@@ -1,0 +1,10 @@
+{
+	"compilerOptions": {
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["src/*"]
+		}
+	},
+	"extends": ["@repo/typescript-config/ts-vite-app.json"],
+	"include": ["./src"],
+}
