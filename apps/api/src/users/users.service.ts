@@ -1,6 +1,7 @@
 // src/users/usersService.ts
-import { User } from "./users.types";
 import { v4 as uuidv4 } from "uuid";
+
+import { User } from "./users.types";
 
 // A post request should not contain an id.
 export type UserCreationParams = Pick<User, "email" | "name" | "phoneNumbers">;

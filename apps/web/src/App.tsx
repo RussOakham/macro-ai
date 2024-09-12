@@ -1,6 +1,8 @@
 import { useState } from 'react'
+
 import reactLogo from './assets/react.svg'
-import { logger } from '@/services/logger'
+import { logger } from './services/logger'
+
 import './App.css'
 
 function App() {

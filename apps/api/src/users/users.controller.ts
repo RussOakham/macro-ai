@@ -1,21 +1,23 @@
 require("module-alias/register");
+import { NextFunction,Request as Req, Response as ExpRes } from "express";
 import {
   Body,
   Controller,
+  Example,
   Get,
+  Middlewares,
   Path,
   Post,
   Query,
-  Route,
   Response,
+  Route,
   SuccessResponse,
-  Example,
-  Middlewares,
 } from "tsoa";
-import { Request as Req, Response as ExpRes, NextFunction } from "express";
-import { User } from "./users.types";
-import { UsersService, UserCreationParams } from "./users.service";
+
 import { logger as pino } from "@/services/logger";
+
+import { UserCreationParams,UsersService } from "./users.service";
+import { User } from "./users.types";
 
 interface ValidateErrorJSON {
   message: "Validation failed";

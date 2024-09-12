@@ -1,15 +1,17 @@
-require('module-alias/register')
+require("module-alias/register");
 import express, {
   json,
-  urlencoded,
-  Response as ExResponse,
-  Request as ExRequest,
   NextFunction,
+  Request as ExRequest,
+  Response as ExResponse,
+  urlencoded,
 } from "express";
 import swaggerUi from "swagger-ui-express";
-import { RegisterRoutes } from "../dist/routes";
 import { ValidateError } from "tsoa";
+
 import { logger as pino } from "@/services/logger";
+
+import { RegisterRoutes } from "../dist/routes";
 
 export const app = express();
 

@@ -9,7 +9,7 @@ module.exports = {
 		'plugin:react/jsx-runtime',
 		'prettier',
 	],
-	ignorePatterns: ['dist', '.eslintrc.cjs'],
+	ignorePatterns: ['dist', '.eslintrc.cjs', 'vite.config.ts'],
 	plugins: ['react-refresh'],
 	parserOptions: {
 		ecmaVersion: 'latest',
@@ -19,6 +19,7 @@ module.exports = {
 	},
 	root: true,
 	rules: {
+		'import/prefer-default-export': 'off',
 		'react-refresh/only-export-components': [
 			'warn',
 			{ allowConstantExport: true },
