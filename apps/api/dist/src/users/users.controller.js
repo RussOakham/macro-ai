@@ -1,4 +1,3 @@
-"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -20,19 +19,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.UsersController = void 0;
-require("module-alias/register");
-const tsoa_1 = require("tsoa");
-const users_service_1 = require("./users.service");
-const logger_1 = require("@/services/logger");
-const { logger } = logger_1.logger;
+import { Body, Controller, Example, Get, Middlewares, Path, Post, Query, Response, Route, SuccessResponse, } from "tsoa";
+import { logger as pino } from "../services/logger";
+import { UsersService } from "./users.service";
+const { logger } = pino;
 function customMiddleware(req, res, next) {
     // Perform any necessary operations or modifications
     logger.info(`Request: ${req.method} ${req.url}`);
     next();
 }
-let UsersController = class UsersController extends tsoa_1.Controller {
+let UsersController = class UsersController extends Controller {
     /**
      * Retrieves the details of an existing user.
      * Supply the unique user ID from either and receive corresponding user details.
@@ -43,7 +39,7 @@ let UsersController = class UsersController extends tsoa_1.Controller {
      */
     getUser(userId, name) {
         return __awaiter(this, void 0, void 0, function* () {
-            return new users_service_1.UsersService().get(userId, name);
+            return new UsersService().get(userId, name);
         });
     }
     /**
@@ -53,30 +49,29 @@ let UsersController = class UsersController extends tsoa_1.Controller {
     createUser(requestBody) {
         return __awaiter(this, void 0, void 0, function* () {
             this.setStatus(201); // set return status 201
-            yield new users_service_1.UsersService().create(requestBody);
+            yield new UsersService().create(requestBody);
             return;
         });
     }
 };
-exports.UsersController = UsersController;
 __decorate([
-    (0, tsoa_1.Example)({
+    Example({
         id: "52907745-7672-470e-a803-a2f8feb52944",
         name: "tsoa user",
         email: "hello@tsoa.com",
         phoneNumbers: [],
         status: "Happy",
     }),
-    (0, tsoa_1.Get)("{userId}"),
-    (0, tsoa_1.Middlewares)(customMiddleware),
-    __param(0, (0, tsoa_1.Path)()),
-    __param(1, (0, tsoa_1.Query)()),
+    Get("{userId}"),
+    Middlewares(customMiddleware),
+    __param(0, Path()),
+    __param(1, Query()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getUser", null);
 __decorate([
-    (0, tsoa_1.Response)(422, "Validation Failed", {
+    Response(422, "Validation Failed", {
         message: "Validation failed",
         details: {
             requestBody: {
@@ -85,15 +80,16 @@ __decorate([
             },
         },
     }),
-    (0, tsoa_1.SuccessResponse)("201", "Created") // Custom success response
+    SuccessResponse("201", "Created") // Custom success response
     ,
-    (0, tsoa_1.Post)(),
-    (0, tsoa_1.Middlewares)(customMiddleware),
-    __param(0, (0, tsoa_1.Body)()),
+    Post(),
+    Middlewares(customMiddleware),
+    __param(0, Body()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "createUser", null);
-exports.UsersController = UsersController = __decorate([
-    (0, tsoa_1.Route)("users")
+UsersController = __decorate([
+    Route("users")
 ], UsersController);
+export { UsersController };

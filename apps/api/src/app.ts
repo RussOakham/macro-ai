@@ -1,5 +1,5 @@
-require("module-alias/register");
 import express, {
+  type Express,
   json,
   NextFunction,
   Request as ExRequest,
@@ -9,11 +9,11 @@ import express, {
 import swaggerUi from "swagger-ui-express";
 import { ValidateError } from "tsoa";
 
-import { logger as pino } from "@/services/logger";
-
 import { RegisterRoutes } from "../dist/routes";
 
-export const app = express();
+import { logger as pino } from "./services/logger";
+
+export const app: Express = express();
 
 const { logger } = pino;
 

@@ -1,8 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.UsersService = void 0;
-const uuid_1 = require("uuid");
-class UsersService {
+// src/users/usersService.ts
+import { v4 as uuidv4 } from "uuid";
+export class UsersService {
     get(id, name) {
         return Promise.resolve({
             id,
@@ -13,7 +11,6 @@ class UsersService {
         });
     }
     create(userCreationParams) {
-        return Promise.resolve(Object.assign({ id: (0, uuid_1.v4)(), status: "Happy" }, userCreationParams));
+        return Promise.resolve(Object.assign({ id: uuidv4(), status: "Happy" }, userCreationParams));
     }
 }
-exports.UsersService = UsersService;

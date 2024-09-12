@@ -1,5 +1,4 @@
-require("module-alias/register");
-import { NextFunction,Request as Req, Response as ExpRes } from "express";
+import { NextFunction, Request as Req, Response as ExpRes } from "express";
 import {
   Body,
   Controller,
@@ -14,9 +13,9 @@ import {
   SuccessResponse,
 } from "tsoa";
 
-import { logger as pino } from "@/services/logger";
+import { logger as pino } from "../services/logger";
 
-import { UserCreationParams,UsersService } from "./users.service";
+import { type UserCreationParams, UsersService } from "./users.service";
 import { User } from "./users.types";
 
 interface ValidateErrorJSON {
