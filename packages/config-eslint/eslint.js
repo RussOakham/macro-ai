@@ -1,9 +1,16 @@
-import { fixupPluginRules } from "@eslint/compat";
+import { fixupConfigRules, fixupPluginRules } from "@eslint/compat";
 import js from "@eslint/js";
 import prettier from "eslint-config-prettier";
 import react from "eslint-plugin-react";
 import hooks from "eslint-plugin-react-hooks";
+import simpleImportSort from "eslint-plugin-simple-import-sort";
 import ts from "typescript-eslint";
+import { FlatCompat } from "@eslint/eslintrc";
+
+const compat = new FlatCompat({
+  recommendedConfig: js.configs.recommended,
+  allConfig: js.configs.all,
+});
 
 const removeDuplicatePlugins = (...configs) => {
   let found = [];
@@ -88,8 +95,10 @@ export const config = (...configs) =>
   );
 
 export const configs = {
-  /** Genertic rules for all JavaScript/Typescript code. */
+  /** Generic rules for all JavaScript/Typescript code. */
   base: [
+    ...fixupConfigRules(compat.extends("")),
+
     // typescript base
     ...ts.configs.strictTypeChecked,
     ...ts.configs.stylisticTypeChecked,
@@ -97,9 +106,30 @@ export const configs = {
     {
       files: ["*.{js,jsx}"],
       ...ts.configs.disableTypeChecked,
+      plugins: { "simple-import-sort": simpleImportSort },
       rules: {
         ...js.configs.recommended.rules,
         ...js.configs.all.rules,
+        "simple-import-sort/imports": [
+          "error",
+          {
+            groups: [
+              // Packages `react` related packages come first.
+              ["^react", "^@?\\w"],
+              // Internal packages.
+              ["^(@|components)(/.*|$)"],
+              // Side effect imports.
+              ["^\\u0000"],
+              // Parent imports. Put `..` last.
+              ["^\\.\\.(?!/?$)", "^\\.\\./?$"],
+              // Other relative imports. Put same-folder imports and `.` last.
+              ["^\\./(?=.*/)(?!/?$)", "^\\.(?!/?$)", "^\\./?$"],
+              // Style imports.
+              ["^.+\\.?(css)$"],
+            ],
+          },
+        ],
+        "simple-import-sort/exports": "error",
       },
     },
   ],
