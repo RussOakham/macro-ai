@@ -16,7 +16,7 @@ node_modules
 coverage
 
 # Turbo
-.turbo
+.turbo/
 
 # Vercel
 .vercel
@@ -24,8 +24,11 @@ coverage
 # Build Outputs
 .next/
 out/
-build
-dist
+build/
+dist/
+dist-ssr
+server/dist
+public/dist
 
 
 # Debug
@@ -36,3 +39,5 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+.cache
+.eslintcache
