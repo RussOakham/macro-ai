@@ -3,6 +3,7 @@ import js from "@eslint/js";
 import prettier from "eslint-config-prettier";
 import react from "eslint-plugin-react";
 import hooks from "eslint-plugin-react-hooks";
+import turbo from "eslint-config-turbo";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
 import ts from "typescript-eslint";
 import { FlatCompat } from "@eslint/eslintrc";
@@ -97,8 +98,7 @@ export const config = (...configs) =>
 export const configs = {
   /** Generic rules for all JavaScript/Typescript code. */
   base: [
-    ...fixupConfigRules(compat.extends("")),
-
+    ...fixupConfigRules(compat.extends("turbo")),
     // typescript base
     ...ts.configs.strictTypeChecked,
     ...ts.configs.stylisticTypeChecked,
