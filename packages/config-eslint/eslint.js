@@ -82,17 +82,20 @@ export const config = (...configs) =>
   ts.config(
     ...removeDuplicatePlugins(...configs),
     // enable type checking
-    {
-      languageOptions: {
-        parserOptions: {
-          project: true,
-          // allow tsconfig bubbling
-          //tsconfigRootDir: import.meta.dirname,
-        },
-      },
-    },
+    // {
+    //   languageOptions: {
+    //     parserOptions: {
+    //       project: true,
+    //       // allow tsconfig bubbling
+    //       tsconfigRootDir: import.meta.dirname,
+    //     },
+    //   },
+    // },
     overrides,
-    prettier
+    prettier,
+    {
+      ignores: ["tsconfig.json", "dist", "node_modules", "eslint.config.js"],
+    }
   );
 
 export const configs = {
