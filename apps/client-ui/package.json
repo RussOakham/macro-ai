@@ -1,6 +1,7 @@
 {
   "$schema": "http://json.schemastore.org/package",
   "name": "client-ui",
+  "license": "MIT",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
+    "@repo/config-typescript": "workspace:*",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react-swc": "^3.5.0",
