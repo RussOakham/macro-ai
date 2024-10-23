@@ -1,5 +1,8 @@
 {
 	"$schema": "http://json.schemastore.org/tsconfig",
 	"extends": "@repo/config-typescript/tsconfig-vite-node.json",
-	"include": ["vite.config.ts"]
+	"include": ["vite.config.ts"],
+	"compilerOptions": {
+		"composite": true
+	}
 }
