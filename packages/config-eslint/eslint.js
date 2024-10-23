@@ -102,7 +102,7 @@ export const config = (...configs) =>
 export const configs = {
   /** Generic rules for all JavaScript/Typescript code. */
   base: [
-    ...fixupConfigRules(compat.extends(turbo)),
+    ...fixupConfigRules(compat.extends("turbo")),
     // typescript base
     ...ts.configs.strictTypeChecked,
     ...ts.configs.stylisticTypeChecked,
