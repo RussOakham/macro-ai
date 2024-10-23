@@ -1,32 +1,32 @@
 {
-  "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "Default",
-  "compilerOptions": {
-    "allowJs": true,
-    "composite": false,
-    "declaration": true,
-    "declarationMap": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "inlineSources": false,
-    "target": "ES2022",
-    "module": "ESNext",
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "outDir": "./dist",
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"display": "Default",
+	"compilerOptions": {
+		"allowJs": true,
+		"composite": false,
+		"declaration": true,
+		"declarationMap": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"inlineSources": false,
+		"target": "ES2022",
+		"module": "ESNext",
+		"skipLibCheck": true,
+		"resolveJsonModule": true,
+		"outDir": "./dist",
 
-    /* Bundler mode */
-    "isolatedModules": true,
-    "allowImportingTsExtensions": true,
-    "moduleResolution": "Bundler",
-    "preserveWatchOutput": true,
-    "noEmit": true,
+		/* Bundler mode */
+		"isolatedModules": true,
+		"allowImportingTsExtensions": true,
+		"moduleResolution": "Bundler",
+		"preserveWatchOutput": true,
+		"noEmit": true,
 
-    /* Linting */
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "strictNullChecks": true
-  },
-  "exclude": ["node_modules"]
+		/* Linting */
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+		"strictNullChecks": true
+	},
+	"exclude": ["node_modules"]
 }

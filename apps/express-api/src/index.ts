@@ -1,12 +1,17 @@
-import express from "express";
+import dotenv from 'dotenv'
+dotenv.config()
 
-const app = express()
-const port = 3030
+import config from 'config'
 
-app.get('/api/health', (req, res) => {
-    res.send('OK')
-})
+import { pino } from './utils/logger.ts'
+import { createServer } from './utils/server.ts'
 
-app.listen(port, () => {
-    console.log(`Server is running on port ${port.toString()}`)
+const port = config.get<number>('port')
+
+const { logger } = pino
+
+const httpServer = createServer()
+
+httpServer.listen(port, () => {
+	logger.info(`[server]: Server is running on port: ${port.toString()}`)
 })

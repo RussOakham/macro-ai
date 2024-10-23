@@ -1,18 +1,18 @@
 {
-  "$schema": "http://json.schemastore.org/tsconfig",
-  "display": "Vite Node Client",
-  "extends": "./tsconfig-base.json",
-  "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022"],
-    "module": "ESNext",
+	"$schema": "http://json.schemastore.org/tsconfig",
+	"display": "Vite Node Client",
+	"extends": "./tsconfig-base.json",
+	"compilerOptions": {
+		"target": "ES2022",
+		"lib": ["ES2022"],
+		"module": "ESNext",
 
-    /* Bundler mode */
-    "moduleDetection": "force",
+		/* Bundler mode */
+		"moduleDetection": "force",
 
-    /* Linting */
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
-  },
+		/* Linting */
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true
+	}
 }

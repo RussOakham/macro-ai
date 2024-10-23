@@ -1,28 +1,28 @@
 {
-  "$schema": "http://json.schemastore.org/package",
-  "name": "client-ui",
-  "license": "MIT",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  },
-  "devDependencies": {
-    "@repo/config-eslint": "workspace:*",
-    "@repo/config-typescript": "workspace:*",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react-swc": "^3.5.0",
-    "eslint-config-turbo": "^2.1.2",
-    "eslint-plugin-react-compiler": "19.0.0-beta-8a03594-20241020",
-    "vite": "^5.4.1"
-  }
+	"$schema": "http://json.schemastore.org/package",
+	"name": "client-ui",
+	"license": "MIT",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "tsc -b && vite build",
+		"lint": "eslint .",
+		"preview": "vite preview"
+	},
+	"dependencies": {
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1"
+	},
+	"devDependencies": {
+		"@repo/config-eslint": "workspace:*",
+		"@repo/config-typescript": "workspace:*",
+		"@types/react": "^18.3.3",
+		"@types/react-dom": "^18.3.0",
+		"@vitejs/plugin-react-swc": "^3.5.0",
+		"eslint-config-turbo": "^2.1.2",
+		"eslint-plugin-react-compiler": "19.0.0-beta-8a03594-20241020",
+		"vite": "^5.4.1"
+	}
 }

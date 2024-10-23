@@ -1,29 +1,44 @@
 {
-    "$schema": "http://json.schemastore.org/package",
-    "name": "@repo/express-api",
-    "license": "MIT",
-    "private": "true",
-    "version": "0.0.0",
-    "type": "module",
-    "scripts": {
-        "build": "tsc",
-        "start": "node dist/index.js",
-        "dev:tsc": "tsc --watch -preserveWatchOutput",
-        "dev:node": "node --enable-source-maps --watch dist/index.js",
-        "dev": "nodemon --config nodemon.json",
-        "lint": "eslint ./src"
-    },
-    "devDependencies": {
-        "@repo/config-eslint": "workspace:*",
-        "@repo/config-typescript": "workspace:*",
-        "@types/express": "^5.0.0",
-        "@types/node": "^22.7.9",
-        "globals": "^15.9.0",
-        "nodemon": "^3.1.7",
-        "tsx": "^4.19.1",
-        "typescript": "^5.5.3"
-    },
-    "dependencies": {
-        "express": "^4.21.1"
-    }
+	"$schema": "http://json.schemastore.org/package",
+	"name": "@repo/express-api",
+	"license": "MIT",
+	"private": "true",
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"start": "node dist/index.js",
+		"dev:tsc": "tsc --watch -preserveWatchOutput",
+		"dev:node": "node --enable-source-maps --watch dist/index.js",
+		"dev": "nodemon --config nodemon.json",
+		"lint": "eslint ./src"
+	},
+	"devDependencies": {
+		"@repo/config-eslint": "workspace:*",
+		"@repo/config-typescript": "workspace:*",
+		"@types/body-parser": "^1.19.5",
+		"@types/compression": "^1.7.5",
+		"@types/config": "^3.3.5",
+		"@types/cookie-parser": "^1.4.7",
+		"@types/cors": "^2.8.17",
+		"@types/express": "^5.0.0",
+		"@types/node": "^22.7.9",
+		"globals": "^15.9.0",
+		"nodemon": "^3.1.7",
+		"tsx": "^4.19.1",
+		"typescript": "^5.5.3"
+	},
+	"dependencies": {
+		"body-parser": "^1.20.3",
+		"compression": "^1.7.4",
+		"config": "^3.3.12",
+		"cookie-parser": "^1.4.7",
+		"cors": "^2.8.5",
+		"dotenv": "^16.4.5",
+		"express": "^4.21.1",
+		"http": "0.0.1-security",
+		"pino": "^9.5.0",
+		"pino-http": "^10.3.0",
+		"pino-pretty": "^11.3.0"
+	}
 }
