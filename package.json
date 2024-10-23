@@ -3,15 +3,23 @@
   "private": true,
   "name": "macro-ai",
   "scripts": {
+    "commit": "cz",
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint"
   },
   "devDependencies": {
+    "commitizen": "^4.3.1",
+    "cz-conventional-changelog": "^3.3.0",
     "turbo": "^2.1.0"
   },
   "packageManager": "pnpm@9.9.0",
   "engines": {
     "node": ">=20"
+  },
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
   }
 }
