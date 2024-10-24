@@ -1,12 +1,12 @@
 import express, { Express } from 'express'
-import bodyParser from 'body-parser'
 import compression from 'compression'
 import cors from 'cors'
+import { json } from 'body-parser'
 
 import { pino } from './logger.ts'
 import { appRouter } from '../router/index.routes.ts'
 
-const createServer = () => {
+const createServer = (): Express => {
 	const app: Express = express()
 
 	app.use(pino)
@@ -16,7 +16,7 @@ const createServer = () => {
 		}),
 	)
 	app.use(compression())
-	app.use(bodyParser.json())
+	app.use(json())
 
 	app.use('/api', appRouter())
 
