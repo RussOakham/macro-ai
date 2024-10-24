@@ -4,6 +4,7 @@ import prettier from 'eslint-config-prettier'
 import react from 'eslint-plugin-react'
 import hooks from 'eslint-plugin-react-hooks'
 import turbo from 'eslint-config-turbo'
+import reactRefresh from 'eslint-plugin-react-refresh'
 import reactCompiler from 'eslint-plugin-react-compiler'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import ts from 'typescript-eslint'
@@ -153,9 +154,14 @@ export const configs = {
 			plugins: {
 				'react-hooks': fixupPluginRules(hooks),
 				'react-compiler': reactCompiler,
+				'react-refresh': reactRefresh,
 			},
 			rules: {
 				...hooks.configs.recommended.rules,
+				'react-refresh/only-export-components': [
+					'warn',
+					{ allowConstantExport: true },
+				],
 			},
 		},
 		// overrides

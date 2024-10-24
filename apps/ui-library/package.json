@@ -1,6 +1,6 @@
 {
 	"$schema": "http://json.schemastore.org/package",
-	"name": "client-ui",
+	"name": "ui-library",
 	"license": "MIT",
 	"private": true,
 	"version": "0.0.0",

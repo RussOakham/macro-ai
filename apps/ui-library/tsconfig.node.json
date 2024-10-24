@@ -1,7 +1,7 @@
 {
 	"$schema": "http://json.schemastore.org/tsconfig",
-	"extends": "@repo/config-typescript/tsconfig-react.json",
-	"include": ["src"],
+	"extends": "@repo/config-typescript/tsconfig-vite-node.json",
+	"include": ["vite.config.ts"],
 	"compilerOptions": {
 		"composite": true
 	}
