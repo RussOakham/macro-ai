@@ -1,0 +1,16 @@
+{
+	"extends": "@repo/config-typescript/tsconfig-react.json",
+	"compilerOptions": {
+		"baseUrl": ".",
+		"paths": {
+			"@repo/ui/*": ["./src/*"]
+		}
+	},
+	"include": [
+		"src",
+		"eslint.config.js",
+		"tailwind.config.ts",
+		"postcss.config.js"
+	],
+	"exclude": ["node_modules"]
+}

@@ -112,7 +112,7 @@ export const configs = {
 			files: ['*.{js,jsx}'],
 			...ts.configs.disableTypeChecked,
 			plugins: { 'simple-import-sort': simpleImportSort },
-	
+
 			rules: {
 				...js.configs.recommended.rules,
 				...js.configs.all.rules,
