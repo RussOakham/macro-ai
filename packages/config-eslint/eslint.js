@@ -67,11 +67,11 @@ const overrides = {
  * @example
  *
 typescript
- * import * as travelchapter from '@travelchapter/config-eslint';
+ * import * as repoConfig from '@repo/config-eslint';
  *
- * export default travelchapter.config(
- *   ...travelchapter.configs.base,
- *   ...travelchapter.configs.react,
+ * export default repoConfig.config(
+ *   ...repoConfig.configs.base,
+ *   ...repoConfig.configs.react,
  *   {
  *     rules: {
  *       '@typescript-eslint/array-type': 'error',
