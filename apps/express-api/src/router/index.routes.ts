@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { utilityRouter } from './utility.routes.ts'
+import { utilityRouter } from '../features/utility/utility.routes.ts'
 
 const router = Router()
 

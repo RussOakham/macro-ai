@@ -1,6 +1,6 @@
 import { type Router } from 'express'
 
-import { pino } from '../utils/logger.ts'
+import { pino } from '../../utils/logger.ts'
 
 const { logger } = pino
 
@@ -52,7 +52,7 @@ const utilityRouter = (router: Router) => {
 			res.status(200).json({ message: 'Api Health Status: OK' })
 		} catch (error: unknown) {
 			logger.error(
-				`[utilityRouter]: Error checking health status: ${(error as Error).message}`,
+				`[utility-routes]: Error checking health status: ${(error as Error).message}`,
 			)
 			res.status(500).json({ message: 'Api Status: Error' })
 		}
