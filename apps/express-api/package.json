@@ -23,6 +23,8 @@
 		"@types/cors": "^2.8.17",
 		"@types/express": "^5.0.0",
 		"@types/node": "^22.7.9",
+		"@types/swagger-jsdoc": "^6.0.4",
+		"@types/swagger-ui-express": "^4.1.6",
 		"globals": "^15.9.0",
 		"nodemon": "^3.1.7",
 		"tsx": "^4.19.1",
@@ -39,6 +41,8 @@
 		"http": "0.0.1-security",
 		"pino": "^9.5.0",
 		"pino-http": "^10.3.0",
-		"pino-pretty": "^11.3.0"
+		"pino-pretty": "^11.3.0",
+		"swagger-jsdoc": "^6.2.8",
+		"swagger-ui-express": "^5.0.1"
 	}
 }
