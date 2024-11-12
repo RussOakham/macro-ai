@@ -5,7 +5,7 @@
 	"scripts": {
 		"commit": "cz",
 		"build": "turbo run build",
-		"dev": "turbo run dev",
+		"dev": "turbo run dev --env-mode=loose",
 		"lint": "turbo run lint",
 		"format": "prettier --check .",
 		"format:fix": "prettier --write .",

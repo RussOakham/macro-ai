@@ -1,12 +1,10 @@
-import dotenv from 'dotenv'
-dotenv.config()
-
 import config from 'config'
 
 import { pino } from './utils/logger.ts'
 import { createServer } from './utils/server.ts'
 
 const port = config.get<number>('port')
+console.log('port', port)
 
 const { logger } = pino
 

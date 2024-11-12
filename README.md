@@ -5,6 +5,7 @@ This monorepo contains the source code for Macro AI, a project that includes bot
 ## Repository Structure
 
 - **Packages**
+
   - **`ui-library`**: Contains reusable UI components, utilities, and configurations for Tailwind CSS. It provides a shared TypeScript configuration for React projects.
   - **`config-typescript`**: Provides base TypeScript configurations for different environments, including React and Express.
   - **`config-eslint`**: Contains shared ESLint configurations for consistent code quality across the monorepo.
