@@ -6,12 +6,19 @@
 			"dependsOn": ["^build"],
 			"inputs": ["$TURBO_DEFAULT$", ".env*"],
 			"outputs": ["dist/**"],
-			"env": ["NODE_ENV"]
+			"env": [
+				"NODE_ENV",
+				"SERVER_PORT",
+				"AWS_COGNITO_USER_POOL_ID",
+				"AWS_COGNITO_USER_POOL_CLIENT_ID",
+				"AWS_COGNITO_USER_POOL_SECRET_KEY"
+			]
 		},
 		"lint": {},
 		"dev": {
 			"cache": false,
 			"persistent": true
 		}
-	}
+	},
+	"envMode": "loose"
 }
