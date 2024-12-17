@@ -3,13 +3,13 @@ import { resolve } from 'path'
 
 config({
 	path: resolve(process.cwd(), '.env'),
+	encoding: 'UTF-8',
 	debug: true, // This will help us see what's happening with dotenv
 })
 
-console.log()
-
 export default {
 	port: process.env.SERVER_PORT ?? 3040,
+	awsCognitoRegion: process.env.AWS_COGNITO_REGION ?? '',
 	awsCognitoUserPoolId: process.env.AWS_COGNITO_USER_POOL_ID ?? '',
 	awsCognitoUserPoolClientId: process.env.AWS_COGNITO_USER_POOL_CLIENT_ID ?? '',
 	awsCognitoUserPoolSecretKey:

@@ -50,6 +50,7 @@ const createServer = (): Express => {
 	)
 	app.use(compression())
 	app.use(bodyParser.json())
+	app.use(express.urlencoded({ extended: true }))
 
 	app.use('/api', appRouter())
 	app.use(

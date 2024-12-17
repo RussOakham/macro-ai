@@ -1,82 +1,48 @@
 import {
-	CognitoUserAttribute,
-	CognitoUserPool,
-	// ICognitoUserPoolData,
-} from 'amazon-cognito-identity-js'
+	CognitoIdentityProviderClient,
+	SignUpCommand,
+} from '@aws-sdk/client-cognito-identity-provider'
 import config from 'config'
+import { z } from 'zod'
+import { TRegister } from './auth.types.ts'
+import crypto from 'crypto'
 
-import { pino } from '../../utils/logger.ts'
+const userAttributes = z.object({
+	email: z.string().email(),
+})
 
-const { logger } = pino
+class CognitoService {
+	private config = {
+		region: config.get<string>('awsCognitoRegion'),
+	}
+	private secretHash = config.get<string>('awsCognitoUserPoolSecretKey')
+	private clientId = config.get<string>('awsCognitoUserPoolClientId')
 
-export interface IUserToken {
-	accessToken: string
-	refreshToken: string
-}
-
-// https://aws.plainenglish.io/how-to-create-authentication-apis-with-aws-cognito-648bf3225b5d
-
-class CognitoUserPoolHelper {
-	public userPool: CognitoUserPool
-
-	constructor() {
-		const awsCognitoUserPoolId = config.get<string>('awsCognitoUserPoolId')
-		const awsCognitoUserPoolClientId = config.get<string>(
-			'awsCognitoUserPoolClientId',
-		)
-
-		if (!awsCognitoUserPoolId || !awsCognitoUserPoolClientId) {
-			throw new Error('AWS Cognito configuration is missing')
-		}
-
-		this.userPool = new CognitoUserPool({
-			UserPoolId: awsCognitoUserPoolId,
-			ClientId: awsCognitoUserPoolClientId,
-		})
+	private generateHash(username: string): string {
+		return crypto
+			.createHmac('SHA256', this.secretHash)
+			.update(username + this.clientId)
+			.digest('base64')
 	}
 
-	public register({
-		email,
-		password,
-	}: {
-		email: string
-		password: string
-	}): Promise<string> {
-		return new Promise((resolve, reject) => {
-			const attributeList: CognitoUserAttribute[] = [
-				new CognitoUserAttribute({
+	public async signUpUser({ email, password, username }: TRegister) {
+		const client = new CognitoIdentityProviderClient(this.config)
+
+		const command = new SignUpCommand({
+			ClientId: this.clientId,
+			Username: username,
+			Password: password,
+			UserAttributes: [
+				{
 					Name: 'email',
 					Value: email,
-				}),
-			]
-
-			this.userPool.signUp(
-				email,
-				password,
-				attributeList,
-				[],
-				(err, result) => {
-					if (err) {
-						logger.error(
-							`[CognitoUserPoolHelper]: Error registering user: ${err}`,
-						)
-						reject(err)
-					}
-
-					logger.info(
-						`[CognitoUserPoolHelper]: User registered successfully: ${result?.user.getUsername() ?? ''}`,
-					)
-					resolve(result?.user.getUsername() ?? '')
 				},
-			)
+			],
+			SecretHash: this.generateHash(username),
 		})
+
+		return client.send(command)
 	}
 }
 
-export default new CognitoUserPoolHelper()
-
-// Make auth register router and auth controller
-
-// Add zod verification middleware
-
-// Add error types
+export { CognitoService }

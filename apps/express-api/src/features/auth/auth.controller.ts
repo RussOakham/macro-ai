@@ -1,8 +1,10 @@
 import express from 'express'
 import { getReasonPhrase, StatusCodes } from 'http-status-codes'
 
-import cognitoUserPoolHelper from './auth.services.ts'
+import { CognitoService } from './auth.services.ts'
 import { pino } from '../../utils/logger.ts'
+import { registerSchema } from './auth.types.ts'
+import { standardizeError } from '../../utils/standardize-error.ts'
 
 const { logger } = pino
 
@@ -15,21 +17,26 @@ interface IAuthController {
 
 const authController: IAuthController = {
 	register: async (req, res) => {
+		const cognito = new CognitoService()
 		try {
-			// TODO: Add type-safe validation
-			const { email, password } = req.body as {
-				email: string
-				password: string
+			const parsedBody = registerSchema.safeParse(req.body)
+
+			if (!parsedBody.success) {
+				const error = standardizeError(parsedBody.error)
+				res.status(StatusCodes.BAD_REQUEST).json({ message: error.message })
+				return
 			}
-			const response = await cognitoUserPoolHelper.register({
+
+			const { email, password, username } = parsedBody.data
+			const response = await cognito.signUpUser({
 				email,
 				password,
+				username,
 			})
 			res.status(StatusCodes.CREATED).json({ message: response })
 		} catch (error: unknown) {
-			logger.error(
-				`[authRouter]: Error registering user: ${(error as Error).message}`,
-			)
+			const err = standardizeError(error)
+			logger.error(`[authRouter]: Error registering user: ${err.message}`)
 
 			res
 				.status(StatusCodes.INTERNAL_SERVER_ERROR)
