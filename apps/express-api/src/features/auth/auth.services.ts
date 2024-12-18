@@ -1,5 +1,6 @@
 import {
 	CognitoIdentityProviderClient,
+	ConfirmSignUpCommand,
 	SignUpCommand,
 } from '@aws-sdk/client-cognito-identity-provider'
 import config from 'config'
@@ -12,11 +13,13 @@ const userAttributes = z.object({
 })
 
 class CognitoService {
-	private config = {
+	private readonly config = {
 		region: config.get<string>('awsCognitoRegion'),
 	}
-	private secretHash = config.get<string>('awsCognitoUserPoolSecretKey')
-	private clientId = config.get<string>('awsCognitoUserPoolClientId')
+	private readonly secretHash = config.get<string>(
+		'awsCognitoUserPoolSecretKey',
+	)
+	private readonly clientId = config.get<string>('awsCognitoUserPoolClientId')
 
 	private generateHash(username: string): string {
 		return crypto
@@ -38,6 +41,19 @@ class CognitoService {
 					Value: email,
 				},
 			],
+			SecretHash: this.generateHash(username),
+		})
+
+		return client.send(command)
+	}
+
+	public async confirmSignUp(username: string, code: number) {
+		const client = new CognitoIdentityProviderClient(this.config)
+
+		const command = new ConfirmSignUpCommand({
+			ClientId: this.clientId,
+			Username: username,
+			ConfirmationCode: code.toString(),
 			SecretHash: this.generateHash(username),
 		})
 

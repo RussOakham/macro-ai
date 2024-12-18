@@ -13,7 +13,7 @@ const options: Options = {
 		openapi: '3.1.0',
 		info: {
 			title: 'Macro AI Express API with Swagger',
-			version: '0.0.0',
+			version: '0.0.1',
 			description:
 				'This is a simple CRUD API application made with Express and documented with Swagger',
 			license: {
@@ -27,17 +27,10 @@ const options: Options = {
 			},
 		],
 	},
-	apis: ['./src/router/*.routes.ts'],
-	components: {
-		schemas: {
-			HealthResponse: {
-				type: 'object',
-			},
-		},
-	},
+	apis: ['./src/features/**/*.ts'],
 }
 
-const specs = swaggerJSDoc(options)
+const swaggerSpec = swaggerJSDoc(options)
 
 const createServer = (): Express => {
 	const app: Express = express()
@@ -56,7 +49,12 @@ const createServer = (): Express => {
 	app.use(
 		'/api-docs',
 		swaggerUi.serve,
-		swaggerUi.setup(specs, { explorer: true }),
+		swaggerUi.setup(swaggerSpec, {
+			explorer: true,
+			swaggerOptions: {
+				url: '/swagger.json',
+			},
+		}),
 	)
 	return app
 }

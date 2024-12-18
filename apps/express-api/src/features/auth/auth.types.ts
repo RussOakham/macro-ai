@@ -42,4 +42,12 @@ const registerSchema = z.object({
 })
 type TRegister = z.infer<typeof registerSchema>
 
-export { registerSchema, type TRegister }
+const confirmRegistrationSchema = z.object({
+	username: z.string(),
+	code: z.number(),
+})
+type TConfirmRegistration = z.infer<typeof confirmRegistrationSchema>
+
+export { confirmRegistrationSchema, registerSchema }
+
+export type { TRegister, TConfirmRegistration }
