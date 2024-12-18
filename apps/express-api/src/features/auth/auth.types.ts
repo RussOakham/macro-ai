@@ -38,16 +38,37 @@ const registerSchema = z.object({
 		message: 'Invalid email address',
 	}),
 	password: passwordValidation(),
-	username: z.string().min(5).max(15),
 })
 type TRegister = z.infer<typeof registerSchema>
 
 const confirmRegistrationSchema = z.object({
-	username: z.string(),
+	username: z.string().email({
+		message: 'Invalid email address',
+	}),
 	code: z.number(),
 })
 type TConfirmRegistration = z.infer<typeof confirmRegistrationSchema>
 
-export { confirmRegistrationSchema, registerSchema }
+const resendConfirmationCodeSchema = z.object({
+	username: z.string().email({
+		message: 'Invalid email address',
+	}),
+})
+type TResendConfirmationCode = z.infer<typeof resendConfirmationCodeSchema>
 
-export type { TRegister, TConfirmRegistration }
+const loginSchema = z.object({
+	email: z.string().email({
+		message: 'Invalid email address',
+	}),
+	password: passwordValidation(),
+})
+type TLogin = z.infer<typeof loginSchema>
+
+export {
+	confirmRegistrationSchema,
+	loginSchema,
+	registerSchema,
+	resendConfirmationCodeSchema,
+}
+
+export type { TRegister, TLogin, TConfirmRegistration, TResendConfirmationCode }

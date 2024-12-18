@@ -14,4 +14,6 @@ export default {
 	awsCognitoUserPoolClientId: process.env.AWS_COGNITO_USER_POOL_CLIENT_ID ?? '',
 	awsCognitoUserPoolSecretKey:
 		process.env.AWS_COGNITO_USER_POOL_SECRET_KEY ?? '',
+	awsCognitoAccessKey: process.env.AWS_COGNITO_ACCESS_KEY ?? '',
+	awsCognitoSecretKey: process.env.AWS_COGNITO_SECRET_KEY ?? '',
 }
