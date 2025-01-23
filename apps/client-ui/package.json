@@ -20,6 +20,7 @@
 	"devDependencies": {
 		"@repo/config-eslint": "workspace:*",
 		"@repo/config-typescript": "workspace:*",
+		"@tanstack/eslint-plugin-router": "^1.97.0",
 		"@tanstack/router-devtools": "^1.97.3",
 		"@tanstack/router-plugin": "^1.97.3",
 		"@types/react": "^18.3.3",

@@ -40,6 +40,11 @@ const authController: IAuthController = {
 				password,
 			})
 
+			console.log(
+				'response.$metadata.httpStatusCode',
+				response.$metadata.httpStatusCode,
+			)
+
 			if (
 				response.$metadata.httpStatusCode !== undefined &&
 				response.$metadata.httpStatusCode !== StatusCodes.OK
