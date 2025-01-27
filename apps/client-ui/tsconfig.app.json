@@ -3,6 +3,14 @@
 	"extends": "@repo/config-typescript/tsconfig-react.json",
 	"include": ["src", "tailwind.config.ts", "postcss.config.js"],
 	"compilerOptions": {
-		"composite": true
+		"composite": true,
+		"declaration": true,
+		"noEmit": false,
+		"emitDeclarationOnly": true,
+		"allowImportingTsExtensions": true,
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["./src/*"]
+		}
 	}
 }

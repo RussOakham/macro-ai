@@ -15,5 +15,15 @@ export default repoConfig.config(
 			},
 		},
 		ignores: ['dist', 'node_modules'],
+		rules: {
+			'@typescript-eslint/no-misused-promises': [
+				2,
+				{
+					checksVoidReturn: {
+						attributes: false,
+					},
+				},
+			],
+		},
 	},
 )
