@@ -8,12 +8,9 @@ export const Route = createLazyFileRoute('/auth/login')({
 })
 
 function RouteComponent() {
-	// TODO: Calculate min-h using header and footer dom height
 	const [headerHeight, setHeaderHeight] = useState(52)
 	const [footerHeight, setFooterHeight] = useState(56)
 	const minHeight = `calc(100svh - ${headerHeight.toString()}px - ${footerHeight.toString()}px)`
-
-	console.log('render')
 
 	useLayoutEffect(() => {
 		const header = document.getElementById('macro-ai-header')

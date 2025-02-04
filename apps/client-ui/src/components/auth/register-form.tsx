@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useForm } from 'react-hook-form'
-import { loginFormSchema, TLoginForm } from '@/lib/types'
+import { registerFormSchema, TRegisterForm } from '@/lib/types'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
 	Form,
@@ -14,31 +14,33 @@ import {
 } from '../ui/form'
 import { Link } from '@tanstack/react-router'
 
-export function LoginForm({
+export function RegisterForm({
 	className,
 	...props
 }: React.ComponentPropsWithoutRef<'div'>) {
-	const form = useForm<TLoginForm>({
-		resolver: zodResolver(loginFormSchema),
+	const form = useForm<TRegisterForm>({
+		resolver: zodResolver(registerFormSchema),
 		defaultValues: {
 			email: '',
 			password: '',
+			confirmPassword: '',
 		},
 	})
 
-	function onSubmit({ email, password }: TLoginForm) {
+	function onSubmit({ email, password, confirmPassword }: TRegisterForm) {
 		console.log({
 			email: email,
 			password: password,
+			confirmPassword: confirmPassword,
 		})
 	}
 
 	return (
 		<div className={cn('flex flex-col gap-6', className)} {...props}>
 			<div className="flex flex-col items-center gap-2 text-center">
-				<h1 className="text-2xl font-bold">Login to your account</h1>
+				<h1 className="text-2xl font-bold">Sign up for an account</h1>
 				<p className="text-balance text-sm text-muted-foreground">
-					Enter your email below to login to your account
+					Enter your email below to register an account
 				</p>
 			</div>
 			<div className="grid gap-6">
@@ -67,12 +69,23 @@ export function LoginForm({
 									<FormItem>
 										<div className="flex items-center">
 											<FormLabel>Password</FormLabel>
-											<a
-												href="#"
-												className="ml-auto text-sm underline-offset-4 hover:underline"
-											>
-												Forgot your password?
-											</a>
+										</div>
+										<FormControl>
+											<Input type="password" {...field} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+						</div>
+						<div className="grid gap-2">
+							<FormField
+								control={form.control}
+								name="confirmPassword"
+								render={({ field }) => (
+									<FormItem>
+										<div className="flex items-center">
+											<FormLabel>Confirm Password</FormLabel>
 										</div>
 										<FormControl>
 											<Input type="password" {...field} />
@@ -83,7 +96,7 @@ export function LoginForm({
 							/>
 						</div>
 						<Button type="submit" className="w-full">
-							Login
+							Sign up!
 						</Button>
 					</form>
 				</Form>
@@ -100,13 +113,13 @@ export function LoginForm({
 							fill="currentColor"
 						/>
 					</svg>
-					Login with GitHub
+					Sign up with GitHub
 				</Button>
 			</div>
 			<div className="text-center text-sm">
-				Don&apos;t have an account?{' '}
-				<Link to="/auth/register" className="underline underline-offset-4">
-					Sign up
+				Have have an account?{' '}
+				<Link to="/auth/login" className="underline underline-offset-4">
+					Login
 				</Link>
 			</div>
 		</div>
