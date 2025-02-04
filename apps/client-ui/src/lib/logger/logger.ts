@@ -1,6 +1,6 @@
-import pino from 'pino'
+import { pino, LoggerOptions } from 'pino'
 
-const logger = pino({
+const pinoOptions: LoggerOptions = {
 	transport: {
 		target: 'pino-pretty',
 	},
@@ -9,6 +9,8 @@ const logger = pino({
 		serialize: true,
 		asObject: true,
 	},
-})
+}
+
+const logger = pino(pinoOptions)
 
 export { logger }
