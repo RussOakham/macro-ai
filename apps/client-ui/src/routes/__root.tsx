@@ -4,6 +4,7 @@ import {
 	NavigationMenuList,
 	navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu'
+import { Toaster } from '@/components/ui/sonner'
 import { NavigationMenuItem } from '@radix-ui/react-navigation-menu'
 import { Link, Outlet, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/router-devtools'
@@ -68,6 +69,12 @@ function RootComponent() {
 				<hr />
 				<main className="flex-1 container">
 					<Outlet />
+					<Toaster
+						position="bottom-left"
+						duration={8000}
+						closeButton
+						richColors
+					/>
 				</main>
 				<hr />
 

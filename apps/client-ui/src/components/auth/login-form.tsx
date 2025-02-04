@@ -17,6 +17,7 @@ import { usePostLoginMutation } from '@/services/auth/hooks/usePostLoginMutation
 import { useTransition } from 'react'
 import { logger } from '@/lib/logger/logger'
 import { standardizeError } from '@/lib/errors/standardize-error'
+import { toast } from 'sonner'
 
 export function LoginForm({
 	className,
@@ -46,6 +47,7 @@ export function LoginForm({
 						// Show error message
 						const error = standardizeError(err)
 						logger.error(`Login error: ${error.message}`)
+						toast.error(error.message)
 					},
 				},
 			)
