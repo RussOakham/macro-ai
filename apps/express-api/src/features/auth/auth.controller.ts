@@ -47,7 +47,7 @@ const authController: IAuthController = {
 
 			if (
 				response.$metadata.httpStatusCode !== undefined &&
-				response.$metadata.httpStatusCode !== StatusCodes.OK
+				response.$metadata.httpStatusCode !== 204
 			) {
 				res
 					.status(response.$metadata.httpStatusCode)
@@ -83,7 +83,7 @@ const authController: IAuthController = {
 
 			if (
 				response.$metadata.httpStatusCode !== undefined &&
-				response.$metadata.httpStatusCode !== StatusCodes.OK
+				response.$metadata.httpStatusCode !== 200
 			) {
 				res
 					.status(response.$metadata.httpStatusCode)
@@ -121,7 +121,7 @@ const authController: IAuthController = {
 
 			if (
 				response.$metadata.httpStatusCode !== undefined &&
-				response.$metadata.httpStatusCode !== StatusCodes.OK
+				response.$metadata.httpStatusCode !== 200
 			) {
 				res
 					.status(response.$metadata.httpStatusCode)
@@ -159,7 +159,7 @@ const authController: IAuthController = {
 
 			if (
 				response.$metadata.httpStatusCode !== undefined &&
-				response.$metadata.httpStatusCode !== StatusCodes.OK
+				response.$metadata.httpStatusCode !== 200
 			) {
 				res
 					.status(response.$metadata.httpStatusCode)
@@ -170,11 +170,14 @@ const authController: IAuthController = {
 			res.status(StatusCodes.OK).json({ message: response })
 		} catch (error: unknown) {
 			const err = standardizeError(error)
-			logger.error(`[authRouter]: Error logging in user: ${err.message}`)
+
+			logger.error(
+				`[authRouter]: Error logging in user: ${err.status.toString()} ${err.message}`,
+			)
 
 			res
-				.status(StatusCodes.INTERNAL_SERVER_ERROR)
-				.json({ message: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) })
+				.status(err.status)
+				.json({ message: err.message, details: err.details })
 		}
 	},
 	getProfile: (req, res) => {

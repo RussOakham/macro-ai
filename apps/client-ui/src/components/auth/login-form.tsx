@@ -13,11 +13,18 @@ import {
 	FormMessage,
 } from '../ui/form'
 import { Link } from '@tanstack/react-router'
+import { usePostLoginMutation } from '@/services/auth/hooks/usePostLoginMutation'
+import { useTransition } from 'react'
+import { logger } from '@/lib/logger/logger'
+import { standardizeError } from '@/lib/errors/standardize-error'
 
 export function LoginForm({
 	className,
 	...props
 }: React.ComponentPropsWithoutRef<'div'>) {
+	const [isPending, startTransition] = useTransition()
+	const { mutate: postLoginMutation } = usePostLoginMutation()
+
 	const form = useForm<TLoginForm>({
 		resolver: zodResolver(loginFormSchema),
 		defaultValues: {
@@ -27,9 +34,21 @@ export function LoginForm({
 	})
 
 	function onSubmit({ email, password }: TLoginForm) {
-		console.log({
-			email: email,
-			password: password,
+		startTransition(() => {
+			postLoginMutation(
+				{ email, password },
+				{
+					onSuccess: () => {
+						// Redirect to dashboard
+						logger.info('Login success')
+					},
+					onError: (err: unknown) => {
+						// Show error message
+						const error = standardizeError(err)
+						logger.error(`Login error: ${error.message}`)
+					},
+				},
+			)
 		})
 	}
 
@@ -82,7 +101,7 @@ export function LoginForm({
 								)}
 							/>
 						</div>
-						<Button type="submit" className="w-full">
+						<Button type="submit" className="w-full" disabled={isPending}>
 							Login
 						</Button>
 					</form>
