@@ -20,7 +20,7 @@
 		"@vercel/style-guide": "^6.0.0",
 		"eslint": "^9.10.0",
 		"eslint-config-prettier": "^9.1.0",
-		"eslint-config-turbo": "^2.1.2",
+		"eslint-config-turbo": "^2.4.0",
 		"eslint-plugin-react": "^7.36.1",
 		"eslint-plugin-react-compiler": "19.0.0-beta-8a03594-20241020",
 		"eslint-plugin-react-hooks": "^4.6.0",

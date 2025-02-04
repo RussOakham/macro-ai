@@ -1,9 +1,9 @@
-import { fixupConfigRules, fixupPluginRules } from '@eslint/compat'
+import { fixupPluginRules } from '@eslint/compat'
 import js from '@eslint/js'
 import prettier from 'eslint-config-prettier'
 import react from 'eslint-plugin-react'
 import hooks from 'eslint-plugin-react-hooks'
-import turbo from 'eslint-config-turbo'
+import turboConfig from 'eslint-config-turbo/flat'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import reactCompiler from 'eslint-plugin-react-compiler'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
@@ -103,10 +103,10 @@ export const config = (...configs) =>
 export const configs = {
 	/** Generic rules for all JavaScript/Typescript code. */
 	base: [
-		...fixupConfigRules(compat.extends('turbo')),
 		// typescript base
 		...ts.configs.strictTypeChecked,
 		...ts.configs.stylisticTypeChecked,
+		...turboConfig,
 		// disable type checking for non-ts files
 		{
 			files: ['*.{js,jsx}'],
