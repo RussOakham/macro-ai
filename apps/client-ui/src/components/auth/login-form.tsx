@@ -44,6 +44,7 @@ export const LoginForm = ({
 					onSuccess: () => {
 						// Redirect to dashboard
 						logger.info('Login success')
+						toast.success('Login successful!')
 					},
 					onError: (err: unknown) => {
 						// Show error message

@@ -1,11 +1,16 @@
+import { useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from '@tanstack/react-router'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { standardizeError } from '@/lib/errors/standardize-error'
+import { logger } from '@/lib/logger/logger'
 import { registerFormSchema, TRegisterForm } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { usePostRegisterMutation } from '@/services/auth/hooks/usePostRegisterMutation'
 
 import {
 	Form,
@@ -20,6 +25,9 @@ const RegisterForm = ({
 	className,
 	...props
 }: React.ComponentPropsWithoutRef<'div'>) => {
+	const [isPending, startTransition] = useTransition()
+	const { mutate: postRegisterMutation } = usePostRegisterMutation()
+
 	const form = useForm<TRegisterForm>({
 		resolver: zodResolver(registerFormSchema),
 		defaultValues: {
@@ -30,10 +38,29 @@ const RegisterForm = ({
 	})
 
 	const onSubmit = ({ email, password, confirmPassword }: TRegisterForm) => {
-		console.log({
-			email: email,
-			password: password,
-			confirmPassword: confirmPassword,
+		startTransition(() => {
+			postRegisterMutation(
+				{
+					email,
+					password,
+					confirmPassword,
+				},
+				{
+					onSuccess: () => {
+						// Redirect to dashboard
+						logger.info('Register success')
+						toast.success(
+							'Account created successfully! Please check your email for you confirmation code.',
+						)
+					},
+					onError: (err: unknown) => {
+						// Show error message
+						const error = standardizeError(err)
+						logger.error(`Register error: ${error.message}`)
+						toast.error(error.message)
+					},
+				},
+			)
 		})
 	}
 
@@ -97,7 +124,7 @@ const RegisterForm = ({
 								)}
 							/>
 						</div>
-						<Button type="submit" className="w-full">
+						<Button type="submit" className="w-full" disabled={isPending}>
 							Sign up!
 						</Button>
 					</form>

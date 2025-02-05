@@ -10,7 +10,7 @@ const postRegister = async ({
 	password,
 	confirmPassword,
 }: TRegisterForm) => {
-	const response = await axios.post<IRegisterResponse>('/auth/login', {
+	const response = await axios.post<IRegisterResponse>('/auth/register', {
 		email,
 		password,
 		confirmPassword,

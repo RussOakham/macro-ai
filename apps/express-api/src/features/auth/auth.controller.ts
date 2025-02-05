@@ -50,14 +50,9 @@ const authController: IAuthController = {
 				confirmPassword,
 			})
 
-			console.log(
-				'response.$metadata.httpStatusCode',
-				response.$metadata.httpStatusCode,
-			)
-
 			if (
 				response.$metadata.httpStatusCode !== undefined &&
-				response.$metadata.httpStatusCode !== 204
+				response.$metadata.httpStatusCode !== 200
 			) {
 				res
 					.status(response.$metadata.httpStatusCode)
@@ -65,7 +60,7 @@ const authController: IAuthController = {
 				return
 			}
 
-			res.status(StatusCodes.CREATED).json({ message: response })
+			res.status(StatusCodes.CREATED).json({ message: 'Account Created' })
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(`[authRouter]: Error registering user: ${err.message}`)
