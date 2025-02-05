@@ -8,8 +8,9 @@ import {
 	SignUpCommand,
 } from '@aws-sdk/client-cognito-identity-provider'
 import config from 'config'
-import { TRegister } from './auth.types.ts'
 import crypto from 'crypto'
+
+import { TRegister } from './auth.types.ts'
 
 class CognitoService {
 	private readonly config: CognitoIdentityProviderClientConfig = {

@@ -1,13 +1,10 @@
-import { RegisterForm } from '@/components/auth/register-form'
+import { useLayoutEffect, useState } from 'react'
 import { createLazyFileRoute } from '@tanstack/react-router'
 import { GalleryVerticalEnd } from 'lucide-react'
-import { useLayoutEffect, useState } from 'react'
 
-export const Route = createLazyFileRoute('/auth/register')({
-	component: RouteComponent,
-})
+import { RegisterForm } from '@/components/auth/register-form'
 
-function RouteComponent() {
+const RouteComponent = () => {
 	const [headerHeight, setHeaderHeight] = useState(52)
 	const [footerHeight, setFooterHeight] = useState(56)
 	const minHeight = `calc(100svh - ${headerHeight.toString()}px - ${footerHeight.toString()}px)`
@@ -52,3 +49,7 @@ function RouteComponent() {
 		</div>
 	)
 }
+
+export const Route = createLazyFileRoute('/auth/register')({
+	component: RouteComponent,
+})

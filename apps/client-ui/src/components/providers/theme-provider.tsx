@@ -20,12 +20,12 @@ const initialState: ThemeProviderState = {
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
-export function ThemeProvider({
+const ThemeProvider = ({
 	children,
 	defaultTheme = 'system',
 	storageKey = 'macro-ai-ui-theme',
 	...props
-}: ThemeProviderProps) {
+}: ThemeProviderProps) => {
 	const [theme, setTheme] = useState<Theme>(() => {
 		const storedTheme = localStorage.getItem(storageKey) as Theme
 
@@ -70,7 +70,7 @@ export function ThemeProvider({
 	)
 }
 
-export const useTheme = () => {
+const useTheme = () => {
 	const context = useContext(ThemeProviderContext)
 
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -79,3 +79,5 @@ export const useTheme = () => {
 
 	return context
 }
+
+export { ThemeProvider, useTheme }

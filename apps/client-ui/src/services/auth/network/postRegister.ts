@@ -5,11 +5,11 @@ export interface IRegisterResponse {
 	message: string
 }
 
-async function postRegister({
+const postRegister = async ({
 	email,
 	password,
 	confirmPassword,
-}: TRegisterForm) {
+}: TRegisterForm) => {
 	const response = await axios.post<IRegisterResponse>('/auth/login', {
 		email,
 		password,

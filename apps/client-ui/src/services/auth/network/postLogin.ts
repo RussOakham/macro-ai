@@ -5,7 +5,7 @@ export interface ILoginResponse {
 	message: string
 }
 
-async function postLogin({ email, password }: TLoginForm) {
+const postLogin = async ({ email, password }: TLoginForm) => {
 	const response = await axios.post<ILoginResponse>('/auth/login', {
 		email,
 		password,

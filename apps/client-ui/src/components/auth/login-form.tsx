@@ -1,9 +1,17 @@
-import { cn } from '@/lib/utils'
+import { useTransition } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Link } from '@tanstack/react-router'
+import { toast } from 'sonner'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useForm } from 'react-hook-form'
+import { standardizeError } from '@/lib/errors/standardize-error'
+import { logger } from '@/lib/logger/logger'
 import { loginFormSchema, TLoginForm } from '@/lib/types'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { cn } from '@/lib/utils'
+import { usePostLoginMutation } from '@/services/auth/hooks/usePostLoginMutation'
+
 import {
 	Form,
 	FormControl,
@@ -12,17 +20,11 @@ import {
 	FormLabel,
 	FormMessage,
 } from '../ui/form'
-import { Link } from '@tanstack/react-router'
-import { usePostLoginMutation } from '@/services/auth/hooks/usePostLoginMutation'
-import { useTransition } from 'react'
-import { logger } from '@/lib/logger/logger'
-import { standardizeError } from '@/lib/errors/standardize-error'
-import { toast } from 'sonner'
 
-export function LoginForm({
+export const LoginForm = ({
 	className,
 	...props
-}: React.ComponentPropsWithoutRef<'div'>) {
+}: React.ComponentPropsWithoutRef<'div'>) => {
 	const [isPending, startTransition] = useTransition()
 	const { mutate: postLoginMutation } = usePostLoginMutation()
 
@@ -34,7 +36,7 @@ export function LoginForm({
 		},
 	})
 
-	function onSubmit({ email, password }: TLoginForm) {
+	const onSubmit = ({ email, password }: TLoginForm) => {
 		startTransition(() => {
 			postLoginMutation(
 				{ email, password },

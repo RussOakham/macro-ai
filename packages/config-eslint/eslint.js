@@ -107,15 +107,10 @@ export const configs = {
 		...ts.configs.strictTypeChecked,
 		...ts.configs.stylisticTypeChecked,
 		...turboConfig,
-		// disable type checking for non-ts files
 		{
-			files: ['*.{js,jsx}'],
-			...ts.configs.disableTypeChecked,
 			plugins: { 'simple-import-sort': simpleImportSort },
-
 			rules: {
-				...js.configs.recommended.rules,
-				...js.configs.all.rules,
+				'func-style': ['error', 'expression'],
 				'simple-import-sort/imports': [
 					'error',
 					{
@@ -138,6 +133,16 @@ export const configs = {
 				'simple-import-sort/exports': 'error',
 			},
 		},
+
+		{
+			// disable type checking for non-ts files
+			files: ['*.{js,jsx}'],
+			...ts.configs.disableTypeChecked,
+			rules: {
+				...js.configs.recommended.rules,
+				...js.configs.all.rules,
+			},
+		},
 	],
 	/** Rules specific to React and React Hooks */
 	react: [
@@ -145,7 +150,6 @@ export const configs = {
 			files: ['*/.{ts,tsx}'],
 			...react.configs.flat.all,
 			rules: {
-				'func-style': 'off', // allow Capitalised component names
 				'react/react-in-jsx-scope': 'off', // no-longer needed in newer React versions
 			},
 		},

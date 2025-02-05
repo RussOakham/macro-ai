@@ -1,9 +1,12 @@
-import { cn } from '@/lib/utils'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Link } from '@tanstack/react-router'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useForm } from 'react-hook-form'
 import { registerFormSchema, TRegisterForm } from '@/lib/types'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { cn } from '@/lib/utils'
+
 import {
 	Form,
 	FormControl,
@@ -12,12 +15,11 @@ import {
 	FormLabel,
 	FormMessage,
 } from '../ui/form'
-import { Link } from '@tanstack/react-router'
 
-export function RegisterForm({
+const RegisterForm = ({
 	className,
 	...props
-}: React.ComponentPropsWithoutRef<'div'>) {
+}: React.ComponentPropsWithoutRef<'div'>) => {
 	const form = useForm<TRegisterForm>({
 		resolver: zodResolver(registerFormSchema),
 		defaultValues: {
@@ -27,7 +29,7 @@ export function RegisterForm({
 		},
 	})
 
-	function onSubmit({ email, password, confirmPassword }: TRegisterForm) {
+	const onSubmit = ({ email, password, confirmPassword }: TRegisterForm) => {
 		console.log({
 			email: email,
 			password: password,
@@ -125,3 +127,5 @@ export function RegisterForm({
 		</div>
 	)
 }
+
+export { RegisterForm }

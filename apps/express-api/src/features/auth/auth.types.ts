@@ -77,4 +77,4 @@ export {
 	resendConfirmationCodeSchema,
 }
 
-export type { TRegister, TLogin, TConfirmRegistration, TResendConfirmationCode }
+export type { TConfirmRegistration, TLogin, TRegister, TResendConfirmationCode }

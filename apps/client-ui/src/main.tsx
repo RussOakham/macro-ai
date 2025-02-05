@@ -1,12 +1,13 @@
 import { StrictMode } from 'react'
-import './index.css'
-
-import { routeTree } from './routeTree.gen.ts'
+import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
-import ReactDOM from 'react-dom/client'
+
 import { ThemeProvider } from './components/providers/theme-provider.tsx'
+import { routeTree } from './routeTree.gen.ts'
+
+import './index.css'
 
 // Create a new Query Client instance
 const queryClient = new QueryClient()

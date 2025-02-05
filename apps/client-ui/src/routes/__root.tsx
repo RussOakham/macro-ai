@@ -1,3 +1,7 @@
+import { NavigationMenuItem } from '@radix-ui/react-navigation-menu'
+import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
+import { TanStackRouterDevtools } from '@tanstack/router-devtools'
+
 import { ModeToggle } from '@/components/mode-toggle'
 import {
 	NavigationMenu,
@@ -5,15 +9,8 @@ import {
 	navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu'
 import { Toaster } from '@/components/ui/sonner'
-import { NavigationMenuItem } from '@radix-ui/react-navigation-menu'
-import { Link, Outlet, createRootRoute } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 
-export const Route = createRootRoute({
-	component: RootComponent,
-})
-
-function RootComponent() {
+const RootComponent = () => {
 	return (
 		<div
 			className="min-h-screen bg-background font-sans antialiased prose-headings:font-poppins"
@@ -89,3 +86,7 @@ function RootComponent() {
 		</div>
 	)
 }
+
+export const Route = createRootRoute({
+	component: RootComponent,
+})

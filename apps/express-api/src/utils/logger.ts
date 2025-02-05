@@ -1,4 +1,4 @@
-import { pinoHttp, HttpLogger, Options } from 'pino-http'
+import { HttpLogger, Options, pinoHttp } from 'pino-http'
 
 const pinoOptions: Options = {
 	transport: {

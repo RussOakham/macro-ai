@@ -1,12 +1,13 @@
-import express, { Express } from 'express'
+import bodyParser from 'body-parser'
 import compression from 'compression'
 import cors from 'cors'
-import bodyParser from 'body-parser'
+import express, { Express } from 'express'
 import swaggerJSDoc, { type Options } from 'swagger-jsdoc'
 import swaggerUi from 'swagger-ui-express'
 
-import { pino } from './logger.ts'
 import { appRouter } from '../router/index.routes.ts'
+
+import { pino } from './logger.ts'
 
 const options: Options = {
 	definition: {

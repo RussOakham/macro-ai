@@ -1,15 +1,16 @@
 import express from 'express'
 import { getReasonPhrase, StatusCodes } from 'http-status-codes'
 
-import { CognitoService } from './auth.services.ts'
 import { pino } from '../../utils/logger.ts'
+import { standardizeError } from '../../utils/standardize-error.ts'
+
+import { CognitoService } from './auth.services.ts'
 import {
 	confirmRegistrationSchema,
 	loginSchema,
 	registerSchema,
 	resendConfirmationCodeSchema,
 } from './auth.types.ts'
-import { standardizeError } from '../../utils/standardize-error.ts'
 
 const { logger } = pino
 

@@ -65,4 +65,4 @@ const standardizeError = (err: unknown): IStandardizedError => {
 	}
 }
 
-export { standardizeError, type IStandardizedError }
+export { type IStandardizedError, standardizeError }
