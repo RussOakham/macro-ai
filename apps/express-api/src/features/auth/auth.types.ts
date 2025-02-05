@@ -33,12 +33,18 @@ const passwordValidation = () =>
 			message: 'Password must contain at least one lowercase letter',
 		})
 
-const registerSchema = z.object({
-	email: z.string().email({
-		message: 'Invalid email address',
-	}),
-	password: passwordValidation(),
-})
+const registerSchema = z
+	.object({
+		email: z.string().email({
+			message: 'Invalid email address',
+		}),
+		password: passwordValidation(),
+		confirmPassword: passwordValidation(),
+	})
+	.refine((data) => data.password === data.confirmPassword, {
+		message: 'Passwords do not match',
+		path: ['confirmPassword'],
+	})
 type TRegister = z.infer<typeof registerSchema>
 
 const confirmRegistrationSchema = z.object({

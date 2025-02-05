@@ -32,7 +32,11 @@ class CognitoService {
 			.digest('base64')
 	}
 
-	public async signUpUser({ email, password }: TRegister) {
+	public async signUpUser({ email, password, confirmPassword }: TRegister) {
+		if (password !== confirmPassword) {
+			throw new Error('[authService]: SignUpUser - Passwords do not match')
+		}
+
 		const client = new CognitoIdentityProviderClient(this.config)
 
 		const usedId = crypto.randomUUID()

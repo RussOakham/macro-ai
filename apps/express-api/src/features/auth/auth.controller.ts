@@ -34,10 +34,19 @@ const authController: IAuthController = {
 				return
 			}
 
-			const { email, password } = parsedBody.data
+			const { email, password, confirmPassword } = parsedBody.data
+
+			if (password !== confirmPassword) {
+				res
+					.status(StatusCodes.BAD_REQUEST)
+					.json({ message: 'Passwords do not match' })
+				return
+			}
+
 			const response = await cognito.signUpUser({
 				email,
 				password,
+				confirmPassword,
 			})
 
 			console.log(
