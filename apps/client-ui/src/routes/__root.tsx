@@ -64,14 +64,18 @@ const RootComponent = () => {
 				</header>
 
 				<hr />
-				<main className="flex-1 container">
-					<Outlet />
-					<Toaster
-						position="bottom-left"
-						duration={8000}
-						closeButton
-						richColors
-					/>
+				<main className="flex flex-1 container">
+					<div className="w-full flex-1">
+						<div className="h-full">
+							<Outlet />
+							<Toaster
+								position="bottom-left"
+								duration={8000}
+								closeButton
+								richColors
+							/>
+						</div>
+					</div>
 				</main>
 				<hr />
 

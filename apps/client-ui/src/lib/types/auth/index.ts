@@ -44,5 +44,23 @@ const registerFormSchema = z
 	})
 type TRegisterForm = z.infer<typeof registerFormSchema>
 
-export { loginFormSchema, registerFormSchema }
-export type { TLoginForm, TRegisterForm }
+const confirmationSchema = z.object({
+	username: z
+		.string()
+		.email({ message: 'Please enter the email address you used to register.' }),
+	code: z
+		.string({
+			required_error: 'Please enter the 6-digit code we sent to your email.',
+		})
+		.length(6, {
+			message: 'Please enter all 6 digits.',
+		})
+		.regex(/^\d+$/, {
+			message: 'Code must only contain numbers.',
+		}),
+})
+
+type TConfirmationForm = z.infer<typeof confirmationSchema>
+
+export { confirmationSchema, loginFormSchema, registerFormSchema }
+export type { TConfirmationForm, TLoginForm, TRegisterForm }

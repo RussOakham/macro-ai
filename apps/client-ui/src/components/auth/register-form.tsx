@@ -1,7 +1,7 @@
 import { useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -27,6 +27,7 @@ const RegisterForm = ({
 }: React.ComponentPropsWithoutRef<'div'>) => {
 	const [isPending, startTransition] = useTransition()
 	const { mutate: postRegisterMutation } = usePostRegisterMutation()
+	const navigate = useNavigate({ from: '/auth/register' })
 
 	const form = useForm<TRegisterForm>({
 		resolver: zodResolver(registerFormSchema),
@@ -52,6 +53,7 @@ const RegisterForm = ({
 						toast.success(
 							'Account created successfully! Please check your email for you confirmation code.',
 						)
+						void navigate({ to: '/auth/confirm-registration' })
 					},
 					onError: (err: unknown) => {
 						// Show error message
