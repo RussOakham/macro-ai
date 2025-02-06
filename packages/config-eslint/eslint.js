@@ -1,14 +1,14 @@
-import { fixupPluginRules } from '@eslint/compat'
 import js from '@eslint/js'
 import prettier from 'eslint-config-prettier'
 import react from 'eslint-plugin-react'
-import hooks from 'eslint-plugin-react-hooks'
+import reactHooks from 'eslint-plugin-react-hooks'
 import turboConfig from 'eslint-config-turbo/flat'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import reactCompiler from 'eslint-plugin-react-compiler'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import ts from 'typescript-eslint'
 import { FlatCompat } from '@eslint/eslintrc'
+import plugin from 'eslint-plugin-react'
 
 const compat = new FlatCompat({
 	recommendedConfig: js.configs.recommended,
@@ -147,26 +147,20 @@ export const configs = {
 	/** Rules specific to React and React Hooks */
 	react: [
 		{
-			files: ['*/.{ts,tsx}'],
-			...react.configs.flat.all,
+			files: ['*/.{ts,tsx,js,jsx}'],
+			...react.configs.flat.recommended,
+			...reactHooks.configs.recommended,
+			...reactRefresh.configs.recommended,
+			plugin: {
+				'react-compiler': reactCompiler,
+			},
 			rules: {
 				'react/react-in-jsx-scope': 'off', // no-longer needed in newer React versions
-			},
-		},
-		// NOTE hooks doesnt provide flat config yet
-		{
-			files: ['*/.{ts,tsx}'],
-			plugins: {
-				'react-hooks': fixupPluginRules(hooks),
-				'react-compiler': reactCompiler,
-				'react-refresh': reactRefresh,
-			},
-			rules: {
-				...hooks.configs.recommended.rules,
 				'react-refresh/only-export-components': [
 					'warn',
 					{ allowConstantExport: true },
 				],
+				'react-compiler/react-compiler': 'error',
 			},
 		},
 		// overrides
