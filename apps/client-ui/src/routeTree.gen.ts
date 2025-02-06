@@ -20,132 +20,132 @@ const IndexLazyImport = createFileRoute('/')()
 const AuthRegisterLazyImport = createFileRoute('/auth/register')()
 const AuthLoginLazyImport = createFileRoute('/auth/login')()
 const AuthConfirmRegistrationLazyImport = createFileRoute(
-  '/auth/confirm-registration',
+	'/auth/confirm-registration',
 )()
 
 // Create/Update Routes
 
 const IndexLazyRoute = IndexLazyImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRoute,
+	id: '/',
+	path: '/',
+	getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
 
 const AuthRegisterLazyRoute = AuthRegisterLazyImport.update({
-  id: '/auth/register',
-  path: '/auth/register',
-  getParentRoute: () => rootRoute,
+	id: '/auth/register',
+	path: '/auth/register',
+	getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/auth/register.lazy').then((d) => d.Route))
 
 const AuthLoginLazyRoute = AuthLoginLazyImport.update({
-  id: '/auth/login',
-  path: '/auth/login',
-  getParentRoute: () => rootRoute,
+	id: '/auth/login',
+	path: '/auth/login',
+	getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/auth/login.lazy').then((d) => d.Route))
 
 const AuthConfirmRegistrationLazyRoute =
-  AuthConfirmRegistrationLazyImport.update({
-    id: '/auth/confirm-registration',
-    path: '/auth/confirm-registration',
-    getParentRoute: () => rootRoute,
-  } as any).lazy(() =>
-    import('./routes/auth/confirm-registration.lazy').then((d) => d.Route),
-  )
+	AuthConfirmRegistrationLazyImport.update({
+		id: '/auth/confirm-registration',
+		path: '/auth/confirm-registration',
+		getParentRoute: () => rootRoute,
+	} as any).lazy(() =>
+		import('./routes/auth/confirm-registration.lazy').then((d) => d.Route),
+	)
 
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
-  interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/auth/confirm-registration': {
-      id: '/auth/confirm-registration'
-      path: '/auth/confirm-registration'
-      fullPath: '/auth/confirm-registration'
-      preLoaderRoute: typeof AuthConfirmRegistrationLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/auth/login': {
-      id: '/auth/login'
-      path: '/auth/login'
-      fullPath: '/auth/login'
-      preLoaderRoute: typeof AuthLoginLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/auth/register': {
-      id: '/auth/register'
-      path: '/auth/register'
-      fullPath: '/auth/register'
-      preLoaderRoute: typeof AuthRegisterLazyImport
-      parentRoute: typeof rootRoute
-    }
-  }
+	interface FileRoutesByPath {
+		'/': {
+			id: '/'
+			path: '/'
+			fullPath: '/'
+			preLoaderRoute: typeof IndexLazyImport
+			parentRoute: typeof rootRoute
+		}
+		'/auth/confirm-registration': {
+			id: '/auth/confirm-registration'
+			path: '/auth/confirm-registration'
+			fullPath: '/auth/confirm-registration'
+			preLoaderRoute: typeof AuthConfirmRegistrationLazyImport
+			parentRoute: typeof rootRoute
+		}
+		'/auth/login': {
+			id: '/auth/login'
+			path: '/auth/login'
+			fullPath: '/auth/login'
+			preLoaderRoute: typeof AuthLoginLazyImport
+			parentRoute: typeof rootRoute
+		}
+		'/auth/register': {
+			id: '/auth/register'
+			path: '/auth/register'
+			fullPath: '/auth/register'
+			preLoaderRoute: typeof AuthRegisterLazyImport
+			parentRoute: typeof rootRoute
+		}
+	}
 }
 
 // Create and export the route tree
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexLazyRoute
-  '/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
-  '/auth/login': typeof AuthLoginLazyRoute
-  '/auth/register': typeof AuthRegisterLazyRoute
+	'/': typeof IndexLazyRoute
+	'/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
+	'/auth/login': typeof AuthLoginLazyRoute
+	'/auth/register': typeof AuthRegisterLazyRoute
 }
 
 export interface FileRoutesByTo {
-  '/': typeof IndexLazyRoute
-  '/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
-  '/auth/login': typeof AuthLoginLazyRoute
-  '/auth/register': typeof AuthRegisterLazyRoute
+	'/': typeof IndexLazyRoute
+	'/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
+	'/auth/login': typeof AuthLoginLazyRoute
+	'/auth/register': typeof AuthRegisterLazyRoute
 }
 
 export interface FileRoutesById {
-  __root__: typeof rootRoute
-  '/': typeof IndexLazyRoute
-  '/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
-  '/auth/login': typeof AuthLoginLazyRoute
-  '/auth/register': typeof AuthRegisterLazyRoute
+	__root__: typeof rootRoute
+	'/': typeof IndexLazyRoute
+	'/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
+	'/auth/login': typeof AuthLoginLazyRoute
+	'/auth/register': typeof AuthRegisterLazyRoute
 }
 
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/auth/confirm-registration'
-    | '/auth/login'
-    | '/auth/register'
-  fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth/confirm-registration' | '/auth/login' | '/auth/register'
-  id:
-    | '__root__'
-    | '/'
-    | '/auth/confirm-registration'
-    | '/auth/login'
-    | '/auth/register'
-  fileRoutesById: FileRoutesById
+	fileRoutesByFullPath: FileRoutesByFullPath
+	fullPaths:
+		| '/'
+		| '/auth/confirm-registration'
+		| '/auth/login'
+		| '/auth/register'
+	fileRoutesByTo: FileRoutesByTo
+	to: '/' | '/auth/confirm-registration' | '/auth/login' | '/auth/register'
+	id:
+		| '__root__'
+		| '/'
+		| '/auth/confirm-registration'
+		| '/auth/login'
+		| '/auth/register'
+	fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
-  IndexLazyRoute: typeof IndexLazyRoute
-  AuthConfirmRegistrationLazyRoute: typeof AuthConfirmRegistrationLazyRoute
-  AuthLoginLazyRoute: typeof AuthLoginLazyRoute
-  AuthRegisterLazyRoute: typeof AuthRegisterLazyRoute
+	IndexLazyRoute: typeof IndexLazyRoute
+	AuthConfirmRegistrationLazyRoute: typeof AuthConfirmRegistrationLazyRoute
+	AuthLoginLazyRoute: typeof AuthLoginLazyRoute
+	AuthRegisterLazyRoute: typeof AuthRegisterLazyRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexLazyRoute: IndexLazyRoute,
-  AuthConfirmRegistrationLazyRoute: AuthConfirmRegistrationLazyRoute,
-  AuthLoginLazyRoute: AuthLoginLazyRoute,
-  AuthRegisterLazyRoute: AuthRegisterLazyRoute,
+	IndexLazyRoute: IndexLazyRoute,
+	AuthConfirmRegistrationLazyRoute: AuthConfirmRegistrationLazyRoute,
+	AuthLoginLazyRoute: AuthLoginLazyRoute,
+	AuthRegisterLazyRoute: AuthRegisterLazyRoute,
 }
 
 export const routeTree = rootRoute
-  ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+	._addFileChildren(rootRouteChildren)
+	._addFileTypes<FileRouteTypes>()
 
 /* ROUTE_MANIFEST_START
 {

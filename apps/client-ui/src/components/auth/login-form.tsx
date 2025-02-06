@@ -1,7 +1,7 @@
 import { useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -27,6 +27,7 @@ export const LoginForm = ({
 }: React.ComponentPropsWithoutRef<'div'>) => {
 	const [isPending, startTransition] = useTransition()
 	const { mutate: postLoginMutation } = usePostLoginMutation()
+	const navigate = useNavigate({ from: '/auth/login' })
 
 	const form = useForm<TLoginForm>({
 		resolver: zodResolver(loginFormSchema),
@@ -45,6 +46,12 @@ export const LoginForm = ({
 						// Redirect to dashboard
 						logger.info('Login success')
 						toast.success('Login successful!')
+						void navigate({
+							to: '/',
+							params: {
+								login: true,
+							},
+						})
 					},
 					onError: (err: unknown) => {
 						// Show error message

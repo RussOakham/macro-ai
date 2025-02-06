@@ -1,5 +1,5 @@
 import express from 'express'
-import { getReasonPhrase, StatusCodes } from 'http-status-codes'
+import { StatusCodes } from 'http-status-codes'
 
 import { pino } from '../../utils/logger.ts'
 import { standardizeError } from '../../utils/standardize-error.ts'
@@ -66,8 +66,8 @@ const authController: IAuthController = {
 			logger.error(`[authRouter]: Error registering user: ${err.message}`)
 
 			res
-				.status(StatusCodes.INTERNAL_SERVER_ERROR)
-				.json({ message: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) })
+				.status(err.status)
+				.json({ message: err.message, details: err.details })
 		}
 	},
 	confirmRegistration: async (req, res) => {
@@ -96,7 +96,7 @@ const authController: IAuthController = {
 				return
 			}
 
-			res.status(StatusCodes.OK).json({ message: response })
+			res.status(StatusCodes.OK).json({ message: 'Account confirmed' })
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(
@@ -104,8 +104,8 @@ const authController: IAuthController = {
 			)
 
 			res
-				.status(StatusCodes.INTERNAL_SERVER_ERROR)
-				.json({ message: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) })
+				.status(err.status)
+				.json({ message: err.message, details: err.details })
 		}
 	},
 	resendConfirmationCode: async (req, res) => {
@@ -142,8 +142,8 @@ const authController: IAuthController = {
 			)
 
 			res
-				.status(StatusCodes.INTERNAL_SERVER_ERROR)
-				.json({ message: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) })
+				.status(err.status)
+				.json({ message: err.message, details: err.details })
 		}
 	},
 	login: async (req, res) => {
