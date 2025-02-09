@@ -59,8 +59,20 @@ const confirmationSchema = z.object({
 			message: 'Code must only contain numbers.',
 		}),
 })
-
 type TConfirmationForm = z.infer<typeof confirmationSchema>
 
-export { confirmationSchema, loginFormSchema, registerFormSchema }
-export type { TConfirmationForm, TLoginForm, TRegisterForm }
+const getUserSchema = z.object({
+	accessToken: z.string({
+		message: 'Invalid access token',
+		required_error: 'Access token is required',
+	}),
+})
+type TGetUser = z.infer<typeof getUserSchema>
+
+export {
+	confirmationSchema,
+	getUserSchema,
+	loginFormSchema,
+	registerFormSchema,
+}
+export type { TConfirmationForm, TGetUser, TLoginForm, TRegisterForm }

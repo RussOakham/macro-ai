@@ -2,6 +2,7 @@ import {
 	CognitoIdentityProviderClient,
 	CognitoIdentityProviderClientConfig,
 	ConfirmSignUpCommand,
+	GetUserCommand,
 	InitiateAuthCommand,
 	ListUsersCommand,
 	ResendConfirmationCodeCommand,
@@ -114,6 +115,16 @@ class CognitoService {
 				PASSWORD: password,
 				SECRET_HASH: this.generateHash(email),
 			},
+		})
+
+		return client.send(command)
+	}
+
+	public async getUser(accessToken: string) {
+		const client = new CognitoIdentityProviderClient(this.config)
+
+		const command = new GetUserCommand({
+			AccessToken: accessToken,
 		})
 
 		return client.send(command)

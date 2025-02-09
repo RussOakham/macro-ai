@@ -7,6 +7,7 @@ import { standardizeError } from '../../utils/standardize-error.ts'
 import { CognitoService } from './auth.services.ts'
 import {
 	confirmRegistrationSchema,
+	getUserSchema,
 	loginSchema,
 	registerSchema,
 	resendConfirmationCodeSchema,
@@ -19,10 +20,17 @@ interface IAuthController {
 	login: express.Handler
 	confirmRegistration: express.Handler
 	resendConfirmationCode: express.Handler
-	getProfile: express.Handler
+	getUser: express.Handler
 }
 
-// TODO: Standardize happy path response messaging. Log Cognito raw response???
+interface ILoginResponse {
+	accessToken: string
+	refreshToken: string
+	expiresIn: number
+}
+
+// TODO: Create Standardized Response Interface for Happy and Unhappy Paths
+// TODO: Generate OpenAPI Docs
 const authController: IAuthController = {
 	register: async (req, res) => {
 		const cognito = new CognitoService()
@@ -172,7 +180,31 @@ const authController: IAuthController = {
 				return
 			}
 
-			res.status(StatusCodes.OK).json({ message: response })
+			const loginResponse: ILoginResponse = {
+				accessToken: response.AuthenticationResult?.AccessToken ?? '',
+				refreshToken: response.AuthenticationResult?.RefreshToken ?? '',
+				expiresIn: response.AuthenticationResult?.ExpiresIn ?? 0,
+			}
+
+			res
+				.cookie('accessToken', response.AuthenticationResult?.AccessToken, {
+					httpOnly: true,
+					secure: process.env.NODE_ENV === 'production',
+					domain: process.env.COOKIE_DOMAIN,
+					sameSite: 'strict',
+					//5 minutes maxAge
+					maxAge: 1000 * 60 * 5,
+				})
+				.cookie('refreshToken', response.AuthenticationResult?.RefreshToken, {
+					httpOnly: true,
+					secure: process.env.NODE_ENV === 'production',
+					domain: process.env.COOKIE_DOMAIN,
+					sameSite: 'strict',
+					// 30 days maxAge
+					maxAge: 1000 * 60 * 60 * 24 * 30,
+				})
+				.status(StatusCodes.OK)
+				.json(loginResponse)
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 
@@ -185,8 +217,44 @@ const authController: IAuthController = {
 				.json({ message: err.message, details: err.details })
 		}
 	},
-	getProfile: (req, res) => {
-		res.json({})
+	getUser: async (req, res) => {
+		const cognito = new CognitoService()
+
+		try {
+			const parsedBody = getUserSchema.safeParse(req.body)
+
+			if (!parsedBody.success) {
+				const error = standardizeError(parsedBody.error)
+				res.status(StatusCodes.BAD_REQUEST).json({ message: error.message })
+				return
+			}
+
+			const { accessToken } = parsedBody.data
+
+			const response = await cognito.getUser(accessToken)
+
+			if (
+				response.$metadata.httpStatusCode !== undefined &&
+				response.$metadata.httpStatusCode !== 200
+			) {
+				res
+					.status(response.$metadata.httpStatusCode)
+					.json({ message: response.$metadata.httpStatusCode })
+				return
+			}
+
+			res.status(StatusCodes.OK).json({ message: response })
+		} catch (error: unknown) {
+			const err = standardizeError(error)
+
+			logger.error(
+				`[authRouter]: Error getting user profile: ${err.status.toString()} ${err.message}`,
+			)
+
+			res
+				.status(err.status)
+				.json({ message: err.message, details: err.details })
+		}
 	},
 }
 

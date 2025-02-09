@@ -70,11 +70,26 @@ const loginSchema = z.object({
 })
 type TLogin = z.infer<typeof loginSchema>
 
+const getUserSchema = z.object({
+	accessToken: z.string({
+		message: 'Invalid access token',
+		required_error: 'Access token is required',
+	}),
+})
+type TGetUser = z.infer<typeof getUserSchema>
+
 export {
 	confirmRegistrationSchema,
+	getUserSchema,
 	loginSchema,
 	registerSchema,
 	resendConfirmationCodeSchema,
 }
 
-export type { TConfirmRegistration, TLogin, TRegister, TResendConfirmationCode }
+export type {
+	TConfirmRegistration,
+	TGetUser,
+	TLogin,
+	TRegister,
+	TResendConfirmationCode,
+}

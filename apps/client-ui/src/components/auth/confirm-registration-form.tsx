@@ -1,4 +1,4 @@
-import { useTransition } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate } from '@tanstack/react-router'
@@ -34,43 +34,45 @@ import { confirmationSchema, TConfirmationForm } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { usePostConfirmRegisterMutation } from '@/services/auth/hooks/usePostConfirmRegisterMutation'
 
+import { useAuthStore } from '../providers/auth-provider'
+
 const ConfirmRegistrationForm = ({
 	className,
 	...props
 }: React.ComponentPropsWithoutRef<'div'>) => {
-	const [isPending, startTransition] = useTransition()
-	const { mutate: postConfirmRegistration } = usePostConfirmRegisterMutation()
+	const [isPending, setIsPending] = useState(false)
+	const { mutateAsync: postConfirmRegistration } =
+		usePostConfirmRegisterMutation()
 	const navigate = useNavigate({ from: '/auth/confirm-registration' })
+	const user = useAuthStore((state) => state.user)
 
 	const form = useForm<TConfirmationForm>({
 		resolver: zodResolver(confirmationSchema),
 		defaultValues: {
-			username: '',
+			username: user?.email ?? '',
 			code: '',
 		},
 	})
 
-	const onSubmit = ({ username, code }: TConfirmationForm) => {
-		startTransition(() => {
-			postConfirmRegistration(
-				{ username, code },
-				{
-					onSuccess: () => {
-						// Redirect to dashboard
-						logger.info('Confirm registration success')
-						toast.success('Account confirmed successfully! Please login.')
-						void navigate({ to: '/auth/login' })
-					},
-					onError: (err: unknown) => {
-						// Show error message
-						const error = standardizeError(err)
-						logger.error('Confirm registration error', error)
-						toast.error(error.message)
-					},
-				},
-			)
-		})
+	const onSubmit = async ({ username, code }: TConfirmationForm) => {
+		try {
+			setIsPending(true)
+
+			await postConfirmRegistration({ username, code })
+
+			logger.info('Confirm registration success')
+			toast.success('Account confirmed successfully! Please login.')
+			await navigate({ to: '/auth/login' })
+		} catch (err: unknown) {
+			// Show error message
+			const error = standardizeError(err)
+			logger.error('Confirm registration error', error)
+			toast.error(error.message)
+		} finally {
+			setIsPending(false)
+		}
 	}
+
 	return (
 		<Card className={cn('w-full max-w-md', className)} {...props}>
 			<CardHeader>

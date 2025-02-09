@@ -1,4 +1,4 @@
-import { useTransition } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from '@tanstack/react-router'
@@ -12,6 +12,7 @@ import { registerFormSchema, TRegisterForm } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { usePostRegisterMutation } from '@/services/auth/hooks/usePostRegisterMutation'
 
+import { useAuthStore } from '../providers/auth-provider'
 import {
 	Form,
 	FormControl,
@@ -25,9 +26,10 @@ const RegisterForm = ({
 	className,
 	...props
 }: React.ComponentPropsWithoutRef<'div'>) => {
-	const [isPending, startTransition] = useTransition()
-	const { mutate: postRegisterMutation } = usePostRegisterMutation()
+	const [isPending, setIsPending] = useState(false)
+	const { mutateAsync: postRegisterMutation } = usePostRegisterMutation()
 	const navigate = useNavigate({ from: '/auth/register' })
+	const setUser = useAuthStore((state) => state.setUser)
 
 	const form = useForm<TRegisterForm>({
 		resolver: zodResolver(registerFormSchema),
@@ -38,32 +40,42 @@ const RegisterForm = ({
 		},
 	})
 
-	const onSubmit = ({ email, password, confirmPassword }: TRegisterForm) => {
-		startTransition(() => {
-			postRegisterMutation(
-				{
-					email,
-					password,
-					confirmPassword,
-				},
-				{
-					onSuccess: () => {
-						// Redirect to dashboard
-						logger.info('Register success')
-						toast.success(
-							'Account created successfully! Please check your email for you confirmation code.',
-						)
-						void navigate({ to: '/auth/confirm-registration' })
-					},
-					onError: (err: unknown) => {
-						// Show error message
-						const error = standardizeError(err)
-						logger.error(`Register error: ${error.message}`)
-						toast.error(error.message)
-					},
-				},
+	const onSubmit = async ({
+		email,
+		password,
+		confirmPassword,
+	}: TRegisterForm) => {
+		try {
+			setIsPending(true)
+
+			await postRegisterMutation({
+				email,
+				password,
+				confirmPassword,
+			})
+
+			setUser({
+				email,
+				accessToken: '',
+				refreshToken: '',
+			})
+
+			logger.info('Register success')
+			toast.success(
+				'Account created successfully! Please check your email for you confirmation code.',
 			)
-		})
+
+			await navigate({
+				to: '/auth/confirm-registration',
+			})
+		} catch (err: unknown) {
+			// Show error message
+			const error = standardizeError(err)
+			logger.error(`Register error: ${error.message}`)
+			toast.error(error.message)
+		} finally {
+			setIsPending(false)
+		}
 	}
 
 	return (

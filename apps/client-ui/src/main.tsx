@@ -15,7 +15,7 @@ const queryClient = new QueryClient()
 // Create a new router instance
 const router = createRouter({
 	routeTree,
-	context: { queryClient },
+	context: { queryClient, auth: undefined },
 	defaultPreload: 'intent',
 	defaultPreloadStaleTime: 0,
 })

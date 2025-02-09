@@ -39,8 +39,12 @@ const authRouter = (router: Router) => {
 	 *       properties:
 	 *         email:
 	 *           type: string
+	 *           description: The user's email address.
+	 *           example: "user@example.com"
 	 *         password:
 	 *           type: string
+	 *           description: The user's password.
+	 *           example: "Password123"
 	 *       required:
 	 *         - email
 	 *         - password
@@ -82,11 +86,24 @@ const authRouter = (router: Router) => {
 	 *             $ref: '#/components/schemas/Login'
 	 *     responses:
 	 *       200:
-	 *         description: User logged in successfully
-	 *       400:
-	 *         description: Bad request
-	 *       500:
-	 *         description: Internal server error
+	 *         description: User logged in successfully.
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               type: object
+	 *               properties:
+	 *                 accessToken:
+	 *                   type: string
+	 *                   description: The JWT access token.
+	 *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+	 *                 refreshToken:
+	 *                   type: string
+	 *                   description: The JWT refresh token.
+	 *                   example: "8xLOxBtZp8"
+	 *                 expiresIn:
+	 *                   type: number
+	 *                   description: Token expiration time in seconds.
+	 *                   example: 300
 	 */
 	router.post('/auth/login', authController.login)
 
@@ -139,7 +156,7 @@ const authRouter = (router: Router) => {
 
 	/**
 	 * @swagger
-	 * /auth/profile:
+	 * /auth/user:
 	 *   get:
 	 *     tags: [Authorization]
 	 *     summary: Get user profile
@@ -151,7 +168,7 @@ const authRouter = (router: Router) => {
 	 *       500:
 	 *         description: Internal server error
 	 */
-	router.get('/auth/profile', authController.getProfile)
+	router.get('/auth/user', authController.getUser)
 }
 
 export { authRouter }

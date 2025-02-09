@@ -39,7 +39,9 @@ const createServer = (): Express => {
 	app.use(pino)
 	app.use(
 		cors({
+			origin: ['http://localhost:3000', 'http://localhost:3030'],
 			credentials: true,
+			exposedHeaders: ['set-cookie'],
 		}),
 	)
 	app.use(compression())

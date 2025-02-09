@@ -1,4 +1,4 @@
-import { useTransition } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from '@tanstack/react-router'
@@ -12,6 +12,7 @@ import { loginFormSchema, TLoginForm } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { usePostLoginMutation } from '@/services/auth/hooks/usePostLoginMutation'
 
+import { useAuthStore } from '../providers/auth-provider'
 import {
 	Form,
 	FormControl,
@@ -25,9 +26,10 @@ export const LoginForm = ({
 	className,
 	...props
 }: React.ComponentPropsWithoutRef<'div'>) => {
-	const [isPending, startTransition] = useTransition()
-	const { mutate: postLoginMutation } = usePostLoginMutation()
+	const [isPending, setIsPending] = useState(false)
+	const { mutateAsync: postLoginMutation } = usePostLoginMutation()
 	const navigate = useNavigate({ from: '/auth/login' })
+	const setUser = useAuthStore((state) => state.setUser)
 
 	const form = useForm<TLoginForm>({
 		resolver: zodResolver(loginFormSchema),
@@ -37,31 +39,34 @@ export const LoginForm = ({
 		},
 	})
 
-	const onSubmit = ({ email, password }: TLoginForm) => {
-		startTransition(() => {
-			postLoginMutation(
-				{ email, password },
-				{
-					onSuccess: () => {
-						// Redirect to dashboard
-						logger.info('Login success')
-						toast.success('Login successful!')
-						void navigate({
-							to: '/',
-							params: {
-								login: true,
-							},
-						})
-					},
-					onError: (err: unknown) => {
-						// Show error message
-						const error = standardizeError(err)
-						logger.error(`Login error: ${error.message}`)
-						toast.error(error.message)
-					},
+	const onSubmit = async ({ email, password }: TLoginForm) => {
+		try {
+			setIsPending(true)
+
+			const response = await postLoginMutation({ email, password })
+
+			setUser({
+				email,
+				accessToken: response.accessToken,
+				refreshToken: response.refreshToken,
+			})
+
+			logger.info('Login success')
+			toast.success('Login successful!')
+			await navigate({
+				to: '/',
+				params: {
+					login: true,
 				},
-			)
-		})
+			})
+		} catch (error: unknown) {
+			// Show error message
+			const err = standardizeError(error)
+			logger.error(`Login error: ${err.message}`)
+			toast.error(err.message)
+		} finally {
+			setIsPending(false)
+		}
 	}
 
 	return (
