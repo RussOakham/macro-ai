@@ -1,3 +1,4 @@
+import config from 'config'
 import express from 'express'
 import { StatusCodes } from 'http-status-codes'
 
@@ -17,6 +18,7 @@ const { logger } = pino
 interface IAuthController {
 	register: express.Handler
 	login: express.Handler
+	logout: express.Handler,
 	confirmRegistration: express.Handler
 	resendConfirmationCode: express.Handler
 	getUser: express.Handler
@@ -27,6 +29,9 @@ interface ILoginResponse {
 	refreshToken: string
 	expiresIn: number
 }
+
+const cookieDomain = config.get<string>('cookieDomain')
+const nodeEnv = config.get<string>('nodeEnv')
 
 // TODO: Create Standardized Response Interface for Happy and Unhappy Paths
 // TODO: Generate OpenAPI Docs
@@ -192,9 +197,9 @@ const authController: IAuthController = {
 					{
 						// Short lived cookie, so non-httpOnly for ease of access by client
 						httpOnly: false,
-						secure: process.env.NODE_ENV === 'production',
+						secure: nodeEnv === 'production',
 						// Add to config file
-						domain: process.env.COOKIE_DOMAIN,
+						domain: cookieDomain,
 						sameSite: 'strict',
 						//5 minutes maxAge
 						maxAge: 1000 * 60 * 5,
@@ -206,8 +211,8 @@ const authController: IAuthController = {
 					{
 						// Long lived cookie, so httpOnly for improved security
 						httpOnly: true,
-						secure: process.env.NODE_ENV === 'production',
-						domain: process.env.COOKIE_DOMAIN,
+						secure: nodeEnv === 'production',
+						domain: cookieDomain,
 						sameSite: 'strict',
 						// 30 days maxAge
 						maxAge: 1000 * 60 * 60 * 24 * 30,
@@ -227,6 +232,43 @@ const authController: IAuthController = {
 				.json({ message: err.message, details: err.details })
 		}
 	},
+	logout: async (req, res) => {
+		const cognito = new CognitoService()
+		try {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+			const accessToken = req.cookies?.['macro-ai-accessToken'] as string | undefined
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+			const refreshToken = req.cookies?.['macro-ai-refreshToken'] as string | undefined
+
+			if (!accessToken || !refreshToken) {
+				res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Unauthorized - Tokens not found' })
+				return
+			}
+
+			await cognito.signOutUser(accessToken, refreshToken)
+
+			// Clear Cookies
+			res.clearCookie('macro-ai-accessToken', {
+				domain: cookieDomain,
+				sameSite: 'strict',
+			})
+			res.clearCookie('marco-ai-refreshToken', {
+				domain: cookieDomain,
+				sameSite: 'strict',
+			})
+
+			res.status(StatusCodes.OK).json({ message: 'Logged out successfully' })
+		} catch (error: unknown) {
+			const err = standardizeError(error)
+			logger.error(
+				`[authRouter]: Error logging out user: ${err.status.toString()} ${err.message}`,
+			)
+
+			res
+				.status(err.status)
+				.json({ message: err.message, details: err.details })
+		}
+ 	},
 	getUser: async (req, res) => {
 		const cognito = new CognitoService()
 

@@ -109,6 +109,24 @@ const authRouter = (router: Router) => {
 
 	/**
 	 * @swagger
+	 * /auth/logout:
+	 *   post:
+	 *     tags: [Authorization]
+	 *     summary: Logout user
+	 *     responses:
+	 *       200:
+	 *         description: User logged out successfully
+	 *       400:
+	 *         description: Bad request
+	 *       401:
+	 * 		   description: Unauthorized
+	 *       500:
+	 *         description: Internal server error
+	 */
+	router.post('/auth/logout', authController.logout)
+
+	/**
+	 * @swagger
 	 * /auth/confirm-registration:
 	 *   post:
 	 *     tags: [Authorization]

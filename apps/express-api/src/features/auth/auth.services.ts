@@ -3,9 +3,11 @@ import {
 	CognitoIdentityProviderClientConfig,
 	ConfirmSignUpCommand,
 	GetUserCommand,
+	GlobalSignOutCommand,
 	InitiateAuthCommand,
 	ListUsersCommand,
 	ResendConfirmationCodeCommand,
+	RevokeTokenCommand,
 	SignUpCommand,
 } from '@aws-sdk/client-cognito-identity-provider'
 import config from 'config'
@@ -118,6 +120,25 @@ class CognitoService {
 		})
 
 		return client.send(command)
+	}
+
+	public async signOutUser(accessToken: string, refreshToken: string) {
+		const client = new CognitoIdentityProviderClient(this.config)
+
+		// Invalidate all access tokens
+		const signOutCommand = new GlobalSignOutCommand({
+			AccessToken: accessToken,
+		})
+
+		// Revoke the refresh token
+		const revokeCommand = new RevokeTokenCommand({
+			ClientId: this.clientId,
+			ClientSecret: this.secretHash,
+			Token: refreshToken,
+		})
+
+		// Execute both commands
+		await Promise.all([client.send(signOutCommand), client.send(revokeCommand)])
 	}
 
 	public async getUser(accessToken: string) {

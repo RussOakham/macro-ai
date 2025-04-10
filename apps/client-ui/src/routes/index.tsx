@@ -10,11 +10,6 @@ const Index = () => {
 	}
 	const accessToken = getAccessToken()
 
-	const testCookie = Cookies.get('test')
-
-	console.log('accessToken', accessToken)
-	console.log('testCookie', testCookie)
-
 	const {
 		data: user,
 		isFetching,
@@ -33,7 +28,7 @@ const Index = () => {
 		return <div>Error: {err.message}</div>
 	}
 
-	// TODO: Implement refresh token logic
+  // TODO: Implement refresh token logic
   // TODO: Implement logout logic
 
 	return (

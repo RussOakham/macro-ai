@@ -1,10 +1,13 @@
+import config from 'config'
 import { HttpLogger, Options, pinoHttp } from 'pino-http'
+
+const nodeEnv = config.get<string>('nodeEnv')
 
 const pinoOptions: Options = {
 	transport: {
 		target: 'pino-pretty',
 	},
-	enabled: process.env.NODE_ENV !== 'test',
+	enabled: nodeEnv !== 'test',
 	quietReqLogger: true,
 	quietResLogger: true,
 }
