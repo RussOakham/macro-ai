@@ -7,7 +7,6 @@ import { standardizeError } from '../../utils/standardize-error.ts'
 import { CognitoService } from './auth.services.ts'
 import {
 	confirmRegistrationSchema,
-	getUserSchema,
 	loginSchema,
 	registerSchema,
 	resendConfirmationCodeSchema,
@@ -187,22 +186,33 @@ const authController: IAuthController = {
 			}
 
 			res
-				.cookie('accessToken', response.AuthenticationResult?.AccessToken, {
-					httpOnly: true,
-					secure: process.env.NODE_ENV === 'production',
-					domain: process.env.COOKIE_DOMAIN,
-					sameSite: 'strict',
-					//5 minutes maxAge
-					maxAge: 1000 * 60 * 5,
-				})
-				.cookie('refreshToken', response.AuthenticationResult?.RefreshToken, {
-					httpOnly: true,
-					secure: process.env.NODE_ENV === 'production',
-					domain: process.env.COOKIE_DOMAIN,
-					sameSite: 'strict',
-					// 30 days maxAge
-					maxAge: 1000 * 60 * 60 * 24 * 30,
-				})
+				.cookie(
+					'macro-ai-accessToken',
+					response.AuthenticationResult?.AccessToken,
+					{
+						// Short lived cookie, so non-httpOnly for ease of access by client
+						httpOnly: false,
+						secure: process.env.NODE_ENV === 'production',
+						// Add to config file
+						domain: process.env.COOKIE_DOMAIN,
+						sameSite: 'strict',
+						//5 minutes maxAge
+						maxAge: 1000 * 60 * 5,
+					},
+				)
+				.cookie(
+					'marco-ai-refreshToken',
+					response.AuthenticationResult?.RefreshToken,
+					{
+						// Long lived cookie, so httpOnly for improved security
+						httpOnly: true,
+						secure: process.env.NODE_ENV === 'production',
+						domain: process.env.COOKIE_DOMAIN,
+						sameSite: 'strict',
+						// 30 days maxAge
+						maxAge: 1000 * 60 * 60 * 24 * 30,
+					},
+				)
 				.status(StatusCodes.OK)
 				.json(loginResponse)
 		} catch (error: unknown) {
@@ -221,15 +231,20 @@ const authController: IAuthController = {
 		const cognito = new CognitoService()
 
 		try {
-			const parsedBody = getUserSchema.safeParse(req.body)
+			// Get access token from cookie request header - Bearer <token>
+			const authHeader = req.headers.authorization
 
-			if (!parsedBody.success) {
-				const error = standardizeError(parsedBody.error)
-				res.status(StatusCodes.BAD_REQUEST).json({ message: error.message })
+			if (!authHeader) {
+				res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Unauthorized' })
 				return
 			}
 
-			const { accessToken } = parsedBody.data
+			const accessToken = authHeader.split(' ')[1]
+
+			if (!accessToken) {
+				res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Unauthorized' })
+				return
+			}
 
 			const response = await cognito.getUser(accessToken)
 
@@ -243,7 +258,16 @@ const authController: IAuthController = {
 				return
 			}
 
-			res.status(StatusCodes.OK).json({ message: response })
+			const userResponse = {
+				Username: response.Username,
+				UserAttributes:
+					response.UserAttributes?.map((attr) => ({
+						Name: attr.Name,
+						Value: attr.Value,
+					})) ?? [],
+			}
+
+			res.status(StatusCodes.OK).json(userResponse)
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 

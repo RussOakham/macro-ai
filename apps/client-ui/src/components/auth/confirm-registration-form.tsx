@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
@@ -28,13 +29,13 @@ import {
 	InputOTPGroup,
 	InputOTPSlot,
 } from '@/components/ui/input-otp'
+import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { confirmationSchema, TConfirmationForm } from '@/lib/types'
+import { TUser } from '@/lib/types/user'
 import { cn } from '@/lib/utils'
 import { usePostConfirmRegisterMutation } from '@/services/auth/hooks/usePostConfirmRegisterMutation'
-
-import { useAuthStore } from '../providers/auth-provider'
 
 const ConfirmRegistrationForm = ({
 	className,
@@ -44,7 +45,9 @@ const ConfirmRegistrationForm = ({
 	const { mutateAsync: postConfirmRegistration } =
 		usePostConfirmRegisterMutation()
 	const navigate = useNavigate({ from: '/auth/confirm-registration' })
-	const user = useAuthStore((state) => state.user)
+	const queryClient = useQueryClient()
+
+	const user = queryClient.getQueryData<TUser>([QUERY_KEY.user])
 
 	const form = useForm<TConfirmationForm>({
 		resolver: zodResolver(confirmationSchema),

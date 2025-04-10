@@ -6,12 +6,12 @@ export interface IUserResponse {
 }
 
 const getUser = async ({ accessToken }: TGetUser) => {
-	const response = await axiosWithCredentials.post<IUserResponse>(
-		'/auth/user',
-		{
-			accessToken,
+	const response = await axiosWithCredentials.get('/auth/user', {
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${accessToken}`,
 		},
-	)
+	})
 
 	return response
 }

@@ -12,7 +12,6 @@ import { loginFormSchema, TLoginForm } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { usePostLoginMutation } from '@/services/auth/hooks/usePostLoginMutation'
 
-import { useAuthStore } from '../providers/auth-provider'
 import {
 	Form,
 	FormControl,
@@ -29,7 +28,6 @@ export const LoginForm = ({
 	const [isPending, setIsPending] = useState(false)
 	const { mutateAsync: postLoginMutation } = usePostLoginMutation()
 	const navigate = useNavigate({ from: '/auth/login' })
-	const setUser = useAuthStore((state) => state.setUser)
 
 	const form = useForm<TLoginForm>({
 		resolver: zodResolver(loginFormSchema),
@@ -43,13 +41,7 @@ export const LoginForm = ({
 		try {
 			setIsPending(true)
 
-			const response = await postLoginMutation({ email, password })
-
-			setUser({
-				email,
-				accessToken: response.accessToken,
-				refreshToken: response.refreshToken,
-			})
+			await postLoginMutation({ email, password })
 
 			logger.info('Login success')
 			toast.success('Login successful!')

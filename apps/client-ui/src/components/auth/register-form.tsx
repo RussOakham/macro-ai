@@ -12,7 +12,6 @@ import { registerFormSchema, TRegisterForm } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { usePostRegisterMutation } from '@/services/auth/hooks/usePostRegisterMutation'
 
-import { useAuthStore } from '../providers/auth-provider'
 import {
 	Form,
 	FormControl,
@@ -29,7 +28,6 @@ const RegisterForm = ({
 	const [isPending, setIsPending] = useState(false)
 	const { mutateAsync: postRegisterMutation } = usePostRegisterMutation()
 	const navigate = useNavigate({ from: '/auth/register' })
-	const setUser = useAuthStore((state) => state.setUser)
 
 	const form = useForm<TRegisterForm>({
 		resolver: zodResolver(registerFormSchema),
@@ -52,12 +50,6 @@ const RegisterForm = ({
 				email,
 				password,
 				confirmPassword,
-			})
-
-			setUser({
-				email,
-				accessToken: '',
-				refreshToken: '',
 			})
 
 			logger.info('Register success')

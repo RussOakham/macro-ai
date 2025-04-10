@@ -10,6 +10,9 @@ const useGetUser = ({ accessToken }: TGetUser) => {
 		queryFn: async () => getUser({ accessToken }),
 		staleTime: Infinity,
 		gcTime: Infinity,
+		refetchOnMount: false,
+		refetchOnReconnect: false,
+		refetchOnWindowFocus: false,
 	})
 }
 
