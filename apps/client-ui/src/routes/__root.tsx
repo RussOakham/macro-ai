@@ -1,13 +1,19 @@
-import { createRootRoute, Outlet } from '@tanstack/react-router'
+import { QueryClient } from '@tanstack/react-query'
+import { createRootRouteWithContext, Outlet } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/router-devtools'
+import Cookies from 'js-cookie'
 
 import { ModeToggle } from '@/components/mode-toggle'
 import { DesktopNav } from '@/components/ui/navigation/desktop-navigation/desktop-nav'
 import { Toaster } from '@/components/ui/sonner'
+import { QUERY_KEY } from '@/constants/query-keys'
+import { getUser } from '@/services/auth/network/getUser'
+
+export interface IRouterContext {
+	queryClient: QueryClient
+}
 
 const RootComponent = () => {
-	const isAuthed = true
-
 	return (
 		<div
 			className="min-h-screen bg-background font-sans antialiased prose-headings:font-poppins"
@@ -15,7 +21,7 @@ const RootComponent = () => {
 		>
 			<div className="relative flex min-h-screen flex-col">
 				<header id="macro-ai-header" className="container">
-					<DesktopNav isAuthed={isAuthed} />
+					<DesktopNav />
 				</header>
 
 				<hr />
@@ -41,11 +47,21 @@ const RootComponent = () => {
 					</div>
 				</footer>
 			</div>
-			<TanStackRouterDevtools />
+			<TanStackRouterDevtools position="bottom-left" />
 		</div>
 	)
 }
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<IRouterContext>()({
 	component: RootComponent,
+	beforeLoad: async ({ context }) => {
+		const { queryClient } = context
+		const accessToken = Cookies.get('macro-ai-accessToken')
+		if (accessToken) {
+			await queryClient.prefetchQuery({
+				queryKey: [QUERY_KEY.user, accessToken],
+				queryFn: () => getUser({ accessToken }),
+			})
+		}
+	},
 })

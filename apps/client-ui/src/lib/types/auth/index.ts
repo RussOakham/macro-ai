@@ -66,6 +66,7 @@ const getUserSchema = z.object({
 		message: 'Invalid access token',
 		required_error: 'Access token is required',
 	}),
+	enabled: z.boolean().optional(),
 })
 type TGetUser = z.infer<typeof getUserSchema>
 

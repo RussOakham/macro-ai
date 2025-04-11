@@ -31,8 +31,16 @@ const usePostLogoutMutation = (): UseMutationResult<
 			toast.error('Logout failed')
 		},
 		onSuccess: async () => {
-			// Clear TanStack Query caches
+			// First set the user data to null (this will trigger observers)
+			queryClient.setQueryData([QUERY_KEY.user], null)
+
+			// Then remove all queries that start with the user key
 			queryClient.removeQueries({ queryKey: [QUERY_KEY.user] })
+
+			// Remove any other auth-related queries if needed
+			// queryClient.removeQueries({ queryKey: ['other-auth-related-key'] })
+
+			// Redirect to login page
 			await navigate({ to: '/auth/login' })
 		},
 	})

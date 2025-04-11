@@ -1,7 +1,9 @@
+import { useEffect } from 'react'
 import { NavigationMenuList } from '@radix-ui/react-navigation-menu'
 import { Link } from '@tanstack/react-router'
 
 import { cn } from '@/lib/utils'
+import { useIsAuthenticated } from '@/services/auth/hooks/useIsAuthenticated'
 
 import {
 	NavigationMenu,
@@ -11,11 +13,16 @@ import {
 
 import { DesktopAuthButtons } from './desktop-auth-buttons'
 
-interface IDesktopNavProps extends React.ComponentPropsWithoutRef<'nav'> {
-	isAuthed: boolean
-}
+const DesktopNav = ({
+	className,
+	...props
+}: React.ComponentPropsWithoutRef<'nav'>) => {
+	const isAuthenticated = useIsAuthenticated()
 
-const DesktopNav = ({ isAuthed, className, ...props }: IDesktopNavProps) => {
+	useEffect(() => {
+		console.log('isAuthed', isAuthenticated)
+	}, [isAuthenticated])
+
 	return (
 		<nav className={cn('flex p-2 gap-2', className)} {...props}>
 			<div className="flex justify-between w-full">
@@ -36,7 +43,7 @@ const DesktopNav = ({ isAuthed, className, ...props }: IDesktopNavProps) => {
 
 				<NavigationMenu>
 					<NavigationMenuList>
-						<DesktopAuthButtons isAuthed={isAuthed} />
+						<DesktopAuthButtons isAuthed={isAuthenticated} />
 					</NavigationMenuList>
 				</NavigationMenu>
 			</div>

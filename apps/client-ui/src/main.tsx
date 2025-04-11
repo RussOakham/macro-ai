@@ -5,17 +5,33 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 
 import { ThemeProvider } from './components/providers/theme-provider.tsx'
+import { standardizeError } from './lib/errors/standardize-error.ts'
 import { routeTree } from './routeTree.gen.ts'
 
 import './index.css'
 
 // Create a new Query Client instance
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+	defaultOptions: {
+		queries: {
+			// only retry if error.status is 500 and max 3 times
+			retry: (failureCount, error) => {
+				const err = standardizeError(error)
+				if (err.status === 500 && failureCount < 3) {
+					return true
+				}
+				return false
+			},
+		},
+	},
+})
 
 // Create a new router instance
 const router = createRouter({
 	routeTree,
-	context: { queryClient },
+	context: {
+		queryClient,
+	},
 	defaultPreload: 'intent',
 	defaultPreloadStaleTime: 0,
 })

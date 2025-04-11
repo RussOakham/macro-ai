@@ -1,14 +1,9 @@
 import { axiosWithCredentials } from '@/lib/axios'
 import { TGetUser } from '@/lib/types'
-
-export interface IUserResponse {
-	id: string
-	email: string
-	emailVerified: boolean
-}
+import { TUser } from '@/lib/types/user'
 
 const getUser = async ({ accessToken }: TGetUser) => {
-	const response = await axiosWithCredentials.get<IUserResponse>('/auth/user', {
+	const response = await axiosWithCredentials.get<TUser>('/auth/user', {
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${accessToken}`,
