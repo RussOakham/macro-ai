@@ -28,13 +28,13 @@ const Index = () => {
 		return <div>Error: {err.message}</div>
 	}
 
-  // TODO: Implement refresh token logic
-  // TODO: Implement logout logic
+	// TODO: Implement refresh token logic
+	// TODO: Implement logout logic
 
 	return (
 		<div className="p-2">
 			<h3>Welcome Home!</h3>
-			<p>{JSON.stringify(user.data)}</p>
+			<p>{JSON.stringify(user)}</p>
 		</div>
 	)
 }

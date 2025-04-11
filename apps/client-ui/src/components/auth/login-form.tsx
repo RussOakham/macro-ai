@@ -43,7 +43,6 @@ export const LoginForm = ({
 
 			await postLoginMutation({ email, password })
 
-			logger.info('Login success')
 			toast.success('Login successful!')
 			await navigate({
 				to: '/',

@@ -1,5 +1,6 @@
 import bodyParser from 'body-parser'
 import compression from 'compression'
+import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import express, { Express } from 'express'
 import swaggerJSDoc, { type Options } from 'swagger-jsdoc'
@@ -47,6 +48,7 @@ const createServer = (): Express => {
 	app.use(compression())
 	app.use(bodyParser.json())
 	app.use(express.urlencoded({ extended: true }))
+	app.use(cookieParser())
 
 	app.use('/api', appRouter())
 	app.use(

@@ -1,7 +1,7 @@
 import { axiosWithCredentials } from '@/lib/axios'
 import { TLoginForm } from '@/lib/types'
 
-export interface ILoginResponse {
+interface ILoginResponse {
 	accessToken: string
 	refreshToken: string
 	expiresIn: number
@@ -20,4 +20,4 @@ const postLogin = async ({ email, password }: TLoginForm) => {
 	return response
 }
 
-export { postLogin }
+export { type ILoginResponse, postLogin }

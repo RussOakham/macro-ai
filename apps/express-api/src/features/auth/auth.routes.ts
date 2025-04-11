@@ -48,6 +48,16 @@ const authRouter = (router: Router) => {
 	 *       required:
 	 *         - email
 	 *         - password
+	 *     Logout:
+	 *       type: object
+	 *       properties:
+	 *         accessToken:
+	 *           type: string
+	 *         refreshToken:
+	 *           type: string
+	 *       required:
+	 *         - accessToken
+	 *         - refreshToken
 	 */
 
 	/**
@@ -119,7 +129,7 @@ const authRouter = (router: Router) => {
 	 *       400:
 	 *         description: Bad request
 	 *       401:
-	 * 		   description: Unauthorized
+	 *         description: Unauthorized
 	 *       500:
 	 *         description: Internal server error
 	 */

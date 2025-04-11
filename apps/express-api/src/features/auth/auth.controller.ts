@@ -18,7 +18,7 @@ const { logger } = pino
 interface IAuthController {
 	register: express.Handler
 	login: express.Handler
-	logout: express.Handler,
+	logout: express.Handler
 	confirmRegistration: express.Handler
 	resendConfirmationCode: express.Handler
 	getUser: express.Handler
@@ -236,12 +236,21 @@ const authController: IAuthController = {
 		const cognito = new CognitoService()
 		try {
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			const accessToken = req.cookies?.['macro-ai-accessToken'] as string | undefined
+			const accessToken = req.cookies?.['macro-ai-accessToken'] as
+				| string
+				| undefined
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			const refreshToken = req.cookies?.['macro-ai-refreshToken'] as string | undefined
+			const refreshToken = req.cookies?.['marco-ai-refreshToken'] as
+				| string
+				| undefined
 
 			if (!accessToken || !refreshToken) {
-				res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Unauthorized - Tokens not found' })
+				logger.error(
+					`[authRouter]: Error logging out user: ${accessToken ? 'No access token' : ''} ${refreshToken ? 'No refresh token' : ''}`,
+				)
+				res
+					.status(StatusCodes.UNAUTHORIZED)
+					.json({ message: 'Unauthorized - Tokens not found' })
 				return
 			}
 
@@ -268,7 +277,7 @@ const authController: IAuthController = {
 				.status(err.status)
 				.json({ message: err.message, details: err.details })
 		}
- 	},
+	},
 	getUser: async (req, res) => {
 		const cognito = new CognitoService()
 
@@ -300,13 +309,21 @@ const authController: IAuthController = {
 				return
 			}
 
-			const userResponse = {
-				Username: response.Username,
-				UserAttributes:
-					response.UserAttributes?.map((attr) => ({
-						Name: attr.Name,
-						Value: attr.Value,
-					})) ?? [],
+			interface IUserResponse {
+				id: string
+				email: string
+				emailVerified: boolean
+			}
+
+			const userResponse: IUserResponse = {
+				id: response.Username ?? '',
+				email:
+					response.UserAttributes?.find((attr) => attr.Name === 'email')
+						?.Value ?? '',
+				emailVerified:
+					response.UserAttributes?.find(
+						(attr) => attr.Name === 'email_verified',
+					)?.Value === 'true',
 			}
 
 			res.status(StatusCodes.OK).json(userResponse)
