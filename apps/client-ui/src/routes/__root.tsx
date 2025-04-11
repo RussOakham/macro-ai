@@ -1,16 +1,13 @@
-import { NavigationMenuItem } from '@radix-ui/react-navigation-menu'
-import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
+import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 
 import { ModeToggle } from '@/components/mode-toggle'
-import {
-	NavigationMenu,
-	NavigationMenuList,
-	navigationMenuTriggerStyle,
-} from '@/components/ui/navigation-menu'
+import { DesktopNav } from '@/components/ui/navigation/desktop-navigation/desktop-nav'
 import { Toaster } from '@/components/ui/sonner'
 
 const RootComponent = () => {
+	const isAuthed = true
+
 	return (
 		<div
 			className="min-h-screen bg-background font-sans antialiased prose-headings:font-poppins"
@@ -18,49 +15,7 @@ const RootComponent = () => {
 		>
 			<div className="relative flex min-h-screen flex-col">
 				<header id="macro-ai-header" className="container">
-					<nav className="p-2 flex gap-2">
-						<div className="flex justify-between w-full">
-							<NavigationMenu>
-								<NavigationMenuList>
-									<NavigationMenuItem asChild>
-										<Link
-											to="/"
-											className={navigationMenuTriggerStyle({
-												className: '[&.active]:font-bold',
-											})}
-										>
-											Home
-										</Link>
-									</NavigationMenuItem>
-								</NavigationMenuList>
-							</NavigationMenu>
-
-							<NavigationMenu>
-								<NavigationMenuList>
-									<NavigationMenuItem asChild>
-										<Link
-											to="/auth/login"
-											className={navigationMenuTriggerStyle({
-												className: '[&.active]:font-bold',
-											})}
-										>
-											Login
-										</Link>
-									</NavigationMenuItem>
-									<NavigationMenuItem asChild>
-										<Link
-											to="/auth/register"
-											className={navigationMenuTriggerStyle({
-												className: '[&.active]:font-bold',
-											})}
-										>
-											Register
-										</Link>
-									</NavigationMenuItem>
-								</NavigationMenuList>
-							</NavigationMenu>
-						</div>
-					</nav>
+					<DesktopNav isAuthed={isAuthed} />
 				</header>
 
 				<hr />

@@ -21,7 +21,7 @@ import {
 	FormMessage,
 } from '../ui/form'
 
-export const LoginForm = ({
+const LoginForm = ({
 	className,
 	...props
 }: React.ComponentPropsWithoutRef<'div'>) => {
@@ -139,3 +139,5 @@ export const LoginForm = ({
 		</div>
 	)
 }
+
+export { LoginForm }

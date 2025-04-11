@@ -239,14 +239,10 @@ const authController: IAuthController = {
 			const accessToken = req.cookies?.['macro-ai-accessToken'] as
 				| string
 				| undefined
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			const refreshToken = req.cookies?.['marco-ai-refreshToken'] as
-				| string
-				| undefined
 
-			if (!accessToken || !refreshToken) {
+			if (!accessToken) {
 				logger.error(
-					`[authRouter]: Error logging out user: ${accessToken ? 'No access token' : ''} ${refreshToken ? 'No refresh token' : ''}`,
+					`[authRouter]: Error logging out user: ${accessToken ? 'No access token' : ''}`,
 				)
 				res
 					.status(StatusCodes.UNAUTHORIZED)
@@ -254,7 +250,7 @@ const authController: IAuthController = {
 				return
 			}
 
-			await cognito.signOutUser(accessToken, refreshToken)
+			await cognito.signOutUser(accessToken)
 
 			// Clear Cookies
 			res.clearCookie('macro-ai-accessToken', {
