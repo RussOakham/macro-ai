@@ -51,10 +51,10 @@ This document outlines the development tasks and enhancements planned for the Ma
   - [x] Add `/auth/logout` POST route
   - [x] Document endpoint with Swagger annotations
 
-- [ ] Add client-side logout logic in `apps/client-ui/src/services/auth/`
+- [x] Add client-side logout logic in `apps/client-ui/src/services/auth/`
   - [x] Create `useLogout` hook
   - [x] Clear TanStack Query cache
-  - [ ] Add logout redirect to login page
+  - [x] Add logout redirect to login page
 
 #### Review and Refactor
 
