@@ -22,4 +22,5 @@ export default {
 	awsCognitoRefreshTokenExpiry:
 		process.env.AWS_COGNITO_REFRESH_TOKEN_EXPIRY ?? 30,
 	cookieDomain: process.env.COOKIE_DOMAIN ?? `localhost`,
+	cookieEncryptionKey: process.env.COOKIE_ENCRYPTION_KEY ?? '',
 }

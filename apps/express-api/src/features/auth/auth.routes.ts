@@ -57,7 +57,6 @@ const authRouter = (router: Router) => {
 	 *           type: string
 	 *       required:
 	 *         - accessToken
-	 *         - refreshToken
 	 *     RefreshToken:
 	 *       type: object
 	 *       properties:
@@ -65,7 +64,6 @@ const authRouter = (router: Router) => {
 	 *           type: string
 	 *       required:
 	 *         - refreshToken
-	 *           description: The refresh token obtained during login.
 	 *       example: "8xLOxBtZp8"
 	 *     GetUser:
 	 *       type: object
