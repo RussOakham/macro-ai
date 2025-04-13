@@ -32,7 +32,6 @@ const usePostRefreshToken = () => {
 
 			// Update query cache with BOTH query keys
 			queryClient.setQueryData([QUERY_KEY.user], userData)
-			queryClient.setQueryData([QUERY_KEY.user, data.accessToken], userData)
 		},
 	})
 }

@@ -17,8 +17,6 @@ export default {
 		process.env.AWS_COGNITO_USER_POOL_SECRET_KEY ?? '',
 	awsCognitoAccessKey: process.env.AWS_COGNITO_ACCESS_KEY ?? '',
 	awsCognitoSecretKey: process.env.AWS_COGNITO_SECRET_KEY ?? '',
-	awsCognitoAccessTokenExpiry:
-		process.env.AWS_COGNITO_ACCESS_TOKEN_EXPIRY ?? 60,
 	awsCognitoRefreshTokenExpiry:
 		process.env.AWS_COGNITO_REFRESH_TOKEN_EXPIRY ?? 30,
 	cookieDomain: process.env.COOKIE_DOMAIN ?? `localhost`,

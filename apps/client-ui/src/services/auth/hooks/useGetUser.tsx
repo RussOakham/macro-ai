@@ -7,7 +7,8 @@ import { getUser } from '../network/getUser'
 
 const useGetUser = ({ accessToken, enabled = true }: TGetUser) => {
 	return useQuery({
-		queryKey: [QUERY_KEY.user, accessToken],
+		// eslint-disable-next-line @tanstack/query/exhaustive-deps
+		queryKey: [QUERY_KEY.user],
 		queryFn: async () => getUser({ accessToken }),
 		staleTime: Infinity,
 		gcTime: Infinity,

@@ -7,6 +7,7 @@ import {
 	InitiateAuthCommand,
 	InitiateAuthCommandOutput,
 	ListUsersCommand,
+	NotAuthorizedException,
 	ResendConfirmationCodeCommand,
 	SignUpCommand,
 } from '@aws-sdk/client-cognito-identity-provider'
@@ -34,6 +35,13 @@ class CognitoService {
 			.createHmac('SHA256', this.secretHash)
 			.update(username + this.clientId)
 			.digest('base64')
+	}
+
+	private isTokenExpiredError(error: unknown): boolean {
+		return (
+			error instanceof NotAuthorizedException &&
+			error.message === 'Access Token has expired'
+		)
 	}
 
 	public async signUpUser({ email, password, confirmPassword }: TRegister) {
@@ -154,13 +162,18 @@ class CognitoService {
 	public async signOutUser(accessToken: string) {
 		const client = new CognitoIdentityProviderClient(this.config)
 
-		// Invalidate all access tokens
-		const signOutCommand = new GlobalSignOutCommand({
-			AccessToken: accessToken,
-		})
+		try {
+			const signOutCommand = new GlobalSignOutCommand({
+				AccessToken: accessToken,
+			})
 
-		// Execute both commands
-		await client.send(signOutCommand)
+			return await client.send(signOutCommand)
+		} catch (error) {
+			if (this.isTokenExpiredError(error)) {
+				throw new Error('TOKEN_EXPIRED')
+			}
+			throw error
+		}
 	}
 
 	public async refreshToken(refreshToken: string, username: string) {
@@ -181,11 +194,18 @@ class CognitoService {
 	public async getUser(accessToken: string) {
 		const client = new CognitoIdentityProviderClient(this.config)
 
-		const command = new GetUserCommand({
-			AccessToken: accessToken,
-		})
+		try {
+			const command = new GetUserCommand({
+				AccessToken: accessToken,
+			})
 
-		return client.send(command)
+			return await client.send(command)
+		} catch (error) {
+			if (this.isTokenExpiredError(error)) {
+				throw new Error('TOKEN_EXPIRED')
+			}
+			throw error
+		}
 	}
 }
 

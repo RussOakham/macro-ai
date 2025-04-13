@@ -76,8 +76,12 @@ axiosWithCredentials.interceptors.response.use(
 				return new Promise((resolve, reject) => {
 					failedQueue.push({ resolve, reject })
 				})
-					.then(() => axiosWithCredentials(originalRequest))
-					.catch(() => Promise.reject(error))
+					.then((accessToken) => {
+						// Update the Authorization header with new token
+						originalRequest.headers.Authorization = `Bearer  ${String(accessToken)}`
+						return axiosWithCredentials(originalRequest)
+					})
+					.catch((err: unknown) => Promise.reject(standardizeError(err)))
 			}
 
 			originalRequest._retry = true
@@ -85,19 +89,28 @@ axiosWithCredentials.interceptors.response.use(
 
 			try {
 				const response = await postRefreshToken()
-
 				const { accessToken } = response
 
-				// Update access token cookie
+				if (!accessToken) {
+					throw new Error(
+						'No access token received from refresh token response',
+					)
+				}
+
+				// Update access token in cookie
 				Cookies.set('macro-ai-accessToken', accessToken, {
 					expires: 1 / 24, // 1 hour
 					secure: true,
 					sameSite: 'strict',
 				})
 
+				// Update axios default headers
 				axiosWithCredentials.defaults.headers.common.Authorization = `Bearer ${accessToken}`
+				// Update the original request headers
+				originalRequest.headers.Authorization = `Bearer ${accessToken}`
 
 				processQueue(null, accessToken)
+				isRefreshing = false
 
 				return await axiosWithCredentials(originalRequest)
 			} catch (refreshError: unknown) {
@@ -107,6 +120,10 @@ axiosWithCredentials.interceptors.response.use(
 				// Clear auth cookies
 				Cookies.remove('macro-ai-accessToken')
 				Cookies.remove('marco-ai-refreshToken')
+				Cookies.remove('macro-ai-synchronize')
+
+				processQueue(err, null)
+				isRefreshing = false
 
 				// Redirect to login page
 				await router.navigate({
@@ -115,12 +132,11 @@ axiosWithCredentials.interceptors.response.use(
 						redirect: router.state.location.pathname,
 					},
 				})
-
-				return await Promise.reject(error)
-			} finally {
-				isRefreshing = false
+				return Promise.reject(err)
 			}
 		}
+
+		return Promise.reject(error)
 	},
 )
 

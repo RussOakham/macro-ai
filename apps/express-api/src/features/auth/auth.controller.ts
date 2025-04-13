@@ -34,7 +34,6 @@ interface ILoginResponse {
 
 const cookieDomain = config.get<string>('cookieDomain')
 const nodeEnv = config.get<string>('nodeEnv')
-const accessTokenExpiryMins = config.get<number>('awsCognitoAccessTokenExpiry')
 const refreshTokenExpiryDays = config.get<number>(
 	'awsCognitoRefreshTokenExpiry',
 )
@@ -202,31 +201,23 @@ const authController: IAuthController = {
 			const encryptedUsername = encrypt(response.Username)
 
 			res
-				.cookie(
-					'macro-ai-accessToken',
-					response.AuthenticationResult?.AccessToken,
-					{
-						// Short lived cookie, so non-httpOnly for ease of access by client
-						httpOnly: false,
-						secure: nodeEnv === 'production',
-						// Add to config file
-						domain: cookieDomain,
-						sameSite: 'strict',
-						maxAge: 1000 * 60 * accessTokenExpiryMins,
-					},
-				)
-				.cookie(
-					'marco-ai-refreshToken',
-					response.AuthenticationResult?.RefreshToken,
-					{
-						// Long lived cookie, so httpOnly for improved security
-						httpOnly: true,
-						secure: nodeEnv === 'production',
-						domain: cookieDomain,
-						sameSite: 'strict',
-						maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
-					},
-				)
+				.cookie('macro-ai-accessToken', loginResponse.accessToken, {
+					// Short lived cookie, so non-httpOnly for ease of access by client
+					httpOnly: false,
+					secure: nodeEnv === 'production',
+					// Add to config file
+					domain: cookieDomain,
+					sameSite: 'strict',
+					maxAge: loginResponse.expiresIn * 1000,
+				})
+				.cookie('marco-ai-refreshToken', loginResponse.refreshToken, {
+					// Long lived cookie, so httpOnly for improved security
+					httpOnly: true,
+					secure: nodeEnv === 'production',
+					domain: cookieDomain,
+					sameSite: 'strict',
+					maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
+				})
 				.cookie('macro-ai-synchronize', encryptedUsername, {
 					// Long lived cookie, so httpOnly for improved security
 					// Encrypted username stored in cookie to enable refresh token journey
@@ -259,32 +250,55 @@ const authController: IAuthController = {
 				| undefined
 
 			if (!accessToken) {
-				logger.error(
-					`[authRouter]: Error logging out user: ${accessToken ? 'No access token' : ''}`,
-				)
+				logger.error('[authRouter]: Error logging out user: No access token')
 				res
 					.status(StatusCodes.UNAUTHORIZED)
 					.json({ message: 'Unauthorized - Tokens not found' })
 				return
 			}
 
-			await cognito.signOutUser(accessToken)
+			try {
+				await cognito.signOutUser(accessToken)
 
-			// Clear Cookies
-			res.clearCookie('macro-ai-accessToken', {
-				domain: cookieDomain,
-				sameSite: 'strict',
-			})
-			res.clearCookie('marco-ai-refreshToken', {
-				domain: cookieDomain,
-				sameSite: 'strict',
-			})
-			res.clearCookie('macro-ai-synchronize', {
-				domain: cookieDomain,
-				sameSite: 'strict',
-			})
+				// Clear Cookies
+				res.clearCookie('macro-ai-accessToken', {
+					domain: cookieDomain,
+					sameSite: 'strict',
+				})
+				res.clearCookie('marco-ai-refreshToken', {
+					domain: cookieDomain,
+					sameSite: 'strict',
+				})
+				res.clearCookie('macro-ai-synchronize', {
+					domain: cookieDomain,
+					sameSite: 'strict',
+				})
 
-			res.status(StatusCodes.OK).json({ message: 'Logged out successfully' })
+				res.status(StatusCodes.OK).json({ message: 'Logged out successfully' })
+			} catch (error) {
+				if (error instanceof Error && error.message === 'TOKEN_EXPIRED') {
+					// If token is expired, still clear cookies but return success
+					// since the user is effectively logged out
+					res.clearCookie('macro-ai-accessToken', {
+						domain: cookieDomain,
+						sameSite: 'strict',
+					})
+					res.clearCookie('marco-ai-refreshToken', {
+						domain: cookieDomain,
+						sameSite: 'strict',
+					})
+					res.clearCookie('macro-ai-synchronize', {
+						domain: cookieDomain,
+						sameSite: 'strict',
+					})
+
+					res
+						.status(StatusCodes.OK)
+						.json({ message: 'Logged out successfully' })
+					return
+				}
+				throw error
+			}
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(
@@ -322,9 +336,11 @@ const authController: IAuthController = {
 			}
 
 			const decryptedUsername = decrypt(encryptedUsername)
-			logger.info(`[authRouter]: Refreshing token for user: ${decryptedUsername}`)
 
-			const response = await cognito.refreshToken(refreshToken, decryptedUsername)
+			const response = await cognito.refreshToken(
+				refreshToken,
+				decryptedUsername,
+			)
 
 			if (
 				response.$metadata.httpStatusCode !== undefined &&
@@ -339,38 +355,43 @@ const authController: IAuthController = {
 				return
 			}
 
+			// If no new refresh token is provided, use the existing one
+			const newRefreshToken =
+				response.AuthenticationResult?.RefreshToken ?? refreshToken
+
 			const refreshLoginResponse: ILoginResponse = {
 				accessToken: response.AuthenticationResult?.AccessToken ?? '',
-				refreshToken: response.AuthenticationResult?.RefreshToken ?? '',
+				refreshToken: newRefreshToken,
 				expiresIn: response.AuthenticationResult?.ExpiresIn ?? 0,
 			}
 
 			res
-				.cookie(
-					'macro-ai-accessToken',
-					response.AuthenticationResult?.AccessToken,
-					{
-						// Short lived cookie, so non-httpOnly for ease of access by client
-						httpOnly: false,
-						secure: nodeEnv === 'production',
-						// Add to config file
-						domain: cookieDomain,
-						sameSite: 'strict',
-						maxAge: 1000 * 60 * accessTokenExpiryMins,
-					},
-				)
-				.cookie(
-					'marco-ai-refreshToken',
-					response.AuthenticationResult?.RefreshToken,
-					{
-						// Long lived cookie, so httpOnly for improved security
-						httpOnly: true,
-						secure: nodeEnv === 'production',
-						domain: cookieDomain,
-						sameSite: 'strict',
-						maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
-					},
-				)
+				.cookie('macro-ai-accessToken', refreshLoginResponse.accessToken, {
+					// Short lived cookie, so non-httpOnly for ease of access by client
+					httpOnly: false,
+					secure: nodeEnv === 'production',
+					// Add to config file
+					domain: cookieDomain,
+					sameSite: 'strict',
+					maxAge: refreshLoginResponse.expiresIn * 1000,
+				})
+				.cookie('marco-ai-refreshToken', refreshLoginResponse.refreshToken, {
+					// Long lived cookie, so httpOnly for improved security
+					httpOnly: true,
+					secure: nodeEnv === 'production',
+					domain: cookieDomain,
+					sameSite: 'strict',
+					maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
+				})
+				.cookie('macro-ai-synchronize', encryptedUsername, {
+					// Long lived cookie, so httpOnly for improved security
+					// Encrypted username stored in cookie to enable refresh token journey
+					httpOnly: true,
+					secure: nodeEnv === 'production',
+					domain: cookieDomain,
+					sameSite: 'strict',
+					maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
+				})
 				.status(StatusCodes.OK)
 				.json(refreshLoginResponse)
 		} catch (error: unknown) {
@@ -403,41 +424,51 @@ const authController: IAuthController = {
 				return
 			}
 
-			const response = await cognito.getUser(accessToken)
+			try {
+				const response = await cognito.getUser(accessToken)
 
-			if (
-				response.$metadata.httpStatusCode !== undefined &&
-				response.$metadata.httpStatusCode !== 200
-			) {
-				res
-					.status(response.$metadata.httpStatusCode)
-					.json({ message: response.$metadata.httpStatusCode })
-				return
+				if (
+					response.$metadata.httpStatusCode !== undefined &&
+					response.$metadata.httpStatusCode !== 200
+				) {
+					res
+						.status(response.$metadata.httpStatusCode)
+						.json({ message: response.$metadata.httpStatusCode })
+					return
+				}
+
+				interface IUserResponse {
+					id: string
+					email: string
+					emailVerified: boolean
+				}
+
+				const userResponse: IUserResponse = {
+					id: response.Username ?? '',
+					email:
+						response.UserAttributes?.find((attr) => attr.Name === 'email')
+							?.Value ?? '',
+					emailVerified:
+						response.UserAttributes?.find(
+							(attr) => attr.Name === 'email_verified',
+						)?.Value === 'true',
+				}
+
+				res.status(StatusCodes.OK).json(userResponse)
+			} catch (error) {
+				if (error instanceof Error && error.message === 'TOKEN_EXPIRED') {
+					res.status(StatusCodes.UNAUTHORIZED).json({
+						message: 'Access token expired',
+						code: 'TOKEN_EXPIRED',
+					})
+					return
+				}
+				throw error
 			}
-
-			interface IUserResponse {
-				id: string
-				email: string
-				emailVerified: boolean
-			}
-
-			const userResponse: IUserResponse = {
-				id: response.Username ?? '',
-				email:
-					response.UserAttributes?.find((attr) => attr.Name === 'email')
-						?.Value ?? '',
-				emailVerified:
-					response.UserAttributes?.find(
-						(attr) => attr.Name === 'email_verified',
-					)?.Value === 'true',
-			}
-
-			res.status(StatusCodes.OK).json(userResponse)
 		} catch (error: unknown) {
 			const err = standardizeError(error)
-
 			logger.error(
-				`[authRouter]: Error getting user profile: ${err.status.toString()} ${err.message}`,
+				`[authRouter]: Error getting user: ${err.status.toString()} ${err.message}`,
 			)
 
 			res

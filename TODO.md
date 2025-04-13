@@ -8,29 +8,31 @@ This document outlines the development tasks and enhancements planned for the Ma
 
 #### Refresh Token Implementation
 
-- [ ] Add refresh token service in `apps/express-api/src/features/auth/auth.services.ts`
+- [x] Add refresh token service in `apps/express-api/src/features/auth/auth.services.ts`
 
-  - [ ] Implement `refreshToken` method using Cognito's `InitiateAuthCommand` with `REFRESH_TOKEN_AUTH` flow
-  - [ ] Add error handling for expired/invalid refresh tokens
+  - [x] Implement `refreshToken` method using Cognito's `InitiateAuthCommand` with `REFRESH_TOKEN_AUTH` flow
+  - [x] Add error handling for expired/invalid refresh tokens
 
-- [ ] Add refresh token controller in `apps/express-api/src/features/auth/auth.controller.ts`
+- [x] Add refresh token controller in `apps/express-api/src/features/auth/auth.controller.ts`
 
-  - [ ] Implement `refreshToken` controller method
-  - [ ] Extract refresh token from HTTP-only cookie
-  - [ ] Set new access and refresh tokens in cookies
-  - [ ] Add proper error handling and responses
+  - [x] Implement `refreshToken` controller method
+  - [x] Extract refresh token from HTTP-only cookie
+  - [x] Set new access and refresh tokens in cookies
+  - [x] Add proper error handling and responses
 
-- [ ] Create refresh token endpoint in `apps/express-api/src/features/auth/auth.routes.ts`
+- [x] Create refresh token endpoint in `apps/express-api/src/features/auth/auth.routes.ts`
 
-  - [ ] Add `/auth/refresh` POST route
-  - [ ] Document endpoint with Swagger annotations
-  - [ ] Implement request validation schema
+  - [x] Add `/auth/refresh` POST route
+  - [x] Document endpoint with Swagger annotations
+  - [x] Implement request validation schema
 
-- [ ] Add client-side refresh token logic in `apps/client-ui/src/services/auth/`
-  - [ ] Create `useRefreshToken` hook
-  - [ ] Implement automatic token refresh in axios interceptors
-  - [ ] Add refresh token retry logic with exponential backoff
-  - [ ] Handle refresh token errors and force logout if needed
+- [x] Add client-side refresh token logic in `apps/client-ui/src/services/auth/`
+  - [x] Implement automatic token refresh in axios interceptors with:
+    - [x] Request queue management during refresh
+    - [x] Proper error handling and status code checks (401, 403)
+    - [x] Cookie management for tokens
+    - [x] Integration with TanStack Router for navigation
+  - [x] Handle refresh token errors and force logout if needed
 
 #### Logout Implementation
 
@@ -61,6 +63,9 @@ This document outlines the development tasks and enhancements planned for the Ma
 - [ ] Access Token - Create bearer token authorization header helper
 - [ ] Access Token - Create access token cookie helper
 - [ ] Refresh Token - Create refresh token cookie helper
+- [ ] Refactor axios interceptor into separate file for better maintainability
+- [ ] Add TypeScript types for axios request config with \_retry property
+- [ ] Add error handling constants/enums for HTTP status codes
 
 ### UI Updates
 
@@ -68,6 +73,7 @@ This document outlines the development tasks and enhancements planned for the Ma
 - [ ] Implement session timeout modal
 - [ ] Add automatic logout on token expiration
 - [ ] Show appropriate loading states during token refresh
+- [ ] Add toast notifications for auth state changes
 
 ### Testing
 
@@ -75,6 +81,8 @@ This document outlines the development tasks and enhancements planned for the Ma
 - [ ] Add integration tests for token refresh flow
 - [ ] Add E2E tests for logout flow
 - [ ] Test error scenarios and recovery
+- [ ] Add tests for axios interceptor logic
+- [ ] Test request queue behavior during token refresh
 
 ### Documentation
 
@@ -82,3 +90,5 @@ This document outlines the development tasks and enhancements planned for the Ma
 - [ ] Document token refresh strategy
 - [ ] Add sequence diagrams for auth flows
 - [ ] Update README with new authentication features
+- [ ] Document axios interceptor implementation
+- [ ] Add examples of handling auth state in components
