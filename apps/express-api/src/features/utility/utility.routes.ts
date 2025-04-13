@@ -9,43 +9,33 @@ const utilityRouter = (router: Router) => {
 	 * @swagger
 	 * tags:
 	 *   name: Utility
-	 *   description: Utility endpoints
+	 *   description: System utility endpoints
 	 * /health:
 	 *   get:
-	 *     tags:
-	 *       - Utility
-	 *     summary: Check if the server is running
+	 *     tags: [Utility]
+	 *     summary: Check API health status
+	 *     description: Returns the current health status of the API
 	 *     responses:
-	 *       '200':
-	 *         description: Server is running
+	 *       200:
+	 *         description: API is healthy
 	 *         content:
 	 *           application/json:
 	 *             schema:
-	 *               $ref: '#/components/schemas/HealthResponse'
-	 *       '500':
-	 *         description: Server is not running
+	 *               type: object
+	 *               properties:
+	 *                 message:
+	 *                   type: string
+	 *                   example: "Api Health Status: OK"
+	 *       500:
+	 *         description: API is unhealthy
 	 *         content:
 	 *           application/json:
 	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 * components:
-	 *   schemas:
-	 *     HealthResponse:
-	 *       type: object
-	 *       properties:
-	 *         message:
-	 *           type: string
-	 *           description: The health status of the api
-	 *       example:
-	 *         message: "Api Health Status: OK"
-	 *     ErrorResponse:
-	 *       type: object
-	 *       properties:
-	 *         message:
-	 *           type: string
-	 *           description: The error message
-	 *       example:
-	 *         message: "Api Status: Error"
+	 *               type: object
+	 *               properties:
+	 *                 message:
+	 *                   type: string
+	 *                   example: "Api Status: Error"
 	 */
 	router.get('/health', (req, res) => {
 		try {
@@ -60,3 +50,4 @@ const utilityRouter = (router: Router) => {
 }
 
 export { utilityRouter }
+

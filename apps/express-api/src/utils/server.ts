@@ -28,6 +28,15 @@ const options: Options = {
 				url: 'http://localhost:3030/api',
 			},
 		],
+		components: {
+			securitySchemes: {
+				cookieAuth: {
+					type: 'apiKey',
+					in: 'cookie',
+					name: 'macro-ai-accessToken'
+				}
+			}
+		}
 	},
 	apis: ['./src/features/**/*.ts'],
 }
@@ -65,3 +74,4 @@ const createServer = (): Express => {
 }
 
 export { createServer }
+
