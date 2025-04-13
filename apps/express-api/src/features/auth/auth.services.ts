@@ -5,6 +5,7 @@ import {
 	GetUserCommand,
 	GlobalSignOutCommand,
 	InitiateAuthCommand,
+	InitiateAuthCommandOutput,
 	ListUsersCommand,
 	ResendConfirmationCodeCommand,
 	SignUpCommand,
@@ -105,8 +106,32 @@ class CognitoService {
 		return client.send(command)
 	}
 
-	public async signInUser(email: string, password: string) {
+	public async signInUser(
+		email: string,
+		password: string,
+	): Promise<InitiateAuthCommandOutput & { Username: string }> {
 		const client = new CognitoIdentityProviderClient(this.config)
+
+		// First, get the user's UUID using their email
+		const getUserCommand = new ListUsersCommand({
+			Filter: `email = "${email}"`,
+			UserPoolId: this.userPoolId,
+		})
+
+		const users = await client.send(getUserCommand)
+
+		if (!users.Users || users.Users.length === 0) {
+			throw new Error('User not found')
+		}
+
+		const uniqueUser = users.Users.find(
+			(user) =>
+				user.Attributes?.find((attr) => attr.Name === 'email')?.Value === email,
+		)
+
+		if (!uniqueUser?.Username) {
+			throw new Error('User not found')
+		}
 
 		const command = new InitiateAuthCommand({
 			ClientId: this.clientId,
@@ -118,7 +143,12 @@ class CognitoService {
 			},
 		})
 
-		return client.send(command)
+		const signInResponse = await client.send(command)
+
+		return {
+			...signInResponse,
+			Username: uniqueUser.Username,
+		}
 	}
 
 	public async signOutUser(accessToken: string) {
@@ -133,7 +163,7 @@ class CognitoService {
 		await client.send(signOutCommand)
 	}
 
-	public async refreshToken(refreshToken: string) {
+	public async refreshToken(refreshToken: string, username: string) {
 		const client = new CognitoIdentityProviderClient(this.config)
 
 		const refreshTokenCommand = new InitiateAuthCommand({
@@ -141,7 +171,7 @@ class CognitoService {
 			AuthFlow: 'REFRESH_TOKEN_AUTH',
 			AuthParameters: {
 				REFRESH_TOKEN: refreshToken,
-				SECRET_HASH: this.generateHash(refreshToken),
+				SECRET_HASH: this.generateHash(username),
 			},
 		})
 

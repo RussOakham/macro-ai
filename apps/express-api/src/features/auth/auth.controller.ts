@@ -2,6 +2,7 @@ import config from 'config'
 import express from 'express'
 import { StatusCodes } from 'http-status-codes'
 
+import { decrypt, encrypt } from '../../utils/crypto.ts'
 import { pino } from '../../utils/logger.ts'
 import { standardizeError } from '../../utils/standardize-error.ts'
 
@@ -198,6 +199,8 @@ const authController: IAuthController = {
 				expiresIn: response.AuthenticationResult?.ExpiresIn ?? 0,
 			}
 
+			const encryptedUsername = encrypt(response.Username)
+
 			res
 				.cookie(
 					'macro-ai-accessToken',
@@ -224,6 +227,15 @@ const authController: IAuthController = {
 						maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
 					},
 				)
+				.cookie('macro-ai-synchronize', encryptedUsername, {
+					// Long lived cookie, so httpOnly for improved security
+					// Encrypted username stored in cookie to enable refresh token journey
+					httpOnly: true,
+					secure: nodeEnv === 'production',
+					domain: cookieDomain,
+					sameSite: 'strict',
+					maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
+				})
 				.status(StatusCodes.OK)
 				.json(loginResponse)
 		} catch (error: unknown) {
@@ -267,6 +279,10 @@ const authController: IAuthController = {
 				domain: cookieDomain,
 				sameSite: 'strict',
 			})
+			res.clearCookie('macro-ai-synchronize', {
+				domain: cookieDomain,
+				sameSite: 'strict',
+			})
 
 			res.status(StatusCodes.OK).json({ message: 'Logged out successfully' })
 		} catch (error: unknown) {
@@ -296,7 +312,19 @@ const authController: IAuthController = {
 				return
 			}
 
-			const response = await cognito.refreshToken(refreshToken)
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+			const encryptedUsername = req.cookies?.['macro-ai-synchronize'] as
+				| string
+				| undefined
+
+			if (!encryptedUsername) {
+				throw new Error('User data not found')
+			}
+
+			const decryptedUsername = decrypt(encryptedUsername)
+			logger.info(`[authRouter]: Refreshing token for user: ${decryptedUsername}`)
+
+			const response = await cognito.refreshToken(refreshToken, decryptedUsername)
 
 			if (
 				response.$metadata.httpStatusCode !== undefined &&
