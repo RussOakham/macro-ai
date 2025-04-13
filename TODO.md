@@ -69,7 +69,7 @@ This document outlines the development tasks and enhancements planned for the Ma
 
 ### UI Updates
 
-- [ ] Add logout button in header/navigation
+- [X] Add logout button in header/navigation
 - [ ] Implement session timeout modal
 - [ ] Add automatic logout on token expiration
 - [ ] Show appropriate loading states during token refresh
@@ -92,3 +92,175 @@ This document outlines the development tasks and enhancements planned for the Ma
 - [ ] Update README with new authentication features
 - [ ] Document axios interceptor implementation
 - [ ] Add examples of handling auth state in components
+
+## API Documentation and Type Generation Tasks
+
+### Express API Swagger Documentation Enhancement (`/apps/express-api`)
+
+- [ ] Update Swagger UI Configuration in `apps/express-api/src/utils/server.ts`
+  - [ ] Add authentication button in Swagger UI for testing secured endpoints
+  - [ ] Add example values for all request bodies
+  - [ ] Add detailed descriptions for all parameters
+  - [ ] Document all possible error responses
+
+- [ ] Create API Documentation Guide in `apps/express-api/README.md`
+  - [ ] Add section about accessing Swagger UI at http://localhost:3030/api-docs
+  - [ ] Document how to authenticate in Swagger UI
+  - [ ] Add examples of using Swagger UI for testing endpoints
+  - [ ] Create documentation for common API testing scenarios
+
+### Type Generation Package (`/packages/types-api`)
+
+- [ ] Create new package structure
+  - [ ] Create directory: `packages/types-api`
+  - [ ] Initialize `packages/types-api/package.json`:
+
+    ```json
+    {
+      "name": "@repo/types-api",
+      "version": "0.0.1",
+      "private": true,
+      "main": "./dist/index.js",
+      "module": "./dist/index.mjs",
+      "types": "./dist/index.d.ts",
+      "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "clean": "rm -rf dist"
+      }
+    }
+    ```
+
+  - [ ] Add `packages/types-api/tsconfig.json` using base config from `packages/config-typescript`
+  - [ ] Set up build process with tsup in `packages/types-api/tsup.config.ts`
+
+- [ ] Implement Type Generation in `/packages/types-api`
+  - [ ] Install dependencies in package directory:
+
+    ```bash
+    cd packages/types-api
+    pnpm add -D openapi-typescript swagger-typescript-api tsup
+    ```
+
+  - [ ] Create type generation script in `packages/types-api/scripts/generate.ts`
+    - [ ] Add script to fetch OpenAPI spec from running API
+    - [ ] Generate TypeScript interfaces from OpenAPI spec
+    - [ ] Add type generation to build process
+
+### API Client Package (`/packages/api-client`)
+
+- [ ] Create Package Structure
+  - [ ] Create directory: `packages/api-client`
+  - [ ] Initialize `packages/api-client/package.json`:
+
+    ```json
+    {
+      "name": "@repo/api-client",
+      "version": "0.0.1",
+      "private": true,
+      "main": "./dist/index.js",
+      "module": "./dist/index.mjs",
+      "types": "./dist/index.d.ts",
+      "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "clean": "rm -rf dist"
+      },
+      "peerDependencies": {
+        "axios": "^1.0.0"
+      },
+      "dependencies": {
+        "@repo/types-api": "workspace:*"
+      }
+    }
+    ```
+
+  - [ ] Add `packages/api-client/tsconfig.json` using base config from `packages/config-typescript`
+  - [ ] Set up build process in `packages/api-client/tsup.config.ts`
+
+### Root Repository Updates (`/`)
+
+- [ ] Update Workspace Configuration
+  - [ ] Add new packages to `pnpm-workspace.yaml`:
+
+    ```yaml
+    packages:
+      - 'apps/*'
+      - 'packages/*'
+      - 'packages/types-api'
+      - 'packages/api-client'
+    ```
+
+  - [ ] Update `turbo.json` pipeline:
+
+    ```json
+    {
+      "pipeline": {
+        "build": {
+          "dependsOn": ["^build"],
+          "outputs": ["dist/**"]
+        }
+      }
+    }
+    ```
+
+### Client UI Updates (`/apps/client-ui`)
+
+- [ ] Update Dependencies in `apps/client-ui/package.json`
+
+  ```json
+  {
+    "dependencies": {
+      "@repo/api-client": "workspace:*",
+      "@repo/types-api": "workspace:*"
+    }
+  }
+  ```
+
+- [ ] Implementation Updates
+  - [ ] Replace current API calls in `apps/client-ui/src/api` with new client
+  - [ ] Update authentication flow in `apps/client-ui/src/features/auth`
+  - [ ] Update error handling in `apps/client-ui/src/utils/error`
+  - [ ] Add proper typing to all API calls
+
+### Express API Updates (`/apps/express-api`)
+
+- [ ] Update API Documentation
+  - [ ] Add JSDoc comments to all route handlers in `apps/express-api/src/features/**/*.ts`
+  - [ ] Update Swagger definitions in `apps/express-api/src/utils/server.ts`
+  - [ ] Add response examples in route handlers
+  - [ ] Document authentication requirements
+
+### Documentation Updates
+
+- [ ] Root Repository (`/`)
+  - [ ] Update main `README.md` with new package information
+  - [ ] Add development workflow for API documentation and client generation
+
+- [ ] Types API Package (`/packages/types-api`)
+  - [ ] Create comprehensive `README.md`
+  - [ ] Add usage examples
+  - [ ] Add type generation documentation
+
+- [ ] API Client Package (`/packages/api-client`)
+  - [ ] Create comprehensive `README.md`
+  - [ ] Add usage examples
+  - [ ] Add authentication documentation
+  - [ ] Add error handling documentation
+
+### Testing Setup
+
+- [ ] API Client Tests (`/packages/api-client`)
+  - [ ] Set up Jest configuration
+  - [ ] Add unit tests for client methods
+  - [ ] Add integration tests
+  - [ ] Add test coverage reporting
+
+- [ ] Types Package Tests (`/packages/types-api`)
+  - [ ] Add type generation tests
+  - [ ] Add validation tests for generated types
+
+- [ ] Client UI Integration Tests (`/apps/client-ui`)
+  - [ ] Add tests for API client integration
+  - [ ] Add authentication flow tests
+  - [ ] Add error handling tests
