@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
-import { loginFormSchema, TLoginForm } from '@/lib/types'
+import { loginSchema } from '@/lib/schemas/auth.schema'
+import { TLoginForm } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { usePostLoginMutation } from '@/services/auth/hooks/usePostLoginMutation'
 
@@ -30,7 +31,7 @@ const LoginForm = ({
 	const navigate = useNavigate({ from: '/auth/login' })
 
 	const form = useForm<TLoginForm>({
-		resolver: zodResolver(loginFormSchema),
+		resolver: zodResolver(loginSchema),
 		defaultValues: {
 			email: '',
 			password: '',
@@ -141,3 +142,4 @@ const LoginForm = ({
 }
 
 export { LoginForm }
+

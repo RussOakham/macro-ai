@@ -11,8 +11,7 @@ import { postRefreshToken } from '@/services/auth/network/postRefreshToken'
 import { standardizeError } from '../errors/standardize-error'
 import { logger } from '../logger/logger'
 
-// Extend the InternalAxiosRequestConfig type to include _retry
-interface ExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
+interface IExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
 	_retry?: boolean
 }
 
@@ -51,7 +50,8 @@ const processQueue = (error: Error | null, token: string | null = null) => {
 axiosWithCredentials.interceptors.response.use(
 	(response) => response,
 	async (error: AxiosError) => {
-		const originalRequest: ExtendedAxiosRequestConfig | undefined = error.config
+		const originalRequest: IExtendedAxiosRequestConfig | undefined =
+			error.config
 
 		if (!originalRequest) {
 			return Promise.reject(error)

@@ -1,116 +1,38 @@
 import { AxiosError } from 'axios'
-import { z } from 'zod'
-import { fromError, isValidationError } from 'zod-validation-error'
+import { ZodError } from 'zod'
 
-export type TErrorType =
-	| 'ApiError'
-	| 'AxiosError'
-	| 'ZodValidationError'
-	| 'ZodError'
-	| 'Error'
-	| 'UnknownError'
-interface IStandardizedError extends Error {
-	type: TErrorType
-	name: string
-	status: number
-	message: string
-	stack: string
-	details?: unknown
-}
+import { IStandardizedError } from '../types'
 
-interface IApiErrorDetails {
-	message: string
-	[key: string]: unknown // Allow additional properties with unknown type
-}
-
-const isApiErrorResponse = (
-	error: unknown,
-): error is AxiosError<IApiErrorDetails> => {
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-return
-	return (
-		error instanceof AxiosError &&
-		error.response?.data &&
-		typeof error.response.data === 'object' &&
-		'message' in error.response.data
-	)
-}
-
-const isApiErrorDetails = (data: unknown): data is IApiErrorDetails => {
-	return (
-		typeof data === 'object' &&
-		data !== null &&
-		'message' in data &&
-		typeof (data as IApiErrorDetails).message === 'string'
-	)
-}
-
-const standardizeError = (err: unknown): IStandardizedError => {
-	if (isApiErrorResponse(err)) {
-		const errorDetails =
-			err.response && isApiErrorDetails(err.response.data)
-				? err.response.data
-				: { message: 'Oops something went wrong!' }
-
-		return {
-			type: 'ApiError',
-			name: err.name,
-			status: err.response?.status ?? 500,
-			message: err.response?.data.message ?? err.message,
-			stack: err.stack ?? '',
-			details: errorDetails,
-		}
-	}
-	if (err instanceof AxiosError) {
-		return {
-			type: 'AxiosError',
-			name: err.name,
-			status: err.response?.status ?? 500,
-			message: err.message,
-			stack: err.stack ?? '',
-			details: err.response?.data,
-		}
-	}
-
-	if (err instanceof z.ZodError) {
-		const validationError = fromError(err)
-		return {
-			type: 'ZodError',
-			name: validationError.name,
-			status: 400,
-			message: validationError.message,
-			stack: validationError.stack ?? '',
-			details: validationError.details,
-		}
-	}
-
-	if (isValidationError(err)) {
-		return {
-			type: 'ZodValidationError',
-			name: err.name,
-			status: 400,
-			message: err.message,
-			stack: err.stack ?? '',
-			details: err.details,
-		}
-	}
-
-	if (err instanceof Error) {
-		return {
-			type: 'Error',
-			name: err.name,
-			status: 500,
-			message: err.message,
-			stack: err.stack ?? '',
-		}
-	}
-
-	return {
+export const standardizeError = (error: unknown): IStandardizedError => {
+	const standardError: IStandardizedError = {
 		type: 'UnknownError',
 		name: 'UnknownError',
+		message: 'An unknown error occurred',
 		status: 500,
-		message: 'An unknown error occurred.',
 		stack: '',
 	}
-}
 
-export { type IStandardizedError, standardizeError }
+	if (error instanceof AxiosError) {
+		standardError.type = 'AxiosError'
+		standardError.name = error.name
+		standardError.message =
+			(error.response?.data as { message?: string }).message ?? error.message
+		standardError.status = error.response?.status ?? 500
+		standardError.stack = error.stack ?? ''
+		standardError.details = error.response?.data
+	} else if (error instanceof ZodError) {
+		standardError.type = 'ZodError'
+		standardError.name = error.name
+		standardError.message = error.errors[0]?.message ?? 'Validation error'
+		standardError.status = 400
+		standardError.stack = error.stack ?? ''
+		standardError.details = error.errors
+	} else if (error instanceof Error) {
+		standardError.type = 'Error'
+		standardError.name = error.name
+		standardError.message = error.message
+		standardError.stack = error.stack ?? ''
+	}
+
+	return standardError
+}

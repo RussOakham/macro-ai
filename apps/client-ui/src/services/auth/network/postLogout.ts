@@ -1,15 +1,8 @@
-import { axiosWithCredentials } from '@/lib/axios'
+import { axios } from '@/lib/axios'
+import { ILogoutResponse } from '@/lib/types'
 
-interface ILogoutResponse {
-	message: string
-}
-
-// Logout reads accessToken and refreshToken from cookies header
 const postLogout = async () => {
-	const response =
-		await axiosWithCredentials.post<ILogoutResponse>('/auth/logout')
-
-	return response
+	return axios.post<ILogoutResponse>('/auth/logout')
 }
 
-export { type ILogoutResponse, postLogout }
+export { postLogout }
