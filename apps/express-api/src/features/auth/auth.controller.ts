@@ -19,6 +19,7 @@ interface IAuthController {
 	register: express.Handler
 	login: express.Handler
 	logout: express.Handler
+	refreshToken: express.Handler
 	confirmRegistration: express.Handler
 	resendConfirmationCode: express.Handler
 	getUser: express.Handler
@@ -32,6 +33,10 @@ interface ILoginResponse {
 
 const cookieDomain = config.get<string>('cookieDomain')
 const nodeEnv = config.get<string>('nodeEnv')
+const accessTokenExpiryMins = config.get<number>('awsCognitoAccessTokenExpiry')
+const refreshTokenExpiryDays = config.get<number>(
+	'awsCognitoRefreshTokenExpiry',
+)
 
 // TODO: Create Standardized Response Interface for Happy and Unhappy Paths
 // TODO: Generate OpenAPI Docs
@@ -178,6 +183,9 @@ const authController: IAuthController = {
 				response.$metadata.httpStatusCode !== undefined &&
 				response.$metadata.httpStatusCode !== 200
 			) {
+				logger.error(
+					`[authRouter]: Error logging in user: ${response.$metadata.httpStatusCode.toString()}`,
+				)
 				res
 					.status(response.$metadata.httpStatusCode)
 					.json({ message: response.$metadata.httpStatusCode })
@@ -201,8 +209,7 @@ const authController: IAuthController = {
 						// Add to config file
 						domain: cookieDomain,
 						sameSite: 'strict',
-						//5 minutes maxAge
-						maxAge: 1000 * 60 * 5,
+						maxAge: 1000 * 60 * accessTokenExpiryMins,
 					},
 				)
 				.cookie(
@@ -214,8 +221,7 @@ const authController: IAuthController = {
 						secure: nodeEnv === 'production',
 						domain: cookieDomain,
 						sameSite: 'strict',
-						// 30 days maxAge
-						maxAge: 1000 * 60 * 60 * 24 * 30,
+						maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
 					},
 				)
 				.status(StatusCodes.OK)
@@ -267,6 +273,82 @@ const authController: IAuthController = {
 			const err = standardizeError(error)
 			logger.error(
 				`[authRouter]: Error logging out user: ${err.status.toString()} ${err.message}`,
+			)
+
+			res
+				.status(err.status)
+				.json({ message: err.message, details: err.details })
+		}
+	},
+	refreshToken: async (req, res) => {
+		const cognito = new CognitoService()
+
+		try {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+			const refreshToken = req.cookies?.['marco-ai-refreshToken'] as
+				| string
+				| undefined
+
+			if (!refreshToken) {
+				res
+					.status(StatusCodes.UNAUTHORIZED)
+					.json({ message: 'Refresh token not found' })
+				return
+			}
+
+			const response = await cognito.refreshToken(refreshToken)
+
+			if (
+				response.$metadata.httpStatusCode !== undefined &&
+				response.$metadata.httpStatusCode !== 200
+			) {
+				logger.error(
+					`[authRouter]: Error refreshing token: ${response.$metadata.httpStatusCode.toString()}`,
+				)
+				res
+					.status(response.$metadata.httpStatusCode)
+					.json({ message: response.$metadata.httpStatusCode })
+				return
+			}
+
+			const refreshLoginResponse: ILoginResponse = {
+				accessToken: response.AuthenticationResult?.AccessToken ?? '',
+				refreshToken: response.AuthenticationResult?.RefreshToken ?? '',
+				expiresIn: response.AuthenticationResult?.ExpiresIn ?? 0,
+			}
+
+			res
+				.cookie(
+					'macro-ai-accessToken',
+					response.AuthenticationResult?.AccessToken,
+					{
+						// Short lived cookie, so non-httpOnly for ease of access by client
+						httpOnly: false,
+						secure: nodeEnv === 'production',
+						// Add to config file
+						domain: cookieDomain,
+						sameSite: 'strict',
+						maxAge: 1000 * 60 * accessTokenExpiryMins,
+					},
+				)
+				.cookie(
+					'marco-ai-refreshToken',
+					response.AuthenticationResult?.RefreshToken,
+					{
+						// Long lived cookie, so httpOnly for improved security
+						httpOnly: true,
+						secure: nodeEnv === 'production',
+						domain: cookieDomain,
+						sameSite: 'strict',
+						maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
+					},
+				)
+				.status(StatusCodes.OK)
+				.json(refreshLoginResponse)
+		} catch (error: unknown) {
+			const err = standardizeError(error)
+			logger.error(
+				`[authRouter]: Error refreshing token: ${err.status.toString()} ${err.message}`,
 			)
 
 			res

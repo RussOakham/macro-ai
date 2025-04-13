@@ -70,6 +70,14 @@ const loginSchema = z.object({
 })
 type TLogin = z.infer<typeof loginSchema>
 
+const refreshTokenSchema = z.object({
+	refreshToken: z.string({
+		message: 'Invalid refresh token',
+		required_error: 'Refresh token is required',
+	}),
+})
+type TRefreshToken = z.infer<typeof refreshTokenSchema>
+
 const getUserSchema = z.object({
 	accessToken: z.string({
 		message: 'Invalid access token',
@@ -82,6 +90,7 @@ export {
 	confirmRegistrationSchema,
 	getUserSchema,
 	loginSchema,
+	refreshTokenSchema,
 	registerSchema,
 	resendConfirmationCodeSchema,
 }
@@ -90,6 +99,7 @@ export type {
 	TConfirmRegistration,
 	TGetUser,
 	TLogin,
+	TRefreshToken,
 	TRegister,
 	TResendConfirmationCode,
 }

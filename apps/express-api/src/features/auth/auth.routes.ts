@@ -58,6 +58,23 @@ const authRouter = (router: Router) => {
 	 *       required:
 	 *         - accessToken
 	 *         - refreshToken
+	 *     RefreshToken:
+	 *       type: object
+	 *       properties:
+	 *         refreshToken:
+	 *           type: string
+	 *       required:
+	 *         - refreshToken
+	 *           description: The refresh token obtained during login.
+	 *       example: "8xLOxBtZp8"
+	 *     GetUser:
+	 *       type: object
+	 *       properties:
+	 *         accessToken:
+	 *           type: string
+	 *       required:
+	 *         - accessToken
+	 *       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 	 */
 
 	/**
@@ -81,6 +98,53 @@ const authRouter = (router: Router) => {
 	 *         description: Internal server error
 	 */
 	router.post('/auth/register', authController.register)
+
+	/**
+	 * @swagger
+	 * /auth/confirm-registration:
+	 *   post:
+	 *     tags: [Authorization]
+	 *     summary: Confirm user registration
+	 *     requestBody:
+	 *       required: true
+	 *       content:
+	 *         application/json:
+	 *           schema:
+	 *             $ref: '#/components/schemas/ConfirmRegistration'
+	 *     responses:
+	 *       200:
+	 *         description: User registration confirmed successfully
+	 *       400:
+	 *         description: Bad request
+	 *       500:
+	 *         description: Internal server error
+	 */
+	router.post('/auth/confirm-registration', authController.confirmRegistration)
+
+	/**
+	 * @swagger
+	 * /auth/resend-confirmation-code:
+	 *   post:
+	 *     tags: [Authorization]
+	 *     summary: Resend confirmation code
+	 *     requestBody:
+	 *       required: true
+	 *       content:
+	 *         application/json:
+	 *           schema:
+	 *             $ref: '#/components/schemas/ResendConfirmationCode'
+	 *     responses:
+	 *       200:
+	 *         description: Confirmation code resent successfully
+	 *       400:
+	 *         description: Bad request
+	 *       500:
+	 *         description: Internal server error
+	 */
+	router.post(
+		'/auth/resend-confirmation-code',
+		authController.resendConfirmationCode,
+	)
 
 	/**
 	 * @swagger
@@ -137,50 +201,34 @@ const authRouter = (router: Router) => {
 
 	/**
 	 * @swagger
-	 * /auth/confirm-registration:
+	 * /auth/refresh:
 	 *   post:
 	 *     tags: [Authorization]
-	 *     summary: Confirm user registration
-	 *     requestBody:
-	 *       required: true
-	 *       content:
-	 *         application/json:
-	 *           schema:
-	 *             $ref: '#/components/schemas/ConfirmRegistration'
+	 *     summary: Refresh access token
+	 *     description: Use refresh token to obtain new access token
 	 *     responses:
 	 *       200:
-	 *         description: User registration confirmed successfully
-	 *       400:
-	 *         description: Bad request
+	 *         description: Tokens refreshed successfully
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               type: object
+	 *               properties:
+	 *                 accessToken:
+	 *                   type: string
+	 *                   description: New access token
+	 *                 refreshToken:
+	 *                   type: string
+	 *                   description: New or existing refresh token
+	 *                 expiresIn:
+	 *                   type: number
+	 *                   description: Token expiration time in seconds
+	 *       401:
+	 *         description: Unauthorized - Invalid or missing refresh token
 	 *       500:
 	 *         description: Internal server error
 	 */
-	router.post('/auth/confirm-registration', authController.confirmRegistration)
-
-	/**
-	 * @swagger
-	 * /auth/resend-confirmation-code:
-	 *   post:
-	 *     tags: [Authorization]
-	 *     summary: Resend confirmation code
-	 *     requestBody:
-	 *       required: true
-	 *       content:
-	 *         application/json:
-	 *           schema:
-	 *             $ref: '#/components/schemas/ResendConfirmationCode'
-	 *     responses:
-	 *       200:
-	 *         description: Confirmation code resent successfully
-	 *       400:
-	 *         description: Bad request
-	 *       500:
-	 *         description: Internal server error
-	 */
-	router.post(
-		'/auth/resend-confirmation-code',
-		authController.resendConfirmationCode,
-	)
+	router.post('/auth/refresh', authController.refreshToken)
 
 	/**
 	 * @swagger

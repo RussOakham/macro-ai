@@ -133,6 +133,21 @@ class CognitoService {
 		await client.send(signOutCommand)
 	}
 
+	public async refreshToken(refreshToken: string) {
+		const client = new CognitoIdentityProviderClient(this.config)
+
+		const refreshTokenCommand = new InitiateAuthCommand({
+			ClientId: this.clientId,
+			AuthFlow: 'REFRESH_TOKEN_AUTH',
+			AuthParameters: {
+				REFRESH_TOKEN: refreshToken,
+				SECRET_HASH: this.generateHash(refreshToken),
+			},
+		})
+
+		return client.send(refreshTokenCommand)
+	}
+
 	public async getUser(accessToken: string) {
 		const client = new CognitoIdentityProviderClient(this.config)
 
