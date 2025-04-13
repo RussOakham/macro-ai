@@ -1,45 +1,27 @@
 import config from 'config'
-import express from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import { decrypt, encrypt } from '../../utils/crypto.ts'
 import { pino } from '../../utils/logger.ts'
 import { standardizeError } from '../../utils/standardize-error.ts'
 
-import { CognitoService } from './auth.services.ts'
 import {
 	confirmRegistrationSchema,
 	loginSchema,
 	registerSchema,
 	resendConfirmationCodeSchema,
-} from './auth.types.ts'
+} from './auth.schemas.ts'
+import { CognitoService } from './auth.services.ts'
+import { IAuthController, IAuthResponse, TLoginResponse } from './auth.types.ts'
 
 const { logger } = pino
 
-interface IAuthController {
-	register: express.Handler
-	login: express.Handler
-	logout: express.Handler
-	refreshToken: express.Handler
-	confirmRegistration: express.Handler
-	resendConfirmationCode: express.Handler
-	getUser: express.Handler
-}
-
-interface ILoginResponse {
-	accessToken: string
-	refreshToken: string
-	expiresIn: number
-}
-
-const cookieDomain = config.get<string>('cookieDomain')
 const nodeEnv = config.get<string>('nodeEnv')
+const cookieDomain = config.get<string>('cookieDomain')
 const refreshTokenExpiryDays = config.get<number>(
 	'awsCognitoRefreshTokenExpiry',
 )
 
-// TODO: Create Standardized Response Interface for Happy and Unhappy Paths
-// TODO: Generate OpenAPI Docs
 const authController: IAuthController = {
 	register: async (req, res) => {
 		const cognito = new CognitoService()
@@ -54,13 +36,6 @@ const authController: IAuthController = {
 
 			const { email, password, confirmPassword } = parsedBody.data
 
-			if (password !== confirmPassword) {
-				res
-					.status(StatusCodes.BAD_REQUEST)
-					.json({ message: 'Passwords do not match' })
-				return
-			}
-
 			const response = await cognito.signUpUser({
 				email,
 				password,
@@ -71,20 +46,33 @@ const authController: IAuthController = {
 				response.$metadata.httpStatusCode !== undefined &&
 				response.$metadata.httpStatusCode !== 200
 			) {
+				logger.error(
+					`[authRouter]: Error registering user: ${response.$metadata.httpStatusCode.toString()}`,
+				)
 				res
 					.status(response.$metadata.httpStatusCode)
 					.json({ message: response.$metadata.httpStatusCode })
 				return
 			}
 
-			res.status(StatusCodes.CREATED).json({ message: 'Account Created' })
-		} catch (error: unknown) {
-			const err = standardizeError(error)
-			logger.error(`[authRouter]: Error registering user: ${err.message}`)
+			if (!response.UserSub) {
+				throw new Error('User not created - no user ID returned')
+			}
 
-			res
-				.status(err.status)
-				.json({ message: err.message, details: err.details })
+			const authResponse: IAuthResponse = {
+				message:
+					'Registration successful. Please check your email for verification code.',
+				user: {
+					id: response.UserSub,
+					email,
+				},
+			}
+
+			res.status(StatusCodes.CREATED).json(authResponse)
+		} catch (error) {
+			const standardError = standardizeError(error)
+			logger.error(`[authController]: Register error: ${standardError.message}`)
+			res.status(standardError.status).json({ message: standardError.message })
 		}
 	},
 	confirmRegistration: async (req, res) => {
@@ -192,7 +180,7 @@ const authController: IAuthController = {
 				return
 			}
 
-			const loginResponse: ILoginResponse = {
+			const loginResponse: TLoginResponse = {
 				accessToken: response.AuthenticationResult?.AccessToken ?? '',
 				refreshToken: response.AuthenticationResult?.RefreshToken ?? '',
 				expiresIn: response.AuthenticationResult?.ExpiresIn ?? 0,
@@ -359,7 +347,7 @@ const authController: IAuthController = {
 			const newRefreshToken =
 				response.AuthenticationResult?.RefreshToken ?? refreshToken
 
-			const refreshLoginResponse: ILoginResponse = {
+			const refreshLoginResponse: TLoginResponse = {
 				accessToken: response.AuthenticationResult?.AccessToken ?? '',
 				refreshToken: newRefreshToken,
 				expiresIn: response.AuthenticationResult?.ExpiresIn ?? 0,

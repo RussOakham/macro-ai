@@ -40,4 +40,3 @@ const usePostLogoutMutation = (): UseMutationResult<
 }
 
 export { usePostLogoutMutation }
-
