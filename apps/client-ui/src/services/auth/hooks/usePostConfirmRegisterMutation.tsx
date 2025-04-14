@@ -1,19 +1,15 @@
+import { IAuthResponse, TConfirmRegistration } from '@repo/types-macro-ai-api'
 import { useMutation, UseMutationResult } from '@tanstack/react-query'
 
-import { TConfirmationForm } from '@/lib/types'
-
-import {
-	IConfirmRegisterResponse,
-	postConfirmRegistration,
-} from '../network/postConfirmRegistration'
+import { postConfirmRegistration } from '../network/postConfirmRegistration'
 
 const usePostConfirmRegisterMutation = (): UseMutationResult<
-	IConfirmRegisterResponse,
+	IAuthResponse,
 	unknown,
-	TConfirmationForm
+	TConfirmRegistration
 > => {
-	return useMutation<IConfirmRegisterResponse, unknown, TConfirmationForm>({
-		mutationFn: async ({ username, code }: TConfirmationForm) => {
+	return useMutation<IAuthResponse, unknown, TConfirmRegistration>({
+		mutationFn: async ({ username, code }: TConfirmRegistration) => {
 			const response = await postConfirmRegistration({
 				username,
 				code,

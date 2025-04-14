@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { registerSchema, TRegister } from '@repo/types-macro-ai-api'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
@@ -8,8 +9,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
-import { registerSchema } from '@/lib/schemas/auth.schema'
-import { TRegisterForm } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { usePostRegisterMutation } from '@/services/auth/hooks/usePostRegisterMutation'
 
@@ -30,7 +29,7 @@ const RegisterForm = ({
 	const { mutateAsync: postRegisterMutation } = usePostRegisterMutation()
 	const navigate = useNavigate({ from: '/auth/register' })
 
-	const form = useForm<TRegisterForm>({
+	const form = useForm<TRegister>({
 		resolver: zodResolver(registerSchema),
 		defaultValues: {
 			email: '',
@@ -39,11 +38,7 @@ const RegisterForm = ({
 		},
 	})
 
-	const onSubmit = async ({
-		email,
-		password,
-		confirmPassword,
-	}: TRegisterForm) => {
+	const onSubmit = async ({ email, password, confirmPassword }: TRegister) => {
 		try {
 			setIsPending(true)
 

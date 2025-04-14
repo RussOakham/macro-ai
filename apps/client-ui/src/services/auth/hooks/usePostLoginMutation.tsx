@@ -1,3 +1,4 @@
+import { TLogin, TLoginResponse } from '@repo/types-macro-ai-api'
 import {
 	useMutation,
 	UseMutationResult,
@@ -5,26 +6,25 @@ import {
 } from '@tanstack/react-query'
 
 import { QUERY_KEY } from '@/constants/query-keys'
-import { TLoginForm } from '@/lib/types'
 
 import { getUser } from '../network/getUser'
-import { ILoginResponse, postLogin } from '../network/postLogin'
+import { postLogin } from '../network/postLogin'
 
 const usePostLoginMutation = (): UseMutationResult<
-	ILoginResponse,
+	TLoginResponse,
 	unknown,
-	TLoginForm
+	TLogin
 > => {
 	const queryClient = useQueryClient()
 
-	return useMutation<ILoginResponse, unknown, TLoginForm>({
-		mutationFn: async ({ email, password }: TLoginForm) => {
+	return useMutation<TLoginResponse, unknown, TLogin>({
+		mutationFn: async ({ email, password }: TLogin) => {
 			const response = await postLogin({ email, password })
 			return response.data
 		},
-		onSuccess: async (data) => {
+		onSuccess: async () => {
 			// After successful login, fetch user data
-			const userData = await getUser({ accessToken: data.accessToken })
+			const userData = await getUser()
 
 			// Update query cache with BOTH query keys
 			queryClient.setQueryData([QUERY_KEY.user], userData)
