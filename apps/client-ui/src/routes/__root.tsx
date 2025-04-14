@@ -59,7 +59,6 @@ export const Route = createRootRouteWithContext<IRouterContext>()({
 		const accessToken = Cookies.get('macro-ai-accessToken')
 		if (accessToken) {
 			await queryClient.prefetchQuery({
-				// eslint-disable-next-line @tanstack/query/exhaustive-deps
 				queryKey: [QUERY_KEY.user],
 				queryFn: () => getUser(),
 			})

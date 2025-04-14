@@ -6,7 +6,6 @@ import { getUser } from '../network/getUser'
 
 const useGetUser = () => {
 	return useQuery({
-		// eslint-disable-next-line @tanstack/query/exhaustive-deps
 		queryKey: [QUERY_KEY.user],
 		queryFn: async () => getUser(),
 		staleTime: Infinity,

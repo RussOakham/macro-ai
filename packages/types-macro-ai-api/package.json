@@ -1,0 +1,26 @@
+{
+	"name": "@repo/types-macro-ai-api",
+	"version": "0.0.1",
+	"private": true,
+	"main": "./dist/index.js",
+	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.ts",
+	"scripts": {
+		"build": "pnpm generate && tsup",
+		"dev": "tsup --watch",
+		"clean": "rm -rf dist src/*.{ts,js} src/*/*.{ts,js}",
+		"typecheck": "tsc --noEmit",
+		"generate": "tsx scripts/generate.ts"
+	},
+	"devDependencies": {
+		"@repo/config-typescript": "workspace:*",
+		"@types/express": "^5.0.0",
+		"@types/glob": "^8.1.0",
+		"@types/node": "^22.7.9",
+		"glob": "^10.3.10",
+		"tsx": "^4.7.0",
+		"typescript": "^5.5.3",
+		"tsup": "^8.0.0",
+		"zod": "^3.24.1"
+	}
+}

@@ -5,7 +5,10 @@
 	"scripts": {
 		"commit": "cz",
 		"build": "turbo run build",
+		"build:types": "turbo run build --filter=@repo/types-macro-ai-api",
 		"dev": "turbo run dev --env-mode=loose",
+		"dev:types": "turbo run dev --filter=@repo/types-macro-ai-api",
+		"generate:types": "turbo run generate --filter=@repo/types-macro-ai-api",
 		"lint": "turbo run lint",
 		"format": "prettier --check .",
 		"format:fix": "prettier --write .",

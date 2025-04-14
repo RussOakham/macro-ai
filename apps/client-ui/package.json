@@ -45,6 +45,7 @@
 	"devDependencies": {
 		"@repo/config-eslint": "workspace:*",
 		"@repo/config-typescript": "workspace:*",
+		"@repo/types-macro-ai-api": "workspace:*",
 		"@tailwindcss/typography": "^0.5.16",
 		"@tanstack/eslint-plugin-query": "^5.66.0",
 		"@tanstack/eslint-plugin-router": "^1.97.0",
