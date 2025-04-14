@@ -338,13 +338,14 @@ This document outlines the development tasks and enhancements planned for the Ma
   - [ ] Implement retry logic with backoff
   - [ ] Add request timeout handling
   - Resources:
+
     - [Axios Documentation](https://axios-http.com/docs/interceptors)
     - [HTTP Client Best Practices](https://docs.microsoft.com/en-us/azure/architecture/best-practices/api-implementation#handle-exceptions)
 
   - [ ] Environment Configuration
   - [ ] Add security-related environment variables
   - [x] Implement environment validation
-  - [X] Add environment type definitions
+  - [x] Add environment type definitions
   - Resources:
     - [Vite Env Variables](https://vitejs.dev/guide/env-and-mode.html)
     - [TypeScript Environment Configuration](https://www.typescriptlang.org/docs/handbook/declaration-files/templates/global-modifying-module-d-ts.html)

@@ -395,62 +395,45 @@ const authController: IAuthController = {
 		const cognito = new CognitoService()
 
 		try {
-			// Get access token from cookie request header - Bearer <token>
-			const authHeader = req.headers.authorization
-
-			if (!authHeader) {
-				res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Unauthorized' })
-				return
-			}
-
-			const accessToken = authHeader.split(' ')[1]
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+			const accessToken = req.cookies?.['macro-ai-accessToken'] as
+				| string
+				| undefined
 
 			if (!accessToken) {
 				res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Unauthorized' })
 				return
 			}
 
-			try {
-				const response = await cognito.getUser(accessToken)
+			const response = await cognito.getUser(accessToken)
 
-				if (
-					response.$metadata.httpStatusCode !== undefined &&
-					response.$metadata.httpStatusCode !== 200
-				) {
-					res
-						.status(response.$metadata.httpStatusCode)
-						.json({ message: response.$metadata.httpStatusCode })
-					return
-				}
-
-				interface IUserResponse {
-					id: string
-					email: string
-					emailVerified: boolean
-				}
-
-				const userResponse: IUserResponse = {
-					id: response.Username ?? '',
-					email:
-						response.UserAttributes?.find((attr) => attr.Name === 'email')
-							?.Value ?? '',
-					emailVerified:
-						response.UserAttributes?.find(
-							(attr) => attr.Name === 'email_verified',
-						)?.Value === 'true',
-				}
-
-				res.status(StatusCodes.OK).json(userResponse)
-			} catch (error) {
-				if (error instanceof Error && error.message === 'TOKEN_EXPIRED') {
-					res.status(StatusCodes.UNAUTHORIZED).json({
-						message: 'Access token expired',
-						code: 'TOKEN_EXPIRED',
-					})
-					return
-				}
-				throw error
+			if (
+				response.$metadata.httpStatusCode !== undefined &&
+				response.$metadata.httpStatusCode !== 200
+			) {
+				res
+					.status(response.$metadata.httpStatusCode)
+					.json({ message: response.$metadata.httpStatusCode })
+				return
 			}
+
+			interface IUserResponse {
+				id: string
+				email: string
+				emailVerified: boolean
+			}
+
+			const userResponse: IUserResponse = {
+				id: response.Username ?? '',
+				email:
+					response.UserAttributes?.find((attr) => attr.Name === 'email')
+						?.Value ?? '',
+				emailVerified:
+					response.UserAttributes?.find(
+						(attr) => attr.Name === 'email_verified',
+					)?.Value === 'true',
+			}
+			res.status(StatusCodes.OK).json(userResponse)
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(

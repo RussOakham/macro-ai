@@ -4,14 +4,26 @@ import { QUERY_KEY } from '@/constants/query-keys'
 import { TUser } from '@/lib/types/user'
 
 const useIsAuthenticated = () => {
-	const { data: user } = useQuery<TUser>({
+	const {
+		data: user,
+		isFetching,
+		isSuccess,
+		isError,
+	} = useQuery<TUser>({
 		queryKey: [QUERY_KEY.user],
 		enabled: false,
 		staleTime: Infinity,
 		gcTime: Infinity,
 	})
 
-	return Boolean(user?.id)
+	if (isFetching || isError) {
+		return false
+	}
+	if (!isSuccess) {
+		return false
+	}
+
+	return Boolean(user.id)
 }
 
 export { useIsAuthenticated }

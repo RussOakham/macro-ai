@@ -90,9 +90,7 @@ axiosWithCredentials.interceptors.response.use(
 				return new Promise((resolve, reject) => {
 					failedQueue.push({ resolve, reject })
 				})
-					.then((accessToken) => {
-						// Update the Authorization header with new token
-						originalRequest.headers.Authorization = `Bearer  ${String(accessToken)}`
+					.then(() => {
 						return axiosWithCredentials(originalRequest)
 					})
 					.catch((err: unknown) => Promise.reject(standardizeError(err)))
@@ -117,11 +115,6 @@ axiosWithCredentials.interceptors.response.use(
 					secure: true,
 					sameSite: 'strict',
 				})
-
-				// Update axios default headers
-				axiosWithCredentials.defaults.headers.common.Authorization = `Bearer ${accessToken}`
-				// Update the original request headers
-				originalRequest.headers.Authorization = `Bearer ${accessToken}`
 
 				processQueue(null, accessToken)
 				isRefreshing = false

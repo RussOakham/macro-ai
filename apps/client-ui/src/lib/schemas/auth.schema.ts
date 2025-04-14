@@ -51,9 +51,5 @@ export const confirmationSchema = z.object({
 })
 
 export const getUserSchema = z.object({
-	accessToken: z.string({
-		message: 'Invalid access token',
-		required_error: 'Access token is required',
-	}),
 	enabled: z.boolean().optional(),
 })

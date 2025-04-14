@@ -46,8 +46,6 @@ const options: Options = {
 		security: [
 			{
 				cookieAuth: [],
-			},
-			{
 				apiKeyAuth: [],
 			},
 		],

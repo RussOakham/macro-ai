@@ -1,22 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
-import Cookies from 'js-cookie'
 
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { useGetUser } from '@/services/auth/hooks/useGetUser'
 
 const Index = () => {
-	const getAccessToken = (): string => {
-		return Cookies.get('macro-ai-accessToken') ?? ''
-	}
-	const accessToken = getAccessToken()
-
-	const {
-		data: user,
-		isFetching,
-		isError,
-		error,
-		isSuccess,
-	} = useGetUser({ accessToken })
+	const { data: user, isFetching, isError, error, isSuccess } = useGetUser()
 
 	if (isFetching && !user) {
 		return <div>Loading...</div>
