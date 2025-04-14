@@ -50,4 +50,3 @@ const utilityRouter = (router: Router) => {
 }
 
 export { utilityRouter }
-

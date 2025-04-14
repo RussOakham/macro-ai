@@ -404,4 +404,3 @@ const authRouter = (router: Router) => {
 }
 
 export { authRouter }
-

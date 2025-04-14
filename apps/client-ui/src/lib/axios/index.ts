@@ -10,15 +10,19 @@ import { postRefreshToken } from '@/services/auth/network/postRefreshToken'
 
 import { standardizeError } from '../errors/standardize-error'
 import { logger } from '../logger/logger'
+import { validateEnvironment } from '../validation/environment'
 
 interface IExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
 	_retry?: boolean
 }
 
+const env = validateEnvironment()
+
 const axiosConfig: AxiosRequestConfig = {
-	baseURL: import.meta.env.VITE_API_URL as string,
+	baseURL: env.VITE_API_URL,
 	headers: {
 		'Content-Type': 'application/json',
+		'X-API-KEY': env.VITE_API_KEY,
 	},
 }
 
@@ -55,6 +59,16 @@ axiosWithCredentials.interceptors.response.use(
 
 		if (!originalRequest) {
 			return Promise.reject(error)
+		}
+
+		// Handle API Key errors}
+		if (
+			error.response?.status === 500 &&
+			(error.response.data as { message?: string }).message ===
+				'Server configuration error'
+		) {
+			logger.error('API key not configured on server')
+			return Promise.reject(new Error('API configuration error'))
 		}
 
 		// Handle 403 Forbidden

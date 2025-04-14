@@ -69,7 +69,7 @@ This document outlines the development tasks and enhancements planned for the Ma
 
 ### UI Updates
 
-- [X] Add logout button in header/navigation
+- [x] Add logout button in header/navigation
 - [ ] Implement session timeout modal
 - [ ] Add automatic logout on token expiration
 - [ ] Show appropriate loading states during token refresh
@@ -98,6 +98,7 @@ This document outlines the development tasks and enhancements planned for the Ma
 ### Express API Swagger Documentation Enhancement (`/apps/express-api`)
 
 - [ ] Update Swagger UI Configuration in `apps/express-api/src/utils/server.ts`
+
   - [ ] Add authentication button in Swagger UI for testing secured endpoints
   - [ ] Add example values for all request bodies
   - [ ] Add detailed descriptions for all parameters
@@ -112,22 +113,23 @@ This document outlines the development tasks and enhancements planned for the Ma
 ### Type Generation Package (`/packages/types-api`)
 
 - [ ] Create new package structure
+
   - [ ] Create directory: `packages/types-api`
   - [ ] Initialize `packages/types-api/package.json`:
 
     ```json
     {
-      "name": "@repo/types-api",
-      "version": "0.0.1",
-      "private": true,
-      "main": "./dist/index.js",
-      "module": "./dist/index.mjs",
-      "types": "./dist/index.d.ts",
-      "scripts": {
-        "build": "tsup",
-        "dev": "tsup --watch",
-        "clean": "rm -rf dist"
-      }
+    	"name": "@repo/types-api",
+    	"version": "0.0.1",
+    	"private": true,
+    	"main": "./dist/index.js",
+    	"module": "./dist/index.mjs",
+    	"types": "./dist/index.d.ts",
+    	"scripts": {
+    		"build": "tsup",
+    		"dev": "tsup --watch",
+    		"clean": "rm -rf dist"
+    	}
     }
     ```
 
@@ -135,6 +137,7 @@ This document outlines the development tasks and enhancements planned for the Ma
   - [ ] Set up build process with tsup in `packages/types-api/tsup.config.ts`
 
 - [ ] Implement Type Generation in `/packages/types-api`
+
   - [ ] Install dependencies in package directory:
 
     ```bash
@@ -150,28 +153,29 @@ This document outlines the development tasks and enhancements planned for the Ma
 ### API Client Package (`/packages/api-client`)
 
 - [ ] Create Package Structure
+
   - [ ] Create directory: `packages/api-client`
   - [ ] Initialize `packages/api-client/package.json`:
 
     ```json
     {
-      "name": "@repo/api-client",
-      "version": "0.0.1",
-      "private": true,
-      "main": "./dist/index.js",
-      "module": "./dist/index.mjs",
-      "types": "./dist/index.d.ts",
-      "scripts": {
-        "build": "tsup",
-        "dev": "tsup --watch",
-        "clean": "rm -rf dist"
-      },
-      "peerDependencies": {
-        "axios": "^1.0.0"
-      },
-      "dependencies": {
-        "@repo/types-api": "workspace:*"
-      }
+    	"name": "@repo/api-client",
+    	"version": "0.0.1",
+    	"private": true,
+    	"main": "./dist/index.js",
+    	"module": "./dist/index.mjs",
+    	"types": "./dist/index.d.ts",
+    	"scripts": {
+    		"build": "tsup",
+    		"dev": "tsup --watch",
+    		"clean": "rm -rf dist"
+    	},
+    	"peerDependencies": {
+    		"axios": "^1.0.0"
+    	},
+    	"dependencies": {
+    		"@repo/types-api": "workspace:*"
+    	}
     }
     ```
 
@@ -181,6 +185,7 @@ This document outlines the development tasks and enhancements planned for the Ma
 ### Root Repository Updates (`/`)
 
 - [ ] Update Workspace Configuration
+
   - [ ] Add new packages to `pnpm-workspace.yaml`:
 
     ```yaml
@@ -195,12 +200,12 @@ This document outlines the development tasks and enhancements planned for the Ma
 
     ```json
     {
-      "pipeline": {
-        "build": {
-          "dependsOn": ["^build"],
-          "outputs": ["dist/**"]
-        }
-      }
+    	"pipeline": {
+    		"build": {
+    			"dependsOn": ["^build"],
+    			"outputs": ["dist/**"]
+    		}
+    	}
     }
     ```
 
@@ -210,10 +215,10 @@ This document outlines the development tasks and enhancements planned for the Ma
 
   ```json
   {
-    "dependencies": {
-      "@repo/api-client": "workspace:*",
-      "@repo/types-api": "workspace:*"
-    }
+  	"dependencies": {
+  		"@repo/api-client": "workspace:*",
+  		"@repo/types-api": "workspace:*"
+  	}
   }
   ```
 
@@ -234,10 +239,12 @@ This document outlines the development tasks and enhancements planned for the Ma
 ### Documentation Updates
 
 - [ ] Root Repository (`/`)
+
   - [ ] Update main `README.md` with new package information
   - [ ] Add development workflow for API documentation and client generation
 
 - [ ] Types API Package (`/packages/types-api`)
+
   - [ ] Create comprehensive `README.md`
   - [ ] Add usage examples
   - [ ] Add type generation documentation
@@ -251,12 +258,14 @@ This document outlines the development tasks and enhancements planned for the Ma
 ### Testing Setup
 
 - [ ] API Client Tests (`/packages/api-client`)
+
   - [ ] Set up Jest configuration
   - [ ] Add unit tests for client methods
   - [ ] Add integration tests
   - [ ] Add test coverage reporting
 
 - [ ] Types Package Tests (`/packages/types-api`)
+
   - [ ] Add type generation tests
   - [ ] Add validation tests for generated types
 
@@ -271,16 +280,18 @@ This document outlines the development tasks and enhancements planned for the Ma
 
 #### Express API Security Updates (`/apps/express-api`)
 
-- [ ] Implement API Key Authentication
-  - [ ] Create `src/middleware/apiKeyAuth.ts`
-  - [ ] Add API key validation middleware
-  - [ ] Update environment variables
-  - [ ] Add API key documentation
+- [x] Implement API Key Authentication
+
+  - [x] Create `src/middleware/apiKeyAuth.ts`
+  - [x] Add API key validation middleware
+  - [x] Update environment variables
+  - [x] Add API key documentation
   - Resources:
     - [Express.js Security Best Practices](https://expressjs.com/en/advanced/best-practice-security.html)
     - [OWASP API Security Top 10](https://owasp.org/www-project-api-security/)
 
 - [ ] Enhanced Security Headers
+
   - [ ] Create `src/middleware/securityHeaders.ts`
   - [ ] Implement Helmet configuration
   - [ ] Add custom security headers
@@ -290,6 +301,7 @@ This document outlines the development tasks and enhancements planned for the Ma
     - [OWASP Secure Headers Project](https://owasp.org/www-project-secure-headers/)
 
 - [ ] Rate Limiting Implementation
+
   - [ ] Add Express rate limiter middleware
   - [ ] Configure rate limits per endpoint
   - [ ] Add rate limit headers
@@ -299,6 +311,7 @@ This document outlines the development tasks and enhancements planned for the Ma
     - [Rate Limiting Best Practices](https://cloud.google.com/architecture/rate-limiting-strategies-patterns)
 
 - [ ] Request Validation Enhancement
+
   - [ ] Add request validation middleware
   - [ ] Implement input sanitization
   - [ ] Add schema validation for all endpoints
@@ -319,7 +332,8 @@ This document outlines the development tasks and enhancements planned for the Ma
 #### Client UI Security Updates (`/apps/client-ui`)
 
 - [ ] API Client Security
-  - [ ] Update Axios configuration with API key
+
+  - [x] Update Axios configuration with API key
   - [ ] Add request/response interceptors
   - [ ] Implement retry logic with backoff
   - [ ] Add request timeout handling
@@ -327,10 +341,10 @@ This document outlines the development tasks and enhancements planned for the Ma
     - [Axios Documentation](https://axios-http.com/docs/interceptors)
     - [HTTP Client Best Practices](https://docs.microsoft.com/en-us/azure/architecture/best-practices/api-implementation#handle-exceptions)
 
-- [ ] Environment Configuration
+  - [ ] Environment Configuration
   - [ ] Add security-related environment variables
-  - [ ] Implement environment validation
-  - [ ] Add environment type definitions
+  - [x] Implement environment validation
+  - [X] Add environment type definitions
   - Resources:
     - [Vite Env Variables](https://vitejs.dev/guide/env-and-mode.html)
     - [TypeScript Environment Configuration](https://www.typescriptlang.org/docs/handbook/declaration-files/templates/global-modifying-module-d-ts.html)
@@ -373,6 +387,7 @@ This document outlines the development tasks and enhancements planned for the Ma
 ### Monitoring and Maintenance
 
 - [ ] Security Monitoring Setup
+
   - [ ] Implement security event monitoring
   - [ ] Set up alerts for suspicious activity
   - [ ] Configure error tracking
