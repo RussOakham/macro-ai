@@ -11,24 +11,22 @@ import {
 	ResendConfirmationCodeCommand,
 	SignUpCommand,
 } from '@aws-sdk/client-cognito-identity-provider'
-import config from 'config'
 import crypto from 'crypto'
 
-import { TRegister } from './auth.types.ts'
+import { config } from '../../../config/default.ts'
 
+import { TRegister } from './auth.types.ts'
 class CognitoService {
 	private readonly config: CognitoIdentityProviderClientConfig = {
-		region: config.get<string>('awsCognitoRegion'),
+		region: config.awsCognitoRegion,
 		credentials: {
-			accessKeyId: config.get<string>('awsCognitoAccessKey'),
-			secretAccessKey: config.get<string>('awsCognitoSecretKey'),
+			accessKeyId: config.awsCognitoAccessKey,
+			secretAccessKey: config.awsCognitoSecretKey,
 		},
 	}
-	private readonly secretHash = config.get<string>(
-		'awsCognitoUserPoolSecretKey',
-	)
-	private readonly clientId = config.get<string>('awsCognitoUserPoolClientId')
-	private readonly userPoolId = config.get<string>('awsCognitoUserPoolId')
+	private readonly secretHash = config.awsCognitoUserPoolSecretKey
+	private readonly clientId = config.awsCognitoUserPoolClientId
+	private readonly userPoolId = config.awsCognitoUserPoolId
 
 	private generateHash(username: string): string {
 		return crypto

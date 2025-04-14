@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
-import { registerFormSchema, TRegisterForm } from '@/lib/types'
+import { registerSchema } from '@/lib/schemas/auth.schema'
+import { TRegisterForm } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { usePostRegisterMutation } from '@/services/auth/hooks/usePostRegisterMutation'
 
@@ -30,7 +31,7 @@ const RegisterForm = ({
 	const navigate = useNavigate({ from: '/auth/register' })
 
 	const form = useForm<TRegisterForm>({
-		resolver: zodResolver(registerFormSchema),
+		resolver: zodResolver(registerSchema),
 		defaultValues: {
 			email: '',
 			password: '',

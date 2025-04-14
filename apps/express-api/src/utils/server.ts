@@ -6,6 +6,7 @@ import express, { Express } from 'express'
 import swaggerJSDoc, { type Options } from 'swagger-jsdoc'
 import swaggerUi from 'swagger-ui-express'
 
+import { apiKeyAuth } from '../middleware.ts'
 import { appRouter } from '../router/index.routes.ts'
 
 import { pino } from './logger.ts'
@@ -33,10 +34,23 @@ const options: Options = {
 				cookieAuth: {
 					type: 'apiKey',
 					in: 'cookie',
-					name: 'macro-ai-accessToken'
-				}
-			}
-		}
+					name: 'macro-ai-accessToken',
+				},
+				apiKeyAuth: {
+					type: 'apiKey',
+					in: 'header',
+					name: 'X-API-KEY',
+				},
+			},
+		},
+		security: [
+			{
+				cookieAuth: [],
+			},
+			{
+				apiKeyAuth: [],
+			},
+		],
 	},
 	apis: ['./src/features/**/*.ts'],
 }
@@ -59,6 +73,9 @@ const createServer = (): Express => {
 	app.use(express.urlencoded({ extended: true }))
 	app.use(cookieParser())
 
+	// Add API key authentication middleware
+	app.use(apiKeyAuth)
+
 	app.use('/api', appRouter())
 	app.use(
 		'/api-docs',
@@ -74,4 +91,3 @@ const createServer = (): Express => {
 }
 
 export { createServer }
-

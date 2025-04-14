@@ -1,8 +1,9 @@
-import config from 'config'
 import crypto from 'crypto'
 
+import { config } from '../../config/default.ts'
+
 // Use a secure encryption key from environment variables
-const encryptionKey = config.get<string>('cookieEncryptionKey')
+const encryptionKey = config.cookieEncryptionKey
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 12 // For GCM, recommended IV length is 12 bytes
 

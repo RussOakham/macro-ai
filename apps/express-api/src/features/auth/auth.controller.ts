@@ -1,6 +1,6 @@
-import config from 'config'
 import { StatusCodes } from 'http-status-codes'
 
+import { config } from '../../../config/default.ts'
 import { decrypt, encrypt } from '../../utils/crypto.ts'
 import { pino } from '../../utils/logger.ts'
 import { standardizeError } from '../../utils/standardize-error.ts'
@@ -16,11 +16,9 @@ import { IAuthController, IAuthResponse, TLoginResponse } from './auth.types.ts'
 
 const { logger } = pino
 
-const nodeEnv = config.get<string>('nodeEnv')
-const cookieDomain = config.get<string>('cookieDomain')
-const refreshTokenExpiryDays = config.get<number>(
-	'awsCognitoRefreshTokenExpiry',
-)
+const nodeEnv = config.nodeEnv
+const cookieDomain = config.cookieDomain
+const refreshTokenExpiryDays = config.awsCognitoRefreshTokenExpiry
 
 const authController: IAuthController = {
 	register: async (req, res) => {
