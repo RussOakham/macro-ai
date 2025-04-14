@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import {
 	confirmRegistrationSchema,
+	getUserResponseSchema,
 	getUserSchema,
 	loginResponseSchema,
 	loginSchema,
@@ -21,6 +22,7 @@ export type TLogin = z.infer<typeof loginSchema>
 export type TLoginResponse = z.infer<typeof loginResponseSchema>
 export type TRefreshToken = z.infer<typeof refreshTokenSchema>
 export type TGetUser = z.infer<typeof getUserSchema>
+export type TGetUserResponse = z.infer<typeof getUserResponseSchema>
 
 // Cognito related interfaces
 export interface ICognitoError {

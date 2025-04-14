@@ -12,7 +12,12 @@ import {
 	resendConfirmationCodeSchema,
 } from './auth.schemas.ts'
 import { CognitoService } from './auth.services.ts'
-import { IAuthController, IAuthResponse, TLoginResponse } from './auth.types.ts'
+import {
+	IAuthController,
+	IAuthResponse,
+	TGetUserResponse,
+	TLoginResponse,
+} from './auth.types.ts'
 
 const { logger } = pino
 
@@ -417,13 +422,7 @@ const authController: IAuthController = {
 				return
 			}
 
-			interface IUserResponse {
-				id: string
-				email: string
-				emailVerified: boolean
-			}
-
-			const userResponse: IUserResponse = {
+			const userResponse: TGetUserResponse = {
 				id: response.Username ?? '',
 				email:
 					response.UserAttributes?.find((attr) => attr.Name === 'email')

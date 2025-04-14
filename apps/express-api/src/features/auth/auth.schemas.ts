@@ -80,3 +80,9 @@ export const getUserSchema = z.object({
 		required_error: 'Access token is required',
 	}),
 })
+
+export const getUserResponseSchema = z.object({
+	id: z.string(),
+	email: z.string(),
+	emailVerified: z.boolean(),
+})

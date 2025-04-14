@@ -61,7 +61,7 @@ export const Route = createRootRouteWithContext<IRouterContext>()({
 			await queryClient.prefetchQuery({
 				// eslint-disable-next-line @tanstack/query/exhaustive-deps
 				queryKey: [QUERY_KEY.user],
-				queryFn: () => getUser({ accessToken }),
+				queryFn: () => getUser(),
 			})
 		}
 	},
