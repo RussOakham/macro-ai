@@ -335,7 +335,7 @@ This document outlines the development tasks and enhancements planned for the Ma
     - [Vite Env Variables](https://vitejs.dev/guide/env-and-mode.html)
     - [TypeScript Environment Configuration](https://www.typescriptlang.org/docs/handbook/declaration-files/templates/global-modifying-module-d-ts.html)
 
-### Documentation Updates
+### Documentation Updates - API Security
 
 - [ ] Security Documentation (`/docs/security.md`)
   - [ ] Document API key usage
@@ -359,7 +359,7 @@ This document outlines the development tasks and enhancements planned for the Ma
     - [Jest Security Testing](https://jestjs.io/docs/testing-async)
     - [SuperTest Documentation](https://github.com/visionmedia/supertest)
 
-### Deployment Updates
+### Deployment Updates - Production Environment
 
 - [ ] Security Configuration for Production
   - [ ] Configure SSL/TLS settings
@@ -389,4 +389,3 @@ This document outlines the development tasks and enhancements planned for the Ma
   - Resources:
     - [npm audit documentation](https://docs.npmjs.com/cli/v8/commands/npm-audit)
     - [Dependabot documentation](https://docs.github.com/en/code-security/dependabot)
-
