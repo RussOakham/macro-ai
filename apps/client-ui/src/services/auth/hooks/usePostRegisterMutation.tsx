@@ -1,3 +1,4 @@
+import { IAuthResponse, TRegister } from '@repo/types-macro-ai-api'
 import {
 	useMutation,
 	UseMutationResult,
@@ -5,19 +6,18 @@ import {
 } from '@tanstack/react-query'
 
 import { QUERY_KEY } from '@/constants/query-keys'
-import { TRegisterForm } from '@/lib/types'
 
-import { IRegisterResponse, postRegister } from '../network/postRegister'
+import { postRegister } from '../network/postRegister'
 
 const usePostRegisterMutation = (): UseMutationResult<
-	IRegisterResponse,
+	IAuthResponse,
 	unknown,
-	TRegisterForm
+	TRegister
 > => {
 	const queryClient = useQueryClient()
 
-	return useMutation<IRegisterResponse, unknown, TRegisterForm>({
-		mutationFn: async ({ email, password, confirmPassword }: TRegisterForm) => {
+	return useMutation<IAuthResponse, unknown, TRegister>({
+		mutationFn: async ({ email, password, confirmPassword }: TRegister) => {
 			const response = await postRegister({ email, password, confirmPassword })
 			return response.data
 		},

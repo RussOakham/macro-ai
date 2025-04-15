@@ -1,16 +1,13 @@
-import { axios } from '@/lib/axios'
-import { TRegisterForm } from '@/lib/types'
+import { IAuthResponse, TRegister } from '@repo/types-macro-ai-api'
 
-export interface IRegisterResponse {
-	message: string
-}
+import { axios } from '@/lib/axios'
 
 const postRegister = async ({
 	email,
 	password,
 	confirmPassword,
-}: TRegisterForm) => {
-	const response = await axios.post<IRegisterResponse>('/auth/register', {
+}: TRegister) => {
+	const response = await axios.post<IAuthResponse>('/auth/register', {
 		email,
 		password,
 		confirmPassword,

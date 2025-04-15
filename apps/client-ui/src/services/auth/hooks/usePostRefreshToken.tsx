@@ -26,9 +26,9 @@ const usePostRefreshToken = () => {
 			await navigate({ to: '/auth/login' })
 			return err
 		},
-		onSuccess: async (data) => {
+		onSuccess: async () => {
 			// After successful login, fetch user data
-			const userData = await getUser({ accessToken: data.accessToken })
+			const userData = await getUser()
 
 			// Update query cache with BOTH query keys
 			queryClient.setQueryData([QUERY_KEY.user], userData)

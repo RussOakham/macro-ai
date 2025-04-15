@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { confirmRegistrationSchema } from '@repo/types-macro-ai-api'
+import { TGetUserResponse } from '@repo/types-macro-ai-api'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -34,16 +33,12 @@ import {
 import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
-import { TUser } from '@/lib/types/user'
 import { cn } from '@/lib/utils'
 import { usePostConfirmRegisterMutation } from '@/services/auth/hooks/usePostConfirmRegisterMutation'
-
-const confirmRegistrationSchemaClient = confirmRegistrationSchema.extend({
-	code: z.string().length(6),
-})
-type TConfirmRegistrationClient = z.infer<
-	typeof confirmRegistrationSchemaClient
->
+import {
+	confirmRegistrationSchemaClient,
+	TConfirmRegistrationClient,
+} from '@/services/auth/network/postConfirmRegistration'
 
 const ConfirmRegistrationForm = ({
 	className,
@@ -55,7 +50,7 @@ const ConfirmRegistrationForm = ({
 	const navigate = useNavigate({ from: '/auth/confirm-registration' })
 	const queryClient = useQueryClient()
 
-	const user = queryClient.getQueryData<TUser>([QUERY_KEY.user])
+	const user = queryClient.getQueryData<TGetUserResponse>([QUERY_KEY.user])
 
 	const form = useForm<TConfirmRegistrationClient>({
 		resolver: zodResolver(confirmRegistrationSchemaClient),

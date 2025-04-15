@@ -1,8 +1,10 @@
+import { TGetUserResponse } from '@repo/types-macro-ai-api'
+
 import { axiosWithCredentials } from '@/lib/axios'
-import { TUser } from '@/lib/types/user'
 
 const getUser = async () => {
-	const response = await axiosWithCredentials.get<TUser>('/auth/user')
+	const response =
+		await axiosWithCredentials.get<TGetUserResponse>('/auth/user')
 
 	return response.data
 }

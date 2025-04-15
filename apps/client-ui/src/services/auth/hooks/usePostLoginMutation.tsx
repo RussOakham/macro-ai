@@ -1,4 +1,4 @@
-import { TLogin, TLoginResponse } from '@repo/types-macro-ai-api'
+import { IAuthResponse, TLogin } from '@repo/types-macro-ai-api'
 import {
 	useMutation,
 	UseMutationResult,
@@ -11,13 +11,13 @@ import { getUser } from '../network/getUser'
 import { postLogin } from '../network/postLogin'
 
 const usePostLoginMutation = (): UseMutationResult<
-	TLoginResponse,
+	IAuthResponse,
 	unknown,
 	TLogin
 > => {
 	const queryClient = useQueryClient()
 
-	return useMutation<TLoginResponse, unknown, TLogin>({
+	return useMutation<IAuthResponse, unknown, TLogin>({
 		mutationFn: async ({ email, password }: TLogin) => {
 			const response = await postLogin({ email, password })
 			return response.data

@@ -1,3 +1,4 @@
+import { IAuthResponse } from '@repo/types-macro-ai-api'
 import {
 	useMutation,
 	UseMutationResult,
@@ -9,19 +10,18 @@ import { toast } from 'sonner'
 import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
-import { ILogoutResponse } from '@/lib/types'
 
 import { postLogout } from '../network/postLogout'
 
 const usePostLogoutMutation = (): UseMutationResult<
-	ILogoutResponse,
+	IAuthResponse,
 	unknown,
 	void
 > => {
 	const queryClient = useQueryClient()
 	const navigate = useNavigate()
 
-	return useMutation<ILogoutResponse, unknown>({
+	return useMutation<IAuthResponse, unknown>({
 		mutationFn: async () => {
 			const response = await postLogout()
 			return response.data

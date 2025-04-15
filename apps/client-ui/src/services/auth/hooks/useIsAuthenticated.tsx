@@ -1,7 +1,7 @@
+import { TGetUserResponse } from '@repo/types-macro-ai-api'
 import { useQuery } from '@tanstack/react-query'
 
 import { QUERY_KEY } from '@/constants/query-keys'
-import { TUser } from '@/lib/types/user'
 
 const useIsAuthenticated = () => {
 	const {
@@ -9,7 +9,7 @@ const useIsAuthenticated = () => {
 		isFetching,
 		isSuccess,
 		isError,
-	} = useQuery<TUser>({
+	} = useQuery<TGetUserResponse>({
 		queryKey: [QUERY_KEY.user],
 		enabled: false,
 		staleTime: Infinity,

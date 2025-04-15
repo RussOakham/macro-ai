@@ -1,15 +1,9 @@
+import { IAuthResponse, TLogin } from '@repo/types-macro-ai-api'
+
 import { axiosWithCredentials } from '@/lib/axios'
-import { TLoginForm } from '@/lib/types'
 
-interface ILoginResponse {
-	accessToken: string
-	refreshToken: string
-	expiresIn: number
-}
-
-// TODO: Update API response schemas with Cognito types, and generate via swagger
-const postLogin = async ({ email, password }: TLoginForm) => {
-	const response = await axiosWithCredentials.post<ILoginResponse>(
+const postLogin = async ({ email, password }: TLogin) => {
+	const response = await axiosWithCredentials.post<IAuthResponse>(
 		'/auth/login',
 		{
 			email,
@@ -20,4 +14,4 @@ const postLogin = async ({ email, password }: TLoginForm) => {
 	return response
 }
 
-export { type ILoginResponse, postLogin }
+export { postLogin }
