@@ -105,47 +105,47 @@ This document outlines the development tasks and enhancements planned for the Ma
   - [ ] Document all possible error responses
 
 - [ ] Create API Documentation Guide in `apps/express-api/README.md`
-  - [ ] Add section about accessing Swagger UI at http://localhost:3030/api-docs
+  - [ ] Add section about accessing Swagger UI at <http://localhost:3030/api-docs>
   - [ ] Document how to authenticate in Swagger UI
   - [ ] Add examples of using Swagger UI for testing endpoints
   - [ ] Create documentation for common API testing scenarios
 
 ### Type Generation Package (`/packages/types-api`)
 
-- [ ] Create new package structure
+- [x] Create new package structure
 
-  - [ ] Create directory: `packages/types-api`
-  - [ ] Initialize `packages/types-api/package.json`:
+  - [x] Create directory: `packages/types-macro-ai-api`
+  - [x] Initialize `packages/types-macro-ai-api/package.json`:
 
     ```json
     {
-    	"name": "@repo/types-api",
-    	"version": "0.0.1",
-    	"private": true,
-    	"main": "./dist/index.js",
-    	"module": "./dist/index.mjs",
-    	"types": "./dist/index.d.ts",
-    	"scripts": {
-    		"build": "tsup",
-    		"dev": "tsup --watch",
-    		"clean": "rm -rf dist"
-    	}
+     "name": "@repo/types-macro-ai-api",
+     "version": "0.0.1",
+     "private": true,
+     "main": "./dist/index.js",
+     "module": "./dist/index.mjs",
+     "types": "./dist/index.d.ts",
+     "scripts": {
+      "build": "tsup",
+      "dev": "tsup --watch",
+      "clean": "rm -rf dist"
+     }
     }
     ```
 
-  - [ ] Add `packages/types-api/tsconfig.json` using base config from `packages/config-typescript`
-  - [ ] Set up build process with tsup in `packages/types-api/tsup.config.ts`
+  - [x] Add `packages/types-macro-ai-api/tsconfig.json` using base config from `packages/config-typescript`
+  - [x] Set up build process with tsup in `packages/types-macro-ai-api/tsup.config.ts`
 
-- [ ] Implement Type Generation in `/packages/types-api`
+- [x] Implement Type Generation in `/packages/types-macro-ai-api`
 
-  - [ ] Install dependencies in package directory:
+  - [x] Install dependencies in package directory:
 
     ```bash
-    cd packages/types-api
+    cd packages/types-macro-ai-api
     pnpm add -D openapi-typescript swagger-typescript-api tsup
     ```
 
-  - [ ] Create type generation script in `packages/types-api/scripts/generate.ts`
+  - [x] Create type generation script in `packages/types-macro-ai-api/scripts/generate.ts`
     - [ ] Add script to fetch OpenAPI spec from running API
     - [ ] Generate TypeScript interfaces from OpenAPI spec
     - [ ] Add type generation to build process
@@ -159,23 +159,23 @@ This document outlines the development tasks and enhancements planned for the Ma
 
     ```json
     {
-    	"name": "@repo/api-client",
-    	"version": "0.0.1",
-    	"private": true,
-    	"main": "./dist/index.js",
-    	"module": "./dist/index.mjs",
-    	"types": "./dist/index.d.ts",
-    	"scripts": {
-    		"build": "tsup",
-    		"dev": "tsup --watch",
-    		"clean": "rm -rf dist"
-    	},
-    	"peerDependencies": {
-    		"axios": "^1.0.0"
-    	},
-    	"dependencies": {
-    		"@repo/types-api": "workspace:*"
-    	}
+     "name": "@repo/api-client",
+     "version": "0.0.1",
+     "private": true,
+     "main": "./dist/index.js",
+     "module": "./dist/index.mjs",
+     "types": "./dist/index.d.ts",
+     "scripts": {
+      "build": "tsup",
+      "dev": "tsup --watch",
+      "clean": "rm -rf dist"
+     },
+     "peerDependencies": {
+      "axios": "^1.0.0"
+     },
+     "dependencies": {
+      "@repo/types-api": "workspace:*"
+     }
     }
     ```
 
@@ -200,12 +200,12 @@ This document outlines the development tasks and enhancements planned for the Ma
 
     ```json
     {
-    	"pipeline": {
-    		"build": {
-    			"dependsOn": ["^build"],
-    			"outputs": ["dist/**"]
-    		}
-    	}
+     "pipeline": {
+      "build": {
+       "dependsOn": ["^build"],
+       "outputs": ["dist/**"]
+      }
+     }
     }
     ```
 
@@ -215,10 +215,10 @@ This document outlines the development tasks and enhancements planned for the Ma
 
   ```json
   {
-  	"dependencies": {
-  		"@repo/api-client": "workspace:*",
-  		"@repo/types-api": "workspace:*"
-  	}
+   "dependencies": {
+    "@repo/api-client": "workspace:*",
+    "@repo/types-api": "workspace:*"
+   }
   }
   ```
 
@@ -332,17 +332,15 @@ This document outlines the development tasks and enhancements planned for the Ma
 #### Client UI Security Updates (`/apps/client-ui`)
 
 - [ ] API Client Security
-
   - [x] Update Axios configuration with API key
   - [ ] Add request/response interceptors
   - [ ] Implement retry logic with backoff
   - [ ] Add request timeout handling
   - Resources:
-
     - [Axios Documentation](https://axios-http.com/docs/interceptors)
     - [HTTP Client Best Practices](https://docs.microsoft.com/en-us/azure/architecture/best-practices/api-implementation#handle-exceptions)
 
-  - [ ] Environment Configuration
+- [ ] Environment Configuration
   - [ ] Add security-related environment variables
   - [x] Implement environment validation
   - [x] Add environment type definitions
