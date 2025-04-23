@@ -6,7 +6,11 @@ import express, { Express } from 'express'
 import swaggerJSDoc, { type Options } from 'swagger-jsdoc'
 import swaggerUi from 'swagger-ui-express'
 
-import { apiKeyAuth } from '../middleware.ts'
+import { apiKeyAuth } from '../middleware/api-key.middleware.ts'
+import {
+	helmetMiddleware,
+	securityHeadersMiddleware,
+} from '../middleware/security-headers.middleware.ts'
 import { appRouter } from '../router/index.routes.ts'
 
 import { pino } from './logger.ts'
@@ -64,6 +68,16 @@ const createServer = (): Express => {
 			origin: ['http://localhost:3000', 'http://localhost:3030'],
 			credentials: true,
 			exposedHeaders: ['set-cookie'],
+			methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+			allowedHeaders: [
+				'Origin',
+				'X-Requested-With',
+				'Content-Type',
+				'Accept',
+				'Authorization',
+				'X-API-KEY',
+			],
+			maxAge: 86400, // 24 hours
 		}),
 	)
 	app.use(compression())
@@ -71,8 +85,10 @@ const createServer = (): Express => {
 	app.use(express.urlencoded({ extended: true }))
 	app.use(cookieParser())
 
-	// Add API key authentication middleware
+	// Add middlewares
 	app.use(apiKeyAuth)
+	app.use(helmetMiddleware)
+	app.use(securityHeadersMiddleware)
 
 	app.use('/api', appRouter())
 	app.use(

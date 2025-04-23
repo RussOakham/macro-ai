@@ -1,9 +1,8 @@
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
-import { config } from '../config/default.ts'
-
-import { pino } from './utils/logger.ts'
+import { config } from '../../config/default.ts'
+import { pino } from '../utils/logger.ts'
 
 const { logger } = pino
 
