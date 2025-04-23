@@ -14,6 +14,7 @@ import {
 import crypto from 'crypto'
 
 import { config } from '../../../config/default.ts'
+import { AppError } from '../../utils/errors.ts'
 
 import { TRegister } from './auth.types.ts'
 class CognitoService {
@@ -44,7 +45,11 @@ class CognitoService {
 
 	public async signUpUser({ email, password, confirmPassword }: TRegister) {
 		if (password !== confirmPassword) {
-			throw new Error('[authService]: SignUpUser - Passwords do not match')
+			throw AppError.validation(
+				'Passwords do not match',
+				undefined,
+				'authService',
+			)
 		}
 
 		const client = new CognitoIdentityProviderClient(this.config)
@@ -78,7 +83,7 @@ class CognitoService {
 		const users = await client.send(getUserCommand)
 
 		if (!users.Users || users.Users.length === 0) {
-			throw new Error('User not found')
+			throw AppError.notFound('User not found', 'authService')
 		}
 
 		const uniqueUser = users.Users.find(
@@ -87,7 +92,7 @@ class CognitoService {
 		)
 
 		if (!uniqueUser?.Username) {
-			throw new Error('User not found')
+			throw AppError.notFound('User not found', 'authService')
 		}
 
 		const command = new ConfirmSignUpCommand({
@@ -127,7 +132,7 @@ class CognitoService {
 		const users = await client.send(getUserCommand)
 
 		if (!users.Users || users.Users.length === 0) {
-			throw new Error('User not found')
+			throw AppError.notFound('User not found', 'authService')
 		}
 
 		const uniqueUser = users.Users.find(
@@ -136,7 +141,7 @@ class CognitoService {
 		)
 
 		if (!uniqueUser?.Username) {
-			throw new Error('User not found')
+			throw AppError.notFound('User not found', 'authService')
 		}
 
 		const command = new InitiateAuthCommand({
@@ -168,9 +173,9 @@ class CognitoService {
 			return await client.send(signOutCommand)
 		} catch (error) {
 			if (this.isTokenExpiredError(error)) {
-				throw new Error('TOKEN_EXPIRED')
+				throw AppError.unauthorized('Token expired', 'authService')
 			}
-			throw error
+			throw AppError.from(error, 'authService')
 		}
 	}
 
@@ -200,9 +205,9 @@ class CognitoService {
 			return await client.send(command)
 		} catch (error) {
 			if (this.isTokenExpiredError(error)) {
-				throw new Error('TOKEN_EXPIRED')
+				throw AppError.unauthorized('Token expired', 'authService')
 			}
-			throw error
+			throw AppError.from(error, 'authService')
 		}
 	}
 }

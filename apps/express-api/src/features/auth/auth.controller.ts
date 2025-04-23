@@ -7,6 +7,7 @@ import {
 	getSynchronizeToken,
 } from '../../utils/cookies.ts'
 import { decrypt, encrypt } from '../../utils/crypto.ts'
+import { AppError } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 import { standardizeError } from '../../utils/standardize-error.ts'
 
@@ -54,7 +55,9 @@ const authController: IAuthController = {
 			}
 
 			if (!response.UserSub) {
-				throw new Error('User not created - no user ID returned')
+				throw AppError.validation('User not created - no user ID returned', {
+					response: response.$metadata,
+				})
 			}
 
 			const authResponse: IAuthResponse = {

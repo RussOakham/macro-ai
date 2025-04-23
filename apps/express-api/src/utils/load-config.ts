@@ -3,6 +3,7 @@ import { resolve } from 'path'
 import { z } from 'zod'
 
 import { envSchema, TEnv } from './env.schema.ts'
+import { AppError } from './errors.ts'
 import { pino } from './logger.ts'
 import { standardizeError } from './standardize-error.ts'
 
@@ -20,8 +21,10 @@ const loadConfig = (): TEnv => {
 		})
 
 		if (result.error) {
-			throw new Error(
+			throw AppError.validation(
 				`Cannot parse .env file '${envPath}': ${result.error.message}`,
+				{ envPath, error: result.error },
+				'configLoader',
 			)
 		}
 
@@ -39,14 +42,18 @@ const loadConfig = (): TEnv => {
 				.join('\n')
 
 			logger.error(`Environment validation failed:\n${errors}`)
-			throw new Error(
+			throw AppError.validation(
 				`Invalid environment configuration in '${envPath}'. Check logs for details.`,
+				{ envPath, errors },
+				'configLoader',
 			)
 		}
 
 		logger.error(`Failed to load configuration: ${err.message}`)
-		throw new Error(
+		throw AppError.validation(
 			`Cannot load configuration from '${envPath}': ${err.message}`,
+			{ envPath, error: err },
+			'configLoader',
 		)
 	}
 }

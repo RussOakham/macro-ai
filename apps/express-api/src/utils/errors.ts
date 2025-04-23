@@ -7,24 +7,28 @@ interface IAppErrorParams {
 	status?: number
 	type?: string
 	details?: unknown
+	service?: string
 }
 
 export class AppError extends Error {
 	readonly type: string
 	readonly status: number
 	readonly details?: unknown
+	readonly service: string
 
 	constructor({
 		message,
 		status = StatusCodes.INTERNAL_SERVER_ERROR,
 		type = 'AppError',
 		details,
+		service = 'unknown', // Default value
 	}: IAppErrorParams) {
 		super(message)
 		this.name = this.constructor.name
 		this.type = type
 		this.status = status
 		this.details = details
+		this.service = service
 
 		// Maintains proper stack trace for where error was thrown (only available on V8)
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -38,7 +42,7 @@ export class AppError extends Error {
 	 * @param error The error to convert
 	 * @returns AppError instance
 	 */
-	static from(error: unknown): AppError {
+	static from(error: unknown, service?: string): AppError {
 		if (error instanceof AppError) {
 			return error
 		}
@@ -50,6 +54,7 @@ export class AppError extends Error {
 				message: validationError.message,
 				status: StatusCodes.BAD_REQUEST,
 				details: validationError.details,
+				service,
 			})
 		}
 
@@ -59,6 +64,7 @@ export class AppError extends Error {
 				message: error.message,
 				status: StatusCodes.BAD_REQUEST,
 				details: error.details,
+				service,
 			})
 		}
 
@@ -66,12 +72,14 @@ export class AppError extends Error {
 			return new AppError({
 				message: error.message,
 				status: StatusCodes.INTERNAL_SERVER_ERROR,
+				service,
 			})
 		}
 
 		return new AppError({
 			message: 'An unknown error occurred',
 			status: StatusCodes.INTERNAL_SERVER_ERROR,
+			service,
 		})
 	}
 
@@ -80,11 +88,12 @@ export class AppError extends Error {
 	 * @param message Optional custom message
 	 * @returns AppError instance
 	 */
-	static notFound(message = 'Resource not found'): AppError {
+	static notFound(message = 'Resource not found', service?: string): AppError {
 		return new AppError({
 			type: 'NotFoundError',
 			message,
 			status: StatusCodes.NOT_FOUND,
+			service,
 		})
 	}
 
@@ -93,11 +102,12 @@ export class AppError extends Error {
 	 * @param message Optional custom message
 	 * @returns AppError instance
 	 */
-	static unauthorized(message = 'Unauthorized'): AppError {
+	static unauthorized(message = 'Unauthorized', service?: string): AppError {
 		return new AppError({
 			type: 'UnauthorizedError',
 			message,
 			status: StatusCodes.UNAUTHORIZED,
+			service,
 		})
 	}
 
@@ -106,11 +116,12 @@ export class AppError extends Error {
 	 * @param message Optional custom message
 	 * @returns AppError instance
 	 */
-	static forbidden(message = 'Forbidden'): AppError {
+	static forbidden(message = 'Forbidden', service?: string): AppError {
 		return new AppError({
 			type: 'ForbiddenError',
 			message,
 			status: StatusCodes.FORBIDDEN,
+			service,
 		})
 	}
 
@@ -120,12 +131,17 @@ export class AppError extends Error {
 	 * @param details Optional validation details
 	 * @returns AppError instance
 	 */
-	static validation(message: string, details?: unknown): AppError {
+	static validation(
+		message: string,
+		details?: unknown,
+		service?: string,
+	): AppError {
 		return new AppError({
 			type: 'ValidationError',
 			message,
 			status: StatusCodes.BAD_REQUEST,
 			details,
+			service,
 		})
 	}
 
@@ -134,11 +150,12 @@ export class AppError extends Error {
 	 * @param message Optional custom message
 	 * @returns AppError instance
 	 */
-	static conflict(message = 'Resource conflict'): AppError {
+	static conflict(message = 'Resource conflict', service?: string): AppError {
 		return new AppError({
 			type: 'ConflictError',
 			message,
 			status: StatusCodes.CONFLICT,
+			service,
 		})
 	}
 }
@@ -153,6 +170,7 @@ export const standardizeError = (err: unknown): IStandardizedError => {
 			message: err.message,
 			stack: err.stack ?? '',
 			details: err.details,
+			service: err.service,
 		}
 	}
 
@@ -167,4 +185,5 @@ export interface IStandardizedError extends Error {
 	message: string
 	stack: string
 	details?: unknown
+	service: string
 }
