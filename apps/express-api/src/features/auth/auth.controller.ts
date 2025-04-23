@@ -1,22 +1,25 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { config } from '../../../config/default.ts'
+import {
+	getAccessToken,
+	getRefreshToken,
+	getSynchronizeToken,
+} from '../../utils/cookies.ts'
 import { decrypt, encrypt } from '../../utils/crypto.ts'
 import { pino } from '../../utils/logger.ts'
 import { standardizeError } from '../../utils/standardize-error.ts'
 
-import {
-	confirmRegistrationSchema,
-	loginSchema,
-	registerSchema,
-	resendConfirmationCodeSchema,
-} from './auth.schemas.ts'
 import { CognitoService } from './auth.services.ts'
 import {
 	IAuthController,
 	IAuthResponse,
+	TConfirmRegistration,
 	TGetUserResponse,
+	TLogin,
 	TLoginResponse,
+	TRegister,
+	TResendConfirmationCode,
 } from './auth.types.ts'
 
 const { logger } = pino
@@ -29,15 +32,7 @@ const authController: IAuthController = {
 	register: async (req, res) => {
 		const cognito = new CognitoService()
 		try {
-			const parsedBody = registerSchema.safeParse(req.body)
-
-			if (!parsedBody.success) {
-				const error = standardizeError(parsedBody.error)
-				res.status(StatusCodes.BAD_REQUEST).json({ message: error.message })
-				return
-			}
-
-			const { email, password, confirmPassword } = parsedBody.data
+			const { email, password, confirmPassword } = req.body as TRegister
 
 			const response = await cognito.signUpUser({
 				email,
@@ -82,15 +77,7 @@ const authController: IAuthController = {
 		const cognito = new CognitoService()
 
 		try {
-			const parsedBody = confirmRegistrationSchema.safeParse(req.body)
-
-			if (!parsedBody.success) {
-				const error = standardizeError(parsedBody.error)
-				res.status(StatusCodes.BAD_REQUEST).json({ message: error.message })
-				return
-			}
-
-			const { username, code } = parsedBody.data
+			const { username, code } = req.body as TConfirmRegistration
 
 			const response = await cognito.confirmSignUp(username, code)
 
@@ -120,15 +107,7 @@ const authController: IAuthController = {
 		const cognito = new CognitoService()
 
 		try {
-			const parsedBody = resendConfirmationCodeSchema.safeParse(req.body)
-
-			if (!parsedBody.success) {
-				const error = standardizeError(parsedBody.error)
-				res.status(StatusCodes.BAD_REQUEST).json({ message: error.message })
-				return
-			}
-
-			const { username } = parsedBody.data
+			const { username } = req.body as TResendConfirmationCode
 
 			const response = await cognito.resendConfirmationCode(username)
 
@@ -158,15 +137,7 @@ const authController: IAuthController = {
 		const cognito = new CognitoService()
 
 		try {
-			const parsedBody = loginSchema.safeParse(req.body)
-
-			if (!parsedBody.success) {
-				const error = standardizeError(parsedBody.error)
-				res.status(StatusCodes.BAD_REQUEST).json({ message: error.message })
-				return
-			}
-
-			const { email, password } = parsedBody.data
+			const { email, password } = req.body as TLogin
 
 			const response = await cognito.signInUser(email, password)
 
@@ -235,18 +206,7 @@ const authController: IAuthController = {
 	logout: async (req, res) => {
 		const cognito = new CognitoService()
 		try {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			const accessToken = req.cookies?.['macro-ai-accessToken'] as
-				| string
-				| undefined
-
-			if (!accessToken) {
-				logger.error('[authRouter]: Error logging out user: No access token')
-				res
-					.status(StatusCodes.UNAUTHORIZED)
-					.json({ message: 'Unauthorized - Tokens not found' })
-				return
-			}
+			const accessToken = getAccessToken(req, false) // Optional for logout
 
 			try {
 				await cognito.signOutUser(accessToken)
@@ -305,26 +265,8 @@ const authController: IAuthController = {
 		const cognito = new CognitoService()
 
 		try {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			const refreshToken = req.cookies?.['marco-ai-refreshToken'] as
-				| string
-				| undefined
-
-			if (!refreshToken) {
-				res
-					.status(StatusCodes.UNAUTHORIZED)
-					.json({ message: 'Refresh token not found' })
-				return
-			}
-
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			const encryptedUsername = req.cookies?.['macro-ai-synchronize'] as
-				| string
-				| undefined
-
-			if (!encryptedUsername) {
-				throw new Error('User data not found')
-			}
+			const refreshToken = getRefreshToken(req)
+			const encryptedUsername = getSynchronizeToken(req)
 
 			const decryptedUsername = decrypt(encryptedUsername)
 
@@ -400,15 +342,7 @@ const authController: IAuthController = {
 		const cognito = new CognitoService()
 
 		try {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			const accessToken = req.cookies?.['macro-ai-accessToken'] as
-				| string
-				| undefined
-
-			if (!accessToken) {
-				res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Unauthorized' })
-				return
-			}
+			const accessToken = getAccessToken(req)
 
 			const response = await cognito.getUser(accessToken)
 

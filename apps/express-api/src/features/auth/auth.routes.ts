@@ -1,6 +1,14 @@
 import { type Router } from 'express'
 
+import { validate } from '../../middleware/validation.middleware.ts'
+
 import { authController } from './auth.controller.ts'
+import {
+	confirmRegistrationSchema,
+	loginSchema,
+	registerSchema,
+	resendConfirmationCodeSchema,
+} from './auth.schemas.ts'
 
 const authRouter = (router: Router) => {
 	/**
@@ -146,7 +154,11 @@ const authRouter = (router: Router) => {
 	 *             schema:
 	 *               $ref: '#/components/schemas/ErrorResponse'
 	 */
-	router.post('/auth/register', authController.register)
+	router.post(
+		'/auth/register',
+		validate(registerSchema),
+		authController.register,
+	)
 
 	/**
 	 * @swagger
@@ -186,7 +198,11 @@ const authRouter = (router: Router) => {
 	 *             schema:
 	 *               $ref: '#/components/schemas/ErrorResponse'
 	 */
-	router.post('/auth/confirm-registration', authController.confirmRegistration)
+	router.post(
+		'/auth/confirm-registration',
+		validate(confirmRegistrationSchema),
+		authController.confirmRegistration,
+	)
 
 	/**
 	 * @swagger
@@ -210,6 +226,7 @@ const authRouter = (router: Router) => {
 	 */
 	router.post(
 		'/auth/resend-confirmation-code',
+		validate(resendConfirmationCodeSchema),
 		authController.resendConfirmationCode,
 	)
 
@@ -272,7 +289,7 @@ const authRouter = (router: Router) => {
 	 *             schema:
 	 *               $ref: '#/components/schemas/ErrorResponse'
 	 */
-	router.post('/auth/login', authController.login)
+	router.post('/auth/login', validate(loginSchema), authController.login)
 
 	/**
 	 * @swagger
