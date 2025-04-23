@@ -67,6 +67,34 @@ This document outlines the development tasks and enhancements planned for the Ma
 - [ ] Add TypeScript types for axios request config with \_retry property
 - [ ] Add error handling constants/enums for HTTP status codes
 
+#### Forgotten Password Implementation
+
+- [ ] Add forgotten password service in `apps/express-api/src/features/auth/auth.services.ts`
+
+  - [ ] Implement `forgotPassword` method using Cognito's `ForgotPasswordCommand`
+  - [ ] Implement `confirmForgotPassword` method using Cognito's `ConfirmForgotPasswordCommand`
+  - [ ] Add error handling for invalid/expired codes
+
+- [ ] Add forgotten password controller in `apps/express-api/src/features/auth/auth.controller.ts`
+
+  - [ ] Implement `forgotPassword` controller method
+  - [ ] Implement `confirmForgotPassword` controller method
+  - [ ] Add proper error handling and responses
+
+- [ ] Create forgotten password endpoints in `apps/express-api/src/features/auth/auth.routes.ts`
+
+  - [ ] Add `/auth/forgot-password` POST route
+  - [ ] Add `/auth/confirm-forgot-password` POST route
+  - [ ] Document endpoints with Swagger annotations
+  - [ ] Implement request validation schemas
+
+- [ ] Add client-side forgotten password logic in `apps/client-ui/src/services/auth/`
+  - [ ] Create `useForgotPassword` hook
+  - [ ] Create forgotten password form component
+  - [ ] Create reset password form component
+  - [ ] Add proper validation and error handling
+  - [ ] Add success/error notifications
+
 ### UI Updates
 
 - [x] Add logout button in header/navigation
@@ -74,12 +102,21 @@ This document outlines the development tasks and enhancements planned for the Ma
 - [ ] Add automatic logout on token expiration
 - [ ] Show appropriate loading states during token refresh
 - [ ] Add toast notifications for auth state changes
+- [ ] Add forgotten password UI flow
+  - [ ] Create forgotten password page
+  - [ ] Create reset password page
+  - [ ] Add navigation links to/from login page
 
 ### Testing
 
 - [ ] Add unit tests for new auth services
-- [ ] Add integration tests for token refresh flow
-- [ ] Add E2E tests for logout flow
+  - [ ] Test forgotten password flow
+  - [ ] Test token refresh flow
+  - [ ] Test logout flow
+- [ ] Add integration tests for auth flows
+  - [ ] Test password reset journey
+  - [ ] Test token refresh journey
+  - [ ] Test logout journey
 - [ ] Test error scenarios and recovery
 - [ ] Add tests for axios interceptor logic
 - [ ] Test request queue behavior during token refresh
@@ -87,8 +124,13 @@ This document outlines the development tasks and enhancements planned for the Ma
 ### Documentation
 
 - [ ] Update API documentation with new endpoints
-- [ ] Document token refresh strategy
+  - [ ] Document forgotten password endpoints
+  - [ ] Document token refresh strategy
+  - [ ] Document logout flow
 - [ ] Add sequence diagrams for auth flows
+  - [ ] Add forgotten password flow diagram
+  - [ ] Add token refresh flow diagram
+  - [ ] Add logout flow diagram
 - [ ] Update README with new authentication features
 - [ ] Document axios interceptor implementation
 - [ ] Add examples of handling auth state in components
@@ -119,17 +161,17 @@ This document outlines the development tasks and enhancements planned for the Ma
 
     ```json
     {
-    	"name": "@repo/types-macro-ai-api",
-    	"version": "0.0.1",
-    	"private": true,
-    	"main": "./dist/index.js",
-    	"module": "./dist/index.mjs",
-    	"types": "./dist/index.d.ts",
-    	"scripts": {
-    		"build": "tsup",
-    		"dev": "tsup --watch",
-    		"clean": "rm -rf dist"
-    	}
+     "name": "@repo/types-macro-ai-api",
+     "version": "0.0.1",
+     "private": true,
+     "main": "./dist/index.js",
+     "module": "./dist/index.mjs",
+     "types": "./dist/index.d.ts",
+     "scripts": {
+      "build": "tsup",
+      "dev": "tsup --watch",
+      "clean": "rm -rf dist"
+     }
     }
     ```
 
@@ -159,23 +201,23 @@ This document outlines the development tasks and enhancements planned for the Ma
 
     ```json
     {
-    	"name": "@repo/api-client",
-    	"version": "0.0.1",
-    	"private": true,
-    	"main": "./dist/index.js",
-    	"module": "./dist/index.mjs",
-    	"types": "./dist/index.d.ts",
-    	"scripts": {
-    		"build": "tsup",
-    		"dev": "tsup --watch",
-    		"clean": "rm -rf dist"
-    	},
-    	"peerDependencies": {
-    		"axios": "^1.0.0"
-    	},
-    	"dependencies": {
-    		"@repo/types-api": "workspace:*"
-    	}
+     "name": "@repo/api-client",
+     "version": "0.0.1",
+     "private": true,
+     "main": "./dist/index.js",
+     "module": "./dist/index.mjs",
+     "types": "./dist/index.d.ts",
+     "scripts": {
+      "build": "tsup",
+      "dev": "tsup --watch",
+      "clean": "rm -rf dist"
+     },
+     "peerDependencies": {
+      "axios": "^1.0.0"
+     },
+     "dependencies": {
+      "@repo/types-api": "workspace:*"
+     }
     }
     ```
 
@@ -200,12 +242,12 @@ This document outlines the development tasks and enhancements planned for the Ma
 
     ```json
     {
-    	"pipeline": {
-    		"build": {
-    			"dependsOn": ["^build"],
-    			"outputs": ["dist/**"]
-    		}
-    	}
+     "pipeline": {
+      "build": {
+       "dependsOn": ["^build"],
+       "outputs": ["dist/**"]
+      }
+     }
     }
     ```
 
@@ -215,10 +257,10 @@ This document outlines the development tasks and enhancements planned for the Ma
 
   ```json
   {
-  	"dependencies": {
-  		"@repo/api-client": "workspace:*",
-  		"@repo/types-api": "workspace:*"
-  	}
+   "dependencies": {
+    "@repo/api-client": "workspace:*",
+    "@repo/types-api": "workspace:*"
+   }
   }
   ```
 

@@ -7,6 +7,7 @@ import swaggerJSDoc, { type Options } from 'swagger-jsdoc'
 import swaggerUi from 'swagger-ui-express'
 
 import { apiKeyAuth } from '../middleware/api-key.middleware.ts'
+import { errorHandler } from '../middleware/error.middleware.ts'
 import {
 	helmetMiddleware,
 	securityHeadersMiddleware,
@@ -101,6 +102,10 @@ const createServer = (): Express => {
 			},
 		}),
 	)
+
+	// Add error handler last
+	app.use(errorHandler)
+
 	return app
 }
 
