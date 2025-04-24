@@ -9,7 +9,7 @@ import { z } from 'zod'
  * - Must contain at least 1 uppercase letter
  * - Must contain at least 1 lowercase letter
  */
-const passwordValidation = () =>
+export const passwordValidation = () =>
 	z
 		.string()
 		.min(8, {
@@ -31,7 +31,7 @@ const passwordValidation = () =>
 			message: 'Password must contain at least one lowercase letter',
 		})
 
-const emailValidation = () =>
+export const emailValidation = () =>
 	z.string().email({
 		message: 'Invalid email address',
 	})
@@ -72,6 +72,19 @@ export const refreshTokenSchema = z.object({
 		message: 'Invalid refresh token',
 		required_error: 'Refresh token is required',
 	}),
+})
+
+export const forgotPasswordSchema = z.object({
+	email: emailValidation(),
+})
+
+export const confirmForgotPasswordSchema = z.object({
+	email: emailValidation(),
+	code: z
+		.string()
+		.min(6, 'Code must be at least 6 characters')
+		.max(6, 'Code must be exactly 6 characters'),
+	newPassword: passwordValidation(),
 })
 
 export const getUserSchema = z.object({

@@ -1,7 +1,9 @@
 import {
 	CognitoIdentityProviderClient,
 	CognitoIdentityProviderClientConfig,
+	ConfirmForgotPasswordCommand,
 	ConfirmSignUpCommand,
+	ForgotPasswordCommand,
 	GetUserCommand,
 	GlobalSignOutCommand,
 	InitiateAuthCommand,
@@ -28,6 +30,11 @@ class CognitoService {
 	private readonly secretHash = config.awsCognitoUserPoolSecretKey
 	private readonly clientId = config.awsCognitoUserPoolClientId
 	private readonly userPoolId = config.awsCognitoUserPoolId
+	private readonly client: CognitoIdentityProviderClient
+
+	constructor() {
+		this.client = new CognitoIdentityProviderClient(this.config)
+	}
 
 	private generateHash(username: string): string {
 		return crypto
@@ -52,8 +59,6 @@ class CognitoService {
 			)
 		}
 
-		const client = new CognitoIdentityProviderClient(this.config)
-
 		const usedId = crypto.randomUUID()
 
 		const command = new SignUpCommand({
@@ -69,18 +74,16 @@ class CognitoService {
 			SecretHash: this.generateHash(usedId),
 		})
 
-		return client.send(command)
+		return this.client.send(command)
 	}
 
 	public async confirmSignUp(email: string, code: number) {
-		const client = new CognitoIdentityProviderClient(this.config)
-
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
 			UserPoolId: this.userPoolId,
 		})
 
-		const users = await client.send(getUserCommand)
+		const users = await this.client.send(getUserCommand)
 
 		if (!users.Users || users.Users.length === 0) {
 			throw AppError.notFound('User not found', 'authService')
@@ -102,34 +105,30 @@ class CognitoService {
 			SecretHash: this.generateHash(uniqueUser.Username),
 		})
 
-		return client.send(command)
+		return this.client.send(command)
 	}
 
 	public async resendConfirmationCode(email: string) {
-		const client = new CognitoIdentityProviderClient(this.config)
-
 		const command = new ResendConfirmationCodeCommand({
 			ClientId: this.clientId,
 			Username: email,
 			SecretHash: this.generateHash(email),
 		})
 
-		return client.send(command)
+		return this.client.send(command)
 	}
 
 	public async signInUser(
 		email: string,
 		password: string,
 	): Promise<InitiateAuthCommandOutput & { Username: string }> {
-		const client = new CognitoIdentityProviderClient(this.config)
-
 		// First, get the user's UUID using their email
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
 			UserPoolId: this.userPoolId,
 		})
 
-		const users = await client.send(getUserCommand)
+		const users = await this.client.send(getUserCommand)
 
 		if (!users.Users || users.Users.length === 0) {
 			throw AppError.notFound('User not found', 'authService')
@@ -154,7 +153,7 @@ class CognitoService {
 			},
 		})
 
-		const signInResponse = await client.send(command)
+		const signInResponse = await this.client.send(command)
 
 		return {
 			...signInResponse,
@@ -163,14 +162,12 @@ class CognitoService {
 	}
 
 	public async signOutUser(accessToken: string) {
-		const client = new CognitoIdentityProviderClient(this.config)
-
 		try {
 			const signOutCommand = new GlobalSignOutCommand({
 				AccessToken: accessToken,
 			})
 
-			return await client.send(signOutCommand)
+			return await this.client.send(signOutCommand)
 		} catch (error) {
 			if (this.isTokenExpiredError(error)) {
 				throw AppError.unauthorized('Token expired', 'authService')
@@ -180,8 +177,6 @@ class CognitoService {
 	}
 
 	public async refreshToken(refreshToken: string, username: string) {
-		const client = new CognitoIdentityProviderClient(this.config)
-
 		const refreshTokenCommand = new InitiateAuthCommand({
 			ClientId: this.clientId,
 			AuthFlow: 'REFRESH_TOKEN_AUTH',
@@ -191,18 +186,83 @@ class CognitoService {
 			},
 		})
 
-		return client.send(refreshTokenCommand)
+		return this.client.send(refreshTokenCommand)
+	}
+
+	public async forgotPassword(email: string) {
+		// First, get the user's UUID using their email
+		const getUserCommand = new ListUsersCommand({
+			Filter: `email = "${email}"`,
+			UserPoolId: this.userPoolId,
+		})
+		const users = await this.client.send(getUserCommand)
+
+		if (!users.Users || users.Users.length === 0) {
+			throw AppError.notFound('User not found', 'authService')
+		}
+
+		const uniqueUser = users.Users.find(
+			(user) =>
+				user.Attributes?.find((attr) => attr.Name === 'email')?.Value === email,
+		)
+
+		if (!uniqueUser?.Username) {
+			throw AppError.notFound('User not found', 'authService')
+		}
+
+		const command = new ForgotPasswordCommand({
+			ClientId: this.clientId,
+			Username: uniqueUser.Username,
+			SecretHash: this.generateHash(uniqueUser.Username),
+		})
+
+		return this.client.send(command)
+	}
+
+	public async confirmForgotPassword(
+		email: string,
+		code: string,
+		newPassword: string,
+	) {
+		// First, get the user's UUID using their email
+		const getUserCommand = new ListUsersCommand({
+			Filter: `email = "${email}"`,
+			UserPoolId: this.userPoolId,
+		})
+
+		const users = await this.client.send(getUserCommand)
+
+		if (!users.Users || users.Users.length === 0) {
+			throw AppError.notFound('User not found', 'authService')
+		}
+
+		const uniqueUser = users.Users.find(
+			(user) =>
+				user.Attributes?.find((attr) => attr.Name === 'email')?.Value === email,
+		)
+
+		if (!uniqueUser?.Username) {
+			throw AppError.notFound('User not found', 'authService')
+		}
+
+		const command = new ConfirmForgotPasswordCommand({
+			ClientId: this.clientId,
+			Username: uniqueUser.Username,
+			ConfirmationCode: code,
+			Password: newPassword,
+			SecretHash: this.generateHash(uniqueUser.Username),
+		})
+
+		return this.client.send(command)
 	}
 
 	public async getUser(accessToken: string) {
-		const client = new CognitoIdentityProviderClient(this.config)
-
 		try {
 			const command = new GetUserCommand({
 				AccessToken: accessToken,
 			})
 
-			return await client.send(command)
+			return await this.client.send(command)
 		} catch (error) {
 			if (this.isTokenExpiredError(error)) {
 				throw AppError.unauthorized('Token expired', 'authService')

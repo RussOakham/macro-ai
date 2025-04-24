@@ -4,7 +4,9 @@ import { validate } from '../../middleware/validation.middleware.ts'
 
 import { authController } from './auth.controller.ts'
 import {
+	confirmForgotPasswordSchema,
 	confirmRegistrationSchema,
+	forgotPasswordSchema,
 	loginSchema,
 	registerSchema,
 	resendConfirmationCodeSchema,
@@ -418,6 +420,106 @@ const authRouter = (router: Router) => {
 	 *               $ref: '#/components/schemas/ErrorResponse'
 	 */
 	router.get('/auth/user', authController.getUser)
+
+	/**
+	 * @swagger
+	 * /auth/forgot-password:
+	 *   post:
+	 *     tags: [Authorization]
+	 *     summary: Request password reset
+	 *     description: Sends a password reset code to the user's email
+	 *     requestBody:
+	 *       required: true
+	 *       content:
+	 *         application/json:
+	 *           schema:
+	 *             type: object
+	 *             properties:
+	 *               email:
+	 *                 type: string
+	 *                 format: email
+	 *                 description: User's email address
+	 *                 example: "user@example.com"
+	 *             required:
+	 *               - email
+	 *     responses:
+	 *       200:
+	 *         description: Password reset code sent successfully
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               type: object
+	 *               properties:
+	 *                 message:
+	 *                   type: string
+	 *                   example: "Password reset code has been sent to your email"
+	 *       400:
+	 *         $ref: '#/components/responses/BadRequest'
+	 *       404:
+	 *         $ref: '#/components/responses/NotFound'
+	 *       500:
+	 *         $ref: '#/components/responses/ServerError'
+	 */
+	router.post(
+		'/auth/forgot-password',
+		validate(forgotPasswordSchema),
+		authController.forgotPassword,
+	)
+
+	/**
+	 * @swagger
+	 * /auth/confirm-forgot-password:
+	 *   post:
+	 *     tags: [Authorization]
+	 *     summary: Confirm password reset
+	 *     description: Resets the user's password using the confirmation code
+	 *     requestBody:
+	 *       required: true
+	 *       content:
+	 *         application/json:
+	 *           schema:
+	 *             type: object
+	 *             properties:
+	 *               email:
+	 *                 type: string
+	 *                 format: email
+	 *                 description: User's email address
+	 *                 example: "user@example.com"
+	 *               code:
+	 *                 type: string
+	 *                 description: Password reset confirmation code
+	 *                 example: "123456"
+	 *               newPassword:
+	 *                 type: string
+	 *                 description: New password
+	 *                 example: "NewSecurePassword123!"
+	 *             required:
+	 *               - email
+	 *               - code
+	 *               - newPassword
+	 *     responses:
+	 *       200:
+	 *         description: Password reset successful
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               type: object
+	 *               properties:
+	 *                 message:
+	 *                   type: string
+	 *                   example: "Password reset successfully"
+	 *       400:
+	 *         $ref: '#/components/responses/BadRequest'
+	 *       404:
+	 *         $ref: '#/components/responses/NotFound'
+	 *       500:
+	 *         $ref: '#/components/responses/ServerError'
+	 */
+	router.post(
+		'/auth/confirm-forgot-password',
+		validate(confirmForgotPasswordSchema),
+		authController.confirmForgotPassword,
+	)
 }
 
 export { authRouter }

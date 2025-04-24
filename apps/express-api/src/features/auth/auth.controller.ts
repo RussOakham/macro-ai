@@ -1,3 +1,4 @@
+import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import { config } from '../../../config/default.ts'
@@ -15,7 +16,9 @@ import { CognitoService } from './auth.services.ts'
 import {
 	IAuthController,
 	IAuthResponse,
+	TConfirmForgotPassword,
 	TConfirmRegistration,
+	TForgotPassword,
 	TGetUserResponse,
 	TLogin,
 	TLoginResponse,
@@ -29,9 +32,10 @@ const nodeEnv = config.nodeEnv
 const cookieDomain = config.cookieDomain
 const refreshTokenExpiryDays = config.awsCognitoRefreshTokenExpiry
 
-const authController: IAuthController = {
-	register: async (req, res) => {
-		const cognito = new CognitoService()
+const cognito = new CognitoService()
+
+export const authController: IAuthController = {
+	register: async (req: Request, res: Response) => {
 		try {
 			const { email, password, confirmPassword } = req.body as TRegister
 
@@ -46,7 +50,7 @@ const authController: IAuthController = {
 				response.$metadata.httpStatusCode !== 200
 			) {
 				logger.error(
-					`[authRouter]: Error registering user: ${response.$metadata.httpStatusCode.toString()}`,
+					`[authController]: Error registering user: ${response.$metadata.httpStatusCode.toString()}`,
 				)
 				res
 					.status(response.$metadata.httpStatusCode)
@@ -76,9 +80,8 @@ const authController: IAuthController = {
 			res.status(standardError.status).json({ message: standardError.message })
 		}
 	},
-	confirmRegistration: async (req, res) => {
-		const cognito = new CognitoService()
 
+	confirmRegistration: async (req: Request, res: Response) => {
 		try {
 			const { username, code } = req.body as TConfirmRegistration
 
@@ -98,7 +101,7 @@ const authController: IAuthController = {
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(
-				`[authRouter]: Error confirming user registration: ${err.message}`,
+				`[authController]: Error confirming user registration: ${err.message}`,
 			)
 
 			res
@@ -106,9 +109,8 @@ const authController: IAuthController = {
 				.json({ message: err.message, details: err.details })
 		}
 	},
-	resendConfirmationCode: async (req, res) => {
-		const cognito = new CognitoService()
 
+	resendConfirmationCode: async (req: Request, res: Response) => {
 		try {
 			const { username } = req.body as TResendConfirmationCode
 
@@ -128,7 +130,7 @@ const authController: IAuthController = {
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(
-				`[authRouter]: Error resending confirmation code: ${err.message}`,
+				`[authController]: Error resending confirmation code: ${err.message}`,
 			)
 
 			res
@@ -136,9 +138,8 @@ const authController: IAuthController = {
 				.json({ message: err.message, details: err.details })
 		}
 	},
-	login: async (req, res) => {
-		const cognito = new CognitoService()
 
+	login: async (req: Request, res: Response) => {
 		try {
 			const { email, password } = req.body as TLogin
 
@@ -149,7 +150,7 @@ const authController: IAuthController = {
 				response.$metadata.httpStatusCode !== 200
 			) {
 				logger.error(
-					`[authRouter]: Error logging in user: ${response.$metadata.httpStatusCode.toString()}`,
+					`[authController]: Error logging in user: ${response.$metadata.httpStatusCode.toString()}`,
 				)
 				res
 					.status(response.$metadata.httpStatusCode)
@@ -198,7 +199,7 @@ const authController: IAuthController = {
 			const err = standardizeError(error)
 
 			logger.error(
-				`[authRouter]: Error logging in user: ${err.status.toString()} ${err.message}`,
+				`[authController]: Error logging in user: ${err.status.toString()} ${err.message}`,
 			)
 
 			res
@@ -206,8 +207,8 @@ const authController: IAuthController = {
 				.json({ message: err.message, details: err.details })
 		}
 	},
-	logout: async (req, res) => {
-		const cognito = new CognitoService()
+
+	logout: async (req: Request, res: Response) => {
 		try {
 			const accessToken = getAccessToken(req, false) // Optional for logout
 
@@ -256,7 +257,7 @@ const authController: IAuthController = {
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(
-				`[authRouter]: Error logging out user: ${err.status.toString()} ${err.message}`,
+				`[authController]: Error logging out user: ${err.status.toString()} ${err.message}`,
 			)
 
 			res
@@ -264,9 +265,8 @@ const authController: IAuthController = {
 				.json({ message: err.message, details: err.details })
 		}
 	},
-	refreshToken: async (req, res) => {
-		const cognito = new CognitoService()
 
+	refreshToken: async (req: Request, res: Response) => {
 		try {
 			const refreshToken = getRefreshToken(req)
 			const encryptedUsername = getSynchronizeToken(req)
@@ -283,7 +283,7 @@ const authController: IAuthController = {
 				response.$metadata.httpStatusCode !== 200
 			) {
 				logger.error(
-					`[authRouter]: Error refreshing token: ${response.$metadata.httpStatusCode.toString()}`,
+					`[authController]: Error refreshing token: ${response.$metadata.httpStatusCode.toString()}`,
 				)
 				res
 					.status(response.$metadata.httpStatusCode)
@@ -333,7 +333,7 @@ const authController: IAuthController = {
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(
-				`[authRouter]: Error refreshing token: ${err.status.toString()} ${err.message}`,
+				`[authController]: Error refreshing token: ${err.status.toString()} ${err.message}`,
 			)
 
 			res
@@ -341,9 +341,79 @@ const authController: IAuthController = {
 				.json({ message: err.message, details: err.details })
 		}
 	},
-	getUser: async (req, res) => {
-		const cognito = new CognitoService()
 
+	forgotPassword: async (req: Request, res: Response) => {
+		try {
+			const { email } = req.body as TForgotPassword
+
+			const response = await cognito.forgotPassword(email)
+
+			if (
+				response.$metadata.httpStatusCode !== undefined &&
+				response.$metadata.httpStatusCode !== 200
+			) {
+				logger.error(
+					`[authController]: Error initiating forgot password: ${response.$metadata.httpStatusCode.toString()}`,
+				)
+				res
+					.status(response.$metadata.httpStatusCode)
+					.json({ message: response.$metadata.httpStatusCode })
+				return
+			}
+		} catch (error: unknown) {
+			const err = standardizeError(error)
+			logger.error(
+				`[authController]: Error initiating forgot password: ${err.status.toString()} ${err.message}`,
+			)
+
+			res
+				.status(err.status)
+				.json({ message: err.message, details: err.details })
+			return
+		}
+	},
+
+	confirmForgotPassword: async (req: Request, res: Response) => {
+		try {
+			const { email, code, newPassword } = req.body as TConfirmForgotPassword
+
+			const response = await cognito.confirmForgotPassword(
+				email,
+				code,
+				newPassword,
+			)
+
+			if (
+				response.$metadata.httpStatusCode !== undefined &&
+				response.$metadata.httpStatusCode !== 200
+			) {
+				logger.error(
+					`[authController]: Error confirming forgot password: ${response.$metadata.httpStatusCode.toString()}`,
+				)
+				res
+					.status(response.$metadata.httpStatusCode)
+					.json({ message: response.$metadata.httpStatusCode })
+				return
+			}
+
+			res
+				.status(StatusCodes.OK)
+				.json({ message: 'Password reset successfully' })
+			return
+		} catch (error: unknown) {
+			const err = standardizeError(error)
+			logger.error(
+				`[authController]: Error confirming forgot password: ${err.status.toString()} ${err.message}`,
+			)
+
+			res
+				.status(err.status)
+				.json({ message: err.message, details: err.details })
+			return
+		}
+	},
+
+	getUser: async (req: Request, res: Response) => {
 		try {
 			const accessToken = getAccessToken(req)
 
@@ -373,7 +443,7 @@ const authController: IAuthController = {
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(
-				`[authRouter]: Error getting user: ${err.status.toString()} ${err.message}`,
+				`[authController]: Error getting user: ${err.status.toString()} ${err.message}`,
 			)
 
 			res
@@ -381,6 +451,4 @@ const authController: IAuthController = {
 				.json({ message: err.message, details: err.details })
 		}
 	},
-}
-
-export { authController }
+} as const
