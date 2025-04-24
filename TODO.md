@@ -60,33 +60,32 @@ This document outlines the development tasks and enhancements planned for the Ma
 
 #### Review and Refactor
 
-- [ ] Access Token - Create bearer token authorization header helper
-- [ ] Access Token - Create access token cookie helper
-- [ ] Refresh Token - Create refresh token cookie helper
+- [x] Access Token - Create access token cookie helper
+- [x] Refresh Token - Create refresh token cookie helper
 - [ ] Refactor axios interceptor into separate file for better maintainability
 - [ ] Add TypeScript types for axios request config with \_retry property
 - [ ] Add error handling constants/enums for HTTP status codes
 
 #### Forgotten Password Implementation
 
-- [ ] Add forgotten password service in `apps/express-api/src/features/auth/auth.services.ts`
+- [x] Add forgotten password service in `apps/express-api/src/features/auth/auth.services.ts`
 
-  - [ ] Implement `forgotPassword` method using Cognito's `ForgotPasswordCommand`
-  - [ ] Implement `confirmForgotPassword` method using Cognito's `ConfirmForgotPasswordCommand`
-  - [ ] Add error handling for invalid/expired codes
+  - [x] Implement `forgotPassword` method using Cognito's `ForgotPasswordCommand`
+  - [x] Implement `confirmForgotPassword` method using Cognito's `ConfirmForgotPasswordCommand`
+  - [x] Add error handling for invalid/expired codes
 
-- [ ] Add forgotten password controller in `apps/express-api/src/features/auth/auth.controller.ts`
+- [x] Add forgotten password controller in `apps/express-api/src/features/auth/auth.controller.ts`
 
-  - [ ] Implement `forgotPassword` controller method
-  - [ ] Implement `confirmForgotPassword` controller method
-  - [ ] Add proper error handling and responses
+  - [x] Implement `forgotPassword` controller method
+  - [x] Implement `confirmForgotPassword` controller method
+  - [x] Add proper error handling and responses
 
-- [ ] Create forgotten password endpoints in `apps/express-api/src/features/auth/auth.routes.ts`
+- [x] Create forgotten password endpoints in `apps/express-api/src/features/auth/auth.routes.ts`
 
-  - [ ] Add `/auth/forgot-password` POST route
-  - [ ] Add `/auth/confirm-forgot-password` POST route
-  - [ ] Document endpoints with Swagger annotations
-  - [ ] Implement request validation schemas
+  - [x] Add `/auth/forgot-password` POST route
+  - [x] Add `/auth/confirm-forgot-password` POST route
+  - [x] Document endpoints with Swagger annotations
+  - [x] Implement request validation schemas
 
 - [ ] Add client-side forgotten password logic in `apps/client-ui/src/services/auth/`
   - [ ] Create `useForgotPassword` hook
@@ -145,52 +144,13 @@ This document outlines the development tasks and enhancements planned for the Ma
   - [ ] Add example values for all request bodies
   - [ ] Add detailed descriptions for all parameters
   - [ ] Document all possible error responses
+  - [ ] Ensure OpenAPI spec is complete and accurate for client generation
 
 - [ ] Create API Documentation Guide in `apps/express-api/README.md`
   - [ ] Add section about accessing Swagger UI at <http://localhost:3030/api-docs>
   - [ ] Document how to authenticate in Swagger UI
   - [ ] Add examples of using Swagger UI for testing endpoints
   - [ ] Create documentation for common API testing scenarios
-
-### Type Generation Package (`/packages/types-api`)
-
-- [x] Create new package structure
-
-  - [x] Create directory: `packages/types-macro-ai-api`
-  - [x] Initialize `packages/types-macro-ai-api/package.json`:
-
-    ```json
-    {
-     "name": "@repo/types-macro-ai-api",
-     "version": "0.0.1",
-     "private": true,
-     "main": "./dist/index.js",
-     "module": "./dist/index.mjs",
-     "types": "./dist/index.d.ts",
-     "scripts": {
-      "build": "tsup",
-      "dev": "tsup --watch",
-      "clean": "rm -rf dist"
-     }
-    }
-    ```
-
-  - [x] Add `packages/types-macro-ai-api/tsconfig.json` using base config from `packages/config-typescript`
-  - [x] Set up build process with tsup in `packages/types-macro-ai-api/tsup.config.ts`
-
-- [x] Implement Type Generation in `/packages/types-macro-ai-api`
-
-  - [x] Install dependencies in package directory:
-
-    ```bash
-    cd packages/types-macro-ai-api
-    pnpm add -D openapi-typescript swagger-typescript-api tsup
-    ```
-
-  - [x] Create type generation script in `packages/types-macro-ai-api/scripts/generate.ts`
-    - [ ] Add script to fetch OpenAPI spec from running API
-    - [ ] Generate TypeScript interfaces from OpenAPI spec
-    - [ ] Add type generation to build process
 
 ### API Client Package (`/packages/api-client`)
 
@@ -201,40 +161,42 @@ This document outlines the development tasks and enhancements planned for the Ma
 
     ```json
     {
-     "name": "@repo/api-client",
-     "version": "0.0.1",
-     "private": true,
-     "main": "./dist/index.js",
-     "module": "./dist/index.mjs",
-     "types": "./dist/index.d.ts",
-     "scripts": {
-      "build": "tsup",
-      "dev": "tsup --watch",
-      "clean": "rm -rf dist"
-     },
-     "peerDependencies": {
-      "axios": "^1.0.0"
-     },
-     "dependencies": {
-      "@repo/types-api": "workspace:*"
-     }
+    	"name": "@repo/api-client",
+    	"version": "0.0.1",
+    	"private": true,
+    	"main": "./dist/index.js",
+    	"module": "./dist/index.mjs",
+    	"types": "./dist/index.d.ts",
+    	"scripts": {
+    		"build": "tsup",
+    		"dev": "tsup --watch",
+    		"clean": "rm -rf dist",
+    		"generate": "openapi-generator-cli generate -i http://localhost:3030/api-docs/swagger.json -g typescript-axios -o src/generated"
+    	},
+    	"peerDependencies": {
+    		"axios": "^1.0.0"
+    	}
     }
     ```
 
   - [ ] Add `packages/api-client/tsconfig.json` using base config from `packages/config-typescript`
   - [ ] Set up build process in `packages/api-client/tsup.config.ts`
+  - [ ] Add OpenAPI Generator configuration
+  - [ ] Create client generation script that:
+    - [ ] Fetches OpenAPI spec from running Express API
+    - [ ] Generates TypeScript client using OpenAPI Generator
+    - [ ] Adds custom wrappers for authentication and error handling
 
 ### Root Repository Updates (`/`)
 
 - [ ] Update Workspace Configuration
 
-  - [ ] Add new packages to `pnpm-workspace.yaml`:
+  - [ ] Update `pnpm-workspace.yaml`:
 
     ```yaml
     packages:
       - 'apps/*'
       - 'packages/*'
-      - 'packages/types-api'
       - 'packages/api-client'
     ```
 
@@ -242,12 +204,15 @@ This document outlines the development tasks and enhancements planned for the Ma
 
     ```json
     {
-     "pipeline": {
-      "build": {
-       "dependsOn": ["^build"],
-       "outputs": ["dist/**"]
-      }
-     }
+    	"pipeline": {
+    		"build": {
+    			"dependsOn": ["^build"],
+    			"outputs": ["dist/**"]
+    		},
+    		"generate": {
+    			"cache": false
+    		}
+    	}
     }
     ```
 
@@ -257,18 +222,17 @@ This document outlines the development tasks and enhancements planned for the Ma
 
   ```json
   {
-   "dependencies": {
-    "@repo/api-client": "workspace:*",
-    "@repo/types-api": "workspace:*"
-   }
+  	"dependencies": {
+  		"@repo/api-client": "workspace:*"
+  	}
   }
   ```
 
 - [ ] Implementation Updates
-  - [ ] Replace current API calls in `apps/client-ui/src/api` with new client
+  - [ ] Replace current API calls in `apps/client-ui/src/api` with generated client
   - [ ] Update authentication flow in `apps/client-ui/src/features/auth`
   - [ ] Update error handling in `apps/client-ui/src/utils/error`
-  - [ ] Add proper typing to all API calls
+  - [ ] Add proper typing to all API calls using generated types
 
 ### Express API Updates (`/apps/express-api`)
 

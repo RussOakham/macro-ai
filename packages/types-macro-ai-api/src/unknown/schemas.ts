@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-// Generated from features/auth/auth.schemas.ts
+// Generated from features\auth\auth.schemas.ts
 
 /**
  * Password validation function
@@ -11,7 +11,7 @@ import { z } from 'zod'
  * - Must contain at least 1 uppercase letter
  * - Must contain at least 1 lowercase letter
  */
-const passwordValidation = () =>
+export const passwordValidation = () =>
 	z
 		.string()
 		.min(8, {
@@ -33,7 +33,7 @@ const passwordValidation = () =>
 			message: 'Password must contain at least one lowercase letter',
 		})
 
-const emailValidation = () =>
+export const emailValidation = () =>
 	z.string().email({
 		message: 'Invalid email address',
 	})
@@ -51,10 +51,7 @@ export const registerSchema = z
 
 export const confirmRegistrationSchema = z.object({
 	username: emailValidation(),
-	code: z
-		.string()
-		.length(6)
-		.transform((val) => parseInt(val, 10)),
+	code: z.number(),
 })
 
 export const resendConfirmationCodeSchema = z.object({
@@ -77,6 +74,19 @@ export const refreshTokenSchema = z.object({
 		message: 'Invalid refresh token',
 		required_error: 'Refresh token is required',
 	}),
+})
+
+export const forgotPasswordSchema = z.object({
+	email: emailValidation(),
+})
+
+export const confirmForgotPasswordSchema = z.object({
+	email: emailValidation(),
+	code: z
+		.string()
+		.min(6, 'Code must be at least 6 characters')
+		.max(6, 'Code must be exactly 6 characters'),
+	newPassword: passwordValidation(),
 })
 
 export const getUserSchema = z.object({

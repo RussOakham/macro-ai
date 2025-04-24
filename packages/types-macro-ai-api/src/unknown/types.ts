@@ -9,9 +9,11 @@ import {
 	refreshTokenSchema,
 	getUserSchema,
 	getUserResponseSchema,
+	forgotPasswordSchema,
+	confirmForgotPasswordSchema,
 } from './schemas'
 
-// Generated from features/auth/auth.types.ts
+// Generated from features\auth\auth.types.ts
 
 // Zod inferred types
 export type TRegister = z.infer<typeof registerSchema>
@@ -27,6 +29,10 @@ export type TLogin = z.infer<typeof loginSchema>
 export type TLoginResponse = z.infer<typeof loginResponseSchema>
 
 export type TRefreshToken = z.infer<typeof refreshTokenSchema>
+
+export type TForgotPassword = z.infer<typeof forgotPasswordSchema>
+
+export type TConfirmForgotPassword = z.infer<typeof confirmForgotPasswordSchema>
 
 export type TGetUser = z.infer<typeof getUserSchema>
 
@@ -55,6 +61,8 @@ export interface IAuthController {
 	refreshToken: express.Handler
 	confirmRegistration: express.Handler
 	resendConfirmationCode: express.Handler
+	forgotPassword: express.Handler
+	confirmForgotPassword: express.Handler
 	getUser: express.Handler
 }
 
