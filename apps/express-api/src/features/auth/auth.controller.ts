@@ -360,6 +360,9 @@ export const authController: IAuthController = {
 					.json({ message: response.$metadata.httpStatusCode })
 				return
 			}
+
+			res.status(StatusCodes.OK).json({ message: 'Password reset initiated' })
+			return
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(
@@ -375,12 +378,14 @@ export const authController: IAuthController = {
 
 	confirmForgotPassword: async (req: Request, res: Response) => {
 		try {
-			const { email, code, newPassword } = req.body as TConfirmForgotPassword
+			const { email, code, newPassword, confirmPassword } =
+				req.body as TConfirmForgotPassword
 
 			const response = await cognito.confirmForgotPassword(
 				email,
 				code,
 				newPassword,
+				confirmPassword,
 			)
 
 			if (
