@@ -1,8 +1,11 @@
-import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import {
+	confirmForgotPasswordSchema,
+	TConfirmForgotPassword,
+} from '@repo/types-macro-ai-api'
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router'
-import { z } from 'zod'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -22,41 +25,47 @@ import {
 	FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-
-const verifyForgotPasswordSchema = z
-	.object({
-		code: z.string().min(6, {
-			message: 'Verification code must be at least 6 characters.',
-		}),
-		password: z.string().min(8, {
-			message: 'Password must be at least 8 characters.',
-		}),
-		confirmPassword: z.string().min(8, {
-			message: 'Confirm password must be at least 8 characters.',
-		}),
-	})
-	.refine((data) => data.password === data.confirmPassword, {
-		message: 'Passwords do not match',
-		path: ['confirmPassword'],
-	})
-
-type TVerifyForgotPasswordSchema = z.infer<typeof verifyForgotPasswordSchema>
+import { standardizeError } from '@/lib/errors/standardize-error'
+import { logger } from '@/lib/logger/logger'
+import { usePostForgotPasswordVerify } from '@/services/auth/hooks/usePostForgotPasswordVerify'
 
 const RouteComponent = () => {
-	const [isPending, setIsPending] = useState(false)
 	const navigate = useNavigate({ from: '/auth/forgotten-password/verify' })
+	const { mutateAsync: postForgotPasswordVerify, isPending } =
+		usePostForgotPasswordVerify()
 
-	const form = useForm<TVerifyForgotPasswordSchema>({
-		resolver: zodResolver(verifyForgotPasswordSchema),
+	const form = useForm<TConfirmForgotPassword>({
+		resolver: zodResolver(confirmForgotPasswordSchema),
 		defaultValues: {
 			code: '',
-			password: '',
+			email: '',
+			newPassword: '',
 			confirmPassword: '',
 		},
 	})
 
-	const onSubmit = (values: TVerifyForgotPasswordSchema) => {
-		console.log(values)
+	const onSubmit = async ({
+		code,
+		email,
+		newPassword,
+		confirmPassword,
+	}: TConfirmForgotPassword) => {
+		try {
+			const response = await postForgotPasswordVerify({
+				code,
+				email,
+				newPassword,
+				confirmPassword,
+			})
+
+			logger.info('Forgot password verify success', response)
+			toast.success('Password reset successfully! Please login.')
+			await navigate({ to: '/auth/login' })
+		} catch (error: unknown) {
+			const err = standardizeError(error)
+			logger.error(`Forgot password verifyerror: ${err.message}`)
+			toast.error(err.message)
+		}
 	}
 
 	return (
@@ -87,7 +96,20 @@ const RouteComponent = () => {
 							/>
 							<FormField
 								control={form.control}
-								name="password"
+								name="email"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Email</FormLabel>
+										<FormControl>
+											<Input placeholder="MaryPoppins@disney.com" {...field} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="newPassword"
 								render={({ field }) => (
 									<FormItem>
 										<FormLabel>New Password</FormLabel>

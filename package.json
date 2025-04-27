@@ -8,6 +8,7 @@
 		"build:types": "turbo run build --filter=@repo/types-macro-ai-api",
 		"dev": "turbo run dev --env-mode=loose",
 		"dev:types": "turbo run dev --filter=@repo/types-macro-ai-api",
+		"clean:types": "turbo run clean --filter=@repo/types-macro-ai-api",
 		"generate:types": "turbo run generate --filter=@repo/types-macro-ai-api",
 		"lint": "turbo run lint",
 		"format": "prettier --check .",

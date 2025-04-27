@@ -25,6 +25,12 @@
 		"dev": {
 			"cache": false,
 			"persistent": true
+		},
+		"generate": {
+			"cache": false
+		},
+		"clean": {
+			"cache": false
 		}
 	},
 	"envMode": "loose"

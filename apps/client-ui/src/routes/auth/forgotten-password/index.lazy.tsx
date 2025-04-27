@@ -1,8 +1,8 @@
-import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { forgotPasswordSchema, TForgotPassword } from '@repo/types-macro-ai-api'
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router'
-import { z } from 'zod'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -22,28 +22,33 @@ import {
 	FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-
-const forgotPasswordSchema = z.object({
-	email: z.string().email({
-		message: 'Invalid email address',
-	}),
-})
-
-type TForgotPasswordSchema = z.infer<typeof forgotPasswordSchema>
+import { standardizeError } from '@/lib/errors/standardize-error'
+import { logger } from '@/lib/logger/logger'
+import { usePostForgotPassword } from '@/services/auth/hooks/usePostForgotPassword'
 
 const RouteComponent = () => {
-	const [isPending, setIsPending] = useState(false)
 	const navigate = useNavigate({ from: '/auth/forgotten-password' })
+	const { mutateAsync: postForgotPassword, isPending } = usePostForgotPassword()
 
-	const form = useForm<TForgotPasswordSchema>({
+	const form = useForm<TForgotPassword>({
 		resolver: zodResolver(forgotPasswordSchema),
 		defaultValues: {
 			email: '',
 		},
 	})
 
-	const onSubmit = (values: TForgotPasswordSchema) => {
-		console.log(values)
+	const onSubmit = async ({ email }: TForgotPassword) => {
+		try {
+			const response = await postForgotPassword({ email })
+
+			logger.info('Forgot password success', response)
+			toast.success('Verification code sent! Please check your email.')
+			await navigate({ to: '/auth/forgotten-password/verify' })
+		} catch (error: unknown) {
+			const err = standardizeError(error)
+			logger.error(`Forgot password error: ${err.message}`)
+			toast.error(err.message)
+		}
 	}
 
 	return (

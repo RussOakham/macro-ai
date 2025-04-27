@@ -78,14 +78,20 @@ export const forgotPasswordSchema = z.object({
 	email: emailValidation(),
 })
 
-export const confirmForgotPasswordSchema = z.object({
-	email: emailValidation(),
-	code: z
-		.string()
-		.min(6, 'Code must be at least 6 characters')
-		.max(6, 'Code must be exactly 6 characters'),
-	newPassword: passwordValidation(),
-})
+export const confirmForgotPasswordSchema = z
+	.object({
+		email: emailValidation(),
+		code: z
+			.string()
+			.min(6, 'Code must be at least 6 characters')
+			.max(6, 'Code must be exactly 6 characters'),
+		newPassword: passwordValidation(),
+		confirmPassword: passwordValidation(),
+	})
+	.refine((data) => data.newPassword === data.confirmPassword, {
+		message: 'Passwords do not match',
+		path: ['confirmPassword'],
+	})
 
 export const getUserSchema = z.object({
 	accessToken: z.string({

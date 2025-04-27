@@ -223,7 +223,16 @@ class CognitoService {
 		email: string,
 		code: string,
 		newPassword: string,
+		confirmPassword: string,
 	) {
+		if (newPassword !== confirmPassword) {
+			throw AppError.validation(
+				'Passwords do not match',
+				undefined,
+				'authService',
+			)
+		}
+
 		// First, get the user's UUID using their email
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
