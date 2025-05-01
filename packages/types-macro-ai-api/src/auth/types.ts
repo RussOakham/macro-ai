@@ -7,10 +7,10 @@ import {
 	loginSchema,
 	loginResponseSchema,
 	refreshTokenSchema,
-	getUserSchema,
-	getUserResponseSchema,
 	forgotPasswordSchema,
 	confirmForgotPasswordSchema,
+	getUserSchema,
+	getUserResponseSchema,
 } from './schemas'
 
 // Generated from features/auth/auth.types.ts

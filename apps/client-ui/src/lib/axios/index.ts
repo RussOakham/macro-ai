@@ -100,34 +100,15 @@ axiosWithCredentials.interceptors.response.use(
 			isRefreshing = true
 
 			try {
-				const response = await postRefreshToken()
-				const { accessToken } = response
+				await postRefreshToken()
 
-				if (!accessToken) {
-					throw new Error(
-						'No access token received from refresh token response',
-					)
-				}
-
-				// Update access token in cookie
-				Cookies.set('macro-ai-accessToken', accessToken, {
-					expires: 1 / 24, // 1 hour
-					secure: true,
-					sameSite: 'strict',
-				})
-
-				processQueue(null, accessToken)
+				processQueue(null)
 				isRefreshing = false
 
 				return await axiosWithCredentials(originalRequest)
 			} catch (refreshError: unknown) {
 				const err = standardizeError(refreshError)
 				logger.error(`Refresh token failed: ${err.message}`)
-
-				// Clear auth cookies
-				Cookies.remove('macro-ai-accessToken')
-				Cookies.remove('marco-ai-refreshToken')
-				Cookies.remove('macro-ai-synchronize')
 
 				processQueue(err, null)
 				isRefreshing = false
