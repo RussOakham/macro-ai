@@ -3,7 +3,7 @@ import compression from 'compression'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import express, { Express } from 'express'
-import swaggerJSDoc, { type Options } from 'swagger-jsdoc'
+import path from 'path'
 import swaggerUi from 'swagger-ui-express'
 
 import { apiKeyAuth } from '../middleware/api-key.middleware.ts'
@@ -16,52 +16,13 @@ import { appRouter } from '../router/index.routes.ts'
 
 import { pino } from './logger.ts'
 
-const options: Options = {
-	definition: {
-		openapi: '3.1.0',
-		info: {
-			title: 'Macro AI Express API with Swagger',
-			version: '0.0.1',
-			description:
-				'This is a simple CRUD API application made with Express and documented with Swagger',
-			license: {
-				name: 'MIT',
-				url: 'https://spdx.org/licenses/MIT.html',
-			},
-		},
-		servers: [
-			{
-				url: 'http://localhost:3030/api',
-			},
-		],
-		components: {
-			securitySchemes: {
-				cookieAuth: {
-					type: 'apiKey',
-					in: 'cookie',
-					name: 'macro-ai-accessToken',
-				},
-				apiKeyAuth: {
-					type: 'apiKey',
-					in: 'header',
-					name: 'X-API-KEY',
-				},
-			},
-		},
-		security: [
-			{
-				cookieAuth: [],
-				apiKeyAuth: [],
-			},
-		],
-	},
-	apis: ['./src/features/**/*.ts'],
-}
-
-const swaggerSpec = swaggerJSDoc(options)
+// Export options for use in generate-swagger.ts
 
 const createServer = (): Express => {
 	const app: Express = express()
+
+	// Add static file serving for swagger.json
+	app.use(express.static(path.join(process.cwd(), 'public')))
 
 	app.use(pino)
 	app.use(
@@ -95,7 +56,7 @@ const createServer = (): Express => {
 	app.use(
 		'/api-docs',
 		swaggerUi.serve,
-		swaggerUi.setup(swaggerSpec, {
+		swaggerUi.setup(undefined, {
 			explorer: true,
 			swaggerOptions: {
 				url: '/swagger.json',

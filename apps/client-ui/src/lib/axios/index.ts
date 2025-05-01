@@ -3,7 +3,6 @@ import Axios, {
 	AxiosRequestConfig,
 	InternalAxiosRequestConfig,
 } from 'axios'
-import Cookies from 'js-cookie'
 
 import { router } from '@/main'
 import { postRefreshToken } from '@/services/auth/network/postRefreshToken'
