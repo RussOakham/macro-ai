@@ -5,6 +5,7 @@ import { schemas } from '@repo/types-macro-ai-api'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
+import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -39,7 +40,6 @@ import {
 	confirmRegistrationSchemaClient,
 	TConfirmRegistrationClient,
 } from '@/services/auth/network/postConfirmRegistration'
-import { z } from 'zod'
 
 type TGetUserResponse = z.infer<typeof schemas.GetUserResponse>
 

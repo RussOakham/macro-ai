@@ -474,6 +474,15 @@ export const authController: IAuthController = {
 				(attr) => attr.Name === 'email',
 			)?.Value
 
+			// Validate email is no undefined for type inference
+			if (!email) {
+				logger.error('[authController]: User profile incomplete')
+				res
+					.status(StatusCodes.PARTIAL_CONTENT)
+					.json({ message: 'User profile incomplete' })
+				return
+			}
+
 			// Check for complete profile
 			const emailValidation = validateData(
 				!!email,
@@ -491,7 +500,7 @@ export const authController: IAuthController = {
 			// Build complete user response
 			const userResponse: TGetUserResponse = {
 				id: response.Username,
-				email: email!,
+				email: email,
 				emailVerified:
 					response.UserAttributes?.find(
 						(attr) => attr.Name === 'email_verified',

@@ -9,7 +9,4 @@ export default repoConfig.config(...repoConfig.configs.base, {
 			project: './tsconfig.json',
 		},
 	},
-	rules: {
-		'@typescript-eslint/no-deprecated': 'off',
-	},
 })

@@ -1,3 +1,4 @@
+/* eslint-disable func-style */
 import { makeApi, Zodios, type ZodiosOptions } from '@zodios/core'
 import { z } from 'zod'
 

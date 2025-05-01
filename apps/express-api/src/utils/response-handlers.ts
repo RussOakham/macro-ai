@@ -1,5 +1,6 @@
 import { Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
+
 import { pino } from './logger.ts'
 import { IStandardizedError } from './standardize-error.ts'
 
@@ -8,13 +9,14 @@ const { logger } = pino
 /**
  * Handles successful API responses
  * @param res Express response object
- * @param data Response data
+ * @param data Response data of type TData
  * @param status HTTP status code (defaults to 200 OK)
  * @returns The Express response object for chaining
  */
-export const sendSuccess = <T>(
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
+export const sendSuccess = <TData>(
 	res: Response,
-	data: T,
+	data: TData,
 	status: number = StatusCodes.OK,
 ): Response => {
 	return res.status(status).json(data)
@@ -74,24 +76,21 @@ export const handleError = (
 	)
 
 	// Handle specific error cases
-	if (
-		err.type === 'UnauthorizedError' ||
-		err.status === StatusCodes.UNAUTHORIZED
-	) {
+	if (err.type === 'UnauthorizedError' || err.status === 401) {
 		return res.status(StatusCodes.UNAUTHORIZED).json({
 			message: 'Authentication required',
 			details: err.details,
 		})
 	}
 
-	if (err.type === 'ForbiddenError' || err.status === StatusCodes.FORBIDDEN) {
+	if (err.type === 'ForbiddenError' || err.status === 403) {
 		return res.status(StatusCodes.FORBIDDEN).json({
 			message: 'Access denied',
 			details: err.details,
 		})
 	}
 
-	if (err.type === 'NotFoundError' || err.status === StatusCodes.NOT_FOUND) {
+	if (err.type === 'NotFoundError' || err.status === 404) {
 		return res.status(StatusCodes.NOT_FOUND).json({
 			message: err.message || 'Resource not found',
 			details: err.details,
