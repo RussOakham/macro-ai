@@ -1,16 +1,12 @@
-import {
-	confirmRegistrationSchema,
-	IAuthResponse,
-} from '@repo/types-macro-ai-api'
+import { apiClient } from '@/lib/api'
+import { schemas } from '@repo/types-macro-ai-api'
+
 import { z } from 'zod'
 
-import { axios } from '@/lib/axios'
-
-export const confirmRegistrationSchemaClient = confirmRegistrationSchema.extend(
-	{
+export const confirmRegistrationSchemaClient =
+	schemas.ConfirmRegistration.extend({
 		code: z.string().length(6),
-	},
-)
+	})
 export type TConfirmRegistrationClient = z.infer<
 	typeof confirmRegistrationSchemaClient
 >
@@ -21,13 +17,10 @@ const postConfirmRegistration = async ({
 }: TConfirmRegistrationClient) => {
 	const parsedCode = z.coerce.number().parse(code)
 
-	const response = await axios.post<IAuthResponse>(
-		'/auth/confirm-registration',
-		{
-			username,
-			code: parsedCode,
-		},
-	)
+	const response = await apiClient.post('/auth/confirm-registration', {
+		username,
+		code: parsedCode,
+	})
 
 	return response
 }

@@ -1,7 +1,10 @@
-import { TGetUserResponse } from '@repo/types-macro-ai-api'
+import { schemas } from '@repo/types-macro-ai-api'
 import { useQuery } from '@tanstack/react-query'
 
 import { QUERY_KEY } from '@/constants/query-keys'
+import { z } from 'zod'
+
+type TGetUserResponse = z.infer<typeof schemas.GetUserResponse>
 
 const useIsAuthenticated = () => {
 	const {
@@ -23,7 +26,11 @@ const useIsAuthenticated = () => {
 		return false
 	}
 
-	return Boolean(user.id)
+	if (!user) {
+		return false
+	}
+
+	return true
 }
 
 export { useIsAuthenticated }

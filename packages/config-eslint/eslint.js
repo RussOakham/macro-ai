@@ -8,7 +8,6 @@ import reactCompiler from 'eslint-plugin-react-compiler'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import ts from 'typescript-eslint'
 import { FlatCompat } from '@eslint/eslintrc'
-import plugin from 'eslint-plugin-react'
 
 const compat = new FlatCompat({
 	recommendedConfig: js.configs.recommended,

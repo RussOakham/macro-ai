@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { TGetUserResponse } from '@repo/types-macro-ai-api'
+import { schemas } from '@repo/types-macro-ai-api'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
@@ -39,6 +39,9 @@ import {
 	confirmRegistrationSchemaClient,
 	TConfirmRegistrationClient,
 } from '@/services/auth/network/postConfirmRegistration'
+import { z } from 'zod'
+
+type TGetUserResponse = z.infer<typeof schemas.GetUserResponse>
 
 const ConfirmRegistrationForm = ({
 	className,

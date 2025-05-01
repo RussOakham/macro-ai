@@ -28,6 +28,36 @@
 			}
 		},
 		"schemas": {
+			"GetUserResponse": {
+				"type": "object",
+				"required": ["id", "email", "emailVerified"],
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "User ID",
+						"example": "user123"
+					},
+					"email": {
+						"type": "string",
+						"description": "User email",
+						"example": "user@example.com"
+					},
+					"emailVerified": {
+						"type": "boolean",
+						"description": "Whether the user's email is verified",
+						"example": true
+					}
+				}
+			},
+			"HealthResponse": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"example": "Api Health Status: OK"
+					}
+				}
+			},
 			"Register": {
 				"type": "object",
 				"properties": {
@@ -142,7 +172,8 @@
 							}
 						}
 					}
-				}
+				},
+				"required": ["message"]
 			},
 			"ErrorResponse": {
 				"type": "object",
@@ -154,6 +185,100 @@
 					"details": {
 						"type": "object",
 						"description": "Additional error details (optional)"
+					}
+				}
+			}
+		},
+		"responses": {
+			"BadRequest": {
+				"description": "Bad Request - The request was malformed or contains invalid parameters",
+				"content": {
+					"application/json": {
+						"schema": {
+							"type": "object",
+							"properties": {
+								"message": {
+									"type": "string",
+									"example": "Validation Failed"
+								},
+								"details": {
+									"type": "object",
+									"example": {
+										"field": "Error details"
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"Unauthorized": {
+				"description": "Unauthorized - Authentication is required or has failed",
+				"content": {
+					"application/json": {
+						"schema": {
+							"type": "object",
+							"properties": {
+								"message": {
+									"type": "string",
+									"example": "Invalid credentials"
+								}
+							}
+						}
+					}
+				}
+			},
+			"Forbidden": {
+				"description": "Forbidden - The user does not have permission to access the resource",
+				"content": {
+					"application/json": {
+						"schema": {
+							"type": "object",
+							"properties": {
+								"message": {
+									"type": "string",
+									"example": "Access denied"
+								}
+							}
+						}
+					}
+				}
+			},
+			"NotFound": {
+				"description": "Not Found - The requested resource was not found",
+				"content": {
+					"application/json": {
+						"schema": {
+							"type": "object",
+							"properties": {
+								"message": {
+									"type": "string",
+									"example": "Resource not found"
+								}
+							}
+						}
+					}
+				}
+			},
+			"ServerError": {
+				"description": "Server Error - An unexpected error occurred on the server",
+				"content": {
+					"application/json": {
+						"schema": {
+							"type": "object",
+							"properties": {
+								"message": {
+									"type": "string",
+									"example": "Internal server error"
+								},
+								"details": {
+									"type": "object",
+									"example": {
+										"error": "Error details"
+									}
+								}
+							}
+						}
 					}
 				}
 			}
@@ -525,6 +650,7 @@
 			"get": {
 				"tags": ["Authorization"],
 				"summary": "Get user profile",
+				"description": "Retrieves the authenticated user's profile information",
 				"security": [
 					{
 						"cookieAuth": []
@@ -536,32 +662,33 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "User profile retrieved successfully"
-										},
-										"user": {
-											"type": "object",
-											"properties": {
-												"id": {
-													"type": "string",
-													"description": "User ID"
-												},
-												"email": {
-													"type": "string",
-													"description": "User email"
-												}
-											}
-										}
-									}
+									"$ref": "#/components/schemas/GetUserResponse"
+								}
+							}
+						}
+					},
+					"206": {
+						"description": "Partial Content - User profile incomplete",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ErrorResponse"
 								}
 							}
 						}
 					},
 					"401": {
 						"description": "Unauthorized - Invalid or expired token",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ErrorResponse"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "User not found",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -663,9 +790,14 @@
 										"type": "string",
 										"description": "New password",
 										"example": "NewSecurePassword123!"
+									},
+									"confirmPassword": {
+										"type": "string",
+										"description": "Confirm new password",
+										"example": "NewSecurePassword123!"
 									}
 								},
-								"required": ["email", "code", "newPassword"]
+								"required": ["email", "code", "newPassword", "confirmPassword"]
 							}
 						}
 					}
@@ -710,6 +842,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
+									"$ref": "#/components/schemas/HealthResponse",
 									"type": "object",
 									"properties": {
 										"message": {
@@ -726,6 +859,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
+									"$ref": "#/components/schemas/ErrorResponse",
 									"type": "object",
 									"properties": {
 										"message": {

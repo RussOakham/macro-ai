@@ -10,6 +10,12 @@ import {
 import { decrypt, encrypt } from '../../utils/crypto.ts'
 import { AppError } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
+import {
+	handleError,
+	handleServiceError,
+	sendSuccess,
+	validateData,
+} from '../../utils/response-handlers.ts'
 import { standardizeError } from '../../utils/standardize-error.ts'
 
 import { CognitoService } from './auth.services.ts'
@@ -81,32 +87,38 @@ export const authController: IAuthController = {
 		}
 	},
 
-	confirmRegistration: async (req: Request, res: Response) => {
+	confirmRegistration: async (req: Request, res: Response): Promise<void> => {
 		try {
 			const { username, code } = req.body as TConfirmRegistration
 
 			const response = await cognito.confirmSignUp(username, code)
 
-			if (
-				response.$metadata.httpStatusCode !== undefined &&
-				response.$metadata.httpStatusCode !== 200
-			) {
+			// Check for service errors
+			const serviceResult = handleServiceError(
+				response,
+				'Error confirming user registration',
+				'authController',
+			)
+			if (!serviceResult.success) {
 				res
-					.status(response.$metadata.httpStatusCode)
-					.json({ message: response.$metadata.httpStatusCode })
+					.status(serviceResult.error.status)
+					.json({ message: serviceResult.error.message })
 				return
 			}
 
-			res.status(StatusCodes.OK).json({ message: 'Account confirmed' })
+			// Return success response
+			const authResponse: IAuthResponse = {
+				message: 'Account confirmed successfully',
+			}
+
+			sendSuccess(res, authResponse, StatusCodes.OK)
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(
 				`[authController]: Error confirming user registration: ${err.message}`,
 			)
 
-			res
-				.status(err.status)
-				.json({ message: err.message, details: err.details })
+			handleError(res, err, 'authController')
 		}
 	},
 
@@ -418,42 +430,78 @@ export const authController: IAuthController = {
 		}
 	},
 
-	getUser: async (req: Request, res: Response) => {
+	getUser: async (req: Request, res: Response): Promise<void> => {
 		try {
 			const accessToken = getAccessToken(req)
-
 			const response = await cognito.getUser(accessToken)
 
-			if (
-				response.$metadata.httpStatusCode !== undefined &&
-				response.$metadata.httpStatusCode !== 200
-			) {
+			// Check for service errors
+			const serviceResult = handleServiceError(
+				response,
+				'Failed to retrieve user information',
+				'authController',
+			)
+			if (!serviceResult.success) {
 				res
-					.status(response.$metadata.httpStatusCode)
-					.json({ message: response.$metadata.httpStatusCode })
+					.status(serviceResult.error.status)
+					.json({ message: serviceResult.error.message })
 				return
 			}
 
+			// Validate user data exists
+			const usernameValidation = validateData(
+				!!response.Username,
+				'User not found',
+				StatusCodes.NOT_FOUND,
+				'authController',
+			)
+			if (!usernameValidation.valid) {
+				res
+					.status(usernameValidation.error.status)
+					.json({ message: usernameValidation.error.message })
+				return
+			}
+
+			// Validate response.Username is not undefined for type inference
+			if (!response.Username) {
+				logger.error('[authController]: User not found')
+				res.status(StatusCodes.NOT_FOUND).json({ message: 'User not found' })
+				return
+			}
+
+			// Extract email from user attributes
+			const email = response.UserAttributes?.find(
+				(attr) => attr.Name === 'email',
+			)?.Value
+
+			// Check for complete profile
+			const emailValidation = validateData(
+				!!email,
+				'User profile incomplete',
+				StatusCodes.PARTIAL_CONTENT,
+				'authController',
+			)
+			if (!emailValidation.valid) {
+				res
+					.status(emailValidation.error.status)
+					.json({ message: emailValidation.error.message })
+				return
+			}
+
+			// Build complete user response
 			const userResponse: TGetUserResponse = {
-				id: response.Username ?? '',
-				email:
-					response.UserAttributes?.find((attr) => attr.Name === 'email')
-						?.Value ?? '',
+				id: response.Username,
+				email: email!,
 				emailVerified:
 					response.UserAttributes?.find(
 						(attr) => attr.Name === 'email_verified',
 					)?.Value === 'true',
 			}
-			res.status(StatusCodes.OK).json(userResponse)
+
+			sendSuccess(res, userResponse)
 		} catch (error: unknown) {
 			const err = standardizeError(error)
-			logger.error(
-				`[authController]: Error getting user: ${err.status.toString()} ${err.message}`,
-			)
-
-			res
-				.status(err.status)
-				.json({ message: err.message, details: err.details })
+			handleError(res, err, 'authController')
 		}
 	},
 } as const

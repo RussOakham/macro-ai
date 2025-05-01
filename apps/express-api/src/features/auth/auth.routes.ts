@@ -107,6 +107,8 @@ const authRouter = (router: Router) => {
 	 *             refreshToken:
 	 *               type: string
 	 *               description: JWT refresh token
+	 *       required:
+	 *         - message
 	 *     ErrorResponse:
 	 *       type: object
 	 *       properties:
@@ -384,6 +386,7 @@ const authRouter = (router: Router) => {
 	 *   get:
 	 *     tags: [Authorization]
 	 *     summary: Get user profile
+	 *     description: Retrieves the authenticated user's profile information
 	 *     security:
 	 *       - cookieAuth: []
 	 *     responses:
@@ -392,22 +395,21 @@ const authRouter = (router: Router) => {
 	 *         content:
 	 *           application/json:
 	 *             schema:
-	 *               type: object
-	 *               properties:
-	 *                 message:
-	 *                   type: string
-	 *                   example: "User profile retrieved successfully"
-	 *                 user:
-	 *                   type: object
-	 *                   properties:
-	 *                     id:
-	 *                       type: string
-	 *                       description: User ID
-	 *                     email:
-	 *                       type: string
-	 *                       description: User email
+	 *               $ref: '#/components/schemas/GetUserResponse'
 	 *       401:
 	 *         description: Unauthorized - Invalid or expired token
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               $ref: '#/components/schemas/ErrorResponse'
+	 *       404:
+	 *         description: User not found
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               $ref: '#/components/schemas/ErrorResponse'
+	 *       206:
+	 *         description: Partial Content - User profile incomplete
 	 *         content:
 	 *           application/json:
 	 *             schema:
@@ -493,10 +495,15 @@ const authRouter = (router: Router) => {
 	 *                 type: string
 	 *                 description: New password
 	 *                 example: "NewSecurePassword123!"
+	 *               confirmPassword:
+	 *                 type: string
+	 *                 description: Confirm new password
+	 *                 example: "NewSecurePassword123!"
 	 *             required:
 	 *               - email
 	 *               - code
 	 *               - newPassword
+	 *               - confirmPassword
 	 *     responses:
 	 *       200:
 	 *         description: Password reset successful

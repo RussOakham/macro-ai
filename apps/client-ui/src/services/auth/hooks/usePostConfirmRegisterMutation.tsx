@@ -1,10 +1,13 @@
-import { IAuthResponse } from '@repo/types-macro-ai-api'
+import { schemas } from '@repo/types-macro-ai-api'
 import { useMutation, UseMutationResult } from '@tanstack/react-query'
 
 import {
 	postConfirmRegistration,
 	TConfirmRegistrationClient,
 } from '../network/postConfirmRegistration'
+import { z } from 'zod'
+
+type IAuthResponse = z.infer<typeof schemas.AuthResponse>
 
 const usePostConfirmRegisterMutation = (): UseMutationResult<
 	IAuthResponse,
@@ -17,7 +20,7 @@ const usePostConfirmRegisterMutation = (): UseMutationResult<
 				username,
 				code,
 			})
-			return response.data
+			return response
 		},
 	})
 }
