@@ -539,6 +539,7 @@
 							"application/json": {
 								"schema": {
 									"type": "object",
+									"required": ["message"],
 									"properties": {
 										"message": {
 											"type": "string",
@@ -588,6 +589,7 @@
 							"application/json": {
 								"schema": {
 									"type": "object",
+									"required": ["message"],
 									"properties": {
 										"message": {
 											"type": "string",
@@ -741,6 +743,7 @@
 							"application/json": {
 								"schema": {
 									"type": "object",
+									"required": ["message"],
 									"properties": {
 										"message": {
 											"type": "string",
@@ -809,6 +812,7 @@
 							"application/json": {
 								"schema": {
 									"type": "object",
+									"required": ["message"],
 									"properties": {
 										"message": {
 											"type": "string",

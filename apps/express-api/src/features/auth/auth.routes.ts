@@ -310,6 +310,8 @@ const authRouter = (router: Router) => {
 	 *           application/json:
 	 *             schema:
 	 *               type: object
+	 *               required:
+	 *                 - message
 	 *               properties:
 	 *                 message:
 	 *                   type: string
@@ -344,6 +346,8 @@ const authRouter = (router: Router) => {
 	 *           application/json:
 	 *             schema:
 	 *               type: object
+	 *               required:
+	 *                 - message
 	 *               properties:
 	 *                 message:
 	 *                   type: string
@@ -451,6 +455,8 @@ const authRouter = (router: Router) => {
 	 *           application/json:
 	 *             schema:
 	 *               type: object
+	 *               required:
+	 *                 - message
 	 *               properties:
 	 *                 message:
 	 *                   type: string
@@ -511,6 +517,8 @@ const authRouter = (router: Router) => {
 	 *           application/json:
 	 *             schema:
 	 *               type: object
+	 *               required:
+	 *                 - message
 	 *               properties:
 	 *                 message:
 	 *                   type: string

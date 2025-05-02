@@ -1,4 +1,3 @@
-/* eslint-disable func-style */
 import { makeApi, Zodios, type ZodiosOptions } from '@zodios/core'
 import { z } from 'zod'
 
@@ -72,7 +71,7 @@ const endpoints = makeApi([
 				schema: postAuthconfirmForgotPassword_Body,
 			},
 		],
-		response: z.object({ message: z.string() }).partial().passthrough(),
+		response: z.object({ message: z.string() }).passthrough(),
 		errors: [
 			{
 				status: 400,
@@ -145,7 +144,7 @@ const endpoints = makeApi([
 				schema: z.object({ email: z.string().email() }).passthrough(),
 			},
 		],
-		response: z.object({ message: z.string() }).partial().passthrough(),
+		response: z.object({ message: z.string() }).passthrough(),
 		errors: [
 			{
 				status: 400,
@@ -223,7 +222,7 @@ const endpoints = makeApi([
 		method: 'post',
 		path: '/auth/logout',
 		requestFormat: 'json',
-		response: z.object({ message: z.string() }).partial().passthrough(),
+		response: z.object({ message: z.string() }).passthrough(),
 		errors: [
 			{
 				status: 401,
@@ -251,9 +250,9 @@ const endpoints = makeApi([
 						expiresIn: z.number(),
 					})
 					.partial()
-					.passthrough(),
+					.passthrough()
+					.optional(),
 			})
-			.partial()
 			.passthrough(),
 		errors: [
 			{

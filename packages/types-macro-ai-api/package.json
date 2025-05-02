@@ -3,13 +3,13 @@
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
-	"main": "./dist/index.js",
-	"module": "./dist/index.mjs",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
 		"build": "pnpm generate && tsup",
 		"dev": "tsup --watch",
-		"clean": "rm -rf dist src/*.{ts,js} src/*/*.{ts,js}",
+		"clean": "rm -rf dist && find src -type f \\( -name '*.ts' -o -name '*.js' \\) ! -name 'index.ts' -delete",
 		"typecheck": "tsc --noEmit",
 		"generate": "cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/types-macro-ai-api && tsx --tsconfig scripts/tsconfig.json scripts/generate.ts",
 		"lint": "eslint ."
@@ -34,5 +34,11 @@
 		"@zodios/core": "^10.9.6",
 		"openapi3-ts": "^3.0.2",
 		"zod": "^3.24.1"
+	},
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"require": "./dist/index.cjs"
+		}
 	}
 }

@@ -3,6 +3,10 @@ import { generateZodClientFromOpenAPI } from 'openapi-zod-client'
 import type { OpenAPIObject } from 'openapi3-ts'
 import path from 'path'
 import { resolveConfig } from 'prettier'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const EXPRESS_API_PATH = path.resolve(__dirname, '../../../apps/express-api')
 const SWAGGER_PATH = path.resolve(EXPRESS_API_PATH, 'public/swagger.json')

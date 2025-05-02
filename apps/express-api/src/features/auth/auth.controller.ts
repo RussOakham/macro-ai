@@ -58,16 +58,22 @@ export const authController: IAuthController = {
 				logger.error(
 					`[authController]: Error registering user: ${response.$metadata.httpStatusCode.toString()}`,
 				)
-				res
-					.status(response.$metadata.httpStatusCode)
-					.json({ message: response.$metadata.httpStatusCode })
+				const error = AppError.validation(
+					`Registration failed: ${response.$metadata.httpStatusCode.toString()}`,
+				)
+				handleError(res, standardizeError(error), 'authController')
 				return
 			}
 
 			if (!response.UserSub) {
-				throw AppError.validation('User not created - no user ID returned', {
-					response: response.$metadata,
-				})
+				const error = AppError.validation(
+					'User not created - no user ID returned',
+					{
+						response: response.$metadata,
+					},
+				)
+				handleError(res, standardizeError(error), 'authController')
+				return
 			}
 
 			const authResponse: IAuthResponse = {
@@ -79,11 +85,11 @@ export const authController: IAuthController = {
 				},
 			}
 
-			res.status(StatusCodes.CREATED).json(authResponse)
+			sendSuccess(res, authResponse, StatusCodes.CREATED)
 		} catch (error) {
 			const standardError = standardizeError(error)
 			logger.error(`[authController]: Register error: ${standardError.message}`)
-			res.status(standardError.status).json({ message: standardError.message })
+			handleError(res, standardError, 'authController')
 		}
 	},
 
@@ -132,9 +138,10 @@ export const authController: IAuthController = {
 				response.$metadata.httpStatusCode !== undefined &&
 				response.$metadata.httpStatusCode !== 200
 			) {
-				res
-					.status(response.$metadata.httpStatusCode)
-					.json({ message: response.$metadata.httpStatusCode })
+				const error = AppError.validation(
+					`Resend confirmation failed: ${response.$metadata.httpStatusCode.toString()}`,
+				)
+				handleError(res, standardizeError(error), 'authController')
 				return
 			}
 
@@ -144,10 +151,7 @@ export const authController: IAuthController = {
 			logger.error(
 				`[authController]: Error resending confirmation code: ${err.message}`,
 			)
-
-			res
-				.status(err.status)
-				.json({ message: err.message, details: err.details })
+			handleError(res, err, 'authController')
 		}
 	},
 
@@ -164,9 +168,10 @@ export const authController: IAuthController = {
 				logger.error(
 					`[authController]: Error logging in user: ${response.$metadata.httpStatusCode.toString()}`,
 				)
-				res
-					.status(response.$metadata.httpStatusCode)
-					.json({ message: response.$metadata.httpStatusCode })
+				const error = AppError.validation(
+					`Login failed: ${response.$metadata.httpStatusCode.toString()}`,
+				)
+				handleError(res, standardizeError(error), 'authController')
 				return
 			}
 
@@ -180,16 +185,13 @@ export const authController: IAuthController = {
 
 			res
 				.cookie('macro-ai-accessToken', loginResponse.accessToken, {
-					// Short lived cookie, so non-httpOnly for ease of access by client
 					httpOnly: false,
 					secure: nodeEnv === 'production',
-					// Add to config file
 					domain: cookieDomain,
 					sameSite: 'strict',
 					maxAge: loginResponse.expiresIn * 1000,
 				})
 				.cookie('marco-ai-refreshToken', loginResponse.refreshToken, {
-					// Long lived cookie, so httpOnly for improved security
 					httpOnly: true,
 					secure: nodeEnv === 'production',
 					domain: cookieDomain,
@@ -197,8 +199,6 @@ export const authController: IAuthController = {
 					maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
 				})
 				.cookie('macro-ai-synchronize', encryptedUsername, {
-					// Long lived cookie, so httpOnly for improved security
-					// Encrypted username stored in cookie to enable refresh token journey
 					httpOnly: true,
 					secure: nodeEnv === 'production',
 					domain: cookieDomain,
@@ -209,14 +209,10 @@ export const authController: IAuthController = {
 				.json(loginResponse)
 		} catch (error: unknown) {
 			const err = standardizeError(error)
-
 			logger.error(
 				`[authController]: Error logging in user: ${err.status.toString()} ${err.message}`,
 			)
-
-			res
-				.status(err.status)
-				.json({ message: err.message, details: err.details })
+			handleError(res, err, 'authController')
 		}
 	},
 
@@ -225,9 +221,19 @@ export const authController: IAuthController = {
 			const accessToken = getAccessToken(req, false) // Optional for logout
 
 			try {
-				await cognito.signOutUser(accessToken)
+				const response = await cognito.signOutUser(accessToken)
 
-				// Clear Cookies
+				if (
+					response.$metadata.httpStatusCode !== undefined &&
+					response.$metadata.httpStatusCode !== 200
+				) {
+					const error = AppError.validation(
+						`Logout failed: ${response.$metadata.httpStatusCode.toString()}`,
+					)
+					handleError(res, standardizeError(error), 'authController')
+					return
+				}
+
 				res.clearCookie('macro-ai-accessToken', {
 					domain: cookieDomain,
 					sameSite: 'strict',
@@ -244,8 +250,6 @@ export const authController: IAuthController = {
 				res.status(StatusCodes.OK).json({ message: 'Logged out successfully' })
 			} catch (error) {
 				if (error instanceof Error && error.message === 'TOKEN_EXPIRED') {
-					// If token is expired, still clear cookies but return success
-					// since the user is effectively logged out
 					res.clearCookie('macro-ai-accessToken', {
 						domain: cookieDomain,
 						sameSite: 'strict',
@@ -271,10 +275,7 @@ export const authController: IAuthController = {
 			logger.error(
 				`[authController]: Error logging out user: ${err.status.toString()} ${err.message}`,
 			)
-
-			res
-				.status(err.status)
-				.json({ message: err.message, details: err.details })
+			handleError(res, err, 'authController')
 		}
 	},
 
@@ -297,13 +298,13 @@ export const authController: IAuthController = {
 				logger.error(
 					`[authController]: Error refreshing token: ${response.$metadata.httpStatusCode.toString()}`,
 				)
-				res
-					.status(response.$metadata.httpStatusCode)
-					.json({ message: response.$metadata.httpStatusCode })
+				const error = AppError.validation(
+					`Refresh token failed: ${response.$metadata.httpStatusCode.toString()}`,
+				)
+				handleError(res, standardizeError(error), 'authController')
 				return
 			}
 
-			// If no new refresh token is provided, use the existing one
 			const newRefreshToken =
 				response.AuthenticationResult?.RefreshToken ?? refreshToken
 
@@ -315,16 +316,13 @@ export const authController: IAuthController = {
 
 			res
 				.cookie('macro-ai-accessToken', refreshLoginResponse.accessToken, {
-					// Short lived cookie, so non-httpOnly for ease of access by client
 					httpOnly: false,
 					secure: nodeEnv === 'production',
-					// Add to config file
 					domain: cookieDomain,
 					sameSite: 'strict',
 					maxAge: refreshLoginResponse.expiresIn * 1000,
 				})
 				.cookie('marco-ai-refreshToken', refreshLoginResponse.refreshToken, {
-					// Long lived cookie, so httpOnly for improved security
 					httpOnly: true,
 					secure: nodeEnv === 'production',
 					domain: cookieDomain,
@@ -332,8 +330,6 @@ export const authController: IAuthController = {
 					maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
 				})
 				.cookie('macro-ai-synchronize', encryptedUsername, {
-					// Long lived cookie, so httpOnly for improved security
-					// Encrypted username stored in cookie to enable refresh token journey
 					httpOnly: true,
 					secure: nodeEnv === 'production',
 					domain: cookieDomain,
@@ -347,10 +343,7 @@ export const authController: IAuthController = {
 			logger.error(
 				`[authController]: Error refreshing token: ${err.status.toString()} ${err.message}`,
 			)
-
-			res
-				.status(err.status)
-				.json({ message: err.message, details: err.details })
+			handleError(res, err, 'authController')
 		}
 	},
 
@@ -367,24 +360,20 @@ export const authController: IAuthController = {
 				logger.error(
 					`[authController]: Error initiating forgot password: ${response.$metadata.httpStatusCode.toString()}`,
 				)
-				res
-					.status(response.$metadata.httpStatusCode)
-					.json({ message: response.$metadata.httpStatusCode })
+				const error = AppError.validation(
+					`Forgot password failed: ${response.$metadata.httpStatusCode.toString()}`,
+				)
+				handleError(res, standardizeError(error), 'authController')
 				return
 			}
 
 			res.status(StatusCodes.OK).json({ message: 'Password reset initiated' })
-			return
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(
 				`[authController]: Error initiating forgot password: ${err.status.toString()} ${err.message}`,
 			)
-
-			res
-				.status(err.status)
-				.json({ message: err.message, details: err.details })
-			return
+			handleError(res, err, 'authController')
 		}
 	},
 
@@ -407,30 +396,26 @@ export const authController: IAuthController = {
 				logger.error(
 					`[authController]: Error confirming forgot password: ${response.$metadata.httpStatusCode.toString()}`,
 				)
-				res
-					.status(response.$metadata.httpStatusCode)
-					.json({ message: response.$metadata.httpStatusCode })
+				const error = AppError.validation(
+					`Confirm forgot password failed: ${response.$metadata.httpStatusCode.toString()}`,
+				)
+				handleError(res, standardizeError(error), 'authController')
 				return
 			}
 
 			res
 				.status(StatusCodes.OK)
 				.json({ message: 'Password reset successfully' })
-			return
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(
 				`[authController]: Error confirming forgot password: ${err.status.toString()} ${err.message}`,
 			)
-
-			res
-				.status(err.status)
-				.json({ message: err.message, details: err.details })
-			return
+			handleError(res, err, 'authController')
 		}
 	},
 
-	getUser: async (req: Request, res: Response): Promise<void> => {
+	getUser: async (req: Request, res: Response) => {
 		try {
 			const accessToken = getAccessToken(req)
 			const response = await cognito.getUser(accessToken)
@@ -507,10 +492,15 @@ export const authController: IAuthController = {
 					)?.Value === 'true',
 			}
 
-			sendSuccess(res, userResponse)
+			res.status(StatusCodes.OK).json(userResponse)
+			return
 		} catch (error: unknown) {
 			const err = standardizeError(error)
-			handleError(res, err, 'authController')
+			logger.error(
+				`[authController]: Error retrieving user: ${err.status.toString()} ${err.message}`,
+			)
+			res.status(err.status).json({ message: err.message })
+			return
 		}
 	},
 } as const

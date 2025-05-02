@@ -20,6 +20,9 @@ export default repoConfig.config(
 		},
 		// Use absolute path for output.ts
 		ignores: ['dist/**', 'node_modules/**', absolutePathToOutput],
+		rules: {
+			'func-style': 'off',
+		},
 	},
 	// Add specific configuration for scripts directory
 	{
