@@ -2,6 +2,7 @@
 	"$schema": "http://json.schemastore.org/package",
 	"private": true,
 	"name": "macro-ai",
+	"type": "module",
 	"scripts": {
 		"commit": "cz",
 		"build": "turbo run build",
@@ -18,7 +19,8 @@
 	"devDependencies": {
 		"commitizen": "^4.3.1",
 		"cz-conventional-changelog": "^3.3.0",
-		"prettier": "^3.5.3",
+		"eslint": "catalog:",
+		"prettier": "catalog:",
 		"turbo": "^2.5.2"
 	},
 	"packageManager": "pnpm@10.9.0",

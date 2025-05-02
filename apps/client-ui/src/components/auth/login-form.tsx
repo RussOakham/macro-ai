@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { schemas } from '@repo/types-macro-ai-api'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
@@ -10,6 +11,7 @@ import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
 import { usePostLoginMutation } from '@/services/auth/hooks/usePostLoginMutation'
+import { TLogin } from '@/services/auth/network/postLogin'
 
 import {
 	Form,
@@ -19,8 +21,6 @@ import {
 	FormLabel,
 	FormMessage,
 } from '../ui/form'
-import { TLogin } from '@/services/auth/network/postLogin'
-import { schemas } from '@repo/types-macro-ai-api'
 
 const LoginForm = ({
 	className,
