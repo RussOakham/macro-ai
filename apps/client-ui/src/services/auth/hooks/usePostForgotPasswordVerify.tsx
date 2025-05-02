@@ -1,14 +1,21 @@
-import { IAuthResponse, TConfirmForgotPassword } from '@repo/types-macro-ai-api'
+import { schemas } from '@repo/types-macro-ai-api'
 import { useMutation, UseMutationResult } from '@tanstack/react-query'
 
-import { postForgotPasswordVerify } from '../network/postForgotPasswordVerify'
+import {
+	postForgotPasswordVerify,
+	TConfirmForgotPassword,
+} from '../network/postForgotPasswordVerify'
+
+import { z } from 'zod'
+
+type TAuthResponse = z.infer<typeof schemas.AuthResponse>
 
 const usePostForgotPasswordVerify = (): UseMutationResult<
-	IAuthResponse,
+	TAuthResponse,
 	unknown,
 	TConfirmForgotPassword
 > => {
-	return useMutation<IAuthResponse, unknown, TConfirmForgotPassword>({
+	return useMutation<TAuthResponse, unknown, TConfirmForgotPassword>({
 		mutationFn: async ({
 			code,
 			email,
@@ -21,7 +28,7 @@ const usePostForgotPasswordVerify = (): UseMutationResult<
 				newPassword,
 				confirmPassword,
 			})
-			return response.data
+			return response
 		},
 	})
 }

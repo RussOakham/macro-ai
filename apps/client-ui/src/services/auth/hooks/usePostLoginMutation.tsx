@@ -1,4 +1,4 @@
-import { IAuthResponse, TLogin } from '@repo/types-macro-ai-api'
+import { schemas } from '@repo/types-macro-ai-api'
 import {
 	useMutation,
 	UseMutationResult,
@@ -8,19 +8,23 @@ import {
 import { QUERY_KEY } from '@/constants/query-keys'
 
 import { getUser } from '../network/getUser'
-import { postLogin } from '../network/postLogin'
+import { postLogin, TLogin } from '../network/postLogin'
+
+import { z } from 'zod'
+
+type TAuthResponse = z.infer<typeof schemas.AuthResponse>
 
 const usePostLoginMutation = (): UseMutationResult<
-	IAuthResponse,
+	TAuthResponse,
 	unknown,
 	TLogin
 > => {
 	const queryClient = useQueryClient()
 
-	return useMutation<IAuthResponse, unknown, TLogin>({
+	return useMutation<TAuthResponse, unknown, TLogin>({
 		mutationFn: async ({ email, password }: TLogin) => {
 			const response = await postLogin({ email, password })
-			return response.data
+			return response
 		},
 		onSuccess: async () => {
 			// After successful login, fetch user data

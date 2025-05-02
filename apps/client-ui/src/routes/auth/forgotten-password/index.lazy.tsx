@@ -1,6 +1,5 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { forgotPasswordSchema, TForgotPassword } from '@repo/types-macro-ai-api'
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
@@ -25,19 +24,23 @@ import { Input } from '@/components/ui/input'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { usePostForgotPassword } from '@/services/auth/hooks/usePostForgotPassword'
+import {
+	forgotPasswordSchemaClient,
+	type TForgotPasswordClient,
+} from '@/services/auth/network/postForgotPassword'
 
 const RouteComponent = () => {
 	const navigate = useNavigate({ from: '/auth/forgotten-password' })
 	const { mutateAsync: postForgotPassword, isPending } = usePostForgotPassword()
 
-	const form = useForm<TForgotPassword>({
-		resolver: zodResolver(forgotPasswordSchema),
+	const form = useForm<TForgotPasswordClient>({
+		resolver: zodResolver(forgotPasswordSchemaClient),
 		defaultValues: {
 			email: '',
 		},
 	})
 
-	const onSubmit = async ({ email }: TForgotPassword) => {
+	const onSubmit = async ({ email }: TForgotPasswordClient) => {
 		try {
 			const response = await postForgotPassword({ email })
 

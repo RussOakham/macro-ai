@@ -1,10 +1,12 @@
-import {
-	confirmForgotPasswordSchema,
-	IAuthResponse,
-	TConfirmForgotPassword,
-} from '@repo/types-macro-ai-api'
+import { schemas } from '@repo/types-macro-ai-api'
 
-import { axios } from '@/lib/axios'
+import { apiClient } from '@/lib/api'
+
+import { z } from 'zod'
+
+type TConfirmForgotPassword = z.infer<
+	typeof schemas.postAuthconfirmForgotPassword_Body
+>
 
 const postForgotPasswordVerify = async ({
 	code,
@@ -12,7 +14,7 @@ const postForgotPasswordVerify = async ({
 	newPassword,
 	confirmPassword,
 }: TConfirmForgotPassword) => {
-	const parsedData = confirmForgotPasswordSchema.safeParse({
+	const parsedData = schemas.postAuthconfirmForgotPassword_Body.safeParse({
 		code,
 		email,
 		newPassword,
@@ -38,7 +40,7 @@ const postForgotPasswordVerify = async ({
 		confirmPassword: confirmPassword,
 	}
 
-	const response = await axios.post<IAuthResponse>(
+	const response = await apiClient.post(
 		'/auth/confirm-forgot-password',
 		requestBody,
 	)
@@ -46,4 +48,4 @@ const postForgotPasswordVerify = async ({
 	return response
 }
 
-export { postForgotPasswordVerify }
+export { postForgotPasswordVerify, type TConfirmForgotPassword }

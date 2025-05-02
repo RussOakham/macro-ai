@@ -1,10 +1,7 @@
-import { TLoginResponse } from '@repo/types-macro-ai-api'
-
-import { axiosWithCredentials } from '@/lib/axios'
+import { apiClient } from '@/lib/api'
 
 const postRefreshToken = async () => {
-	const response =
-		await axiosWithCredentials.post<TLoginResponse>('/auth/refresh')
+	const response = await apiClient.post('/auth/refresh', undefined)
 
 	return response.data
 }

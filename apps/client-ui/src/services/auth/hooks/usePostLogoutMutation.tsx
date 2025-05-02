@@ -1,4 +1,4 @@
-import { IAuthResponse } from '@repo/types-macro-ai-api'
+import { schemas } from '@repo/types-macro-ai-api'
 import {
 	useMutation,
 	UseMutationResult,
@@ -13,18 +13,22 @@ import { logger } from '@/lib/logger/logger'
 
 import { postLogout } from '../network/postLogout'
 
+import { z } from 'zod'
+
+type TAuthResponse = z.infer<typeof schemas.AuthResponse>
+
 const usePostLogoutMutation = (): UseMutationResult<
-	IAuthResponse,
+	TAuthResponse,
 	unknown,
 	void
 > => {
 	const queryClient = useQueryClient()
 	const navigate = useNavigate()
 
-	return useMutation<IAuthResponse, unknown>({
+	return useMutation<TAuthResponse, unknown>({
 		mutationFn: async () => {
 			const response = await postLogout()
-			return response.data
+			return response
 		},
 		onError: (error) => {
 			const err = standardizeError(error)

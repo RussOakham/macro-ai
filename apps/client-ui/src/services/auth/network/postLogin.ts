@@ -1,17 +1,18 @@
-import { IAuthResponse, TLogin } from '@repo/types-macro-ai-api'
+import { schemas } from '@repo/types-macro-ai-api'
 
-import { axiosWithCredentials } from '@/lib/axios'
+import { apiClient } from '@/lib/api'
+
+import { z } from 'zod'
+
+type TLogin = z.infer<typeof schemas.Login>
 
 const postLogin = async ({ email, password }: TLogin) => {
-	const response = await axiosWithCredentials.post<IAuthResponse>(
-		'/auth/login',
-		{
-			email,
-			password,
-		},
-	)
+	const response = await apiClient.post('/auth/login', {
+		email,
+		password,
+	})
 
 	return response
 }
 
-export { postLogin }
+export { postLogin, type TLogin }

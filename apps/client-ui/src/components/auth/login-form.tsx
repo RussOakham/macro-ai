@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { loginSchema, TLogin } from '@repo/types-macro-ai-api'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
@@ -20,6 +19,8 @@ import {
 	FormLabel,
 	FormMessage,
 } from '../ui/form'
+import { TLogin } from '@/services/auth/network/postLogin'
+import { schemas } from '@repo/types-macro-ai-api'
 
 const LoginForm = ({
 	className,
@@ -30,7 +31,7 @@ const LoginForm = ({
 	const navigate = useNavigate({ from: '/auth/login' })
 
 	const form = useForm<TLogin>({
-		resolver: zodResolver(loginSchema),
+		resolver: zodResolver(schemas.Login),
 		defaultValues: {
 			email: '',
 			password: '',

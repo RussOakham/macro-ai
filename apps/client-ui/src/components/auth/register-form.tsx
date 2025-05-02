@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { registerSchema, TRegister } from '@repo/types-macro-ai-api'
+import { schemas } from '@repo/types-macro-ai-api'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
@@ -20,6 +20,7 @@ import {
 	FormLabel,
 	FormMessage,
 } from '../ui/form'
+import { TRegister } from '@/services/auth/network/postRegister'
 
 const RegisterForm = ({
 	className,
@@ -30,7 +31,7 @@ const RegisterForm = ({
 	const navigate = useNavigate({ from: '/auth/register' })
 
 	const form = useForm<TRegister>({
-		resolver: zodResolver(registerSchema),
+		resolver: zodResolver(schemas.Register),
 		defaultValues: {
 			email: '',
 			password: '',
@@ -119,7 +120,11 @@ const RegisterForm = ({
 											<FormLabel>Confirm Password</FormLabel>
 										</div>
 										<FormControl>
-											<Input type="password" {...field} />
+											<Input
+												type="password"
+												{...field}
+												value={field.value as string}
+											/>
 										</FormControl>
 										<FormMessage />
 									</FormItem>

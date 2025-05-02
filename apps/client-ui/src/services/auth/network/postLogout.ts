@@ -1,9 +1,9 @@
-import { IAuthResponse } from '@repo/types-macro-ai-api'
-
-import { axiosWithCredentials } from '@/lib/axios'
+import { apiClient } from '@/lib/api'
 
 const postLogout = async () => {
-	return axiosWithCredentials.post<IAuthResponse>('/auth/logout')
+	const response = await apiClient.post('/auth/logout', undefined)
+
+	return response
 }
 
 export { postLogout }

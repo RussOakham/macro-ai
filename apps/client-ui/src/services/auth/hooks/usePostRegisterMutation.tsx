@@ -1,4 +1,4 @@
-import { IAuthResponse, TRegister } from '@repo/types-macro-ai-api'
+import { schemas } from '@repo/types-macro-ai-api'
 import {
 	useMutation,
 	UseMutationResult,
@@ -7,19 +7,27 @@ import {
 
 import { QUERY_KEY } from '@/constants/query-keys'
 
-import { postRegister } from '../network/postRegister'
+import { postRegister, TRegister } from '../network/postRegister'
+
+import { z } from 'zod'
+
+type TAuthResponse = z.infer<typeof schemas.AuthResponse>
 
 const usePostRegisterMutation = (): UseMutationResult<
-	IAuthResponse,
+	TAuthResponse,
 	unknown,
 	TRegister
 > => {
 	const queryClient = useQueryClient()
 
-	return useMutation<IAuthResponse, unknown, TRegister>({
+	return useMutation<TAuthResponse, unknown, TRegister>({
 		mutationFn: async ({ email, password, confirmPassword }: TRegister) => {
-			const response = await postRegister({ email, password, confirmPassword })
-			return response.data
+			const response = await postRegister({
+				email,
+				password,
+				confirmPassword,
+			})
+			return response
 		},
 		onSuccess: (_data, variables) => {
 			queryClient.setQueryData([QUERY_KEY.user], {

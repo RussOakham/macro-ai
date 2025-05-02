@@ -1,13 +1,23 @@
-import { IAuthResponse, TForgotPassword } from '@repo/types-macro-ai-api'
+import { apiClient } from '@/lib/api'
 
-import { axios } from '@/lib/axios'
+import { z } from 'zod'
 
-const postForgotPassword = async ({ email }: TForgotPassword) => {
-	const response = await axios.post<IAuthResponse>('/auth/forgot-password', {
+const forgotPasswordSchemaClient = z.object({
+	email: z.string().email(),
+})
+
+type TForgotPasswordClient = z.infer<typeof forgotPasswordSchemaClient>
+
+const postForgotPassword = async ({ email }: TForgotPasswordClient) => {
+	const response = await apiClient.post('/auth/forgot-password', {
 		email,
 	})
 
 	return response
 }
 
-export { postForgotPassword }
+export {
+	postForgotPassword,
+	forgotPasswordSchemaClient,
+	type TForgotPasswordClient,
+}

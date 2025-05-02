@@ -7,14 +7,14 @@ import {
 } from '../network/postConfirmRegistration'
 import { z } from 'zod'
 
-type IAuthResponse = z.infer<typeof schemas.AuthResponse>
+type TAuthResponse = z.infer<typeof schemas.AuthResponse>
 
 const usePostConfirmRegisterMutation = (): UseMutationResult<
-	IAuthResponse,
+	TAuthResponse,
 	unknown,
 	TConfirmRegistrationClient
 > => {
-	return useMutation<IAuthResponse, unknown, TConfirmRegistrationClient>({
+	return useMutation<TAuthResponse, unknown, TConfirmRegistrationClient>({
 		mutationFn: async ({ username, code }: TConfirmRegistrationClient) => {
 			const response = await postConfirmRegistration({
 				username,

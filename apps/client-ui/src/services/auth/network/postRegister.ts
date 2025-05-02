@@ -1,13 +1,17 @@
-import { IAuthResponse, TRegister } from '@repo/types-macro-ai-api'
+import { schemas } from '@repo/types-macro-ai-api'
 
-import { axios } from '@/lib/axios'
+import { apiClient } from '@/lib/api'
+
+import { z } from 'zod'
+
+type TRegister = z.infer<typeof schemas.Register>
 
 const postRegister = async ({
 	email,
 	password,
 	confirmPassword,
 }: TRegister) => {
-	const response = await axios.post<IAuthResponse>('/auth/register', {
+	const response = await apiClient.post('/auth/register', {
 		email,
 		password,
 		confirmPassword,
@@ -16,4 +20,4 @@ const postRegister = async ({
 	return response
 }
 
-export { postRegister }
+export { postRegister, type TRegister }
