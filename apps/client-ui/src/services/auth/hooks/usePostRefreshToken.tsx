@@ -1,12 +1,6 @@
-import { schemas } from '@repo/types-macro-ai-api'
-import {
-	useMutation,
-	UseMutationResult,
-	useQueryClient,
-} from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import Cookies from 'js-cookie'
-import { z } from 'zod'
 
 import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
@@ -15,17 +9,11 @@ import { logger } from '@/lib/logger/logger'
 import { getUser } from '../network/getUser'
 import { postRefreshToken } from '../network/postRefreshToken'
 
-type TAuthResponse = z.infer<typeof schemas.AuthResponse>
-
-const usePostRefreshToken = (): UseMutationResult<
-	TAuthResponse,
-	unknown,
-	void
-> => {
+const usePostRefreshToken = () => {
 	const queryClient = useQueryClient()
 	const navigate = useNavigate()
 
-	return useMutation<TAuthResponse, unknown>({
+	return useMutation({
 		mutationFn: async () => {
 			const response = await postRefreshToken()
 			return response

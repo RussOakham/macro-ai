@@ -1,25 +1,13 @@
-import { schemas } from '@repo/types-macro-ai-api'
-import {
-	useMutation,
-	UseMutationResult,
-	useQueryClient,
-} from '@tanstack/react-query'
-import { z } from 'zod'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { QUERY_KEY } from '@/constants/query-keys'
 
 import { postRegister, TRegister } from '../network/postRegister'
 
-type TAuthResponse = z.infer<typeof schemas.AuthResponse>
-
-const usePostRegisterMutation = (): UseMutationResult<
-	TAuthResponse,
-	unknown,
-	TRegister
-> => {
+const usePostRegisterMutation = () => {
 	const queryClient = useQueryClient()
 
-	return useMutation<TAuthResponse, unknown, TRegister>({
+	return useMutation({
 		mutationFn: async ({ email, password, confirmPassword }: TRegister) => {
 			const response = await postRegister({
 				email,

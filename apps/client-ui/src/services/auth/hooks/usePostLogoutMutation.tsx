@@ -1,12 +1,6 @@
-import { schemas } from '@repo/types-macro-ai-api'
-import {
-	useMutation,
-	UseMutationResult,
-	useQueryClient,
-} from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { z } from 'zod'
 
 import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
@@ -14,17 +8,11 @@ import { logger } from '@/lib/logger/logger'
 
 import { postLogout } from '../network/postLogout'
 
-type TAuthResponse = z.infer<typeof schemas.AuthResponse>
-
-const usePostLogoutMutation = (): UseMutationResult<
-	TAuthResponse,
-	unknown,
-	void
-> => {
+const usePostLogoutMutation = () => {
 	const queryClient = useQueryClient()
 	const navigate = useNavigate()
 
-	return useMutation<TAuthResponse, unknown>({
+	return useMutation({
 		mutationFn: async () => {
 			const response = await postLogout()
 			return response
