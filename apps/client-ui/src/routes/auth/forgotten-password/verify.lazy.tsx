@@ -1,6 +1,6 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-
+import { schemas } from '@repo/types-macro-ai-api'
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
@@ -26,7 +26,6 @@ import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { usePostForgotPasswordVerify } from '@/services/auth/hooks/usePostForgotPasswordVerify'
 import { TConfirmForgotPassword } from '@/services/auth/network/postForgotPasswordVerify'
-import { schemas } from '@repo/types-macro-ai-api'
 
 const RouteComponent = () => {
 	const navigate = useNavigate({ from: '/auth/forgotten-password/verify' })

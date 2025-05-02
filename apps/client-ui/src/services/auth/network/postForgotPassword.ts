@@ -1,6 +1,6 @@
-import { apiClient } from '@/lib/api'
-
 import { z } from 'zod'
+
+import { apiClient } from '@/lib/api'
 
 const forgotPasswordSchemaClient = z.object({
 	email: z.string().email(),
@@ -17,7 +17,7 @@ const postForgotPassword = async ({ email }: TForgotPasswordClient) => {
 }
 
 export {
-	postForgotPassword,
 	forgotPasswordSchemaClient,
+	postForgotPassword,
 	type TForgotPasswordClient,
 }

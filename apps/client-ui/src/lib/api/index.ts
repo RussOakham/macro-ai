@@ -1,10 +1,12 @@
 import { createApiClient } from '@repo/types-macro-ai-api'
-import { validateEnvironment } from '../validation/environment'
 import { AxiosError, InternalAxiosRequestConfig } from 'axios'
-import { logger } from '../logger/logger'
+
 import { router } from '@/main'
-import { standardizeError } from '../errors/standardize-error'
 import { postRefreshToken } from '@/services/auth/network/postRefreshToken'
+
+import { standardizeError } from '../errors/standardize-error'
+import { logger } from '../logger/logger'
+import { validateEnvironment } from '../validation/environment'
 
 const env = validateEnvironment()
 

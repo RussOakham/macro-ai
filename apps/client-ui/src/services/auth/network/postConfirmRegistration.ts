@@ -26,7 +26,7 @@ const postConfirmRegistration = async ({
 }
 
 export {
-	postConfirmRegistration,
 	confirmRegistrationSchemaClient,
+	postConfirmRegistration,
 	type TConfirmRegistrationClient,
 }

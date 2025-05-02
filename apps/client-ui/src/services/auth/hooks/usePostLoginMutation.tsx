@@ -4,13 +4,12 @@ import {
 	UseMutationResult,
 	useQueryClient,
 } from '@tanstack/react-query'
+import { z } from 'zod'
 
 import { QUERY_KEY } from '@/constants/query-keys'
 
 import { getUser } from '../network/getUser'
 import { postLogin, TLogin } from '../network/postLogin'
-
-import { z } from 'zod'
 
 type TAuthResponse = z.infer<typeof schemas.AuthResponse>
 

@@ -1,11 +1,11 @@
 import { schemas } from '@repo/types-macro-ai-api'
 import { useMutation, UseMutationResult } from '@tanstack/react-query'
+import { z } from 'zod'
 
 import {
 	postConfirmRegistration,
 	TConfirmRegistrationClient,
 } from '../network/postConfirmRegistration'
-import { z } from 'zod'
 
 type TAuthResponse = z.infer<typeof schemas.AuthResponse>
 

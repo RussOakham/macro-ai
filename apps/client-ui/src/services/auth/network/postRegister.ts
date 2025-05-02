@@ -1,8 +1,7 @@
 import { schemas } from '@repo/types-macro-ai-api'
+import { z } from 'zod'
 
 import { apiClient } from '@/lib/api'
-
-import { z } from 'zod'
 
 type TRegister = z.infer<typeof schemas.Register>
 

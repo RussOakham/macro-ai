@@ -1,3 +1,4 @@
+import { schemas } from '@repo/types-macro-ai-api'
 import {
 	useMutation,
 	UseMutationResult,
@@ -5,6 +6,7 @@ import {
 } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import Cookies from 'js-cookie'
+import { z } from 'zod'
 
 import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
@@ -12,9 +14,6 @@ import { logger } from '@/lib/logger/logger'
 
 import { getUser } from '../network/getUser'
 import { postRefreshToken } from '../network/postRefreshToken'
-
-import { z } from 'zod'
-import { schemas } from '@repo/types-macro-ai-api'
 
 type TAuthResponse = z.infer<typeof schemas.AuthResponse>
 

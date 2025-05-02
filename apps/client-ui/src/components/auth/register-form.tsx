@@ -11,6 +11,7 @@ import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
 import { usePostRegisterMutation } from '@/services/auth/hooks/usePostRegisterMutation'
+import { TRegister } from '@/services/auth/network/postRegister'
 
 import {
 	Form,
@@ -20,7 +21,6 @@ import {
 	FormLabel,
 	FormMessage,
 } from '../ui/form'
-import { TRegister } from '@/services/auth/network/postRegister'
 
 const RegisterForm = ({
 	className,
