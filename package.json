@@ -14,14 +14,19 @@
 		"lint": "turbo run lint",
 		"format": "prettier --check .",
 		"format:fix": "prettier --write .",
-		"ui": "pnpm --filter @repo/ui ui"
+		"ui": "pnpm --filter @repo/ui ui",
+		"test": "turbo run test"
 	},
 	"devDependencies": {
+		"@types/node": "catalog:",
+		"@vitest/ui": "^3.1.2",
 		"commitizen": "^4.3.1",
 		"cz-conventional-changelog": "^3.3.0",
 		"eslint": "catalog:",
 		"prettier": "catalog:",
-		"turbo": "^2.5.2"
+		"tsx": "^4.19.4",
+		"turbo": "^2.5.2",
+		"vitest": "^3.1.2"
 	},
 	"packageManager": "pnpm@10.9.0",
 	"engines": {
