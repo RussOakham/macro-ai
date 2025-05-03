@@ -58,7 +58,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Build types package
-        run: pnpm --filter types-macro-ai-api... build
+        run: pnpm --filter macro-ai-api-client... build
       - name: Run lint
         run: pnpm lint
 

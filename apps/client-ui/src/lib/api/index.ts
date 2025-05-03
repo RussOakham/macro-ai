@@ -1,4 +1,4 @@
-import { createApiClient } from '@repo/types-macro-ai-api'
+import { createApiClient } from '@repo/macro-ai-api-client'
 import { AxiosError, InternalAxiosRequestConfig } from 'axios'
 
 import { router } from '@/main'

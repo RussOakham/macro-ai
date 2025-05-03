@@ -33,10 +33,10 @@
 - [x] Document axios interceptor implementation in `apps/client-ui/src/lib/api/README.md`
 - [ ] Add examples of handling auth state in components in `apps/client-ui/src/features/auth/README.md`
 
-## API Client Package (`/packages/api-client`)
+## API Client Package (`/packages/macro-ai-api-client`)
 
 - [ ] Create Package Structure
-  - [ ] Create directory: `packages/api-client`
+  - [ ] Create directory: `packages/macro-ai-api-client`
   - [ ] Initialize `packages/api-client/package.json`
   - [ ] Add `packages/api-client/tsconfig.json` using base config from `packages/config-typescript`
   - [ ] Set up build process in `packages/api-client/tsup.config.ts`
@@ -72,11 +72,9 @@
 ## Documentation Updates
 
 - [ ] Root Repository (`/`)
-- [ ] Types API Package (`/packages/types-api`)
-- [ ] API Client Package (`/packages/api-client`)
+- [ ] API Client Package (`/packages/macro-ai-api-client`)
 
 ## Testing Setup
 
-- [ ] API Client Tests (`/packages/api-client`)
-- [ ] Types Package Tests (`/packages/types-api`)
+- [ ] API Client Tests (`/packages/macro-ai-api-client`)
 - [ ] Client UI Integration Tests (`/apps/client-ui`)

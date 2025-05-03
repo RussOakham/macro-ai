@@ -1,5 +1,5 @@
 {
-	"name": "@repo/types-macro-ai-api",
+	"name": "@repo/macro-ai-api-client",
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
@@ -11,7 +11,7 @@
 		"dev": "tsup --watch",
 		"clean": "rm -rf dist && find src -type f \\( -name '*.ts' -o -name '*.js' \\) ! -name 'index.ts' -delete",
 		"typecheck": "tsc --noEmit",
-		"generate": "cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/types-macro-ai-api && tsx --tsconfig scripts/tsconfig.json scripts/generate.ts",
+		"generate": "cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && tsx --tsconfig scripts/tsconfig.json scripts/generate.ts",
 		"lint": "eslint ."
 	},
 	"devDependencies": {
