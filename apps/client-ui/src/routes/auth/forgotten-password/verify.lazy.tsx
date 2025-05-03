@@ -1,6 +1,6 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { schemas } from '@repo/types-macro-ai-api'
+import { schemas } from '@repo/macro-ai-api-client'
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 

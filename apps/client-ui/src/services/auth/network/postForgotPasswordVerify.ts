@@ -1,4 +1,4 @@
-import { schemas } from '@repo/types-macro-ai-api'
+import { schemas } from '@repo/macro-ai-api-client'
 import { z } from 'zod'
 
 import { apiClient } from '@/lib/api'
