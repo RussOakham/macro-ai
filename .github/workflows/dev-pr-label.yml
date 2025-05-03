@@ -6,9 +6,9 @@ name: Dev - PR Label Check
 
 on:
   pull_request:
-    types: [ opened, reopened, labeled, unlabeled, synchronize ]
+    types: [opened, reopened, labeled, unlabeled, synchronize]
     branches:
-    - main
+      - main
 
 concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
@@ -20,13 +20,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [ 20.x ]
+        node-version: [20.x]
     steps:
-    - name: Check PR Label
-      uses: mheap/github-action-required-labels@v5.4.1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        mode: exactly
-        count: 1
-        labels: 'major, minor, patch'
+      - name: Check PR Label
+        uses: mheap/github-action-required-labels@v5.4.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          mode: exactly
+          count: 1
+          labels: 'major, minor, patch'

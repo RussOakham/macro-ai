@@ -15,7 +15,8 @@
 		"format": "prettier --check .",
 		"format:fix": "prettier --write .",
 		"ui": "pnpm --filter @repo/ui ui",
-		"test": "turbo run test"
+		"test": "turbo run test",
+		"prepare": "husky"
 	},
 	"devDependencies": {
 		"@types/node": "catalog:",
@@ -23,6 +24,7 @@
 		"commitizen": "^4.3.1",
 		"cz-conventional-changelog": "^3.3.0",
 		"eslint": "catalog:",
+		"husky": "^9.1.7",
 		"prettier": "catalog:",
 		"tsx": "^4.19.4",
 		"turbo": "^2.5.2",
