@@ -19,6 +19,8 @@ const config = {
 	awsCognitoRefreshTokenExpiry: env.AWS_COGNITO_REFRESH_TOKEN_EXPIRY,
 	cookieDomain: env.COOKIE_DOMAIN,
 	cookieEncryptionKey: env.COOKIE_ENCRYPTION_KEY,
+	nonRelationalDatabaseUrl: env.NON_RELATIONAL_DATABASE_URL,
+	relationalDatabaseUrl: env.RELATIONAL_DATABASE_URL,
 }
 
 export { config }

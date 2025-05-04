@@ -1,5 +1,6 @@
 import * as repoConfig from '@repo/config-eslint'
 import globals from 'globals'
+import drizzlePlugin from 'eslint-plugin-drizzle'
 
 export default repoConfig.config(...repoConfig.configs.base, {
 	languageOptions: {
@@ -8,5 +9,8 @@ export default repoConfig.config(...repoConfig.configs.base, {
 			ecmaVersion: 2022,
 			project: './tsconfig.json',
 		},
+	},
+	plugins: {
+		drizzle: drizzlePlugin,
 	},
 })

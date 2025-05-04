@@ -17,6 +17,7 @@ import {
 	validateData,
 } from '../../utils/response-handlers.ts'
 import { standardizeError } from '../../utils/standardize-error.ts'
+import { registerOrLoginUserById } from '../user/user.services.ts'
 
 import { CognitoService } from './auth.services.ts'
 import {
@@ -31,7 +32,6 @@ import {
 	TRegister,
 	TResendConfirmationCode,
 } from './auth.types.ts'
-
 const { logger } = pino
 
 const nodeEnv = config.nodeEnv
@@ -83,6 +83,14 @@ export const authController: IAuthController = {
 					id: response.UserSub,
 					email,
 				},
+			}
+
+			const user = await registerOrLoginUserById(response.UserSub, email)
+
+			if (!user) {
+				const error = AppError.validation('User not created')
+				handleError(res, standardizeError(error), 'authController')
+				return
 			}
 
 			sendSuccess(res, authResponse, StatusCodes.CREATED)
@@ -182,6 +190,14 @@ export const authController: IAuthController = {
 			}
 
 			const encryptedUsername = encrypt(response.Username)
+
+			const user = await registerOrLoginUserById(response.Username, email)
+
+			if (!user) {
+				const error = AppError.validation('User not created')
+				handleError(res, standardizeError(error), 'authController')
+				return
+			}
 
 			res
 				.cookie('macro-ai-accessToken', loginResponse.accessToken, {

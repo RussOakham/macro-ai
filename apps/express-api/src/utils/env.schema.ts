@@ -38,6 +38,14 @@ const envSchema = z.object({
 			required_error: 'Cookie encryption key is required',
 		})
 		.min(32, 'Cookie encryption key must be at least 32 characters'),
+
+	// Database
+	NON_RELATIONAL_DATABASE_URL: z
+		.string()
+		.min(1, 'Non-relational database URL is required'),
+	RELATIONAL_DATABASE_URL: z
+		.string()
+		.min(1, 'Relational database URL is required'),
 })
 
 type TEnv = z.infer<typeof envSchema>
