@@ -399,7 +399,7 @@ const authRouter = (router: Router) => {
 	 *         content:
 	 *           application/json:
 	 *             schema:
-	 *               $ref: '#/components/schemas/GetUserResponse'
+	 *               $ref: '#/components/schemas/GetCognitoUserResponse'
 	 *       401:
 	 *         description: Unauthorized - Invalid or expired token
 	 *         content:
@@ -425,7 +425,7 @@ const authRouter = (router: Router) => {
 	 *             schema:
 	 *               $ref: '#/components/schemas/ErrorResponse'
 	 */
-	router.get('/auth/user', authController.getUser)
+	router.get('/auth/user', authController.getCognitoUser)
 
 	/**
 	 * @swagger

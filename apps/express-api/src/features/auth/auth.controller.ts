@@ -17,7 +17,7 @@ import {
 	validateData,
 } from '../../utils/response-handlers.ts'
 import { standardizeError } from '../../utils/standardize-error.ts'
-import { registerOrLoginUserById } from '../user/user.services.ts'
+import { userService } from '../user/user.services.ts'
 
 import { CognitoService } from './auth.services.ts'
 import {
@@ -26,7 +26,7 @@ import {
 	TConfirmForgotPassword,
 	TConfirmRegistration,
 	TForgotPassword,
-	TGetUserResponse,
+	TGetCognitoUserResponse,
 	TLogin,
 	TLoginResponse,
 	TRegister,
@@ -85,7 +85,10 @@ export const authController: IAuthController = {
 				},
 			}
 
-			const user = await registerOrLoginUserById(response.UserSub, email)
+			const user = await userService.registerOrLoginUserById(
+				response.UserSub,
+				email,
+			)
 
 			if (!user) {
 				const error = AppError.validation('User not created')
@@ -191,7 +194,10 @@ export const authController: IAuthController = {
 
 			const encryptedUsername = encrypt(response.Username)
 
-			const user = await registerOrLoginUserById(response.Username, email)
+			const user = await userService.registerOrLoginUserById(
+				response.Username,
+				email,
+			)
 
 			if (!user) {
 				const error = AppError.validation('User not created')
@@ -431,10 +437,10 @@ export const authController: IAuthController = {
 		}
 	},
 
-	getUser: async (req: Request, res: Response) => {
+	getCognitoUser: async (req: Request, res: Response) => {
 		try {
 			const accessToken = getAccessToken(req)
-			const response = await cognito.getUser(accessToken)
+			const response = await cognito.getCognitoUser(accessToken)
 
 			// Check for service errors
 			const serviceResult = handleServiceError(
@@ -499,7 +505,7 @@ export const authController: IAuthController = {
 			}
 
 			// Build complete user response
-			const userResponse: TGetUserResponse = {
+			const userResponse: TGetCognitoUserResponse = {
 				id: response.Username,
 				email: email,
 				emailVerified:

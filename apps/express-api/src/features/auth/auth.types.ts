@@ -5,8 +5,8 @@ import {
 	confirmForgotPasswordSchema,
 	confirmRegistrationSchema,
 	forgotPasswordSchema,
-	getUserResponseSchema,
-	getUserSchema,
+	getCognitoUserResponseSchema,
+	getCognitoUserSchema,
 	loginResponseSchema,
 	loginSchema,
 	refreshTokenSchema,
@@ -25,8 +25,10 @@ export type TLoginResponse = z.infer<typeof loginResponseSchema>
 export type TRefreshToken = z.infer<typeof refreshTokenSchema>
 export type TForgotPassword = z.infer<typeof forgotPasswordSchema>
 export type TConfirmForgotPassword = z.infer<typeof confirmForgotPasswordSchema>
-export type TGetUser = z.infer<typeof getUserSchema>
-export type TGetUserResponse = z.infer<typeof getUserResponseSchema>
+export type TGetCognitoUser = z.infer<typeof getCognitoUserSchema>
+export type TGetCognitoUserResponse = z.infer<
+	typeof getCognitoUserResponseSchema
+>
 
 // Cognito related interfaces
 export interface ICognitoError {
@@ -53,7 +55,7 @@ export interface IAuthController {
 	resendConfirmationCode: express.Handler
 	forgotPassword: express.Handler
 	confirmForgotPassword: express.Handler
-	getUser: express.Handler
+	getCognitoUser: express.Handler
 }
 
 // Response interfaces

@@ -93,14 +93,14 @@ export const confirmForgotPasswordSchema = z
 		path: ['confirmPassword'],
 	})
 
-export const getUserSchema = z.object({
+export const getCognitoUserSchema = z.object({
 	accessToken: z.string({
 		message: 'Invalid access token',
 		required_error: 'Access token is required',
 	}),
 })
 
-export const getUserResponseSchema = z.object({
+export const getCognitoUserResponseSchema = z.object({
 	id: z.string(),
 	email: z.string(),
 	emailVerified: z.boolean(),
