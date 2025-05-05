@@ -2,13 +2,13 @@
 
 ## Express API Swagger Documentation Enhancement (`/apps/express-api`)
 
-- [ ] Update Swagger UI Configuration in `apps/express-api/src/utils/server.ts`
+- [x] Update Swagger UI Configuration in `apps/express-api/src/utils/server.ts`
 
-  - [ ] Add authentication button in Swagger UI for testing secured endpoints
-  - [ ] Add example values for all request bodies
-  - [ ] Add detailed descriptions for all parameters
-  - [ ] Document all possible error responses
-  - [ ] Ensure OpenAPI spec is complete and accurate for client generation
+  - [x] Add authentication button in Swagger UI for testing secured endpoints
+  - [x] Add example values for all request bodies
+  - [x] Add detailed descriptions for all parameters
+  - [x] Document all possible error responses
+  - [x] Ensure OpenAPI spec is complete and accurate for client generation
 
 - [ ] Create API Documentation Guide in `apps/express-api/README.md`
 
@@ -35,44 +35,48 @@
 
 ## API Client Package (`/packages/macro-ai-api-client`)
 
-- [ ] Create Package Structure
-  - [ ] Create directory: `packages/macro-ai-api-client`
-  - [ ] Initialize `packages/api-client/package.json`
-  - [ ] Add `packages/api-client/tsconfig.json` using base config from `packages/config-typescript`
-  - [ ] Set up build process in `packages/api-client/tsup.config.ts`
-  - [ ] Add OpenAPI Generator configuration
-  - [ ] Create client generation script that:
-    - [ ] Fetches OpenAPI spec from running Express API
-    - [ ] Generates TypeScript client using OpenAPI Generator
-    - [ ] Adds custom wrappers for authentication and error handling
+- [x] Create Package Structure
+  - [x] Create directory: `packages/macro-ai-api-client`
+  - [x] Initialize `packages/api-client/package.json`
+  - [x] Add `packages/api-client/tsconfig.json` using base config from `packages/config-typescript`
+  - [x] Set up build process in `packages/api-client/tsup.config.ts`
+  - [x] Add OpenAPI Generator configuration
+  - [x] Create client generation script that:
+    - [x] Fetches OpenAPI spec from running Express API
+    - [x] Generates TypeScript client using OpenAPI Generator
+    - [x] Adds custom wrappers for authentication and error handling
 
 ## Root Repository Updates (`/`)
 
-- [ ] Update Workspace Configuration
-  - [ ] Update `pnpm-workspace.yaml`
-  - [ ] Update `turbo.json` pipeline
+- [x] Update Workspace Configuration
+  - [x] Update `pnpm-workspace.yaml`
+  - [x] Update `turbo.json` pipeline
 
 ## Client UI Updates (`/apps/client-ui`)
 
-- [ ] Update Dependencies in `apps/client-ui/package.json`
-- [ ] Implementation Updates
-  - [ ] Replace current API calls in `apps/client-ui/src/api` with generated client
-  - [ ] Update authentication flow in `apps/client-ui/src/features/auth`
-  - [ ] Update error handling in `apps/client-ui/src/utils/error`
-  - [ ] Add proper typing to all API calls using generated types
+- [x] Update Dependencies in `apps/client-ui/package.json`
+- [x] Implementation Updates
+  - [x] Replace current API calls in `apps/client-ui/src/api` with generated client
+  - [x] Update authentication flow in `apps/client-ui/src/features/auth`
+  - [x] Update error handling in `apps/client-ui/src/utils/error`
+  - [x] Add proper typing to all API calls using generated types
 
 ## Express API Updates (`/apps/express-api`)
 
-- [ ] Update API Documentation
-  - [ ] Add JSDoc comments to all route handlers in `apps/express-api/src/features/**/*.ts`
+- [x] Update API Documentation
+  - [x] Add JSDoc comments to all route handlers in `apps/express-api/src/features/**/*.ts`
   - [x] Update Swagger definitions in `apps/express-api/src/utils/server.ts`
-  - [ ] Add response examples in route handlers
+  - [x] Add response examples in route handlers
   - [x] Document authentication requirements
+- [x] Implement Drizzle-Zod integration
+  - [x] Generate Zod schemas from Drizzle tables
+  - [x] Use Zod schemas for validation and type safety
+  - [x] Update Swagger documentation to match schema definitions
 
 ## Documentation Updates
 
-- [ ] Root Repository (`/`)
-- [ ] API Client Package (`/packages/macro-ai-api-client`)
+- [x] Root Repository (`/`)
+- [x] API Client Package (`/packages/macro-ai-api-client`)
 
 ## Testing Setup
 

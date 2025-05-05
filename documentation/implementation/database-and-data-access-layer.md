@@ -1,65 +1,10 @@
-# Database Integration & Data Access Layer Implementation (Neon + Drizzle + pgvector)
+# Database and Data Access Layer Implementation
 
-## Overview
+## Database Schema Implementation
 
-This document outlines the implementation of our database architecture using Neon-hosted PostgreSQL with Drizzle ORM and pgvector for vector storage. The architecture follows a clean separation of concerns with a dedicated data access layer that abstracts database operations from business logic.
+### 1. Schema Definition with Drizzle ORM
 
----
-
-## Database Architecture
-
-### Core Components
-
-- **PostgreSQL (Neon)**: Primary relational database for structured data
-  - Hosted on Neon for serverless scaling and built-in pgvector support
-  - Uses connection pooling for efficient resource management
-- **Drizzle ORM**: Type-safe database toolkit
-  - Provides schema definition, migrations, and query building
-  - Integrates with TypeScript for full type safety
-- **pgvector**: PostgreSQL extension for vector operations
-  - Enables efficient storage and similarity search of embeddings
-  - Used for semantic search capabilities
-
-### Database Schema
-
-| Table          | Purpose                     | Key Fields                                           | Relationships                |
-| -------------- | --------------------------- | ---------------------------------------------------- | ---------------------------- |
-| `users`        | User profiles and auth info | `id` (UUID, PK), `email`, `emailVerified`            | Referenced by `chat_vectors` |
-| `sessions`     | User session tracking       | `id` (UUID, PK), `userId` (FK), `expiresAt`          | References `users`           |
-| `chats`        | Chat metadata               | `id` (UUID, PK), `userId` (FK), `title`, `createdAt` | References `users`           |
-| `chat_vectors` | Message embeddings          | `id` (UUID, PK), `userId` (FK), `embedding` (vector) | References `users`           |
-
-### Additional Storage Options
-
-- **Redis**: Optional caching layer for sessions and rate limiting
-- **DynamoDB**: Optional scalable storage for chat messages
-
----
-
-## Implementation Details
-
-### 1. Database Connection Setup
-
-The database connection is established using a connection pool for efficient resource management:
-
-```typescript
-// apps/express-api/src/data-access/db.ts
-import { drizzle } from 'drizzle-orm/node-postgres'
-import { Pool } from 'pg'
-import { config } from '../../config/default.ts'
-
-const pool = new Pool({
-	connectionString: config.relationalDatabaseUrl,
-})
-
-const db = drizzle({ client: pool })
-
-export { db }
-```
-
-### 2. Schema Definition with Drizzle-Zod Integration
-
-Database tables are defined using Drizzle's schema definition language with Zod schema generation:
+The database schema is defined using Drizzle ORM with PostgreSQL:
 
 ```typescript
 // apps/express-api/src/data-access/schema.ts
@@ -73,6 +18,7 @@ import {
 	vector,
 } from 'drizzle-orm/pg-core'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+import { z } from 'zod'
 
 const usersTable = pgTable(
 	'users',
@@ -104,6 +50,12 @@ const selectUserSchema = createSelectSchema(usersTable)
 const insertChatVectorSchema = createInsertSchema(chatVectorsTable)
 const selectChatVectorSchema = createSelectSchema(chatVectorsTable)
 
+// Define types using Zod schemas
+export type InsertUser = z.infer<typeof insertUserSchema>
+export type User = z.infer<typeof selectUserSchema>
+export type InsertChatVector = z.infer<typeof insertChatVectorSchema>
+export type ChatVector = z.infer<typeof selectChatVectorSchema>
+
 export {
 	usersTable,
 	chatVectorsTable,
@@ -112,6 +64,24 @@ export {
 	insertChatVectorSchema,
 	selectChatVectorSchema,
 }
+```
+
+### 2. Database Connection Setup
+
+The database connection is established using Drizzle with PostgreSQL:
+
+```typescript
+// apps/express-api/src/data-access/db.ts
+import { drizzle } from 'drizzle-orm/node-postgres'
+import { Pool } from 'pg'
+import { env } from '../config/env'
+
+const pool = new Pool({
+	connectionString: env.DATABASE_URL,
+	ssl: env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+})
+
+export const db = drizzle(pool)
 ```
 
 ### 3. Data Access Layer with Zod Validation
@@ -126,63 +96,47 @@ import {
 	usersTable,
 	insertUserSchema,
 	selectUserSchema,
+	type InsertUser,
+	type User,
 } from '../../data-access/schema.ts'
-import { z } from 'zod'
 
-// Define types using Zod schemas
-type InsertUser = z.infer<typeof insertUserSchema>
-type User = z.infer<typeof selectUserSchema>
-
-const findUserByEmail = async (email: string): Promise<User | null> => {
-	const user = await db
+const findUserByEmail = async (email: string): Promise<User | undefined> => {
+	const users = await db
 		.select()
 		.from(usersTable)
 		.where(eq(usersTable.email, email))
 		.limit(1)
-		.then((rows) => rows[0] ?? null)
 
-	return user ? selectUserSchema.parse(user) : null
+	return users[0]
 }
 
-const findUserById = async (id: string): Promise<User | null> => {
-	const user = await db
+const findUserById = async (id: string): Promise<User | undefined> => {
+	const users = await db
 		.select()
 		.from(usersTable)
 		.where(eq(usersTable.id, id))
 		.limit(1)
-		.then((rows) => rows[0] ?? null)
 
-	return user ? selectUserSchema.parse(user) : null
+	return users[0]
 }
 
-const createUser = async (
-	userData: Omit<InsertUser, 'createdAt' | 'updatedAt' | 'emailVerified'>,
-): Promise<User | null> => {
-	// Validate input data
-	const validatedData = insertUserSchema.parse({
-		...userData,
-		emailVerified: false,
-	})
+const createUser = async (userData: InsertUser): Promise<User> => {
+	const [user] = await db.insert(usersTable).values(userData).returning()
 
-	return await db
-		.insert(usersTable)
-		.values(validatedData)
-		.returning()
-		.then((rows) => selectUserSchema.parse(rows[0] ?? null))
+	return user
 }
 
-const updateLastLogin = async (email: string): Promise<User | null> => {
-	return db
+const updateLastLogin = async (id: string): Promise<User | undefined> => {
+	const [user] = await db
 		.update(usersTable)
-		.set({
-			lastLogin: new Date(),
-		})
-		.where(eq(usersTable.email, email))
+		.set({ lastLogin: new Date() })
+		.where(eq(usersTable.id, id))
 		.returning()
-		.then((rows) => selectUserSchema.parse(rows[0] ?? null))
+
+	return user
 }
 
-export { findUserByEmail, findUserById, createUser, updateLastLogin }
+export { createUser, findUserByEmail, findUserById, updateLastLogin }
 ```
 
 ### 4. Database Migrations
@@ -401,6 +355,17 @@ describe('User data access integration', () => {
 ```
 
 ---
+
+## Implementation Status
+
+- [x] Define database schema with Drizzle ORM
+- [x] Set up database connection
+- [x] Implement data access layer with Zod validation
+- [x] Set up database migrations
+- [x] Integrate with business logic
+- [x] Implement Drizzle-Zod integration for schema validation
+- [ ] Implement unit tests for data access layer
+- [ ] Implement integration tests for database operations
 
 ## Future Enhancements
 
