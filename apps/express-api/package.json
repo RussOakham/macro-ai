@@ -61,6 +61,7 @@
 		"cors": "^2.8.5",
 		"dotenv": "^16.4.5",
 		"drizzle-orm": "^0.43.1",
+		"drizzle-zod": "^0.7.1",
 		"express": "^4.21.1",
 		"helmet": "^8.1.0",
 		"http": "0.0.1-security",

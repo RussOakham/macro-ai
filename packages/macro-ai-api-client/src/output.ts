@@ -1,8 +1,13 @@
 import { makeApi, Zodios, type ZodiosOptions } from '@zodios/core'
 import { z } from 'zod'
 
-const Register = z
-	.object({ email: z.string(), password: z.string() })
+const RegisterRequest = z
+	.object({
+		email: z.string(),
+		password: z.string(),
+		firstName: z.string().optional(),
+		lastName: z.string().optional(),
+	})
 	.passthrough()
 const AuthResponse = z
 	.object({
@@ -13,7 +18,11 @@ const AuthResponse = z
 			.passthrough()
 			.optional(),
 		tokens: z
-			.object({ accessToken: z.string(), refreshToken: z.string() })
+			.object({
+				accessToken: z.string(),
+				refreshToken: z.string(),
+				expiresIn: z.number(),
+			})
 			.partial()
 			.passthrough()
 			.optional(),
@@ -26,15 +35,43 @@ const ErrorResponse = z
 	})
 	.partial()
 	.passthrough()
+const LoginRequest = z
+	.object({ email: z.string(), password: z.string() })
+	.passthrough()
+const TokenResponse = z
+	.object({
+		accessToken: z.string(),
+		refreshToken: z.string(),
+		expiresIn: z.number(),
+	})
+	.passthrough()
+const UserProfile = z
+	.object({
+		id: z.string(),
+		email: z.string(),
+		emailVerified: z.boolean(),
+		firstName: z.string().optional(),
+		lastName: z.string().optional(),
+		createdAt: z.string().datetime({ offset: true }).optional(),
+		updatedAt: z.string().datetime({ offset: true }).optional(),
+		lastLogin: z.string().datetime({ offset: true }).optional(),
+	})
+	.passthrough()
 const ConfirmRegistration = z
 	.object({ username: z.string(), code: z.number() })
 	.passthrough()
 const ResendConfirmationCode = z.object({ username: z.string() }).passthrough()
-const Login = z
-	.object({ email: z.string(), password: z.string() })
-	.passthrough()
 const GetAuthUserResponse = z
-	.object({ id: z.string(), email: z.string(), emailVerified: z.boolean() })
+	.object({
+		id: z.string(),
+		email: z.string(),
+		emailVerified: z.boolean(),
+		firstName: z.string().optional(),
+		lastName: z.string().optional(),
+		createdAt: z.string().datetime({ offset: true }).optional(),
+		updatedAt: z.string().datetime({ offset: true }).optional(),
+		lastLogin: z.string().datetime({ offset: true }).optional(),
+	})
 	.passthrough()
 const postAuthconfirmForgotPassword_Body = z
 	.object({
@@ -44,28 +81,18 @@ const postAuthconfirmForgotPassword_Body = z
 		confirmPassword: z.string(),
 	})
 	.passthrough()
-const HealthResponse = z.object({ message: z.string() }).partial().passthrough()
-const User = z
-	.object({
-		id: z.string(),
-		email: z.string(),
-		createdAt: z.string().datetime({ offset: true }),
-		updatedAt: z.string().datetime({ offset: true }),
-		lastLoginAt: z.string().datetime({ offset: true }).optional(),
-	})
-	.passthrough()
 
 export const schemas = {
-	Register,
+	RegisterRequest,
 	AuthResponse,
 	ErrorResponse,
+	LoginRequest,
+	TokenResponse,
+	UserProfile,
 	ConfirmRegistration,
 	ResendConfirmationCode,
-	Login,
 	GetAuthUserResponse,
 	postAuthconfirmForgotPassword_Body,
-	HealthResponse,
-	User,
 }
 
 const endpoints = makeApi([
@@ -188,37 +215,23 @@ const endpoints = makeApi([
 	{
 		method: 'post',
 		path: '/auth/login',
+		description: `Authenticates a user and returns tokens as cookies and in response body`,
 		requestFormat: 'json',
 		parameters: [
 			{
 				name: 'body',
 				type: 'Body',
-				schema: Login,
+				schema: LoginRequest,
 			},
 		],
 		response: z
-			.object({
-				message: z.string(),
-				tokens: z
-					.object({
-						accessToken: z.string(),
-						refreshToken: z.string(),
-						expiresIn: z.number(),
-					})
-					.partial()
-					.passthrough(),
-			})
+			.object({ message: z.string(), tokens: TokenResponse, user: UserProfile })
 			.partial()
 			.passthrough(),
 		errors: [
 			{
 				status: 400,
 				description: `Invalid credentials`,
-				schema: ErrorResponse,
-			},
-			{
-				status: 401,
-				description: `User not confirmed`,
 				schema: ErrorResponse,
 			},
 			{
@@ -231,8 +244,9 @@ const endpoints = makeApi([
 	{
 		method: 'post',
 		path: '/auth/logout',
+		description: `Invalidates the user&#x27;s tokens and clears authentication cookies`,
 		requestFormat: 'json',
-		response: z.object({ message: z.string() }).passthrough(),
+		response: z.object({ message: z.string() }).partial().passthrough(),
 		errors: [
 			{
 				status: 401,
@@ -249,20 +263,11 @@ const endpoints = makeApi([
 	{
 		method: 'post',
 		path: '/auth/refresh',
+		description: `Uses a refresh token to obtain a new access token`,
 		requestFormat: 'json',
 		response: z
-			.object({
-				message: z.string(),
-				tokens: z
-					.object({
-						accessToken: z.string(),
-						refreshToken: z.string(),
-						expiresIn: z.number(),
-					})
-					.partial()
-					.passthrough()
-					.optional(),
-			})
+			.object({ message: z.string(), tokens: TokenResponse })
+			.partial()
 			.passthrough(),
 		errors: [
 			{
@@ -280,24 +285,20 @@ const endpoints = makeApi([
 	{
 		method: 'post',
 		path: '/auth/register',
+		description: `Creates a new user account in Cognito and the application database`,
 		requestFormat: 'json',
 		parameters: [
 			{
 				name: 'body',
 				type: 'Body',
-				schema: Register,
+				schema: RegisterRequest,
 			},
 		],
 		response: AuthResponse,
 		errors: [
 			{
 				status: 400,
-				description: `Validation error`,
-				schema: ErrorResponse,
-			},
-			{
-				status: 409,
-				description: `User already exists`,
+				description: `Invalid input or user already exists`,
 				schema: ErrorResponse,
 			},
 			{
@@ -341,8 +342,14 @@ const endpoints = makeApi([
 		errors: [
 			{
 				status: 401,
-				description: `Unauthorized - Invalid or expired token`,
-				schema: ErrorResponse,
+				description: `Unauthorized - Authentication required`,
+				schema: z.union([
+					z.object({ message: z.string() }).partial().passthrough(),
+					z
+						.object({ message: z.string(), code: z.string() })
+						.partial()
+						.passthrough(),
+				]),
 			},
 			{
 				status: 404,
@@ -366,62 +373,26 @@ const endpoints = makeApi([
 			{
 				status: 500,
 				description: `API is unhealthy`,
-				schema: ErrorResponse,
-			},
-		],
-	},
-	{
-		method: 'get',
-		path: '/users/:id',
-		description: `Retrieves a user by their ID`,
-		requestFormat: 'json',
-		parameters: [
-			{
-				name: 'id',
-				type: 'Path',
-				schema: z.string(),
-			},
-		],
-		response: User,
-		errors: [
-			{
-				status: 400,
-				description: `Bad request - Missing ID`,
-				schema: z.void(),
-			},
-			{
-				status: 404,
-				description: `User not found`,
-				schema: z.void(),
-			},
-			{
-				status: 500,
-				description: `Internal server error`,
-				schema: z.void(),
+				schema: z.object({ message: z.string() }).partial().passthrough(),
 			},
 		],
 	},
 	{
 		method: 'get',
 		path: '/users/me',
-		description: `Retrieves the current user based on the access token`,
+		description: `Returns the profile of the currently authenticated user`,
 		requestFormat: 'json',
-		response: User,
+		response: UserProfile,
 		errors: [
 			{
 				status: 401,
-				description: `Unauthorized - Invalid or expired token`,
-				schema: z.void(),
-			},
-			{
-				status: 404,
-				description: `User not found`,
-				schema: z.void(),
+				description: `Unauthorized - Authentication required or token expired`,
+				schema: ErrorResponse,
 			},
 			{
 				status: 500,
 				description: `Internal server error`,
-				schema: z.void(),
+				schema: ErrorResponse,
 			},
 		],
 	},

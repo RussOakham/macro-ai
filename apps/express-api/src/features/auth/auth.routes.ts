@@ -33,13 +33,7 @@ const authRouter = (router: Router) => {
 	 *         content:
 	 *           application/json:
 	 *             schema:
-	 *               type: object
-	 *               properties:
-	 *                 message:
-	 *                   type: string
-	 *                   example: User registered successfully
-	 *                 user:
-	 *                   $ref: '#/components/schemas/User'
+	 *               $ref: '#/components/schemas/AuthResponse'
 	 *       400:
 	 *         description: Invalid input or user already exists
 	 *         content:

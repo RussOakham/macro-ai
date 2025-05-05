@@ -87,7 +87,12 @@ class UserService {
 					userId: id,
 					email,
 				})
-				user = await createUser(id, email, firstName, lastName)
+				user = await createUser({
+					id,
+					email,
+					firstName,
+					lastName,
+				})
 			} else {
 				// Update last login timestamp for existing user
 				logger.info({

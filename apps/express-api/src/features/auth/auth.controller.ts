@@ -17,7 +17,9 @@ import {
 	validateData,
 } from '../../utils/response-handlers.ts'
 import { standardizeError } from '../../utils/standardize-error.ts'
+import { createUser, updateUser } from '../user/user.data-access.ts'
 import { userService } from '../user/user.services.ts'
+import { InsertUser } from '../user/user.types.ts'
 
 import { CognitoService } from './auth.services.ts'
 import {
@@ -76,6 +78,16 @@ export const authController: IAuthController = {
 				return
 			}
 
+			// Create user in database with Zod validation
+			const userData: InsertUser = {
+				id: response.UserSub,
+				email,
+			}
+
+			const user = await createUser(userData)
+
+			logger.info(`[authController]: User created: ${user.id}`)
+
 			const authResponse: IAuthResponse = {
 				message:
 					'Registration successful. Please check your email for verification code.',
@@ -84,8 +96,6 @@ export const authController: IAuthController = {
 					email,
 				},
 			}
-
-			await userService.registerOrLoginUserById(response.UserSub, email)
 
 			sendSuccess(res, authResponse, StatusCodes.CREATED)
 		} catch (error) {
@@ -113,6 +123,16 @@ export const authController: IAuthController = {
 					.json({ message: serviceResult.error.message })
 				return
 			}
+
+			const dbUser = await updateUser(username, { emailVerified: true })
+			if (!dbUser) {
+				throw AppError.internal(
+					'Failed to update user email verification',
+					'authController',
+				)
+			}
+
+			logger.info(`[authController]: User confirmed: ${username}`)
 
 			// Return success response
 			const authResponse: IAuthResponse = {

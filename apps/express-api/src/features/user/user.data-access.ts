@@ -1,58 +1,67 @@
 import { eq } from 'drizzle-orm'
 
 import { db } from '../../data-access/db.ts'
-import { usersTable } from '../../data-access/schema.ts'
 
-const findUserByEmail = async (email: string) => {
-	const user = await db
+import { usersTable } from './user.schema.ts'
+import { InsertUser, User } from './user.types.ts'
+
+const findUserByEmail = async (email: string): Promise<User | undefined> => {
+	const users = await db
 		.select()
 		.from(usersTable)
 		.where(eq(usersTable.email, email))
 		.limit(1)
-		.then((rows) => rows[0] ?? null)
 
-	return user
+	return users[0]
 }
 
-const findUserById = async (id: string) => {
-	const user = await db
+const findUserById = async (id: string): Promise<User | undefined> => {
+	const users = await db
 		.select()
 		.from(usersTable)
 		.where(eq(usersTable.id, id))
 		.limit(1)
-		.then((rows) => rows[0] ?? null)
+
+	return users[0]
+}
+
+const createUser = async (userData: InsertUser): Promise<User> => {
+	const [user] = await db.insert(usersTable).values(userData).returning()
+
+	if (!user) {
+		throw new Error('Failed to create user')
+	}
 
 	return user
 }
 
-// Update to create user with id
-const createUser = async (
-	id: string,
-	email: string,
-	firstName?: string,
-	lastName?: string,
-) => {
-	return await db
-		.insert(usersTable)
-		.values({
-			id,
-			email,
-			firstName,
-			lastName,
-		})
-		.returning()
-		.then((rows) => rows[0] ?? null)
-}
-
-const updateLastLogin = async (email: string) => {
-	return db
+const updateLastLogin = async (id: string): Promise<User | undefined> => {
+	const [user] = await db
 		.update(usersTable)
-		.set({
-			lastLogin: new Date(),
-		})
-		.where(eq(usersTable.email, email))
+		.set({ lastLogin: new Date() })
+		.where(eq(usersTable.id, id))
 		.returning()
-		.then((rows) => rows[0] ?? null)
+
+	return user
 }
 
-export { createUser, findUserByEmail, findUserById, updateLastLogin }
+const updateUser = async (
+	id: string,
+	userData: Partial<InsertUser>,
+): Promise<User | undefined> => {
+	const [user] = await db
+		.update(usersTable)
+		.set(userData)
+		.where(eq(usersTable.id, id))
+		.returning()
+
+	return user
+}
+
+export {
+	createUser,
+	findUserByEmail,
+	findUserById,
+	updateLastLogin,
+	updateUser,
+}
