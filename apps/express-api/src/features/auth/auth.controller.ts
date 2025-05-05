@@ -85,16 +85,7 @@ export const authController: IAuthController = {
 				},
 			}
 
-			const user = await userService.registerOrLoginUserById(
-				response.UserSub,
-				email,
-			)
-
-			if (!user) {
-				const error = AppError.validation('User not created')
-				handleError(res, standardizeError(error), 'authController')
-				return
-			}
+			await userService.registerOrLoginUserById(response.UserSub, email)
 
 			sendSuccess(res, authResponse, StatusCodes.CREATED)
 		} catch (error) {
@@ -194,16 +185,7 @@ export const authController: IAuthController = {
 
 			const encryptedUsername = encrypt(response.Username)
 
-			const user = await userService.registerOrLoginUserById(
-				response.Username,
-				email,
-			)
-
-			if (!user) {
-				const error = AppError.validation('User not created')
-				handleError(res, standardizeError(error), 'authController')
-				return
-			}
+			await userService.registerOrLoginUserById(response.Username, email)
 
 			res
 				.cookie('macro-ai-accessToken', loginResponse.accessToken, {

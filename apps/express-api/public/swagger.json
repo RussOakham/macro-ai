@@ -28,9 +28,9 @@
 			}
 		},
 		"schemas": {
-			"User": {
+			"UserProfile": {
 				"type": "object",
-				"required": ["id", "email", "createdAt", "updatedAt"],
+				"required": ["id", "email"],
 				"properties": {
 					"id": {
 						"type": "string",
@@ -42,17 +42,15 @@
 						"description": "User email",
 						"example": "user@example.com"
 					},
-					"createdAt": {
+					"firstName": {
 						"type": "string",
-						"format": "date-time",
-						"description": "User creation timestamp",
-						"example": "2023-01-01T00:00:00Z"
+						"description": "User first name",
+						"example": "John"
 					},
-					"updatedAt": {
+					"lastName": {
 						"type": "string",
-						"format": "date-time",
-						"description": "User last update timestamp",
-						"example": "2023-01-01T00:00:00Z"
+						"description": "User last name",
+						"example": "Doe"
 					},
 					"lastLoginAt": {
 						"type": "string",
@@ -83,6 +81,112 @@
 					}
 				}
 			},
+			"TokenResponse": {
+				"type": "object",
+				"required": ["accessToken", "refreshToken", "expiresIn"],
+				"properties": {
+					"accessToken": {
+						"type": "string",
+						"description": "JWT access token",
+						"example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+					},
+					"refreshToken": {
+						"type": "string",
+						"description": "JWT refresh token",
+						"example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+					},
+					"expiresIn": {
+						"type": "number",
+						"description": "Token expiration time in seconds",
+						"example": 3600
+					}
+				}
+			},
+			"LoginRequest": {
+				"type": "object",
+				"required": ["email", "password"],
+				"properties": {
+					"email": {
+						"type": "string",
+						"description": "User email",
+						"example": "user@example.com"
+					},
+					"password": {
+						"type": "string",
+						"description": "User password",
+						"example": "Password123!"
+					}
+				}
+			},
+			"RegisterRequest": {
+				"type": "object",
+				"required": ["email", "password"],
+				"properties": {
+					"email": {
+						"type": "string",
+						"description": "User email",
+						"example": "user@example.com"
+					},
+					"password": {
+						"type": "string",
+						"description": "User password",
+						"example": "Password123!"
+					},
+					"firstName": {
+						"type": "string",
+						"description": "User first name (optional)",
+						"example": "John"
+					},
+					"lastName": {
+						"type": "string",
+						"description": "User last name (optional)",
+						"example": "Doe"
+					}
+				}
+			},
+			"RefreshTokenRequest": {
+				"type": "object",
+				"required": ["refreshToken"],
+				"properties": {
+					"refreshToken": {
+						"type": "string",
+						"description": "JWT refresh token",
+						"example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+					}
+				}
+			},
+			"ForgotPasswordRequest": {
+				"type": "object",
+				"required": ["email"],
+				"properties": {
+					"email": {
+						"type": "string",
+						"description": "User email",
+						"example": "user@example.com"
+					}
+				}
+			},
+			"ConfirmForgotPasswordRequest": {
+				"type": "object",
+				"required": ["email", "code", "newPassword"],
+				"properties": {
+					"email": {
+						"type": "string",
+						"description": "User email",
+						"example": "user@example.com"
+					},
+					"code": {
+						"type": "string",
+						"description": "Verification code sent to email",
+						"example": "123456"
+					},
+					"newPassword": {
+						"type": "string",
+						"description": "New password",
+						"example": "NewPassword123!"
+					}
+				}
+			},
 			"HealthResponse": {
 				"type": "object",
 				"properties": {
@@ -97,134 +201,15 @@
 				"properties": {
 					"message": {
 						"type": "string",
-						"example": "Error message",
-						"description": "Error message"
+						"example": "Error message"
 					},
 					"details": {
 						"type": "object",
 						"example": {
 							"field": "Error details"
-						},
-						"description": "Additional error details (optional)"
+						}
 					}
 				}
-			},
-			"Register": {
-				"type": "object",
-				"properties": {
-					"email": {
-						"type": "string"
-					},
-					"password": {
-						"type": "string"
-					}
-				},
-				"required": ["email", "password"]
-			},
-			"ConfirmRegistration": {
-				"type": "object",
-				"properties": {
-					"username": {
-						"type": "string"
-					},
-					"code": {
-						"type": "number"
-					}
-				},
-				"required": ["username", "code"]
-			},
-			"ResendConfirmationCode": {
-				"type": "object",
-				"properties": {
-					"username": {
-						"type": "string"
-					}
-				},
-				"required": ["username"]
-			},
-			"Login": {
-				"type": "object",
-				"properties": {
-					"email": {
-						"type": "string",
-						"description": "The user's email address.",
-						"example": "user@example.com"
-					},
-					"password": {
-						"type": "string",
-						"description": "The user's password.",
-						"example": "Password123"
-					}
-				},
-				"required": ["email", "password"]
-			},
-			"Logout": {
-				"type": "object",
-				"properties": {
-					"accessToken": {
-						"type": "string"
-					},
-					"refreshToken": {
-						"type": "string"
-					}
-				},
-				"required": ["accessToken"]
-			},
-			"RefreshToken": {
-				"type": "object",
-				"properties": {
-					"refreshToken": {
-						"type": "string"
-					}
-				},
-				"required": ["refreshToken"],
-				"example": "8xLOxBtZp8"
-			},
-			"GetUser": {
-				"type": "object",
-				"properties": {
-					"accessToken": {
-						"type": "string"
-					}
-				},
-				"required": ["accessToken"],
-				"example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-			},
-			"AuthResponse": {
-				"type": "object",
-				"properties": {
-					"message": {
-						"type": "string",
-						"description": "Response message"
-					},
-					"user": {
-						"type": "object",
-						"properties": {
-							"id": {
-								"type": "string",
-								"description": "User ID"
-							},
-							"email": {
-								"type": "string",
-								"description": "User email"
-							}
-						}
-					},
-					"tokens": {
-						"type": "object",
-						"properties": {
-							"accessToken": {
-								"type": "string",
-								"description": "JWT access token"
-							},
-							"refreshToken": {
-								"type": "string",
-								"description": "JWT refresh token"
-							}
-						}
-					}
-				},
-				"required": ["message"]
 			}
 		},
 		"responses": {
@@ -331,14 +316,15 @@
 	"paths": {
 		"/auth/register": {
 			"post": {
-				"tags": ["Authorization"],
 				"summary": "Register a new user",
+				"description": "Creates a new user account in Cognito and the application database",
+				"tags": ["Authentication"],
 				"requestBody": {
 					"required": true,
 					"content": {
 						"application/json": {
 							"schema": {
-								"$ref": "#/components/schemas/Register"
+								"$ref": "#/components/schemas/RegisterRequest"
 							}
 						}
 					}
@@ -349,13 +335,22 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/AuthResponse"
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"example": "User registered successfully"
+										},
+										"user": {
+											"$ref": "#/components/schemas/User"
+										}
+									}
 								}
 							}
 						}
 					},
 					"400": {
-						"description": "Validation error",
+						"description": "Invalid input or user already exists",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -364,8 +359,181 @@
 							}
 						}
 					},
-					"409": {
-						"description": "User already exists",
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ErrorResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/auth/login": {
+			"post": {
+				"summary": "Login user",
+				"description": "Authenticates a user and returns tokens as cookies and in response body",
+				"tags": ["Authentication"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/LoginRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Login successful",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"example": "Login successful"
+										},
+										"tokens": {
+											"$ref": "#/components/schemas/TokenResponse"
+										},
+										"user": {
+											"$ref": "#/components/schemas/UserProfile"
+										}
+									}
+								}
+							}
+						},
+						"headers": {
+							"Set-Cookie": {
+								"schema": {
+									"type": "string",
+									"description": "Authentication cookies (accessToken, refreshToken)"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid credentials",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ErrorResponse"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ErrorResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/auth/refresh": {
+			"post": {
+				"summary": "Refresh access token",
+				"description": "Uses a refresh token to obtain a new access token",
+				"tags": ["Authentication"],
+				"responses": {
+					"200": {
+						"description": "Token refreshed successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"example": "Token refreshed successfully"
+										},
+										"tokens": {
+											"$ref": "#/components/schemas/TokenResponse"
+										}
+									}
+								}
+							}
+						},
+						"headers": {
+							"Set-Cookie": {
+								"schema": {
+									"type": "string",
+									"description": "Updated authentication cookies"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Invalid or expired refresh token",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ErrorResponse"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ErrorResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/auth/logout": {
+			"post": {
+				"summary": "Logout user",
+				"description": "Invalidates the user's tokens and clears authentication cookies",
+				"tags": ["Authentication"],
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Logout successful",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"example": "Logout successful"
+										}
+									}
+								}
+							}
+						},
+						"headers": {
+							"Set-Cookie": {
+								"schema": {
+									"type": "string",
+									"description": "Cleared authentication cookies"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized - No valid session",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -472,220 +640,6 @@
 				}
 			}
 		},
-		"/auth/login": {
-			"post": {
-				"tags": ["Authorization"],
-				"summary": "Login user",
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/Login"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "Login successful",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Login successful"
-										},
-										"tokens": {
-											"type": "object",
-											"properties": {
-												"accessToken": {
-													"type": "string",
-													"description": "JWT access token"
-												},
-												"refreshToken": {
-													"type": "string",
-													"description": "JWT refresh token"
-												},
-												"expiresIn": {
-													"type": "number",
-													"description": "Token expiration time in seconds"
-												}
-											}
-										}
-									}
-								}
-							}
-						},
-						"headers": {
-							"Set-Cookie": {
-								"schema": {
-									"type": "string",
-									"description": "Authentication cookies (accessToken, refreshToken)"
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Invalid credentials",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ErrorResponse"
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "User not confirmed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ErrorResponse"
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Internal server error",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ErrorResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/auth/logout": {
-			"post": {
-				"tags": ["Authorization"],
-				"summary": "Logout user",
-				"security": [
-					{
-						"cookieAuth": []
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Logout successful",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"required": ["message"],
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Logout successful"
-										}
-									}
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized - No valid session",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ErrorResponse"
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Internal server error",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ErrorResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/auth/refresh": {
-			"post": {
-				"tags": ["Authorization"],
-				"summary": "Refresh access token",
-				"security": [
-					{
-						"cookieAuth": []
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Tokens refreshed successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"required": ["message"],
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Tokens refreshed successfully"
-										},
-										"tokens": {
-											"type": "object",
-											"properties": {
-												"accessToken": {
-													"type": "string",
-													"description": "New access token"
-												},
-												"refreshToken": {
-													"type": "string",
-													"description": "New refresh token"
-												},
-												"expiresIn": {
-													"type": "number",
-													"description": "Token expiration time in seconds"
-												}
-											}
-										}
-									}
-								}
-							}
-						},
-						"headers": {
-							"Set-Cookie": {
-								"schema": {
-									"type": "string",
-									"description": "Updated authentication cookies"
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Invalid or expired refresh token",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ErrorResponse"
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Internal server error",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ErrorResponse"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
 		"/auth/user": {
 			"get": {
 				"tags": ["Authorization"],
@@ -707,22 +661,35 @@
 							}
 						}
 					},
-					"206": {
-						"description": "Partial Content - User profile incomplete",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ErrorResponse"
-								}
-							}
-						}
-					},
 					"401": {
-						"description": "Unauthorized - Invalid or expired token",
+						"description": "Unauthorized - Authentication required",
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/ErrorResponse"
+									"oneOf": [
+										{
+											"type": "object",
+											"properties": {
+												"message": {
+													"type": "string",
+													"example": "Authentication required"
+												}
+											}
+										},
+										{
+											"type": "object",
+											"properties": {
+												"message": {
+													"type": "string",
+													"example": "Authentication token expired"
+												},
+												"code": {
+													"type": "string",
+													"example": "TOKEN_EXPIRED"
+												}
+											}
+										}
+									]
 								}
 							}
 						}
@@ -918,72 +885,44 @@
 		},
 		"/users/me": {
 			"get": {
-				"summary": "Get the current user",
-				"description": "Retrieves the current user based on the access token",
+				"summary": "Get current user profile",
+				"description": "Returns the profile of the currently authenticated user",
 				"tags": ["Users"],
 				"security": [
 					{
-						"bearerAuth": []
+						"cookieAuth": []
 					}
 				],
 				"responses": {
 					"200": {
-						"description": "User found",
+						"description": "User profile retrieved successfully",
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/User"
+									"$ref": "#/components/schemas/UserProfile"
 								}
 							}
 						}
 					},
 					"401": {
-						"description": "Unauthorized - Invalid or expired token"
-					},
-					"404": {
-						"description": "User not found"
-					},
-					"500": {
-						"description": "Internal server error"
-					}
-				}
-			}
-		},
-		"/users/{id}": {
-			"get": {
-				"summary": "Get a user by ID",
-				"description": "Retrieves a user by their ID",
-				"tags": ["Users"],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						},
-						"description": "The user ID"
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "User found",
+						"description": "Unauthorized - Authentication required or token expired",
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/User"
+									"$ref": "#/components/schemas/ErrorResponse"
 								}
 							}
 						}
 					},
-					"400": {
-						"description": "Bad request - Missing ID"
-					},
-					"404": {
-						"description": "User not found"
-					},
 					"500": {
-						"description": "Internal server error"
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ErrorResponse"
+								}
+							}
+						}
 					}
 				}
 			}
