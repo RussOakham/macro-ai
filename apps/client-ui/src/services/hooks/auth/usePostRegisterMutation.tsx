@@ -17,7 +17,7 @@ const usePostRegisterMutation = () => {
 			return response
 		},
 		onSuccess: (_data, variables) => {
-			queryClient.setQueryData([QUERY_KEY.user], {
+			queryClient.setQueryData([QUERY_KEY.authUser], {
 				email: variables.email,
 			})
 		},

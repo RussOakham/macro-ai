@@ -23,8 +23,8 @@ const usePostLogoutMutation = () => {
 			toast.error('Logout failed')
 		},
 		onSuccess: async () => {
-			queryClient.setQueryData([QUERY_KEY.user], null)
-			queryClient.removeQueries({ queryKey: [QUERY_KEY.user] })
+			queryClient.setQueryData([QUERY_KEY.authUser], null)
+			queryClient.removeQueries({ queryKey: [QUERY_KEY.authUser] })
 			await navigate({ to: '/auth/login' })
 		},
 	})

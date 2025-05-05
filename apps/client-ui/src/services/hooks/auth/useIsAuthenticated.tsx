@@ -15,7 +15,7 @@ const useIsAuthenticated = () => {
 		isSuccess,
 		isError,
 	} = useQuery<TGetAuthUserResponse>({
-		queryKey: [QUERY_KEY.user],
+		queryKey: [QUERY_KEY.authUser],
 		queryFn: async () => getAuthUser(),
 		enabled: false,
 		staleTime: Infinity,

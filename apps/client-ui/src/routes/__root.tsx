@@ -7,7 +7,7 @@ import { ModeToggle } from '@/components/mode-toggle'
 import { DesktopNav } from '@/components/ui/navigation/desktop-navigation/desktop-nav'
 import { Toaster } from '@/components/ui/sonner'
 import { QUERY_KEY } from '@/constants/query-keys'
-import { getAuthUser } from '@/services/network/auth/getAuthUser'
+import { getUser } from '@/services/network/user/getUser'
 
 export interface IRouterContext {
 	queryClient: QueryClient
@@ -60,7 +60,7 @@ export const Route = createRootRouteWithContext<IRouterContext>()({
 		if (accessToken) {
 			await queryClient.prefetchQuery({
 				queryKey: [QUERY_KEY.user],
-				queryFn: () => getAuthUser(),
+				queryFn: () => getUser(),
 			})
 		}
 	},

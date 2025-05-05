@@ -2,12 +2,12 @@ import { useQuery } from '@tanstack/react-query'
 
 import { QUERY_KEY } from '@/constants/query-keys'
 
-import { getAuthUser } from '../../network/auth/getAuthUser'
+import { getUser } from '../../network/user/getUser'
 
-const useGetAuthUser = () => {
+const useGetUser = () => {
 	return useQuery({
-		queryKey: [QUERY_KEY.authUser],
-		queryFn: async () => getAuthUser(),
+		queryKey: [QUERY_KEY.user],
+		queryFn: async () => getUser(),
 		staleTime: Infinity,
 		gcTime: Infinity,
 		refetchOnMount: false,
@@ -16,4 +16,4 @@ const useGetAuthUser = () => {
 	})
 }
 
-export { useGetAuthUser }
+export { useGetUser }
