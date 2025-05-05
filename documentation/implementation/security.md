@@ -320,7 +320,7 @@ const defaultRateLimiter = rateLimit({
 
 Environment variables were added to support rate limiting configuration:
 
-```
+```env
 # .env.example additions
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100

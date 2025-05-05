@@ -158,6 +158,23 @@ export class AppError extends Error {
 			service,
 		})
 	}
+
+	/**
+	 * Creates an internal server error
+	 * @param message Optional custom message
+	 * @returns AppError instance
+	 */
+	static internal(
+		message = 'Internal server error',
+		service?: string,
+	): AppError {
+		return new AppError({
+			type: 'InternalError',
+			message,
+			status: StatusCodes.INTERNAL_SERVER_ERROR,
+			service,
+		})
+	}
 }
 
 // Re-export standardizeError with AppError support

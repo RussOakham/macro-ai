@@ -1,8 +1,8 @@
 // User-related schema definitions
 export const userSchemas = {
-	User: {
+	UserProfile: {
 		type: 'object',
-		required: ['id', 'email', 'createdAt', 'updatedAt'],
+		required: ['id', 'email'],
 		properties: {
 			id: {
 				type: 'string',
@@ -14,17 +14,15 @@ export const userSchemas = {
 				description: 'User email',
 				example: 'user@example.com',
 			},
-			createdAt: {
+			firstName: {
 				type: 'string',
-				format: 'date-time',
-				description: 'User creation timestamp',
-				example: '2023-01-01T00:00:00Z',
+				description: 'User first name',
+				example: 'John',
 			},
-			updatedAt: {
+			lastName: {
 				type: 'string',
-				format: 'date-time',
-				description: 'User last update timestamp',
-				example: '2023-01-01T00:00:00Z',
+				description: 'User last name',
+				example: 'Doe',
 			},
 			lastLoginAt: {
 				type: 'string',

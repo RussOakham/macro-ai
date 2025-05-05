@@ -1,5 +1,6 @@
-import { type Router } from 'express'
+import { Router } from 'express'
 
+import { verifyAuth } from '../../middleware/auth.middleware.ts'
 import { validate } from '../../middleware/validation.middleware.ts'
 
 import { authController } from './auth.controller.ts'
@@ -15,138 +16,32 @@ import {
 const authRouter = (router: Router) => {
 	/**
 	 * @swagger
-	 * components:
-	 *   schemas:
-	 *     Register:
-	 *       type: object
-	 *       properties:
-	 *         email:
-	 *           type: string
-	 *         password:
-	 *           type: string
-	 *       required:
-	 *         - email
-	 *         - password
-	 *     ConfirmRegistration:
-	 *       type: object
-	 *       properties:
-	 *         username:
-	 *           type: string
-	 *         code:
-	 *           type: number
-	 *       required:
-	 *         - username
-	 *         - code
-	 *     ResendConfirmationCode:
-	 *       type: object
-	 *       properties:
-	 *         username:
-	 *           type: string
-	 *       required:
-	 *         - username
-	 *     Login:
-	 *       type: object
-	 *       properties:
-	 *         email:
-	 *           type: string
-	 *           description: The user's email address.
-	 *           example: "user@example.com"
-	 *         password:
-	 *           type: string
-	 *           description: The user's password.
-	 *           example: "Password123"
-	 *       required:
-	 *         - email
-	 *         - password
-	 *     Logout:
-	 *       type: object
-	 *       properties:
-	 *         accessToken:
-	 *           type: string
-	 *         refreshToken:
-	 *           type: string
-	 *       required:
-	 *         - accessToken
-	 *     RefreshToken:
-	 *       type: object
-	 *       properties:
-	 *         refreshToken:
-	 *           type: string
-	 *       required:
-	 *         - refreshToken
-	 *       example: "8xLOxBtZp8"
-	 *     GetUser:
-	 *       type: object
-	 *       properties:
-	 *         accessToken:
-	 *           type: string
-	 *       required:
-	 *         - accessToken
-	 *       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-	 *     AuthResponse:
-	 *       type: object
-	 *       properties:
-	 *         message:
-	 *           type: string
-	 *           description: Response message
-	 *         user:
-	 *           type: object
-	 *           properties:
-	 *             id:
-	 *               type: string
-	 *               description: User ID
-	 *             email:
-	 *               type: string
-	 *               description: User email
-	 *         tokens:
-	 *           type: object
-	 *           properties:
-	 *             accessToken:
-	 *               type: string
-	 *               description: JWT access token
-	 *             refreshToken:
-	 *               type: string
-	 *               description: JWT refresh token
-	 *       required:
-	 *         - message
-	 *     ErrorResponse:
-	 *       type: object
-	 *       properties:
-	 *         message:
-	 *           type: string
-	 *           description: Error message
-	 *         details:
-	 *           type: object
-	 *           description: Additional error details (optional)
-	 */
-
-	/**
-	 * @swagger
 	 * /auth/register:
 	 *   post:
-	 *     tags: [Authorization]
 	 *     summary: Register a new user
+	 *     description: Creates a new user account in Cognito and the application database
+	 *     tags: [Authentication]
 	 *     requestBody:
 	 *       required: true
 	 *       content:
 	 *         application/json:
 	 *           schema:
-	 *             $ref: '#/components/schemas/Register'
+	 *             $ref: '#/components/schemas/RegisterRequest'
 	 *     responses:
 	 *       201:
 	 *         description: User registered successfully
 	 *         content:
 	 *           application/json:
 	 *             schema:
-	 *               $ref: '#/components/schemas/AuthResponse'
+	 *               type: object
+	 *               properties:
+	 *                 message:
+	 *                   type: string
+	 *                   example: User registered successfully
+	 *                 user:
+	 *                   $ref: '#/components/schemas/User'
 	 *       400:
-	 *         description: Validation error
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 *       409:
-	 *         description: User already exists
+	 *         description: Invalid input or user already exists
 	 *         content:
 	 *           application/json:
 	 *             schema:
@@ -163,6 +58,134 @@ const authRouter = (router: Router) => {
 		validate(registerSchema),
 		authController.register,
 	)
+
+	/**
+	 * @swagger
+	 * /auth/login:
+	 *   post:
+	 *     summary: Login user
+	 *     description: Authenticates a user and returns tokens as cookies and in response body
+	 *     tags: [Authentication]
+	 *     requestBody:
+	 *       required: true
+	 *       content:
+	 *         application/json:
+	 *           schema:
+	 *             $ref: '#/components/schemas/LoginRequest'
+	 *     responses:
+	 *       200:
+	 *         description: Login successful
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               type: object
+	 *               properties:
+	 *                 message:
+	 *                   type: string
+	 *                   example: Login successful
+	 *                 tokens:
+	 *                   $ref: '#/components/schemas/TokenResponse'
+	 *                 user:
+	 *                   $ref: '#/components/schemas/UserProfile'
+	 *         headers:
+	 *           Set-Cookie:
+	 *             schema:
+	 *               type: string
+	 *               description: Authentication cookies (accessToken, refreshToken)
+	 *       400:
+	 *         description: Invalid credentials
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               $ref: '#/components/schemas/ErrorResponse'
+	 *       500:
+	 *         description: Internal server error
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               $ref: '#/components/schemas/ErrorResponse'
+	 */
+	router.post('/auth/login', validate(loginSchema), authController.login)
+
+	/**
+	 * @swagger
+	 * /auth/refresh:
+	 *   post:
+	 *     summary: Refresh access token
+	 *     description: Uses a refresh token to obtain a new access token
+	 *     tags: [Authentication]
+	 *     responses:
+	 *       200:
+	 *         description: Token refreshed successfully
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               type: object
+	 *               properties:
+	 *                 message:
+	 *                   type: string
+	 *                   example: Token refreshed successfully
+	 *                 tokens:
+	 *                   $ref: '#/components/schemas/TokenResponse'
+	 *         headers:
+	 *           Set-Cookie:
+	 *             schema:
+	 *               type: string
+	 *               description: Updated authentication cookies
+	 *       401:
+	 *         description: Invalid or expired refresh token
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               $ref: '#/components/schemas/ErrorResponse'
+	 *       500:
+	 *         description: Internal server error
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               $ref: '#/components/schemas/ErrorResponse'
+	 */
+	router.post('/auth/refresh', authController.refreshToken)
+
+	/**
+	 * @swagger
+	 * /auth/logout:
+	 *   post:
+	 *     summary: Logout user
+	 *     description: Invalidates the user's tokens and clears authentication cookies
+	 *     tags: [Authentication]
+	 *     security:
+	 *       - cookieAuth: []
+	 *     responses:
+	 *       200:
+	 *         description: Logout successful
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               type: object
+	 *               properties:
+	 *                 message:
+	 *                   type: string
+	 *                   example: Logout successful
+	 *         headers:
+	 *           Set-Cookie:
+	 *             schema:
+	 *               type: string
+	 *               description: Cleared authentication cookies
+	 *       401:
+	 *         description: Unauthorized - No valid session
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               $ref: '#/components/schemas/ErrorResponse'
+	 *       500:
+	 *         description: Internal server error
+	 *         content:
+	 *           application/json:
+	 *             schema:
+	 *               $ref: '#/components/schemas/ErrorResponse'
+	 */
+	router.post('/auth/logout', authController.logout)
 
 	/**
 	 * @swagger
@@ -236,156 +259,6 @@ const authRouter = (router: Router) => {
 
 	/**
 	 * @swagger
-	 * /auth/login:
-	 *   post:
-	 *     tags: [Authorization]
-	 *     summary: Login user
-	 *     requestBody:
-	 *       required: true
-	 *       content:
-	 *         application/json:
-	 *           schema:
-	 *             $ref: '#/components/schemas/Login'
-	 *     responses:
-	 *       200:
-	 *         description: Login successful
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               type: object
-	 *               properties:
-	 *                 message:
-	 *                   type: string
-	 *                   example: "Login successful"
-	 *                 tokens:
-	 *                   type: object
-	 *                   properties:
-	 *                     accessToken:
-	 *                       type: string
-	 *                       description: JWT access token
-	 *                     refreshToken:
-	 *                       type: string
-	 *                       description: JWT refresh token
-	 *                     expiresIn:
-	 *                       type: number
-	 *                       description: Token expiration time in seconds
-	 *         headers:
-	 *           Set-Cookie:
-	 *             schema:
-	 *               type: string
-	 *               description: Authentication cookies (accessToken, refreshToken)
-	 *       400:
-	 *         description: Invalid credentials
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 *       401:
-	 *         description: User not confirmed
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 *       500:
-	 *         description: Internal server error
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 */
-	router.post('/auth/login', validate(loginSchema), authController.login)
-
-	/**
-	 * @swagger
-	 * /auth/logout:
-	 *   post:
-	 *     tags: [Authorization]
-	 *     summary: Logout user
-	 *     security:
-	 *       - cookieAuth: []
-	 *     responses:
-	 *       200:
-	 *         description: Logout successful
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               type: object
-	 *               required:
-	 *                 - message
-	 *               properties:
-	 *                 message:
-	 *                   type: string
-	 *                   example: "Logout successful"
-	 *       401:
-	 *         description: Unauthorized - No valid session
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 *       500:
-	 *         description: Internal server error
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 */
-	router.post('/auth/logout', authController.logout)
-
-	/**
-	 * @swagger
-	 * /auth/refresh:
-	 *   post:
-	 *     tags: [Authorization]
-	 *     summary: Refresh access token
-	 *     security:
-	 *       - cookieAuth: []
-	 *     responses:
-	 *       200:
-	 *         description: Tokens refreshed successfully
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               type: object
-	 *               required:
-	 *                 - message
-	 *               properties:
-	 *                 message:
-	 *                   type: string
-	 *                   example: "Tokens refreshed successfully"
-	 *                 tokens:
-	 *                   type: object
-	 *                   properties:
-	 *                     accessToken:
-	 *                       type: string
-	 *                       description: New access token
-	 *                     refreshToken:
-	 *                       type: string
-	 *                       description: New refresh token
-	 *                     expiresIn:
-	 *                       type: number
-	 *                       description: Token expiration time in seconds
-	 *         headers:
-	 *           Set-Cookie:
-	 *             schema:
-	 *               type: string
-	 *               description: Updated authentication cookies
-	 *       401:
-	 *         description: Invalid or expired refresh token
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 *       500:
-	 *         description: Internal server error
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 */
-	router.post('/auth/refresh', authController.refreshToken)
-
-	/**
-	 * @swagger
 	 * /auth/user:
 	 *   get:
 	 *     tags: [Authorization]
@@ -401,19 +274,26 @@ const authRouter = (router: Router) => {
 	 *             schema:
 	 *               $ref: '#/components/schemas/GetAuthUserResponse'
 	 *       401:
-	 *         description: Unauthorized - Invalid or expired token
+	 *         description: Unauthorized - Authentication required
 	 *         content:
 	 *           application/json:
 	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
+	 *               oneOf:
+	 *                 - type: object
+	 *                   properties:
+	 *                     message:
+	 *                       type: string
+	 *                       example: "Authentication required"
+	 *                 - type: object
+	 *                   properties:
+	 *                     message:
+	 *                       type: string
+	 *                       example: "Authentication token expired"
+	 *                     code:
+	 *                       type: string
+	 *                       example: "TOKEN_EXPIRED"
 	 *       404:
 	 *         description: User not found
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 *       206:
-	 *         description: Partial Content - User profile incomplete
 	 *         content:
 	 *           application/json:
 	 *             schema:
@@ -425,7 +305,7 @@ const authRouter = (router: Router) => {
 	 *             schema:
 	 *               $ref: '#/components/schemas/ErrorResponse'
 	 */
-	router.get('/auth/user', authController.getAuthUser)
+	router.get('/auth/user', verifyAuth, authController.getAuthUser)
 
 	/**
 	 * @swagger
