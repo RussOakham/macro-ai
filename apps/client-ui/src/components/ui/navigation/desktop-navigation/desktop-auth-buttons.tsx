@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 
-import { usePostLogoutMutation } from '@/services/auth/hooks/usePostLogoutMutation'
+import { usePostLogoutMutation } from '@/services/hooks/auth/usePostLogoutMutation'
 
 import {
 	NavigationMenuItem,

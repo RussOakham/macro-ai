@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { QUERY_KEY } from '@/constants/query-keys'
 
-import { getUser } from '../network/getUser'
+import { getUser } from '../../network/user/getUser'
 
 const useGetUser = () => {
 	return useQuery({

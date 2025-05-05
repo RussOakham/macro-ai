@@ -24,8 +24,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
-import { usePostForgotPasswordVerify } from '@/services/auth/hooks/usePostForgotPasswordVerify'
-import { TConfirmForgotPassword } from '@/services/auth/network/postForgotPasswordVerify'
+import { usePostForgotPasswordVerify } from '@/services/hooks/auth/usePostForgotPasswordVerify'
+import { TConfirmForgotPassword } from '@/services/network/auth/postForgotPasswordVerify'
 
 const RouteComponent = () => {
 	const navigate = useNavigate({ from: '/auth/forgotten-password/verify' })

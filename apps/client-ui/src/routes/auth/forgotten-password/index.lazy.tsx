@@ -23,11 +23,11 @@ import {
 import { Input } from '@/components/ui/input'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
-import { usePostForgotPassword } from '@/services/auth/hooks/usePostForgotPassword'
+import { usePostForgotPassword } from '@/services/hooks/auth/usePostForgotPassword'
 import {
 	forgotPasswordSchemaClient,
 	type TForgotPasswordClient,
-} from '@/services/auth/network/postForgotPassword'
+} from '@/services/network/auth/postForgotPassword'
 
 const RouteComponent = () => {
 	const navigate = useNavigate({ from: '/auth/forgotten-password' })

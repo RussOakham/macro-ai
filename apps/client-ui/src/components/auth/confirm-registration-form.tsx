@@ -35,13 +35,13 @@ import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
-import { usePostConfirmRegisterMutation } from '@/services/auth/hooks/usePostConfirmRegisterMutation'
+import { usePostConfirmRegisterMutation } from '@/services/hooks/auth/usePostConfirmRegisterMutation'
 import {
 	confirmRegistrationSchemaClient,
 	TConfirmRegistrationClient,
-} from '@/services/auth/network/postConfirmRegistration'
+} from '@/services/network/auth/postConfirmRegistration'
 
-type TGetUserResponse = z.infer<typeof schemas.GetUserResponse>
+type TAuthGetUserResponse = z.infer<typeof schemas.GetAuthUserResponse>
 
 const ConfirmRegistrationForm = ({
 	className,
@@ -53,12 +53,14 @@ const ConfirmRegistrationForm = ({
 	const navigate = useNavigate({ from: '/auth/confirm-registration' })
 	const queryClient = useQueryClient()
 
-	const user = queryClient.getQueryData<TGetUserResponse>([QUERY_KEY.user])
+	const authUser = queryClient.getQueryData<TAuthGetUserResponse>([
+		QUERY_KEY.authUser,
+	])
 
 	const form = useForm<TConfirmRegistrationClient>({
 		resolver: zodResolver(confirmRegistrationSchemaClient),
 		defaultValues: {
-			username: user?.email ?? '',
+			username: authUser?.email ?? '',
 			code: '',
 		},
 	})

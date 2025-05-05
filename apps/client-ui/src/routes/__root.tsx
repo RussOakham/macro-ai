@@ -7,7 +7,7 @@ import { ModeToggle } from '@/components/mode-toggle'
 import { DesktopNav } from '@/components/ui/navigation/desktop-navigation/desktop-nav'
 import { Toaster } from '@/components/ui/sonner'
 import { QUERY_KEY } from '@/constants/query-keys'
-import { getUser } from '@/services/auth/network/getUser'
+import { getUser } from '@/services/network/user/getUser'
 
 export interface IRouterContext {
 	queryClient: QueryClient

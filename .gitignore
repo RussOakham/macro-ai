@@ -41,3 +41,7 @@ yarn-error.log*
 *.pem
 .cache
 .eslintcache
+
+# IDE
+.idea
+.vscode

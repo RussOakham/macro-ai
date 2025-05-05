@@ -6,8 +6,8 @@ import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 
-import { getUser } from '../network/getUser'
-import { postRefreshToken } from '../network/postRefreshToken'
+import { getAuthUser } from '../../network/auth/getAuthUser'
+import { postRefreshToken } from '../../network/auth/postRefreshToken'
 
 const usePostRefreshToken = () => {
 	const queryClient = useQueryClient()
@@ -31,10 +31,10 @@ const usePostRefreshToken = () => {
 		},
 		onSuccess: async () => {
 			// After successful login, fetch user data
-			const userData = await getUser()
+			const userData = await getAuthUser()
 
 			// Update query cache with BOTH query keys
-			queryClient.setQueryData([QUERY_KEY.user], userData)
+			queryClient.setQueryData([QUERY_KEY.authUser], userData)
 		},
 	})
 }

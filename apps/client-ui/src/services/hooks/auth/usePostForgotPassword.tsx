@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import {
 	postForgotPassword,
 	TForgotPasswordClient,
-} from '../network/postForgotPassword'
+} from '../../network/auth/postForgotPassword'
 
 const usePostForgotPassword = () => {
 	return useMutation({

@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { QUERY_KEY } from '@/constants/query-keys'
 
-import { postRegister, TRegister } from '../network/postRegister'
+import { postRegister, TRegister } from '../../network/auth/postRegister'
 
 const usePostRegisterMutation = () => {
 	const queryClient = useQueryClient()
@@ -17,7 +17,7 @@ const usePostRegisterMutation = () => {
 			return response
 		},
 		onSuccess: (_data, variables) => {
-			queryClient.setQueryData([QUERY_KEY.user], {
+			queryClient.setQueryData([QUERY_KEY.authUser], {
 				email: variables.email,
 			})
 		},

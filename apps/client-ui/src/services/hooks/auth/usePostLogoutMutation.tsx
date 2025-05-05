@@ -6,7 +6,7 @@ import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 
-import { postLogout } from '../network/postLogout'
+import { postLogout } from '../../network/auth/postLogout'
 
 const usePostLogoutMutation = () => {
 	const queryClient = useQueryClient()
@@ -23,8 +23,8 @@ const usePostLogoutMutation = () => {
 			toast.error('Logout failed')
 		},
 		onSuccess: async () => {
-			queryClient.setQueryData([QUERY_KEY.user], null)
-			queryClient.removeQueries({ queryKey: [QUERY_KEY.user] })
+			queryClient.setQueryData([QUERY_KEY.authUser], null)
+			queryClient.removeQueries({ queryKey: [QUERY_KEY.authUser] })
 			await navigate({ to: '/auth/login' })
 		},
 	})

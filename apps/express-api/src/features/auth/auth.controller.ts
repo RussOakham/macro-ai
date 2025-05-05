@@ -17,6 +17,7 @@ import {
 	validateData,
 } from '../../utils/response-handlers.ts'
 import { standardizeError } from '../../utils/standardize-error.ts'
+import { userService } from '../user/user.services.ts'
 
 import { CognitoService } from './auth.services.ts'
 import {
@@ -25,13 +26,12 @@ import {
 	TConfirmForgotPassword,
 	TConfirmRegistration,
 	TForgotPassword,
-	TGetUserResponse,
+	TGetAuthUserResponse,
 	TLogin,
 	TLoginResponse,
 	TRegister,
 	TResendConfirmationCode,
 } from './auth.types.ts'
-
 const { logger } = pino
 
 const nodeEnv = config.nodeEnv
@@ -83,6 +83,17 @@ export const authController: IAuthController = {
 					id: response.UserSub,
 					email,
 				},
+			}
+
+			const user = await userService.registerOrLoginUserById(
+				response.UserSub,
+				email,
+			)
+
+			if (!user) {
+				const error = AppError.validation('User not created')
+				handleError(res, standardizeError(error), 'authController')
+				return
 			}
 
 			sendSuccess(res, authResponse, StatusCodes.CREATED)
@@ -182,6 +193,17 @@ export const authController: IAuthController = {
 			}
 
 			const encryptedUsername = encrypt(response.Username)
+
+			const user = await userService.registerOrLoginUserById(
+				response.Username,
+				email,
+			)
+
+			if (!user) {
+				const error = AppError.validation('User not created')
+				handleError(res, standardizeError(error), 'authController')
+				return
+			}
 
 			res
 				.cookie('macro-ai-accessToken', loginResponse.accessToken, {
@@ -415,10 +437,10 @@ export const authController: IAuthController = {
 		}
 	},
 
-	getUser: async (req: Request, res: Response) => {
+	getAuthUser: async (req: Request, res: Response) => {
 		try {
 			const accessToken = getAccessToken(req)
-			const response = await cognito.getUser(accessToken)
+			const response = await cognito.getAuthUser(accessToken)
 
 			// Check for service errors
 			const serviceResult = handleServiceError(
@@ -483,7 +505,7 @@ export const authController: IAuthController = {
 			}
 
 			// Build complete user response
-			const userResponse: TGetUserResponse = {
+			const userResponse: TGetAuthUserResponse = {
 				id: response.Username,
 				email: email,
 				emailVerified:

@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import { standardizeError } from '@/lib/errors/standardize-error'
-import { useGetUser } from '@/services/auth/hooks/useGetUser'
+import { useGetUser } from '@/services/hooks/user/getUser'
 
 const Index = () => {
 	const { data: user, isFetching, isError, error, isSuccess } = useGetUser()

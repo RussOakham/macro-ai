@@ -33,7 +33,7 @@ const ResendConfirmationCode = z.object({ username: z.string() }).passthrough()
 const Login = z
 	.object({ email: z.string(), password: z.string() })
 	.passthrough()
-const GetUserResponse = z
+const GetAuthUserResponse = z
 	.object({ id: z.string(), email: z.string(), emailVerified: z.boolean() })
 	.passthrough()
 const postAuthconfirmForgotPassword_Body = z
@@ -45,6 +45,15 @@ const postAuthconfirmForgotPassword_Body = z
 	})
 	.passthrough()
 const HealthResponse = z.object({ message: z.string() }).partial().passthrough()
+const User = z
+	.object({
+		id: z.string(),
+		email: z.string(),
+		createdAt: z.string().datetime({ offset: true }),
+		updatedAt: z.string().datetime({ offset: true }),
+		lastLoginAt: z.string().datetime({ offset: true }).optional(),
+	})
+	.passthrough()
 
 export const schemas = {
 	Register,
@@ -53,9 +62,10 @@ export const schemas = {
 	ConfirmRegistration,
 	ResendConfirmationCode,
 	Login,
-	GetUserResponse,
+	GetAuthUserResponse,
 	postAuthconfirmForgotPassword_Body,
 	HealthResponse,
+	User,
 }
 
 const endpoints = makeApi([
@@ -327,7 +337,7 @@ const endpoints = makeApi([
 		path: '/auth/user',
 		description: `Retrieves the authenticated user&#x27;s profile information`,
 		requestFormat: 'json',
-		response: GetUserResponse,
+		response: GetAuthUserResponse,
 		errors: [
 			{
 				status: 401,
@@ -357,6 +367,61 @@ const endpoints = makeApi([
 				status: 500,
 				description: `API is unhealthy`,
 				schema: ErrorResponse,
+			},
+		],
+	},
+	{
+		method: 'get',
+		path: '/users/:id',
+		description: `Retrieves a user by their ID`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'id',
+				type: 'Path',
+				schema: z.string(),
+			},
+		],
+		response: User,
+		errors: [
+			{
+				status: 400,
+				description: `Bad request - Missing ID`,
+				schema: z.void(),
+			},
+			{
+				status: 404,
+				description: `User not found`,
+				schema: z.void(),
+			},
+			{
+				status: 500,
+				description: `Internal server error`,
+				schema: z.void(),
+			},
+		],
+	},
+	{
+		method: 'get',
+		path: '/users/me',
+		description: `Retrieves the current user based on the access token`,
+		requestFormat: 'json',
+		response: User,
+		errors: [
+			{
+				status: 401,
+				description: `Unauthorized - Invalid or expired token`,
+				schema: z.void(),
+			},
+			{
+				status: 404,
+				description: `User not found`,
+				schema: z.void(),
+			},
+			{
+				status: 500,
+				description: `Internal server error`,
+				schema: z.void(),
 			},
 		],
 	},
