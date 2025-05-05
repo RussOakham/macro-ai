@@ -26,7 +26,7 @@ import {
 	TConfirmForgotPassword,
 	TConfirmRegistration,
 	TForgotPassword,
-	TGetCognitoUserResponse,
+	TGetAuthUserResponse,
 	TLogin,
 	TLoginResponse,
 	TRegister,
@@ -437,10 +437,10 @@ export const authController: IAuthController = {
 		}
 	},
 
-	getCognitoUser: async (req: Request, res: Response) => {
+	getAuthUser: async (req: Request, res: Response) => {
 		try {
 			const accessToken = getAccessToken(req)
-			const response = await cognito.getCognitoUser(accessToken)
+			const response = await cognito.getAuthUser(accessToken)
 
 			// Check for service errors
 			const serviceResult = handleServiceError(
@@ -505,7 +505,7 @@ export const authController: IAuthController = {
 			}
 
 			// Build complete user response
-			const userResponse: TGetCognitoUserResponse = {
+			const userResponse: TGetAuthUserResponse = {
 				id: response.Username,
 				email: email,
 				emailVerified:

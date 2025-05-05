@@ -61,7 +61,7 @@ class UserService {
 	async getUserByAccessToken(accessToken: string) {
 		try {
 			// Step 1: Get user information from Cognito using the access token
-			const cognitoUser = await cognitoService.getCognitoUser(accessToken)
+			const cognitoUser = await cognitoService.getAuthUser(accessToken)
 
 			if (!cognitoUser.Username) {
 				logger.error(

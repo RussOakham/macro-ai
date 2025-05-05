@@ -265,7 +265,7 @@ class CognitoService {
 		return this.client.send(command)
 	}
 
-	public async getCognitoUser(accessToken: string) {
+	public async getAuthUser(accessToken: string) {
 		try {
 			const command = new GetUserCommand({
 				AccessToken: accessToken,
