@@ -53,14 +53,14 @@ const ConfirmRegistrationForm = ({
 	const navigate = useNavigate({ from: '/auth/confirm-registration' })
 	const queryClient = useQueryClient()
 
-	const user = queryClient.getQueryData<TAuthGetUserResponse>([
+	const authUser = queryClient.getQueryData<TAuthGetUserResponse>([
 		QUERY_KEY.authUser,
 	])
 
 	const form = useForm<TConfirmRegistrationClient>({
 		resolver: zodResolver(confirmRegistrationSchemaClient),
 		defaultValues: {
-			username: user?.email ?? '',
+			username: authUser?.email ?? '',
 			code: '',
 		},
 	})
