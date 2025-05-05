@@ -26,9 +26,7 @@ export type TRefreshToken = z.infer<typeof refreshTokenSchema>
 export type TForgotPassword = z.infer<typeof forgotPasswordSchema>
 export type TConfirmForgotPassword = z.infer<typeof confirmForgotPasswordSchema>
 export type TGetAuthUser = z.infer<typeof getAuthUserSchema>
-export type TGetAuthUserResponse = z.infer<
-	typeof getAuthUserResponseSchema
->
+export type TGetAuthUserResponse = z.infer<typeof getAuthUserResponseSchema>
 
 // Cognito related interfaces
 export interface ICognitoError {

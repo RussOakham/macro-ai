@@ -3,7 +3,7 @@ import { NavigationMenuList } from '@radix-ui/react-navigation-menu'
 import { Link } from '@tanstack/react-router'
 
 import { cn } from '@/lib/utils'
-import { useIsAuthenticated } from '@/services/auth/hooks/useIsAuthenticated'
+import { useIsAuthenticated } from '@/services/hooks/auth/useIsAuthenticated'
 
 import {
 	NavigationMenu,

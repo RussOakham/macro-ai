@@ -4,9 +4,9 @@ import { z } from 'zod'
 
 import { QUERY_KEY } from '@/constants/query-keys'
 
-import { getUser } from '../network/getUser'
+import { getAuthUser } from '../../network/auth/getAuthUser'
 
-type TGetUserResponse = z.infer<typeof schemas.GetUserResponse>
+type TGetAuthUserResponse = z.infer<typeof schemas.GetAuthUserResponse>
 
 const useIsAuthenticated = () => {
 	const {
@@ -14,9 +14,9 @@ const useIsAuthenticated = () => {
 		isFetching,
 		isSuccess,
 		isError,
-	} = useQuery<TGetUserResponse>({
+	} = useQuery<TGetAuthUserResponse>({
 		queryKey: [QUERY_KEY.user],
-		queryFn: async () => getUser(),
+		queryFn: async () => getAuthUser(),
 		enabled: false,
 		staleTime: Infinity,
 		gcTime: Infinity,

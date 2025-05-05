@@ -2,7 +2,7 @@ import { createApiClient } from '@repo/macro-ai-api-client'
 import { AxiosError, InternalAxiosRequestConfig } from 'axios'
 
 import { router } from '@/main'
-import { postRefreshToken } from '@/services/auth/network/postRefreshToken'
+import { postRefreshToken } from '@/services/network/auth/postRefreshToken'
 
 import { standardizeError } from '../errors/standardize-error'
 import { logger } from '../logger/logger'

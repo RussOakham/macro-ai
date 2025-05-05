@@ -10,8 +10,8 @@ import { Input } from '@/components/ui/input'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
-import { usePostRegisterMutation } from '@/services/auth/hooks/usePostRegisterMutation'
-import { TRegister } from '@/services/auth/network/postRegister'
+import { usePostRegisterMutation } from '@/services/hooks/auth/usePostRegisterMutation'
+import { TRegister } from '@/services/network/auth/postRegister'
 
 import {
 	Form,
