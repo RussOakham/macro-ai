@@ -100,56 +100,56 @@ const { logger } = pino
 
 // Default rate limit configuration
 const defaultRateLimiter = rateLimit({
- windowMs: 15 * 60 * 1000, // 15 minutes
- limit: 100, // 100 requests per windowMs
- standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
- legacyHeaders: false, // Disable the `X-RateLimit-*` headers
- message: {
-  status: StatusCodes.TOO_MANY_REQUESTS,
-  message: 'Too many requests, please try again later.',
- },
- handler: (req: Request, res: Response, next: NextFunction, options: any) => {
-  logger.warn(
-   `[middleware - rateLimit]: Rate limit exceeded for IP: ${req.ip}`,
-  )
-  res.status(options.statusCode).json(options.message)
- },
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	limit: 100, // 100 requests per windowMs
+	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+	message: {
+		status: StatusCodes.TOO_MANY_REQUESTS,
+		message: 'Too many requests, please try again later.',
+	},
+	handler: (req: Request, res: Response, next: NextFunction, options: any) => {
+		logger.warn(
+			`[middleware - rateLimit]: Rate limit exceeded for IP: ${req.ip}`,
+		)
+		res.status(options.statusCode).json(options.message)
+	},
 })
 
 // Stricter rate limit for authentication endpoints
 const authRateLimiter = rateLimit({
- windowMs: 60 * 60 * 1000, // 1 hour
- limit: 10, // 10 requests per hour
- standardHeaders: true,
- legacyHeaders: false,
- message: {
-  status: StatusCodes.TOO_MANY_REQUESTS,
-  message: 'Too many authentication attempts, please try again later.',
- },
- handler: (req: Request, res: Response, next: NextFunction, options: any) => {
-  logger.warn(
-   `[middleware - rateLimit]: Auth rate limit exceeded for IP: ${req.ip}`,
-  )
-  res.status(options.statusCode).json(options.message)
- },
+	windowMs: 60 * 60 * 1000, // 1 hour
+	limit: 10, // 10 requests per hour
+	standardHeaders: true,
+	legacyHeaders: false,
+	message: {
+		status: StatusCodes.TOO_MANY_REQUESTS,
+		message: 'Too many authentication attempts, please try again later.',
+	},
+	handler: (req: Request, res: Response, next: NextFunction, options: any) => {
+		logger.warn(
+			`[middleware - rateLimit]: Auth rate limit exceeded for IP: ${req.ip}`,
+		)
+		res.status(options.statusCode).json(options.message)
+	},
 })
 
 // API rate limiter for endpoints that require API key
 const apiRateLimiter = rateLimit({
- windowMs: 60 * 1000, // 1 minute
- limit: 60, // 60 requests per minute
- standardHeaders: true,
- legacyHeaders: false,
- message: {
-  status: StatusCodes.TOO_MANY_REQUESTS,
-  message: 'API rate limit exceeded, please try again later.',
- },
- handler: (req: Request, res: Response, next: NextFunction, options: any) => {
-  logger.warn(
-   `[middleware - rateLimit]: API rate limit exceeded for IP: ${req.ip}`,
-  )
-  res.status(options.statusCode).json(options.message)
- },
+	windowMs: 60 * 1000, // 1 minute
+	limit: 60, // 60 requests per minute
+	standardHeaders: true,
+	legacyHeaders: false,
+	message: {
+		status: StatusCodes.TOO_MANY_REQUESTS,
+		message: 'API rate limit exceeded, please try again later.',
+	},
+	handler: (req: Request, res: Response, next: NextFunction, options: any) => {
+		logger.warn(
+			`[middleware - rateLimit]: API rate limit exceeded for IP: ${req.ip}`,
+		)
+		res.status(options.statusCode).json(options.message)
+	},
 })
 
 export { defaultRateLimiter, authRateLimiter, apiRateLimiter }
@@ -166,86 +166,86 @@ import { authRateLimiter } from '../../middleware/rate-limit.middleware.ts'
 import { authController } from './auth.controller.ts'
 
 const authRouter = (router: Router) => {
- /**
-  * @swagger
-  * /auth/register:
-  *   post:
-  *     summary: Register a new user
-  *     description: Creates a new user account
-  *     tags: [Authentication]
-  *     requestBody:
-  *       required: true
-  *       content:
-  *         application/json:
-  *           schema:
-  *             $ref: '#/components/schemas/RegisterRequest'
-  *     responses:
-  *       201:
-  *         description: User registered successfully
-  *       400:
-  *         description: Invalid input
-  *       429:
-  *         description: Too many requests
-  *       500:
-  *         description: Internal server error
-  */
- router.post('/auth/register', authRateLimiter, authController.register)
+	/**
+	 * @swagger
+	 * /auth/register:
+	 *   post:
+	 *     summary: Register a new user
+	 *     description: Creates a new user account
+	 *     tags: [Authentication]
+	 *     requestBody:
+	 *       required: true
+	 *       content:
+	 *         application/json:
+	 *           schema:
+	 *             $ref: '#/components/schemas/RegisterRequest'
+	 *     responses:
+	 *       201:
+	 *         description: User registered successfully
+	 *       400:
+	 *         description: Invalid input
+	 *       429:
+	 *         description: Too many requests
+	 *       500:
+	 *         description: Internal server error
+	 */
+	router.post('/auth/register', authRateLimiter, authController.register)
 
- /**
-  * @swagger
-  * /auth/login:
-  *   post:
-  *     summary: Login user
-  *     description: Authenticates a user and returns tokens
-  *     tags: [Authentication]
-  *     requestBody:
-  *       required: true
-  *       content:
-  *         application/json:
-  *           schema:
-  *             $ref: '#/components/schemas/LoginRequest'
-  *     responses:
-  *       200:
-  *         description: Login successful
-  *       400:
-  *         description: Invalid credentials
-  *       429:
-  *         description: Too many requests
-  *       500:
-  *         description: Internal server error
-  */
- router.post('/auth/login', authRateLimiter, authController.login)
+	/**
+	 * @swagger
+	 * /auth/login:
+	 *   post:
+	 *     summary: Login user
+	 *     description: Authenticates a user and returns tokens
+	 *     tags: [Authentication]
+	 *     requestBody:
+	 *       required: true
+	 *       content:
+	 *         application/json:
+	 *           schema:
+	 *             $ref: '#/components/schemas/LoginRequest'
+	 *     responses:
+	 *       200:
+	 *         description: Login successful
+	 *       400:
+	 *         description: Invalid credentials
+	 *       429:
+	 *         description: Too many requests
+	 *       500:
+	 *         description: Internal server error
+	 */
+	router.post('/auth/login', authRateLimiter, authController.login)
 
- /**
-  * @swagger
-  * /auth/forgot-password:
-  *   post:
-  *     summary: Forgot password
-  *     description: Initiates the password reset process
-  *     tags: [Authentication]
-  *     requestBody:
-  *       required: true
-  *       content:
-  *         application/json:
-  *           schema:
-  *             $ref: '#/components/schemas/ForgotPasswordRequest'
-  *     responses:
-  *       200:
-  *         description: Password reset initiated
-  *       400:
-  *         description: Invalid input
-  *       429:
-  *         description: Too many requests
-  *       500:
-  *         description: Internal server error
-  */
- router.post(
-  '/auth/forgot-password',
-  authRateLimiter,
-  authController.forgotPassword,
- )
+	/**
+	 * @swagger
+	 * /auth/forgot-password:
+	 *   post:
+	 *     summary: Forgot password
+	 *     description: Initiates the password reset process
+	 *     tags: [Authentication]
+	 *     requestBody:
+	 *       required: true
+	 *       content:
+	 *         application/json:
+	 *           schema:
+	 *             $ref: '#/components/schemas/ForgotPasswordRequest'
+	 *     responses:
+	 *       200:
+	 *         description: Password reset initiated
+	 *       400:
+	 *         description: Invalid input
+	 *       429:
+	 *         description: Too many requests
+	 *       500:
+	 *         description: Internal server error
+	 */
+	router.post(
+		'/auth/forgot-password',
+		authRateLimiter,
+		authController.forgotPassword,
+	)
 
- // Other routes...
+	// Other routes...
 }
 
 export { authRouter }
@@ -261,14 +261,14 @@ import express from 'express'
 import { defaultRateLimiter } from '../middleware/rate-limit.middleware.ts'
 
 export const createServer = () => {
- const app = express()
+	const app = express()
 
- // Apply global rate limiting to all routes
- app.use(defaultRateLimiter)
+	// Apply global rate limiting to all routes
+	app.use(defaultRateLimiter)
 
- // Other middleware and route setup...
+	// Other middleware and route setup...
 
- return app
+	return app
 }
 ```
 
@@ -285,32 +285,32 @@ let store = undefined
 
 // Set up Redis store for production environments
 if (config.nodeEnv === 'production' && config.redisUrl) {
- const redisClient = createClient({
-  url: config.redisUrl,
-  socket: {
-   connectTimeout: 50000,
-  },
- })
+	const redisClient = createClient({
+		url: config.redisUrl,
+		socket: {
+			connectTimeout: 50000,
+		},
+	})
 
- redisClient.connect().catch((err) => {
-  logger.error(`[middleware - rateLimit]: Redis connection error: ${err}`)
- })
+	redisClient.connect().catch((err) => {
+		logger.error(`[middleware - rateLimit]: Redis connection error: ${err}`)
+	})
 
- store = new RedisStore({
-  sendCommand: (...args: string[]) => redisClient.sendCommand(args),
- })
+	store = new RedisStore({
+		sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+	})
 
- logger.info('[middleware - rateLimit]: Using Redis store for rate limiting')
+	logger.info('[middleware - rateLimit]: Using Redis store for rate limiting')
 }
 
 // Update rate limiters to use Redis store in production
 const defaultRateLimiter = rateLimit({
- windowMs: 15 * 60 * 1000,
- limit: 100,
- standardHeaders: true,
- legacyHeaders: false,
- store: store, // Use Redis store if available
- // Other options...
+	windowMs: 15 * 60 * 1000,
+	limit: 100,
+	standardHeaders: true,
+	legacyHeaders: false,
+	store: store, // Use Redis store if available
+	// Other options...
 })
 
 // Similar updates for authRateLimiter and apiRateLimiter
