@@ -89,3 +89,27 @@
   - [x] Create reset password form component
   - [ ] Add proper validation and error handling
   - [ ] Add success/error notifications
+
+### Authorization Middleware Implementation
+
+- [x] Create auth middleware in `apps/express-api/src/middleware/auth.middleware.ts`
+
+  - [x] Implement `verifyAuth` middleware to check Cognito access tokens
+  - [x] Extract access token from cookies
+  - [x] Verify token with Cognito service
+  - [x] Add user ID to request object for route handlers
+  - [x] Handle unauthorized errors with appropriate status codes
+
+- [x] Update Express Request type definition
+
+  - [x] Add `userId` property to Request interface in `apps/express-api/src/types/express/index.d.ts`
+
+- [x] Apply middleware to protected routes
+
+  - [x] Add middleware to `/users/me` endpoint
+  - [x] Document authentication requirements in Swagger annotations
+
+- [x] Update user service to support auth middleware
+  - [x] Add `getUserById` method to retrieve user data
+  - [x] Add `getUserByAccessToken` method for token verification
+  - [x] Add proper error handling for authentication failures
