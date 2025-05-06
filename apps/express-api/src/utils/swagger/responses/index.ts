@@ -90,4 +90,24 @@ export const responses = {
 			},
 		},
 	},
+	TooManyRequests: {
+		description: 'Too Many Requests - Rate limit exceeded',
+		content: {
+			'application/json': {
+				schema: {
+					type: 'object',
+					properties: {
+						status: {
+							type: 'number',
+							example: 429,
+						},
+						message: {
+							type: 'string',
+							example: 'Too many requests, please try again later.',
+						},
+					},
+				},
+			},
+		},
+	},
 }

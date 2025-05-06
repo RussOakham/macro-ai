@@ -8,6 +8,7 @@ import swaggerUi from 'swagger-ui-express'
 
 import { apiKeyAuth } from '../middleware/api-key.middleware.ts'
 import { errorHandler } from '../middleware/error.middleware.ts'
+import { defaultRateLimiter } from '../middleware/rate-limit.middleware.ts'
 import {
 	helmetMiddleware,
 	securityHeadersMiddleware,
@@ -51,6 +52,7 @@ const createServer = (): Express => {
 	app.use(apiKeyAuth)
 	app.use(helmetMiddleware)
 	app.use(securityHeadersMiddleware)
+	app.use(defaultRateLimiter)
 
 	app.use('/api', appRouter())
 	app.use(

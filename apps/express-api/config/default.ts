@@ -21,6 +21,13 @@ const config = {
 	cookieEncryptionKey: env.COOKIE_ENCRYPTION_KEY,
 	nonRelationalDatabaseUrl: env.NON_RELATIONAL_DATABASE_URL,
 	relationalDatabaseUrl: env.RELATIONAL_DATABASE_URL,
+	rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
+	rateLimitMaxRequests: env.RATE_LIMIT_MAX_REQUESTS,
+	authRateLimitWindowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+	authRateLimitMaxRequests: env.AUTH_RATE_LIMIT_MAX_REQUESTS,
+	apiRateLimitWindowMs: env.API_RATE_LIMIT_WINDOW_MS,
+	apiRateLimitMaxRequests: env.API_RATE_LIMIT_MAX_REQUESTS,
+	redisUrl: env.REDIS_URL,
 }
 
 export { config }

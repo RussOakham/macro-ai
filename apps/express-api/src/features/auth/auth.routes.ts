@@ -1,6 +1,7 @@
 import { Router } from 'express'
 
 import { verifyAuth } from '../../middleware/auth.middleware.ts'
+import { authRateLimiter } from '../../middleware/rate-limit.middleware.ts'
 import { validate } from '../../middleware/validation.middleware.ts'
 
 import { authController } from './auth.controller.ts'
@@ -99,7 +100,12 @@ const authRouter = (router: Router) => {
 	 *             schema:
 	 *               $ref: '#/components/schemas/ErrorResponse'
 	 */
-	router.post('/auth/login', validate(loginSchema), authController.login)
+	router.post(
+		'/auth/login',
+		authRateLimiter,
+		validate(loginSchema),
+		authController.login,
+	)
 
 	/**
 	 * @swagger
@@ -344,6 +350,7 @@ const authRouter = (router: Router) => {
 	 */
 	router.post(
 		'/auth/forgot-password',
+		authRateLimiter,
 		validate(forgotPasswordSchema),
 		authController.forgotPassword,
 	)
