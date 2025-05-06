@@ -35,7 +35,11 @@ const createUser = async (userData: InsertUser): Promise<User> => {
 	return user
 }
 
-const updateLastLogin = async (id: string): Promise<User | undefined> => {
+const updateLastLogin = async ({
+	id,
+}: {
+	id: string
+}): Promise<User | undefined> => {
 	const [user] = await db
 		.update(usersTable)
 		.set({ lastLogin: new Date() })

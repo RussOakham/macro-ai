@@ -100,7 +100,7 @@ class UserService {
 					userId: id,
 					email,
 				})
-				user = await updateLastLogin(email)
+				user = await updateLastLogin({ id })
 			}
 
 			if (!user) {
