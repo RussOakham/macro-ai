@@ -31,7 +31,7 @@ const RegisterForm = ({
 	const navigate = useNavigate({ from: '/auth/register' })
 
 	const form = useForm<TRegister>({
-		resolver: zodResolver(schemas.Register),
+		resolver: zodResolver(schemas.RegisterRequest),
 		defaultValues: {
 			email: '',
 			password: '',
