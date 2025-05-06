@@ -9,38 +9,38 @@ The database schema is defined using Drizzle ORM with PostgreSQL:
 ```typescript
 // apps/express-api/src/data-access/schema.ts
 import {
- boolean,
- pgTable,
- timestamp,
- uniqueIndex,
- uuid,
- varchar,
- vector,
+	boolean,
+	pgTable,
+	timestamp,
+	uniqueIndex,
+	uuid,
+	varchar,
+	vector,
 } from 'drizzle-orm/pg-core'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { z } from 'zod'
 
 const usersTable = pgTable(
- 'users',
- {
-  id: uuid('id').primaryKey(),
-  email: varchar('email', { length: 255 }).notNull().unique(),
-  emailVerified: boolean('email_verified').default(false),
-  firstName: varchar('first_name', { length: 255 }),
-  lastName: varchar('last_name', { length: 255 }),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
-  lastLogin: timestamp('last_login'),
- },
- (users) => [uniqueIndex('email_idx').on(users.email)],
+	'users',
+	{
+		id: uuid('id').primaryKey(),
+		email: varchar('email', { length: 255 }).notNull().unique(),
+		emailVerified: boolean('email_verified').default(false),
+		firstName: varchar('first_name', { length: 255 }),
+		lastName: varchar('last_name', { length: 255 }),
+		createdAt: timestamp('created_at').defaultNow(),
+		updatedAt: timestamp('updated_at').defaultNow(),
+		lastLogin: timestamp('last_login'),
+	},
+	(users) => [uniqueIndex('email_idx').on(users.email)],
 )
 
 const chatVectorsTable = pgTable('chat_vectors', {
- id: uuid('id').primaryKey().defaultRandom(),
- userId: uuid('user_id').references(() => usersTable.id),
- embedding: vector('vector', { dimensions: 1536 }),
- createdAt: timestamp('created_at').defaultNow(),
- updatedAt: timestamp('updated_at').defaultNow(),
+	id: uuid('id').primaryKey().defaultRandom(),
+	userId: uuid('user_id').references(() => usersTable.id),
+	embedding: vector('vector', { dimensions: 1536 }),
+	createdAt: timestamp('created_at').defaultNow(),
+	updatedAt: timestamp('updated_at').defaultNow(),
 })
 
 // Generate Zod schemas for type validation
@@ -57,12 +57,12 @@ export type InsertChatVector = z.infer<typeof insertChatVectorSchema>
 export type ChatVector = z.infer<typeof selectChatVectorSchema>
 
 export {
- usersTable,
- chatVectorsTable,
- insertUserSchema,
- selectUserSchema,
- insertChatVectorSchema,
- selectChatVectorSchema,
+	usersTable,
+	chatVectorsTable,
+	insertUserSchema,
+	selectUserSchema,
+	insertChatVectorSchema,
+	selectChatVectorSchema,
 }
 ```
 
@@ -77,8 +77,8 @@ import { Pool } from 'pg'
 import { env } from '../config/env'
 
 const pool = new Pool({
- connectionString: env.DATABASE_URL,
- ssl: env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+	connectionString: env.DATABASE_URL,
+	ssl: env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 })
 
 export const db = drizzle(pool)
@@ -93,51 +93,51 @@ Each feature has its own data access module that encapsulates database operation
 import { eq } from 'drizzle-orm'
 import { db } from '../../data-access/db.ts'
 import {
- usersTable,
- insertUserSchema,
- selectUserSchema,
- type InsertUser,
- type User,
+	usersTable,
+	insertUserSchema,
+	selectUserSchema,
+	type InsertUser,
+	type User,
 } from '../../data-access/schema.ts'
 
 const findUserByEmail = async (email: string): Promise<User | undefined> => {
- const users = await db
-  .select()
-  .from(usersTable)
-  .where(eq(usersTable.email, email))
-  .limit(1)
+	const users = await db
+		.select()
+		.from(usersTable)
+		.where(eq(usersTable.email, email))
+		.limit(1)
 
- return users[0]
+	return users[0]
 }
 
 const findUserById = async (id: string): Promise<User | undefined> => {
- const users = await db
-  .select()
-  .from(usersTable)
-  .where(eq(usersTable.id, id))
-  .limit(1)
+	const users = await db
+		.select()
+		.from(usersTable)
+		.where(eq(usersTable.id, id))
+		.limit(1)
 
- return users[0]
+	return users[0]
 }
 
 const createUser = async (userData: InsertUser): Promise<User> => {
- const [user] = await db.insert(usersTable).values(userData).returning()
+	const [user] = await db.insert(usersTable).values(userData).returning()
 
- return user
+	return user
 }
 
 const updateLastLogin = async ({
- id,
+	id,
 }: {
- id: string
+	id: string
 }): Promise<User | undefined> => {
- const [user] = await db
-  .update(usersTable)
-  .set({ lastLogin: new Date() })
-  .where(eq(usersTable.id, id))
-  .returning()
+	const [user] = await db
+		.update(usersTable)
+		.set({ lastLogin: new Date() })
+		.where(eq(usersTable.id, id))
+		.returning()
 
- return user
+	return user
 }
 
 export { createUser, findUserByEmail, findUserById, updateLastLogin }
@@ -164,36 +164,36 @@ The data access layer is consumed by service classes that implement business log
 ```typescript
 // apps/express-api/src/features/user/user.services.ts
 import {
- findUserById,
- createUser,
- updateLastLogin,
+	findUserById,
+	createUser,
+	updateLastLogin,
 } from './user.data-access.ts'
 
 class UserService {
- async registerOrLoginUserById(id: string, email: string) {
-  let user = await findUserById(id)
+	async registerOrLoginUserById(id: string, email: string) {
+		let user = await findUserById(id)
 
-  if (!user) {
-   user = await createUser({ id, email })
-  } else {
-   user = await updateLastLogin({ id })
-  }
+		if (!user) {
+			user = await createUser({ id, email })
+		} else {
+			user = await updateLastLogin({ id })
+		}
 
-  return user
- }
+		return user
+	}
 
- async getUserByAccessToken(accessToken: string) {
-  // Get user ID from Cognito using access token
-  const cognitoUser = await cognitoService.getCognitoUser(accessToken)
+	async getUserByAccessToken(accessToken: string) {
+		// Get user ID from Cognito using access token
+		const cognitoUser = await cognitoService.getCognitoUser(accessToken)
 
-  if (!cognitoUser || !cognitoUser.Username) {
-   return null
-  }
+		if (!cognitoUser || !cognitoUser.Username) {
+			return null
+		}
 
-  // Use ID to get user from database
-  const user = await findUserById(cognitoUser.Username)
-  return user
- }
+		// Use ID to get user from database
+		const user = await findUserById(cognitoUser.Username)
+		return user
+	}
 }
 ```
 
@@ -216,8 +216,8 @@ Embeddings are stored in the `chat_vectors` table using the vector type with Zod
 ```typescript
 // Example of storing an embedding with Zod validation
 import {
- insertChatVectorSchema,
- selectChatVectorSchema,
+	insertChatVectorSchema,
+	selectChatVectorSchema,
 } from '../../data-access/schema.ts'
 import { z } from 'zod'
 
@@ -225,16 +225,16 @@ type InsertChatVector = z.infer<typeof insertChatVectorSchema>
 type ChatVector = z.infer<typeof selectChatVectorSchema>
 
 const storeEmbedding = async (
- data: Omit<InsertChatVector, 'id' | 'createdAt' | 'updatedAt'>,
+	data: Omit<InsertChatVector, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<ChatVector | null> => {
- // Validate input data
- const validatedData = insertChatVectorSchema.parse(data)
+	// Validate input data
+	const validatedData = insertChatVectorSchema.parse(data)
 
- return await db
-  .insert(chatVectorsTable)
-  .values(validatedData)
-  .returning()
-  .then((rows) => selectChatVectorSchema.parse(rows[0] ?? null))
+	return await db
+		.insert(chatVectorsTable)
+		.values(validatedData)
+		.returning()
+		.then((rows) => selectChatVectorSchema.parse(rows[0] ?? null))
 }
 ```
 
@@ -247,16 +247,16 @@ Similarity searches can be performed using pgvector's operators:
 import { sql } from 'drizzle-orm'
 
 const findSimilarVectors = async (
- embedding: number[],
- limit = 5,
+	embedding: number[],
+	limit = 5,
 ): Promise<ChatVector[]> => {
- const results = await db
-  .select()
-  .from(chatVectorsTable)
-  .orderBy(sql`embedding <-> ${embedding}`)
-  .limit(limit)
+	const results = await db
+		.select()
+		.from(chatVectorsTable)
+		.orderBy(sql`embedding <-> ${embedding}`)
+		.limit(limit)
 
- return results.map((result) => selectChatVectorSchema.parse(result))
+	return results.map((result) => selectChatVectorSchema.parse(result))
 }
 ```
 
@@ -269,8 +269,8 @@ Database connection strings and other configuration are stored in environment va
 ```typescript
 // apps/express-api/config/default.ts
 const config = {
- // ...other config
- relationalDatabaseUrl: env.RELATIONAL_DATABASE_URL,
+	// ...other config
+	relationalDatabaseUrl: env.RELATIONAL_DATABASE_URL,
 }
 ```
 
@@ -279,10 +279,10 @@ Environment variables are validated using Zod:
 ```typescript
 // apps/express-api/src/utils/env.schema.ts
 const envSchema = z.object({
- // ...other env vars
- RELATIONAL_DATABASE_URL: z
-  .string()
-  .min(1, 'Relational database URL is required'),
+	// ...other env vars
+	RELATIONAL_DATABASE_URL: z
+		.string()
+		.min(1, 'Relational database URL is required'),
 })
 ```
 
@@ -299,25 +299,25 @@ Unit tests for data access functions use a test database or mocks with Zod valid
 import { selectUserSchema } from '../../data-access/schema.ts'
 
 describe('findUserById', () => {
- it('should return a valid user when found', async () => {
-  // Arrange
-  const mockUser = {
-   id: 'test-id',
-   email: 'test@example.com',
-   emailVerified: false,
-   createdAt: new Date(),
-   updatedAt: new Date(),
-  }
-  // Mock db or use test database
+	it('should return a valid user when found', async () => {
+		// Arrange
+		const mockUser = {
+			id: 'test-id',
+			email: 'test@example.com',
+			emailVerified: false,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		}
+		// Mock db or use test database
 
-  // Act
-  const result = await findUserById('test-id')
+		// Act
+		const result = await findUserById('test-id')
 
-  // Assert
-  expect(result).not.toBeNull()
-  expect(() => selectUserSchema.parse(result)).not.toThrow()
-  expect(result?.id).toEqual(mockUser.id)
- })
+		// Assert
+		expect(result).not.toBeNull()
+		expect(() => selectUserSchema.parse(result)).not.toThrow()
+		expect(result?.id).toEqual(mockUser.id)
+	})
 })
 ```
 
@@ -328,33 +328,33 @@ Integration tests verify the interaction between the data access layer and the d
 ```typescript
 // Example integration test with Zod validation
 describe('User data access integration', () => {
- beforeAll(async () => {
-  // Set up test database
- })
+	beforeAll(async () => {
+		// Set up test database
+	})
 
- afterAll(async () => {
-  // Clean up test database
- })
+	afterAll(async () => {
+		// Clean up test database
+	})
 
- it('should create and retrieve a user with valid schema', async () => {
-  // Create user
-  const userData = {
-   id: 'test-id',
-   email: 'test@example.com',
-  }
-  const created = await createUser(userData)
+	it('should create and retrieve a user with valid schema', async () => {
+		// Create user
+		const userData = {
+			id: 'test-id',
+			email: 'test@example.com',
+		}
+		const created = await createUser(userData)
 
-  // Validate created user
-  expect(() => selectUserSchema.parse(created)).not.toThrow()
+		// Validate created user
+		expect(() => selectUserSchema.parse(created)).not.toThrow()
 
-  // Retrieve user
-  const found = await findUserById('test-id')
+		// Retrieve user
+		const found = await findUserById('test-id')
 
-  // Verify
-  expect(found).not.toBeNull()
-  expect(() => selectUserSchema.parse(found)).not.toThrow()
-  expect(found?.id).toEqual(userData.id)
- })
+		// Verify
+		expect(found).not.toBeNull()
+		expect(() => selectUserSchema.parse(found)).not.toThrow()
+		expect(found?.id).toEqual(userData.id)
+	})
 })
 ```
 
