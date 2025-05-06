@@ -46,6 +46,15 @@ const envSchema = z.object({
 	RELATIONAL_DATABASE_URL: z
 		.string()
 		.min(1, 'Relational database URL is required'),
+
+	// Rate Limiting
+	RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900000), // 15 minutes
+	RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
+	AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().default(3600000), // 1 hour
+	AUTH_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(10),
+	API_RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60000), // 1 minute
+	API_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(60),
+	REDIS_URL: z.string().optional(),
 })
 
 type TEnv = z.infer<typeof envSchema>
