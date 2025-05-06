@@ -31,7 +31,7 @@ const RegisterForm = ({
 	const navigate = useNavigate({ from: '/auth/register' })
 
 	const form = useForm<TRegister>({
-		resolver: zodResolver(schemas.RegisterRequest),
+		resolver: zodResolver(schemas.postAuthregister_Body),
 		defaultValues: {
 			email: '',
 			password: '',
@@ -120,11 +120,7 @@ const RegisterForm = ({
 											<FormLabel>Confirm Password</FormLabel>
 										</div>
 										<FormControl>
-											<Input
-												type="password"
-												{...field}
-												value={field.value as string}
-											/>
+											<Input type="password" {...field} />
 										</FormControl>
 										<FormMessage />
 									</FormItem>

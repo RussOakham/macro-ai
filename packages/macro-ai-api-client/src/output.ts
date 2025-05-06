@@ -1,97 +1,35 @@
 import { makeApi, Zodios, type ZodiosOptions } from '@zodios/core'
 import { z } from 'zod'
 
-const RegisterRequest = z
+const postAuthregister_Body = z
 	.object({
-		email: z.string(),
-		password: z.string(),
-		firstName: z.string().optional(),
-		lastName: z.string().optional(),
+		email: z.string().email(),
+		password: z.string().min(8).max(15).regex(/\d/),
+		confirmPassword: z.string().min(8).max(15).regex(/\d/),
 	})
 	.passthrough()
-const AuthResponse = z
+const postAuthlogin_Body = z
 	.object({
-		message: z.string(),
-		user: z
-			.object({ id: z.string(), email: z.string() })
-			.partial()
-			.passthrough()
-			.optional(),
-		tokens: z
-			.object({
-				accessToken: z.string(),
-				refreshToken: z.string(),
-				expiresIn: z.number(),
-			})
-			.partial()
-			.passthrough()
-			.optional(),
+		email: z.string().email(),
+		password: z.string().min(8).max(15).regex(/\d/),
 	})
 	.passthrough()
-const ErrorResponse = z
-	.object({
-		message: z.string(),
-		details: z.object({}).partial().passthrough(),
-	})
-	.partial()
-	.passthrough()
-const LoginRequest = z
-	.object({ email: z.string(), password: z.string() })
-	.passthrough()
-const TokenResponse = z
-	.object({
-		accessToken: z.string(),
-		refreshToken: z.string(),
-		expiresIn: z.number(),
-	})
-	.passthrough()
-const UserProfile = z
-	.object({
-		id: z.string(),
-		email: z.string(),
-		emailVerified: z.boolean(),
-		firstName: z.string().optional(),
-		lastName: z.string().optional(),
-		createdAt: z.string().datetime({ offset: true }).optional(),
-		updatedAt: z.string().datetime({ offset: true }).optional(),
-		lastLogin: z.string().datetime({ offset: true }).optional(),
-	})
-	.passthrough()
-const ConfirmRegistration = z
-	.object({ username: z.string(), code: z.number() })
-	.passthrough()
-const ResendConfirmationCode = z.object({ username: z.string() }).passthrough()
-const GetAuthUserResponse = z
-	.object({
-		id: z.string(),
-		email: z.string(),
-		emailVerified: z.boolean(),
-		firstName: z.string().optional(),
-		lastName: z.string().optional(),
-		createdAt: z.string().datetime({ offset: true }).optional(),
-		updatedAt: z.string().datetime({ offset: true }).optional(),
-		lastLogin: z.string().datetime({ offset: true }).optional(),
-	})
+const postAuthconfirmRegistration_Body = z
+	.object({ username: z.string().email(), code: z.number() })
 	.passthrough()
 const postAuthconfirmForgotPassword_Body = z
 	.object({
 		email: z.string().email(),
-		code: z.string(),
-		newPassword: z.string(),
-		confirmPassword: z.string(),
+		code: z.string().min(6).max(6),
+		newPassword: z.string().min(8).max(15).regex(/\d/),
+		confirmPassword: z.string().min(8).max(15).regex(/\d/),
 	})
 	.passthrough()
 
 export const schemas = {
-	RegisterRequest,
-	AuthResponse,
-	ErrorResponse,
-	LoginRequest,
-	TokenResponse,
-	UserProfile,
-	ConfirmRegistration,
-	ResendConfirmationCode,
-	GetAuthUserResponse,
+	postAuthregister_Body,
+	postAuthlogin_Body,
+	postAuthconfirmRegistration_Body,
 	postAuthconfirmForgotPassword_Body,
 }
 
@@ -99,7 +37,6 @@ const endpoints = makeApi([
 	{
 		method: 'post',
 		path: '/auth/confirm-forgot-password',
-		description: `Resets the user&#x27;s password using the confirmation code`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -108,33 +45,92 @@ const endpoints = makeApi([
 				schema: postAuthconfirmForgotPassword_Body,
 			},
 		],
-		response: z.object({ message: z.string() }).passthrough(),
+		response: z
+			.object({
+				message: z.string(),
+				user: z
+					.object({ id: z.string(), email: z.string() })
+					.passthrough()
+					.optional(),
+				tokens: z
+					.object({
+						accessToken: z.string(),
+						refreshToken: z.string(),
+						expiresIn: z.number(),
+					})
+					.passthrough()
+					.optional(),
+			})
+			.passthrough(),
 		errors: [
 			{
 				status: 400,
-				description: `Bad Request - The request was malformed or contains invalid parameters`,
+				description: `Invalid request data`,
 				schema: z
 					.object({
 						message: z.string(),
-						details: z.object({}).partial().passthrough(),
+						details: z.record(z.unknown().nullable()).optional(),
 					})
-					.partial()
+					.passthrough(),
+			},
+			{
+				status: 401,
+				description: `Unauthorized - Authentication required`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 403,
+				description: `Forbidden - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
 					.passthrough(),
 			},
 			{
 				status: 404,
-				description: `Not Found - The requested resource was not found`,
-				schema: z.object({ message: z.string() }).partial().passthrough(),
-			},
-			{
-				status: 500,
-				description: `Server Error - An unexpected error occurred on the server`,
+				description: `User not found`,
 				schema: z
 					.object({
 						message: z.string(),
-						details: z.object({}).partial().passthrough(),
+						details: z.record(z.unknown().nullable()).optional(),
 					})
-					.partial()
+					.passthrough(),
+			},
+			{
+				status: 409,
+				description: `Conflict - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 429,
+				description: `Too many requests`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 500,
+				description: `Server error`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
 					.passthrough(),
 			},
 		],
@@ -147,32 +143,102 @@ const endpoints = makeApi([
 			{
 				name: 'body',
 				type: 'Body',
-				schema: ConfirmRegistration,
+				schema: postAuthconfirmRegistration_Body,
 			},
 		],
-		response: AuthResponse,
+		response: z
+			.object({
+				message: z.string(),
+				user: z
+					.object({ id: z.string(), email: z.string() })
+					.passthrough()
+					.optional(),
+				tokens: z
+					.object({
+						accessToken: z.string(),
+						refreshToken: z.string(),
+						expiresIn: z.number(),
+					})
+					.passthrough()
+					.optional(),
+			})
+			.passthrough(),
 		errors: [
 			{
 				status: 400,
-				description: `Invalid verification code`,
-				schema: ErrorResponse,
+				description: `Invalid confirmation code`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 401,
+				description: `Unauthorized - Authentication required`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 403,
+				description: `Forbidden - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
 			},
 			{
 				status: 404,
 				description: `User not found`,
-				schema: ErrorResponse,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 409,
+				description: `Conflict - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 429,
+				description: `Too many requests`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
 			},
 			{
 				status: 500,
-				description: `Internal server error`,
-				schema: ErrorResponse,
+				description: `Server error`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
 			},
 		],
 	},
 	{
 		method: 'post',
 		path: '/auth/forgot-password',
-		description: `Sends a password reset code to the user&#x27;s email`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -181,33 +247,92 @@ const endpoints = makeApi([
 				schema: z.object({ email: z.string().email() }).passthrough(),
 			},
 		],
-		response: z.object({ message: z.string() }).passthrough(),
+		response: z
+			.object({
+				message: z.string(),
+				user: z
+					.object({ id: z.string(), email: z.string() })
+					.passthrough()
+					.optional(),
+				tokens: z
+					.object({
+						accessToken: z.string(),
+						refreshToken: z.string(),
+						expiresIn: z.number(),
+					})
+					.passthrough()
+					.optional(),
+			})
+			.passthrough(),
 		errors: [
 			{
 				status: 400,
-				description: `Bad Request - The request was malformed or contains invalid parameters`,
+				description: `Invalid request data`,
 				schema: z
 					.object({
 						message: z.string(),
-						details: z.object({}).partial().passthrough(),
+						details: z.record(z.unknown().nullable()).optional(),
 					})
-					.partial()
+					.passthrough(),
+			},
+			{
+				status: 401,
+				description: `Unauthorized - Authentication required`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 403,
+				description: `Forbidden - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
 					.passthrough(),
 			},
 			{
 				status: 404,
-				description: `Not Found - The requested resource was not found`,
-				schema: z.object({ message: z.string() }).partial().passthrough(),
-			},
-			{
-				status: 500,
-				description: `Server Error - An unexpected error occurred on the server`,
+				description: `User not found`,
 				schema: z
 					.object({
 						message: z.string(),
-						details: z.object({}).partial().passthrough(),
+						details: z.record(z.unknown().nullable()).optional(),
 					})
-					.partial()
+					.passthrough(),
+			},
+			{
+				status: 409,
+				description: `Conflict - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 429,
+				description: `Too many requests`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 500,
+				description: `Server error`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
 					.passthrough(),
 			},
 		],
@@ -215,96 +340,377 @@ const endpoints = makeApi([
 	{
 		method: 'post',
 		path: '/auth/login',
-		description: `Authenticates a user and returns tokens as cookies and in response body`,
 		requestFormat: 'json',
 		parameters: [
 			{
 				name: 'body',
 				type: 'Body',
-				schema: LoginRequest,
+				schema: postAuthlogin_Body,
 			},
 		],
 		response: z
-			.object({ message: z.string(), tokens: TokenResponse, user: UserProfile })
-			.partial()
+			.object({
+				message: z.string(),
+				user: z
+					.object({ id: z.string(), email: z.string() })
+					.passthrough()
+					.optional(),
+				tokens: z
+					.object({
+						accessToken: z.string(),
+						refreshToken: z.string(),
+						expiresIn: z.number(),
+					})
+					.passthrough()
+					.optional(),
+			})
 			.passthrough(),
 		errors: [
 			{
 				status: 400,
 				description: `Invalid credentials`,
-				schema: ErrorResponse,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 401,
+				description: `Unauthorized - Authentication required`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 403,
+				description: `Forbidden - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 404,
+				description: `User not found`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 409,
+				description: `Conflict - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 429,
+				description: `Too many requests`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
 			},
 			{
 				status: 500,
-				description: `Internal server error`,
-				schema: ErrorResponse,
+				description: `Server error`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
 			},
 		],
 	},
 	{
 		method: 'post',
 		path: '/auth/logout',
-		description: `Invalidates the user&#x27;s tokens and clears authentication cookies`,
 		requestFormat: 'json',
-		response: z.object({ message: z.string() }).partial().passthrough(),
+		response: z
+			.object({
+				message: z.string(),
+				user: z
+					.object({ id: z.string(), email: z.string() })
+					.passthrough()
+					.optional(),
+				tokens: z
+					.object({
+						accessToken: z.string(),
+						refreshToken: z.string(),
+						expiresIn: z.number(),
+					})
+					.passthrough()
+					.optional(),
+			})
+			.passthrough(),
 		errors: [
 			{
+				status: 400,
+				description: `Invalid request data`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
 				status: 401,
-				description: `Unauthorized - No valid session`,
-				schema: ErrorResponse,
+				description: `Unauthorized - Authentication required`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 403,
+				description: `Forbidden - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 409,
+				description: `Conflict - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 429,
+				description: `Too many requests`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
 			},
 			{
 				status: 500,
-				description: `Internal server error`,
-				schema: ErrorResponse,
+				description: `Server error`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
 			},
 		],
 	},
 	{
 		method: 'post',
 		path: '/auth/refresh',
-		description: `Uses a refresh token to obtain a new access token`,
 		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'body',
+				type: 'Body',
+				schema: z.object({ refreshToken: z.string() }).passthrough(),
+			},
+		],
 		response: z
-			.object({ message: z.string(), tokens: TokenResponse })
-			.partial()
+			.object({
+				message: z.string(),
+				user: z
+					.object({ id: z.string(), email: z.string() })
+					.passthrough()
+					.optional(),
+				tokens: z
+					.object({
+						accessToken: z.string(),
+						refreshToken: z.string(),
+						expiresIn: z.number(),
+					})
+					.passthrough()
+					.optional(),
+			})
 			.passthrough(),
 		errors: [
 			{
+				status: 400,
+				description: `Invalid request data`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
 				status: 401,
-				description: `Invalid or expired refresh token`,
-				schema: ErrorResponse,
+				description: `Unauthorized - Authentication required`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 403,
+				description: `Forbidden - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 409,
+				description: `Conflict - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 429,
+				description: `Too many requests`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
 			},
 			{
 				status: 500,
-				description: `Internal server error`,
-				schema: ErrorResponse,
+				description: `Server error`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
 			},
 		],
 	},
 	{
 		method: 'post',
 		path: '/auth/register',
-		description: `Creates a new user account in Cognito and the application database`,
 		requestFormat: 'json',
 		parameters: [
 			{
 				name: 'body',
 				type: 'Body',
-				schema: RegisterRequest,
+				schema: postAuthregister_Body,
 			},
 		],
-		response: AuthResponse,
+		response: z
+			.object({
+				message: z.string(),
+				user: z
+					.object({ id: z.string(), email: z.string() })
+					.passthrough()
+					.optional(),
+				tokens: z
+					.object({
+						accessToken: z.string(),
+						refreshToken: z.string(),
+						expiresIn: z.number(),
+					})
+					.passthrough()
+					.optional(),
+			})
+			.passthrough(),
 		errors: [
 			{
 				status: 400,
-				description: `Invalid input or user already exists`,
-				schema: ErrorResponse,
+				description: `Invalid request data`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 401,
+				description: `Unauthorized - Authentication required`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 403,
+				description: `Forbidden - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 404,
+				description: `User not found`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 409,
+				description: `Conflict - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 429,
+				description: `Too many requests`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
 			},
 			{
 				status: 500,
-				description: `Internal server error`,
-				schema: ErrorResponse,
+				description: `Server error`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
 			},
 		],
 	},
@@ -316,83 +722,222 @@ const endpoints = makeApi([
 			{
 				name: 'body',
 				type: 'Body',
-				schema: z.object({ username: z.string() }).passthrough(),
+				schema: z.object({ username: z.string().email() }).passthrough(),
 			},
 		],
-		response: z.void(),
+		response: z
+			.object({
+				message: z.string(),
+				user: z
+					.object({ id: z.string(), email: z.string() })
+					.passthrough()
+					.optional(),
+				tokens: z
+					.object({
+						accessToken: z.string(),
+						refreshToken: z.string(),
+						expiresIn: z.number(),
+					})
+					.passthrough()
+					.optional(),
+			})
+			.passthrough(),
 		errors: [
 			{
 				status: 400,
-				description: `Bad request`,
-				schema: z.void(),
+				description: `Invalid request data`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 401,
+				description: `Unauthorized - Authentication required`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 403,
+				description: `Forbidden - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 404,
+				description: `User not found`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 409,
+				description: `Conflict - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 429,
+				description: `Too many requests`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
 			},
 			{
 				status: 500,
-				description: `Internal server error`,
-				schema: z.void(),
+				description: `Server error`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
 			},
 		],
 	},
 	{
 		method: 'get',
 		path: '/auth/user',
-		description: `Retrieves the authenticated user&#x27;s profile information`,
 		requestFormat: 'json',
-		response: GetAuthUserResponse,
+		response: z
+			.object({ id: z.string(), email: z.string(), emailVerified: z.boolean() })
+			.passthrough(),
 		errors: [
 			{
 				status: 401,
 				description: `Unauthorized - Authentication required`,
-				schema: z.union([
-					z.object({ message: z.string() }).partial().passthrough(),
-					z
-						.object({ message: z.string(), code: z.string() })
-						.partial()
-						.passthrough(),
-				]),
-			},
-			{
-				status: 404,
-				description: `User not found`,
-				schema: ErrorResponse,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
 			},
 			{
 				status: 500,
-				description: `Internal server error`,
-				schema: ErrorResponse,
+				description: `Server error`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
 			},
 		],
 	},
 	{
 		method: 'get',
 		path: '/health',
-		description: `Returns the current health status of the API`,
 		requestFormat: 'json',
-		response: z.object({ message: z.string() }).partial().passthrough(),
+		response: z.object({ message: z.string() }).passthrough(),
 		errors: [
 			{
 				status: 500,
-				description: `API is unhealthy`,
-				schema: z.object({ message: z.string() }).partial().passthrough(),
+				description: `Health check failed`,
+				schema: z.object({ message: z.string() }).passthrough(),
 			},
 		],
 	},
 	{
 		method: 'get',
 		path: '/users/me',
-		description: `Returns the profile of the currently authenticated user`,
 		requestFormat: 'json',
-		response: UserProfile,
+		response: z
+			.object({
+				user: z
+					.object({
+						id: z.string().uuid(),
+						email: z.string().max(255),
+						emailVerified: z.boolean().nullable(),
+						firstName: z.string().max(255).nullable(),
+						lastName: z.string().max(255).nullable(),
+						createdAt: z.string().nullable(),
+						updatedAt: z.string().nullable(),
+						lastLogin: z.string().nullable(),
+					})
+					.passthrough(),
+			})
+			.passthrough(),
 		errors: [
 			{
+				status: 400,
+				description: `Invalid request data`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
 				status: 401,
-				description: `Unauthorized - Authentication required or token expired`,
-				schema: ErrorResponse,
+				description: `Unauthorized - Authentication required`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 403,
+				description: `Forbidden - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 409,
+				description: `Conflict - User already confirmed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 429,
+				description: `Too many requests`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
 			},
 			{
 				status: 500,
-				description: `Internal server error`,
-				schema: ErrorResponse,
+				description: `Server error`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
 			},
 		],
 	},

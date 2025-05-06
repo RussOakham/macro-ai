@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { registerZodSchema } from '../../utils/swagger/openapi-registry.ts'
+
 /**
  * Password validation function
  * - Minimum length: 8 characters
@@ -9,7 +11,7 @@ import { z } from 'zod'
  * - Must contain at least 1 uppercase letter
  * - Must contain at least 1 lowercase letter
  */
-export const passwordValidation = () =>
+const passwordValidation = () =>
 	z
 		.string()
 		.min(8, {
@@ -31,77 +33,167 @@ export const passwordValidation = () =>
 			message: 'Password must contain at least one lowercase letter',
 		})
 
-export const emailValidation = () =>
+const emailValidation = () =>
 	z.string().email({
 		message: 'Invalid email address',
 	})
 
-export const registerSchema = z
-	.object({
-		email: emailValidation(),
-		password: passwordValidation(),
-		confirmPassword: passwordValidation(),
-	})
-	.refine((data) => data.password === data.confirmPassword, {
-		message: 'Passwords do not match',
-		path: ['confirmPassword'],
-	})
+const registerUserSchema = registerZodSchema(
+	'RegisterRequest',
+	z
+		.object({
+			email: emailValidation().openapi({ description: 'User email address' }),
+			password: passwordValidation().openapi({ description: 'User password' }),
+			confirmPassword: passwordValidation().openapi({
+				description: 'Confirm password',
+			}),
+		})
+		.refine((data) => data.password === data.confirmPassword, {
+			message: 'Passwords do not match',
+			path: ['confirmPassword'],
+		}),
+	'User registration request',
+)
 
-export const confirmRegistrationSchema = z.object({
-	username: emailValidation(),
-	code: z.number(),
-})
-
-export const resendConfirmationCodeSchema = z.object({
-	username: emailValidation(),
-})
-
-export const loginSchema = z.object({
-	email: emailValidation(),
-	password: passwordValidation(),
-})
-
-export const loginResponseSchema = z.object({
-	accessToken: z.string(),
-	refreshToken: z.string(),
-	expiresIn: z.number(),
-})
-
-export const refreshTokenSchema = z.object({
-	refreshToken: z.string({
-		message: 'Invalid refresh token',
-		required_error: 'Refresh token is required',
-	}),
-})
-
-export const forgotPasswordSchema = z.object({
-	email: emailValidation(),
-})
-
-export const confirmForgotPasswordSchema = z
-	.object({
-		email: emailValidation(),
+const confirmRegistrationSchema = registerZodSchema(
+	'ConfirmRegistration',
+	z.object({
+		username: emailValidation().openapi({ description: 'User email address' }),
 		code: z
-			.string()
-			.min(6, 'Code must be at least 6 characters')
-			.max(6, 'Code must be exactly 6 characters'),
-		newPassword: passwordValidation(),
-		confirmPassword: passwordValidation(),
-	})
-	.refine((data) => data.newPassword === data.confirmPassword, {
-		message: 'Passwords do not match',
-		path: ['confirmPassword'],
-	})
-
-export const getAuthUserSchema = z.object({
-	accessToken: z.string({
-		message: 'Invalid access token',
-		required_error: 'Access token is required',
+			.number()
+			.openapi({ description: 'Verification code sent to email' }),
 	}),
-})
+	'Confirm user registration with verification code',
+)
 
-export const getAuthUserResponseSchema = z.object({
-	id: z.string(),
-	email: z.string(),
-	emailVerified: z.boolean(),
-})
+const resendConfirmationCodeSchema = registerZodSchema(
+	'ResendConfirmationCode',
+	z.object({
+		username: emailValidation().openapi({ description: 'User email address' }),
+	}),
+	'Request to resend confirmation code',
+)
+
+const loginSchema = registerZodSchema(
+	'LoginRequest',
+	z.object({
+		email: emailValidation().openapi({ description: 'User email address' }),
+		password: passwordValidation().openapi({ description: 'User password' }),
+	}),
+	'User login request',
+)
+
+const loginResponseSchema = registerZodSchema(
+	'TokenResponse',
+	z.object({
+		accessToken: z.string().openapi({ description: 'JWT access token' }),
+		refreshToken: z.string().openapi({ description: 'JWT refresh token' }),
+		expiresIn: z
+			.number()
+			.openapi({ description: 'Token expiration time in seconds' }),
+	}),
+	'Authentication tokens response',
+)
+
+const refreshTokenSchema = registerZodSchema(
+	'RefreshTokenRequest',
+	z.object({
+		refreshToken: z
+			.string({
+				message: 'Invalid refresh token',
+				required_error: 'Refresh token is required',
+			})
+			.openapi({ description: 'JWT refresh token' }),
+	}),
+	'Request to refresh access token',
+)
+
+const forgotPasswordSchema = registerZodSchema(
+	'ForgotPasswordRequest',
+	z.object({
+		email: emailValidation().openapi({ description: 'User email address' }),
+	}),
+	'Request to initiate password reset',
+)
+
+const confirmForgotPasswordSchema = registerZodSchema(
+	'ConfirmForgotPasswordRequest',
+	z
+		.object({
+			email: emailValidation().openapi({ description: 'User email address' }),
+			code: z
+				.string()
+				.min(6, 'Code must be at least 6 characters')
+				.max(6, 'Code must be exactly 6 characters')
+				.openapi({ description: 'Verification code sent to email' }),
+			newPassword: passwordValidation().openapi({
+				description: 'New password',
+			}),
+			confirmPassword: passwordValidation().openapi({
+				description: 'Confirm new password',
+			}),
+		})
+		.refine((data) => data.newPassword === data.confirmPassword, {
+			message: 'Passwords do not match',
+			path: ['confirmPassword'],
+		}),
+	'Request to confirm password reset with code',
+)
+
+const getAuthUserSchema = registerZodSchema(
+	'GetAuthUserRequest',
+	z.object({
+		accessToken: z
+			.string({
+				message: 'Invalid access token',
+				required_error: 'Access token is required',
+			})
+			.openapi({ description: 'JWT access token' }),
+	}),
+	'Request to get authenticated user information',
+)
+
+const getAuthUserResponseSchema = registerZodSchema(
+	'GetAuthUserResponse',
+	z.object({
+		id: z.string().openapi({ description: 'User ID' }),
+		email: z.string().openapi({ description: 'User email address' }),
+		emailVerified: z
+			.boolean()
+			.openapi({ description: 'Email verification status' }),
+	}),
+	'Authenticated user information response',
+)
+
+// Register a generic auth response schema
+const authResponseSchema = registerZodSchema(
+	'AuthResponse',
+	z.object({
+		message: z.string().openapi({ description: 'Response message' }),
+		user: z
+			.object({
+				id: z.string().openapi({ description: 'User ID' }),
+				email: z.string().openapi({ description: 'User email address' }),
+			})
+			.optional()
+			.openapi({ description: 'User information' }),
+		tokens: loginResponseSchema
+			.optional()
+			.openapi({ description: 'Authentication tokens' }),
+	}),
+	'Generic authentication response',
+)
+
+export {
+	authResponseSchema,
+	confirmForgotPasswordSchema,
+	confirmRegistrationSchema,
+	forgotPasswordSchema,
+	getAuthUserResponseSchema,
+	getAuthUserSchema,
+	loginResponseSchema,
+	loginSchema,
+	refreshTokenSchema,
+	registerUserSchema,
+	resendConfirmationCodeSchema,
+}

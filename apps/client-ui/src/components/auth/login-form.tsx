@@ -31,7 +31,7 @@ const LoginForm = ({
 	const navigate = useNavigate({ from: '/auth/login' })
 
 	const form = useForm<TLogin>({
-		resolver: zodResolver(schemas.LoginRequest),
+		resolver: zodResolver(schemas.postAuthlogin_Body),
 		defaultValues: {
 			email: '',
 			password: '',

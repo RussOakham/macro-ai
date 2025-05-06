@@ -6,12 +6,12 @@
 	"version": "0.0.0",
 	"type": "module",
 	"scripts": {
-		"build": "tsc && tsx src/utils/generate-swagger.ts",
+		"build": "tsc && tsx src/utils/swagger/generate-swagger.ts",
 		"start": "node dist/index.js",
 		"dev:tsc": "tsc --watch -preserveWatchOutput",
 		"dev:node": "node --enable-source-maps --watch dist/index.js",
-		"dev": "tsx src/utils/generate-swagger.ts && nodemon --config nodemon.json",
-		"generate-swagger": "tsx src/utils/generate-swagger.ts",
+		"dev": "tsx src/utils/swagger/generate-swagger.ts && nodemon --config nodemon.json",
+		"generate-swagger": "tsx src/utils/swagger/generate-swagger.ts",
 		"db:generate": "drizzle-kit generate:pg --config=drizzle.config.ts",
 		"db:push": "drizzle-kit push:pg --config=drizzle.config.ts",
 		"lint": "eslint ./src",
@@ -51,6 +51,7 @@
 		"vitest": "catalog:"
 	},
 	"dependencies": {
+		"@asteasolutions/zod-to-openapi": "^7.3.0",
 		"@aws-sdk/client-cognito-identity": "^3.679.0",
 		"@aws-sdk/client-cognito-identity-provider": "^3.713.0",
 		"@types/supertest": "^6.0.3",

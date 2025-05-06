@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { schemas } from '@repo/macro-ai-api-client'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -36,12 +34,11 @@ import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
 import { usePostConfirmRegisterMutation } from '@/services/hooks/auth/usePostConfirmRegisterMutation'
+import { TGetAuthUserResponse } from '@/services/network/auth/getAuthUser'
 import {
 	confirmRegistrationSchemaClient,
 	TConfirmRegistrationClient,
 } from '@/services/network/auth/postConfirmRegistration'
-
-type TAuthGetUserResponse = z.infer<typeof schemas.GetAuthUserResponse>
 
 const ConfirmRegistrationForm = ({
 	className,
@@ -53,7 +50,7 @@ const ConfirmRegistrationForm = ({
 	const navigate = useNavigate({ from: '/auth/confirm-registration' })
 	const queryClient = useQueryClient()
 
-	const authUser = queryClient.getQueryData<TAuthGetUserResponse>([
+	const authUser = queryClient.getQueryData<TGetAuthUserResponse>([
 		QUERY_KEY.authUser,
 	])
 

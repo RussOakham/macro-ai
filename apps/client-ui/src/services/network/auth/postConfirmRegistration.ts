@@ -3,9 +3,10 @@ import { z } from 'zod'
 
 import { apiClient } from '@/lib/api'
 
-const confirmRegistrationSchemaClient = schemas.ConfirmRegistration.extend({
-	code: z.string().length(6),
-})
+const confirmRegistrationSchemaClient =
+	schemas.postAuthconfirmRegistration_Body.extend({
+		code: z.string().length(6),
+	})
 
 type TConfirmRegistrationClient = z.infer<
 	typeof confirmRegistrationSchemaClient

@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { apiClient } from '@/lib/api'
 
-type TRegister = z.infer<typeof schemas.RegisterRequest>
+type TRegister = z.infer<typeof schemas.postAuthregister_Body>
 
 const postRegister = async ({
 	email,

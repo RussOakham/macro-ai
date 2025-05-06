@@ -10,12 +10,12 @@ import {
 	loginResponseSchema,
 	loginSchema,
 	refreshTokenSchema,
-	registerSchema,
+	registerUserSchema,
 	resendConfirmationCodeSchema,
 } from './auth.schemas.ts'
 
 // Zod inferred types
-export type TRegister = z.infer<typeof registerSchema>
+export type TRegister = z.infer<typeof registerUserSchema>
 export type TConfirmRegistration = z.infer<typeof confirmRegistrationSchema>
 export type TResendConfirmationCode = z.infer<
 	typeof resendConfirmationCodeSchema

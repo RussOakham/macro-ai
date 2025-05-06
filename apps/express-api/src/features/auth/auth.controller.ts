@@ -203,6 +203,11 @@ export const authController: IAuthController = {
 				expiresIn: response.AuthenticationResult?.ExpiresIn ?? 0,
 			}
 
+			const loginApiResponse: IAuthResponse = {
+				message: 'Login successful',
+				tokens: loginResponse,
+			}
+
 			const encryptedUsername = encrypt(response.Username)
 
 			await userService.registerOrLoginUserById(response.Username, email)
@@ -230,7 +235,7 @@ export const authController: IAuthController = {
 					maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
 				})
 				.status(StatusCodes.OK)
-				.json(loginResponse)
+				.json(loginApiResponse)
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(
