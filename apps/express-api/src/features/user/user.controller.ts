@@ -10,7 +10,7 @@ import { TMessageBase, TUserResponse } from './user.types.ts'
 
 const { logger } = pino
 
-export const userController = {
+const userController = {
 	/**
 	 * Get the current authenticated user's profile
 	 * Requires the verifyAuth middleware to be applied
@@ -80,3 +80,5 @@ export const userController = {
 		res.status(StatusCodes.OK).json(userResponse)
 	},
 }
+
+export { userController }

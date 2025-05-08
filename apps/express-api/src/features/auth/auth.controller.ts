@@ -43,7 +43,7 @@ const refreshTokenExpiryDays = config.awsCognitoRefreshTokenExpiry
 
 const cognito = new CognitoService()
 
-export const authController: IAuthController = {
+const authController: IAuthController = {
 	register: async (req: Request, res: Response) => {
 		try {
 			const { email, password, confirmPassword } =
@@ -568,3 +568,5 @@ export const authController: IAuthController = {
 		}
 	},
 } as const
+
+export { authController }
