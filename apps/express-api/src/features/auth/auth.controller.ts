@@ -49,6 +49,8 @@ export const authController: IAuthController = {
 			const { email, password, confirmPassword } =
 				req.body as TRegisterUserRequest
 
+			// TODO: Check if user already exists in database
+
 			const response = await cognito.signUpUser({
 				email,
 				password,
@@ -86,7 +88,7 @@ export const authController: IAuthController = {
 				email,
 			}
 
-			const user = await createUser(userData)
+			const user = await createUser({ userData })
 
 			logger.info(`[authController]: User created: ${user.id}`)
 
@@ -127,7 +129,7 @@ export const authController: IAuthController = {
 			}
 
 			// get user from database
-			const user = await userService.getUserByEmail(email)
+			const user = await userService.getUserByEmail({ email })
 
 			const dbUser = await updateUser(user.id, { emailVerified: true })
 			if (!dbUser) {
@@ -208,7 +210,10 @@ export const authController: IAuthController = {
 
 			const encryptedUsername = encrypt(response.Username)
 
-			await userService.registerOrLoginUserById(response.Username, email)
+			await userService.registerOrLoginUserById({
+				id: response.Username,
+				email,
+			})
 
 			const loginResponse: TLoginResponse = {
 				message: 'Login successful',

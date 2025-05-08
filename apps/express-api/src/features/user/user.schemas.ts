@@ -56,10 +56,28 @@ const userResponseSchema = registerZodSchema(
 	'User profile response',
 )
 
+// Custom Schemas
+const messageBaseSchema = registerZodSchema(
+	'MessageBase',
+	z.object({
+		message: z.string().openapi({ description: 'Response message' }),
+	}),
+	'Base response with a message',
+)
+
+// Add a schema for validating user ID
+const userIdSchema = registerZodSchema(
+	'UserId',
+	z.string().uuid('Invalid user ID format'),
+	'User ID validation schema',
+)
+
 export {
 	insertUserSchema,
+	messageBaseSchema,
 	selectUserSchema,
 	updateUserProfileSchema,
+	userIdSchema,
 	userProfileSchema,
 	userResponseSchema,
 	usersTable,

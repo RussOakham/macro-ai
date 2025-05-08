@@ -1,11 +1,21 @@
 import { eq } from 'drizzle-orm'
+import { fromError } from 'zod-validation-error'
 
 import { db } from '../../data-access/db.ts'
+import { AppError } from '../../utils/errors.ts'
+import { pino } from '../../utils/logger.ts'
 
-import { usersTable } from './user.schemas.ts'
+import { selectUserSchema, usersTable } from './user.schemas.ts'
 import { TInsertUser, TUser } from './user.types.ts'
 
-const findUserByEmail = async (email: string): Promise<TUser | undefined> => {
+const { logger } = pino
+
+// TODO: Refactor to UserRepository class function with IUserRepository interface
+const findUserByEmail = async ({
+	email,
+}: {
+	email: string
+}): Promise<TUser | undefined> => {
 	const users = await db
 		.select()
 		.from(usersTable)
@@ -15,17 +25,49 @@ const findUserByEmail = async (email: string): Promise<TUser | undefined> => {
 	return users[0]
 }
 
-const findUserById = async (id: string): Promise<TUser | undefined> => {
-	const users = await db
-		.select()
-		.from(usersTable)
-		.where(eq(usersTable.id, id))
-		.limit(1)
+const findUserById = async ({
+	id,
+}: {
+	id: string
+}): Promise<TUser | undefined> => {
+	try {
+		const users = await db
+			.select()
+			.from(usersTable)
+			.where(eq(usersTable.id, id))
+			.limit(1)
 
-	return users[0]
+		// If no user found, return undefined
+		if (!users.length) return undefined
+
+		// Validate the returned user with Zod
+		const result = selectUserSchema.safeParse(users[0])
+
+		if (!result.success) {
+			const validationError = fromError(result.error)
+			throw AppError.validation(
+				`Invalid user data returned from database: ${validationError.message}`,
+				{ details: validationError.details },
+				'userDataAccess',
+			)
+		}
+
+		return result.data
+	} catch (error) {
+		logger.error({
+			msg: '[userDataAccess - findUserById]: Database error',
+			id,
+			error,
+		})
+		throw AppError.from(error, 'userDataAccess')
+	}
 }
 
-const createUser = async (userData: TInsertUser): Promise<TUser> => {
+const createUser = async ({
+	userData,
+}: {
+	userData: TInsertUser
+}): Promise<TUser> => {
 	const [user] = await db.insert(usersTable).values(userData).returning()
 
 	if (!user) {

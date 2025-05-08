@@ -19,6 +19,8 @@ import { config } from '../../../config/default.ts'
 import { AppError } from '../../utils/errors.ts'
 
 import { TRegisterUserRequest } from './auth.types.ts'
+
+// TODO: Add ICognitoService interface
 class CognitoService {
 	private readonly config: CognitoIdentityProviderClientConfig = {
 		region: config.awsCognitoRegion,

@@ -1,3 +1,5 @@
+import { fromError } from 'zod-validation-error'
+
 import { AppError } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 import { CognitoService } from '../auth/auth.services.ts'
@@ -8,19 +10,33 @@ import {
 	findUserById,
 	updateLastLogin,
 } from './user.data-access.ts'
+import { userIdSchema } from './user.schemas.ts'
 
 const { logger } = pino
 const cognito = new CognitoService()
 
+// TODO: Create IUserService interface
 class UserService {
 	/**
 	 * Get user by ID from the database
 	 * @param userId The user's unique identifier
 	 * @returns The user object or null if not found
 	 */
-	async getUserById(userId: string) {
+	async getUserById({ userId }: { userId: string }) {
 		try {
-			const user = await findUserById(userId)
+			// Validate userId with Zod
+			const result = userIdSchema.safeParse(userId)
+
+			if (!result.success) {
+				const validationError = fromError(result.error)
+				throw AppError.validation(
+					`Invalid user ID: ${validationError.message}`,
+					{ details: validationError.details },
+					'userService',
+				)
+			}
+
+			const user = await findUserById({ id: userId })
 
 			if (!user) {
 				throw AppError.notFound('User not found', 'userService')
@@ -42,9 +58,9 @@ class UserService {
 	 * @param email The user's email address
 	 * @returns The user object or null if not found
 	 */
-	async getUserByEmail(email: string) {
+	async getUserByEmail({ email }: { email: string }) {
 		try {
-			const user = await findUserByEmail(email)
+			const user = await findUserByEmail({ email })
 
 			if (!user) {
 				throw AppError.notFound('User not found', 'userService')
@@ -67,7 +83,7 @@ class UserService {
 	 * @param accessToken The Cognito access token
 	 * @returns The user object or null if not found
 	 */
-	async getUserByAccessToken(accessToken: string) {
+	async getUserByAccessToken({ accessToken }: { accessToken: string }) {
 		try {
 			// Get user ID from Cognito using access token
 			const cognitoUser = await cognito.getAuthUser(accessToken)
@@ -77,7 +93,7 @@ class UserService {
 			}
 
 			// Use ID to get user from database
-			const user = await this.getUserById(cognitoUser.Username)
+			const user = await this.getUserById({ userId: cognitoUser.Username })
 			return user
 		} catch (error) {
 			logger.error({
@@ -96,14 +112,19 @@ class UserService {
 	 * @param lastName Optional last name
 	 * @returns The user object
 	 */
-	async registerOrLoginUserById(
-		id: string,
-		email: string,
-		firstName?: string,
-		lastName?: string,
-	) {
+	async registerOrLoginUserById({
+		id,
+		email,
+		firstName,
+		lastName,
+	}: {
+		id: string
+		email: string
+		firstName?: string
+		lastName?: string
+	}) {
 		try {
-			let user = await findUserById(id)
+			let user = await findUserById({ id })
 
 			if (!user) {
 				// Create new user if not found
@@ -113,10 +134,12 @@ class UserService {
 					email,
 				})
 				user = await createUser({
-					id,
-					email,
-					firstName,
-					lastName,
+					userData: {
+						id,
+						email,
+						firstName,
+						lastName,
+					},
 				})
 			} else {
 				// Update last login timestamp for existing user
