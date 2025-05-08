@@ -2,6 +2,8 @@ import { z } from 'zod'
 
 import { registerZodSchema } from '../../utils/swagger/openapi-registry.ts'
 
+// Utility Schemas
+
 /**
  * Password validation function
  * - Minimum length: 8 characters
@@ -38,7 +40,17 @@ const emailValidation = () =>
 		message: 'Invalid email address',
 	})
 
-const registerUserSchema = registerZodSchema(
+// Base auth response schema
+const authResponseSchema = registerZodSchema(
+	'AuthResponse',
+	z.object({
+		message: z.string().openapi({ description: 'Response message' }),
+	}),
+	'Generic authentication response',
+)
+
+// Registration Schemas
+const registerUserRequestSchema = registerZodSchema(
 	'RegisterRequest',
 	z
 		.object({
@@ -55,10 +67,24 @@ const registerUserSchema = registerZodSchema(
 	'User registration request',
 )
 
-const confirmRegistrationSchema = registerZodSchema(
+const registerUserResponseSchema = registerZodSchema(
+	'RegisterResponse',
+	authResponseSchema
+		.extend({
+			user: z.object({
+				id: z.string().openapi({ description: 'User ID' }),
+				email: z.string().openapi({ description: 'User email address' }),
+			}),
+		})
+		.openapi({ description: 'User registration response' }),
+	'User registration response',
+)
+
+// Confirm Registration Schemas
+const confirmRegistrationRequestSchema = registerZodSchema(
 	'ConfirmRegistration',
 	z.object({
-		username: emailValidation().openapi({ description: 'User email address' }),
+		email: emailValidation().openapi({ description: 'User email address' }),
 		code: z
 			.number()
 			.openapi({ description: 'Verification code sent to email' }),
@@ -66,91 +92,12 @@ const confirmRegistrationSchema = registerZodSchema(
 	'Confirm user registration with verification code',
 )
 
-const resendConfirmationCodeSchema = registerZodSchema(
+const resendConfirmationCodeRequestSchema = registerZodSchema(
 	'ResendConfirmationCode',
-	z.object({
-		username: emailValidation().openapi({ description: 'User email address' }),
-	}),
-	'Request to resend confirmation code',
-)
-
-const refreshTokenSchema = registerZodSchema(
-	'RefreshTokenRequest',
-	z.object({
-		refreshToken: z
-			.string({
-				message: 'Invalid refresh token',
-				required_error: 'Refresh token is required',
-			})
-			.openapi({ description: 'JWT refresh token' }),
-	}),
-	'Request to refresh access token',
-)
-
-const forgotPasswordSchema = registerZodSchema(
-	'ForgotPasswordRequest',
 	z.object({
 		email: emailValidation().openapi({ description: 'User email address' }),
 	}),
-	'Request to initiate password reset',
-)
-
-const confirmForgotPasswordSchema = registerZodSchema(
-	'ConfirmForgotPasswordRequest',
-	z
-		.object({
-			email: emailValidation().openapi({ description: 'User email address' }),
-			code: z
-				.string()
-				.min(6, 'Code must be at least 6 characters')
-				.max(6, 'Code must be exactly 6 characters')
-				.openapi({ description: 'Verification code sent to email' }),
-			newPassword: passwordValidation().openapi({
-				description: 'New password',
-			}),
-			confirmPassword: passwordValidation().openapi({
-				description: 'Confirm new password',
-			}),
-		})
-		.refine((data) => data.newPassword === data.confirmPassword, {
-			message: 'Passwords do not match',
-			path: ['confirmPassword'],
-		}),
-	'Request to confirm password reset with code',
-)
-
-const getAuthUserSchema = registerZodSchema(
-	'GetAuthUserRequest',
-	z.object({
-		accessToken: z
-			.string({
-				message: 'Invalid access token',
-				required_error: 'Access token is required',
-			})
-			.openapi({ description: 'JWT access token' }),
-	}),
-	'Request to get authenticated user information',
-)
-
-const getAuthUserResponseSchema = registerZodSchema(
-	'GetAuthUserResponse',
-	z.object({
-		id: z.string().openapi({ description: 'User ID' }),
-		email: z.string().openapi({ description: 'User email address' }),
-		emailVerified: z
-			.boolean()
-			.openapi({ description: 'Email verification status' }),
-	}),
-	'Authenticated user information response',
-)
-
-// Base auth response schema
-const authResponseSchema = registerZodSchema(
-	'AuthResponse',
-	z.object({
-		message: z.string().openapi({ description: 'Response message' }),
-	}),
-	'Generic authentication response',
+	'Request to resend confirmation code',
 )
 
 // Login Request Schema
@@ -189,16 +136,61 @@ const loginResponseSchema = registerZodSchema(
 	'Generic authentication response',
 )
 
+// Forgot Password Schemas
+const forgotPasswordRequestSchema = registerZodSchema(
+	'ForgotPasswordRequest',
+	z.object({
+		email: emailValidation().openapi({ description: 'User email address' }),
+	}),
+	'Request to initiate password reset',
+)
+
+const confirmForgotPasswordRequestSchema = registerZodSchema(
+	'ConfirmForgotPasswordRequest',
+	z
+		.object({
+			email: emailValidation().openapi({ description: 'User email address' }),
+			code: z
+				.string()
+				.min(6, 'Code must be at least 6 characters')
+				.max(6, 'Code must be exactly 6 characters')
+				.openapi({ description: 'Verification code sent to email' }),
+			newPassword: passwordValidation().openapi({
+				description: 'New password',
+			}),
+			confirmPassword: passwordValidation().openapi({
+				description: 'Confirm new password',
+			}),
+		})
+		.refine((data) => data.newPassword === data.confirmPassword, {
+			message: 'Passwords do not match',
+			path: ['confirmPassword'],
+		}),
+	'Request to confirm password reset with code',
+)
+
+// Get Authenticated User Schemas
+const getAuthUserResponseSchema = registerZodSchema(
+	'GetAuthUserResponse',
+	z.object({
+		id: z.string().openapi({ description: 'User ID' }),
+		email: z.string().openapi({ description: 'User email address' }),
+		emailVerified: z
+			.boolean()
+			.openapi({ description: 'Email verification status' }),
+	}),
+	'Authenticated user information response',
+)
+
 export {
 	authResponseSchema,
-	confirmForgotPasswordSchema,
-	confirmRegistrationSchema,
-	forgotPasswordSchema,
+	confirmForgotPasswordRequestSchema,
+	confirmRegistrationRequestSchema,
+	forgotPasswordRequestSchema,
 	getAuthUserResponseSchema,
-	getAuthUserSchema,
 	loginRequestSchema,
 	loginResponseSchema,
-	refreshTokenSchema,
-	registerUserSchema,
-	resendConfirmationCodeSchema,
+	registerUserRequestSchema,
+	registerUserResponseSchema,
+	resendConfirmationCodeRequestSchema,
 }

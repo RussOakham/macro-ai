@@ -11,15 +11,14 @@ import {
 import { authController } from './auth.controller.ts'
 import {
 	authResponseSchema,
-	confirmForgotPasswordSchema,
-	confirmRegistrationSchema,
-	forgotPasswordSchema,
+	confirmForgotPasswordRequestSchema,
+	confirmRegistrationRequestSchema,
+	forgotPasswordRequestSchema,
 	getAuthUserResponseSchema,
 	loginRequestSchema,
 	loginResponseSchema,
-	refreshTokenSchema,
-	registerUserSchema,
-	resendConfirmationCodeSchema,
+	registerUserRequestSchema,
+	resendConfirmationCodeRequestSchema,
 } from './auth.schemas.ts'
 
 // Register auth routes with OpenAPI
@@ -32,7 +31,7 @@ registry.registerPath({
 		body: {
 			content: {
 				'application/json': {
-					schema: registerUserSchema,
+					schema: registerUserRequestSchema,
 				},
 			},
 		},
@@ -40,6 +39,171 @@ registry.registerPath({
 	responses: {
 		[StatusCodes.CREATED]: {
 			description: 'User registered successfully',
+			content: {
+				'application/json': {
+					schema: authResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.BAD_REQUEST]: {
+			description: 'Invalid request data',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.NOT_FOUND]: {
+			description: 'User not found',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.UNAUTHORIZED]: {
+			description: 'Unauthorized - Authentication required',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.FORBIDDEN]: {
+			description: 'Forbidden - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.CONFLICT]: {
+			description: 'Conflict - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Too many requests',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Server error',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+	},
+})
+
+// Confirm registration endpoint
+registry.registerPath({
+	method: 'post',
+	path: '/auth/confirm-registration',
+	tags: ['Authentication'],
+	request: {
+		body: {
+			content: {
+				'application/json': {
+					schema: confirmRegistrationRequestSchema,
+				},
+			},
+		},
+	},
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'User registration confirmed successfully',
+			content: {
+				'application/json': {
+					schema: authResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.BAD_REQUEST]: {
+			description: 'Invalid confirmation code',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.NOT_FOUND]: {
+			description: 'User not found',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.UNAUTHORIZED]: {
+			description: 'Unauthorized - Authentication required',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.FORBIDDEN]: {
+			description: 'Forbidden - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.CONFLICT]: {
+			description: 'Conflict - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Too many requests',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Server error',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+	},
+})
+
+// Resend confirmation code endpoint
+registry.registerPath({
+	method: 'post',
+	path: '/auth/resend-confirmation-code',
+	tags: ['Authentication'],
+	request: {
+		body: {
+			content: {
+				'application/json': {
+					schema: resendConfirmationCodeRequestSchema,
+				},
+			},
+		},
+	},
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'Confirmation code resent successfully',
 			content: {
 				'application/json': {
 					schema: authResponseSchema,
@@ -187,171 +351,6 @@ registry.registerPath({
 	},
 })
 
-// Confirm registration endpoint
-registry.registerPath({
-	method: 'post',
-	path: '/auth/confirm-registration',
-	tags: ['Authentication'],
-	request: {
-		body: {
-			content: {
-				'application/json': {
-					schema: confirmRegistrationSchema,
-				},
-			},
-		},
-	},
-	responses: {
-		[StatusCodes.OK]: {
-			description: 'User registration confirmed successfully',
-			content: {
-				'application/json': {
-					schema: authResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.BAD_REQUEST]: {
-			description: 'Invalid confirmation code',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.NOT_FOUND]: {
-			description: 'User not found',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.UNAUTHORIZED]: {
-			description: 'Unauthorized - Authentication required',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.FORBIDDEN]: {
-			description: 'Forbidden - User already confirmed',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.CONFLICT]: {
-			description: 'Conflict - User already confirmed',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.TOO_MANY_REQUESTS]: {
-			description: 'Too many requests',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-
-		[StatusCodes.INTERNAL_SERVER_ERROR]: {
-			description: 'Server error',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-	},
-})
-
-// Resend confirmation code endpoint
-registry.registerPath({
-	method: 'post',
-	path: '/auth/resend-confirmation-code',
-	tags: ['Authentication'],
-	request: {
-		body: {
-			content: {
-				'application/json': {
-					schema: resendConfirmationCodeSchema,
-				},
-			},
-		},
-	},
-	responses: {
-		[StatusCodes.OK]: {
-			description: 'Confirmation code resent successfully',
-			content: {
-				'application/json': {
-					schema: authResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.BAD_REQUEST]: {
-			description: 'Invalid request data',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.NOT_FOUND]: {
-			description: 'User not found',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.UNAUTHORIZED]: {
-			description: 'Unauthorized - Authentication required',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.FORBIDDEN]: {
-			description: 'Forbidden - User already confirmed',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.CONFLICT]: {
-			description: 'Conflict - User already confirmed',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.TOO_MANY_REQUESTS]: {
-			description: 'Too many requests',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.INTERNAL_SERVER_ERROR]: {
-			description: 'Server error',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-	},
-})
-
 // Forgot password endpoint
 registry.registerPath({
 	method: 'post',
@@ -361,7 +360,7 @@ registry.registerPath({
 		body: {
 			content: {
 				'application/json': {
-					schema: forgotPasswordSchema,
+					schema: forgotPasswordRequestSchema,
 				},
 			},
 		},
@@ -443,7 +442,7 @@ registry.registerPath({
 		body: {
 			content: {
 				'application/json': {
-					schema: confirmForgotPasswordSchema,
+					schema: confirmForgotPasswordRequestSchema,
 				},
 			},
 		},
@@ -499,39 +498,6 @@ registry.registerPath({
 		},
 		[StatusCodes.TOO_MANY_REQUESTS]: {
 			description: 'Too many requests',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.INTERNAL_SERVER_ERROR]: {
-			description: 'Server error',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-	},
-})
-
-// Get authenticated user endpoint
-registry.registerPath({
-	method: 'get',
-	path: '/auth/user',
-	tags: ['Authentication'],
-	responses: {
-		[StatusCodes.OK]: {
-			description: 'User information retrieved successfully',
-			content: {
-				'application/json': {
-					schema: getAuthUserResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.UNAUTHORIZED]: {
-			description: 'Unauthorized - Authentication required',
 			content: {
 				'application/json': {
 					schema: ErrorResponseSchema,
@@ -619,21 +585,12 @@ registry.registerPath({
 	method: 'post',
 	path: '/auth/refresh',
 	tags: ['Authentication'],
-	request: {
-		body: {
-			content: {
-				'application/json': {
-					schema: refreshTokenSchema,
-				},
-			},
-		},
-	},
 	responses: {
 		[StatusCodes.OK]: {
 			description: 'Access token refreshed successfully',
 			content: {
 				'application/json': {
-					schema: authResponseSchema,
+					schema: loginRequestSchema,
 				},
 			},
 		},
@@ -688,25 +645,58 @@ registry.registerPath({
 	},
 })
 
+// Get authenticated user endpoint
+registry.registerPath({
+	method: 'get',
+	path: '/auth/user',
+	tags: ['Authentication'],
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'User information retrieved successfully',
+			content: {
+				'application/json': {
+					schema: getAuthUserResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.UNAUTHORIZED]: {
+			description: 'Unauthorized - Authentication required',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Server error',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+	},
+})
+
 const authRouter = (router: Router) => {
 	// Register
 	router.post(
 		'/auth/register',
-		validate(registerUserSchema),
+		validate(registerUserRequestSchema),
 		authController.register,
 	)
 
 	// Confirm registration
 	router.post(
 		'/auth/confirm-registration',
-		validate(confirmRegistrationSchema),
+		validate(confirmRegistrationRequestSchema),
 		authController.confirmRegistration,
 	)
 
 	// Resend confirmation code
 	router.post(
 		'/auth/resend-confirmation-code',
-		validate(resendConfirmationCodeSchema),
+		validate(resendConfirmationCodeRequestSchema),
 		authController.resendConfirmationCode,
 	)
 
@@ -717,23 +707,18 @@ const authRouter = (router: Router) => {
 	router.post('/auth/logout', verifyAuth, authController.logout)
 
 	// Refresh token
-	router.post(
-		'/auth/refresh',
-		validate(refreshTokenSchema),
-		authController.refreshToken,
-	)
+	router.post('/auth/refresh', authController.refreshToken)
 
 	// Forgot password
 	router.post(
 		'/auth/forgot-password',
-		validate(forgotPasswordSchema),
+		validate(forgotPasswordRequestSchema),
 		authController.forgotPassword,
 	)
 
 	// Confirm forgot password
 	router.post(
 		'/auth/confirm-forgot-password',
-		validate(confirmForgotPasswordSchema),
 		authController.confirmForgotPassword,
 	)
 

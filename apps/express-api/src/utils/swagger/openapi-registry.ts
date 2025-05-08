@@ -32,6 +32,8 @@ const ErrorResponseSchema = registerZodSchema(
 	'Standard error response',
 )
 
+type TErrorResponse = z.infer<typeof ErrorResponseSchema>
+
 // Register security schemes
 registry.registerComponent('securitySchemes', 'cookieAuth', {
 	type: 'apiKey',
@@ -46,3 +48,4 @@ registry.registerComponent('securitySchemes', 'apiKey', {
 })
 
 export { ErrorResponseSchema, registerZodSchema, registry }
+export type { TErrorResponse }

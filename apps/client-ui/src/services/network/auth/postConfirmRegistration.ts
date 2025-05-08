@@ -2,9 +2,11 @@ import { schemas } from '@repo/macro-ai-api-client'
 import { z } from 'zod'
 
 import { apiClient } from '@/lib/api'
+import { emailValidation } from '@/lib/validation/inputs'
 
 const confirmRegistrationSchemaClient =
 	schemas.postAuthconfirmRegistration_Body.extend({
+		email: emailValidation(),
 		code: z.string().length(6),
 	})
 
@@ -13,13 +15,14 @@ type TConfirmRegistrationClient = z.infer<
 >
 
 const postConfirmRegistration = async ({
-	username,
+	email,
 	code,
 }: TConfirmRegistrationClient) => {
+	// fix bug for leading zeros - create custom input OTP for number values?
 	const parsedCode = z.coerce.number().parse(code)
 
 	const response = await apiClient.post('/auth/confirm-registration', {
-		username,
+		email,
 		code: parsedCode,
 	})
 

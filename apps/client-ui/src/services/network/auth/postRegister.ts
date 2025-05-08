@@ -2,8 +2,20 @@ import { schemas } from '@repo/macro-ai-api-client'
 import { z } from 'zod'
 
 import { apiClient } from '@/lib/api'
+import { emailValidation, passwordValidation } from '@/lib/validation/inputs'
 
-type TRegister = z.infer<typeof schemas.postAuthregister_Body>
+const registerSchemaClient = schemas.postAuthregister_Body
+	.extend({
+		email: emailValidation(),
+		password: passwordValidation(),
+		confirmPassword: passwordValidation(),
+	})
+	.refine((data) => data.password === data.confirmPassword, {
+		message: 'Passwords do not match',
+		path: ['confirmPassword'],
+	})
+
+type TRegister = z.infer<typeof registerSchemaClient>
 
 const postRegister = async ({
 	email,
@@ -19,4 +31,4 @@ const postRegister = async ({
 	return response
 }
 
-export { postRegister, type TRegister }
+export { postRegister, registerSchemaClient, type TRegister }

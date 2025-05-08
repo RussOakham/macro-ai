@@ -4,6 +4,7 @@ import { pino } from '../../utils/logger.ts'
 import { registry } from '../../utils/swagger/openapi-registry.ts'
 
 import { healthErrorSchema, healthResponseSchema } from './utility.schemas.ts'
+import { THealthErrorResponse, THealthResponse } from './utility.types.ts'
 
 const { logger } = pino
 
@@ -35,12 +36,21 @@ registry.registerPath({
 const utilityRouter = (router: Router) => {
 	router.get('/health', (req, res) => {
 		try {
-			res.status(200).json({ message: 'Api Health Status: OK' })
+			const healthResponse: THealthResponse = {
+				message: 'Api Health Status: OK',
+			}
+
+			res.status(200).json(healthResponse)
 		} catch (error: unknown) {
 			logger.error(
 				`[utility-routes]: Error checking health status: ${(error as Error).message}`,
 			)
-			res.status(500).json({ message: 'Api Status: Error' })
+
+			const healthErrorResponse: THealthErrorResponse = {
+				message: 'Api Status: Error',
+			}
+
+			res.status(500).json(healthErrorResponse)
 		}
 	})
 }

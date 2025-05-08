@@ -26,6 +26,10 @@ const generateSwaggerSpec = async () => {
 				title: 'Macro AI Express API',
 				version: '0.0.1',
 				description: 'API documentation for Macro AI',
+				license: {
+					name: 'MIT',
+					url: 'https://spdx.org/licenses/MIT.html',
+				},
 			},
 			servers: [
 				{

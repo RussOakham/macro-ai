@@ -7,9 +7,9 @@ import {
 
 const usePostConfirmRegisterMutation = () => {
 	return useMutation({
-		mutationFn: async ({ username, code }: TConfirmRegistrationClient) => {
+		mutationFn: async ({ email, code }: TConfirmRegistrationClient) => {
 			const response = await postConfirmRegistration({
-				username,
+				email,
 				code,
 			})
 			return response

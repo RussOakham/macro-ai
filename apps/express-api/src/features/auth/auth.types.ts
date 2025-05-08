@@ -2,34 +2,38 @@ import express from 'express'
 import { z } from 'zod'
 
 import {
-	confirmForgotPasswordSchema,
-	confirmRegistrationSchema,
-	forgotPasswordSchema,
+	authResponseSchema,
+	confirmForgotPasswordRequestSchema,
+	confirmRegistrationRequestSchema,
+	forgotPasswordRequestSchema,
 	getAuthUserResponseSchema,
-	getAuthUserSchema,
 	loginRequestSchema,
 	loginResponseSchema,
-	refreshTokenSchema,
-	registerUserSchema,
-	resendConfirmationCodeSchema,
+	registerUserRequestSchema,
+	registerUserResponseSchema,
+	resendConfirmationCodeRequestSchema,
 } from './auth.schemas.ts'
 
-// Zod inferred types
-export type TRegister = z.infer<typeof registerUserSchema>
-export type TConfirmRegistration = z.infer<typeof confirmRegistrationSchema>
-export type TResendConfirmationCode = z.infer<
-	typeof resendConfirmationCodeSchema
+// Define types using Zod schemas
+type TAuthResponse = z.infer<typeof authResponseSchema>
+type TConfirmForgotPasswordRequest = z.infer<
+	typeof confirmForgotPasswordRequestSchema
 >
-export type TLoginRequest = z.infer<typeof loginRequestSchema>
-export type TLoginResponse = z.infer<typeof loginResponseSchema>
-export type TRefreshToken = z.infer<typeof refreshTokenSchema>
-export type TForgotPassword = z.infer<typeof forgotPasswordSchema>
-export type TConfirmForgotPassword = z.infer<typeof confirmForgotPasswordSchema>
-export type TGetAuthUser = z.infer<typeof getAuthUserSchema>
-export type TGetAuthUserResponse = z.infer<typeof getAuthUserResponseSchema>
+type TConfirmRegistrationRequest = z.infer<
+	typeof confirmRegistrationRequestSchema
+>
+type TForgotPasswordRequest = z.infer<typeof forgotPasswordRequestSchema>
+type TGetAuthUserResponse = z.infer<typeof getAuthUserResponseSchema>
+type TLoginRequest = z.infer<typeof loginRequestSchema>
+type TLoginResponse = z.infer<typeof loginResponseSchema>
+type TResendConfirmationCodeRequest = z.infer<
+	typeof resendConfirmationCodeRequestSchema
+>
+type TRegisterUserRequest = z.infer<typeof registerUserRequestSchema>
+type TRegisterUserResponse = z.infer<typeof registerUserResponseSchema>
 
 // Cognito related interfaces
-export interface ICognitoError {
+interface ICognitoError {
 	$fault: 'client' | 'server'
 	$metadata: {
 		httpStatusCode: number
@@ -44,7 +48,7 @@ export interface ICognitoError {
 }
 
 // Controller interfaces
-export interface IAuthController {
+interface IAuthController {
 	register: express.Handler
 	login: express.Handler
 	logout: express.Handler
@@ -56,15 +60,17 @@ export interface IAuthController {
 	getAuthUser: express.Handler
 }
 
-// Response interfaces
-export interface IAuthResponse {
-	message: string
-	user?: {
-		id: string
-		email: string
-	}
-	tokens?: {
-		accessToken: string
-		refreshToken: string
-	}
+export type {
+	IAuthController,
+	ICognitoError,
+	TAuthResponse,
+	TConfirmForgotPasswordRequest,
+	TConfirmRegistrationRequest,
+	TForgotPasswordRequest,
+	TGetAuthUserResponse,
+	TLoginRequest,
+	TLoginResponse,
+	TRegisterUserRequest,
+	TRegisterUserResponse,
+	TResendConfirmationCodeRequest,
 }

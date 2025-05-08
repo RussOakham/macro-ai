@@ -3,7 +3,11 @@
 	"info": {
 		"title": "Macro AI Express API",
 		"version": "0.0.1",
-		"description": "API documentation for Macro AI"
+		"description": "API documentation for Macro AI",
+		"license": {
+			"name": "MIT",
+			"url": "https://spdx.org/licenses/MIT.html"
+		}
 	},
 	"servers": [
 		{
@@ -162,6 +166,17 @@
 				"required": ["user"],
 				"description": "User profile response"
 			},
+			"AuthResponse": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Response message"
+					}
+				},
+				"required": ["message"],
+				"description": "Generic authentication response"
+			},
 			"RegisterRequest": {
 				"type": "object",
 				"properties": {
@@ -188,10 +203,35 @@
 				"required": ["email", "password", "confirmPassword"],
 				"description": "User registration request"
 			},
+			"RegisterResponse": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Response message"
+					},
+					"user": {
+						"type": "object",
+						"properties": {
+							"id": {
+								"type": "string",
+								"description": "User ID"
+							},
+							"email": {
+								"type": "string",
+								"description": "User email address"
+							}
+						},
+						"required": ["id", "email"]
+					}
+				},
+				"required": ["message", "user"],
+				"description": "User registration response"
+			},
 			"ConfirmRegistration": {
 				"type": "object",
 				"properties": {
-					"username": {
+					"email": {
 						"type": "string",
 						"format": "email",
 						"description": "User email address"
@@ -201,31 +241,58 @@
 						"description": "Verification code sent to email"
 					}
 				},
-				"required": ["username", "code"],
+				"required": ["email", "code"],
 				"description": "Confirm user registration with verification code"
 			},
 			"ResendConfirmationCode": {
 				"type": "object",
 				"properties": {
-					"username": {
+					"email": {
 						"type": "string",
 						"format": "email",
 						"description": "User email address"
 					}
 				},
-				"required": ["username"],
+				"required": ["email"],
 				"description": "Request to resend confirmation code"
 			},
-			"RefreshTokenRequest": {
+			"LoginRequest": {
 				"type": "object",
 				"properties": {
+					"email": {
+						"type": "string",
+						"format": "email",
+						"description": "User email address"
+					},
+					"password": {
+						"type": "string",
+						"minLength": 8,
+						"maxLength": 15,
+						"pattern": "\\d",
+						"description": "User password"
+					}
+				},
+				"required": ["email", "password"],
+				"description": "User login request"
+			},
+			"TokenResponse": {
+				"type": "object",
+				"properties": {
+					"accessToken": {
+						"type": "string",
+						"description": "JWT access token"
+					},
 					"refreshToken": {
 						"type": "string",
 						"description": "JWT refresh token"
+					},
+					"expiresIn": {
+						"type": "number",
+						"description": "Token expiration time in seconds"
 					}
 				},
-				"required": ["refreshToken"],
-				"description": "Request to refresh access token"
+				"required": ["accessToken", "refreshToken", "expiresIn"],
+				"description": "Authentication tokens response"
 			},
 			"ForgotPasswordRequest": {
 				"type": "object",
@@ -271,17 +338,6 @@
 				"required": ["email", "code", "newPassword", "confirmPassword"],
 				"description": "Request to confirm password reset with code"
 			},
-			"GetAuthUserRequest": {
-				"type": "object",
-				"properties": {
-					"accessToken": {
-						"type": "string",
-						"description": "JWT access token"
-					}
-				},
-				"required": ["accessToken"],
-				"description": "Request to get authenticated user information"
-			},
 			"GetAuthUserResponse": {
 				"type": "object",
 				"properties": {
@@ -300,55 +356,6 @@
 				},
 				"required": ["id", "email", "emailVerified"],
 				"description": "Authenticated user information response"
-			},
-			"AuthResponse": {
-				"type": "object",
-				"properties": {
-					"message": {
-						"type": "string",
-						"description": "Response message"
-					}
-				},
-				"required": ["message"],
-				"description": "Generic authentication response"
-			},
-			"LoginRequest": {
-				"type": "object",
-				"properties": {
-					"email": {
-						"type": "string",
-						"format": "email",
-						"description": "User email address"
-					},
-					"password": {
-						"type": "string",
-						"minLength": 8,
-						"maxLength": 15,
-						"pattern": "\\d",
-						"description": "User password"
-					}
-				},
-				"required": ["email", "password"],
-				"description": "User login request"
-			},
-			"TokenResponse": {
-				"type": "object",
-				"properties": {
-					"accessToken": {
-						"type": "string",
-						"description": "JWT access token"
-					},
-					"refreshToken": {
-						"type": "string",
-						"description": "JWT refresh token"
-					},
-					"expiresIn": {
-						"type": "number",
-						"description": "Token expiration time in seconds"
-					}
-				},
-				"required": ["accessToken", "refreshToken", "expiresIn"],
-				"description": "Authentication tokens response"
 			},
 			"HealthResponse": {
 				"type": "object",
@@ -415,6 +422,428 @@
 				"responses": {
 					"201": {
 						"description": "User registered successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Response message"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid request data",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Error message"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Error details"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized - Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Error message"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Error details"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Forbidden - User already confirmed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Error message"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Error details"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "User not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Error message"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Error details"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "Conflict - User already confirmed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Error message"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Error details"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Too many requests",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Error message"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Error details"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Error message"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Error details"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/auth/confirm-registration": {
+			"post": {
+				"tags": ["Authentication"],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"email": {
+										"type": "string",
+										"format": "email",
+										"description": "User email address"
+									},
+									"code": {
+										"type": "number",
+										"description": "Verification code sent to email"
+									}
+								},
+								"required": ["email", "code"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "User registration confirmed successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Response message"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid confirmation code",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Error message"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Error details"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized - Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Error message"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Error details"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Forbidden - User already confirmed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Error message"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Error details"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "User not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Error message"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Error details"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "Conflict - User already confirmed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Error message"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Error details"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Too many requests",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Error message"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Error details"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Error message"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Error details"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/auth/resend-confirmation-code": {
+			"post": {
+				"tags": ["Authentication"],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"email": {
+										"type": "string",
+										"format": "email",
+										"description": "User email address"
+									}
+								},
+								"required": ["email"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Confirmation code resent successfully",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -668,428 +1097,6 @@
 					},
 					"400": {
 						"description": "Invalid credentials",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized - Authentication required",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"403": {
-						"description": "Forbidden - User already confirmed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"404": {
-						"description": "User not found",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"409": {
-						"description": "Conflict - User already confirmed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"429": {
-						"description": "Too many requests",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Server error",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/auth/confirm-registration": {
-			"post": {
-				"tags": ["Authentication"],
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"type": "object",
-								"properties": {
-									"username": {
-										"type": "string",
-										"format": "email",
-										"description": "User email address"
-									},
-									"code": {
-										"type": "number",
-										"description": "Verification code sent to email"
-									}
-								},
-								"required": ["username", "code"]
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "User registration confirmed successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Response message"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Invalid confirmation code",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized - Authentication required",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"403": {
-						"description": "Forbidden - User already confirmed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"404": {
-						"description": "User not found",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"409": {
-						"description": "Conflict - User already confirmed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"429": {
-						"description": "Too many requests",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Server error",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/auth/resend-confirmation-code": {
-			"post": {
-				"tags": ["Authentication"],
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"type": "object",
-								"properties": {
-									"username": {
-										"type": "string",
-										"format": "email",
-										"description": "User email address"
-									}
-								},
-								"required": ["username"]
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "Confirmation code resent successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Response message"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Invalid request data",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1697,86 +1704,6 @@
 				}
 			}
 		},
-		"/auth/user": {
-			"get": {
-				"tags": ["Authentication"],
-				"responses": {
-					"200": {
-						"description": "User information retrieved successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"id": {
-											"type": "string",
-											"description": "User ID"
-										},
-										"email": {
-											"type": "string",
-											"description": "User email address"
-										},
-										"emailVerified": {
-											"type": "boolean",
-											"description": "Email verification status"
-										}
-									},
-									"required": ["id", "email", "emailVerified"]
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized - Authentication required",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Server error",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					}
-				}
-			}
-		},
 		"/auth/logout": {
 			"post": {
 				"tags": ["Authentication"],
@@ -1948,22 +1875,6 @@
 		"/auth/refresh": {
 			"post": {
 				"tags": ["Authentication"],
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"type": "object",
-								"properties": {
-									"refreshToken": {
-										"type": "string",
-										"description": "JWT refresh token"
-									}
-								},
-								"required": ["refreshToken"]
-							}
-						}
-					}
-				},
 				"responses": {
 					"200": {
 						"description": "Access token refreshed successfully",
@@ -1972,12 +1883,20 @@
 								"schema": {
 									"type": "object",
 									"properties": {
-										"message": {
+										"email": {
 											"type": "string",
-											"description": "Response message"
+											"format": "email",
+											"description": "User email address"
+										},
+										"password": {
+											"type": "string",
+											"minLength": 8,
+											"maxLength": 15,
+											"pattern": "\\d",
+											"description": "User password"
 										}
 									},
-									"required": ["message"]
+									"required": ["email", "password"]
 								}
 							}
 						}
@@ -2080,6 +1999,86 @@
 					},
 					"429": {
 						"description": "Too many requests",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Error message"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Error details"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Error message"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Error details"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/auth/user": {
+			"get": {
+				"tags": ["Authentication"],
+				"responses": {
+					"200": {
+						"description": "User information retrieved successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string",
+											"description": "User ID"
+										},
+										"email": {
+											"type": "string",
+											"description": "User email address"
+										},
+										"emailVerified": {
+											"type": "boolean",
+											"description": "Email verification status"
+										}
+									},
+									"required": ["id", "email", "emailVerified"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized - Authentication required",
 						"content": {
 							"application/json": {
 								"schema": {

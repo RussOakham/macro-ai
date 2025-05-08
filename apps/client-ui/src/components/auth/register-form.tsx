@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { schemas } from '@repo/macro-ai-api-client'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
@@ -11,7 +10,10 @@ import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
 import { usePostRegisterMutation } from '@/services/hooks/auth/usePostRegisterMutation'
-import { TRegister } from '@/services/network/auth/postRegister'
+import {
+	registerSchemaClient,
+	TRegister,
+} from '@/services/network/auth/postRegister'
 
 import {
 	Form,
@@ -31,7 +33,7 @@ const RegisterForm = ({
 	const navigate = useNavigate({ from: '/auth/register' })
 
 	const form = useForm<TRegister>({
-		resolver: zodResolver(schemas.postAuthregister_Body),
+		resolver: zodResolver(registerSchemaClient),
 		defaultValues: {
 			email: '',
 			password: '',

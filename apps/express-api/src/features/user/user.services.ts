@@ -4,6 +4,7 @@ import { CognitoService } from '../auth/auth.services.ts'
 
 import {
 	createUser,
+	findUserByEmail,
 	findUserById,
 	updateLastLogin,
 } from './user.data-access.ts'
@@ -30,6 +31,30 @@ class UserService {
 			logger.error({
 				msg: '[userService - getUserById]: Error retrieving user',
 				userId,
+				error,
+			})
+			throw AppError.from(error, 'userService')
+		}
+	}
+
+	/**
+	 * Get user by email from the database
+	 * @param email The user's email address
+	 * @returns The user object or null if not found
+	 */
+	async getUserByEmail(email: string) {
+		try {
+			const user = await findUserByEmail(email)
+
+			if (!user) {
+				throw AppError.notFound('User not found', 'userService')
+			}
+
+			return user
+		} catch (error) {
+			logger.error({
+				msg: '[userService - getUserByEmail]: Error retrieving user',
+				email,
 				error,
 			})
 			throw AppError.from(error, 'userService')

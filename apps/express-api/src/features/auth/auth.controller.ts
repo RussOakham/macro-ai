@@ -24,15 +24,16 @@ import { TInsertUser } from '../user/user.types.ts'
 import { CognitoService } from './auth.services.ts'
 import {
 	IAuthController,
-	IAuthResponse,
-	TConfirmForgotPassword,
-	TConfirmRegistration,
-	TForgotPassword,
+	TAuthResponse,
+	TConfirmForgotPasswordRequest,
+	TConfirmRegistrationRequest,
+	TForgotPasswordRequest,
 	TGetAuthUserResponse,
 	TLoginRequest,
 	TLoginResponse,
-	TRegister,
-	TResendConfirmationCode,
+	TRegisterUserRequest,
+	TRegisterUserResponse,
+	TResendConfirmationCodeRequest,
 } from './auth.types.ts'
 const { logger } = pino
 
@@ -45,7 +46,8 @@ const cognito = new CognitoService()
 export const authController: IAuthController = {
 	register: async (req: Request, res: Response) => {
 		try {
-			const { email, password, confirmPassword } = req.body as TRegister
+			const { email, password, confirmPassword } =
+				req.body as TRegisterUserRequest
 
 			const response = await cognito.signUpUser({
 				email,
@@ -88,7 +90,7 @@ export const authController: IAuthController = {
 
 			logger.info(`[authController]: User created: ${user.id}`)
 
-			const authResponse: IAuthResponse = {
+			const authResponse: TRegisterUserResponse = {
 				message:
 					'Registration successful. Please check your email for verification code.',
 				user: {
@@ -107,9 +109,9 @@ export const authController: IAuthController = {
 
 	confirmRegistration: async (req: Request, res: Response): Promise<void> => {
 		try {
-			const { username, code } = req.body as TConfirmRegistration
+			const { email, code } = req.body as TConfirmRegistrationRequest
 
-			const response = await cognito.confirmSignUp(username, code)
+			const response = await cognito.confirmSignUp(email, code)
 
 			// Check for service errors
 			const serviceResult = handleServiceError(
@@ -124,7 +126,10 @@ export const authController: IAuthController = {
 				return
 			}
 
-			const dbUser = await updateUser(username, { emailVerified: true })
+			// get user from database
+			const user = await userService.getUserByEmail(email)
+
+			const dbUser = await updateUser(user.id, { emailVerified: true })
 			if (!dbUser) {
 				throw AppError.internal(
 					'Failed to update user email verification',
@@ -132,10 +137,10 @@ export const authController: IAuthController = {
 				)
 			}
 
-			logger.info(`[authController]: User confirmed: ${username}`)
+			logger.info(`[authController]: User confirmed: ${email}`)
 
 			// Return success response
-			const authResponse: IAuthResponse = {
+			const authResponse: TAuthResponse = {
 				message: 'Account confirmed successfully',
 			}
 
@@ -152,9 +157,9 @@ export const authController: IAuthController = {
 
 	resendConfirmationCode: async (req: Request, res: Response) => {
 		try {
-			const { username } = req.body as TResendConfirmationCode
+			const { email } = req.body as TResendConfirmationCodeRequest
 
-			const response = await cognito.resendConfirmationCode(username)
+			const response = await cognito.resendConfirmationCode(email)
 
 			if (
 				response.$metadata.httpStatusCode !== undefined &&
@@ -167,7 +172,11 @@ export const authController: IAuthController = {
 				return
 			}
 
-			res.status(StatusCodes.OK).json({ message: response })
+			const authResponse: TAuthResponse = {
+				message: 'Confirmation code resent successfully',
+			}
+
+			res.status(StatusCodes.OK).json(authResponse)
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(
@@ -197,6 +206,10 @@ export const authController: IAuthController = {
 				return
 			}
 
+			const encryptedUsername = encrypt(response.Username)
+
+			await userService.registerOrLoginUserById(response.Username, email)
+
 			const loginResponse: TLoginResponse = {
 				message: 'Login successful',
 				tokens: {
@@ -205,10 +218,6 @@ export const authController: IAuthController = {
 					expiresIn: response.AuthenticationResult?.ExpiresIn ?? 0,
 				},
 			}
-
-			const encryptedUsername = encrypt(response.Username)
-
-			await userService.registerOrLoginUserById(response.Username, email)
 
 			res
 				.cookie('macro-ai-accessToken', loginResponse.tokens.accessToken, {
@@ -274,7 +283,11 @@ export const authController: IAuthController = {
 					sameSite: 'strict',
 				})
 
-				res.status(StatusCodes.OK).json({ message: 'Logged out successfully' })
+				const authResponse: TAuthResponse = {
+					message: 'Logout successful',
+				}
+
+				res.status(StatusCodes.OK).json(authResponse)
 			} catch (error) {
 				if (error instanceof Error && error.message === 'TOKEN_EXPIRED') {
 					res.clearCookie('macro-ai-accessToken', {
@@ -290,9 +303,11 @@ export const authController: IAuthController = {
 						sameSite: 'strict',
 					})
 
-					res
-						.status(StatusCodes.OK)
-						.json({ message: 'Logged out successfully' })
+					const authResponse: TAuthResponse = {
+						message: 'Logout successful',
+					}
+
+					res.status(StatusCodes.OK).json(authResponse)
 					return
 				}
 				throw error
@@ -387,7 +402,7 @@ export const authController: IAuthController = {
 
 	forgotPassword: async (req: Request, res: Response) => {
 		try {
-			const { email } = req.body as TForgotPassword
+			const { email } = req.body as TForgotPasswordRequest
 
 			const response = await cognito.forgotPassword(email)
 
@@ -405,7 +420,11 @@ export const authController: IAuthController = {
 				return
 			}
 
-			res.status(StatusCodes.OK).json({ message: 'Password reset initiated' })
+			const authResponse: TAuthResponse = {
+				message: 'Password reset initiated successfully',
+			}
+
+			res.status(StatusCodes.OK).json(authResponse)
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(
@@ -418,7 +437,7 @@ export const authController: IAuthController = {
 	confirmForgotPassword: async (req: Request, res: Response) => {
 		try {
 			const { email, code, newPassword, confirmPassword } =
-				req.body as TConfirmForgotPassword
+				req.body as TConfirmForgotPasswordRequest
 
 			const response = await cognito.confirmForgotPassword(
 				email,
@@ -441,9 +460,11 @@ export const authController: IAuthController = {
 				return
 			}
 
-			res
-				.status(StatusCodes.OK)
-				.json({ message: 'Password reset successfully' })
+			const authResponse: TAuthResponse = {
+				message: 'Password reset successfully',
+			}
+
+			res.status(StatusCodes.OK).json(authResponse)
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(

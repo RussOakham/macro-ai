@@ -17,64 +17,59 @@ import {
 import {
 	Form,
 	FormControl,
-	FormDescription,
 	FormField,
 	FormItem,
 	FormLabel,
 	FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import {
-	InputOTP,
-	InputOTPGroup,
-	InputOTPSlot,
-} from '@/components/ui/input-otp'
 import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
-import { usePostConfirmRegisterMutation } from '@/services/hooks/auth/usePostConfirmRegisterMutation'
+import { usePostResendConfirmRegistrationCodeMutation } from '@/services/hooks/auth/usePostResendConfirmRegistrationCode'
 import { TGetAuthUserResponse } from '@/services/network/auth/getAuthUser'
 import {
-	confirmRegistrationSchemaClient,
-	TConfirmRegistrationClient,
-} from '@/services/network/auth/postConfirmRegistration'
+	resendConfirmationCodeSchemaClient,
+	TResendConfirmationCodeClient,
+} from '@/services/network/auth/postResendConfirmRegistrationCode'
 
-const ConfirmRegistrationForm = ({
+const ResendConfirmationCodeForm = ({
 	className,
 	...props
 }: React.ComponentPropsWithoutRef<'div'>) => {
 	const [isPending, setIsPending] = useState(false)
-	const { mutateAsync: postConfirmRegistration } =
-		usePostConfirmRegisterMutation()
-	const navigate = useNavigate({ from: '/auth/confirm-registration' })
+	const { mutateAsync: postResentConfirmRegistrationCodeMutation } =
+		usePostResendConfirmRegistrationCodeMutation()
+	const navigate = useNavigate({ from: '/auth/resend-confirmation-code' })
 	const queryClient = useQueryClient()
 
 	const authUser = queryClient.getQueryData<TGetAuthUserResponse>([
 		QUERY_KEY.authUser,
 	])
 
-	const form = useForm<TConfirmRegistrationClient>({
-		resolver: zodResolver(confirmRegistrationSchemaClient),
+	const form = useForm<TResendConfirmationCodeClient>({
+		resolver: zodResolver(resendConfirmationCodeSchemaClient),
 		defaultValues: {
-			username: authUser?.email ?? '',
-			code: '',
+			email: authUser?.email ?? '',
 		},
 	})
 
-	const onSubmit = async ({ email, code }: TConfirmRegistrationClient) => {
+	const onSubmit = async ({ email }: TResendConfirmationCodeClient) => {
 		try {
 			setIsPending(true)
 
-			await postConfirmRegistration({ email, code })
+			await postResentConfirmRegistrationCodeMutation({ email })
 
-			logger.info('Confirm registration success')
-			toast.success('Account confirmed successfully! Please login.')
-			await navigate({ to: '/auth/login' })
+			logger.info('Resend confirmation code success')
+			toast.success(
+				'Confirmation code resent successfully! Please check your email.',
+			)
+			await navigate({ to: '/auth/confirm-registration' })
 		} catch (err: unknown) {
 			// Show error message
 			const error = standardizeError(err)
-			logger.error('Confirm registration error', error)
+			logger.error('Error resending confirmation code', error)
 			toast.error(error.message)
 		} finally {
 			setIsPending(false)
@@ -84,9 +79,9 @@ const ConfirmRegistrationForm = ({
 	return (
 		<Card className={cn('w-full max-w-md', className)} {...props}>
 			<CardHeader>
-				<CardTitle>Confirm Registration</CardTitle>
+				<CardTitle>Resend Confirmation Code</CardTitle>
 				<CardDescription>
-					Enter the 6-digit code sent to your email.
+					Enter your email address to resend the confirmation code.
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
@@ -105,45 +100,20 @@ const ConfirmRegistrationForm = ({
 								</FormItem>
 							)}
 						/>
-						<FormField
-							control={form.control}
-							name="code"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Confirmation Code</FormLabel>
-									<FormControl>
-										<InputOTP maxLength={6} {...field}>
-											<InputOTPGroup>
-												<InputOTPSlot index={0} />
-												<InputOTPSlot index={1} />
-												<InputOTPSlot index={2} />
-												<InputOTPSlot index={3} />
-												<InputOTPSlot index={4} />
-												<InputOTPSlot index={5} />
-											</InputOTPGroup>
-										</InputOTP>
-									</FormControl>
-									<FormDescription>
-										Please enter the 6-digit code we sent to your email.
-									</FormDescription>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
 						<Button type="submit" className="w-full" disabled={isPending}>
-							{isPending ? 'Confirming...' : 'Confirm Registration'}
+							{isPending ? 'Confirming...' : 'Resend Code'}
 						</Button>
 					</form>
 				</Form>
 			</CardContent>
 			<CardFooter className="flex justify-center">
 				<p className="text-sm text-gray-600">
-					Didn't receive a code?{' '}
+					Go back to{' '}
 					<Link
 						className="text-blue-600 hover:underline"
-						to="/auth/resend-confirmation-code"
+						to="/auth/confirm-registration"
 					>
-						Resend code
+						Confirm Registration
 					</Link>
 				</p>
 			</CardFooter>
@@ -151,4 +121,4 @@ const ConfirmRegistrationForm = ({
 	)
 }
 
-export { ConfirmRegistrationForm }
+export { ResendConfirmationCodeForm }

@@ -18,7 +18,7 @@ import crypto from 'crypto'
 import { config } from '../../../config/default.ts'
 import { AppError } from '../../utils/errors.ts'
 
-import { TRegister } from './auth.types.ts'
+import { TRegisterUserRequest } from './auth.types.ts'
 class CognitoService {
 	private readonly config: CognitoIdentityProviderClientConfig = {
 		region: config.awsCognitoRegion,
@@ -50,7 +50,11 @@ class CognitoService {
 		)
 	}
 
-	public async signUpUser({ email, password, confirmPassword }: TRegister) {
+	public async signUpUser({
+		email,
+		password,
+		confirmPassword,
+	}: TRegisterUserRequest) {
 		if (password !== confirmPassword) {
 			throw AppError.validation(
 				'Passwords do not match',
@@ -109,10 +113,30 @@ class CognitoService {
 	}
 
 	public async resendConfirmationCode(email: string) {
+		const getUserCommand = new ListUsersCommand({
+			Filter: `email = "${email}"`,
+			UserPoolId: this.userPoolId,
+		})
+
+		const users = await this.client.send(getUserCommand)
+
+		if (!users.Users || users.Users.length === 0) {
+			throw AppError.notFound('User not found', 'authService')
+		}
+
+		const uniqueUser = users.Users.find(
+			(user) =>
+				user.Attributes?.find((attr) => attr.Name === 'email')?.Value === email,
+		)
+
+		if (!uniqueUser?.Username) {
+			throw AppError.notFound('User not found', 'authService')
+		}
+
 		const command = new ResendConfirmationCodeCommand({
 			ClientId: this.clientId,
-			Username: email,
-			SecretHash: this.generateHash(email),
+			Username: uniqueUser.Username,
+			SecretHash: this.generateHash(uniqueUser.Username),
 		})
 
 		return this.client.send(command)
