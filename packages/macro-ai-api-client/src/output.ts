@@ -8,14 +8,14 @@ const postAuthregister_Body = z
 		confirmPassword: z.string().min(8).max(15).regex(/\d/),
 	})
 	.passthrough()
+const postAuthconfirmRegistration_Body = z
+	.object({ email: z.string().email(), code: z.number() })
+	.passthrough()
 const postAuthlogin_Body = z
 	.object({
 		email: z.string().email(),
 		password: z.string().min(8).max(15).regex(/\d/),
 	})
-	.passthrough()
-const postAuthconfirmRegistration_Body = z
-	.object({ username: z.string().email(), code: z.number() })
 	.passthrough()
 const postAuthconfirmForgotPassword_Body = z
 	.object({
@@ -28,8 +28,8 @@ const postAuthconfirmForgotPassword_Body = z
 
 export const schemas = {
 	postAuthregister_Body,
-	postAuthlogin_Body,
 	postAuthconfirmRegistration_Body,
+	postAuthlogin_Body,
 	postAuthconfirmForgotPassword_Body,
 }
 
@@ -457,14 +457,12 @@ const endpoints = makeApi([
 		method: 'post',
 		path: '/auth/refresh',
 		requestFormat: 'json',
-		parameters: [
-			{
-				name: 'body',
-				type: 'Body',
-				schema: z.object({ refreshToken: z.string() }).passthrough(),
-			},
-		],
-		response: z.object({ message: z.string() }).passthrough(),
+		response: z
+			.object({
+				email: z.string().email(),
+				password: z.string().min(8).max(15).regex(/\d/),
+			})
+			.passthrough(),
 		errors: [
 			{
 				status: 400,
@@ -621,7 +619,7 @@ const endpoints = makeApi([
 			{
 				name: 'body',
 				type: 'Body',
-				schema: z.object({ username: z.string().email() }).passthrough(),
+				schema: z.object({ email: z.string().email() }).passthrough(),
 			},
 		],
 		response: z.object({ message: z.string() }).passthrough(),
