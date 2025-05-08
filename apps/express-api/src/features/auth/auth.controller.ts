@@ -19,7 +19,7 @@ import {
 import { standardizeError } from '../../utils/standardize-error.ts'
 import { createUser, updateUser } from '../user/user.data-access.ts'
 import { userService } from '../user/user.services.ts'
-import { InsertUser } from '../user/user.types.ts'
+import { TInsertUser } from '../user/user.types.ts'
 
 import { CognitoService } from './auth.services.ts'
 import {
@@ -29,7 +29,7 @@ import {
 	TConfirmRegistration,
 	TForgotPassword,
 	TGetAuthUserResponse,
-	TLogin,
+	TLoginRequest,
 	TLoginResponse,
 	TRegister,
 	TResendConfirmationCode,
@@ -79,7 +79,7 @@ export const authController: IAuthController = {
 			}
 
 			// Create user in database with Zod validation
-			const userData: InsertUser = {
+			const userData: TInsertUser = {
 				id: response.UserSub,
 				email,
 			}
@@ -179,7 +179,7 @@ export const authController: IAuthController = {
 
 	login: async (req: Request, res: Response) => {
 		try {
-			const { email, password } = req.body as TLogin
+			const { email, password } = req.body as TLoginRequest
 
 			const response = await cognito.signInUser(email, password)
 
@@ -198,14 +198,12 @@ export const authController: IAuthController = {
 			}
 
 			const loginResponse: TLoginResponse = {
-				accessToken: response.AuthenticationResult?.AccessToken ?? '',
-				refreshToken: response.AuthenticationResult?.RefreshToken ?? '',
-				expiresIn: response.AuthenticationResult?.ExpiresIn ?? 0,
-			}
-
-			const loginApiResponse: IAuthResponse = {
 				message: 'Login successful',
-				tokens: loginResponse,
+				tokens: {
+					accessToken: response.AuthenticationResult?.AccessToken ?? '',
+					refreshToken: response.AuthenticationResult?.RefreshToken ?? '',
+					expiresIn: response.AuthenticationResult?.ExpiresIn ?? 0,
+				},
 			}
 
 			const encryptedUsername = encrypt(response.Username)
@@ -213,14 +211,14 @@ export const authController: IAuthController = {
 			await userService.registerOrLoginUserById(response.Username, email)
 
 			res
-				.cookie('macro-ai-accessToken', loginResponse.accessToken, {
+				.cookie('macro-ai-accessToken', loginResponse.tokens.accessToken, {
 					httpOnly: false,
 					secure: nodeEnv === 'production',
 					domain: cookieDomain,
 					sameSite: 'strict',
-					maxAge: loginResponse.expiresIn * 1000,
+					maxAge: loginResponse.tokens.expiresIn * 1000,
 				})
-				.cookie('marco-ai-refreshToken', loginResponse.refreshToken, {
+				.cookie('marco-ai-refreshToken', loginResponse.tokens.refreshToken, {
 					httpOnly: true,
 					secure: nodeEnv === 'production',
 					domain: cookieDomain,
@@ -235,7 +233,7 @@ export const authController: IAuthController = {
 					maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
 				})
 				.status(StatusCodes.OK)
-				.json(loginApiResponse)
+				.json(loginResponse)
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(
@@ -338,26 +336,37 @@ export const authController: IAuthController = {
 				response.AuthenticationResult?.RefreshToken ?? refreshToken
 
 			const refreshLoginResponse: TLoginResponse = {
-				accessToken: response.AuthenticationResult?.AccessToken ?? '',
-				refreshToken: newRefreshToken,
-				expiresIn: response.AuthenticationResult?.ExpiresIn ?? 0,
+				message: 'Token refreshed successfully',
+				tokens: {
+					accessToken: response.AuthenticationResult?.AccessToken ?? '',
+					refreshToken: newRefreshToken,
+					expiresIn: response.AuthenticationResult?.ExpiresIn ?? 0,
+				},
 			}
 
 			res
-				.cookie('macro-ai-accessToken', refreshLoginResponse.accessToken, {
-					httpOnly: false,
-					secure: nodeEnv === 'production',
-					domain: cookieDomain,
-					sameSite: 'strict',
-					maxAge: refreshLoginResponse.expiresIn * 1000,
-				})
-				.cookie('marco-ai-refreshToken', refreshLoginResponse.refreshToken, {
-					httpOnly: true,
-					secure: nodeEnv === 'production',
-					domain: cookieDomain,
-					sameSite: 'strict',
-					maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
-				})
+				.cookie(
+					'macro-ai-accessToken',
+					refreshLoginResponse.tokens.accessToken,
+					{
+						httpOnly: false,
+						secure: nodeEnv === 'production',
+						domain: cookieDomain,
+						sameSite: 'strict',
+						maxAge: refreshLoginResponse.tokens.expiresIn * 1000,
+					},
+				)
+				.cookie(
+					'marco-ai-refreshToken',
+					refreshLoginResponse.tokens.refreshToken,
+					{
+						httpOnly: true,
+						secure: nodeEnv === 'production',
+						domain: cookieDomain,
+						sameSite: 'strict',
+						maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
+					},
+				)
 				.cookie('macro-ai-synchronize', encryptedUsername, {
 					httpOnly: true,
 					secure: nodeEnv === 'production',

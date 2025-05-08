@@ -1,7 +1,11 @@
 import express from 'express'
 import { z } from 'zod'
 
-import { insertUserSchema, selectUserSchema } from './user.schema.ts'
+import {
+	insertUserSchema,
+	selectUserSchema,
+	userResponseSchema,
+} from './user.schemas.ts'
 
 interface IUserController {
 	getUserById: express.Handler
@@ -9,7 +13,8 @@ interface IUserController {
 }
 
 // Define types using Zod schemas
-type InsertUser = z.infer<typeof insertUserSchema>
-type User = z.infer<typeof selectUserSchema>
+type TInsertUser = z.infer<typeof insertUserSchema>
+type TUser = z.infer<typeof selectUserSchema>
+type TUserResponse = z.infer<typeof userResponseSchema>
 
-export type { InsertUser, IUserController, User }
+export type { IUserController, TInsertUser, TUser, TUserResponse }

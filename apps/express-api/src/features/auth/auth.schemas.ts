@@ -74,27 +74,6 @@ const resendConfirmationCodeSchema = registerZodSchema(
 	'Request to resend confirmation code',
 )
 
-const loginSchema = registerZodSchema(
-	'LoginRequest',
-	z.object({
-		email: emailValidation().openapi({ description: 'User email address' }),
-		password: passwordValidation().openapi({ description: 'User password' }),
-	}),
-	'User login request',
-)
-
-const loginResponseSchema = registerZodSchema(
-	'TokenResponse',
-	z.object({
-		accessToken: z.string().openapi({ description: 'JWT access token' }),
-		refreshToken: z.string().openapi({ description: 'JWT refresh token' }),
-		expiresIn: z
-			.number()
-			.openapi({ description: 'Token expiration time in seconds' }),
-	}),
-	'Authentication tokens response',
-)
-
 const refreshTokenSchema = registerZodSchema(
 	'RefreshTokenRequest',
 	z.object({
@@ -165,22 +144,48 @@ const getAuthUserResponseSchema = registerZodSchema(
 	'Authenticated user information response',
 )
 
-// Register a generic auth response schema
+// Base auth response schema
 const authResponseSchema = registerZodSchema(
 	'AuthResponse',
 	z.object({
 		message: z.string().openapi({ description: 'Response message' }),
-		user: z
-			.object({
-				id: z.string().openapi({ description: 'User ID' }),
-				email: z.string().openapi({ description: 'User email address' }),
-			})
-			.optional()
-			.openapi({ description: 'User information' }),
-		tokens: loginResponseSchema
-			.optional()
-			.openapi({ description: 'Authentication tokens' }),
 	}),
+	'Generic authentication response',
+)
+
+// Login Request Schema
+const loginRequestSchema = registerZodSchema(
+	'LoginRequest',
+	z.object({
+		email: emailValidation().openapi({ description: 'User email address' }),
+		password: passwordValidation().openapi({ description: 'User password' }),
+	}),
+	'User login request',
+)
+
+// Login Response Schema
+const tokenResponseSchema = registerZodSchema(
+	'TokenResponse',
+	z.object({
+		accessToken: z.string().openapi({ description: 'JWT access token' }),
+		refreshToken: z.string().openapi({ description: 'JWT refresh token' }),
+		expiresIn: z
+			.number()
+			.openapi({ description: 'Token expiration time in seconds' }),
+	}),
+	'Authentication tokens response',
+)
+
+// Register a generic auth response schema
+const loginResponseSchema = registerZodSchema(
+	'AuthResponse',
+	authResponseSchema
+		.extend({
+			tokens: tokenResponseSchema.openapi({
+				description: 'Authentication tokens',
+			}),
+		})
+		.openapi({ description: 'Authentication response' }),
 	'Generic authentication response',
 )
 
@@ -191,8 +196,8 @@ export {
 	forgotPasswordSchema,
 	getAuthUserResponseSchema,
 	getAuthUserSchema,
+	loginRequestSchema,
 	loginResponseSchema,
-	loginSchema,
 	refreshTokenSchema,
 	registerUserSchema,
 	resendConfirmationCodeSchema,

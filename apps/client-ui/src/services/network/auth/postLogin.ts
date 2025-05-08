@@ -3,9 +3,9 @@ import { z } from 'zod'
 
 import { apiClient } from '@/lib/api'
 
-type TLogin = z.infer<typeof schemas.postAuthlogin_Body>
+type TLoginRequest = z.infer<typeof schemas.postAuthlogin_Body>
 
-const postLogin = async ({ email, password }: TLogin) => {
+const postLogin = async ({ email, password }: TLoginRequest) => {
 	const response = await apiClient.post('/auth/login', {
 		email,
 		password,
@@ -14,4 +14,4 @@ const postLogin = async ({ email, password }: TLogin) => {
 	return response
 }
 
-export { postLogin, type TLogin }
+export { postLogin, type TLoginRequest }

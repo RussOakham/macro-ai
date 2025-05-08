@@ -45,23 +45,7 @@ const endpoints = makeApi([
 				schema: postAuthconfirmForgotPassword_Body,
 			},
 		],
-		response: z
-			.object({
-				message: z.string(),
-				user: z
-					.object({ id: z.string(), email: z.string() })
-					.passthrough()
-					.optional(),
-				tokens: z
-					.object({
-						accessToken: z.string(),
-						refreshToken: z.string(),
-						expiresIn: z.number(),
-					})
-					.passthrough()
-					.optional(),
-			})
-			.passthrough(),
+		response: z.object({ message: z.string() }).passthrough(),
 		errors: [
 			{
 				status: 400,
@@ -146,23 +130,7 @@ const endpoints = makeApi([
 				schema: postAuthconfirmRegistration_Body,
 			},
 		],
-		response: z
-			.object({
-				message: z.string(),
-				user: z
-					.object({ id: z.string(), email: z.string() })
-					.passthrough()
-					.optional(),
-				tokens: z
-					.object({
-						accessToken: z.string(),
-						refreshToken: z.string(),
-						expiresIn: z.number(),
-					})
-					.passthrough()
-					.optional(),
-			})
-			.passthrough(),
+		response: z.object({ message: z.string() }).passthrough(),
 		errors: [
 			{
 				status: 400,
@@ -247,23 +215,7 @@ const endpoints = makeApi([
 				schema: z.object({ email: z.string().email() }).passthrough(),
 			},
 		],
-		response: z
-			.object({
-				message: z.string(),
-				user: z
-					.object({ id: z.string(), email: z.string() })
-					.passthrough()
-					.optional(),
-				tokens: z
-					.object({
-						accessToken: z.string(),
-						refreshToken: z.string(),
-						expiresIn: z.number(),
-					})
-					.passthrough()
-					.optional(),
-			})
-			.passthrough(),
+		response: z.object({ message: z.string() }).passthrough(),
 		errors: [
 			{
 				status: 400,
@@ -351,18 +303,13 @@ const endpoints = makeApi([
 		response: z
 			.object({
 				message: z.string(),
-				user: z
-					.object({ id: z.string(), email: z.string() })
-					.passthrough()
-					.optional(),
 				tokens: z
 					.object({
 						accessToken: z.string(),
 						refreshToken: z.string(),
 						expiresIn: z.number(),
 					})
-					.passthrough()
-					.optional(),
+					.passthrough(),
 			})
 			.passthrough(),
 		errors: [
@@ -442,23 +389,7 @@ const endpoints = makeApi([
 		method: 'post',
 		path: '/auth/logout',
 		requestFormat: 'json',
-		response: z
-			.object({
-				message: z.string(),
-				user: z
-					.object({ id: z.string(), email: z.string() })
-					.passthrough()
-					.optional(),
-				tokens: z
-					.object({
-						accessToken: z.string(),
-						refreshToken: z.string(),
-						expiresIn: z.number(),
-					})
-					.passthrough()
-					.optional(),
-			})
-			.passthrough(),
+		response: z.object({ message: z.string() }).passthrough(),
 		errors: [
 			{
 				status: 400,
@@ -533,23 +464,7 @@ const endpoints = makeApi([
 				schema: z.object({ refreshToken: z.string() }).passthrough(),
 			},
 		],
-		response: z
-			.object({
-				message: z.string(),
-				user: z
-					.object({ id: z.string(), email: z.string() })
-					.passthrough()
-					.optional(),
-				tokens: z
-					.object({
-						accessToken: z.string(),
-						refreshToken: z.string(),
-						expiresIn: z.number(),
-					})
-					.passthrough()
-					.optional(),
-			})
-			.passthrough(),
+		response: z.object({ message: z.string() }).passthrough(),
 		errors: [
 			{
 				status: 400,
@@ -624,23 +539,7 @@ const endpoints = makeApi([
 				schema: postAuthregister_Body,
 			},
 		],
-		response: z
-			.object({
-				message: z.string(),
-				user: z
-					.object({ id: z.string(), email: z.string() })
-					.passthrough()
-					.optional(),
-				tokens: z
-					.object({
-						accessToken: z.string(),
-						refreshToken: z.string(),
-						expiresIn: z.number(),
-					})
-					.passthrough()
-					.optional(),
-			})
-			.passthrough(),
+		response: z.object({ message: z.string() }).passthrough(),
 		errors: [
 			{
 				status: 400,
@@ -725,23 +624,7 @@ const endpoints = makeApi([
 				schema: z.object({ username: z.string().email() }).passthrough(),
 			},
 		],
-		response: z
-			.object({
-				message: z.string(),
-				user: z
-					.object({ id: z.string(), email: z.string() })
-					.passthrough()
-					.optional(),
-				tokens: z
-					.object({
-						accessToken: z.string(),
-						refreshToken: z.string(),
-						expiresIn: z.number(),
-					})
-					.passthrough()
-					.optional(),
-			})
-			.passthrough(),
+		response: z.object({ message: z.string() }).passthrough(),
 		errors: [
 			{
 				status: 400,

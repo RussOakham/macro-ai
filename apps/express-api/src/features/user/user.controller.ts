@@ -5,6 +5,7 @@ import { pino } from '../../utils/logger.ts'
 import { standardizeError } from '../../utils/standardize-error.ts'
 
 import { userService } from './user.services.ts'
+import { TUserResponse } from './user.types.ts'
 
 const { logger } = pino
 
@@ -26,7 +27,20 @@ export const userController = {
 
 			const user = await userService.getUserById(req.userId)
 
-			res.status(StatusCodes.OK).json(user)
+			const userResponse: TUserResponse = {
+				user: {
+					id: user.id,
+					email: user.email,
+					emailVerified: user.emailVerified,
+					firstName: user.firstName,
+					lastName: user.lastName,
+					createdAt: user.createdAt,
+					updatedAt: user.updatedAt,
+					lastLogin: user.lastLogin,
+				},
+			}
+
+			res.status(StatusCodes.OK).json(userResponse)
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 

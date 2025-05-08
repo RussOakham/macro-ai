@@ -15,7 +15,8 @@ import {
 	confirmRegistrationSchema,
 	forgotPasswordSchema,
 	getAuthUserResponseSchema,
-	loginSchema,
+	loginRequestSchema,
+	loginResponseSchema,
 	refreshTokenSchema,
 	registerUserSchema,
 	resendConfirmationCodeSchema,
@@ -113,7 +114,7 @@ registry.registerPath({
 		body: {
 			content: {
 				'application/json': {
-					schema: loginSchema,
+					schema: loginRequestSchema,
 				},
 			},
 		},
@@ -123,7 +124,7 @@ registry.registerPath({
 			description: 'User logged in successfully',
 			content: {
 				'application/json': {
-					schema: authResponseSchema,
+					schema: loginResponseSchema,
 				},
 			},
 		},
@@ -710,7 +711,7 @@ const authRouter = (router: Router) => {
 	)
 
 	// Login
-	router.post('/auth/login', validate(loginSchema), authController.login)
+	router.post('/auth/login', validate(loginRequestSchema), authController.login)
 
 	// Logout
 	router.post('/auth/logout', verifyAuth, authController.logout)

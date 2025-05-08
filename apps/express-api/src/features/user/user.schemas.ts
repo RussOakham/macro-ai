@@ -1,8 +1,34 @@
+import {
+	boolean,
+	pgTable,
+	timestamp,
+	uniqueIndex,
+	uuid,
+	varchar,
+} from 'drizzle-orm/pg-core'
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { z } from 'zod'
 
 import { registerZodSchema } from '../../utils/swagger/openapi-registry.ts'
 
-import { selectUserSchema } from './user.schema.ts'
+const usersTable = pgTable(
+	'users',
+	{
+		id: uuid('id').primaryKey(),
+		email: varchar('email', { length: 255 }).notNull().unique(),
+		emailVerified: boolean('email_verified').default(false),
+		firstName: varchar('first_name', { length: 255 }),
+		lastName: varchar('last_name', { length: 255 }),
+		createdAt: timestamp('created_at').defaultNow(),
+		updatedAt: timestamp('updated_at').defaultNow(),
+		lastLogin: timestamp('last_login'),
+	},
+	(users) => [uniqueIndex('email_idx').on(users.email)],
+)
+
+// Generate Zod schemas for type validation
+const insertUserSchema = createInsertSchema(usersTable)
+const selectUserSchema = createSelectSchema(usersTable)
 
 // Convert Drizzle-generated schema to OpenAPI
 const userProfileSchema = registerZodSchema(
@@ -30,4 +56,11 @@ const userResponseSchema = registerZodSchema(
 	'User profile response',
 )
 
-export { updateUserProfileSchema, userProfileSchema, userResponseSchema }
+export {
+	insertUserSchema,
+	selectUserSchema,
+	updateUserProfileSchema,
+	userProfileSchema,
+	userResponseSchema,
+	usersTable,
+}

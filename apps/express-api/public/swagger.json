@@ -42,228 +42,6 @@
 				"required": ["message"],
 				"description": "Standard error response"
 			},
-			"RegisterRequest": {
-				"type": "object",
-				"properties": {
-					"email": {
-						"type": "string",
-						"format": "email",
-						"description": "User email address"
-					},
-					"password": {
-						"type": "string",
-						"minLength": 8,
-						"maxLength": 15,
-						"pattern": "\\d",
-						"description": "User password"
-					},
-					"confirmPassword": {
-						"type": "string",
-						"minLength": 8,
-						"maxLength": 15,
-						"pattern": "\\d",
-						"description": "Confirm password"
-					}
-				},
-				"required": ["email", "password", "confirmPassword"],
-				"description": "User registration request"
-			},
-			"ConfirmRegistration": {
-				"type": "object",
-				"properties": {
-					"username": {
-						"type": "string",
-						"format": "email",
-						"description": "User email address"
-					},
-					"code": {
-						"type": "number",
-						"description": "Verification code sent to email"
-					}
-				},
-				"required": ["username", "code"],
-				"description": "Confirm user registration with verification code"
-			},
-			"ResendConfirmationCode": {
-				"type": "object",
-				"properties": {
-					"username": {
-						"type": "string",
-						"format": "email",
-						"description": "User email address"
-					}
-				},
-				"required": ["username"],
-				"description": "Request to resend confirmation code"
-			},
-			"LoginRequest": {
-				"type": "object",
-				"properties": {
-					"email": {
-						"type": "string",
-						"format": "email",
-						"description": "User email address"
-					},
-					"password": {
-						"type": "string",
-						"minLength": 8,
-						"maxLength": 15,
-						"pattern": "\\d",
-						"description": "User password"
-					}
-				},
-				"required": ["email", "password"],
-				"description": "User login request"
-			},
-			"TokenResponse": {
-				"type": "object",
-				"properties": {
-					"accessToken": {
-						"type": "string",
-						"description": "JWT access token"
-					},
-					"refreshToken": {
-						"type": "string",
-						"description": "JWT refresh token"
-					},
-					"expiresIn": {
-						"type": "number",
-						"description": "Token expiration time in seconds"
-					}
-				},
-				"required": ["accessToken", "refreshToken", "expiresIn"],
-				"description": "Authentication tokens response"
-			},
-			"RefreshTokenRequest": {
-				"type": "object",
-				"properties": {
-					"refreshToken": {
-						"type": "string",
-						"description": "JWT refresh token"
-					}
-				},
-				"required": ["refreshToken"],
-				"description": "Request to refresh access token"
-			},
-			"ForgotPasswordRequest": {
-				"type": "object",
-				"properties": {
-					"email": {
-						"type": "string",
-						"format": "email",
-						"description": "User email address"
-					}
-				},
-				"required": ["email"],
-				"description": "Request to initiate password reset"
-			},
-			"ConfirmForgotPasswordRequest": {
-				"type": "object",
-				"properties": {
-					"email": {
-						"type": "string",
-						"format": "email",
-						"description": "User email address"
-					},
-					"code": {
-						"type": "string",
-						"minLength": 6,
-						"maxLength": 6,
-						"description": "Verification code sent to email"
-					},
-					"newPassword": {
-						"type": "string",
-						"minLength": 8,
-						"maxLength": 15,
-						"pattern": "\\d",
-						"description": "New password"
-					},
-					"confirmPassword": {
-						"type": "string",
-						"minLength": 8,
-						"maxLength": 15,
-						"pattern": "\\d",
-						"description": "Confirm new password"
-					}
-				},
-				"required": ["email", "code", "newPassword", "confirmPassword"],
-				"description": "Request to confirm password reset with code"
-			},
-			"GetAuthUserRequest": {
-				"type": "object",
-				"properties": {
-					"accessToken": {
-						"type": "string",
-						"description": "JWT access token"
-					}
-				},
-				"required": ["accessToken"],
-				"description": "Request to get authenticated user information"
-			},
-			"GetAuthUserResponse": {
-				"type": "object",
-				"properties": {
-					"id": {
-						"type": "string",
-						"description": "User ID"
-					},
-					"email": {
-						"type": "string",
-						"description": "User email address"
-					},
-					"emailVerified": {
-						"type": "boolean",
-						"description": "Email verification status"
-					}
-				},
-				"required": ["id", "email", "emailVerified"],
-				"description": "Authenticated user information response"
-			},
-			"AuthResponse": {
-				"type": "object",
-				"properties": {
-					"message": {
-						"type": "string",
-						"description": "Response message"
-					},
-					"user": {
-						"type": "object",
-						"properties": {
-							"id": {
-								"type": "string",
-								"description": "User ID"
-							},
-							"email": {
-								"type": "string",
-								"description": "User email address"
-							}
-						},
-						"required": ["id", "email"],
-						"description": "User information"
-					},
-					"tokens": {
-						"type": "object",
-						"properties": {
-							"accessToken": {
-								"type": "string",
-								"description": "JWT access token"
-							},
-							"refreshToken": {
-								"type": "string",
-								"description": "JWT refresh token"
-							},
-							"expiresIn": {
-								"type": "number",
-								"description": "Token expiration time in seconds"
-							}
-						},
-						"required": ["accessToken", "refreshToken", "expiresIn"],
-						"description": "Authentication tokens"
-					}
-				},
-				"required": ["message"],
-				"description": "Generic authentication response"
-			},
 			"UserProfile": {
 				"type": "object",
 				"properties": {
@@ -384,6 +162,194 @@
 				"required": ["user"],
 				"description": "User profile response"
 			},
+			"RegisterRequest": {
+				"type": "object",
+				"properties": {
+					"email": {
+						"type": "string",
+						"format": "email",
+						"description": "User email address"
+					},
+					"password": {
+						"type": "string",
+						"minLength": 8,
+						"maxLength": 15,
+						"pattern": "\\d",
+						"description": "User password"
+					},
+					"confirmPassword": {
+						"type": "string",
+						"minLength": 8,
+						"maxLength": 15,
+						"pattern": "\\d",
+						"description": "Confirm password"
+					}
+				},
+				"required": ["email", "password", "confirmPassword"],
+				"description": "User registration request"
+			},
+			"ConfirmRegistration": {
+				"type": "object",
+				"properties": {
+					"username": {
+						"type": "string",
+						"format": "email",
+						"description": "User email address"
+					},
+					"code": {
+						"type": "number",
+						"description": "Verification code sent to email"
+					}
+				},
+				"required": ["username", "code"],
+				"description": "Confirm user registration with verification code"
+			},
+			"ResendConfirmationCode": {
+				"type": "object",
+				"properties": {
+					"username": {
+						"type": "string",
+						"format": "email",
+						"description": "User email address"
+					}
+				},
+				"required": ["username"],
+				"description": "Request to resend confirmation code"
+			},
+			"RefreshTokenRequest": {
+				"type": "object",
+				"properties": {
+					"refreshToken": {
+						"type": "string",
+						"description": "JWT refresh token"
+					}
+				},
+				"required": ["refreshToken"],
+				"description": "Request to refresh access token"
+			},
+			"ForgotPasswordRequest": {
+				"type": "object",
+				"properties": {
+					"email": {
+						"type": "string",
+						"format": "email",
+						"description": "User email address"
+					}
+				},
+				"required": ["email"],
+				"description": "Request to initiate password reset"
+			},
+			"ConfirmForgotPasswordRequest": {
+				"type": "object",
+				"properties": {
+					"email": {
+						"type": "string",
+						"format": "email",
+						"description": "User email address"
+					},
+					"code": {
+						"type": "string",
+						"minLength": 6,
+						"maxLength": 6,
+						"description": "Verification code sent to email"
+					},
+					"newPassword": {
+						"type": "string",
+						"minLength": 8,
+						"maxLength": 15,
+						"pattern": "\\d",
+						"description": "New password"
+					},
+					"confirmPassword": {
+						"type": "string",
+						"minLength": 8,
+						"maxLength": 15,
+						"pattern": "\\d",
+						"description": "Confirm new password"
+					}
+				},
+				"required": ["email", "code", "newPassword", "confirmPassword"],
+				"description": "Request to confirm password reset with code"
+			},
+			"GetAuthUserRequest": {
+				"type": "object",
+				"properties": {
+					"accessToken": {
+						"type": "string",
+						"description": "JWT access token"
+					}
+				},
+				"required": ["accessToken"],
+				"description": "Request to get authenticated user information"
+			},
+			"GetAuthUserResponse": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "User ID"
+					},
+					"email": {
+						"type": "string",
+						"description": "User email address"
+					},
+					"emailVerified": {
+						"type": "boolean",
+						"description": "Email verification status"
+					}
+				},
+				"required": ["id", "email", "emailVerified"],
+				"description": "Authenticated user information response"
+			},
+			"AuthResponse": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Response message"
+					}
+				},
+				"required": ["message"],
+				"description": "Generic authentication response"
+			},
+			"LoginRequest": {
+				"type": "object",
+				"properties": {
+					"email": {
+						"type": "string",
+						"format": "email",
+						"description": "User email address"
+					},
+					"password": {
+						"type": "string",
+						"minLength": 8,
+						"maxLength": 15,
+						"pattern": "\\d",
+						"description": "User password"
+					}
+				},
+				"required": ["email", "password"],
+				"description": "User login request"
+			},
+			"TokenResponse": {
+				"type": "object",
+				"properties": {
+					"accessToken": {
+						"type": "string",
+						"description": "JWT access token"
+					},
+					"refreshToken": {
+						"type": "string",
+						"description": "JWT refresh token"
+					},
+					"expiresIn": {
+						"type": "number",
+						"description": "Token expiration time in seconds"
+					}
+				},
+				"required": ["accessToken", "refreshToken", "expiresIn"],
+				"description": "Authentication tokens response"
+			},
 			"HealthResponse": {
 				"type": "object",
 				"properties": {
@@ -457,40 +423,6 @@
 										"message": {
 											"type": "string",
 											"description": "Response message"
-										},
-										"user": {
-											"type": "object",
-											"properties": {
-												"id": {
-													"type": "string",
-													"description": "User ID"
-												},
-												"email": {
-													"type": "string",
-													"description": "User email address"
-												}
-											},
-											"required": ["id", "email"],
-											"description": "User information"
-										},
-										"tokens": {
-											"type": "object",
-											"properties": {
-												"accessToken": {
-													"type": "string",
-													"description": "JWT access token"
-												},
-												"refreshToken": {
-													"type": "string",
-													"description": "JWT refresh token"
-												},
-												"expiresIn": {
-													"type": "number",
-													"description": "Token expiration time in seconds"
-												}
-											},
-											"required": ["accessToken", "refreshToken", "expiresIn"],
-											"description": "Authentication tokens"
 										}
 									},
 									"required": ["message"]
@@ -708,21 +640,6 @@
 											"type": "string",
 											"description": "Response message"
 										},
-										"user": {
-											"type": "object",
-											"properties": {
-												"id": {
-													"type": "string",
-													"description": "User ID"
-												},
-												"email": {
-													"type": "string",
-													"description": "User email address"
-												}
-											},
-											"required": ["id", "email"],
-											"description": "User information"
-										},
 										"tokens": {
 											"type": "object",
 											"properties": {
@@ -743,7 +660,8 @@
 											"description": "Authentication tokens"
 										}
 									},
-									"required": ["message"]
+									"required": ["message", "tokens"],
+									"description": "Authentication response"
 								}
 							}
 						}
@@ -954,40 +872,6 @@
 										"message": {
 											"type": "string",
 											"description": "Response message"
-										},
-										"user": {
-											"type": "object",
-											"properties": {
-												"id": {
-													"type": "string",
-													"description": "User ID"
-												},
-												"email": {
-													"type": "string",
-													"description": "User email address"
-												}
-											},
-											"required": ["id", "email"],
-											"description": "User information"
-										},
-										"tokens": {
-											"type": "object",
-											"properties": {
-												"accessToken": {
-													"type": "string",
-													"description": "JWT access token"
-												},
-												"refreshToken": {
-													"type": "string",
-													"description": "JWT refresh token"
-												},
-												"expiresIn": {
-													"type": "number",
-													"description": "Token expiration time in seconds"
-												}
-											},
-											"required": ["accessToken", "refreshToken", "expiresIn"],
-											"description": "Authentication tokens"
 										}
 									},
 									"required": ["message"]
@@ -1197,40 +1081,6 @@
 										"message": {
 											"type": "string",
 											"description": "Response message"
-										},
-										"user": {
-											"type": "object",
-											"properties": {
-												"id": {
-													"type": "string",
-													"description": "User ID"
-												},
-												"email": {
-													"type": "string",
-													"description": "User email address"
-												}
-											},
-											"required": ["id", "email"],
-											"description": "User information"
-										},
-										"tokens": {
-											"type": "object",
-											"properties": {
-												"accessToken": {
-													"type": "string",
-													"description": "JWT access token"
-												},
-												"refreshToken": {
-													"type": "string",
-													"description": "JWT refresh token"
-												},
-												"expiresIn": {
-													"type": "number",
-													"description": "Token expiration time in seconds"
-												}
-											},
-											"required": ["accessToken", "refreshToken", "expiresIn"],
-											"description": "Authentication tokens"
 										}
 									},
 									"required": ["message"]
@@ -1440,40 +1290,6 @@
 										"message": {
 											"type": "string",
 											"description": "Response message"
-										},
-										"user": {
-											"type": "object",
-											"properties": {
-												"id": {
-													"type": "string",
-													"description": "User ID"
-												},
-												"email": {
-													"type": "string",
-													"description": "User email address"
-												}
-											},
-											"required": ["id", "email"],
-											"description": "User information"
-										},
-										"tokens": {
-											"type": "object",
-											"properties": {
-												"accessToken": {
-													"type": "string",
-													"description": "JWT access token"
-												},
-												"refreshToken": {
-													"type": "string",
-													"description": "JWT refresh token"
-												},
-												"expiresIn": {
-													"type": "number",
-													"description": "Token expiration time in seconds"
-												}
-											},
-											"required": ["accessToken", "refreshToken", "expiresIn"],
-											"description": "Authentication tokens"
 										}
 									},
 									"required": ["message"]
@@ -1703,40 +1519,6 @@
 										"message": {
 											"type": "string",
 											"description": "Response message"
-										},
-										"user": {
-											"type": "object",
-											"properties": {
-												"id": {
-													"type": "string",
-													"description": "User ID"
-												},
-												"email": {
-													"type": "string",
-													"description": "User email address"
-												}
-											},
-											"required": ["id", "email"],
-											"description": "User information"
-										},
-										"tokens": {
-											"type": "object",
-											"properties": {
-												"accessToken": {
-													"type": "string",
-													"description": "JWT access token"
-												},
-												"refreshToken": {
-													"type": "string",
-													"description": "JWT refresh token"
-												},
-												"expiresIn": {
-													"type": "number",
-													"description": "Token expiration time in seconds"
-												}
-											},
-											"required": ["accessToken", "refreshToken", "expiresIn"],
-											"description": "Authentication tokens"
 										}
 									},
 									"required": ["message"]
@@ -2009,40 +1791,6 @@
 										"message": {
 											"type": "string",
 											"description": "Response message"
-										},
-										"user": {
-											"type": "object",
-											"properties": {
-												"id": {
-													"type": "string",
-													"description": "User ID"
-												},
-												"email": {
-													"type": "string",
-													"description": "User email address"
-												}
-											},
-											"required": ["id", "email"],
-											"description": "User information"
-										},
-										"tokens": {
-											"type": "object",
-											"properties": {
-												"accessToken": {
-													"type": "string",
-													"description": "JWT access token"
-												},
-												"refreshToken": {
-													"type": "string",
-													"description": "JWT refresh token"
-												},
-												"expiresIn": {
-													"type": "number",
-													"description": "Token expiration time in seconds"
-												}
-											},
-											"required": ["accessToken", "refreshToken", "expiresIn"],
-											"description": "Authentication tokens"
 										}
 									},
 									"required": ["message"]
@@ -2227,40 +1975,6 @@
 										"message": {
 											"type": "string",
 											"description": "Response message"
-										},
-										"user": {
-											"type": "object",
-											"properties": {
-												"id": {
-													"type": "string",
-													"description": "User ID"
-												},
-												"email": {
-													"type": "string",
-													"description": "User email address"
-												}
-											},
-											"required": ["id", "email"],
-											"description": "User information"
-										},
-										"tokens": {
-											"type": "object",
-											"properties": {
-												"accessToken": {
-													"type": "string",
-													"description": "JWT access token"
-												},
-												"refreshToken": {
-													"type": "string",
-													"description": "JWT refresh token"
-												},
-												"expiresIn": {
-													"type": "number",
-													"description": "Token expiration time in seconds"
-												}
-											},
-											"required": ["accessToken", "refreshToken", "expiresIn"],
-											"description": "Authentication tokens"
 										}
 									},
 									"required": ["message"]

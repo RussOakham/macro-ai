@@ -7,8 +7,8 @@ import {
 	forgotPasswordSchema,
 	getAuthUserResponseSchema,
 	getAuthUserSchema,
+	loginRequestSchema,
 	loginResponseSchema,
-	loginSchema,
 	refreshTokenSchema,
 	registerUserSchema,
 	resendConfirmationCodeSchema,
@@ -20,7 +20,7 @@ export type TConfirmRegistration = z.infer<typeof confirmRegistrationSchema>
 export type TResendConfirmationCode = z.infer<
 	typeof resendConfirmationCodeSchema
 >
-export type TLogin = z.infer<typeof loginSchema>
+export type TLoginRequest = z.infer<typeof loginRequestSchema>
 export type TLoginResponse = z.infer<typeof loginResponseSchema>
 export type TRefreshToken = z.infer<typeof refreshTokenSchema>
 export type TForgotPassword = z.infer<typeof forgotPasswordSchema>
