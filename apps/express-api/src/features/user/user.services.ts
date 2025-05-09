@@ -4,19 +4,46 @@ import { AppError } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 import { CognitoService } from '../auth/auth.services.ts'
 
-import {
-	createUser,
-	findUserByEmail,
-	findUserById,
-	updateLastLogin,
-} from './user.data-access.ts'
+import { userRepository } from './user.data-access.ts'
 import { userIdSchema } from './user.schemas.ts'
+import { IUserRepository, TUser } from './user.types.ts'
 
 const { logger } = pino
 const cognito = new CognitoService()
 
-// TODO: Create IUserService interface
-class UserService {
+interface IUserService {
+	getUserById: ({ userId }: { userId: string }) => Promise<TUser | null>
+	getUserByEmail: ({ email }: { email: string }) => Promise<TUser | null>
+	getUserByAccessToken: ({
+		accessToken,
+	}: {
+		accessToken: string
+	}) => Promise<TUser | null>
+	registerOrLoginUserById: ({
+		id,
+		email,
+		firstName,
+		lastName,
+	}: {
+		id: string
+		email: string
+		firstName?: string
+		lastName?: string
+	}) => Promise<TUser>
+}
+
+class UserService implements IUserService {
+	private userRepository: IUserRepository
+	private cognitoService: CognitoService
+
+	constructor(
+		userRepo: IUserRepository = userRepository,
+		cognitoSvc: CognitoService = cognito,
+	) {
+		this.userRepository = userRepo
+		this.cognitoService = cognitoSvc
+	}
+
 	/**
 	 * Get user by ID from the database
 	 * @param userId The user's unique identifier
@@ -36,7 +63,7 @@ class UserService {
 				)
 			}
 
-			const user = await findUserById({ id: userId })
+			const user = await this.userRepository.findUserById({ id: userId })
 
 			if (!user) {
 				throw AppError.notFound('User not found', 'userService')
@@ -60,7 +87,7 @@ class UserService {
 	 */
 	async getUserByEmail({ email }: { email: string }) {
 		try {
-			const user = await findUserByEmail({ email })
+			const user = await this.userRepository.findUserByEmail({ email })
 
 			if (!user) {
 				throw AppError.notFound('User not found', 'userService')
@@ -86,7 +113,7 @@ class UserService {
 	async getUserByAccessToken({ accessToken }: { accessToken: string }) {
 		try {
 			// Get user ID from Cognito using access token
-			const cognitoUser = await cognito.getAuthUser(accessToken)
+			const cognitoUser = await this.cognitoService.getAuthUser(accessToken)
 
 			if (!cognitoUser.Username) {
 				throw AppError.unauthorized('Invalid access token', 'userService')
@@ -124,7 +151,7 @@ class UserService {
 		lastName?: string
 	}) {
 		try {
-			let user = await findUserById({ id })
+			let user = await this.userRepository.findUserById({ id })
 
 			if (!user) {
 				// Create new user if not found
@@ -133,7 +160,7 @@ class UserService {
 					userId: id,
 					email,
 				})
-				user = await createUser({
+				user = await this.userRepository.createUser({
 					userData: {
 						id,
 						email,
@@ -148,7 +175,7 @@ class UserService {
 					userId: id,
 					email,
 				})
-				user = await updateLastLogin({ id })
+				user = await this.userRepository.updateLastLogin({ id })
 			}
 
 			if (!user) {
@@ -171,4 +198,7 @@ class UserService {
 	}
 }
 
-export const userService = new UserService()
+// Create an instance of the UserService
+const userService = new UserService()
+
+export { UserService, userService }

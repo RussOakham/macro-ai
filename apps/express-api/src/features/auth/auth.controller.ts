@@ -13,11 +13,10 @@ import { pino } from '../../utils/logger.ts'
 import {
 	handleError,
 	handleServiceError,
-	sendSuccess,
 	validateData,
 } from '../../utils/response-handlers.ts'
 import { standardizeError } from '../../utils/standardize-error.ts'
-import { createUser, updateUser } from '../user/user.data-access.ts'
+import { userRepository } from '../user/user.data-access.ts'
 import { userService } from '../user/user.services.ts'
 import { TInsertUser } from '../user/user.types.ts'
 
@@ -41,17 +40,30 @@ const nodeEnv = config.nodeEnv
 const cookieDomain = config.cookieDomain
 const refreshTokenExpiryDays = config.awsCognitoRefreshTokenExpiry
 
-const cognito = new CognitoService()
+/**
+ * AuthController class that implements the IAuthController interface
+ * Handles all authentication related requests
+ */
+class AuthController implements IAuthController {
+	private cognito: CognitoService
+	private userService: typeof userService
 
-const authController: IAuthController = {
-	register: async (req: Request, res: Response) => {
+	constructor(
+		cognitoService: CognitoService = new CognitoService(),
+		userSvc: typeof userService = userService,
+	) {
+		this.cognito = cognitoService
+		this.userService = userSvc
+	}
+
+	public register = async (req: Request, res: Response): Promise<void> => {
 		try {
 			const { email, password, confirmPassword } =
 				req.body as TRegisterUserRequest
 
 			// TODO: Check if user already exists in database
 
-			const response = await cognito.signUpUser({
+			const response = await this.cognito.signUpUser({
 				email,
 				password,
 				confirmPassword,
@@ -88,7 +100,7 @@ const authController: IAuthController = {
 				email,
 			}
 
-			const user = await createUser({ userData })
+			const user = await userRepository.createUser({ userData })
 
 			logger.info(`[authController]: User created: ${user.id}`)
 
@@ -101,19 +113,24 @@ const authController: IAuthController = {
 				},
 			}
 
-			sendSuccess(res, authResponse, StatusCodes.CREATED)
-		} catch (error) {
-			const standardError = standardizeError(error)
-			logger.error(`[authController]: Register error: ${standardError.message}`)
-			handleError(res, standardError, 'authController')
+			res.status(StatusCodes.CREATED).json(authResponse)
+		} catch (error: unknown) {
+			const err = standardizeError(error)
+			logger.error(
+				`[authController]: Error registering user: ${err.status.toString()} ${err.message}`,
+			)
+			handleError(res, err, 'authController')
 		}
-	},
+	}
 
-	confirmRegistration: async (req: Request, res: Response): Promise<void> => {
+	public confirmRegistration = async (
+		req: Request,
+		res: Response,
+	): Promise<void> => {
 		try {
 			const { email, code } = req.body as TConfirmRegistrationRequest
 
-			const response = await cognito.confirmSignUp(email, code)
+			const response = await this.cognito.confirmSignUp(email, code)
 
 			// Check for service errors
 			const serviceResult = handleServiceError(
@@ -129,9 +146,11 @@ const authController: IAuthController = {
 			}
 
 			// get user from database
-			const user = await userService.getUserByEmail({ email })
+			const user = await this.userService.getUserByEmail({ email })
 
-			const dbUser = await updateUser(user.id, { emailVerified: true })
+			const dbUser = await userRepository.updateUser(user.id, {
+				emailVerified: true,
+			})
 			if (!dbUser) {
 				throw AppError.internal(
 					'Failed to update user email verification',
@@ -139,38 +158,39 @@ const authController: IAuthController = {
 				)
 			}
 
-			logger.info(`[authController]: User confirmed: ${email}`)
-
-			// Return success response
 			const authResponse: TAuthResponse = {
-				message: 'Account confirmed successfully',
+				message: 'Email confirmed successfully',
 			}
 
-			sendSuccess(res, authResponse, StatusCodes.OK)
+			res.status(StatusCodes.OK).json(authResponse)
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(
-				`[authController]: Error confirming user registration: ${err.message}`,
+				`[authController]: Error confirming registration: ${err.status.toString()} ${err.message}`,
 			)
-
 			handleError(res, err, 'authController')
 		}
-	},
+	}
 
-	resendConfirmationCode: async (req: Request, res: Response) => {
+	public resendConfirmationCode = async (
+		req: Request,
+		res: Response,
+	): Promise<void> => {
 		try {
 			const { email } = req.body as TResendConfirmationCodeRequest
 
-			const response = await cognito.resendConfirmationCode(email)
+			const response = await this.cognito.resendConfirmationCode(email)
 
-			if (
-				response.$metadata.httpStatusCode !== undefined &&
-				response.$metadata.httpStatusCode !== 200
-			) {
-				const error = AppError.validation(
-					`Resend confirmation failed: ${response.$metadata.httpStatusCode.toString()}`,
-				)
-				handleError(res, standardizeError(error), 'authController')
+			// Check for service errors
+			const serviceResult = handleServiceError(
+				response,
+				'Error resending confirmation code',
+				'authController',
+			)
+			if (!serviceResult.success) {
+				res
+					.status(serviceResult.error.status)
+					.json({ message: serviceResult.error.message })
 				return
 			}
 
@@ -182,17 +202,17 @@ const authController: IAuthController = {
 		} catch (error: unknown) {
 			const err = standardizeError(error)
 			logger.error(
-				`[authController]: Error resending confirmation code: ${err.message}`,
+				`[authController]: Error resending confirmation code: ${err.status.toString()} ${err.message}`,
 			)
 			handleError(res, err, 'authController')
 		}
-	},
+	}
 
-	login: async (req: Request, res: Response) => {
+	public login = async (req: Request, res: Response): Promise<void> => {
 		try {
 			const { email, password } = req.body as TLoginRequest
 
-			const response = await cognito.signInUser(email, password)
+			const response = await this.cognito.signInUser(email, password)
 
 			if (
 				response.$metadata.httpStatusCode !== undefined &&
@@ -210,7 +230,7 @@ const authController: IAuthController = {
 
 			const encryptedUsername = encrypt(response.Username)
 
-			await userService.registerOrLoginUserById({
+			await this.userService.registerOrLoginUserById({
 				id: response.Username,
 				email,
 			})
@@ -255,14 +275,14 @@ const authController: IAuthController = {
 			)
 			handleError(res, err, 'authController')
 		}
-	},
+	}
 
-	logout: async (req: Request, res: Response) => {
+	public logout = async (req: Request, res: Response): Promise<void> => {
 		try {
 			const accessToken = getAccessToken(req, false) // Optional for logout
 
 			try {
-				const response = await cognito.signOutUser(accessToken)
+				const response = await this.cognito.signOutUser(accessToken)
 
 				if (
 					response.$metadata.httpStatusCode !== undefined &&
@@ -324,16 +344,16 @@ const authController: IAuthController = {
 			)
 			handleError(res, err, 'authController')
 		}
-	},
+	}
 
-	refreshToken: async (req: Request, res: Response) => {
+	public refreshToken = async (req: Request, res: Response): Promise<void> => {
 		try {
 			const refreshToken = getRefreshToken(req)
 			const encryptedUsername = getSynchronizeToken(req)
 
 			const decryptedUsername = decrypt(encryptedUsername)
 
-			const response = await cognito.refreshToken(
+			const response = await this.cognito.refreshToken(
 				refreshToken,
 				decryptedUsername,
 			)
@@ -403,13 +423,16 @@ const authController: IAuthController = {
 			)
 			handleError(res, err, 'authController')
 		}
-	},
+	}
 
-	forgotPassword: async (req: Request, res: Response) => {
+	public forgotPassword = async (
+		req: Request,
+		res: Response,
+	): Promise<void> => {
 		try {
 			const { email } = req.body as TForgotPasswordRequest
 
-			const response = await cognito.forgotPassword(email)
+			const response = await this.cognito.forgotPassword(email)
 
 			if (
 				response.$metadata.httpStatusCode !== undefined &&
@@ -437,14 +460,17 @@ const authController: IAuthController = {
 			)
 			handleError(res, err, 'authController')
 		}
-	},
+	}
 
-	confirmForgotPassword: async (req: Request, res: Response) => {
+	public confirmForgotPassword = async (
+		req: Request,
+		res: Response,
+	): Promise<void> => {
 		try {
 			const { email, code, newPassword, confirmPassword } =
 				req.body as TConfirmForgotPasswordRequest
 
-			const response = await cognito.confirmForgotPassword(
+			const response = await this.cognito.confirmForgotPassword(
 				email,
 				code,
 				newPassword,
@@ -477,12 +503,12 @@ const authController: IAuthController = {
 			)
 			handleError(res, err, 'authController')
 		}
-	},
+	}
 
-	getAuthUser: async (req: Request, res: Response) => {
+	public getAuthUser = async (req: Request, res: Response): Promise<void> => {
 		try {
 			const accessToken = getAccessToken(req)
-			const response = await cognito.getAuthUser(accessToken)
+			const response = await this.cognito.getAuthUser(accessToken)
 
 			// Check for service errors
 			const serviceResult = handleServiceError(
@@ -566,7 +592,10 @@ const authController: IAuthController = {
 			res.status(err.status).json({ message: err.message })
 			return
 		}
-	},
-} as const
+	}
+}
+
+// Create an instance of the AuthController
+const authController = new AuthController()
 
 export { authController }
