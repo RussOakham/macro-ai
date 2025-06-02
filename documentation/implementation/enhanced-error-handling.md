@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the implementation steps for enhancing error handling across the application using our `tryCatch` utility, ensuring type safety, consistent logging, and comprehensive validation.
+This document outlines the implementation steps for enhancing error handling across the application using our `tryCatch` and `tryCatchSync` utilities, ensuring type safety, consistent logging, and comprehensive validation.
 
 ## Implementation Steps
 
@@ -25,7 +25,9 @@ This document outlines the implementation steps for enhancing error handling acr
   - [ ] Add constructor parameters for dependencies
   - [ ] Provide default implementations for backward compatibility
 
-### 2. Implement tryCatch Utility Across Codebase
+### 2. Implement tryCatch and tryCatchSync Utilities Across Codebase
+
+#### 2.1 Async Operations with tryCatch
 
 - [ ] Refactor Auth Service methods
 
@@ -56,6 +58,31 @@ This document outlines the implementation steps for enhancing error handling acr
   - [ ] Remove redundant try/catch blocks
   - [ ] Standardize response patterns
 
+#### 2.2 Synchronous Operations with tryCatchSync
+
+- [ ] Refactor configuration loading functions
+
+  - [ ] Update `loadConfig` in `utils/load-config.ts` to use `tryCatchSync`
+  - [ ] Update `parseEnvFile` in `utils/load-config.ts` to use `tryCatchSync`
+
+- [ ] Refactor crypto utility functions
+
+  - [ ] Update `encrypt` in `utils/crypto.ts` to use `tryCatchSync`
+  - [ ] Update `decrypt` in `utils/crypto.ts` to use `tryCatchSync`
+  - [ ] Update `generateHash` in `auth.services.ts` to use `tryCatchSync`
+
+- [ ] Refactor validation functions
+
+  - [ ] Update schema parsing in `validateData` in `utils/response-handlers.ts`
+  - [ ] Update schema parsing in data access layer functions
+  - [ ] Update token verification in `verifyToken` in `utils/jwt.ts`
+
+- [ ] Refactor utility functions
+
+  - [ ] Update `parseJSON` in `utils/helpers.ts` to use `tryCatchSync`
+  - [ ] Update `formatDate` in `utils/date.ts` to use `tryCatchSync`
+  - [ ] Update `generateRandomString` in `utils/helpers.ts` to use `tryCatchSync`
+
 ### 3. Implement Type-Safe Error Handling
 
 - [ ] Create domain-specific error types
@@ -65,7 +92,7 @@ This document outlines the implementation steps for enhancing error handling acr
   - [ ] Define `ValidationError` type for validation errors
   - [ ] Define `DatabaseError` type for database errors
 
-- [ ] Update `tryCatch` utility to support specific error types
+- [ ] Update `tryCatch` and `tryCatchSync` utilities to support specific error types
 
   - [ ] Add generic type parameter for error type
   - [ ] Ensure error standardization preserves type information
@@ -158,7 +185,7 @@ This document outlines the implementation steps for enhancing error handling acr
 
 ## Code Examples
 
-### Example: Refactored Auth Service Method
+### Example: Refactored Auth Service Method with tryCatch
 
 ```typescript
 // Before
@@ -256,6 +283,34 @@ public async signUpUser({
 }
 ```
 
+### Example: Using tryCatchSync for Synchronous Operations
+
+```typescript
+// Before
+public generateHash(username: string): string {
+  try {
+    const hmac = createHmac('sha256', this.clientSecret)
+    hmac.update(username + this.clientId)
+    return hmac.digest('base64')
+  } catch (error) {
+    logger.error(`[authService]: Error generating hash: ${error}`)
+    throw AppError.from(error, 'authService')
+  }
+}
+
+// After
+public generateHash(username: string): EnhancedResult<string, AuthError> {
+  return tryCatchSync(
+    () => {
+      const hmac = createHmac('sha256', this.clientSecret)
+      hmac.update(username + this.clientId)
+      return hmac.digest('base64')
+    },
+    'authService - generateHash'
+  )
+}
+```
+
 ### Example: Refactored Controller Method
 
 ```typescript
@@ -322,6 +377,28 @@ register: async (req: Request, res: Response) => {
 }
 ```
 
+## When to Use tryCatch vs tryCatchSync
+
+### Use tryCatch for
+
+- API calls and network requests
+- Database operations
+- File system operations
+- Any function that returns a Promise
+- Operations that might take time to complete
+
+### Use tryCatchSync for
+
+- Configuration parsing and validation
+- Data transformation and formatting
+- Input validation with synchronous schema validation
+- Cryptographic operations (encryption, hashing)
+- JSON parsing and serialization
+- Date formatting and parsing
+- String manipulation and validation
+- Object property access that might throw
+- Type conversions that could fail
+
 ## Testing Strategy
 
 1. **Unit Tests**
@@ -329,6 +406,7 @@ register: async (req: Request, res: Response) => {
    - Test each service method with various inputs
    - Test error handling for each possible error type
    - Test validation for both valid and invalid inputs
+   - Test both tryCatch and tryCatchSync with success and failure cases
 
 2. **Integration Tests**
 
