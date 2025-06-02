@@ -1,421 +1,743 @@
-import { Router } from 'express'
+import { type Router } from 'express'
+import { StatusCodes } from 'http-status-codes'
 
 import { verifyAuth } from '../../middleware/auth.middleware.ts'
 import { authRateLimiter } from '../../middleware/rate-limit.middleware.ts'
 import { validate } from '../../middleware/validation.middleware.ts'
+import {
+	ErrorResponseSchema,
+	registry,
+} from '../../utils/swagger/openapi-registry.ts'
 
 import { authController } from './auth.controller.ts'
 import {
-	confirmForgotPasswordSchema,
-	confirmRegistrationSchema,
-	forgotPasswordSchema,
-	loginSchema,
-	registerSchema,
-	resendConfirmationCodeSchema,
+	authResponseSchema,
+	confirmForgotPasswordRequestSchema,
+	confirmRegistrationRequestSchema,
+	forgotPasswordRequestSchema,
+	getAuthUserResponseSchema,
+	loginRequestSchema,
+	loginResponseSchema,
+	registerUserRequestSchema,
+	resendConfirmationCodeRequestSchema,
 } from './auth.schemas.ts'
 
+// Register auth routes with OpenAPI
+// Register endpoint
+registry.registerPath({
+	method: 'post',
+	path: '/auth/register',
+	tags: ['Authentication'],
+	request: {
+		body: {
+			content: {
+				'application/json': {
+					schema: registerUserRequestSchema,
+				},
+			},
+		},
+	},
+	responses: {
+		[StatusCodes.CREATED]: {
+			description: 'User registered successfully',
+			content: {
+				'application/json': {
+					schema: authResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.BAD_REQUEST]: {
+			description: 'Invalid request data',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.NOT_FOUND]: {
+			description: 'User not found',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.UNAUTHORIZED]: {
+			description: 'Unauthorized - Authentication required',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.FORBIDDEN]: {
+			description: 'Forbidden - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.CONFLICT]: {
+			description: 'Conflict - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Too many requests',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Server error',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+	},
+})
+
+// Confirm registration endpoint
+registry.registerPath({
+	method: 'post',
+	path: '/auth/confirm-registration',
+	tags: ['Authentication'],
+	request: {
+		body: {
+			content: {
+				'application/json': {
+					schema: confirmRegistrationRequestSchema,
+				},
+			},
+		},
+	},
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'User registration confirmed successfully',
+			content: {
+				'application/json': {
+					schema: authResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.BAD_REQUEST]: {
+			description: 'Invalid confirmation code',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.NOT_FOUND]: {
+			description: 'User not found',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.UNAUTHORIZED]: {
+			description: 'Unauthorized - Authentication required',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.FORBIDDEN]: {
+			description: 'Forbidden - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.CONFLICT]: {
+			description: 'Conflict - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Too many requests',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Server error',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+	},
+})
+
+// Resend confirmation code endpoint
+registry.registerPath({
+	method: 'post',
+	path: '/auth/resend-confirmation-code',
+	tags: ['Authentication'],
+	request: {
+		body: {
+			content: {
+				'application/json': {
+					schema: resendConfirmationCodeRequestSchema,
+				},
+			},
+		},
+	},
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'Confirmation code resent successfully',
+			content: {
+				'application/json': {
+					schema: authResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.BAD_REQUEST]: {
+			description: 'Invalid request data',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.NOT_FOUND]: {
+			description: 'User not found',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.UNAUTHORIZED]: {
+			description: 'Unauthorized - Authentication required',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.FORBIDDEN]: {
+			description: 'Forbidden - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.CONFLICT]: {
+			description: 'Conflict - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Too many requests',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Server error',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+	},
+})
+
+// Login endpoint
+registry.registerPath({
+	method: 'post',
+	path: '/auth/login',
+	tags: ['Authentication'],
+	request: {
+		body: {
+			content: {
+				'application/json': {
+					schema: loginRequestSchema,
+				},
+			},
+		},
+	},
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'User logged in successfully',
+			content: {
+				'application/json': {
+					schema: loginResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.BAD_REQUEST]: {
+			description: 'Invalid credentials',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.NOT_FOUND]: {
+			description: 'User not found',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.UNAUTHORIZED]: {
+			description: 'Unauthorized - Authentication required',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.FORBIDDEN]: {
+			description: 'Forbidden - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.CONFLICT]: {
+			description: 'Conflict - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Too many requests',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Server error',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+	},
+})
+
+// Forgot password endpoint
+registry.registerPath({
+	method: 'post',
+	path: '/auth/forgot-password',
+	tags: ['Authentication'],
+	request: {
+		body: {
+			content: {
+				'application/json': {
+					schema: forgotPasswordRequestSchema,
+				},
+			},
+		},
+	},
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'Password reset initiated successfully',
+			content: {
+				'application/json': {
+					schema: authResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.BAD_REQUEST]: {
+			description: 'Invalid request data',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.NOT_FOUND]: {
+			description: 'User not found',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.UNAUTHORIZED]: {
+			description: 'Unauthorized - Authentication required',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.FORBIDDEN]: {
+			description: 'Forbidden - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.CONFLICT]: {
+			description: 'Conflict - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Too many requests',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Server error',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+	},
+})
+
+// Confirm forgot password endpoint
+registry.registerPath({
+	method: 'post',
+	path: '/auth/confirm-forgot-password',
+	tags: ['Authentication'],
+	request: {
+		body: {
+			content: {
+				'application/json': {
+					schema: confirmForgotPasswordRequestSchema,
+				},
+			},
+		},
+	},
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'Password reset successfully',
+			content: {
+				'application/json': {
+					schema: authResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.BAD_REQUEST]: {
+			description: 'Invalid request data',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.NOT_FOUND]: {
+			description: 'User not found',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.UNAUTHORIZED]: {
+			description: 'Unauthorized - Authentication required',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.FORBIDDEN]: {
+			description: 'Forbidden - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.CONFLICT]: {
+			description: 'Conflict - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Too many requests',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Server error',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+	},
+})
+
+// Logout endpoint
+registry.registerPath({
+	method: 'post',
+	path: '/auth/logout',
+	tags: ['Authentication'],
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'User logged out successfully',
+			content: {
+				'application/json': {
+					schema: authResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.BAD_REQUEST]: {
+			description: 'Invalid request data',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.UNAUTHORIZED]: {
+			description: 'Unauthorized - Authentication required',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.FORBIDDEN]: {
+			description: 'Forbidden - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.CONFLICT]: {
+			description: 'Conflict - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Too many requests',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Server error',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+	},
+})
+
+// Refresh token endpoint
+registry.registerPath({
+	method: 'post',
+	path: '/auth/refresh',
+	tags: ['Authentication'],
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'Access token refreshed successfully',
+			content: {
+				'application/json': {
+					schema: loginRequestSchema,
+				},
+			},
+		},
+		[StatusCodes.BAD_REQUEST]: {
+			description: 'Invalid request data',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.UNAUTHORIZED]: {
+			description: 'Unauthorized - Authentication required',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.FORBIDDEN]: {
+			description: 'Forbidden - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.CONFLICT]: {
+			description: 'Conflict - User already confirmed',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Too many requests',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Server error',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+	},
+})
+
+// Get authenticated user endpoint
+registry.registerPath({
+	method: 'get',
+	path: '/auth/user',
+	tags: ['Authentication'],
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'User information retrieved successfully',
+			content: {
+				'application/json': {
+					schema: getAuthUserResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.UNAUTHORIZED]: {
+			description: 'Unauthorized - Authentication required',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Server error',
+			content: {
+				'application/json': {
+					schema: ErrorResponseSchema,
+				},
+			},
+		},
+	},
+})
+
 const authRouter = (router: Router) => {
-	/**
-	 * @swagger
-	 * /auth/register:
-	 *   post:
-	 *     summary: Register a new user
-	 *     description: Creates a new user account in Cognito and the application database
-	 *     tags: [Authentication]
-	 *     requestBody:
-	 *       required: true
-	 *       content:
-	 *         application/json:
-	 *           schema:
-	 *             $ref: '#/components/schemas/RegisterRequest'
-	 *     responses:
-	 *       201:
-	 *         description: User registered successfully
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/AuthResponse'
-	 *       400:
-	 *         description: Invalid input or user already exists
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 *       500:
-	 *         description: Internal server error
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 */
+	// Register
 	router.post(
 		'/auth/register',
-		validate(registerSchema),
+		authRateLimiter,
+		validate(registerUserRequestSchema),
 		authController.register,
 	)
 
-	/**
-	 * @swagger
-	 * /auth/login:
-	 *   post:
-	 *     summary: Login user
-	 *     description: Authenticates a user and returns tokens as cookies and in response body
-	 *     tags: [Authentication]
-	 *     requestBody:
-	 *       required: true
-	 *       content:
-	 *         application/json:
-	 *           schema:
-	 *             $ref: '#/components/schemas/LoginRequest'
-	 *     responses:
-	 *       200:
-	 *         description: Login successful
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               type: object
-	 *               properties:
-	 *                 message:
-	 *                   type: string
-	 *                   example: Login successful
-	 *                 tokens:
-	 *                   $ref: '#/components/schemas/TokenResponse'
-	 *                 user:
-	 *                   $ref: '#/components/schemas/UserProfile'
-	 *         headers:
-	 *           Set-Cookie:
-	 *             schema:
-	 *               type: string
-	 *               description: Authentication cookies (accessToken, refreshToken)
-	 *       400:
-	 *         description: Invalid credentials
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 *       500:
-	 *         description: Internal server error
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 */
-	router.post(
-		'/auth/login',
-		authRateLimiter,
-		validate(loginSchema),
-		authController.login,
-	)
-
-	/**
-	 * @swagger
-	 * /auth/refresh:
-	 *   post:
-	 *     summary: Refresh access token
-	 *     description: Uses a refresh token to obtain a new access token
-	 *     tags: [Authentication]
-	 *     responses:
-	 *       200:
-	 *         description: Token refreshed successfully
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               type: object
-	 *               properties:
-	 *                 message:
-	 *                   type: string
-	 *                   example: Token refreshed successfully
-	 *                 tokens:
-	 *                   $ref: '#/components/schemas/TokenResponse'
-	 *         headers:
-	 *           Set-Cookie:
-	 *             schema:
-	 *               type: string
-	 *               description: Updated authentication cookies
-	 *       401:
-	 *         description: Invalid or expired refresh token
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 *       500:
-	 *         description: Internal server error
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 */
-	router.post('/auth/refresh', authController.refreshToken)
-
-	/**
-	 * @swagger
-	 * /auth/logout:
-	 *   post:
-	 *     summary: Logout user
-	 *     description: Invalidates the user's tokens and clears authentication cookies
-	 *     tags: [Authentication]
-	 *     security:
-	 *       - cookieAuth: []
-	 *     responses:
-	 *       200:
-	 *         description: Logout successful
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               type: object
-	 *               properties:
-	 *                 message:
-	 *                   type: string
-	 *                   example: Logout successful
-	 *         headers:
-	 *           Set-Cookie:
-	 *             schema:
-	 *               type: string
-	 *               description: Cleared authentication cookies
-	 *       401:
-	 *         description: Unauthorized - No valid session
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 *       500:
-	 *         description: Internal server error
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 */
-	router.post('/auth/logout', authController.logout)
-
-	/**
-	 * @swagger
-	 * /auth/confirm-registration:
-	 *   post:
-	 *     tags: [Authorization]
-	 *     summary: Confirm user registration with verification code
-	 *     requestBody:
-	 *       required: true
-	 *       content:
-	 *         application/json:
-	 *           schema:
-	 *             $ref: '#/components/schemas/ConfirmRegistration'
-	 *     responses:
-	 *       200:
-	 *         description: Registration confirmed successfully
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/AuthResponse'
-	 *       400:
-	 *         description: Invalid verification code
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 *       404:
-	 *         description: User not found
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 *       500:
-	 *         description: Internal server error
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 */
+	// Confirm registration
 	router.post(
 		'/auth/confirm-registration',
-		validate(confirmRegistrationSchema),
+		authRateLimiter,
+		validate(confirmRegistrationRequestSchema),
 		authController.confirmRegistration,
 	)
 
-	/**
-	 * @swagger
-	 * /auth/resend-confirmation-code:
-	 *   post:
-	 *     tags: [Authorization]
-	 *     summary: Resend confirmation code
-	 *     requestBody:
-	 *       required: true
-	 *       content:
-	 *         application/json:
-	 *           schema:
-	 *             $ref: '#/components/schemas/ResendConfirmationCode'
-	 *     responses:
-	 *       200:
-	 *         description: Confirmation code resent successfully
-	 *       400:
-	 *         description: Bad request
-	 *       500:
-	 *         description: Internal server error
-	 */
+	// Resend confirmation code
 	router.post(
 		'/auth/resend-confirmation-code',
-		validate(resendConfirmationCodeSchema),
+		authRateLimiter,
+		validate(resendConfirmationCodeRequestSchema),
 		authController.resendConfirmationCode,
 	)
 
-	/**
-	 * @swagger
-	 * /auth/user:
-	 *   get:
-	 *     tags: [Authorization]
-	 *     summary: Get user profile
-	 *     description: Retrieves the authenticated user's profile information
-	 *     security:
-	 *       - cookieAuth: []
-	 *     responses:
-	 *       200:
-	 *         description: User profile retrieved successfully
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/GetAuthUserResponse'
-	 *       401:
-	 *         description: Unauthorized - Authentication required
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               oneOf:
-	 *                 - type: object
-	 *                   properties:
-	 *                     message:
-	 *                       type: string
-	 *                       example: "Authentication required"
-	 *                 - type: object
-	 *                   properties:
-	 *                     message:
-	 *                       type: string
-	 *                       example: "Authentication token expired"
-	 *                     code:
-	 *                       type: string
-	 *                       example: "TOKEN_EXPIRED"
-	 *       404:
-	 *         description: User not found
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 *       500:
-	 *         description: Internal server error
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               $ref: '#/components/schemas/ErrorResponse'
-	 */
-	router.get('/auth/user', verifyAuth, authController.getAuthUser)
+	// Login
+	router.post(
+		'/auth/login',
+		authRateLimiter,
+		validate(loginRequestSchema),
+		authController.login,
+	)
 
-	/**
-	 * @swagger
-	 * /auth/forgot-password:
-	 *   post:
-	 *     tags: [Authorization]
-	 *     summary: Request password reset
-	 *     description: Sends a password reset code to the user's email
-	 *     requestBody:
-	 *       required: true
-	 *       content:
-	 *         application/json:
-	 *           schema:
-	 *             type: object
-	 *             properties:
-	 *               email:
-	 *                 type: string
-	 *                 format: email
-	 *                 description: User's email address
-	 *                 example: "user@example.com"
-	 *             required:
-	 *               - email
-	 *     responses:
-	 *       200:
-	 *         description: Password reset code sent successfully
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               type: object
-	 *               required:
-	 *                 - message
-	 *               properties:
-	 *                 message:
-	 *                   type: string
-	 *                   example: "Password reset code has been sent to your email"
-	 *       400:
-	 *         $ref: '#/components/responses/BadRequest'
-	 *       404:
-	 *         $ref: '#/components/responses/NotFound'
-	 *       500:
-	 *         $ref: '#/components/responses/ServerError'
-	 */
+	// Forgot password
 	router.post(
 		'/auth/forgot-password',
 		authRateLimiter,
-		validate(forgotPasswordSchema),
+		validate(forgotPasswordRequestSchema),
 		authController.forgotPassword,
 	)
 
-	/**
-	 * @swagger
-	 * /auth/confirm-forgot-password:
-	 *   post:
-	 *     tags: [Authorization]
-	 *     summary: Confirm password reset
-	 *     description: Resets the user's password using the confirmation code
-	 *     requestBody:
-	 *       required: true
-	 *       content:
-	 *         application/json:
-	 *           schema:
-	 *             type: object
-	 *             properties:
-	 *               email:
-	 *                 type: string
-	 *                 format: email
-	 *                 description: User's email address
-	 *                 example: "user@example.com"
-	 *               code:
-	 *                 type: string
-	 *                 description: Password reset confirmation code
-	 *                 example: "123456"
-	 *               newPassword:
-	 *                 type: string
-	 *                 description: New password
-	 *                 example: "NewSecurePassword123!"
-	 *               confirmPassword:
-	 *                 type: string
-	 *                 description: Confirm new password
-	 *                 example: "NewSecurePassword123!"
-	 *             required:
-	 *               - email
-	 *               - code
-	 *               - newPassword
-	 *               - confirmPassword
-	 *     responses:
-	 *       200:
-	 *         description: Password reset successful
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               type: object
-	 *               required:
-	 *                 - message
-	 *               properties:
-	 *                 message:
-	 *                   type: string
-	 *                   example: "Password reset successfully"
-	 *       400:
-	 *         $ref: '#/components/responses/BadRequest'
-	 *       404:
-	 *         $ref: '#/components/responses/NotFound'
-	 *       500:
-	 *         $ref: '#/components/responses/ServerError'
-	 */
+	// Confirm forgot password
 	router.post(
 		'/auth/confirm-forgot-password',
-		validate(confirmForgotPasswordSchema),
+		authRateLimiter,
 		authController.confirmForgotPassword,
 	)
+
+	// The following routes don't need the strict auth rate limiter
+	// as they're already protected by authentication
+
+	// Logout
+	router.post('/auth/logout', verifyAuth, authController.logout)
+
+	// Refresh token
+	router.post('/auth/refresh', authController.refreshToken)
+
+	// Get authenticated user
+	router.get('/auth/user', verifyAuth, authController.getAuthUser)
 }
 
 export { authRouter }

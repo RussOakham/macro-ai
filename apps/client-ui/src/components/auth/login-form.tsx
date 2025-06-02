@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { schemas } from '@repo/macro-ai-api-client'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
@@ -11,7 +10,10 @@ import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
 import { usePostLoginMutation } from '@/services/hooks/auth/usePostLoginMutation'
-import { TLogin } from '@/services/network/auth/postLogin'
+import {
+	loginSchemaClient,
+	TLoginRequest,
+} from '@/services/network/auth/postLogin'
 
 import {
 	Form,
@@ -30,15 +32,15 @@ const LoginForm = ({
 	const { mutateAsync: postLoginMutation } = usePostLoginMutation()
 	const navigate = useNavigate({ from: '/auth/login' })
 
-	const form = useForm<TLogin>({
-		resolver: zodResolver(schemas.LoginRequest),
+	const form = useForm<TLoginRequest>({
+		resolver: zodResolver(loginSchemaClient),
 		defaultValues: {
 			email: '',
 			password: '',
 		},
 	})
 
-	const onSubmit = async ({ email, password }: TLogin) => {
+	const onSubmit = async ({ email, password }: TLoginRequest) => {
 		try {
 			setIsPending(true)
 

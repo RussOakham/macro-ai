@@ -1,50 +1,66 @@
 import { type Router } from 'express'
+import { StatusCodes } from 'http-status-codes'
 
+import { apiRateLimiter } from '../../middleware/rate-limit.middleware.ts'
 import { pino } from '../../utils/logger.ts'
+import { registry } from '../../utils/swagger/openapi-registry.ts'
+
+import { healthErrorSchema, healthResponseSchema } from './utility.schemas.ts'
+import { THealthErrorResponse, THealthResponse } from './utility.types.ts'
 
 const { logger } = pino
 
+// Register the health endpoint with OpenAPI
+registry.registerPath({
+	method: 'get',
+	path: '/health',
+	tags: ['Utility'],
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'Health check successful',
+			content: {
+				'application/json': {
+					schema: healthResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Too many requests - rate limit exceeded',
+			content: {
+				'application/json': {
+					schema: healthErrorSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Health check failed',
+			content: {
+				'application/json': {
+					schema: healthErrorSchema,
+				},
+			},
+		},
+	},
+})
+
 const utilityRouter = (router: Router) => {
-	/**
-	 * @swagger
-	 * tags:
-	 *   name: Utility
-	 *   description: System utility endpoints
-	 * /health:
-	 *   get:
-	 *     tags: [Utility]
-	 *     summary: Check API health status
-	 *     description: Returns the current health status of the API
-	 *     responses:
-	 *       200:
-	 *         description: API is healthy
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               type: object
-	 *               properties:
-	 *                 message:
-	 *                   type: string
-	 *                   example: "Api Health Status: OK"
-	 *       500:
-	 *         description: API is unhealthy
-	 *         content:
-	 *           application/json:
-	 *             schema:
-	 *               type: object
-	 *               properties:
-	 *                 message:
-	 *                   type: string
-	 *                   example: "Api Status: Error"
-	 */
-	router.get('/health', (req, res) => {
+	router.get('/health', apiRateLimiter, (req, res) => {
 		try {
-			res.status(200).json({ message: 'Api Health Status: OK' })
+			const healthResponse: THealthResponse = {
+				message: 'Api Health Status: OK',
+			}
+
+			res.status(200).json(healthResponse)
 		} catch (error: unknown) {
 			logger.error(
 				`[utility-routes]: Error checking health status: ${(error as Error).message}`,
 			)
-			res.status(500).json({ message: 'Api Status: Error' })
+
+			const healthErrorResponse: THealthErrorResponse = {
+				message: 'Api Status: Error',
+			}
+
+			res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(healthErrorResponse)
 		}
 	})
 }

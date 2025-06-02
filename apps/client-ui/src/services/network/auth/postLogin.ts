@@ -2,10 +2,16 @@ import { schemas } from '@repo/macro-ai-api-client'
 import { z } from 'zod'
 
 import { apiClient } from '@/lib/api'
+import { emailValidation, passwordValidation } from '@/lib/validation/inputs'
 
-type TLogin = z.infer<typeof schemas.LoginRequest>
+const loginSchemaClient = schemas.postAuthlogin_Body.extend({
+	email: emailValidation(),
+	password: passwordValidation(),
+})
 
-const postLogin = async ({ email, password }: TLogin) => {
+type TLoginRequest = z.infer<typeof loginSchemaClient>
+
+const postLogin = async ({ email, password }: TLoginRequest) => {
 	const response = await apiClient.post('/auth/login', {
 		email,
 		password,
@@ -14,4 +20,4 @@ const postLogin = async ({ email, password }: TLogin) => {
 	return response
 }
 
-export { postLogin, type TLogin }
+export { loginSchemaClient, postLogin, type TLoginRequest }

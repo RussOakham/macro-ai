@@ -1,15 +1,40 @@
 import express from 'express'
 import { z } from 'zod'
 
-import { insertUserSchema, selectUserSchema } from './user.schema.ts'
+import {
+	insertUserSchema,
+	messageBaseSchema,
+	selectUserSchema,
+	userResponseSchema,
+} from './user.schemas.ts'
 
 interface IUserController {
-	getUserById: express.Handler
 	getCurrentUser: express.Handler
+	getUserById: express.Handler
+}
+
+interface IUserRepository {
+	findUserByEmail: ({ email }: { email: string }) => Promise<TUser | undefined>
+	findUserById: ({ id }: { id: string }) => Promise<TUser | undefined>
+	createUser: ({ userData }: { userData: TInsertUser }) => Promise<TUser>
+	updateLastLogin: ({ id }: { id: string }) => Promise<TUser | undefined>
+	updateUser: (
+		id: string,
+		userData: Partial<TInsertUser>,
+	) => Promise<TUser | undefined>
 }
 
 // Define types using Zod schemas
-type InsertUser = z.infer<typeof insertUserSchema>
-type User = z.infer<typeof selectUserSchema>
+type TInsertUser = z.infer<typeof insertUserSchema>
+type TUser = z.infer<typeof selectUserSchema>
+type TUserResponse = z.infer<typeof userResponseSchema>
+type TMessageBase = z.infer<typeof messageBaseSchema>
 
-export type { InsertUser, IUserController, User }
+export type {
+	IUserController,
+	IUserRepository,
+	TInsertUser,
+	TMessageBase,
+	TUser,
+	TUserResponse,
+}

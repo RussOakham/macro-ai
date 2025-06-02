@@ -1,23 +1,22 @@
-import { schemas } from '@repo/macro-ai-api-client'
 import { useQuery } from '@tanstack/react-query'
-import { z } from 'zod'
+import Cookies from 'js-cookie'
 
 import { QUERY_KEY } from '@/constants/query-keys'
 
 import { getAuthUser } from '../../network/auth/getAuthUser'
 
-type TGetAuthUserResponse = z.infer<typeof schemas.GetAuthUserResponse>
-
 const useIsAuthenticated = () => {
+	const accessToken = Cookies.get('macro-ai-accessToken')
+
 	const {
 		data: user,
 		isFetching,
 		isSuccess,
 		isError,
-	} = useQuery<TGetAuthUserResponse>({
+	} = useQuery({
 		queryKey: [QUERY_KEY.authUser],
 		queryFn: async () => getAuthUser(),
-		enabled: false,
+		enabled: !!accessToken,
 		staleTime: Infinity,
 		gcTime: Infinity,
 	})

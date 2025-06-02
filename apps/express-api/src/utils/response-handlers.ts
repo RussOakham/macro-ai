@@ -2,7 +2,7 @@ import { Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import { pino } from './logger.ts'
-import { IStandardizedError } from './standardize-error.ts'
+import { ErrorType, IStandardizedError } from './standardize-error.ts'
 
 const { logger } = pino
 
@@ -76,25 +76,22 @@ export const handleError = (
 	)
 
 	// Handle specific error cases
-	if (err.type === 'UnauthorizedError' || err.status === 401) {
-		return res.status(StatusCodes.UNAUTHORIZED).json({
-			message: 'Authentication required',
-			details: err.details,
-		})
-	}
-
-	if (err.type === 'ForbiddenError' || err.status === 403) {
-		return res.status(StatusCodes.FORBIDDEN).json({
-			message: 'Access denied',
-			details: err.details,
-		})
-	}
-
-	if (err.type === 'NotFoundError' || err.status === 404) {
-		return res.status(StatusCodes.NOT_FOUND).json({
-			message: err.message || 'Resource not found',
-			details: err.details,
-		})
+	switch (err.type) {
+		case ErrorType.UnauthorizedError:
+			return res.status(StatusCodes.UNAUTHORIZED).json({
+				message: 'Authentication required',
+				details: err.details,
+			})
+		case ErrorType.ForbiddenError:
+			return res.status(StatusCodes.FORBIDDEN).json({
+				message: 'Access denied',
+				details: err.details,
+			})
+		case ErrorType.NotFoundError:
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: err.message || 'Resource not found',
+				details: err.details,
+			})
 	}
 
 	return res

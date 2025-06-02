@@ -17,6 +17,9 @@ import { Route as IndexImport } from './routes/index'
 
 // Create Virtual Routes
 
+const AuthResendConfirmationCodeLazyImport = createFileRoute(
+	'/auth/resend-confirmation-code',
+)()
 const AuthRegisterLazyImport = createFileRoute('/auth/register')()
 const AuthLoginLazyImport = createFileRoute('/auth/login')()
 const AuthConfirmRegistrationLazyImport = createFileRoute(
@@ -36,6 +39,15 @@ const IndexRoute = IndexImport.update({
 	path: '/',
 	getParentRoute: () => rootRoute,
 } as any)
+
+const AuthResendConfirmationCodeLazyRoute =
+	AuthResendConfirmationCodeLazyImport.update({
+		id: '/auth/resend-confirmation-code',
+		path: '/auth/resend-confirmation-code',
+		getParentRoute: () => rootRoute,
+	} as any).lazy(() =>
+		import('./routes/auth/resend-confirmation-code.lazy').then((d) => d.Route),
+	)
 
 const AuthRegisterLazyRoute = AuthRegisterLazyImport.update({
 	id: '/auth/register',
@@ -108,6 +120,13 @@ declare module '@tanstack/react-router' {
 			preLoaderRoute: typeof AuthRegisterLazyImport
 			parentRoute: typeof rootRoute
 		}
+		'/auth/resend-confirmation-code': {
+			id: '/auth/resend-confirmation-code'
+			path: '/auth/resend-confirmation-code'
+			fullPath: '/auth/resend-confirmation-code'
+			preLoaderRoute: typeof AuthResendConfirmationCodeLazyImport
+			parentRoute: typeof rootRoute
+		}
 		'/auth/forgotten-password/verify': {
 			id: '/auth/forgotten-password/verify'
 			path: '/auth/forgotten-password/verify'
@@ -132,6 +151,7 @@ export interface FileRoutesByFullPath {
 	'/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
 	'/auth/login': typeof AuthLoginLazyRoute
 	'/auth/register': typeof AuthRegisterLazyRoute
+	'/auth/resend-confirmation-code': typeof AuthResendConfirmationCodeLazyRoute
 	'/auth/forgotten-password/verify': typeof AuthForgottenPasswordVerifyLazyRoute
 	'/auth/forgotten-password': typeof AuthForgottenPasswordIndexLazyRoute
 }
@@ -141,6 +161,7 @@ export interface FileRoutesByTo {
 	'/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
 	'/auth/login': typeof AuthLoginLazyRoute
 	'/auth/register': typeof AuthRegisterLazyRoute
+	'/auth/resend-confirmation-code': typeof AuthResendConfirmationCodeLazyRoute
 	'/auth/forgotten-password/verify': typeof AuthForgottenPasswordVerifyLazyRoute
 	'/auth/forgotten-password': typeof AuthForgottenPasswordIndexLazyRoute
 }
@@ -151,6 +172,7 @@ export interface FileRoutesById {
 	'/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
 	'/auth/login': typeof AuthLoginLazyRoute
 	'/auth/register': typeof AuthRegisterLazyRoute
+	'/auth/resend-confirmation-code': typeof AuthResendConfirmationCodeLazyRoute
 	'/auth/forgotten-password/verify': typeof AuthForgottenPasswordVerifyLazyRoute
 	'/auth/forgotten-password/': typeof AuthForgottenPasswordIndexLazyRoute
 }
@@ -162,6 +184,7 @@ export interface FileRouteTypes {
 		| '/auth/confirm-registration'
 		| '/auth/login'
 		| '/auth/register'
+		| '/auth/resend-confirmation-code'
 		| '/auth/forgotten-password/verify'
 		| '/auth/forgotten-password'
 	fileRoutesByTo: FileRoutesByTo
@@ -170,6 +193,7 @@ export interface FileRouteTypes {
 		| '/auth/confirm-registration'
 		| '/auth/login'
 		| '/auth/register'
+		| '/auth/resend-confirmation-code'
 		| '/auth/forgotten-password/verify'
 		| '/auth/forgotten-password'
 	id:
@@ -178,6 +202,7 @@ export interface FileRouteTypes {
 		| '/auth/confirm-registration'
 		| '/auth/login'
 		| '/auth/register'
+		| '/auth/resend-confirmation-code'
 		| '/auth/forgotten-password/verify'
 		| '/auth/forgotten-password/'
 	fileRoutesById: FileRoutesById
@@ -188,6 +213,7 @@ export interface RootRouteChildren {
 	AuthConfirmRegistrationLazyRoute: typeof AuthConfirmRegistrationLazyRoute
 	AuthLoginLazyRoute: typeof AuthLoginLazyRoute
 	AuthRegisterLazyRoute: typeof AuthRegisterLazyRoute
+	AuthResendConfirmationCodeLazyRoute: typeof AuthResendConfirmationCodeLazyRoute
 	AuthForgottenPasswordVerifyLazyRoute: typeof AuthForgottenPasswordVerifyLazyRoute
 	AuthForgottenPasswordIndexLazyRoute: typeof AuthForgottenPasswordIndexLazyRoute
 }
@@ -197,6 +223,7 @@ const rootRouteChildren: RootRouteChildren = {
 	AuthConfirmRegistrationLazyRoute: AuthConfirmRegistrationLazyRoute,
 	AuthLoginLazyRoute: AuthLoginLazyRoute,
 	AuthRegisterLazyRoute: AuthRegisterLazyRoute,
+	AuthResendConfirmationCodeLazyRoute: AuthResendConfirmationCodeLazyRoute,
 	AuthForgottenPasswordVerifyLazyRoute: AuthForgottenPasswordVerifyLazyRoute,
 	AuthForgottenPasswordIndexLazyRoute: AuthForgottenPasswordIndexLazyRoute,
 }
@@ -215,6 +242,7 @@ export const routeTree = rootRoute
         "/auth/confirm-registration",
         "/auth/login",
         "/auth/register",
+        "/auth/resend-confirmation-code",
         "/auth/forgotten-password/verify",
         "/auth/forgotten-password/"
       ]
@@ -230,6 +258,9 @@ export const routeTree = rootRoute
     },
     "/auth/register": {
       "filePath": "auth/register.lazy.tsx"
+    },
+    "/auth/resend-confirmation-code": {
+      "filePath": "auth/resend-confirmation-code.lazy.tsx"
     },
     "/auth/forgotten-password/verify": {
       "filePath": "auth/forgotten-password/verify.lazy.tsx"

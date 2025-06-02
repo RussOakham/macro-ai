@@ -176,31 +176,3 @@ export class AppError extends Error {
 		})
 	}
 }
-
-// Re-export standardizeError with AppError support
-export const standardizeError = (err: unknown): IStandardizedError => {
-	if (err instanceof AppError) {
-		return {
-			type: err.type,
-			name: err.name,
-			status: err.status,
-			message: err.message,
-			stack: err.stack ?? '',
-			details: err.details,
-			service: err.service,
-		}
-	}
-
-	const standardError = standardizeError(err)
-	return standardError
-}
-
-export interface IStandardizedError extends Error {
-	type: string
-	name: string
-	status: number
-	message: string
-	stack: string
-	details?: unknown
-	service: string
-}
