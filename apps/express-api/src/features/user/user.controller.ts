@@ -78,6 +78,17 @@ class UserController implements IUserController {
 			}
 		}
 
+		if (!user) {
+			logger.error({
+				msg: '[userController - getCurrentUser]: No user found',
+				userId: req.userId,
+			})
+			res.status(StatusCodes.NOT_FOUND).json({
+				message: 'User not found',
+			})
+			return
+		}
+
 		const userResponse: TUserResponse = {
 			user: {
 				id: user.id,
@@ -155,6 +166,17 @@ class UserController implements IUserController {
 					return
 				}
 			}
+		}
+
+		if (!user) {
+			logger.error({
+				msg: '[userController - getUserById]: No user found',
+				userId,
+			})
+			res.status(StatusCodes.NOT_FOUND).json({
+				message: 'User not found',
+			})
+			return
 		}
 
 		const userResponse: TUserResponse = {

@@ -1,5 +1,5 @@
 import { Response } from 'express'
-import { StatusCodes } from 'http-status-codes'
+import { ReasonPhrases, StatusCodes } from 'http-status-codes'
 
 import { ErrorType, IStandardizedError } from './errors.ts'
 import { pino } from './logger.ts'
@@ -80,23 +80,52 @@ export const handleError = (
 		case ErrorType.UnauthorizedError:
 			return res.status(StatusCodes.UNAUTHORIZED).json({
 				message: 'Authentication required',
-				details: err.details,
 			})
 		case ErrorType.ForbiddenError:
 			return res.status(StatusCodes.FORBIDDEN).json({
 				message: 'Access denied',
-				details: err.details,
 			})
 		case ErrorType.NotFoundError:
 			return res.status(StatusCodes.NOT_FOUND).json({
 				message: err.message || 'Resource not found',
-				details: err.details,
+			})
+		case ErrorType.ValidationError:
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: err.message,
+			})
+		case ErrorType.ConflictError:
+			return res.status(StatusCodes.CONFLICT).json({
+				message: err.message,
+			})
+		case ErrorType.InternalError:
+			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+				message: err.message,
+			})
+		case ErrorType.ApiError:
+			return res.status(err.status).json({
+				message: err.message,
+			})
+		case ErrorType.AxiosError:
+			return res.status(err.status).json({
+				message: err.message || 'External API error',
+			})
+		case ErrorType.CognitoError:
+			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+				message: 'A Cognito error occurred',
+			})
+		case ErrorType.ZodError:
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: ReasonPhrases.BAD_REQUEST,
+			})
+		case ErrorType.ZodValidationError:
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: ReasonPhrases.BAD_REQUEST,
+			})
+		default:
+			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+				message: 'An unknown error occurred',
 			})
 	}
-
-	return res
-		.status(err.status)
-		.json({ message: err.message, details: err.details })
 }
 
 type TValidationResult =
@@ -114,8 +143,8 @@ type TValidationResult =
 export const validateData = (
 	condition: boolean,
 	errorMessage: string,
-	status: number = StatusCodes.BAD_REQUEST,
 	logContext: string,
+	status: number = StatusCodes.BAD_REQUEST,
 ): TValidationResult => {
 	if (!condition) {
 		logger.error(`[${logContext}]: ${errorMessage}`)

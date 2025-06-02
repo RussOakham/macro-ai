@@ -8,7 +8,7 @@ import {
 	getSynchronizeToken,
 } from '../../utils/cookies.ts'
 import { decrypt, encrypt } from '../../utils/crypto.ts'
-import { tryCatch } from '../../utils/error-handling/try-catch.ts'
+import { tryCatch, tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import { AppError, standardizeError } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 import {
@@ -290,7 +290,14 @@ class AuthController implements IAuthController {
 			return
 		}
 
-		const encryptedUsername = encrypt(signInResponse.Username)
+		const { data: encryptedUsername, error: encryptError } = tryCatchSync(() =>
+			encrypt(signInResponse.Username),
+		)
+
+		if (encryptError) {
+			handleError(res, encryptError, 'authController')
+			return
+		}
 
 		// Register or login user in database
 		const { data: user, error: userError } = await tryCatch(
@@ -344,7 +351,16 @@ class AuthController implements IAuthController {
 	}
 
 	public logout = async (req: Request, res: Response): Promise<void> => {
-		const accessToken = getAccessToken(req, false) // Optional for logout
+		// Extract access token from cookies
+		const { data: accessToken, error: accessTokenError } = tryCatchSync(
+			() => getAccessToken(req),
+			'authController - logout',
+		)
+
+		if (accessTokenError) {
+			handleError(res, accessTokenError, 'authController')
+			return
+		}
 
 		// Logout user with Cognito
 		const { data: signOutResponse, error: signOutError } = await tryCatch(
@@ -580,8 +596,8 @@ class AuthController implements IAuthController {
 		const usernameValidation = validateData(
 			!!getAuthUserResponse.Username,
 			'User not found',
-			StatusCodes.NOT_FOUND,
 			'authController',
+			StatusCodes.NOT_FOUND,
 		)
 		if (!usernameValidation.valid) {
 			res
@@ -615,8 +631,8 @@ class AuthController implements IAuthController {
 		const emailValidation = validateData(
 			!!email,
 			'User profile incomplete',
-			StatusCodes.PARTIAL_CONTENT,
 			'authController',
+			StatusCodes.PARTIAL_CONTENT,
 		)
 		if (!emailValidation.valid) {
 			res
