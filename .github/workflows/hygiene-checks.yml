@@ -18,7 +18,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  setup-env:
+    uses: ./.github/workflows/setup-env.yml
+    with:
+      environment: test
+    # You can pass secrets here if needed
+    # secrets:
+    #   API_KEY: ${{ secrets.API_KEY }}
+
   build:
+    needs: setup-env
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -36,15 +45,25 @@ jobs:
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      
-      # Use the composite action to set up environment
-      - name: Setup Environment
-        uses: ./.github/actions/setup-env
-      
+
+      # Download environment files
+      - name: Download Express API env file
+        uses: actions/download-artifact@v4
+        with:
+          name: express-api-env
+          path: apps/express-api/
+
+      - name: Download Client UI env file
+        uses: actions/download-artifact@v4
+        with:
+          name: client-ui-env
+          path: apps/client-ui/
+
       - name: Run build
         run: pnpm build
 
   lint:
+    needs: setup-env
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -62,17 +81,27 @@ jobs:
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      
-      # Use the composite action to set up environment
-      - name: Setup Environment
-        uses: ./.github/actions/setup-env
-      
+
+      # Download environment files
+      - name: Download Express API env file
+        uses: actions/download-artifact@v4
+        with:
+          name: express-api-env
+          path: apps/express-api/
+
+      - name: Download Client UI env file
+        uses: actions/download-artifact@v4
+        with:
+          name: client-ui-env
+          path: apps/client-ui/
+
       - name: Build types package
         run: pnpm --filter macro-ai-api-client... build
       - name: Run lint
         run: pnpm lint
 
   test:
+    needs: setup-env
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -90,11 +119,19 @@ jobs:
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      
-      # Use the composite action to set up environment
-      - name: Setup Environment
-        uses: ./.github/actions/setup-env
-      
+
+      # Download environment files
+      - name: Download Express API env file
+        uses: actions/download-artifact@v4
+        with:
+          name: express-api-env
+          path: apps/express-api/
+
+      - name: Download Client UI env file
+        uses: actions/download-artifact@v4
+        with:
+          name: client-ui-env
+          path: apps/client-ui/
+
       - name: Run test
         run: pnpm test
-
