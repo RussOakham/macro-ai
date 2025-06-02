@@ -18,16 +18,67 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  setup-env:
-    uses: ./.github/workflows/setup-env.yml
-    with:
-      environment: test
-    # You can pass secrets here if needed
-    # secrets:
-    #   API_KEY: ${{ secrets.API_KEY }}
+  setup:
+    name: Setup Environment
+    runs-on: ubuntu-latest
+    outputs:
+      express_env: ${{ steps.create_express_env.outputs.env_content }}
+      client_env: ${{ steps.create_client_env.outputs.env_content }}
+    steps:
+      - name: Create Express API .env content
+        id: create_express_env
+        run: |
+          ENV_CONTENT=$(cat << EOF
+          # API Configuration
+          API_KEY=${{ secrets.API_KEY }}
+          SERVER_PORT=${{ secrets.SERVER_PORT || '3030' }}
+          NODE_ENV=test
+
+          # AWS Cognito Configuration
+          AWS_COGNITO_REGION=${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
+          AWS_COGNITO_USER_POOL_ID=${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
+          AWS_COGNITO_USER_POOL_CLIENT_ID=${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
+          AWS_COGNITO_USER_POOL_SECRET_KEY=${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
+          AWS_COGNITO_ACCESS_KEY=${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
+          AWS_COGNITO_SECRET_KEY=${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
+
+          # Cookie Configuration
+          COOKIE_DOMAIN=${{ secrets.COOKIE_DOMAIN || 'localhost' }}
+          COOKIE_ENCRYPTION_KEY=${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+
+          # Databases
+          NON_RELATIONAL_DATABASE_URL=${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          RELATIONAL_DATABASE_URL=${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS=${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
+          RATE_LIMIT_MAX_REQUESTS=${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
+          AUTH_RATE_LIMIT_WINDOW_MS=${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS=${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
+          API_RATE_LIMIT_WINDOW_MS=${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
+          API_RATE_LIMIT_MAX_REQUESTS=${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+          REDIS_URL=${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
+          EOF
+          )
+          echo "env_content<<EOF" >> $GITHUB_OUTPUT
+          echo "$ENV_CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Client UI .env content
+        id: create_client_env
+        run: |
+          ENV_CONTENT=$(cat << EOF
+          VITE_API_URL=${{ secrets.VITE_API_URL || 'http://localhost:3030/api' }}
+          VITE_API_KEY=${{ secrets.VITE_API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+          EOF
+          )
+          echo "env_content<<EOF" >> $GITHUB_OUTPUT
+          echo "$ENV_CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
   build:
-    needs: setup-env
+    needs: setup
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -46,24 +97,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Download environment files
-      - name: Download Express API env file
-        uses: actions/download-artifact@v4
-        with:
-          name: express-api-env
-          path: apps/express-api/
+      # Create .env files using the output from setup job
+      - name: Create Express API .env file
+        run: |
+          echo "${{ needs.setup.outputs.express_env }}" > apps/express-api/.env
 
-      - name: Download Client UI env file
-        uses: actions/download-artifact@v4
-        with:
-          name: client-ui-env
-          path: apps/client-ui/
+      - name: Create Client UI .env file
+        run: |
+          echo "${{ needs.setup.outputs.client_env }}" > apps/client-ui/.env
 
       - name: Run build
         run: pnpm build
 
   lint:
-    needs: setup-env
+    needs: setup
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -82,18 +129,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Download environment files
-      - name: Download Express API env file
-        uses: actions/download-artifact@v4
-        with:
-          name: express-api-env
-          path: apps/express-api/
+      # Create .env files using the output from setup job
+      - name: Create Express API .env file
+        run: |
+          echo "${{ needs.setup.outputs.express_env }}" > apps/express-api/.env
 
-      - name: Download Client UI env file
-        uses: actions/download-artifact@v4
-        with:
-          name: client-ui-env
-          path: apps/client-ui/
+      - name: Create Client UI .env file
+        run: |
+          echo "${{ needs.setup.outputs.client_env }}" > apps/client-ui/.env
 
       - name: Build types package
         run: pnpm --filter macro-ai-api-client... build
@@ -101,7 +144,7 @@ jobs:
         run: pnpm lint
 
   test:
-    needs: setup-env
+    needs: setup
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -120,18 +163,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Download environment files
-      - name: Download Express API env file
-        uses: actions/download-artifact@v4
-        with:
-          name: express-api-env
-          path: apps/express-api/
+      # Create .env files using the output from setup job
+      - name: Create Express API .env file
+        run: |
+          echo "${{ needs.setup.outputs.express_env }}" > apps/express-api/.env
 
-      - name: Download Client UI env file
-        uses: actions/download-artifact@v4
-        with:
-          name: client-ui-env
-          path: apps/client-ui/
+      - name: Create Client UI .env file
+        run: |
+          echo "${{ needs.setup.outputs.client_env }}" > apps/client-ui/.env
 
       - name: Run test
         run: pnpm test
