@@ -123,6 +123,21 @@ class UserController implements IUserController {
 				details: error.details,
 			})
 			switch (error.type) {
+				case ErrorType.UnauthorizedError: {
+					const authResponse: TMessageBase = {
+						message: 'Authentication required',
+					}
+
+					res.status(StatusCodes.UNAUTHORIZED).json(authResponse)
+					return
+				}
+				case ErrorType.ForbiddenError: {
+					const forbiddenResponse: TMessageBase = {
+						message: 'Access denied',
+					}
+					res.status(StatusCodes.FORBIDDEN).json(forbiddenResponse)
+					return
+				}
 				case ErrorType.NotFoundError: {
 					const notFoundResponse: TMessageBase = {
 						message: 'User not found',

@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 import { fromError } from 'zod-validation-error'
 
 import { db } from '../../data-access/db.ts'
+import { tryCatch } from '../../utils/error-handling/try-catch.ts'
 import { AppError } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 
@@ -15,7 +16,7 @@ const { logger } = pino
  * Handles all user-related database operations
  */
 class UserRepository implements IUserRepository {
-	private db: typeof db
+	private readonly db: typeof db
 
 	constructor(database: typeof db = db) {
 		this.db = database
@@ -31,30 +32,15 @@ class UserRepository implements IUserRepository {
 	}: {
 		email: string
 	}): Promise<TUser | undefined> {
-		try {
-			const users = await this.db
+		const { data: users, error } = await tryCatch(
+			this.db
 				.select()
 				.from(usersTable)
 				.where(eq(usersTable.email, email))
-				.limit(1)
+				.limit(1),
+		)
 
-			// If no user found, return undefined
-			if (!users.length) return undefined
-
-			// Validate the returned user with Zod
-			const result = selectUserSchema.safeParse(users[0])
-
-			if (!result.success) {
-				const validationError = fromError(result.error)
-				throw AppError.validation(
-					`Invalid user data returned from database: ${validationError.message}`,
-					{ details: validationError.details },
-					'userRepository',
-				)
-			}
-
-			return result.data
-		} catch (error) {
+		if (error) {
 			logger.error({
 				msg: '[userRepository - findUserByEmail]: Database error',
 				email,
@@ -62,6 +48,23 @@ class UserRepository implements IUserRepository {
 			})
 			throw AppError.from(error, 'userRepository')
 		}
+
+		// If no user found, return undefined
+		if (!users.length) return undefined
+
+		// Validate the returned user with Zod
+		const result = selectUserSchema.safeParse(users[0])
+
+		if (!result.success) {
+			const validationError = fromError(result.error)
+			throw AppError.validation(
+				`Invalid user data returned from database: ${validationError.message}`,
+				{ details: validationError.details },
+				'userRepository',
+			)
+		}
+
+		return result.data
 	}
 
 	/**
@@ -74,30 +77,11 @@ class UserRepository implements IUserRepository {
 	}: {
 		id: string
 	}): Promise<TUser | undefined> {
-		try {
-			const users = await this.db
-				.select()
-				.from(usersTable)
-				.where(eq(usersTable.id, id))
-				.limit(1)
+		const { data: users, error } = await tryCatch(
+			this.db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1),
+		)
 
-			// If no user found, return undefined
-			if (!users.length) return undefined
-
-			// Validate the returned user with Zod
-			const result = selectUserSchema.safeParse(users[0])
-
-			if (!result.success) {
-				const validationError = fromError(result.error)
-				throw AppError.validation(
-					`Invalid user data returned from database: ${validationError.message}`,
-					{ details: validationError.details },
-					'userRepository',
-				)
-			}
-
-			return result.data
-		} catch (error) {
+		if (error) {
 			logger.error({
 				msg: '[userRepository - findUserById]: Database error',
 				id,
@@ -105,6 +89,23 @@ class UserRepository implements IUserRepository {
 			})
 			throw AppError.from(error, 'userRepository')
 		}
+
+		// If no user found, return undefined
+		if (!users.length) return undefined
+
+		// Validate the returned user with Zod
+		const result = selectUserSchema.safeParse(users[0])
+
+		if (!result.success) {
+			const validationError = fromError(result.error)
+			throw AppError.validation(
+				`Invalid user data returned from database: ${validationError.message}`,
+				{ details: validationError.details },
+				'userRepository',
+			)
+		}
+
+		return result.data
 	}
 
 	/**
@@ -117,30 +118,11 @@ class UserRepository implements IUserRepository {
 	}: {
 		userData: TInsertUser
 	}): Promise<TUser> {
-		try {
-			const [user] = await this.db
-				.insert(usersTable)
-				.values(userData)
-				.returning()
+		const { data: user, error } = await tryCatch(
+			this.db.insert(usersTable).values(userData).returning(),
+		)
 
-			if (!user) {
-				throw AppError.internal('Failed to create user', 'userRepository')
-			}
-
-			// Validate the returned user with Zod
-			const result = selectUserSchema.safeParse(user)
-
-			if (!result.success) {
-				const validationError = fromError(result.error)
-				throw AppError.validation(
-					`Invalid user data returned from database: ${validationError.message}`,
-					{ details: validationError.details },
-					'userRepository',
-				)
-			}
-
-			return result.data
-		} catch (error) {
+		if (error) {
 			logger.error({
 				msg: '[userRepository - createUser]: Database error',
 				userData,
@@ -148,6 +130,25 @@ class UserRepository implements IUserRepository {
 			})
 			throw AppError.from(error, 'userRepository')
 		}
+
+		// If no user created, throw error
+		if (!user.length) {
+			throw AppError.internal('Failed to create user', 'userRepository')
+		}
+
+		// Validate the returned user with Zod
+		const result = selectUserSchema.safeParse(user)
+
+		if (!result.success) {
+			const validationError = fromError(result.error)
+			throw AppError.validation(
+				`Invalid user data returned from database: ${validationError.message}`,
+				{ details: validationError.details },
+				'userRepository',
+			)
+		}
+
+		return result.data
 	}
 
 	/**
@@ -160,29 +161,15 @@ class UserRepository implements IUserRepository {
 	}: {
 		id: string
 	}): Promise<TUser | undefined> {
-		try {
-			const [user] = await this.db
+		const { data: user, error } = await tryCatch(
+			this.db
 				.update(usersTable)
 				.set({ lastLogin: new Date() })
 				.where(eq(usersTable.id, id))
-				.returning()
+				.returning(),
+		)
 
-			if (!user) return undefined
-
-			// Validate the returned user with Zod
-			const result = selectUserSchema.safeParse(user)
-
-			if (!result.success) {
-				const validationError = fromError(result.error)
-				throw AppError.validation(
-					`Invalid user data returned from database: ${validationError.message}`,
-					{ details: validationError.details },
-					'userRepository',
-				)
-			}
-
-			return result.data
-		} catch (error) {
+		if (error) {
 			logger.error({
 				msg: '[userRepository - updateLastLogin]: Database error',
 				id,
@@ -190,6 +177,23 @@ class UserRepository implements IUserRepository {
 			})
 			throw AppError.from(error, 'userRepository')
 		}
+
+		// If no user found, return undefined
+		if (!user.length) return undefined
+
+		// Validate the returned user with Zod
+		const result = selectUserSchema.safeParse(user)
+
+		if (!result.success) {
+			const validationError = fromError(result.error)
+			throw AppError.validation(
+				`Invalid user data returned from database: ${validationError.message}`,
+				{ details: validationError.details },
+				'userRepository',
+			)
+		}
+
+		return result.data
 	}
 
 	/**
@@ -202,29 +206,15 @@ class UserRepository implements IUserRepository {
 		id: string,
 		userData: Partial<TInsertUser>,
 	): Promise<TUser | undefined> {
-		try {
-			const [user] = await this.db
+		const { data: user, error } = await tryCatch(
+			this.db
 				.update(usersTable)
 				.set(userData)
 				.where(eq(usersTable.id, id))
-				.returning()
+				.returning(),
+		)
 
-			if (!user) return undefined
-
-			// Validate the returned user with Zod
-			const result = selectUserSchema.safeParse(user)
-
-			if (!result.success) {
-				const validationError = fromError(result.error)
-				throw AppError.validation(
-					`Invalid user data returned from database: ${validationError.message}`,
-					{ details: validationError.details },
-					'userRepository',
-				)
-			}
-
-			return result.data
-		} catch (error) {
+		if (error) {
 			logger.error({
 				msg: '[userRepository - updateUser]: Database error',
 				id,
@@ -233,6 +223,22 @@ class UserRepository implements IUserRepository {
 			})
 			throw AppError.from(error, 'userRepository')
 		}
+
+		if (!user.length) return undefined
+
+		// Validate the returned user with Zod
+		const result = selectUserSchema.safeParse(user)
+
+		if (!result.success) {
+			const validationError = fromError(result.error)
+			throw AppError.validation(
+				`Invalid user data returned from database: ${validationError.message}`,
+				{ details: validationError.details },
+				'userRepository',
+			)
+		}
+
+		return result.data
 	}
 }
 
