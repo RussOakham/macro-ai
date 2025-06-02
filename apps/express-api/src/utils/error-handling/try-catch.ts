@@ -1,9 +1,5 @@
+import { ErrorType, IStandardizedError, standardizeError } from '../errors.ts'
 import { pino } from '../logger.ts'
-import {
-	ErrorType,
-	IStandardizedError,
-	standardizeError,
-} from '../standardize-error.ts'
 
 const { logger } = pino
 

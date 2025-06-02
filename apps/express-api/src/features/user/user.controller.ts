@@ -2,8 +2,8 @@ import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import { tryCatch } from '../../utils/error-handling/try-catch.ts'
+import { ErrorType } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
-import { ErrorType } from '../../utils/standardize-error.ts'
 
 import { userService } from './user.services.ts'
 import { IUserController, TMessageBase, TUserResponse } from './user.types.ts'

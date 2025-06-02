@@ -3,8 +3,8 @@ import { StatusCodes } from 'http-status-codes'
 
 import { CognitoService } from '../features/auth/auth.services.ts'
 import { getAccessToken } from '../utils/cookies.ts'
+import { standardizeError } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
-import { standardizeError } from '../utils/standardize-error.ts'
 
 const { logger } = pino
 const cognito = new CognitoService()

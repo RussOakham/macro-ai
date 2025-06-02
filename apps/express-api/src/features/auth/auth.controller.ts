@@ -8,14 +8,13 @@ import {
 	getSynchronizeToken,
 } from '../../utils/cookies.ts'
 import { decrypt, encrypt } from '../../utils/crypto.ts'
-import { AppError } from '../../utils/errors.ts'
+import { AppError, standardizeError } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 import {
 	handleError,
 	handleServiceError,
 	validateData,
 } from '../../utils/response-handlers.ts'
-import { standardizeError } from '../../utils/standardize-error.ts'
 import { userRepository } from '../user/user.data-access.ts'
 import { userService } from '../user/user.services.ts'
 import { TInsertUser } from '../user/user.types.ts'

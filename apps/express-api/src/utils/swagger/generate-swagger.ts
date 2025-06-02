@@ -7,8 +7,8 @@ import '../../features/auth/auth.routes.ts'
 import '../../features/user/user.routes.ts'
 import '../../features/utility/utility.routes.ts'
 
+import { standardizeError } from '../errors.ts'
 import { pino } from '../logger.ts'
-import { standardizeError } from '../standardize-error.ts'
 
 import { registry } from './openapi-registry.ts'
 

@@ -1,8 +1,8 @@
 import { Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
+import { ErrorType, IStandardizedError } from './errors.ts'
 import { pino } from './logger.ts'
-import { ErrorType, IStandardizedError } from './standardize-error.ts'
 
 const { logger } = pino
 

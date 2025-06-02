@@ -3,8 +3,8 @@ import { StatusCodes } from 'http-status-codes'
 import { AnyZodObject, ZodEffects, ZodError } from 'zod'
 import { fromError } from 'zod-validation-error'
 
+import { standardizeError } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
-import { standardizeError } from '../utils/standardize-error.ts'
 
 const { logger } = pino
 
