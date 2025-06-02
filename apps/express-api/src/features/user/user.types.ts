@@ -13,6 +13,35 @@ interface IUserController {
 	getUserById: express.Handler
 }
 
+interface IUserService {
+	getUserById: ({
+		userId,
+	}: {
+		userId: string
+	}) => Promise<TUser | undefined | null>
+	getUserByEmail: ({
+		email,
+	}: {
+		email: string
+	}) => Promise<TUser | undefined | null>
+	getUserByAccessToken: ({
+		accessToken,
+	}: {
+		accessToken: string
+	}) => Promise<TUser | undefined | null>
+	registerOrLoginUserById: ({
+		id,
+		email,
+		firstName,
+		lastName,
+	}: {
+		id: string
+		email: string
+		firstName?: string
+		lastName?: string
+	}) => Promise<TUser>
+}
+
 interface IUserRepository {
 	findUserByEmail: ({ email }: { email: string }) => Promise<TUser | undefined>
 	findUserById: ({ id }: { id: string }) => Promise<TUser | undefined>
@@ -33,6 +62,7 @@ type TMessageBase = z.infer<typeof messageBaseSchema>
 export type {
 	IUserController,
 	IUserRepository,
+	IUserService,
 	TInsertUser,
 	TMessageBase,
 	TUser,

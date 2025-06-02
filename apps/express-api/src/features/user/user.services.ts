@@ -7,31 +7,10 @@ import { CognitoService } from '../auth/auth.services.ts'
 
 import { userRepository } from './user.data-access.ts'
 import { userIdSchema } from './user.schemas.ts'
-import { IUserRepository, TUser } from './user.types.ts'
+import { IUserRepository, IUserService } from './user.types.ts'
 
 const { logger } = pino
 const cognito = new CognitoService()
-
-interface IUserService {
-	getUserById: ({ userId }: { userId: string }) => Promise<TUser | null>
-	getUserByEmail: ({ email }: { email: string }) => Promise<TUser | null>
-	getUserByAccessToken: ({
-		accessToken,
-	}: {
-		accessToken: string
-	}) => Promise<TUser | null>
-	registerOrLoginUserById: ({
-		id,
-		email,
-		firstName,
-		lastName,
-	}: {
-		id: string
-		email: string
-		firstName?: string
-		lastName?: string
-	}) => Promise<TUser>
-}
 
 class UserService implements IUserService {
 	private readonly userRepository: IUserRepository
@@ -65,6 +44,7 @@ class UserService implements IUserService {
 
 		const { data: user, error } = await tryCatch(
 			this.userRepository.findUserById({ id: userId }),
+			'userService - getUserById',
 		)
 
 		if (error) {
@@ -76,15 +56,8 @@ class UserService implements IUserService {
 			throw AppError.from(error, 'userService')
 		}
 
-		if (!user) {
-			logger.error({
-				msg: '[userService - getUserById]: User not found',
-				userId,
-			})
-			throw AppError.notFound('User not found', 'userService')
-		}
-
-		console.log(user.id)
+		// If no user found, return undefined
+		if (!user) return undefined
 
 		return user
 	}
@@ -97,6 +70,7 @@ class UserService implements IUserService {
 	async getUserByEmail({ email }: { email: string }) {
 		const { data: user, error } = await tryCatch(
 			this.userRepository.findUserByEmail({ email }),
+			'userService - getUserByEmail',
 		)
 
 		if (error) {
@@ -108,13 +82,8 @@ class UserService implements IUserService {
 			throw AppError.from(error, 'userService')
 		}
 
-		if (!user) {
-			logger.error({
-				msg: '[userService - getUserByEmail]: User not found',
-				email,
-			})
-			throw AppError.notFound('User not found', 'userService')
-		}
+		// If no user found, return undefined
+		if (!user) return undefined
 
 		return user
 	}
@@ -129,6 +98,7 @@ class UserService implements IUserService {
 		// Get user ID from Cognito using access token
 		const { data: cognitoUser, error } = await tryCatch(
 			this.cognitoService.getAuthUser(accessToken),
+			'userService - getUserByAccessToken',
 		)
 
 		if (error) {
@@ -146,6 +116,7 @@ class UserService implements IUserService {
 		// Use ID to get user from database
 		const { data: user, error: userError } = await tryCatch(
 			this.getUserById({ userId: cognitoUser.Username }),
+			'userService - getUserByAccessToken',
 		)
 
 		if (userError) {
@@ -156,6 +127,9 @@ class UserService implements IUserService {
 			})
 			throw AppError.from(userError, 'userService')
 		}
+
+		// If no user found, return undefined
+		if (!user) return undefined
 
 		return user
 	}
@@ -182,6 +156,7 @@ class UserService implements IUserService {
 		// Check if user Exists
 		const { data: user, error } = await tryCatch(
 			this.userRepository.findUserById({ id }),
+			'userService - registerOrLoginUserById',
 		)
 
 		if (error) {
@@ -204,6 +179,7 @@ class UserService implements IUserService {
 						lastName,
 					},
 				}),
+				'userService - registerOrLoginUserById',
 			)
 
 			if (newUserError) {
@@ -221,6 +197,7 @@ class UserService implements IUserService {
 		// Update last login timestamp if found
 		const { data: updatedUser, error: updatedUserError } = await tryCatch(
 			this.userRepository.updateLastLogin({ id }),
+			'userService - registerOrLoginUserById',
 		)
 
 		if (updatedUserError) {

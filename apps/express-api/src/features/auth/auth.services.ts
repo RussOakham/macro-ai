@@ -16,12 +16,15 @@ import {
 import crypto from 'crypto'
 
 import { config } from '../../../config/default.ts'
+import { tryCatch } from '../../utils/error-handling/try-catch.ts'
 import { AppError } from '../../utils/errors.ts'
+import { pino } from '../../utils/logger.ts'
 
-import { TRegisterUserRequest } from './auth.types.ts'
+import { ICognitoService, TRegisterUserRequest } from './auth.types.ts'
 
-// TODO: Add ICognitoService interface
-class CognitoService {
+const { logger } = pino
+
+class CognitoService implements ICognitoService {
 	private readonly config: CognitoIdentityProviderClientConfig = {
 		region: config.awsCognitoRegion,
 		credentials: {
@@ -80,7 +83,20 @@ class CognitoService {
 			SecretHash: this.generateHash(usedId),
 		})
 
-		return this.client.send(command)
+		const { data: signUpResult, error } = await tryCatch(
+			this.client.send(command),
+			'authService - signUpUser',
+		)
+
+		if (error) {
+			logger.error({
+				msg: '[authService - signUpUser]: Error signing up user',
+				error,
+			})
+			throw AppError.from(error, 'authService')
+		}
+
+		return signUpResult
 	}
 
 	public async confirmSignUp(email: string, code: number) {
@@ -89,7 +105,18 @@ class CognitoService {
 			UserPoolId: this.userPoolId,
 		})
 
-		const users = await this.client.send(getUserCommand)
+		const { data: users, error } = await tryCatch(
+			this.client.send(getUserCommand),
+			'authService - confirmSignUp',
+		)
+
+		if (error) {
+			logger.error({
+				msg: '[authService - confirmSignUp]: Error confirming sign up',
+				error,
+			})
+			throw AppError.from(error, 'authService')
+		}
 
 		if (!users.Users || users.Users.length === 0) {
 			throw AppError.notFound('User not found', 'authService')
@@ -111,7 +138,18 @@ class CognitoService {
 			SecretHash: this.generateHash(uniqueUser.Username),
 		})
 
-		return this.client.send(command)
+		const { data: confirmSignUpResult, error: confirmSignUpError } =
+			await tryCatch(this.client.send(command), 'authService - confirmSignUp')
+
+		if (confirmSignUpError) {
+			logger.error({
+				msg: '[authService - confirmSignUp]: Error confirming sign up',
+				error: confirmSignUpError,
+			})
+			throw AppError.from(confirmSignUpError, 'authService')
+		}
+
+		return confirmSignUpResult
 	}
 
 	public async resendConfirmationCode(email: string) {
@@ -120,7 +158,18 @@ class CognitoService {
 			UserPoolId: this.userPoolId,
 		})
 
-		const users = await this.client.send(getUserCommand)
+		const { data: users, error } = await tryCatch(
+			this.client.send(getUserCommand),
+			'authService - resendConfirmationCode',
+		)
+
+		if (error) {
+			logger.error({
+				msg: '[authService - resendConfirmationCode]: Error resending confirmation code',
+				error,
+			})
+			throw AppError.from(error, 'authService')
+		}
 
 		if (!users.Users || users.Users.length === 0) {
 			throw AppError.notFound('User not found', 'authService')
@@ -141,7 +190,23 @@ class CognitoService {
 			SecretHash: this.generateHash(uniqueUser.Username),
 		})
 
-		return this.client.send(command)
+		const {
+			data: resendConfirmationCodeResult,
+			error: resendConfirmationCodeError,
+		} = await tryCatch(
+			this.client.send(command),
+			'authService - resendConfirmationCode',
+		)
+
+		if (resendConfirmationCodeError) {
+			logger.error({
+				msg: '[authService - resendConfirmationCode]: Error resending confirmation code',
+				error: resendConfirmationCodeError,
+			})
+			throw AppError.from(resendConfirmationCodeError, 'authService')
+		}
+
+		return resendConfirmationCodeResult
 	}
 
 	public async signInUser(
@@ -154,7 +219,18 @@ class CognitoService {
 			UserPoolId: this.userPoolId,
 		})
 
-		const users = await this.client.send(getUserCommand)
+		const { data: users, error } = await tryCatch(
+			this.client.send(getUserCommand),
+			'authService - signInUser',
+		)
+
+		if (error) {
+			logger.error({
+				msg: '[authService - signInUser]: Error signing in user',
+				error,
+			})
+			throw AppError.from(error, 'authService')
+		}
 
 		if (!users.Users || users.Users.length === 0) {
 			throw AppError.notFound('User not found', 'authService')
@@ -179,7 +255,18 @@ class CognitoService {
 			},
 		})
 
-		const signInResponse = await this.client.send(command)
+		const { data: signInResponse, error: signInError } = await tryCatch(
+			this.client.send(command),
+			'authService - signInUser',
+		)
+
+		if (signInError) {
+			logger.error({
+				msg: '[authService - signInUser]: Error signing in user',
+				error: signInError,
+			})
+			throw AppError.from(signInError, 'authService')
+		}
 
 		return {
 			...signInResponse,
@@ -188,18 +275,28 @@ class CognitoService {
 	}
 
 	public async signOutUser(accessToken: string) {
-		try {
-			const signOutCommand = new GlobalSignOutCommand({
-				AccessToken: accessToken,
-			})
+		const signOutCommand = new GlobalSignOutCommand({
+			AccessToken: accessToken,
+		})
 
-			return await this.client.send(signOutCommand)
-		} catch (error) {
-			if (this.isTokenExpiredError(error)) {
+		const { data: signOutResponse, error: signOutError } = await tryCatch(
+			this.client.send(signOutCommand),
+			'authService - signOutUser',
+		)
+
+		if (signOutError) {
+			if (this.isTokenExpiredError(signOutError)) {
 				throw AppError.unauthorized('Token expired', 'authService')
 			}
-			throw AppError.from(error, 'authService')
+
+			logger.error({
+				msg: '[authService - signOutUser]: Error signing out user',
+				error: signOutError,
+			})
+			throw AppError.from(signOutError, 'authService')
 		}
+
+		return signOutResponse
 	}
 
 	public async refreshToken(refreshToken: string, username: string) {
@@ -212,7 +309,21 @@ class CognitoService {
 			},
 		})
 
-		return this.client.send(refreshTokenCommand)
+		const { data: refreshTokenResponse, error: refreshTokenError } =
+			await tryCatch(
+				this.client.send(refreshTokenCommand),
+				'authService - refreshToken',
+			)
+
+		if (refreshTokenError) {
+			logger.error({
+				msg: '[authService - refreshToken]: Error refreshing token',
+				error: refreshTokenError,
+			})
+			throw AppError.from(refreshTokenError, 'authService')
+		}
+
+		return refreshTokenResponse
 	}
 
 	public async forgotPassword(email: string) {
@@ -221,7 +332,19 @@ class CognitoService {
 			Filter: `email = "${email}"`,
 			UserPoolId: this.userPoolId,
 		})
-		const users = await this.client.send(getUserCommand)
+
+		const { data: users, error } = await tryCatch(
+			this.client.send(getUserCommand),
+			'authService - forgotPassword',
+		)
+
+		if (error) {
+			logger.error({
+				msg: '[authService - forgotPassword]: Error retrieving user',
+				error,
+			})
+			throw AppError.from(error, 'authService')
+		}
 
 		if (!users.Users || users.Users.length === 0) {
 			throw AppError.notFound('User not found', 'authService')
@@ -242,7 +365,18 @@ class CognitoService {
 			SecretHash: this.generateHash(uniqueUser.Username),
 		})
 
-		return this.client.send(command)
+		const { data: forgotPasswordResponse, error: forgotPasswordError } =
+			await tryCatch(this.client.send(command), 'authService - forgotPassword')
+
+		if (forgotPasswordError) {
+			logger.error({
+				msg: '[authService - forgotPassword]: Error initiating forgot password',
+				error: forgotPasswordError,
+			})
+			throw AppError.from(forgotPasswordError, 'authService')
+		}
+
+		return forgotPasswordResponse
 	}
 
 	public async confirmForgotPassword(
@@ -265,7 +399,18 @@ class CognitoService {
 			UserPoolId: this.userPoolId,
 		})
 
-		const users = await this.client.send(getUserCommand)
+		const { data: users, error } = await tryCatch(
+			this.client.send(getUserCommand),
+			'authService - confirmForgotPassword',
+		)
+
+		if (error) {
+			logger.error({
+				msg: '[authService - confirmForgotPassword]: Error retrieving user',
+				error,
+			})
+			throw AppError.from(error, 'authService')
+		}
 
 		if (!users.Users || users.Users.length === 0) {
 			throw AppError.notFound('User not found', 'authService')
@@ -288,22 +433,42 @@ class CognitoService {
 			SecretHash: this.generateHash(uniqueUser.Username),
 		})
 
-		return this.client.send(command)
+		const {
+			data: confirmForgotPasswordResponse,
+			error: confirmForgotPasswordError,
+		} = await tryCatch(
+			this.client.send(command),
+			'authService - confirmForgotPassword',
+		)
+
+		if (confirmForgotPasswordError) {
+			logger.error({
+				msg: '[authService - confirmForgotPassword]: Error confirming forgot password',
+				error: confirmForgotPasswordError,
+			})
+			throw AppError.from(confirmForgotPasswordError, 'authService')
+		}
+
+		return confirmForgotPasswordResponse
 	}
 
 	public async getAuthUser(accessToken: string) {
-		try {
-			const command = new GetUserCommand({
-				AccessToken: accessToken,
-			})
+		const command = new GetUserCommand({
+			AccessToken: accessToken,
+		})
 
-			return await this.client.send(command)
-		} catch (error) {
-			if (this.isTokenExpiredError(error)) {
-				throw AppError.unauthorized('Token expired', 'authService')
-			}
-			throw AppError.from(error, 'authService')
+		const { data: getAuthUserResponse, error: getAuthUserError } =
+			await tryCatch(this.client.send(command), 'authService - getAuthUser')
+
+		if (getAuthUserError) {
+			logger.error({
+				msg: '[authService - getAuthUser]: Error retrieving user',
+				error: getAuthUserError,
+			})
+			throw AppError.from(getAuthUserError, 'authService')
 		}
+
+		return getAuthUserResponse
 	}
 }
 

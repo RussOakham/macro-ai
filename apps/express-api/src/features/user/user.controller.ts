@@ -40,6 +40,7 @@ class UserController implements IUserController {
 
 		const { data: user, error } = await tryCatch(
 			this.userService.getUserById({ userId: req.userId }),
+			'userController - getCurrentUser',
 		)
 
 		// Handle errors
@@ -111,6 +112,7 @@ class UserController implements IUserController {
 
 		const { data: user, error } = await tryCatch(
 			this.userService.getUserById({ userId }),
+			'userController - getUserById',
 		)
 
 		// Handle errors

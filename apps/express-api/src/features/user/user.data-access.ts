@@ -38,6 +38,7 @@ class UserRepository implements IUserRepository {
 				.from(usersTable)
 				.where(eq(usersTable.email, email))
 				.limit(1),
+			'userRepository - findUserByEmail',
 		)
 
 		if (error) {
@@ -79,6 +80,7 @@ class UserRepository implements IUserRepository {
 	}): Promise<TUser | undefined> {
 		const { data: users, error } = await tryCatch(
 			this.db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1),
+			'userRepository - findUserById',
 		)
 
 		if (error) {
@@ -120,6 +122,7 @@ class UserRepository implements IUserRepository {
 	}): Promise<TUser> {
 		const { data: user, error } = await tryCatch(
 			this.db.insert(usersTable).values(userData).returning(),
+			'userRepository - createUser',
 		)
 
 		if (error) {
@@ -167,6 +170,7 @@ class UserRepository implements IUserRepository {
 				.set({ lastLogin: new Date() })
 				.where(eq(usersTable.id, id))
 				.returning(),
+			'userRepository - updateLastLogin',
 		)
 
 		if (error) {
@@ -212,6 +216,7 @@ class UserRepository implements IUserRepository {
 				.set(userData)
 				.where(eq(usersTable.id, id))
 				.returning(),
+			'userRepository - updateUser',
 		)
 
 		if (error) {

@@ -1,3 +1,13 @@
+import {
+	ConfirmForgotPasswordCommandOutput,
+	ConfirmSignUpCommandOutput,
+	ForgotPasswordCommandOutput,
+	GetUserCommandOutput,
+	GlobalSignOutCommandOutput,
+	InitiateAuthCommandOutput,
+	ResendConfirmationCodeCommandOutput,
+	SignUpCommandOutput,
+} from '@aws-sdk/client-cognito-identity-provider'
 import express from 'express'
 import { z } from 'zod'
 
@@ -47,6 +57,31 @@ interface ICognitoError {
 	message?: string
 }
 
+// Service interfaces
+interface ICognitoService {
+	signUpUser: (request: TRegisterUserRequest) => Promise<SignUpCommandOutput>
+	confirmSignUp: (
+		email: string,
+		code: number,
+	) => Promise<ConfirmSignUpCommandOutput>
+	resendConfirmationCode: (
+		email: string,
+	) => Promise<ResendConfirmationCodeCommandOutput>
+	signInUser: (
+		email: string,
+		password: string,
+	) => Promise<InitiateAuthCommandOutput & { Username: string }>
+	signOutUser: (accessToken: string) => Promise<GlobalSignOutCommandOutput>
+	forgotPassword: (email: string) => Promise<ForgotPasswordCommandOutput>
+	confirmForgotPassword: (
+		email: string,
+		code: string,
+		newPassword: string,
+		confirmPassword: string,
+	) => Promise<ConfirmForgotPasswordCommandOutput>
+	getAuthUser: (accessToken: string) => Promise<GetUserCommandOutput>
+}
+
 // Controller interfaces
 interface IAuthController {
 	register: express.Handler
@@ -63,6 +98,7 @@ interface IAuthController {
 export type {
 	IAuthController,
 	ICognitoError,
+	ICognitoService,
 	TAuthResponse,
 	TConfirmForgotPasswordRequest,
 	TConfirmRegistrationRequest,
