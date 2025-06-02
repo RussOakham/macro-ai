@@ -1,5 +1,6 @@
 import { fromError } from 'zod-validation-error'
 
+import { tryCatch } from '../../utils/error-handling/try-catch.ts'
 import { AppError } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 import { CognitoService } from '../auth/auth.services.ts'
@@ -50,27 +51,23 @@ class UserService implements IUserService {
 	 * @returns The user object or null if not found
 	 */
 	async getUserById({ userId }: { userId: string }) {
-		try {
-			// Validate userId with Zod
-			const result = userIdSchema.safeParse(userId)
+		// Validate userId with Zod
+		const result = userIdSchema.safeParse(userId)
 
-			if (!result.success) {
-				const validationError = fromError(result.error)
-				throw AppError.validation(
-					`Invalid user ID: ${validationError.message}`,
-					{ details: validationError.details },
-					'userService',
-				)
-			}
+		if (!result.success) {
+			const validationError = fromError(result.error)
+			throw AppError.validation(
+				`Invalid user ID: ${validationError.message}`,
+				{ details: validationError.details },
+				'userService',
+			)
+		}
 
-			const user = await this.userRepository.findUserById({ id: userId })
+		const { data: user, error } = await tryCatch(
+			this.userRepository.findUserById({ id: userId }),
+		)
 
-			if (!user) {
-				throw AppError.notFound('User not found', 'userService')
-			}
-
-			return user
-		} catch (error) {
+		if (error) {
 			logger.error({
 				msg: '[userService - getUserById]: Error retrieving user',
 				userId,
@@ -78,6 +75,18 @@ class UserService implements IUserService {
 			})
 			throw AppError.from(error, 'userService')
 		}
+
+		if (!user) {
+			logger.error({
+				msg: '[userService - getUserById]: User not found',
+				userId,
+			})
+			throw AppError.notFound('User not found', 'userService')
+		}
+
+		console.log(user.id)
+
+		return user
 	}
 
 	/**
