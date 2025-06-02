@@ -2,6 +2,7 @@ import { type Router } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import { verifyAuth } from '../../middleware/auth.middleware.ts'
+import { authRateLimiter } from '../../middleware/rate-limit.middleware.ts'
 import { validate } from '../../middleware/validation.middleware.ts'
 import {
 	ErrorResponseSchema,
@@ -682,6 +683,7 @@ const authRouter = (router: Router) => {
 	// Register
 	router.post(
 		'/auth/register',
+		authRateLimiter,
 		validate(registerUserRequestSchema),
 		authController.register,
 	)
@@ -689,6 +691,7 @@ const authRouter = (router: Router) => {
 	// Confirm registration
 	router.post(
 		'/auth/confirm-registration',
+		authRateLimiter,
 		validate(confirmRegistrationRequestSchema),
 		authController.confirmRegistration,
 	)
@@ -696,22 +699,23 @@ const authRouter = (router: Router) => {
 	// Resend confirmation code
 	router.post(
 		'/auth/resend-confirmation-code',
+		authRateLimiter,
 		validate(resendConfirmationCodeRequestSchema),
 		authController.resendConfirmationCode,
 	)
 
 	// Login
-	router.post('/auth/login', validate(loginRequestSchema), authController.login)
-
-	// Logout
-	router.post('/auth/logout', verifyAuth, authController.logout)
-
-	// Refresh token
-	router.post('/auth/refresh', authController.refreshToken)
+	router.post(
+		'/auth/login',
+		authRateLimiter,
+		validate(loginRequestSchema),
+		authController.login,
+	)
 
 	// Forgot password
 	router.post(
 		'/auth/forgot-password',
+		authRateLimiter,
 		validate(forgotPasswordRequestSchema),
 		authController.forgotPassword,
 	)
@@ -719,8 +723,18 @@ const authRouter = (router: Router) => {
 	// Confirm forgot password
 	router.post(
 		'/auth/confirm-forgot-password',
+		authRateLimiter,
 		authController.confirmForgotPassword,
 	)
+
+	// The following routes don't need the strict auth rate limiter
+	// as they're already protected by authentication
+
+	// Logout
+	router.post('/auth/logout', verifyAuth, authController.logout)
+
+	// Refresh token
+	router.post('/auth/refresh', authController.refreshToken)
 
 	// Get authenticated user
 	router.get('/auth/user', verifyAuth, authController.getAuthUser)

@@ -25,7 +25,16 @@ const generateSwaggerSpec = async () => {
 			info: {
 				title: 'Macro AI Express API',
 				version: '0.0.1',
-				description: 'API documentation for Macro AI',
+				description: `API documentation for Macro AI
+				
+## Rate Limiting
+This API implements rate limiting to protect against abuse:
+
+- **Global Rate Limit**: 100 requests per 15 minutes for all endpoints
+- **Authentication Rate Limit**: 10 requests per hour for authentication endpoints
+- **API Rate Limit**: 60 requests per minute for API endpoints
+
+Rate limit headers are included in responses to help track usage.`,
 				license: {
 					name: 'MIT',
 					url: 'https://spdx.org/licenses/MIT.html',

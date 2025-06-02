@@ -1,5 +1,7 @@
 import { type Router } from 'express'
+import { StatusCodes } from 'http-status-codes'
 
+import { apiRateLimiter } from '../../middleware/rate-limit.middleware.ts'
 import { pino } from '../../utils/logger.ts'
 import { registry } from '../../utils/swagger/openapi-registry.ts'
 
@@ -14,7 +16,7 @@ registry.registerPath({
 	path: '/health',
 	tags: ['Utility'],
 	responses: {
-		200: {
+		[StatusCodes.OK]: {
 			description: 'Health check successful',
 			content: {
 				'application/json': {
@@ -22,7 +24,15 @@ registry.registerPath({
 				},
 			},
 		},
-		500: {
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Too many requests - rate limit exceeded',
+			content: {
+				'application/json': {
+					schema: healthErrorSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
 			description: 'Health check failed',
 			content: {
 				'application/json': {
@@ -34,7 +44,7 @@ registry.registerPath({
 })
 
 const utilityRouter = (router: Router) => {
-	router.get('/health', (req, res) => {
+	router.get('/health', apiRateLimiter, (req, res) => {
 		try {
 			const healthResponse: THealthResponse = {
 				message: 'Api Health Status: OK',
@@ -50,7 +60,7 @@ const utilityRouter = (router: Router) => {
 				message: 'Api Status: Error',
 			}
 
-			res.status(500).json(healthErrorResponse)
+			res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(healthErrorResponse)
 		}
 	})
 }

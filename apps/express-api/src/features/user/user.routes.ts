@@ -2,6 +2,7 @@ import { type Router } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import { verifyAuth } from '../../middleware/auth.middleware.ts'
+import { apiRateLimiter } from '../../middleware/rate-limit.middleware.ts'
 import {
 	ErrorResponseSchema,
 	registry,
@@ -26,32 +27,8 @@ registry.registerPath({
 				},
 			},
 		},
-		[StatusCodes.BAD_REQUEST]: {
-			description: 'Invalid request data',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
 		[StatusCodes.UNAUTHORIZED]: {
-			description: 'Unauthorized - Authentication required',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.FORBIDDEN]: {
-			description: 'Forbidden - User already confirmed',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.CONFLICT]: {
-			description: 'Conflict - User already confirmed',
+			description: 'Unauthorized - Authentication required or token expired',
 			content: {
 				'application/json': {
 					schema: ErrorResponseSchema,
@@ -59,7 +36,7 @@ registry.registerPath({
 			},
 		},
 		[StatusCodes.TOO_MANY_REQUESTS]: {
-			description: 'Too many requests',
+			description: 'Too many requests - rate limit exceeded',
 			content: {
 				'application/json': {
 					schema: ErrorResponseSchema,
@@ -67,7 +44,7 @@ registry.registerPath({
 			},
 		},
 		[StatusCodes.INTERNAL_SERVER_ERROR]: {
-			description: 'Server error',
+			description: 'Internal server error',
 			content: {
 				'application/json': {
 					schema: ErrorResponseSchema,
@@ -79,7 +56,12 @@ registry.registerPath({
 
 const userRouter = (router: Router) => {
 	// Get current user
-	router.get('/users/me', verifyAuth, userController.getCurrentUser)
+	router.get(
+		'/users/me',
+		verifyAuth,
+		apiRateLimiter,
+		userController.getCurrentUser,
+	)
 }
 
 export { userRouter }
