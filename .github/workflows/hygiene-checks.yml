@@ -108,6 +108,17 @@ jobs:
 
       - name: Run build
         run: pnpm build
+        env:
+          API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+          AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
+          AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
+          AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
+          AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
+          AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
+          AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
+          COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+          NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
 
   lint:
     needs: setup
@@ -185,4 +196,14 @@ jobs:
 
       - name: Run test
         run: pnpm test
-
+        env:
+          API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+          AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
+          AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
+          AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
+          AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
+          AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
+          AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
+          COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+          NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
