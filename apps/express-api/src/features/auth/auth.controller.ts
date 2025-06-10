@@ -8,7 +8,7 @@ import {
 	getSynchronizeToken,
 } from '../../utils/cookies.ts'
 import { decrypt, encrypt } from '../../utils/crypto.ts'
-import { tryCatch, tryCatchSync } from '../../utils/error-handling/try-catch.ts'
+import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import { AppError, standardizeError } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 import {
@@ -47,13 +47,16 @@ const refreshTokenExpiryDays = config.awsCognitoRefreshTokenExpiry
 class AuthController implements IAuthController {
 	private readonly cognito: CognitoService
 	private readonly userService: typeof userService
+	private readonly userRepository: typeof userRepository
 
 	constructor(
 		cognitoService: CognitoService = new CognitoService(),
 		userSvc: typeof userService = userService,
+		userRepo: typeof userRepository = userRepository,
 	) {
 		this.cognito = cognitoService
 		this.userService = userSvc
+		this.userRepository = userRepo
 	}
 
 	public register = async (req: Request, res: Response): Promise<void> => {
@@ -61,10 +64,8 @@ class AuthController implements IAuthController {
 			req.body as TRegisterUserRequest
 
 		// Check if user already exists
-		const { data: getUserResponse, error: getUserError } = await tryCatch(
-			this.userService.getUserByEmail({ email }),
-			'authController - register',
-		)
+		const { data: getUserResponse, error: getUserError } =
+			await this.userService.getUserByEmail({ email })
 
 		if (getUserError) {
 			handleError(res, getUserError, 'authController')
@@ -119,10 +120,8 @@ class AuthController implements IAuthController {
 			email,
 		}
 
-		const { data: user, error: userError } = await tryCatch(
-			userRepository.createUser({ userData }),
-			'authController - register',
-		)
+		const { data: user, error: userError } =
+			await this.userRepository.createUser({ userData })
 
 		if (userError) {
 			handleError(res, userError, 'authController')
@@ -173,10 +172,8 @@ class AuthController implements IAuthController {
 		}
 
 		// get user from database
-		const { data: user, error: userError } = await tryCatch(
-			this.userService.getUserByEmail({ email }),
-			'authController - confirmRegistration',
-		)
+		const { data: user, error: userError } =
+			await this.userService.getUserByEmail({ email })
 
 		if (userError) {
 			handleError(res, userError, 'authController')
@@ -190,12 +187,10 @@ class AuthController implements IAuthController {
 		}
 
 		// Update user email verification status in database
-		const { data: updatedUser, error: updatedUserError } = await tryCatch(
-			userRepository.updateUser(user.id, {
+		const { data: updatedUser, error: updatedUserError } =
+			await this.userRepository.updateUser(user.id, {
 				emailVerified: true,
-			}),
-			'authController - confirmRegistration',
-		)
+			})
 
 		if (updatedUserError) {
 			handleError(res, updatedUserError, 'authController')
@@ -291,13 +286,11 @@ class AuthController implements IAuthController {
 		}
 
 		// Register or login user in database
-		const { data: user, error: userError } = await tryCatch(
-			this.userService.registerOrLoginUserById({
+		const { data: user, error: userError } =
+			await this.userService.registerOrLoginUserById({
 				id: signInResponse.Username,
 				email,
-			}),
-			'authController - login',
-		)
+			})
 
 		if (userError) {
 			handleError(res, userError, 'authController')

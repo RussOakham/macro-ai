@@ -1,7 +1,6 @@
 import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
-import { tryCatch } from '../../utils/error-handling/try-catch.ts'
 import { ErrorType } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 
@@ -38,21 +37,22 @@ class UserController implements IUserController {
 			return
 		}
 
-		const { data: user, error } = await tryCatch(
-			this.userService.getUserById({ userId: req.userId }),
-			'userController - getCurrentUser',
+		const { data: user, error: userError } = await this.userService.getUserById(
+			{
+				userId: req.userId,
+			},
 		)
 
 		// Handle errors
-		if (error) {
+		if (userError) {
 			logger.error({
 				msg: '[userController - getCurrentUser]: Error retrieving current user',
 				userId: req.userId,
-				error: error.message,
-				type: error.type,
-				details: error.details,
+				error: userError.message,
+				type: userError.type,
+				details: userError.details,
 			})
-			switch (error.type) {
+			switch (userError.type) {
 				case ErrorType.UnauthorizedError: {
 					const authResponse: TMessageBase = {
 						message: 'Authentication required',
@@ -121,21 +121,20 @@ class UserController implements IUserController {
 			return
 		}
 
-		const { data: user, error } = await tryCatch(
-			this.userService.getUserById({ userId }),
-			'userController - getUserById',
+		const { data: user, error: userError } = await this.userService.getUserById(
+			{ userId },
 		)
 
 		// Handle errors
-		if (error) {
+		if (userError) {
 			logger.error({
 				msg: '[userController - getUserById]: Error retrieving user',
 				userId,
-				error: error.message,
-				type: error.type,
-				details: error.details,
+				error: userError.message,
+				type: userError.type,
+				details: userError.details,
 			})
-			switch (error.type) {
+			switch (userError.type) {
 				case ErrorType.UnauthorizedError: {
 					const authResponse: TMessageBase = {
 						message: 'Authentication required',

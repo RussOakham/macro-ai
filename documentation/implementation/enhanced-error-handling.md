@@ -63,6 +63,7 @@ This document outlines the implementation steps for enhancing error handling acr
 #### 2.2 Synchronous Operations with tryCatchSync
 
 - [x] Create `tryCatchSync` utility function
+
   - [x] Implement in `utils/error-handling/try-catch.ts`
   - [x] Add proper type definitions
   - [x] Add error standardization
@@ -88,6 +89,7 @@ This document outlines the implementation steps for enhancing error handling acr
 ### 3. Implement Type-Safe Error Handling
 
 - [x] Create unified error handling approach
+
   - [x] Consolidate `AppError` and `standardizeError` in `utils/errors.ts`
   - [x] Update imports to use the unified error module
   - [x] Add deprecation notice to `standardize-error.ts`
