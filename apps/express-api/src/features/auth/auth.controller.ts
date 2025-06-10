@@ -81,10 +81,8 @@ class AuthController implements IAuthController {
 		}
 
 		// Register user with Cognito
-		const { data: signUpResponse, error: signUpError } = await tryCatch(
-			this.cognito.signUpUser({ email, password, confirmPassword }),
-			'authController - register',
-		)
+		const { data: signUpResponse, error: signUpError } =
+			await this.cognito.signUpUser({ email, password, confirmPassword })
 
 		if (signUpError) {
 			handleError(res, signUpError, 'authController')
@@ -153,10 +151,7 @@ class AuthController implements IAuthController {
 
 		// Confirm user registration with Cognito
 		const { data: confirmSignUpResponse, error: confirmSignUpError } =
-			await tryCatch(
-				this.cognito.confirmSignUp(email, code),
-				'authController - confirmRegistration',
-			)
+			await this.cognito.confirmSignUp(email, code)
 
 		if (confirmSignUpError) {
 			handleError(res, confirmSignUpError, 'authController')
@@ -233,10 +228,7 @@ class AuthController implements IAuthController {
 		const {
 			data: resendConfirmationCodeResponse,
 			error: resendConfirmationCodeError,
-		} = await tryCatch(
-			this.cognito.resendConfirmationCode(email),
-			'authController - resendConfirmationCode',
-		)
+		} = await this.cognito.resendConfirmationCode(email)
 
 		if (resendConfirmationCodeError) {
 			handleError(res, resendConfirmationCodeError, 'authController')
@@ -267,10 +259,8 @@ class AuthController implements IAuthController {
 		const { email, password } = req.body as TLoginRequest
 
 		// Login user with Cognito
-		const { data: signInResponse, error: signInError } = await tryCatch(
-			this.cognito.signInUser(email, password),
-			'authController - login',
-		)
+		const { data: signInResponse, error: signInError } =
+			await this.cognito.signInUser(email, password)
 
 		if (signInError) {
 			handleError(res, signInError, 'authController')
@@ -290,8 +280,9 @@ class AuthController implements IAuthController {
 			return
 		}
 
-		const { data: encryptedUsername, error: encryptError } = tryCatchSync(() =>
-			encrypt(signInResponse.Username),
+		// Use the encrypt function with the new return type
+		const { data: encryptedUsername, error: encryptError } = encrypt(
+			signInResponse.Username,
 		)
 
 		if (encryptError) {
@@ -363,10 +354,8 @@ class AuthController implements IAuthController {
 		}
 
 		// Logout user with Cognito
-		const { data: signOutResponse, error: signOutError } = await tryCatch(
-			this.cognito.signOutUser(accessToken),
-			'authController - logout',
-		)
+		const { data: signOutResponse, error: signOutError } =
+			await this.cognito.signOutUser(accessToken)
 
 		if (signOutError) {
 			handleError(res, signOutError, 'authController')
@@ -411,14 +400,18 @@ class AuthController implements IAuthController {
 		const refreshToken = getRefreshToken(req)
 		const encryptedUsername = getSynchronizeToken(req)
 
-		const decryptedUsername = decrypt(encryptedUsername)
+		// Use the decrypt function with the new return type
+		const { data: decryptedUsername, error: decryptError } =
+			decrypt(encryptedUsername)
+
+		if (decryptError) {
+			handleError(res, decryptError, 'authController')
+			return
+		}
 
 		// Refresh token with Cognito
 		const { data: refreshTokenResponse, error: refreshTokenError } =
-			await tryCatch(
-				this.cognito.refreshToken(refreshToken, decryptedUsername),
-				'authController - refreshToken',
-			)
+			await this.cognito.refreshToken(refreshToken, decryptedUsername)
 
 		if (refreshTokenError) {
 			handleError(res, refreshTokenError, 'authController')
@@ -489,10 +482,7 @@ class AuthController implements IAuthController {
 
 		// Initiate forgot password with Cognito
 		const { data: forgotPasswordResponse, error: forgotPasswordError } =
-			await tryCatch(
-				this.cognito.forgotPassword(email),
-				'authController - forgotPassword',
-			)
+			await this.cognito.forgotPassword(email)
 
 		if (forgotPasswordError) {
 			handleError(res, forgotPasswordError, 'authController')
@@ -530,14 +520,11 @@ class AuthController implements IAuthController {
 		const {
 			data: confirmForgotPasswordResponse,
 			error: confirmForgotPasswordError,
-		} = await tryCatch(
-			this.cognito.confirmForgotPassword(
-				email,
-				code,
-				newPassword,
-				confirmPassword,
-			),
-			'authController - confirmForgotPassword',
+		} = await this.cognito.confirmForgotPassword(
+			email,
+			code,
+			newPassword,
+			confirmPassword,
 		)
 
 		if (confirmForgotPasswordError) {
@@ -569,10 +556,8 @@ class AuthController implements IAuthController {
 		const accessToken = getAccessToken(req)
 
 		// Get user from Cognito
-		const { data: getAuthUserResponse, error: responseError } = await tryCatch(
-			this.cognito.getAuthUser(accessToken),
-			'authController - getAuthUser',
-		)
+		const { data: getAuthUserResponse, error: responseError } =
+			await this.cognito.getAuthUser(accessToken)
 
 		if (responseError) {
 			handleError(res, responseError, 'authController')

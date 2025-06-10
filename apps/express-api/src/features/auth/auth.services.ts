@@ -2,8 +2,10 @@ import {
 	CognitoIdentityProviderClient,
 	CognitoIdentityProviderClientConfig,
 	ConfirmForgotPasswordCommand,
+	ConfirmForgotPasswordCommandOutput,
 	ConfirmSignUpCommand,
 	ForgotPasswordCommand,
+	ForgotPasswordCommandOutput,
 	GetUserCommand,
 	GlobalSignOutCommand,
 	InitiateAuthCommand,
@@ -16,13 +18,14 @@ import {
 import crypto from 'crypto'
 
 import { config } from '../../../config/default.ts'
-import { tryCatch } from '../../utils/error-handling/try-catch.ts'
-import { AppError } from '../../utils/errors.ts'
-import { pino } from '../../utils/logger.ts'
+import {
+	EnhancedResult,
+	tryCatch,
+	tryCatchSync,
+} from '../../utils/error-handling/try-catch.ts'
+import { AppError, ErrorType, IStandardizedError } from '../../utils/errors.ts'
 
 import { ICognitoService, TRegisterUserRequest } from './auth.types.ts'
-
-const { logger } = pino
 
 class CognitoService implements ICognitoService {
 	private readonly config: CognitoIdentityProviderClientConfig = {
@@ -41,11 +44,15 @@ class CognitoService implements ICognitoService {
 		this.client = new CognitoIdentityProviderClient(this.config)
 	}
 
+	/**
+	 * Generate a hash for Cognito API calls
+	 * @param username Username to hash
+	 * @returns Hash string
+	 */
 	private generateHash(username: string): string {
-		return crypto
-			.createHmac('SHA256', this.secretHash)
-			.update(username + this.clientId)
-			.digest('base64')
+		const hmac = crypto.createHmac('sha256', this.secretHash)
+		hmac.update(username + this.clientId)
+		return hmac.digest('base64')
 	}
 
 	private isTokenExpiredError(error: unknown): boolean {
@@ -55,24 +62,47 @@ class CognitoService implements ICognitoService {
 		)
 	}
 
+	/**
+	 * Sign up a new user with Cognito
+	 * @param request Registration request containing email, password, and confirmPassword
+	 * @returns EnhancedResult with SignUpCommandOutput or error
+	 */
 	public async signUpUser({
 		email,
 		password,
 		confirmPassword,
 	}: TRegisterUserRequest) {
-		if (password !== confirmPassword) {
-			throw AppError.validation(
-				'Passwords do not match',
-				undefined,
-				'authService',
-			)
+		// Validate passwords match using tryCatchSync
+		const { error: validationError } = tryCatchSync(() => {
+			if (password !== confirmPassword) {
+				throw AppError.validation(
+					'Passwords do not match',
+					undefined,
+					'authService',
+				)
+			}
+			return true
+		}, 'authService - validatePasswords')
+
+		if (validationError) {
+			return { data: null, error: validationError }
 		}
 
-		const usedId = crypto.randomUUID()
+		const userId = crypto.randomUUID()
+
+		// Generate hash using tryCatchSync
+		const { data: secretHash, error: hashError } = tryCatchSync(
+			() => this.generateHash(userId),
+			'authService - generateHash',
+		)
+
+		if (hashError) {
+			return { data: null, error: hashError }
+		}
 
 		const command = new SignUpCommand({
 			ClientId: this.clientId,
-			Username: usedId,
+			Username: userId,
 			Password: password,
 			UserAttributes: [
 				{
@@ -80,78 +110,87 @@ class CognitoService implements ICognitoService {
 					Value: email,
 				},
 			],
-			SecretHash: this.generateHash(usedId),
+			SecretHash: secretHash,
 		})
 
-		const { data: signUpResult, error } = await tryCatch(
-			this.client.send(command),
-			'authService - signUpUser',
-		)
-
-		if (error) {
-			logger.error({
-				msg: '[authService - signUpUser]: Error signing up user',
-				error,
-			})
-			throw AppError.from(error, 'authService')
-		}
-
-		return signUpResult
+		return await tryCatch(this.client.send(command), 'authService - signUpUser')
 	}
 
+	/**
+	 * Confirm user registration with Cognito
+	 * @param email User's email
+	 * @param code Confirmation code
+	 * @returns EnhancedResult with ConfirmSignUpCommandOutput or error
+	 */
 	public async confirmSignUp(email: string, code: number) {
+		// Get user by email
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
 			UserPoolId: this.userPoolId,
 		})
 
-		const { data: users, error } = await tryCatch(
+		const { data: users, error: getUserError } = await tryCatch(
 			this.client.send(getUserCommand),
 			'authService - confirmSignUp',
 		)
 
-		if (error) {
-			logger.error({
-				msg: '[authService - confirmSignUp]: Error confirming sign up',
-				error,
-			})
-			throw AppError.from(error, 'authService')
+		if (getUserError) {
+			return { data: null, error: getUserError }
 		}
 
-		if (!users.Users || users.Users.length === 0) {
-			throw AppError.notFound('User not found', 'authService')
+		// Validate users result using tryCatchSync
+		const { data: uniqueUser, error: validationError } = tryCatchSync(() => {
+			if (!users.Users || users.Users.length === 0) {
+				throw AppError.notFound('User not found', 'authService')
+			}
+
+			const uniqueUser = users.Users.find(
+				(user) =>
+					user.Attributes?.find((attr) => attr.Name === 'email')?.Value ===
+					email,
+			)
+
+			if (!uniqueUser?.Username) {
+				throw AppError.notFound('User not found', 'authService')
+			}
+
+			return uniqueUser
+		}, 'authService - validateUser')
+
+		if (validationError) {
+			return { data: null, error: validationError }
 		}
 
-		const uniqueUser = users.Users.find(
-			(user) =>
-				user.Attributes?.find((attr) => attr.Name === 'email')?.Value === email,
+		// Generate hash using tryCatchSync
+		const { data: secretHash, error: hashError } = tryCatchSync(
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			() => this.generateHash(uniqueUser.Username!),
+			'authService - generateHash',
 		)
 
-		if (!uniqueUser?.Username) {
-			throw AppError.notFound('User not found', 'authService')
+		if (hashError) {
+			return { data: null, error: hashError }
 		}
 
 		const command = new ConfirmSignUpCommand({
 			ClientId: this.clientId,
-			Username: uniqueUser.Username,
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			Username: uniqueUser.Username!,
 			ConfirmationCode: code.toString(),
-			SecretHash: this.generateHash(uniqueUser.Username),
+			SecretHash: secretHash,
 		})
 
-		const { data: confirmSignUpResult, error: confirmSignUpError } =
-			await tryCatch(this.client.send(command), 'authService - confirmSignUp')
-
-		if (confirmSignUpError) {
-			logger.error({
-				msg: '[authService - confirmSignUp]: Error confirming sign up',
-				error: confirmSignUpError,
-			})
-			throw AppError.from(confirmSignUpError, 'authService')
-		}
-
-		return confirmSignUpResult
+		return await tryCatch(
+			this.client.send(command),
+			'authService - confirmSignUp',
+		)
 	}
 
+	/**
+	 * Resend confirmation code to user's email
+	 * @param email User's email
+	 * @returns EnhancedResult with ResendConfirmationCodeCommandOutput or error
+	 */
 	public async resendConfirmationCode(email: string) {
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
@@ -164,85 +203,127 @@ class CognitoService implements ICognitoService {
 		)
 
 		if (error) {
-			logger.error({
-				msg: '[authService - resendConfirmationCode]: Error resending confirmation code',
-				error,
-			})
-			throw AppError.from(error, 'authService')
+			return { data: null, error }
 		}
 
-		if (!users.Users || users.Users.length === 0) {
-			throw AppError.notFound('User not found', 'authService')
+		// Validate users result using tryCatchSync
+		const { data: uniqueUser, error: validationError } = tryCatchSync(() => {
+			if (!users.Users || users.Users.length === 0) {
+				throw AppError.notFound('User not found', 'authService')
+			}
+
+			const uniqueUser = users.Users.find(
+				(user) =>
+					user.Attributes?.find((attr) => attr.Name === 'email')?.Value ===
+					email,
+			)
+
+			if (!uniqueUser?.Username) {
+				throw AppError.notFound('User not found', 'authService')
+			}
+
+			return uniqueUser
+		}, 'authService - validateUser')
+
+		if (validationError) {
+			return { data: null, error: validationError }
 		}
 
-		const uniqueUser = users.Users.find(
-			(user) =>
-				user.Attributes?.find((attr) => attr.Name === 'email')?.Value === email,
+		if (!uniqueUser.Username) {
+			const err: IStandardizedError = {
+				type: ErrorType.NotFoundError,
+				name: 'NotFoundError',
+				status: 404,
+				message: 'User not found',
+				service: 'authService',
+				details: null,
+				stack: '',
+			}
+
+			return {
+				data: null,
+				error: err,
+			}
+		}
+
+		// Generate hash using tryCatchSync
+		const { data: secretHash, error: hashError } = tryCatchSync(
+			() => this.generateHash(uniqueUser.Username ?? ''),
+			'authService - generateHash',
 		)
 
-		if (!uniqueUser?.Username) {
-			throw AppError.notFound('User not found', 'authService')
+		if (hashError) {
+			return { data: null, error: hashError }
 		}
 
 		const command = new ResendConfirmationCodeCommand({
 			ClientId: this.clientId,
 			Username: uniqueUser.Username,
-			SecretHash: this.generateHash(uniqueUser.Username),
+			SecretHash: secretHash,
 		})
 
-		const {
-			data: resendConfirmationCodeResult,
-			error: resendConfirmationCodeError,
-		} = await tryCatch(
+		return await tryCatch(
 			this.client.send(command),
 			'authService - resendConfirmationCode',
 		)
-
-		if (resendConfirmationCodeError) {
-			logger.error({
-				msg: '[authService - resendConfirmationCode]: Error resending confirmation code',
-				error: resendConfirmationCodeError,
-			})
-			throw AppError.from(resendConfirmationCodeError, 'authService')
-		}
-
-		return resendConfirmationCodeResult
 	}
 
+	/**
+	 * Sign in a user with Cognito
+	 * @param email User's email
+	 * @param password User's password
+	 * @returns EnhancedResult with InitiateAuthCommandOutput & Username or error
+	 */
 	public async signInUser(
 		email: string,
 		password: string,
-	): Promise<InitiateAuthCommandOutput & { Username: string }> {
+	): Promise<EnhancedResult<InitiateAuthCommandOutput & { Username: string }>> {
 		// First, get the user's UUID using their email
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
 			UserPoolId: this.userPoolId,
 		})
 
-		const { data: users, error } = await tryCatch(
+		const { data: users, error: getUserError } = await tryCatch(
 			this.client.send(getUserCommand),
 			'authService - signInUser',
 		)
 
-		if (error) {
-			logger.error({
-				msg: '[authService - signInUser]: Error signing in user',
-				error,
-			})
-			throw AppError.from(error, 'authService')
+		if (getUserError) {
+			return { data: null, error: getUserError }
 		}
 
-		if (!users.Users || users.Users.length === 0) {
-			throw AppError.notFound('User not found', 'authService')
+		// Validate users result using tryCatchSync
+		const { data: uniqueUser, error: validationError } = tryCatchSync(() => {
+			if (!users.Users || users.Users.length === 0) {
+				throw AppError.notFound('User not found', 'authService')
+			}
+
+			const uniqueUser = users.Users.find(
+				(user) =>
+					user.Attributes?.find((attr) => attr.Name === 'email')?.Value ===
+					email,
+			)
+
+			if (!uniqueUser?.Username) {
+				throw AppError.notFound('User not found', 'authService')
+			}
+
+			return uniqueUser
+		}, 'authService - validateUser')
+
+		if (validationError) {
+			return { data: null, error: validationError }
 		}
 
-		const uniqueUser = users.Users.find(
-			(user) =>
-				user.Attributes?.find((attr) => attr.Name === 'email')?.Value === email,
+		// Generate hash using tryCatchSync
+		const { data: secretHash, error: hashError } = tryCatchSync(
+			() => this.generateHash(email),
+			'authService - generateHash',
 		)
 
-		if (!uniqueUser?.Username) {
-			throw AppError.notFound('User not found', 'authService')
+		if (hashError) {
+			return { data: null, error: hashError }
 		}
 
 		const command = new InitiateAuthCommand({
@@ -251,7 +332,7 @@ class CognitoService implements ICognitoService {
 			AuthParameters: {
 				USERNAME: email,
 				PASSWORD: password,
-				SECRET_HASH: this.generateHash(email),
+				SECRET_HASH: secretHash,
 			},
 		})
 
@@ -261,16 +342,22 @@ class CognitoService implements ICognitoService {
 		)
 
 		if (signInError) {
-			logger.error({
-				msg: '[authService - signInUser]: Error signing in user',
-				error: signInError,
-			})
-			throw AppError.from(signInError, 'authService')
+			return { data: null, error: signInError }
+		}
+
+		if (!uniqueUser.Username) {
+			return {
+				data: null,
+				error: AppError.notFound('User not found', 'authService'),
+			}
 		}
 
 		return {
-			...signInResponse,
-			Username: uniqueUser.Username,
+			data: {
+				...signInResponse,
+				Username: uniqueUser.Username,
+			},
+			error: null,
 		}
 	}
 
@@ -279,54 +366,50 @@ class CognitoService implements ICognitoService {
 			AccessToken: accessToken,
 		})
 
-		const { data: signOutResponse, error: signOutError } = await tryCatch(
+		return await tryCatch(
 			this.client.send(signOutCommand),
 			'authService - signOutUser',
 		)
-
-		if (signOutError) {
-			if (this.isTokenExpiredError(signOutError)) {
-				throw AppError.unauthorized('Token expired', 'authService')
-			}
-
-			logger.error({
-				msg: '[authService - signOutUser]: Error signing out user',
-				error: signOutError,
-			})
-			throw AppError.from(signOutError, 'authService')
-		}
-
-		return signOutResponse
 	}
 
-	public async refreshToken(refreshToken: string, username: string) {
+	/**
+	 * Refresh an access token using a refresh token
+	 * @param refreshToken The refresh token
+	 * @param username The username associated with the token
+	 * @returns EnhancedResult with InitiateAuthCommandOutput or error
+	 */
+	public async refreshToken(
+		refreshToken: string,
+		username: string,
+	): Promise<EnhancedResult<InitiateAuthCommandOutput>> {
+		// Generate hash using tryCatchSync
+		const { data: secretHash, error: hashError } = tryCatchSync(
+			() => this.generateHash(username),
+			'authService - refreshToken',
+		)
+
+		if (hashError) {
+			return { data: null, error: hashError }
+		}
+
 		const refreshTokenCommand = new InitiateAuthCommand({
 			ClientId: this.clientId,
 			AuthFlow: 'REFRESH_TOKEN_AUTH',
 			AuthParameters: {
 				REFRESH_TOKEN: refreshToken,
-				SECRET_HASH: this.generateHash(username),
+				SECRET_HASH: secretHash,
 			},
 		})
 
-		const { data: refreshTokenResponse, error: refreshTokenError } =
-			await tryCatch(
-				this.client.send(refreshTokenCommand),
-				'authService - refreshToken',
-			)
-
-		if (refreshTokenError) {
-			logger.error({
-				msg: '[authService - refreshToken]: Error refreshing token',
-				error: refreshTokenError,
-			})
-			throw AppError.from(refreshTokenError, 'authService')
-		}
-
-		return refreshTokenResponse
+		return await tryCatch(
+			this.client.send(refreshTokenCommand),
+			'authService - refreshToken',
+		)
 	}
 
-	public async forgotPassword(email: string) {
+	public async forgotPassword(
+		email: string,
+	): Promise<EnhancedResult<ForgotPasswordCommandOutput>> {
 		// First, get the user's UUID using their email
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
@@ -339,44 +422,52 @@ class CognitoService implements ICognitoService {
 		)
 
 		if (error) {
-			logger.error({
-				msg: '[authService - forgotPassword]: Error retrieving user',
-				error,
-			})
-			throw AppError.from(error, 'authService')
+			return { data: null, error }
 		}
 
-		if (!users.Users || users.Users.length === 0) {
-			throw AppError.notFound('User not found', 'authService')
+		// Validate users result using tryCatchSync
+		const { data: uniqueUser, error: validationError } = tryCatchSync(() => {
+			if (!users.Users || users.Users.length === 0) {
+				throw AppError.notFound('User not found', 'authService')
+			}
+
+			const uniqueUser = users.Users.find(
+				(user) =>
+					user.Attributes?.find((attr) => attr.Name === 'email')?.Value ===
+					email,
+			)
+
+			if (!uniqueUser?.Username) {
+				throw AppError.notFound('User not found', 'authService')
+			}
+
+			return uniqueUser
+		}, 'authService - validateUser')
+
+		if (validationError) {
+			return { data: null, error: validationError }
 		}
 
-		const uniqueUser = users.Users.find(
-			(user) =>
-				user.Attributes?.find((attr) => attr.Name === 'email')?.Value === email,
+		// Generate hash using tryCatchSync
+		const { data: secretHash, error: hashError } = tryCatchSync(
+			() => this.generateHash(uniqueUser.Username ?? ''),
+			'authService - generateHash',
 		)
 
-		if (!uniqueUser?.Username) {
-			throw AppError.notFound('User not found', 'authService')
+		if (hashError) {
+			return { data: null, error: hashError }
 		}
 
 		const command = new ForgotPasswordCommand({
 			ClientId: this.clientId,
 			Username: uniqueUser.Username,
-			SecretHash: this.generateHash(uniqueUser.Username),
+			SecretHash: secretHash,
 		})
 
-		const { data: forgotPasswordResponse, error: forgotPasswordError } =
-			await tryCatch(this.client.send(command), 'authService - forgotPassword')
-
-		if (forgotPasswordError) {
-			logger.error({
-				msg: '[authService - forgotPassword]: Error initiating forgot password',
-				error: forgotPasswordError,
-			})
-			throw AppError.from(forgotPasswordError, 'authService')
-		}
-
-		return forgotPasswordResponse
+		return await tryCatch(
+			this.client.send(command),
+			'authService - forgotPassword',
+		)
 	}
 
 	public async confirmForgotPassword(
@@ -384,13 +475,21 @@ class CognitoService implements ICognitoService {
 		code: string,
 		newPassword: string,
 		confirmPassword: string,
-	) {
-		if (newPassword !== confirmPassword) {
-			throw AppError.validation(
-				'Passwords do not match',
-				undefined,
-				'authService',
-			)
+	): Promise<EnhancedResult<ConfirmForgotPasswordCommandOutput>> {
+		// Validate passwords match using tryCatchSync
+		const { error: validationError } = tryCatchSync(() => {
+			if (newPassword !== confirmPassword) {
+				throw AppError.validation(
+					'Passwords do not match',
+					undefined,
+					'authService',
+				)
+			}
+			return true
+		}, 'authService - confirmForgotPassword')
+
+		if (validationError) {
+			return { data: null, error: validationError }
 		}
 
 		// First, get the user's UUID using their email
@@ -399,30 +498,49 @@ class CognitoService implements ICognitoService {
 			UserPoolId: this.userPoolId,
 		})
 
-		const { data: users, error } = await tryCatch(
+		const { data: users, error: getUserError } = await tryCatch(
 			this.client.send(getUserCommand),
 			'authService - confirmForgotPassword',
 		)
 
-		if (error) {
-			logger.error({
-				msg: '[authService - confirmForgotPassword]: Error retrieving user',
-				error,
-			})
-			throw AppError.from(error, 'authService')
+		if (getUserError) {
+			return { data: null, error: getUserError }
 		}
 
-		if (!users.Users || users.Users.length === 0) {
-			throw AppError.notFound('User not found', 'authService')
-		}
+		// Validate users result using tryCatchSync
+		const { data: uniqueUser, error: validationUserError } = tryCatchSync(
+			() => {
+				if (!users.Users || users.Users.length === 0) {
+					throw AppError.notFound('User not found', 'authService')
+				}
 
-		const uniqueUser = users.Users.find(
-			(user) =>
-				user.Attributes?.find((attr) => attr.Name === 'email')?.Value === email,
+				const uniqueUser = users.Users.find(
+					(user) =>
+						user.Attributes?.find((attr) => attr.Name === 'email')?.Value ===
+						email,
+				)
+
+				if (!uniqueUser?.Username) {
+					throw AppError.notFound('User not found', 'authService')
+				}
+
+				return uniqueUser
+			},
+			'authService - validateUser',
 		)
 
-		if (!uniqueUser?.Username) {
-			throw AppError.notFound('User not found', 'authService')
+		if (validationUserError) {
+			return { data: null, error: validationUserError }
+		}
+
+		// Generate hash using tryCatchSync
+		const { data: secretHash, error: hashError } = tryCatchSync(
+			() => this.generateHash(uniqueUser.Username ?? ''),
+			'authService - generateHash',
+		)
+
+		if (hashError) {
+			return { data: null, error: hashError }
 		}
 
 		const command = new ConfirmForgotPasswordCommand({
@@ -430,26 +548,13 @@ class CognitoService implements ICognitoService {
 			Username: uniqueUser.Username,
 			ConfirmationCode: code,
 			Password: newPassword,
-			SecretHash: this.generateHash(uniqueUser.Username),
+			SecretHash: secretHash,
 		})
 
-		const {
-			data: confirmForgotPasswordResponse,
-			error: confirmForgotPasswordError,
-		} = await tryCatch(
+		return await tryCatch(
 			this.client.send(command),
 			'authService - confirmForgotPassword',
 		)
-
-		if (confirmForgotPasswordError) {
-			logger.error({
-				msg: '[authService - confirmForgotPassword]: Error confirming forgot password',
-				error: confirmForgotPasswordError,
-			})
-			throw AppError.from(confirmForgotPasswordError, 'authService')
-		}
-
-		return confirmForgotPasswordResponse
 	}
 
 	public async getAuthUser(accessToken: string) {
@@ -457,18 +562,10 @@ class CognitoService implements ICognitoService {
 			AccessToken: accessToken,
 		})
 
-		const { data: getAuthUserResponse, error: getAuthUserError } =
-			await tryCatch(this.client.send(command), 'authService - getAuthUser')
-
-		if (getAuthUserError) {
-			logger.error({
-				msg: '[authService - getAuthUser]: Error retrieving user',
-				error: getAuthUserError,
-			})
-			throw AppError.from(getAuthUserError, 'authService')
-		}
-
-		return getAuthUserResponse
+		return await tryCatch(
+			this.client.send(command),
+			'authService - getAuthUser',
+		)
 	}
 }
 

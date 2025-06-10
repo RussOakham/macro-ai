@@ -18,7 +18,7 @@ type EnhancedResult<T, E extends IStandardizedError = IStandardizedError> =
 	| Success<T>
 	| Failure<E>
 
-// Enhanced tryCatch with standardized errors
+// Enhanced tryCatch with standardized errors and proper type narrowing
 /**
  * Wraps an async operation in a try-catch block and returns a standardized result object
  * @param promise - The promise to be executed
@@ -43,7 +43,7 @@ const tryCatch = async <T, E extends IStandardizedError = IStandardizedError>(
 ): Promise<EnhancedResult<T, E>> => {
 	try {
 		const data = await promise
-		return { data, error: null }
+		return { data, error: null } as Success<T>
 	} catch (error: unknown) {
 		const standardizedError = standardizeError(error) as E
 
@@ -51,7 +51,7 @@ const tryCatch = async <T, E extends IStandardizedError = IStandardizedError>(
 		standardizedError.service ??= context
 
 		logger.error(`[${context}]: ${standardizedError.message}`)
-		return { data: null, error: standardizedError }
+		return { data: null, error: standardizedError } as Failure<E>
 	}
 }
 
@@ -79,7 +79,7 @@ const tryCatchSync = <T, E extends IStandardizedError = IStandardizedError>(
 ): EnhancedResult<T, E> => {
 	try {
 		const data = func()
-		return { data, error: null }
+		return { data, error: null } as Success<T>
 	} catch (error: unknown) {
 		const standardizedError = standardizeError(error) as E
 
@@ -87,7 +87,7 @@ const tryCatchSync = <T, E extends IStandardizedError = IStandardizedError>(
 		standardizedError.service ??= context
 
 		logger.error(`[${context}]: ${standardizedError.message}`)
-		return { data: null, error: standardizedError }
+		return { data: null, error: standardizedError } as Failure<E>
 	}
 }
 

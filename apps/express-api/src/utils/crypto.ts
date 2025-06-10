@@ -2,6 +2,8 @@ import crypto from 'crypto'
 
 import { config } from '../../config/default.ts'
 
+import { tryCatchSync } from './error-handling/try-catch.ts'
+
 // Use a secure encryption key from environment variables
 const encryptionKey = config.cookieEncryptionKey
 const ALGORITHM = 'aes-256-gcm'
@@ -17,23 +19,25 @@ const IV_LENGTH = 12 // For GCM, recommended IV length is 12 bytes
  * @returns The `encrypt` function returns an encrypted output string in the format of
  * "IV:AuthTag:EncryptedText".
  */
-export const encrypt = (text: string): string => {
-	const iv = crypto.randomBytes(IV_LENGTH)
-	const cipher = crypto.createCipheriv(
-		ALGORITHM,
-		Buffer.from(encryptionKey, 'hex'),
-		iv,
-	)
+export const encrypt = (text: string) => {
+	return tryCatchSync(() => {
+		const iv = crypto.randomBytes(IV_LENGTH)
+		const cipher = crypto.createCipheriv(
+			ALGORITHM,
+			Buffer.from(encryptionKey, 'hex'),
+			iv,
+		)
 
-	let encrypted = cipher.update(text, 'utf8', 'hex')
-	encrypted += cipher.final('hex')
+		let encrypted = cipher.update(text, 'utf8', 'hex')
+		encrypted += cipher.final('hex')
 
-	const authTag = cipher.getAuthTag()
+		const authTag = cipher.getAuthTag()
 
-	// IV:AuthTag:EncrpytedText
-	const encryptedOutput = `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`
+		// IV:AuthTag:EncrpytedText
+		const encryptedOutput = `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`
 
-	return encryptedOutput
+		return encryptedOutput
+	}, 'cryptoUtils - encrypt')
 }
 
 /**
@@ -46,22 +50,25 @@ export const encrypt = (text: string): string => {
  * @returns The `decrypt` function returns the decrypted text after decrypting the input encrypted text
  * using the provided encryption key, initialization vector (iv), and authentication tag.
  */
-export const decrypt = (encryptedText: string): string => {
-	const [ivHex, authTagHex, encryptedHex] = encryptedText.split(':')
+export const decrypt = (encryptedText: string) => {
+	return tryCatchSync(() => {
+		const [ivHex, authTagHex, encryptedHex] = encryptedText.split(':')
 
-	if (!ivHex || !authTagHex || !encryptedHex) {
-		throw new Error('Invalid encrypted text format')
-	}
-	const decipher = crypto.createDecipheriv(
-		ALGORITHM,
-		Buffer.from(encryptionKey, 'hex'),
-		Buffer.from(ivHex, 'hex'),
-	)
+		if (!ivHex || !authTagHex || !encryptedHex) {
+			throw new Error('Invalid encrypted text format')
+		}
 
-	decipher.setAuthTag(Buffer.from(authTagHex, 'hex'))
+		const decipher = crypto.createDecipheriv(
+			ALGORITHM,
+			Buffer.from(encryptionKey, 'hex'),
+			Buffer.from(ivHex, 'hex'),
+		)
 
-	let decrypted = decipher.update(encryptedHex, 'hex', 'utf8')
-	decrypted += decipher.final('utf8')
+		decipher.setAuthTag(Buffer.from(authTagHex, 'hex'))
 
-	return decrypted
+		let decrypted = decipher.update(encryptedHex, 'hex', 'utf8')
+		decrypted += decipher.final('utf8')
+
+		return decrypted
+	}, 'cryptoUtils - decrypt')
 }

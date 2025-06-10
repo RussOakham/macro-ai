@@ -5,32 +5,52 @@ import { pino } from '../utils/logger.ts'
 
 const { logger } = pino
 
+/**
+ * Global error handling middleware
+ * Catches all unhandled errors and returns a standardized response
+ */
 const errorHandler: ErrorRequestHandler = (
-	error: Error,
+	error: unknown,
 	req: Request,
 	res: Response,
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	_next: NextFunction,
+	next: NextFunction,
 ) => {
+	// Skip if headers already sent
+	if (res.headersSent) {
+		next(error)
+		return
+	}
+
+	// Standardize the error
 	const err =
 		error instanceof AppError
 			? error
 			: AppError.from(error, 'globalErrorHandler')
 
+	// Log the error with context
 	logger.error(`[ErrorHandler]: ${err.message}`, {
 		path: req.path,
 		method: req.method,
 		status: err.status,
 		type: err.type,
 		service: err.service,
-		stack: err.stack,
+		stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
 	})
 
-	res.status(err.status).json({
+	// Determine appropriate response
+	const responseBody = {
 		message: err.message,
-		details: err.details,
-		type: err.type,
-	})
+		// Only include details and type in non-production environments
+		...(process.env.NODE_ENV !== 'production'
+			? {
+					details: err.details,
+					type: err.type,
+				}
+			: {}),
+	}
+
+	// Send response with appropriate status code
+	res.status(err.status).json(responseBody)
 }
 
 export { errorHandler }

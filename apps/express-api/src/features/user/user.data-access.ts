@@ -1,15 +1,12 @@
 import { eq } from 'drizzle-orm'
-import { fromError } from 'zod-validation-error'
 
 import { db } from '../../data-access/db.ts'
 import { tryCatch } from '../../utils/error-handling/try-catch.ts'
 import { AppError } from '../../utils/errors.ts'
-import { pino } from '../../utils/logger.ts'
+import { safeValidateSchema } from '../../utils/response-handlers.ts'
 
 import { selectUserSchema, usersTable } from './user.schemas.ts'
 import { IUserRepository, TInsertUser, TUser } from './user.types.ts'
-
-const { logger } = pino
 
 /**
  * UserRepository class that implements the IUserRepository interface
@@ -42,11 +39,6 @@ class UserRepository implements IUserRepository {
 		)
 
 		if (error) {
-			logger.error({
-				msg: '[userRepository - findUserByEmail]: Database error',
-				email,
-				error,
-			})
 			throw AppError.from(error, 'userRepository')
 		}
 
@@ -54,15 +46,14 @@ class UserRepository implements IUserRepository {
 		if (!users.length) return undefined
 
 		// Validate the returned user with Zod
-		const result = selectUserSchema.safeParse(users[0])
+		const result = safeValidateSchema(
+			users[0],
+			selectUserSchema,
+			'userRepository',
+		)
 
-		if (!result.success) {
-			const validationError = fromError(result.error)
-			throw AppError.validation(
-				`Invalid user data returned from database: ${validationError.message}`,
-				{ details: validationError.details },
-				'userRepository',
-			)
+		if (result.error) {
+			throw AppError.from(result.error, 'userRepository')
 		}
 
 		return result.data
@@ -84,11 +75,6 @@ class UserRepository implements IUserRepository {
 		)
 
 		if (error) {
-			logger.error({
-				msg: '[userRepository - findUserById]: Database error',
-				id,
-				error,
-			})
 			throw AppError.from(error, 'userRepository')
 		}
 
@@ -96,15 +82,14 @@ class UserRepository implements IUserRepository {
 		if (!users.length) return undefined
 
 		// Validate the returned user with Zod
-		const result = selectUserSchema.safeParse(users[0])
+		const result = safeValidateSchema(
+			users[0],
+			selectUserSchema,
+			'userRepository',
+		)
 
-		if (!result.success) {
-			const validationError = fromError(result.error)
-			throw AppError.validation(
-				`Invalid user data returned from database: ${validationError.message}`,
-				{ details: validationError.details },
-				'userRepository',
-			)
+		if (result.error) {
+			throw AppError.from(result.error, 'userRepository')
 		}
 
 		return result.data
@@ -126,11 +111,6 @@ class UserRepository implements IUserRepository {
 		)
 
 		if (error) {
-			logger.error({
-				msg: '[userRepository - createUser]: Database error',
-				userData,
-				error,
-			})
 			throw AppError.from(error, 'userRepository')
 		}
 
@@ -140,15 +120,10 @@ class UserRepository implements IUserRepository {
 		}
 
 		// Validate the returned user with Zod
-		const result = selectUserSchema.safeParse(user)
+		const result = safeValidateSchema(user, selectUserSchema, 'userRepository')
 
-		if (!result.success) {
-			const validationError = fromError(result.error)
-			throw AppError.validation(
-				`Invalid user data returned from database: ${validationError.message}`,
-				{ details: validationError.details },
-				'userRepository',
-			)
+		if (result.error) {
+			throw AppError.from(result.error, 'userRepository')
 		}
 
 		return result.data
@@ -174,11 +149,6 @@ class UserRepository implements IUserRepository {
 		)
 
 		if (error) {
-			logger.error({
-				msg: '[userRepository - updateLastLogin]: Database error',
-				id,
-				error,
-			})
 			throw AppError.from(error, 'userRepository')
 		}
 
@@ -186,15 +156,10 @@ class UserRepository implements IUserRepository {
 		if (!user.length) return undefined
 
 		// Validate the returned user with Zod
-		const result = selectUserSchema.safeParse(user)
+		const result = safeValidateSchema(user, selectUserSchema, 'userRepository')
 
-		if (!result.success) {
-			const validationError = fromError(result.error)
-			throw AppError.validation(
-				`Invalid user data returned from database: ${validationError.message}`,
-				{ details: validationError.details },
-				'userRepository',
-			)
+		if (result.error) {
+			throw AppError.from(result.error, 'userRepository')
 		}
 
 		return result.data
@@ -220,27 +185,16 @@ class UserRepository implements IUserRepository {
 		)
 
 		if (error) {
-			logger.error({
-				msg: '[userRepository - updateUser]: Database error',
-				id,
-				userData,
-				error,
-			})
 			throw AppError.from(error, 'userRepository')
 		}
 
 		if (!user.length) return undefined
 
 		// Validate the returned user with Zod
-		const result = selectUserSchema.safeParse(user)
+		const result = safeValidateSchema(user, selectUserSchema, 'userRepository')
 
-		if (!result.success) {
-			const validationError = fromError(result.error)
-			throw AppError.validation(
-				`Invalid user data returned from database: ${validationError.message}`,
-				{ details: validationError.details },
-				'userRepository',
-			)
+		if (result.error) {
+			throw AppError.from(result.error, 'userRepository')
 		}
 
 		return result.data

@@ -1,7 +1,10 @@
 import { Response } from 'express'
 import { ReasonPhrases, StatusCodes } from 'http-status-codes'
+import { z } from 'zod'
+import { fromError } from 'zod-validation-error'
 
-import { ErrorType, IStandardizedError } from './errors.ts'
+import { tryCatchSync } from './error-handling/try-catch.ts'
+import { AppError, ErrorType, IStandardizedError } from './errors.ts'
 import { pino } from './logger.ts'
 
 const { logger } = pino
@@ -30,28 +33,42 @@ export type TServiceErrorResult =
 	| { success: false; error: { status: number; message: string } }
 
 /**
+ * Type for AWS service response metadata
+ */
+export interface TAwsServiceMetadata {
+	$metadata?: {
+		httpStatusCode?: number
+		requestId?: string
+		extendedRequestId?: string
+		attempts?: number
+	}
+}
+
+/**
  * Checks for error responses from AWS services
- * @param response AWS service response
+ * @param response AWS service response or its metadata
  * @param errorMessage Custom error message
  * @param logContext Context for logging
  * @returns Discriminated union indicating success or error details
  */
 export const handleServiceError = (
-	response: { $metadata: { httpStatusCode?: number } },
+	response: TAwsServiceMetadata | { $metadata: { httpStatusCode?: number } },
 	errorMessage: string,
 	logContext: string,
 ): TServiceErrorResult => {
+	const metadata = response.$metadata
+
 	if (
-		response.$metadata.httpStatusCode !== undefined &&
-		response.$metadata.httpStatusCode !== 200
+		metadata?.httpStatusCode !== undefined &&
+		metadata.httpStatusCode !== 200
 	) {
 		logger.error(
-			`[${logContext}]: ${errorMessage}: ${response.$metadata.httpStatusCode.toString()}`,
+			`[${logContext}]: ${errorMessage}: ${metadata.httpStatusCode.toString()}`,
 		)
 		return {
 			success: false,
 			error: {
-				status: response.$metadata.httpStatusCode,
+				status: metadata.httpStatusCode,
 				message: errorMessage,
 			},
 		}
@@ -157,4 +174,49 @@ export const validateData = (
 		}
 	}
 	return { valid: true }
+}
+
+/**
+ * Validates data against a Zod schema
+ * @param data Data to validate
+ * @param schema Zod schema to validate against
+ * @param logContext Context for logging
+ * @returns Object with validation result and parsed data or error details
+ */
+export const validateSchema = <T>(
+	data: unknown,
+	schema: z.ZodType<T>,
+	logContext: string,
+) => {
+	return tryCatchSync(() => {
+		return schema.parse(data)
+	}, `${logContext} - validateSchema`)
+}
+
+/**
+ * Safely validates data against a Zod schema without throwing
+ * @param data Data to validate
+ * @param schema Zod schema to validate against
+ * @param logContext Context for logging
+ * @returns Object with validation result and parsed data or error details
+ */
+export const safeValidateSchema = <T>(
+	data: unknown,
+	schema: z.ZodType<T>,
+	logContext: string,
+) => {
+	return tryCatchSync(() => {
+		const result = schema.safeParse(data)
+
+		if (!result.success) {
+			const validationError = fromError(result.error)
+			throw AppError.validation(
+				`Validation failed: ${validationError.message}`,
+				{ details: validationError.details },
+				logContext,
+			)
+		}
+
+		return result.data
+	}, `${logContext} - safeValidateSchema`)
 }

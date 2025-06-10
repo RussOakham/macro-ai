@@ -1,6 +1,7 @@
+import { z } from 'zod'
 import { fromError } from 'zod-validation-error'
 
-import { tryCatch } from '../../utils/error-handling/try-catch.ts'
+import { tryCatch, tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import { AppError } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 import { CognitoService } from '../auth/auth.services.ts'
@@ -30,20 +31,31 @@ class UserService implements IUserService {
 	 * @returns The user object or null if not found
 	 */
 	async getUserById({ userId }: { userId: string }) {
-		// Validate userId with Zod
-		const result = userIdSchema.safeParse(userId)
+		// Validate userId with Zod using tryCatchSync
+		const { data: validatedId, error: validationError } = tryCatchSync(() => {
+			const result = userIdSchema.safeParse(userId)
+			if (!result.success) {
+				const validationError = fromError(result.error)
+				throw AppError.validation(
+					`Invalid user ID: ${validationError.message}`,
+					{ details: validationError.details },
+					'userService',
+				)
+			}
+			return userId
+		}, 'userService - validateUserId')
 
-		if (!result.success) {
-			const validationError = fromError(result.error)
-			throw AppError.validation(
-				`Invalid user ID: ${validationError.message}`,
-				{ details: validationError.details },
-				'userService',
-			)
+		if (validationError) {
+			logger.error({
+				msg: '[userService - getUserById]: Invalid user ID',
+				userId,
+				error: validationError,
+			})
+			throw AppError.from(validationError, 'userService')
 		}
 
 		const { data: user, error } = await tryCatch(
-			this.userRepository.findUserById({ id: userId }),
+			this.userRepository.findUserById({ id: validatedId }),
 			'userService - getUserById',
 		)
 
@@ -68,8 +80,34 @@ class UserService implements IUserService {
 	 * @returns The user object or null if not found
 	 */
 	async getUserByEmail({ email }: { email: string }) {
+		// Validate email with Zod and tryCatchSync
+		const { data: validatedEmail, error: validationError } = tryCatchSync(
+			() => {
+				const result = z.string().email().safeParse(email)
+				if (!result.success) {
+					const validationError = fromError(result.error)
+					throw AppError.validation(
+						`Invalid email: ${validationError.message}`,
+						{ details: validationError.details },
+						'userService',
+					)
+				}
+				return result.data
+			},
+			'userService - validateEmail',
+		)
+
+		if (validationError) {
+			logger.error({
+				msg: '[userService - getUserByEmail]: Invalid email',
+				email,
+				error: validationError,
+			})
+			throw AppError.from(validationError, 'userService')
+		}
+
 		const { data: user, error } = await tryCatch(
-			this.userRepository.findUserByEmail({ email }),
+			this.userRepository.findUserByEmail({ email: validatedEmail }),
 			'userService - getUserByEmail',
 		)
 
@@ -96,10 +134,8 @@ class UserService implements IUserService {
 	 */
 	async getUserByAccessToken({ accessToken }: { accessToken: string }) {
 		// Get user ID from Cognito using access token
-		const { data: cognitoUser, error } = await tryCatch(
-			this.cognitoService.getAuthUser(accessToken),
-			'userService - getUserByAccessToken',
-		)
+		const { data: cognitoUser, error } =
+			await this.cognitoService.getAuthUser(accessToken)
 
 		if (error) {
 			logger.error({

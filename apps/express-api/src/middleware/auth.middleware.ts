@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { CognitoService } from '../features/auth/auth.services.ts'
 import { getAccessToken } from '../utils/cookies.ts'
-import { tryCatch, tryCatchSync } from '../utils/error-handling/try-catch.ts'
+import { tryCatchSync } from '../utils/error-handling/try-catch.ts'
 import { pino } from '../utils/logger.ts'
 import { handleServiceError } from '../utils/response-handlers.ts'
 
@@ -52,10 +52,8 @@ const verifyAuth = async (req: Request, res: Response, next: NextFunction) => {
 	}
 
 	// Verify token with Cognito service
-	const { data: cognitoUser, error: cognitoError } = await tryCatch(
-		cognito.getAuthUser(accessToken),
-		'middleware - verifyAuth',
-	)
+	const { data: cognitoUser, error: cognitoError } =
+		await cognito.getAuthUser(accessToken)
 
 	if (cognitoError) {
 		logger.error({
