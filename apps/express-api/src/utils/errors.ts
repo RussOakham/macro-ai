@@ -17,6 +17,57 @@ export enum ErrorType {
 	InternalError = 'InternalError',
 	Error = 'Error',
 	UnknownError = 'UnknownError',
+	DatabaseError = 'DATABASE_ERROR',
+	DatabaseConnectionError = 'DATABASE_CONNECTION_ERROR',
+	DatabaseQueryError = 'DATABASE_QUERY_ERROR',
+	DatabaseTransactionError = 'DATABASE_TRANSACTION_ERROR',
+}
+
+/**
+ * Type guard to check if an error is an authentication-related error
+ * @param error The error to check
+ * @returns True if the error is authentication-related
+ */
+export const isAuthError = (error: unknown): error is IStandardizedError => {
+	if (
+		typeof error === 'object' &&
+		error !== null &&
+		'type' in error &&
+		typeof error.type === 'string'
+	) {
+		const authErrorTypes = [
+			ErrorType.CognitoError,
+			ErrorType.UnauthorizedError,
+			ErrorType.ForbiddenError,
+		]
+		return authErrorTypes.includes(error.type as ErrorType)
+	}
+	return false
+}
+
+/**
+ * Type guard to check if an error is a database-related error
+ * @param error The error to check
+ * @returns True if the error is database-related
+ */
+export const isDatabaseError = (
+	error: unknown,
+): error is IStandardizedError => {
+	if (
+		typeof error === 'object' &&
+		error !== null &&
+		'type' in error &&
+		typeof error.type === 'string'
+	) {
+		const dbErrorTypes = [
+			ErrorType.DatabaseError,
+			ErrorType.DatabaseConnectionError,
+			ErrorType.DatabaseQueryError,
+			ErrorType.DatabaseTransactionError,
+		]
+		return dbErrorTypes.includes(error.type as ErrorType)
+	}
+	return false
 }
 
 // Standardized error interface
@@ -297,4 +348,61 @@ export const standardizeError = (err: unknown): IStandardizedError => {
 
 	// Otherwise, create an AppError and then convert it
 	return AppError.from(err).toStandardized()
+}
+
+export const standardizeDatabaseError = (
+	error: unknown,
+	context = 'database',
+): AppError => {
+	// Handle specific PostgreSQL error codes
+	if (error && typeof error === 'object' && 'code' in error) {
+		const pgError = error as { code: string; message?: string }
+
+		switch (pgError.code) {
+			case '08000': // connection_exception
+			case '08003': // connection_does_not_exist
+			case '08006': // connection_failure
+			case '08001': // sqlclient_unable_to_establish_sqlconnection
+			case '08004': // sqlserver_rejected_establishment_of_sqlconnection
+				return new AppError({
+					message: pgError.message ?? 'Database connection failed',
+					type: ErrorType.DatabaseConnectionError,
+					status: 503, // Service Unavailable
+					service: context,
+					details: error,
+				})
+
+			case '40001': // serialization_failure
+			case '40P01': // deadlock_detected
+				return new AppError({
+					message: pgError.message ?? 'Database transaction conflict',
+					type: ErrorType.DatabaseTransactionError,
+					status: 409, // Conflict
+					service: context,
+					details: error,
+				})
+
+			case '23505': // unique_violation
+				return new AppError({
+					message:
+						pgError.message ?? 'Duplicate key value violates unique constraint',
+					type: ErrorType.DatabaseError,
+					status: 409, // Conflict
+					service: context,
+					details: error,
+				})
+
+			default:
+				return new AppError({
+					message: pgError.message ?? 'Database error occurred',
+					type: ErrorType.DatabaseError,
+					status: 500,
+					service: context,
+					details: error,
+				})
+		}
+	}
+
+	// Default case for unknown database errors
+	return AppError.from(error, context)
 }
