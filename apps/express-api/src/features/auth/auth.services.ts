@@ -23,7 +23,7 @@ import {
 	tryCatch,
 	tryCatchSync,
 } from '../../utils/error-handling/try-catch.ts'
-import { AppError, ErrorType, IStandardizedError } from '../../utils/errors.ts'
+import { AppError } from '../../utils/errors.ts'
 
 import { ICognitoService, TRegisterUserRequest } from './auth.types.ts'
 
@@ -227,23 +227,6 @@ class CognitoService implements ICognitoService {
 
 		if (validationError) {
 			return { data: null, error: validationError }
-		}
-
-		if (!uniqueUser.Username) {
-			const err: IStandardizedError = {
-				type: ErrorType.NotFoundError,
-				name: 'NotFoundError',
-				status: 404,
-				message: 'User not found',
-				service: 'authService',
-				details: null,
-				stack: '',
-			}
-
-			return {
-				data: null,
-				error: err,
-			}
 		}
 
 		// Generate hash using tryCatchSync

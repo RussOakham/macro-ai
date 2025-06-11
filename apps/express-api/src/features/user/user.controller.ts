@@ -79,13 +79,12 @@ class UserController implements IUserController {
 		}
 
 		if (!user) {
-			logger.error({
-				msg: '[userController - getCurrentUser]: No user found',
-				userId: req.userId,
-			})
-			res.status(StatusCodes.NOT_FOUND).json({
-				message: 'User not found',
-			})
+			logger.fatal(
+				'[userController - getCurrentUser]: Service returned Success<undefined>',
+			)
+			res
+				.status(StatusCodes.INTERNAL_SERVER_ERROR)
+				.json({ message: 'Internal server error' })
 			return
 		}
 

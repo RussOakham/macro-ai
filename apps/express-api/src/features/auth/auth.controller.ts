@@ -316,7 +316,7 @@ class AuthController implements IAuthController {
 				sameSite: 'strict',
 				maxAge: loginResponse.tokens.expiresIn * 1000,
 			})
-			.cookie('marco-ai-refreshToken', loginResponse.tokens.refreshToken, {
+			.cookie('macro-ai-refreshToken', loginResponse.tokens.refreshToken, {
 				httpOnly: true,
 				secure: nodeEnv === 'production',
 				domain: cookieDomain,
@@ -377,7 +377,7 @@ class AuthController implements IAuthController {
 				domain: cookieDomain,
 				sameSite: 'strict',
 			})
-			.clearCookie('marco-ai-refreshToken', {
+			.clearCookie('macro-ai-refreshToken', {
 				domain: cookieDomain,
 				sameSite: 'strict',
 			})
@@ -446,7 +446,7 @@ class AuthController implements IAuthController {
 				maxAge: refreshLoginResponse.tokens.expiresIn * 1000,
 			})
 			.cookie(
-				'marco-ai-refreshToken',
+				'macro-ai-refreshToken',
 				refreshLoginResponse.tokens.refreshToken,
 				{
 					httpOnly: true,

@@ -52,8 +52,11 @@ export const encrypt = (text: string) => {
  */
 export const decrypt = (encryptedText: string) => {
 	return tryCatchSync(() => {
-		const [ivHex, authTagHex, encryptedHex] = encryptedText.split(':')
-
+		const parts = encryptedText.split(':')
+		if (parts.length !== 3) {
+			throw new Error('Invalid encrypted text format')
+		}
+		const [ivHex, authTagHex, encryptedHex] = parts
 		if (!ivHex || !authTagHex || !encryptedHex) {
 			throw new Error('Invalid encrypted text format')
 		}
