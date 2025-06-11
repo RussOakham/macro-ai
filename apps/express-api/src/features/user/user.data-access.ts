@@ -1,15 +1,18 @@
 import { eq } from 'drizzle-orm'
 
-import { db } from '../../data-access/db.ts'
+import { checkDatabaseConnection, db } from '../../data-access/db.ts'
 import {
 	EnhancedResult,
 	tryCatch,
 } from '../../utils/error-handling/try-catch.ts'
-import { AppError } from '../../utils/errors.ts'
+import { AppError, ErrorType, isDatabaseError } from '../../utils/errors.ts'
+import { pino } from '../../utils/logger.ts'
 import { safeValidateSchema } from '../../utils/response-handlers.ts'
 
 import { selectUserSchema, usersTable } from './user.schemas.ts'
 import { IUserRepository, TInsertUser, TUser } from './user.types.ts'
+
+const { logger } = pino
 
 /**
  * UserRepository class that implements the IUserRepository interface
@@ -22,6 +25,73 @@ class UserRepository implements IUserRepository {
 		this.db = database
 	}
 
+	// Add a method to handle database errors with retry logic
+	private async executeWithRetry<T>(
+		operation: () => Promise<T>,
+		context: string,
+		maxRetries = 3,
+	): Promise<EnhancedResult<T>> {
+		let retries = 0
+		let delay = 500 // Start with 500ms delay
+
+		while (retries <= maxRetries) {
+			const { data, error } = await tryCatch(
+				operation(),
+				`userRepository - ${context}`,
+			)
+
+			if (!error) {
+				return { data, error: null }
+			}
+
+			// If it's a database error that might be transient, retry
+			if (
+				isDatabaseError(error) &&
+				(error.type === ErrorType.DatabaseConnectionError ||
+					error.type === ErrorType.DatabaseTransactionError)
+			) {
+				retries++
+
+				if (retries <= maxRetries) {
+					logger.warn({
+						msg: `Database operation failed, retrying (${retries.toString()}/${maxRetries.toString()})`,
+						context,
+						error: error.message,
+						type: error.type,
+					})
+
+					// Check if database is still connected
+					const { status } = await checkDatabaseConnection()
+					if (status === 'error') {
+						logger.error({
+							msg: 'Database connection lost during operation',
+							context,
+						})
+						// Don't retry if connection is completely lost
+						break
+					}
+
+					// Wait before retrying with exponential backoff
+					await new Promise((resolve) => setTimeout(resolve, delay))
+					delay *= 2 // Exponential backoff
+					continue
+				}
+			}
+
+			// For non-retriable errors or max retries reached
+			return { data: null, error }
+		}
+
+		// If we've exhausted retries
+		return {
+			data: null,
+			error: AppError.internal(
+				`Failed to execute database operation after ${maxRetries.toString()} retries`,
+				`userRepository - ${context}`,
+			),
+		}
+	}
+
 	/**
 	 * Find a user by email
 	 * @param email The user's email address
@@ -32,18 +102,21 @@ class UserRepository implements IUserRepository {
 	}: {
 		email: string
 	}): Promise<EnhancedResult<TUser | undefined>> {
-		const { data: users, error } = await tryCatch(
-			this.db
-				.select()
-				.from(usersTable)
-				.where(eq(usersTable.email, email))
-				.limit(1),
-			'userRepository - findUserByEmail',
+		const result = await this.executeWithRetry(
+			() =>
+				this.db
+					.select()
+					.from(usersTable)
+					.where(eq(usersTable.email, email))
+					.limit(1),
+			'findUserByEmail',
 		)
 
-		if (error) {
-			return { data: null, error }
+		if (result.error) {
+			return { data: null, error: result.error }
 		}
+
+		const users = result.data
 
 		// If no user found, return undefined
 		if (!users.length) return { data: undefined, error: null }
