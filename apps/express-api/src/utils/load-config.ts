@@ -3,9 +3,8 @@ import { resolve } from 'path'
 import { z } from 'zod'
 
 import { envSchema, TEnv } from './env.schema.ts'
-import { AppError } from './errors.ts'
+import { AppError, standardizeError } from './errors.ts'
 import { pino } from './logger.ts'
-import { standardizeError } from './standardize-error.ts'
 
 const { logger } = pino
 

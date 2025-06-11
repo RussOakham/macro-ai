@@ -1,5 +1,17 @@
+import {
+	ConfirmForgotPasswordCommandOutput,
+	ConfirmSignUpCommandOutput,
+	ForgotPasswordCommandOutput,
+	GetUserCommandOutput,
+	GlobalSignOutCommandOutput,
+	InitiateAuthCommandOutput,
+	ResendConfirmationCodeCommandOutput,
+	SignUpCommandOutput,
+} from '@aws-sdk/client-cognito-identity-provider'
 import express from 'express'
 import { z } from 'zod'
+
+import { EnhancedResult } from '../../utils/error-handling/try-catch.ts'
 
 import {
 	authResponseSchema,
@@ -47,6 +59,39 @@ interface ICognitoError {
 	message?: string
 }
 
+// Service interfaces
+interface ICognitoService {
+	signUpUser: (
+		request: TRegisterUserRequest,
+	) => Promise<EnhancedResult<SignUpCommandOutput>>
+	confirmSignUp: (
+		email: string,
+		code: number,
+	) => Promise<EnhancedResult<ConfirmSignUpCommandOutput>>
+	resendConfirmationCode: (
+		email: string,
+	) => Promise<EnhancedResult<ResendConfirmationCodeCommandOutput>>
+	signInUser: (
+		email: string,
+		password: string,
+	) => Promise<EnhancedResult<InitiateAuthCommandOutput & { Username: string }>>
+	signOutUser: (
+		accessToken: string,
+	) => Promise<EnhancedResult<GlobalSignOutCommandOutput>>
+	forgotPassword: (
+		email: string,
+	) => Promise<EnhancedResult<ForgotPasswordCommandOutput>>
+	confirmForgotPassword: (
+		email: string,
+		code: string,
+		newPassword: string,
+		confirmPassword: string,
+	) => Promise<EnhancedResult<ConfirmForgotPasswordCommandOutput>>
+	getAuthUser: (
+		accessToken: string,
+	) => Promise<EnhancedResult<GetUserCommandOutput>>
+}
+
 // Controller interfaces
 interface IAuthController {
 	register: express.Handler
@@ -63,6 +108,7 @@ interface IAuthController {
 export type {
 	IAuthController,
 	ICognitoError,
+	ICognitoService,
 	TAuthResponse,
 	TConfirmForgotPasswordRequest,
 	TConfirmRegistrationRequest,

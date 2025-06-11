@@ -2,26 +2,55 @@ import { StatusCodes } from 'http-status-codes'
 import { z } from 'zod'
 import { fromError, isValidationError } from 'zod-validation-error'
 
-interface IAppErrorParams {
+// Define an enum for error types - moved from standardize-error.ts
+export enum ErrorType {
+	ApiError = 'ApiError',
+	AxiosError = 'AxiosError',
+	CognitoError = 'CognitoError',
+	ZodValidationError = 'ZodValidationError',
+	ZodError = 'ZodError',
+	ValidationError = 'ValidationError',
+	NotFoundError = 'NotFoundError',
+	UnauthorizedError = 'UnauthorizedError',
+	ForbiddenError = 'ForbiddenError',
+	ConflictError = 'ConflictError',
+	InternalError = 'InternalError',
+	Error = 'Error',
+	UnknownError = 'UnknownError',
+}
+
+// Standardized error interface
+export interface IStandardizedError extends Error {
+	type: ErrorType
+	name: string
+	status: number
 	message: string
-	status?: number
-	type?: string
+	stack: string
 	details?: unknown
 	service?: string
 }
 
-export class AppError extends Error {
-	readonly type: string
+interface IAppErrorParams {
+	message: string
+	status?: number
+	type?: ErrorType
+	details?: unknown
+	service?: string
+}
+
+export class AppError extends Error implements IStandardizedError {
+	readonly type: ErrorType
 	readonly status: number
 	readonly details?: unknown
 	readonly service: string
+	override readonly stack!: string
 
 	constructor({
 		message,
 		status = StatusCodes.INTERNAL_SERVER_ERROR,
-		type = 'AppError',
+		type = ErrorType.ApiError,
 		details,
-		service = 'unknown', // Default value
+		service = 'unknown',
 	}: IAppErrorParams) {
 		super(message)
 		this.name = this.constructor.name
@@ -30,11 +59,7 @@ export class AppError extends Error {
 		this.details = details
 		this.service = service
 
-		// Maintains proper stack trace for where error was thrown (only available on V8)
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		if (Error.captureStackTrace) {
-			Error.captureStackTrace(this, this.constructor)
-		}
+		Error.captureStackTrace(this, this.constructor)
 	}
 
 	/**
@@ -43,14 +68,26 @@ export class AppError extends Error {
 	 * @returns AppError instance
 	 */
 	static from(error: unknown, service?: string): AppError {
+		// Return as is if already an AppError
 		if (error instanceof AppError) {
 			return error
 		}
 
+		// Handle Cognito errors
+		if (isCognitoError(error)) {
+			return new AppError({
+				type: ErrorType.CognitoError,
+				message: getCognitoErrorMessage(error),
+				status: error.$metadata.httpStatusCode,
+				service,
+			})
+		}
+
+		// Handle Zod errors
 		if (error instanceof z.ZodError) {
 			const validationError = fromError(error)
 			return new AppError({
-				type: 'ValidationError',
+				type: ErrorType.ZodError,
 				message: validationError.message,
 				status: StatusCodes.BAD_REQUEST,
 				details: validationError.details,
@@ -58,9 +95,10 @@ export class AppError extends Error {
 			})
 		}
 
+		// Handle Zod validation errors
 		if (isValidationError(error)) {
 			return new AppError({
-				type: 'ValidationError',
+				type: ErrorType.ZodValidationError,
 				message: error.message,
 				status: StatusCodes.BAD_REQUEST,
 				details: error.details,
@@ -68,15 +106,19 @@ export class AppError extends Error {
 			})
 		}
 
+		// Handle standard errors
 		if (error instanceof Error) {
 			return new AppError({
+				type: ErrorType.Error,
 				message: error.message,
 				status: StatusCodes.INTERNAL_SERVER_ERROR,
 				service,
 			})
 		}
 
+		// Handle unknown errors
 		return new AppError({
+			type: ErrorType.UnknownError,
 			message: 'An unknown error occurred',
 			status: StatusCodes.INTERNAL_SERVER_ERROR,
 			service,
@@ -90,7 +132,7 @@ export class AppError extends Error {
 	 */
 	static notFound(message = 'Resource not found', service?: string): AppError {
 		return new AppError({
-			type: 'NotFoundError',
+			type: ErrorType.NotFoundError,
 			message,
 			status: StatusCodes.NOT_FOUND,
 			service,
@@ -104,7 +146,7 @@ export class AppError extends Error {
 	 */
 	static unauthorized(message = 'Unauthorized', service?: string): AppError {
 		return new AppError({
-			type: 'UnauthorizedError',
+			type: ErrorType.UnauthorizedError,
 			message,
 			status: StatusCodes.UNAUTHORIZED,
 			service,
@@ -118,7 +160,7 @@ export class AppError extends Error {
 	 */
 	static forbidden(message = 'Forbidden', service?: string): AppError {
 		return new AppError({
-			type: 'ForbiddenError',
+			type: ErrorType.ForbiddenError,
 			message,
 			status: StatusCodes.FORBIDDEN,
 			service,
@@ -137,7 +179,7 @@ export class AppError extends Error {
 		service?: string,
 	): AppError {
 		return new AppError({
-			type: 'ValidationError',
+			type: ErrorType.ValidationError,
 			message,
 			status: StatusCodes.BAD_REQUEST,
 			details,
@@ -152,7 +194,7 @@ export class AppError extends Error {
 	 */
 	static conflict(message = 'Resource conflict', service?: string): AppError {
 		return new AppError({
-			type: 'ConflictError',
+			type: ErrorType.ConflictError,
 			message,
 			status: StatusCodes.CONFLICT,
 			service,
@@ -169,10 +211,90 @@ export class AppError extends Error {
 		service?: string,
 	): AppError {
 		return new AppError({
-			type: 'InternalError',
+			type: ErrorType.InternalError,
 			message,
 			status: StatusCodes.INTERNAL_SERVER_ERROR,
 			service,
 		})
 	}
+
+	/**
+	 * Converts this AppError to a standardized error object
+	 * @returns Standardized error object
+	 */
+	toStandardized(): IStandardizedError {
+		return {
+			type: this.type,
+			name: this.name,
+			status: this.status,
+			message: this.message,
+			stack: this.stack,
+			details: this.details,
+			service: this.service,
+		}
+	}
+}
+
+// Cognito error handling - moved from standardize-error.ts
+interface ICognitoError {
+	$fault: 'client' | 'server'
+	$metadata: {
+		httpStatusCode: number
+		requestId: string
+		extendedRequestId?: string
+		cfId?: string
+		attempts: number
+		totalRetryDelay: number
+	}
+	__type: string
+	message?: string
+}
+
+const isCognitoError = (error: unknown): error is ICognitoError => {
+	return (
+		typeof error === 'object' &&
+		error !== null &&
+		'$fault' in error &&
+		'$metadata' in error &&
+		'__type' in error
+	)
+}
+
+const getCognitoErrorMessage = (error: ICognitoError): string => {
+	if (error.message) {
+		return error.message
+	}
+
+	// Map common Cognito error types to user-friendly messages
+	switch (error.__type) {
+		case 'UsernameExistsException':
+			return 'User already exists'
+		case 'UserNotConfirmedException':
+			return 'User is not confirmed'
+		case 'UserNotFoundException':
+			return 'User not found'
+		case 'NotAuthorizedException':
+			return 'Invalid username or password'
+		case 'CodeMismatchException':
+			return 'Invalid verification code'
+		case 'ExpiredCodeException':
+			return 'Verification code has expired'
+		default:
+			return `Cognito error: ${error.__type}`
+	}
+}
+
+/**
+ * Standardizes any error into a consistent format
+ * @param err The error to standardize
+ * @returns A standardized error object
+ */
+export const standardizeError = (err: unknown): IStandardizedError => {
+	// If it's already an AppError, convert it to standardized format
+	if (err instanceof AppError) {
+		return err.toStandardized()
+	}
+
+	// Otherwise, create an AppError and then convert it
+	return AppError.from(err).toStandardized()
 }

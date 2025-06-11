@@ -8,14 +8,14 @@ import {
 	getSynchronizeToken,
 } from '../../utils/cookies.ts'
 import { decrypt, encrypt } from '../../utils/crypto.ts'
-import { AppError } from '../../utils/errors.ts'
+import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
+import { AppError, standardizeError } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 import {
 	handleError,
 	handleServiceError,
 	validateData,
 } from '../../utils/response-handlers.ts'
-import { standardizeError } from '../../utils/standardize-error.ts'
 import { userRepository } from '../user/user.data-access.ts'
 import { userService } from '../user/user.services.ts'
 import { TInsertUser } from '../user/user.types.ts'
@@ -45,553 +45,668 @@ const refreshTokenExpiryDays = config.awsCognitoRefreshTokenExpiry
  * Handles all authentication related requests
  */
 class AuthController implements IAuthController {
-	private cognito: CognitoService
-	private userService: typeof userService
+	private readonly cognito: CognitoService
+	private readonly userService: typeof userService
+	private readonly userRepository: typeof userRepository
 
 	constructor(
 		cognitoService: CognitoService = new CognitoService(),
 		userSvc: typeof userService = userService,
+		userRepo: typeof userRepository = userRepository,
 	) {
 		this.cognito = cognitoService
 		this.userService = userSvc
+		this.userRepository = userRepo
 	}
 
 	public register = async (req: Request, res: Response): Promise<void> => {
-		try {
-			const { email, password, confirmPassword } =
-				req.body as TRegisterUserRequest
+		const { email, password, confirmPassword } =
+			req.body as TRegisterUserRequest
 
-			// TODO: Check if user already exists in database
+		// Check if user already exists
+		const { data: getUserResponse, error: getUserError } =
+			await this.userService.getUserByEmail({ email })
 
-			const response = await this.cognito.signUpUser({
-				email,
-				password,
-				confirmPassword,
-			})
-
-			if (
-				response.$metadata.httpStatusCode !== undefined &&
-				response.$metadata.httpStatusCode !== 200
-			) {
-				logger.error(
-					`[authController]: Error registering user: ${response.$metadata.httpStatusCode.toString()}`,
-				)
-				const error = AppError.validation(
-					`Registration failed: ${response.$metadata.httpStatusCode.toString()}`,
-				)
-				handleError(res, standardizeError(error), 'authController')
-				return
-			}
-
-			if (!response.UserSub) {
-				const error = AppError.validation(
-					'User not created - no user ID returned',
-					{
-						response: response.$metadata,
-					},
-				)
-				handleError(res, standardizeError(error), 'authController')
-				return
-			}
-
-			// Create user in database with Zod validation
-			const userData: TInsertUser = {
-				id: response.UserSub,
-				email,
-			}
-
-			const user = await userRepository.createUser({ userData })
-
-			logger.info(`[authController]: User created: ${user.id}`)
-
-			const authResponse: TRegisterUserResponse = {
-				message:
-					'Registration successful. Please check your email for verification code.',
-				user: {
-					id: response.UserSub,
-					email,
-				},
-			}
-
-			res.status(StatusCodes.CREATED).json(authResponse)
-		} catch (error: unknown) {
-			const err = standardizeError(error)
-			logger.error(
-				`[authController]: Error registering user: ${err.status.toString()} ${err.message}`,
-			)
-			handleError(res, err, 'authController')
+		if (getUserError) {
+			handleError(res, getUserError, 'authController')
+			return
 		}
+
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+		if (getUserResponse) {
+			const error = AppError.conflict(
+				'User already exists',
+				'authController - register',
+			)
+			handleError(res, standardizeError(error), 'authController')
+			return
+		}
+
+		// Register user with Cognito
+		const { data: signUpResponse, error: signUpError } =
+			await this.cognito.signUpUser({ email, password, confirmPassword })
+
+		if (signUpError) {
+			handleError(res, signUpError, 'authController')
+			return
+		}
+
+		// Check for Cognito service errors
+		const serviceResult = handleServiceError(
+			signUpResponse,
+			'Error registering user',
+			'authController',
+		)
+
+		if (!serviceResult.success) {
+			res
+				.status(serviceResult.error.status)
+				.json({ message: serviceResult.error.message })
+			return
+		}
+
+		// Check for service errors
+		if (!signUpResponse.UserSub) {
+			const error = AppError.validation(
+				'User not created - no user ID returned',
+				'authController - register',
+			)
+			handleError(res, standardizeError(error), 'authController')
+			return
+		}
+
+		// Create user in database with Zod validation
+		const userData: TInsertUser = {
+			id: signUpResponse.UserSub,
+			email,
+		}
+
+		const { data: user, error: userError } =
+			await this.userRepository.createUser({ userData })
+
+		if (userError) {
+			handleError(res, userError, 'authController')
+			return
+		}
+
+		logger.info(`[authController]: User created: ${user.id}`)
+
+		const authResponse: TRegisterUserResponse = {
+			message:
+				'Registration successful. Please check your email for verification code.',
+			user: {
+				id: signUpResponse.UserSub,
+				email,
+			},
+		}
+
+		res.status(StatusCodes.CREATED).json(authResponse)
 	}
 
 	public confirmRegistration = async (
 		req: Request,
 		res: Response,
 	): Promise<void> => {
-		try {
-			const { email, code } = req.body as TConfirmRegistrationRequest
+		const { email, code } = req.body as TConfirmRegistrationRequest
 
-			const response = await this.cognito.confirmSignUp(email, code)
+		// Confirm user registration with Cognito
+		const { data: confirmSignUpResponse, error: confirmSignUpError } =
+			await this.cognito.confirmSignUp(email, code)
 
-			// Check for service errors
-			const serviceResult = handleServiceError(
-				response,
-				'Error confirming user registration',
-				'authController',
-			)
-			if (!serviceResult.success) {
-				res
-					.status(serviceResult.error.status)
-					.json({ message: serviceResult.error.message })
-				return
-			}
+		if (confirmSignUpError) {
+			handleError(res, confirmSignUpError, 'authController')
+			return
+		}
 
-			// get user from database
-			const user = await this.userService.getUserByEmail({ email })
+		// Check for service errors
+		const serviceResult = handleServiceError(
+			confirmSignUpResponse,
+			'Error confirming user registration',
+			'authController',
+		)
 
-			const dbUser = await userRepository.updateUser(user.id, {
+		if (!serviceResult.success) {
+			res
+				.status(serviceResult.error.status)
+				.json({ message: serviceResult.error.message })
+			return
+		}
+
+		// get user from database
+		const { data: user, error: userError } =
+			await this.userService.getUserByEmail({ email })
+
+		if (userError) {
+			handleError(res, userError, 'authController')
+			return
+		}
+
+		// Update user email verification status in database
+		const { data: updatedUser, error: updatedUserError } =
+			await this.userRepository.updateUser(user.id, {
 				emailVerified: true,
 			})
-			if (!dbUser) {
-				throw AppError.internal(
-					'Failed to update user email verification',
-					'authController',
-				)
-			}
 
-			const authResponse: TAuthResponse = {
-				message: 'Email confirmed successfully',
-			}
-
-			res.status(StatusCodes.OK).json(authResponse)
-		} catch (error: unknown) {
-			const err = standardizeError(error)
-			logger.error(
-				`[authController]: Error confirming registration: ${err.status.toString()} ${err.message}`,
-			)
-			handleError(res, err, 'authController')
+		if (updatedUserError) {
+			handleError(res, updatedUserError, 'authController')
+			return
 		}
+
+		if (!updatedUser) {
+			const error = AppError.internal(
+				'Failed to update user email verification',
+				'authController',
+			)
+			handleError(res, standardizeError(error), 'authController')
+			return
+		}
+
+		const authResponse: TAuthResponse = {
+			message: 'Email confirmed successfully',
+		}
+
+		res.status(StatusCodes.OK).json(authResponse)
 	}
 
 	public resendConfirmationCode = async (
 		req: Request,
 		res: Response,
 	): Promise<void> => {
-		try {
-			const { email } = req.body as TResendConfirmationCodeRequest
+		const { email } = req.body as TResendConfirmationCodeRequest
 
-			const response = await this.cognito.resendConfirmationCode(email)
+		// Resend confirmation code with Cognito
+		const {
+			data: resendConfirmationCodeResponse,
+			error: resendConfirmationCodeError,
+		} = await this.cognito.resendConfirmationCode(email)
 
-			// Check for service errors
-			const serviceResult = handleServiceError(
-				response,
-				'Error resending confirmation code',
-				'authController',
-			)
-			if (!serviceResult.success) {
-				res
-					.status(serviceResult.error.status)
-					.json({ message: serviceResult.error.message })
-				return
-			}
-
-			const authResponse: TAuthResponse = {
-				message: 'Confirmation code resent successfully',
-			}
-
-			res.status(StatusCodes.OK).json(authResponse)
-		} catch (error: unknown) {
-			const err = standardizeError(error)
-			logger.error(
-				`[authController]: Error resending confirmation code: ${err.status.toString()} ${err.message}`,
-			)
-			handleError(res, err, 'authController')
+		if (resendConfirmationCodeError) {
+			handleError(res, resendConfirmationCodeError, 'authController')
+			return
 		}
+
+		// Check for service errors
+		const serviceResult = handleServiceError(
+			resendConfirmationCodeResponse,
+			'Error resending confirmation code',
+			'authController',
+		)
+		if (!serviceResult.success) {
+			res
+				.status(serviceResult.error.status)
+				.json({ message: serviceResult.error.message })
+			return
+		}
+
+		const authResponse: TAuthResponse = {
+			message: 'Confirmation code resent successfully',
+		}
+
+		res.status(StatusCodes.OK).json(authResponse)
 	}
 
 	public login = async (req: Request, res: Response): Promise<void> => {
-		try {
-			const { email, password } = req.body as TLoginRequest
+		const { email, password } = req.body as TLoginRequest
 
-			const response = await this.cognito.signInUser(email, password)
+		// Login user with Cognito
+		const { data: signInResponse, error: signInError } =
+			await this.cognito.signInUser(email, password)
 
-			if (
-				response.$metadata.httpStatusCode !== undefined &&
-				response.$metadata.httpStatusCode !== 200
-			) {
-				logger.error(
-					`[authController]: Error logging in user: ${response.$metadata.httpStatusCode.toString()}`,
-				)
-				const error = AppError.validation(
-					`Login failed: ${response.$metadata.httpStatusCode.toString()}`,
-				)
-				handleError(res, standardizeError(error), 'authController')
-				return
-			}
+		if (signInError) {
+			handleError(res, signInError, 'authController')
+			return
+		}
 
-			const encryptedUsername = encrypt(response.Username)
+		// Check for service errors
+		const serviceResult = handleServiceError(
+			signInResponse,
+			'Error logging in user',
+			'authController',
+		)
+		if (!serviceResult.success) {
+			res
+				.status(serviceResult.error.status)
+				.json({ message: serviceResult.error.message })
+			return
+		}
 
+		// Validate that authentication tokens are present
+		if (
+			!signInResponse.AuthenticationResult?.AccessToken ||
+			!signInResponse.AuthenticationResult.RefreshToken ||
+			!signInResponse.AuthenticationResult.ExpiresIn
+		) {
+			const error = AppError.internal(
+				'Authentication tokens missing from response',
+				'authController - login',
+			)
+			logger.error({
+				msg: '[authController - login]: Missing authentication tokens',
+				error: error.message,
+			})
+			handleError(res, standardizeError(error), 'authController')
+			return
+		}
+
+		// Use the encrypt function with the new return type
+		const { data: encryptedUsername, error: encryptError } = encrypt(
+			signInResponse.Username,
+		)
+
+		if (encryptError) {
+			handleError(res, encryptError, 'authController')
+			return
+		}
+
+		// Register or login user in database
+		const { data: user, error: userError } =
 			await this.userService.registerOrLoginUserById({
-				id: response.Username,
+				id: signInResponse.Username,
 				email,
 			})
 
-			const loginResponse: TLoginResponse = {
-				message: 'Login successful',
-				tokens: {
-					accessToken: response.AuthenticationResult?.AccessToken ?? '',
-					refreshToken: response.AuthenticationResult?.RefreshToken ?? '',
-					expiresIn: response.AuthenticationResult?.ExpiresIn ?? 0,
-				},
-			}
-
-			res
-				.cookie('macro-ai-accessToken', loginResponse.tokens.accessToken, {
-					httpOnly: false,
-					secure: nodeEnv === 'production',
-					domain: cookieDomain,
-					sameSite: 'strict',
-					maxAge: loginResponse.tokens.expiresIn * 1000,
-				})
-				.cookie('marco-ai-refreshToken', loginResponse.tokens.refreshToken, {
-					httpOnly: true,
-					secure: nodeEnv === 'production',
-					domain: cookieDomain,
-					sameSite: 'strict',
-					maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
-				})
-				.cookie('macro-ai-synchronize', encryptedUsername, {
-					httpOnly: true,
-					secure: nodeEnv === 'production',
-					domain: cookieDomain,
-					sameSite: 'strict',
-					maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
-				})
-				.status(StatusCodes.OK)
-				.json(loginResponse)
-		} catch (error: unknown) {
-			const err = standardizeError(error)
-			logger.error(
-				`[authController]: Error logging in user: ${err.status.toString()} ${err.message}`,
-			)
-			handleError(res, err, 'authController')
+		if (userError) {
+			handleError(res, userError, 'authController')
+			return
 		}
+
+		logger.info(`[authController]: User logged in: ${user.id}`)
+
+		const loginResponse: TLoginResponse = {
+			message: 'Login successful',
+			tokens: {
+				accessToken: signInResponse.AuthenticationResult.AccessToken,
+				refreshToken: signInResponse.AuthenticationResult.RefreshToken,
+				expiresIn: signInResponse.AuthenticationResult.ExpiresIn,
+			},
+		}
+
+		res
+			.cookie('macro-ai-accessToken', loginResponse.tokens.accessToken, {
+				httpOnly: false,
+				secure: nodeEnv === 'production',
+				domain: cookieDomain,
+				sameSite: 'strict',
+				maxAge: loginResponse.tokens.expiresIn * 1000,
+			})
+			.cookie('macro-ai-refreshToken', loginResponse.tokens.refreshToken, {
+				httpOnly: true,
+				secure: nodeEnv === 'production',
+				domain: cookieDomain,
+				sameSite: 'strict',
+				maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
+			})
+			.cookie('macro-ai-synchronize', encryptedUsername, {
+				httpOnly: true,
+				secure: nodeEnv === 'production',
+				domain: cookieDomain,
+				sameSite: 'strict',
+				maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
+			})
+			.status(StatusCodes.OK)
+			.json(loginResponse)
 	}
 
 	public logout = async (req: Request, res: Response): Promise<void> => {
-		try {
-			const accessToken = getAccessToken(req, false) // Optional for logout
+		// Extract access token from cookies
+		const { data: accessToken, error: accessTokenError } = tryCatchSync(
+			() => getAccessToken(req),
+			'authController - logout',
+		)
 
-			try {
-				const response = await this.cognito.signOutUser(accessToken)
-
-				if (
-					response.$metadata.httpStatusCode !== undefined &&
-					response.$metadata.httpStatusCode !== 200
-				) {
-					const error = AppError.validation(
-						`Logout failed: ${response.$metadata.httpStatusCode.toString()}`,
-					)
-					handleError(res, standardizeError(error), 'authController')
-					return
-				}
-
-				res.clearCookie('macro-ai-accessToken', {
-					domain: cookieDomain,
-					sameSite: 'strict',
-				})
-				res.clearCookie('marco-ai-refreshToken', {
-					domain: cookieDomain,
-					sameSite: 'strict',
-				})
-				res.clearCookie('macro-ai-synchronize', {
-					domain: cookieDomain,
-					sameSite: 'strict',
-				})
-
-				const authResponse: TAuthResponse = {
-					message: 'Logout successful',
-				}
-
-				res.status(StatusCodes.OK).json(authResponse)
-			} catch (error) {
-				if (error instanceof Error && error.message === 'TOKEN_EXPIRED') {
-					res.clearCookie('macro-ai-accessToken', {
-						domain: cookieDomain,
-						sameSite: 'strict',
-					})
-					res.clearCookie('marco-ai-refreshToken', {
-						domain: cookieDomain,
-						sameSite: 'strict',
-					})
-					res.clearCookie('macro-ai-synchronize', {
-						domain: cookieDomain,
-						sameSite: 'strict',
-					})
-
-					const authResponse: TAuthResponse = {
-						message: 'Logout successful',
-					}
-
-					res.status(StatusCodes.OK).json(authResponse)
-					return
-				}
-				throw error
-			}
-		} catch (error: unknown) {
-			const err = standardizeError(error)
-			logger.error(
-				`[authController]: Error logging out user: ${err.status.toString()} ${err.message}`,
-			)
-			handleError(res, err, 'authController')
+		if (accessTokenError) {
+			handleError(res, accessTokenError, 'authController')
+			return
 		}
+
+		// Logout user with Cognito
+		const { data: signOutResponse, error: signOutError } =
+			await this.cognito.signOutUser(accessToken)
+
+		if (signOutError) {
+			handleError(res, signOutError, 'authController')
+			return
+		}
+
+		// Check for service errors
+		const serviceResult = handleServiceError(
+			signOutResponse,
+			'Error logging out user',
+			'authController',
+		)
+		if (!serviceResult.success) {
+			res
+				.status(serviceResult.error.status)
+				.json({ message: serviceResult.error.message })
+			return
+		}
+
+		const authResponse: TAuthResponse = {
+			message: 'Logout successful',
+		}
+
+		res
+			.clearCookie('macro-ai-accessToken', {
+				domain: cookieDomain,
+				sameSite: 'strict',
+			})
+			.clearCookie('macro-ai-refreshToken', {
+				domain: cookieDomain,
+				sameSite: 'strict',
+			})
+			.clearCookie('macro-ai-synchronize', {
+				domain: cookieDomain,
+				sameSite: 'strict',
+			})
+			.status(StatusCodes.OK)
+			.json(authResponse)
 	}
 
 	public refreshToken = async (req: Request, res: Response): Promise<void> => {
-		try {
-			const refreshToken = getRefreshToken(req)
-			const encryptedUsername = getSynchronizeToken(req)
+		// Extract refresh token from cookies with error handling
+		const { data: refreshToken, error: getRefreshTokenError } = tryCatchSync(
+			() => getRefreshToken(req),
+			'authController - refreshToken',
+		)
 
-			const decryptedUsername = decrypt(encryptedUsername)
+		if (getRefreshTokenError) {
+			logger.error({
+				msg: '[authController - refreshToken]: Error retrieving refresh token',
+				error: getRefreshTokenError,
+			})
+			res.status(StatusCodes.UNAUTHORIZED).json({
+				message: 'Refresh token not found or invalid',
+			})
+			return
+		}
 
-			const response = await this.cognito.refreshToken(
-				refreshToken,
-				decryptedUsername,
+		// Extract synchronize token from cookies with error handling
+		const { data: encryptedUsername, error: synchronizeTokenError } =
+			tryCatchSync(
+				() => getSynchronizeToken(req),
+				'authController - refreshToken',
 			)
 
-			if (
-				response.$metadata.httpStatusCode !== undefined &&
-				response.$metadata.httpStatusCode !== 200
-			) {
-				logger.error(
-					`[authController]: Error refreshing token: ${response.$metadata.httpStatusCode.toString()}`,
-				)
-				const error = AppError.validation(
-					`Refresh token failed: ${response.$metadata.httpStatusCode.toString()}`,
-				)
-				handleError(res, standardizeError(error), 'authController')
-				return
-			}
+		if (synchronizeTokenError) {
+			logger.error({
+				msg: '[authController - refreshToken]: Error retrieving synchronize token',
+				error: synchronizeTokenError,
+			})
+			res.status(StatusCodes.UNAUTHORIZED).json({
+				message: 'Synchronize token not found or invalid',
+			})
+			return
+		}
 
-			const newRefreshToken =
-				response.AuthenticationResult?.RefreshToken ?? refreshToken
+		// Use the decrypt function with the new return type
+		const { data: decryptedUsername, error: decryptError } =
+			decrypt(encryptedUsername)
 
-			const refreshLoginResponse: TLoginResponse = {
-				message: 'Token refreshed successfully',
-				tokens: {
-					accessToken: response.AuthenticationResult?.AccessToken ?? '',
-					refreshToken: newRefreshToken,
-					expiresIn: response.AuthenticationResult?.ExpiresIn ?? 0,
-				},
-			}
+		if (decryptError) {
+			handleError(res, decryptError, 'authController')
+			return
+		}
 
+		// Refresh token with Cognito
+		const { data: refreshTokenResponse, error: refreshTokenResponseError } =
+			await this.cognito.refreshToken(refreshToken, decryptedUsername)
+
+		if (refreshTokenResponseError) {
+			handleError(res, refreshTokenResponseError, 'authController')
+			return
+		}
+
+		// Check for service errors
+		const serviceResult = handleServiceError(
+			refreshTokenResponse,
+			'Error refreshing token',
+			'authController',
+		)
+		if (!serviceResult.success) {
 			res
-				.cookie(
-					'macro-ai-accessToken',
-					refreshLoginResponse.tokens.accessToken,
-					{
-						httpOnly: false,
-						secure: nodeEnv === 'production',
-						domain: cookieDomain,
-						sameSite: 'strict',
-						maxAge: refreshLoginResponse.tokens.expiresIn * 1000,
-					},
-				)
-				.cookie(
-					'marco-ai-refreshToken',
-					refreshLoginResponse.tokens.refreshToken,
-					{
-						httpOnly: true,
-						secure: nodeEnv === 'production',
-						domain: cookieDomain,
-						sameSite: 'strict',
-						maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
-					},
-				)
-				.cookie('macro-ai-synchronize', encryptedUsername, {
+				.status(serviceResult.error.status)
+				.json({ message: serviceResult.error.message })
+			return
+		}
+
+		// Validate that required authentication tokens are present
+		if (
+			!refreshTokenResponse.AuthenticationResult?.AccessToken ||
+			typeof refreshTokenResponse.AuthenticationResult.ExpiresIn !== 'number'
+		) {
+			const error = AppError.internal(
+				'Authentication tokens missing from response',
+				'authController - refreshToken',
+			)
+			logger.error({
+				msg: '[authController - refreshToken]: Missing authentication tokens',
+				error: error.message,
+			})
+			handleError(res, standardizeError(error), 'authController')
+			return
+		}
+
+		// The refresh token might not be returned if it hasn't expired yet
+		const newRefreshToken =
+			refreshTokenResponse.AuthenticationResult.RefreshToken ?? refreshToken
+
+		const refreshLoginResponse: TLoginResponse = {
+			message: 'Token refreshed successfully',
+			tokens: {
+				accessToken: refreshTokenResponse.AuthenticationResult.AccessToken,
+				refreshToken: newRefreshToken,
+				expiresIn: refreshTokenResponse.AuthenticationResult.ExpiresIn,
+			},
+		}
+
+		res
+			.cookie('macro-ai-accessToken', refreshLoginResponse.tokens.accessToken, {
+				httpOnly: false,
+				secure: nodeEnv === 'production',
+				domain: cookieDomain,
+				sameSite: 'strict',
+				maxAge: refreshLoginResponse.tokens.expiresIn * 1000,
+			})
+			.cookie(
+				'macro-ai-refreshToken',
+				refreshLoginResponse.tokens.refreshToken,
+				{
 					httpOnly: true,
 					secure: nodeEnv === 'production',
 					domain: cookieDomain,
 					sameSite: 'strict',
 					maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
-				})
-				.status(StatusCodes.OK)
-				.json(refreshLoginResponse)
-		} catch (error: unknown) {
-			const err = standardizeError(error)
-			logger.error(
-				`[authController]: Error refreshing token: ${err.status.toString()} ${err.message}`,
+				},
 			)
-			handleError(res, err, 'authController')
-		}
+			.cookie('macro-ai-synchronize', encryptedUsername, {
+				httpOnly: true,
+				secure: nodeEnv === 'production',
+				domain: cookieDomain,
+				sameSite: 'strict',
+				maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
+			})
+			.status(StatusCodes.OK)
+			.json(refreshLoginResponse)
 	}
 
 	public forgotPassword = async (
 		req: Request,
 		res: Response,
 	): Promise<void> => {
-		try {
-			const { email } = req.body as TForgotPasswordRequest
+		const { email } = req.body as TForgotPasswordRequest
 
-			const response = await this.cognito.forgotPassword(email)
+		// Initiate forgot password with Cognito
+		const { data: forgotPasswordResponse, error: forgotPasswordError } =
+			await this.cognito.forgotPassword(email)
 
-			if (
-				response.$metadata.httpStatusCode !== undefined &&
-				response.$metadata.httpStatusCode !== 200
-			) {
-				logger.error(
-					`[authController]: Error initiating forgot password: ${response.$metadata.httpStatusCode.toString()}`,
-				)
-				const error = AppError.validation(
-					`Forgot password failed: ${response.$metadata.httpStatusCode.toString()}`,
-				)
-				handleError(res, standardizeError(error), 'authController')
-				return
-			}
-
-			const authResponse: TAuthResponse = {
-				message: 'Password reset initiated successfully',
-			}
-
-			res.status(StatusCodes.OK).json(authResponse)
-		} catch (error: unknown) {
-			const err = standardizeError(error)
-			logger.error(
-				`[authController]: Error initiating forgot password: ${err.status.toString()} ${err.message}`,
-			)
-			handleError(res, err, 'authController')
+		if (forgotPasswordError) {
+			handleError(res, forgotPasswordError, 'authController')
+			return
 		}
+
+		// Check for service errors
+		const serviceResult = handleServiceError(
+			forgotPasswordResponse,
+			'Error initiating forgot password',
+			'authController',
+		)
+		if (!serviceResult.success) {
+			res
+				.status(serviceResult.error.status)
+				.json({ message: serviceResult.error.message })
+			return
+		}
+
+		const authResponse: TAuthResponse = {
+			message: 'Password reset initiated successfully',
+		}
+
+		res.status(StatusCodes.OK).json(authResponse)
 	}
 
 	public confirmForgotPassword = async (
 		req: Request,
 		res: Response,
 	): Promise<void> => {
-		try {
-			const { email, code, newPassword, confirmPassword } =
-				req.body as TConfirmForgotPasswordRequest
+		const { email, code, newPassword, confirmPassword } =
+			req.body as TConfirmForgotPasswordRequest
 
-			const response = await this.cognito.confirmForgotPassword(
-				email,
-				code,
-				newPassword,
-				confirmPassword,
-			)
+		// Confirm forgot password with Cognito
+		const {
+			data: confirmForgotPasswordResponse,
+			error: confirmForgotPasswordError,
+		} = await this.cognito.confirmForgotPassword(
+			email,
+			code,
+			newPassword,
+			confirmPassword,
+		)
 
-			if (
-				response.$metadata.httpStatusCode !== undefined &&
-				response.$metadata.httpStatusCode !== 200
-			) {
-				logger.error(
-					`[authController]: Error confirming forgot password: ${response.$metadata.httpStatusCode.toString()}`,
-				)
-				const error = AppError.validation(
-					`Confirm forgot password failed: ${response.$metadata.httpStatusCode.toString()}`,
-				)
-				handleError(res, standardizeError(error), 'authController')
-				return
-			}
-
-			const authResponse: TAuthResponse = {
-				message: 'Password reset successfully',
-			}
-
-			res.status(StatusCodes.OK).json(authResponse)
-		} catch (error: unknown) {
-			const err = standardizeError(error)
-			logger.error(
-				`[authController]: Error confirming forgot password: ${err.status.toString()} ${err.message}`,
-			)
-			handleError(res, err, 'authController')
+		if (confirmForgotPasswordError) {
+			handleError(res, confirmForgotPasswordError, 'authController')
+			return
 		}
+
+		// Check for service errors
+		const serviceResult = handleServiceError(
+			confirmForgotPasswordResponse,
+			'Error confirming forgot password',
+			'authController',
+		)
+		if (!serviceResult.success) {
+			res
+				.status(serviceResult.error.status)
+				.json({ message: serviceResult.error.message })
+			return
+		}
+
+		const authResponse: TAuthResponse = {
+			message: 'Password reset successfully',
+		}
+
+		res.status(StatusCodes.OK).json(authResponse)
 	}
 
 	public getAuthUser = async (req: Request, res: Response): Promise<void> => {
-		try {
-			const accessToken = getAccessToken(req)
-			const response = await this.cognito.getAuthUser(accessToken)
+		// Extract access token from cookies with error handling
+		const { data: accessToken, error: accessTokenError } = tryCatchSync(
+			() => getAccessToken(req),
+			'authController - getAuthUser',
+		)
 
-			// Check for service errors
-			const serviceResult = handleServiceError(
-				response,
-				'Failed to retrieve user information',
-				'authController',
-			)
-			if (!serviceResult.success) {
-				res
-					.status(serviceResult.error.status)
-					.json({ message: serviceResult.error.message })
-				return
-			}
-
-			// Validate user data exists
-			const usernameValidation = validateData(
-				!!response.Username,
-				'User not found',
-				StatusCodes.NOT_FOUND,
-				'authController',
-			)
-			if (!usernameValidation.valid) {
-				res
-					.status(usernameValidation.error.status)
-					.json({ message: usernameValidation.error.message })
-				return
-			}
-
-			// Validate response.Username is not undefined for type inference
-			if (!response.Username) {
-				logger.error('[authController]: User not found')
-				res.status(StatusCodes.NOT_FOUND).json({ message: 'User not found' })
-				return
-			}
-
-			// Extract email from user attributes
-			const email = response.UserAttributes?.find(
-				(attr) => attr.Name === 'email',
-			)?.Value
-
-			// Validate email is no undefined for type inference
-			if (!email) {
-				logger.error('[authController]: User profile incomplete')
-				res
-					.status(StatusCodes.PARTIAL_CONTENT)
-					.json({ message: 'User profile incomplete' })
-				return
-			}
-
-			// Check for complete profile
-			const emailValidation = validateData(
-				!!email,
-				'User profile incomplete',
-				StatusCodes.PARTIAL_CONTENT,
-				'authController',
-			)
-			if (!emailValidation.valid) {
-				res
-					.status(emailValidation.error.status)
-					.json({ message: emailValidation.error.message })
-				return
-			}
-
-			// Build complete user response
-			const userResponse: TGetAuthUserResponse = {
-				id: response.Username,
-				email: email,
-				emailVerified:
-					response.UserAttributes?.find(
-						(attr) => attr.Name === 'email_verified',
-					)?.Value === 'true',
-			}
-
-			res.status(StatusCodes.OK).json(userResponse)
-			return
-		} catch (error: unknown) {
-			const err = standardizeError(error)
-			logger.error(
-				`[authController]: Error retrieving user: ${err.status.toString()} ${err.message}`,
-			)
-			res.status(err.status).json({ message: err.message })
+		if (accessTokenError) {
+			logger.error({
+				msg: '[authController - getAuthUser]: Error retrieving access token',
+				error: accessTokenError,
+			})
+			res.status(StatusCodes.UNAUTHORIZED).json({
+				message: 'Authentication required',
+			})
 			return
 		}
+
+		// Get user from Cognito
+		const { data: getAuthUserResponse, error: responseError } =
+			await this.cognito.getAuthUser(accessToken)
+
+		if (responseError) {
+			handleError(res, responseError, 'authController')
+			return
+		}
+
+		// Check for service errors
+		const serviceResult = handleServiceError(
+			getAuthUserResponse,
+			'Failed to retrieve user information',
+			'authController',
+		)
+		if (!serviceResult.success) {
+			res
+				.status(serviceResult.error.status)
+				.json({ message: serviceResult.error.message })
+			return
+		}
+
+		// Validate user data exists
+		const usernameValidation = validateData(
+			!!getAuthUserResponse.Username,
+			'User not found',
+			'authController',
+			StatusCodes.NOT_FOUND,
+		)
+		if (!usernameValidation.valid) {
+			res
+				.status(usernameValidation.error.status)
+				.json({ message: usernameValidation.error.message })
+			return
+		}
+
+		// Validate response.Username is not undefined for type inference
+		if (!getAuthUserResponse.Username) {
+			logger.error('[authController]: User not found')
+			res.status(StatusCodes.NOT_FOUND).json({ message: 'User not found' })
+			return
+		}
+
+		// Extract email from user attributes
+		const email = getAuthUserResponse.UserAttributes?.find(
+			(attr) => attr.Name === 'email',
+		)?.Value
+
+		// Validate email is no undefined for type inference
+		if (!email) {
+			logger.error('[authController]: User profile incomplete')
+			res
+				.status(StatusCodes.PARTIAL_CONTENT)
+				.json({ message: 'User profile incomplete' })
+			return
+		}
+
+		// Check for complete profile
+		const emailValidation = validateData(
+			!!email,
+			'User profile incomplete',
+			'authController',
+			StatusCodes.PARTIAL_CONTENT,
+		)
+		if (!emailValidation.valid) {
+			res
+				.status(emailValidation.error.status)
+				.json({ message: emailValidation.error.message })
+			return
+		}
+
+		// Build complete user response
+		const userResponse: TGetAuthUserResponse = {
+			id: getAuthUserResponse.Username,
+			email: email,
+			emailVerified:
+				getAuthUserResponse.UserAttributes?.find(
+					(attr) => attr.Name === 'email_verified',
+				)?.Value === 'true',
+		}
+
+		res.status(StatusCodes.OK).json(userResponse)
 	}
 }
 

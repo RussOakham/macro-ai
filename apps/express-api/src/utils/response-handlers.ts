@@ -1,8 +1,11 @@
 import { Response } from 'express'
-import { StatusCodes } from 'http-status-codes'
+import { ReasonPhrases, StatusCodes } from 'http-status-codes'
+import { z } from 'zod'
+import { fromError } from 'zod-validation-error'
 
+import { tryCatchSync } from './error-handling/try-catch.ts'
+import { AppError, ErrorType, IStandardizedError } from './errors.ts'
 import { pino } from './logger.ts'
-import { ErrorType, IStandardizedError } from './standardize-error.ts'
 
 const { logger } = pino
 
@@ -30,28 +33,42 @@ export type TServiceErrorResult =
 	| { success: false; error: { status: number; message: string } }
 
 /**
+ * Type for AWS service response metadata
+ */
+export interface TAwsServiceMetadata {
+	$metadata?: {
+		httpStatusCode?: number
+		requestId?: string
+		extendedRequestId?: string
+		attempts?: number
+	}
+}
+
+/**
  * Checks for error responses from AWS services
- * @param response AWS service response
+ * @param response AWS service response or its metadata
  * @param errorMessage Custom error message
  * @param logContext Context for logging
  * @returns Discriminated union indicating success or error details
  */
 export const handleServiceError = (
-	response: { $metadata: { httpStatusCode?: number } },
+	response: TAwsServiceMetadata | { $metadata: { httpStatusCode?: number } },
 	errorMessage: string,
 	logContext: string,
 ): TServiceErrorResult => {
+	const metadata = response.$metadata
+
 	if (
-		response.$metadata.httpStatusCode !== undefined &&
-		response.$metadata.httpStatusCode !== 200
+		metadata?.httpStatusCode !== undefined &&
+		metadata.httpStatusCode !== 200
 	) {
 		logger.error(
-			`[${logContext}]: ${errorMessage}: ${response.$metadata.httpStatusCode.toString()}`,
+			`[${logContext}]: ${errorMessage}: ${metadata.httpStatusCode.toString()}`,
 		)
 		return {
 			success: false,
 			error: {
-				status: response.$metadata.httpStatusCode,
+				status: metadata.httpStatusCode,
 				message: errorMessage,
 			},
 		}
@@ -80,23 +97,52 @@ export const handleError = (
 		case ErrorType.UnauthorizedError:
 			return res.status(StatusCodes.UNAUTHORIZED).json({
 				message: 'Authentication required',
-				details: err.details,
 			})
 		case ErrorType.ForbiddenError:
 			return res.status(StatusCodes.FORBIDDEN).json({
 				message: 'Access denied',
-				details: err.details,
 			})
 		case ErrorType.NotFoundError:
 			return res.status(StatusCodes.NOT_FOUND).json({
 				message: err.message || 'Resource not found',
-				details: err.details,
+			})
+		case ErrorType.ValidationError:
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: err.message,
+			})
+		case ErrorType.ConflictError:
+			return res.status(StatusCodes.CONFLICT).json({
+				message: err.message,
+			})
+		case ErrorType.InternalError:
+			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+				message: err.message,
+			})
+		case ErrorType.ApiError:
+			return res.status(err.status).json({
+				message: err.message,
+			})
+		case ErrorType.AxiosError:
+			return res.status(err.status).json({
+				message: err.message || 'External API error',
+			})
+		case ErrorType.CognitoError:
+			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+				message: 'A Cognito error occurred',
+			})
+		case ErrorType.ZodError:
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: ReasonPhrases.BAD_REQUEST,
+			})
+		case ErrorType.ZodValidationError:
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: ReasonPhrases.BAD_REQUEST,
+			})
+		default:
+			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+				message: 'An unknown error occurred',
 			})
 	}
-
-	return res
-		.status(err.status)
-		.json({ message: err.message, details: err.details })
 }
 
 type TValidationResult =
@@ -114,8 +160,8 @@ type TValidationResult =
 export const validateData = (
 	condition: boolean,
 	errorMessage: string,
-	status: number = StatusCodes.BAD_REQUEST,
 	logContext: string,
+	status: number = StatusCodes.BAD_REQUEST,
 ): TValidationResult => {
 	if (!condition) {
 		logger.error(`[${logContext}]: ${errorMessage}`)
@@ -128,4 +174,49 @@ export const validateData = (
 		}
 	}
 	return { valid: true }
+}
+
+/**
+ * Validates data against a Zod schema
+ * @param data Data to validate
+ * @param schema Zod schema to validate against
+ * @param logContext Context for logging
+ * @returns Object with validation result and parsed data or error details
+ */
+export const validateSchema = <T>(
+	data: unknown,
+	schema: z.ZodType<T>,
+	logContext: string,
+) => {
+	return tryCatchSync(() => {
+		return schema.parse(data)
+	}, `${logContext} - validateSchema`)
+}
+
+/**
+ * Safely validates data against a Zod schema without throwing
+ * @param data Data to validate
+ * @param schema Zod schema to validate against
+ * @param logContext Context for logging
+ * @returns Object with validation result and parsed data or error details
+ */
+export const safeValidateSchema = <T>(
+	data: unknown,
+	schema: z.ZodType<T>,
+	logContext: string,
+) => {
+	return tryCatchSync(() => {
+		const result = schema.safeParse(data)
+
+		if (!result.success) {
+			const validationError = fromError(result.error)
+			throw AppError.validation(
+				`Validation failed: ${validationError.message}`,
+				{ details: validationError.details },
+				logContext,
+			)
+		}
+
+		return result.data
+	}, `${logContext} - safeValidateSchema`)
 }

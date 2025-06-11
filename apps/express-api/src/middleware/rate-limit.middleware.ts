@@ -5,8 +5,8 @@ import { RedisStore } from 'rate-limit-redis'
 import { createClient } from 'redis'
 
 import { config } from '../../config/default.ts'
+import { standardizeError } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
-import { standardizeError } from '../utils/standardize-error.ts'
 
 const { logger } = pino
 

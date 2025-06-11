@@ -1,21 +1,22 @@
 import { eq } from 'drizzle-orm'
-import { fromError } from 'zod-validation-error'
 
 import { db } from '../../data-access/db.ts'
+import {
+	EnhancedResult,
+	tryCatch,
+} from '../../utils/error-handling/try-catch.ts'
 import { AppError } from '../../utils/errors.ts'
-import { pino } from '../../utils/logger.ts'
+import { safeValidateSchema } from '../../utils/response-handlers.ts'
 
 import { selectUserSchema, usersTable } from './user.schemas.ts'
 import { IUserRepository, TInsertUser, TUser } from './user.types.ts'
-
-const { logger } = pino
 
 /**
  * UserRepository class that implements the IUserRepository interface
  * Handles all user-related database operations
  */
 class UserRepository implements IUserRepository {
-	private db: typeof db
+	private readonly db: typeof db
 
 	constructor(database: typeof db = db) {
 		this.db = database
@@ -24,215 +25,227 @@ class UserRepository implements IUserRepository {
 	/**
 	 * Find a user by email
 	 * @param email The user's email address
-	 * @returns The user object or undefined if not found
+	 * @returns EnhancedResult with the user object or undefined if not found
 	 */
 	public async findUserByEmail({
 		email,
 	}: {
 		email: string
-	}): Promise<TUser | undefined> {
-		try {
-			const users = await this.db
+	}): Promise<EnhancedResult<TUser | undefined>> {
+		const { data: users, error } = await tryCatch(
+			this.db
 				.select()
 				.from(usersTable)
 				.where(eq(usersTable.email, email))
-				.limit(1)
+				.limit(1),
+			'userRepository - findUserByEmail',
+		)
 
-			// If no user found, return undefined
-			if (!users.length) return undefined
-
-			// Validate the returned user with Zod
-			const result = selectUserSchema.safeParse(users[0])
-
-			if (!result.success) {
-				const validationError = fromError(result.error)
-				throw AppError.validation(
-					`Invalid user data returned from database: ${validationError.message}`,
-					{ details: validationError.details },
-					'userRepository',
-				)
-			}
-
-			return result.data
-		} catch (error) {
-			logger.error({
-				msg: '[userRepository - findUserByEmail]: Database error',
-				email,
-				error,
-			})
-			throw AppError.from(error, 'userRepository')
+		if (error) {
+			return { data: null, error }
 		}
+
+		// If no user found, return undefined
+		if (!users.length) return { data: undefined, error: null }
+
+		// Validate the returned user with Zod
+		const { data: validationResult, error: validationError } =
+			safeValidateSchema(
+				users[0],
+				selectUserSchema,
+				'userRepository - findUserByEmail',
+			)
+
+		if (validationError) {
+			return {
+				data: null,
+				error: AppError.from(
+					validationError,
+					'userRepository - findUserByEmail',
+				),
+			}
+		}
+
+		return { data: validationResult, error: null }
 	}
 
 	/**
 	 * Find a user by ID
 	 * @param id The user's unique identifier
-	 * @returns The user object or undefined if not found
+	 * @returns EnhancedResult with the user object or undefined if not found
 	 */
 	public async findUserById({
 		id,
 	}: {
 		id: string
-	}): Promise<TUser | undefined> {
-		try {
-			const users = await this.db
-				.select()
-				.from(usersTable)
-				.where(eq(usersTable.id, id))
-				.limit(1)
+	}): Promise<EnhancedResult<TUser | undefined>> {
+		const { data: users, error } = await tryCatch(
+			this.db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1),
+			'userRepository - findUserById',
+		)
 
-			// If no user found, return undefined
-			if (!users.length) return undefined
-
-			// Validate the returned user with Zod
-			const result = selectUserSchema.safeParse(users[0])
-
-			if (!result.success) {
-				const validationError = fromError(result.error)
-				throw AppError.validation(
-					`Invalid user data returned from database: ${validationError.message}`,
-					{ details: validationError.details },
-					'userRepository',
-				)
-			}
-
-			return result.data
-		} catch (error) {
-			logger.error({
-				msg: '[userRepository - findUserById]: Database error',
-				id,
-				error,
-			})
-			throw AppError.from(error, 'userRepository')
+		if (error) {
+			return { data: null, error }
 		}
+
+		// If no user found, return undefined
+		if (!users.length) return { data: undefined, error: null }
+
+		// Validate the returned user with Zod
+		const { data: validationResult, error: validationError } =
+			safeValidateSchema(
+				users[0],
+				selectUserSchema,
+				'userRepository - findUserById',
+			)
+
+		if (validationError) {
+			return {
+				data: null,
+				error: AppError.from(validationError, 'userRepository - findUserById'),
+			}
+		}
+
+		return { data: validationResult, error: null }
 	}
 
 	/**
 	 * Create a new user
 	 * @param userData The user data to insert
-	 * @returns The created user object
+	 * @returns EnhancedResult with the created user object
 	 */
 	public async createUser({
 		userData,
 	}: {
 		userData: TInsertUser
-	}): Promise<TUser> {
-		try {
-			const [user] = await this.db
-				.insert(usersTable)
-				.values(userData)
-				.returning()
+	}): Promise<EnhancedResult<TUser>> {
+		const { data: user, error } = await tryCatch(
+			this.db.insert(usersTable).values(userData).returning(),
+			'userRepository - createUser',
+		)
 
-			if (!user) {
-				throw AppError.internal('Failed to create user', 'userRepository')
-			}
-
-			// Validate the returned user with Zod
-			const result = selectUserSchema.safeParse(user)
-
-			if (!result.success) {
-				const validationError = fromError(result.error)
-				throw AppError.validation(
-					`Invalid user data returned from database: ${validationError.message}`,
-					{ details: validationError.details },
-					'userRepository',
-				)
-			}
-
-			return result.data
-		} catch (error) {
-			logger.error({
-				msg: '[userRepository - createUser]: Database error',
-				userData,
-				error,
-			})
-			throw AppError.from(error, 'userRepository')
+		if (error) {
+			return { data: null, error }
 		}
+
+		// If no user created, return error
+		if (!user.length) {
+			return {
+				data: null,
+				error: AppError.internal(
+					'Failed to create user',
+					'userRepository - createUser',
+				),
+			}
+		}
+
+		// Validate the returned user with Zod
+		const { data: validationResult, error: validationError } =
+			safeValidateSchema(
+				user[0],
+				selectUserSchema,
+				'userRepository - createUser',
+			)
+
+		if (validationError) {
+			return {
+				data: null,
+				error: AppError.from(validationError, 'userRepository - createUser'),
+			}
+		}
+
+		return { data: validationResult, error: null }
 	}
 
 	/**
 	 * Update a user's last login timestamp
 	 * @param id The user's unique identifier
-	 * @returns The updated user object or undefined if not found
+	 * @returns EnhancedResult with the updated user object or undefined if not found
 	 */
 	public async updateLastLogin({
 		id,
 	}: {
 		id: string
-	}): Promise<TUser | undefined> {
-		try {
-			const [user] = await this.db
+	}): Promise<EnhancedResult<TUser | undefined>> {
+		const { data: user, error } = await tryCatch(
+			this.db
 				.update(usersTable)
 				.set({ lastLogin: new Date() })
 				.where(eq(usersTable.id, id))
-				.returning()
+				.returning(),
+			'userRepository - updateLastLogin',
+		)
 
-			if (!user) return undefined
-
-			// Validate the returned user with Zod
-			const result = selectUserSchema.safeParse(user)
-
-			if (!result.success) {
-				const validationError = fromError(result.error)
-				throw AppError.validation(
-					`Invalid user data returned from database: ${validationError.message}`,
-					{ details: validationError.details },
-					'userRepository',
-				)
-			}
-
-			return result.data
-		} catch (error) {
-			logger.error({
-				msg: '[userRepository - updateLastLogin]: Database error',
-				id,
-				error,
-			})
-			throw AppError.from(error, 'userRepository')
+		if (error) {
+			return { data: null, error }
 		}
+
+		// If no user found, return undefined
+		if (!user.length) return { data: undefined, error: null }
+
+		// Validate the returned user with Zod
+		const { data: validationResult, error: validationError } =
+			safeValidateSchema(
+				user[0],
+				selectUserSchema,
+				'userRepository - updateLastLogin',
+			)
+
+		if (validationError) {
+			return {
+				data: null,
+				error: AppError.from(
+					validationError,
+					'userRepository - updateLastLogin',
+				),
+			}
+		}
+
+		return { data: validationResult, error: null }
 	}
 
 	/**
 	 * Update a user's profile
 	 * @param id The user's unique identifier
 	 * @param userData The user data to update
-	 * @returns The updated user object or undefined if not found
+	 * @returns EnhancedResult with the updated user object or undefined if not found
 	 */
 	public async updateUser(
 		id: string,
 		userData: Partial<TInsertUser>,
-	): Promise<TUser | undefined> {
-		try {
-			const [user] = await this.db
+	): Promise<EnhancedResult<TUser | undefined>> {
+		const { data: user, error } = await tryCatch(
+			this.db
 				.update(usersTable)
 				.set(userData)
 				.where(eq(usersTable.id, id))
-				.returning()
+				.returning(),
+			'userRepository - updateUser',
+		)
 
-			if (!user) return undefined
-
-			// Validate the returned user with Zod
-			const result = selectUserSchema.safeParse(user)
-
-			if (!result.success) {
-				const validationError = fromError(result.error)
-				throw AppError.validation(
-					`Invalid user data returned from database: ${validationError.message}`,
-					{ details: validationError.details },
-					'userRepository',
-				)
-			}
-
-			return result.data
-		} catch (error) {
-			logger.error({
-				msg: '[userRepository - updateUser]: Database error',
-				id,
-				userData,
-				error,
-			})
-			throw AppError.from(error, 'userRepository')
+		if (error) {
+			return { data: null, error }
 		}
+
+		// If no user found, return undefined
+		if (!user.length) return { data: undefined, error: null }
+
+		// Validate the returned user with Zod
+		const { data: validationResult, error: validationError } =
+			safeValidateSchema(
+				user[0],
+				selectUserSchema,
+				'userRepository - updateUser',
+			)
+
+		if (validationError) {
+			return {
+				data: null,
+				error: AppError.from(validationError, 'userRepository - updateUser'),
+			}
+		}
+
+		return { data: validationResult, error: null }
 	}
 }
 

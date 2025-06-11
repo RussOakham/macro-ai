@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the implementation steps for enhancing error handling across the application using our `tryCatch` utility, ensuring type safety, consistent logging, and comprehensive validation.
+This document outlines the implementation steps for enhancing error handling across the application using our `tryCatch` and `tryCatchSync` utilities, ensuring type safety, consistent logging, and comprehensive validation.
 
 ## Implementation Steps
 
@@ -10,80 +10,116 @@ This document outlines the implementation steps for enhancing error handling acr
 
 - [ ] Create interfaces for all services and repositories
 
-  - [ ] Define `IAuthService` interface in `auth.services.ts`
-  - [ ] Define `IUserService` interface in `user.services.ts`
-  - [ ] Define `IUserRepository` interface in `user.data-access.ts`
+  - [x] Define `ICognitoService` interface in `auth.services.ts`
+  - [x] Define `IUserService` interface in `user.services.ts`
+  - [x] Define `IUserRepository` interface in `user.data-access.ts`
   - [ ] Ensure all methods have proper return types using `EnhancedResult<T, E>`
 
 - [ ] Refactor service classes to implement interfaces
 
-  - [ ] Update `CognitoService` to implement `IAuthService`
-  - [ ] Update `UserService` to implement `IUserService`
-  - [ ] Create `UserRepository` class implementing `IUserRepository`
+  - [x] Update `CognitoService` to implement `ICognitoService`
+  - [x] Update `UserService` to implement `IUserService`
+  - [x] Create `UserRepository` class implementing `IUserRepository`
 
-- [ ] Standardize constructor patterns for dependency injection
-  - [ ] Add constructor parameters for dependencies
-  - [ ] Provide default implementations for backward compatibility
+- [x] Standardize constructor patterns for dependency injection
+  - [x] Add constructor parameters for dependencies
+  - [x] Provide default implementations for backward compatibility
 
-### 2. Implement tryCatch Utility Across Codebase
+### 2. Implement tryCatch and tryCatchSync Utilities Across Codebase
 
-- [ ] Refactor Auth Service methods
+#### 2.1 Async Operations with tryCatch
 
-  - [ ] Update `signUpUser` to use `tryCatch`
-  - [ ] Update `signInUser` to use `tryCatch`
-  - [ ] Update `refreshToken` to use `tryCatch`
-  - [ ] Update `forgotPassword` to use `tryCatch`
-  - [ ] Update `confirmForgotPassword` to use `tryCatch`
-  - [ ] Update `getAuthUser` to use `tryCatch`
+- [x] Refactor Auth Service methods
 
-- [ ] Refactor User Service methods
+  - [x] Update `signUpUser` to use `tryCatch` and `tryCatchSync`
+  - [x] Update `confirmSignUp` to use `tryCatch` and `tryCatchSync`
+  - [x] Update `signInUser` to use `tryCatch` and `tryCatchSync`
+  - [x] Update `refreshToken` to use `tryCatch` and `tryCatchSync`
+  - [x] Update `forgotPassword` to use `tryCatch` and `tryCatchSync`
+  - [x] Update `confirmForgotPassword` to use `tryCatch` and `tryCatchSync`
+  - [x] Update `getAuthUser` to use `tryCatch` and `tryCatchSync`
+  - [x] Update `generateHash` to use `tryCatchSync`
 
-  - [ ] Update `getUserById` to use `tryCatch`
-  - [ ] Update `getUserByEmail` to use `tryCatch`
-  - [ ] Update `getUserByAccessToken` to use `tryCatch`
-  - [ ] Update `registerOrLoginUserById` to use `tryCatch`
+- [x] Refactor User Service methods
 
-- [ ] Refactor User Repository methods
+  - [x] Update `getUserById` to use `tryCatch`
+  - [x] Update `getUserByEmail` to use `tryCatch`
+  - [x] Update `getUserByAccessToken` to use `tryCatch`
+  - [x] Update `registerOrLoginUserById` to use `tryCatch`
 
-  - [ ] Update `findByEmail` to use `tryCatch`
-  - [ ] Update `findById` to use `tryCatch`
-  - [ ] Update `create` to use `tryCatch`
-  - [ ] Update `updateLastLogin` to use `tryCatch`
-  - [ ] Update `update` to use `tryCatch`
+- [x] Refactor User Repository methods
 
-- [ ] Refactor Auth Controller methods
-  - [ ] Simplify error handling using `tryCatch` results
-  - [ ] Remove redundant try/catch blocks
-  - [ ] Standardize response patterns
+  - [x] Update `findByEmail` to use `tryCatch`
+  - [x] Update `findById` to use `tryCatch`
+  - [x] Update `create` to use `tryCatch`
+  - [x] Update `updateLastLogin` to use `tryCatch`
+  - [x] Update `update` to use `tryCatch`
+
+- [x] Refactor Auth Controller methods
+  - [x] Simplify error handling using `tryCatch` results
+  - [x] Remove redundant try/catch blocks
+  - [x] Standardize response patterns
+
+#### 2.2 Synchronous Operations with tryCatchSync
+
+- [x] Create `tryCatchSync` utility function
+
+  - [x] Implement in `utils/error-handling/try-catch.ts`
+  - [x] Add proper type definitions
+  - [x] Add error standardization
+  - [x] Add context logging
+
+- [ ] Refactor configuration loading functions
+
+  - [ ] Update `loadConfig` in `utils/load-config.ts` to use `tryCatchSync`
+  - [ ] Update `parseEnvFile` in `utils/load-config.ts` to use `tryCatchSync`
+
+- [x] Refactor crypto utility functions
+
+  - [x] Update `encrypt` in `utils/crypto.ts` to use `tryCatchSync`
+  - [x] Update `decrypt` in `utils/crypto.ts` to use `tryCatchSync`
+  - [x] Update `generateHash` in `auth.services.ts` to use `tryCatchSync`
+  - [x] Update consumers of crypto functions to handle `EnhancedResult` return type
+
+- [x] Refactor validation functions
+
+  - [x] Update schema parsing in `validateData` in `utils/response-handlers.ts`
+  - [x] Update schema parsing in data access layer functions
 
 ### 3. Implement Type-Safe Error Handling
 
-- [ ] Create domain-specific error types
+- [x] Create unified error handling approach
 
-  - [ ] Define `AuthError` type for authentication errors
-  - [ ] Define `UserError` type for user-related errors
-  - [ ] Define `ValidationError` type for validation errors
-  - [ ] Define `DatabaseError` type for database errors
+  - [x] Consolidate `AppError` and `standardizeError` in `utils/errors.ts`
+  - [x] Update imports to use the unified error module
+  - [x] Add deprecation notice to `standardize-error.ts`
 
-- [ ] Update `tryCatch` utility to support specific error types
+- [x] Create domain-specific error types
 
-  - [ ] Add generic type parameter for error type
-  - [ ] Ensure error standardization preserves type information
+  - [x] Define error type enum in `utils/errors.ts`
+  - [x] Add support for Cognito errors
+  - [x] Add support for Zod validation errors
+  - [x] Add support for API errors
+
+- [x] Update `tryCatch` and `tryCatchSync` utilities to support specific error types
+
+  - [x] Add generic type parameter for error type
+  - [x] Ensure error standardization preserves type information
 
 - [ ] Implement error type guards
   - [ ] Add `isAuthError` type guard
   - [ ] Add `isUserError` type guard
-  - [ ] Add `isValidationError` type guard
+  - [x] Add `isValidationError` type guard
   - [ ] Add `isDatabaseError` type guard
 
 ### 4. Enhance Error Logging
 
-- [ ] Standardize logging format across the application
+- [x] Standardize logging format across the application
 
-  - [ ] Include error origin (service/component name)
-  - [ ] Include error status code
-  - [ ] Include error message
-  - [ ] Include stack trace in development environment
+  - [x] Include error origin (service/component name)
+  - [x] Include error status code
+  - [x] Include error message
+  - [x] Include stack trace in development environment
 
 - [ ] Add context information to logs
 
@@ -91,12 +127,18 @@ This document outlines the implementation steps for enhancing error handling acr
   - [ ] Include user ID where available
   - [ ] Include relevant operation details
 
-- [ ] Implement structured logging
-  - [ ] Use JSON format for logs
-  - [ ] Add severity levels (error, warn, info)
-  - [ ] Add timestamps to all logs
+- [x] Implement structured logging
+  - [x] Use JSON format for logs
+  - [x] Add severity levels (error, warn, info)
+  - [x] Add timestamps to all logs
 
 ### 5. Implement Zod Validation for All Inputs
+
+- [x] Set up Zod validation infrastructure
+
+  - [x] Add `zod-validation-error` for improved error messages
+  - [x] Integrate with OpenAPI documentation
+  - [x] Create validation middleware
 
 - [ ] Create validation schemas for all function inputs
 
@@ -110,23 +152,23 @@ This document outlines the implementation steps for enhancing error handling acr
   - [ ] Return appropriate error for validation failures
   - [ ] Log validation errors with details
 
-- [ ] Update controller validation
-  - [ ] Ensure all request bodies are validated
-  - [ ] Ensure all path and query parameters are validated
-  - [ ] Return consistent validation error responses
+- [x] Update controller validation
+  - [x] Ensure all request bodies are validated
+  - [x] Ensure all path and query parameters are validated
+  - [x] Return consistent validation error responses
 
 ### 6. Identify and Handle Edge Cases
 
 - [ ] Auth Service edge cases
 
-  - [ ] Handle expired tokens
-  - [ ] Handle invalid credentials
+  - [x] Handle expired tokens
+  - [x] Handle invalid credentials
   - [ ] Handle account lockouts
   - [ ] Handle service unavailability
 
 - [ ] User Service edge cases
 
-  - [ ] Handle non-existent users
+  - [x] Handle non-existent users
   - [ ] Handle duplicate emails
   - [ ] Handle incomplete user profiles
   - [ ] Handle permission issues
@@ -139,26 +181,42 @@ This document outlines the implementation steps for enhancing error handling acr
 
 ### 7. Update OpenAPI Specification
 
-- [ ] Update error responses in OpenAPI schemas
+- [x] Update error responses in OpenAPI schemas
 
-  - [ ] Add specific error types to each endpoint
-  - [ ] Document error status codes
-  - [ ] Document error response formats
+  - [x] Add specific error types to each endpoint
+  - [x] Document error status codes
+  - [x] Document error response formats
 
-- [ ] Add examples for error responses
+- [x] Add examples for error responses
 
-  - [ ] Include validation error examples
-  - [ ] Include authentication error examples
-  - [ ] Include not found error examples
-  - [ ] Include server error examples
+  - [x] Include validation error examples
+  - [x] Include authentication error examples
+  - [x] Include not found error examples
+  - [x] Include server error examples
 
-- [ ] Update request validation schemas
-  - [ ] Ensure all input validation rules are reflected in OpenAPI schemas
-  - [ ] Add descriptions for validation requirements
+- [x] Update request validation schemas
+  - [x] Ensure all input validation rules are reflected in OpenAPI schemas
+  - [x] Add descriptions for validation requirements
+
+### 8. Enhance Global Error Handler
+
+- [x] Enhance global error handler
+
+  - [x] Update existing error handler in `middleware/error.middleware.ts`
+  - [x] Add environment-specific error details
+  - [x] Ensure proper handling of headers already sent
+  - [x] Improve error logging with context
+
+### 9. Testing and Validation
+
+- [x] Create unit tests for error handling
+- [x] Create integration tests for error propagation
+- [x] Create end-to-end tests for error responses
+- [x] Validate error responses in the UI
 
 ## Code Examples
 
-### Example: Refactored Auth Service Method
+### Example: Refactored Auth Service Method with tryCatch
 
 ```typescript
 // Before
@@ -256,6 +314,34 @@ public async signUpUser({
 }
 ```
 
+### Example: Using tryCatchSync for Synchronous Operations
+
+```typescript
+// Before
+public generateHash(username: string): string {
+  try {
+    const hmac = createHmac('sha256', this.clientSecret)
+    hmac.update(username + this.clientId)
+    return hmac.digest('base64')
+  } catch (error) {
+    logger.error(`[authService]: Error generating hash: ${error}`)
+    throw AppError.from(error, 'authService')
+  }
+}
+
+// After
+public generateHash(username: string): EnhancedResult<string, AuthError> {
+  return tryCatchSync(
+    () => {
+      const hmac = createHmac('sha256', this.clientSecret)
+      hmac.update(username + this.clientId)
+      return hmac.digest('base64')
+    },
+    'authService - generateHash'
+  )
+}
+```
+
 ### Example: Refactored Controller Method
 
 ```typescript
@@ -322,6 +408,28 @@ register: async (req: Request, res: Response) => {
 }
 ```
 
+## When to Use tryCatch vs tryCatchSync
+
+### Use tryCatch for
+
+- API calls and network requests
+- Database operations
+- File system operations
+- Any function that returns a Promise
+- Operations that might take time to complete
+
+### Use tryCatchSync for
+
+- Configuration parsing and validation
+- Data transformation and formatting
+- Input validation with synchronous schema validation
+- Cryptographic operations (encryption, hashing)
+- JSON parsing and serialization
+- Date formatting and parsing
+- String manipulation and validation
+- Object property access that might throw
+- Type conversions that could fail
+
 ## Testing Strategy
 
 1. **Unit Tests**
@@ -329,6 +437,7 @@ register: async (req: Request, res: Response) => {
    - Test each service method with various inputs
    - Test error handling for each possible error type
    - Test validation for both valid and invalid inputs
+   - Test both tryCatch and tryCatchSync with success and failure cases
 
 2. **Integration Tests**
 
