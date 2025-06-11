@@ -29,36 +29,36 @@ This document outlines the implementation steps for enhancing error handling acr
 
 #### 2.1 Async Operations with tryCatch
 
-- [ ] Refactor Auth Service methods
+- [x] Refactor Auth Service methods
 
   - [x] Update `signUpUser` to use `tryCatch` and `tryCatchSync`
   - [x] Update `confirmSignUp` to use `tryCatch` and `tryCatchSync`
   - [x] Update `signInUser` to use `tryCatch` and `tryCatchSync`
-  - [ ] Update `refreshToken` to use `tryCatch` and `tryCatchSync`
-  - [ ] Update `forgotPassword` to use `tryCatch` and `tryCatchSync`
-  - [ ] Update `confirmForgotPassword` to use `tryCatch` and `tryCatchSync`
-  - [ ] Update `getAuthUser` to use `tryCatch` and `tryCatchSync`
+  - [x] Update `refreshToken` to use `tryCatch` and `tryCatchSync`
+  - [x] Update `forgotPassword` to use `tryCatch` and `tryCatchSync`
+  - [x] Update `confirmForgotPassword` to use `tryCatch` and `tryCatchSync`
+  - [x] Update `getAuthUser` to use `tryCatch` and `tryCatchSync`
   - [x] Update `generateHash` to use `tryCatchSync`
 
-- [ ] Refactor User Service methods
+- [x] Refactor User Service methods
 
-  - [ ] Update `getUserById` to use `tryCatch`
-  - [ ] Update `getUserByEmail` to use `tryCatch`
-  - [ ] Update `getUserByAccessToken` to use `tryCatch`
-  - [ ] Update `registerOrLoginUserById` to use `tryCatch`
+  - [x] Update `getUserById` to use `tryCatch`
+  - [x] Update `getUserByEmail` to use `tryCatch`
+  - [x] Update `getUserByAccessToken` to use `tryCatch`
+  - [x] Update `registerOrLoginUserById` to use `tryCatch`
 
-- [ ] Refactor User Repository methods
+- [x] Refactor User Repository methods
 
-  - [ ] Update `findByEmail` to use `tryCatch`
-  - [ ] Update `findById` to use `tryCatch`
-  - [ ] Update `create` to use `tryCatch`
-  - [ ] Update `updateLastLogin` to use `tryCatch`
-  - [ ] Update `update` to use `tryCatch`
+  - [x] Update `findByEmail` to use `tryCatch`
+  - [x] Update `findById` to use `tryCatch`
+  - [x] Update `create` to use `tryCatch`
+  - [x] Update `updateLastLogin` to use `tryCatch`
+  - [x] Update `update` to use `tryCatch`
 
-- [ ] Refactor Auth Controller methods
-  - [ ] Simplify error handling using `tryCatch` results
-  - [ ] Remove redundant try/catch blocks
-  - [ ] Standardize response patterns
+- [x] Refactor Auth Controller methods
+  - [x] Simplify error handling using `tryCatch` results
+  - [x] Remove redundant try/catch blocks
+  - [x] Standardize response patterns
 
 #### 2.2 Synchronous Operations with tryCatchSync
 
