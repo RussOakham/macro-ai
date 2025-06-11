@@ -11,9 +11,11 @@ import {
 	InitiateAuthCommand,
 	InitiateAuthCommandOutput,
 	ListUsersCommand,
+	ListUsersCommandOutput,
 	NotAuthorizedException,
 	ResendConfirmationCodeCommand,
 	SignUpCommand,
+	UserType,
 } from '@aws-sdk/client-cognito-identity-provider'
 import crypto from 'crypto'
 
@@ -117,6 +119,37 @@ class CognitoService implements ICognitoService {
 	}
 
 	/**
+	 * Validates and extracts a unique user by email from Cognito users list
+	 * @param users The list of users from Cognito
+	 * @param email The email to match
+	 * @param context The context string for error reporting
+	 * @returns EnhancedResult with the unique user or error
+	 */
+	private validateAndExtractUser(
+		users: ListUsersCommandOutput,
+		email: string,
+		context: string,
+	): EnhancedResult<UserType> {
+		return tryCatchSync(() => {
+			if (!users.Users || users.Users.length === 0) {
+				throw AppError.notFound('User not found', 'authService')
+			}
+
+			const uniqueUser = users.Users.find(
+				(user) =>
+					user.Attributes?.find((attr) => attr.Name === 'email')?.Value ===
+					email,
+			)
+
+			if (!uniqueUser?.Username) {
+				throw AppError.notFound('User not found', 'authService')
+			}
+
+			return uniqueUser
+		}, `authService - ${context}`)
+	}
+
+	/**
 	 * Confirm user registration with Cognito
 	 * @param email User's email
 	 * @param code Confirmation code
@@ -138,24 +171,9 @@ class CognitoService implements ICognitoService {
 			return { data: null, error: getUserError }
 		}
 
-		// Validate users result using tryCatchSync
-		const { data: uniqueUser, error: validationError } = tryCatchSync(() => {
-			if (!users.Users || users.Users.length === 0) {
-				throw AppError.notFound('User not found', 'authService')
-			}
-
-			const uniqueUser = users.Users.find(
-				(user) =>
-					user.Attributes?.find((attr) => attr.Name === 'email')?.Value ===
-					email,
-			)
-
-			if (!uniqueUser?.Username) {
-				throw AppError.notFound('User not found', 'authService')
-			}
-
-			return uniqueUser
-		}, 'authService - validateUser')
+		// Validate users result using the helper method
+		const { data: uniqueUser, error: validationError } =
+			this.validateAndExtractUser(users, email, 'validateUser')
 
 		if (validationError) {
 			return { data: null, error: validationError }
@@ -206,24 +224,9 @@ class CognitoService implements ICognitoService {
 			return { data: null, error }
 		}
 
-		// Validate users result using tryCatchSync
-		const { data: uniqueUser, error: validationError } = tryCatchSync(() => {
-			if (!users.Users || users.Users.length === 0) {
-				throw AppError.notFound('User not found', 'authService')
-			}
-
-			const uniqueUser = users.Users.find(
-				(user) =>
-					user.Attributes?.find((attr) => attr.Name === 'email')?.Value ===
-					email,
-			)
-
-			if (!uniqueUser?.Username) {
-				throw AppError.notFound('User not found', 'authService')
-			}
-
-			return uniqueUser
-		}, 'authService - validateUser')
+		// Validate users result using the helper method
+		const { data: uniqueUser, error: validationError } =
+			this.validateAndExtractUser(users, email, 'validateUser')
 
 		if (validationError) {
 			return { data: null, error: validationError }
@@ -276,24 +279,9 @@ class CognitoService implements ICognitoService {
 			return { data: null, error: getUserError }
 		}
 
-		// Validate users result using tryCatchSync
-		const { data: uniqueUser, error: validationError } = tryCatchSync(() => {
-			if (!users.Users || users.Users.length === 0) {
-				throw AppError.notFound('User not found', 'authService')
-			}
-
-			const uniqueUser = users.Users.find(
-				(user) =>
-					user.Attributes?.find((attr) => attr.Name === 'email')?.Value ===
-					email,
-			)
-
-			if (!uniqueUser?.Username) {
-				throw AppError.notFound('User not found', 'authService')
-			}
-
-			return uniqueUser
-		}, 'authService - validateUser')
+		// Validate users result using the helper method
+		const { data: uniqueUser, error: validationError } =
+			this.validateAndExtractUser(users, email, 'validateUser')
 
 		if (validationError) {
 			return { data: null, error: validationError }
@@ -408,24 +396,9 @@ class CognitoService implements ICognitoService {
 			return { data: null, error }
 		}
 
-		// Validate users result using tryCatchSync
-		const { data: uniqueUser, error: validationError } = tryCatchSync(() => {
-			if (!users.Users || users.Users.length === 0) {
-				throw AppError.notFound('User not found', 'authService')
-			}
-
-			const uniqueUser = users.Users.find(
-				(user) =>
-					user.Attributes?.find((attr) => attr.Name === 'email')?.Value ===
-					email,
-			)
-
-			if (!uniqueUser?.Username) {
-				throw AppError.notFound('User not found', 'authService')
-			}
-
-			return uniqueUser
-		}, 'authService - validateUser')
+		// Validate users result using the helper method
+		const { data: uniqueUser, error: validationError } =
+			this.validateAndExtractUser(users, email, 'validateUser')
 
 		if (validationError) {
 			return { data: null, error: validationError }
@@ -433,7 +406,8 @@ class CognitoService implements ICognitoService {
 
 		// Generate hash using tryCatchSync
 		const { data: secretHash, error: hashError } = tryCatchSync(
-			() => this.generateHash(uniqueUser.Username ?? ''),
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			() => this.generateHash(uniqueUser.Username!),
 			'authService - generateHash',
 		)
 
@@ -490,27 +464,9 @@ class CognitoService implements ICognitoService {
 			return { data: null, error: getUserError }
 		}
 
-		// Validate users result using tryCatchSync
-		const { data: uniqueUser, error: validationUserError } = tryCatchSync(
-			() => {
-				if (!users.Users || users.Users.length === 0) {
-					throw AppError.notFound('User not found', 'authService')
-				}
-
-				const uniqueUser = users.Users.find(
-					(user) =>
-						user.Attributes?.find((attr) => attr.Name === 'email')?.Value ===
-						email,
-				)
-
-				if (!uniqueUser?.Username) {
-					throw AppError.notFound('User not found', 'authService')
-				}
-
-				return uniqueUser
-			},
-			'authService - validateUser',
-		)
+		// Validate users result using the helper method
+		const { data: uniqueUser, error: validationUserError } =
+			this.validateAndExtractUser(users, email, 'validateUser')
 
 		if (validationUserError) {
 			return { data: null, error: validationUserError }

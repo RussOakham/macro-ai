@@ -20,17 +20,17 @@ interface IUserService {
 		userId,
 	}: {
 		userId: string
-	}) => Promise<EnhancedResult<TUser | undefined>>
+	}) => Promise<EnhancedResult<TUser>>
 	getUserByEmail: ({
 		email,
 	}: {
 		email: string
-	}) => Promise<EnhancedResult<TUser | undefined>>
+	}) => Promise<EnhancedResult<TUser>>
 	getUserByAccessToken: ({
 		accessToken,
 	}: {
 		accessToken: string
-	}) => Promise<EnhancedResult<TUser | undefined>>
+	}) => Promise<EnhancedResult<TUser>>
 	registerOrLoginUserById: ({
 		id,
 		email,

@@ -31,13 +31,13 @@ class UserService implements IUserService {
 	/**
 	 * Get user by ID from the database
 	 * @param userId The user's unique identifier
-	 * @returns EnhancedResult with the user object or undefined if not found
+	 * @returns EnhancedResult with the user object or error
 	 */
 	async getUserById({
 		userId,
 	}: {
 		userId: string
-	}): Promise<EnhancedResult<TUser | undefined>> {
+	}): Promise<EnhancedResult<TUser>> {
 		// Validate userId with Zod using tryCatchSync
 		const { data: validatedId, error: validationError } = tryCatchSync(() => {
 			const result = userIdSchema.safeParse(userId)
@@ -74,19 +74,32 @@ class UserService implements IUserService {
 			return { data: null, error: result.error }
 		}
 
+		// If user is not found, return a NotFoundError instead of undefined
+		if (!result.data) {
+			const error = AppError.notFound(
+				`User with ID ${userId} not found`,
+				'userService - getUserById',
+			)
+			logger.info({
+				msg: '[userService - getUserById]: User not found',
+				userId,
+			})
+			return { data: null, error }
+		}
+
 		return { data: result.data, error: null }
 	}
 
 	/**
 	 * Get user by email from the database
 	 * @param email The user's email address
-	 * @returns EnhancedResult with the user object or undefined if not found
+	 * @returns EnhancedResult with the user object or error
 	 */
 	async getUserByEmail({
 		email,
 	}: {
 		email: string
-	}): Promise<EnhancedResult<TUser | undefined>> {
+	}): Promise<EnhancedResult<TUser>> {
 		// Validate email with Zod and tryCatchSync
 		const { data: validatedEmail, error: validationError } = tryCatchSync(
 			() => {
@@ -113,34 +126,46 @@ class UserService implements IUserService {
 			return { data: null, error: validationError }
 		}
 
-		const { data: result, error: resultError } =
-			await this.userRepository.findUserByEmail({
-				email: validatedEmail,
-			})
+		const result = await this.userRepository.findUserByEmail({
+			email: validatedEmail,
+		})
 
-		if (resultError) {
+		if (result.error) {
 			logger.error({
 				msg: '[userService - getUserByEmail]: Error retrieving user',
 				email,
-				error: resultError,
+				error: result.error,
 			})
-			return { data: null, error: resultError }
+			return { data: null, error: result.error }
 		}
 
-		return { data: result, error: null }
+		// If user is not found, return a NotFoundError instead of undefined
+		if (!result.data) {
+			const error = AppError.notFound(
+				`User with email ${email} not found`,
+				'userService - getUserByEmail',
+			)
+			logger.info({
+				msg: '[userService - getUserByEmail]: User not found',
+				email,
+			})
+			return { data: null, error }
+		}
+
+		return { data: result.data, error: null }
 	}
 
 	/**
 	 * Get user by access token
 	 * Verifies the token with Cognito and retrieves the user from the database
 	 * @param accessToken The Cognito access token
-	 * @returns EnhancedResult with the user object or undefined if not found
+	 * @returns EnhancedResult with the user object or error
 	 */
 	async getUserByAccessToken({
 		accessToken,
 	}: {
 		accessToken: string
-	}): Promise<EnhancedResult<TUser | undefined>> {
+	}): Promise<EnhancedResult<TUser>> {
 		// Get user ID from Cognito using access token
 		const cognitoResult = await this.cognitoService.getAuthUser(accessToken)
 
@@ -152,8 +177,13 @@ class UserService implements IUserService {
 			return { data: null, error: cognitoResult.error }
 		}
 
+		// Check if cognitoResult.data exists and has a Username property
 		if (!cognitoResult.data.Username) {
 			const error = AppError.unauthorized('Invalid access token', 'userService')
+			logger.error({
+				msg: '[userService - getUserByAccessToken]: Missing or invalid user data from token',
+				error: error.message,
+			})
 			return { data: null, error }
 		}
 
@@ -162,6 +192,7 @@ class UserService implements IUserService {
 			userId: cognitoResult.data.Username,
 		})
 
+		// No need to check for undefined here since getUserById now returns an error if user not found
 		if (userResult.error) {
 			logger.error({
 				msg: '[userService - getUserByAccessToken]: Error retrieving user by ID',

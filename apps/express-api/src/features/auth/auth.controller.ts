@@ -72,6 +72,7 @@ class AuthController implements IAuthController {
 			return
 		}
 
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (getUserResponse) {
 			const error = AppError.conflict(
 				'User already exists',
@@ -180,12 +181,6 @@ class AuthController implements IAuthController {
 			return
 		}
 
-		if (!user) {
-			const error = AppError.notFound('User not found', 'authController')
-			handleError(res, standardizeError(error), 'authController')
-			return
-		}
-
 		// Update user email verification status in database
 		const { data: updatedUser, error: updatedUserError } =
 			await this.userRepository.updateUser(user.id, {
@@ -275,6 +270,24 @@ class AuthController implements IAuthController {
 			return
 		}
 
+		// Validate that authentication tokens are present
+		if (
+			!signInResponse.AuthenticationResult?.AccessToken ||
+			!signInResponse.AuthenticationResult.RefreshToken ||
+			!signInResponse.AuthenticationResult.ExpiresIn
+		) {
+			const error = AppError.internal(
+				'Authentication tokens missing from response',
+				'authController - login',
+			)
+			logger.error({
+				msg: '[authController - login]: Missing authentication tokens',
+				error: error.message,
+			})
+			handleError(res, standardizeError(error), 'authController')
+			return
+		}
+
 		// Use the encrypt function with the new return type
 		const { data: encryptedUsername, error: encryptError } = encrypt(
 			signInResponse.Username,
@@ -302,9 +315,9 @@ class AuthController implements IAuthController {
 		const loginResponse: TLoginResponse = {
 			message: 'Login successful',
 			tokens: {
-				accessToken: signInResponse.AuthenticationResult?.AccessToken ?? '',
-				refreshToken: signInResponse.AuthenticationResult?.RefreshToken ?? '',
-				expiresIn: signInResponse.AuthenticationResult?.ExpiresIn ?? 0,
+				accessToken: signInResponse.AuthenticationResult.AccessToken,
+				refreshToken: signInResponse.AuthenticationResult.RefreshToken,
+				expiresIn: signInResponse.AuthenticationResult.ExpiresIn,
 			},
 		}
 
@@ -390,8 +403,40 @@ class AuthController implements IAuthController {
 	}
 
 	public refreshToken = async (req: Request, res: Response): Promise<void> => {
-		const refreshToken = getRefreshToken(req)
-		const encryptedUsername = getSynchronizeToken(req)
+		// Extract refresh token from cookies with error handling
+		const { data: refreshToken, error: getRefreshTokenError } = tryCatchSync(
+			() => getRefreshToken(req),
+			'authController - refreshToken',
+		)
+
+		if (getRefreshTokenError) {
+			logger.error({
+				msg: '[authController - refreshToken]: Error retrieving refresh token',
+				error: getRefreshTokenError,
+			})
+			res.status(StatusCodes.UNAUTHORIZED).json({
+				message: 'Refresh token not found or invalid',
+			})
+			return
+		}
+
+		// Extract synchronize token from cookies with error handling
+		const { data: encryptedUsername, error: synchronizeTokenError } =
+			tryCatchSync(
+				() => getSynchronizeToken(req),
+				'authController - refreshToken',
+			)
+
+		if (synchronizeTokenError) {
+			logger.error({
+				msg: '[authController - refreshToken]: Error retrieving synchronize token',
+				error: synchronizeTokenError,
+			})
+			res.status(StatusCodes.UNAUTHORIZED).json({
+				message: 'Synchronize token not found or invalid',
+			})
+			return
+		}
 
 		// Use the decrypt function with the new return type
 		const { data: decryptedUsername, error: decryptError } =
@@ -546,7 +591,22 @@ class AuthController implements IAuthController {
 	}
 
 	public getAuthUser = async (req: Request, res: Response): Promise<void> => {
-		const accessToken = getAccessToken(req)
+		// Extract access token from cookies with error handling
+		const { data: accessToken, error: accessTokenError } = tryCatchSync(
+			() => getAccessToken(req),
+			'authController - getAuthUser',
+		)
+
+		if (accessTokenError) {
+			logger.error({
+				msg: '[authController - getAuthUser]: Error retrieving access token',
+				error: accessTokenError,
+			})
+			res.status(StatusCodes.UNAUTHORIZED).json({
+				message: 'Authentication required',
+			})
+			return
+		}
 
 		// Get user from Cognito
 		const { data: getAuthUserResponse, error: responseError } =
