@@ -448,11 +448,11 @@ class AuthController implements IAuthController {
 		}
 
 		// Refresh token with Cognito
-		const { data: refreshTokenResponse, error: refreshTokenError } =
+		const { data: refreshTokenResponse, error: refreshTokenResponseError } =
 			await this.cognito.refreshToken(refreshToken, decryptedUsername)
 
-		if (refreshTokenError) {
-			handleError(res, refreshTokenError, 'authController')
+		if (refreshTokenResponseError) {
+			handleError(res, refreshTokenResponseError, 'authController')
 			return
 		}
 
@@ -469,16 +469,33 @@ class AuthController implements IAuthController {
 			return
 		}
 
+		// Validate that required authentication tokens are present
+		if (
+			!refreshTokenResponse.AuthenticationResult?.AccessToken ||
+			typeof refreshTokenResponse.AuthenticationResult.ExpiresIn !== 'number'
+		) {
+			const error = AppError.internal(
+				'Authentication tokens missing from response',
+				'authController - refreshToken',
+			)
+			logger.error({
+				msg: '[authController - refreshToken]: Missing authentication tokens',
+				error: error.message,
+			})
+			handleError(res, standardizeError(error), 'authController')
+			return
+		}
+
+		// The refresh token might not be returned if it hasn't expired yet
 		const newRefreshToken =
-			refreshTokenResponse.AuthenticationResult?.RefreshToken ?? refreshToken
+			refreshTokenResponse.AuthenticationResult.RefreshToken ?? refreshToken
 
 		const refreshLoginResponse: TLoginResponse = {
 			message: 'Token refreshed successfully',
 			tokens: {
-				accessToken:
-					refreshTokenResponse.AuthenticationResult?.AccessToken ?? '',
+				accessToken: refreshTokenResponse.AuthenticationResult.AccessToken,
 				refreshToken: newRefreshToken,
-				expiresIn: refreshTokenResponse.AuthenticationResult?.ExpiresIn ?? 0,
+				expiresIn: refreshTokenResponse.AuthenticationResult.ExpiresIn,
 			},
 		}
 
