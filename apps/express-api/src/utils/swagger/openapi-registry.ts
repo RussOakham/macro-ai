@@ -99,12 +99,89 @@ const NotFoundErrorSchema = registerZodSchema(
 	'Resource not found error response',
 )
 
+const ConflictErrorSchema = registerZodSchema(
+	'ConflictError',
+	z.object({
+		message: z.string().openapi({
+			description: 'Conflict error message',
+			example: 'Resource conflict',
+		}),
+	}),
+	'Resource conflict error response',
+)
+
+const ForbiddenErrorSchema = registerZodSchema(
+	'ForbiddenError',
+	z.object({
+		message: z.string().openapi({
+			description: 'Forbidden error message',
+			example: 'Forbidden',
+		}),
+	}),
+	'Forbidden access error response',
+)
+
+// Cognito-specific error schemas
+const CognitoCodeMismatchErrorSchema = registerZodSchema(
+	'CognitoCodeMismatchError',
+	z.object({
+		message: z.string().openapi({
+			description: 'Invalid verification code error message',
+			example: 'Invalid verification code',
+		}),
+	}),
+	'Invalid verification code error response',
+)
+
+const CognitoExpiredCodeErrorSchema = registerZodSchema(
+	'CognitoExpiredCodeError',
+	z.object({
+		message: z.string().openapi({
+			description: 'Expired verification code error message',
+			example: 'Verification code has expired',
+		}),
+	}),
+	'Expired verification code error response',
+)
+
+const CognitoUserNotConfirmedErrorSchema = registerZodSchema(
+	'CognitoUserNotConfirmedError',
+	z.object({
+		message: z.string().openapi({
+			description: 'User not confirmed error message',
+			example: 'User is not confirmed',
+		}),
+	}),
+	'User not confirmed error response',
+)
+
+const CognitoUsernameExistsErrorSchema = registerZodSchema(
+	'CognitoUsernameExistsError',
+	z.object({
+		message: z.string().openapi({
+			description: 'User already exists error message',
+			example: 'User already exists',
+		}),
+	}),
+	'User already exists error response',
+)
+
 type TErrorResponse = z.infer<typeof ErrorResponseSchema>
 type TRateLimitError = z.infer<typeof RateLimitErrorSchema>
 type TValidationError = z.infer<typeof ValidationErrorSchema>
 type TInternalServerError = z.infer<typeof InternalServerErrorSchema>
 type TUnauthorizedError = z.infer<typeof UnauthorizedErrorSchema>
 type TNotFoundError = z.infer<typeof NotFoundErrorSchema>
+type TConflictError = z.infer<typeof ConflictErrorSchema>
+type TForbiddenError = z.infer<typeof ForbiddenErrorSchema>
+type TCognitoCodeMismatchError = z.infer<typeof CognitoCodeMismatchErrorSchema>
+type TCognitoExpiredCodeError = z.infer<typeof CognitoExpiredCodeErrorSchema>
+type TCognitoUserNotConfirmedError = z.infer<
+	typeof CognitoUserNotConfirmedErrorSchema
+>
+type TCognitoUsernameExistsError = z.infer<
+	typeof CognitoUsernameExistsErrorSchema
+>
 
 // Register security schemes
 registry.registerComponent('securitySchemes', 'cookieAuth', {
@@ -120,7 +197,13 @@ registry.registerComponent('securitySchemes', 'apiKey', {
 })
 
 export {
+	CognitoCodeMismatchErrorSchema,
+	CognitoExpiredCodeErrorSchema,
+	CognitoUsernameExistsErrorSchema,
+	CognitoUserNotConfirmedErrorSchema,
+	ConflictErrorSchema,
 	ErrorResponseSchema,
+	ForbiddenErrorSchema,
 	InternalServerErrorSchema,
 	NotFoundErrorSchema,
 	RateLimitErrorSchema,
@@ -131,7 +214,13 @@ export {
 }
 
 export type {
+	TCognitoCodeMismatchError,
+	TCognitoExpiredCodeError,
+	TCognitoUsernameExistsError,
+	TCognitoUserNotConfirmedError,
+	TConflictError,
 	TErrorResponse,
+	TForbiddenError,
 	TInternalServerError,
 	TNotFoundError,
 	TRateLimitError,
