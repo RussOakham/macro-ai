@@ -80,6 +80,7 @@ This document tracks the authentication implementation across the Macro AI appli
 ### Client-Side Logout ✅ COMPLETE
 
 - [x] **Logout Hook** in `apps/client-ui/src/services/hooks/auth/usePostLogoutMutation.tsx`
+
   - [x] ✅ `usePostLogoutMutation` with TanStack Query integration
   - [x] ✅ Clear TanStack Query cache and remove auth user data
   - [x] ✅ Automatic redirect to login page on success
@@ -145,6 +146,7 @@ This document tracks the authentication implementation across the Macro AI appli
 ### Registration Flow ✅ COMPLETE
 
 - [x] **Registration Service and Controller** - Complete AWS Cognito integration
+
   - [x] ✅ User registration with email/password validation
   - [x] ✅ Automatic user creation in local database
   - [x] ✅ Email confirmation code sending
@@ -160,6 +162,7 @@ This document tracks the authentication implementation across the Macro AI appli
 ### Login Flow ✅ COMPLETE
 
 - [x] **Login Service and Controller** - Secure authentication
+
   - [x] ✅ Email/password authentication with Cognito
   - [x] ✅ Secure cookie setting (access, refresh, synchronize tokens)
   - [x] ✅ User registration or login in local database
@@ -217,6 +220,7 @@ This document tracks the authentication implementation across the Macro AI appli
 ### Authentication Components ✅ COMPLETE
 
 - [x] **Auth Forms** - Complete form implementations
+
   - [x] ✅ `LoginForm` - Email/password login with validation
   - [x] ✅ `RegisterForm` - Registration with password confirmation
   - [x] ✅ `ConfirmRegistrationForm` - Email confirmation with code input

@@ -6,18 +6,18 @@ This document compares our custom `tryCatch` utility with the [neverthrow](https
 
 ## Comparison Summary
 
-| Feature                | Custom tryCatch/tryCatchSync | Neverthrow                 |
-| ---------------------- | ---------------------------- | -------------------------- |
-| **Approach**           | Go-style tuple wrapper       | Comprehensive Result monad |
-| **Learning Curve**     | Low - familiar Go pattern    | Medium - new concepts      |
-| **Type Safety**        | Excellent with AppError      | Excellent                  |
-| **Error Standardization** | Built-in with AppError    | Manual implementation      |
-| **Logging**            | Automatic with context       | Manual implementation      |
-| **Composability**      | Limited (manual chaining)    | Extensive with combinators |
-| **Bundle Size**        | Zero additional              | Small (~4KB)               |
-| **Sync/Async Support** | Both tryCatch & tryCatchSync | ResultAsync for async      |
-| **Integration Effort** | Minimal changes              | Moderate refactoring       |
-| **Context Tracking**   | Built-in service context     | Manual implementation      |
+| Feature                   | Custom tryCatch/tryCatchSync | Neverthrow                 |
+| ------------------------- | ---------------------------- | -------------------------- |
+| **Approach**              | Go-style tuple wrapper       | Comprehensive Result monad |
+| **Learning Curve**        | Low - familiar Go pattern    | Medium - new concepts      |
+| **Type Safety**           | Excellent with AppError      | Excellent                  |
+| **Error Standardization** | Built-in with AppError       | Manual implementation      |
+| **Logging**               | Automatic with context       | Manual implementation      |
+| **Composability**         | Limited (manual chaining)    | Extensive with combinators |
+| **Bundle Size**           | Zero additional              | Small (~4KB)               |
+| **Sync/Async Support**    | Both tryCatch & tryCatchSync | ResultAsync for async      |
+| **Integration Effort**    | Minimal changes              | Moderate refactoring       |
+| **Context Tracking**      | Built-in service context     | Manual implementation      |
 
 ## Custom tryCatch Utility
 
@@ -128,7 +128,7 @@ register: async (req: Request, res: Response) => {
 	// Using tuple destructuring with tryCatch
 	const [response, error] = await tryCatch(
 		cognito.signUpUser({ email, password, confirmPassword }),
-		'authController - register'
+		'authController - register',
 	)
 
 	if (error) {
@@ -138,14 +138,16 @@ register: async (req: Request, res: Response) => {
 	}
 
 	if (!response.UserSub) {
-		const validationError = AppError.validation('User not created - no user ID returned')
+		const validationError = AppError.validation(
+			'User not created - no user ID returned',
+		)
 		handleError(res, validationError, 'authController')
 		return
 	}
 
 	const [user, userError] = await tryCatch(
 		createUser({ id: response.UserSub, email }),
-		'authController - createUser'
+		'authController - createUser',
 	)
 
 	if (userError) {
@@ -354,13 +356,13 @@ Our `tryCatch` and `tryCatchSync` utilities automatically standardize all errors
 const [data, error] = await tryCatch(someAsyncOperation(), 'myService')
 
 if (error) {
-  // error is guaranteed to be an AppError with:
-  // - Consistent structure (type, status, message, service, etc.)
-  // - Proper logging already handled
-  // - Context information included
-  console.log(error.type)     // ErrorType enum value
-  console.log(error.status)   // HTTP status code
-  console.log(error.service)  // Service context
+	// error is guaranteed to be an AppError with:
+	// - Consistent structure (type, status, message, service, etc.)
+	// - Proper logging already handled
+	// - Context information included
+	console.log(error.type) // ErrorType enum value
+	console.log(error.status) // HTTP status code
+	console.log(error.service) // Service context
 }
 ```
 
@@ -370,10 +372,7 @@ Both utilities include built-in error logging with context:
 
 ```typescript
 // This automatically logs: "[userService]: User not found"
-const [user, error] = await tryCatch(
-  findUserById(id),
-  'userService'
-)
+const [user, error] = await tryCatch(findUserById(id), 'userService')
 ```
 
 ### Type Safety with Result Tuples
@@ -385,9 +384,9 @@ The `Result<T>` type provides strong typing for both success and error cases:
 const [user, error]: Result<User> = await tryCatch(getUserById(id))
 
 if (error) {
-  // TypeScript knows this is AppError
-  handleError(res, error)
-  return
+	// TypeScript knows this is AppError
+	handleError(res, error)
+	return
 }
 
 // TypeScript knows user is User type (not null)
@@ -401,20 +400,20 @@ console.log(user.email)
 ```typescript
 // API calls
 const [response, error] = await tryCatch(
-  fetch('/api/users'),
-  'userService - fetchUsers'
+	fetch('/api/users'),
+	'userService - fetchUsers',
 )
 
 // Database operations
 const [user, dbError] = await tryCatch(
-  db.select().from(users).where(eq(users.id, userId)),
-  'userRepository - findById'
+	db.select().from(users).where(eq(users.id, userId)),
+	'userRepository - findById',
 )
 
 // File operations
 const [fileContent, fileError] = await tryCatch(
-  fs.readFile('config.json', 'utf8'),
-  'configService - readFile'
+	fs.readFile('config.json', 'utf8'),
+	'configService - readFile',
 )
 ```
 
@@ -423,25 +422,22 @@ const [fileContent, fileError] = await tryCatch(
 ```typescript
 // JSON parsing
 const [config, parseError] = tryCatchSync(
-  () => JSON.parse(configString),
-  'configService - parseJSON'
+	() => JSON.parse(configString),
+	'configService - parseJSON',
 )
 
 // Data validation
 const [validatedData, validationError] = tryCatchSync(
-  () => userSchema.parse(userData),
-  'userService - validateUser'
+	() => userSchema.parse(userData),
+	'userService - validateUser',
 )
 
 // Cryptographic operations
-const [hash, hashError] = tryCatchSync(
-  () => {
-    const hmac = createHmac('sha256', secret)
-    hmac.update(data)
-    return hmac.digest('hex')
-  },
-  'authService - generateHash'
-)
+const [hash, hashError] = tryCatchSync(() => {
+	const hmac = createHmac('sha256', secret)
+	hmac.update(data)
+	return hmac.digest('hex')
+}, 'authService - generateHash')
 ```
 
 ### Error Handling Patterns
@@ -450,7 +446,7 @@ const [hash, hashError] = tryCatchSync(
 // Early return pattern
 const [user, error] = await tryCatch(getUserById(id), 'userController')
 if (error) {
-  return handleError(res, error)
+	return handleError(res, error)
 }
 
 // Multiple operations with error accumulation
@@ -458,8 +454,8 @@ const [user, userError] = await tryCatch(getUserById(id), 'userService')
 if (userError) return [null, userError]
 
 const [profile, profileError] = await tryCatch(
-  getProfileById(user.profileId),
-  'userService'
+	getProfileById(user.profileId),
+	'userService',
 )
 if (profileError) return [null, profileError]
 

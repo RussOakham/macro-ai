@@ -35,6 +35,7 @@ This document outlines our **completed implementation** of automated API documen
   - [x] Register `GetAuthUserResponse` schema
 
 - [x] **User feature schemas** - Integrated with Drizzle ORM
+
   - [x] Register `UserProfile` schema from Drizzle-generated schemas
   - [x] Register `UpdateUserProfile` schema
   - [x] Register `UserResponse` schema
@@ -60,6 +61,7 @@ This document outlines our **completed implementation** of automated API documen
   - [x] Register `/auth/refresh` endpoint
 
 - [x] **User routes** - Secured endpoints with proper authentication
+
   - [x] Register `/users/me` endpoint with cookieAuth security
 
 - [x] **Utility routes** - System health and monitoring
@@ -193,7 +195,10 @@ const userResponseSchema = registerZodSchema(
 ```typescript
 // apps/express-api/src/features/user/user.routes.ts
 import { StatusCodes } from 'http-status-codes'
-import { registry, ErrorResponseSchema } from '../../utils/swagger/openapi-registry.ts'
+import {
+	registry,
+	ErrorResponseSchema,
+} from '../../utils/swagger/openapi-registry.ts'
 import { userResponseSchema } from './user.schemas.ts'
 
 // Register routes with OpenAPI registry - comprehensive status codes
@@ -320,9 +325,9 @@ Rate limit headers are included in responses to help track usage.`,
 ```json
 // package.json scripts
 {
-  "build": "tsc && tsx src/utils/swagger/generate-swagger.ts",
-  "dev": "tsx src/utils/swagger/generate-swagger.ts && nodemon --config nodemon.json",
-  "generate-swagger": "tsx src/utils/swagger/generate-swagger.ts"
+	"build": "tsc && tsx src/utils/swagger/generate-swagger.ts",
+	"dev": "tsx src/utils/swagger/generate-swagger.ts && nodemon --config nodemon.json",
+	"generate-swagger": "tsx src/utils/swagger/generate-swagger.ts"
 }
 ```
 
@@ -381,6 +386,7 @@ const main = async () => {
 4. **Zero Duplication**: No need to maintain separate JSDoc comments, validation schemas, or manual API documentation.
 
 5. **Enhanced Developer Experience**:
+
    - IDE autocomplete for all API schemas
    - Automatic client generation with proper TypeScript types
    - Interactive Swagger UI for API testing
@@ -416,11 +422,11 @@ const main = async () => {
 
    ```typescript
    const userSchema = registerZodSchema(
-     'User',
-     z.object({
-       email: z.string().email().openapi({ description: 'User email address' }),
-     }),
-     'User information'
+   	'User',
+   	z.object({
+   		email: z.string().email().openapi({ description: 'User email address' }),
+   	}),
+   	'User information',
    )
    ```
 
@@ -428,11 +434,15 @@ const main = async () => {
 
    ```typescript
    registry.registerPath({
-     method: 'post',
-     path: '/users',
-     tags: ['Users'],
-     request: { body: { content: { 'application/json': { schema: userSchema } } } },
-     responses: { /* ... */ }
+   	method: 'post',
+   	path: '/users',
+   	tags: ['Users'],
+   	request: {
+   		body: { content: { 'application/json': { schema: userSchema } } },
+   	},
+   	responses: {
+   		/* ... */
+   	},
    })
    ```
 

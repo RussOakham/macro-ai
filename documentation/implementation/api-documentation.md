@@ -39,11 +39,13 @@ This document tracks the implementation status of API documentation and type gen
   - [ ] Add registration and email confirmation flow diagram
 
 - [ ] **Express API README** ⚠️ MISSING
+
   - [ ] Create comprehensive `apps/express-api/README.md`
   - [ ] Document authentication features and cookie-based auth
   - [ ] Include API development guidelines and testing instructions
 
 - [x] **Client API Integration Documentation** ✅ COMPLETE
+
   - [x] ✅ Axios interceptor implementation in `apps/client-ui/src/lib/api/index.ts`
   - [x] ✅ Automatic token refresh with request queuing
   - [x] ✅ Error handling and standardization
@@ -55,6 +57,7 @@ This document tracks the implementation status of API documentation and type gen
 ## API Client Package ✅ COMPLETE (`/packages/macro-ai-api-client`)
 
 - [x] **Package Structure** ✅ COMPLETE
+
   - [x] ✅ Directory: `packages/macro-ai-api-client` with proper workspace setup
   - [x] ✅ Package.json with correct dependencies and scripts
   - [x] ✅ TypeScript configuration using base config from `packages/config-typescript`
@@ -78,12 +81,14 @@ This document tracks the implementation status of API documentation and type gen
 ## Client UI Updates ✅ COMPLETE (`/apps/client-ui`)
 
 - [x] **Dependencies and Integration** ✅ COMPLETE
+
   - [x] ✅ Updated `package.json` with `@repo/macro-ai-api-client` dependency
   - [x] ✅ TanStack Router with proper route configuration
   - [x] ✅ TanStack Query for API state management
   - [x] ✅ Proper TypeScript configuration with path aliases
 
 - [x] **API Integration** ✅ COMPLETE
+
   - [x] ✅ Generated API client integration in `src/lib/api/index.ts`
   - [x] ✅ Axios interceptors for automatic token refresh
   - [x] ✅ Request queuing during token refresh operations
@@ -99,6 +104,7 @@ This document tracks the implementation status of API documentation and type gen
 ## Express API Updates ✅ COMPLETE (`/apps/express-api`)
 
 - [x] **OpenAPI Documentation** ✅ COMPLETE
+
   - [x] ✅ Comprehensive OpenAPI 3.0.0 specification with `@asteasolutions/zod-to-openapi`
   - [x] ✅ All route handlers documented with proper schemas
   - [x] ✅ Security schemes (cookieAuth, apiKey) configured
@@ -114,11 +120,13 @@ This document tracks the implementation status of API documentation and type gen
 ## Documentation Status
 
 - [x] **Root Repository** ✅ COMPLETE (`/`)
+
   - [x] ✅ Comprehensive README.md with monorepo structure
   - [x] ✅ Getting started guide with prerequisites
   - [x] ✅ Development workflow documentation
 
 - [x] **API Client Package** ✅ COMPLETE (`/packages/macro-ai-api-client`)
+
   - [x] ✅ Package structure and build configuration
   - [x] ✅ Generation scripts and automation
   - [x] ✅ TypeScript configuration and ESLint setup
@@ -132,12 +140,14 @@ This document tracks the implementation status of API documentation and type gen
 ## Testing Setup ⚠️ INCOMPLETE
 
 - [ ] **API Client Tests** (`/packages/macro-ai-api-client`)
+
   - [ ] Unit tests for generated client functions
   - [ ] Integration tests with mock API responses
   - [ ] Error handling and retry logic tests
   - [ ] Authentication flow tests
 
 - [ ] **Client UI Integration Tests** (`/apps/client-ui`)
+
   - [ ] Auth flow integration tests
   - [ ] API client integration tests
   - [ ] Component tests with API mocking
@@ -153,16 +163,19 @@ This document tracks the implementation status of API documentation and type gen
 ### ✅ **What's Working**
 
 1. **Complete API Documentation Pipeline**
+
    - Zod schemas → OpenAPI spec → TypeScript client
    - Automatic synchronization between validation and documentation
    - Interactive Swagger UI at `/api-docs`
 
 2. **Production-Ready API Client**
+
    - Auto-generated TypeScript client with proper types
    - Automatic token refresh with request queuing
    - Standardized error handling across the application
 
 3. **Comprehensive Authentication**
+
    - Cookie-based auth with secure HTTP-only cookies
    - Automatic token refresh with fallback to logout
    - Complete auth flows (login, register, forgot password)
@@ -174,11 +187,13 @@ This document tracks the implementation status of API documentation and type gen
 ### ⚠️ **What Needs Attention**
 
 1. **Documentation Gaps**
+
    - Missing Express API README
    - No visual auth flow diagrams
    - Limited component usage examples
 
 2. **Testing Infrastructure**
+
    - No tests for API client package
    - No integration tests for client UI
    - Basic test setup but no actual test coverage
@@ -202,21 +217,21 @@ This document tracks the implementation status of API documentation and type gen
 ```markdown
 apps/express-api/
 ├── src/utils/swagger/
-│   ├── openapi-registry.ts     # Central OpenAPI schema registry
-│   └── generate-swagger.ts     # Swagger generation script
-├── src/features/*/
-│   ├── *.routes.ts            # Route definitions with OpenAPI registration
-│   └── *.schemas.ts           # Zod schemas with OpenAPI metadata
-└── public/swagger.json         # Generated OpenAPI specification
+│ ├── openapi-registry.ts # Central OpenAPI schema registry
+│ └── generate-swagger.ts # Swagger generation script
+├── src/features/_/
+│ ├── _.routes.ts # Route definitions with OpenAPI registration
+│ └── \*.schemas.ts # Zod schemas with OpenAPI metadata
+└── public/swagger.json # Generated OpenAPI specification
 
 packages/macro-ai-api-client/
-├── scripts/generate.ts         # Client generation script
-├── src/index.ts               # Main client export
-└── src/output.ts              # Generated client (auto-generated)
+├── scripts/generate.ts # Client generation script
+├── src/index.ts # Main client export
+└── src/output.ts # Generated client (auto-generated)
 
 apps/client-ui/
-├── src/lib/api/index.ts       # API client with interceptors
-└── src/features/auth/         # Auth components using generated client
+├── src/lib/api/index.ts # API client with interceptors
+└── src/features/auth/ # Auth components using generated client
 ```
 
 ### Development Workflow
