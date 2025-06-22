@@ -2,13 +2,10 @@ import { type Router } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import { apiRateLimiter } from '../../middleware/rate-limit.middleware.ts'
-import { pino } from '../../utils/logger.ts'
 import { registry } from '../../utils/swagger/openapi-registry.ts'
 
+import { utilityController } from './utility.controller.ts'
 import { healthErrorSchema, healthResponseSchema } from './utility.schemas.ts'
-import { THealthErrorResponse, THealthResponse } from './utility.types.ts'
-
-const { logger } = pino
 
 // Register the health endpoint with OpenAPI
 registry.registerPath({
@@ -43,26 +40,48 @@ registry.registerPath({
 	},
 })
 
+// Register the system info endpoint with OpenAPI
+registry.registerPath({
+	method: 'get',
+	path: '/system-info',
+	tags: ['Utility'],
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'System information retrieved successfully',
+			content: {
+				'application/json': {
+					schema: {
+						type: 'object',
+						properties: {
+							nodeVersion: { type: 'string' },
+							platform: { type: 'string' },
+							architecture: { type: 'string' },
+							uptime: { type: 'number' },
+							memoryUsage: { type: 'object' },
+							cpuUsage: { type: 'object' },
+							timestamp: { type: 'string' },
+						},
+					},
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Failed to retrieve system information',
+			content: {
+				'application/json': {
+					schema: healthErrorSchema,
+				},
+			},
+		},
+	},
+})
+
 const utilityRouter = (router: Router) => {
-	router.get('/health', apiRateLimiter, (req, res) => {
-		try {
-			const healthResponse: THealthResponse = {
-				message: 'Api Health Status: OK',
-			}
+	// Health check endpoint using Go-style error handling
+	router.get('/health', apiRateLimiter, utilityController.getHealthStatus)
 
-			res.status(200).json(healthResponse)
-		} catch (error: unknown) {
-			logger.error(
-				`[utility-routes]: Error checking health status: ${(error as Error).message}`,
-			)
-
-			const healthErrorResponse: THealthErrorResponse = {
-				message: 'Api Status: Error',
-			}
-
-			res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(healthErrorResponse)
-		}
-	})
+	// System info endpoint using Go-style error handling
+	router.get('/system-info', apiRateLimiter, utilityController.getSystemInfo)
 }
 
 export { utilityRouter }

@@ -11,7 +11,7 @@ import {
 import express from 'express'
 import { z } from 'zod'
 
-import { EnhancedResult } from '../../utils/error-handling/try-catch.ts'
+import { Result } from '../../utils/errors.ts'
 
 import {
 	authResponseSchema,
@@ -63,33 +63,31 @@ interface ICognitoError {
 interface ICognitoService {
 	signUpUser: (
 		request: TRegisterUserRequest,
-	) => Promise<EnhancedResult<SignUpCommandOutput>>
+	) => Promise<Result<SignUpCommandOutput>>
 	confirmSignUp: (
 		email: string,
 		code: number,
-	) => Promise<EnhancedResult<ConfirmSignUpCommandOutput>>
+	) => Promise<Result<ConfirmSignUpCommandOutput>>
 	resendConfirmationCode: (
 		email: string,
-	) => Promise<EnhancedResult<ResendConfirmationCodeCommandOutput>>
+	) => Promise<Result<ResendConfirmationCodeCommandOutput>>
 	signInUser: (
 		email: string,
 		password: string,
-	) => Promise<EnhancedResult<InitiateAuthCommandOutput & { Username: string }>>
+	) => Promise<Result<InitiateAuthCommandOutput & { Username: string }>>
 	signOutUser: (
 		accessToken: string,
-	) => Promise<EnhancedResult<GlobalSignOutCommandOutput>>
+	) => Promise<Result<GlobalSignOutCommandOutput>>
 	forgotPassword: (
 		email: string,
-	) => Promise<EnhancedResult<ForgotPasswordCommandOutput>>
+	) => Promise<Result<ForgotPasswordCommandOutput>>
 	confirmForgotPassword: (
 		email: string,
 		code: string,
 		newPassword: string,
 		confirmPassword: string,
-	) => Promise<EnhancedResult<ConfirmForgotPasswordCommandOutput>>
-	getAuthUser: (
-		accessToken: string,
-	) => Promise<EnhancedResult<GetUserCommandOutput>>
+	) => Promise<Result<ConfirmForgotPasswordCommandOutput>>
+	getAuthUser: (accessToken: string) => Promise<Result<GetUserCommandOutput>>
 }
 
 // Controller interfaces

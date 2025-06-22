@@ -1,100 +1,67 @@
-import { ErrorType, IStandardizedError, standardizeError } from '../errors.ts'
+import { AppError, Result } from '../errors.ts'
 import { pino } from '../logger.ts'
 
 const { logger } = pino
 
-// Types for the result object with discriminated union
-interface Success<T> {
-	data: T
-	error: null
-}
-
-interface Failure<E extends IStandardizedError> {
-	data: null
-	error: E
-}
-
-type EnhancedResult<T, E extends IStandardizedError = IStandardizedError> =
-	| Success<T>
-	| Failure<E>
-
-// Enhanced tryCatch with standardized errors and proper type narrowing
 /**
- * Wraps an async operation in a try-catch block and returns a standardized result object
+ * Wraps an async operation in a try-catch block and returns a Go-style Result tuple
  * @param promise - The promise to be executed
  * @param context - The context/service name for error logging (defaults to 'unknown')
- * @returns An EnhancedResult object containing either the data or a standardized error
+ * @returns A Result tuple containing either [data, null] or [null, error]
  *
  * @example
- * const { data: user, error } = await tryCatch(
+ * const [user, error] = await tryCatch(
  *   userRepository.findUserById({ id }),
  *   'userService - getUserById'
  * )
  *
  * if (error) {
- *   throw AppError.from(error, 'userService')
+ *   return [null, error]
  * }
  *
- * return user
+ * return [user, null]
  */
-const tryCatch = async <T, E extends IStandardizedError = IStandardizedError>(
+const tryCatch = async <T>(
 	promise: Promise<T>,
 	context = 'unknown',
-): Promise<EnhancedResult<T, E>> => {
+): Promise<Result<T>> => {
 	try {
 		const data = await promise
-		return { data, error: null } as Success<T>
+		return [data, null]
 	} catch (error: unknown) {
-		const standardizedError = standardizeError(error) as E
-
-		// Add context if not already present
-		standardizedError.service ??= context
-
-		logger.error(`[${context}]: ${standardizedError.message}`)
-		return { data: null, error: standardizedError } as Failure<E>
+		const appError = AppError.from(error, context)
+		logger.error(`[${context}]: ${appError.message}`)
+		return [null, appError]
 	}
 }
 
 /**
- * Synchronous version of tryCatch that wraps a function in a try-catch block and returns a standardized result object
+ * Synchronous version of tryCatch that wraps a function in a try-catch block and returns a Go-style Result tuple
  * @param func - The function to be executed
  * @param context - The context/service name for error logging (defaults to 'unknown')
- * @returns An EnhancedResult object containing either the data or a standardized error
+ * @returns A Result tuple containing either [data, null] or [null, error]
  *
  * @example
- * const { data: config, error } = tryCatchSync(
+ * const [config, error] = tryCatchSync(
  *   () => parseConfig(configFile),
  *   'configService - loadConfig'
  * )
  *
  * if (error) {
- *   throw AppError.from(error, 'configService')
+ *   return [null, error]
  * }
  *
- * return config
+ * return [config, null]
  */
-const tryCatchSync = <T, E extends IStandardizedError = IStandardizedError>(
-	func: () => T,
-	context = 'unknown',
-): EnhancedResult<T, E> => {
+const tryCatchSync = <T>(func: () => T, context = 'unknown'): Result<T> => {
 	try {
 		const data = func()
-		return { data, error: null } as Success<T>
+		return [data, null]
 	} catch (error: unknown) {
-		const standardizedError = standardizeError(error) as E
-
-		// Add context if not already present
-		standardizedError.service ??= context
-
-		logger.error(`[${context}]: ${standardizedError.message}`)
-		return { data: null, error: standardizedError } as Failure<E>
+		const appError = AppError.from(error, context)
+		logger.error(`[${context}]: ${appError.message}`)
+		return [null, appError]
 	}
 }
 
-export {
-	type EnhancedResult,
-	ErrorType,
-	type IStandardizedError,
-	tryCatch,
-	tryCatchSync,
-}
+export { tryCatch, tryCatchSync }

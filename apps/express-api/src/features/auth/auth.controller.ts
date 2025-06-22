@@ -1,4 +1,4 @@
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import { config } from '../../../config/default.ts'
@@ -9,10 +9,14 @@ import {
 } from '../../utils/cookies.ts'
 import { decrypt, encrypt } from '../../utils/crypto.ts'
 import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
-import { AppError, standardizeError } from '../../utils/errors.ts'
+import {
+	ConflictError,
+	ErrorType,
+	InternalError,
+	ValidationError,
+} from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 import {
-	handleError,
 	handleServiceError,
 	validateData,
 } from '../../utils/response-handlers.ts'
@@ -59,35 +63,42 @@ class AuthController implements IAuthController {
 		this.userRepository = userRepo
 	}
 
-	public register = async (req: Request, res: Response): Promise<void> => {
+	public register = async (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): Promise<void> => {
 		const { email, password, confirmPassword } =
 			req.body as TRegisterUserRequest
 
 		// Check if user already exists
-		const { data: getUserResponse, error: getUserError } =
+		const [getUserResponse, getUserError] =
 			await this.userService.getUserByEmail({ email })
 
-		if (getUserError) {
-			handleError(res, getUserError, 'authController')
-			return
-		}
-
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (getUserResponse) {
-			const error = AppError.conflict(
+			const error = new ConflictError(
 				'User already exists',
 				'authController - register',
 			)
-			handleError(res, standardizeError(error), 'authController')
+			next(error)
+			return
+		}
+
+		// if getUserError and not NotFoundError, throw error
+		if (getUserError.type !== ErrorType.NotFoundError) {
+			next(getUserError)
 			return
 		}
 
 		// Register user with Cognito
-		const { data: signUpResponse, error: signUpError } =
-			await this.cognito.signUpUser({ email, password, confirmPassword })
+		const [signUpResponse, signUpError] = await this.cognito.signUpUser({
+			email,
+			password,
+			confirmPassword,
+		})
 
 		if (signUpError) {
-			handleError(res, signUpError, 'authController')
+			next(signUpError)
 			return
 		}
 
@@ -107,11 +118,12 @@ class AuthController implements IAuthController {
 
 		// Check for service errors
 		if (!signUpResponse.UserSub) {
-			const error = AppError.validation(
+			const error = new ValidationError(
 				'User not created - no user ID returned',
+				undefined,
 				'authController - register',
 			)
-			handleError(res, standardizeError(error), 'authController')
+			next(error)
 			return
 		}
 
@@ -121,11 +133,10 @@ class AuthController implements IAuthController {
 			email,
 		}
 
-		const { data: user, error: userError } =
-			await this.userRepository.createUser({ userData })
+		const [user, userError] = await this.userRepository.createUser({ userData })
 
 		if (userError) {
-			handleError(res, userError, 'authController')
+			next(userError)
 			return
 		}
 
@@ -146,15 +157,16 @@ class AuthController implements IAuthController {
 	public confirmRegistration = async (
 		req: Request,
 		res: Response,
+		next: NextFunction,
 	): Promise<void> => {
 		const { email, code } = req.body as TConfirmRegistrationRequest
 
 		// Confirm user registration with Cognito
-		const { data: confirmSignUpResponse, error: confirmSignUpError } =
+		const [confirmSignUpResponse, confirmSignUpError] =
 			await this.cognito.confirmSignUp(email, code)
 
 		if (confirmSignUpError) {
-			handleError(res, confirmSignUpError, 'authController')
+			next(confirmSignUpError)
 			return
 		}
 
@@ -173,31 +185,30 @@ class AuthController implements IAuthController {
 		}
 
 		// get user from database
-		const { data: user, error: userError } =
-			await this.userService.getUserByEmail({ email })
+		const [user, userError] = await this.userService.getUserByEmail({ email })
 
 		if (userError) {
-			handleError(res, userError, 'authController')
+			next(userError)
 			return
 		}
 
 		// Update user email verification status in database
-		const { data: updatedUser, error: updatedUserError } =
+		const [updatedUser, updatedUserError] =
 			await this.userRepository.updateUser(user.id, {
 				emailVerified: true,
 			})
 
 		if (updatedUserError) {
-			handleError(res, updatedUserError, 'authController')
+			next(updatedUserError)
 			return
 		}
 
 		if (!updatedUser) {
-			const error = AppError.internal(
+			const error = new InternalError(
 				'Failed to update user email verification',
 				'authController',
 			)
-			handleError(res, standardizeError(error), 'authController')
+			next(error)
 			return
 		}
 
@@ -211,17 +222,16 @@ class AuthController implements IAuthController {
 	public resendConfirmationCode = async (
 		req: Request,
 		res: Response,
+		next: NextFunction,
 	): Promise<void> => {
 		const { email } = req.body as TResendConfirmationCodeRequest
 
 		// Resend confirmation code with Cognito
-		const {
-			data: resendConfirmationCodeResponse,
-			error: resendConfirmationCodeError,
-		} = await this.cognito.resendConfirmationCode(email)
+		const [resendConfirmationCodeResponse, resendConfirmationCodeError] =
+			await this.cognito.resendConfirmationCode(email)
 
 		if (resendConfirmationCodeError) {
-			handleError(res, resendConfirmationCodeError, 'authController')
+			next(resendConfirmationCodeError)
 			return
 		}
 
@@ -245,15 +255,21 @@ class AuthController implements IAuthController {
 		res.status(StatusCodes.OK).json(authResponse)
 	}
 
-	public login = async (req: Request, res: Response): Promise<void> => {
+	public login = async (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): Promise<void> => {
 		const { email, password } = req.body as TLoginRequest
 
 		// Login user with Cognito
-		const { data: signInResponse, error: signInError } =
-			await this.cognito.signInUser(email, password)
+		const [signInResponse, signInError] = await this.cognito.signInUser(
+			email,
+			password,
+		)
 
 		if (signInError) {
-			handleError(res, signInError, 'authController')
+			next(signInError)
 			return
 		}
 
@@ -276,7 +292,7 @@ class AuthController implements IAuthController {
 			!signInResponse.AuthenticationResult.RefreshToken ||
 			!signInResponse.AuthenticationResult.ExpiresIn
 		) {
-			const error = AppError.internal(
+			const error = new InternalError(
 				'Authentication tokens missing from response',
 				'authController - login',
 			)
@@ -284,29 +300,26 @@ class AuthController implements IAuthController {
 				msg: '[authController - login]: Missing authentication tokens',
 				error: error.message,
 			})
-			handleError(res, standardizeError(error), 'authController')
+			next(error)
 			return
 		}
 
 		// Use the encrypt function with the new return type
-		const { data: encryptedUsername, error: encryptError } = encrypt(
-			signInResponse.Username,
-		)
+		const [encryptedUsername, encryptError] = encrypt(signInResponse.Username)
 
 		if (encryptError) {
-			handleError(res, encryptError, 'authController')
+			next(encryptError)
 			return
 		}
 
 		// Register or login user in database
-		const { data: user, error: userError } =
-			await this.userService.registerOrLoginUserById({
-				id: signInResponse.Username,
-				email,
-			})
+		const [user, userError] = await this.userService.registerOrLoginUserById({
+			id: signInResponse.Username,
+			email,
+		})
 
 		if (userError) {
-			handleError(res, userError, 'authController')
+			next(userError)
 			return
 		}
 
@@ -347,24 +360,28 @@ class AuthController implements IAuthController {
 			.json(loginResponse)
 	}
 
-	public logout = async (req: Request, res: Response): Promise<void> => {
+	public logout = async (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): Promise<void> => {
 		// Extract access token from cookies
-		const { data: accessToken, error: accessTokenError } = tryCatchSync(
+		const [accessToken, accessTokenError] = tryCatchSync(
 			() => getAccessToken(req),
 			'authController - logout',
 		)
 
 		if (accessTokenError) {
-			handleError(res, accessTokenError, 'authController')
+			next(accessTokenError)
 			return
 		}
 
 		// Logout user with Cognito
-		const { data: signOutResponse, error: signOutError } =
+		const [signOutResponse, signOutError] =
 			await this.cognito.signOutUser(accessToken)
 
 		if (signOutError) {
-			handleError(res, signOutError, 'authController')
+			next(signOutError)
 			return
 		}
 
@@ -402,9 +419,13 @@ class AuthController implements IAuthController {
 			.json(authResponse)
 	}
 
-	public refreshToken = async (req: Request, res: Response): Promise<void> => {
+	public refreshToken = async (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): Promise<void> => {
 		// Extract refresh token from cookies with error handling
-		const { data: refreshToken, error: getRefreshTokenError } = tryCatchSync(
+		const [refreshToken, getRefreshTokenError] = tryCatchSync(
 			() => getRefreshToken(req),
 			'authController - refreshToken',
 		)
@@ -421,11 +442,10 @@ class AuthController implements IAuthController {
 		}
 
 		// Extract synchronize token from cookies with error handling
-		const { data: encryptedUsername, error: synchronizeTokenError } =
-			tryCatchSync(
-				() => getSynchronizeToken(req),
-				'authController - refreshToken',
-			)
+		const [encryptedUsername, synchronizeTokenError] = tryCatchSync(
+			() => getSynchronizeToken(req),
+			'authController - refreshToken',
+		)
 
 		if (synchronizeTokenError) {
 			logger.error({
@@ -439,20 +459,19 @@ class AuthController implements IAuthController {
 		}
 
 		// Use the decrypt function with the new return type
-		const { data: decryptedUsername, error: decryptError } =
-			decrypt(encryptedUsername)
+		const [decryptedUsername, decryptError] = decrypt(encryptedUsername)
 
 		if (decryptError) {
-			handleError(res, decryptError, 'authController')
+			next(decryptError)
 			return
 		}
 
 		// Refresh token with Cognito
-		const { data: refreshTokenResponse, error: refreshTokenResponseError } =
+		const [refreshTokenResponse, refreshTokenResponseError] =
 			await this.cognito.refreshToken(refreshToken, decryptedUsername)
 
 		if (refreshTokenResponseError) {
-			handleError(res, refreshTokenResponseError, 'authController')
+			next(refreshTokenResponseError)
 			return
 		}
 
@@ -474,7 +493,7 @@ class AuthController implements IAuthController {
 			!refreshTokenResponse.AuthenticationResult?.AccessToken ||
 			typeof refreshTokenResponse.AuthenticationResult.ExpiresIn !== 'number'
 		) {
-			const error = AppError.internal(
+			const error = new InternalError(
 				'Authentication tokens missing from response',
 				'authController - refreshToken',
 			)
@@ -482,7 +501,7 @@ class AuthController implements IAuthController {
 				msg: '[authController - refreshToken]: Missing authentication tokens',
 				error: error.message,
 			})
-			handleError(res, standardizeError(error), 'authController')
+			next(error)
 			return
 		}
 
@@ -532,15 +551,16 @@ class AuthController implements IAuthController {
 	public forgotPassword = async (
 		req: Request,
 		res: Response,
+		next: NextFunction,
 	): Promise<void> => {
 		const { email } = req.body as TForgotPasswordRequest
 
 		// Initiate forgot password with Cognito
-		const { data: forgotPasswordResponse, error: forgotPasswordError } =
+		const [forgotPasswordResponse, forgotPasswordError] =
 			await this.cognito.forgotPassword(email)
 
 		if (forgotPasswordError) {
-			handleError(res, forgotPasswordError, 'authController')
+			next(forgotPasswordError)
 			return
 		}
 
@@ -567,23 +587,22 @@ class AuthController implements IAuthController {
 	public confirmForgotPassword = async (
 		req: Request,
 		res: Response,
+		next: NextFunction,
 	): Promise<void> => {
 		const { email, code, newPassword, confirmPassword } =
 			req.body as TConfirmForgotPasswordRequest
 
 		// Confirm forgot password with Cognito
-		const {
-			data: confirmForgotPasswordResponse,
-			error: confirmForgotPasswordError,
-		} = await this.cognito.confirmForgotPassword(
-			email,
-			code,
-			newPassword,
-			confirmPassword,
-		)
+		const [confirmForgotPasswordResponse, confirmForgotPasswordError] =
+			await this.cognito.confirmForgotPassword(
+				email,
+				code,
+				newPassword,
+				confirmPassword,
+			)
 
 		if (confirmForgotPasswordError) {
-			handleError(res, confirmForgotPasswordError, 'authController')
+			next(confirmForgotPasswordError)
 			return
 		}
 
@@ -607,9 +626,13 @@ class AuthController implements IAuthController {
 		res.status(StatusCodes.OK).json(authResponse)
 	}
 
-	public getAuthUser = async (req: Request, res: Response): Promise<void> => {
+	public getAuthUser = async (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): Promise<void> => {
 		// Extract access token from cookies with error handling
-		const { data: accessToken, error: accessTokenError } = tryCatchSync(
+		const [accessToken, accessTokenError] = tryCatchSync(
 			() => getAccessToken(req),
 			'authController - getAuthUser',
 		)
@@ -626,11 +649,11 @@ class AuthController implements IAuthController {
 		}
 
 		// Get user from Cognito
-		const { data: getAuthUserResponse, error: responseError } =
+		const [getAuthUserResponse, responseError] =
 			await this.cognito.getAuthUser(accessToken)
 
 		if (responseError) {
-			handleError(res, responseError, 'authController')
+			next(responseError)
 			return
 		}
 

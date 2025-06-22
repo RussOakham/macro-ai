@@ -1,9 +1,8 @@
 import { NextFunction, Request, Response } from 'express'
-import { StatusCodes } from 'http-status-codes'
 import { AnyZodObject, ZodEffects, ZodError } from 'zod'
 import { fromError } from 'zod-validation-error'
 
-import { standardizeError } from '../utils/errors.ts'
+import { InternalError, ValidationError } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
 
 const { logger } = pino
@@ -30,25 +29,28 @@ const validate = <T>(
 					error: validationError.message,
 				})
 
-				res.status(StatusCodes.BAD_REQUEST).json({
-					message: 'Validation Failed',
-					details: validationError.details,
-				})
+				// Use Go-style error handling with custom error class
+				const validationErr = new ValidationError(
+					'Validation Failed',
+					validationError.details,
+					'validation middleware',
+				)
+				next(validationErr)
 				return
 			}
 
-			const err = standardizeError(error)
-
 			logger.error({
-				msg: '[middleware - validateRequest]: Error',
+				msg: '[middleware - validateRequest]: Unexpected error',
 				path: req.path,
-				error: err.message,
+				error: (error as Error).message,
 			})
 
-			res
-				.status(err.status)
-				.json({ message: err.message, details: err.details })
-			return
+			// Use Go-style error handling with custom error class
+			const internalErr = new InternalError(
+				'Internal server error during validation',
+				'validation middleware',
+			)
+			next(internalErr)
 		}
 	}
 }
