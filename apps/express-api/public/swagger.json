@@ -3,7 +3,7 @@
 	"info": {
 		"title": "Macro AI Express API",
 		"version": "0.0.1",
-		"description": "API documentation for Macro AI",
+		"description": "API documentation for Macro AI\n\t\t\t\t\n## Rate Limiting\nThis API implements rate limiting to protect against abuse:\n\n- **Global Rate Limit**: 100 requests per 15 minutes for all endpoints\n- **Authentication Rate Limit**: 10 requests per hour for authentication endpoints\n- **API Rate Limit**: 60 requests per minute for API endpoints\n\nRate limit headers are included in responses to help track usage.",
 		"license": {
 			"name": "MIT",
 			"url": "https://spdx.org/licenses/MIT.html"
@@ -45,6 +45,82 @@
 				},
 				"required": ["message"],
 				"description": "Standard error response"
+			},
+			"RateLimitError": {
+				"type": "object",
+				"properties": {
+					"status": {
+						"type": "number",
+						"description": "HTTP status code",
+						"example": 429
+					},
+					"message": {
+						"type": "string",
+						"description": "Rate limit error message",
+						"example": "Too many requests, please try again later."
+					}
+				},
+				"required": ["status", "message"],
+				"description": "Rate limit exceeded error response"
+			},
+			"ValidationError": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Validation error message",
+						"example": "Validation Failed"
+					},
+					"details": {
+						"type": "object",
+						"additionalProperties": {
+							"nullable": true
+						},
+						"description": "Detailed validation error information",
+						"example": {
+							"field": "email",
+							"message": "Invalid email format"
+						}
+					}
+				},
+				"required": ["message"],
+				"description": "Request validation error response"
+			},
+			"InternalServerError": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Internal server error message",
+						"example": "Internal server error"
+					}
+				},
+				"required": ["message"],
+				"description": "Internal server error response"
+			},
+			"UnauthorizedError": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Unauthorized error message",
+						"example": "Authentication required"
+					}
+				},
+				"required": ["message"],
+				"description": "Unauthorized access error response"
+			},
+			"NotFoundError": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Not found error message",
+						"example": "Resource not found"
+					}
+				},
+				"required": ["message"],
+				"description": "Resource not found error response"
 			},
 			"UserProfile": {
 				"type": "object",
@@ -165,6 +241,22 @@
 				},
 				"required": ["user"],
 				"description": "User profile response"
+			},
+			"MessageBase": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Response message"
+					}
+				},
+				"required": ["message"],
+				"description": "Base response with a message"
+			},
+			"UserId": {
+				"type": "string",
+				"format": "uuid",
+				"description": "User ID validation schema"
 			},
 			"AuthResponse": {
 				"type": "object",
@@ -368,6 +460,90 @@
 				},
 				"required": ["message"],
 				"description": "API health check response"
+			},
+			"SystemInfoResponse": {
+				"type": "object",
+				"properties": {
+					"nodeVersion": {
+						"type": "string",
+						"description": "Node.js version",
+						"example": "v18.17.0"
+					},
+					"platform": {
+						"type": "string",
+						"description": "Operating system platform",
+						"example": "linux"
+					},
+					"architecture": {
+						"type": "string",
+						"description": "System architecture",
+						"example": "x64"
+					},
+					"uptime": {
+						"type": "number",
+						"description": "System uptime in seconds",
+						"example": 3600
+					},
+					"memoryUsage": {
+						"type": "object",
+						"properties": {
+							"rss": {
+								"type": "number",
+								"description": "Resident Set Size in bytes",
+								"example": 50331648
+							},
+							"heapTotal": {
+								"type": "number",
+								"description": "Total heap size in bytes",
+								"example": 20971520
+							},
+							"heapUsed": {
+								"type": "number",
+								"description": "Used heap size in bytes",
+								"example": 15728640
+							},
+							"external": {
+								"type": "number",
+								"description": "External memory usage in bytes",
+								"example": 1048576
+							}
+						},
+						"required": ["rss", "heapTotal", "heapUsed", "external"],
+						"description": "Memory usage statistics"
+					},
+					"cpuUsage": {
+						"type": "object",
+						"properties": {
+							"user": {
+								"type": "number",
+								"description": "User CPU time in microseconds",
+								"example": 1000000
+							},
+							"system": {
+								"type": "number",
+								"description": "System CPU time in microseconds",
+								"example": 500000
+							}
+						},
+						"required": ["user", "system"],
+						"description": "CPU usage statistics"
+					},
+					"timestamp": {
+						"type": "string",
+						"description": "ISO timestamp when the information was collected",
+						"example": "2024-01-01T12:00:00.000Z"
+					}
+				},
+				"required": [
+					"nodeVersion",
+					"platform",
+					"architecture",
+					"uptime",
+					"memoryUsage",
+					"cpuUsage",
+					"timestamp"
+				],
+				"description": "System information response"
 			},
 			"HealthErrorResponse": {
 				"type": "object",
@@ -2200,80 +2376,8 @@
 							}
 						}
 					},
-					"400": {
-						"description": "Invalid request data",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
 					"401": {
-						"description": "Unauthorized - Authentication required",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"403": {
-						"description": "Forbidden - User already confirmed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"409": {
-						"description": "Conflict - User already confirmed",
+						"description": "Unauthorized - Authentication required or token expired",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -2297,7 +2401,7 @@
 						}
 					},
 					"429": {
-						"description": "Too many requests",
+						"description": "Too many requests - rate limit exceeded",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -2321,7 +2425,7 @@
 						}
 					},
 					"500": {
-						"description": "Server error",
+						"description": "Internal server error",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -2350,6 +2454,8 @@
 		"/health": {
 			"get": {
 				"tags": ["Utility"],
+				"summary": "Health check endpoint",
+				"description": "Returns the current health status of the API service",
 				"responses": {
 					"200": {
 						"description": "Health check successful",
@@ -2369,8 +2475,31 @@
 							}
 						}
 					},
+					"429": {
+						"description": "Too many requests - rate limit exceeded",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
+										"message": {
+											"type": "string",
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
+										}
+									},
+									"required": ["status", "message"]
+								}
+							}
+						}
+					},
 					"500": {
-						"description": "Health check failed",
+						"description": "Health check failed - internal server error",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -2378,8 +2507,148 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message",
-											"example": "Api Status: Error"
+											"description": "Internal server error message",
+											"example": "Internal server error"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/system-info": {
+			"get": {
+				"tags": ["Utility"],
+				"summary": "System information endpoint",
+				"description": "Returns detailed system information including Node.js version, platform, memory usage, and CPU statistics",
+				"responses": {
+					"200": {
+						"description": "System information retrieved successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"nodeVersion": {
+											"type": "string",
+											"description": "Node.js version",
+											"example": "v18.17.0"
+										},
+										"platform": {
+											"type": "string",
+											"description": "Operating system platform",
+											"example": "linux"
+										},
+										"architecture": {
+											"type": "string",
+											"description": "System architecture",
+											"example": "x64"
+										},
+										"uptime": {
+											"type": "number",
+											"description": "System uptime in seconds",
+											"example": 3600
+										},
+										"memoryUsage": {
+											"type": "object",
+											"properties": {
+												"rss": {
+													"type": "number",
+													"description": "Resident Set Size in bytes",
+													"example": 50331648
+												},
+												"heapTotal": {
+													"type": "number",
+													"description": "Total heap size in bytes",
+													"example": 20971520
+												},
+												"heapUsed": {
+													"type": "number",
+													"description": "Used heap size in bytes",
+													"example": 15728640
+												},
+												"external": {
+													"type": "number",
+													"description": "External memory usage in bytes",
+													"example": 1048576
+												}
+											},
+											"required": ["rss", "heapTotal", "heapUsed", "external"],
+											"description": "Memory usage statistics"
+										},
+										"cpuUsage": {
+											"type": "object",
+											"properties": {
+												"user": {
+													"type": "number",
+													"description": "User CPU time in microseconds",
+													"example": 1000000
+												},
+												"system": {
+													"type": "number",
+													"description": "System CPU time in microseconds",
+													"example": 500000
+												}
+											},
+											"required": ["user", "system"],
+											"description": "CPU usage statistics"
+										},
+										"timestamp": {
+											"type": "string",
+											"description": "ISO timestamp when the information was collected",
+											"example": "2024-01-01T12:00:00.000Z"
+										}
+									},
+									"required": [
+										"nodeVersion",
+										"platform",
+										"architecture",
+										"uptime",
+										"memoryUsage",
+										"cpuUsage",
+										"timestamp"
+									]
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Too many requests - rate limit exceeded",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
+										"message": {
+											"type": "string",
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
+										}
+									},
+									"required": ["status", "message"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Failed to retrieve system information - internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Internal server error message",
+											"example": "Internal server error"
 										}
 									},
 									"required": ["message"]
