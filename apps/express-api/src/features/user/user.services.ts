@@ -36,7 +36,11 @@ class UserService implements IUserService {
 	 * @param userId The user's unique identifier
 	 * @returns Result tuple with the user object or error
 	 */
-	async getUserById({ userId }: { userId: string }): Promise<Result<TUser>> {
+	getUserById = async ({
+		userId,
+	}: {
+		userId: string
+	}): Promise<Result<TUser>> => {
 		// Validate userId with Zod using tryCatchSync
 		const [validatedId, validationError] = tryCatchSync(() => {
 			const result = userIdSchema.safeParse(userId)
@@ -94,7 +98,11 @@ class UserService implements IUserService {
 	 * @param email The user's email address
 	 * @returns Result tuple with the user object or error
 	 */
-	async getUserByEmail({ email }: { email: string }): Promise<Result<TUser>> {
+	getUserByEmail = async ({
+		email,
+	}: {
+		email: string
+	}): Promise<Result<TUser>> => {
 		// Validate email with Zod and tryCatchSync
 		const [validatedEmail, validationError] = tryCatchSync(() => {
 			const result = z.string().email().safeParse(email)
@@ -153,11 +161,11 @@ class UserService implements IUserService {
 	 * @param accessToken The Cognito access token
 	 * @returns Result tuple with the user object or error
 	 */
-	async getUserByAccessToken({
+	getUserByAccessToken = async ({
 		accessToken,
 	}: {
 		accessToken: string
-	}): Promise<Result<TUser>> {
+	}): Promise<Result<TUser>> => {
 		// Get user ID from Cognito using access token
 		const [cognitoUser, cognitoError] =
 			await this.cognitoService.getAuthUser(accessToken)
@@ -206,7 +214,7 @@ class UserService implements IUserService {
 	 * @param lastName Optional last name
 	 * @returns Result tuple with the user object
 	 */
-	async registerOrLoginUserById({
+	registerOrLoginUserById = async ({
 		id,
 		email,
 		firstName,
@@ -216,7 +224,7 @@ class UserService implements IUserService {
 		email: string
 		firstName?: string
 		lastName?: string
-	}): Promise<Result<TUser>> {
+	}): Promise<Result<TUser>> => {
 		// Check if user Exists
 		const [existingUser, userError] = await this.userRepository.findUserById({
 			id,
