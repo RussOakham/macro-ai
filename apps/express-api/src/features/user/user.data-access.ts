@@ -24,11 +24,11 @@ class UserRepository implements IUserRepository {
 	 * @param email The user's email address
 	 * @returns Result tuple with the user object or undefined if not found
 	 */
-	public async findUserByEmail({
+	public findUserByEmail = async ({
 		email,
 	}: {
 		email: string
-	}): Promise<Result<TUser | undefined>> {
+	}): Promise<Result<TUser | undefined>> => {
 		const [users, error] = await tryCatch(
 			this.db
 				.select()
@@ -67,11 +67,11 @@ class UserRepository implements IUserRepository {
 	 * @param id The user's unique identifier
 	 * @returns Result tuple with the user object or undefined if not found
 	 */
-	public async findUserById({
+	public findUserById = async ({
 		id,
 	}: {
 		id: string
-	}): Promise<Result<TUser | undefined>> {
+	}): Promise<Result<TUser | undefined>> => {
 		const [users, error] = await tryCatch(
 			this.db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1),
 			'userRepository - findUserById',
@@ -106,11 +106,11 @@ class UserRepository implements IUserRepository {
 	 * @param userData The user data to insert
 	 * @returns Result tuple with the created user object
 	 */
-	public async createUser({
+	public createUser = async ({
 		userData,
 	}: {
 		userData: TInsertUser
-	}): Promise<Result<TUser>> {
+	}): Promise<Result<TUser>> => {
 		const [user, error] = await tryCatch(
 			this.db.insert(usersTable).values(userData).returning(),
 			'userRepository - createUser',
@@ -153,11 +153,11 @@ class UserRepository implements IUserRepository {
 	 * @param id The user's unique identifier
 	 * @returns Result tuple with the updated user object or undefined if not found
 	 */
-	public async updateLastLogin({
+	public updateLastLogin = async ({
 		id,
 	}: {
 		id: string
-	}): Promise<Result<TUser | undefined>> {
+	}): Promise<Result<TUser | undefined>> => {
 		const [user, error] = await tryCatch(
 			this.db
 				.update(usersTable)
@@ -197,10 +197,10 @@ class UserRepository implements IUserRepository {
 	 * @param userData The user data to update
 	 * @returns Result tuple with the updated user object or undefined if not found
 	 */
-	public async updateUser(
+	public updateUser = async (
 		id: string,
 		userData: Partial<TInsertUser>,
-	): Promise<Result<TUser | undefined>> {
+	): Promise<Result<TUser | undefined>> => {
 		const [user, error] = await tryCatch(
 			this.db
 				.update(usersTable)

@@ -15,7 +15,6 @@ import {
 	InitiateAuthCommandOutput,
 	ListUsersCommand,
 	ListUsersCommandOutput,
-	NotAuthorizedException,
 	ResendConfirmationCodeCommand,
 	ResendConfirmationCodeCommandOutput,
 	SignUpCommand,
@@ -58,23 +57,16 @@ class CognitoService implements ICognitoService {
 		return hmac.digest('base64')
 	}
 
-	private isTokenExpiredError(error: unknown): boolean {
-		return (
-			error instanceof NotAuthorizedException &&
-			error.message === 'Access Token has expired'
-		)
-	}
-
 	/**
 	 * Sign up a new user with Cognito
 	 * @param request Registration request containing email, password, and confirmPassword
 	 * @returns Result tuple with SignUpCommandOutput or error
 	 */
-	public async signUpUser({
+	public signUpUser = async ({
 		email,
 		password,
 		confirmPassword,
-	}: TRegisterUserRequest): Promise<Result<SignUpCommandOutput>> {
+	}: TRegisterUserRequest): Promise<Result<SignUpCommandOutput>> => {
 		// Validate passwords match using tryCatchSync
 		const [, validationError] = tryCatchSync(() => {
 			if (password !== confirmPassword) {
@@ -126,11 +118,11 @@ class CognitoService implements ICognitoService {
 	 * @param context The context string for error reporting
 	 * @returns Result tuple with the unique user or error
 	 */
-	private validateAndExtractUser(
+	private validateAndExtractUser = (
 		users: ListUsersCommandOutput,
 		email: string,
 		context: string,
-	): Result<UserType> {
+	): Result<UserType> => {
 		return tryCatchSync(() => {
 			if (!users.Users || users.Users.length === 0) {
 				throw new NotFoundError('User not found', 'authService')
@@ -156,10 +148,10 @@ class CognitoService implements ICognitoService {
 	 * @param code Confirmation code
 	 * @returns Result tuple with ConfirmSignUpCommandOutput or error
 	 */
-	public async confirmSignUp(
+	public confirmSignUp = async (
 		email: string,
 		code: number,
-	): Promise<Result<ConfirmSignUpCommandOutput>> {
+	): Promise<Result<ConfirmSignUpCommandOutput>> => {
 		// Get user by email
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
@@ -216,9 +208,9 @@ class CognitoService implements ICognitoService {
 	 * @param email User's email
 	 * @returns Result tuple with ResendConfirmationCodeCommandOutput or error
 	 */
-	public async resendConfirmationCode(
+	public resendConfirmationCode = async (
 		email: string,
-	): Promise<Result<ResendConfirmationCodeCommandOutput>> {
+	): Promise<Result<ResendConfirmationCodeCommandOutput>> => {
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
 			UserPoolId: this.userPoolId,
@@ -272,10 +264,10 @@ class CognitoService implements ICognitoService {
 	 * @param password User's password
 	 * @returns Result tuple with InitiateAuthCommandOutput & Username or error
 	 */
-	public async signInUser(
+	public signInUser = async (
 		email: string,
 		password: string,
-	): Promise<Result<InitiateAuthCommandOutput & { Username: string }>> {
+	): Promise<Result<InitiateAuthCommandOutput & { Username: string }>> => {
 		// First, get the user's UUID using their email
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
@@ -344,9 +336,9 @@ class CognitoService implements ICognitoService {
 		]
 	}
 
-	public async signOutUser(
+	public signOutUser = async (
 		accessToken: string,
-	): Promise<Result<GlobalSignOutCommandOutput>> {
+	): Promise<Result<GlobalSignOutCommandOutput>> => {
 		const signOutCommand = new GlobalSignOutCommand({
 			AccessToken: accessToken,
 		})
@@ -363,10 +355,10 @@ class CognitoService implements ICognitoService {
 	 * @param username The username associated with the token
 	 * @returns Result tuple with InitiateAuthCommandOutput or error
 	 */
-	public async refreshToken(
+	public refreshToken = async (
 		refreshToken: string,
 		username: string,
-	): Promise<Result<InitiateAuthCommandOutput>> {
+	): Promise<Result<InitiateAuthCommandOutput>> => {
 		// Generate hash using tryCatchSync
 		const [secretHash, hashError] = tryCatchSync(
 			() => this.generateHash(username),
@@ -392,9 +384,9 @@ class CognitoService implements ICognitoService {
 		)
 	}
 
-	public async forgotPassword(
+	public forgotPassword = async (
 		email: string,
-	): Promise<Result<ForgotPasswordCommandOutput>> {
+	): Promise<Result<ForgotPasswordCommandOutput>> => {
 		// First, get the user's UUID using their email
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
@@ -444,12 +436,12 @@ class CognitoService implements ICognitoService {
 		)
 	}
 
-	public async confirmForgotPassword(
+	public confirmForgotPassword = async (
 		email: string,
 		code: string,
 		newPassword: string,
 		confirmPassword: string,
-	): Promise<Result<ConfirmForgotPasswordCommandOutput>> {
+	): Promise<Result<ConfirmForgotPasswordCommandOutput>> => {
 		// Validate passwords match using tryCatchSync
 		const [, validationError] = tryCatchSync(() => {
 			if (newPassword !== confirmPassword) {
@@ -516,9 +508,9 @@ class CognitoService implements ICognitoService {
 		)
 	}
 
-	public async getAuthUser(
+	public getAuthUser = async (
 		accessToken: string,
-	): Promise<Result<GetUserCommandOutput>> {
+	): Promise<Result<GetUserCommandOutput>> => {
 		const command = new GetUserCommand({
 			AccessToken: accessToken,
 		})
@@ -530,4 +522,6 @@ class CognitoService implements ICognitoService {
 	}
 }
 
-export { CognitoService }
+const cognitoService = new CognitoService()
+
+export { CognitoService, cognitoService }

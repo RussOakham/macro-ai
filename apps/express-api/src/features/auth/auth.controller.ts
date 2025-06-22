@@ -24,7 +24,7 @@ import { userRepository } from '../user/user.data-access.ts'
 import { userService } from '../user/user.services.ts'
 import { TInsertUser } from '../user/user.types.ts'
 
-import { CognitoService } from './auth.services.ts'
+import { cognitoService } from './auth.services.ts'
 import {
 	IAuthController,
 	TAuthResponse,
@@ -49,16 +49,16 @@ const refreshTokenExpiryDays = config.awsCognitoRefreshTokenExpiry
  * Handles all authentication related requests
  */
 class AuthController implements IAuthController {
-	private readonly cognito: CognitoService
+	private readonly cognito: typeof cognitoService
 	private readonly userService: typeof userService
 	private readonly userRepository: typeof userRepository
 
 	constructor(
-		cognitoService: CognitoService = new CognitoService(),
+		cognitoSvc: typeof cognitoService = cognitoService,
 		userSvc: typeof userService = userService,
 		userRepo: typeof userRepository = userRepository,
 	) {
-		this.cognito = cognitoService
+		this.cognito = cognitoSvc
 		this.userService = userSvc
 		this.userRepository = userRepo
 	}
