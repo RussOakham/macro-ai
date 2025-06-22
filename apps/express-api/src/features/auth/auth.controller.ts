@@ -435,9 +435,7 @@ class AuthController implements IAuthController {
 				msg: '[authController - refreshToken]: Error retrieving refresh token',
 				error: getRefreshTokenError,
 			})
-			res.status(StatusCodes.UNAUTHORIZED).json({
-				message: 'Refresh token not found or invalid',
-			})
+			next(getRefreshTokenError)
 			return
 		}
 
