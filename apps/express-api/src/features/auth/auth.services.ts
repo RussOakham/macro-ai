@@ -15,7 +15,6 @@ import {
 	InitiateAuthCommandOutput,
 	ListUsersCommand,
 	ListUsersCommandOutput,
-	NotAuthorizedException,
 	ResendConfirmationCodeCommand,
 	ResendConfirmationCodeCommandOutput,
 	SignUpCommand,
@@ -56,13 +55,6 @@ class CognitoService implements ICognitoService {
 		const hmac = crypto.createHmac('sha256', this.secretHash)
 		hmac.update(username + this.clientId)
 		return hmac.digest('base64')
-	}
-
-	private isTokenExpiredError(error: unknown): boolean {
-		return (
-			error instanceof NotAuthorizedException &&
-			error.message === 'Access Token has expired'
-		)
 	}
 
 	/**
