@@ -34,8 +34,12 @@
 		},
 		"lint": {},
 		"test": {},
-		"test:ui": {},
-		"test:coverage": {},
+		"test:ui": {
+			"cache": false
+		},
+		"test:coverage": {
+			"outputs": ["coverage/**"]
+		},
 		"dev": {
 			"cache": false,
 			"persistent": true
