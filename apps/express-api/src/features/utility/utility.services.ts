@@ -16,7 +16,7 @@ class UtilityService implements IUtilityService {
 	 * Performs basic health checks and returns status
 	 * @returns Result tuple with health status or error
 	 */
-	getHealthStatus(): Result<THealthStatus> {
+	getHealthStatus = (): Result<THealthStatus> => {
 		// Perform basic health checks using tryCatchSync
 		const [healthCheck, error] = tryCatchSync(() => {
 			// Basic health checks - can be extended with database, external service checks, etc.
@@ -64,7 +64,7 @@ class UtilityService implements IUtilityService {
 	 * Returns more comprehensive system health data
 	 * @returns Result tuple with system info or error
 	 */
-	getSystemInfo(): Result<TSystemInfo> {
+	getSystemInfo = (): Result<TSystemInfo> => {
 		const [systemInfo, error] = tryCatchSync(() => {
 			const memoryUsage = process.memoryUsage()
 			const cpuUsage = process.cpuUsage()

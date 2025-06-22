@@ -16,7 +16,9 @@
 		"db:push": "drizzle-kit push:pg --config=drizzle.config.ts",
 		"lint": "eslint ./src",
 		"test": "vitest run",
-		"test:ui": "vitest"
+		"test:ui": "vitest",
+		"test:coverage": "vitest run --coverage",
+		"test:coverage:ui": "vitest --coverage --ui"
 	},
 	"devDependencies": {
 		"@repo/config-eslint": "workspace:*",
