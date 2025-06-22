@@ -1,84 +1,254 @@
 # API Documentation and Type Generation
 
-## Express API Swagger Documentation Enhancement (`/apps/express-api`)
+## Current Implementation Status
 
-- [x] Update Swagger UI Configuration in `apps/express-api/src/utils/server.ts`
+This document tracks the implementation status of API documentation and type generation across the Macro AI monorepo. Most core functionality is **✅ COMPLETE** with some documentation and testing enhancements remaining.
 
-  - [x] Add authentication button in Swagger UI for testing secured endpoints
-  - [x] Add example values for all request bodies
-  - [x] Add detailed descriptions for all parameters
-  - [x] Document all possible error responses
-  - [x] Ensure OpenAPI spec is complete and accurate for client generation
+## Express API Swagger Documentation ✅ COMPLETE (`/apps/express-api`)
 
-- [ ] Create API Documentation Guide in `apps/express-api/README.md`
+- [x] **Swagger UI Configuration** in `apps/express-api/src/utils/server.ts`
+
+  - [x] ✅ Authentication schemes configured (cookieAuth, apiKey)
+  - [x] ✅ Comprehensive OpenAPI 3.0.0 specification generation
+  - [x] ✅ All request/response schemas with detailed descriptions
+  - [x] ✅ Complete error response documentation with HTTP status codes
+  - [x] ✅ Rate limiting documentation included in API description
+  - [x] ✅ Swagger UI served at `/api-docs` with explorer enabled
+
+- [ ] **API Documentation Guide** in `apps/express-api/README.md` ⚠️ MISSING
 
   - [ ] Add section about accessing Swagger UI at <http://localhost:3030/api-docs>
-  - [ ] Document how to authenticate in Swagger UI
+  - [ ] Document how to authenticate in Swagger UI using cookies
   - [ ] Add examples of using Swagger UI for testing endpoints
   - [ ] Create documentation for common API testing scenarios
+  - [ ] Document rate limiting policies and headers
 
-- [x] Update API documentation with new auth endpoints
+- [x] **API Documentation with Auth Endpoints** ✅ COMPLETE
 
-  - [x] Document forgotten password endpoints in `apps/express-api/src/features/auth/auth.routes.ts`
-  - [x] Document token refresh strategy in `apps/express-api/src/features/auth/auth.routes.ts`
-  - [x] Document logout flow in `apps/express-api/src/features/auth/auth.routes.ts`
+  - [x] ✅ Comprehensive auth flow documentation in OpenAPI spec
+  - [x] ✅ Forgot password endpoints with full request/response schemas
+  - [x] ✅ Token refresh strategy documented with security requirements
+  - [x] ✅ Logout flow with proper cookie handling documentation
+  - [x] ✅ All endpoints include rate limiting and error response documentation
 
-- [ ] Add sequence diagrams for auth flows in `documentation/auth-flows/`
+- [ ] **Auth Flow Diagrams** in `documentation/auth-flows/` ⚠️ MISSING
 
-  - [ ] Add forgotten password flow diagram
-  - [ ] Add token refresh flow diagram
-  - [ ] Add logout flow diagram
+  - [ ] Add forgotten password flow diagram (Mermaid/PlantUML)
+  - [ ] Add token refresh flow diagram with interceptor logic
+  - [ ] Add logout flow diagram with cookie cleanup
+  - [ ] Add registration and email confirmation flow diagram
 
-- [ ] Update README with new authentication features in `apps/express-api/README.md`
-- [x] Document axios interceptor implementation in `apps/client-ui/src/lib/api/README.md`
-- [ ] Add examples of handling auth state in components in `apps/client-ui/src/features/auth/README.md`
+- [ ] **Express API README** ⚠️ MISSING
+  - [ ] Create comprehensive `apps/express-api/README.md`
+  - [ ] Document authentication features and cookie-based auth
+  - [ ] Include API development guidelines and testing instructions
 
-## API Client Package (`/packages/macro-ai-api-client`)
+- [x] **Client API Integration Documentation** ✅ COMPLETE
+  - [x] ✅ Axios interceptor implementation in `apps/client-ui/src/lib/api/index.ts`
+  - [x] ✅ Automatic token refresh with request queuing
+  - [x] ✅ Error handling and standardization
+  - [x] ✅ Cookie-based authentication flow
 
-- [x] Create Package Structure
-  - [x] Create directory: `packages/macro-ai-api-client`
-  - [x] Initialize `packages/api-client/package.json`
-  - [x] Add `packages/api-client/tsconfig.json` using base config from `packages/config-typescript`
-  - [x] Set up build process in `packages/api-client/tsup.config.ts`
-  - [x] Add OpenAPI Generator configuration
-  - [x] Create client generation script that:
-    - [x] Fetches OpenAPI spec from running Express API
-    - [x] Generates TypeScript client using OpenAPI Generator
-    - [x] Adds custom wrappers for authentication and error handling
+- [ ] **Auth Component Documentation** ⚠️ MISSING
+  - [ ] Add examples of handling auth state in components in `apps/client-ui/src/features/auth/README.md`
 
-## Root Repository Updates (`/`)
+## API Client Package ✅ COMPLETE (`/packages/macro-ai-api-client`)
 
-- [x] Update Workspace Configuration
-  - [x] Update `pnpm-workspace.yaml`
-  - [x] Update `turbo.json` pipeline
+- [x] **Package Structure** ✅ COMPLETE
+  - [x] ✅ Directory: `packages/macro-ai-api-client` with proper workspace setup
+  - [x] ✅ Package.json with correct dependencies and scripts
+  - [x] ✅ TypeScript configuration using base config from `packages/config-typescript`
+  - [x] ✅ Build process with `tsup.config.ts` for CJS/ESM dual output
+  - [x] ✅ ESLint configuration with proper ignores for generated files
 
-## Client UI Updates (`/apps/client-ui`)
+- [x] **OpenAPI Client Generation** ✅ COMPLETE
+  - [x] ✅ Automated generation script using `openapi-zod-client`
+  - [x] ✅ Fetches OpenAPI spec from Express API (`public/swagger.json`)
+  - [x] ✅ Generates TypeScript client with Zod validation
+  - [x] ✅ Custom wrappers for authentication and error handling
+  - [x] ✅ Integrated build process: `pnpm generate && tsup`
 
-- [x] Update Dependencies in `apps/client-ui/package.json`
-- [x] Implementation Updates
-  - [x] Replace current API calls in `apps/client-ui/src/api` with generated client
-  - [x] Update authentication flow in `apps/client-ui/src/features/auth`
-  - [x] Update error handling in `apps/client-ui/src/utils/error`
-  - [x] Add proper typing to all API calls using generated types
+## Root Repository Updates ✅ COMPLETE (`/`)
 
-## Express API Updates (`/apps/express-api`)
+- [x] **Workspace Configuration** ✅ COMPLETE
+  - [x] ✅ `pnpm-workspace.yaml` includes all packages and applications
+  - [x] ✅ `turbo.json` pipeline with proper build dependencies
+  - [x] ✅ Root package.json with workspace scripts and tooling
 
-- [x] Update API Documentation
-  - [x] Add JSDoc comments to all route handlers in `apps/express-api/src/features/**/*.ts`
-  - [x] Update Swagger definitions in `apps/express-api/src/utils/server.ts`
-  - [x] Add response examples in route handlers
-  - [x] Document authentication requirements
-- [x] Implement Drizzle-Zod integration
-  - [x] Generate Zod schemas from Drizzle tables
-  - [x] Use Zod schemas for validation and type safety
-  - [x] Update Swagger documentation to match schema definitions
+## Client UI Updates ✅ COMPLETE (`/apps/client-ui`)
 
-## Documentation Updates
+- [x] **Dependencies and Integration** ✅ COMPLETE
+  - [x] ✅ Updated `package.json` with `@repo/macro-ai-api-client` dependency
+  - [x] ✅ TanStack Router with proper route configuration
+  - [x] ✅ TanStack Query for API state management
+  - [x] ✅ Proper TypeScript configuration with path aliases
 
-- [x] Root Repository (`/`)
-- [x] API Client Package (`/packages/macro-ai-api-client`)
+- [x] **API Integration** ✅ COMPLETE
+  - [x] ✅ Generated API client integration in `src/lib/api/index.ts`
+  - [x] ✅ Axios interceptors for automatic token refresh
+  - [x] ✅ Request queuing during token refresh operations
+  - [x] ✅ Cookie-based authentication with proper credential handling
+  - [x] ✅ Standardized error handling with `standardizeError`
 
-## Testing Setup
+- [x] **Authentication Flow** ✅ COMPLETE
+  - [x] ✅ Complete auth feature implementation in `src/features/auth`
+  - [x] ✅ Login, registration, and password reset flows
+  - [x] ✅ Automatic logout on token refresh failure
+  - [x] ✅ Router integration for auth redirects
 
-- [ ] API Client Tests (`/packages/macro-ai-api-client`)
-- [ ] Client UI Integration Tests (`/apps/client-ui`)
+## Express API Updates ✅ COMPLETE (`/apps/express-api`)
+
+- [x] **OpenAPI Documentation** ✅ COMPLETE
+  - [x] ✅ Comprehensive OpenAPI 3.0.0 specification with `@asteasolutions/zod-to-openapi`
+  - [x] ✅ All route handlers documented with proper schemas
+  - [x] ✅ Security schemes (cookieAuth, apiKey) configured
+  - [x] ✅ Rate limiting documentation included
+  - [x] ✅ Complete error response documentation
+
+- [x] **Drizzle-Zod Integration** ✅ COMPLETE
+  - [x] ✅ `createSelectSchema` and `createInsertSchema` for all tables
+  - [x] ✅ Zod schemas used for validation and OpenAPI generation
+  - [x] ✅ Type-safe database operations with proper validation
+  - [x] ✅ Automatic schema registration with OpenAPI registry
+
+## Documentation Status
+
+- [x] **Root Repository** ✅ COMPLETE (`/`)
+  - [x] ✅ Comprehensive README.md with monorepo structure
+  - [x] ✅ Getting started guide with prerequisites
+  - [x] ✅ Development workflow documentation
+
+- [x] **API Client Package** ✅ COMPLETE (`/packages/macro-ai-api-client`)
+  - [x] ✅ Package structure and build configuration
+  - [x] ✅ Generation scripts and automation
+  - [x] ✅ TypeScript configuration and ESLint setup
+
+- [ ] **Missing Documentation** ⚠️ NEEDS ATTENTION
+  - [ ] Express API README with comprehensive API documentation
+  - [ ] Auth flow diagrams and visual documentation
+  - [ ] Client UI component usage examples
+  - [ ] Testing guides and best practices
+
+## Testing Setup ⚠️ INCOMPLETE
+
+- [ ] **API Client Tests** (`/packages/macro-ai-api-client`)
+  - [ ] Unit tests for generated client functions
+  - [ ] Integration tests with mock API responses
+  - [ ] Error handling and retry logic tests
+  - [ ] Authentication flow tests
+
+- [ ] **Client UI Integration Tests** (`/apps/client-ui`)
+  - [ ] Auth flow integration tests
+  - [ ] API client integration tests
+  - [ ] Component tests with API mocking
+  - [ ] E2E tests for critical user journeys
+
+- [x] **Express API Testing** ✅ BASIC SETUP
+  - [x] ✅ Vitest configuration in `vitest.config.ts`
+  - [x] ✅ Test scripts in package.json (`test`, `test:ui`)
+  - [ ] Actual test files and test coverage
+
+## Current Architecture Overview
+
+### ✅ **What's Working**
+
+1. **Complete API Documentation Pipeline**
+   - Zod schemas → OpenAPI spec → TypeScript client
+   - Automatic synchronization between validation and documentation
+   - Interactive Swagger UI at `/api-docs`
+
+2. **Production-Ready API Client**
+   - Auto-generated TypeScript client with proper types
+   - Automatic token refresh with request queuing
+   - Standardized error handling across the application
+
+3. **Comprehensive Authentication**
+   - Cookie-based auth with secure HTTP-only cookies
+   - Automatic token refresh with fallback to logout
+   - Complete auth flows (login, register, forgot password)
+
+4. **Type Safety End-to-End**
+   - Database schemas → Zod validation → OpenAPI docs → Client types
+   - No manual type definitions needed for API operations
+
+### ⚠️ **What Needs Attention**
+
+1. **Documentation Gaps**
+   - Missing Express API README
+   - No visual auth flow diagrams
+   - Limited component usage examples
+
+2. **Testing Infrastructure**
+   - No tests for API client package
+   - No integration tests for client UI
+   - Basic test setup but no actual test coverage
+
+3. **Developer Experience**
+   - Could benefit from more comprehensive development guides
+   - API testing scenarios documentation needed
+
+## Implementation Details
+
+### Current Tech Stack
+
+- **API Documentation**: `@asteasolutions/zod-to-openapi` with comprehensive OpenAPI 3.0.0 spec
+- **Client Generation**: `openapi-zod-client` for TypeScript client with Zod validation
+- **Authentication**: Cookie-based with automatic refresh using Axios interceptors
+- **Validation**: Zod schemas integrated with Drizzle ORM
+- **Build Process**: Automated Swagger generation integrated into dev and build workflows
+
+### Key Files and Structure
+
+```markdown
+apps/express-api/
+├── src/utils/swagger/
+│   ├── openapi-registry.ts     # Central OpenAPI schema registry
+│   └── generate-swagger.ts     # Swagger generation script
+├── src/features/*/
+│   ├── *.routes.ts            # Route definitions with OpenAPI registration
+│   └── *.schemas.ts           # Zod schemas with OpenAPI metadata
+└── public/swagger.json         # Generated OpenAPI specification
+
+packages/macro-ai-api-client/
+├── scripts/generate.ts         # Client generation script
+├── src/index.ts               # Main client export
+└── src/output.ts              # Generated client (auto-generated)
+
+apps/client-ui/
+├── src/lib/api/index.ts       # API client with interceptors
+└── src/features/auth/         # Auth components using generated client
+```
+
+### Development Workflow
+
+1. **Define API**: Create Zod schema with `.openapi()` metadata
+2. **Register Route**: Add OpenAPI route registration in routes file
+3. **Generate Docs**: Run `pnpm generate-swagger` (automatic in dev mode)
+4. **Generate Client**: Run `pnpm build` in API client package
+5. **Use in UI**: Import and use typed client functions
+
+### Access Points
+
+- **Swagger UI**: <http://localhost:3030/api-docs>
+- **OpenAPI Spec**: <http://localhost:3030/swagger.json>
+- **Generated Client**: `@repo/macro-ai-api-client` package
+
+## Next Steps Priority
+
+### High Priority ⚠️
+
+1. **Create Express API README** - Essential for developer onboarding
+2. **Add API Client Tests** - Critical for reliability
+3. **Create Auth Flow Diagrams** - Important for understanding complex flows
+
+### Medium Priority
+
+1. **Client UI Integration Tests** - Important for preventing regressions
+2. **Component Usage Documentation** - Helpful for team development
+3. **API Testing Scenarios Guide** - Useful for manual testing
+
+### Low Priority
+
+1. **Enhanced Developer Guides** - Nice to have for advanced scenarios
+2. **Performance Testing** - Future optimization needs
+3. **API Versioning Strategy** - For future API evolution

@@ -6,61 +6,71 @@ This document compares our custom `tryCatch` utility with the [neverthrow](https
 
 ## Comparison Summary
 
-| Feature                | Custom tryCatch              | Neverthrow                 |
+| Feature                | Custom tryCatch/tryCatchSync | Neverthrow                 |
 | ---------------------- | ---------------------------- | -------------------------- |
-| **Approach**           | Simple Promise wrapper       | Comprehensive Result monad |
-| **Learning Curve**     | Low - familiar syntax        | Medium - new concepts      |
-| **Type Safety**        | Good                         | Excellent                  |
-| **Composability**      | Limited                      | Extensive                  |
+| **Approach**           | Go-style tuple wrapper       | Comprehensive Result monad |
+| **Learning Curve**     | Low - familiar Go pattern    | Medium - new concepts      |
+| **Type Safety**        | Excellent with AppError      | Excellent                  |
+| **Error Standardization** | Built-in with AppError    | Manual implementation      |
+| **Logging**            | Automatic with context       | Manual implementation      |
+| **Composability**      | Limited (manual chaining)    | Extensive with combinators |
 | **Bundle Size**        | Zero additional              | Small (~4KB)               |
-| **Flexibility**        | Basic success/error handling | Rich API with combinators  |
+| **Sync/Async Support** | Both tryCatch & tryCatchSync | ResultAsync for async      |
 | **Integration Effort** | Minimal changes              | Moderate refactoring       |
-| **Error Type Safety**  | Basic with enhancement       | Comprehensive              |
+| **Context Tracking**   | Built-in service context     | Manual implementation      |
 
 ## Custom tryCatch Utility
 
-Our custom utility provides a simple wrapper around try/catch blocks:
+Our custom utility provides a Go-style error handling wrapper around try/catch blocks:
 
 ```typescript
-// Result type with discriminated union
-interface Success<T> {
-	data: T
-	error: null
-}
+// Go-style Result type - tuple format
+export type Result<T, E = AppError> = [T, null] | [null, E]
 
-interface Failure<E> {
-	data: null
-	error: E
-}
-
-type Result<T, E = Error> = Success<T> | Failure<E>
-
-// Main wrapper function
-const tryCatch = async <T, E = Error>(
+// Async wrapper function
+const tryCatch = async <T>(
 	promise: Promise<T>,
-): Promise<Result<T, E>> => {
+	context = 'unknown',
+): Promise<Result<T>> => {
 	try {
 		const data = await promise
-		return { data, error: null }
+		return [data, null]
 	} catch (error: unknown) {
-		return { data: null, error: error as E }
+		const appError = AppError.from(error, context)
+		logger.error(`[${context}]: ${appError.message}`)
+		return [null, appError]
+	}
+}
+
+// Synchronous wrapper function
+const tryCatchSync = <T>(func: () => T, context = 'unknown'): Result<T> => {
+	try {
+		const data = func()
+		return [data, null]
+	} catch (error: unknown) {
+		const appError = AppError.from(error, context)
+		logger.error(`[${context}]: ${appError.message}`)
+		return [null, appError]
 	}
 }
 ```
 
-### Advantages:
+### Advantages - Custom tryCatch
 
-- Familiar pattern for JavaScript developers
-- Easy to adopt incrementally
-- No external dependencies
-- Simple mental model
+- **Go-style error handling**: Familiar tuple pattern `[data, error]` for developers coming from Go
+- **Automatic error standardization**: All errors are converted to `AppError` instances with consistent structure
+- **Built-in logging**: Automatic error logging with context information
+- **Type safety**: Strong TypeScript typing with `Result<T>` tuple type
+- **No external dependencies**: Zero additional bundle size
+- **Incremental adoption**: Can be adopted gradually across the codebase
+- **Context awareness**: Built-in service/context tracking for better debugging
 
-### Disadvantages:
+### Disadvantages - Custom tryCatch
 
-- Limited composability
-- No built-in combinators for complex flows
-- Manual error handling in each consumer
-- Less powerful type inference
+- **Limited composability**: No built-in combinators for chaining operations
+- **Manual error checking**: Each result requires explicit error checking with `if (error)`
+- **Tuple destructuring**: Requires array destructuring which may be less readable than object properties
+- **No advanced error handling**: Limited compared to full Result monad implementations
 
 ## Neverthrow
 
@@ -78,7 +88,7 @@ function divide(a: number, b: number): Result<number, string> {
 }
 ```
 
-### Advantages:
+### Advantages - Neverthrow
 
 - Strong type safety
 - Rich API for composition (map, mapErr, andThen, etc.)
@@ -86,7 +96,7 @@ function divide(a: number, b: number): Result<number, string> {
 - Prevents runtime exceptions
 - Chainable operations
 
-### Disadvantages:
+### Disadvantages - Neverthrow
 
 - Steeper learning curve
 - Requires more upfront refactoring
@@ -115,33 +125,32 @@ router.post(
 register: async (req: Request, res: Response) => {
 	const { email, password, confirmPassword } = req.body as TRegisterUserRequest
 
-	const { data: response, error } = await tryCatch(
+	// Using tuple destructuring with tryCatch
+	const [response, error] = await tryCatch(
 		cognito.signUpUser({ email, password, confirmPassword }),
+		'authController - register'
 	)
 
 	if (error) {
-		logger.error(`[authController]: Error registering user: ${error}`)
-		const err = standardizeError(error)
-		handleError(res, err, 'authController')
+		// Error is already logged and standardized by tryCatch
+		handleError(res, error, 'authController')
 		return
 	}
 
 	if (!response.UserSub) {
-		const error = AppError.validation('User not created - no user ID returned')
-		handleError(res, standardizeError(error), 'authController')
+		const validationError = AppError.validation('User not created - no user ID returned')
+		handleError(res, validationError, 'authController')
 		return
 	}
 
-	const { data: user, error: userError } = await tryCatch(
+	const [user, userError] = await tryCatch(
 		createUser({ id: response.UserSub, email }),
+		'authController - createUser'
 	)
 
 	if (userError) {
-		logger.error(
-			`[authController]: Error creating user in database: ${userError}`,
-		)
-		const err = standardizeError(userError)
-		handleError(res, err, 'authController')
+		// Error is already logged and standardized by tryCatch
+		handleError(res, userError, 'authController')
 		return
 	}
 
@@ -168,7 +177,7 @@ public async signUpUser({
   email,
   password,
   confirmPassword,
-}: TRegisterUserRequest) {
+}: TRegisterUserRequest): Promise<SignUpCommandOutput> {
   if (password !== confirmPassword) {
     throw AppError.validation('Passwords do not match', undefined, 'authService')
   }
@@ -188,6 +197,7 @@ public async signUpUser({
     SecretHash: this.generateHash(userId),
   })
 
+  // Service throws errors - tryCatch handles them in the controller
   return this.client.send(command)
 }
 ```
@@ -210,6 +220,8 @@ const createUser = async (userData: TInsertUser): Promise<TUser> => {
 }
 ```
 
+**Note**: In this pattern, the data access layer throws errors, and the controller uses `tryCatch` to handle them. This keeps the data access layer simple while providing consistent error handling at the controller level.
+
 ### Refactored with Neverthrow
 
 #### 1. Route Handler (unchanged)
@@ -223,7 +235,7 @@ router.post(
 )
 ```
 
-#### 2. Controller
+#### 2. Controller - Refactored with Neverthrow
 
 ```typescript
 // auth.controller.ts
@@ -273,7 +285,7 @@ register: async (req: Request, res: Response) => {
 }
 ```
 
-#### 3. Service
+#### 3. Service - Refactored with Neverthrow
 
 ```typescript
 // auth.services.ts
@@ -308,7 +320,7 @@ public signUpUser({
 }
 ```
 
-#### 4. Data Access
+#### 4. Data Access - Refactored with Neverthrow
 
 ```typescript
 // user.data-access.ts
@@ -331,104 +343,127 @@ const createUser = (userData: TInsertUser): ResultAsync<TUser, AppError> => {
 }
 ```
 
-## Enhanced Error Handling
+## Key Features of Our Implementation
 
-### Enhancing tryCatch with Standardized Errors
+### Built-in Error Standardization
 
-Our current `tryCatch` utility can be enhanced to automatically standardize errors, providing more type safety:
+Our `tryCatch` and `tryCatchSync` utilities automatically standardize all errors using `AppError.from()`:
 
 ```typescript
-// Enhanced Result type with standardized error
-interface Success<T> {
-	data: T
-	error: null
-}
+// All errors are converted to AppError instances
+const [data, error] = await tryCatch(someAsyncOperation(), 'myService')
 
-interface Failure<E extends IStandardizedError> {
-	data: null
-	error: E
-}
-
-type EnhancedResult<T, E extends IStandardizedError = IStandardizedError> =
-	| Success<T>
-	| Failure<E>
-
-// Error type enum for more precise error typing
-enum ErrorType {
-	Validation = 'ValidationError',
-	NotFound = 'NotFoundError',
-	Unauthorized = 'UnauthorizedError',
-	Forbidden = 'ForbiddenError',
-	Conflict = 'ConflictError',
-	Internal = 'InternalError',
-	External = 'ExternalError',
-	Unknown = 'UnknownError',
-}
-
-// Enhanced tryCatch with standardized errors
-const enhancedTryCatch = async <
-	T,
-	E extends IStandardizedError = IStandardizedError,
->(
-	promise: Promise<T>,
-	context: string = 'unknown',
-): Promise<EnhancedResult<T, E>> => {
-	try {
-		const data = await promise
-		return { data, error: null }
-	} catch (error: unknown) {
-		const standardizedError = standardizeError(error) as E
-
-		// Add context if not already present
-		if (!standardizedError.service) {
-			standardizedError.service = context
-		}
-
-		logger.error(`[${context}]: ${standardizedError.message}`)
-		return { data: null, error: standardizedError }
-	}
+if (error) {
+  // error is guaranteed to be an AppError with:
+  // - Consistent structure (type, status, message, service, etc.)
+  // - Proper logging already handled
+  // - Context information included
+  console.log(error.type)     // ErrorType enum value
+  console.log(error.status)   // HTTP status code
+  console.log(error.service)  // Service context
 }
 ```
 
-Usage example:
+### Automatic Logging
+
+Both utilities include built-in error logging with context:
 
 ```typescript
-// Controller with enhanced tryCatch
-register: async (req: Request, res: Response) => {
-	const { email, password, confirmPassword } = req.body as TRegisterUserRequest
+// This automatically logs: "[userService]: User not found"
+const [user, error] = await tryCatch(
+  findUserById(id),
+  'userService'
+)
+```
 
-	const { data: response, error } = await enhancedTryCatch(
-		cognito.signUpUser({ email, password, confirmPassword }),
-		'authController',
-	)
+### Type Safety with Result Tuples
 
-	if (error) {
-		// Error is already standardized
-		handleError(res, error, 'authController')
-		return
-	}
+The `Result<T>` type provides strong typing for both success and error cases:
 
-	if (!response.UserSub) {
-		const validationError = AppError.validation(
-			'User not created - no user ID returned',
-		)
-		handleError(res, standardizeError(validationError), 'authController')
-		return
-	}
+```typescript
+// TypeScript knows the exact types
+const [user, error]: Result<User> = await tryCatch(getUserById(id))
 
-	const { data: user, error: userError } = await enhancedTryCatch(
-		createUser({ id: response.UserSub, email }),
-		'authController',
-	)
-
-	if (userError) {
-		// Error is already standardized
-		handleError(res, userError, 'authController')
-		return
-	}
-
-	// Rest of the function remains the same
+if (error) {
+  // TypeScript knows this is AppError
+  handleError(res, error)
+  return
 }
+
+// TypeScript knows user is User type (not null)
+console.log(user.email)
+```
+
+## Practical Usage Examples
+
+### Using tryCatch for Async Operations
+
+```typescript
+// API calls
+const [response, error] = await tryCatch(
+  fetch('/api/users'),
+  'userService - fetchUsers'
+)
+
+// Database operations
+const [user, dbError] = await tryCatch(
+  db.select().from(users).where(eq(users.id, userId)),
+  'userRepository - findById'
+)
+
+// File operations
+const [fileContent, fileError] = await tryCatch(
+  fs.readFile('config.json', 'utf8'),
+  'configService - readFile'
+)
+```
+
+### Using tryCatchSync for Synchronous Operations
+
+```typescript
+// JSON parsing
+const [config, parseError] = tryCatchSync(
+  () => JSON.parse(configString),
+  'configService - parseJSON'
+)
+
+// Data validation
+const [validatedData, validationError] = tryCatchSync(
+  () => userSchema.parse(userData),
+  'userService - validateUser'
+)
+
+// Cryptographic operations
+const [hash, hashError] = tryCatchSync(
+  () => {
+    const hmac = createHmac('sha256', secret)
+    hmac.update(data)
+    return hmac.digest('hex')
+  },
+  'authService - generateHash'
+)
+```
+
+### Error Handling Patterns
+
+```typescript
+// Early return pattern
+const [user, error] = await tryCatch(getUserById(id), 'userController')
+if (error) {
+  return handleError(res, error)
+}
+
+// Multiple operations with error accumulation
+const [user, userError] = await tryCatch(getUserById(id), 'userService')
+if (userError) return [null, userError]
+
+const [profile, profileError] = await tryCatch(
+  getProfileById(user.profileId),
+  'userService'
+)
+if (profileError) return [null, profileError]
+
+return [{ user, profile }, null]
 ```
 
 ### Neverthrow's Type-Safe Error Handling
@@ -581,32 +616,48 @@ createUser(input).match(
 
 ## Conclusion
 
-### When to Use Custom tryCatch:
+### When to Use Our Custom tryCatch Implementation
 
-- For simpler applications with straightforward error flows
-- When introducing functional error handling incrementally
-- When minimizing dependencies is a priority
-- For teams more familiar with traditional try/catch patterns
+**Recommended for:**
 
-### When to Use Neverthrow:
+- Applications that need consistent error handling with minimal complexity
+- Teams familiar with Go-style error handling patterns
+- Projects requiring zero external dependencies
+- Codebases that benefit from automatic error standardization and logging
+- Incremental adoption of functional error handling patterns
 
-- For complex applications with sophisticated error handling needs
-- When strong type safety and composition are priorities
-- For teams comfortable with functional programming concepts
-- When building a new application from scratch
+**Key Benefits:**
 
-Our custom `tryCatch` utility provides a good balance of simplicity and error handling for many use cases, while neverthrow offers more power and safety at the cost of a steeper learning curve and more extensive refactoring.
+- **Built-in error standardization**: All errors automatically converted to `AppError` instances
+- **Automatic logging**: Context-aware error logging included
+- **Type safety**: Strong TypeScript support with tuple destructuring
+- **Go-style familiarity**: `[data, error]` pattern familiar to many developers
+- **Zero dependencies**: No additional bundle size
 
-### Enhanced Error Handling Decision:
+### When to Use Neverthrow
 
-If you need more precise error typing but want to keep your current approach:
+**Recommended for:**
 
-1. Enhance the `tryCatch` utility with automatic error standardization
-2. Add an error type enum for more precise error typing
-3. Use type guards for error discrimination
+- Complex applications requiring sophisticated error composition
+- Teams comfortable with functional programming and monadic patterns
+- Projects needing advanced error chaining and transformation
+- Applications built from scratch with functional-first architecture
 
-If you need comprehensive error handling with full type safety:
+**Key Benefits:**
 
-1. Adopt neverthrow for its strong typing and composition capabilities
-2. Define domain-specific error types with discriminated unions
-3. Leverage neverthrow's combinators for complex flows
+- **Rich composition API**: Extensive combinators for chaining operations
+- **Advanced type safety**: Comprehensive error type discrimination
+- **Functional paradigm**: Full Result monad implementation
+- **Chainable operations**: Elegant error handling flows
+
+### Current Implementation Status
+
+Our current `tryCatch` and `tryCatchSync` utilities already include many advanced features:
+
+✅ **Automatic error standardization** - All errors converted to `AppError`
+✅ **Built-in logging** - Context-aware error logging
+✅ **Type safety** - Strong TypeScript typing with `Result<T>` tuples
+✅ **Context tracking** - Service/context information for debugging
+✅ **Go-style syntax** - Familiar `[data, error]` tuple pattern
+
+This implementation provides an excellent balance of simplicity, type safety, and functionality for most use cases without requiring external dependencies or extensive refactoring.
