@@ -34,6 +34,8 @@
 		},
 		"lint": {},
 		"test": {},
+		"test:ui": {},
+		"test:coverage": {},
 		"dev": {
 			"cache": false,
 			"persistent": true
