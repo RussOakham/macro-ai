@@ -2304,9 +2304,207 @@
 				}
 			}
 		},
+		"/users/{id}": {
+			"get": {
+				"tags": ["Users"],
+				"summary": "Get user by ID",
+				"description": "Retrieves a user's profile information by their unique identifier. Requires authentication.",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"description": "The unique identifier of the user",
+						"schema": {
+							"type": "string",
+							"format": "uuid",
+							"example": "123e4567-e89b-12d3-a456-426614174000"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "User profile retrieved successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"user": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string",
+													"format": "uuid"
+												},
+												"email": {
+													"type": "string",
+													"maxLength": 255
+												},
+												"emailVerified": {
+													"type": "boolean",
+													"nullable": true
+												},
+												"firstName": {
+													"type": "string",
+													"nullable": true,
+													"maxLength": 255
+												},
+												"lastName": {
+													"type": "string",
+													"nullable": true,
+													"maxLength": 255
+												},
+												"createdAt": {
+													"type": "string",
+													"nullable": true
+												},
+												"updatedAt": {
+													"type": "string",
+													"nullable": true
+												},
+												"lastLogin": {
+													"type": "string",
+													"nullable": true
+												}
+											},
+											"required": [
+												"id",
+												"email",
+												"emailVerified",
+												"firstName",
+												"lastName",
+												"createdAt",
+												"updatedAt",
+												"lastLogin"
+											],
+											"description": "User profile data"
+										}
+									},
+									"required": ["user"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid user ID format or missing required parameters",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Validation error message",
+											"example": "Validation Failed"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Detailed validation error information",
+											"example": {
+												"field": "email",
+												"message": "Invalid email format"
+											}
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized - Authentication required, token expired, or invalid token",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Unauthorized error message",
+											"example": "Authentication required"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "User not found - No user exists with the specified ID",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Not found error message",
+											"example": "Resource not found"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Too many requests - rate limit exceeded",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
+										"message": {
+											"type": "string",
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
+										}
+									},
+									"required": ["status", "message"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error - Database or service error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Internal server error message",
+											"example": "Internal server error"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
 		"/users/me": {
 			"get": {
 				"tags": ["Users"],
+				"summary": "Get current user profile",
+				"description": "Retrieves the authenticated user's profile information including personal details and account status",
 				"security": [
 					{
 						"cookieAuth": []
@@ -2376,8 +2574,8 @@
 							}
 						}
 					},
-					"401": {
-						"description": "Unauthorized - Authentication required or token expired",
+					"400": {
+						"description": "Invalid request - Authentication token validation failed",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -2385,14 +2583,55 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
+											"description": "Validation error message",
+											"example": "Validation Failed"
 										},
 										"details": {
 											"type": "object",
 											"additionalProperties": {
 												"nullable": true
 											},
-											"description": "Error details"
+											"description": "Detailed validation error information",
+											"example": {
+												"field": "email",
+												"message": "Invalid email format"
+											}
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized - Authentication required, token expired, or invalid token",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Unauthorized error message",
+											"example": "Authentication required"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "User not found - The authenticated user does not exist in the system",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Not found error message",
+											"example": "Resource not found"
 										}
 									},
 									"required": ["message"]
@@ -2407,25 +2646,24 @@
 								"schema": {
 									"type": "object",
 									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
 										}
 									},
-									"required": ["message"]
+									"required": ["status", "message"]
 								}
 							}
 						}
 					},
 					"500": {
-						"description": "Internal server error",
+						"description": "Internal server error - Database or service error",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -2433,14 +2671,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Internal server error message",
+											"example": "Internal server error"
 										}
 									},
 									"required": ["message"]
