@@ -403,25 +403,16 @@ describe('Auth Routes', () => {
 						path: '/auth/forgot-password',
 						schema: forgotPasswordRequestSchema,
 					},
+					{
+						path: '/auth/confirm-forgot-password',
+						schema: confirmForgotPasswordRequestSchema,
+					},
 				]
 
 				for (const { path, schema } of validationEndpoints) {
 					await request(app).post(path).send({})
 					expect(validate).toHaveBeenCalledWith(schema)
 				}
-			})
-
-			it('should not apply validation to confirm-forgot-password endpoint', async () => {
-				// Clear previous calls
-				vi.clearAllMocks()
-
-				await request(app).post('/auth/confirm-forgot-password').send({})
-
-				// This endpoint doesn't use the validate middleware in the route definition
-				// The validation is handled differently or within the controller
-				expect(validate).not.toHaveBeenCalledWith(
-					confirmForgotPasswordRequestSchema,
-				)
 			})
 		})
 	})

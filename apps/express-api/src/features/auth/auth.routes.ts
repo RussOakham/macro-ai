@@ -612,6 +612,7 @@ const authRouter = (router: Router) => {
 	router.post(
 		'/auth/confirm-forgot-password',
 		authRateLimiter,
+		validate(confirmForgotPasswordRequestSchema),
 		authController.confirmForgotPassword,
 	)
 
