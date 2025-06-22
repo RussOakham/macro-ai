@@ -3,7 +3,7 @@
 	"info": {
 		"title": "Macro AI Express API",
 		"version": "0.0.1",
-		"description": "API documentation for Macro AI",
+		"description": "API documentation for Macro AI\n\t\t\t\t\n## Rate Limiting\nThis API implements rate limiting to protect against abuse:\n\n- **Global Rate Limit**: 100 requests per 15 minutes for all endpoints\n- **Authentication Rate Limit**: 10 requests per hour for authentication endpoints\n- **API Rate Limit**: 60 requests per minute for API endpoints\n\nRate limit headers are included in responses to help track usage.",
 		"license": {
 			"name": "MIT",
 			"url": "https://spdx.org/licenses/MIT.html"
@@ -45,6 +45,154 @@
 				},
 				"required": ["message"],
 				"description": "Standard error response"
+			},
+			"RateLimitError": {
+				"type": "object",
+				"properties": {
+					"status": {
+						"type": "number",
+						"description": "HTTP status code",
+						"example": 429
+					},
+					"message": {
+						"type": "string",
+						"description": "Rate limit error message",
+						"example": "Too many requests, please try again later."
+					}
+				},
+				"required": ["status", "message"],
+				"description": "Rate limit exceeded error response"
+			},
+			"ValidationError": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Validation error message",
+						"example": "Validation Failed"
+					},
+					"details": {
+						"type": "object",
+						"additionalProperties": {
+							"nullable": true
+						},
+						"description": "Detailed validation error information",
+						"example": {
+							"field": "email",
+							"message": "Invalid email format"
+						}
+					}
+				},
+				"required": ["message"],
+				"description": "Request validation error response"
+			},
+			"InternalServerError": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Internal server error message",
+						"example": "Internal server error"
+					}
+				},
+				"required": ["message"],
+				"description": "Internal server error response"
+			},
+			"UnauthorizedError": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Unauthorized error message",
+						"example": "Authentication required"
+					}
+				},
+				"required": ["message"],
+				"description": "Unauthorized access error response"
+			},
+			"NotFoundError": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Not found error message",
+						"example": "Resource not found"
+					}
+				},
+				"required": ["message"],
+				"description": "Resource not found error response"
+			},
+			"ConflictError": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Conflict error message",
+						"example": "Resource conflict"
+					}
+				},
+				"required": ["message"],
+				"description": "Resource conflict error response"
+			},
+			"ForbiddenError": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Forbidden error message",
+						"example": "Forbidden"
+					}
+				},
+				"required": ["message"],
+				"description": "Forbidden access error response"
+			},
+			"CognitoCodeMismatchError": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Invalid verification code error message",
+						"example": "Invalid verification code"
+					}
+				},
+				"required": ["message"],
+				"description": "Invalid verification code error response"
+			},
+			"CognitoExpiredCodeError": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Expired verification code error message",
+						"example": "Verification code has expired"
+					}
+				},
+				"required": ["message"],
+				"description": "Expired verification code error response"
+			},
+			"CognitoUserNotConfirmedError": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "User not confirmed error message",
+						"example": "User is not confirmed"
+					}
+				},
+				"required": ["message"],
+				"description": "User not confirmed error response"
+			},
+			"CognitoUsernameExistsError": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "User already exists error message",
+						"example": "User already exists"
+					}
+				},
+				"required": ["message"],
+				"description": "User already exists error response"
 			},
 			"UserProfile": {
 				"type": "object",
@@ -165,6 +313,22 @@
 				},
 				"required": ["user"],
 				"description": "User profile response"
+			},
+			"MessageBase": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Response message"
+					}
+				},
+				"required": ["message"],
+				"description": "Base response with a message"
+			},
+			"UserId": {
+				"type": "string",
+				"format": "uuid",
+				"description": "User ID validation schema"
 			},
 			"AuthResponse": {
 				"type": "object",
@@ -369,6 +533,90 @@
 				"required": ["message"],
 				"description": "API health check response"
 			},
+			"SystemInfoResponse": {
+				"type": "object",
+				"properties": {
+					"nodeVersion": {
+						"type": "string",
+						"description": "Node.js version",
+						"example": "v18.17.0"
+					},
+					"platform": {
+						"type": "string",
+						"description": "Operating system platform",
+						"example": "linux"
+					},
+					"architecture": {
+						"type": "string",
+						"description": "System architecture",
+						"example": "x64"
+					},
+					"uptime": {
+						"type": "number",
+						"description": "System uptime in seconds",
+						"example": 3600
+					},
+					"memoryUsage": {
+						"type": "object",
+						"properties": {
+							"rss": {
+								"type": "number",
+								"description": "Resident Set Size in bytes",
+								"example": 50331648
+							},
+							"heapTotal": {
+								"type": "number",
+								"description": "Total heap size in bytes",
+								"example": 20971520
+							},
+							"heapUsed": {
+								"type": "number",
+								"description": "Used heap size in bytes",
+								"example": 15728640
+							},
+							"external": {
+								"type": "number",
+								"description": "External memory usage in bytes",
+								"example": 1048576
+							}
+						},
+						"required": ["rss", "heapTotal", "heapUsed", "external"],
+						"description": "Memory usage statistics"
+					},
+					"cpuUsage": {
+						"type": "object",
+						"properties": {
+							"user": {
+								"type": "number",
+								"description": "User CPU time in microseconds",
+								"example": 1000000
+							},
+							"system": {
+								"type": "number",
+								"description": "System CPU time in microseconds",
+								"example": 500000
+							}
+						},
+						"required": ["user", "system"],
+						"description": "CPU usage statistics"
+					},
+					"timestamp": {
+						"type": "string",
+						"description": "ISO timestamp when the information was collected",
+						"example": "2024-01-01T12:00:00.000Z"
+					}
+				},
+				"required": [
+					"nodeVersion",
+					"platform",
+					"architecture",
+					"uptime",
+					"memoryUsage",
+					"cpuUsage",
+					"timestamp"
+				],
+				"description": "System information response"
+			},
 			"HealthErrorResponse": {
 				"type": "object",
 				"properties": {
@@ -388,6 +636,8 @@
 		"/auth/register": {
 			"post": {
 				"tags": ["Authentication"],
+				"summary": "Register new user",
+				"description": "Creates a new user account with email and password. Sends confirmation email to verify the account.",
 				"requestBody": {
 					"content": {
 						"application/json": {
@@ -421,7 +671,7 @@
 				},
 				"responses": {
 					"201": {
-						"description": "User registered successfully",
+						"description": "User registered successfully - confirmation email sent",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -438,7 +688,7 @@
 						}
 					},
 					"400": {
-						"description": "Invalid request data",
+						"description": "Invalid request data - validation failed or passwords do not match",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -446,86 +696,19 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
+											"description": "Validation error message",
+											"example": "Validation Failed"
 										},
 										"details": {
 											"type": "object",
 											"additionalProperties": {
 												"nullable": true
 											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized - Authentication required",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"403": {
-						"description": "Forbidden - User already confirmed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"404": {
-						"description": "User not found",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Detailed validation error information",
+											"example": {
+												"field": "email",
+												"message": "Invalid email format"
+											}
 										}
 									},
 									"required": ["message"]
@@ -534,7 +717,7 @@
 						}
 					},
 					"409": {
-						"description": "Conflict - User already confirmed",
+						"description": "Conflict - User already exists (from database check)",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -542,14 +725,26 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Conflict error message",
+											"example": "Resource conflict"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "User already exists in Cognito (UsernameExistsException)",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "User already exists error message",
+											"example": "User already exists"
 										}
 									},
 									"required": ["message"]
@@ -558,31 +753,30 @@
 						}
 					},
 					"429": {
-						"description": "Too many requests",
+						"description": "Too many registration attempts - rate limit exceeded",
 						"content": {
 							"application/json": {
 								"schema": {
 									"type": "object",
 									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
 										}
 									},
-									"required": ["message"]
+									"required": ["status", "message"]
 								}
 							}
 						}
 					},
 					"500": {
-						"description": "Server error",
+						"description": "Server error - Cognito or database error",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -590,14 +784,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Internal server error message",
+											"example": "Internal server error"
 										}
 									},
 									"required": ["message"]
@@ -611,6 +799,8 @@
 		"/auth/confirm-registration": {
 			"post": {
 				"tags": ["Authentication"],
+				"summary": "Confirm user registration",
+				"description": "Confirms user registration using the confirmation code sent via email.",
 				"requestBody": {
 					"content": {
 						"application/json": {
@@ -651,7 +841,7 @@
 						}
 					},
 					"400": {
-						"description": "Invalid confirmation code",
+						"description": "Invalid confirmation code (CodeMismatchException) or request data validation failed",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -659,38 +849,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized - Authentication required",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Invalid verification code error message",
+											"example": "Invalid verification code"
 										}
 									},
 									"required": ["message"]
@@ -707,14 +867,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Forbidden error message",
+											"example": "Forbidden"
 										}
 									},
 									"required": ["message"]
@@ -731,14 +885,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Not found error message",
+											"example": "Resource not found"
 										}
 									},
 									"required": ["message"]
@@ -746,8 +894,8 @@
 							}
 						}
 					},
-					"409": {
-						"description": "Conflict - User already confirmed",
+					"410": {
+						"description": "Verification code has expired (ExpiredCodeException)",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -755,14 +903,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Expired verification code error message",
+											"example": "Verification code has expired"
 										}
 									},
 									"required": ["message"]
@@ -771,31 +913,30 @@
 						}
 					},
 					"429": {
-						"description": "Too many requests",
+						"description": "Too many confirmation attempts - rate limit exceeded",
 						"content": {
 							"application/json": {
 								"schema": {
 									"type": "object",
 									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
 										}
 									},
-									"required": ["message"]
+									"required": ["status", "message"]
 								}
 							}
 						}
 					},
 					"500": {
-						"description": "Server error",
+						"description": "Server error - Cognito or database error",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -803,14 +944,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Internal server error message",
+											"example": "Internal server error"
 										}
 									},
 									"required": ["message"]
@@ -824,6 +959,8 @@
 		"/auth/resend-confirmation-code": {
 			"post": {
 				"tags": ["Authentication"],
+				"summary": "Resend confirmation code",
+				"description": "Resends the confirmation code to the user's email address for account verification.",
 				"requestBody": {
 					"content": {
 						"application/json": {
@@ -860,7 +997,7 @@
 						}
 					},
 					"400": {
-						"description": "Invalid request data",
+						"description": "Invalid request data - validation failed or invalid email format",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -868,38 +1005,19 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
+											"description": "Validation error message",
+											"example": "Validation Failed"
 										},
 										"details": {
 											"type": "object",
 											"additionalProperties": {
 												"nullable": true
 											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized - Authentication required",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Detailed validation error information",
+											"example": {
+												"field": "email",
+												"message": "Invalid email format"
+											}
 										}
 									},
 									"required": ["message"]
@@ -916,14 +1034,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Forbidden error message",
+											"example": "Forbidden"
 										}
 									},
 									"required": ["message"]
@@ -940,38 +1052,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"409": {
-						"description": "Conflict - User already confirmed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Not found error message",
+											"example": "Resource not found"
 										}
 									},
 									"required": ["message"]
@@ -980,31 +1062,30 @@
 						}
 					},
 					"429": {
-						"description": "Too many requests",
+						"description": "Too many resend attempts - rate limit exceeded",
 						"content": {
 							"application/json": {
 								"schema": {
 									"type": "object",
 									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
 										}
 									},
-									"required": ["message"]
+									"required": ["status", "message"]
 								}
 							}
 						}
 					},
 					"500": {
-						"description": "Server error",
+						"description": "Server error - Cognito or database error",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1012,14 +1093,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Internal server error message",
+											"example": "Internal server error"
 										}
 									},
 									"required": ["message"]
@@ -1033,6 +1108,8 @@
 		"/auth/login": {
 			"post": {
 				"tags": ["Authentication"],
+				"summary": "User login",
+				"description": "Authenticates a user with email and password, returning access tokens upon successful login.",
 				"requestBody": {
 					"content": {
 						"application/json": {
@@ -1096,7 +1173,7 @@
 						}
 					},
 					"400": {
-						"description": "Invalid credentials",
+						"description": "Invalid credentials or request data",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1104,14 +1181,19 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
+											"description": "Validation error message",
+											"example": "Validation Failed"
 										},
 										"details": {
 											"type": "object",
 											"additionalProperties": {
 												"nullable": true
 											},
-											"description": "Error details"
+											"description": "Detailed validation error information",
+											"example": {
+												"field": "email",
+												"message": "Invalid email format"
+											}
 										}
 									},
 									"required": ["message"]
@@ -1120,7 +1202,7 @@
 						}
 					},
 					"401": {
-						"description": "Unauthorized - Authentication required",
+						"description": "Unauthorized - Invalid email or password",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1128,14 +1210,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Unauthorized error message",
+											"example": "Authentication required"
 										}
 									},
 									"required": ["message"]
@@ -1144,7 +1220,7 @@
 						}
 					},
 					"403": {
-						"description": "Forbidden - User already confirmed",
+						"description": "Forbidden - User not confirmed (UserNotConfirmedException)",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1152,62 +1228,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"404": {
-						"description": "User not found",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"409": {
-						"description": "Conflict - User already confirmed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "User not confirmed error message",
+											"example": "User is not confirmed"
 										}
 									},
 									"required": ["message"]
@@ -1216,31 +1238,30 @@
 						}
 					},
 					"429": {
-						"description": "Too many requests",
+						"description": "Too many login attempts - rate limit exceeded",
 						"content": {
 							"application/json": {
 								"schema": {
 									"type": "object",
 									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
 										}
 									},
-									"required": ["message"]
+									"required": ["status", "message"]
 								}
 							}
 						}
 					},
 					"500": {
-						"description": "Server error",
+						"description": "Server error - Cognito or database error",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1248,14 +1269,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Internal server error message",
+											"example": "Internal server error"
 										}
 									},
 									"required": ["message"]
@@ -1269,6 +1284,8 @@
 		"/auth/forgot-password": {
 			"post": {
 				"tags": ["Authentication"],
+				"summary": "Initiate password reset",
+				"description": "Initiates password reset process by sending a reset code to the user's email address.",
 				"requestBody": {
 					"content": {
 						"application/json": {
@@ -1288,7 +1305,7 @@
 				},
 				"responses": {
 					"200": {
-						"description": "Password reset initiated successfully",
+						"description": "Password reset initiated successfully - reset code sent to email",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1305,7 +1322,7 @@
 						}
 					},
 					"400": {
-						"description": "Invalid request data",
+						"description": "Invalid request data - validation failed",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1313,62 +1330,19 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
+											"description": "Validation error message",
+											"example": "Validation Failed"
 										},
 										"details": {
 											"type": "object",
 											"additionalProperties": {
 												"nullable": true
 											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized - Authentication required",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"403": {
-						"description": "Forbidden - User already confirmed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Detailed validation error information",
+											"example": {
+												"field": "email",
+												"message": "Invalid email format"
+											}
 										}
 									},
 									"required": ["message"]
@@ -1385,38 +1359,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"409": {
-						"description": "Conflict - User already confirmed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Not found error message",
+											"example": "Resource not found"
 										}
 									},
 									"required": ["message"]
@@ -1425,31 +1369,30 @@
 						}
 					},
 					"429": {
-						"description": "Too many requests",
+						"description": "Too many password reset attempts - rate limit exceeded",
 						"content": {
 							"application/json": {
 								"schema": {
 									"type": "object",
 									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
 										}
 									},
-									"required": ["message"]
+									"required": ["status", "message"]
 								}
 							}
 						}
 					},
 					"500": {
-						"description": "Server error",
+						"description": "Server error - Cognito or database error",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1457,14 +1400,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Internal server error message",
+											"example": "Internal server error"
 										}
 									},
 									"required": ["message"]
@@ -1478,6 +1415,8 @@
 		"/auth/confirm-forgot-password": {
 			"post": {
 				"tags": ["Authentication"],
+				"summary": "Confirm password reset",
+				"description": "Confirms password reset using the reset code and sets a new password.",
 				"requestBody": {
 					"content": {
 						"application/json": {
@@ -1534,7 +1473,7 @@
 						}
 					},
 					"400": {
-						"description": "Invalid request data",
+						"description": "Invalid reset code (CodeMismatchException) or request data validation failed",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1542,62 +1481,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized - Authentication required",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"403": {
-						"description": "Forbidden - User already confirmed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Invalid verification code error message",
+											"example": "Invalid verification code"
 										}
 									},
 									"required": ["message"]
@@ -1614,14 +1499,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Not found error message",
+											"example": "Resource not found"
 										}
 									},
 									"required": ["message"]
@@ -1629,8 +1508,8 @@
 							}
 						}
 					},
-					"409": {
-						"description": "Conflict - User already confirmed",
+					"410": {
+						"description": "Reset code has expired (ExpiredCodeException)",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1638,14 +1517,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Expired verification code error message",
+											"example": "Verification code has expired"
 										}
 									},
 									"required": ["message"]
@@ -1654,31 +1527,30 @@
 						}
 					},
 					"429": {
-						"description": "Too many requests",
+						"description": "Too many password reset attempts - rate limit exceeded",
 						"content": {
 							"application/json": {
 								"schema": {
 									"type": "object",
 									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
 										}
 									},
-									"required": ["message"]
+									"required": ["status", "message"]
 								}
 							}
 						}
 					},
 					"500": {
-						"description": "Server error",
+						"description": "Server error - Cognito or database error",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1686,14 +1558,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Internal server error message",
+											"example": "Internal server error"
 										}
 									},
 									"required": ["message"]
@@ -1707,6 +1573,13 @@
 		"/auth/logout": {
 			"post": {
 				"tags": ["Authentication"],
+				"summary": "User logout",
+				"description": "Logs out the authenticated user and invalidates their session.",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
 				"responses": {
 					"200": {
 						"description": "User logged out successfully",
@@ -1725,30 +1598,6 @@
 							}
 						}
 					},
-					"400": {
-						"description": "Invalid request data",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
 					"401": {
 						"description": "Unauthorized - Authentication required",
 						"content": {
@@ -1758,86 +1607,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"403": {
-						"description": "Forbidden - User already confirmed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"409": {
-						"description": "Conflict - User already confirmed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"429": {
-						"description": "Too many requests",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Unauthorized error message",
+											"example": "Authentication required"
 										}
 									},
 									"required": ["message"]
@@ -1846,7 +1617,7 @@
 						}
 					},
 					"500": {
-						"description": "Server error",
+						"description": "Server error - Cognito or database error",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1854,14 +1625,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Internal server error message",
+											"example": "Internal server error"
 										}
 									},
 									"required": ["message"]
@@ -1875,6 +1640,8 @@
 		"/auth/refresh": {
 			"post": {
 				"tags": ["Authentication"],
+				"summary": "Refresh access token",
+				"description": "Refreshes the user's access token using a valid refresh token.",
 				"responses": {
 					"200": {
 						"description": "Access token refreshed successfully",
@@ -1883,26 +1650,38 @@
 								"schema": {
 									"type": "object",
 									"properties": {
-										"email": {
+										"message": {
 											"type": "string",
-											"format": "email",
-											"description": "User email address"
+											"description": "Response message"
 										},
-										"password": {
-											"type": "string",
-											"minLength": 8,
-											"maxLength": 15,
-											"pattern": "\\d",
-											"description": "User password"
+										"tokens": {
+											"type": "object",
+											"properties": {
+												"accessToken": {
+													"type": "string",
+													"description": "JWT access token"
+												},
+												"refreshToken": {
+													"type": "string",
+													"description": "JWT refresh token"
+												},
+												"expiresIn": {
+													"type": "number",
+													"description": "Token expiration time in seconds"
+												}
+											},
+											"required": ["accessToken", "refreshToken", "expiresIn"],
+											"description": "Authentication tokens"
 										}
 									},
-									"required": ["email", "password"]
+									"required": ["message", "tokens"],
+									"description": "Authentication response"
 								}
 							}
 						}
 					},
 					"400": {
-						"description": "Invalid request data",
+						"description": "Invalid refresh token or request data",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1910,14 +1689,19 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
+											"description": "Validation error message",
+											"example": "Validation Failed"
 										},
 										"details": {
 											"type": "object",
 											"additionalProperties": {
 												"nullable": true
 											},
-											"description": "Error details"
+											"description": "Detailed validation error information",
+											"example": {
+												"field": "email",
+												"message": "Invalid email format"
+											}
 										}
 									},
 									"required": ["message"]
@@ -1926,7 +1710,7 @@
 						}
 					},
 					"401": {
-						"description": "Unauthorized - Authentication required",
+						"description": "Unauthorized - Invalid or expired refresh token",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1934,86 +1718,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"403": {
-						"description": "Forbidden - User already confirmed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"409": {
-						"description": "Conflict - User already confirmed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"429": {
-						"description": "Too many requests",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Unauthorized error message",
+											"example": "Authentication required"
 										}
 									},
 									"required": ["message"]
@@ -2022,7 +1728,7 @@
 						}
 					},
 					"500": {
-						"description": "Server error",
+						"description": "Server error - Cognito or database error",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -2030,14 +1736,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Internal server error message",
+											"example": "Internal server error"
 										}
 									},
 									"required": ["message"]
@@ -2051,6 +1751,13 @@
 		"/auth/user": {
 			"get": {
 				"tags": ["Authentication"],
+				"summary": "Get authenticated user information",
+				"description": "Retrieves the authenticated user's information from Cognito.",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
 				"responses": {
 					"200": {
 						"description": "User information retrieved successfully",
@@ -2086,14 +1793,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Unauthorized error message",
+											"example": "Authentication required"
 										}
 									},
 									"required": ["message"]
@@ -2102,7 +1803,7 @@
 						}
 					},
 					"500": {
-						"description": "Server error",
+						"description": "Server error - Cognito or database error",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -2110,14 +1811,204 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
+											"description": "Internal server error message",
+											"example": "Internal server error"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/users/{id}": {
+			"get": {
+				"tags": ["Users"],
+				"summary": "Get user by ID",
+				"description": "Retrieves a user's profile information by their unique identifier. Requires authentication.",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"description": "The unique identifier of the user",
+						"schema": {
+							"type": "string",
+							"format": "uuid",
+							"example": "123e4567-e89b-12d3-a456-426614174000"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "User profile retrieved successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"user": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string",
+													"format": "uuid"
+												},
+												"email": {
+													"type": "string",
+													"maxLength": 255
+												},
+												"emailVerified": {
+													"type": "boolean",
+													"nullable": true
+												},
+												"firstName": {
+													"type": "string",
+													"nullable": true,
+													"maxLength": 255
+												},
+												"lastName": {
+													"type": "string",
+													"nullable": true,
+													"maxLength": 255
+												},
+												"createdAt": {
+													"type": "string",
+													"nullable": true
+												},
+												"updatedAt": {
+													"type": "string",
+													"nullable": true
+												},
+												"lastLogin": {
+													"type": "string",
+													"nullable": true
+												}
+											},
+											"required": [
+												"id",
+												"email",
+												"emailVerified",
+												"firstName",
+												"lastName",
+												"createdAt",
+												"updatedAt",
+												"lastLogin"
+											],
+											"description": "User profile data"
+										}
+									},
+									"required": ["user"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid user ID format or missing required parameters",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Validation error message",
+											"example": "Validation Failed"
 										},
 										"details": {
 											"type": "object",
 											"additionalProperties": {
 												"nullable": true
 											},
-											"description": "Error details"
+											"description": "Detailed validation error information",
+											"example": {
+												"field": "email",
+												"message": "Invalid email format"
+											}
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized - Authentication required, token expired, or invalid token",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Unauthorized error message",
+											"example": "Authentication required"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "User not found - No user exists with the specified ID",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Not found error message",
+											"example": "Resource not found"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Too many requests - rate limit exceeded",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
+										"message": {
+											"type": "string",
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
+										}
+									},
+									"required": ["status", "message"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error - Database or service error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Internal server error message",
+											"example": "Internal server error"
 										}
 									},
 									"required": ["message"]
@@ -2131,6 +2022,8 @@
 		"/users/me": {
 			"get": {
 				"tags": ["Users"],
+				"summary": "Get current user profile",
+				"description": "Retrieves the authenticated user's profile information including personal details and account status",
 				"security": [
 					{
 						"cookieAuth": []
@@ -2201,7 +2094,7 @@
 						}
 					},
 					"400": {
-						"description": "Invalid request data",
+						"description": "Invalid request - Authentication token validation failed",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -2209,14 +2102,19 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
+											"description": "Validation error message",
+											"example": "Validation Failed"
 										},
 										"details": {
 											"type": "object",
 											"additionalProperties": {
 												"nullable": true
 											},
-											"description": "Error details"
+											"description": "Detailed validation error information",
+											"example": {
+												"field": "email",
+												"message": "Invalid email format"
+											}
 										}
 									},
 									"required": ["message"]
@@ -2225,7 +2123,7 @@
 						}
 					},
 					"401": {
-						"description": "Unauthorized - Authentication required",
+						"description": "Unauthorized - Authentication required, token expired, or invalid token",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -2233,14 +2131,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Unauthorized error message",
+											"example": "Authentication required"
 										}
 									},
 									"required": ["message"]
@@ -2248,8 +2140,8 @@
 							}
 						}
 					},
-					"403": {
-						"description": "Forbidden - User already confirmed",
+					"404": {
+						"description": "User not found - The authenticated user does not exist in the system",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -2257,38 +2149,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
-										}
-									},
-									"required": ["message"]
-								}
-							}
-						}
-					},
-					"409": {
-						"description": "Conflict - User already confirmed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Not found error message",
+											"example": "Resource not found"
 										}
 									},
 									"required": ["message"]
@@ -2297,31 +2159,30 @@
 						}
 					},
 					"429": {
-						"description": "Too many requests",
+						"description": "Too many requests - rate limit exceeded",
 						"content": {
 							"application/json": {
 								"schema": {
 									"type": "object",
 									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
 										}
 									},
-									"required": ["message"]
+									"required": ["status", "message"]
 								}
 							}
 						}
 					},
 					"500": {
-						"description": "Server error",
+						"description": "Internal server error - Database or service error",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -2329,14 +2190,8 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message"
-										},
-										"details": {
-											"type": "object",
-											"additionalProperties": {
-												"nullable": true
-											},
-											"description": "Error details"
+											"description": "Internal server error message",
+											"example": "Internal server error"
 										}
 									},
 									"required": ["message"]
@@ -2350,6 +2205,8 @@
 		"/health": {
 			"get": {
 				"tags": ["Utility"],
+				"summary": "Health check endpoint",
+				"description": "Returns the current health status of the API service",
 				"responses": {
 					"200": {
 						"description": "Health check successful",
@@ -2369,8 +2226,31 @@
 							}
 						}
 					},
+					"429": {
+						"description": "Too many requests - rate limit exceeded",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
+										"message": {
+											"type": "string",
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
+										}
+									},
+									"required": ["status", "message"]
+								}
+							}
+						}
+					},
 					"500": {
-						"description": "Health check failed",
+						"description": "Health check failed - internal server error",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -2378,8 +2258,148 @@
 									"properties": {
 										"message": {
 											"type": "string",
-											"description": "Error message",
-											"example": "Api Status: Error"
+											"description": "Internal server error message",
+											"example": "Internal server error"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/system-info": {
+			"get": {
+				"tags": ["Utility"],
+				"summary": "System information endpoint",
+				"description": "Returns detailed system information including Node.js version, platform, memory usage, and CPU statistics",
+				"responses": {
+					"200": {
+						"description": "System information retrieved successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"nodeVersion": {
+											"type": "string",
+											"description": "Node.js version",
+											"example": "v18.17.0"
+										},
+										"platform": {
+											"type": "string",
+											"description": "Operating system platform",
+											"example": "linux"
+										},
+										"architecture": {
+											"type": "string",
+											"description": "System architecture",
+											"example": "x64"
+										},
+										"uptime": {
+											"type": "number",
+											"description": "System uptime in seconds",
+											"example": 3600
+										},
+										"memoryUsage": {
+											"type": "object",
+											"properties": {
+												"rss": {
+													"type": "number",
+													"description": "Resident Set Size in bytes",
+													"example": 50331648
+												},
+												"heapTotal": {
+													"type": "number",
+													"description": "Total heap size in bytes",
+													"example": 20971520
+												},
+												"heapUsed": {
+													"type": "number",
+													"description": "Used heap size in bytes",
+													"example": 15728640
+												},
+												"external": {
+													"type": "number",
+													"description": "External memory usage in bytes",
+													"example": 1048576
+												}
+											},
+											"required": ["rss", "heapTotal", "heapUsed", "external"],
+											"description": "Memory usage statistics"
+										},
+										"cpuUsage": {
+											"type": "object",
+											"properties": {
+												"user": {
+													"type": "number",
+													"description": "User CPU time in microseconds",
+													"example": 1000000
+												},
+												"system": {
+													"type": "number",
+													"description": "System CPU time in microseconds",
+													"example": 500000
+												}
+											},
+											"required": ["user", "system"],
+											"description": "CPU usage statistics"
+										},
+										"timestamp": {
+											"type": "string",
+											"description": "ISO timestamp when the information was collected",
+											"example": "2024-01-01T12:00:00.000Z"
+										}
+									},
+									"required": [
+										"nodeVersion",
+										"platform",
+										"architecture",
+										"uptime",
+										"memoryUsage",
+										"cpuUsage",
+										"timestamp"
+									]
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Too many requests - rate limit exceeded",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
+										"message": {
+											"type": "string",
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
+										}
+									},
+									"required": ["status", "message"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Failed to retrieve system information - internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Internal server error message",
+											"example": "Internal server error"
 										}
 									},
 									"required": ["message"]

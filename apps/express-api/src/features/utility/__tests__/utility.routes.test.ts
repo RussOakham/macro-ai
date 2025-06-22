@@ -25,6 +25,18 @@ describe('utilityRouter', () => {
 		expect(res.body).toEqual({ message: 'Api Health Status: OK' })
 	})
 
+	it('GET /system-info should return 200 and system information', async () => {
+		const res = await request(app).get('/system-info')
+		expect(res.status).toBe(200)
+		expect(res.body).toHaveProperty('nodeVersion')
+		expect(res.body).toHaveProperty('platform')
+		expect(res.body).toHaveProperty('architecture')
+		expect(res.body).toHaveProperty('uptime')
+		expect(res.body).toHaveProperty('memoryUsage')
+		expect(res.body).toHaveProperty('cpuUsage')
+		expect(res.body).toHaveProperty('timestamp')
+	})
+
 	it('should handle errors and return 500', async () => {
 		// Override the /health route to simulate an error
 		const router = Router()

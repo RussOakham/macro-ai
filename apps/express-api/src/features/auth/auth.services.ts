@@ -4,28 +4,29 @@ import {
 	ConfirmForgotPasswordCommand,
 	ConfirmForgotPasswordCommandOutput,
 	ConfirmSignUpCommand,
+	ConfirmSignUpCommandOutput,
 	ForgotPasswordCommand,
 	ForgotPasswordCommandOutput,
 	GetUserCommand,
+	GetUserCommandOutput,
 	GlobalSignOutCommand,
+	GlobalSignOutCommandOutput,
 	InitiateAuthCommand,
 	InitiateAuthCommandOutput,
 	ListUsersCommand,
 	ListUsersCommandOutput,
 	NotAuthorizedException,
 	ResendConfirmationCodeCommand,
+	ResendConfirmationCodeCommandOutput,
 	SignUpCommand,
+	SignUpCommandOutput,
 	UserType,
 } from '@aws-sdk/client-cognito-identity-provider'
 import crypto from 'crypto'
 
 import { config } from '../../../config/default.ts'
-import {
-	EnhancedResult,
-	tryCatch,
-	tryCatchSync,
-} from '../../utils/error-handling/try-catch.ts'
-import { AppError } from '../../utils/errors.ts'
+import { tryCatch, tryCatchSync } from '../../utils/error-handling/try-catch.ts'
+import { NotFoundError, Result, ValidationError } from '../../utils/errors.ts'
 
 import { ICognitoService, TRegisterUserRequest } from './auth.types.ts'
 
@@ -67,17 +68,17 @@ class CognitoService implements ICognitoService {
 	/**
 	 * Sign up a new user with Cognito
 	 * @param request Registration request containing email, password, and confirmPassword
-	 * @returns EnhancedResult with SignUpCommandOutput or error
+	 * @returns Result tuple with SignUpCommandOutput or error
 	 */
 	public async signUpUser({
 		email,
 		password,
 		confirmPassword,
-	}: TRegisterUserRequest) {
+	}: TRegisterUserRequest): Promise<Result<SignUpCommandOutput>> {
 		// Validate passwords match using tryCatchSync
-		const { error: validationError } = tryCatchSync(() => {
+		const [, validationError] = tryCatchSync(() => {
 			if (password !== confirmPassword) {
-				throw AppError.validation(
+				throw new ValidationError(
 					'Passwords do not match',
 					undefined,
 					'authService',
@@ -87,19 +88,19 @@ class CognitoService implements ICognitoService {
 		}, 'authService - validatePasswords')
 
 		if (validationError) {
-			return { data: null, error: validationError }
+			return [null, validationError]
 		}
 
 		const userId = crypto.randomUUID()
 
 		// Generate hash using tryCatchSync
-		const { data: secretHash, error: hashError } = tryCatchSync(
+		const [secretHash, hashError] = tryCatchSync(
 			() => this.generateHash(userId),
 			'authService - generateHash',
 		)
 
 		if (hashError) {
-			return { data: null, error: hashError }
+			return [null, hashError]
 		}
 
 		const command = new SignUpCommand({
@@ -123,16 +124,16 @@ class CognitoService implements ICognitoService {
 	 * @param users The list of users from Cognito
 	 * @param email The email to match
 	 * @param context The context string for error reporting
-	 * @returns EnhancedResult with the unique user or error
+	 * @returns Result tuple with the unique user or error
 	 */
 	private validateAndExtractUser(
 		users: ListUsersCommandOutput,
 		email: string,
 		context: string,
-	): EnhancedResult<UserType> {
+	): Result<UserType> {
 		return tryCatchSync(() => {
 			if (!users.Users || users.Users.length === 0) {
-				throw AppError.notFound('User not found', 'authService')
+				throw new NotFoundError('User not found', 'authService')
 			}
 
 			const uniqueUser = users.Users.find(
@@ -142,7 +143,7 @@ class CognitoService implements ICognitoService {
 			)
 
 			if (!uniqueUser?.Username) {
-				throw AppError.notFound('User not found', 'authService')
+				throw new NotFoundError('User not found', 'authService')
 			}
 
 			return uniqueUser
@@ -153,41 +154,47 @@ class CognitoService implements ICognitoService {
 	 * Confirm user registration with Cognito
 	 * @param email User's email
 	 * @param code Confirmation code
-	 * @returns EnhancedResult with ConfirmSignUpCommandOutput or error
+	 * @returns Result tuple with ConfirmSignUpCommandOutput or error
 	 */
-	public async confirmSignUp(email: string, code: number) {
+	public async confirmSignUp(
+		email: string,
+		code: number,
+	): Promise<Result<ConfirmSignUpCommandOutput>> {
 		// Get user by email
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
 			UserPoolId: this.userPoolId,
 		})
 
-		const { data: users, error: getUserError } = await tryCatch(
+		const [users, getUserError] = await tryCatch(
 			this.client.send(getUserCommand),
 			'authService - confirmSignUp',
 		)
 
 		if (getUserError) {
-			return { data: null, error: getUserError }
+			return [null, getUserError]
 		}
 
 		// Validate users result using the helper method
-		const { data: uniqueUser, error: validationError } =
-			this.validateAndExtractUser(users, email, 'validateUser')
+		const [uniqueUser, validationError] = this.validateAndExtractUser(
+			users,
+			email,
+			'validateUser',
+		)
 
 		if (validationError) {
-			return { data: null, error: validationError }
+			return [null, validationError]
 		}
 
 		// Generate hash using tryCatchSync
-		const { data: secretHash, error: hashError } = tryCatchSync(
+		const [secretHash, hashError] = tryCatchSync(
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			() => this.generateHash(uniqueUser.Username!),
 			'authService - generateHash',
 		)
 
 		if (hashError) {
-			return { data: null, error: hashError }
+			return [null, hashError]
 		}
 
 		const command = new ConfirmSignUpCommand({
@@ -207,39 +214,44 @@ class CognitoService implements ICognitoService {
 	/**
 	 * Resend confirmation code to user's email
 	 * @param email User's email
-	 * @returns EnhancedResult with ResendConfirmationCodeCommandOutput or error
+	 * @returns Result tuple with ResendConfirmationCodeCommandOutput or error
 	 */
-	public async resendConfirmationCode(email: string) {
+	public async resendConfirmationCode(
+		email: string,
+	): Promise<Result<ResendConfirmationCodeCommandOutput>> {
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
 			UserPoolId: this.userPoolId,
 		})
 
-		const { data: users, error } = await tryCatch(
+		const [users, error] = await tryCatch(
 			this.client.send(getUserCommand),
 			'authService - resendConfirmationCode',
 		)
 
 		if (error) {
-			return { data: null, error }
+			return [null, error]
 		}
 
 		// Validate users result using the helper method
-		const { data: uniqueUser, error: validationError } =
-			this.validateAndExtractUser(users, email, 'validateUser')
+		const [uniqueUser, validationError] = this.validateAndExtractUser(
+			users,
+			email,
+			'validateUser',
+		)
 
 		if (validationError) {
-			return { data: null, error: validationError }
+			return [null, validationError]
 		}
 
 		// Generate hash using tryCatchSync
-		const { data: secretHash, error: hashError } = tryCatchSync(
+		const [secretHash, hashError] = tryCatchSync(
 			() => this.generateHash(uniqueUser.Username ?? ''),
 			'authService - generateHash',
 		)
 
 		if (hashError) {
-			return { data: null, error: hashError }
+			return [null, hashError]
 		}
 
 		const command = new ResendConfirmationCodeCommand({
@@ -258,43 +270,46 @@ class CognitoService implements ICognitoService {
 	 * Sign in a user with Cognito
 	 * @param email User's email
 	 * @param password User's password
-	 * @returns EnhancedResult with InitiateAuthCommandOutput & Username or error
+	 * @returns Result tuple with InitiateAuthCommandOutput & Username or error
 	 */
 	public async signInUser(
 		email: string,
 		password: string,
-	): Promise<EnhancedResult<InitiateAuthCommandOutput & { Username: string }>> {
+	): Promise<Result<InitiateAuthCommandOutput & { Username: string }>> {
 		// First, get the user's UUID using their email
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
 			UserPoolId: this.userPoolId,
 		})
 
-		const { data: users, error: getUserError } = await tryCatch(
+		const [users, getUserError] = await tryCatch(
 			this.client.send(getUserCommand),
 			'authService - signInUser',
 		)
 
 		if (getUserError) {
-			return { data: null, error: getUserError }
+			return [null, getUserError]
 		}
 
 		// Validate users result using the helper method
-		const { data: uniqueUser, error: validationError } =
-			this.validateAndExtractUser(users, email, 'validateUser')
+		const [uniqueUser, validationError] = this.validateAndExtractUser(
+			users,
+			email,
+			'validateUser',
+		)
 
 		if (validationError) {
-			return { data: null, error: validationError }
+			return [null, validationError]
 		}
 
 		// Generate hash using tryCatchSync
-		const { data: secretHash, error: hashError } = tryCatchSync(
+		const [secretHash, hashError] = tryCatchSync(
 			() => this.generateHash(email),
 			'authService - generateHash',
 		)
 
 		if (hashError) {
-			return { data: null, error: hashError }
+			return [null, hashError]
 		}
 
 		const command = new InitiateAuthCommand({
@@ -307,32 +322,31 @@ class CognitoService implements ICognitoService {
 			},
 		})
 
-		const { data: signInResponse, error: signInError } = await tryCatch(
+		const [signInResponse, signInError] = await tryCatch(
 			this.client.send(command),
 			'authService - signInUser',
 		)
 
 		if (signInError) {
-			return { data: null, error: signInError }
+			return [null, signInError]
 		}
 
 		if (!uniqueUser.Username) {
-			return {
-				data: null,
-				error: AppError.notFound('User not found', 'authService'),
-			}
+			return [null, new NotFoundError('User not found', 'authService')]
 		}
 
-		return {
-			data: {
+		return [
+			{
 				...signInResponse,
 				Username: uniqueUser.Username,
 			},
-			error: null,
-		}
+			null,
+		]
 	}
 
-	public async signOutUser(accessToken: string) {
+	public async signOutUser(
+		accessToken: string,
+	): Promise<Result<GlobalSignOutCommandOutput>> {
 		const signOutCommand = new GlobalSignOutCommand({
 			AccessToken: accessToken,
 		})
@@ -347,20 +361,20 @@ class CognitoService implements ICognitoService {
 	 * Refresh an access token using a refresh token
 	 * @param refreshToken The refresh token
 	 * @param username The username associated with the token
-	 * @returns EnhancedResult with InitiateAuthCommandOutput or error
+	 * @returns Result tuple with InitiateAuthCommandOutput or error
 	 */
 	public async refreshToken(
 		refreshToken: string,
 		username: string,
-	): Promise<EnhancedResult<InitiateAuthCommandOutput>> {
+	): Promise<Result<InitiateAuthCommandOutput>> {
 		// Generate hash using tryCatchSync
-		const { data: secretHash, error: hashError } = tryCatchSync(
+		const [secretHash, hashError] = tryCatchSync(
 			() => this.generateHash(username),
 			'authService - refreshToken',
 		)
 
 		if (hashError) {
-			return { data: null, error: hashError }
+			return [null, hashError]
 		}
 
 		const refreshTokenCommand = new InitiateAuthCommand({
@@ -380,39 +394,42 @@ class CognitoService implements ICognitoService {
 
 	public async forgotPassword(
 		email: string,
-	): Promise<EnhancedResult<ForgotPasswordCommandOutput>> {
+	): Promise<Result<ForgotPasswordCommandOutput>> {
 		// First, get the user's UUID using their email
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
 			UserPoolId: this.userPoolId,
 		})
 
-		const { data: users, error } = await tryCatch(
+		const [users, error] = await tryCatch(
 			this.client.send(getUserCommand),
 			'authService - forgotPassword',
 		)
 
 		if (error) {
-			return { data: null, error }
+			return [null, error]
 		}
 
 		// Validate users result using the helper method
-		const { data: uniqueUser, error: validationError } =
-			this.validateAndExtractUser(users, email, 'validateUser')
+		const [uniqueUser, validationError] = this.validateAndExtractUser(
+			users,
+			email,
+			'validateUser',
+		)
 
 		if (validationError) {
-			return { data: null, error: validationError }
+			return [null, validationError]
 		}
 
 		// Generate hash using tryCatchSync
-		const { data: secretHash, error: hashError } = tryCatchSync(
+		const [secretHash, hashError] = tryCatchSync(
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			() => this.generateHash(uniqueUser.Username!),
 			'authService - generateHash',
 		)
 
 		if (hashError) {
-			return { data: null, error: hashError }
+			return [null, hashError]
 		}
 
 		const command = new ForgotPasswordCommand({
@@ -432,11 +449,11 @@ class CognitoService implements ICognitoService {
 		code: string,
 		newPassword: string,
 		confirmPassword: string,
-	): Promise<EnhancedResult<ConfirmForgotPasswordCommandOutput>> {
+	): Promise<Result<ConfirmForgotPasswordCommandOutput>> {
 		// Validate passwords match using tryCatchSync
-		const { error: validationError } = tryCatchSync(() => {
+		const [, validationError] = tryCatchSync(() => {
 			if (newPassword !== confirmPassword) {
-				throw AppError.validation(
+				throw new ValidationError(
 					'Passwords do not match',
 					undefined,
 					'authService',
@@ -446,7 +463,7 @@ class CognitoService implements ICognitoService {
 		}, 'authService - confirmForgotPassword')
 
 		if (validationError) {
-			return { data: null, error: validationError }
+			return [null, validationError]
 		}
 
 		// First, get the user's UUID using their email
@@ -455,31 +472,34 @@ class CognitoService implements ICognitoService {
 			UserPoolId: this.userPoolId,
 		})
 
-		const { data: users, error: getUserError } = await tryCatch(
+		const [users, getUserError] = await tryCatch(
 			this.client.send(getUserCommand),
 			'authService - confirmForgotPassword',
 		)
 
 		if (getUserError) {
-			return { data: null, error: getUserError }
+			return [null, getUserError]
 		}
 
 		// Validate users result using the helper method
-		const { data: uniqueUser, error: validationUserError } =
-			this.validateAndExtractUser(users, email, 'validateUser')
+		const [uniqueUser, validationUserError] = this.validateAndExtractUser(
+			users,
+			email,
+			'validateUser',
+		)
 
 		if (validationUserError) {
-			return { data: null, error: validationUserError }
+			return [null, validationUserError]
 		}
 
 		// Generate hash using tryCatchSync
-		const { data: secretHash, error: hashError } = tryCatchSync(
+		const [secretHash, hashError] = tryCatchSync(
 			() => this.generateHash(uniqueUser.Username ?? ''),
 			'authService - generateHash',
 		)
 
 		if (hashError) {
-			return { data: null, error: hashError }
+			return [null, hashError]
 		}
 
 		const command = new ConfirmForgotPasswordCommand({
@@ -496,7 +516,9 @@ class CognitoService implements ICognitoService {
 		)
 	}
 
-	public async getAuthUser(accessToken: string) {
+	public async getAuthUser(
+		accessToken: string,
+	): Promise<Result<GetUserCommandOutput>> {
 		const command = new GetUserCommand({
 			AccessToken: accessToken,
 		})

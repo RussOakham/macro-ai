@@ -5,8 +5,18 @@ import { verifyAuth } from '../../middleware/auth.middleware.ts'
 import { authRateLimiter } from '../../middleware/rate-limit.middleware.ts'
 import { validate } from '../../middleware/validation.middleware.ts'
 import {
-	ErrorResponseSchema,
+	CognitoCodeMismatchErrorSchema,
+	CognitoExpiredCodeErrorSchema,
+	CognitoUsernameExistsErrorSchema,
+	CognitoUserNotConfirmedErrorSchema,
+	ConflictErrorSchema,
+	ForbiddenErrorSchema,
+	InternalServerErrorSchema,
+	NotFoundErrorSchema,
+	RateLimitErrorSchema,
 	registry,
+	UnauthorizedErrorSchema,
+	ValidationErrorSchema,
 } from '../../utils/swagger/openapi-registry.ts'
 
 import { authController } from './auth.controller.ts'
@@ -28,6 +38,9 @@ registry.registerPath({
 	method: 'post',
 	path: '/auth/register',
 	tags: ['Authentication'],
+	summary: 'Register new user',
+	description:
+		'Creates a new user account with email and password. Sends confirmation email to verify the account.',
 	request: {
 		body: {
 			content: {
@@ -39,7 +52,7 @@ registry.registerPath({
 	},
 	responses: {
 		[StatusCodes.CREATED]: {
-			description: 'User registered successfully',
+			description: 'User registered successfully - confirmation email sent',
 			content: {
 				'application/json': {
 					schema: authResponseSchema,
@@ -47,58 +60,43 @@ registry.registerPath({
 			},
 		},
 		[StatusCodes.BAD_REQUEST]: {
-			description: 'Invalid request data',
+			description:
+				'Invalid request data - validation failed or passwords do not match',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.NOT_FOUND]: {
-			description: 'User not found',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.UNAUTHORIZED]: {
-			description: 'Unauthorized - Authentication required',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.FORBIDDEN]: {
-			description: 'Forbidden - User already confirmed',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: ValidationErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.CONFLICT]: {
-			description: 'Conflict - User already confirmed',
+			description: 'Conflict - User already exists (from database check)',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: ConflictErrorSchema,
+				},
+			},
+		},
+		[StatusCodes.UNPROCESSABLE_ENTITY]: {
+			description: 'User already exists in Cognito (UsernameExistsException)',
+			content: {
+				'application/json': {
+					schema: CognitoUsernameExistsErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.TOO_MANY_REQUESTS]: {
-			description: 'Too many requests',
+			description: 'Too many registration attempts - rate limit exceeded',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: RateLimitErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.INTERNAL_SERVER_ERROR]: {
-			description: 'Server error',
+			description: 'Server error - Cognito or database error',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: InternalServerErrorSchema,
 				},
 			},
 		},
@@ -110,6 +108,9 @@ registry.registerPath({
 	method: 'post',
 	path: '/auth/confirm-registration',
 	tags: ['Authentication'],
+	summary: 'Confirm user registration',
+	description:
+		'Confirms user registration using the confirmation code sent via email.',
 	request: {
 		body: {
 			content: {
@@ -129,10 +130,19 @@ registry.registerPath({
 			},
 		},
 		[StatusCodes.BAD_REQUEST]: {
-			description: 'Invalid confirmation code',
+			description:
+				'Invalid confirmation code (CodeMismatchException) or request data validation failed',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: CognitoCodeMismatchErrorSchema,
+				},
+			},
+		},
+		[StatusCodes.GONE]: {
+			description: 'Verification code has expired (ExpiredCodeException)',
+			content: {
+				'application/json': {
+					schema: CognitoExpiredCodeErrorSchema,
 				},
 			},
 		},
@@ -140,15 +150,7 @@ registry.registerPath({
 			description: 'User not found',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.UNAUTHORIZED]: {
-			description: 'Unauthorized - Authentication required',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: NotFoundErrorSchema,
 				},
 			},
 		},
@@ -156,32 +158,23 @@ registry.registerPath({
 			description: 'Forbidden - User already confirmed',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.CONFLICT]: {
-			description: 'Conflict - User already confirmed',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: ForbiddenErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.TOO_MANY_REQUESTS]: {
-			description: 'Too many requests',
+			description: 'Too many confirmation attempts - rate limit exceeded',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: RateLimitErrorSchema,
 				},
 			},
 		},
-
 		[StatusCodes.INTERNAL_SERVER_ERROR]: {
-			description: 'Server error',
+			description: 'Server error - Cognito or database error',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: InternalServerErrorSchema,
 				},
 			},
 		},
@@ -193,6 +186,9 @@ registry.registerPath({
 	method: 'post',
 	path: '/auth/resend-confirmation-code',
 	tags: ['Authentication'],
+	summary: 'Resend confirmation code',
+	description:
+		"Resends the confirmation code to the user's email address for account verification.",
 	request: {
 		body: {
 			content: {
@@ -212,10 +208,11 @@ registry.registerPath({
 			},
 		},
 		[StatusCodes.BAD_REQUEST]: {
-			description: 'Invalid request data',
+			description:
+				'Invalid request data - validation failed or invalid email format',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: ValidationErrorSchema,
 				},
 			},
 		},
@@ -223,15 +220,7 @@ registry.registerPath({
 			description: 'User not found',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.UNAUTHORIZED]: {
-			description: 'Unauthorized - Authentication required',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: NotFoundErrorSchema,
 				},
 			},
 		},
@@ -239,31 +228,23 @@ registry.registerPath({
 			description: 'Forbidden - User already confirmed',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.CONFLICT]: {
-			description: 'Conflict - User already confirmed',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: ForbiddenErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.TOO_MANY_REQUESTS]: {
-			description: 'Too many requests',
+			description: 'Too many resend attempts - rate limit exceeded',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: RateLimitErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.INTERNAL_SERVER_ERROR]: {
-			description: 'Server error',
+			description: 'Server error - Cognito or database error',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: InternalServerErrorSchema,
 				},
 			},
 		},
@@ -275,6 +256,9 @@ registry.registerPath({
 	method: 'post',
 	path: '/auth/login',
 	tags: ['Authentication'],
+	summary: 'User login',
+	description:
+		'Authenticates a user with email and password, returning access tokens upon successful login.',
 	request: {
 		body: {
 			content: {
@@ -294,58 +278,42 @@ registry.registerPath({
 			},
 		},
 		[StatusCodes.BAD_REQUEST]: {
-			description: 'Invalid credentials',
+			description: 'Invalid credentials or request data',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.NOT_FOUND]: {
-			description: 'User not found',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: ValidationErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.UNAUTHORIZED]: {
-			description: 'Unauthorized - Authentication required',
+			description: 'Unauthorized - Invalid email or password',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: UnauthorizedErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.FORBIDDEN]: {
-			description: 'Forbidden - User already confirmed',
+			description: 'Forbidden - User not confirmed (UserNotConfirmedException)',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.CONFLICT]: {
-			description: 'Conflict - User already confirmed',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: CognitoUserNotConfirmedErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.TOO_MANY_REQUESTS]: {
-			description: 'Too many requests',
+			description: 'Too many login attempts - rate limit exceeded',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: RateLimitErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.INTERNAL_SERVER_ERROR]: {
-			description: 'Server error',
+			description: 'Server error - Cognito or database error',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: InternalServerErrorSchema,
 				},
 			},
 		},
@@ -357,6 +325,9 @@ registry.registerPath({
 	method: 'post',
 	path: '/auth/forgot-password',
 	tags: ['Authentication'],
+	summary: 'Initiate password reset',
+	description:
+		"Initiates password reset process by sending a reset code to the user's email address.",
 	request: {
 		body: {
 			content: {
@@ -368,7 +339,8 @@ registry.registerPath({
 	},
 	responses: {
 		[StatusCodes.OK]: {
-			description: 'Password reset initiated successfully',
+			description:
+				'Password reset initiated successfully - reset code sent to email',
 			content: {
 				'application/json': {
 					schema: authResponseSchema,
@@ -376,10 +348,10 @@ registry.registerPath({
 			},
 		},
 		[StatusCodes.BAD_REQUEST]: {
-			description: 'Invalid request data',
+			description: 'Invalid request data - validation failed',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: ValidationErrorSchema,
 				},
 			},
 		},
@@ -387,47 +359,23 @@ registry.registerPath({
 			description: 'User not found',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.UNAUTHORIZED]: {
-			description: 'Unauthorized - Authentication required',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.FORBIDDEN]: {
-			description: 'Forbidden - User already confirmed',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.CONFLICT]: {
-			description: 'Conflict - User already confirmed',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: NotFoundErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.TOO_MANY_REQUESTS]: {
-			description: 'Too many requests',
+			description: 'Too many password reset attempts - rate limit exceeded',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: RateLimitErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.INTERNAL_SERVER_ERROR]: {
-			description: 'Server error',
+			description: 'Server error - Cognito or database error',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: InternalServerErrorSchema,
 				},
 			},
 		},
@@ -439,6 +387,9 @@ registry.registerPath({
 	method: 'post',
 	path: '/auth/confirm-forgot-password',
 	tags: ['Authentication'],
+	summary: 'Confirm password reset',
+	description:
+		'Confirms password reset using the reset code and sets a new password.',
 	request: {
 		body: {
 			content: {
@@ -458,10 +409,19 @@ registry.registerPath({
 			},
 		},
 		[StatusCodes.BAD_REQUEST]: {
-			description: 'Invalid request data',
+			description:
+				'Invalid reset code (CodeMismatchException) or request data validation failed',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: CognitoCodeMismatchErrorSchema,
+				},
+			},
+		},
+		[StatusCodes.GONE]: {
+			description: 'Reset code has expired (ExpiredCodeException)',
+			content: {
+				'application/json': {
+					schema: CognitoExpiredCodeErrorSchema,
 				},
 			},
 		},
@@ -469,47 +429,23 @@ registry.registerPath({
 			description: 'User not found',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.UNAUTHORIZED]: {
-			description: 'Unauthorized - Authentication required',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.FORBIDDEN]: {
-			description: 'Forbidden - User already confirmed',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.CONFLICT]: {
-			description: 'Conflict - User already confirmed',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: NotFoundErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.TOO_MANY_REQUESTS]: {
-			description: 'Too many requests',
+			description: 'Too many password reset attempts - rate limit exceeded',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: RateLimitErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.INTERNAL_SERVER_ERROR]: {
-			description: 'Server error',
+			description: 'Server error - Cognito or database error',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: InternalServerErrorSchema,
 				},
 			},
 		},
@@ -521,6 +457,9 @@ registry.registerPath({
 	method: 'post',
 	path: '/auth/logout',
 	tags: ['Authentication'],
+	summary: 'User logout',
+	description: 'Logs out the authenticated user and invalidates their session.',
+	security: [{ cookieAuth: [] }],
 	responses: {
 		[StatusCodes.OK]: {
 			description: 'User logged out successfully',
@@ -530,51 +469,19 @@ registry.registerPath({
 				},
 			},
 		},
-		[StatusCodes.BAD_REQUEST]: {
-			description: 'Invalid request data',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
 		[StatusCodes.UNAUTHORIZED]: {
 			description: 'Unauthorized - Authentication required',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.FORBIDDEN]: {
-			description: 'Forbidden - User already confirmed',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.CONFLICT]: {
-			description: 'Conflict - User already confirmed',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.TOO_MANY_REQUESTS]: {
-			description: 'Too many requests',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: UnauthorizedErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.INTERNAL_SERVER_ERROR]: {
-			description: 'Server error',
+			description: 'Server error - Cognito or database error',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: InternalServerErrorSchema,
 				},
 			},
 		},
@@ -586,60 +493,38 @@ registry.registerPath({
 	method: 'post',
 	path: '/auth/refresh',
 	tags: ['Authentication'],
+	summary: 'Refresh access token',
+	description: "Refreshes the user's access token using a valid refresh token.",
 	responses: {
 		[StatusCodes.OK]: {
 			description: 'Access token refreshed successfully',
 			content: {
 				'application/json': {
-					schema: loginRequestSchema,
+					schema: loginResponseSchema,
 				},
 			},
 		},
 		[StatusCodes.BAD_REQUEST]: {
-			description: 'Invalid request data',
+			description: 'Invalid refresh token or request data',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: ValidationErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.UNAUTHORIZED]: {
-			description: 'Unauthorized - Authentication required',
+			description: 'Unauthorized - Invalid or expired refresh token',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.FORBIDDEN]: {
-			description: 'Forbidden - User already confirmed',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.CONFLICT]: {
-			description: 'Conflict - User already confirmed',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.TOO_MANY_REQUESTS]: {
-			description: 'Too many requests',
-			content: {
-				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: UnauthorizedErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.INTERNAL_SERVER_ERROR]: {
-			description: 'Server error',
+			description: 'Server error - Cognito or database error',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: InternalServerErrorSchema,
 				},
 			},
 		},
@@ -651,6 +536,9 @@ registry.registerPath({
 	method: 'get',
 	path: '/auth/user',
 	tags: ['Authentication'],
+	summary: 'Get authenticated user information',
+	description: "Retrieves the authenticated user's information from Cognito.",
+	security: [{ cookieAuth: [] }],
 	responses: {
 		[StatusCodes.OK]: {
 			description: 'User information retrieved successfully',
@@ -664,15 +552,15 @@ registry.registerPath({
 			description: 'Unauthorized - Authentication required',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: UnauthorizedErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.INTERNAL_SERVER_ERROR]: {
-			description: 'Server error',
+			description: 'Server error - Cognito or database error',
 			content: {
 				'application/json': {
-					schema: ErrorResponseSchema,
+					schema: InternalServerErrorSchema,
 				},
 			},
 		},

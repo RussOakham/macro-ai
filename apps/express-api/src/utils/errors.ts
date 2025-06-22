@@ -5,7 +5,6 @@ import { fromError, isValidationError } from 'zod-validation-error'
 // Define an enum for error types - moved from standardize-error.ts
 export enum ErrorType {
 	ApiError = 'ApiError',
-	AxiosError = 'AxiosError',
 	CognitoError = 'CognitoError',
 	ZodValidationError = 'ZodValidationError',
 	ZodError = 'ZodError',
@@ -233,6 +232,103 @@ export class AppError extends Error implements IStandardizedError {
 			service: this.service,
 		}
 	}
+}
+
+// Go-style Result type
+export type Result<T, E = AppError> = [T, null] | [null, E]
+
+// Custom error classes that extend AppError with specific statusCode
+export class NotFoundError extends AppError {
+	constructor(message = 'Resource not found', service?: string) {
+		super({
+			type: ErrorType.NotFoundError,
+			message,
+			status: StatusCodes.NOT_FOUND,
+			service,
+		})
+		this.name = 'NotFoundError'
+	}
+}
+
+export class UnauthorizedError extends AppError {
+	constructor(message = 'Unauthorized', service?: string) {
+		super({
+			type: ErrorType.UnauthorizedError,
+			message,
+			status: StatusCodes.UNAUTHORIZED,
+			service,
+		})
+		this.name = 'UnauthorizedError'
+	}
+}
+
+export class ForbiddenError extends AppError {
+	constructor(message = 'Forbidden', service?: string) {
+		super({
+			type: ErrorType.ForbiddenError,
+			message,
+			status: StatusCodes.FORBIDDEN,
+			service,
+		})
+		this.name = 'ForbiddenError'
+	}
+}
+
+export class ConflictError extends AppError {
+	constructor(message = 'Resource conflict', service?: string) {
+		super({
+			type: ErrorType.ConflictError,
+			message,
+			status: StatusCodes.CONFLICT,
+			service,
+		})
+		this.name = 'ConflictError'
+	}
+}
+
+export class ValidationError extends AppError {
+	constructor(message: string, details?: unknown, service?: string) {
+		super({
+			type: ErrorType.ValidationError,
+			message,
+			status: StatusCodes.BAD_REQUEST,
+			details,
+			service,
+		})
+		this.name = 'ValidationError'
+	}
+}
+
+export class InternalError extends AppError {
+	constructor(message = 'Internal server error', service?: string) {
+		super({
+			type: ErrorType.InternalError,
+			message,
+			status: StatusCodes.INTERNAL_SERVER_ERROR,
+			service,
+		})
+		this.name = 'InternalError'
+	}
+}
+
+// Helper functions for working with Result type
+export const ok = <T>(data: T): Result<T, never> => [data, null]
+export const err = <E extends AppError>(error: E): Result<never, E> => [
+	null,
+	error,
+]
+
+// Type guards for Result type
+export const isOk = <T, E extends AppError>(
+	result: Result<T, E>,
+): result is [T, null] => {
+	return result[1] === null
+}
+
+export const isErr = <T, E extends AppError>(
+	result: Result<T, E>,
+): result is [null, E] => {
+	return result[1] !== null
 }
 
 // Cognito error handling - moved from standardize-error.ts

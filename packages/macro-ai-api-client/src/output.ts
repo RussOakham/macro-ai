@@ -729,12 +729,60 @@ const endpoints = makeApi([
 	{
 		method: 'get',
 		path: '/health',
+		description: `Returns the current health status of the API service`,
 		requestFormat: 'json',
 		response: z.object({ message: z.string() }).passthrough(),
 		errors: [
 			{
+				status: 429,
+				description: `Too many requests - rate limit exceeded`,
+				schema: z
+					.object({ status: z.number(), message: z.string() })
+					.passthrough(),
+			},
+			{
 				status: 500,
-				description: `Health check failed`,
+				description: `Health check failed - internal server error`,
+				schema: z.object({ message: z.string() }).passthrough(),
+			},
+		],
+	},
+	{
+		method: 'get',
+		path: '/system-info',
+		description: `Returns detailed system information including Node.js version, platform, memory usage, and CPU statistics`,
+		requestFormat: 'json',
+		response: z
+			.object({
+				nodeVersion: z.string(),
+				platform: z.string(),
+				architecture: z.string(),
+				uptime: z.number(),
+				memoryUsage: z
+					.object({
+						rss: z.number(),
+						heapTotal: z.number(),
+						heapUsed: z.number(),
+						external: z.number(),
+					})
+					.passthrough(),
+				cpuUsage: z
+					.object({ user: z.number(), system: z.number() })
+					.passthrough(),
+				timestamp: z.string(),
+			})
+			.passthrough(),
+		errors: [
+			{
+				status: 429,
+				description: `Too many requests - rate limit exceeded`,
+				schema: z
+					.object({ status: z.number(), message: z.string() })
+					.passthrough(),
+			},
+			{
+				status: 500,
+				description: `Failed to retrieve system information - internal server error`,
 				schema: z.object({ message: z.string() }).passthrough(),
 			},
 		],
@@ -761,38 +809,8 @@ const endpoints = makeApi([
 			.passthrough(),
 		errors: [
 			{
-				status: 400,
-				description: `Invalid request data`,
-				schema: z
-					.object({
-						message: z.string(),
-						details: z.record(z.unknown().nullable()).optional(),
-					})
-					.passthrough(),
-			},
-			{
 				status: 401,
-				description: `Unauthorized - Authentication required`,
-				schema: z
-					.object({
-						message: z.string(),
-						details: z.record(z.unknown().nullable()).optional(),
-					})
-					.passthrough(),
-			},
-			{
-				status: 403,
-				description: `Forbidden - User already confirmed`,
-				schema: z
-					.object({
-						message: z.string(),
-						details: z.record(z.unknown().nullable()).optional(),
-					})
-					.passthrough(),
-			},
-			{
-				status: 409,
-				description: `Conflict - User already confirmed`,
+				description: `Unauthorized - Authentication required or token expired`,
 				schema: z
 					.object({
 						message: z.string(),
@@ -802,7 +820,7 @@ const endpoints = makeApi([
 			},
 			{
 				status: 429,
-				description: `Too many requests`,
+				description: `Too many requests - rate limit exceeded`,
 				schema: z
 					.object({
 						message: z.string(),
@@ -812,7 +830,7 @@ const endpoints = makeApi([
 			},
 			{
 				status: 500,
-				description: `Server error`,
+				description: `Internal server error`,
 				schema: z
 					.object({
 						message: z.string(),

@@ -6,8 +6,10 @@ import { pino } from '../utils/logger.ts'
 const { logger } = pino
 
 /**
- * Global error handling middleware
- * Catches all unhandled errors and returns a standardized response
+ * Global error handling middleware for Go-style error handling
+ * Catches all errors passed via next(error) and returns a standardized response
+ * Works with all custom error classes (NotFoundError, UnauthorizedError, etc.)
+ * since they extend AppError with proper statusCode fields
  */
 const errorHandler: ErrorRequestHandler = (
 	error: unknown,

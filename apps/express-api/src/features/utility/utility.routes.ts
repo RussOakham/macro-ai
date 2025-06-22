@@ -2,19 +2,25 @@ import { type Router } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import { apiRateLimiter } from '../../middleware/rate-limit.middleware.ts'
-import { pino } from '../../utils/logger.ts'
-import { registry } from '../../utils/swagger/openapi-registry.ts'
+import {
+	InternalServerErrorSchema,
+	RateLimitErrorSchema,
+	registry,
+} from '../../utils/swagger/openapi-registry.ts'
 
-import { healthErrorSchema, healthResponseSchema } from './utility.schemas.ts'
-import { THealthErrorResponse, THealthResponse } from './utility.types.ts'
-
-const { logger } = pino
+import { utilityController } from './utility.controller.ts'
+import {
+	healthResponseSchema,
+	systemInfoResponseSchema,
+} from './utility.schemas.ts'
 
 // Register the health endpoint with OpenAPI
 registry.registerPath({
 	method: 'get',
 	path: '/health',
 	tags: ['Utility'],
+	summary: 'Health check endpoint',
+	description: 'Returns the current health status of the API service',
 	responses: {
 		[StatusCodes.OK]: {
 			description: 'Health check successful',
@@ -28,15 +34,52 @@ registry.registerPath({
 			description: 'Too many requests - rate limit exceeded',
 			content: {
 				'application/json': {
-					schema: healthErrorSchema,
+					schema: RateLimitErrorSchema,
 				},
 			},
 		},
 		[StatusCodes.INTERNAL_SERVER_ERROR]: {
-			description: 'Health check failed',
+			description: 'Health check failed - internal server error',
 			content: {
 				'application/json': {
-					schema: healthErrorSchema,
+					schema: InternalServerErrorSchema,
+				},
+			},
+		},
+	},
+})
+
+// Register the system info endpoint with OpenAPI
+registry.registerPath({
+	method: 'get',
+	path: '/system-info',
+	tags: ['Utility'],
+	summary: 'System information endpoint',
+	description:
+		'Returns detailed system information including Node.js version, platform, memory usage, and CPU statistics',
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'System information retrieved successfully',
+			content: {
+				'application/json': {
+					schema: systemInfoResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Too many requests - rate limit exceeded',
+			content: {
+				'application/json': {
+					schema: RateLimitErrorSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description:
+				'Failed to retrieve system information - internal server error',
+			content: {
+				'application/json': {
+					schema: InternalServerErrorSchema,
 				},
 			},
 		},
@@ -44,25 +87,11 @@ registry.registerPath({
 })
 
 const utilityRouter = (router: Router) => {
-	router.get('/health', apiRateLimiter, (req, res) => {
-		try {
-			const healthResponse: THealthResponse = {
-				message: 'Api Health Status: OK',
-			}
+	// Health check endpoint using Go-style error handling
+	router.get('/health', apiRateLimiter, utilityController.getHealthStatus)
 
-			res.status(200).json(healthResponse)
-		} catch (error: unknown) {
-			logger.error(
-				`[utility-routes]: Error checking health status: ${(error as Error).message}`,
-			)
-
-			const healthErrorResponse: THealthErrorResponse = {
-				message: 'Api Status: Error',
-			}
-
-			res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(healthErrorResponse)
-		}
-	})
+	// System info endpoint using Go-style error handling
+	router.get('/system-info', apiRateLimiter, utilityController.getSystemInfo)
 }
 
 export { utilityRouter }

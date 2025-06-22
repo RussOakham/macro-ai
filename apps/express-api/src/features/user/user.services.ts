@@ -1,11 +1,14 @@
 import { z } from 'zod'
 import { fromError } from 'zod-validation-error'
 
+import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import {
-	EnhancedResult,
-	tryCatchSync,
-} from '../../utils/error-handling/try-catch.ts'
-import { AppError } from '../../utils/errors.ts'
+	InternalError,
+	NotFoundError,
+	Result,
+	UnauthorizedError,
+	ValidationError,
+} from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 import { CognitoService } from '../auth/auth.services.ts'
 
@@ -31,19 +34,15 @@ class UserService implements IUserService {
 	/**
 	 * Get user by ID from the database
 	 * @param userId The user's unique identifier
-	 * @returns EnhancedResult with the user object or error
+	 * @returns Result tuple with the user object or error
 	 */
-	async getUserById({
-		userId,
-	}: {
-		userId: string
-	}): Promise<EnhancedResult<TUser>> {
+	async getUserById({ userId }: { userId: string }): Promise<Result<TUser>> {
 		// Validate userId with Zod using tryCatchSync
-		const { data: validatedId, error: validationError } = tryCatchSync(() => {
+		const [validatedId, validationError] = tryCatchSync(() => {
 			const result = userIdSchema.safeParse(userId)
 			if (!result.success) {
 				const validationError = fromError(result.error)
-				throw AppError.validation(
+				throw new ValidationError(
 					`Invalid user ID: ${validationError.message}`,
 					{ details: validationError.details },
 					'userService',
@@ -58,25 +57,25 @@ class UserService implements IUserService {
 				userId,
 				error: validationError,
 			})
-			return { data: null, error: validationError }
+			return [null, validationError]
 		}
 
-		const result = await this.userRepository.findUserById({
+		const [user, repositoryError] = await this.userRepository.findUserById({
 			id: validatedId,
 		})
 
-		if (result.error) {
+		if (repositoryError) {
 			logger.error({
 				msg: '[userService - getUserById]: Error retrieving user',
 				userId,
-				error: result.error,
+				error: repositoryError,
 			})
-			return { data: null, error: result.error }
+			return [null, repositoryError]
 		}
 
 		// If user is not found, return a NotFoundError instead of undefined
-		if (!result.data) {
-			const error = AppError.notFound(
+		if (!user) {
+			const error = new NotFoundError(
 				`User with ID ${userId} not found`,
 				'userService - getUserById',
 			)
@@ -84,38 +83,31 @@ class UserService implements IUserService {
 				msg: '[userService - getUserById]: User not found',
 				userId,
 			})
-			return { data: null, error }
+			return [null, error]
 		}
 
-		return { data: result.data, error: null }
+		return [user, null]
 	}
 
 	/**
 	 * Get user by email from the database
 	 * @param email The user's email address
-	 * @returns EnhancedResult with the user object or error
+	 * @returns Result tuple with the user object or error
 	 */
-	async getUserByEmail({
-		email,
-	}: {
-		email: string
-	}): Promise<EnhancedResult<TUser>> {
+	async getUserByEmail({ email }: { email: string }): Promise<Result<TUser>> {
 		// Validate email with Zod and tryCatchSync
-		const { data: validatedEmail, error: validationError } = tryCatchSync(
-			() => {
-				const result = z.string().email().safeParse(email)
-				if (!result.success) {
-					const validationError = fromError(result.error)
-					throw AppError.validation(
-						`Invalid email: ${validationError.message}`,
-						{ details: validationError.details },
-						'userService',
-					)
-				}
-				return result.data
-			},
-			'userService - validateEmail',
-		)
+		const [validatedEmail, validationError] = tryCatchSync(() => {
+			const result = z.string().email().safeParse(email)
+			if (!result.success) {
+				const validationError = fromError(result.error)
+				throw new ValidationError(
+					`Invalid email: ${validationError.message}`,
+					{ details: validationError.details },
+					'userService',
+				)
+			}
+			return result.data
+		}, 'userService - validateEmail')
 
 		if (validationError) {
 			logger.error({
@@ -123,25 +115,25 @@ class UserService implements IUserService {
 				email,
 				error: validationError,
 			})
-			return { data: null, error: validationError }
+			return [null, validationError]
 		}
 
-		const result = await this.userRepository.findUserByEmail({
+		const [user, repositoryError] = await this.userRepository.findUserByEmail({
 			email: validatedEmail,
 		})
 
-		if (result.error) {
+		if (repositoryError) {
 			logger.error({
 				msg: '[userService - getUserByEmail]: Error retrieving user',
 				email,
-				error: result.error,
+				error: repositoryError,
 			})
-			return { data: null, error: result.error }
+			return [null, repositoryError]
 		}
 
 		// If user is not found, return a NotFoundError instead of undefined
-		if (!result.data) {
-			const error = AppError.notFound(
+		if (!user) {
+			const error = new NotFoundError(
 				`User with email ${email} not found`,
 				'userService - getUserByEmail',
 			)
@@ -149,60 +141,61 @@ class UserService implements IUserService {
 				msg: '[userService - getUserByEmail]: User not found',
 				email,
 			})
-			return { data: null, error }
+			return [null, error]
 		}
 
-		return { data: result.data, error: null }
+		return [user, null]
 	}
 
 	/**
 	 * Get user by access token
 	 * Verifies the token with Cognito and retrieves the user from the database
 	 * @param accessToken The Cognito access token
-	 * @returns EnhancedResult with the user object or error
+	 * @returns Result tuple with the user object or error
 	 */
 	async getUserByAccessToken({
 		accessToken,
 	}: {
 		accessToken: string
-	}): Promise<EnhancedResult<TUser>> {
+	}): Promise<Result<TUser>> {
 		// Get user ID from Cognito using access token
-		const cognitoResult = await this.cognitoService.getAuthUser(accessToken)
+		const [cognitoUser, cognitoError] =
+			await this.cognitoService.getAuthUser(accessToken)
 
-		if (cognitoResult.error) {
+		if (cognitoError) {
 			logger.error({
 				msg: '[userService - getUserByAccessToken]: Error retrieving user by token',
-				error: cognitoResult.error,
+				error: cognitoError,
 			})
-			return { data: null, error: cognitoResult.error }
+			return [null, cognitoError]
 		}
 
-		// Check if cognitoResult.data exists and has a Username property
-		if (!cognitoResult.data.Username) {
-			const error = AppError.unauthorized('Invalid access token', 'userService')
+		// Check if cognitoUser exists and has a Username property
+		if (!cognitoUser.Username) {
+			const error = new UnauthorizedError('Invalid access token', 'userService')
 			logger.error({
 				msg: '[userService - getUserByAccessToken]: Missing or invalid user data from token',
 				error: error.message,
 			})
-			return { data: null, error }
+			return [null, error]
 		}
 
 		// Use ID to get user from database
-		const userResult = await this.getUserById({
-			userId: cognitoResult.data.Username,
+		const [user, userError] = await this.getUserById({
+			userId: cognitoUser.Username,
 		})
 
 		// No need to check for undefined here since getUserById now returns an error if user not found
-		if (userResult.error) {
+		if (userError) {
 			logger.error({
 				msg: '[userService - getUserByAccessToken]: Error retrieving user by ID',
-				userId: cognitoResult.data.Username,
-				error: userResult.error,
+				userId: cognitoUser.Username,
+				error: userError,
 			})
-			return { data: null, error: userResult.error }
+			return [null, userError]
 		}
 
-		return { data: userResult.data, error: null }
+		return [user, null]
 	}
 
 	/**
@@ -211,7 +204,7 @@ class UserService implements IUserService {
 	 * @param email The user's email address
 	 * @param firstName Optional first name
 	 * @param lastName Optional last name
-	 * @returns EnhancedResult with the user object
+	 * @returns Result tuple with the user object
 	 */
 	async registerOrLoginUserById({
 		id,
@@ -223,22 +216,24 @@ class UserService implements IUserService {
 		email: string
 		firstName?: string
 		lastName?: string
-	}): Promise<EnhancedResult<TUser>> {
+	}): Promise<Result<TUser>> {
 		// Check if user Exists
-		const userResult = await this.userRepository.findUserById({ id })
+		const [existingUser, userError] = await this.userRepository.findUserById({
+			id,
+		})
 
-		if (userResult.error) {
+		if (userError) {
 			logger.error({
 				msg: '[userService - registerOrLoginUserById]: Error retrieving user',
 				userId: id,
-				error: userResult.error,
+				error: userError,
 			})
-			return { data: null, error: userResult.error }
+			return [null, userError]
 		}
 
 		// Create new user if not found
-		if (!userResult.data) {
-			const newUserResult = await this.userRepository.createUser({
+		if (!existingUser) {
+			const [newUser, createError] = await this.userRepository.createUser({
 				userData: {
 					id,
 					email,
@@ -247,32 +242,33 @@ class UserService implements IUserService {
 				},
 			})
 
-			if (newUserResult.error) {
+			if (createError) {
 				logger.error({
 					msg: '[userService - registerOrLoginUserById]: Error creating user',
 					userId: id,
-					error: newUserResult.error,
+					error: createError,
 				})
-				return { data: null, error: newUserResult.error }
+				return [null, createError]
 			}
 
-			return { data: newUserResult.data, error: null }
+			return [newUser, null]
 		}
 
 		// Update last login timestamp if found
-		const updatedUserResult = await this.userRepository.updateLastLogin({ id })
+		const [updatedUser, updateError] =
+			await this.userRepository.updateLastLogin({ id })
 
-		if (updatedUserResult.error) {
+		if (updateError) {
 			logger.error({
 				msg: '[userService - registerOrLoginUserById]: Error updating last login',
 				userId: id,
-				error: updatedUserResult.error,
+				error: updateError,
 			})
-			return { data: null, error: updatedUserResult.error }
+			return [null, updateError]
 		}
 
-		if (!updatedUserResult.data) {
-			const error = AppError.internal(
+		if (!updatedUser) {
+			const error = new InternalError(
 				'Failed to update last login timestamp',
 				'userService',
 			)
@@ -280,10 +276,10 @@ class UserService implements IUserService {
 				msg: '[userService - registerOrLoginUserById]: Failed to update last login',
 				userId: id,
 			})
-			return { data: null, error }
+			return [null, error]
 		}
 
-		return { data: updatedUserResult.data, error: null }
+		return [updatedUser, null]
 	}
 }
 

@@ -1,11 +1,11 @@
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
-import { ErrorType } from '../../utils/errors.ts'
+import { UnauthorizedError, ValidationError } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 
 import { userService } from './user.services.ts'
-import { IUserController, TMessageBase, TUserResponse } from './user.types.ts'
+import { IUserController, TUserResponse } from './user.types.ts'
 
 const { logger } = pino
 
@@ -27,55 +27,32 @@ class UserController implements IUserController {
 	public getCurrentUser = async (
 		req: Request,
 		res: Response,
+		next: NextFunction,
 	): Promise<void> => {
 		// The userId is added by the verifyAuth middleware
 		if (!req.userId) {
 			logger.error('[userController - getCurrentUser]: No user ID in request')
-			res.status(StatusCodes.UNAUTHORIZED).json({
-				message: 'Authentication required',
-			})
+			const error = new UnauthorizedError(
+				'Authentication required',
+				'userController',
+			)
+			next(error)
 			return
 		}
 
-		const { data: user, error: userError } = await this.userService.getUserById(
-			{
-				userId: req.userId,
-			},
-		)
+		const [user, userError] = await this.userService.getUserById({
+			userId: req.userId,
+		})
 
-		// Handle errors
+		// Handle errors using centralized error middleware
 		if (userError) {
 			logger.error({
 				msg: '[userController - getCurrentUser]: Error retrieving current user',
 				userId: req.userId,
 				error: userError.message,
-				type: userError.type,
-				details: userError.details,
 			})
-			switch (userError.type) {
-				case ErrorType.UnauthorizedError: {
-					const authResponse: TMessageBase = {
-						message: 'Authentication required',
-					}
-
-					res.status(StatusCodes.UNAUTHORIZED).json(authResponse)
-					return
-				}
-				case ErrorType.NotFoundError: {
-					const notFoundResponse: TMessageBase = {
-						message: 'User not found',
-					}
-					res.status(StatusCodes.NOT_FOUND).json(notFoundResponse)
-					return
-				}
-				default: {
-					const internalResponse: TMessageBase = {
-						message: 'Internal server error',
-					}
-					res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(internalResponse)
-					return
-				}
-			}
+			next(userError)
+			return
 		}
 
 		const userResponse: TUserResponse = {
@@ -99,61 +76,35 @@ class UserController implements IUserController {
 	 * This method can be used for getting any user's profile
 	 * Authorization checks should be implemented at the route level
 	 */
-	public getUserById = async (req: Request, res: Response): Promise<void> => {
+	public getUserById = async (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): Promise<void> => {
 		const userId = req.params.id
 
 		if (!userId) {
 			logger.error('[userController - getUserById]: No user ID provided')
-			res.status(StatusCodes.BAD_REQUEST).json({
-				message: 'User ID is required',
-			})
+			const error = new ValidationError(
+				'User ID is required',
+				undefined,
+				'userController',
+			)
+			next(error)
 			return
 		}
 
-		const { data: user, error: userError } = await this.userService.getUserById(
-			{ userId },
-		)
+		const [user, userError] = await this.userService.getUserById({ userId })
 
-		// Handle errors
+		// Handle errors using centralized error middleware
 		if (userError) {
 			logger.error({
 				msg: '[userController - getUserById]: Error retrieving user',
 				userId,
 				error: userError.message,
-				type: userError.type,
-				details: userError.details,
 			})
-			switch (userError.type) {
-				case ErrorType.UnauthorizedError: {
-					const authResponse: TMessageBase = {
-						message: 'Authentication required',
-					}
-
-					res.status(StatusCodes.UNAUTHORIZED).json(authResponse)
-					return
-				}
-				case ErrorType.ForbiddenError: {
-					const forbiddenResponse: TMessageBase = {
-						message: 'Access denied',
-					}
-					res.status(StatusCodes.FORBIDDEN).json(forbiddenResponse)
-					return
-				}
-				case ErrorType.NotFoundError: {
-					const notFoundResponse: TMessageBase = {
-						message: 'User not found',
-					}
-					res.status(StatusCodes.NOT_FOUND).json(notFoundResponse)
-					return
-				}
-				default: {
-					const internalResponse: TMessageBase = {
-						message: 'Internal server error',
-					}
-					res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(internalResponse)
-					return
-				}
-			}
+			next(userError)
+			return
 		}
 
 		const userResponse: TUserResponse = {

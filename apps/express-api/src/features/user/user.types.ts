@@ -1,7 +1,7 @@
 import express from 'express'
 import { z } from 'zod'
 
-import { EnhancedResult } from '../../utils/error-handling/try-catch.ts'
+import { type Result } from '../../utils/errors.ts'
 
 import {
 	insertUserSchema,
@@ -16,21 +16,13 @@ interface IUserController {
 }
 
 interface IUserService {
-	getUserById: ({
-		userId,
-	}: {
-		userId: string
-	}) => Promise<EnhancedResult<TUser>>
-	getUserByEmail: ({
-		email,
-	}: {
-		email: string
-	}) => Promise<EnhancedResult<TUser>>
+	getUserById: ({ userId }: { userId: string }) => Promise<Result<TUser>>
+	getUserByEmail: ({ email }: { email: string }) => Promise<Result<TUser>>
 	getUserByAccessToken: ({
 		accessToken,
 	}: {
 		accessToken: string
-	}) => Promise<EnhancedResult<TUser>>
+	}) => Promise<Result<TUser>>
 	registerOrLoginUserById: ({
 		id,
 		email,
@@ -41,7 +33,7 @@ interface IUserService {
 		email: string
 		firstName?: string
 		lastName?: string
-	}) => Promise<EnhancedResult<TUser>>
+	}) => Promise<Result<TUser>>
 }
 
 interface IUserRepository {
@@ -49,26 +41,22 @@ interface IUserRepository {
 		email,
 	}: {
 		email: string
-	}) => Promise<EnhancedResult<TUser | undefined>>
-	findUserById: ({
-		id,
-	}: {
-		id: string
-	}) => Promise<EnhancedResult<TUser | undefined>>
+	}) => Promise<Result<TUser | undefined>>
+	findUserById: ({ id }: { id: string }) => Promise<Result<TUser | undefined>>
 	createUser: ({
 		userData,
 	}: {
 		userData: TInsertUser
-	}) => Promise<EnhancedResult<TUser>>
+	}) => Promise<Result<TUser>>
 	updateLastLogin: ({
 		id,
 	}: {
 		id: string
-	}) => Promise<EnhancedResult<TUser | undefined>>
+	}) => Promise<Result<TUser | undefined>>
 	updateUser: (
 		id: string,
 		userData: Partial<TInsertUser>,
-	) => Promise<EnhancedResult<TUser | undefined>>
+	) => Promise<Result<TUser | undefined>>
 }
 
 // Define types using Zod schemas

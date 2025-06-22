@@ -1,10 +1,10 @@
 import { Response } from 'express'
-import { ReasonPhrases, StatusCodes } from 'http-status-codes'
+import { StatusCodes } from 'http-status-codes'
 import { z } from 'zod'
 import { fromError } from 'zod-validation-error'
 
 import { tryCatchSync } from './error-handling/try-catch.ts'
-import { AppError, ErrorType, IStandardizedError } from './errors.ts'
+import { ValidationError } from './errors.ts'
 import { pino } from './logger.ts'
 
 const { logger } = pino
@@ -76,75 +76,6 @@ export const handleServiceError = (
 	return { success: true }
 }
 
-/**
- * Handles standardized errors
- * @param res Express response object
- * @param err Standardized error object
- * @param logContext Context for logging
- * @returns The Express response object for chaining
- */
-export const handleError = (
-	res: Response,
-	err: IStandardizedError,
-	logContext: string,
-): Response => {
-	logger.error(
-		`[${logContext}]: Error: ${err.status.toString()} ${err.message}`,
-	)
-
-	// Handle specific error cases
-	switch (err.type) {
-		case ErrorType.UnauthorizedError:
-			return res.status(StatusCodes.UNAUTHORIZED).json({
-				message: 'Authentication required',
-			})
-		case ErrorType.ForbiddenError:
-			return res.status(StatusCodes.FORBIDDEN).json({
-				message: 'Access denied',
-			})
-		case ErrorType.NotFoundError:
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: err.message || 'Resource not found',
-			})
-		case ErrorType.ValidationError:
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: err.message,
-			})
-		case ErrorType.ConflictError:
-			return res.status(StatusCodes.CONFLICT).json({
-				message: err.message,
-			})
-		case ErrorType.InternalError:
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-				message: err.message,
-			})
-		case ErrorType.ApiError:
-			return res.status(err.status).json({
-				message: err.message,
-			})
-		case ErrorType.AxiosError:
-			return res.status(err.status).json({
-				message: err.message || 'External API error',
-			})
-		case ErrorType.CognitoError:
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-				message: 'A Cognito error occurred',
-			})
-		case ErrorType.ZodError:
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: ReasonPhrases.BAD_REQUEST,
-			})
-		case ErrorType.ZodValidationError:
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: ReasonPhrases.BAD_REQUEST,
-			})
-		default:
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-				message: 'An unknown error occurred',
-			})
-	}
-}
-
 type TValidationResult =
 	| { valid: true }
 	| { valid: false; error: { message: string; status: number } }
@@ -210,7 +141,7 @@ export const safeValidateSchema = <T>(
 
 		if (!result.success) {
 			const validationError = fromError(result.error)
-			throw AppError.validation(
+			throw new ValidationError(
 				`Validation failed: ${validationError.message}`,
 				{ details: validationError.details },
 				logContext,
