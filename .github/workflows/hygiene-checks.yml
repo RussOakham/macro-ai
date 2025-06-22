@@ -197,8 +197,8 @@ jobs:
         run: |
           echo "${{ needs.setup.outputs.client_env }}" > apps/client-ui/.env
 
-      - name: Run test
-        run: pnpm test
+      - name: Run test with coverage
+        run: pnpm test:coverage
         env:
           API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
           AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
@@ -210,3 +210,42 @@ jobs:
           COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
           NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-reports
+          path: |
+            apps/express-api/coverage/
+            **/coverage/
+          retention-days: 30
+
+      - name: Extract coverage percentage
+        id: coverage
+        if: always()
+        run: |
+          # Extract coverage percentage from the JSON report
+          if [ -f "apps/express-api/coverage/coverage-summary.json" ]; then
+            COVERAGE=$(node -p "
+              const fs = require('fs');
+              const coverage = JSON.parse(fs.readFileSync('apps/express-api/coverage/coverage-summary.json', 'utf8'));
+              Math.round(coverage.total.lines.pct || 0);
+            ")
+            echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
+            echo "Coverage: $COVERAGE%"
+          else
+            echo "percentage=0" >> $GITHUB_OUTPUT
+            echo "Coverage file not found"
+          fi
+
+      - name: Create coverage badge
+        if: github.ref == 'refs/heads/main' && always()
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GITHUB_TOKEN }}
+          gistID: ${{ secrets.COVERAGE_GIST_ID }}
+          filename: macro-ai-coverage.json
+          label: coverage
+          message: ${{ steps.coverage.outputs.percentage }}%
+          color: ${{ steps.coverage.outputs.percentage >= 80 && 'brightgreen' || steps.coverage.outputs.percentage >= 60 && 'yellow' || 'red' }}
