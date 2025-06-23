@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from 'express'
-import { AnyZodObject, ZodEffects, ZodError } from 'zod'
-import { fromError } from 'zod-validation-error'
+import { AnyZodObject, ZodEffects } from 'zod'
 
-import { InternalError, ValidationError } from '../utils/errors.ts'
+import { tryCatch } from '../utils/error-handling/try-catch.ts'
+import { ErrorType, ValidationError } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
 
 const { logger } = pino
@@ -15,43 +15,39 @@ const validate = <T>(
 	target: ValidationTarget = 'body',
 ) => {
 	return async (req: Request, res: Response, next: NextFunction) => {
-		try {
-			const data = await schema.parseAsync(req[target])
-			req[target] = data
-			next()
-		} catch (error: unknown) {
-			if (error instanceof ZodError) {
-				const validationError = fromError(error)
+		const [data, error] = await tryCatch(
+			schema.parseAsync(req[target]) as Promise<T>,
+			`validation middleware - ${target}`,
+		)
 
+		if (error) {
+			// Check if it's a ZodError for specific handling
+			if (error.type === ErrorType.ZodError) {
+				// Log validation error as warning
 				logger.warn({
 					msg: '[middleware - validateRequest]: Validation error',
 					path: req.path,
-					error: validationError.message,
+					error: error.message,
 				})
 
-				// Use Go-style error handling with custom error class
+				// Convert to ValidationError for consistent handling
 				const validationErr = new ValidationError(
 					'Validation Failed',
-					validationError.details,
+					error.details,
 					'validation middleware',
 				)
 				next(validationErr)
 				return
 			}
 
-			logger.error({
-				msg: '[middleware - validateRequest]: Unexpected error',
-				path: req.path,
-				error: (error as Error).message,
-			})
-
-			// Use Go-style error handling with custom error class
-			const internalErr = new InternalError(
-				'Internal server error during validation',
-				'validation middleware',
-			)
-			next(internalErr)
+			// For other errors, pass the already standardized error from tryCatch
+			next(error)
+			return
 		}
+
+		// Success case - update request and continue
+		req[target] = data
+		next()
 	}
 }
 
