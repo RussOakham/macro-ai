@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { InternalError, NotFoundError } from '../../../utils/errors.ts'
+import { mockExpress } from '../../../utils/test-helpers/express-mocks.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { userController } from '../user.controller.ts'
 import { userService } from '../user.services.ts'
@@ -25,8 +26,6 @@ describe('UserController', () => {
 	let mockRequest: Partial<Request>
 	let mockResponse: Partial<Response>
 	let mockNext: NextFunction
-	let mockJson: ReturnType<typeof vi.fn>
-	let mockStatus: ReturnType<typeof vi.fn>
 
 	const mockUser: TUser = {
 		id: '123e4567-e89b-12d3-a456-426614174000',
@@ -40,20 +39,10 @@ describe('UserController', () => {
 	}
 
 	beforeEach(() => {
-		vi.clearAllMocks()
-
-		mockJson = vi.fn()
-		mockStatus = vi.fn().mockReturnValue({ json: mockJson })
-
-		mockRequest = {
-			userId: undefined,
-			params: {},
-		}
-		mockResponse = {
-			status: mockStatus,
-			json: mockJson,
-		}
-		mockNext = vi.fn()
+		const mocks = mockExpress.setup()
+		mockRequest = mocks.req
+		mockResponse = mocks.res
+		mockNext = mocks.next
 	})
 
 	describe('getCurrentUser', () => {
@@ -73,8 +62,8 @@ describe('UserController', () => {
 			expect(userService.getUserById).toHaveBeenCalledWith({
 				userId: '123e4567-e89b-12d3-a456-426614174000',
 			})
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.OK)
-			expect(mockJson).toHaveBeenCalledWith({
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
+			expect(mockResponse.json).toHaveBeenCalledWith({
 				user: {
 					id: mockUser.id,
 					email: mockUser.email,
@@ -107,8 +96,8 @@ describe('UserController', () => {
 					status: StatusCodes.UNAUTHORIZED,
 				}),
 			)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 
 		it('should handle service error and call next middleware', async () => {
@@ -129,8 +118,8 @@ describe('UserController', () => {
 				userId: '123e4567-e89b-12d3-a456-426614174000',
 			})
 			expect(mockNext).toHaveBeenCalledWith(serviceError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 	})
 
@@ -151,8 +140,8 @@ describe('UserController', () => {
 			expect(userService.getUserById).toHaveBeenCalledWith({
 				userId: '123e4567-e89b-12d3-a456-426614174000',
 			})
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.OK)
-			expect(mockJson).toHaveBeenCalledWith({
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
+			expect(mockResponse.json).toHaveBeenCalledWith({
 				user: {
 					id: mockUser.id,
 					email: mockUser.email,
@@ -185,8 +174,8 @@ describe('UserController', () => {
 					status: StatusCodes.BAD_REQUEST,
 				}),
 			)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 
 		it('should handle service error and call next middleware', async () => {
@@ -207,8 +196,8 @@ describe('UserController', () => {
 				userId: '123e4567-e89b-12d3-a456-426614174000',
 			})
 			expect(mockNext).toHaveBeenCalledWith(serviceError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 
 		it('should handle empty string user ID as missing ID', async () => {
@@ -229,8 +218,8 @@ describe('UserController', () => {
 					status: StatusCodes.BAD_REQUEST,
 				}),
 			)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 	})
 })

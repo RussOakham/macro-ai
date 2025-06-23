@@ -99,6 +99,110 @@ describe('Your Test', () => {
 })
 ```
 
+### Express Mocks (`express-mocks.ts`)
+
+Reusable factory functions for creating Express Request, Response, and NextFunction mocks with proper TypeScript typing and chainable methods.
+
+#### Basic Usage
+
+```typescript
+import { mockExpress } from '../utils/test-helpers/express-mocks.ts'
+
+describe('Your Controller Test', () => {
+	let mockRequest: Partial<Request>
+	let mockResponse: Partial<Response>
+	let mockNext: NextFunction
+
+	beforeEach(() => {
+		// Setup all Express mocks with automatic cleanup
+		const mocks = mockExpress.setup()
+		mockRequest = mocks.req
+		mockResponse = mocks.res
+		mockNext = mocks.next
+	})
+
+	it('should handle successful response', async () => {
+		// Act
+		await yourController.method(
+			mockRequest as Request,
+			mockResponse as Response,
+			mockNext,
+		)
+
+		// Assert - supports status().json() chaining
+		expect(mockResponse.status).toHaveBeenCalledWith(200)
+		expect(mockResponse.json).toHaveBeenCalledWith({ message: 'success' })
+		expect(mockNext).not.toHaveBeenCalled()
+	})
+})
+```
+
+#### Advanced Usage
+
+```typescript
+describe('Advanced Express Mocking', () => {
+	it('should handle authenticated request', () => {
+		// Create request with specific properties
+		const req = mockExpress.createAuthenticatedRequest('user-123', {
+			body: { data: 'test' },
+			params: { id: '456' },
+		})
+
+		expect(req.userId).toBe('user-123')
+		expect(req.body).toEqual({ data: 'test' })
+		expect(req.params).toEqual({ id: '456' })
+	})
+
+	it('should handle different request types', () => {
+		// Helper functions for common scenarios
+		const bodyReq = mockExpress.createRequestWithBody({
+			email: 'test@example.com',
+		})
+		const paramReq = mockExpress.createRequestWithParams({ id: '123' })
+		const headerReq = mockExpress.createRequestWithHeaders({
+			'x-api-key': 'secret',
+		})
+		const cookieReq = mockExpress.createRequestWithCookies({
+			sessionId: 'abc123',
+		})
+
+		// All helpers support additional overrides
+		const complexReq = mockExpress.createRequestWithBody(
+			{ email: 'test@example.com' },
+			{ userId: 'user-123', params: { id: '456' } },
+		)
+	})
+
+	it('should test response chaining', () => {
+		const res = mockExpress.createResponse()
+
+		// Test chainable methods
+		res.cookie('sessionId', 'abc123').clearCookie('oldSession')
+		expect(res.cookie).toHaveBeenCalledWith('sessionId', 'abc123')
+		expect(res.clearCookie).toHaveBeenCalledWith('oldSession')
+
+		// Test status().json() pattern
+		const statusResult = res.status(201)
+		statusResult.json({ id: 'new-resource' })
+		expect(res.status).toHaveBeenCalledWith(201)
+		expect(statusResult.json).toHaveBeenCalledWith({ id: 'new-resource' })
+	})
+})
+```
+
+#### Available Methods
+
+- `mockExpress.setup(requestOverrides?)` - Creates all mocks with cleanup
+- `mockExpress.createRequest(overrides?)` - Creates Request mock
+- `mockExpress.createResponse()` - Creates Response mock with chaining
+- `mockExpress.createNext()` - Creates NextFunction mock
+- `mockExpress.createMocks(requestOverrides?)` - Creates all mocks without cleanup
+- `mockExpress.createAuthenticatedRequest(userId, overrides?)` - Request with userId
+- `mockExpress.createRequestWithBody(body, overrides?)` - Request with body
+- `mockExpress.createRequestWithParams(params, overrides?)` - Request with params
+- `mockExpress.createRequestWithHeaders(headers, overrides?)` - Request with headers
+- `mockExpress.createRequestWithCookies(cookies, overrides?)` - Request with cookies
+
 ## Migration Guide
 
 ### Replacing Manual Logger Mocks
@@ -125,6 +229,69 @@ vi.mock('../../utils/logger.ts', () => ({
 import { mockLogger } from '../../utils/test-helpers/logger.mock.ts'
 
 vi.mock('../../utils/logger.ts', () => mockLogger.createModule())
+```
+
+### Replacing Manual Express Mocks
+
+**Before:**
+
+```typescript
+describe('Controller Test', () => {
+	let mockRequest: Partial<Request>
+	let mockResponse: Partial<Response>
+	let mockNext: NextFunction
+	let mockJson: ReturnType<typeof vi.fn>
+	let mockStatus: ReturnType<typeof vi.fn>
+
+	beforeEach(() => {
+		vi.clearAllMocks()
+
+		mockJson = vi.fn()
+		mockStatus = vi.fn().mockReturnValue({ json: mockJson })
+
+		mockRequest = {
+			body: {},
+			params: {},
+			userId: 'user-123',
+		}
+		mockResponse = {
+			status: mockStatus,
+			json: mockJson,
+		}
+		mockNext = vi.fn()
+	})
+
+	it('should test controller', async () => {
+		// Test logic...
+		expect(mockStatus).toHaveBeenCalledWith(200)
+		expect(mockJson).toHaveBeenCalledWith({ message: 'success' })
+	})
+})
+```
+
+**After:**
+
+```typescript
+import { mockExpress } from '../../utils/test-helpers/express-mocks.ts'
+
+describe('Controller Test', () => {
+	let mockRequest: Partial<Request>
+	let mockResponse: Partial<Response>
+	let mockNext: NextFunction
+
+	beforeEach(() => {
+		const mocks = mockExpress.setup({ userId: 'user-123' })
+		mockRequest = mocks.req
+		mockResponse = mocks.res
+		mockNext = mocks.next
+	})
+
+	it('should test controller', async () => {
+		// Test logic...
+		expect(mockResponse.status).toHaveBeenCalledWith(200)
+		expect(mockResponse.json).toHaveBeenCalledWith({ message: 'success' })
+	})
+})
 ```
 
 ### Benefits

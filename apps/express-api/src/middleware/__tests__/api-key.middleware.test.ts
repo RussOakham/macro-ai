@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { UnauthorizedError } from '../../utils/errors.ts'
+import { mockExpress } from '../../utils/test-helpers/express-mocks.ts'
 import { mockLogger } from '../../utils/test-helpers/logger.mock.ts'
 
 // Mock the logger using the reusable helper
@@ -23,17 +24,15 @@ describe('apiKeyAuth Middleware', () => {
 	let mockNext: NextFunction
 
 	beforeEach(() => {
-		vi.clearAllMocks()
-
-		mockRequest = {
+		// Setup Express mocks with default properties for API key middleware tests
+		const expressMocks = mockExpress.setup({
 			path: '/api/test',
 			headers: {},
 			ip: '127.0.0.1',
-		}
-
-		mockResponse = {}
-
-		mockNext = vi.fn()
+		})
+		mockRequest = expressMocks.req
+		mockResponse = expressMocks.res
+		mockNext = expressMocks.next
 	})
 
 	describe('Swagger Documentation Bypass', () => {

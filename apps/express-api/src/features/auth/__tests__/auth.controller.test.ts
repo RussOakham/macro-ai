@@ -29,6 +29,7 @@ import {
 	handleServiceError,
 	validateData,
 } from '../../../utils/response-handlers.ts'
+import { mockExpress } from '../../../utils/test-helpers/express-mocks.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { userRepository } from '../../user/user.data-access.ts'
 import { userService } from '../../user/user.services.ts'
@@ -113,10 +114,6 @@ describe('AuthController', () => {
 	let mockRequest: Partial<Request>
 	let mockResponse: Partial<Response>
 	let mockNext: NextFunction
-	let mockJson: ReturnType<typeof vi.fn>
-	let mockStatus: ReturnType<typeof vi.fn>
-	let mockClearCookie: ReturnType<typeof vi.fn>
-	let mockCookie: ReturnType<typeof vi.fn>
 	const mockUser: TUser = {
 		id: '123e4567-e89b-12d3-a456-426614174000',
 		email: 'test@example.com',
@@ -129,25 +126,11 @@ describe('AuthController', () => {
 	}
 
 	beforeEach(() => {
-		vi.clearAllMocks()
-
-		// Mock Express objects
-		mockJson = vi.fn()
-		mockStatus = vi.fn().mockReturnValue({ json: mockJson })
-		mockClearCookie = vi.fn().mockReturnThis()
-		mockCookie = vi.fn().mockReturnThis()
-
-		mockRequest = {
-			body: {},
-			cookies: {},
-		}
-		mockResponse = {
-			status: mockStatus,
-			json: mockJson,
-			clearCookie: mockClearCookie,
-			cookie: mockCookie,
-		}
-		mockNext = vi.fn()
+		// Setup Express mocks
+		const mocks = mockExpress.setup()
+		mockRequest = mocks.req
+		mockResponse = mocks.res
+		mockNext = mocks.next
 
 		// Mock utility functions
 		vi.mocked(handleServiceError).mockReturnValue({ success: true })
@@ -189,8 +172,8 @@ describe('AuthController', () => {
 					type: ErrorType.ConflictError,
 				}),
 			)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 
 		it('should handle getUserByEmail service error', async () => {
@@ -220,8 +203,8 @@ describe('AuthController', () => {
 				email: registerRequest.email,
 			})
 			expect(mockNext).toHaveBeenCalledWith(serviceError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 
 		it('should successfully register a new user', async () => {
@@ -286,8 +269,8 @@ describe('AuthController', () => {
 					email: 'test@example.com',
 				},
 			})
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.CREATED)
-			expect(mockJson).toHaveBeenCalledWith({
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.CREATED)
+			expect(mockResponse.json).toHaveBeenCalledWith({
 				message:
 					'Registration successful. Please check your email for verification code.',
 				user: {
@@ -329,8 +312,8 @@ describe('AuthController', () => {
 			// Assert
 			expect(cognitoService.signUpUser).toHaveBeenCalledWith(registerRequest)
 			expect(mockNext).toHaveBeenCalledWith(cognitoError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 
 		it('should handle service error in register', async () => {
@@ -376,8 +359,10 @@ describe('AuthController', () => {
 
 			// Assert
 			expect(cognitoService.signUpUser).toHaveBeenCalledWith(registerRequest)
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST)
-			expect(mockJson).toHaveBeenCalledWith({ message: 'Service error' })
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST)
+			expect(mockResponse.json).toHaveBeenCalledWith({
+				message: 'Service error',
+			})
 			expect(mockNext).not.toHaveBeenCalled()
 		})
 
@@ -427,8 +412,8 @@ describe('AuthController', () => {
 					message: 'User not created - no user ID returned',
 				}),
 			)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 
 		it('should handle userRepository.createUser error', async () => {
@@ -485,8 +470,8 @@ describe('AuthController', () => {
 				},
 			})
 			expect(mockNext).toHaveBeenCalledWith(createUserError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 	})
 
@@ -537,8 +522,8 @@ describe('AuthController', () => {
 			expect(userRepository.updateUser).toHaveBeenCalledWith(mockUser.id, {
 				emailVerified: true,
 			})
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.OK)
-			expect(mockJson).toHaveBeenCalledWith({
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
+			expect(mockResponse.json).toHaveBeenCalledWith({
 				message: 'Email confirmed successfully',
 			})
 			expect(mockNext).not.toHaveBeenCalled()
@@ -571,8 +556,8 @@ describe('AuthController', () => {
 				123456,
 			)
 			expect(mockNext).toHaveBeenCalledWith(cognitoError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 	})
 
@@ -629,23 +614,23 @@ describe('AuthController', () => {
 				email: 'test@example.com',
 			})
 			expect(encrypt).toHaveBeenCalledWith('test-user-id')
-			expect(mockCookie).toHaveBeenCalledWith(
+			expect(mockResponse.cookie).toHaveBeenCalledWith(
 				'macro-ai-accessToken',
 				'access-token',
 				expect.any(Object),
 			)
-			expect(mockCookie).toHaveBeenCalledWith(
+			expect(mockResponse.cookie).toHaveBeenCalledWith(
 				'macro-ai-refreshToken',
 				'refresh-token',
 				expect.any(Object),
 			)
-			expect(mockCookie).toHaveBeenCalledWith(
+			expect(mockResponse.cookie).toHaveBeenCalledWith(
 				'macro-ai-synchronize',
 				'encrypted-value',
 				expect.any(Object),
 			)
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.OK)
-			expect(mockJson).toHaveBeenCalledWith({
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
+			expect(mockResponse.json).toHaveBeenCalledWith({
 				message: 'Login successful',
 				tokens: {
 					accessToken: 'access-token',
@@ -686,8 +671,8 @@ describe('AuthController', () => {
 				loginRequest.password,
 			)
 			expect(mockNext).toHaveBeenCalledWith(cognitoError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 
 		it('should handle user registration/login error', async () => {
@@ -745,8 +730,8 @@ describe('AuthController', () => {
 				email: 'test@example.com',
 			})
 			expect(mockNext).toHaveBeenCalledWith(userServiceError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 	})
 
@@ -786,20 +771,20 @@ describe('AuthController', () => {
 				'authController - logout',
 			)
 			expect(cognitoService.signOutUser).toHaveBeenCalledWith('access-token')
-			expect(mockClearCookie).toHaveBeenCalledWith(
+			expect(mockResponse.clearCookie).toHaveBeenCalledWith(
 				'macro-ai-accessToken',
 				expect.any(Object),
 			)
-			expect(mockClearCookie).toHaveBeenCalledWith(
+			expect(mockResponse.clearCookie).toHaveBeenCalledWith(
 				'macro-ai-refreshToken',
 				expect.any(Object),
 			)
-			expect(mockClearCookie).toHaveBeenCalledWith(
+			expect(mockResponse.clearCookie).toHaveBeenCalledWith(
 				'macro-ai-synchronize',
 				expect.any(Object),
 			)
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.OK)
-			expect(mockJson).toHaveBeenCalledWith({
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
+			expect(mockResponse.json).toHaveBeenCalledWith({
 				message: 'Logout successful',
 			})
 			expect(mockNext).not.toHaveBeenCalled()
@@ -827,8 +812,8 @@ describe('AuthController', () => {
 			)
 			expect(mockNext).toHaveBeenCalledWith(accessTokenError)
 			expect(cognitoService.signOutUser).not.toHaveBeenCalled()
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 
 		it('should handle Cognito signOut error', async () => {
@@ -854,8 +839,8 @@ describe('AuthController', () => {
 			)
 			expect(cognitoService.signOutUser).toHaveBeenCalledWith('access-token')
 			expect(mockNext).toHaveBeenCalledWith(cognitoError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 	})
 
@@ -892,8 +877,8 @@ describe('AuthController', () => {
 			expect(cognitoService.resendConfirmationCode).toHaveBeenCalledWith(
 				'test@example.com',
 			)
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.OK)
-			expect(mockJson).toHaveBeenCalledWith({
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
+			expect(mockResponse.json).toHaveBeenCalledWith({
 				message: 'Confirmation code resent successfully',
 			})
 			expect(mockNext).not.toHaveBeenCalled()
@@ -924,8 +909,8 @@ describe('AuthController', () => {
 				'test@example.com',
 			)
 			expect(mockNext).toHaveBeenCalledWith(cognitoError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 
 		it('should handle service error in resendConfirmationCode', async () => {
@@ -963,8 +948,10 @@ describe('AuthController', () => {
 			expect(cognitoService.resendConfirmationCode).toHaveBeenCalledWith(
 				'test@example.com',
 			)
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST)
-			expect(mockJson).toHaveBeenCalledWith({ message: 'Service error' })
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST)
+			expect(mockResponse.json).toHaveBeenCalledWith({
+				message: 'Service error',
+			})
 			expect(mockNext).not.toHaveBeenCalled()
 		})
 	})
@@ -1002,8 +989,8 @@ describe('AuthController', () => {
 			expect(cognitoService.forgotPassword).toHaveBeenCalledWith(
 				'test@example.com',
 			)
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.OK)
-			expect(mockJson).toHaveBeenCalledWith({
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
+			expect(mockResponse.json).toHaveBeenCalledWith({
 				message: 'Password reset initiated successfully',
 			})
 			expect(mockNext).not.toHaveBeenCalled()
@@ -1034,8 +1021,8 @@ describe('AuthController', () => {
 				'test@example.com',
 			)
 			expect(mockNext).toHaveBeenCalledWith(cognitoError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 	})
 
@@ -1079,8 +1066,8 @@ describe('AuthController', () => {
 				'NewPassword123!',
 				'NewPassword123!',
 			)
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.OK)
-			expect(mockJson).toHaveBeenCalledWith({
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
+			expect(mockResponse.json).toHaveBeenCalledWith({
 				message: 'Password reset successfully',
 			})
 			expect(mockNext).not.toHaveBeenCalled()
@@ -1117,8 +1104,8 @@ describe('AuthController', () => {
 				'NewPassword123!',
 			)
 			expect(mockNext).toHaveBeenCalledWith(cognitoError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 	})
 
@@ -1171,23 +1158,23 @@ describe('AuthController', () => {
 				'refresh-token',
 				'decrypted-username',
 			)
-			expect(mockCookie).toHaveBeenCalledWith(
+			expect(mockResponse.cookie).toHaveBeenCalledWith(
 				'macro-ai-accessToken',
 				'new-access-token',
 				expect.any(Object),
 			)
-			expect(mockCookie).toHaveBeenCalledWith(
+			expect(mockResponse.cookie).toHaveBeenCalledWith(
 				'macro-ai-refreshToken',
 				'new-refresh-token',
 				expect.any(Object),
 			)
-			expect(mockCookie).toHaveBeenCalledWith(
+			expect(mockResponse.cookie).toHaveBeenCalledWith(
 				'macro-ai-synchronize',
 				'encrypted-username',
 				expect.any(Object),
 			)
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.OK)
-			expect(mockJson).toHaveBeenCalledWith({
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
+			expect(mockResponse.json).toHaveBeenCalledWith({
 				message: 'Token refreshed successfully',
 				tokens: {
 					accessToken: 'new-access-token',
@@ -1219,8 +1206,8 @@ describe('AuthController', () => {
 				'authController - refreshToken',
 			)
 			expect(mockNext).toHaveBeenCalledWith(refreshTokenError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 
 		it('should handle getSynchronizeToken error', async () => {
@@ -1242,8 +1229,8 @@ describe('AuthController', () => {
 
 			// Assert
 			expect(tryCatchSync).toHaveBeenCalledTimes(2)
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.UNAUTHORIZED)
-			expect(mockJson).toHaveBeenCalledWith({
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.UNAUTHORIZED)
+			expect(mockResponse.json).toHaveBeenCalledWith({
 				message: 'Synchronize token not found or invalid',
 			})
 			expect(mockNext).not.toHaveBeenCalled()
@@ -1267,8 +1254,8 @@ describe('AuthController', () => {
 			// Assert
 			expect(decrypt).toHaveBeenCalledWith('encrypted-username')
 			expect(mockNext).toHaveBeenCalledWith(decryptError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 
 		it('should handle missing authentication tokens in response', async () => {
@@ -1308,8 +1295,8 @@ describe('AuthController', () => {
 					message: 'Authentication tokens missing from response',
 				}),
 			)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 	})
 
@@ -1354,8 +1341,8 @@ describe('AuthController', () => {
 				'authController - getAuthUser',
 			)
 			expect(cognitoService.getAuthUser).toHaveBeenCalledWith('access-token')
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.OK)
-			expect(mockJson).toHaveBeenCalledWith({
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
+			expect(mockResponse.json).toHaveBeenCalledWith({
 				id: 'test-user-id',
 				email: 'test@example.com',
 				emailVerified: true,
@@ -1383,8 +1370,8 @@ describe('AuthController', () => {
 				expect.any(Function),
 				'authController - getAuthUser',
 			)
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.UNAUTHORIZED)
-			expect(mockJson).toHaveBeenCalledWith({
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.UNAUTHORIZED)
+			expect(mockResponse.json).toHaveBeenCalledWith({
 				message: 'Authentication required',
 			})
 			expect(mockNext).not.toHaveBeenCalled()
@@ -1422,8 +1409,10 @@ describe('AuthController', () => {
 
 			// Assert
 			expect(cognitoService.getAuthUser).toHaveBeenCalledWith('access-token')
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.PARTIAL_CONTENT)
-			expect(mockJson).toHaveBeenCalledWith({
+			expect(mockResponse.status).toHaveBeenCalledWith(
+				StatusCodes.PARTIAL_CONTENT,
+			)
+			expect(mockResponse.json).toHaveBeenCalledWith({
 				message: 'User profile incomplete',
 			})
 			expect(mockNext).not.toHaveBeenCalled()

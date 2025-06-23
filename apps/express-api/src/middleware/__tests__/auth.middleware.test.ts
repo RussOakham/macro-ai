@@ -6,6 +6,7 @@ import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import { UnauthorizedError } from '../../utils/errors.ts'
 import { handleServiceError } from '../../utils/response-handlers.ts'
 import { mockCognitoService } from '../../utils/test-helpers/cognito-service.mock.ts'
+import { mockExpress } from '../../utils/test-helpers/express-mocks.ts'
 import { mockLogger } from '../../utils/test-helpers/logger.mock.ts'
 import { verifyAuth } from '../auth.middleware.ts'
 
@@ -39,19 +40,14 @@ describe('verifyAuth Middleware', () => {
 	let cognitoMocks: ReturnType<typeof mockCognitoService.setupServiceMock>
 
 	beforeEach(() => {
-		vi.clearAllMocks()
+		// Setup Express mocks
+		const expressMocks = mockExpress.setup()
+		mockRequest = expressMocks.req
+		mockResponse = expressMocks.res
+		mockNext = expressMocks.next
 
 		// Setup the reusable CognitoService mock
 		cognitoMocks = mockCognitoService.setupServiceMock()
-
-		mockRequest = {
-			cookies: {},
-			userId: undefined,
-		}
-
-		mockResponse = {}
-
-		mockNext = vi.fn()
 	})
 
 	describe('Access Token Extraction', () => {

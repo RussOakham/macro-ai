@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { InternalError } from '../../../utils/errors.ts'
+import { mockExpress } from '../../../utils/test-helpers/express-mocks.ts'
 import { utilityController } from '../utility.controller.ts'
 import { utilityService } from '../utility.services.ts'
 
@@ -28,21 +29,12 @@ describe('UtilityController', () => {
 	let mockRequest: Partial<Request>
 	let mockResponse: Partial<Response>
 	let mockNext: NextFunction
-	let mockJson: ReturnType<typeof vi.fn>
-	let mockStatus: ReturnType<typeof vi.fn>
 
 	beforeEach(() => {
-		vi.clearAllMocks()
-
-		mockJson = vi.fn()
-		mockStatus = vi.fn().mockReturnValue({ json: mockJson })
-
-		mockRequest = {}
-		mockResponse = {
-			status: mockStatus,
-			json: mockJson,
-		}
-		mockNext = vi.fn()
+		const mocks = mockExpress.setup()
+		mockRequest = mocks.req
+		mockResponse = mocks.res
+		mockNext = mocks.next
 	})
 
 	describe('getHealthStatus', () => {
@@ -68,8 +60,8 @@ describe('UtilityController', () => {
 
 			// Assert
 			expect(utilityService.getHealthStatus).toHaveBeenCalledOnce()
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.OK)
-			expect(mockJson).toHaveBeenCalledWith({
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
+			expect(mockResponse.json).toHaveBeenCalledWith({
 				message: 'Api Health Status: OK',
 			})
 			expect(mockNext).not.toHaveBeenCalled()
@@ -93,8 +85,8 @@ describe('UtilityController', () => {
 			// Assert
 			expect(utilityService.getHealthStatus).toHaveBeenCalledOnce()
 			expect(mockNext).toHaveBeenCalledWith(mockError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 	})
 
@@ -132,8 +124,8 @@ describe('UtilityController', () => {
 
 			// Assert
 			expect(utilityService.getSystemInfo).toHaveBeenCalledOnce()
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.OK)
-			expect(mockJson).toHaveBeenCalledWith(mockSystemInfo)
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
+			expect(mockResponse.json).toHaveBeenCalledWith(mockSystemInfo)
 			expect(mockNext).not.toHaveBeenCalled()
 		})
 
@@ -152,8 +144,8 @@ describe('UtilityController', () => {
 			// Assert
 			expect(utilityService.getSystemInfo).toHaveBeenCalledOnce()
 			expect(mockNext).toHaveBeenCalledWith(mockError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 	})
 })
