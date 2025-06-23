@@ -15,6 +15,7 @@
 		"db:generate": "drizzle-kit generate:pg --config=drizzle.config.ts",
 		"db:push": "drizzle-kit push:pg --config=drizzle.config.ts",
 		"lint": "eslint ./src",
+		"type-check": "tsc --noEmit",
 		"test": "vitest run",
 		"test:ui": "vitest",
 		"test:coverage": "vitest run --coverage",
