@@ -29,6 +29,7 @@ import {
 	handleServiceError,
 	validateData,
 } from '../../../utils/response-handlers.ts'
+import { mockConfig } from '../../../utils/test-helpers/config.mock.ts'
 import { mockExpress } from '../../../utils/test-helpers/express-mocks.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { userRepository } from '../../user/user.data-access.ts'
@@ -85,14 +86,8 @@ vi.mock('../../../utils/response-handlers.ts', () => ({
 	validateData: vi.fn(),
 }))
 
-// Mock config
-vi.mock('../../../config/default.ts', () => ({
-	config: {
-		nodeEnv: 'test',
-		cookieDomain: 'localhost',
-		awsCognitoRefreshTokenExpiry: 30,
-	},
-}))
+// Mock config using the reusable helper
+vi.mock('../../../config/default.ts', () => mockConfig.createModule())
 
 // Mock utility functions
 vi.mock('../../../utils/cookies.ts', () => ({
@@ -126,6 +121,10 @@ describe('AuthController', () => {
 	}
 
 	beforeEach(() => {
+		// Setup config and logger mocks for consistent test environment
+		mockConfig.setup()
+		mockLogger.setup()
+
 		// Setup Express mocks
 		const mocks = mockExpress.setup()
 		mockRequest = mocks.req

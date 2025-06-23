@@ -2,18 +2,15 @@ import { NextFunction, Request, Response } from 'express'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { UnauthorizedError } from '../../utils/errors.ts'
+import { mockConfig } from '../../utils/test-helpers/config.mock.ts'
 import { mockExpress } from '../../utils/test-helpers/express-mocks.ts'
 import { mockLogger } from '../../utils/test-helpers/logger.mock.ts'
 
 // Mock the logger using the reusable helper
 vi.mock('../../utils/logger.ts', () => mockLogger.createModule())
 
-// Mock the config - needs to be done before importing the middleware
-vi.mock('../../../config/default.ts', () => ({
-	config: {
-		apiKey: 'test-api-key-12345678901234567890',
-	},
-}))
+// Mock the config using the reusable helper
+vi.mock('../../../config/default.ts', () => mockConfig.createModule())
 
 // Import after mocking
 import { apiKeyAuth } from '../api-key.middleware.ts'
@@ -24,6 +21,10 @@ describe('apiKeyAuth Middleware', () => {
 	let mockNext: NextFunction
 
 	beforeEach(() => {
+		// Setup config and logger mocks for consistent test environment
+		mockConfig.setup()
+		mockLogger.setup()
+
 		// Setup Express mocks with default properties for API key middleware tests
 		const expressMocks = mockExpress.setup({
 			path: '/api/test',

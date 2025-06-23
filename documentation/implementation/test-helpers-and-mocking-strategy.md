@@ -167,20 +167,52 @@ const errorResult = mockErrorHandling.errorResult(error)
 const validationError = mockErrorHandling.errors.validation('Invalid input')
 ```
 
-#### 2.3 Config Mock Helper 🔄 **TO BE IMPLEMENTED**
+#### 2.3 Config Mock Helper ✅ **IMPLEMENTED**
 
 **Impact:** Used in 4+ test files
 **Effort:** Medium
 **Files Affected:** Tests that need configuration
 
-**Status:** 🔄 **PENDING** - Phase 2 priority implementation
+**Status:** ✅ **COMPLETED** - Fully implemented with comprehensive test coverage
 
 **Implementation Steps:**
 
-1. 🔄 Create `apps/express-api/src/utils/test-helpers/config.mock.ts`
-2. 🔄 Export default test configurations
-3. 🔄 Include environment-specific overrides
-4. 🔄 Update affected test files
+1. ✅ Create `apps/express-api/src/utils/test-helpers/config.mock.ts`
+2. ✅ Export default test configurations
+3. ✅ Include environment-specific overrides
+4. ✅ Update affected test files
+
+**Key Features Implemented:**
+
+- **Type-safe configuration mocking** using type inference from actual config
+- **Environment-specific creators** (development, production, test)
+- **Feature-specific creators** (Cognito, database, rate limiting)
+- **Unified export pattern** following established mock helper conventions
+- **Comprehensive test coverage** with 30 test cases
+- **Usage examples** demonstrating practical implementation patterns
+
+**Usage Pattern:**
+
+```typescript
+import { mockConfig } from '../utils/test-helpers/config.mock.ts'
+
+// Mock the config module
+vi.mock('../../../config/default.ts', () => mockConfig.createModule())
+
+// Use environment-specific configs
+const devConfig = mockConfig.development()
+const prodConfig = mockConfig.production()
+
+// Use feature-specific configs
+const cognitoConfig = mockConfig.cognito({ awsCognitoRegion: 'eu-west-1' })
+const dbConfig = mockConfig.database({ relationalDatabaseUrl: 'custom-url' })
+
+// Use custom overrides
+const customConfig = mockConfig.create({
+	apiKey: 'custom-key',
+	port: 4000,
+})
+```
 
 ### Phase 3: Lower Impact, Higher Effort (Priority 3)
 

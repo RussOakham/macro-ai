@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { verifyAuth } from '../../../middleware/auth.middleware.ts'
 import { authRateLimiter } from '../../../middleware/rate-limit.middleware.ts'
 import { validate } from '../../../middleware/validation.middleware.ts'
+import { mockConfig } from '../../../utils/test-helpers/config.mock.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { authController } from '../auth.controller.ts'
 import { authRouter } from '../auth.routes.ts'
@@ -48,21 +49,17 @@ vi.mock('../../../middleware/validation.middleware.ts', () => ({
 	validate: vi.fn(),
 }))
 
-// Mock config
-vi.mock('../../../config/default.ts', () => ({
-	config: {
-		nodeEnv: 'test',
-		cookieDomain: 'localhost',
-		awsCognitoRefreshTokenExpiry: 30,
-	},
-}))
+// Mock config using the reusable helper
+vi.mock('../../../config/default.ts', () => mockConfig.createModule())
 
 describe('Auth Routes', () => {
 	let app: express.Application
 	let router: Router
 
 	beforeEach(() => {
-		vi.clearAllMocks()
+		// Setup config and logger mocks for consistent test environment
+		mockConfig.setup()
+		mockLogger.setup()
 
 		// Create Express app and router
 		app = express()

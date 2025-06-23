@@ -8,28 +8,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Result } from '../../../utils/errors.ts'
 import { mockCognitoService } from '../cognito-service.mock.ts'
+import { mockConfig } from '../config.mock.ts'
 
 /**
  * Example test demonstrating the simplified aws-sdk-client-mock approach
  * This shows how to use the reusable mock for service-level tests
  */
 
-// Mock the config
-vi.mock('../../../config/default.ts', () => ({
-	config: {
-		awsCognitoRegion: 'us-east-1',
-		awsCognitoAccessKey: 'test-access-key',
-		awsCognitoSecretKey: 'test-secret-key',
-		awsCognitoUserPoolSecretKey: 'test-pool-secret',
-		awsCognitoUserPoolClientId: 'test-client-id',
-		awsCognitoUserPoolId: 'test-pool-id',
-	},
-}))
+// Mock the config using the reusable helper
+vi.mock('../../../config/default.ts', () => mockConfig.createModule())
 
 describe('CognitoService Mock Example - AWS SDK Client Mock', () => {
 	let cognitoMock: AwsClientStub<CognitoIdentityProviderClient>
 
 	beforeEach(() => {
+		// Setup config mock for consistent test environment
+		mockConfig.setup()
+
 		// Create the AWS SDK client mock
 		cognitoMock = mockCognitoService.createAwsMock()
 	})
@@ -118,6 +113,9 @@ describe('CognitoService Mock Example - Service Method Mock', () => {
 	let cognitoMocks: ReturnType<typeof mockCognitoService.setupServiceMock>
 
 	beforeEach(() => {
+		// Setup config mock for consistent test environment
+		mockConfig.setup()
+
 		// Setup service method mocks (for middleware/controller tests)
 		cognitoMocks = mockCognitoService.setupServiceMock()
 	})
