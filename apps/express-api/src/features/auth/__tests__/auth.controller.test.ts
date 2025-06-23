@@ -31,9 +31,9 @@ import { mockCognitoService } from '../../../utils/test-helpers/cognito-service.
 import { mockConfig } from '../../../utils/test-helpers/config.mock.ts'
 import { mockExpress } from '../../../utils/test-helpers/express-mocks.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
+import { mockUserService } from '../../../utils/test-helpers/user-service.mock.ts'
 import { userRepository } from '../../user/user.data-access.ts'
 import { userService } from '../../user/user.services.ts'
-import { TUser } from '../../user/user.types.ts'
 import { authController } from '../auth.controller.ts'
 import { cognitoService } from '../auth.services.ts'
 import {
@@ -51,13 +51,8 @@ vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 // Mock the CognitoService using the reusable helper
 vi.mock('../auth.services.ts', () => mockCognitoService.createModule())
 
-// Mock user services
-vi.mock('../../user/user.services.ts', () => ({
-	userService: {
-		getUserByEmail: vi.fn(),
-		registerOrLoginUserById: vi.fn(),
-	},
-}))
+// Mock user services using the reusable helper
+vi.mock('../../user/user.services.ts', () => mockUserService.createModule())
 
 // Mock user data access
 vi.mock('../../user/user.data-access.ts', () => ({
@@ -96,16 +91,7 @@ describe('AuthController', () => {
 	let mockRequest: Partial<Request>
 	let mockResponse: Partial<Response>
 	let mockNext: NextFunction
-	const mockUser: TUser = {
-		id: '123e4567-e89b-12d3-a456-426614174000',
-		email: 'test@example.com',
-		emailVerified: true,
-		firstName: 'John',
-		lastName: 'Doe',
-		createdAt: new Date('2023-01-01'),
-		updatedAt: new Date('2023-01-01'),
-		lastLogin: new Date('2023-01-01'),
-	}
+	const mockUser = mockUserService.createUser()
 
 	beforeEach(() => {
 		// Setup config and logger mocks for consistent test environment
@@ -207,16 +193,14 @@ describe('AuthController', () => {
 				UserSub: 'test-user-id',
 				UserConfirmed: false,
 			})
-			const mockCreatedUser: TUser = {
+			const mockCreatedUser = mockUserService.createUser({
 				id: 'test-user-id',
 				email: 'test@example.com',
 				emailVerified: false,
 				firstName: null,
 				lastName: null,
-				createdAt: new Date(),
-				updatedAt: new Date(),
 				lastLogin: null,
-			}
+			})
 
 			vi.mocked(userService.getUserByEmail).mockResolvedValue([
 				null,
@@ -454,7 +438,10 @@ describe('AuthController', () => {
 					totalRetryDelay: 0,
 				},
 			}
-			const mockUpdatedUser: TUser = { ...mockUser, emailVerified: true }
+			const mockUpdatedUser = mockUserService.createUser({
+				...mockUser,
+				emailVerified: true,
+			})
 
 			vi.mocked(cognitoService.confirmSignUp).mockResolvedValue([
 				mockConfirmResponse,

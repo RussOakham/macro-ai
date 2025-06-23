@@ -227,7 +227,7 @@ const customConfig = mockConfig.create({
 **Implementation Steps:**
 
 1. ✅ Create `utility-service.mock.ts` following the established pattern
-2. 🔄 Create additional service-specific mock helpers (e.g., `user-service.mock.ts`)
+2. ✅ Create additional service-specific mock helpers (e.g., `user-service.mock.ts`)
 3. ✅ Follow the pattern established by `cognito-service.mock.ts`
 4. ✅ Include both method mocking and factory patterns
 5. ✅ Update service-dependent tests
@@ -275,6 +275,44 @@ vi.mocked(utilityService.getHealthStatus).mockReturnValue([
 - Standardized mock data creation for health status and system info
 - Full TypeScript support with type inference from actual service
 - Zero regressions in existing test functionality (4/4 tests passing)
+
+##### User Service Mock ✅ **COMPLETED**
+
+**File:** `apps/express-api/src/utils/test-helpers/user-service.mock.ts`
+**Impact:** Used in user controller tests and auth controller tests
+**Status:** ✅ **IMPLEMENTED** - Complete with comprehensive test coverage
+
+**Key Features:**
+
+- **Service method mocking** for controller tests
+- **Mock data creators** for `TUser`, `TInsertUser`, and `TUserResponse`
+- **Type inference** from actual UserService instance
+- **Unified export pattern** following established conventions
+- **Comprehensive test coverage** with example usage
+
+**Usage:**
+
+```typescript
+import { mockUserService } from '../utils/test-helpers/user-service.mock.ts'
+
+// Mock the service module
+vi.mock('../user.services.ts', () => mockUserService.createModule())
+
+// Use mock data creators
+const mockUser = mockUserService.createUser({ email: 'custom@example.com' })
+const mockInsertUser = mockUserService.createInsertUser({ id: 'new-id' })
+
+// Mock service methods
+vi.mocked(userService.getUserById).mockResolvedValue([mockUser, null])
+```
+
+**Achieved Outcome:**
+
+- ~85% reduction in user service mock setup code
+- Standardized mock data creation for all user-related types
+- Full TypeScript support with type inference from actual service
+- Applied to both user controller and auth controller tests
+- Zero regressions in existing test functionality (37/37 tests passing)
 
 #### 3.2 Middleware Testing Strategy ✅ **IMPLEMENTED**
 
