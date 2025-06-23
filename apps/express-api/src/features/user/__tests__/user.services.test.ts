@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { tryCatchSync } from '../../../utils/error-handling/try-catch.ts'
 import {
 	InternalError,
 	NotFoundError,
 	UnauthorizedError,
 	ValidationError,
 } from '../../../utils/errors.ts'
+import { mockErrorHandling } from '../../../utils/test-helpers/error-handling.mock.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { CognitoService } from '../../auth/auth.services.ts'
 import { UserService } from '../user.services.ts'
@@ -15,10 +15,13 @@ import { IUserRepository, TUser } from '../user.types.ts'
 // Mock the logger using the reusable helper
 vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 
-// Mock the tryCatchSync utility
-vi.mock('../../../utils/error-handling/try-catch.ts', () => ({
-	tryCatchSync: vi.fn(),
-}))
+// Mock the error handling module using the helper
+vi.mock('../../../utils/error-handling/try-catch.ts', () =>
+	mockErrorHandling.createModule(),
+)
+
+// Import after mocking
+import { tryCatchSync } from '../../../utils/error-handling/try-catch.ts'
 
 // Mock the user repository
 const mockUserRepository: IUserRepository = {
@@ -75,10 +78,9 @@ describe('UserService', () => {
 	describe('getUserById', () => {
 		it('should return user when found with valid ID', async () => {
 			// Arrange
-			vi.mocked(tryCatchSync).mockReturnValue([
-				'123e4567-e89b-12d3-a456-426614174000',
-				null,
-			])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult('123e4567-e89b-12d3-a456-426614174000'),
+			)
 			vi.mocked(mockUserRepository.findUserById).mockResolvedValue([
 				mockUser,
 				null,
@@ -100,8 +102,14 @@ describe('UserService', () => {
 
 		it('should return validation error for invalid user ID', async () => {
 			// Arrange
-			const validationError = new ValidationError('Invalid user ID', {}, 'test')
-			vi.mocked(tryCatchSync).mockReturnValue([null, validationError])
+			const validationError = mockErrorHandling.errors.validation(
+				'Invalid user ID',
+				{},
+				'test',
+			)
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.errorResult(validationError),
+			)
 
 			// Act
 			const [result, error] = await userService.getUserById({
@@ -117,11 +125,13 @@ describe('UserService', () => {
 
 		it('should return repository error when database fails', async () => {
 			// Arrange
-			const dbError = new InternalError('Database error', 'test')
-			vi.mocked(tryCatchSync).mockReturnValue([
-				'123e4567-e89b-12d3-a456-426614174000',
-				null,
-			])
+			const dbError = mockErrorHandling.errors.internal(
+				'Database error',
+				'test',
+			)
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult('123e4567-e89b-12d3-a456-426614174000'),
+			)
 			vi.mocked(mockUserRepository.findUserById).mockResolvedValue([
 				null,
 				dbError,
@@ -141,10 +151,9 @@ describe('UserService', () => {
 
 		it('should return NotFoundError when user not found', async () => {
 			// Arrange
-			vi.mocked(tryCatchSync).mockReturnValue([
-				'123e4567-e89b-12d3-a456-426614174000',
-				null,
-			])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult('123e4567-e89b-12d3-a456-426614174000'),
+			)
 			vi.mocked(mockUserRepository.findUserById).mockResolvedValue([
 				undefined,
 				null,

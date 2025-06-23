@@ -1,19 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { tryCatch } from '../../../utils/error-handling/try-catch.ts'
 import { AppError, InternalError } from '../../../utils/errors.ts'
 import { safeValidateSchema } from '../../../utils/response-handlers.ts'
 import { mockDatabase } from '../../../utils/test-helpers/drizzle-db.mock.ts'
+import { mockErrorHandling } from '../../../utils/test-helpers/error-handling.mock.ts'
 import { userRepository } from '../user.data-access.ts'
 import { TInsertUser, TUser } from '../user.types.ts'
 
 // Mock the database using the standardized helper
 vi.mock('../../../data-access/db.ts', () => mockDatabase.createModule())
 
-// Mock the tryCatch utility
-vi.mock('../../../utils/error-handling/try-catch.ts', () => ({
-	tryCatch: vi.fn(),
-}))
+// Mock the error handling module using the helper
+vi.mock('../../../utils/error-handling/try-catch.ts', () =>
+	mockErrorHandling.createModule(),
+)
+
+// Import after mocking
+import { tryCatch } from '../../../utils/error-handling/try-catch.ts'
 
 // Mock the response handlers
 vi.mock('../../../utils/response-handlers.ts', () => ({
@@ -42,7 +45,9 @@ describe('UserRepository', () => {
 	describe('findUserByEmail', () => {
 		it('should return user when found', async () => {
 			// Arrange
-			vi.mocked(tryCatch).mockResolvedValue([[mockUser], null])
+			vi.mocked(tryCatch).mockResolvedValue(
+				mockErrorHandling.successResult([mockUser]),
+			)
 			vi.mocked(safeValidateSchema).mockReturnValue([mockUser, null])
 
 			// Act
@@ -59,7 +64,7 @@ describe('UserRepository', () => {
 
 		it('should return undefined when user not found', async () => {
 			// Arrange
-			vi.mocked(tryCatch).mockResolvedValue([[], null])
+			vi.mocked(tryCatch).mockResolvedValue(mockErrorHandling.successResult([]))
 
 			// Act
 			const [result, error] = await userRepository.findUserByEmail({
@@ -74,9 +79,14 @@ describe('UserRepository', () => {
 
 		it('should handle database error', async () => {
 			// Arrange
-			const dbError = new InternalError('Database connection failed', 'test')
+			const dbError = mockErrorHandling.errors.internal(
+				'Database connection failed',
+				'test',
+			)
 
-			vi.mocked(tryCatch).mockResolvedValue([null, dbError])
+			vi.mocked(tryCatch).mockResolvedValue(
+				mockErrorHandling.errorResult(dbError),
+			)
 
 			// Act
 			const [result, error] = await userRepository.findUserByEmail({
@@ -91,9 +101,14 @@ describe('UserRepository', () => {
 
 		it('should handle validation error', async () => {
 			// Arrange
-			const validationError = new InternalError('Validation failed', 'test')
+			const validationError = mockErrorHandling.errors.internal(
+				'Validation failed',
+				'test',
+			)
 
-			vi.mocked(tryCatch).mockResolvedValue([[mockUser], null])
+			vi.mocked(tryCatch).mockResolvedValue(
+				mockErrorHandling.successResult([mockUser]),
+			)
 			vi.mocked(safeValidateSchema).mockReturnValue([null, validationError])
 
 			// Act

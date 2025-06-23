@@ -2,10 +2,10 @@ import { GetUserCommandOutput } from '@aws-sdk/client-cognito-identity-provider'
 import { NextFunction, Request, Response } from 'express'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import { UnauthorizedError } from '../../utils/errors.ts'
 import { handleServiceError } from '../../utils/response-handlers.ts'
 import { mockCognitoService } from '../../utils/test-helpers/cognito-service.mock.ts'
+import { mockErrorHandling } from '../../utils/test-helpers/error-handling.mock.ts'
 import { mockExpress } from '../../utils/test-helpers/express-mocks.ts'
 import { mockLogger } from '../../utils/test-helpers/logger.mock.ts'
 import { verifyAuth } from '../auth.middleware.ts'
@@ -18,10 +18,10 @@ vi.mock('../../utils/cookies.ts', () => ({
 	getAccessToken: vi.fn(),
 }))
 
-// Mock the try-catch utility
-vi.mock('../../utils/error-handling/try-catch.ts', () => ({
-	tryCatchSync: vi.fn(),
-}))
+// Mock the error handling module using the helper
+vi.mock('../../utils/error-handling/try-catch.ts', () =>
+	mockErrorHandling.createModule(),
+)
 
 // Mock the response handlers
 vi.mock('../../utils/response-handlers.ts', () => ({
@@ -32,6 +32,9 @@ vi.mock('../../utils/response-handlers.ts', () => ({
 vi.mock('../../features/auth/auth.services.ts', () =>
 	mockCognitoService.createServiceMock(),
 )
+
+// Import after mocking
+import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 
 describe('verifyAuth Middleware', () => {
 	let mockRequest: Partial<Request>
@@ -53,11 +56,13 @@ describe('verifyAuth Middleware', () => {
 	describe('Access Token Extraction', () => {
 		it('should call next with UnauthorizedError when tryCatchSync returns an error', async () => {
 			// Arrange
-			const tokenError = new UnauthorizedError(
+			const tokenError = mockErrorHandling.errors.unauthorized(
 				'Token extraction failed',
 				'test',
 			)
-			vi.mocked(tryCatchSync).mockReturnValue([null, tokenError])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.errorResult(tokenError),
+			)
 
 			// Act
 			await verifyAuth(
@@ -80,8 +85,13 @@ describe('verifyAuth Middleware', () => {
 
 		it('should handle token expired error specifically', async () => {
 			// Arrange
-			const tokenError = new UnauthorizedError('Token expired', 'test')
-			vi.mocked(tryCatchSync).mockReturnValue([null, tokenError])
+			const tokenError = mockErrorHandling.errors.unauthorized(
+				'Token expired',
+				'test',
+			)
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.errorResult(tokenError),
+			)
 
 			// Act
 			await verifyAuth(
@@ -100,7 +110,9 @@ describe('verifyAuth Middleware', () => {
 
 		it('should call next with UnauthorizedError when no access token is provided', async () => {
 			// Arrange
-			vi.mocked(tryCatchSync).mockReturnValue([null, null])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult(null),
+			)
 
 			// Act
 			await verifyAuth(
@@ -119,7 +131,9 @@ describe('verifyAuth Middleware', () => {
 
 		it('should call next with UnauthorizedError when access token is empty string', async () => {
 			// Arrange
-			vi.mocked(tryCatchSync).mockReturnValue(['', null])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult(''),
+			)
 
 			// Act
 			await verifyAuth(
@@ -140,7 +154,9 @@ describe('verifyAuth Middleware', () => {
 	describe('Cognito Token Verification', () => {
 		beforeEach(() => {
 			// Setup successful token extraction
-			vi.mocked(tryCatchSync).mockReturnValue(['valid-access-token', null])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult('valid-access-token'),
+			)
 		})
 
 		it('should call next with cognito error when getAuthUser returns an error', async () => {
@@ -223,7 +239,9 @@ describe('verifyAuth Middleware', () => {
 	describe('User Validation', () => {
 		beforeEach(() => {
 			// Setup successful token extraction and service error handling
-			vi.mocked(tryCatchSync).mockReturnValue(['valid-access-token', null])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult('valid-access-token'),
+			)
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
 		})
 
@@ -300,7 +318,9 @@ describe('verifyAuth Middleware', () => {
 	describe('Successful Authentication', () => {
 		beforeEach(() => {
 			// Setup successful token extraction and service error handling
-			vi.mocked(tryCatchSync).mockReturnValue(['valid-access-token', null])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult('valid-access-token'),
+			)
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
 		})
 

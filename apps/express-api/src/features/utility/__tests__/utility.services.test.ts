@@ -1,23 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { tryCatchSync } from '../../../utils/error-handling/try-catch.ts'
 import { InternalError } from '../../../utils/errors.ts'
+import { mockErrorHandling } from '../../../utils/test-helpers/error-handling.mock.ts'
+import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { utilityService } from '../utility.services.ts'
 
-// Mock the logger
-vi.mock('../../../utils/logger.ts', () => ({
-	pino: {
-		logger: {
-			error: vi.fn(),
-			info: vi.fn(),
-		},
-	},
-}))
+// Mock the logger using the reusable helper
+vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 
-// Mock the tryCatchSync utility
-vi.mock('../../../utils/error-handling/try-catch.ts', () => ({
-	tryCatchSync: vi.fn(),
-}))
+// Mock the error handling module using the helper
+vi.mock('../../../utils/error-handling/try-catch.ts', () =>
+	mockErrorHandling.createModule(),
+)
+
+// Import after mocking
+import { tryCatchSync } from '../../../utils/error-handling/try-catch.ts'
 
 describe('UtilityService', () => {
 	beforeEach(() => {
@@ -35,7 +32,9 @@ describe('UtilityService', () => {
 			}
 
 			// Mock tryCatchSync to return successful result
-			vi.mocked(tryCatchSync).mockReturnValue([mockHealthStatus, null])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult(mockHealthStatus),
+			)
 
 			// Act
 			const [result, error] = utilityService.getHealthStatus()
@@ -48,10 +47,15 @@ describe('UtilityService', () => {
 
 		it('should handle error in health check', () => {
 			// Arrange
-			const mockError = new InternalError('Health check failed', 'test')
+			const mockError = mockErrorHandling.errors.internal(
+				'Health check failed',
+				'test',
+			)
 
 			// Mock tryCatchSync to return error
-			vi.mocked(tryCatchSync).mockReturnValue([null, mockError])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.errorResult(mockError),
+			)
 
 			// Act
 			const [result, error] = utilityService.getHealthStatus()
@@ -67,15 +71,10 @@ describe('UtilityService', () => {
 			const originalUptime = process.uptime.bind(process)
 			process.uptime = vi.fn().mockReturnValue(-1)
 
-			// Mock tryCatchSync to call the actual function and catch the error
-			vi.mocked(tryCatchSync).mockImplementation((fn) => {
-				try {
-					const result = fn()
-					return [result, null]
-				} catch (error) {
-					return [null, error as InternalError]
-				}
-			})
+			// Mock tryCatchSync to use real implementation for integration-style testing
+			vi.mocked(tryCatchSync).mockImplementation(
+				mockErrorHandling.withRealTryCatchSync(),
+			)
 
 			// Act
 			const [result, error] = utilityService.getHealthStatus()
@@ -112,7 +111,9 @@ describe('UtilityService', () => {
 			}
 
 			// Mock tryCatchSync to return successful result
-			vi.mocked(tryCatchSync).mockReturnValue([mockSystemInfo, null])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult(mockSystemInfo),
+			)
 
 			// Act
 			const [result, error] = utilityService.getSystemInfo()
@@ -125,10 +126,15 @@ describe('UtilityService', () => {
 
 		it('should handle error in system info retrieval', () => {
 			// Arrange
-			const mockError = new InternalError('System info failed', 'test')
+			const mockError = mockErrorHandling.errors.internal(
+				'System info failed',
+				'test',
+			)
 
 			// Mock tryCatchSync to return error
-			vi.mocked(tryCatchSync).mockReturnValue([null, mockError])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.errorResult(mockError),
+			)
 
 			// Act
 			const [result, error] = utilityService.getSystemInfo()
