@@ -6,19 +6,11 @@ import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import { UnauthorizedError } from '../../utils/errors.ts'
 import { handleServiceError } from '../../utils/response-handlers.ts'
 import { mockCognitoService } from '../../utils/test-helpers/cognito-service.mock.ts'
+import { mockLogger } from '../../utils/test-helpers/logger.mock.ts'
 import { verifyAuth } from '../auth.middleware.ts'
 
-// Mock the logger
-vi.mock('../../utils/logger.ts', () => ({
-	pino: {
-		logger: {
-			error: vi.fn(),
-			warn: vi.fn(),
-			debug: vi.fn(),
-		},
-	},
-	configureLogger: vi.fn(),
-}))
+// Mock the logger using the reusable helper
+vi.mock('../../utils/logger.ts', () => mockLogger.createModule())
 
 // Mock the cookies utility
 vi.mock('../../utils/cookies.ts', () => ({

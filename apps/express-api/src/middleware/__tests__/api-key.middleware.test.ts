@@ -2,18 +2,10 @@ import { NextFunction, Request, Response } from 'express'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { UnauthorizedError } from '../../utils/errors.ts'
+import { mockLogger } from '../../utils/test-helpers/logger.mock.ts'
 
-// Mock the logger
-vi.mock('../../utils/logger.ts', () => ({
-	pino: {
-		logger: {
-			error: vi.fn(),
-			warn: vi.fn(),
-			debug: vi.fn(),
-		},
-	},
-	configureLogger: vi.fn(),
-}))
+// Mock the logger using the reusable helper
+vi.mock('../../utils/logger.ts', () => mockLogger.createModule())
 
 // Mock the config - needs to be done before importing the middleware
 vi.mock('../../../config/default.ts', () => ({
