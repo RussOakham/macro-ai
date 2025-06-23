@@ -4,26 +4,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { InternalError } from '../../../utils/errors.ts'
 import { mockExpress } from '../../../utils/test-helpers/express-mocks.ts'
+import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
+import { mockUtilityService } from '../../../utils/test-helpers/utility-service.mock.ts'
 import { utilityController } from '../utility.controller.ts'
 import { utilityService } from '../utility.services.ts'
 
-// Mock the utility service
-vi.mock('../utility.services.ts', () => ({
-	utilityService: {
-		getHealthStatus: vi.fn(),
-		getSystemInfo: vi.fn(),
-	},
-}))
+// Mock the utility service using the reusable helper
+vi.mock('../utility.services.ts', () => mockUtilityService.createModule())
 
-// Mock the logger
-vi.mock('../../../utils/logger.ts', () => ({
-	pino: {
-		logger: {
-			error: vi.fn(),
-			info: vi.fn(),
-		},
-	},
-}))
+// Mock the logger using the reusable helper
+vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 
 describe('UtilityController', () => {
 	let mockRequest: Partial<Request>
@@ -40,12 +30,7 @@ describe('UtilityController', () => {
 	describe('getHealthStatus', () => {
 		it('should return health status successfully', () => {
 			// Arrange
-			const mockHealthStatus = {
-				message: 'Api Health Status: OK',
-				timestamp: '2023-01-01T00:00:00.000Z',
-				uptime: 100,
-				memoryUsageMB: 50,
-			}
+			const mockHealthStatus = mockUtilityService.createHealthStatus()
 			vi.mocked(utilityService.getHealthStatus).mockReturnValue([
 				mockHealthStatus,
 				null,
@@ -93,23 +78,7 @@ describe('UtilityController', () => {
 	describe('getSystemInfo', () => {
 		it('should return system info successfully', () => {
 			// Arrange
-			const mockSystemInfo = {
-				nodeVersion: 'v18.0.0',
-				platform: 'linux',
-				architecture: 'x64',
-				uptime: 100,
-				memoryUsage: {
-					rss: 50,
-					heapTotal: 30,
-					heapUsed: 20,
-					external: 5,
-				},
-				cpuUsage: {
-					user: 1000,
-					system: 500,
-				},
-				timestamp: '2023-01-01T00:00:00.000Z',
-			}
+			const mockSystemInfo = mockUtilityService.createSystemInfo()
 			vi.mocked(utilityService.getSystemInfo).mockReturnValue([
 				mockSystemInfo,
 				null,

@@ -3,11 +3,9 @@ import {
 	ConfirmForgotPasswordCommandOutput,
 	ConfirmSignUpCommandOutput,
 	ForgotPasswordCommandOutput,
-	GetUserCommandOutput,
 	GlobalSignOutCommandOutput,
 	InitiateAuthCommandOutput,
 	ResendConfirmationCodeCommandOutput,
-	SignUpCommandOutput,
 } from '@aws-sdk/client-cognito-identity-provider'
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
@@ -29,6 +27,7 @@ import {
 	handleServiceError,
 	validateData,
 } from '../../../utils/response-handlers.ts'
+import { mockCognitoService } from '../../../utils/test-helpers/cognito-service.mock.ts'
 import { mockConfig } from '../../../utils/test-helpers/config.mock.ts'
 import { mockExpress } from '../../../utils/test-helpers/express-mocks.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
@@ -49,20 +48,8 @@ import {
 // Mock the logger using the reusable helper
 vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 
-// Mock the CognitoService
-vi.mock('../auth.services.ts', () => ({
-	cognitoService: {
-		signUpUser: vi.fn(),
-		confirmSignUp: vi.fn(),
-		resendConfirmationCode: vi.fn(),
-		signInUser: vi.fn(),
-		signOutUser: vi.fn(),
-		forgotPassword: vi.fn(),
-		confirmForgotPassword: vi.fn(),
-		refreshToken: vi.fn(),
-		getAuthUser: vi.fn(),
-	},
-}))
+// Mock the CognitoService using the reusable helper
+vi.mock('../auth.services.ts', () => mockCognitoService.createModule())
 
 // Mock user services
 vi.mock('../../user/user.services.ts', () => ({
@@ -216,16 +203,10 @@ describe('AuthController', () => {
 			mockRequest.body = registerRequest
 
 			const notFoundError = new NotFoundError('User not found', 'userService')
-			const mockSignUpResponse: SignUpCommandOutput = {
+			const mockSignUpResponse = mockCognitoService.createSignUpResponse({
 				UserSub: 'test-user-id',
 				UserConfirmed: false,
-				$metadata: {
-					httpStatusCode: 200,
-					requestId: 'test-request-id',
-					attempts: 1,
-					totalRetryDelay: 0,
-				},
-			}
+			})
 			const mockCreatedUser: TUser = {
 				id: 'test-user-id',
 				email: 'test@example.com',
@@ -325,16 +306,10 @@ describe('AuthController', () => {
 			mockRequest.body = registerRequest
 
 			const notFoundError = new NotFoundError('User not found', 'userService')
-			const mockSignUpResponse: SignUpCommandOutput = {
+			const mockSignUpResponse = mockCognitoService.createSignUpResponse({
 				UserSub: 'test-user-id',
 				UserConfirmed: false,
-				$metadata: {
-					httpStatusCode: 200,
-					requestId: 'test-request-id',
-					attempts: 1,
-					totalRetryDelay: 0,
-				},
-			}
+			})
 
 			vi.mocked(userService.getUserByEmail).mockResolvedValue([
 				null,
@@ -375,17 +350,11 @@ describe('AuthController', () => {
 			mockRequest.body = registerRequest
 
 			const notFoundError = new NotFoundError('User not found', 'userService')
-			const mockSignUpResponse = {
-				// Missing UserSub - set to undefined to test validation
+			// Missing UserSub - set to undefined to test validation
+			const mockSignUpResponse = mockCognitoService.createSignUpResponse({
 				UserSub: undefined,
 				UserConfirmed: false,
-				$metadata: {
-					httpStatusCode: 200,
-					requestId: 'test-request-id',
-					attempts: 1,
-					totalRetryDelay: 0,
-				},
-			} as SignUpCommandOutput
+			})
 
 			vi.mocked(userService.getUserByEmail).mockResolvedValue([
 				null,
@@ -425,16 +394,10 @@ describe('AuthController', () => {
 			mockRequest.body = registerRequest
 
 			const notFoundError = new NotFoundError('User not found', 'userService')
-			const mockSignUpResponse: SignUpCommandOutput = {
+			const mockSignUpResponse = mockCognitoService.createSignUpResponse({
 				UserSub: 'test-user-id',
 				UserConfirmed: false,
-				$metadata: {
-					httpStatusCode: 200,
-					requestId: 'test-request-id',
-					attempts: 1,
-					totalRetryDelay: 0,
-				},
-			}
+			})
 			const createUserError = new InternalError(
 				'Database error',
 				'userRepository',
@@ -1306,19 +1269,13 @@ describe('AuthController', () => {
 				'macro-ai-accessToken': 'access-token',
 			}
 
-			const mockGetAuthUserResponse: GetUserCommandOutput = {
+			const mockGetAuthUserResponse = mockCognitoService.createUser({
 				Username: 'test-user-id',
 				UserAttributes: [
 					{ Name: 'email', Value: 'test@example.com' },
 					{ Name: 'email_verified', Value: 'true' },
 				],
-				$metadata: {
-					httpStatusCode: 200,
-					requestId: 'test-request-id',
-					attempts: 1,
-					totalRetryDelay: 0,
-				},
-			}
+			})
 
 			vi.mocked(tryCatchSync).mockReturnValue(['access-token', null])
 			vi.mocked(cognitoService.getAuthUser).mockResolvedValue([
@@ -1378,19 +1335,13 @@ describe('AuthController', () => {
 
 		it('should handle missing email in user attributes', async () => {
 			// Arrange
-			const mockGetAuthUserResponse: GetUserCommandOutput = {
+			const mockGetAuthUserResponse = mockCognitoService.createUser({
 				Username: 'test-user-id',
 				UserAttributes: [
 					{ Name: 'email_verified', Value: 'true' },
 					// Missing email attribute
 				],
-				$metadata: {
-					httpStatusCode: 200,
-					requestId: 'test-request-id',
-					attempts: 1,
-					totalRetryDelay: 0,
-				},
-			}
+			})
 
 			vi.mocked(tryCatchSync).mockReturnValue(['access-token', null])
 			vi.mocked(cognitoService.getAuthUser).mockResolvedValue([
