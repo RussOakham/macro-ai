@@ -29,6 +29,7 @@ import {
 	handleServiceError,
 	validateData,
 } from '../../../utils/response-handlers.ts'
+import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { userRepository } from '../../user/user.data-access.ts'
 import { userService } from '../../user/user.services.ts'
 import { TUser } from '../../user/user.types.ts'
@@ -43,16 +44,8 @@ import {
 	TResendConfirmationCodeRequest,
 } from '../auth.types.ts'
 
-// Mock the logger
-vi.mock('../../../utils/logger.ts', () => ({
-	pino: {
-		logger: {
-			error: vi.fn(),
-			info: vi.fn(),
-		},
-	},
-	configureLogger: vi.fn(),
-}))
+// Mock the logger using the reusable helper
+vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 
 // Mock the CognitoService
 vi.mock('../auth.services.ts', () => ({

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { verifyAuth } from '../../../middleware/auth.middleware.ts'
 import { authRateLimiter } from '../../../middleware/rate-limit.middleware.ts'
 import { validate } from '../../../middleware/validation.middleware.ts'
+import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { authController } from '../auth.controller.ts'
 import { authRouter } from '../auth.routes.ts'
 import {
@@ -16,16 +17,8 @@ import {
 	resendConfirmationCodeRequestSchema,
 } from '../auth.schemas.ts'
 
-// Mock the logger
-vi.mock('../../../utils/logger.ts', () => ({
-	pino: {
-		logger: {
-			error: vi.fn(),
-			info: vi.fn(),
-		},
-	},
-	configureLogger: vi.fn(),
-}))
+// Mock the logger using the reusable helper
+vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 
 // Mock the auth controller
 vi.mock('../auth.controller.ts', () => ({

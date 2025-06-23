@@ -7,20 +7,13 @@ import {
 	UnauthorizedError,
 	ValidationError,
 } from '../../../utils/errors.ts'
+import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { CognitoService } from '../../auth/auth.services.ts'
 import { UserService } from '../user.services.ts'
 import { IUserRepository, TUser } from '../user.types.ts'
 
-// Mock the logger
-vi.mock('../../../utils/logger.ts', () => ({
-	pino: {
-		logger: {
-			error: vi.fn(),
-			info: vi.fn(),
-		},
-	},
-	configureLogger: vi.fn(),
-}))
+// Mock the logger using the reusable helper
+vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 
 // Mock the tryCatchSync utility
 vi.mock('../../../utils/error-handling/try-catch.ts', () => ({

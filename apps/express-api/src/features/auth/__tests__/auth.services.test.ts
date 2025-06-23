@@ -31,19 +31,12 @@ import {
 	NotFoundError,
 	ValidationError,
 } from '../../../utils/errors.ts'
+import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { CognitoService } from '../auth.services.ts'
 import { TRegisterUserRequest } from '../auth.types.ts'
 
-// Mock the logger
-vi.mock('../../../utils/logger.ts', () => ({
-	pino: {
-		logger: {
-			error: vi.fn(),
-			info: vi.fn(),
-		},
-	},
-	configureLogger: vi.fn(),
-}))
+// Mock the logger using the reusable helper
+vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 
 // Mock the config
 vi.mock('../../../config/default.ts', () => ({

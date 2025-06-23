@@ -3,20 +3,13 @@ import { StatusCodes } from 'http-status-codes'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { InternalError, NotFoundError } from '../../../utils/errors.ts'
+import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { userController } from '../user.controller.ts'
 import { userService } from '../user.services.ts'
 import { TUser } from '../user.types.ts'
 
-// Mock the logger
-vi.mock('../../../utils/logger.ts', () => ({
-	pino: {
-		logger: {
-			error: vi.fn(),
-			info: vi.fn(),
-		},
-	},
-	configureLogger: vi.fn(),
-}))
+// Mock the logger using the reusable helper
+vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 
 // Mock the user service
 vi.mock('../user.services.ts', () => ({

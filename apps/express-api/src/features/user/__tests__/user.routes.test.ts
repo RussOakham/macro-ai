@@ -4,22 +4,13 @@ import request from 'supertest'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { NotFoundError, UnauthorizedError } from '../../../utils/errors.ts'
+import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { userController } from '../user.controller.ts'
 import { userRouter } from '../user.routes.ts'
 import { TUser } from '../user.types.ts'
 
-// Mock the logger
-vi.mock('../../../utils/logger.ts', () => ({
-	pino: {
-		logger: {
-			error: vi.fn(),
-			info: vi.fn(),
-			warn: vi.fn(),
-			debug: vi.fn(),
-		},
-	},
-	configureLogger: vi.fn(),
-}))
+// Mock the logger using the reusable helper
+vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 
 // Mock the user controller
 vi.mock('../user.controller.ts', () => ({
