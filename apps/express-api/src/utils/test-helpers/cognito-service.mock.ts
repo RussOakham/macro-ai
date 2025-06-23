@@ -6,6 +6,16 @@ import {
 import { AwsClientStub, mockClient } from 'aws-sdk-client-mock'
 import { vi } from 'vitest'
 
+// Type inference helper - this will be used inside functions to avoid hoisting issues
+type CognitoServiceType =
+	typeof import('../../features/auth/auth.services.ts').cognitoService
+
+// Type inference from actual cognitoService instance - following established pattern
+// This ensures our mocks stay in sync with the real implementation
+type MockCognitoServiceType = {
+	[K in keyof CognitoServiceType]: ReturnType<typeof vi.fn>
+}
+
 // Cognito error interface for proper typing
 interface ICognitoError extends Error {
 	$fault: 'client' | 'server'
@@ -49,32 +59,25 @@ interface ICognitoError extends Error {
  * ```typescript
  * import { mockCognitoService } from '../../utils/test-helpers/cognito-service.mock.ts'
  *
- * vi.mock('../../features/auth/auth.services.ts', () => mockCognitoService.createServiceMock())
+ * vi.mock('../../features/auth/auth.services.ts', () => mockCognitoService.createModule())
  *
  * describe('Auth Middleware', () => {
- *   let cognitoMocks: ReturnType<typeof mockCognitoService.setupServiceMock>
+ *   let cognitoMocks: ReturnType<typeof mockCognitoService.setup>
  *
  *   beforeEach(() => {
- *     cognitoMocks = mockCognitoService.setupServiceMock()
+ *     cognitoMocks = mockCognitoService.setup()
  *   })
  *
  *   it('should test something', () => {
  *     const mockUser = mockCognitoService.createUser({ Username: 'test-user' })
- *     cognitoMocks.mockGetAuthUser.mockResolvedValue([mockUser, null])
+ *     cognitoMocks.getAuthUser.mockResolvedValue([mockUser, null])
  *   })
  * })
  * ```
  */
 
-// Service method mocks for middleware/controller tests
-export const mockGetAuthUser = vi.fn()
-export const mockSignUpUser = vi.fn()
-export const mockConfirmSignUp = vi.fn()
-export const mockResendConfirmationCode = vi.fn()
-export const mockSignInUser = vi.fn()
-export const mockSignOutUser = vi.fn()
-export const mockForgotPassword = vi.fn()
-export const mockConfirmForgotPassword = vi.fn()
+// Service method mocks are statically defined to avoid hoisting issues with vi.mock
+// The type definition ensures our mocks stay in sync with the expected interface
 
 /**
  * Creates and returns an AWS SDK client mock for CognitoIdentityProviderClient
@@ -86,59 +89,49 @@ export const createAwsMock =
 	}
 
 /**
+ * Creates a basic service mock with all methods
+ * Use this for creating fresh mock instances
+ * Creates mocks for all known CognitoService methods based on the type inference
+ */
+export const createCognitoServiceMock = (): MockCognitoServiceType => {
+	// Create mocks for all known methods - these are inferred from the type
+	// This maintains type safety while avoiding hoisting issues
+	return {
+		signUpUser: vi.fn(),
+		confirmSignUp: vi.fn(),
+		resendConfirmationCode: vi.fn(),
+		signInUser: vi.fn(),
+		signOutUser: vi.fn(),
+		refreshToken: vi.fn(),
+		forgotPassword: vi.fn(),
+		confirmForgotPassword: vi.fn(),
+		getAuthUser: vi.fn(),
+	} as MockCognitoServiceType
+}
+
+/**
  * Creates a mock factory for vi.mock() to mock the CognitoService class
  * Use this for middleware/controller tests that use the CognitoService
  */
-export const createServiceMock = () => ({
-	CognitoService: vi.fn().mockImplementation(() => ({
-		getAuthUser: mockGetAuthUser,
-		signUpUser: mockSignUpUser,
-		confirmSignUp: mockConfirmSignUp,
-		resendConfirmationCode: mockResendConfirmationCode,
-		signInUser: mockSignInUser,
-		signOutUser: mockSignOutUser,
-		forgotPassword: mockForgotPassword,
-		confirmForgotPassword: mockConfirmForgotPassword,
-	})),
-	cognitoService: {
-		getAuthUser: mockGetAuthUser,
-		signUpUser: mockSignUpUser,
-		confirmSignUp: mockConfirmSignUp,
-		resendConfirmationCode: mockResendConfirmationCode,
-		signInUser: mockSignInUser,
-		signOutUser: mockSignOutUser,
-		forgotPassword: mockForgotPassword,
-		confirmForgotPassword: mockConfirmForgotPassword,
-	},
-})
+export const createServiceMock = (): {
+	CognitoService: ReturnType<typeof vi.fn>
+	cognitoService: MockCognitoServiceType
+} => {
+	const serviceMock = createCognitoServiceMock()
+
+	return {
+		CognitoService: vi.fn().mockImplementation(() => serviceMock),
+		cognitoService: serviceMock,
+	}
+}
 
 /**
  * Sets up and returns the service method mocks for easy access in tests
  * Use this in beforeEach for middleware/controller tests
  */
-export const setupServiceMock = () => {
+export const setupServiceMock = (): MockCognitoServiceType => {
 	vi.clearAllMocks()
-
-	// Reset all mock implementations
-	mockGetAuthUser.mockReset()
-	mockSignUpUser.mockReset()
-	mockConfirmSignUp.mockReset()
-	mockResendConfirmationCode.mockReset()
-	mockSignInUser.mockReset()
-	mockSignOutUser.mockReset()
-	mockForgotPassword.mockReset()
-	mockConfirmForgotPassword.mockReset()
-
-	return {
-		mockGetAuthUser,
-		mockSignUpUser,
-		mockConfirmSignUp,
-		mockResendConfirmationCode,
-		mockSignInUser,
-		mockSignOutUser,
-		mockForgotPassword,
-		mockConfirmForgotPassword,
-	}
+	return createCognitoServiceMock()
 }
 
 /**
@@ -302,14 +295,16 @@ export const createCognitoErrorHelpers = {
 
 /**
  * Unified export object supporting both AWS SDK mocking and service method mocking
+ * Following the established pattern from other mock helpers
  */
 export const mockCognitoService = {
+	// Core factory functions
+	create: createCognitoServiceMock,
+	createModule: createServiceMock,
+	setup: setupServiceMock,
+
 	// AWS SDK Client Mock (for service-level tests)
 	createAwsMock,
-
-	// Service Method Mock (for middleware/controller tests)
-	createServiceMock,
-	setupServiceMock,
 
 	// Mock data creators
 	createUser: createMockCognitoUser,

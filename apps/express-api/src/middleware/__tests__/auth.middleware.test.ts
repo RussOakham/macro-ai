@@ -2,13 +2,12 @@ import { GetUserCommandOutput } from '@aws-sdk/client-cognito-identity-provider'
 import { NextFunction, Request, Response } from 'express'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { CognitoService } from '../../features/auth/auth.services.ts'
 import { UnauthorizedError } from '../../utils/errors.ts'
 import { handleServiceError } from '../../utils/response-handlers.ts'
-import { mockCognitoService } from '../../utils/test-helpers/cognito-service.mock.ts'
 import { mockErrorHandling } from '../../utils/test-helpers/error-handling.mock.ts'
 import { mockExpress } from '../../utils/test-helpers/express-mocks.ts'
 import { mockLogger } from '../../utils/test-helpers/logger.mock.ts'
-import { verifyAuth } from '../auth.middleware.ts'
 
 // Mock the logger using the reusable helper
 vi.mock('../../utils/logger.ts', () => mockLogger.createModule())
@@ -28,29 +27,65 @@ vi.mock('../../utils/response-handlers.ts', () => ({
 	handleServiceError: vi.fn(),
 }))
 
-// Mock the CognitoService using the reusable mock
-vi.mock('../../features/auth/auth.services.ts', () =>
-	mockCognitoService.createServiceMock(),
-)
+// Mock the CognitoService class directly for middleware testing
+vi.mock('../../features/auth/auth.services.ts', () => ({
+	CognitoService: vi.fn(),
+}))
+
+// Create a typed mock instance for the CognitoService
+// This approach provides type safety while being simple and maintainable
+const mockCognitoInstance = {
+	getAuthUser: vi.fn(),
+} satisfies Partial<CognitoService>
+
+// Helper functions for creating mock data
+const createMockCognitoUser = (
+	overrides: Partial<GetUserCommandOutput> = {},
+): GetUserCommandOutput => ({
+	Username: 'test-user-id-123',
+	UserAttributes: [
+		{ Name: 'email', Value: 'test@example.com' },
+		{ Name: 'email_verified', Value: 'true' },
+	],
+	$metadata: {
+		httpStatusCode: 200,
+		requestId: 'test-request-id',
+		attempts: 1,
+		totalRetryDelay: 0,
+	},
+	...overrides,
+})
+
+const createMockCognitoError = (message: string): Error => {
+	const error = new Error(message)
+	// Add Cognito-specific properties if needed
+	return error
+}
 
 // Import after mocking
 import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
+// Note: verifyAuth is imported dynamically in tests to ensure mocks are set up first
 
 describe('verifyAuth Middleware', () => {
 	let mockRequest: Partial<Request>
 	let mockResponse: Partial<Response>
 	let mockNext: NextFunction
-	let cognitoMocks: ReturnType<typeof mockCognitoService.setupServiceMock>
 
 	beforeEach(() => {
+		// Reset all mock functions first
+		vi.clearAllMocks()
+
 		// Setup Express mocks
 		const expressMocks = mockExpress.setup()
 		mockRequest = expressMocks.req
 		mockResponse = expressMocks.res
 		mockNext = expressMocks.next
 
-		// Setup the reusable CognitoService mock
-		cognitoMocks = mockCognitoService.setupServiceMock()
+		// Setup the CognitoService class mock to return our typed mock instance
+		// This must be done after clearAllMocks to ensure it's not cleared
+		vi.mocked(CognitoService).mockImplementation(
+			() => mockCognitoInstance as unknown as CognitoService,
+		)
 	})
 
 	describe('Access Token Extraction', () => {
@@ -65,11 +100,9 @@ describe('verifyAuth Middleware', () => {
 			)
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(tryCatchSync).toHaveBeenCalledWith(
@@ -94,11 +127,9 @@ describe('verifyAuth Middleware', () => {
 			)
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(expect.any(UnauthorizedError))
@@ -115,11 +146,9 @@ describe('verifyAuth Middleware', () => {
 			)
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(expect.any(UnauthorizedError))
@@ -136,11 +165,9 @@ describe('verifyAuth Middleware', () => {
 			)
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(expect.any(UnauthorizedError))
@@ -161,23 +188,16 @@ describe('verifyAuth Middleware', () => {
 
 		it('should call next with cognito error when getAuthUser returns an error', async () => {
 			// Arrange - Using properly typed Cognito error
-			const cognitoError = mockCognitoService.errorHelpers.notAuthorized(
-				'Invalid access token',
-			)
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([
-				null,
-				cognitoError as unknown as Error,
-			])
+			const cognitoError = createMockCognitoError('Invalid access token')
+			mockCognitoInstance.getAuthUser.mockResolvedValue([null, cognitoError])
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
-			expect(cognitoMocks.mockGetAuthUser).toHaveBeenCalledWith(
+			expect(mockCognitoInstance.getAuthUser).toHaveBeenCalledWith(
 				'valid-access-token',
 			)
 			expect(mockNext).toHaveBeenCalledWith(cognitoError)
@@ -185,19 +205,16 @@ describe('verifyAuth Middleware', () => {
 
 		it('should call handleServiceError when cognito user is returned', async () => {
 			// Arrange
-			const mockCognitoUser: GetUserCommandOutput =
-				mockCognitoService.createUser({
-					Username: 'test-user-id',
-				})
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			const mockCognitoUser: GetUserCommandOutput = createMockCognitoUser({
+				Username: 'test-user-id',
+			})
+			mockCognitoInstance.getAuthUser.mockResolvedValue([mockCognitoUser, null])
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(handleServiceError).toHaveBeenCalledWith(
@@ -209,23 +226,20 @@ describe('verifyAuth Middleware', () => {
 
 		it('should call next with UnauthorizedError when handleServiceError returns failure', async () => {
 			// Arrange
-			const mockCognitoUser: GetUserCommandOutput =
-				mockCognitoService.createUser({
-					Username: 'test-user-id',
-					$metadata: { httpStatusCode: 401 },
-				})
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			const mockCognitoUser: GetUserCommandOutput = createMockCognitoUser({
+				Username: 'test-user-id',
+				$metadata: { httpStatusCode: 401 },
+			})
+			mockCognitoInstance.getAuthUser.mockResolvedValue([mockCognitoUser, null])
 			vi.mocked(handleServiceError).mockReturnValue({
 				success: false,
 				error: { status: 401, message: 'Service error' },
 			})
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(expect.any(UnauthorizedError))
@@ -247,18 +261,15 @@ describe('verifyAuth Middleware', () => {
 
 		it('should call next with UnauthorizedError when cognito user has no Username', async () => {
 			// Arrange
-			const mockCognitoUser: GetUserCommandOutput =
-				mockCognitoService.createUser({
-					Username: undefined,
-				})
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			const mockCognitoUser: GetUserCommandOutput = createMockCognitoUser({
+				Username: undefined,
+			})
+			mockCognitoInstance.getAuthUser.mockResolvedValue([mockCognitoUser, null])
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(expect.any(UnauthorizedError))
@@ -270,18 +281,15 @@ describe('verifyAuth Middleware', () => {
 
 		it('should call next with UnauthorizedError when cognito user has empty Username', async () => {
 			// Arrange
-			const mockCognitoUser: GetUserCommandOutput =
-				mockCognitoService.createUser({
-					Username: '',
-				})
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			const mockCognitoUser: GetUserCommandOutput = createMockCognitoUser({
+				Username: '',
+			})
+			mockCognitoInstance.getAuthUser.mockResolvedValue([mockCognitoUser, null])
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(expect.any(UnauthorizedError))
@@ -294,17 +302,15 @@ describe('verifyAuth Middleware', () => {
 		it('should call next with UnauthorizedError when cognito user has null Username', async () => {
 			// Arrange
 			const mockCognitoUser: GetUserCommandOutput = {
-				...mockCognitoService.createUser(),
+				...createMockCognitoUser(),
 				Username: null as unknown as string, // Simulate malformed response
 			}
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			mockCognitoInstance.getAuthUser.mockResolvedValue([mockCognitoUser, null])
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(expect.any(UnauthorizedError))
@@ -326,18 +332,15 @@ describe('verifyAuth Middleware', () => {
 
 		it('should add userId to request and call next without error when authentication is successful', async () => {
 			// Arrange
-			const mockCognitoUser: GetUserCommandOutput =
-				mockCognitoService.createUser({
-					Username: 'test-user-id-123',
-				})
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			const mockCognitoUser: GetUserCommandOutput = createMockCognitoUser({
+				Username: 'test-user-id-123',
+			})
+			mockCognitoInstance.getAuthUser.mockResolvedValue([mockCognitoUser, null])
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(mockRequest.userId).toBe('test-user-id-123')
@@ -348,18 +351,15 @@ describe('verifyAuth Middleware', () => {
 
 		it('should proceed with valid UUID as Username', async () => {
 			// Arrange
-			const mockCognitoUser: GetUserCommandOutput =
-				mockCognitoService.createUser({
-					Username: '550e8400-e29b-41d4-a716-446655440000',
-				})
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			const mockCognitoUser: GetUserCommandOutput = createMockCognitoUser({
+				Username: '550e8400-e29b-41d4-a716-446655440000',
+			})
+			mockCognitoInstance.getAuthUser.mockResolvedValue([mockCognitoUser, null])
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(mockRequest.userId).toBe('550e8400-e29b-41d4-a716-446655440000')
@@ -369,18 +369,15 @@ describe('verifyAuth Middleware', () => {
 
 		it('should proceed with alphanumeric Username', async () => {
 			// Arrange
-			const mockCognitoUser: GetUserCommandOutput =
-				mockCognitoService.createUser({
-					Username: 'user123abc',
-				})
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			const mockCognitoUser: GetUserCommandOutput = createMockCognitoUser({
+				Username: 'user123abc',
+			})
+			mockCognitoInstance.getAuthUser.mockResolvedValue([mockCognitoUser, null])
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(mockRequest.userId).toBe('user123abc')
@@ -394,14 +391,14 @@ describe('verifyAuth Middleware', () => {
 			// Arrange
 			const { pino } = await import('../../utils/logger.ts')
 			const tokenError = new UnauthorizedError('Token expired', 'test')
-			vi.mocked(tryCatchSync).mockReturnValue([null, tokenError])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.errorResult(tokenError),
+			)
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(pino.logger.warn).toHaveBeenCalledWith(
@@ -416,14 +413,14 @@ describe('verifyAuth Middleware', () => {
 				'Token extraction failed',
 				'test',
 			)
-			vi.mocked(tryCatchSync).mockReturnValue([null, tokenError])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.errorResult(tokenError),
+			)
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith({
@@ -435,14 +432,14 @@ describe('verifyAuth Middleware', () => {
 		it('should log warning when no access token is provided', async () => {
 			// Arrange
 			const { pino } = await import('../../utils/logger.ts')
-			vi.mocked(tryCatchSync).mockReturnValue([null, null])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult(null),
+			)
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(pino.logger.warn).toHaveBeenCalledWith(
@@ -453,21 +450,19 @@ describe('verifyAuth Middleware', () => {
 		it('should log error when cognito verification fails', async () => {
 			// Arrange - Using properly typed Cognito error
 			const { pino } = await import('../../utils/logger.ts')
-			const cognitoError = mockCognitoService.errorHelpers.userNotFound(
-				'User does not exist',
+			const cognitoError = createMockCognitoError('User does not exist')
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult('valid-access-token'),
 			)
-			vi.mocked(tryCatchSync).mockReturnValue(['valid-access-token', null])
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([
+			mockCognitoInstance.getAuthUser.mockResolvedValue([
 				null,
 				cognitoError as unknown as Error,
 			])
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith({
@@ -479,20 +474,19 @@ describe('verifyAuth Middleware', () => {
 		it('should log warning when invalid access token is provided', async () => {
 			// Arrange
 			const { pino } = await import('../../utils/logger.ts')
-			const mockCognitoUser: GetUserCommandOutput =
-				mockCognitoService.createUser({
-					Username: '',
-				})
-			vi.mocked(tryCatchSync).mockReturnValue(['valid-access-token', null])
+			const mockCognitoUser: GetUserCommandOutput = createMockCognitoUser({
+				Username: '',
+			})
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult('valid-access-token'),
+			)
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			mockCognitoInstance.getAuthUser.mockResolvedValue([mockCognitoUser, null])
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(pino.logger.warn).toHaveBeenCalledWith(
@@ -503,20 +497,19 @@ describe('verifyAuth Middleware', () => {
 		it('should log debug message when authentication is successful', async () => {
 			// Arrange
 			const { pino } = await import('../../utils/logger.ts')
-			const mockCognitoUser: GetUserCommandOutput =
-				mockCognitoService.createUser({
-					Username: 'test-user-id-123',
-				})
-			vi.mocked(tryCatchSync).mockReturnValue(['valid-access-token', null])
+			const mockCognitoUser: GetUserCommandOutput = createMockCognitoUser({
+				Username: 'test-user-id-123',
+			})
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult('valid-access-token'),
+			)
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			mockCognitoInstance.getAuthUser.mockResolvedValue([mockCognitoUser, null])
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(pino.logger.debug).toHaveBeenCalledWith({
@@ -529,20 +522,19 @@ describe('verifyAuth Middleware', () => {
 	describe('Edge Cases', () => {
 		it('should handle whitespace-only Username', async () => {
 			// Arrange
-			const mockCognitoUser: GetUserCommandOutput =
-				mockCognitoService.createUser({
-					Username: '   ',
-				})
-			vi.mocked(tryCatchSync).mockReturnValue(['valid-access-token', null])
+			const mockCognitoUser: GetUserCommandOutput = createMockCognitoUser({
+				Username: '   ',
+			})
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult('valid-access-token'),
+			)
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			mockCognitoInstance.getAuthUser.mockResolvedValue([mockCognitoUser, null])
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(mockRequest.userId).toBe('   ')
@@ -553,20 +545,19 @@ describe('verifyAuth Middleware', () => {
 		it('should handle very long Username', async () => {
 			// Arrange
 			const longUsername = 'a'.repeat(1000)
-			const mockCognitoUser: GetUserCommandOutput =
-				mockCognitoService.createUser({
-					Username: longUsername,
-				})
-			vi.mocked(tryCatchSync).mockReturnValue(['valid-access-token', null])
+			const mockCognitoUser: GetUserCommandOutput = createMockCognitoUser({
+				Username: longUsername,
+			})
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult('valid-access-token'),
+			)
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			mockCognitoInstance.getAuthUser.mockResolvedValue([mockCognitoUser, null])
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(mockRequest.userId).toBe(longUsername)
@@ -577,20 +568,19 @@ describe('verifyAuth Middleware', () => {
 		it('should handle Username with special characters', async () => {
 			// Arrange
 			const specialUsername = 'user@domain.com'
-			const mockCognitoUser: GetUserCommandOutput =
-				mockCognitoService.createUser({
-					Username: specialUsername,
-				})
-			vi.mocked(tryCatchSync).mockReturnValue(['valid-access-token', null])
+			const mockCognitoUser: GetUserCommandOutput = createMockCognitoUser({
+				Username: specialUsername,
+			})
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult('valid-access-token'),
+			)
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			mockCognitoInstance.getAuthUser.mockResolvedValue([mockCognitoUser, null])
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(mockRequest.userId).toBe(specialUsername)
@@ -606,14 +596,14 @@ describe('verifyAuth Middleware', () => {
 				'Token extraction failed',
 				'test',
 			)
-			vi.mocked(tryCatchSync).mockReturnValue([null, tokenError])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.errorResult(tokenError),
+			)
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(expect.any(UnauthorizedError))
@@ -629,15 +619,15 @@ describe('verifyAuth Middleware', () => {
 				'Detailed cognito error with sensitive info',
 				'test',
 			)
-			vi.mocked(tryCatchSync).mockReturnValue(['valid-access-token', null])
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([null, cognitoError])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult('valid-access-token'),
+			)
+			mockCognitoInstance.getAuthUser.mockResolvedValue([null, cognitoError])
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(cognitoError)
@@ -648,19 +638,22 @@ describe('verifyAuth Middleware', () => {
 			// Arrange
 			const malformedResponse: GetUserCommandOutput = {
 				// Missing Username property - simulating malformed response
-				...mockCognitoService.createUser(),
+				...createMockCognitoUser(),
 				Username: undefined as unknown as string,
 			}
-			vi.mocked(tryCatchSync).mockReturnValue(['valid-access-token', null])
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult('valid-access-token'),
+			)
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([malformedResponse, null])
+			mockCognitoInstance.getAuthUser.mockResolvedValue([
+				malformedResponse,
+				null,
+			])
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(expect.any(UnauthorizedError))
@@ -673,30 +666,26 @@ describe('verifyAuth Middleware', () => {
 	describe('Integration Flow', () => {
 		it('should execute the complete authentication flow successfully', async () => {
 			// Arrange
-			const mockCognitoUser: GetUserCommandOutput =
-				mockCognitoService.createUser({
-					Username: 'integration-test-user',
-				})
-			vi.mocked(tryCatchSync).mockReturnValue([
-				'integration-access-token',
-				null,
-			])
+			const mockCognitoUser: GetUserCommandOutput = createMockCognitoUser({
+				Username: 'integration-test-user',
+			})
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult('integration-access-token'),
+			)
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			mockCognitoInstance.getAuthUser.mockResolvedValue([mockCognitoUser, null])
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert - Verify the complete flow
 			expect(tryCatchSync).toHaveBeenCalledWith(
 				expect.any(Function),
 				'verifyAuth',
 			)
-			expect(cognitoMocks.mockGetAuthUser).toHaveBeenCalledWith(
+			expect(mockCognitoInstance.getAuthUser).toHaveBeenCalledWith(
 				'integration-access-token',
 			)
 			expect(handleServiceError).toHaveBeenCalledWith(
@@ -711,31 +700,30 @@ describe('verifyAuth Middleware', () => {
 
 		it('should verify all dependencies are called in correct order', async () => {
 			// Arrange
-			const mockCognitoUser: GetUserCommandOutput =
-				mockCognitoService.createUser({
-					Username: 'order-test-user',
-				})
-			vi.mocked(tryCatchSync).mockReturnValue(['order-access-token', null])
+			const mockCognitoUser: GetUserCommandOutput = createMockCognitoUser({
+				Username: 'order-test-user',
+			})
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult('order-access-token'),
+			)
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
-			cognitoMocks.mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			mockCognitoInstance.getAuthUser.mockResolvedValue([mockCognitoUser, null])
 
 			// Act
-			await verifyAuth(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await (
+				await import('../auth.middleware.ts')
+			).verifyAuth(mockRequest as Request, mockResponse as Response, mockNext)
 
 			// Assert - Verify call order by checking that functions were called
 			expect(vi.mocked(tryCatchSync)).toHaveBeenCalled()
-			expect(cognitoMocks.mockGetAuthUser).toHaveBeenCalled()
+			expect(mockCognitoInstance.getAuthUser).toHaveBeenCalled()
 			expect(vi.mocked(handleServiceError)).toHaveBeenCalled()
 
 			// Verify the sequence of calls
 			expect(vi.mocked(tryCatchSync)).toHaveBeenCalledBefore(
-				cognitoMocks.mockGetAuthUser,
+				mockCognitoInstance.getAuthUser,
 			)
-			expect(cognitoMocks.mockGetAuthUser).toHaveBeenCalledBefore(
+			expect(mockCognitoInstance.getAuthUser).toHaveBeenCalledBefore(
 				vi.mocked(handleServiceError),
 			)
 		})

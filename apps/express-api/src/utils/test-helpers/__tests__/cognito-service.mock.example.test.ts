@@ -110,14 +110,14 @@ describe('CognitoService Mock Example - AWS SDK Client Mock', () => {
 })
 
 describe('CognitoService Mock Example - Service Method Mock', () => {
-	let cognitoMocks: ReturnType<typeof mockCognitoService.setupServiceMock>
+	let cognitoMocks: ReturnType<typeof mockCognitoService.setup>
 
 	beforeEach(() => {
 		// Setup config mock for consistent test environment
 		mockConfig.setup()
 
 		// Setup service method mocks (for middleware/controller tests)
-		cognitoMocks = mockCognitoService.setupServiceMock()
+		cognitoMocks = mockCognitoService.setup()
 	})
 
 	it('should demonstrate service method mocking', async () => {
@@ -127,10 +127,10 @@ describe('CognitoService Mock Example - Service Method Mock', () => {
 		})
 
 		// Mock the service method to return a Result tuple
-		cognitoMocks.mockGetAuthUser.mockResolvedValue([mockUser, null])
+		cognitoMocks.getAuthUser.mockResolvedValue([mockUser, null])
 
 		// Act - This would be your middleware/controller calling the service
-		const [result, error] = (await cognitoMocks.mockGetAuthUser(
+		const [result, error] = (await cognitoMocks.getAuthUser(
 			'test-token',
 		)) as Result<GetUserCommandOutput>
 
@@ -139,7 +139,7 @@ describe('CognitoService Mock Example - Service Method Mock', () => {
 		expect(result).toEqual(mockUser)
 		expect(result).toBeDefined()
 		expect(result?.Username).toBe('service-test-user')
-		expect(cognitoMocks.mockGetAuthUser).toHaveBeenCalledWith('test-token')
+		expect(cognitoMocks.getAuthUser).toHaveBeenCalledWith('test-token')
 	})
 
 	it('should demonstrate service method error mocking', async () => {
@@ -148,19 +148,19 @@ describe('CognitoService Mock Example - Service Method Mock', () => {
 			mockCognitoService.errorHelpers.notAuthorized('Invalid token')
 
 		// Mock the service method to return an error
-		cognitoMocks.mockGetAuthUser.mockResolvedValue([
+		cognitoMocks.getAuthUser.mockResolvedValue([
 			null,
 			cognitoError as unknown as Error,
 		])
 
 		// Act
-		const [result, error] = (await cognitoMocks.mockGetAuthUser(
+		const [result, error] = (await cognitoMocks.getAuthUser(
 			'invalid-token',
 		)) as Result<GetUserCommandOutput>
 
 		// Assert
 		expect(result).toBeNull()
 		expect(error).toEqual(cognitoError)
-		expect(cognitoMocks.mockGetAuthUser).toHaveBeenCalledWith('invalid-token')
+		expect(cognitoMocks.getAuthUser).toHaveBeenCalledWith('invalid-token')
 	})
 })

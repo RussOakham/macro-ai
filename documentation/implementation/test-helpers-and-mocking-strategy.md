@@ -231,20 +231,61 @@ const customConfig = mockConfig.create({
 3. 🔄 Include both method mocking and factory patterns
 4. 🔄 Update service-dependent tests
 
-#### 3.2 Middleware Mock Helper 🔄 **TO BE IMPLEMENTED**
+#### 3.2 Middleware Testing Strategy ✅ **IMPLEMENTED**
 
-**Impact:** Used in route tests
+**Impact:** Used in middleware tests that depend on external services
 **Effort:** Medium
-**Files Affected:** Route test files
+**Files Affected:** Middleware test files with service dependencies
 
-**Status:** 🔄 **PENDING** - Phase 3 priority implementation
+**Status:** ✅ **IMPLEMENTED** - Direct service mocking approach for middleware testing
 
-**Implementation Steps:**
+**Implementation Approach:**
 
-1. 🔄 Create `apps/express-api/src/utils/test-helpers/middleware.mock.ts`
-2. 🔄 Export common middleware mocks (auth, rate limiting, validation)
-3. 🔄 Include configurable behavior patterns
-4. 🔄 Update route test files
+For middleware that creates module-level service instances (like `auth.middleware.ts`), use direct class mocking instead of complex helper functions:
+
+```typescript
+// Mock the service class directly
+vi.mock('../../features/auth/auth.services.ts', () => ({
+	CognitoService: vi.fn(),
+}))
+
+// Create a typed mock instance for the service
+const mockCognitoInstance = {
+	getAuthUser: vi.fn(),
+} satisfies Partial<CognitoService>
+
+// In beforeEach, connect the class mock to the instance mock
+beforeEach(() => {
+	vi.clearAllMocks()
+	vi.mocked(CognitoService).mockImplementation(() => mockCognitoInstance as any)
+})
+
+// CRITICAL: Import middleware dynamically after mocks are set up
+// This ensures the module-level service instance uses the mocked class
+it('should test middleware behavior', async () => {
+	// Arrange
+	mockCognitoInstance.getAuthUser.mockResolvedValue([mockUser, null])
+
+	// Import after mocks are established
+	const { verifyAuth } = await import('../auth.middleware.ts')
+
+	// Act & Assert
+	await verifyAuth(req, res, next)
+	expect(mockCognitoInstance.getAuthUser).toHaveBeenCalled()
+})
+```
+
+**Why Dynamic Import is Required:**
+
+Module-level service instances (like `const cognito = new CognitoService()`) are created when the module is first imported. If the middleware is imported at the top level of the test file, the service instance is created before mocks are set up, resulting in "intermediate value is not iterable" errors.
+
+**Benefits:**
+
+- **Type Safety:** Uses `satisfies Partial<ServiceClass>` for compile-time type checking
+- **Simplicity:** No complex helper functions needed for one-off middleware tests
+- **Maintainability:** Mock interface automatically stays in sync with service changes
+- **Clarity:** Direct relationship between class constructor and mock instance
+- **Reliability:** Dynamic import ensures mocks are established before module execution
 
 ## External Library Opportunities
 
