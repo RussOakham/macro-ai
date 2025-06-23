@@ -3,26 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { tryCatch } from '../../../utils/error-handling/try-catch.ts'
 import { AppError, InternalError } from '../../../utils/errors.ts'
 import { safeValidateSchema } from '../../../utils/response-handlers.ts'
+import { mockDatabase } from '../../../utils/test-helpers/drizzle-db.mock.ts'
 import { userRepository } from '../user.data-access.ts'
 import { TInsertUser, TUser } from '../user.types.ts'
 
-// Mock the database with proper query builder chain
-const mockQueryBuilder = {
-	from: vi.fn().mockReturnThis(),
-	where: vi.fn().mockReturnThis(),
-	limit: vi.fn().mockReturnThis(),
-	values: vi.fn().mockReturnThis(),
-	returning: vi.fn().mockReturnThis(),
-	set: vi.fn().mockReturnThis(),
-}
-
-vi.mock('../../../data-access/db.ts', () => ({
-	db: {
-		select: vi.fn(() => mockQueryBuilder),
-		insert: vi.fn(() => mockQueryBuilder),
-		update: vi.fn(() => mockQueryBuilder),
-	},
-}))
+// Mock the database using the standardized helper
+vi.mock('../../../data-access/db.ts', () => mockDatabase.createModule())
 
 // Mock the tryCatch utility
 vi.mock('../../../utils/error-handling/try-catch.ts', () => ({
@@ -44,24 +30,10 @@ vi.mock('../user.schemas.ts', () => ({
 }))
 
 describe('UserRepository', () => {
-	const mockUser: TUser = {
-		id: '123e4567-e89b-12d3-a456-426614174000',
-		email: 'test@example.com',
-		emailVerified: true,
-		firstName: 'John',
-		lastName: 'Doe',
-		createdAt: new Date('2023-01-01'),
-		updatedAt: new Date('2023-01-01'),
-		lastLogin: new Date('2023-01-01'),
-	}
-
-	const mockInsertUser: TInsertUser = {
-		id: '123e4567-e89b-12d3-a456-426614174000',
-		email: 'test@example.com',
-		emailVerified: true,
-		firstName: 'John',
-		lastName: 'Doe',
-	}
+	// Use the standardized mock data creators
+	const mockUser: TUser = mockDatabase.createUser() as TUser
+	const mockInsertUser: TInsertUser =
+		mockDatabase.createInsertUser() as TInsertUser
 
 	beforeEach(() => {
 		vi.clearAllMocks()
