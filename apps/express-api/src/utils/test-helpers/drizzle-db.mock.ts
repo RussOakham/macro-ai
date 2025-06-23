@@ -1,36 +1,57 @@
 import { type MockedFunction, vi } from 'vitest'
 
+import { db } from '../../data-access/db.ts'
+
 /**
  * Mock interfaces for Drizzle ORM database operations
  * These interfaces provide type-safe mocking for database queries and operations
+ *
+ * IMPLEMENTATION FOLLOWS TYPE INFERENCE PATTERN:
+ * Types are inferred from the actual database instance (db.ts) to ensure:
+ * - Mock interfaces stay in sync with the real Drizzle database
+ * - TypeScript catches any mismatches between mocks and actual usage
+ * - Automatic updates when the database schema or Drizzle version changes
+ *
+ * See: documentation/implementation/test-helpers-and-mocking-strategy.md
  */
 
 /**
+ * Infer the actual database type from the db instance
+ * This ensures our MockDatabase type matches the real database interface
+ */
+type DatabaseType = typeof db
+
+/**
  * Mock interface for Drizzle query builder methods
- * Supports method chaining with proper return types
- * Each method is a mock function that can be configured to return this or a promise
+ * Based on the actual Drizzle query builder interface but with mock functions
+ * This provides a balance between type safety and flexibility for testing
  */
 interface MockQueryBuilder {
-	from: MockedFunction<(...args: unknown[]) => unknown>
-	where: MockedFunction<(...args: unknown[]) => unknown>
-	limit: MockedFunction<(...args: unknown[]) => unknown>
-	values: MockedFunction<(...args: unknown[]) => unknown>
-	returning: MockedFunction<(...args: unknown[]) => unknown>
-	set: MockedFunction<(...args: unknown[]) => unknown>
-	orderBy: MockedFunction<(...args: unknown[]) => unknown>
-	offset: MockedFunction<(...args: unknown[]) => unknown>
-	execute: MockedFunction<(...args: unknown[]) => unknown>
+	// Core query building methods - present on all query builders
+	from: MockedFunction<(...args: unknown[]) => MockQueryBuilder>
+	where: MockedFunction<(...args: unknown[]) => MockQueryBuilder>
+	limit: MockedFunction<(...args: unknown[]) => MockQueryBuilder>
+	offset: MockedFunction<(...args: unknown[]) => MockQueryBuilder>
+	orderBy: MockedFunction<(...args: unknown[]) => MockQueryBuilder>
+
+	// Insert/Update specific methods
+	values: MockedFunction<(...args: unknown[]) => MockQueryBuilder>
+	set: MockedFunction<(...args: unknown[]) => MockQueryBuilder>
+
+	// Result methods
+	returning: MockedFunction<(...args: unknown[]) => MockQueryBuilder>
+	execute: MockedFunction<(...args: unknown[]) => MockQueryBuilder>
 }
 
 /**
  * Mock interface for the main database instance
- * Provides the core CRUD operation methods
+ * Inferred from the actual database type for maximum type safety
  */
-interface MockDatabase {
-	select: MockedFunction<() => MockQueryBuilder>
-	insert: MockedFunction<() => MockQueryBuilder>
-	update: MockedFunction<() => MockQueryBuilder>
-	delete: MockedFunction<() => MockQueryBuilder>
+type MockDatabase = {
+	[K in keyof Pick<
+		DatabaseType,
+		'select' | 'insert' | 'update' | 'delete'
+	>]: MockedFunction<() => MockQueryBuilder>
 }
 
 /**
@@ -109,7 +130,14 @@ export const mockQueryResult = (data: unknown[]): MockQueryBuilder => {
 	]
 
 	methods.forEach((method) => {
-		method.mockImplementation(() => Promise.resolve(data))
+		method.mockImplementation((...args: unknown[]) => {
+			// If called with no arguments or specific patterns, return a promise (for execution)
+			// Otherwise return the query builder for chaining
+			if (args.length === 0 || method === queryBuilder.execute) {
+				return Promise.resolve(data) as Promise<unknown[]> & MockQueryBuilder
+			}
+			return queryBuilder as Promise<unknown[]> & MockQueryBuilder
+		})
 	})
 
 	return queryBuilder
@@ -138,7 +166,14 @@ export const mockQueryError = (error: Error): MockQueryBuilder => {
 	]
 
 	methods.forEach((method) => {
-		method.mockImplementation(() => Promise.reject(error))
+		method.mockImplementation((...args: unknown[]) => {
+			// If called with no arguments or specific patterns, return a promise (for execution)
+			// Otherwise return the query builder for chaining
+			if (args.length === 0 || method === queryBuilder.execute) {
+				return Promise.reject(error) as Promise<unknown[]> & MockQueryBuilder
+			}
+			return queryBuilder as Promise<unknown[]> & MockQueryBuilder
+		})
 	})
 
 	return queryBuilder

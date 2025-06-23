@@ -216,9 +216,47 @@ const mockUser = mockDatabase.createUser()
 
 1. **Follow Existing Patterns:** Use `cognito-service.mock.ts` as the gold standard
 2. **TypeScript First:** Ensure all mocks have proper typing
-3. **Factory Pattern:** Create factory functions for flexible mock creation
-4. **Comprehensive Coverage:** Include both success and error scenarios
-5. **Documentation:** Add JSDoc comments for all exported functions
+3. **Type Inference Pattern:** ALWAYS infer mock types from actual instances using `typeof actualInstance` rather than manually defining them
+4. **Factory Pattern:** Create factory functions for flexible mock creation
+5. **Comprehensive Coverage:** Include both success and error scenarios
+6. **Documentation:** Add JSDoc comments for all exported functions
+
+### Type Inference Implementation Rule
+
+**CRITICAL PATTERN:** Always infer mock types from actual instances to ensure type safety and automatic synchronization.
+
+**Implementation:**
+
+```typescript
+// ✅ CORRECT: Infer from actual instance
+import { db } from '../../data-access/db.ts'
+type DatabaseType = typeof db
+
+// ✅ CORRECT: Infer from actual logger
+import { logger } from '../../utils/logger.ts'
+type LoggerType = typeof logger
+
+// ❌ INCORRECT: Manual type definition
+interface DatabaseType {
+	select: () => QueryBuilder
+	// Manual definitions become outdated
+}
+```
+
+**Benefits:**
+
+- Mock interfaces stay in sync with real implementations
+- TypeScript catches mismatches between mocks and actual usage
+- Automatic updates when libraries, schemas, or versions change
+- Maximum type safety with minimal maintenance overhead
+
+**Application Areas:**
+
+- Database instances (Drizzle ORM)
+- Logger instances (Pino)
+- Service instances
+- External library interfaces
+- Internal module exports
 
 ### File Structure Template
 
