@@ -1,5 +1,8 @@
 # Macro AI Monorepo
 
+[![Build Status](https://github.com/RussOakham/macro-ai/workflows/Hygiene%20Checks/badge.svg)](https://github.com/RussOakham/macro-ai/actions/workflows/hygiene-checks.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/RussOakham/COVERAGE_GIST_ID/raw/macro-ai-coverage.json)](https://github.com/RussOakham/macro-ai/actions/workflows/hygiene-checks.yml)
+
 This monorepo contains the source code for Macro AI, a project that includes both frontend and backend applications. It is structured using `pnpm` workspaces to manage dependencies efficiently across multiple packages and applications.
 
 ## Repository Structure

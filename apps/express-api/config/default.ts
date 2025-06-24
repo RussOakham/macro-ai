@@ -1,7 +1,12 @@
 import { loadConfig } from '../src/utils/load-config.ts'
 import { configureLogger } from '../src/utils/logger.ts'
 
-const env = loadConfig()
+const [env, configError] = loadConfig()
+
+if (configError) {
+	console.error('Failed to load configuration:', configError.message)
+	process.exit(1)
+}
 
 // Configure logger with actual environment
 configureLogger(env.NODE_ENV)

@@ -31,31 +31,16 @@ import {
 	NotFoundError,
 	ValidationError,
 } from '../../../utils/errors.ts'
+import { mockConfig } from '../../../utils/test-helpers/config.mock.ts'
+import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { CognitoService } from '../auth.services.ts'
 import { TRegisterUserRequest } from '../auth.types.ts'
 
-// Mock the logger
-vi.mock('../../../utils/logger.ts', () => ({
-	pino: {
-		logger: {
-			error: vi.fn(),
-			info: vi.fn(),
-		},
-	},
-	configureLogger: vi.fn(),
-}))
+// Mock the logger using the reusable helper
+vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 
-// Mock the config
-vi.mock('../../../config/default.ts', () => ({
-	config: {
-		awsCognitoRegion: 'us-east-1',
-		awsCognitoAccessKey: 'test-access-key',
-		awsCognitoSecretKey: 'test-secret-key',
-		awsCognitoUserPoolSecretKey: 'test-pool-secret',
-		awsCognitoUserPoolClientId: 'test-client-id',
-		awsCognitoUserPoolId: 'test-pool-id',
-	},
-}))
+// Mock the config using the reusable helper
+vi.mock('../../../config/default.ts', () => mockConfig.createModule())
 
 // Mock the tryCatch utilities
 vi.mock('../../../utils/error-handling/try-catch.ts', () => ({
@@ -93,7 +78,9 @@ describe('CognitoService', () => {
 	let cognitoService: CognitoService
 
 	beforeEach(() => {
-		vi.clearAllMocks()
+		// Use config mock setup for consistent test environment
+		mockConfig.setup()
+		mockLogger.setup()
 		cognitoMock.reset()
 		cognitoService = new CognitoService()
 	})

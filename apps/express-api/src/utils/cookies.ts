@@ -5,7 +5,7 @@ import { AppError } from './errors.ts'
 // Common cookie names as const for type inference
 const COOKIE_NAMES = {
 	ACCESS_TOKEN: 'macro-ai-accessToken',
-	REFRESH_TOKEN: 'marco-ai-refreshToken',
+	REFRESH_TOKEN: 'macro-ai-refreshToken',
 	SYNCHRONIZE: 'macro-ai-synchronize',
 } as const
 
@@ -45,11 +45,7 @@ const getCookie = <T extends string>(
  * @throws AppError if token is required and missing
  */
 const getAccessToken = (req: Request, required = true): string => {
-	const token = getCookie(req, COOKIE_NAMES.ACCESS_TOKEN, required)
-	if (!token && required) {
-		throw AppError.unauthorized('Access token not found')
-	}
-	return token
+	return getCookie(req, COOKIE_NAMES.ACCESS_TOKEN, required)
 }
 
 /**
@@ -60,11 +56,7 @@ const getAccessToken = (req: Request, required = true): string => {
  * @throws AppError if token is required and missing
  */
 const getRefreshToken = (req: Request, required = true): string => {
-	const token = getCookie(req, COOKIE_NAMES.REFRESH_TOKEN, required)
-	if (!token && required) {
-		throw AppError.unauthorized('Refresh token not found')
-	}
-	return token
+	return getCookie(req, COOKIE_NAMES.REFRESH_TOKEN, required)
 }
 
 /**
@@ -75,11 +67,7 @@ const getRefreshToken = (req: Request, required = true): string => {
  * @throws AppError if token is required and missing
  */
 const getSynchronizeToken = (req: Request, required = true): string => {
-	const token = getCookie(req, COOKIE_NAMES.SYNCHRONIZE, required)
-	if (!token && required) {
-		throw AppError.unauthorized('Synchronize token not found')
-	}
-	return token
+	return getCookie(req, COOKIE_NAMES.SYNCHRONIZE, required)
 }
 
 /**
@@ -88,7 +76,7 @@ const getSynchronizeToken = (req: Request, required = true): string => {
  * @returns Boolean indicating if the cookie name is common
  */
 const isCommonCookie = (name: string): name is TCookieNames => {
-	return name in COOKIE_NAMES
+	return Object.values(COOKIE_NAMES).includes(name as TCookieNames)
 }
 
 export {

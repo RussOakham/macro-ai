@@ -3,64 +3,30 @@ import { StatusCodes } from 'http-status-codes'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { InternalError, NotFoundError } from '../../../utils/errors.ts'
+import { mockExpress } from '../../../utils/test-helpers/express-mocks.ts'
+import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
+import { mockUserService } from '../../../utils/test-helpers/user-service.mock.ts'
 import { userController } from '../user.controller.ts'
 import { userService } from '../user.services.ts'
-import { TUser } from '../user.types.ts'
 
-// Mock the logger
-vi.mock('../../../utils/logger.ts', () => ({
-	pino: {
-		logger: {
-			error: vi.fn(),
-			info: vi.fn(),
-		},
-	},
-	configureLogger: vi.fn(),
-}))
+// Mock the logger using the reusable helper
+vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 
-// Mock the user service
-vi.mock('../user.services.ts', () => ({
-	userService: {
-		getUserById: vi.fn(),
-		getUserByEmail: vi.fn(),
-		getUserByAccessToken: vi.fn(),
-		registerOrLoginUserById: vi.fn(),
-	},
-}))
+// Mock the user service using the reusable helper
+vi.mock('../user.services.ts', () => mockUserService.createModule())
 
 describe('UserController', () => {
 	let mockRequest: Partial<Request>
 	let mockResponse: Partial<Response>
 	let mockNext: NextFunction
-	let mockJson: ReturnType<typeof vi.fn>
-	let mockStatus: ReturnType<typeof vi.fn>
 
-	const mockUser: TUser = {
-		id: '123e4567-e89b-12d3-a456-426614174000',
-		email: 'test@example.com',
-		emailVerified: true,
-		firstName: 'John',
-		lastName: 'Doe',
-		createdAt: new Date('2023-01-01'),
-		updatedAt: new Date('2023-01-01'),
-		lastLogin: new Date('2023-01-01'),
-	}
+	const mockUser = mockUserService.createUser()
 
 	beforeEach(() => {
-		vi.clearAllMocks()
-
-		mockJson = vi.fn()
-		mockStatus = vi.fn().mockReturnValue({ json: mockJson })
-
-		mockRequest = {
-			userId: undefined,
-			params: {},
-		}
-		mockResponse = {
-			status: mockStatus,
-			json: mockJson,
-		}
-		mockNext = vi.fn()
+		const mocks = mockExpress.setup()
+		mockRequest = mocks.req
+		mockResponse = mocks.res
+		mockNext = mocks.next
 	})
 
 	describe('getCurrentUser', () => {
@@ -80,8 +46,8 @@ describe('UserController', () => {
 			expect(userService.getUserById).toHaveBeenCalledWith({
 				userId: '123e4567-e89b-12d3-a456-426614174000',
 			})
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.OK)
-			expect(mockJson).toHaveBeenCalledWith({
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
+			expect(mockResponse.json).toHaveBeenCalledWith({
 				user: {
 					id: mockUser.id,
 					email: mockUser.email,
@@ -114,8 +80,8 @@ describe('UserController', () => {
 					status: StatusCodes.UNAUTHORIZED,
 				}),
 			)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 
 		it('should handle service error and call next middleware', async () => {
@@ -136,8 +102,8 @@ describe('UserController', () => {
 				userId: '123e4567-e89b-12d3-a456-426614174000',
 			})
 			expect(mockNext).toHaveBeenCalledWith(serviceError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 	})
 
@@ -158,8 +124,8 @@ describe('UserController', () => {
 			expect(userService.getUserById).toHaveBeenCalledWith({
 				userId: '123e4567-e89b-12d3-a456-426614174000',
 			})
-			expect(mockStatus).toHaveBeenCalledWith(StatusCodes.OK)
-			expect(mockJson).toHaveBeenCalledWith({
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
+			expect(mockResponse.json).toHaveBeenCalledWith({
 				user: {
 					id: mockUser.id,
 					email: mockUser.email,
@@ -192,8 +158,8 @@ describe('UserController', () => {
 					status: StatusCodes.BAD_REQUEST,
 				}),
 			)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 
 		it('should handle service error and call next middleware', async () => {
@@ -214,8 +180,8 @@ describe('UserController', () => {
 				userId: '123e4567-e89b-12d3-a456-426614174000',
 			})
 			expect(mockNext).toHaveBeenCalledWith(serviceError)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 
 		it('should handle empty string user ID as missing ID', async () => {
@@ -236,8 +202,8 @@ describe('UserController', () => {
 					status: StatusCodes.BAD_REQUEST,
 				}),
 			)
-			expect(mockStatus).not.toHaveBeenCalled()
-			expect(mockJson).not.toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
+			expect(mockResponse.json).not.toHaveBeenCalled()
 		})
 	})
 })
