@@ -545,26 +545,6 @@ describe('Rate Limit Middleware', () => {
 	})
 
 	describe('Middleware Behavior', () => {
-		it('should handle rate limit exceeded scenario gracefully', async () => {
-			// This test verifies that the middleware handles rate limit scenarios
-			// without crashing the application
-			const middleware = await import('../rate-limit.middleware.ts')
-			const mockRequest = mockExpress.createRequest({
-				ip: '192.168.1.100',
-				method: 'POST',
-				url: '/api/test',
-			})
-
-			// Act & Assert - Should not throw errors
-			expect(async () => {
-				await middleware.defaultRateLimiter(
-					mockRequest as Request,
-					mockResponse as Response,
-					mockNext,
-				)
-			}).not.toThrow()
-		})
-
 		it('should handle different rate limiter types', async () => {
 			// This test verifies that all three rate limiters can be used
 			// and behave consistently
@@ -637,14 +617,114 @@ describe('Rate Limit Middleware', () => {
 
 	describe('Rate Limit Handler Functions', () => {
 		it('should configure rate limiters with handler functions', async () => {
-			// This test verifies that the rate limiters are configured with handler functions
-			// The actual handler logic is tested through the rate limit behavior
+			// Arrange - Mock logger and capture handlers from all rate limiters
+			const mockLogger = {
+				warn: vi.fn(),
+				error: vi.fn(),
+				info: vi.fn(),
+			}
+
+			vi.doMock('../../utils/logger.ts', () => ({
+				pino: {
+					logger: mockLogger,
+				},
+				configureLogger: vi.fn(),
+			}))
+
+			const capturedHandlers: HandlerFunction[] = []
+
+			const mockRateLimitFactory = vi.fn(
+				(config: { handler: HandlerFunction; message: unknown }) => {
+					// Capture each handler function from the configuration
+					capturedHandlers.push(config.handler)
+
+					// Return a middleware that simulates rate limit exceeded to trigger handler
+					return createHandlerTestMiddleware(config.handler, config)
+				},
+			)
+
+			vi.doMock('express-rate-limit', () => ({
+				default: mockRateLimitFactory,
+			}))
+
+			// Reset modules to pick up the new mocks
+			vi.resetModules()
 			const middleware = await import('../rate-limit.middleware.ts')
 
-			// Verify that all rate limiters are functions (indicating they were configured with handlers)
+			// Verify that all rate limiters are functions
 			expect(typeof middleware.defaultRateLimiter).toBe('function')
 			expect(typeof middleware.authRateLimiter).toBe('function')
 			expect(typeof middleware.apiRateLimiter).toBe('function')
+
+			// Verify that express-rate-limit was called 3 times (once for each limiter)
+			expect(mockRateLimitFactory).toHaveBeenCalledTimes(3)
+
+			// Verify that 3 handler functions were captured
+			expect(capturedHandlers).toHaveLength(3)
+
+			// Test each captured handler to verify they're configured correctly
+			const mockRequest = mockExpress.createRequest({ ip: '192.168.1.50' })
+			const mockRes1 = mockExpress.createResponse()
+			const mockRes2 = mockExpress.createResponse()
+			const mockRes3 = mockExpress.createResponse()
+
+			// Ensure we have all handlers before testing
+			expect(capturedHandlers[0]).toBeDefined()
+			expect(capturedHandlers[1]).toBeDefined()
+			expect(capturedHandlers[2]).toBeDefined()
+
+			// Test default handler (should log "Rate limit exceeded")
+			const defaultHandler = capturedHandlers[0]
+			if (defaultHandler) {
+				defaultHandler(mockRequest as Request, mockRes1 as Response, mockNext, {
+					statusCode: 429,
+					message: {
+						status: 429,
+						message: 'Too many requests, please try again later.',
+					},
+				})
+			}
+
+			// Test auth handler (should log "Auth rate limit exceeded")
+			const authHandler = capturedHandlers[1]
+			if (authHandler) {
+				authHandler(mockRequest as Request, mockRes2 as Response, mockNext, {
+					statusCode: 429,
+					message: {
+						status: 429,
+						message:
+							'Too many authentication attempts, please try again later.',
+					},
+				})
+			}
+
+			// Test API handler (should log "API rate limit exceeded")
+			const apiHandler = capturedHandlers[2]
+			if (apiHandler) {
+				apiHandler(mockRequest as Request, mockRes3 as Response, mockNext, {
+					statusCode: 429,
+					message: {
+						status: 429,
+						message: 'API rate limit exceeded, please try again later.',
+					},
+				})
+			}
+
+			// Verify each handler logged the correct message
+			expect(mockLogger.warn).toHaveBeenCalledWith(
+				'[middleware - rateLimit]: Rate limit exceeded for IP: 192.168.1.50',
+			)
+			expect(mockLogger.warn).toHaveBeenCalledWith(
+				'[middleware - rateLimit]: Auth rate limit exceeded for IP: 192.168.1.50',
+			)
+			expect(mockLogger.warn).toHaveBeenCalledWith(
+				'[middleware - rateLimit]: API rate limit exceeded for IP: 192.168.1.50',
+			)
+
+			// Verify all handlers returned 429 status
+			expect(mockRes1.status).toHaveBeenCalledWith(429)
+			expect(mockRes2.status).toHaveBeenCalledWith(429)
+			expect(mockRes3.status).toHaveBeenCalledWith(429)
 		})
 
 		it('should handle rate limit exceeded scenarios', async () => {
