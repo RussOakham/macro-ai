@@ -38,7 +38,7 @@ describe('errorHandler Middleware', () => {
 
 		// Store original NODE_ENV and reset it for each test
 		originalNodeEnv = process.env.NODE_ENV
-		delete process.env.NODE_ENV
+		process.env.NODE_ENV = undefined
 	})
 
 	afterEach(() => {
@@ -46,7 +46,7 @@ describe('errorHandler Middleware', () => {
 		if (originalNodeEnv !== undefined) {
 			process.env.NODE_ENV = originalNodeEnv
 		} else {
-			delete process.env.NODE_ENV
+			process.env.NODE_ENV = undefined
 		}
 	})
 
@@ -353,7 +353,7 @@ describe('errorHandler Middleware', () => {
 		it('should treat undefined NODE_ENV as non-production', async () => {
 			// Arrange
 			const error = new NotFoundError('Resource not found', 'api service')
-			delete process.env.NODE_ENV
+			process.env.NODE_ENV = undefined
 
 			// Act
 			await errorHandler(

@@ -93,8 +93,9 @@ vi.mock('path', () => ({
 	},
 }))
 
-// Mock process.cwd for static file serving
+// Mock process.cwd for static file serving while preserving other process properties
 vi.mock('process', () => ({
+	...process,
 	cwd: vi.fn(() => '/mocked/cwd'),
 }))
 

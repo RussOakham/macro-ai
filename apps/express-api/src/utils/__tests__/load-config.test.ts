@@ -85,7 +85,7 @@ describe('loadConfig', () => {
 			expect(mockConfig).toHaveBeenCalledWith({
 				path: mockEnvPath,
 				encoding: 'UTF-8',
-				debug: true, // NODE_ENV !== 'production'
+				debug: true, // NODE_ENV !== 'production' && NODE_ENV !== 'test'
 			})
 			expect(result).toEqual(
 				expect.objectContaining({
@@ -155,7 +155,7 @@ describe('loadConfig', () => {
 			expect(mockConfig).toHaveBeenCalledWith({
 				path: mockEnvPath,
 				encoding: 'UTF-8',
-				debug: false, // NODE_ENV === 'production'
+				debug: false, // NODE_ENV === 'production' && NODE_ENV !== 'test'
 			})
 			expect(result?.NODE_ENV).toBe('production')
 		})

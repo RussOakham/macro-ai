@@ -11,11 +11,14 @@ const { logger } = pino
 const loadConfig = (): Result<TEnv> => {
 	const envPath = resolve(process.cwd(), '.env')
 
+	const enableDebug =
+		process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test'
+
 	// Load environment variables from .env file
 	const result = config({
 		path: envPath,
 		encoding: 'UTF-8',
-		debug: process.env.NODE_ENV !== 'production',
+		debug: enableDebug,
 	})
 
 	if (result.error) {

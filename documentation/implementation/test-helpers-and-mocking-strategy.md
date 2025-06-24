@@ -871,7 +871,7 @@ export const defaultTestConfig = {
 	awsCognitoUserPoolId: 'test-pool-id',
 
 	// API
-	apiKey: 'test-api-key-12345678901234567890',
+	apiKey: 'test-api-key-dummy',
 	port: 3000,
 
 	// Database
