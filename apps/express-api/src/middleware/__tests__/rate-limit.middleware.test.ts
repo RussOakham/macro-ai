@@ -36,6 +36,29 @@ vi.mock('express-rate-limit', () => ({
 	),
 }))
 
+// Helper types and functions for handler testing
+type HandlerFunction = (
+	req: Request,
+	res: Response,
+	next: NextFunction,
+	options: { statusCode: number; message: unknown },
+) => void
+
+const createHandlerTestMiddleware = (
+	capturedHandler: HandlerFunction | null,
+	config: { handler: HandlerFunction; message: unknown },
+) => {
+	return vi.fn((req: Request, res: Response, next: NextFunction) => {
+		if (capturedHandler) {
+			const options = {
+				statusCode: 429,
+				message: config.message,
+			}
+			capturedHandler(req, res, next, options)
+		}
+	})
+}
+
 vi.mock('rate-limit-redis', () => ({
 	RedisStore: vi.fn(),
 }))
@@ -60,6 +83,7 @@ describe('Rate Limit Middleware', () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks()
+		vi.resetAllMocks()
 		// Reset module cache to ensure fresh imports
 		vi.resetModules()
 
@@ -83,42 +107,281 @@ describe('Rate Limit Middleware', () => {
 			expect(typeof middleware.apiRateLimiter).toBe('function')
 		})
 
-		it('should call middleware functions without errors', async () => {
+		it('should call next() when rate limit is not exceeded', async () => {
 			// Arrange
 			const middleware = await import('../rate-limit.middleware.ts')
 			const mockRequest = mockExpress.createRequest({ ip: '127.0.0.1' })
 
-			// Act & Assert - Should not throw errors
-			expect(async () => {
-				await middleware.defaultRateLimiter(
-					mockRequest as Request,
-					mockResponse as Response,
-					mockNext,
-				)
-			}).not.toThrow()
+			// Act
+			await middleware.defaultRateLimiter(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
 
-			expect(async () => {
-				await middleware.authRateLimiter(
-					mockRequest as Request,
-					mockResponse as Response,
-					mockNext,
-				)
-			}).not.toThrow()
+			await middleware.authRateLimiter(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
 
-			expect(async () => {
-				await middleware.apiRateLimiter(
-					mockRequest as Request,
-					mockResponse as Response,
-					mockNext,
-				)
-			}).not.toThrow()
+			await middleware.apiRateLimiter(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockNext).toHaveBeenCalledTimes(3)
+			expect(mockResponse.status).not.toHaveBeenCalled()
+		})
+
+		it('should return 429 status when rate limit is exceeded', async () => {
+			// Arrange - Mock express-rate-limit to simulate rate limit exceeded
+			const mockRateLimitExceeded = vi.fn((_req: Request, res: Response) => {
+				res.status(429).json({
+					status: 429,
+					message: 'Too many requests, please try again later.',
+				})
+			})
+
+			vi.doMock('express-rate-limit', () => ({
+				default: vi.fn(() => mockRateLimitExceeded),
+			}))
+
+			// Reset modules to pick up the new mock
+			vi.resetModules()
+			const middleware = await import('../rate-limit.middleware.ts')
+			const mockRequest = mockExpress.createRequest({ ip: '127.0.0.1' })
+			const mockRes = mockExpress.createResponse()
+
+			// Act
+			await middleware.defaultRateLimiter(
+				mockRequest as Request,
+				mockRes as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockRes.status).toHaveBeenCalledWith(429)
+			const statusResult = mockRes.status(429) as {
+				json: ReturnType<typeof vi.fn>
+			}
+			expect(statusResult.json).toHaveBeenCalledWith({
+				status: 429,
+				message: 'Too many requests, please try again later.',
+			})
+			expect(mockNext).not.toHaveBeenCalled()
+		})
+
+		it('should trigger real default rate limiter handler when limit exceeded', async () => {
+			// Arrange - Use real express-rate-limit but mock its dependencies
+			const mockLogger = {
+				warn: vi.fn(),
+				error: vi.fn(),
+				info: vi.fn(),
+			}
+
+			vi.doMock('../../utils/logger.ts', () => ({
+				pino: {
+					logger: mockLogger,
+				},
+				configureLogger: vi.fn(),
+			}))
+
+			// Mock express-rate-limit to capture and call the real handler
+			let capturedHandler: HandlerFunction | null = null
+
+			const mockRateLimitFactory = vi.fn(
+				(config: { handler: HandlerFunction; message: unknown }) => {
+					// Capture the handler function from the real configuration
+					capturedHandler = config.handler
+
+					// Return a middleware that simulates rate limit exceeded
+					return createHandlerTestMiddleware(capturedHandler, config)
+				},
+			)
+
+			vi.doMock('express-rate-limit', () => ({
+				default: mockRateLimitFactory,
+			}))
+
+			// Reset modules to pick up the new mocks
+			vi.resetModules()
+			const middleware = await import('../rate-limit.middleware.ts')
+			const mockRequest = mockExpress.createRequest({
+				ip: '192.168.1.100',
+				method: 'GET',
+				url: '/test',
+			})
+			const mockRes = mockExpress.createResponse()
+
+			// Act - Call the rate limiter which should trigger the real handler
+			await middleware.defaultRateLimiter(
+				mockRequest as Request,
+				mockRes as Response,
+				mockNext,
+			)
+
+			// Assert - Verify the real handler was called and logged correctly
+			expect(mockLogger.warn).toHaveBeenCalledWith(
+				'[middleware - rateLimit]: Rate limit exceeded for IP: 192.168.1.100',
+			)
+			expect(mockRes.status).toHaveBeenCalledWith(429)
+			const statusResult = mockRes.status(429) as {
+				json: ReturnType<typeof vi.fn>
+			}
+			expect(statusResult.json).toHaveBeenCalledWith({
+				status: 429,
+				message: 'Too many requests, please try again later.',
+			})
+			expect(mockNext).not.toHaveBeenCalled()
+		})
+
+		it('should trigger real auth rate limiter handler when limit exceeded', async () => {
+			// Arrange - Use real express-rate-limit but mock its dependencies
+			const mockLogger = {
+				warn: vi.fn(),
+				error: vi.fn(),
+				info: vi.fn(),
+			}
+
+			vi.doMock('../../utils/logger.ts', () => ({
+				pino: {
+					logger: mockLogger,
+				},
+				configureLogger: vi.fn(),
+			}))
+
+			// Mock express-rate-limit to capture and call the real handler
+			let capturedHandler: HandlerFunction | null = null
+
+			const mockRateLimitFactory = vi.fn(
+				(config: { handler: HandlerFunction; message: unknown }) => {
+					// Capture the handler function from the real configuration
+					capturedHandler = config.handler
+
+					// Return a middleware that simulates rate limit exceeded
+					return createHandlerTestMiddleware(capturedHandler, config)
+				},
+			)
+
+			vi.doMock('express-rate-limit', () => ({
+				default: mockRateLimitFactory,
+			}))
+
+			// Reset modules to pick up the new mocks
+			vi.resetModules()
+			const middleware = await import('../rate-limit.middleware.ts')
+			const mockRequest = mockExpress.createRequest({
+				ip: '10.0.0.50',
+				method: 'POST',
+				url: '/auth/login',
+			})
+			const mockRes = mockExpress.createResponse()
+
+			// Act - Call the auth rate limiter which should trigger the real handler
+			await middleware.authRateLimiter(
+				mockRequest as Request,
+				mockRes as Response,
+				mockNext,
+			)
+
+			// Assert - Verify the real auth handler was called and logged correctly
+			expect(mockLogger.warn).toHaveBeenCalledWith(
+				'[middleware - rateLimit]: Auth rate limit exceeded for IP: 10.0.0.50',
+			)
+			expect(mockRes.status).toHaveBeenCalledWith(429)
+			const statusResult = mockRes.status(429) as {
+				json: ReturnType<typeof vi.fn>
+			}
+			expect(statusResult.json).toHaveBeenCalledWith({
+				status: 429,
+				message: 'Too many authentication attempts, please try again later.',
+			})
+			expect(mockNext).not.toHaveBeenCalled()
+		})
+
+		it('should trigger real API rate limiter handler when limit exceeded', async () => {
+			// Arrange - Use real express-rate-limit but mock its dependencies
+			const mockLogger = {
+				warn: vi.fn(),
+				error: vi.fn(),
+				info: vi.fn(),
+			}
+
+			vi.doMock('../../utils/logger.ts', () => ({
+				pino: {
+					logger: mockLogger,
+				},
+				configureLogger: vi.fn(),
+			}))
+
+			// Mock express-rate-limit to capture and call the real handler
+			let capturedHandler: HandlerFunction | null = null
+
+			const mockRateLimitFactory = vi.fn(
+				(config: { handler: HandlerFunction; message: unknown }) => {
+					// Capture the handler function from the real configuration
+					capturedHandler = config.handler
+
+					// Return a middleware that simulates rate limit exceeded
+					return createHandlerTestMiddleware(capturedHandler, config)
+				},
+			)
+
+			vi.doMock('express-rate-limit', () => ({
+				default: mockRateLimitFactory,
+			}))
+
+			// Reset modules to pick up the new mocks
+			vi.resetModules()
+			const middleware = await import('../rate-limit.middleware.ts')
+			const mockRequest = mockExpress.createRequest({
+				ip: '172.16.0.25',
+				method: 'GET',
+				url: '/api/data',
+			})
+			const mockRes = mockExpress.createResponse()
+
+			// Act - Call the API rate limiter which should trigger the real handler
+			await middleware.apiRateLimiter(
+				mockRequest as Request,
+				mockRes as Response,
+				mockNext,
+			)
+
+			// Assert - Verify the real API handler was called and logged correctly
+			expect(mockLogger.warn).toHaveBeenCalledWith(
+				'[middleware - rateLimit]: API rate limit exceeded for IP: 172.16.0.25',
+			)
+			expect(mockRes.status).toHaveBeenCalledWith(429)
+			const statusResult = mockRes.status(429) as {
+				json: ReturnType<typeof vi.fn>
+			}
+			expect(statusResult.json).toHaveBeenCalledWith({
+				status: 429,
+				message: 'API rate limit exceeded, please try again later.',
+			})
+			expect(mockNext).not.toHaveBeenCalled()
 		})
 	})
 
 	describe('Rate Limit Configuration', () => {
 		it('should have different configurations for each limiter type', async () => {
-			// This test verifies that the middleware module loads successfully
-			// and that the rate limiters are properly configured with different settings
+			// Arrange - Mock express-rate-limit to return different instances for each call
+			const mockRateLimitFactory = vi.fn(() => {
+				return vi.fn((_req: Request, _res: Response, next: NextFunction) => {
+					next()
+				})
+			})
+
+			vi.doMock('express-rate-limit', () => ({
+				default: mockRateLimitFactory,
+			}))
+
+			// Reset modules to pick up the new mock
+			vi.resetModules()
 			const middleware = await import('../rate-limit.middleware.ts')
 
 			// Verify that all three limiters exist and are functions
@@ -130,18 +393,35 @@ describe('Rate Limit Middleware', () => {
 			expect(middleware.defaultRateLimiter).not.toBe(middleware.authRateLimiter)
 			expect(middleware.authRateLimiter).not.toBe(middleware.apiRateLimiter)
 			expect(middleware.defaultRateLimiter).not.toBe(middleware.apiRateLimiter)
+
+			// Verify that express-rate-limit was called 3 times (once for each limiter)
+			expect(mockRateLimitFactory).toHaveBeenCalledTimes(3)
 		})
 	})
 
 	describe('Error Handling', () => {
 		it('should handle requests gracefully when rate limit is not exceeded', async () => {
-			// Arrange
+			// Arrange - Mock express-rate-limit to always allow requests through
+			const mockRateLimitAllow = vi.fn(
+				(_req: Request, _res: Response, next: NextFunction) => {
+					next()
+				},
+			)
+
+			const mockRateLimitFactory = vi.fn(() => mockRateLimitAllow)
+			vi.doMock('express-rate-limit', () => ({
+				default: mockRateLimitFactory,
+			}))
+
+			// Reset modules to pick up the new mock
+			vi.resetModules()
 			const middleware = await import('../rate-limit.middleware.ts')
 			const mockRequest = mockExpress.createRequest({
 				ip: '192.168.1.1',
 				method: 'GET',
 				url: '/test',
 			})
+			const mockNext = vi.fn()
 
 			// Act
 			await middleware.defaultRateLimiter(
@@ -151,9 +431,8 @@ describe('Rate Limit Middleware', () => {
 			)
 
 			// Assert - Should call next() when rate limit is not exceeded
-			// Note: In a real scenario, this would depend on the rate limit store state
-			// For unit tests, we're just verifying the middleware doesn't crash
 			expect(mockNext).toHaveBeenCalled()
+			expect(mockResponse.status).not.toHaveBeenCalled()
 		})
 
 		it('should handle requests with missing IP address', async () => {
@@ -369,8 +648,31 @@ describe('Rate Limit Middleware', () => {
 		})
 
 		it('should handle rate limit exceeded scenarios', async () => {
-			// This test verifies that the middleware can handle rate limit scenarios
-			// The actual rate limiting logic is handled by express-rate-limit
+			// Arrange - Mock express-rate-limit to simulate rate limit exceeded after multiple calls
+			let callCount = 0
+			const mockRateLimitWithCounter = vi.fn(
+				(_req: Request, res: Response, next: NextFunction) => {
+					callCount++
+					if (callCount <= 2) {
+						// First two calls succeed
+						next()
+					} else {
+						// Third call exceeds rate limit
+						res.status(429).json({
+							status: 429,
+							message: 'Too many requests, please try again later.',
+						})
+					}
+				},
+			)
+
+			const mockRateLimitFactory = vi.fn(() => mockRateLimitWithCounter)
+			vi.doMock('express-rate-limit', () => ({
+				default: mockRateLimitFactory,
+			}))
+
+			// Reset modules to pick up the new mock
+			vi.resetModules()
 			const middleware = await import('../rate-limit.middleware.ts')
 			const mockRequest = mockExpress.createRequest({
 				ip: '192.168.1.200',
@@ -378,26 +680,71 @@ describe('Rate Limit Middleware', () => {
 				url: '/api/test-endpoint',
 			})
 
-			// Act - Call the rate limiter
+			// Act - Call the rate limiter multiple times to trigger rate limit
+			const mockRes1 = mockExpress.createResponse()
+			const mockNext1 = vi.fn()
 			await middleware.defaultRateLimiter(
 				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
+				mockRes1 as Response,
+				mockNext1,
 			)
 
-			// Assert - Should execute without errors
-			expect(mockNext).toHaveBeenCalled()
+			const mockRes2 = mockExpress.createResponse()
+			const mockNext2 = vi.fn()
+			await middleware.defaultRateLimiter(
+				mockRequest as Request,
+				mockRes2 as Response,
+				mockNext2,
+			)
+
+			const mockRes3 = mockExpress.createResponse()
+			const mockNext3 = vi.fn()
+			await middleware.defaultRateLimiter(
+				mockRequest as Request,
+				mockRes3 as Response,
+				mockNext3,
+			)
+
+			// Assert - First two calls should succeed
+			expect(mockNext1).toHaveBeenCalled()
+			expect(mockNext2).toHaveBeenCalled()
+			expect(mockRes1.status).not.toHaveBeenCalled()
+			expect(mockRes2.status).not.toHaveBeenCalled()
+
+			// Third call should be rate limited
+			expect(mockNext3).not.toHaveBeenCalled()
+			expect(mockRes3.status).toHaveBeenCalledWith(429)
+			const statusResult = mockRes3.status(429) as {
+				json: ReturnType<typeof vi.fn>
+			}
+			expect(statusResult.json).toHaveBeenCalledWith({
+				status: 429,
+				message: 'Too many requests, please try again later.',
+			})
 		})
 
 		it('should handle different rate limiter configurations', async () => {
-			// This test verifies that different rate limiters can be used
-			// and that they have different configurations
+			// Arrange - Mock express-rate-limit to always allow requests through
+			const mockRateLimitAllow = vi.fn(
+				(_req: Request, _res: Response, next: NextFunction) => {
+					next()
+				},
+			)
+
+			const mockRateLimitFactory = vi.fn(() => mockRateLimitAllow)
+			vi.doMock('express-rate-limit', () => ({
+				default: mockRateLimitFactory,
+			}))
+
+			// Reset modules to pick up the new mock
+			vi.resetModules()
 			const middleware = await import('../rate-limit.middleware.ts')
 			const mockRequest = mockExpress.createRequest({
 				ip: '10.0.0.200',
 				method: 'GET',
 				url: '/auth/test',
 			})
+			const mockNext = vi.fn()
 
 			// Act - Test all three rate limiters
 			await middleware.defaultRateLimiter(
@@ -418,8 +765,9 @@ describe('Rate Limit Middleware', () => {
 				mockNext,
 			)
 
-			// Assert - All should execute without errors
+			// Assert - All should execute without errors and call next() 3 times
 			expect(mockNext).toHaveBeenCalledTimes(3)
+			expect(mockResponse.status).not.toHaveBeenCalled()
 		})
 	})
 
