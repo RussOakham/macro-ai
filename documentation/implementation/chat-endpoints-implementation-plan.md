@@ -1053,40 +1053,246 @@ export class VectorService {
 export const vectorService = new VectorService()
 ```
 
-#### Semantic Search API Endpoint
+#### Complete Chat Routes with Authentication & Authorization
 
 ```typescript
 // apps/express-api/src/features/chat/chat.routes.ts
 import { Router } from 'express'
 import { verifyAuth } from '../../middleware/auth.middleware.ts'
 import { validateRequest } from '../../middleware/validation.middleware.ts'
-import { searchChatRequestSchema } from './chat.schemas.ts'
+import {
+	createChatRequestSchema,
+	sendMessageRequestSchema,
+	searchChatRequestSchema,
+} from './chat.schemas.ts'
+import { chatService } from './chat.service.ts'
 import { vectorService } from './vector.service.ts'
+import { streamChatResponse } from './chat.controllers.ts'
 import { tryCatch } from '../../utils/error-handling/try-catch.ts'
+import { pino } from '../../utils/logger.ts'
 
+const { logger } = pino
 const router = Router()
 
-// Semantic search across all user chats
+// All chat routes require authentication
+router.use(verifyAuth)
+
+// GET /api/chats - List user's chats with pagination
+router.get('/', async (req, res) => {
+	const userId = req.userId
+	const page = Number(req.query.page) || 1
+	const limit = Math.min(Number(req.query.limit) || 20, 100) // Max 100 chats per request
+
+	const [chats, error] = await chatService.getUserChats(userId, page, limit)
+
+	if (error) {
+		logger.error({
+			msg: '[chatRoutes]: Error retrieving user chats',
+			error: error.message,
+			userId,
+		})
+		return res.status(500).json({
+			success: false,
+			error: 'Failed to retrieve chats',
+		})
+	}
+
+	res.json({
+		success: true,
+		data: chats,
+		meta: {
+			page,
+			limit,
+			total: chats.length,
+		},
+	})
+})
+
+// POST /api/chats - Create new chat (user can only create for themselves)
+router.post('/', validateRequest(createChatRequestSchema), async (req, res) => {
+	const userId = req.userId
+	const { title } = req.body
+
+	const [chat, error] = await chatService.createChat(userId, title)
+
+	if (error) {
+		logger.error({
+			msg: '[chatRoutes]: Error creating chat',
+			error: error.message,
+			userId,
+		})
+		return res.status(500).json({
+			success: false,
+			error: 'Failed to create chat',
+		})
+	}
+
+	logger.info({
+		msg: '[chatRoutes]: Chat created successfully',
+		chatId: chat.id,
+		userId,
+	})
+
+	res.status(201).json({
+		success: true,
+		data: chat,
+	})
+})
+
+// GET /api/chats/:id - Get specific chat with messages (with ownership verification)
+router.get('/:id', async (req, res) => {
+	const userId = req.userId
+	const chatId = req.params.id
+
+	// Verify chat ownership and get chat with messages
+	const [chat, error] = await chatService.getChatWithMessages(chatId, userId)
+
+	if (error) {
+		logger.error({
+			msg: '[chatRoutes]: Error retrieving chat',
+			error: error.message,
+			userId,
+			chatId,
+		})
+
+		// Return 404 for both non-existent and unauthorized access
+		return res.status(404).json({
+			success: false,
+			error: 'Chat not found',
+		})
+	}
+
+	res.json({
+		success: true,
+		data: chat,
+	})
+})
+
+// PUT /api/chats/:id - Update chat title (with ownership verification)
+router.put(
+	'/:id',
+	validateRequest(createChatRequestSchema),
+	async (req, res) => {
+		const userId = req.userId
+		const chatId = req.params.id
+		const { title } = req.body
+
+		const [updatedChat, error] = await chatService.updateChat(chatId, userId, {
+			title,
+		})
+
+		if (error) {
+			logger.error({
+				msg: '[chatRoutes]: Error updating chat',
+				error: error.message,
+				userId,
+				chatId,
+			})
+
+			return res.status(404).json({
+				success: false,
+				error: 'Chat not found',
+			})
+		}
+
+		res.json({
+			success: true,
+			data: updatedChat,
+		})
+	},
+)
+
+// DELETE /api/chats/:id - Delete chat (with ownership verification)
+router.delete('/:id', async (req, res) => {
+	const userId = req.userId
+	const chatId = req.params.id
+
+	const [, error] = await chatService.deleteChat(chatId, userId)
+
+	if (error) {
+		logger.error({
+			msg: '[chatRoutes]: Error deleting chat',
+			error: error.message,
+			userId,
+			chatId,
+		})
+
+		return res.status(404).json({
+			success: false,
+			error: 'Chat not found',
+		})
+	}
+
+	logger.info({
+		msg: '[chatRoutes]: Chat deleted successfully',
+		chatId,
+		userId,
+	})
+
+	res.json({
+		success: true,
+		message: 'Chat deleted successfully',
+	})
+})
+
+// POST /api/chats/:id/messages - Send message and stream response (with ownership verification)
+router.post(
+	'/:id/messages',
+	validateRequest(sendMessageRequestSchema),
+	async (req, res) => {
+		const userId = req.userId
+		const chatId = req.params.id
+
+		// Verify chat ownership before processing message
+		const [chatExists, verifyError] = await chatService.verifyChatOwnership(
+			chatId,
+			userId,
+		)
+
+		if (verifyError || !chatExists) {
+			logger.warn({
+				msg: '[chatRoutes]: Unauthorized chat access attempt',
+				userId,
+				chatId,
+				error: verifyError?.message,
+			})
+
+			return res.status(404).json({
+				success: false,
+				error: 'Chat not found',
+			})
+		}
+
+		// Delegate to streaming controller
+		return streamChatResponse(req, res)
+	},
+)
+
+// GET /api/chats/search - Semantic search across user's chats only
 router.get(
 	'/search',
-	verifyAuth,
 	validateRequest(searchChatRequestSchema),
 	async (req, res) => {
 		const { query, limit, threshold } = req.query
 		const userId = req.userId
 
 		const [results, error] = await vectorService.semanticSearch(
-			userId,
+			userId, // Only search within user's own chats
 			query as string,
 			Number(limit) || 10,
 			Number(threshold) || 0.7,
 		)
 
 		if (error) {
+			logger.error({
+				msg: '[chatRoutes]: Error performing semantic search',
+				error: error.message,
+				userId,
+			})
+
 			return res.status(500).json({
 				success: false,
 				error: 'Search failed',
-				details: error.message,
 			})
 		}
 
@@ -1103,6 +1309,426 @@ router.get(
 )
 
 export { router as chatRouter }
+```
+
+### Chat Service with Authorization Checks
+
+```typescript
+// apps/express-api/src/features/chat/chat.service.ts
+import { eq, and, desc } from 'drizzle-orm'
+import { db } from '../../data-access/db.ts'
+import { chatsTable, chatMessagesTable } from './chat.schemas.ts'
+import { aiService } from './ai.service.ts'
+import { vectorService } from './vector.service.ts'
+import { tryCatch } from '../../utils/error-handling/try-catch.ts'
+import { UnauthorizedError, NotFoundError } from '../../utils/errors.ts'
+import type { Result } from '../../utils/error-handling/types.ts'
+
+export class ChatService {
+	/**
+	 * Verify that a user owns a specific chat
+	 */
+	public async verifyChatOwnership(
+		chatId: string,
+		userId: string,
+	): Promise<Result<boolean>> {
+		const [chat, error] = await tryCatch(
+			db
+				.select({ id: chatsTable.id })
+				.from(chatsTable)
+				.where(and(eq(chatsTable.id, chatId), eq(chatsTable.userId, userId)))
+				.limit(1),
+			'chatService - verifyChatOwnership',
+		)
+
+		if (error) {
+			return [null, error]
+		}
+
+		return [chat.length > 0, null]
+	}
+
+	/**
+	 * Get user's chats with pagination (only their own chats)
+	 */
+	public async getUserChats(
+		userId: string,
+		page: number = 1,
+		limit: number = 20,
+	): Promise<Result<Array<any>>> {
+		const offset = (page - 1) * limit
+
+		const [chats, error] = await tryCatch(
+			db
+				.select()
+				.from(chatsTable)
+				.where(eq(chatsTable.userId, userId))
+				.orderBy(desc(chatsTable.updatedAt))
+				.limit(limit)
+				.offset(offset),
+			'chatService - getUserChats',
+		)
+
+		if (error) {
+			return [null, error]
+		}
+
+		return [chats, null]
+	}
+
+	/**
+	 * Create new chat for authenticated user
+	 */
+	public async createChat(userId: string, title: string): Promise<Result<any>> {
+		const [chat, error] = await tryCatch(
+			db
+				.insert(chatsTable)
+				.values({
+					userId,
+					title,
+				})
+				.returning(),
+			'chatService - createChat',
+		)
+
+		if (error) {
+			return [null, error]
+		}
+
+		return [chat[0], null]
+	}
+
+	/**
+	 * Get chat with messages (with ownership verification)
+	 */
+	public async getChatWithMessages(
+		chatId: string,
+		userId: string,
+	): Promise<Result<any>> {
+		// First verify ownership
+		const [isOwner, ownershipError] = await this.verifyChatOwnership(
+			chatId,
+			userId,
+		)
+
+		if (ownershipError) {
+			return [null, ownershipError]
+		}
+
+		if (!isOwner) {
+			return [
+				null,
+				new UnauthorizedError('Access denied to chat', 'chatService'),
+			]
+		}
+
+		// Get chat with messages
+		const [chat, chatError] = await tryCatch(
+			db.select().from(chatsTable).where(eq(chatsTable.id, chatId)),
+			'chatService - getChatWithMessages',
+		)
+
+		if (chatError) {
+			return [null, chatError]
+		}
+
+		if (chat.length === 0) {
+			return [null, new NotFoundError('Chat not found', 'chatService')]
+		}
+
+		const [messages, messagesError] = await tryCatch(
+			db
+				.select()
+				.from(chatMessagesTable)
+				.where(eq(chatMessagesTable.chatId, chatId))
+				.orderBy(chatMessagesTable.createdAt),
+			'chatService - getChatMessages',
+		)
+
+		if (messagesError) {
+			return [null, messagesError]
+		}
+
+		return [{ ...chat[0], messages }, null]
+	}
+
+	/**
+	 * Update chat (with ownership verification)
+	 */
+	public async updateChat(
+		chatId: string,
+		userId: string,
+		updates: { title?: string },
+	): Promise<Result<any>> {
+		// Verify ownership first
+		const [isOwner, ownershipError] = await this.verifyChatOwnership(
+			chatId,
+			userId,
+		)
+
+		if (ownershipError) {
+			return [null, ownershipError]
+		}
+
+		if (!isOwner) {
+			return [
+				null,
+				new UnauthorizedError('Access denied to chat', 'chatService'),
+			]
+		}
+
+		const [updatedChat, error] = await tryCatch(
+			db
+				.update(chatsTable)
+				.set({ ...updates, updatedAt: new Date() })
+				.where(eq(chatsTable.id, chatId))
+				.returning(),
+			'chatService - updateChat',
+		)
+
+		if (error) {
+			return [null, error]
+		}
+
+		return [updatedChat[0], null]
+	}
+
+	/**
+	 * Delete chat (with ownership verification)
+	 */
+	public async deleteChat(
+		chatId: string,
+		userId: string,
+	): Promise<Result<boolean>> {
+		// Verify ownership first
+		const [isOwner, ownershipError] = await this.verifyChatOwnership(
+			chatId,
+			userId,
+		)
+
+		if (ownershipError) {
+			return [null, ownershipError]
+		}
+
+		if (!isOwner) {
+			return [
+				null,
+				new UnauthorizedError('Access denied to chat', 'chatService'),
+			]
+		}
+
+		// Delete chat (messages will be cascade deleted)
+		const [, error] = await tryCatch(
+			db.delete(chatsTable).where(eq(chatsTable.id, chatId)),
+			'chatService - deleteChat',
+		)
+
+		if (error) {
+			return [null, error]
+		}
+
+		return [true, null]
+	}
+
+	/**
+	 * Add message to chat (with ownership verification)
+	 */
+	public async addMessage(
+		chatId: string,
+		userId: string,
+		message: { role: string; content: string },
+	): Promise<Result<any>> {
+		// Verify ownership first
+		const [isOwner, ownershipError] = await this.verifyChatOwnership(
+			chatId,
+			userId,
+		)
+
+		if (ownershipError) {
+			return [null, ownershipError]
+		}
+
+		if (!isOwner) {
+			return [
+				null,
+				new UnauthorizedError('Access denied to chat', 'chatService'),
+			]
+		}
+
+		const [savedMessage, error] = await tryCatch(
+			db
+				.insert(chatMessagesTable)
+				.values({
+					chatId,
+					role: message.role,
+					content: message.content,
+				})
+				.returning(),
+			'chatService - addMessage',
+		)
+
+		if (error) {
+			return [null, error]
+		}
+
+		return [savedMessage[0], null]
+	}
+
+	/**
+	 * Generate and save embedding for message (with ownership verification)
+	 */
+	public async generateAndSaveEmbedding(
+		chatId: string,
+		userId: string,
+		content: string,
+	): Promise<Result<string>> {
+		// Verify ownership first
+		const [isOwner, ownershipError] = await this.verifyChatOwnership(
+			chatId,
+			userId,
+		)
+
+		if (ownershipError) {
+			return [null, ownershipError]
+		}
+
+		if (!isOwner) {
+			return [
+				null,
+				new UnauthorizedError('Access denied to chat', 'chatService'),
+			]
+		}
+
+		// Generate and store embedding
+		return await vectorService.storeEmbedding(userId, chatId, '', content)
+	}
+}
+
+export const chatService = new ChatService()
+```
+
+## Authorization & Security Considerations
+
+### 1. Authentication Requirements
+
+**All chat endpoints require valid Cognito authentication:**
+
+- Uses existing `verifyAuth` middleware
+- Extracts `userId` from verified JWT token
+- Rejects requests without valid authentication
+
+### 2. Authorization Patterns
+
+**Ownership-Based Access Control:**
+
+```typescript
+// Every chat operation verifies user ownership
+const [isOwner, error] = await chatService.verifyChatOwnership(chatId, userId)
+if (!isOwner) {
+	return res.status(404).json({ error: 'Chat not found' }) // Don't reveal existence
+}
+```
+
+**Key Authorization Principles:**
+
+- **Implicit Ownership**: Users can only access their own chats
+- **Resource Isolation**: Database queries always filter by `userId`
+- **Information Hiding**: Return 404 instead of 403 to avoid revealing chat existence
+- **Fail-Safe Defaults**: Deny access by default, grant only when verified
+
+### 3. Security Measures
+
+**Input Validation & Sanitization:**
+
+```typescript
+// Validate all user inputs
+router.post('/', validateRequest(createChatRequestSchema), async (req, res) => {
+	// Schema validation ensures safe input
+})
+
+// Sanitize chat content before AI processing
+const sanitizedContent = content.trim().slice(0, 10000) // Max length limit
+```
+
+**Rate Limiting Considerations:**
+
+```typescript
+// Per-user rate limiting for chat operations
+const chatRateLimiter = rateLimit({
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	max: 100, // 100 chat operations per window
+	keyGenerator: (req) => req.userId,
+	message: 'Too many chat requests',
+})
+
+// Stricter limits for AI streaming
+const aiStreamingLimiter = rateLimit({
+	windowMs: 60 * 1000, // 1 minute
+	max: 10, // 10 AI requests per minute
+	keyGenerator: (req) => req.userId,
+})
+```
+
+**Data Access Patterns:**
+
+- **Always filter by userId**: Every database query includes user ID filter
+- **Parameterized queries**: Use Drizzle ORM to prevent SQL injection
+- **Minimal data exposure**: Only return necessary fields in API responses
+
+### 4. Additional Authorization Considerations
+
+**Chat Sharing (Future Enhancement):**
+
+```typescript
+// If implementing chat sharing, add explicit permissions
+interface ChatPermission {
+	chatId: string
+	userId: string
+	permission: 'read' | 'write' | 'admin'
+	grantedBy: string
+	expiresAt?: Date
+}
+```
+
+**Admin Access (Future Enhancement):**
+
+```typescript
+// Admin middleware for support/moderation
+const requireAdmin = async (
+	req: Request,
+	res: Response,
+	next: NextFunction,
+) => {
+	const userRole = await getUserRole(req.userId)
+	if (userRole !== 'admin') {
+		return res.status(403).json({ error: 'Admin access required' })
+	}
+	next()
+}
+```
+
+**Audit Logging:**
+
+```typescript
+// Log all chat access for security monitoring
+logger.info({
+	msg: 'Chat access',
+	userId,
+	chatId,
+	action: 'read|write|delete',
+	ip: req.ip,
+	userAgent: req.get('User-Agent'),
+})
+```
+
+**Content Moderation:**
+
+```typescript
+// Optional: Content filtering before AI processing
+const moderateContent = async (content: string): Promise<boolean> => {
+	// Check for inappropriate content
+	// Return false if content should be blocked
+}
 ```
 
 ## Additional Dependencies and Packages
