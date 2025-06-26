@@ -1,6 +1,8 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import Cookies from 'js-cookie'
 
+import { ChatInterface } from '@/components/chat/chat-interface.tsx/chat-interface'
+import { ChatSidebar } from '@/components/chat/chat-sidebar/chat-sidebar'
 import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
@@ -27,9 +29,9 @@ const Index = () => {
 	// TODO: Implement logout logic
 
 	return (
-		<div className="p-2">
-			<h3>Welcome Home!</h3>
-			<p>{JSON.stringify(user)}</p>
+		<div className="flex h-full w-full">
+			<ChatSidebar />
+			<ChatInterface />
 		</div>
 	)
 }
