@@ -9,8 +9,7 @@ import {
 
 import { config } from '../../../config/default.ts'
 import { tryCatch, tryCatchSync } from '../../utils/error-handling/try-catch.ts'
-import type { Result } from '../../utils/errors.ts'
-import { ValidationError } from '../../utils/errors.ts'
+import { AppError, type Result, ValidationError } from '../../utils/errors.ts'
 
 // Interface for chat messages to avoid repetition
 interface ChatMessage {
@@ -142,19 +141,23 @@ class AIService {
 		for (let i = 0; i < texts.length; i += batchSize) {
 			const batch = texts.slice(i, i + batchSize)
 
-			// Process batch in parallel
-			const batchPromises = batch.map((text) => this.generateEmbedding(text))
-
-			const [batchResults, batchError] = await tryCatch(
-				Promise.all(batchPromises),
-				'aiService - generateEmbeddingsBatch',
-			)
-
-			if (batchError) {
-				return [null, batchError]
+			// Execute batch processing with proper error handling
+			let batchResults: Result<number[]>[]
+			try {
+				// Process all embeddings in parallel
+				batchResults = await Promise.all(
+					batch.map((text) => this.generateEmbedding(text)),
+				)
+			} catch (batchError) {
+				// Handle system-level failures (out of memory, etc.)
+				const appError = AppError.from(
+					batchError,
+					'aiService - generateEmbeddingsBatch',
+				)
+				return [null, appError]
 			}
 
-			// Check if any individual embedding failed
+			// Check each individual Result tuple for errors
 			for (const [embedding, error] of batchResults) {
 				if (error) {
 					return [null, error]

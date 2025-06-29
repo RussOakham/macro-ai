@@ -11,6 +11,9 @@ import {
 	selectMessageSchema,
 } from './chat.schemas.ts'
 
+// Chat message role type
+type ChatMessageRole = 'user' | 'assistant' | 'system'
+
 // Pagination interface
 interface PaginationOptions {
 	page?: number
@@ -76,7 +79,7 @@ interface IMessageRepository {
 	getChatHistory: (chatId: string) => Promise<
 		Result<
 			{
-				role: 'user' | 'assistant' | 'system'
+				role: ChatMessageRole
 				content: string
 			}[]
 		>
@@ -116,14 +119,14 @@ interface IChatService {
 		chatId: string
 		userId: string
 		content: string
-		role?: 'user' | 'assistant' | 'system'
+		role?: ChatMessageRole
 	}) => Promise<Result<{ userMessage: TChatMessage; aiResponse: TChatMessage }>>
 
 	sendMessageStreaming: (request: {
 		chatId: string
 		userId: string
 		content: string
-		role?: 'user' | 'assistant' | 'system'
+		role?: ChatMessageRole
 	}) => Promise<
 		Result<{
 			userMessage: TChatMessage
@@ -160,6 +163,7 @@ type TInsertChatVector = z.infer<typeof insertChatVectorSchema>
 type TChatVector = z.infer<typeof selectChatVectorSchema>
 
 export type {
+	ChatMessageRole,
 	ChatWithMessages,
 	IChatRepository,
 	IChatService,
