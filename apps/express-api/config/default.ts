@@ -26,6 +26,7 @@ const config = {
 	cookieEncryptionKey: env.COOKIE_ENCRYPTION_KEY,
 	nonRelationalDatabaseUrl: env.NON_RELATIONAL_DATABASE_URL,
 	relationalDatabaseUrl: env.RELATIONAL_DATABASE_URL,
+	openaiApiKey: env.OPENAI_API_KEY,
 	rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
 	rateLimitMaxRequests: env.RATE_LIMIT_MAX_REQUESTS,
 	authRateLimitWindowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,

@@ -47,6 +47,12 @@ const envSchema = z.object({
 		.string()
 		.min(1, 'Relational database URL is required'),
 
+	// OpenAI
+	OPENAI_API_KEY: z
+		.string()
+		.min(1, 'OpenAI API key is required')
+		.startsWith('sk-', 'OpenAI API key must start with sk-'),
+
 	// Rate Limiting
 	RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900000), // 15 minutes
 	RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
