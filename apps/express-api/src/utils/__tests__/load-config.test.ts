@@ -64,6 +64,7 @@ describe('loadConfig', () => {
 				COOKIE_ENCRYPTION_KEY: 'test-cookie-key-with-32-chars-min',
 				NON_RELATIONAL_DATABASE_URL: 'mongodb://localhost:27017/test',
 				RELATIONAL_DATABASE_URL: 'postgresql://localhost:5432/test',
+				OPENAI_API_KEY: 'sk-test-openai-key',
 				RATE_LIMIT_WINDOW_MS: '900000',
 				RATE_LIMIT_MAX_REQUESTS: '100',
 				AUTH_RATE_LIMIT_WINDOW_MS: '3600000',
@@ -110,6 +111,7 @@ describe('loadConfig', () => {
 				COOKIE_ENCRYPTION_KEY: 'test-cookie-key-with-32-chars-min',
 				NON_RELATIONAL_DATABASE_URL: 'mongodb://localhost:27017/test',
 				RELATIONAL_DATABASE_URL: 'postgresql://localhost:5432/test',
+				OPENAI_API_KEY: 'sk-test-openai-key',
 			}
 
 			process.env = minimalValidEnv
@@ -141,6 +143,7 @@ describe('loadConfig', () => {
 				COOKIE_ENCRYPTION_KEY: 'prod-cookie-key-with-32-chars-min',
 				NON_RELATIONAL_DATABASE_URL: 'mongodb://prod:27017/app',
 				RELATIONAL_DATABASE_URL: 'postgresql://prod:5432/app',
+				OPENAI_API_KEY: 'sk-prod-openai-key',
 			}
 
 			process.env = prodEnv
@@ -172,6 +175,7 @@ describe('loadConfig', () => {
 				AWS_COGNITO_SECRET_KEY: 'test',
 				COOKIE_ENCRYPTION_KEY: 'test-cookie-key-with-32-chars-min',
 				NON_RELATIONAL_DATABASE_URL: 'mongodb://localhost:27017/test',
+				OPENAI_API_KEY: 'sk-test-openai-key',
 				RELATIONAL_DATABASE_URL: 'postgresql://localhost:5432/test',
 				REDIS_URL: 'redis://localhost:6379',
 			}
@@ -198,6 +202,7 @@ describe('loadConfig', () => {
 				AWS_COGNITO_ACCESS_KEY: 'test',
 				AWS_COGNITO_SECRET_KEY: 'test',
 				COOKIE_ENCRYPTION_KEY: 'test-cookie-key-with-32-chars-min',
+				OPENAI_API_KEY: 'sk-test-openai-key',
 				NON_RELATIONAL_DATABASE_URL: 'mongodb://localhost:27017/test',
 				RELATIONAL_DATABASE_URL: 'postgresql://localhost:5432/test',
 			}
@@ -324,6 +329,7 @@ describe('loadConfig', () => {
 				COOKIE_ENCRYPTION_KEY: 'test-cookie-key-with-32-chars-min',
 				NON_RELATIONAL_DATABASE_URL: 'mongodb://localhost:27017/test',
 				RELATIONAL_DATABASE_URL: 'postgresql://localhost:5432/test',
+				OPENAI_API_KEY: 'sk-test-openai-key',
 			}
 			process.env = validEnv
 			mockConfig.mockReturnValue({ parsed: validEnv })
@@ -423,6 +429,7 @@ describe('loadConfig', () => {
 				COOKIE_ENCRYPTION_KEY: 'test-cookie-key-with-32-chars-456',
 				NON_RELATIONAL_DATABASE_URL: 'mongodb://test:27017/testdb',
 				RELATIONAL_DATABASE_URL: 'postgresql://test:5432/testdb',
+				OPENAI_API_KEY: 'sk-test-openai-key-456',
 				RATE_LIMIT_WINDOW_MS: '1800000',
 				RATE_LIMIT_MAX_REQUESTS: '200',
 				AUTH_RATE_LIMIT_WINDOW_MS: '7200000',
