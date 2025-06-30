@@ -167,6 +167,7 @@ interface IChatController {
 	getChatById: express.Handler
 	updateChat: express.Handler
 	deleteChat: express.Handler
+	streamChatMessage: express.Handler
 }
 
 // Define types using Zod schemas

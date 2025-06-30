@@ -1,10 +1,14 @@
 import type { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
-import { tryCatch } from '../../utils/error-handling/try-catch.ts'
+import { tryCatch, tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import { pino } from '../../utils/logger.ts'
 
-import { CreateChatRequest, UpdateChatRequest } from './chat.schemas.ts'
+import {
+	CreateChatRequest,
+	SendMessageRequest,
+	UpdateChatRequest,
+} from './chat.schemas.ts'
 import { chatService } from './chat.service.ts'
 import type { IChatController, PaginationOptions } from './chat.types.ts'
 
@@ -363,6 +367,194 @@ export class ChatController implements IChatController {
 			success: true,
 			message: 'Chat deleted successfully',
 		})
+	}
+
+	/**
+	 * Stream chat message response using Server-Sent Events (SSE)
+	 * POST /api/chats/:id/stream
+	 */
+	public streamChatMessage = async (
+		req: Request,
+		res: Response,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		next: NextFunction,
+	): Promise<void> => {
+		const userId = req.userId // Set by auth middleware
+		const chatId = req.params.id
+		const { content, role = 'user' } = req.body as SendMessageRequest
+
+		if (!userId) {
+			res.status(StatusCodes.UNAUTHORIZED).json({
+				success: false,
+				error: 'Authentication required',
+			})
+			return
+		}
+
+		if (!chatId) {
+			res.status(StatusCodes.BAD_REQUEST).json({
+				success: false,
+				error: 'Chat ID is required',
+			})
+			return
+		}
+
+		// Set SSE headers for streaming
+		res.writeHead(StatusCodes.OK, {
+			'Content-Type': 'text/event-stream',
+			'Cache-Control': 'no-cache',
+			Connection: 'keep-alive',
+			'Access-Control-Allow-Origin': '*',
+			'Access-Control-Allow-Headers': 'Cache-Control',
+		})
+
+		// Helper function to send SSE data with Go-style error handling
+		const sendSSEData = (data: object): void => {
+			const [, writeError] = tryCatchSync(
+				() => res.write(`data: ${JSON.stringify(data)}\n\n`),
+				'streamChatMessage - sendSSEData',
+			)
+
+			if (writeError) {
+				logger.error({
+					msg: '[streamChatMessage]: Error writing SSE data',
+					error: writeError.message,
+					userId,
+					chatId,
+				})
+			}
+		}
+
+		// Send initial connection confirmation
+		sendSSEData({ type: 'connected', message: 'Stream connected' })
+
+		try {
+			// Initiate streaming message exchange
+			const [result, error] = await tryCatch(
+				chatService.sendMessageStreaming({
+					chatId,
+					userId,
+					content,
+					role,
+				}),
+				'streamChatMessage - sendMessageStreaming',
+			)
+
+			if (error) {
+				logger.error({
+					msg: '[streamChatMessage]: Error initiating streaming',
+					error: error.message,
+					userId,
+					chatId,
+				})
+				sendSSEData({ type: 'error', error: 'Failed to process message' })
+				res.end()
+				return
+			}
+
+			const [streamingResult, serviceError] = result
+			if (serviceError) {
+				logger.error({
+					msg: '[streamChatMessage]: Service error during streaming',
+					error: serviceError.message,
+					userId,
+					chatId,
+				})
+				sendSSEData({ type: 'error', error: serviceError.message })
+				res.end()
+				return
+			}
+
+			// Send user message confirmation
+			sendSSEData({
+				type: 'user_message',
+				message: streamingResult.userMessage,
+			})
+
+			// Stream AI response
+			let fullResponse = ''
+			const { messageId, stream } = streamingResult.streamingResponse
+
+			// Send streaming start event
+			sendSSEData({
+				type: 'stream_start',
+				messageId,
+			})
+
+			// Process streaming chunks
+			const [, streamingError] = await tryCatch(
+				(async () => {
+					for await (const chunk of stream) {
+						fullResponse += chunk
+						sendSSEData({
+							type: 'chunk',
+							content: chunk,
+							messageId,
+						})
+					}
+				})(),
+				'streamChatMessage - streaming',
+			)
+
+			if (streamingError) {
+				logger.error({
+					msg: '[streamChatMessage]: Error during streaming',
+					error: streamingError.message,
+					userId,
+					chatId,
+					messageId,
+				})
+				sendSSEData({ type: 'error', error: 'Streaming interrupted' })
+				res.end()
+				return
+			}
+
+			// Update the AI message with the complete response
+			const [, updateError] = await tryCatch(
+				chatService.updateMessageContent(messageId, fullResponse),
+				'streamChatMessage - updateMessageContent',
+			)
+
+			if (updateError) {
+				logger.warn({
+					msg: '[streamChatMessage]: Error updating message content',
+					error: updateError.message,
+					userId,
+					chatId,
+					messageId,
+				})
+				// Continue anyway as the response was already streamed
+			}
+
+			// Send completion signal
+			sendSSEData({
+				type: 'stream_complete',
+				messageId,
+				fullContent: fullResponse,
+			})
+
+			logger.info({
+				msg: '[streamChatMessage]: Streaming completed successfully',
+				chatId,
+				userId,
+				messageId,
+				responseLength: fullResponse.length,
+			})
+		} catch (unexpectedError) {
+			logger.error({
+				msg: '[streamChatMessage]: Unexpected error during streaming',
+				error:
+					unexpectedError instanceof Error
+						? unexpectedError.message
+						: String(unexpectedError),
+				userId,
+				chatId,
+			})
+			sendSSEData({ type: 'error', error: 'Unexpected error occurred' })
+		} finally {
+			// Always end the response
+			res.end()
+		}
 	}
 }
 

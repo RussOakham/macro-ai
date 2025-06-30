@@ -206,6 +206,48 @@ const chatWithMessagesResponseSchema = registerZodSchema(
 	'Chat with messages response',
 )
 
+// Streaming endpoint schemas
+const streamingEventSchema = registerZodSchema(
+	'StreamingEvent',
+	z.discriminatedUnion('type', [
+		z.object({
+			type: z
+				.literal('connected')
+				.openapi({ description: 'Connection established' }),
+			message: z.string().openapi({ description: 'Connection message' }),
+		}),
+		z.object({
+			type: z
+				.literal('user_message')
+				.openapi({ description: 'User message saved' }),
+			message: chatMessageSchema.openapi({ description: 'Saved user message' }),
+		}),
+		z.object({
+			type: z
+				.literal('stream_start')
+				.openapi({ description: 'AI response streaming started' }),
+			messageId: z.string().uuid().openapi({ description: 'AI message ID' }),
+		}),
+		z.object({
+			type: z.literal('chunk').openapi({ description: 'AI response chunk' }),
+			content: z.string().openapi({ description: 'Chunk content' }),
+			messageId: z.string().uuid().openapi({ description: 'AI message ID' }),
+		}),
+		z.object({
+			type: z
+				.literal('stream_complete')
+				.openapi({ description: 'AI response streaming completed' }),
+			messageId: z.string().uuid().openapi({ description: 'AI message ID' }),
+			fullContent: z.string().openapi({ description: 'Complete AI response' }),
+		}),
+		z.object({
+			type: z.literal('error').openapi({ description: 'Error occurred' }),
+			error: z.string().openapi({ description: 'Error message' }),
+		}),
+	]),
+	'Server-Sent Event for streaming chat',
+)
+
 // Type definitions for pgvector operations
 export type Chat = typeof chatsTable.$inferSelect
 export type NewChat = typeof chatsTable.$inferInsert
@@ -224,6 +266,7 @@ export type ChatListResponse = z.infer<typeof chatListResponseSchema>
 export type ChatWithMessagesResponse = z.infer<
 	typeof chatWithMessagesResponseSchema
 >
+export type StreamingEvent = z.infer<typeof streamingEventSchema>
 
 // Export all schemas
 export {
@@ -242,5 +285,6 @@ export {
 	selectChatVectorSchema,
 	selectMessageSchema,
 	sendMessageRequestSchema,
+	streamingEventSchema,
 	updateChatRequestSchema,
 }

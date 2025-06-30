@@ -52,6 +52,16 @@ vi.mock('../chat.controller.ts', () => ({
 		deleteChat: vi.fn((_req: Request, res: Response) =>
 			res.status(200).json({ success: true }),
 		),
+		streamChatMessage: vi.fn((_req: Request, res: Response) => {
+			// Mock SSE response
+			res.writeHead(200, {
+				'Content-Type': 'text/event-stream',
+				'Cache-Control': 'no-cache',
+				Connection: 'keep-alive',
+			})
+			res.write('data: {"type":"connected","message":"Stream connected"}\n\n')
+			res.end()
+		}),
 	},
 }))
 
@@ -94,8 +104,51 @@ describe('Chat Routes Integration', () => {
 
 		// Verify that routes were registered
 		expect(routerSpy.get).toHaveBeenCalledTimes(2) // GET /chats and GET /chats/:id
-		expect(routerSpy.post).toHaveBeenCalledTimes(1) // POST /chats
+		expect(routerSpy.post).toHaveBeenCalledTimes(2) // POST /chats and POST /chats/:id/stream
 		expect(routerSpy.put).toHaveBeenCalledTimes(1) // PUT /chats/:id
 		expect(routerSpy.delete).toHaveBeenCalledTimes(1) // DELETE /chats/:id
+	})
+
+	it('should register streaming endpoint with proper middleware', () => {
+		const app = express()
+		const routerSpy = {
+			get: vi.fn(),
+			post: vi.fn(),
+			put: vi.fn(),
+			delete: vi.fn(),
+		}
+
+		app.get = routerSpy.get
+		app.post = routerSpy.post
+		app.put = routerSpy.put
+		app.delete = routerSpy.delete
+
+		chatRouter(app)
+
+		// Verify streaming endpoint is registered
+		const streamingCall = routerSpy.post.mock.calls.find(
+			(call) => typeof call[0] === 'string' && call[0].includes('/stream'),
+		)
+		expect(streamingCall).toBeDefined()
+		if (streamingCall) {
+			expect(streamingCall[0]).toBe('/chats/:id/stream')
+			// Verify middleware order: verifyAuth, apiRateLimiter, validate, controller
+			expect(streamingCall.length).toBe(5) // path + 3 middleware + controller
+		}
+	})
+
+	it('should handle streaming endpoint route registration', () => {
+		const app = express()
+		app.use(express.json())
+
+		// Should not throw when registering streaming route
+		expect(() => {
+			chatRouter(app)
+		}).not.toThrow()
+
+		// Verify the router function can be called multiple times
+		expect(() => {
+			chatRouter(app)
+		}).not.toThrow()
 	})
 })

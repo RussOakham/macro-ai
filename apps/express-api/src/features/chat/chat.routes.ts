@@ -1,5 +1,6 @@
 import { type Router } from 'express'
 import { StatusCodes } from 'http-status-codes'
+import { z } from 'zod'
 
 import { verifyAuth } from '../../middleware/auth.middleware.ts'
 import { apiRateLimiter } from '../../middleware/rate-limit.middleware.ts'
@@ -19,6 +20,7 @@ import {
 	chatResponseSchema,
 	chatWithMessagesResponseSchema,
 	createChatRequestSchema,
+	sendMessageRequestSchema,
 } from './chat.schemas.ts'
 
 // Register chat routes with OpenAPI documentation
@@ -382,6 +384,101 @@ registry.registerPath({
 	},
 })
 
+// POST /chats/:id/stream - Stream chat message response
+registry.registerPath({
+	method: 'post',
+	path: '/chats/{id}/stream',
+	description:
+		'Send a message and receive streaming AI response via Server-Sent Events',
+	summary: 'Stream chat message response',
+	tags: ['Chat'],
+	security: [{ bearerAuth: [] }],
+	request: {
+		params: z.object({
+			id: z.string().uuid().openapi({ description: 'Chat ID' }),
+		}),
+		body: {
+			description: 'Message to send',
+			content: {
+				'application/json': {
+					schema: sendMessageRequestSchema,
+				},
+			},
+		},
+	},
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'Streaming response via Server-Sent Events',
+			content: {
+				'text/event-stream': {
+					schema: z.object({
+						data: z.string().openapi({
+							description: 'SSE event data in JSON format',
+						}),
+					}),
+					examples: {
+						connected: {
+							summary: 'Connection established',
+							value:
+								'data: {"type":"connected","message":"Stream connected"}\n\n',
+						},
+						chunk: {
+							summary: 'AI response chunk',
+							value:
+								'data: {"type":"chunk","content":"Hello","messageId":"123e4567-e89b-12d3-a456-426614174000"}\n\n',
+						},
+						complete: {
+							summary: 'Streaming complete',
+							value:
+								'data: {"type":"stream_complete","messageId":"123e4567-e89b-12d3-a456-426614174000","fullContent":"Hello, how can I help you?"}\n\n',
+						},
+					},
+				},
+			},
+		},
+		[StatusCodes.BAD_REQUEST]: {
+			description: 'Invalid request parameters',
+			content: {
+				'application/json': {
+					schema: ValidationErrorSchema,
+				},
+			},
+		},
+		[StatusCodes.UNAUTHORIZED]: {
+			description: 'Authentication required',
+			content: {
+				'application/json': {
+					schema: UnauthorizedErrorSchema,
+				},
+			},
+		},
+		[StatusCodes.NOT_FOUND]: {
+			description: 'Chat not found or access denied',
+			content: {
+				'application/json': {
+					schema: NotFoundErrorSchema,
+				},
+			},
+		},
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Rate limit exceeded',
+			content: {
+				'application/json': {
+					schema: RateLimitErrorSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Internal server error',
+			content: {
+				'application/json': {
+					schema: InternalServerErrorSchema,
+				},
+			},
+		},
+	},
+})
+
 const chatRouter = (router: Router): void => {
 	// All chat routes require authentication and rate limiting
 	const basePath = '/chats'
@@ -421,6 +518,15 @@ const chatRouter = (router: Router): void => {
 		verifyAuth,
 		apiRateLimiter,
 		chatController.deleteChat,
+	)
+
+	// POST /chats/:id/stream - Stream chat message response
+	router.post(
+		`${basePath}/:id/stream`,
+		verifyAuth,
+		apiRateLimiter,
+		validate(sendMessageRequestSchema),
+		chatController.streamChatMessage,
 	)
 }
 
