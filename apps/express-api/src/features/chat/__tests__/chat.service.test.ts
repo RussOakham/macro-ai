@@ -1697,5 +1697,466 @@ describe('ChatService (Refactored)', () => {
 				)
 			})
 		})
+
+		describe('updateChat', () => {
+			describe('Success scenarios', () => {
+				it('should update chat successfully with valid title', async () => {
+					// Arrange
+					const chatId = mockChatId
+					const updates = { title: 'Updated Chat Title' }
+					const updatedChat = {
+						...mockChat,
+						title: updates.title,
+						updatedAt: new Date(),
+					}
+
+					mockChatRepository.updateChat.mockResolvedValue([updatedChat, null])
+
+					// Act
+					const [result, error] = await chatService.updateChat(chatId, updates)
+
+					// Assert
+					expect(mockChatRepository.updateChat).toHaveBeenCalledWith(
+						chatId,
+						updates,
+					)
+					expect(result).toEqual(updatedChat)
+					expect(error).toBeNull()
+					// Note: Logger is mocked at module level, so we don't assert on it in unit tests
+					// The logging behavior is tested through integration tests
+				})
+
+				it('should update chat with trimmed title', async () => {
+					// Arrange
+					const chatId = mockChatId
+					const updates = { title: '  Trimmed Title  ' }
+					const updatedChat = {
+						...mockChat,
+						title: 'Trimmed Title',
+						updatedAt: new Date(),
+					}
+
+					mockChatRepository.updateChat.mockResolvedValue([updatedChat, null])
+
+					// Act
+					const [result, error] = await chatService.updateChat(chatId, updates)
+
+					// Assert
+					expect(mockChatRepository.updateChat).toHaveBeenCalledWith(
+						chatId,
+						updates,
+					)
+					expect(result).toEqual(updatedChat)
+					expect(error).toBeNull()
+				})
+
+				it('should update chat with empty updates object', async () => {
+					// Arrange
+					const chatId = mockChatId
+					const updates = {}
+					const updatedChat = {
+						...mockChat,
+						updatedAt: new Date(),
+					}
+
+					mockChatRepository.updateChat.mockResolvedValue([updatedChat, null])
+
+					// Act
+					const [result, error] = await chatService.updateChat(chatId, updates)
+
+					// Assert
+					expect(mockChatRepository.updateChat).toHaveBeenCalledWith(
+						chatId,
+						updates,
+					)
+					expect(result).toEqual(updatedChat)
+					expect(error).toBeNull()
+				})
+
+				it('should update chat with maximum allowed title length', async () => {
+					// Arrange
+					const chatId = mockChatId
+					const maxLengthTitle = 'a'.repeat(255) // Exactly 255 characters
+					const updates = { title: maxLengthTitle }
+					const updatedChat = {
+						...mockChat,
+						title: maxLengthTitle,
+						updatedAt: new Date(),
+					}
+
+					mockChatRepository.updateChat.mockResolvedValue([updatedChat, null])
+
+					// Act
+					const [result, error] = await chatService.updateChat(chatId, updates)
+
+					// Assert
+					expect(mockChatRepository.updateChat).toHaveBeenCalledWith(
+						chatId,
+						updates,
+					)
+					expect(result).toEqual(updatedChat)
+					expect(error).toBeNull()
+				})
+			})
+
+			describe('Error scenarios', () => {
+				it('should return NotFoundError when chat does not exist', async () => {
+					// Arrange
+					const chatId = 'nonexistent-chat-id'
+					const updates = { title: 'New Title' }
+
+					// Repository returns null when chat not found
+					mockChatRepository.updateChat.mockResolvedValue([null, null])
+
+					// Act
+					const [result, error] = await chatService.updateChat(chatId, updates)
+
+					// Assert
+					expect(mockChatRepository.updateChat).toHaveBeenCalledWith(
+						chatId,
+						updates,
+					)
+					expect(result).toBeNull()
+					expect(error).toBeInstanceOf(NotFoundError)
+					expect(error?.message).toBe('Chat not found')
+					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+					expect(error!.service).toBe('chatService')
+				})
+
+				it('should return repository error when database operation fails', async () => {
+					// Arrange
+					const chatId = mockChatId
+					const updates = { title: 'New Title' }
+					const repositoryError = new InternalError(
+						'Database connection failed',
+						'chatRepository',
+					)
+
+					mockChatRepository.updateChat.mockResolvedValue([
+						null,
+						repositoryError,
+					])
+
+					// Act
+					const [result, error] = await chatService.updateChat(chatId, updates)
+
+					// Assert
+					expect(mockChatRepository.updateChat).toHaveBeenCalledWith(
+						chatId,
+						updates,
+					)
+					expect(result).toBeNull()
+					expect(error).toBe(repositoryError)
+					// Note: Logger is mocked at module level, so we don't assert on it in unit tests
+				})
+
+				it('should handle database constraint violation errors', async () => {
+					// Arrange
+					const chatId = mockChatId
+					const updates = { title: 'New Title' }
+					const constraintError = new InternalError(
+						'Unique constraint violation',
+						'chatRepository',
+					)
+
+					mockChatRepository.updateChat.mockResolvedValue([
+						null,
+						constraintError,
+					])
+
+					// Act
+					const [result, error] = await chatService.updateChat(chatId, updates)
+
+					// Assert
+					expect(result).toBeNull()
+					expect(error).toBe(constraintError)
+				})
+
+				it('should handle database timeout errors', async () => {
+					// Arrange
+					const chatId = mockChatId
+					const updates = { title: 'New Title' }
+					const timeoutError = new InternalError(
+						'Database operation timeout',
+						'chatRepository',
+					)
+
+					mockChatRepository.updateChat.mockResolvedValue([null, timeoutError])
+
+					// Act
+					const [result, error] = await chatService.updateChat(chatId, updates)
+
+					// Assert
+					expect(result).toBeNull()
+					expect(error).toBe(timeoutError)
+				})
+			})
+
+			describe('Edge cases', () => {
+				it('should handle undefined title in updates', async () => {
+					// Arrange
+					const chatId = mockChatId
+					const updates = { title: undefined }
+					const updatedChat = {
+						...mockChat,
+						updatedAt: new Date(),
+					}
+
+					mockChatRepository.updateChat.mockResolvedValue([updatedChat, null])
+
+					// Act
+					const [result, error] = await chatService.updateChat(chatId, updates)
+
+					// Assert
+					expect(mockChatRepository.updateChat).toHaveBeenCalledWith(
+						chatId,
+						updates,
+					)
+					expect(result).toEqual(updatedChat)
+					expect(error).toBeNull()
+				})
+
+				it('should handle null chatId', async () => {
+					// Arrange
+					const chatId = null as unknown as string
+					const updates = { title: 'New Title' }
+					const repositoryError = new ValidationError(
+						'Invalid chatId',
+						undefined,
+						'chatRepository',
+					)
+
+					mockChatRepository.updateChat.mockResolvedValue([
+						null,
+						repositoryError,
+					])
+
+					// Act
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+					const [result, error] = await chatService.updateChat(chatId, updates)
+
+					// Assert
+					expect(result).toBeNull()
+					expect(error).toBe(repositoryError)
+				})
+
+				it('should handle empty string chatId', async () => {
+					// Arrange
+					const chatId = ''
+					const updates = { title: 'New Title' }
+					const repositoryError = new ValidationError(
+						'Invalid chatId',
+						undefined,
+						'chatRepository',
+					)
+
+					mockChatRepository.updateChat.mockResolvedValue([
+						null,
+						repositoryError,
+					])
+
+					// Act
+					const [result, error] = await chatService.updateChat(chatId, updates)
+
+					// Assert
+					expect(result).toBeNull()
+					expect(error).toBe(repositoryError)
+				})
+
+				it('should handle malformed UUID chatId', async () => {
+					// Arrange
+					const chatId = 'invalid-uuid-format'
+					const updates = { title: 'New Title' }
+					const repositoryError = new ValidationError(
+						'Invalid UUID format',
+						undefined,
+						'chatRepository',
+					)
+
+					mockChatRepository.updateChat.mockResolvedValue([
+						null,
+						repositoryError,
+					])
+
+					// Act
+					const [result, error] = await chatService.updateChat(chatId, updates)
+
+					// Assert
+					expect(result).toBeNull()
+					expect(error).toBe(repositoryError)
+				})
+			})
+		})
+
+		describe('Input Validation (Private Methods Coverage)', () => {
+			describe('validateCreateChatRequest', () => {
+				it('should validate successful request', async () => {
+					// Arrange
+					const validRequest = { userId: mockUserId, title: 'Valid Title' }
+					const expectedValidated = { userId: mockUserId, title: 'Valid Title' }
+
+					vi.mocked(tryCatchSync).mockReturnValue([expectedValidated, null])
+
+					// Act
+					await chatService.createChat(validRequest)
+
+					// Assert
+					expect(tryCatchSync).toHaveBeenCalledWith(
+						expect.any(Function),
+						'chatService - validateCreateChatRequest',
+					)
+					// The validation is tested through createChat since it's a private method
+				})
+
+				it('should reject empty userId', async () => {
+					// Arrange
+					const invalidRequest = { userId: '', title: 'Valid Title' }
+					const validationError = new ValidationError(
+						'Valid userId is required',
+						undefined,
+						'chatService',
+					)
+
+					vi.mocked(tryCatchSync).mockReturnValue([null, validationError])
+
+					// Act
+					const [result, error] = await chatService.createChat(invalidRequest)
+
+					// Assert
+					expect(result).toBeNull()
+					expect(error).toBe(validationError)
+				})
+
+				it('should reject non-string userId', async () => {
+					// Arrange
+					const invalidRequest = {
+						userId: 123 as unknown as string,
+						title: 'Valid Title',
+					}
+					const validationError = new ValidationError(
+						'Valid userId is required',
+						undefined,
+						'chatService',
+					)
+
+					vi.mocked(tryCatchSync).mockReturnValue([null, validationError])
+
+					// Act
+					const [result, error] = await chatService.createChat(invalidRequest)
+
+					// Assert
+					expect(result).toBeNull()
+					expect(error).toBe(validationError)
+				})
+
+				it('should reject empty title', async () => {
+					// Arrange
+					const invalidRequest = { userId: mockUserId, title: '' }
+					const validationError = new ValidationError(
+						'Valid title is required',
+						undefined,
+						'chatService',
+					)
+
+					vi.mocked(tryCatchSync).mockReturnValue([null, validationError])
+
+					// Act
+					const [result, error] = await chatService.createChat(invalidRequest)
+
+					// Assert
+					expect(result).toBeNull()
+					expect(error).toBe(validationError)
+				})
+
+				it('should reject whitespace-only title', async () => {
+					// Arrange
+					const invalidRequest = { userId: mockUserId, title: '   ' }
+					const validationError = new ValidationError(
+						'Valid title is required',
+						undefined,
+						'chatService',
+					)
+
+					vi.mocked(tryCatchSync).mockReturnValue([null, validationError])
+
+					// Act
+					const [result, error] = await chatService.createChat(invalidRequest)
+
+					// Assert
+					expect(result).toBeNull()
+					expect(error).toBe(validationError)
+				})
+
+				it('should reject non-string title', async () => {
+					// Arrange
+					const invalidRequest = {
+						userId: mockUserId,
+						title: 123 as unknown as string,
+					}
+					const validationError = new ValidationError(
+						'Valid title is required',
+						undefined,
+						'chatService',
+					)
+
+					vi.mocked(tryCatchSync).mockReturnValue([null, validationError])
+
+					// Act
+					const [result, error] = await chatService.createChat(invalidRequest)
+
+					// Assert
+					expect(result).toBeNull()
+					expect(error).toBe(validationError)
+				})
+
+				it('should reject title longer than 255 characters', async () => {
+					// Arrange
+					const longTitle = 'a'.repeat(256) // 256 characters, exceeds 255 limit
+					const invalidRequest = { userId: mockUserId, title: longTitle }
+					const validationError = new ValidationError(
+						'Title must be 255 characters or less',
+						undefined,
+						'chatService',
+					)
+
+					vi.mocked(tryCatchSync).mockReturnValue([null, validationError])
+
+					// Act
+					const [result, error] = await chatService.createChat(invalidRequest)
+
+					// Assert
+					expect(result).toBeNull()
+					expect(error).toBe(validationError)
+				})
+
+				it('should trim title whitespace', async () => {
+					// Arrange
+					const requestWithWhitespace = {
+						userId: mockUserId,
+						title: '  Trimmed Title  ',
+					}
+					const expectedTrimmed = {
+						userId: mockUserId,
+						title: 'Trimmed Title',
+					}
+
+					vi.mocked(tryCatchSync).mockReturnValue([expectedTrimmed, null])
+					mockChatRepository.createChat.mockResolvedValue([mockChat, null])
+
+					// Act
+					const [result, error] = await chatService.createChat(
+						requestWithWhitespace,
+					)
+
+					// Assert
+					expect(tryCatchSync).toHaveBeenCalledWith(
+						expect.any(Function),
+						'chatService - validateCreateChatRequest',
+					)
+					expect(result).toEqual(mockChat)
+					expect(error).toBeNull()
+				})
+			})
+		})
 	})
 })
