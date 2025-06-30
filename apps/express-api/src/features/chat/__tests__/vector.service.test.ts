@@ -25,7 +25,7 @@ vi.mock('../ai.service.ts', () => ({
 }))
 
 // Mock vector repository
-vi.mock('../chat.data-access.ts', () => ({
+vi.mock('../vector.data-access.ts', () => ({
 	vectorRepository: {
 		createVector: vi.fn(),
 		findVectorsByUserId: vi.fn(),
@@ -39,7 +39,6 @@ vi.mock('../chat.data-access.ts', () => ({
 // Import after mocking
 import type { AIService } from '../ai.service.ts'
 import { aiService } from '../ai.service.ts'
-import { vectorRepository } from '../chat.data-access.ts'
 import type {
 	IVectorRepository,
 	SemanticSearchOptions,
@@ -47,6 +46,7 @@ import type {
 	TChatVector,
 	TInsertChatVector,
 } from '../chat.types.ts'
+import { vectorRepository } from '../vector.data-access.ts'
 import { VectorService } from '../vector.service.ts'
 
 // Create proper mock types for the services
