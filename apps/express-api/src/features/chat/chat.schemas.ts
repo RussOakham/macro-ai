@@ -123,6 +123,14 @@ const createChatRequestSchema = registerZodSchema(
 	'Create new chat request',
 )
 
+const updateChatRequestSchema = registerZodSchema(
+	'UpdateChatRequest',
+	z.object({
+		title: z.string().min(1).max(255).openapi({ description: 'Chat title' }),
+	}),
+	'Update chat request',
+)
+
 const sendMessageRequestSchema = registerZodSchema(
 	'SendMessageRequest',
 	z.object({
@@ -206,6 +214,17 @@ export type NewChatMessage = typeof chatMessagesTable.$inferInsert
 export type ChatVector = typeof chatVectorsTable.$inferSelect
 export type NewChatVector = typeof chatVectorsTable.$inferInsert
 
+// Type definitions for API requests and responses
+export type CreateChatRequest = z.infer<typeof createChatRequestSchema>
+export type UpdateChatRequest = z.infer<typeof updateChatRequestSchema>
+export type SendMessageRequest = z.infer<typeof sendMessageRequestSchema>
+export type SearchChatRequest = z.infer<typeof searchChatRequestSchema>
+export type ChatResponse = z.infer<typeof chatResponseSchema>
+export type ChatListResponse = z.infer<typeof chatListResponseSchema>
+export type ChatWithMessagesResponse = z.infer<
+	typeof chatWithMessagesResponseSchema
+>
+
 // Export all schemas
 export {
 	chatListResponseSchema,
@@ -223,4 +242,5 @@ export {
 	selectChatVectorSchema,
 	selectMessageSchema,
 	sendMessageRequestSchema,
+	updateChatRequestSchema,
 }

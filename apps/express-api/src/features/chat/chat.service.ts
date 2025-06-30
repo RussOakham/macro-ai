@@ -417,6 +417,40 @@ export class ChatService implements IChatService {
 	}
 
 	/**
+	 * Update a chat (with ownership verification)
+	 * @param chatId - The chat ID to update
+	 * @param updates - The updates to apply (e.g., title)
+	 * @returns Result tuple with updated chat or error
+	 */
+	public async updateChat(
+		chatId: string,
+		updates: { title?: string },
+	): Promise<Result<TChat>> {
+		// Note: Ownership verification should be done by the caller (controller)
+		// This method focuses on the update operation itself
+		const [updatedChat, error] = await this.chatRepository.updateChat(
+			chatId,
+			updates,
+		)
+
+		if (error) {
+			return [null, error]
+		}
+
+		if (!updatedChat) {
+			return [null, new NotFoundError('Chat not found', 'chatService')]
+		}
+
+		logger.info({
+			msg: 'Chat updated successfully',
+			chatId,
+			updates,
+		})
+
+		return [updatedChat, null]
+	}
+
+	/**
 	 * Delete a chat and all its messages
 	 * @param chatId - The chat ID to delete
 	 * @param userId - The user ID for ownership verification

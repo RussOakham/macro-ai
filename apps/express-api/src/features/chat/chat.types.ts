@@ -1,3 +1,4 @@
+import express from 'express'
 import { z } from 'zod'
 
 import { type Result } from '../../utils/errors.ts'
@@ -142,6 +143,11 @@ interface IChatService {
 		content: string,
 	) => Promise<Result<TChatMessage>>
 
+	updateChat: (
+		chatId: string,
+		updates: { title?: string },
+	) => Promise<Result<TChat>>
+
 	deleteChat: (chatId: string, userId: string) => Promise<Result<void>>
 
 	semanticSearch: (
@@ -152,6 +158,15 @@ interface IChatService {
 		chatId: string,
 		userId: string,
 	) => Promise<Result<boolean>>
+}
+
+// Chat controller interface
+interface IChatController {
+	getChats: express.Handler
+	createChat: express.Handler
+	getChatById: express.Handler
+	updateChat: express.Handler
+	deleteChat: express.Handler
 }
 
 // Define types using Zod schemas
@@ -165,6 +180,7 @@ type TChatVector = z.infer<typeof selectChatVectorSchema>
 export type {
 	ChatMessageRole,
 	ChatWithMessages,
+	IChatController,
 	IChatRepository,
 	IChatService,
 	IMessageRepository,
