@@ -733,7 +733,7 @@ describe('Mock Data Creation', () => {
 	})
 
 	describe('createInsertChat', () => {
-		it('should create insert chat with defaults', () => {
+		it(`should create insert chat with defaults`, () => {
 			// Act
 			const insertChat = mockChatService.createInsertChat()
 
@@ -900,7 +900,7 @@ describe('Mock Data Creation', () => {
 					'sendMessageStreaming',
 					'updateMessageContent',
 					'semanticSearch',
-				]
+				] as const
 
 				expectedMethods.forEach((method) => {
 					expect(module.chatService).toHaveProperty(method)
@@ -967,7 +967,7 @@ describe('Mock Data Creation', () => {
 					'sendMessageStreaming',
 					'updateMessageContent',
 					'semanticSearch',
-				]
+				] as const
 
 				expectedMethods.forEach((method) => {
 					expect(mock).toHaveProperty(method)
