@@ -18,6 +18,7 @@ vi.mock('../../../utils/error-handling/try-catch.ts', () =>
 // Import types for proper typing
 import type { AIService } from '../ai.service.ts'
 import type {
+	ChatMessageRole,
 	IChatRepository,
 	IMessageRepository,
 	TChat,
@@ -332,8 +333,10 @@ describe('ChatService (Refactored)', () => {
 
 		it('should return validation error for invalid userId type', async () => {
 			// Arrange
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-			const invalidRequest = { userId: 123 as any, title: 'Valid Title' }
+			const invalidRequest = {
+				userId: 123 as unknown as string,
+				title: 'Valid Title',
+			}
 			const validationError = new ValidationError(
 				'Valid userId is required',
 				undefined,
@@ -756,8 +759,7 @@ describe('ChatService (Refactored)', () => {
 				chatId: mockChatId,
 				userId: mockUserId,
 				content: 'Hello AI',
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-				role: 'invalid-role' as any,
+				role: 'invalid-role' as unknown as ChatMessageRole,
 			}
 			const validationError = new ValidationError(
 				'Invalid role specified',
@@ -1932,7 +1934,6 @@ describe('ChatService (Refactored)', () => {
 					])
 
 					// Act
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 					const [result, error] = await chatService.updateChat(chatId, updates)
 
 					// Assert
