@@ -314,5 +314,5 @@ export class VectorService {
 // Create and export singleton instance
 // Import dependencies here to avoid circular dependency
 import { aiService } from './ai.service.ts'
-import { vectorRepository } from './chat.data-access.ts'
+import { vectorRepository } from './vector.data-access.ts'
 export const vectorService = new VectorService(aiService, vectorRepository)

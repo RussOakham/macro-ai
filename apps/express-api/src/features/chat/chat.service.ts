@@ -612,7 +612,8 @@ export class ChatService implements IChatService {
 // Create and export singleton instance
 // Import dependencies here to avoid circular dependency
 import { aiService } from './ai.service.ts'
-import { chatRepository, messageRepository } from './chat.data-access.ts'
+import { chatRepository } from './chat.data-access.ts'
+import { messageRepository } from './message.data-access.ts'
 import { vectorService } from './vector.service.ts'
 
 export const chatService = new ChatService(
