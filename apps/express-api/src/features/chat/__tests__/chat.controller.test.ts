@@ -99,6 +99,27 @@ describe('ChatController', () => {
 			expect(mockNext).not.toHaveBeenCalled()
 		})
 
+		it('should return 401 when userId is missing', async () => {
+			// Arrange
+			mockRequest.userId = undefined
+
+			// Act
+			await chatController.getChats(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.UNAUTHORIZED)
+			expect(mockResponse.json).toHaveBeenCalledWith({
+				success: false,
+				error: 'Authentication required',
+			})
+			expect(mockedChatService.getUserChats).not.toHaveBeenCalled()
+			expect(mockNext).not.toHaveBeenCalled()
+		})
+
 		it('should handle service errors', async () => {
 			// Arrange
 			const error = new InternalError('Database error')
@@ -113,6 +134,32 @@ describe('ChatController', () => {
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(error)
+		})
+
+		it('should use default pagination values when not provided', async () => {
+			// Arrange
+			mockRequest.query = {} // No pagination params
+			const mockChatsData = mockChatService.createChatsPagination({
+				chats: [],
+				total: 0,
+			})
+			vi.mocked(chatService).getUserChats.mockResolvedValue([
+				mockChatsData,
+				null,
+			])
+
+			// Act
+			await chatController.getChats(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockedChatService.getUserChats).toHaveBeenCalledWith(mockUserId, {
+				page: 1, // Default page
+				limit: 20, // Default limit
+			})
 		})
 
 		it('should limit pagination to maximum 100', async () => {
@@ -138,6 +185,110 @@ describe('ChatController', () => {
 			expect(mockedChatService.getUserChats).toHaveBeenCalledWith(mockUserId, {
 				page: 1,
 				limit: 100, // Should be capped at 100
+			})
+		})
+
+		it('should handle invalid pagination parameters gracefully', async () => {
+			// Arrange
+			mockRequest.query = { page: 'invalid', limit: 'invalid' }
+			const mockChatsData = mockChatService.createChatsPagination({
+				chats: [],
+				total: 0,
+			})
+			vi.mocked(chatService).getUserChats.mockResolvedValue([
+				mockChatsData,
+				null,
+			])
+
+			// Act
+			await chatController.getChats(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockedChatService.getUserChats).toHaveBeenCalledWith(mockUserId, {
+				page: 1, // Default when invalid
+				limit: 20, // Default when invalid
+			})
+		})
+
+		it('should sanitize negative pagination values to defaults', async () => {
+			// Arrange
+			mockRequest.query = { page: '-1', limit: '-5' }
+			const mockChatsData = mockChatService.createChatsPagination({
+				chats: [],
+				total: 0,
+			})
+			vi.mocked(chatService).getUserChats.mockResolvedValue([
+				mockChatsData,
+				null,
+			])
+
+			// Act
+			await chatController.getChats(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockedChatService.getUserChats).toHaveBeenCalledWith(mockUserId, {
+				page: 1, // Negative values should be sanitized to default
+				limit: 20, // Negative values should be sanitized to default
+			})
+		})
+
+		it('should sanitize zero pagination values to defaults', async () => {
+			// Arrange
+			mockRequest.query = { page: '0', limit: '0' }
+			const mockChatsData = mockChatService.createChatsPagination({
+				chats: [],
+				total: 0,
+			})
+			vi.mocked(chatService).getUserChats.mockResolvedValue([
+				mockChatsData,
+				null,
+			])
+
+			// Act
+			await chatController.getChats(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockedChatService.getUserChats).toHaveBeenCalledWith(mockUserId, {
+				page: 1, // Zero values should be sanitized to default
+				limit: 20, // Zero values should be sanitized to default
+			})
+		})
+
+		it('should handle decimal pagination values correctly', async () => {
+			// Arrange
+			mockRequest.query = { page: '2.7', limit: '15.9' }
+			const mockChatsData = mockChatService.createChatsPagination({
+				chats: [],
+				total: 0,
+			})
+			vi.mocked(chatService).getUserChats.mockResolvedValue([
+				mockChatsData,
+				null,
+			])
+
+			// Act
+			await chatController.getChats(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockedChatService.getUserChats).toHaveBeenCalledWith(mockUserId, {
+				page: 2.7, // Number('2.7') returns 2.7, which is > 0, so it's accepted
+				limit: 15.9, // Number('15.9') returns 15.9, which is > 0, so it's accepted
 			})
 		})
 	})
@@ -168,6 +319,28 @@ describe('ChatController', () => {
 			expect(mockNext).not.toHaveBeenCalled()
 		})
 
+		it('should return 401 when userId is missing', async () => {
+			// Arrange
+			mockRequest.userId = undefined
+			mockRequest.body = { title: 'New Chat' }
+
+			// Act
+			await chatController.createChat(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.UNAUTHORIZED)
+			expect(mockResponse.json).toHaveBeenCalledWith({
+				success: false,
+				error: 'Authentication required',
+			})
+			expect(mockedChatService.createChat).not.toHaveBeenCalled()
+			expect(mockNext).not.toHaveBeenCalled()
+		})
+
 		it('should handle service errors', async () => {
 			// Arrange
 			mockRequest.body = { title: 'New Chat' }
@@ -183,6 +356,47 @@ describe('ChatController', () => {
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(error)
+		})
+
+		it('should handle valid minimum title length', async () => {
+			// Arrange
+			mockRequest.body = { title: 'A' } // Minimum valid title (1 character)
+			vi.mocked(chatService).createChat.mockResolvedValue([mockChat, null])
+
+			// Act
+			await chatController.createChat(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockedChatService.createChat).toHaveBeenCalledWith({
+				userId: mockUserId,
+				title: 'A',
+			})
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.CREATED)
+		})
+
+		it('should handle valid maximum title length', async () => {
+			// Arrange
+			const maxTitle = 'A'.repeat(255) // Maximum valid title (255 characters)
+			mockRequest.body = { title: maxTitle }
+			vi.mocked(chatService).createChat.mockResolvedValue([mockChat, null])
+
+			// Act
+			await chatController.createChat(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockedChatService.createChat).toHaveBeenCalledWith({
+				userId: mockUserId,
+				title: maxTitle,
+			})
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.CREATED)
 		})
 	})
 
@@ -212,6 +426,49 @@ describe('ChatController', () => {
 				success: true,
 				data: mockChatWithMessages,
 			})
+			expect(mockNext).not.toHaveBeenCalled()
+		})
+
+		it('should return 401 when userId is missing', async () => {
+			// Arrange
+			mockRequest.userId = undefined
+			mockRequest.params = { id: mockChatId }
+
+			// Act
+			await chatController.getChatById(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.UNAUTHORIZED)
+			expect(mockResponse.json).toHaveBeenCalledWith({
+				success: false,
+				error: 'Authentication required',
+			})
+			expect(mockedChatService.getChatWithMessages).not.toHaveBeenCalled()
+			expect(mockNext).not.toHaveBeenCalled()
+		})
+
+		it('should return 400 when chatId is missing', async () => {
+			// Arrange
+			mockRequest.params = {} // No id parameter
+
+			// Act
+			await chatController.getChatById(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST)
+			expect(mockResponse.json).toHaveBeenCalledWith({
+				success: false,
+				error: 'Chat ID is required',
+			})
+			expect(mockedChatService.getChatWithMessages).not.toHaveBeenCalled()
 			expect(mockNext).not.toHaveBeenCalled()
 		})
 
@@ -254,6 +511,46 @@ describe('ChatController', () => {
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(error)
 		})
+
+		it('should handle empty chatId parameter', async () => {
+			// Arrange
+			mockRequest.params = { id: '' } // Empty string
+
+			// Act
+			await chatController.getChatById(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST)
+			expect(mockResponse.json).toHaveBeenCalledWith({
+				success: false,
+				error: 'Chat ID is required',
+			})
+			expect(mockedChatService.getChatWithMessages).not.toHaveBeenCalled()
+		})
+
+		it('should handle undefined chatId parameter', async () => {
+			// Arrange
+			delete mockRequest.params?.id // Remove id property
+
+			// Act
+			await chatController.getChatById(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST)
+			expect(mockResponse.json).toHaveBeenCalledWith({
+				success: false,
+				error: 'Chat ID is required',
+			})
+			expect(mockedChatService.getChatWithMessages).not.toHaveBeenCalled()
+		})
 	})
 
 	describe('updateChat', () => {
@@ -289,6 +586,53 @@ describe('ChatController', () => {
 				success: true,
 				data: updatedChat,
 			})
+			expect(mockNext).not.toHaveBeenCalled()
+		})
+
+		it('should return 401 when userId is missing', async () => {
+			// Arrange
+			mockRequest.userId = undefined
+			mockRequest.params = { id: mockChatId }
+			mockRequest.body = { title: 'Updated Chat Title' }
+
+			// Act
+			await chatController.updateChat(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.UNAUTHORIZED)
+			expect(mockResponse.json).toHaveBeenCalledWith({
+				success: false,
+				error: 'Authentication required',
+			})
+			expect(mockedChatService.verifyChatOwnership).not.toHaveBeenCalled()
+			expect(mockedChatService.updateChat).not.toHaveBeenCalled()
+			expect(mockNext).not.toHaveBeenCalled()
+		})
+
+		it('should return 400 when chatId is missing', async () => {
+			// Arrange
+			mockRequest.params = {} // No id parameter
+			mockRequest.body = { title: 'Updated Chat Title' }
+
+			// Act
+			await chatController.updateChat(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST)
+			expect(mockResponse.json).toHaveBeenCalledWith({
+				success: false,
+				error: 'Chat ID is required',
+			})
+			expect(mockedChatService.verifyChatOwnership).not.toHaveBeenCalled()
+			expect(mockedChatService.updateChat).not.toHaveBeenCalled()
 			expect(mockNext).not.toHaveBeenCalled()
 		})
 
@@ -341,6 +685,26 @@ describe('ChatController', () => {
 			expect(mockNext).toHaveBeenCalledWith(error)
 			expect(mockedChatService.updateChat).not.toHaveBeenCalled()
 		})
+
+		it('should handle update service errors', async () => {
+			// Arrange
+			mockRequest.params = { id: mockChatId }
+			mockRequest.body = { title: 'Updated Chat Title' }
+			const error = new InternalError('Update failed')
+
+			vi.mocked(chatService).verifyChatOwnership.mockResolvedValue([true, null])
+			vi.mocked(chatService).updateChat.mockResolvedValue([null, error])
+
+			// Act
+			await chatController.updateChat(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockNext).toHaveBeenCalledWith(error)
+		})
 	})
 
 	describe('deleteChat', () => {
@@ -366,6 +730,49 @@ describe('ChatController', () => {
 				success: true,
 				message: 'Chat deleted successfully',
 			})
+			expect(mockNext).not.toHaveBeenCalled()
+		})
+
+		it('should return 401 when userId is missing', async () => {
+			// Arrange
+			mockRequest.userId = undefined
+			mockRequest.params = { id: mockChatId }
+
+			// Act
+			await chatController.deleteChat(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.UNAUTHORIZED)
+			expect(mockResponse.json).toHaveBeenCalledWith({
+				success: false,
+				error: 'Authentication required',
+			})
+			expect(mockedChatService.deleteChat).not.toHaveBeenCalled()
+			expect(mockNext).not.toHaveBeenCalled()
+		})
+
+		it('should return 400 when chatId is missing', async () => {
+			// Arrange
+			mockRequest.params = {} // No id parameter
+
+			// Act
+			await chatController.deleteChat(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST)
+			expect(mockResponse.json).toHaveBeenCalledWith({
+				success: false,
+				error: 'Chat ID is required',
+			})
+			expect(mockedChatService.deleteChat).not.toHaveBeenCalled()
 			expect(mockNext).not.toHaveBeenCalled()
 		})
 

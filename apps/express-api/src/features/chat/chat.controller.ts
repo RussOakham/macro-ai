@@ -35,8 +35,12 @@ export class ChatController implements IChatController {
 			return
 		}
 
-		const page = Number(req.query.page) || 1
-		const limit = Math.min(Number(req.query.limit) || 20, 100) // Max 100 chats per request
+		// Validate and sanitize pagination parameters
+		const pageNum = Number(req.query.page)
+		const limitNum = Number(req.query.limit)
+
+		const page = pageNum > 0 ? pageNum : 1 // Default to 1 for invalid/negative/zero values
+		const limit = Math.min(limitNum > 0 ? limitNum : 20, 100) // Default to 20, max 100
 
 		const paginationOptions: PaginationOptions = { page, limit }
 
