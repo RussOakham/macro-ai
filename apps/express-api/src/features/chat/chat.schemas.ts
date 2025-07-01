@@ -131,16 +131,22 @@ const updateChatRequestSchema = registerZodSchema(
 	'Update chat request',
 )
 
+// Schema for individual message in AI SDK request
+const aiMessageSchema = z.object({
+	role: z.enum(['user', 'assistant', 'system']).openapi({
+		description: 'Message role',
+	}),
+	content: z.string().min(1).max(10000).openapi({
+		description: 'Message content',
+	}),
+})
+
+// Schema for Vercel AI SDK compatible request (with messages array)
 const sendMessageRequestSchema = registerZodSchema(
 	'SendMessageRequest',
 	z.object({
-		content: z
-			.string()
-			.min(1)
-			.max(10000)
-			.openapi({ description: 'Message content' }),
-		role: z.enum(['user', 'assistant', 'system']).default('user').openapi({
-			description: 'Message role',
+		messages: z.array(aiMessageSchema).min(1).openapi({
+			description: 'Array of conversation messages',
 		}),
 	}),
 	'Send message request',

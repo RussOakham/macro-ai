@@ -381,7 +381,29 @@ export class ChatController implements IChatController {
 	): Promise<void> => {
 		const userId = req.userId // Set by auth middleware
 		const chatId = req.params.id
-		const { content, role = 'user' } = req.body as SendMessageRequest
+		const requestBody = req.body as SendMessageRequest
+
+		// Validate messages array
+		if (requestBody.messages.length === 0) {
+			res.status(StatusCodes.BAD_REQUEST).json({
+				success: false,
+				error: 'Messages array must not be empty',
+			})
+			return
+		}
+
+		// Extract the latest user message from the messages array
+		const latestMessage = requestBody.messages[requestBody.messages.length - 1]
+		if (!latestMessage || latestMessage.role !== 'user') {
+			res.status(StatusCodes.BAD_REQUEST).json({
+				success: false,
+				error: 'Latest message must be from user',
+			})
+			return
+		}
+
+		const content = latestMessage.content
+		const role = latestMessage.role
 
 		if (!userId) {
 			res.status(StatusCodes.UNAUTHORIZED).json({
@@ -404,8 +426,8 @@ export class ChatController implements IChatController {
 			'Content-Type': 'text/event-stream',
 			'Cache-Control': 'no-cache',
 			Connection: 'keep-alive',
-			'Access-Control-Allow-Origin': '*',
-			'Access-Control-Allow-Headers': 'Cache-Control',
+			// CORS headers are handled by the main CORS middleware
+			// Removing manual CORS headers to avoid conflicts with credentials
 		})
 
 		// Helper function to send SSE data with Go-style error handling
