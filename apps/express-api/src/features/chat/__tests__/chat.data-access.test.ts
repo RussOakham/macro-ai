@@ -264,6 +264,29 @@ describe('Chat Data Access Layer', () => {
 				})
 				expect(error).toBeNull()
 			})
+
+			it('should convert string count to number (PostgreSQL behavior)', async () => {
+				// Arrange - Simulate PostgreSQL returning count as string
+				const mockChats = [mockChat]
+				const mockCountResult = [{ count: '1' }] // PostgreSQL returns count as string
+
+				vi.mocked(tryCatch)
+					.mockResolvedValueOnce([mockChats, null])
+					.mockResolvedValueOnce([mockCountResult, null])
+				vi.mocked(safeValidateSchema).mockReturnValue([mockChat, null])
+
+				// Act
+				const [result, error] =
+					await chatRepository.findChatsByUserId(mockUserId)
+
+				// Assert
+				expect(result).toEqual({
+					chats: [mockChat],
+					total: 1, // Should be converted to number
+				})
+				expect(typeof result?.total).toBe('number')
+				expect(error).toBeNull()
+			})
 		})
 
 		describe('createChat', () => {

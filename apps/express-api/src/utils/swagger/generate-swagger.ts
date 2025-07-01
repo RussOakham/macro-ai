@@ -4,6 +4,7 @@ import path from 'path'
 
 // Import all route files to ensure they register with the OpenAPI registry
 import '../../features/auth/auth.routes.ts'
+import '../../features/chat/chat.routes.ts'
 import '../../features/user/user.routes.ts'
 import '../../features/utility/utility.routes.ts'
 
