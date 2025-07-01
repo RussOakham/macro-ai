@@ -22,25 +22,23 @@ const useUpdateChatMutation = () => {
 			const response = await updateChat(chatId, { title })
 			return response
 		},
-		onSuccess: async (data, variables) => {
-			// Invalidate and refetch chat list queries to reflect the updated chat
-			await queryClient.invalidateQueries({
+		onMutate: async (variables) => {
+			// Cancel any outgoing re-fetches (so they don't overwrite our optimistic update)
+			await queryClient.cancelQueries({
 				queryKey: [QUERY_KEY.chat, QUERY_KEY_MODIFIERS.list],
 			})
 
-			// Update the specific chat data in cache for immediate access
-			if (data.success) {
-				queryClient.setQueryData(
-					[QUERY_KEY.chat, 'detail', variables.chatId],
-					data,
-				)
-			}
+			// Snapshot the previous value
+			const previousChats = queryClient.getQueryData<TGetChatsResponse>([
+				QUERY_KEY.chat,
+				QUERY_KEY_MODIFIERS.list,
+			])
 
-			// Optimistically update any cached chat list data
+			// Optimistically update the cache
 			queryClient.setQueriesData(
 				{ queryKey: [QUERY_KEY.chat, QUERY_KEY_MODIFIERS.list] },
 				(oldData: TGetChatsResponse | undefined) => {
-					if (!oldData || !oldData.success) return oldData
+					if (!oldData) return []
 
 					return {
 						...oldData,
@@ -56,12 +54,38 @@ const useUpdateChatMutation = () => {
 					}
 				},
 			)
+
+			// Return a context object with the snapshotted value
+			return { previousChats }
 		},
-		onError: (error) => {
+		onSuccess: (data, variables) => {
+			// Update the specific chat data in cache for immediate access
+			if (data.success) {
+				queryClient.setQueryData(
+					[QUERY_KEY.chat, 'detail', variables.chatId],
+					data,
+				)
+			}
+		},
+		onError: (error, _variables, context) => {
+			// If the mutation fails, use the context returned from onMutate to roll back
+			if (context?.previousChats) {
+				queryClient.setQueryData(
+					[QUERY_KEY.chat, QUERY_KEY_MODIFIERS.list],
+					context.previousChats,
+				)
+			}
+
 			// Error handling is managed by the component using this hook
 			// Following the pattern from existing auth mutations
 			logger.error('[useUpdateChatMutation]: unable to update chat', {
 				error,
+			})
+		},
+		onSettled: async () => {
+			// Always refetch after error or success to ensure we have the latest data
+			await queryClient.invalidateQueries({
+				queryKey: [QUERY_KEY.chat, QUERY_KEY_MODIFIERS.list],
 			})
 		},
 	})

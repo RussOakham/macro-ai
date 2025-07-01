@@ -19,41 +19,65 @@ const useDeleteChatMutation = () => {
 			const response = await deleteChat(chatId)
 			return response
 		},
-		onSuccess: async (data, variables) => {
-			// Invalidate and refetch chat list queries to reflect the deleted chat
-			await queryClient.invalidateQueries({
+		onMutate: async (variables) => {
+			// Cancel any outgoing re-fetches (so they don't overwrite our optimistic update)
+			await queryClient.cancelQueries({
 				queryKey: [QUERY_KEY.chat, QUERY_KEY_MODIFIERS.list],
 			})
 
-			// Remove the specific chat data from cache
-			if (data.success) {
-				queryClient.removeQueries({
-					queryKey: [QUERY_KEY.chat, 'detail', variables.chatId],
-				})
-			}
+			// Snapshot the previous value
+			const previousChats = queryClient.getQueryData<TGetChatsResponse>([
+				QUERY_KEY.chat,
+				QUERY_KEY_MODIFIERS.list,
+			])
 
-			// Optimistically update any cached chat list data to remove the deleted chat
+			// Optimistically update the cache to remove the deleted chat
 			queryClient.setQueriesData(
 				{ queryKey: [QUERY_KEY.chat, QUERY_KEY_MODIFIERS.list] },
 				(oldData: TGetChatsResponse | undefined) => {
-					if (!oldData || !oldData.success) return oldData
+					if (!oldData) return []
 
 					return {
 						...oldData,
 						data: oldData.data.filter((chat) => chat.id !== variables.chatId),
 						meta: {
 							...oldData.meta,
-							total: oldData.meta.total - 1,
+							total: Math.max(0, oldData.meta.total - 1),
 						},
 					}
 				},
 			)
+
+			// Return a context object with the snapshotted value
+			return { previousChats }
 		},
-		onError: (error) => {
+		onSuccess: (data, variables) => {
+			// Remove the specific chat data from cache
+			if (data.success) {
+				queryClient.removeQueries({
+					queryKey: [QUERY_KEY.chat, 'detail', variables.chatId],
+				})
+			}
+		},
+		onError: (error, _variables, context) => {
+			// If the mutation fails, use the context returned from onMutate to roll back
+			if (context?.previousChats) {
+				queryClient.setQueryData(
+					[QUERY_KEY.chat, QUERY_KEY_MODIFIERS.list],
+					context.previousChats,
+				)
+			}
+
 			// Error handling is managed by the component using this hook
 			// Following the pattern from existing auth mutations
 			logger.error('[useDeleteChatMutation]: unable to delete chat', {
 				error,
+			})
+		},
+		onSettled: async () => {
+			// Always refetch after error or success to ensure we have the latest data
+			await queryClient.invalidateQueries({
+				queryKey: [QUERY_KEY.chat, QUERY_KEY_MODIFIERS.list],
 			})
 		},
 	})

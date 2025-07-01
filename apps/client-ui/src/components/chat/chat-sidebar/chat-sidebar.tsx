@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import {
 	AlertCircle,
@@ -36,11 +36,12 @@ const ChatSidebar = () => {
 	const [editingChatId, setEditingChatId] = useState<string | null>(null)
 	const [editTitle, setEditTitle] = useState('')
 	const [showCreateForm, setShowCreateForm] = useState(false)
-	const [isUpdating, setIsUpdating] = useState(false)
-	const [deletingChatId, setDeletingChatId] = useState<string | null>(null)
 	const [confirmDeleteChatId, setConfirmDeleteChatId] = useState<string | null>(
 		null,
 	)
+
+	// React 19 useTransition for better UX
+	const [isPending, startTransition] = useTransition()
 
 	// ============================================================================
 	// API Integration
@@ -75,13 +76,15 @@ const ChatSidebar = () => {
 
 	const handleCreateChatSuccess = (chatId: string) => {
 		setShowCreateForm(false)
-		void navigate({ to: `/chat/${chatId}` })
-		logger.info(
-			'[ChatSidebar]: Chat created successfully, navigating to chat',
-			{
-				chatId,
-			},
-		)
+		startTransition(() => {
+			void navigate({ to: `/chat/${chatId}` })
+			logger.info(
+				'[ChatSidebar]: Chat created successfully, navigating to chat',
+				{
+					chatId,
+				},
+			)
+		})
 	}
 
 	const handleCreateChatCancel = () => {
@@ -94,8 +97,8 @@ const ChatSidebar = () => {
 		setEditTitle(chat.title)
 	}
 
-	const saveEdit = async () => {
-		if (!editingChatId || !editTitle.trim() || isUpdating) return
+	const saveEdit = () => {
+		if (!editingChatId || !editTitle.trim() || isPending) return
 
 		const trimmedTitle = editTitle.trim()
 
@@ -107,36 +110,34 @@ const ChatSidebar = () => {
 			return
 		}
 
-		setIsUpdating(true)
+		startTransition(async () => {
+			try {
+				await updateChatMutation({
+					chatId: editingChatId,
+					title: trimmedTitle,
+				})
 
-		try {
-			await updateChatMutation({
-				chatId: editingChatId,
-				title: trimmedTitle,
-			})
+				logger.info('[ChatSidebar]: Chat updated successfully', {
+					chatId: editingChatId,
+					newTitle: trimmedTitle,
+				})
 
-			logger.info('[ChatSidebar]: Chat updated successfully', {
-				chatId: editingChatId,
-				newTitle: trimmedTitle,
-			})
+				toast.success('Chat title updated successfully!')
 
-			toast.success('Chat title updated successfully!')
+				// Reset editing state
+				setEditingChatId(null)
+				setEditTitle('')
+			} catch (error: unknown) {
+				logger.error('[ChatSidebar]: Error updating chat', {
+					chatId: editingChatId,
+					newTitle: trimmedTitle,
+					error: error instanceof Error ? error.message : 'Unknown error',
+				})
 
-			// Reset editing state
-			setEditingChatId(null)
-			setEditTitle('')
-		} catch (error: unknown) {
-			logger.error('[ChatSidebar]: Error updating chat', {
-				chatId: editingChatId,
-				newTitle: trimmedTitle,
-				error: error instanceof Error ? error.message : 'Unknown error',
-			})
-
-			toast.error('Failed to update chat title. Please try again.')
-			// Keep editing state active on error so user can retry
-		} finally {
-			setIsUpdating(false)
-		}
+				toast.error('Failed to update chat title. Please try again.')
+				// Keep editing state active on error so user can retry
+			}
+		})
 	}
 
 	const cancelEdit = () => {
@@ -152,35 +153,34 @@ const ChatSidebar = () => {
 		})
 	}
 
-	const confirmDeleteChat = async (chatId: string) => {
-		if (deletingChatId) return // Prevent multiple simultaneous deletes
+	const confirmDeleteChat = (chatId: string) => {
+		if (isPending) return // Prevent multiple simultaneous operations
 
-		setDeletingChatId(chatId)
 		setConfirmDeleteChatId(null) // Hide confirmation
 
-		try {
-			await deleteChatMutation({ chatId })
+		startTransition(async () => {
+			try {
+				await deleteChatMutation({ chatId })
 
-			logger.info('[ChatSidebar]: Chat deleted successfully', {
-				chatId,
-			})
+				logger.info('[ChatSidebar]: Chat deleted successfully', {
+					chatId,
+				})
 
-			toast.success('Chat deleted successfully!')
+				toast.success('Chat deleted successfully!')
 
-			// If the deleted chat was the current chat, navigate to chat list
-			if (currentChatId === chatId) {
-				void navigate({ to: '/chat' })
+				// If the deleted chat was the current chat, navigate to chat list
+				if (currentChatId === chatId) {
+					void navigate({ to: '/chat' })
+				}
+			} catch (error: unknown) {
+				logger.error('[ChatSidebar]: Error deleting chat', {
+					chatId,
+					error: error instanceof Error ? error.message : 'Unknown error',
+				})
+
+				toast.error('Failed to delete chat. Please try again.')
 			}
-		} catch (error: unknown) {
-			logger.error('[ChatSidebar]: Error deleting chat', {
-				chatId,
-				error: error instanceof Error ? error.message : 'Unknown error',
-			})
-
-			toast.error('Failed to delete chat. Please try again.')
-		} finally {
-			setDeletingChatId(null)
-		}
+		})
 	}
 
 	const cancelDeleteChat = () => {
@@ -299,11 +299,13 @@ const ChatSidebar = () => {
 												<Button
 													size="sm"
 													variant="ghost"
-													onClick={() => void confirmDeleteChat(chat.id)}
-													disabled={deletingChatId === chat.id}
+													onClick={() => {
+														confirmDeleteChat(chat.id)
+													}}
+													disabled={isPending}
 													className="h-6 w-6 p-0 text-red-400 hover:text-red-300 disabled:opacity-50"
 												>
-													{deletingChatId === chat.id ? (
+													{isPending ? (
 														<Loader2 className="h-3 w-3 animate-spin" />
 													) : (
 														<Check className="h-3 w-3" />
@@ -313,7 +315,7 @@ const ChatSidebar = () => {
 													size="sm"
 													variant="ghost"
 													onClick={cancelDeleteChat}
-													disabled={deletingChatId === chat.id}
+													disabled={isPending}
 													className="h-6 w-6 p-0 text-gray-400 hover:text-gray-300 disabled:opacity-50"
 												>
 													<X className="h-3 w-3" />
@@ -326,22 +328,28 @@ const ChatSidebar = () => {
 													onChange={(e) => {
 														setEditTitle(e.target.value)
 													}}
-													disabled={isUpdating}
+													disabled={isPending}
 													className="h-8 text-sm bg-gray-800 border-gray-600 text-white disabled:opacity-50"
 													onKeyDown={(e) => {
-														if (e.key === 'Enter') void saveEdit()
-														if (e.key === 'Escape') cancelEdit()
+														if (e.key === 'Enter') {
+															saveEdit()
+														}
+														if (e.key === 'Escape') {
+															cancelEdit()
+														}
 													}}
 													autoFocus
 												/>
 												<Button
 													size="sm"
 													variant="ghost"
-													onClick={() => void saveEdit()}
-													disabled={isUpdating}
+													onClick={() => {
+														saveEdit()
+													}}
+													disabled={isPending}
 													className="h-6 w-6 p-0 text-green-400 hover:text-green-300 disabled:opacity-50"
 												>
-													{isUpdating ? (
+													{isPending ? (
 														<Loader2 className="h-3 w-3 animate-spin" />
 													) : (
 														<Check className="h-3 w-3" />
@@ -351,7 +359,7 @@ const ChatSidebar = () => {
 													size="sm"
 													variant="ghost"
 													onClick={cancelEdit}
-													disabled={isUpdating}
+													disabled={isPending}
 													className="h-6 w-6 p-0 text-gray-400 hover:text-gray-300 disabled:opacity-50"
 												>
 													<X className="h-3 w-3" />
@@ -361,7 +369,9 @@ const ChatSidebar = () => {
 											<div className="flex items-center group">
 												<button
 													onClick={() => {
-														void navigate({ to: `/chat/${chat.id}` })
+														startTransition(() => {
+															void navigate({ to: `/chat/${chat.id}` })
+														})
 													}}
 													className={`flex-1 flex items-center gap-3 p-2 rounded text-left text-sm hover:bg-gray-800 ${
 														currentChatId === chat.id ? 'bg-gray-800' : ''
@@ -387,10 +397,7 @@ const ChatSidebar = () => {
 														onClick={() => {
 															handleDeleteChat(chat.id)
 														}}
-														disabled={
-															deletingChatId !== null ||
-															confirmDeleteChatId !== null
-														}
+														disabled={isPending || confirmDeleteChatId !== null}
 														className="h-6 w-6 p-0 text-gray-400 hover:text-red-400 disabled:opacity-50"
 													>
 														<Trash2 className="h-3 w-3" />
