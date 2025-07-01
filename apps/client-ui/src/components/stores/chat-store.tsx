@@ -11,12 +11,10 @@ export const useChatStore = create<ChatStore>()(
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		(set, _get) => ({
 			chats: sampleChats,
-			currentChatId: '1',
 
 			addChat: (chat: Chat) => {
 				set((state) => ({
 					chats: [chat, ...state.chats],
-					currentChatId: chat.id,
 				}))
 			},
 
@@ -33,13 +31,7 @@ export const useChatStore = create<ChatStore>()(
 			deleteChat: (chatId: string) => {
 				set((state) => ({
 					chats: state.chats.filter((chat) => chat.id !== chatId),
-					currentChatId:
-						state.currentChatId === chatId ? null : state.currentChatId,
 				}))
-			},
-
-			setCurrentChat: (chatId: string | null) => {
-				set({ currentChatId: chatId })
 			},
 
 			addMessage: (chatId: string, message: Message) => {

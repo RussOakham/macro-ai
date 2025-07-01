@@ -13,7 +13,9 @@ import { createFileRoute } from '@tanstack/react-router'
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as ChatImport } from './routes/chat'
 import { Route as IndexImport } from './routes/index'
+import { Route as ChatChatIdImport } from './routes/chat/$chatId'
 
 // Create Virtual Routes
 
@@ -33,6 +35,12 @@ const AuthForgottenPasswordVerifyLazyImport = createFileRoute(
 )()
 
 // Create/Update Routes
+
+const ChatRoute = ChatImport.update({
+	id: '/chat',
+	path: '/chat',
+	getParentRoute: () => rootRoute,
+} as any)
 
 const IndexRoute = IndexImport.update({
 	id: '/',
@@ -70,6 +78,12 @@ const AuthConfirmRegistrationLazyRoute =
 		import('./routes/auth/confirm-registration.lazy').then((d) => d.Route),
 	)
 
+const ChatChatIdRoute = ChatChatIdImport.update({
+	id: '/$chatId',
+	path: '/$chatId',
+	getParentRoute: () => ChatRoute,
+} as any)
+
 const AuthForgottenPasswordIndexLazyRoute =
 	AuthForgottenPasswordIndexLazyImport.update({
 		id: '/auth/forgotten-password/',
@@ -98,6 +112,20 @@ declare module '@tanstack/react-router' {
 			fullPath: '/'
 			preLoaderRoute: typeof IndexImport
 			parentRoute: typeof rootRoute
+		}
+		'/chat': {
+			id: '/chat'
+			path: '/chat'
+			fullPath: '/chat'
+			preLoaderRoute: typeof ChatImport
+			parentRoute: typeof rootRoute
+		}
+		'/chat/$chatId': {
+			id: '/chat/$chatId'
+			path: '/$chatId'
+			fullPath: '/chat/$chatId'
+			preLoaderRoute: typeof ChatChatIdImport
+			parentRoute: typeof ChatImport
 		}
 		'/auth/confirm-registration': {
 			id: '/auth/confirm-registration'
@@ -146,8 +174,20 @@ declare module '@tanstack/react-router' {
 
 // Create and export the route tree
 
+interface ChatRouteChildren {
+	ChatChatIdRoute: typeof ChatChatIdRoute
+}
+
+const ChatRouteChildren: ChatRouteChildren = {
+	ChatChatIdRoute: ChatChatIdRoute,
+}
+
+const ChatRouteWithChildren = ChatRoute._addFileChildren(ChatRouteChildren)
+
 export interface FileRoutesByFullPath {
 	'/': typeof IndexRoute
+	'/chat': typeof ChatRouteWithChildren
+	'/chat/$chatId': typeof ChatChatIdRoute
 	'/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
 	'/auth/login': typeof AuthLoginLazyRoute
 	'/auth/register': typeof AuthRegisterLazyRoute
@@ -158,6 +198,8 @@ export interface FileRoutesByFullPath {
 
 export interface FileRoutesByTo {
 	'/': typeof IndexRoute
+	'/chat': typeof ChatRouteWithChildren
+	'/chat/$chatId': typeof ChatChatIdRoute
 	'/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
 	'/auth/login': typeof AuthLoginLazyRoute
 	'/auth/register': typeof AuthRegisterLazyRoute
@@ -169,6 +211,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
 	__root__: typeof rootRoute
 	'/': typeof IndexRoute
+	'/chat': typeof ChatRouteWithChildren
+	'/chat/$chatId': typeof ChatChatIdRoute
 	'/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
 	'/auth/login': typeof AuthLoginLazyRoute
 	'/auth/register': typeof AuthRegisterLazyRoute
@@ -181,6 +225,8 @@ export interface FileRouteTypes {
 	fileRoutesByFullPath: FileRoutesByFullPath
 	fullPaths:
 		| '/'
+		| '/chat'
+		| '/chat/$chatId'
 		| '/auth/confirm-registration'
 		| '/auth/login'
 		| '/auth/register'
@@ -190,6 +236,8 @@ export interface FileRouteTypes {
 	fileRoutesByTo: FileRoutesByTo
 	to:
 		| '/'
+		| '/chat'
+		| '/chat/$chatId'
 		| '/auth/confirm-registration'
 		| '/auth/login'
 		| '/auth/register'
@@ -199,6 +247,8 @@ export interface FileRouteTypes {
 	id:
 		| '__root__'
 		| '/'
+		| '/chat'
+		| '/chat/$chatId'
 		| '/auth/confirm-registration'
 		| '/auth/login'
 		| '/auth/register'
@@ -210,6 +260,7 @@ export interface FileRouteTypes {
 
 export interface RootRouteChildren {
 	IndexRoute: typeof IndexRoute
+	ChatRoute: typeof ChatRouteWithChildren
 	AuthConfirmRegistrationLazyRoute: typeof AuthConfirmRegistrationLazyRoute
 	AuthLoginLazyRoute: typeof AuthLoginLazyRoute
 	AuthRegisterLazyRoute: typeof AuthRegisterLazyRoute
@@ -220,6 +271,7 @@ export interface RootRouteChildren {
 
 const rootRouteChildren: RootRouteChildren = {
 	IndexRoute: IndexRoute,
+	ChatRoute: ChatRouteWithChildren,
 	AuthConfirmRegistrationLazyRoute: AuthConfirmRegistrationLazyRoute,
 	AuthLoginLazyRoute: AuthLoginLazyRoute,
 	AuthRegisterLazyRoute: AuthRegisterLazyRoute,
@@ -239,6 +291,7 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
+        "/chat",
         "/auth/confirm-registration",
         "/auth/login",
         "/auth/register",
@@ -249,6 +302,16 @@ export const routeTree = rootRoute
     },
     "/": {
       "filePath": "index.tsx"
+    },
+    "/chat": {
+      "filePath": "chat.tsx",
+      "children": [
+        "/chat/$chatId"
+      ]
+    },
+    "/chat/$chatId": {
+      "filePath": "chat/$chatId.tsx",
+      "parent": "/chat"
     },
     "/auth/confirm-registration": {
       "filePath": "auth/confirm-registration.lazy.tsx"

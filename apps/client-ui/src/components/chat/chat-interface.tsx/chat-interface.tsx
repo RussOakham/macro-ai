@@ -1,7 +1,6 @@
-'use client'
-
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
+import { useParams } from '@tanstack/react-router'
 import { Bot, Menu, Send, User } from 'lucide-react'
 
 import { useChatStore } from '@/components/stores/chat-store'
@@ -10,7 +9,9 @@ import { Textarea } from '@/components/ui/textarea'
 import type { Message } from '@/lib/types'
 
 const ChatInterface = () => {
-	const { chats, currentChatId, addMessage } = useChatStore()
+	const params = useParams({ strict: false })
+	const currentChatId = params.chatId ?? null
+	const { chats, addMessage } = useChatStore()
 	const [inputValue, setInputValue] = useState('')
 	const [isLoading, setIsLoading] = useState(false)
 	const messagesEndRef = useRef<HTMLDivElement>(null)

@@ -43,11 +43,9 @@ type ChatListResponse = ApiResponse<Chat[]>
 // Zustand store interface - only for UI-specific state
 interface ChatStore {
 	chats: Chat[]
-	currentChatId: string | null
 	addChat: (chat: Chat) => void
 	updateChat: (chatId: string, updates: Partial<Chat>) => void
 	deleteChat: (chatId: string) => void
-	setCurrentChat: (chatId: string | null) => void
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	addMessage: (chatId: string, message: any) => void // Keep for backward compatibility
 }

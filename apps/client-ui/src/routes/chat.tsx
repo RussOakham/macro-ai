@@ -1,21 +1,40 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import Cookies from 'js-cookie'
 
+import { ChatInterface } from '@/components/chat/chat-interface.tsx/chat-interface'
+import { ChatSidebar } from '@/components/chat/chat-sidebar/chat-sidebar'
 import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
+import { useGetUser } from '@/services/hooks/user/getUser'
 import {
 	getAuthUser,
 	TGetAuthUserResponse,
 } from '@/services/network/auth/getAuthUser'
 
-const Index = () => {
-	// This component should never render as we redirect in beforeLoad
-	return null
+const ChatLayout = () => {
+	const { data: user, isFetching, isError, error, isSuccess } = useGetUser()
+
+	if (isFetching && !user) {
+		return <div>Loading...</div>
+	}
+
+	if (isError || !isSuccess) {
+		const err = standardizeError(error)
+
+		return <div>Error: {err.message}</div>
+	}
+
+	return (
+		<div className="flex h-full w-full">
+			<ChatSidebar />
+			<ChatInterface />
+		</div>
+	)
 }
 
-export const Route = createFileRoute('/')({
-	component: Index,
+export const Route = createFileRoute('/chat')({
+	component: ChatLayout,
 	beforeLoad: async ({ context, location }) => {
 		const { queryClient } = context
 		const accessToken = Cookies.get('macro-ai-accessToken')
@@ -55,21 +74,11 @@ export const Route = createFileRoute('/')({
 						},
 					})
 				}
+				return
 			}
-
-			// If authenticated, redirect to chat
-			// eslint-disable-next-line @typescript-eslint/only-throw-error
-			throw redirect({
-				to: '/chat',
-			})
 		} catch (error: unknown) {
-			// Check if this is our redirect
-			if (error && typeof error === 'object' && 'to' in error) {
-				// eslint-disable-next-line @typescript-eslint/only-throw-error
-				throw error
-			}
-
 			// If auth check fails, redirect to login
+
 			const err = standardizeError(error)
 
 			logger.error(`Auth check failed: ${err.message}`)

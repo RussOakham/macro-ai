@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate, useParams } from '@tanstack/react-router'
 import {
 	AlertCircle,
 	Check,
@@ -11,7 +12,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { useChatStore } from '@/components/stores/chat-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { logger } from '@/lib/logger/logger'
@@ -27,8 +27,10 @@ const ChatSidebar = () => {
 	// State Management
 	// ============================================================================
 
-	// UI state from Zustand store
-	const { currentChatId, setCurrentChat } = useChatStore()
+	// Navigation and route parameters
+	const navigate = useNavigate()
+	const params = useParams({ strict: false })
+	const currentChatId = params.chatId ?? null
 
 	// Local component state
 	const [editingChatId, setEditingChatId] = useState<string | null>(null)
@@ -73,7 +75,7 @@ const ChatSidebar = () => {
 
 	const handleCreateChatSuccess = (chatId: string) => {
 		setShowCreateForm(false)
-		setCurrentChat(chatId)
+		void navigate({ to: `/chat/${chatId}` })
 		logger.info(
 			'[ChatSidebar]: Chat created successfully, navigating to chat',
 			{
@@ -165,9 +167,9 @@ const ChatSidebar = () => {
 
 			toast.success('Chat deleted successfully!')
 
-			// If the deleted chat was the current chat, clear the selection
+			// If the deleted chat was the current chat, navigate to chat list
 			if (currentChatId === chatId) {
-				setCurrentChat(null)
+				void navigate({ to: '/chat' })
 			}
 		} catch (error: unknown) {
 			logger.error('[ChatSidebar]: Error deleting chat', {
@@ -359,7 +361,7 @@ const ChatSidebar = () => {
 											<div className="flex items-center group">
 												<button
 													onClick={() => {
-														setCurrentChat(chat.id)
+														void navigate({ to: `/chat/${chat.id}` })
 													}}
 													className={`flex-1 flex items-center gap-3 p-2 rounded text-left text-sm hover:bg-gray-800 ${
 														currentChatId === chat.id ? 'bg-gray-800' : ''
