@@ -12,6 +12,7 @@ const transformChatDates = (chat: {
 	updatedAt: string | null
 }): Chat => ({
 	...chat,
+	messages: [], // temporary to make linter happy
 	createdAt: chat.createdAt ? new Date(chat.createdAt) : new Date(),
 	updatedAt: chat.updatedAt ? new Date(chat.updatedAt) : new Date(),
 })

@@ -17,6 +17,8 @@ import { logger } from '@/lib/logger/logger'
 import type { Chat } from '@/lib/types'
 import { useChats } from '@/services/hooks/chat/useChats'
 
+import { CreateChatForm } from '../create-chat-form/create-chat-form'
+
 const ChatSidebar = () => {
 	// ============================================================================
 	// State Management
@@ -28,6 +30,7 @@ const ChatSidebar = () => {
 	// Local component state
 	const [editingChatId, setEditingChatId] = useState<string | null>(null)
 	const [editTitle, setEditTitle] = useState('')
+	const [showCreateForm, setShowCreateForm] = useState(false)
 
 	// ============================================================================
 	// API Integration
@@ -50,8 +53,24 @@ const ChatSidebar = () => {
 	// ============================================================================
 
 	const createNewChat = () => {
-		// TODO: Implement create chat functionality in next iteration
-		logger.info('[ChatSidebar]: Create new chat clicked - not implemented yet')
+		setShowCreateForm(true)
+		logger.info('[ChatSidebar]: Create new chat form opened')
+	}
+
+	const handleCreateChatSuccess = (chatId: string) => {
+		setShowCreateForm(false)
+		setCurrentChat(chatId)
+		logger.info(
+			'[ChatSidebar]: Chat created successfully, navigating to chat',
+			{
+				chatId,
+			},
+		)
+	}
+
+	const handleCreateChatCancel = () => {
+		setShowCreateForm(false)
+		logger.info('[ChatSidebar]: Create chat form cancelled')
 	}
 
 	const startEditing = (chat: Chat) => {
@@ -119,6 +138,17 @@ const ChatSidebar = () => {
 					New chat
 				</Button>
 			</div>
+
+			{/* Create Chat Form */}
+			{showCreateForm && (
+				<div className="p-3 border-b border-gray-700 bg-gray-800">
+					<CreateChatForm
+						onSuccess={handleCreateChatSuccess}
+						onCancel={handleCreateChatCancel}
+						className="text-white"
+					/>
+				</div>
+			)}
 
 			{/* Chat List */}
 			<div className="flex-1 overflow-y-auto">
