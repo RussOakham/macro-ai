@@ -100,7 +100,7 @@ describe('AIService', () => {
 			expect(mockCreateOpenAI).toHaveBeenCalledWith({
 				apiKey: expect.stringMatching(/^sk-/) as string, // Should be a valid OpenAI API key format
 			})
-			expect(mockOpenAIInstance).toHaveBeenCalledWith('gpt-4-turbo-preview')
+			expect(mockOpenAIInstance).toHaveBeenCalledWith('gpt-3.5-turbo')
 			expect(mockOpenAIInstance.embedding).toHaveBeenCalledWith(
 				'text-embedding-3-small',
 			)
