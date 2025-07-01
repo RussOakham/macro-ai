@@ -1,21 +1,5 @@
 import { apiClient } from '@/lib/api'
-import type { Chat, ChatListResponse, PaginationOptions } from '@/lib/types'
-
-/**
- * Transform API response dates from strings to Date objects
- */
-const transformChatDates = (chat: {
-	id: string
-	userId: string
-	title: string
-	createdAt: string | null
-	updatedAt: string | null
-}): Chat => ({
-	...chat,
-	messages: [], // temporary to make linter happy
-	createdAt: chat.createdAt ? new Date(chat.createdAt) : new Date(),
-	updatedAt: chat.updatedAt ? new Date(chat.updatedAt) : new Date(),
-})
+import type { PaginationOptions } from '@/lib/types'
 
 // infer ReturnType of getChats
 type TGetChatsResponse = Awaited<ReturnType<typeof getChats>>
@@ -25,9 +9,7 @@ type TGetChatsResponse = Awaited<ReturnType<typeof getChats>>
  * @param options - Pagination options (page, limit)
  * @returns Promise<ChatListResponse>
  */
-const getChats = async (
-	options?: PaginationOptions,
-): Promise<ChatListResponse> => {
+const getChats = async (options?: PaginationOptions) => {
 	const params = new URLSearchParams()
 
 	if (options?.page) {
@@ -46,10 +28,7 @@ const getChats = async (
 	})
 
 	// Transform the response to match frontend types
-	return {
-		...response,
-		data: response.data.map(transformChatDates),
-	}
+	return response
 }
 
 export { getChats }

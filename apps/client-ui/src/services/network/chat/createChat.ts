@@ -23,23 +23,13 @@ type CreateChatResponse = ApiResponse<Chat>
  * @param request - Chat creation request with title
  * @returns Promise<CreateChatResponse>
  */
-const createChat = async (
-	request: TCreateChatRequest,
-): Promise<CreateChatResponse> => {
+const createChat = async (request: TCreateChatRequest) => {
 	const response = await apiClient.post('/chats', {
 		title: request.title,
 	})
 
 	// Transform the response to match frontend types
-	return {
-		...response,
-		data: {
-			...response.data,
-			messages: [], // New chats start with no messages
-			createdAt: new Date(response.data.createdAt ?? new Date()),
-			updatedAt: new Date(response.data.updatedAt ?? new Date()),
-		},
-	}
+	return response
 }
 
 export { createChat, createChatSchemaClient }

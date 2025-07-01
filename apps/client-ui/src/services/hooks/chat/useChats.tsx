@@ -18,6 +18,18 @@ const useChats = (options?: PaginationOptions) => {
 		gcTime: 10 * 60 * 1000, // 10 minutes
 		refetchOnWindowFocus: false,
 		refetchOnMount: true,
+		select: (data) => {
+			// Transform dates from strings to Date objects
+			return {
+				...data,
+				data: data.data.map((chat) => ({
+					...chat,
+					messages: [], // temporary to make linter happy
+					createdAt: new Date(chat.createdAt ?? new Date()),
+					updatedAt: new Date(chat.updatedAt ?? new Date()),
+				})),
+			}
+		},
 	})
 }
 
