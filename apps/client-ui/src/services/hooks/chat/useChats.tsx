@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { QUERY_KEY } from '@/constants/query-keys'
+import { QUERY_KEY, QUERY_KEY_MODIFIERS } from '@/constants/query-keys'
 import type { PaginationOptions } from '@/lib/types'
 
 import { getChats } from '../../network/chat/getChats'
@@ -12,7 +12,7 @@ import { getChats } from '../../network/chat/getChats'
  */
 const useChats = (options?: PaginationOptions) => {
 	return useQuery({
-		queryKey: [QUERY_KEY.chat, 'list', options],
+		queryKey: [QUERY_KEY.chat, QUERY_KEY_MODIFIERS.list, options],
 		queryFn: async () => getChats(options),
 		staleTime: 5 * 60 * 1000, // 5 minutes
 		gcTime: 10 * 60 * 1000, // 10 minutes

@@ -9,6 +9,7 @@ import {
 	Trash2,
 	X,
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { useChatStore } from '@/components/stores/chat-store'
 import { Button } from '@/components/ui/button'
@@ -16,6 +17,8 @@ import { Input } from '@/components/ui/input'
 import { logger } from '@/lib/logger/logger'
 import type { Chat } from '@/lib/types'
 import { useChats } from '@/services/hooks/chat/useChats'
+import { useDeleteChatMutation } from '@/services/hooks/chat/useDeleteChatMutation'
+import { useUpdateChatMutation } from '@/services/hooks/chat/useUpdateChatMutation'
 
 import { CreateChatForm } from '../create-chat-form/create-chat-form'
 
@@ -31,6 +34,11 @@ const ChatSidebar = () => {
 	const [editingChatId, setEditingChatId] = useState<string | null>(null)
 	const [editTitle, setEditTitle] = useState('')
 	const [showCreateForm, setShowCreateForm] = useState(false)
+	const [isUpdating, setIsUpdating] = useState(false)
+	const [deletingChatId, setDeletingChatId] = useState<string | null>(null)
+	const [confirmDeleteChatId, setConfirmDeleteChatId] = useState<string | null>(
+		null,
+	)
 
 	// ============================================================================
 	// API Integration
@@ -44,6 +52,12 @@ const ChatSidebar = () => {
 		error: chatsError,
 		refetch: refetchChats,
 	} = useChats({ page: 1, limit: 100 }) // Get first 100 chats
+
+	// Update chat mutation
+	const { mutateAsync: updateChatMutation } = useUpdateChatMutation()
+
+	// Delete chat mutation
+	const { mutateAsync: deleteChatMutation } = useDeleteChatMutation()
 
 	// Extract chats from response
 	const chats = chatsResponse?.success ? chatsResponse.data : []
@@ -78,14 +92,49 @@ const ChatSidebar = () => {
 		setEditTitle(chat.title)
 	}
 
-	const saveEdit = () => {
-		// TODO: Implement update chat functionality in next iteration
-		logger.info('[ChatSidebar]: Save edit clicked - not implemented yet', {
-			chatId: editingChatId,
-			newTitle: editTitle.trim(),
-		})
-		setEditingChatId(null)
-		setEditTitle('')
+	const saveEdit = async () => {
+		if (!editingChatId || !editTitle.trim() || isUpdating) return
+
+		const trimmedTitle = editTitle.trim()
+
+		// Don't update if title hasn't changed
+		const currentChat = chats.find((chat) => chat.id === editingChatId)
+		if (currentChat?.title === trimmedTitle) {
+			setEditingChatId(null)
+			setEditTitle('')
+			return
+		}
+
+		setIsUpdating(true)
+
+		try {
+			await updateChatMutation({
+				chatId: editingChatId,
+				title: trimmedTitle,
+			})
+
+			logger.info('[ChatSidebar]: Chat updated successfully', {
+				chatId: editingChatId,
+				newTitle: trimmedTitle,
+			})
+
+			toast.success('Chat title updated successfully!')
+
+			// Reset editing state
+			setEditingChatId(null)
+			setEditTitle('')
+		} catch (error: unknown) {
+			logger.error('[ChatSidebar]: Error updating chat', {
+				chatId: editingChatId,
+				newTitle: trimmedTitle,
+				error: error instanceof Error ? error.message : 'Unknown error',
+			})
+
+			toast.error('Failed to update chat title. Please try again.')
+			// Keep editing state active on error so user can retry
+		} finally {
+			setIsUpdating(false)
+		}
 	}
 
 	const cancelEdit = () => {
@@ -94,10 +143,47 @@ const ChatSidebar = () => {
 	}
 
 	const handleDeleteChat = (chatId: string) => {
-		// TODO: Implement delete chat functionality in next iteration
-		logger.info('[ChatSidebar]: Delete chat clicked - not implemented yet', {
+		// Show confirmation state
+		setConfirmDeleteChatId(chatId)
+		logger.info('[ChatSidebar]: Delete chat confirmation requested', {
 			chatId,
 		})
+	}
+
+	const confirmDeleteChat = async (chatId: string) => {
+		if (deletingChatId) return // Prevent multiple simultaneous deletes
+
+		setDeletingChatId(chatId)
+		setConfirmDeleteChatId(null) // Hide confirmation
+
+		try {
+			await deleteChatMutation({ chatId })
+
+			logger.info('[ChatSidebar]: Chat deleted successfully', {
+				chatId,
+			})
+
+			toast.success('Chat deleted successfully!')
+
+			// If the deleted chat was the current chat, clear the selection
+			if (currentChatId === chatId) {
+				setCurrentChat(null)
+			}
+		} catch (error: unknown) {
+			logger.error('[ChatSidebar]: Error deleting chat', {
+				chatId,
+				error: error instanceof Error ? error.message : 'Unknown error',
+			})
+
+			toast.error('Failed to delete chat. Please try again.')
+		} finally {
+			setDeletingChatId(null)
+		}
+	}
+
+	const cancelDeleteChat = () => {
+		setConfirmDeleteChatId(null)
+		logger.info('[ChatSidebar]: Delete chat confirmation cancelled')
 	}
 
 	const handleRetry = () => {
@@ -198,16 +284,50 @@ const ChatSidebar = () => {
 							<div className="space-y-1">
 								{chatsInGroup.map((chat) => (
 									<div key={chat.id} className="group px-3">
-										{editingChatId === chat.id ? (
+										{confirmDeleteChatId === chat.id ? (
+											<div className="flex items-center gap-2 p-2 bg-red-900/20 border border-red-700 rounded">
+												<div className="flex-1">
+													<p className="text-sm text-red-200">
+														Delete "{chat.title}"?
+													</p>
+													<p className="text-xs text-red-300">
+														This action cannot be undone.
+													</p>
+												</div>
+												<Button
+													size="sm"
+													variant="ghost"
+													onClick={() => void confirmDeleteChat(chat.id)}
+													disabled={deletingChatId === chat.id}
+													className="h-6 w-6 p-0 text-red-400 hover:text-red-300 disabled:opacity-50"
+												>
+													{deletingChatId === chat.id ? (
+														<Loader2 className="h-3 w-3 animate-spin" />
+													) : (
+														<Check className="h-3 w-3" />
+													)}
+												</Button>
+												<Button
+													size="sm"
+													variant="ghost"
+													onClick={cancelDeleteChat}
+													disabled={deletingChatId === chat.id}
+													className="h-6 w-6 p-0 text-gray-400 hover:text-gray-300 disabled:opacity-50"
+												>
+													<X className="h-3 w-3" />
+												</Button>
+											</div>
+										) : editingChatId === chat.id ? (
 											<div className="flex items-center gap-2">
 												<Input
 													value={editTitle}
 													onChange={(e) => {
 														setEditTitle(e.target.value)
 													}}
-													className="h-8 text-sm bg-gray-800 border-gray-600 text-white"
+													disabled={isUpdating}
+													className="h-8 text-sm bg-gray-800 border-gray-600 text-white disabled:opacity-50"
 													onKeyDown={(e) => {
-														if (e.key === 'Enter') saveEdit()
+														if (e.key === 'Enter') void saveEdit()
 														if (e.key === 'Escape') cancelEdit()
 													}}
 													autoFocus
@@ -215,16 +335,22 @@ const ChatSidebar = () => {
 												<Button
 													size="sm"
 													variant="ghost"
-													onClick={saveEdit}
-													className="h-6 w-6 p-0 text-green-400 hover:text-green-300"
+													onClick={() => void saveEdit()}
+													disabled={isUpdating}
+													className="h-6 w-6 p-0 text-green-400 hover:text-green-300 disabled:opacity-50"
 												>
-													<Check className="h-3 w-3" />
+													{isUpdating ? (
+														<Loader2 className="h-3 w-3 animate-spin" />
+													) : (
+														<Check className="h-3 w-3" />
+													)}
 												</Button>
 												<Button
 													size="sm"
 													variant="ghost"
 													onClick={cancelEdit}
-													className="h-6 w-6 p-0 text-gray-400 hover:text-gray-300"
+													disabled={isUpdating}
+													className="h-6 w-6 p-0 text-gray-400 hover:text-gray-300 disabled:opacity-50"
 												>
 													<X className="h-3 w-3" />
 												</Button>
@@ -259,7 +385,11 @@ const ChatSidebar = () => {
 														onClick={() => {
 															handleDeleteChat(chat.id)
 														}}
-														className="h-6 w-6 p-0 text-gray-400 hover:text-red-400"
+														disabled={
+															deletingChatId !== null ||
+															confirmDeleteChatId !== null
+														}
+														className="h-6 w-6 p-0 text-gray-400 hover:text-red-400 disabled:opacity-50"
 													>
 														<Trash2 className="h-3 w-3" />
 													</Button>

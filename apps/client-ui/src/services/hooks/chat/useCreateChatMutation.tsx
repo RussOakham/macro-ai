@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { QUERY_KEY } from '@/constants/query-keys'
+import { QUERY_KEY, QUERY_KEY_MODIFIERS } from '@/constants/query-keys'
+import { logger } from '@/lib/logger/logger'
 
 import { createChat, TCreateChatRequest } from '../../network/chat/createChat'
 
@@ -20,7 +21,7 @@ const useCreateChatMutation = () => {
 		onSuccess: async (data) => {
 			// Invalidate and refetch chat list queries to include the new chat
 			await queryClient.invalidateQueries({
-				queryKey: [QUERY_KEY.chat, 'list'],
+				queryKey: [QUERY_KEY.chat, QUERY_KEY_MODIFIERS.list],
 			})
 
 			// Optionally set the new chat data in cache for immediate access
@@ -31,7 +32,9 @@ const useCreateChatMutation = () => {
 		onError: (error) => {
 			// Error handling is managed by the component using this hook
 			// Following the pattern from existing auth mutations
-			console.error('Create chat mutation failed:', error)
+			logger.error('[useCreateChatMutation]: unable to create chat', {
+				error,
+			})
 		},
 	})
 }
