@@ -827,7 +827,9 @@ describe('ChatController', () => {
 		it('should successfully stream chat message response', async () => {
 			// Arrange
 			mockRequest.params = { id: mockChatId }
-			mockRequest.body = { content: mockMessageContent, role: 'user' }
+			mockRequest.body = {
+				messages: [{ content: mockMessageContent, role: 'user' }],
+			}
 			vi.mocked(chatService).sendMessageStreaming.mockResolvedValue([
 				mockStreamingResponse,
 				null,
@@ -846,11 +848,9 @@ describe('ChatController', () => {
 
 			// Assert
 			expect(mockResponse.writeHead).toHaveBeenCalledWith(StatusCodes.OK, {
-				'Content-Type': 'text/event-stream',
+				'Content-Type': 'text/plain; charset=utf-8',
 				'Cache-Control': 'no-cache',
 				Connection: 'keep-alive',
-				'Access-Control-Allow-Origin': '*',
-				'Access-Control-Allow-Headers': 'Cache-Control',
 			})
 
 			expect(mockedChatService.sendMessageStreaming).toHaveBeenCalledWith({
@@ -860,22 +860,13 @@ describe('ChatController', () => {
 				role: 'user',
 			})
 
-			// Verify essential SSE events were sent
-			expect(mockResponse.write).toHaveBeenCalledWith(
-				`data: ${JSON.stringify({ type: 'connected', message: 'Stream connected' })}\n\n`,
-			)
-			expect(mockResponse.write).toHaveBeenCalledWith(
-				`data: ${JSON.stringify({ type: 'user_message', message: mockMessage })}\n\n`,
-			)
-			expect(mockResponse.write).toHaveBeenCalledWith(
-				`data: ${JSON.stringify({ type: 'stream_start', messageId: 'ai-msg-123' })}\n\n`,
-			)
+			// Verify text chunks were sent directly
+			expect(mockResponse.write).toHaveBeenCalledWith('Hello')
+			expect(mockResponse.write).toHaveBeenCalledWith(', how')
+			expect(mockResponse.write).toHaveBeenCalledWith(' can I')
+			expect(mockResponse.write).toHaveBeenCalledWith(' help you?')
 
-			// Verify completion event is sent (content may vary based on stream processing)
-			expect(mockResponse.write).toHaveBeenCalledWith(
-				expect.stringContaining('stream_complete'),
-			)
-
+			// Verify response is properly ended
 			expect(mockResponse.end).toHaveBeenCalled()
 			expect(mockNext).not.toHaveBeenCalled()
 		})
@@ -884,7 +875,9 @@ describe('ChatController', () => {
 			// Arrange
 			mockRequest.userId = undefined
 			mockRequest.params = { id: mockChatId }
-			mockRequest.body = { content: mockMessageContent }
+			mockRequest.body = {
+				messages: [{ content: mockMessageContent, role: 'user' }],
+			}
 
 			// Act
 			await chatController.streamChatMessage(
@@ -905,7 +898,9 @@ describe('ChatController', () => {
 		it('should return 400 when chatId is missing', async () => {
 			// Arrange
 			mockRequest.params = {} // No chatId
-			mockRequest.body = { content: mockMessageContent }
+			mockRequest.body = {
+				messages: [{ content: mockMessageContent, role: 'user' }],
+			}
 
 			// Act
 			await chatController.streamChatMessage(
@@ -926,7 +921,9 @@ describe('ChatController', () => {
 		it('should handle service errors during streaming initiation', async () => {
 			// Arrange
 			mockRequest.params = { id: mockChatId }
-			mockRequest.body = { content: mockMessageContent }
+			mockRequest.body = {
+				messages: [{ content: mockMessageContent, role: 'user' }],
+			}
 			const error = new UnauthorizedError('Chat not found')
 			vi.mocked(chatService).sendMessageStreaming.mockResolvedValue([
 				null,
@@ -942,20 +939,18 @@ describe('ChatController', () => {
 
 			// Assert
 			expect(mockResponse.writeHead).toHaveBeenCalled()
-			expect(mockResponse.write).toHaveBeenCalledWith(
-				`data: ${JSON.stringify({ type: 'connected', message: 'Stream connected' })}\n\n`,
-			)
-			// Should send error with the actual error message from the service
-			expect(mockResponse.write).toHaveBeenCalledWith(
-				expect.stringContaining('error'),
-			)
+			expect(mockResponse.end).toHaveBeenCalled()
+			// With text streaming, no error messages are sent to the stream
+			expect(mockResponse.write).not.toHaveBeenCalled()
 			expect(mockResponse.end).toHaveBeenCalled()
 		})
 
 		it('should handle streaming errors during chunk processing', async () => {
 			// Arrange
 			mockRequest.params = { id: mockChatId }
-			mockRequest.body = { content: mockMessageContent }
+			mockRequest.body = {
+				messages: [{ content: mockMessageContent, role: 'user' }],
+			}
 
 			const errorStream = {
 				// eslint-disable-next-line @typescript-eslint/require-await
@@ -987,16 +982,17 @@ describe('ChatController', () => {
 
 			// Assert - should handle streaming error gracefully
 			expect(mockResponse.writeHead).toHaveBeenCalled()
-			expect(mockResponse.write).toHaveBeenCalledWith(
-				expect.stringContaining('connected'),
-			)
+			// With text streaming, chunks are sent directly
+			expect(mockResponse.write).toHaveBeenCalledWith('Hello')
 			expect(mockResponse.end).toHaveBeenCalled()
 		})
 
 		it('should handle message update errors gracefully', async () => {
 			// Arrange
 			mockRequest.params = { id: mockChatId }
-			mockRequest.body = { content: mockMessageContent }
+			mockRequest.body = {
+				messages: [{ content: mockMessageContent, role: 'user' }],
+			}
 			vi.mocked(chatService).sendMessageStreaming.mockResolvedValue([
 				mockStreamingResponse,
 				null,
@@ -1016,16 +1012,15 @@ describe('ChatController', () => {
 
 			// Assert - should continue despite update error
 			expect(mockResponse.writeHead).toHaveBeenCalled()
-			expect(mockResponse.write).toHaveBeenCalledWith(
-				expect.stringContaining('stream_complete'),
-			)
 			expect(mockResponse.end).toHaveBeenCalled()
 		})
 
 		it('should handle unexpected errors during streaming', async () => {
 			// Arrange
 			mockRequest.params = { id: mockChatId }
-			mockRequest.body = { content: mockMessageContent }
+			mockRequest.body = {
+				messages: [{ content: mockMessageContent, role: 'user' }],
+			}
 			vi.mocked(chatService).sendMessageStreaming.mockRejectedValue(
 				new Error('Unexpected error'),
 			)
@@ -1039,16 +1034,15 @@ describe('ChatController', () => {
 
 			// Assert
 			expect(mockResponse.writeHead).toHaveBeenCalled()
-			expect(mockResponse.write).toHaveBeenCalledWith(
-				expect.stringContaining('error'),
-			)
 			expect(mockResponse.end).toHaveBeenCalled()
 		})
 
-		it('should use default role when not provided', async () => {
+		it('should handle user role messages correctly', async () => {
 			// Arrange
 			mockRequest.params = { id: mockChatId }
-			mockRequest.body = { content: mockMessageContent } // No role specified
+			mockRequest.body = {
+				messages: [{ content: mockMessageContent, role: 'user' }],
+			} // Role specified
 			vi.mocked(chatService).sendMessageStreaming.mockResolvedValue([
 				mockStreamingResponse,
 				null,

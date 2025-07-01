@@ -408,29 +408,16 @@ registry.registerPath({
 	},
 	responses: {
 		[StatusCodes.OK]: {
-			description: 'Streaming response via Server-Sent Events',
+			description: 'Streaming text response compatible with Vercel AI SDK',
 			content: {
-				'text/event-stream': {
-					schema: z.object({
-						data: z.string().openapi({
-							description: 'SSE event data in JSON format',
-						}),
+				'text/plain': {
+					schema: z.string().openapi({
+						description: 'Plain text chunks streamed directly to client',
 					}),
 					examples: {
-						connected: {
-							summary: 'Connection established',
-							value:
-								'data: {"type":"connected","message":"Stream connected"}\n\n',
-						},
-						chunk: {
-							summary: 'AI response chunk',
-							value:
-								'data: {"type":"chunk","content":"Hello","messageId":"123e4567-e89b-12d3-a456-426614174000"}\n\n',
-						},
-						complete: {
-							summary: 'Streaming complete',
-							value:
-								'data: {"type":"stream_complete","messageId":"123e4567-e89b-12d3-a456-426614174000","fullContent":"Hello, how can I help you?"}\n\n',
+						streaming: {
+							summary: 'AI response streaming',
+							value: 'Hello, how can I help you today?',
 						},
 					},
 				},

@@ -8,6 +8,8 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { standardizeError } from '@/lib/errors/standardize-error'
+import { useChatById } from '@/services/hooks/chat/useChatById'
 
 const apiUrl = import.meta.env.VITE_API_URL
 const apiKey = import.meta.env.VITE_API_KEY
@@ -19,12 +21,30 @@ const ChatInterface = () => {
 	// Get authentication token for API requests
 	const accessToken = Cookies.get('macro-ai-accessToken')
 
+	// Fetch existing chat messages
+	const {
+		data: chatData,
+		isLoading: isChatLoading,
+		isError: isChatError,
+		error: chatError,
+	} = useChatById(currentChatId ?? undefined)
+
+	// Transform existing messages to AI SDK format
+	const initialMessages =
+		chatData?.data.messages.map((message) => ({
+			id: message.id,
+			role: message.role as 'user' | 'assistant' | 'system',
+			content: message.content,
+		})) ?? []
+
 	// Use Vercel's AI SDK useChat hook for streaming
 	const { messages, input, handleInputChange, handleSubmit, isLoading } =
 		useChat({
 			api: currentChatId
 				? `${apiUrl}/chats/${currentChatId}/stream`
 				: undefined,
+			initialMessages,
+			streamProtocol: 'text', // Use text stream protocol
 			headers: {
 				Authorization: `Bearer ${accessToken ?? ''}`,
 				'X-API-KEY': apiKey,
@@ -89,6 +109,42 @@ const ChatInterface = () => {
 		)
 	}
 
+	// Handle loading state for chat data
+	if (isChatLoading) {
+		return (
+			<div className="flex-1 flex items-center justify-center bg-white">
+				<div className="text-center">
+					<Loader2 className="h-8 w-8 mx-auto mb-4 text-gray-400 animate-spin" />
+					<p className="text-gray-600">Loading chat...</p>
+				</div>
+			</div>
+		)
+	}
+
+	// Handle error state for chat data
+	if (isChatError) {
+		const err = standardizeError(chatError)
+		return (
+			<div className="flex-1 flex items-center justify-center bg-white">
+				<div className="text-center max-w-md">
+					<Bot className="h-16 w-16 mx-auto mb-6 text-red-400" />
+					<h2 className="text-2xl font-semibold mb-4 text-gray-800">
+						Error Loading Chat
+					</h2>
+					<p className="text-red-600 mb-6">{err.message}</p>
+					<Button
+						onClick={() => {
+							window.location.reload()
+						}}
+						variant="outline"
+					>
+						Try Again
+					</Button>
+				</div>
+			</div>
+		)
+	}
+
 	return (
 		<div className="flex-1 flex flex-col h-full bg-white">
 			{/* Header */}
@@ -97,45 +153,61 @@ const ChatInterface = () => {
 					<Button variant="ghost" size="sm" className="md:hidden">
 						<Menu className="h-4 w-4" />
 					</Button>
-					<h1 className="font-semibold text-gray-800">Chat {currentChatId}</h1>
+					<h1 className="font-semibold text-gray-800">
+						{chatData?.data.title ?? `Chat ${currentChatId}`}
+					</h1>
 				</div>
 			</div>
 
 			{/* Messages */}
-			<div className="flex-1 overflow-y-auto">
-				{messages.map((message) => (
-					<div
-						key={message.id}
-						className={`border-b border-gray-100 ${message.role === 'assistant' ? 'bg-gray-50' : 'bg-white'}`}
-					>
-						<div className="max-w-4xl mx-auto p-6">
-							<div className="flex gap-6">
-								<div className="flex-shrink-0">
-									<div
-										className={`w-8 h-8 rounded-full flex items-center justify-center ${
-											message.role === 'assistant'
-												? 'bg-green-500'
-												: 'bg-blue-500'
-										}`}
-									>
-										{message.role === 'assistant' ? (
-											<Bot className="h-4 w-4 text-white" />
-										) : (
-											<User className="h-4 w-4 text-white" />
-										)}
+			<div className="flex-1 overflow-y-scroll">
+				{messages.length === 0 && !isLoading ? (
+					<div className="flex-1 flex items-center justify-center h-full">
+						<div className="text-center max-w-md">
+							<Bot className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+							<h3 className="text-xl font-medium mb-2 text-gray-800">
+								Start the conversation
+							</h3>
+							<p className="text-gray-600">
+								Send a message to begin chatting with AI
+							</p>
+						</div>
+					</div>
+				) : (
+					messages.map((message) => (
+						<div
+							key={message.id}
+							className={`border-b border-gray-100 ${message.role === 'assistant' ? 'bg-gray-50' : 'bg-white'}`}
+						>
+							<div className="max-w-4xl mx-auto p-6">
+								<div className="flex gap-6">
+									<div className="flex-shrink-0">
+										<div
+											className={`w-8 h-8 rounded-full flex items-center justify-center ${
+												message.role === 'assistant'
+													? 'bg-green-500'
+													: 'bg-blue-500'
+											}`}
+										>
+											{message.role === 'assistant' ? (
+												<Bot className="h-4 w-4 text-white" />
+											) : (
+												<User className="h-4 w-4 text-white" />
+											)}
+										</div>
 									</div>
-								</div>
-								<div className="flex-1 min-w-0">
-									<div className="prose prose-sm max-w-none">
-										<div className="whitespace-pre-wrap break-words text-gray-800">
-											{message.content}
+									<div className="flex-1 min-w-0">
+										<div className="prose prose-sm max-w-none">
+											<div className="whitespace-pre-wrap break-words text-gray-800">
+												{message.content}
+											</div>
 										</div>
 									</div>
 								</div>
 							</div>
 						</div>
-					</div>
-				))}
+					))
+				)}
 
 				{/* Loading indicator for streaming */}
 				{isLoading && (

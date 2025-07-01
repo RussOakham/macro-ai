@@ -421,34 +421,30 @@ export class ChatController implements IChatController {
 			return
 		}
 
-		// Set SSE headers for streaming
+		// Set headers for Vercel AI SDK text streaming
 		res.writeHead(StatusCodes.OK, {
-			'Content-Type': 'text/event-stream',
+			'Content-Type': 'text/plain; charset=utf-8',
 			'Cache-Control': 'no-cache',
 			Connection: 'keep-alive',
 			// CORS headers are handled by the main CORS middleware
-			// Removing manual CORS headers to avoid conflicts with credentials
 		})
 
-		// Helper function to send SSE data with Go-style error handling
-		const sendSSEData = (data: object): void => {
+		// Helper function to send text chunks for Vercel AI SDK
+		const sendTextChunk = (text: string): void => {
 			const [, writeError] = tryCatchSync(
-				() => res.write(`data: ${JSON.stringify(data)}\n\n`),
-				'streamChatMessage - sendSSEData',
+				() => res.write(text),
+				'streamChatMessage - sendTextChunk',
 			)
 
 			if (writeError) {
 				logger.error({
-					msg: '[streamChatMessage]: Error writing SSE data',
+					msg: '[streamChatMessage]: Error writing text chunk',
 					error: writeError.message,
 					userId,
 					chatId,
 				})
 			}
 		}
-
-		// Send initial connection confirmation
-		sendSSEData({ type: 'connected', message: 'Stream connected' })
 
 		try {
 			// Initiate streaming message exchange
@@ -469,7 +465,6 @@ export class ChatController implements IChatController {
 					userId,
 					chatId,
 				})
-				sendSSEData({ type: 'error', error: 'Failed to process message' })
 				res.end()
 				return
 			}
@@ -482,37 +477,21 @@ export class ChatController implements IChatController {
 					userId,
 					chatId,
 				})
-				sendSSEData({ type: 'error', error: serviceError.message })
 				res.end()
 				return
 			}
 
-			// Send user message confirmation
-			sendSSEData({
-				type: 'user_message',
-				message: streamingResult.userMessage,
-			})
-
-			// Stream AI response
+			// Stream AI response using text protocol
 			let fullResponse = ''
 			const { messageId, stream } = streamingResult.streamingResponse
 
-			// Send streaming start event
-			sendSSEData({
-				type: 'stream_start',
-				messageId,
-			})
-
-			// Process streaming chunks
+			// Process streaming chunks - send text content for AI SDK
 			const [, streamingError] = await tryCatch(
 				(async () => {
 					for await (const chunk of stream) {
 						fullResponse += chunk
-						sendSSEData({
-							type: 'chunk',
-							content: chunk,
-							messageId,
-						})
+						// Send the text chunk directly (no SSE formatting needed)
+						sendTextChunk(chunk)
 					}
 				})(),
 				'streamChatMessage - streaming',
@@ -526,7 +505,6 @@ export class ChatController implements IChatController {
 					chatId,
 					messageId,
 				})
-				sendSSEData({ type: 'error', error: 'Streaming interrupted' })
 				res.end()
 				return
 			}
@@ -548,13 +526,6 @@ export class ChatController implements IChatController {
 				// Continue anyway as the response was already streamed
 			}
 
-			// Send completion signal
-			sendSSEData({
-				type: 'stream_complete',
-				messageId,
-				fullContent: fullResponse,
-			})
-
 			logger.info({
 				msg: '[streamChatMessage]: Streaming completed successfully',
 				chatId,
@@ -572,7 +543,6 @@ export class ChatController implements IChatController {
 				userId,
 				chatId,
 			})
-			sendSSEData({ type: 'error', error: 'Unexpected error occurred' })
 		} finally {
 			// Always end the response
 			res.end()
