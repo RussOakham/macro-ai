@@ -114,16 +114,16 @@ const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
 	// Handle no chat selected
 	if (!currentChatId) {
 		return (
-			<div className="flex-1 flex items-center justify-center bg-white h-full">
+			<div className="flex-1 flex items-center justify-center bg-background h-full">
 				<div className="text-center max-w-md">
-					<Bot className="h-16 w-16 mx-auto mb-6 text-gray-400" />
-					<h2 className="text-3xl font-semibold mb-4 text-gray-800">
+					<Bot className="h-16 w-16 mx-auto mb-6 text-muted-foreground" />
+					<h2 className="text-3xl font-semibold mb-4 text-foreground">
 						ChatGPT Clone
 					</h2>
-					<p className="text-gray-600 mb-6">
+					<p className="text-muted-foreground mb-6">
 						Start a new conversation to begin chatting with AI
 					</p>
-					<div className="space-y-2 text-sm text-gray-500">
+					<div className="space-y-2 text-sm text-muted-foreground">
 						<p>• Ask questions and get helpful answers</p>
 						<p>• Have natural conversations</p>
 						<p>• Get assistance with various topics</p>
@@ -136,9 +136,9 @@ const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
 	// Handle loading state for chat data
 	if (isChatLoading) {
 		return (
-			<div className="flex-1 flex items-center justify-center bg-white">
+			<div className="flex-1 flex items-center justify-center bg-background h-full">
 				<div className="text-center">
-					<Loader2 className="h-8 w-8 mx-auto mb-4 text-gray-400 animate-spin" />
+					<Loader2 className="h-8 w-8 mx-auto mb-4 text-foreground animate-spin" />
 					<p className="text-gray-600">Loading chat...</p>
 				</div>
 			</div>
@@ -149,13 +149,13 @@ const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
 	if (isChatError) {
 		const err = standardizeError(chatError)
 		return (
-			<div className="flex-1 flex items-center justify-center bg-white">
+			<div className="flex-1 flex items-center justify-center h-full bg-background">
 				<div className="text-center max-w-md">
-					<Bot className="h-16 w-16 mx-auto mb-6 text-red-400" />
-					<h2 className="text-2xl font-semibold mb-4 text-gray-800">
+					<Bot className="h-16 w-16 mx-auto mb-6 text-destructive" />
+					<h2 className="text-2xl font-semibold mb-4 text-foreground">
 						Error Loading Chat
 					</h2>
-					<p className="text-red-600 mb-6">{err.message}</p>
+					<p className="text-destructive mb-6">{err.message}</p>
 					<Button
 						onClick={async () => {
 							await router.invalidate()
@@ -170,9 +170,9 @@ const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
 	}
 
 	return (
-		<div className="flex-1 flex flex-col h-full bg-white min-h-0">
+		<div className="flex-1 flex flex-col h-full bg-background min-h-0">
 			{/* Header */}
-			<div className="border-b border-gray-200 p-4 flex-shrink-0">
+			<div className="border-b border-border p-4 flex-shrink-0">
 				<div className="flex items-center justify-between w-full">
 					<div className="flex items-center gap-3">
 						<Button
@@ -183,7 +183,7 @@ const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
 						>
 							<Menu className="h-4 w-4" />
 						</Button>
-						<h1 className="font-semibold text-gray-800">
+						<h1 className="font-semibold text-foreground">
 							{chatData?.data.title ?? `Chat ${currentChatId}`}
 						</h1>
 					</div>
@@ -191,12 +191,12 @@ const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
 					{/* Connection Status Indicator */}
 					<div className="flex items-center gap-2 text-xs">
 						{status === 'streaming' ? (
-							<div className="flex items-center gap-1 text-blue-600">
-								<div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+							<div className="flex items-center gap-1 text-primary">
+								<div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
 								<span className="hidden sm:inline">Streaming</span>
 							</div>
 						) : (
-							<div className="flex items-center gap-1 text-green-600">
+							<div className="flex items-center gap-1 text-muted-foreground">
 								<div className="w-2 h-2 bg-green-500 rounded-full" />
 								<span className="hidden sm:inline">Ready</span>
 							</div>
@@ -210,11 +210,11 @@ const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
 				{messages.length === 0 && status !== 'streaming' ? (
 					<div className="flex-1 flex items-center justify-center h-full">
 						<div className="text-center max-w-md">
-							<Bot className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-							<h3 className="text-xl font-medium mb-2 text-gray-800">
+							<Bot className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+							<h3 className="text-xl font-medium mb-2 text-foreground">
 								Start the conversation
 							</h3>
-							<p className="text-gray-600">
+							<p className="text-muted-foreground">
 								Send a message to begin chatting with AI
 							</p>
 						</div>
@@ -223,7 +223,7 @@ const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
 					messages.map((message) => (
 						<div
 							key={message.id}
-							className={`border-b border-gray-100 ${message.role === 'assistant' ? 'bg-gray-50' : 'bg-white'}`}
+							className={`border-b border-border ${message.role === 'assistant' ? 'bg-muted/50' : 'bg-background'}`}
 						>
 							<div className="max-w-4xl mx-auto p-6">
 								<div className="flex gap-6">
@@ -231,20 +231,20 @@ const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
 										<div
 											className={`w-8 h-8 rounded-full flex items-center justify-center ${
 												message.role === 'assistant'
-													? 'bg-green-500'
-													: 'bg-blue-500'
+													? 'bg-primary'
+													: 'bg-secondary'
 											}`}
 										>
 											{message.role === 'assistant' ? (
-												<Bot className="h-4 w-4 text-white" />
+												<Bot className="h-4 w-4 text-primary-foreground" />
 											) : (
-												<User className="h-4 w-4 text-white" />
+												<User className="h-4 w-4 text-secondary-foreground" />
 											)}
 										</div>
 									</div>
 									<div className="flex-1 min-w-0">
 										<div className="prose prose-sm max-w-none">
-											<div className="whitespace-pre-wrap break-words text-gray-800">
+											<div className="whitespace-pre-wrap break-words text-foreground">
 												{message.content}
 											</div>
 										</div>
@@ -257,38 +257,38 @@ const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
 
 				{/* Enhanced streaming indicator */}
 				{status === 'streaming' && (
-					<div className="border-b border-gray-100 bg-gradient-to-r from-gray-50 to-blue-50">
+					<div className="border-b border-border bg-gradient-to-r from-muted/50 to-accent/50">
 						<div className="max-w-4xl mx-auto p-6">
 							<div className="flex gap-6">
 								<div className="flex-shrink-0">
-									<div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center animate-pulse">
-										<Bot className="h-4 w-4 text-white" />
+									<div className="w-8 h-8 bg-gradient-to-r from-primary to-accent rounded-full flex items-center justify-center animate-pulse">
+										<Bot className="h-4 w-4 text-primary-foreground" />
 									</div>
 								</div>
 								<div className="flex-1 min-w-0">
 									<div className="flex items-center gap-3">
 										<div className="flex gap-1">
-											<div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
+											<div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
 											<div
-												className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+												className="w-2 h-2 bg-primary rounded-full animate-bounce"
 												style={{ animationDelay: '0.1s' }}
 											/>
 											<div
-												className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+												className="w-2 h-2 bg-primary rounded-full animate-bounce"
 												style={{ animationDelay: '0.2s' }}
 											/>
 										</div>
-										<span className="text-sm text-blue-600 font-medium">
+										<span className="text-sm text-primary font-medium">
 											AI is thinking...
 										</span>
-										<div className="flex items-center gap-1 text-xs text-gray-500">
+										<div className="flex items-center gap-1 text-xs text-muted-foreground">
 											<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
 											<span>Connected</span>
 										</div>
 									</div>
 									<div className="mt-2">
-										<div className="w-full bg-gray-200 rounded-full h-1">
-											<div className="bg-gradient-to-r from-blue-500 to-green-500 h-1 rounded-full animate-pulse w-3/4"></div>
+										<div className="w-full bg-muted rounded-full h-1">
+											<div className="bg-gradient-to-r from-primary to-accent h-1 rounded-full animate-pulse w-3/4"></div>
 										</div>
 									</div>
 								</div>
@@ -301,7 +301,7 @@ const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
 			</div>
 
 			{/* Input */}
-			<div className="border-t border-gray-200 bg-white flex-shrink-0">
+			<div className="border-t border-border bg-background flex-shrink-0">
 				<div className="max-w-4xl mx-auto p-4">
 					<form onSubmit={onSubmit} className="flex gap-3">
 						<div className="flex-1 relative">
@@ -311,7 +311,7 @@ const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
 								onChange={handleInputChange}
 								onKeyDown={handleKeyDown}
 								placeholder="Send a message..."
-								className="min-h-[44px] max-h-32 resize-none pr-12 border-gray-300 focus:border-gray-400 focus:ring-gray-400"
+								className="min-h-[44px] max-h-32 resize-none pr-12"
 								disabled={status === 'streaming'}
 								rows={1}
 							/>
@@ -321,19 +321,19 @@ const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
 								size="sm"
 								className={`absolute right-2 bottom-2 h-8 w-8 p-0 transition-all duration-200 ${
 									status === 'streaming'
-										? 'bg-blue-500 hover:bg-blue-600'
-										: 'bg-gray-800 hover:bg-gray-700'
+										? 'bg-primary hover:bg-primary/90'
+										: 'bg-foreground hover:bg-foreground/90'
 								}`}
 							>
 								{status === 'streaming' ? (
-									<Loader2 className="h-3 w-3 animate-spin text-white" />
+									<Loader2 className="h-3 w-3 animate-spin text-primary-foreground" />
 								) : (
-									<Send className="h-3 w-3" />
+									<Send className="h-3 w-3 text-background" />
 								)}
 							</Button>
 						</div>
 					</form>
-					<div className="text-xs text-gray-500 text-center mt-2">
+					<div className="text-xs text-muted-foreground text-center mt-2">
 						ChatGPT Clone can make mistakes. Consider checking important
 						information.
 					</div>

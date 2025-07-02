@@ -218,12 +218,12 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 	}, {})
 
 	return (
-		<div className="w-64 bg-gray-900 text-white flex flex-col h-full min-h-0">
+		<div className="w-64 bg-card text-card-foreground flex flex-col h-full min-h-0 border-r border-border">
 			{/* Header */}
-			<div className="p-3 border-b border-gray-700 flex-shrink-0">
+			<div className="p-3 border-b border-border flex-shrink-0">
 				<Button
 					onClick={createNewChat}
-					className="w-full justify-start gap-3 bg-transparent border border-gray-600 hover:bg-gray-800"
+					className="w-full justify-start gap-3"
 					variant="outline"
 				>
 					<Plus className="h-4 w-4" />
@@ -233,11 +233,11 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 
 			{/* Create Chat Form */}
 			{showCreateForm && (
-				<div className="p-3 border-b border-gray-700 bg-gray-800 flex-shrink-0">
+				<div className="p-3 border-b border-border bg-muted flex-shrink-0">
 					<CreateChatForm
 						onSuccess={handleCreateChatSuccess}
 						onCancel={handleCreateChatCancel}
-						className="text-white"
+						className="text-foreground"
 					/>
 				</div>
 			)}
@@ -247,16 +247,18 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 				{isChatsLoading ? (
 					<div className="flex items-center justify-center p-6">
 						<div className="text-center">
-							<Loader2 className="h-6 w-6 mx-auto mb-2 text-gray-400 animate-spin" />
-							<p className="text-sm text-gray-400">Loading chats...</p>
+							<Loader2 className="h-6 w-6 mx-auto mb-2 text-muted-foreground animate-spin" />
+							<p className="text-sm text-muted-foreground">Loading chats...</p>
 						</div>
 					</div>
 				) : isChatsError ? (
 					<div className="flex items-center justify-center p-6">
 						<div className="text-center">
-							<AlertCircle className="h-6 w-6 mx-auto mb-2 text-red-400" />
-							<p className="text-sm text-gray-400 mb-2">Failed to load chats</p>
-							<p className="text-xs text-gray-500 mb-3">
+							<AlertCircle className="h-6 w-6 mx-auto mb-2 text-destructive" />
+							<p className="text-sm text-muted-foreground mb-2">
+								Failed to load chats
+							</p>
+							<p className="text-xs text-muted-foreground mb-3">
 								{chatsError instanceof Error
 									? chatsError.message
 									: 'An error occurred'}
@@ -274,9 +276,9 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 				) : chats.length === 0 ? (
 					<div className="flex items-center justify-center p-6">
 						<div className="text-center">
-							<MessageSquare className="h-6 w-6 mx-auto mb-2 text-gray-400" />
-							<p className="text-sm text-gray-400">No chats yet</p>
-							<p className="text-xs text-gray-500">
+							<MessageSquare className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+							<p className="text-sm text-muted-foreground">No chats yet</p>
+							<p className="text-xs text-muted-foreground">
 								Create your first chat to get started
 							</p>
 						</div>
@@ -284,19 +286,19 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 				) : (
 					Object.entries(groupedChats).map(([dateGroup, chatsInGroup]) => (
 						<div key={dateGroup} className="py-2">
-							<div className="px-3 py-2 text-xs text-gray-400 font-medium">
+							<div className="px-3 py-2 text-xs text-muted-foreground font-medium">
 								{dateGroup}
 							</div>
 							<div className="space-y-1">
 								{chatsInGroup.map((chat) => (
 									<div key={chat.id} className="group px-3">
 										{confirmDeleteChatId === chat.id ? (
-											<div className="flex items-center gap-2 p-2 bg-red-900/20 border border-red-700 rounded">
+											<div className="flex items-center gap-2 p-2 bg-destructive/20 border border-destructive rounded">
 												<div className="flex-1">
-													<p className="text-sm text-red-200">
+													<p className="text-sm text-destructive-foreground">
 														Delete "{chat.title}"?
 													</p>
-													<p className="text-xs text-red-300">
+													<p className="text-xs text-muted-foreground">
 														This action cannot be undone.
 													</p>
 												</div>
@@ -307,7 +309,7 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 														confirmDeleteChat(chat.id)
 													}}
 													disabled={isPending}
-													className="h-6 w-6 p-0 text-red-400 hover:text-red-300 disabled:opacity-50"
+													className="h-6 w-6 p-0 text-destructive hover:text-destructive/80 disabled:opacity-50"
 												>
 													{isPending ? (
 														<Loader2 className="h-3 w-3 animate-spin" />
@@ -320,7 +322,7 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 													variant="ghost"
 													onClick={cancelDeleteChat}
 													disabled={isPending}
-													className="h-6 w-6 p-0 text-gray-400 hover:text-gray-300 disabled:opacity-50"
+													className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
 												>
 													<X className="h-3 w-3" />
 												</Button>
@@ -333,7 +335,7 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 														setEditTitle(e.target.value)
 													}}
 													disabled={isPending}
-													className="h-8 text-sm bg-gray-800 border-gray-600 text-white disabled:opacity-50"
+													className="h-8 text-sm disabled:opacity-50"
 													onKeyDown={(e) => {
 														if (e.key === 'Enter') {
 															saveEdit()
@@ -351,7 +353,7 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 														saveEdit()
 													}}
 													disabled={isPending}
-													className="h-6 w-6 p-0 text-green-400 hover:text-green-300 disabled:opacity-50"
+													className="h-6 w-6 p-0 text-green-500 hover:text-green-600 disabled:opacity-50"
 												>
 													{isPending ? (
 														<Loader2 className="h-3 w-3 animate-spin" />
@@ -364,7 +366,7 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 													variant="ghost"
 													onClick={cancelEdit}
 													disabled={isPending}
-													className="h-6 w-6 p-0 text-gray-400 hover:text-gray-300 disabled:opacity-50"
+													className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
 												>
 													<X className="h-3 w-3" />
 												</Button>
@@ -379,8 +381,10 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 														// Close mobile sidebar when navigating to a chat
 														onMobileClose?.()
 													}}
-													className={`flex-1 flex items-center gap-3 p-2 rounded text-left text-sm hover:bg-gray-800 ${
-														currentChatId === chat.id ? 'bg-gray-800' : ''
+													className={`flex-1 flex items-center gap-3 p-2 rounded text-left text-sm hover:bg-accent hover:text-accent-foreground ${
+														currentChatId === chat.id
+															? 'bg-accent text-accent-foreground'
+															: 'text-card-foreground'
 													}`}
 												>
 													<MessageSquare className="h-4 w-4 shrink-0" />
@@ -393,7 +397,7 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 														onClick={() => {
 															startEditing(chat)
 														}}
-														className="h-6 w-6 p-0 text-gray-400 hover:text-white"
+														className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
 													>
 														<Edit3 className="h-3 w-3" />
 													</Button>
@@ -404,7 +408,7 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 															handleDeleteChat(chat.id)
 														}}
 														disabled={isPending || confirmDeleteChatId !== null}
-														className="h-6 w-6 p-0 text-gray-400 hover:text-red-400 disabled:opacity-50"
+														className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive disabled:opacity-50"
 													>
 														<Trash2 className="h-3 w-3" />
 													</Button>
