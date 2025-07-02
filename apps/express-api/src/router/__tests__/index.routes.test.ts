@@ -236,6 +236,7 @@ describe('appRouter', () => {
 			// Act & Assert
 			expect(() => appRouter()).toThrow()
 			expect(authRouter).toHaveBeenCalledTimes(1)
+			expect(chatRouter).not.toHaveBeenCalled()
 			expect(utilityRouter).not.toHaveBeenCalled()
 			expect(userRouter).not.toHaveBeenCalled()
 		})

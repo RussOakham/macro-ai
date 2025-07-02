@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm'
+import { desc, eq, type SQL } from 'drizzle-orm'
 
 import { db } from '../../data-access/db.ts'
 import { tryCatch } from '../../utils/error-handling/try-catch.ts'
@@ -82,20 +82,22 @@ class VectorRepository implements IVectorRepository {
 	}
 
 	/**
-	 * Find vectors by user ID
-	 * @param userId The user's unique identifier
-	 * @returns Result tuple with vectors array
+	 * Generic helper method to find vectors with a given filter condition
+	 * @param filterCondition The SQL filter condition to apply
+	 * @param methodName The method name for error context
+	 * @returns Result tuple with validated vectors array
 	 */
-	public findVectorsByUserId = async (
-		userId: string,
-	): Promise<Result<TChatVector[]>> => {
+	private async findVectorsWithFilter(
+		filterCondition: SQL,
+		methodName: string,
+	): Promise<Result<TChatVector[]>> {
 		const [vectors, error] = await tryCatch(
 			this.db
 				.select()
 				.from(chatVectorsTable)
-				.where(eq(chatVectorsTable.userId, userId))
+				.where(filterCondition)
 				.orderBy(desc(chatVectorsTable.createdAt)),
-			'vectorRepository - findVectorsByUserId',
+			`vectorRepository - ${methodName}`,
 		)
 
 		if (error) {
@@ -108,16 +110,13 @@ class VectorRepository implements IVectorRepository {
 			const [validationResult, validationError] = safeValidateSchema(
 				vector,
 				selectChatVectorSchema,
-				'vectorRepository - findVectorsByUserId',
+				`vectorRepository - ${methodName}`,
 			)
 
 			if (validationError) {
 				return [
 					null,
-					AppError.from(
-						validationError,
-						'vectorRepository - findVectorsByUserId',
-					),
+					AppError.from(validationError, `vectorRepository - ${methodName}`),
 				]
 			}
 
@@ -128,6 +127,20 @@ class VectorRepository implements IVectorRepository {
 	}
 
 	/**
+	 * Find vectors by user ID
+	 * @param userId The user's unique identifier
+	 * @returns Result tuple with vectors array
+	 */
+	public findVectorsByUserId = async (
+		userId: string,
+	): Promise<Result<TChatVector[]>> => {
+		return await this.findVectorsWithFilter(
+			eq(chatVectorsTable.userId, userId),
+			'findVectorsByUserId',
+		)
+	}
+
+	/**
 	 * Find vectors by chat ID
 	 * @param chatId The chat's unique identifier
 	 * @returns Result tuple with vectors array
@@ -135,42 +148,10 @@ class VectorRepository implements IVectorRepository {
 	public findVectorsByChatId = async (
 		chatId: string,
 	): Promise<Result<TChatVector[]>> => {
-		const [vectors, error] = await tryCatch(
-			this.db
-				.select()
-				.from(chatVectorsTable)
-				.where(eq(chatVectorsTable.chatId, chatId))
-				.orderBy(desc(chatVectorsTable.createdAt)),
-			'vectorRepository - findVectorsByChatId',
+		return await this.findVectorsWithFilter(
+			eq(chatVectorsTable.chatId, chatId),
+			'findVectorsByChatId',
 		)
-
-		if (error) {
-			return [null, error]
-		}
-
-		// Validate each vector
-		const validatedVectors: TChatVector[] = []
-		for (const vector of vectors) {
-			const [validationResult, validationError] = safeValidateSchema(
-				vector,
-				selectChatVectorSchema,
-				'vectorRepository - findVectorsByChatId',
-			)
-
-			if (validationError) {
-				return [
-					null,
-					AppError.from(
-						validationError,
-						'vectorRepository - findVectorsByChatId',
-					),
-				]
-			}
-
-			validatedVectors.push(validationResult)
-		}
-
-		return [validatedVectors, null]
 	}
 
 	/**

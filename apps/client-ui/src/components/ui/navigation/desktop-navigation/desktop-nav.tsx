@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { NavigationMenuList } from '@radix-ui/react-navigation-menu'
 import { Link } from '@tanstack/react-router'
 
@@ -18,10 +17,6 @@ const DesktopNav = ({
 	...props
 }: React.ComponentPropsWithoutRef<'nav'>) => {
 	const isAuthenticated = useIsAuthenticated()
-
-	useEffect(() => {
-		console.log('isAuthenticated', isAuthenticated)
-	}, [isAuthenticated])
 
 	return (
 		<nav className={cn('flex p-2 gap-2', className)} {...props}>

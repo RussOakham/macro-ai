@@ -2034,7 +2034,11 @@ describe('ChatService (Refactored)', () => {
 					])
 
 					// Act
-					const [result, error] = await chatService.updateChat(chatId, updates)
+					const [result, error] = await chatService.updateChat(
+						chatId,
+						mockUserId,
+						updates,
+					)
 
 					// Assert
 					expect(result).toBeNull()
@@ -2053,7 +2057,11 @@ describe('ChatService (Refactored)', () => {
 					mockChatRepository.updateChat.mockResolvedValue([null, timeoutError])
 
 					// Act
-					const [result, error] = await chatService.updateChat(chatId, updates)
+					const [result, error] = await chatService.updateChat(
+						chatId,
+						mockUserId,
+						updates,
+					)
 
 					// Assert
 					expect(result).toBeNull()
@@ -2111,7 +2119,11 @@ describe('ChatService (Refactored)', () => {
 					])
 
 					// Act
-					const [result, error] = await chatService.updateChat(chatId, updates)
+					const [result, error] = await chatService.updateChat(
+						chatId,
+						mockUserId,
+						updates,
+					)
 
 					// Assert
 					expect(result).toBeNull()
@@ -2134,7 +2146,11 @@ describe('ChatService (Refactored)', () => {
 					])
 
 					// Act
-					const [result, error] = await chatService.updateChat(chatId, updates)
+					const [result, error] = await chatService.updateChat(
+						chatId,
+						mockUserId,
+						updates,
+					)
 
 					// Assert
 					expect(result).toBeNull()
@@ -2157,7 +2173,11 @@ describe('ChatService (Refactored)', () => {
 					])
 
 					// Act
-					const [result, error] = await chatService.updateChat(chatId, updates)
+					const [result, error] = await chatService.updateChat(
+						chatId,
+						mockUserId,
+						updates,
+					)
 
 					// Assert
 					expect(result).toBeNull()

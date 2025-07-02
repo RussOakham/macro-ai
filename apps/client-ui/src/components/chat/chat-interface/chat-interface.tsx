@@ -5,15 +5,21 @@ import { useParams } from '@tanstack/react-router'
 import Cookies from 'js-cookie'
 import { Bot, Loader2, Menu, Send, User } from 'lucide-react'
 import { toast } from 'sonner'
+import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
+import { router } from '@/main'
 import { useChatById } from '@/services/hooks/chat/useChatById'
 
 const apiUrl = import.meta.env.VITE_API_URL
 const apiKey = import.meta.env.VITE_API_KEY
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const messageRoleSchema = z.enum(['user', 'assistant', 'system'])
+type MessageRole = z.infer<typeof messageRoleSchema>
 
 const ChatInterface = () => {
 	const params = useParams({ strict: false })
@@ -34,7 +40,11 @@ const ChatInterface = () => {
 	const initialMessages =
 		chatData?.data.messages.map((message) => ({
 			id: message.id,
-			role: message.role as 'user' | 'assistant' | 'system',
+			role: (['user', 'assistant', 'system'] as const).includes(
+				message.role as MessageRole,
+			)
+				? (message.role as 'user' | 'assistant' | 'system')
+				: 'user', // fallback to user role
 			content: message.content,
 		})) ?? []
 
@@ -131,8 +141,8 @@ const ChatInterface = () => {
 					</h2>
 					<p className="text-red-600 mb-6">{err.message}</p>
 					<Button
-						onClick={() => {
-							window.location.reload()
+						onClick={async () => {
+							await router.invalidate()
 						}}
 						variant="outline"
 					>
