@@ -120,11 +120,24 @@ export class ChatService implements IChatService {
 		const { page = 1, limit = 20 } = options
 
 		// Validate pagination parameters
+		// Check if page and limit are integers
+		if (!Number.isInteger(page) || !Number.isInteger(limit)) {
+			return [
+				null,
+				new ValidationError(
+					'Invalid pagination parameters: page and limit must be integers',
+					{ page, limit },
+					'chatService',
+				),
+			]
+		}
+
+		// Check if page and limit are within valid ranges
 		if (page < 1 || limit < 1 || limit > 100) {
 			return [
 				null,
 				new ValidationError(
-					'Invalid pagination parameters',
+					'Invalid pagination parameters: page must be >= 1, limit must be between 1 and 100',
 					{ page, limit },
 					'chatService',
 				),

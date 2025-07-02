@@ -378,7 +378,7 @@ describe('ChatService (Refactored)', () => {
 			expect(error).toBeNull()
 		})
 
-		it('should return validation error for invalid pagination', async () => {
+		it('should return validation error for invalid pagination ranges', async () => {
 			// Act
 			const [result, error] = await chatService.getUserChats(mockUserId, {
 				page: 0,
@@ -388,7 +388,54 @@ describe('ChatService (Refactored)', () => {
 			// Assert
 			expect(result).toBeNull()
 			expect(error).toBeInstanceOf(ValidationError)
-			expect(error?.message).toBe('Invalid pagination parameters')
+			expect(error?.message).toBe(
+				'Invalid pagination parameters: page must be >= 1, limit must be between 1 and 100',
+			)
+		})
+
+		it('should return validation error for non-integer page parameter', async () => {
+			// Act
+			const [result, error] = await chatService.getUserChats(mockUserId, {
+				page: 2.5,
+				limit: 20,
+			})
+
+			// Assert
+			expect(result).toBeNull()
+			expect(error).toBeInstanceOf(ValidationError)
+			expect(error?.message).toBe(
+				'Invalid pagination parameters: page and limit must be integers',
+			)
+		})
+
+		it('should return validation error for non-integer limit parameter', async () => {
+			// Act
+			const [result, error] = await chatService.getUserChats(mockUserId, {
+				page: 1,
+				limit: 15.7,
+			})
+
+			// Assert
+			expect(result).toBeNull()
+			expect(error).toBeInstanceOf(ValidationError)
+			expect(error?.message).toBe(
+				'Invalid pagination parameters: page and limit must be integers',
+			)
+		})
+
+		it('should return validation error for both non-integer parameters', async () => {
+			// Act
+			const [result, error] = await chatService.getUserChats(mockUserId, {
+				page: 1.3,
+				limit: 20.8,
+			})
+
+			// Assert
+			expect(result).toBeNull()
+			expect(error).toBeInstanceOf(ValidationError)
+			expect(error?.message).toBe(
+				'Invalid pagination parameters: page and limit must be integers',
+			)
 		})
 
 		it('should use default pagination when no options provided', async () => {
