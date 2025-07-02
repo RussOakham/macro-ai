@@ -30,7 +30,7 @@ const createServer = (): Express => {
 		cors({
 			origin: ['http://localhost:3000', 'http://localhost:3030'],
 			credentials: true,
-			exposedHeaders: ['set-cookie'],
+			exposedHeaders: ['set-cookie', 'cache-control'],
 			methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 			allowedHeaders: [
 				'Origin',
@@ -39,6 +39,7 @@ const createServer = (): Express => {
 				'Accept',
 				'Authorization',
 				'X-API-KEY',
+				'Cache-Control',
 			],
 			maxAge: 86400, // 24 hours
 		}),

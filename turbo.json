@@ -33,6 +33,7 @@
 			]
 		},
 		"lint": {},
+		"type-check": {},
 		"test": {},
 		"test:ui": {
 			"cache": false

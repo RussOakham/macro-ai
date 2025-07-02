@@ -48,6 +48,9 @@ export const defaultTestConfig: ConfigType = {
 	nonRelationalDatabaseUrl: 'mongodb://localhost:27017/test_db',
 	relationalDatabaseUrl: 'postgresql://test:test@localhost:5432/test_db',
 
+	// OpenAI Configuration
+	openaiApiKey: 'sk-test-mock-key-for-testing-only',
+
 	// Rate Limiting Configuration
 	rateLimitWindowMs: 900000, // 15 minutes
 	rateLimitMaxRequests: 100,

@@ -122,6 +122,7 @@ jobs:
           COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
           NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
 
   lint:
     needs: setup
@@ -165,6 +166,7 @@ jobs:
           COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
           NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
       - name: Run lint
         run: pnpm lint
 
@@ -210,6 +212,7 @@ jobs:
           COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
           NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4

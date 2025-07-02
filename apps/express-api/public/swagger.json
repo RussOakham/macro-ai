@@ -521,6 +521,664 @@
 				"required": ["id", "email", "emailVerified"],
 				"description": "Authenticated user information response"
 			},
+			"Chat": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"userId": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"title": {
+						"type": "string",
+						"maxLength": 255
+					},
+					"createdAt": {
+						"type": "string",
+						"nullable": true
+					},
+					"updatedAt": {
+						"type": "string",
+						"nullable": true
+					}
+				},
+				"required": ["id", "userId", "title", "createdAt", "updatedAt"]
+			},
+			"ChatMessage": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"chatId": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"role": {
+						"type": "string",
+						"maxLength": 20
+					},
+					"content": {
+						"type": "string"
+					},
+					"embedding": {
+						"type": "array",
+						"nullable": true,
+						"items": {
+							"type": "number"
+						}
+					},
+					"createdAt": {
+						"type": "string",
+						"nullable": true
+					},
+					"metadata": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "number"
+							},
+							{
+								"type": "boolean"
+							},
+							{
+								"nullable": true
+							},
+							{
+								"type": "object",
+								"additionalProperties": {
+									"nullable": true
+								}
+							},
+							{
+								"type": "array",
+								"items": {
+									"nullable": true
+								}
+							},
+							{
+								"nullable": true
+							}
+						],
+						"description": "JSON metadata - can be string, number, boolean, null, object, or array"
+					}
+				},
+				"required": [
+					"id",
+					"chatId",
+					"role",
+					"content",
+					"embedding",
+					"createdAt"
+				]
+			},
+			"ChatVector": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"userId": {
+						"type": "string",
+						"format": "uuid"
+					},
+					"chatId": {
+						"type": "string",
+						"nullable": true,
+						"format": "uuid"
+					},
+					"messageId": {
+						"type": "string",
+						"nullable": true,
+						"format": "uuid"
+					},
+					"content": {
+						"type": "string"
+					},
+					"embedding": {
+						"type": "array",
+						"nullable": true,
+						"items": {
+							"type": "number"
+						}
+					},
+					"createdAt": {
+						"type": "string",
+						"nullable": true
+					},
+					"updatedAt": {
+						"type": "string",
+						"nullable": true
+					},
+					"metadata": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "number"
+							},
+							{
+								"type": "boolean"
+							},
+							{
+								"nullable": true
+							},
+							{
+								"type": "object",
+								"additionalProperties": {
+									"nullable": true
+								}
+							},
+							{
+								"type": "array",
+								"items": {
+									"nullable": true
+								}
+							},
+							{
+								"nullable": true
+							}
+						],
+						"description": "JSON metadata - can be string, number, boolean, null, object, or array"
+					}
+				},
+				"required": [
+					"id",
+					"userId",
+					"chatId",
+					"messageId",
+					"content",
+					"embedding",
+					"createdAt",
+					"updatedAt"
+				]
+			},
+			"CreateChatRequest": {
+				"type": "object",
+				"properties": {
+					"title": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 255,
+						"description": "Chat title"
+					}
+				},
+				"required": ["title"],
+				"description": "Create new chat request"
+			},
+			"UpdateChatRequest": {
+				"type": "object",
+				"properties": {
+					"title": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 255,
+						"description": "Chat title"
+					}
+				},
+				"required": ["title"],
+				"description": "Update chat request"
+			},
+			"SendMessageRequest": {
+				"type": "object",
+				"properties": {
+					"messages": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"role": {
+									"type": "string",
+									"enum": ["user", "assistant", "system"],
+									"description": "Message role"
+								},
+								"content": {
+									"type": "string",
+									"minLength": 1,
+									"maxLength": 10000,
+									"description": "Message content"
+								}
+							},
+							"required": ["role", "content"]
+						},
+						"minItems": 1,
+						"description": "Array of conversation messages"
+					}
+				},
+				"required": ["messages"],
+				"description": "Send message request"
+			},
+			"SearchChatRequest": {
+				"type": "object",
+				"properties": {
+					"query": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 1000,
+						"description": "Search query"
+					},
+					"limit": {
+						"type": "number",
+						"minimum": 1,
+						"maximum": 50,
+						"default": 10,
+						"description": "Maximum number of results"
+					},
+					"threshold": {
+						"type": "number",
+						"minimum": 0,
+						"maximum": 1,
+						"default": 0.7,
+						"description": "Similarity threshold"
+					}
+				},
+				"required": ["query"],
+				"description": "Semantic search request"
+			},
+			"ChatResponse": {
+				"type": "object",
+				"properties": {
+					"success": {
+						"type": "boolean",
+						"description": "Request success status"
+					},
+					"data": {
+						"type": "object",
+						"properties": {
+							"id": {
+								"type": "string",
+								"format": "uuid"
+							},
+							"userId": {
+								"type": "string",
+								"format": "uuid"
+							},
+							"title": {
+								"type": "string",
+								"maxLength": 255
+							},
+							"createdAt": {
+								"type": "string",
+								"nullable": true
+							},
+							"updatedAt": {
+								"type": "string",
+								"nullable": true
+							}
+						},
+						"required": ["id", "userId", "title", "createdAt", "updatedAt"],
+						"description": "Chat data"
+					}
+				},
+				"required": ["success", "data"],
+				"description": "Chat response"
+			},
+			"ChatListResponse": {
+				"type": "object",
+				"properties": {
+					"success": {
+						"type": "boolean",
+						"description": "Request success status"
+					},
+					"data": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"id": {
+									"type": "string",
+									"format": "uuid"
+								},
+								"userId": {
+									"type": "string",
+									"format": "uuid"
+								},
+								"title": {
+									"type": "string",
+									"maxLength": 255
+								},
+								"createdAt": {
+									"type": "string",
+									"nullable": true
+								},
+								"updatedAt": {
+									"type": "string",
+									"nullable": true
+								}
+							},
+							"required": ["id", "userId", "title", "createdAt", "updatedAt"],
+							"description": "Chat conversation metadata"
+						},
+						"description": "List of chats"
+					},
+					"meta": {
+						"type": "object",
+						"properties": {
+							"page": {
+								"type": "number",
+								"description": "Current page number"
+							},
+							"limit": {
+								"type": "number",
+								"description": "Items per page"
+							},
+							"total": {
+								"type": "number",
+								"description": "Total number of items"
+							}
+						},
+						"required": ["page", "limit", "total"],
+						"description": "Pagination metadata"
+					}
+				},
+				"required": ["success", "data", "meta"],
+				"description": "Chat list response"
+			},
+			"ChatWithMessagesResponse": {
+				"type": "object",
+				"properties": {
+					"success": {
+						"type": "boolean",
+						"description": "Request success status"
+					},
+					"data": {
+						"type": "object",
+						"properties": {
+							"id": {
+								"type": "string",
+								"format": "uuid",
+								"description": "Chat ID"
+							},
+							"userId": {
+								"type": "string",
+								"format": "uuid",
+								"description": "User ID"
+							},
+							"title": {
+								"type": "string",
+								"description": "Chat title"
+							},
+							"createdAt": {
+								"type": "string",
+								"description": "Creation timestamp"
+							},
+							"updatedAt": {
+								"type": "string",
+								"description": "Last update timestamp"
+							},
+							"messages": {
+								"type": "array",
+								"items": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string",
+											"format": "uuid"
+										},
+										"chatId": {
+											"type": "string",
+											"format": "uuid"
+										},
+										"role": {
+											"type": "string",
+											"maxLength": 20
+										},
+										"content": {
+											"type": "string"
+										},
+										"embedding": {
+											"type": "array",
+											"nullable": true,
+											"items": {
+												"type": "number"
+											}
+										},
+										"createdAt": {
+											"type": "string",
+											"nullable": true
+										},
+										"metadata": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "number"
+												},
+												{
+													"type": "boolean"
+												},
+												{
+													"nullable": true
+												},
+												{
+													"type": "object",
+													"additionalProperties": {
+														"nullable": true
+													}
+												},
+												{
+													"type": "array",
+													"items": {
+														"nullable": true
+													}
+												},
+												{
+													"nullable": true
+												}
+											],
+											"description": "JSON metadata - can be string, number, boolean, null, object, or array"
+										}
+									},
+									"required": [
+										"id",
+										"chatId",
+										"role",
+										"content",
+										"embedding",
+										"createdAt"
+									],
+									"description": "Individual chat message"
+								},
+								"description": "Chat messages"
+							}
+						},
+						"required": [
+							"id",
+							"userId",
+							"title",
+							"createdAt",
+							"updatedAt",
+							"messages"
+						],
+						"description": "Chat with messages"
+					}
+				},
+				"required": ["success", "data"],
+				"description": "Chat with messages response"
+			},
+			"StreamingEvent": {
+				"oneOf": [
+					{
+						"type": "object",
+						"properties": {
+							"type": {
+								"type": "string",
+								"enum": ["connected"],
+								"description": "Connection established"
+							},
+							"message": {
+								"type": "string",
+								"description": "Connection message"
+							}
+						},
+						"required": ["type", "message"]
+					},
+					{
+						"type": "object",
+						"properties": {
+							"type": {
+								"type": "string",
+								"enum": ["user_message"],
+								"description": "User message saved"
+							},
+							"message": {
+								"type": "object",
+								"properties": {
+									"id": {
+										"type": "string",
+										"format": "uuid"
+									},
+									"chatId": {
+										"type": "string",
+										"format": "uuid"
+									},
+									"role": {
+										"type": "string",
+										"maxLength": 20
+									},
+									"content": {
+										"type": "string"
+									},
+									"embedding": {
+										"type": "array",
+										"nullable": true,
+										"items": {
+											"type": "number"
+										}
+									},
+									"createdAt": {
+										"type": "string",
+										"nullable": true
+									},
+									"metadata": {
+										"anyOf": [
+											{
+												"type": "string"
+											},
+											{
+												"type": "number"
+											},
+											{
+												"type": "boolean"
+											},
+											{
+												"nullable": true
+											},
+											{
+												"type": "object",
+												"additionalProperties": {
+													"nullable": true
+												}
+											},
+											{
+												"type": "array",
+												"items": {
+													"nullable": true
+												}
+											},
+											{
+												"nullable": true
+											}
+										],
+										"description": "JSON metadata - can be string, number, boolean, null, object, or array"
+									}
+								},
+								"required": [
+									"id",
+									"chatId",
+									"role",
+									"content",
+									"embedding",
+									"createdAt"
+								],
+								"description": "Saved user message"
+							}
+						},
+						"required": ["type", "message"]
+					},
+					{
+						"type": "object",
+						"properties": {
+							"type": {
+								"type": "string",
+								"enum": ["stream_start"],
+								"description": "AI response streaming started"
+							},
+							"messageId": {
+								"type": "string",
+								"format": "uuid",
+								"description": "AI message ID"
+							}
+						},
+						"required": ["type", "messageId"]
+					},
+					{
+						"type": "object",
+						"properties": {
+							"type": {
+								"type": "string",
+								"enum": ["chunk"],
+								"description": "AI response chunk"
+							},
+							"content": {
+								"type": "string",
+								"description": "Chunk content"
+							},
+							"messageId": {
+								"type": "string",
+								"format": "uuid",
+								"description": "AI message ID"
+							}
+						},
+						"required": ["type", "content", "messageId"]
+					},
+					{
+						"type": "object",
+						"properties": {
+							"type": {
+								"type": "string",
+								"enum": ["stream_complete"],
+								"description": "AI response streaming completed"
+							},
+							"messageId": {
+								"type": "string",
+								"format": "uuid",
+								"description": "AI message ID"
+							},
+							"fullContent": {
+								"type": "string",
+								"description": "Complete AI response"
+							}
+						},
+						"required": ["type", "messageId", "fullContent"]
+					},
+					{
+						"type": "object",
+						"properties": {
+							"type": {
+								"type": "string",
+								"enum": ["error"],
+								"description": "Error occurred"
+							},
+							"error": {
+								"type": "string",
+								"description": "Error message"
+							}
+						},
+						"required": ["type", "error"]
+					}
+				],
+				"description": "Server-Sent Event for streaming chat"
+			},
 			"HealthResponse": {
 				"type": "object",
 				"properties": {
@@ -1804,6 +2462,1085 @@
 					},
 					"500": {
 						"description": "Server error - Cognito or database error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Internal server error message",
+											"example": "Internal server error"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/chats": {
+			"get": {
+				"tags": ["Chat Management"],
+				"summary": "Get user chats",
+				"description": "Retrieves all chats for the authenticated user with pagination support. Supports optional query parameters: page (default: 1) and limit (default: 20, max: 100).",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "page",
+						"in": "query",
+						"required": false,
+						"description": "Page number for pagination",
+						"schema": {
+							"type": "integer",
+							"minimum": 1,
+							"default": 1,
+							"example": 1
+						}
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"required": false,
+						"description": "Number of chats per page (max 100)",
+						"schema": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 100,
+							"default": 20,
+							"example": 20
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successfully retrieved user chats",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": {
+											"type": "boolean",
+											"description": "Request success status"
+										},
+										"data": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string",
+														"format": "uuid"
+													},
+													"userId": {
+														"type": "string",
+														"format": "uuid"
+													},
+													"title": {
+														"type": "string",
+														"maxLength": 255
+													},
+													"createdAt": {
+														"type": "string",
+														"nullable": true
+													},
+													"updatedAt": {
+														"type": "string",
+														"nullable": true
+													}
+												},
+												"required": [
+													"id",
+													"userId",
+													"title",
+													"createdAt",
+													"updatedAt"
+												],
+												"description": "Chat conversation metadata"
+											},
+											"description": "List of chats"
+										},
+										"meta": {
+											"type": "object",
+											"properties": {
+												"page": {
+													"type": "number",
+													"description": "Current page number"
+												},
+												"limit": {
+													"type": "number",
+													"description": "Items per page"
+												},
+												"total": {
+													"type": "number",
+													"description": "Total number of items"
+												}
+											},
+											"required": ["page", "limit", "total"],
+											"description": "Pagination metadata"
+										}
+									},
+									"required": ["success", "data", "meta"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Unauthorized error message",
+											"example": "Authentication required"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Rate limit exceeded",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
+										"message": {
+											"type": "string",
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
+										}
+									},
+									"required": ["status", "message"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Server error - Database or service error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Internal server error message",
+											"example": "Internal server error"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"tags": ["Chat Management"],
+				"summary": "Create new chat",
+				"description": "Creates a new chat conversation for the authenticated user.",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"title": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 255,
+										"description": "Chat title"
+									}
+								},
+								"required": ["title"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Chat created successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": {
+											"type": "boolean",
+											"description": "Request success status"
+										},
+										"data": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string",
+													"format": "uuid"
+												},
+												"userId": {
+													"type": "string",
+													"format": "uuid"
+												},
+												"title": {
+													"type": "string",
+													"maxLength": 255
+												},
+												"createdAt": {
+													"type": "string",
+													"nullable": true
+												},
+												"updatedAt": {
+													"type": "string",
+													"nullable": true
+												}
+											},
+											"required": [
+												"id",
+												"userId",
+												"title",
+												"createdAt",
+												"updatedAt"
+											],
+											"description": "Chat data"
+										}
+									},
+									"required": ["success", "data"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid request data",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Validation error message",
+											"example": "Validation Failed"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Detailed validation error information",
+											"example": {
+												"field": "email",
+												"message": "Invalid email format"
+											}
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Unauthorized error message",
+											"example": "Authentication required"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Rate limit exceeded",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
+										"message": {
+											"type": "string",
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
+										}
+									},
+									"required": ["status", "message"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Server error - Database or service error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Internal server error message",
+											"example": "Internal server error"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/chats/{id}": {
+			"get": {
+				"tags": ["Chat Management"],
+				"summary": "Get chat by ID",
+				"description": "Retrieves a specific chat with all its messages. User must own the chat.",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"description": "Chat ID",
+						"schema": {
+							"type": "string",
+							"format": "uuid",
+							"example": "123e4567-e89b-12d3-a456-426614174000"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successfully retrieved chat with messages",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": {
+											"type": "boolean",
+											"description": "Request success status"
+										},
+										"data": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string",
+													"format": "uuid",
+													"description": "Chat ID"
+												},
+												"userId": {
+													"type": "string",
+													"format": "uuid",
+													"description": "User ID"
+												},
+												"title": {
+													"type": "string",
+													"description": "Chat title"
+												},
+												"createdAt": {
+													"type": "string",
+													"description": "Creation timestamp"
+												},
+												"updatedAt": {
+													"type": "string",
+													"description": "Last update timestamp"
+												},
+												"messages": {
+													"type": "array",
+													"items": {
+														"type": "object",
+														"properties": {
+															"id": {
+																"type": "string",
+																"format": "uuid"
+															},
+															"chatId": {
+																"type": "string",
+																"format": "uuid"
+															},
+															"role": {
+																"type": "string",
+																"maxLength": 20
+															},
+															"content": {
+																"type": "string"
+															},
+															"embedding": {
+																"type": "array",
+																"nullable": true,
+																"items": {
+																	"type": "number"
+																}
+															},
+															"createdAt": {
+																"type": "string",
+																"nullable": true
+															},
+															"metadata": {
+																"anyOf": [
+																	{
+																		"type": "string"
+																	},
+																	{
+																		"type": "number"
+																	},
+																	{
+																		"type": "boolean"
+																	},
+																	{
+																		"nullable": true
+																	},
+																	{
+																		"type": "object",
+																		"additionalProperties": {
+																			"nullable": true
+																		}
+																	},
+																	{
+																		"type": "array",
+																		"items": {
+																			"nullable": true
+																		}
+																	},
+																	{
+																		"nullable": true
+																	}
+																],
+																"description": "JSON metadata - can be string, number, boolean, null, object, or array"
+															}
+														},
+														"required": [
+															"id",
+															"chatId",
+															"role",
+															"content",
+															"embedding",
+															"createdAt"
+														],
+														"description": "Individual chat message"
+													},
+													"description": "Chat messages"
+												}
+											},
+											"required": [
+												"id",
+												"userId",
+												"title",
+												"createdAt",
+												"updatedAt",
+												"messages"
+											],
+											"description": "Chat with messages"
+										}
+									},
+									"required": ["success", "data"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Unauthorized error message",
+											"example": "Authentication required"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Chat not found or access denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Not found error message",
+											"example": "Resource not found"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Rate limit exceeded",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
+										"message": {
+											"type": "string",
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
+										}
+									},
+									"required": ["status", "message"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Server error - Database or service error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Internal server error message",
+											"example": "Internal server error"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					}
+				}
+			},
+			"put": {
+				"tags": ["Chat Management"],
+				"summary": "Update chat",
+				"description": "Updates chat title. User must own the chat.",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"description": "Chat ID",
+						"schema": {
+							"type": "string",
+							"format": "uuid",
+							"example": "123e4567-e89b-12d3-a456-426614174000"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"title": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 255,
+										"description": "Chat title"
+									}
+								},
+								"required": ["title"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Chat updated successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": {
+											"type": "boolean",
+											"description": "Request success status"
+										},
+										"data": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string",
+													"format": "uuid"
+												},
+												"userId": {
+													"type": "string",
+													"format": "uuid"
+												},
+												"title": {
+													"type": "string",
+													"maxLength": 255
+												},
+												"createdAt": {
+													"type": "string",
+													"nullable": true
+												},
+												"updatedAt": {
+													"type": "string",
+													"nullable": true
+												}
+											},
+											"required": [
+												"id",
+												"userId",
+												"title",
+												"createdAt",
+												"updatedAt"
+											],
+											"description": "Chat data"
+										}
+									},
+									"required": ["success", "data"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid request data",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Validation error message",
+											"example": "Validation Failed"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Detailed validation error information",
+											"example": {
+												"field": "email",
+												"message": "Invalid email format"
+											}
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Unauthorized error message",
+											"example": "Authentication required"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Chat not found or access denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Not found error message",
+											"example": "Resource not found"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Rate limit exceeded",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
+										"message": {
+											"type": "string",
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
+										}
+									},
+									"required": ["status", "message"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Server error - Database or service error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Internal server error message",
+											"example": "Internal server error"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": ["Chat Management"],
+				"summary": "Delete chat",
+				"description": "Deletes a chat and all its messages. User must own the chat. This action cannot be undone.",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"description": "Chat ID",
+						"schema": {
+							"type": "string",
+							"format": "uuid",
+							"example": "123e4567-e89b-12d3-a456-426614174000"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Chat deleted successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": {
+											"type": "boolean",
+											"example": true
+										},
+										"message": {
+											"type": "string",
+											"example": "Chat deleted successfully"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Unauthorized error message",
+											"example": "Authentication required"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Chat not found or access denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Not found error message",
+											"example": "Resource not found"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Rate limit exceeded",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
+										"message": {
+											"type": "string",
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
+										}
+									},
+									"required": ["status", "message"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Server error - Database or service error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Internal server error message",
+											"example": "Internal server error"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/chats/{id}/stream": {
+			"post": {
+				"description": "Send a message and receive streaming AI response via Server-Sent Events",
+				"summary": "Stream chat message response",
+				"tags": ["Chat"],
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"format": "uuid",
+							"description": "Chat ID"
+						},
+						"required": true,
+						"name": "id",
+						"in": "path"
+					}
+				],
+				"requestBody": {
+					"description": "Message to send",
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"messages": {
+										"type": "array",
+										"items": {
+											"type": "object",
+											"properties": {
+												"role": {
+													"type": "string",
+													"enum": ["user", "assistant", "system"],
+													"description": "Message role"
+												},
+												"content": {
+													"type": "string",
+													"minLength": 1,
+													"maxLength": 10000,
+													"description": "Message content"
+												}
+											},
+											"required": ["role", "content"]
+										},
+										"minItems": 1,
+										"description": "Array of conversation messages"
+									}
+								},
+								"required": ["messages"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Streaming text response compatible with Vercel AI SDK",
+						"content": {
+							"text/plain": {
+								"schema": {
+									"type": "string",
+									"description": "Plain text chunks streamed directly to client"
+								},
+								"examples": {
+									"streaming": {
+										"summary": "AI response streaming",
+										"value": "Hello, how can I help you today?"
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid request parameters",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Validation error message",
+											"example": "Validation Failed"
+										},
+										"details": {
+											"type": "object",
+											"additionalProperties": {
+												"nullable": true
+											},
+											"description": "Detailed validation error information",
+											"example": {
+												"field": "email",
+												"message": "Invalid email format"
+											}
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Unauthorized error message",
+											"example": "Authentication required"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Chat not found or access denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Not found error message",
+											"example": "Resource not found"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Rate limit exceeded",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "number",
+											"description": "HTTP status code",
+											"example": 429
+										},
+										"message": {
+											"type": "string",
+											"description": "Rate limit error message",
+											"example": "Too many requests, please try again later."
+										}
+									},
+									"required": ["status", "message"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
 						"content": {
 							"application/json": {
 								"schema": {

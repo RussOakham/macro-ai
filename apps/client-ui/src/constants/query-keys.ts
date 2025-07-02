@@ -7,4 +7,9 @@ const QUERY_KEY = {
 	messages: 'messages',
 } as const
 
-export { QUERY_KEY }
+const QUERY_KEY_MODIFIERS = {
+	list: 'list',
+	detail: 'detail',
+} as const
+
+export { QUERY_KEY, QUERY_KEY_MODIFIERS }

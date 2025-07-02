@@ -9,4 +9,7 @@ export default defineConfig({
 	dbCredentials: {
 		url: config.relationalDatabaseUrl,
 	},
+	// Disable breakpoints to prevent interactive prompts during CI/CD migrations
+	// PostgreSQL supports multiple DDL statements in one transaction, so breakpoints are not needed
+	breakpoints: false,
 })

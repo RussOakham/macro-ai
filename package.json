@@ -20,6 +20,7 @@
 		"test": "turbo run test",
 		"test:ui": "turbo run --filter @repo/express-api test:ui",
 		"test:coverage": "turbo run test:coverage",
+		"type-check": "turbo run type-check",
 		"prepare": "husky"
 	},
 	"devDependencies": {
