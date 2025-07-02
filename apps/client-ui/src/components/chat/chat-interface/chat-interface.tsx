@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { standardizeError } from '@/lib/errors/standardize-error'
+import { logger } from '@/lib/logger/logger'
 import { useChatById } from '@/services/hooks/chat/useChatById'
 
 const apiUrl = import.meta.env.VITE_API_URL
@@ -48,14 +49,14 @@ const ChatInterface = () => {
 		},
 		credentials: 'include',
 		onResponse: (response) => {
-			console.log('Response received:', response)
+			logger.info('Response received:', response)
 		},
 		onError: (error) => {
-			console.error('Chat error:', error)
+			logger.error('Chat error:', error)
 			toast.error(`Chat error: ${error.message}`)
 		},
 		onFinish: (message) => {
-			console.log('Message finished:', message)
+			logger.info('Message finished:', message)
 		},
 	})
 

@@ -40,11 +40,13 @@ export class ChatController implements IChatController {
 		}
 
 		// Validate and sanitize pagination parameters
+		// Convert to numbers first, then ensure they are integers
 		const pageNum = Number(req.query.page)
 		const limitNum = Number(req.query.limit)
 
-		const page = pageNum > 0 ? pageNum : 1 // Default to 1 for invalid/negative/zero values
-		const limit = Math.min(limitNum > 0 ? limitNum : 20, 100) // Default to 20, max 100
+		// Use Math.floor to convert decimals to integers, ensuring only whole numbers are used
+		const page = pageNum > 0 ? Math.floor(pageNum) : 1 // Default to 1 for invalid/negative/zero values
+		const limit = Math.min(limitNum > 0 ? Math.floor(limitNum) : 20, 100) // Default to 20, max 100
 
 		const paginationOptions: PaginationOptions = { page, limit }
 

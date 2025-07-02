@@ -11,6 +11,10 @@ vi.mock('../../features/auth/auth.routes.ts', () => ({
 	authRouter: vi.fn(),
 }))
 
+vi.mock('../../features/chat/chat.routes.ts', () => ({
+	chatRouter: vi.fn(),
+}))
+
 vi.mock('../../features/user/user.routes.ts', () => ({
 	userRouter: vi.fn(),
 }))
@@ -21,6 +25,7 @@ vi.mock('../../features/utility/utility.routes.ts', () => ({
 
 // Import after mocking
 import { authRouter } from '../../features/auth/auth.routes.ts'
+import { chatRouter } from '../../features/chat/chat.routes.ts'
 import { userRouter } from '../../features/user/user.routes.ts'
 import { utilityRouter } from '../../features/utility/utility.routes.ts'
 import { appRouter } from '../index.routes.ts'
@@ -43,6 +48,7 @@ describe('appRouter', () => {
 
 			// Verify the router instance is passed to each feature router
 			expect(authRouter).toHaveBeenCalledWith(expect.any(Function))
+			expect(chatRouter).toHaveBeenCalledWith(expect.any(Function))
 			expect(utilityRouter).toHaveBeenCalledWith(expect.any(Function))
 			expect(userRouter).toHaveBeenCalledWith(expect.any(Function))
 		})
@@ -53,6 +59,9 @@ describe('appRouter', () => {
 
 			vi.mocked(authRouter).mockImplementation(() => {
 				callOrder.push('auth')
+			})
+			vi.mocked(chatRouter).mockImplementation(() => {
+				callOrder.push('chat')
 			})
 			vi.mocked(utilityRouter).mockImplementation(() => {
 				callOrder.push('utility')
@@ -65,7 +74,7 @@ describe('appRouter', () => {
 			appRouter()
 
 			// Assert
-			expect(callOrder).toEqual(['auth', 'utility', 'user'])
+			expect(callOrder).toEqual(['auth', 'chat', 'utility', 'user'])
 		})
 
 		it('should pass the same router instance to all feature routers', () => {
@@ -74,21 +83,29 @@ describe('appRouter', () => {
 
 			// Assert
 			const authRouterCall = vi.mocked(authRouter).mock.calls[0]
+			const chatRouterCall = vi.mocked(chatRouter).mock.calls[0]
 			const utilityRouterCall = vi.mocked(utilityRouter).mock.calls[0]
 			const userRouterCall = vi.mocked(userRouter).mock.calls[0]
 
 			// Verify the same router instance is passed to all feature routers
 			expect(router).toBeDefined()
 			expect(authRouterCall).toBeDefined()
+			expect(chatRouterCall).toBeDefined()
 			expect(utilityRouterCall).toBeDefined()
 			expect(userRouterCall).toBeDefined()
 
 			// Verify the same router instance is passed to all feature routers
-			if (!authRouterCall || !utilityRouterCall || !userRouterCall) {
+			if (
+				!authRouterCall ||
+				!chatRouterCall ||
+				!utilityRouterCall ||
+				!userRouterCall
+			) {
 				throw new Error('Router calls not defined')
 			}
 
 			expect(authRouterCall[0]).toBe(utilityRouterCall[0])
+			expect(authRouterCall[0]).toBe(chatRouterCall[0])
 			expect(utilityRouterCall[0]).toBe(userRouterCall[0])
 			expect(authRouterCall[0]).toBe(userRouterCall[0])
 		})
@@ -155,6 +172,9 @@ describe('appRouter', () => {
 			vi.mocked(authRouter).mockImplementation(() => {
 				// No-op implementation for testing
 			})
+			vi.mocked(chatRouter).mockImplementation(() => {
+				// No-op implementation for testing
+			})
 			vi.mocked(utilityRouter).mockImplementation(() => {
 				// No-op implementation for testing
 			})
@@ -172,6 +192,17 @@ describe('appRouter', () => {
 
 			// Act & Assert
 			expect(() => appRouter()).toThrow('Auth router registration failed')
+		})
+
+		it('should handle errors during chat router registration', () => {
+			// Arrange
+			const error = new Error('Chat router registration failed')
+			vi.mocked(chatRouter).mockImplementation(() => {
+				throw error
+			})
+
+			// Act & Assert
+			expect(() => appRouter()).toThrow('Chat router registration failed')
 		})
 
 		it('should handle errors during utility router registration', () => {
@@ -241,6 +272,12 @@ describe('appRouter', () => {
 				router.stack = []
 			})
 
+			vi.mocked(chatRouter).mockImplementation((router: Router) => {
+				routerModifications.push('chat-modified')
+				// Verify router state is maintained
+				expect(router.stack).toBeDefined()
+			})
+
 			vi.mocked(utilityRouter).mockImplementation((router: Router) => {
 				routerModifications.push('utility-modified')
 				// Verify router state is maintained
@@ -259,6 +296,7 @@ describe('appRouter', () => {
 			// Assert
 			expect(routerModifications).toEqual([
 				'auth-modified',
+				'chat-modified',
 				'utility-modified',
 				'user-modified',
 			])
@@ -287,6 +325,7 @@ describe('appRouter', () => {
 			// Assert
 			// Each call should register the routers again
 			expect(authRouter).toHaveBeenCalledTimes(2)
+			expect(chatRouter).toHaveBeenCalledTimes(2)
 			expect(utilityRouter).toHaveBeenCalledTimes(2)
 			expect(userRouter).toHaveBeenCalledTimes(2)
 		})
@@ -295,6 +334,9 @@ describe('appRouter', () => {
 			// Arrange
 			vi.mocked(authRouter).mockImplementation((router: Router) => {
 				router.get('/auth/test', vi.fn())
+			})
+			vi.mocked(chatRouter).mockImplementation((router: Router) => {
+				router.get('/chat/test', vi.fn())
 			})
 			vi.mocked(utilityRouter).mockImplementation((router: Router) => {
 				router.get('/utility/test', vi.fn())
@@ -310,6 +352,7 @@ describe('appRouter', () => {
 			expect(router).toBeDefined()
 			expect(typeof router.use).toBe('function')
 			expect(authRouter).toHaveBeenCalledWith(router)
+			expect(chatRouter).toHaveBeenCalledWith(router)
 			expect(utilityRouter).toHaveBeenCalledWith(router)
 			expect(userRouter).toHaveBeenCalledWith(router)
 		})
@@ -379,6 +422,7 @@ describe('appRouter', () => {
 					// No-op implementation for restoration
 				}
 				vi.mocked(authRouter).mockImplementation(noOpRouter)
+				vi.mocked(chatRouter).mockImplementation(noOpRouter)
 				vi.mocked(utilityRouter).mockImplementation(noOpRouter)
 				vi.mocked(userRouter).mockImplementation(noOpRouter)
 			}
@@ -390,6 +434,7 @@ describe('appRouter', () => {
 				// No-op implementation for testing
 			}
 			vi.mocked(authRouter).mockImplementation(noOpImplementation)
+			vi.mocked(chatRouter).mockImplementation(noOpImplementation)
 			vi.mocked(utilityRouter).mockImplementation(noOpImplementation)
 			vi.mocked(userRouter).mockImplementation(noOpImplementation)
 
@@ -399,6 +444,7 @@ describe('appRouter', () => {
 			// Assert
 			expect(router).toBeDefined()
 			expect(authRouter).toHaveBeenCalledTimes(1)
+			expect(chatRouter).toHaveBeenCalledTimes(1)
 			expect(utilityRouter).toHaveBeenCalledTimes(1)
 			expect(userRouter).toHaveBeenCalledTimes(1)
 		})
@@ -415,6 +461,7 @@ describe('appRouter', () => {
 			// Act & Assert
 			expect(() => appRouter()).toThrow('Utility router failed')
 			expect(authRouter).toHaveBeenCalledTimes(1)
+			expect(chatRouter).not.toHaveBeenCalled()
 			expect(utilityRouter).toHaveBeenCalledTimes(1)
 			expect(userRouter).not.toHaveBeenCalled()
 		})
@@ -424,6 +471,9 @@ describe('appRouter', () => {
 			const routerInstances: Router[] = []
 
 			vi.mocked(authRouter).mockImplementation((router) => {
+				routerInstances.push(router)
+			})
+			vi.mocked(chatRouter).mockImplementation((router) => {
 				routerInstances.push(router)
 			})
 			vi.mocked(utilityRouter).mockImplementation((router) => {

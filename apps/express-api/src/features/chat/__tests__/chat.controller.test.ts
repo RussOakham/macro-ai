@@ -266,7 +266,7 @@ describe('ChatController', () => {
 			})
 		})
 
-		it('should handle decimal pagination values correctly', async () => {
+		it('should convert decimal pagination values to integers', async () => {
 			// Arrange
 			mockRequest.query = { page: '2.7', limit: '15.9' }
 			const mockChatsData = mockChatService.createChatsPagination({
@@ -287,8 +287,8 @@ describe('ChatController', () => {
 
 			// Assert
 			expect(mockedChatService.getUserChats).toHaveBeenCalledWith(mockUserId, {
-				page: 2.7, // Number('2.7') returns 2.7, which is > 0, so it's accepted
-				limit: 15.9, // Number('15.9') returns 15.9, which is > 0, so it's accepted
+				page: 2, // Math.floor(2.7) = 2 - decimal values converted to integers
+				limit: 15, // Math.floor(15.9) = 15 - decimal values converted to integers
 			})
 		})
 	})
