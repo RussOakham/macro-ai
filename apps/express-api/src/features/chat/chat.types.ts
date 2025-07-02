@@ -145,6 +145,7 @@ interface IChatService {
 
 	updateChat: (
 		chatId: string,
+		userId: string,
 		updates: { title?: string },
 	) => Promise<Result<TChat>>
 

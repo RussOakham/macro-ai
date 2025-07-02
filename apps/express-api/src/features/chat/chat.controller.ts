@@ -240,41 +240,9 @@ export class ChatController implements IChatController {
 			return
 		}
 
-		// First verify ownership
-		const [ownershipResult, ownershipError] = await tryCatch(
-			chatService.verifyChatOwnership(chatId, userId),
-			'chatController - updateChat - ownership',
-		)
-
-		if (ownershipError) {
-			logger.error({
-				msg: '[chatController - updateChat]: Error verifying chat ownership',
-				error: ownershipError.message,
-				userId,
-				chatId,
-			})
-			next(ownershipError)
-			return
-		}
-
-		const [isOwner, verifyError] = ownershipResult
-		if (verifyError) {
-			next(verifyError)
-			return
-		}
-
-		if (!isOwner) {
-			// Return 404 instead of 403 to avoid revealing chat existence
-			res.status(StatusCodes.NOT_FOUND).json({
-				success: false,
-				error: 'Chat not found',
-			})
-			return
-		}
-
-		// Update the chat
+		// Update the chat (service handles ownership verification)
 		const [updateResult, updateError] = await tryCatch(
-			chatService.updateChat(chatId, { title }),
+			chatService.updateChat(chatId, userId, { title }),
 			'chatController - updateChat',
 		)
 

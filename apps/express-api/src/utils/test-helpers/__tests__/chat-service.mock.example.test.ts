@@ -287,14 +287,22 @@ describe('mockChatService Example Usage', () => {
 				vi.mocked(chatService.updateChat).mockResolvedValue([updatedChat, null])
 
 				// Act
-				const [result, error] = await chatService.updateChat('chat-123', {
-					title: 'Updated Title',
-				})
+				const [result, error] = await chatService.updateChat(
+					'chat-123',
+					'user-123',
+					{
+						title: 'Updated Title',
+					},
+				)
 
 				// Assert
-				expect(chatService.updateChat).toHaveBeenCalledWith('chat-123', {
-					title: 'Updated Title',
-				})
+				expect(chatService.updateChat).toHaveBeenCalledWith(
+					'chat-123',
+					'user-123',
+					{
+						title: 'Updated Title',
+					},
+				)
 				expect(result).toEqual(updatedChat)
 				expect(error).toBeNull()
 				expect(result?.title).toBe('Updated Title')
@@ -308,9 +316,13 @@ describe('mockChatService Example Usage', () => {
 				vi.mocked(chatService.updateChat).mockResolvedValue([null, mockError])
 
 				// Act
-				const [result, error] = await chatService.updateChat('nonexistent', {
-					title: 'New Title',
-				})
+				const [result, error] = await chatService.updateChat(
+					'nonexistent',
+					'user-123',
+					{
+						title: 'New Title',
+					},
+				)
 
 				// Assert
 				expect(result).toBeNull()

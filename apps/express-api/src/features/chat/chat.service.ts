@@ -419,15 +419,35 @@ export class ChatService implements IChatService {
 	/**
 	 * Update a chat (with ownership verification)
 	 * @param chatId - The chat ID to update
+	 * @param userId - The user ID for ownership verification
 	 * @param updates - The updates to apply (e.g., title)
 	 * @returns Result tuple with updated chat or error
 	 */
 	public async updateChat(
 		chatId: string,
+		userId: string,
 		updates: { title?: string },
 	): Promise<Result<TChat>> {
-		// Note: Ownership verification should be done by the caller (controller)
-		// This method focuses on the update operation itself
+		// Verify ownership first
+		const [isOwner, ownershipError] = await this.verifyChatOwnership(
+			chatId,
+			userId,
+		)
+		if (ownershipError) {
+			return [null, ownershipError]
+		}
+
+		if (!isOwner) {
+			return [
+				null,
+				new UnauthorizedError(
+					'User does not have access to this chat',
+					'chatService',
+				),
+			]
+		}
+
+		// Update the chat using repository
 		const [updatedChat, error] = await this.chatRepository.updateChat(
 			chatId,
 			updates,
@@ -444,6 +464,7 @@ export class ChatService implements IChatService {
 		logger.info({
 			msg: 'Chat updated successfully',
 			chatId,
+			userId,
 			updates,
 		})
 

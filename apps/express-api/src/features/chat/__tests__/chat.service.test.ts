@@ -1701,10 +1701,71 @@ describe('ChatService (Refactored)', () => {
 		})
 
 		describe('updateChat', () => {
-			describe('Success scenarios', () => {
-				it('should update chat successfully with valid title', async () => {
+			describe('Authorization scenarios', () => {
+				it('should return authorization error when user does not own the chat', async () => {
 					// Arrange
 					const chatId = mockChatId
+					const userId = mockUserId
+					const updates = { title: 'Updated Chat Title' }
+
+					mockChatRepository.verifyChatOwnership.mockResolvedValue([
+						false,
+						null,
+					])
+
+					// Act
+					const [result, error] = await chatService.updateChat(
+						chatId,
+						userId,
+						updates,
+					)
+
+					// Assert
+					expect(mockChatRepository.verifyChatOwnership).toHaveBeenCalledWith(
+						chatId,
+						userId,
+					)
+					expect(mockChatRepository.updateChat).not.toHaveBeenCalled()
+					expect(result).toBeNull()
+					expect(error).toBeInstanceOf(UnauthorizedError)
+					expect(error?.message).toBe('User does not have access to this chat')
+				})
+
+				it('should return error when ownership verification fails', async () => {
+					// Arrange
+					const chatId = mockChatId
+					const userId = mockUserId
+					const updates = { title: 'Updated Chat Title' }
+					const ownershipError = new InternalError('Database error', 'test')
+
+					mockChatRepository.verifyChatOwnership.mockResolvedValue([
+						null,
+						ownershipError,
+					])
+
+					// Act
+					const [result, error] = await chatService.updateChat(
+						chatId,
+						userId,
+						updates,
+					)
+
+					// Assert
+					expect(mockChatRepository.verifyChatOwnership).toHaveBeenCalledWith(
+						chatId,
+						userId,
+					)
+					expect(mockChatRepository.updateChat).not.toHaveBeenCalled()
+					expect(result).toBeNull()
+					expect(error).toBe(ownershipError)
+				})
+			})
+
+			describe('Success scenarios', () => {
+				it('should update chat successfully with valid title when user owns chat', async () => {
+					// Arrange
+					const chatId = mockChatId
+					const userId = mockUserId
 					const updates = { title: 'Updated Chat Title' }
 					const updatedChat = {
 						...mockChat,
@@ -1712,12 +1773,21 @@ describe('ChatService (Refactored)', () => {
 						updatedAt: new Date(),
 					}
 
+					mockChatRepository.verifyChatOwnership.mockResolvedValue([true, null])
 					mockChatRepository.updateChat.mockResolvedValue([updatedChat, null])
 
 					// Act
-					const [result, error] = await chatService.updateChat(chatId, updates)
+					const [result, error] = await chatService.updateChat(
+						chatId,
+						userId,
+						updates,
+					)
 
 					// Assert
+					expect(mockChatRepository.verifyChatOwnership).toHaveBeenCalledWith(
+						chatId,
+						userId,
+					)
 					expect(mockChatRepository.updateChat).toHaveBeenCalledWith(
 						chatId,
 						updates,
@@ -1731,6 +1801,7 @@ describe('ChatService (Refactored)', () => {
 				it('should update chat with trimmed title', async () => {
 					// Arrange
 					const chatId = mockChatId
+					const userId = mockUserId
 					const updates = { title: '  Trimmed Title  ' }
 					const updatedChat = {
 						...mockChat,
@@ -1738,12 +1809,21 @@ describe('ChatService (Refactored)', () => {
 						updatedAt: new Date(),
 					}
 
+					mockChatRepository.verifyChatOwnership.mockResolvedValue([true, null])
 					mockChatRepository.updateChat.mockResolvedValue([updatedChat, null])
 
 					// Act
-					const [result, error] = await chatService.updateChat(chatId, updates)
+					const [result, error] = await chatService.updateChat(
+						chatId,
+						userId,
+						updates,
+					)
 
 					// Assert
+					expect(mockChatRepository.verifyChatOwnership).toHaveBeenCalledWith(
+						chatId,
+						userId,
+					)
 					expect(mockChatRepository.updateChat).toHaveBeenCalledWith(
 						chatId,
 						updates,
@@ -1755,18 +1835,28 @@ describe('ChatService (Refactored)', () => {
 				it('should update chat with empty updates object', async () => {
 					// Arrange
 					const chatId = mockChatId
+					const userId = mockUserId
 					const updates = {}
 					const updatedChat = {
 						...mockChat,
 						updatedAt: new Date(),
 					}
 
+					mockChatRepository.verifyChatOwnership.mockResolvedValue([true, null])
 					mockChatRepository.updateChat.mockResolvedValue([updatedChat, null])
 
 					// Act
-					const [result, error] = await chatService.updateChat(chatId, updates)
+					const [result, error] = await chatService.updateChat(
+						chatId,
+						userId,
+						updates,
+					)
 
 					// Assert
+					expect(mockChatRepository.verifyChatOwnership).toHaveBeenCalledWith(
+						chatId,
+						userId,
+					)
 					expect(mockChatRepository.updateChat).toHaveBeenCalledWith(
 						chatId,
 						updates,
@@ -1778,6 +1868,7 @@ describe('ChatService (Refactored)', () => {
 				it('should update chat with maximum allowed title length', async () => {
 					// Arrange
 					const chatId = mockChatId
+					const userId = mockUserId
 					const maxLengthTitle = 'a'.repeat(255) // Exactly 255 characters
 					const updates = { title: maxLengthTitle }
 					const updatedChat = {
@@ -1786,12 +1877,21 @@ describe('ChatService (Refactored)', () => {
 						updatedAt: new Date(),
 					}
 
+					mockChatRepository.verifyChatOwnership.mockResolvedValue([true, null])
 					mockChatRepository.updateChat.mockResolvedValue([updatedChat, null])
 
 					// Act
-					const [result, error] = await chatService.updateChat(chatId, updates)
+					const [result, error] = await chatService.updateChat(
+						chatId,
+						userId,
+						updates,
+					)
 
 					// Assert
+					expect(mockChatRepository.verifyChatOwnership).toHaveBeenCalledWith(
+						chatId,
+						userId,
+					)
 					expect(mockChatRepository.updateChat).toHaveBeenCalledWith(
 						chatId,
 						updates,
@@ -1805,15 +1905,25 @@ describe('ChatService (Refactored)', () => {
 				it('should return NotFoundError when chat does not exist', async () => {
 					// Arrange
 					const chatId = 'nonexistent-chat-id'
+					const userId = mockUserId
 					const updates = { title: 'New Title' }
 
+					mockChatRepository.verifyChatOwnership.mockResolvedValue([true, null])
 					// Repository returns null when chat not found
 					mockChatRepository.updateChat.mockResolvedValue([null, null])
 
 					// Act
-					const [result, error] = await chatService.updateChat(chatId, updates)
+					const [result, error] = await chatService.updateChat(
+						chatId,
+						userId,
+						updates,
+					)
 
 					// Assert
+					expect(mockChatRepository.verifyChatOwnership).toHaveBeenCalledWith(
+						chatId,
+						userId,
+					)
 					expect(mockChatRepository.updateChat).toHaveBeenCalledWith(
 						chatId,
 						updates,
@@ -1828,21 +1938,31 @@ describe('ChatService (Refactored)', () => {
 				it('should return repository error when database operation fails', async () => {
 					// Arrange
 					const chatId = mockChatId
+					const userId = mockUserId
 					const updates = { title: 'New Title' }
 					const repositoryError = new InternalError(
 						'Database connection failed',
 						'chatRepository',
 					)
 
+					mockChatRepository.verifyChatOwnership.mockResolvedValue([true, null])
 					mockChatRepository.updateChat.mockResolvedValue([
 						null,
 						repositoryError,
 					])
 
 					// Act
-					const [result, error] = await chatService.updateChat(chatId, updates)
+					const [result, error] = await chatService.updateChat(
+						chatId,
+						userId,
+						updates,
+					)
 
 					// Assert
+					expect(mockChatRepository.verifyChatOwnership).toHaveBeenCalledWith(
+						chatId,
+						userId,
+					)
 					expect(mockChatRepository.updateChat).toHaveBeenCalledWith(
 						chatId,
 						updates,
@@ -1898,18 +2018,28 @@ describe('ChatService (Refactored)', () => {
 				it('should handle undefined title in updates', async () => {
 					// Arrange
 					const chatId = mockChatId
+					const userId = mockUserId
 					const updates = { title: undefined }
 					const updatedChat = {
 						...mockChat,
 						updatedAt: new Date(),
 					}
 
+					mockChatRepository.verifyChatOwnership.mockResolvedValue([true, null])
 					mockChatRepository.updateChat.mockResolvedValue([updatedChat, null])
 
 					// Act
-					const [result, error] = await chatService.updateChat(chatId, updates)
+					const [result, error] = await chatService.updateChat(
+						chatId,
+						userId,
+						updates,
+					)
 
 					// Assert
+					expect(mockChatRepository.verifyChatOwnership).toHaveBeenCalledWith(
+						chatId,
+						userId,
+					)
 					expect(mockChatRepository.updateChat).toHaveBeenCalledWith(
 						chatId,
 						updates,

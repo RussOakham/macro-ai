@@ -563,7 +563,6 @@ describe('ChatController', () => {
 				title: 'Updated Chat Title',
 			})
 
-			vi.mocked(chatService).verifyChatOwnership.mockResolvedValue([true, null])
 			vi.mocked(chatService).updateChat.mockResolvedValue([updatedChat, null])
 
 			// Act
@@ -574,13 +573,13 @@ describe('ChatController', () => {
 			)
 
 			// Assert
-			expect(mockedChatService.verifyChatOwnership).toHaveBeenCalledWith(
+			expect(mockedChatService.updateChat).toHaveBeenCalledWith(
 				mockChatId,
 				mockUserId,
+				{
+					title: 'Updated Chat Title',
+				},
 			)
-			expect(mockedChatService.updateChat).toHaveBeenCalledWith(mockChatId, {
-				title: 'Updated Chat Title',
-			})
 			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
 			expect(mockResponse.json).toHaveBeenCalledWith({
 				success: true,
@@ -636,15 +635,16 @@ describe('ChatController', () => {
 			expect(mockNext).not.toHaveBeenCalled()
 		})
 
-		it('should return 404 when user does not own the chat', async () => {
+		it('should handle authorization error when user does not own the chat', async () => {
 			// Arrange
 			mockRequest.params = { id: mockChatId }
 			mockRequest.body = { title: 'Updated Chat Title' }
+			const authError = new UnauthorizedError(
+				'User does not have access to this chat',
+				'chatService',
+			)
 
-			vi.mocked(chatService).verifyChatOwnership.mockResolvedValue([
-				false,
-				null,
-			])
+			vi.mocked(chatService).updateChat.mockResolvedValue([null, authError])
 
 			// Act
 			await chatController.updateChat(
@@ -654,45 +654,22 @@ describe('ChatController', () => {
 			)
 
 			// Assert
-			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.NOT_FOUND)
-			expect(mockResponse.json).toHaveBeenCalledWith({
-				success: false,
-				error: 'Chat not found',
-			})
-			expect(mockedChatService.updateChat).not.toHaveBeenCalled()
-			expect(mockNext).not.toHaveBeenCalled()
+			expect(mockedChatService.updateChat).toHaveBeenCalledWith(
+				mockChatId,
+				mockUserId,
+				{
+					title: 'Updated Chat Title',
+				},
+			)
+			expect(mockNext).toHaveBeenCalledWith(authError)
 		})
 
-		it('should handle ownership verification errors', async () => {
+		it('should handle ownership verification errors from service', async () => {
 			// Arrange
 			mockRequest.params = { id: mockChatId }
 			mockRequest.body = { title: 'Updated Chat Title' }
 			const error = new InternalError('Database error')
 
-			vi.mocked(chatService).verifyChatOwnership.mockResolvedValue([
-				null,
-				error,
-			])
-
-			// Act
-			await chatController.updateChat(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
-
-			// Assert
-			expect(mockNext).toHaveBeenCalledWith(error)
-			expect(mockedChatService.updateChat).not.toHaveBeenCalled()
-		})
-
-		it('should handle update service errors', async () => {
-			// Arrange
-			mockRequest.params = { id: mockChatId }
-			mockRequest.body = { title: 'Updated Chat Title' }
-			const error = new InternalError('Update failed')
-
-			vi.mocked(chatService).verifyChatOwnership.mockResolvedValue([true, null])
 			vi.mocked(chatService).updateChat.mockResolvedValue([null, error])
 
 			// Act
@@ -703,6 +680,39 @@ describe('ChatController', () => {
 			)
 
 			// Assert
+			expect(mockedChatService.updateChat).toHaveBeenCalledWith(
+				mockChatId,
+				mockUserId,
+				{
+					title: 'Updated Chat Title',
+				},
+			)
+			expect(mockNext).toHaveBeenCalledWith(error)
+		})
+
+		it('should handle update service errors', async () => {
+			// Arrange
+			mockRequest.params = { id: mockChatId }
+			mockRequest.body = { title: 'Updated Chat Title' }
+			const error = new InternalError('Update failed')
+
+			vi.mocked(chatService).updateChat.mockResolvedValue([null, error])
+
+			// Act
+			await chatController.updateChat(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert
+			expect(mockedChatService.updateChat).toHaveBeenCalledWith(
+				mockChatId,
+				mockUserId,
+				{
+					title: 'Updated Chat Title',
+				},
+			)
 			expect(mockNext).toHaveBeenCalledWith(error)
 		})
 	})
