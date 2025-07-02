@@ -10,7 +10,7 @@
 		"build": "pnpm generate && tsup",
 		"dev": "tsup --watch",
 		"clean": "rm -rf dist && find src -type f \\( -name '*.ts' -o -name '*.js' \\) ! -name 'index.ts' -delete",
-		"typecheck": "tsc --noEmit",
+		"type-check": "tsc --noEmit",
 		"generate": "cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && tsx --tsconfig scripts/tsconfig.json scripts/generate.ts",
 		"lint": "eslint ."
 	},

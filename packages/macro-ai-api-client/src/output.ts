@@ -27,8 +27,16 @@ const postAuthconfirmForgotPassword_Body = z
 	.passthrough()
 const postChatsIdstream_Body = z
 	.object({
-		content: z.string().min(1).max(10000),
-		role: z.enum(['user', 'assistant', 'system']).optional().default('user'),
+		messages: z
+			.array(
+				z
+					.object({
+						role: z.enum(['user', 'assistant', 'system']),
+						content: z.string().min(1).max(10000),
+					})
+					.passthrough(),
+			)
+			.min(1),
 	})
 	.passthrough()
 

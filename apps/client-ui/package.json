@@ -10,7 +10,7 @@
 		"build": "vite build",
 		"lint": "eslint .",
 		"preview": "vite preview",
-		"type-check": "tsc --noEmit"
+		"type-check": "tsc --noEmit --project tsconfig.app.json"
 	},
 	"dependencies": {
 		"@aws-sdk/client-cognito-identity-provider": "^3.713.0",
