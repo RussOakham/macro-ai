@@ -461,7 +461,7 @@ describe('appRouter', () => {
 			// Act & Assert
 			expect(() => appRouter()).toThrow('Utility router failed')
 			expect(authRouter).toHaveBeenCalledTimes(1)
-			expect(chatRouter).not.toHaveBeenCalled()
+			expect(chatRouter).toHaveBeenCalledTimes(1)
 			expect(utilityRouter).toHaveBeenCalledTimes(1)
 			expect(userRouter).not.toHaveBeenCalled()
 		})
@@ -487,7 +487,7 @@ describe('appRouter', () => {
 			const mainRouter = appRouter()
 
 			// Assert
-			expect(routerInstances).toHaveLength(3)
+			expect(routerInstances).toHaveLength(4)
 			expect(routerInstances[0]).toBe(mainRouter)
 			expect(routerInstances[1]).toBe(mainRouter)
 			expect(routerInstances[2]).toBe(mainRouter)
