@@ -16,17 +16,17 @@ export interface IRouterContext {
 const RootComponent = () => {
 	return (
 		<div
-			className="min-h-screen bg-background font-sans antialiased prose-headings:font-poppins"
+			className="h-screen bg-background font-sans antialiased prose-headings:font-poppins"
 			suppressHydrationWarning
 		>
-			<div className="relative flex min-h-screen flex-col">
-				<header id="macro-ai-header" className="container">
+			<div className="relative flex h-full flex-col">
+				<header id="macro-ai-header" className="container flex-shrink-0">
 					<DesktopNav />
 				</header>
 
-				<hr />
-				<main className="flex flex-1 container">
-					<div className="w-full flex-1">
+				<hr className="flex-shrink-0" />
+				<main className="flex flex-1 container min-h-0">
+					<div className="w-full flex-1 min-h-0">
 						<div className="h-full">
 							<Outlet />
 							<Toaster
@@ -38,9 +38,9 @@ const RootComponent = () => {
 						</div>
 					</div>
 				</main>
-				<hr />
+				<hr className="flex-shrink-0" />
 
-				<footer id="marco-ai-footer" className="container">
+				<footer id="marco-ai-footer" className="container flex-shrink-0">
 					<div className="p-2 flex justify-between">
 						<p className="p-2">Footer</p>
 						<ModeToggle />

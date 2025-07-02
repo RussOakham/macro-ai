@@ -22,7 +22,11 @@ import { useUpdateChatMutation } from '@/services/hooks/chat/useUpdateChatMutati
 
 import { CreateChatForm } from '../create-chat-form/create-chat-form'
 
-const ChatSidebar = () => {
+interface ChatSidebarProps {
+	onMobileClose?: () => void
+}
+
+const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 	// ============================================================================
 	// State Management
 	// ============================================================================
@@ -214,9 +218,9 @@ const ChatSidebar = () => {
 	}, {})
 
 	return (
-		<div className="w-64 bg-gray-900 text-white flex flex-col h-full">
+		<div className="w-64 bg-gray-900 text-white flex flex-col h-full min-h-0">
 			{/* Header */}
-			<div className="p-3 border-b border-gray-700">
+			<div className="p-3 border-b border-gray-700 flex-shrink-0">
 				<Button
 					onClick={createNewChat}
 					className="w-full justify-start gap-3 bg-transparent border border-gray-600 hover:bg-gray-800"
@@ -229,7 +233,7 @@ const ChatSidebar = () => {
 
 			{/* Create Chat Form */}
 			{showCreateForm && (
-				<div className="p-3 border-b border-gray-700 bg-gray-800">
+				<div className="p-3 border-b border-gray-700 bg-gray-800 flex-shrink-0">
 					<CreateChatForm
 						onSuccess={handleCreateChatSuccess}
 						onCancel={handleCreateChatCancel}
@@ -239,7 +243,7 @@ const ChatSidebar = () => {
 			)}
 
 			{/* Chat List */}
-			<div className="flex-1 overflow-y-auto">
+			<div className="flex-1 overflow-y-auto min-h-0">
 				{isChatsLoading ? (
 					<div className="flex items-center justify-center p-6">
 						<div className="text-center">
@@ -372,6 +376,8 @@ const ChatSidebar = () => {
 														startTransition(() => {
 															void navigate({ to: `/chat/${chat.id}` })
 														})
+														// Close mobile sidebar when navigating to a chat
+														onMobileClose?.()
 													}}
 													className={`flex-1 flex items-center gap-3 p-2 rounded text-left text-sm hover:bg-gray-800 ${
 														currentChatId === chat.id ? 'bg-gray-800' : ''

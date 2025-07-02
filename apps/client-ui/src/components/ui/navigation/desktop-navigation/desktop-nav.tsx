@@ -33,6 +33,18 @@ const DesktopNav = ({
 								Home
 							</Link>
 						</NavigationMenuItem>
+						{isAuthenticated && (
+							<NavigationMenuItem asChild>
+								<Link
+									to="/chat"
+									className={navigationMenuTriggerStyle({
+										className: '[&.active]:font-bold',
+									})}
+								>
+									Chat
+								</Link>
+							</NavigationMenuItem>
+						)}
 					</NavigationMenuList>
 				</NavigationMenu>
 

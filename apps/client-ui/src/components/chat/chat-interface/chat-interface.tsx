@@ -21,7 +21,11 @@ const apiKey = import.meta.env.VITE_API_KEY
 const messageRoleSchema = z.enum(['user', 'assistant', 'system'])
 type MessageRole = z.infer<typeof messageRoleSchema>
 
-const ChatInterface = () => {
+interface ChatInterfaceProps {
+	onMobileSidebarToggle?: () => void
+}
+
+const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
 	const params = useParams({ strict: false })
 	const currentChatId = params.chatId ?? null
 
@@ -77,9 +81,21 @@ const ChatInterface = () => {
 		messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
 	}
 
+	// Auto-scroll when messages change or during streaming
 	useEffect(() => {
 		scrollToBottom()
 	}, [messages])
+
+	// Auto-scroll during streaming status changes
+	useEffect(() => {
+		if (status === 'streaming') {
+			// Use a slight delay to ensure DOM updates are complete
+			const timeoutId = setTimeout(scrollToBottom, 100)
+			return () => {
+				clearTimeout(timeoutId)
+			}
+		}
+	}, [status])
 
 	// Handle form submission with useChat's built-in handler
 	const onSubmit = (e: React.FormEvent) => {
@@ -98,7 +114,7 @@ const ChatInterface = () => {
 	// Handle no chat selected
 	if (!currentChatId) {
 		return (
-			<div className="flex-1 flex items-center justify-center bg-white">
+			<div className="flex-1 flex items-center justify-center bg-white h-full">
 				<div className="text-center max-w-md">
 					<Bot className="h-16 w-16 mx-auto mb-6 text-gray-400" />
 					<h2 className="text-3xl font-semibold mb-4 text-gray-800">
@@ -154,21 +170,43 @@ const ChatInterface = () => {
 	}
 
 	return (
-		<div className="flex-1 flex flex-col h-full bg-white">
+		<div className="flex-1 flex flex-col h-full bg-white min-h-0">
 			{/* Header */}
-			<div className="border-b border-gray-200 p-4">
-				<div className="flex items-center gap-3">
-					<Button variant="ghost" size="sm" className="md:hidden">
-						<Menu className="h-4 w-4" />
-					</Button>
-					<h1 className="font-semibold text-gray-800">
-						{chatData?.data.title ?? `Chat ${currentChatId}`}
-					</h1>
+			<div className="border-b border-gray-200 p-4 flex-shrink-0">
+				<div className="flex items-center justify-between w-full">
+					<div className="flex items-center gap-3">
+						<Button
+							variant="ghost"
+							size="sm"
+							className="md:hidden"
+							onClick={onMobileSidebarToggle}
+						>
+							<Menu className="h-4 w-4" />
+						</Button>
+						<h1 className="font-semibold text-gray-800">
+							{chatData?.data.title ?? `Chat ${currentChatId}`}
+						</h1>
+					</div>
+
+					{/* Connection Status Indicator */}
+					<div className="flex items-center gap-2 text-xs">
+						{status === 'streaming' ? (
+							<div className="flex items-center gap-1 text-blue-600">
+								<div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+								<span className="hidden sm:inline">Streaming</span>
+							</div>
+						) : (
+							<div className="flex items-center gap-1 text-green-600">
+								<div className="w-2 h-2 bg-green-500 rounded-full" />
+								<span className="hidden sm:inline">Ready</span>
+							</div>
+						)}
+					</div>
 				</div>
 			</div>
 
 			{/* Messages */}
-			<div className="flex-1 overflow-y-scroll">
+			<div className="flex-1 overflow-y-auto min-h-0">
 				{messages.length === 0 && status !== 'streaming' ? (
 					<div className="flex-1 flex items-center justify-center h-full">
 						<div className="text-center max-w-md">
@@ -217,30 +255,41 @@ const ChatInterface = () => {
 					))
 				)}
 
-				{/* Loading indicator for streaming */}
+				{/* Enhanced streaming indicator */}
 				{status === 'streaming' && (
-					<div className="border-b border-gray-100 bg-gray-50">
+					<div className="border-b border-gray-100 bg-gradient-to-r from-gray-50 to-blue-50">
 						<div className="max-w-4xl mx-auto p-6">
 							<div className="flex gap-6">
 								<div className="flex-shrink-0">
-									<div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+									<div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center animate-pulse">
 										<Bot className="h-4 w-4 text-white" />
 									</div>
 								</div>
 								<div className="flex-1 min-w-0">
-									<div className="flex items-center gap-2">
+									<div className="flex items-center gap-3">
 										<div className="flex gap-1">
-											<div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+											<div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
 											<div
-												className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+												className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
 												style={{ animationDelay: '0.1s' }}
 											/>
 											<div
-												className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+												className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
 												style={{ animationDelay: '0.2s' }}
 											/>
 										</div>
-										<span className="text-sm text-gray-500">Thinking...</span>
+										<span className="text-sm text-blue-600 font-medium">
+											AI is thinking...
+										</span>
+										<div className="flex items-center gap-1 text-xs text-gray-500">
+											<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+											<span>Connected</span>
+										</div>
+									</div>
+									<div className="mt-2">
+										<div className="w-full bg-gray-200 rounded-full h-1">
+											<div className="bg-gradient-to-r from-blue-500 to-green-500 h-1 rounded-full animate-pulse w-3/4"></div>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -252,7 +301,7 @@ const ChatInterface = () => {
 			</div>
 
 			{/* Input */}
-			<div className="border-t border-gray-200 bg-white">
+			<div className="border-t border-gray-200 bg-white flex-shrink-0">
 				<div className="max-w-4xl mx-auto p-4">
 					<form onSubmit={onSubmit} className="flex gap-3">
 						<div className="flex-1 relative">
@@ -270,10 +319,14 @@ const ChatInterface = () => {
 								type="submit"
 								disabled={!input.trim() || status === 'streaming'}
 								size="sm"
-								className="absolute right-2 bottom-2 h-8 w-8 p-0 bg-gray-800 hover:bg-gray-700"
+								className={`absolute right-2 bottom-2 h-8 w-8 p-0 transition-all duration-200 ${
+									status === 'streaming'
+										? 'bg-blue-500 hover:bg-blue-600'
+										: 'bg-gray-800 hover:bg-gray-700'
+								}`}
 							>
 								{status === 'streaming' ? (
-									<Loader2 className="h-3 w-3 animate-spin" />
+									<Loader2 className="h-3 w-3 animate-spin text-white" />
 								) : (
 									<Send className="h-3 w-3" />
 								)}
