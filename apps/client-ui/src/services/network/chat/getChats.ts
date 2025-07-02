@@ -10,16 +10,6 @@ type TGetChatsResponse = Awaited<ReturnType<typeof getChats>>
  * @returns Promise<ChatListResponse>
  */
 const getChats = async (options?: PaginationOptions) => {
-	const params = new URLSearchParams()
-
-	if (options?.page) {
-		params.append('page', options.page.toString())
-	}
-
-	if (options?.limit) {
-		params.append('limit', options.limit.toString())
-	}
-
 	const response = await apiClient.get('/chats', {
 		queries: {
 			page: options?.page,

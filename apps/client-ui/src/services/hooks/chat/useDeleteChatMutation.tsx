@@ -55,7 +55,11 @@ const useDeleteChatMutation = () => {
 			// Remove the specific chat data from cache
 			if (data.success) {
 				queryClient.removeQueries({
-					queryKey: [QUERY_KEY.chat, 'detail', variables.chatId],
+					queryKey: [
+						QUERY_KEY.chat,
+						QUERY_KEY_MODIFIERS.detail,
+						variables.chatId,
+					],
 				})
 			}
 		},

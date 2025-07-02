@@ -7,7 +7,6 @@ interface Chat {
 	id: string
 	userId: string
 	title: string
-	messages: Message[] // old message interface - to be removed
 	createdAt: Date
 	updatedAt: Date
 }
@@ -37,36 +36,7 @@ interface ApiResponse<T> {
 type ChatListResponse = ApiResponse<Chat[]>
 
 // ============================================================================
-// Zustand Store Types (UI State Only)
-// ============================================================================
-
-// Zustand store interface - only for UI-specific state
-interface ChatStore {
-	chats: Chat[]
-	addChat: (chat: Chat) => void
-	updateChat: (chatId: string, updates: Partial<Chat>) => void
-	deleteChat: (chatId: string) => void
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	addMessage: (chatId: string, message: any) => void // Keep for backward compatibility
-}
-
-// Old message interface - to be removed
-interface Message {
-	id: string
-	role: 'user' | 'assistant'
-	content: string
-	timestamp: Date
-}
-
-// ============================================================================
 // Exports
 // ============================================================================
 
-export type {
-	ApiResponse,
-	Chat,
-	ChatListResponse,
-	ChatStore,
-	Message,
-	PaginationOptions,
-}
+export type { ApiResponse, Chat, ChatListResponse, PaginationOptions }

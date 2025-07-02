@@ -24,7 +24,6 @@ const useChats = (options?: PaginationOptions) => {
 				...data,
 				data: data.data.map((chat) => ({
 					...chat,
-					messages: [], // temporary to make linter happy
 					createdAt: new Date(chat.createdAt ?? new Date()),
 					updatedAt: new Date(chat.updatedAt ?? new Date()),
 				})),

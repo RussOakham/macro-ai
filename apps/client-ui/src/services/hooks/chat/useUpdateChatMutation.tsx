@@ -62,7 +62,7 @@ const useUpdateChatMutation = () => {
 			// Update the specific chat data in cache for immediate access
 			if (data.success) {
 				queryClient.setQueryData(
-					[QUERY_KEY.chat, 'detail', variables.chatId],
+					[QUERY_KEY.chat, QUERY_KEY_MODIFIERS.detail, variables.chatId],
 					data,
 				)
 			}

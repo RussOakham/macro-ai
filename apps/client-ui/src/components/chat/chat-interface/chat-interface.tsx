@@ -1,7 +1,7 @@
 import type React from 'react'
 import { useEffect, useRef } from 'react'
+import { useChat } from '@ai-sdk/react'
 import { useParams } from '@tanstack/react-router'
-import { useChat } from 'ai/react'
 import Cookies from 'js-cookie'
 import { Bot, Loader2, Menu, Send, User } from 'lucide-react'
 import { toast } from 'sonner'
@@ -38,29 +38,26 @@ const ChatInterface = () => {
 		})) ?? []
 
 	// Use Vercel's AI SDK useChat hook for streaming
-	const { messages, input, handleInputChange, handleSubmit, isLoading } =
-		useChat({
-			api: currentChatId
-				? `${apiUrl}/chats/${currentChatId}/stream`
-				: undefined,
-			initialMessages,
-			streamProtocol: 'text', // Use text stream protocol
-			headers: {
-				Authorization: `Bearer ${accessToken ?? ''}`,
-				'X-API-KEY': apiKey,
-			},
-			credentials: 'include',
-			onResponse: (response) => {
-				console.log('Response received:', response)
-			},
-			onError: (error) => {
-				console.error('Chat error:', error)
-				toast.error(`Chat error: ${error.message}`)
-			},
-			onFinish: (message) => {
-				console.log('Message finished:', message)
-			},
-		})
+	const { messages, input, handleInputChange, handleSubmit, status } = useChat({
+		api: currentChatId ? `${apiUrl}/chats/${currentChatId}/stream` : undefined,
+		initialMessages,
+		streamProtocol: 'text', // Use text stream protocol
+		headers: {
+			Authorization: `Bearer ${accessToken ?? ''}`,
+			'X-API-KEY': apiKey,
+		},
+		credentials: 'include',
+		onResponse: (response) => {
+			console.log('Response received:', response)
+		},
+		onError: (error) => {
+			console.error('Chat error:', error)
+			toast.error(`Chat error: ${error.message}`)
+		},
+		onFinish: (message) => {
+			console.log('Message finished:', message)
+		},
+	})
 
 	const messagesEndRef = useRef<HTMLDivElement>(null)
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -76,7 +73,7 @@ const ChatInterface = () => {
 	// Handle form submission with useChat's built-in handler
 	const onSubmit = (e: React.FormEvent) => {
 		e.preventDefault()
-		if (!input.trim() || !currentChatId || isLoading) return
+		if (!input.trim() || !currentChatId || status === 'streaming') return
 		handleSubmit(e)
 	}
 
@@ -161,7 +158,7 @@ const ChatInterface = () => {
 
 			{/* Messages */}
 			<div className="flex-1 overflow-y-scroll">
-				{messages.length === 0 && !isLoading ? (
+				{messages.length === 0 && status !== 'streaming' ? (
 					<div className="flex-1 flex items-center justify-center h-full">
 						<div className="text-center max-w-md">
 							<Bot className="h-12 w-12 mx-auto mb-4 text-gray-400" />
@@ -210,7 +207,7 @@ const ChatInterface = () => {
 				)}
 
 				{/* Loading indicator for streaming */}
-				{isLoading && (
+				{status === 'streaming' && (
 					<div className="border-b border-gray-100 bg-gray-50">
 						<div className="max-w-4xl mx-auto p-6">
 							<div className="flex gap-6">
@@ -255,16 +252,16 @@ const ChatInterface = () => {
 								onKeyDown={handleKeyDown}
 								placeholder="Send a message..."
 								className="min-h-[44px] max-h-32 resize-none pr-12 border-gray-300 focus:border-gray-400 focus:ring-gray-400"
-								disabled={isLoading}
+								disabled={status === 'streaming'}
 								rows={1}
 							/>
 							<Button
 								type="submit"
-								disabled={!input.trim() || isLoading}
+								disabled={!input.trim() || status === 'streaming'}
 								size="sm"
 								className="absolute right-2 bottom-2 h-8 w-8 p-0 bg-gray-800 hover:bg-gray-700"
 							>
-								{isLoading ? (
+								{status === 'streaming' ? (
 									<Loader2 className="h-3 w-3 animate-spin" />
 								) : (
 									<Send className="h-3 w-3" />

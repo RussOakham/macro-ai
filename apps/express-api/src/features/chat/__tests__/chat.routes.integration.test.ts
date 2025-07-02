@@ -102,11 +102,34 @@ describe('Chat Routes Integration', () => {
 		// Call the router
 		chatRouter(app)
 
-		// Verify that routes were registered
-		expect(routerSpy.get).toHaveBeenCalledTimes(2) // GET /chats and GET /chats/:id
-		expect(routerSpy.post).toHaveBeenCalledTimes(2) // POST /chats and POST /chats/:id/stream
-		expect(routerSpy.put).toHaveBeenCalledTimes(1) // PUT /chats/:id
-		expect(routerSpy.delete).toHaveBeenCalledTimes(1) // DELETE /chats/:id
+		// Verify that expected routes were registered by checking for specific route paths
+		// This approach is more resilient to route additions/modifications than exact call counts
+
+		// Check GET routes
+		const getCalls = routerSpy.get.mock.calls
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+		const getRoutes = getCalls.map((call) => call[0])
+		expect(getRoutes).toContain('/chats') // List user's chats
+		expect(getRoutes).toContain('/chats/:id') // Get specific chat with messages
+
+		// Check POST routes
+		const postCalls = routerSpy.post.mock.calls
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+		const postRoutes = postCalls.map((call) => call[0])
+		expect(postRoutes).toContain('/chats') // Create new chat
+		expect(postRoutes).toContain('/chats/:id/stream') // Stream chat message response
+
+		// Check PUT routes
+		const putCalls = routerSpy.put.mock.calls
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+		const putRoutes = putCalls.map((call) => call[0])
+		expect(putRoutes).toContain('/chats/:id') // Update chat title
+
+		// Check DELETE routes
+		const deleteCalls = routerSpy.delete.mock.calls
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+		const deleteRoutes = deleteCalls.map((call) => call[0])
+		expect(deleteRoutes).toContain('/chats/:id') // Delete chat
 	})
 
 	it('should register streaming endpoint with proper middleware', () => {

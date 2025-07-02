@@ -26,7 +26,10 @@ const useCreateChatMutation = () => {
 
 			// Optionally set the new chat data in cache for immediate access
 			if (data.success) {
-				queryClient.setQueryData([QUERY_KEY.chat, 'detail', data.data.id], data)
+				queryClient.setQueryData(
+					[QUERY_KEY.chat, QUERY_KEY_MODIFIERS.detail, data.data.id],
+					data,
+				)
 			}
 		},
 		onError: (error) => {

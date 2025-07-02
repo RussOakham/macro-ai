@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import Cookies from 'js-cookie'
 import { z } from 'zod'
 
-import { ChatInterface } from '@/components/chat/chat-interface.tsx/chat-interface'
+import { ChatInterface } from '@/components/chat/chat-interface/chat-interface'
 import { ChatSidebar } from '@/components/chat/chat-sidebar/chat-sidebar'
 import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
