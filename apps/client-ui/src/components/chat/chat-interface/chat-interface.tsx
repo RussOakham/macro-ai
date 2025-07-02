@@ -1,25 +1,14 @@
 import type React from 'react'
 import { useEffect, useRef } from 'react'
-import { useChat } from '@ai-sdk/react'
 import { useParams } from '@tanstack/react-router'
-import Cookies from 'js-cookie'
 import { Bot, Loader2, Menu, Send, User } from 'lucide-react'
-import { toast } from 'sonner'
-import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { router } from '@/main'
-import { useChatById } from '@/services/hooks/chat/useChatById'
-
-const apiUrl = import.meta.env.VITE_API_URL
-const apiKey = import.meta.env.VITE_API_KEY
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const messageRoleSchema = z.enum(['user', 'assistant', 'system'])
-type MessageRole = z.infer<typeof messageRoleSchema>
+import { useEnhancedChat } from '@/services/hooks/chat/useEnhancedChat'
 
 interface ChatInterfaceProps {
 	onMobileSidebarToggle?: () => void
@@ -29,50 +18,35 @@ const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
 	const params = useParams({ strict: false })
 	const currentChatId = params.chatId ?? null
 
-	// Get authentication token for API requests
-	const accessToken = Cookies.get('macro-ai-accessToken')
-
-	// Fetch existing chat messages
+	// Use enhanced chat hook for streaming with TanStack Query integration
 	const {
-		data: chatData,
-		isLoading: isChatLoading,
-		isError: isChatError,
-		error: chatError,
-	} = useChatById(currentChatId ?? undefined)
-
-	// Transform existing messages to AI SDK format
-	const initialMessages =
-		chatData?.data.messages.map((message) => ({
-			id: message.id,
-			role: (['user', 'assistant', 'system'] as const).includes(
-				message.role as MessageRole,
-			)
-				? (message.role as 'user' | 'assistant' | 'system')
-				: 'user', // fallback to user role
-			content: message.content,
-		})) ?? []
-
-	// Use Vercel's AI SDK useChat hook for streaming
-	const { messages, input, handleInputChange, handleSubmit, status } = useChat({
-		api: currentChatId ? `${apiUrl}/chats/${currentChatId}/stream` : undefined,
-		initialMessages,
-		streamProtocol: 'text', // Use text stream protocol
-		headers: {
-			Authorization: `Bearer ${accessToken ?? ''}`,
-			'X-API-KEY': apiKey,
+		messages,
+		input,
+		handleInputChange,
+		handleSubmit,
+		status,
+		isChatLoading,
+		chatData,
+	} = useEnhancedChat({
+		chatId: currentChatId ?? '',
+		onMessageSent: (messageId) => {
+			logger.info('[ChatInterface]: Message sent', {
+				messageId,
+				chatId: currentChatId,
+			})
 		},
-		credentials: 'include',
-		onResponse: (response) => {
-			logger.info('Response received:', response)
-		},
-		onError: (error) => {
-			logger.error('Chat error:', error)
-			toast.error(`Chat error: ${error.message}`)
-		},
-		onFinish: (message) => {
-			logger.info('Message finished:', message)
+		onStreamingComplete: (messageId, content) => {
+			logger.info('[ChatInterface]: Streaming complete', {
+				messageId,
+				chatId: currentChatId,
+				contentLength: content.length,
+			})
 		},
 	})
+
+	// Handle case where no chat ID is provided
+	const isChatError = !currentChatId
+	const chatError = !currentChatId ? new Error('No chat ID provided') : null
 
 	const messagesEndRef = useRef<HTMLDivElement>(null)
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -97,17 +71,17 @@ const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
 		}
 	}, [status])
 
-	// Handle form submission with useChat's built-in handler
-	const onSubmit = (e: React.FormEvent) => {
+	// Handle form submission with enhanced handler
+	const onSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
 		if (!input.trim() || !currentChatId || status === 'streaming') return
-		handleSubmit(e)
+		await handleSubmit(e)
 	}
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault()
-			onSubmit(e as React.FormEvent)
+			void onSubmit(e as React.FormEvent)
 		}
 	}
 
