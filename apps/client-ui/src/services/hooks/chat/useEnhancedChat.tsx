@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { useQueryClient } from '@tanstack/react-query'
 import Cookies from 'js-cookie'
@@ -72,12 +72,6 @@ const useEnhancedChat = ({
 				: 'user', // fallback to user role
 			content: message.content,
 		})) ?? []
-
-	useEffect(() => {
-		logger.info('[useEnhancedChat]: Chat ID changed', {
-			chatId,
-		})
-	}, [chatId])
 
 	// Use Vercel's AI SDK useChat hook for streaming
 	// Use chatId as the hook id to ensure separate instances for different chats
@@ -159,9 +153,7 @@ const useEnhancedChat = ({
 					queryClient.setQueryData(
 						[QUERY_KEY.chat, QUERY_KEY_MODIFIERS.detail, chatId],
 						(oldData: ReturnType<typeof useChatById>['data']) => {
-							if (!oldData) return []
-
-							console.log('[useEnhancedChat]: Old data', oldData)
+							if (!oldData) return oldData
 
 							const oldMessages = oldData.data.messages
 
