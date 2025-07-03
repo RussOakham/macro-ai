@@ -24,11 +24,19 @@ const useCreateChatMutation = () => {
 				queryKey: [QUERY_KEY.chat, QUERY_KEY_MODIFIERS.list],
 			})
 
-			// Optionally set the new chat data in cache for immediate access
+			// Set the new chat data in cache with empty messages array for immediate access
+			// This prevents the undefined messages error when navigating to the new chat
 			if (data.success) {
+				const chatWithMessages = {
+					...data,
+					data: {
+						...data.data,
+						messages: [], // New chats start with empty messages array
+					},
+				}
 				queryClient.setQueryData(
 					[QUERY_KEY.chat, QUERY_KEY_MODIFIERS.detail, data.data.id],
-					data,
+					chatWithMessages,
 				)
 			}
 		},

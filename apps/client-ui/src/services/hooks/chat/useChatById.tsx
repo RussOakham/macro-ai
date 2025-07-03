@@ -25,13 +25,15 @@ const useChatById = (chatId: string | undefined) => {
 		refetchOnMount: true,
 		select: (data) => {
 			// Transform dates from strings to Date objects and ensure proper typing
+			// Use defensive programming to ensure messages is always an array
+			const messages = data.data.messages
 			return {
 				...data,
 				data: {
 					...data.data,
 					createdAt: new Date(data.data.createdAt),
 					updatedAt: new Date(data.data.updatedAt),
-					messages: data.data.messages.map((message) => ({
+					messages: messages.map((message) => ({
 						...message,
 						createdAt: message.createdAt ? new Date(message.createdAt) : null,
 					})),

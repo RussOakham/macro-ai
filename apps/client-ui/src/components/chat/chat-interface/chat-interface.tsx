@@ -37,6 +37,7 @@ const ChatInterface = () => {
 	} = useChatById(currentChatId ?? undefined)
 
 	// Transform existing messages to AI SDK format
+	// Use defensive programming to handle undefined messages array
 	const initialMessages =
 		chatData?.data.messages.map((message) => ({
 			id: message.id,
