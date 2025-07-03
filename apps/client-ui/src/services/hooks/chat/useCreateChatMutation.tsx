@@ -26,6 +26,9 @@ const useCreateChatMutation = () => {
 
 			// Optionally set the new chat data in cache for immediate access
 			if (data.success) {
+				// Add empty messages array to the chat data
+				data.data.messages = []
+
 				queryClient.setQueryData(
 					[QUERY_KEY.chat, QUERY_KEY_MODIFIERS.detail, data.data.id],
 					data,

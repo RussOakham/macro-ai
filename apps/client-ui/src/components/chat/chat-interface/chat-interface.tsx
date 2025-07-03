@@ -1,6 +1,6 @@
 import type React from 'react'
-import { useEffect, useRef } from 'react'
-import { useParams } from '@tanstack/react-router'
+import { useEffect, useMemo, useRef } from 'react'
+import { useRouterState } from '@tanstack/react-router'
 import { Bot, Loader2, Menu, Send, User } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -14,9 +14,19 @@ interface ChatInterfaceProps {
 	onMobileSidebarToggle?: () => void
 }
 
-const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
-	const params = useParams({ strict: false })
-	const currentChatId = params.chatId ?? null
+const ChatInterface = ({
+	onMobileSidebarToggle,
+}: ChatInterfaceProps): React.JSX.Element => {
+	// Use useRouterState to get the current location and extract chatId
+	// This ensures we get updates when the route changes
+	const routerState = useRouterState()
+	const currentChatId = useMemo(() => {
+		// Extract chatId from the current location pathname
+		const pathname = routerState.location.pathname
+		const chatIdRegex = /^\/chat\/([^/]+)$/
+		const chatIdMatch = chatIdRegex.exec(pathname)
+		return chatIdMatch ? chatIdMatch[1] : null
+	}, [routerState.location.pathname])
 
 	// Use enhanced chat hook for streaming with TanStack Query integration
 	const {
@@ -72,16 +82,23 @@ const ChatInterface = ({ onMobileSidebarToggle }: ChatInterfaceProps) => {
 	}, [status])
 
 	// Handle form submission with enhanced handler
-	const onSubmit = async (e: React.FormEvent) => {
+	const onSubmit = async (
+		e: React.FormEvent<HTMLFormElement>,
+	): Promise<void> => {
 		e.preventDefault()
 		if (!input.trim() || !currentChatId || status === 'streaming') return
 		await handleSubmit(e)
 	}
 
-	const handleKeyDown = (e: React.KeyboardEvent) => {
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault()
-			void onSubmit(e as React.FormEvent)
+			// Create a synthetic form event for submission
+			const formEvent = new Event('submit', {
+				bubbles: true,
+				cancelable: true,
+			}) as unknown as React.FormEvent<HTMLFormElement>
+			void onSubmit(formEvent)
 		}
 	}
 
