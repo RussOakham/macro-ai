@@ -1,7 +1,12 @@
 {
 	"$schema": "http://json.schemastore.org/tsconfig",
 	"extends": "@repo/config-typescript/tsconfig-react.json",
-	"include": ["src", "tailwind.config.ts", "postcss.config.js"],
+	"include": [
+		"src",
+		"tailwind.config.ts",
+		"postcss.config.js",
+		"vitest.config.ts"
+	],
 	"compilerOptions": {
 		"composite": true,
 		"declaration": true,

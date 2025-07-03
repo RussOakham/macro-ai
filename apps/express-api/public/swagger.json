@@ -565,17 +565,6 @@
 					"content": {
 						"type": "string"
 					},
-					"embedding": {
-						"type": "array",
-						"nullable": true,
-						"items": {
-							"type": "number"
-						}
-					},
-					"createdAt": {
-						"type": "string",
-						"nullable": true
-					},
 					"metadata": {
 						"anyOf": [
 							{
@@ -605,8 +594,18 @@
 							{
 								"nullable": true
 							}
-						],
-						"description": "JSON metadata - can be string, number, boolean, null, object, or array"
+						]
+					},
+					"embedding": {
+						"type": "array",
+						"nullable": true,
+						"items": {
+							"type": "number"
+						}
+					},
+					"createdAt": {
+						"type": "string",
+						"nullable": true
 					}
 				},
 				"required": [
@@ -614,6 +613,7 @@
 					"chatId",
 					"role",
 					"content",
+					"metadata",
 					"embedding",
 					"createdAt"
 				]
@@ -649,14 +649,6 @@
 							"type": "number"
 						}
 					},
-					"createdAt": {
-						"type": "string",
-						"nullable": true
-					},
-					"updatedAt": {
-						"type": "string",
-						"nullable": true
-					},
 					"metadata": {
 						"anyOf": [
 							{
@@ -686,8 +678,15 @@
 							{
 								"nullable": true
 							}
-						],
-						"description": "JSON metadata - can be string, number, boolean, null, object, or array"
+						]
+					},
+					"createdAt": {
+						"type": "string",
+						"nullable": true
+					},
+					"updatedAt": {
+						"type": "string",
+						"nullable": true
 					}
 				},
 				"required": [
@@ -697,6 +696,7 @@
 					"messageId",
 					"content",
 					"embedding",
+					"metadata",
 					"createdAt",
 					"updatedAt"
 				]
@@ -934,17 +934,6 @@
 										"content": {
 											"type": "string"
 										},
-										"embedding": {
-											"type": "array",
-											"nullable": true,
-											"items": {
-												"type": "number"
-											}
-										},
-										"createdAt": {
-											"type": "string",
-											"nullable": true
-										},
 										"metadata": {
 											"anyOf": [
 												{
@@ -974,8 +963,18 @@
 												{
 													"nullable": true
 												}
-											],
-											"description": "JSON metadata - can be string, number, boolean, null, object, or array"
+											]
+										},
+										"embedding": {
+											"type": "array",
+											"nullable": true,
+											"items": {
+												"type": "number"
+											}
+										},
+										"createdAt": {
+											"type": "string",
+											"nullable": true
 										}
 									},
 									"required": [
@@ -983,6 +982,7 @@
 										"chatId",
 										"role",
 										"content",
+										"metadata",
 										"embedding",
 										"createdAt"
 									],
@@ -1048,17 +1048,6 @@
 									"content": {
 										"type": "string"
 									},
-									"embedding": {
-										"type": "array",
-										"nullable": true,
-										"items": {
-											"type": "number"
-										}
-									},
-									"createdAt": {
-										"type": "string",
-										"nullable": true
-									},
 									"metadata": {
 										"anyOf": [
 											{
@@ -1088,8 +1077,18 @@
 											{
 												"nullable": true
 											}
-										],
-										"description": "JSON metadata - can be string, number, boolean, null, object, or array"
+										]
+									},
+									"embedding": {
+										"type": "array",
+										"nullable": true,
+										"items": {
+											"type": "number"
+										}
+									},
+									"createdAt": {
+										"type": "string",
+										"nullable": true
 									}
 								},
 								"required": [
@@ -1097,6 +1096,7 @@
 									"chatId",
 									"role",
 									"content",
+									"metadata",
 									"embedding",
 									"createdAt"
 								],
@@ -2902,17 +2902,6 @@
 															"content": {
 																"type": "string"
 															},
-															"embedding": {
-																"type": "array",
-																"nullable": true,
-																"items": {
-																	"type": "number"
-																}
-															},
-															"createdAt": {
-																"type": "string",
-																"nullable": true
-															},
 															"metadata": {
 																"anyOf": [
 																	{
@@ -2942,8 +2931,18 @@
 																	{
 																		"nullable": true
 																	}
-																],
-																"description": "JSON metadata - can be string, number, boolean, null, object, or array"
+																]
+															},
+															"embedding": {
+																"type": "array",
+																"nullable": true,
+																"items": {
+																	"type": "number"
+																}
+															},
+															"createdAt": {
+																"type": "string",
+																"nullable": true
 															}
 														},
 														"required": [
@@ -2951,6 +2950,7 @@
 															"chatId",
 															"role",
 															"content",
+															"metadata",
 															"embedding",
 															"createdAt"
 														],

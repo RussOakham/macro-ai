@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import Cookies from 'js-cookie'
 
@@ -14,6 +15,7 @@ import {
 
 const ChatLayout = () => {
 	const { data: user, isFetching, isError, error, isSuccess } = useGetUser()
+	const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
 	if (isFetching && !user) {
 		return <div>Loading...</div>
@@ -26,9 +28,38 @@ const ChatLayout = () => {
 	}
 
 	return (
-		<div className="flex h-full w-full">
-			<ChatSidebar />
-			<ChatInterface />
+		<div className="flex h-full w-full min-h-0 relative">
+			{/* Mobile Sidebar Overlay */}
+			{isMobileSidebarOpen && (
+				<div
+					className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+					onClick={() => {
+						setIsMobileSidebarOpen(false)
+					}}
+				/>
+			)}
+
+			{/* Sidebar */}
+			<div
+				className={`${
+					isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+				} fixed inset-y-0 left-0 z-50 w-64 transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:z-auto`}
+			>
+				<ChatSidebar
+					onMobileClose={() => {
+						setIsMobileSidebarOpen(false)
+					}}
+				/>
+			</div>
+
+			{/* Main Chat Interface */}
+			<div className="flex-1 min-h-0">
+				<ChatInterface
+					onMobileSidebarToggle={() => {
+						setIsMobileSidebarOpen(!isMobileSidebarOpen)
+					}}
+				/>
+			</div>
 		</div>
 	)
 }

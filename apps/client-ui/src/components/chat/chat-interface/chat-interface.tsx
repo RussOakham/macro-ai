@@ -1,74 +1,62 @@
 import type React from 'react'
-import { useEffect, useRef } from 'react'
-import { useChat } from '@ai-sdk/react'
-import { useParams } from '@tanstack/react-router'
-import Cookies from 'js-cookie'
+import { useEffect, useMemo, useRef } from 'react'
+import { useRouterState } from '@tanstack/react-router'
 import { Bot, Loader2, Menu, Send, User } from 'lucide-react'
-import { toast } from 'sonner'
-import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { router } from '@/main'
-import { useChatById } from '@/services/hooks/chat/useChatById'
+import { useEnhancedChat } from '@/services/hooks/chat/useEnhancedChat'
 
-const apiUrl = import.meta.env.VITE_API_URL
-const apiKey = import.meta.env.VITE_API_KEY
+interface ChatInterfaceProps {
+	onMobileSidebarToggle?: () => void
+}
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const messageRoleSchema = z.enum(['user', 'assistant', 'system'])
-type MessageRole = z.infer<typeof messageRoleSchema>
+const ChatInterface = ({
+	onMobileSidebarToggle,
+}: ChatInterfaceProps): React.JSX.Element => {
+	// Use useRouterState to get the current location and extract chatId
+	// This ensures we get updates when the route changes
+	const routerState = useRouterState()
+	const currentChatId = useMemo(() => {
+		// Extract chatId from the current location pathname
+		const pathname = routerState.location.pathname
+		const chatIdRegex = /^\/chat\/([^/]+)$/
+		const chatIdMatch = chatIdRegex.exec(pathname)
+		return chatIdMatch ? chatIdMatch[1] : null
+	}, [routerState.location.pathname])
 
-const ChatInterface = () => {
-	const params = useParams({ strict: false })
-	const currentChatId = params.chatId ?? null
-
-	// Get authentication token for API requests
-	const accessToken = Cookies.get('macro-ai-accessToken')
-
-	// Fetch existing chat messages
+	// Use enhanced chat hook for streaming with TanStack Query integration
 	const {
-		data: chatData,
-		isLoading: isChatLoading,
-		isError: isChatError,
-		error: chatError,
-	} = useChatById(currentChatId ?? undefined)
-
-	// Transform existing messages to AI SDK format
-	const initialMessages =
-		chatData?.data.messages.map((message) => ({
-			id: message.id,
-			role: (['user', 'assistant', 'system'] as const).includes(
-				message.role as MessageRole,
-			)
-				? (message.role as 'user' | 'assistant' | 'system')
-				: 'user', // fallback to user role
-			content: message.content,
-		})) ?? []
-
-	// Use Vercel's AI SDK useChat hook for streaming
-	const { messages, input, handleInputChange, handleSubmit, status } = useChat({
-		api: currentChatId ? `${apiUrl}/chats/${currentChatId}/stream` : undefined,
-		initialMessages,
-		streamProtocol: 'text', // Use text stream protocol
-		headers: {
-			Authorization: `Bearer ${accessToken ?? ''}`,
-			'X-API-KEY': apiKey,
+		messages,
+		input,
+		handleInputChange,
+		handleSubmit,
+		status,
+		isChatLoading,
+		chatData,
+	} = useEnhancedChat({
+		chatId: currentChatId ?? '',
+		onMessageSent: (messageId) => {
+			logger.info('[ChatInterface]: Message sent', {
+				messageId,
+				chatId: currentChatId,
+			})
 		},
-		credentials: 'include',
-		onResponse: (response) => {
-			logger.info('Response received:', response)
-		},
-		onError: (error) => {
-			logger.error('Chat error:', error)
-			toast.error(`Chat error: ${error.message}`)
-		},
-		onFinish: (message) => {
-			logger.info('Message finished:', message)
+		onStreamingComplete: (messageId, content) => {
+			logger.info('[ChatInterface]: Streaming complete', {
+				messageId,
+				chatId: currentChatId,
+				contentLength: content.length,
+			})
 		},
 	})
+
+	// Handle case where no chat ID is provided
+	const isChatError = !currentChatId
+	const chatError = !currentChatId ? new Error('No chat ID provided') : null
 
 	const messagesEndRef = useRef<HTMLDivElement>(null)
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -77,37 +65,56 @@ const ChatInterface = () => {
 		messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
 	}
 
+	// Auto-scroll when messages change or during streaming
 	useEffect(() => {
 		scrollToBottom()
 	}, [messages])
 
-	// Handle form submission with useChat's built-in handler
-	const onSubmit = (e: React.FormEvent) => {
+	// Auto-scroll during streaming status changes
+	useEffect(() => {
+		if (status === 'streaming') {
+			// Use a slight delay to ensure DOM updates are complete
+			const timeoutId = setTimeout(scrollToBottom, 100)
+			return () => {
+				clearTimeout(timeoutId)
+			}
+		}
+	}, [status])
+
+	// Handle form submission with enhanced handler
+	const onSubmit = async (
+		e: React.FormEvent<HTMLFormElement>,
+	): Promise<void> => {
 		e.preventDefault()
 		if (!input.trim() || !currentChatId || status === 'streaming') return
-		handleSubmit(e)
+		await handleSubmit(e)
 	}
 
-	const handleKeyDown = (e: React.KeyboardEvent) => {
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault()
-			onSubmit(e as React.FormEvent)
+			// Create a synthetic form event for submission
+			const formEvent = new Event('submit', {
+				bubbles: true,
+				cancelable: true,
+			}) as unknown as React.FormEvent<HTMLFormElement>
+			void onSubmit(formEvent)
 		}
 	}
 
 	// Handle no chat selected
 	if (!currentChatId) {
 		return (
-			<div className="flex-1 flex items-center justify-center bg-white">
+			<div className="flex-1 flex items-center justify-center bg-background h-full">
 				<div className="text-center max-w-md">
-					<Bot className="h-16 w-16 mx-auto mb-6 text-gray-400" />
-					<h2 className="text-3xl font-semibold mb-4 text-gray-800">
+					<Bot className="h-16 w-16 mx-auto mb-6 text-muted-foreground" />
+					<h2 className="text-3xl font-semibold mb-4 text-foreground">
 						ChatGPT Clone
 					</h2>
-					<p className="text-gray-600 mb-6">
+					<p className="text-muted-foreground mb-6">
 						Start a new conversation to begin chatting with AI
 					</p>
-					<div className="space-y-2 text-sm text-gray-500">
+					<div className="space-y-2 text-sm text-muted-foreground">
 						<p>• Ask questions and get helpful answers</p>
 						<p>• Have natural conversations</p>
 						<p>• Get assistance with various topics</p>
@@ -120,9 +127,9 @@ const ChatInterface = () => {
 	// Handle loading state for chat data
 	if (isChatLoading) {
 		return (
-			<div className="flex-1 flex items-center justify-center bg-white">
+			<div className="flex-1 flex items-center justify-center bg-background h-full">
 				<div className="text-center">
-					<Loader2 className="h-8 w-8 mx-auto mb-4 text-gray-400 animate-spin" />
+					<Loader2 className="h-8 w-8 mx-auto mb-4 text-foreground animate-spin" />
 					<p className="text-gray-600">Loading chat...</p>
 				</div>
 			</div>
@@ -133,13 +140,13 @@ const ChatInterface = () => {
 	if (isChatError) {
 		const err = standardizeError(chatError)
 		return (
-			<div className="flex-1 flex items-center justify-center bg-white">
+			<div className="flex-1 flex items-center justify-center h-full bg-background">
 				<div className="text-center max-w-md">
-					<Bot className="h-16 w-16 mx-auto mb-6 text-red-400" />
-					<h2 className="text-2xl font-semibold mb-4 text-gray-800">
+					<Bot className="h-16 w-16 mx-auto mb-6 text-destructive" />
+					<h2 className="text-2xl font-semibold mb-4 text-foreground">
 						Error Loading Chat
 					</h2>
-					<p className="text-red-600 mb-6">{err.message}</p>
+					<p className="text-destructive mb-6">{err.message}</p>
 					<Button
 						onClick={async () => {
 							await router.invalidate()
@@ -154,29 +161,51 @@ const ChatInterface = () => {
 	}
 
 	return (
-		<div className="flex-1 flex flex-col h-full bg-white">
+		<div className="flex-1 flex flex-col h-full bg-background min-h-0">
 			{/* Header */}
-			<div className="border-b border-gray-200 p-4">
-				<div className="flex items-center gap-3">
-					<Button variant="ghost" size="sm" className="md:hidden">
-						<Menu className="h-4 w-4" />
-					</Button>
-					<h1 className="font-semibold text-gray-800">
-						{chatData?.data.title ?? `Chat ${currentChatId}`}
-					</h1>
+			<div className="border-b border-border p-4 flex-shrink-0">
+				<div className="flex items-center justify-between w-full">
+					<div className="flex items-center gap-3">
+						<Button
+							variant="ghost"
+							size="sm"
+							className="md:hidden"
+							onClick={onMobileSidebarToggle}
+						>
+							<Menu className="h-4 w-4" />
+						</Button>
+						<h1 className="font-semibold text-foreground">
+							{chatData?.data.title ?? `Chat ${currentChatId}`}
+						</h1>
+					</div>
+
+					{/* Connection Status Indicator */}
+					<div className="flex items-center gap-2 text-xs">
+						{status === 'streaming' ? (
+							<div className="flex items-center gap-1 text-primary">
+								<div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+								<span className="hidden sm:inline">Streaming</span>
+							</div>
+						) : (
+							<div className="flex items-center gap-1 text-muted-foreground">
+								<div className="w-2 h-2 bg-green-500 rounded-full" />
+								<span className="hidden sm:inline">Ready</span>
+							</div>
+						)}
+					</div>
 				</div>
 			</div>
 
 			{/* Messages */}
-			<div className="flex-1 overflow-y-scroll">
+			<div className="flex-1 overflow-y-auto min-h-0">
 				{messages.length === 0 && status !== 'streaming' ? (
 					<div className="flex-1 flex items-center justify-center h-full">
 						<div className="text-center max-w-md">
-							<Bot className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-							<h3 className="text-xl font-medium mb-2 text-gray-800">
+							<Bot className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+							<h3 className="text-xl font-medium mb-2 text-foreground">
 								Start the conversation
 							</h3>
-							<p className="text-gray-600">
+							<p className="text-muted-foreground">
 								Send a message to begin chatting with AI
 							</p>
 						</div>
@@ -185,7 +214,7 @@ const ChatInterface = () => {
 					messages.map((message) => (
 						<div
 							key={message.id}
-							className={`border-b border-gray-100 ${message.role === 'assistant' ? 'bg-gray-50' : 'bg-white'}`}
+							className={`border-b border-border ${message.role === 'assistant' ? 'bg-muted/50' : 'bg-background'}`}
 						>
 							<div className="max-w-4xl mx-auto p-6">
 								<div className="flex gap-6">
@@ -193,20 +222,20 @@ const ChatInterface = () => {
 										<div
 											className={`w-8 h-8 rounded-full flex items-center justify-center ${
 												message.role === 'assistant'
-													? 'bg-green-500'
-													: 'bg-blue-500'
+													? 'bg-primary'
+													: 'bg-secondary'
 											}`}
 										>
 											{message.role === 'assistant' ? (
-												<Bot className="h-4 w-4 text-white" />
+												<Bot className="h-4 w-4 text-primary-foreground" />
 											) : (
-												<User className="h-4 w-4 text-white" />
+												<User className="h-4 w-4 text-secondary-foreground" />
 											)}
 										</div>
 									</div>
 									<div className="flex-1 min-w-0">
 										<div className="prose prose-sm max-w-none">
-											<div className="whitespace-pre-wrap break-words text-gray-800">
+											<div className="whitespace-pre-wrap break-words text-foreground">
 												{message.content}
 											</div>
 										</div>
@@ -217,30 +246,41 @@ const ChatInterface = () => {
 					))
 				)}
 
-				{/* Loading indicator for streaming */}
+				{/* Enhanced streaming indicator */}
 				{status === 'streaming' && (
-					<div className="border-b border-gray-100 bg-gray-50">
+					<div className="border-b border-border bg-gradient-to-r from-muted/50 to-accent/50">
 						<div className="max-w-4xl mx-auto p-6">
 							<div className="flex gap-6">
 								<div className="flex-shrink-0">
-									<div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-										<Bot className="h-4 w-4 text-white" />
+									<div className="w-8 h-8 bg-gradient-to-r from-primary to-accent rounded-full flex items-center justify-center animate-pulse">
+										<Bot className="h-4 w-4 text-primary-foreground" />
 									</div>
 								</div>
 								<div className="flex-1 min-w-0">
-									<div className="flex items-center gap-2">
+									<div className="flex items-center gap-3">
 										<div className="flex gap-1">
-											<div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+											<div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
 											<div
-												className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+												className="w-2 h-2 bg-primary rounded-full animate-bounce"
 												style={{ animationDelay: '0.1s' }}
 											/>
 											<div
-												className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+												className="w-2 h-2 bg-primary rounded-full animate-bounce"
 												style={{ animationDelay: '0.2s' }}
 											/>
 										</div>
-										<span className="text-sm text-gray-500">Thinking...</span>
+										<span className="text-sm text-primary font-medium">
+											AI is thinking...
+										</span>
+										<div className="flex items-center gap-1 text-xs text-muted-foreground">
+											<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+											<span>Connected</span>
+										</div>
+									</div>
+									<div className="mt-2">
+										<div className="w-full bg-muted rounded-full h-1">
+											<div className="bg-gradient-to-r from-primary to-accent h-1 rounded-full animate-pulse w-3/4"></div>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -252,7 +292,7 @@ const ChatInterface = () => {
 			</div>
 
 			{/* Input */}
-			<div className="border-t border-gray-200 bg-white">
+			<div className="border-t border-border bg-background flex-shrink-0">
 				<div className="max-w-4xl mx-auto p-4">
 					<form onSubmit={onSubmit} className="flex gap-3">
 						<div className="flex-1 relative">
@@ -262,7 +302,7 @@ const ChatInterface = () => {
 								onChange={handleInputChange}
 								onKeyDown={handleKeyDown}
 								placeholder="Send a message..."
-								className="min-h-[44px] max-h-32 resize-none pr-12 border-gray-300 focus:border-gray-400 focus:ring-gray-400"
+								className="min-h-[44px] max-h-32 resize-none pr-12"
 								disabled={status === 'streaming'}
 								rows={1}
 							/>
@@ -270,17 +310,21 @@ const ChatInterface = () => {
 								type="submit"
 								disabled={!input.trim() || status === 'streaming'}
 								size="sm"
-								className="absolute right-2 bottom-2 h-8 w-8 p-0 bg-gray-800 hover:bg-gray-700"
+								className={`absolute right-2 bottom-2 h-8 w-8 p-0 transition-all duration-200 ${
+									status === 'streaming'
+										? 'bg-primary hover:bg-primary/90'
+										: 'bg-foreground hover:bg-foreground/90'
+								}`}
 							>
 								{status === 'streaming' ? (
-									<Loader2 className="h-3 w-3 animate-spin" />
+									<Loader2 className="h-3 w-3 animate-spin text-primary-foreground" />
 								) : (
-									<Send className="h-3 w-3" />
+									<Send className="h-3 w-3 text-background" />
 								)}
 							</Button>
 						</div>
 					</form>
-					<div className="text-xs text-gray-500 text-center mt-2">
+					<div className="text-xs text-muted-foreground text-center mt-2">
 						ChatGPT Clone can make mistakes. Consider checking important
 						information.
 					</div>
