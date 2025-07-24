@@ -32,6 +32,7 @@ const ChatInterface = ({
 		status,
 		isChatLoading,
 		chatData,
+		messagesEndRef,
 	} = useChatInterface({
 		chatId: currentChatId,
 	})
@@ -74,7 +75,11 @@ const ChatInterface = ({
 			/>
 
 			{/* Messages */}
-			<ChatMessages messages={messages} status={status} />
+			<ChatMessages
+				messages={messages}
+				status={status}
+				messagesEndRef={messagesEndRef}
+			/>
 
 			{/* Chat Input */}
 			<ChatInput

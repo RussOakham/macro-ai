@@ -1,5 +1,4 @@
 import type React from 'react'
-import { useRef } from 'react'
 
 import { MessageList } from './message-list'
 
@@ -10,6 +9,7 @@ interface ChatMessagesProps extends React.ComponentPropsWithoutRef<'div'> {
 		content: string
 	}[]
 	status: 'ready' | 'submitted' | 'streaming' | 'error'
+	messagesEndRef: React.RefObject<HTMLDivElement | null>
 }
 
 /**
@@ -19,11 +19,10 @@ interface ChatMessagesProps extends React.ComponentPropsWithoutRef<'div'> {
 const ChatMessages = ({
 	messages,
 	status,
+	messagesEndRef,
 	className,
 	...props
 }: ChatMessagesProps): React.JSX.Element => {
-	const messagesEndRef = useRef<HTMLDivElement>(null)
-
 	return (
 		<div
 			className={`flex-1 overflow-y-auto min-h-0 ${className ?? ''}`}
