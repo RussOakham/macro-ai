@@ -33,7 +33,7 @@
 		"husky": "^9.1.7",
 		"prettier": "catalog:",
 		"tsx": "^4.19.4",
-		"turbo": "^2.5.2",
+		"turbo": "^2.5.5",
 		"vitest": "^3.1.2"
 	},
 	"packageManager": "pnpm@10.13.1",
