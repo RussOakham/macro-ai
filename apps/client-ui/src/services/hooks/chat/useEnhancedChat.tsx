@@ -241,4 +241,4 @@ const useEnhancedChat = ({
 }
 
 export { useEnhancedChat }
-export type { TChatMessage, UseEnhancedChatOptions }
+export type { TChatMessage, UseEnhancedChatOptions, UseEnhancedChatReturn }
