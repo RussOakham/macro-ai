@@ -39,6 +39,8 @@ interface UseEnhancedChatReturn {
 	chatData: ReturnType<typeof useChatById>['data']
 }
 
+type TChatMessage = UseEnhancedChatReturn['messages'][number]
+
 /**
  * Enhanced chat hook that integrates @ai-sdk/react useChat with TanStack Query
  * Provides streaming capabilities while maintaining proper cache synchronization
@@ -239,4 +241,4 @@ const useEnhancedChat = ({
 }
 
 export { useEnhancedChat }
-export type { UseEnhancedChatOptions }
+export type { TChatMessage, UseEnhancedChatOptions }

@@ -1,14 +1,20 @@
 import type React from 'react'
 import { useEffect, useMemo, useRef } from 'react'
 import { useRouterState } from '@tanstack/react-router'
-import { Bot, Loader2, Menu, Send, User } from 'lucide-react'
+import { Bot, Menu } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
-import { router } from '@/main'
 import { useEnhancedChat } from '@/services/hooks/chat/useEnhancedChat'
+
+import { ChatInput } from '../chat-input/chat-input'
+import { ChatMessage } from '../chat-message/chat-message'
+import { ChatMessageLoadingIndicator } from '../chat-message/chat-message-loading-indicator'
+import { ChatMessageStreamingIndicator } from '../chat-message/chat-message-streaming-indicator'
+
+import { ChatInterfaceError } from './chat-interface-error'
+import { ChatInterfaceLoading } from './chat-interface-loading'
 
 interface ChatInterfaceProps {
 	onMobileSidebarToggle?: () => void
@@ -59,7 +65,6 @@ const ChatInterface = ({
 	const chatError = !currentChatId ? new Error('No chat ID provided') : null
 
 	const messagesEndRef = useRef<HTMLDivElement>(null)
-	const textareaRef = useRef<HTMLTextAreaElement>(null)
 
 	const scrollToBottom = () => {
 		messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -126,38 +131,13 @@ const ChatInterface = ({
 
 	// Handle loading state for chat data
 	if (isChatLoading) {
-		return (
-			<div className="flex-1 flex items-center justify-center bg-background h-full">
-				<div className="text-center">
-					<Loader2 className="h-8 w-8 mx-auto mb-4 text-foreground animate-spin" />
-					<p className="text-gray-600">Loading chat...</p>
-				</div>
-			</div>
-		)
+		return <ChatInterfaceLoading />
 	}
 
 	// Handle error state for chat data
 	if (isChatError) {
 		const err = standardizeError(chatError)
-		return (
-			<div className="flex-1 flex items-center justify-center h-full bg-background">
-				<div className="text-center max-w-md">
-					<Bot className="h-16 w-16 mx-auto mb-6 text-destructive" />
-					<h2 className="text-2xl font-semibold mb-4 text-foreground">
-						Error Loading Chat
-					</h2>
-					<p className="text-destructive mb-6">{err.message}</p>
-					<Button
-						onClick={async () => {
-							await router.invalidate()
-						}}
-						variant="outline"
-					>
-						Try Again
-					</Button>
-				</div>
-			</div>
-		)
+		return <ChatInterfaceError error={err} />
 	}
 
 	return (
@@ -219,157 +199,26 @@ const ChatInterface = ({
 					</div>
 				) : (
 					messages.map((message) => (
-						<div
-							key={message.id}
-							className={`border-b border-border ${message.role === 'assistant' ? 'bg-muted/50' : 'bg-background'}`}
-						>
-							<div className="max-w-4xl mx-auto p-6">
-								<div className="flex gap-6">
-									<div className="flex-shrink-0">
-										<div
-											className={`w-8 h-8 rounded-full flex items-center justify-center ${
-												message.role === 'assistant'
-													? 'bg-primary'
-													: 'bg-secondary'
-											}`}
-										>
-											{message.role === 'assistant' ? (
-												<Bot className="h-4 w-4 text-primary-foreground" />
-											) : (
-												<User className="h-4 w-4 text-secondary-foreground" />
-											)}
-										</div>
-									</div>
-									<div className="flex-1 min-w-0">
-										<div className="prose prose-sm max-w-none">
-											<div className="whitespace-pre-wrap break-words text-foreground">
-												{message.content}
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
+						<ChatMessage key={message.id} message={message} />
 					))
 				)}
 
 				{/* Loading state indicator - appears after message submission */}
-				{status === 'submitted' && (
-					<div className="border-b border-border bg-muted/30">
-						<div className="max-w-4xl mx-auto p-6">
-							<div className="flex gap-6">
-								<div className="flex-shrink-0">
-									<div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-										<Bot className="h-4 w-4 text-primary-foreground" />
-									</div>
-								</div>
-								<div className="flex-1 min-w-0">
-									<div className="flex items-center gap-3">
-										<div className="flex gap-1">
-											<div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-pulse" />
-											<div
-												className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-pulse"
-												style={{ animationDelay: '0.2s' }}
-											/>
-											<div
-												className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-pulse"
-												style={{ animationDelay: '0.4s' }}
-											/>
-										</div>
-										<span className="text-sm text-muted-foreground">
-											Preparing response...
-										</span>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				)}
+				{status === 'submitted' ? <ChatMessageLoadingIndicator /> : null}
 
 				{/* Enhanced streaming indicator */}
-				{status === 'streaming' && (
-					<div className="border-b border-border bg-gradient-to-r from-muted/50 to-accent/50">
-						<div className="max-w-4xl mx-auto p-6">
-							<div className="flex gap-6">
-								<div className="flex-shrink-0">
-									<div className="w-8 h-8 bg-gradient-to-r from-primary to-accent rounded-full flex items-center justify-center animate-pulse">
-										<Bot className="h-4 w-4 text-primary-foreground" />
-									</div>
-								</div>
-								<div className="flex-1 min-w-0">
-									<div className="flex items-center gap-3">
-										<div className="flex gap-1">
-											<div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
-											<div
-												className="w-2 h-2 bg-primary rounded-full animate-bounce"
-												style={{ animationDelay: '0.1s' }}
-											/>
-											<div
-												className="w-2 h-2 bg-primary rounded-full animate-bounce"
-												style={{ animationDelay: '0.2s' }}
-											/>
-										</div>
-										<span className="text-sm text-primary font-medium">
-											AI is thinking...
-										</span>
-										<div className="flex items-center gap-1 text-xs text-muted-foreground">
-											<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-											<span>Connected</span>
-										</div>
-									</div>
-									<div className="mt-2">
-										<div className="w-full bg-muted rounded-full h-1">
-											<div className="bg-gradient-to-r from-primary to-accent h-1 rounded-full animate-pulse w-3/4"></div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				)}
+				{status === 'streaming' ? <ChatMessageStreamingIndicator /> : null}
 
 				<div ref={messagesEndRef} />
 			</div>
 
-			{/* Input */}
-			<div className="border-t border-border bg-background flex-shrink-0">
-				<div className="max-w-4xl mx-auto p-4">
-					<form onSubmit={onSubmit} className="flex gap-3">
-						<div className="flex-1 relative">
-							<Textarea
-								ref={textareaRef}
-								value={input}
-								onChange={handleInputChange}
-								onKeyDown={handleKeyDown}
-								placeholder="Send a message..."
-								className="min-h-[44px] max-h-32 resize-none pr-12"
-								disabled={status === 'streaming'}
-								rows={1}
-							/>
-							<Button
-								type="submit"
-								disabled={!input.trim() || status === 'streaming'}
-								size="sm"
-								className={`absolute right-2 bottom-2 h-8 w-8 p-0 transition-all duration-200 ${
-									status === 'streaming'
-										? 'bg-primary hover:bg-primary/90'
-										: 'bg-foreground hover:bg-foreground/90'
-								}`}
-							>
-								{status === 'streaming' ? (
-									<Loader2 className="h-3 w-3 animate-spin text-primary-foreground" />
-								) : (
-									<Send className="h-3 w-3 text-background" />
-								)}
-							</Button>
-						</div>
-					</form>
-					<div className="text-xs text-muted-foreground text-center mt-2">
-						ChatGPT Clone can make mistakes. Consider checking important
-						information.
-					</div>
-				</div>
-			</div>
+			<ChatInput
+				onSubmit={onSubmit}
+				input={input}
+				handleInputChange={handleInputChange}
+				handleKeyDown={handleKeyDown}
+				status={status}
+			/>
 		</div>
 	)
 }
