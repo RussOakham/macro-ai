@@ -303,29 +303,232 @@ apps/express-api/src/features/chat/
 
 **File:** `apps/express-api/src/utils/errors.ts` (396 lines)
 
-- **Issues:** Mixed error definitions, handling, and transformation logic
-- **Benefits:** Better organization, easier extension, clearer separation
+**Current State:**
+Large utility file containing multiple error classes, type definitions, error handling utilities, and transformation functions all consolidated into a single module.
+
+**Issues Identified:**
+
+- Single file contains error class definitions, error types, and utility functions
+- Mixed concerns: error creation, error handling, error transformation, and HTTP status mapping
+- Difficult to locate specific error types or utilities
+- Challenging to extend with new error types without modifying core file
+- No clear separation between application errors and HTTP errors
+
+**Proposed Modular Structure:**
+
+```markdown
+apps/express-api/src/utils/errors/
+├── types/
+│ ├── error.types.ts # Core error type definitions
+│ ├── http.types.ts # HTTP-specific error types
+│ └── validation.types.ts # Validation error types
+├── classes/
+│ ├── app.errors.ts # Application error classes
+│ ├── http.errors.ts # HTTP error classes
+│ ├── validation.errors.ts # Validation error classes
+│ └── cognito.errors.ts # AWS Cognito error classes
+├── handlers/
+│ ├── error.handlers.ts # Error handling utilities
+│ ├── error.transformers.ts # Error transformation logic
+│ └── error.mappers.ts # Status code and message mapping
+├── middleware/
+│ └── error.middleware.ts # Express error handling middleware
+└── index.ts # Main error utilities export
+```
+
+**Benefits:**
+
+- Clear separation of error types, classes, and utilities
+- Easier to extend with new error categories
+- Better organization for debugging and maintenance
+- Improved testability with focused modules
+- Consistent error handling patterns across the application
+
+**Implementation Strategy:**
+
+1. Extract error type definitions into separate type files
+2. Create focused error class modules by category (app, HTTP, validation)
+3. Separate error handling utilities from error definitions
+4. Create dedicated transformation and mapping utilities
+5. Maintain backward compatibility with existing error imports
+6. Update error handling middleware to use new structure
 
 ### 8. Chat Schema Separation
 
 **File:** `apps/express-api/src/features/chat/chat.schemas.ts` (296 lines)
 
-- **Issues:** Mixed database and API schemas in single file
-- **Benefits:** Clear separation of concerns, easier schema management
+**Current State:**
+Large schema file containing both database table schemas and API validation schemas for all chat-related operations mixed together without clear separation.
+
+**Issues Identified:**
+
+- Database schemas and API validation schemas mixed in single file
+- No clear separation between different functional areas (chats, messages, search)
+- Difficult to locate specific schema definitions
+- Schema validation logic mixed with schema definitions
+- Challenging to maintain consistency between related schemas
+
+**Proposed Modular Structure:**
+
+```markdown
+apps/express-api/src/features/chat/schemas/
+├── database/
+│ ├── chat.db.schemas.ts # Chat table schemas and relations
+│ ├── message.db.schemas.ts # Message table schemas
+│ ├── vector.db.schemas.ts # Vector embedding schemas
+│ └── index.ts # Database schema exports
+├── api/
+│ ├── chat.api.schemas.ts # Chat API request/response schemas
+│ ├── message.api.schemas.ts # Message API schemas
+│ ├── search.api.schemas.ts # Search and filtering schemas
+│ └── index.ts # API schema exports
+├── validation/
+│ ├── chat.validators.ts # Chat validation rules
+│ ├── message.validators.ts # Message validation rules
+│ └── search.validators.ts # Search validation rules
+└── index.ts # Main schema exports
+```
+
+**Benefits:**
+
+- Clear separation between database and API concerns
+- Feature-based organization improves discoverability
+- Easier schema maintenance and updates
+- Better validation rule organization
+- Improved type safety with focused schema modules
+
+**Implementation Strategy:**
+
+1. Separate database schemas from API schemas
+2. Group schemas by functional area (chat, message, search)
+3. Extract validation logic into dedicated validator modules
+4. Create clear export structure for easy imports
+5. Maintain existing schema exports for backward compatibility
+6. Update imports across the application to use new structure
 
 ### 9. Enhanced Chat Hook Decomposition
 
 **File:** `apps/client-ui/src/services/hooks/chat/useEnhancedChat.tsx` (244 lines)
 
-- **Issues:** Multiple responsibilities in single React hook
-- **Benefits:** Focused hooks, better reusability, easier testing
+**Current State:**
+Complex React hook managing chat state, AI integration, TanStack Query cache management, optimistic updates, and error handling all within a single hook implementation.
+
+**Issues Identified:**
+
+- Multiple responsibilities: state management, API integration, cache synchronization, optimistic updates
+- Large hook with complex logic difficult to test in isolation
+- Mixed concerns: UI state, business logic, cache management, and error handling
+- Difficult to reuse individual pieces of functionality
+- Complex interdependencies between different hook features
+
+**Proposed Modular Structure:**
+
+```markdown
+apps/client-ui/src/services/hooks/chat/
+├── useEnhancedChat.tsx # Main orchestration hook
+├── core/
+│ ├── useChatState.tsx # Chat state management
+│ ├── useChatStreaming.tsx # AI streaming functionality
+│ ├── useChatCache.tsx # TanStack Query cache management
+│ └── useChatOptimistic.tsx # Optimistic update handling
+├── utils/
+│ ├── chat.transformers.ts # Data transformation utilities
+│ ├── chat.validators.ts # Input validation helpers
+│ └── chat.helpers.ts # General chat utilities
+├── types/
+│ ├── chat.hook.types.ts # Hook-specific type definitions
+│ └── chat.state.types.ts # State management types
+└── **tests**/
+├── useEnhancedChat.test.tsx # Main hook tests
+├── useChatState.test.tsx # State management tests
+└── useChatStreaming.test.tsx # Streaming functionality tests
+```
+
+**Benefits:**
+
+- Focused hooks with single responsibilities
+- Better reusability of individual hook features
+- Improved testability with isolated functionality
+- Easier maintenance and debugging
+- Clear separation of concerns between different chat features
+
+**Implementation Strategy:**
+
+1. Extract state management logic into dedicated `useChatState` hook
+2. Create separate `useChatStreaming` hook for AI integration
+3. Isolate cache management in `useChatCache` hook
+4. Extract optimistic update logic into `useChatOptimistic` hook
+5. Create utility modules for transformation and validation
+6. Maintain main hook interface for backward compatibility
+7. Implement comprehensive unit tests for each extracted hook
 
 ### 10. Chat Interface Component Breakdown
 
 **File:** `apps/client-ui/src/components/chat/chat-interface/chat-interface.tsx` (226 lines)
 
-- **Issues:** Large component with multiple UI concerns
-- **Benefits:** Smaller components, better reusability, easier maintenance
+**Current State:**
+Large React component handling routing logic, state management, UI rendering, event handling, and navigation all within a single component implementation.
+
+**Issues Identified:**
+
+- Multiple UI responsibilities: header, messages, input, status indicators
+- Complex component with routing, state management, and UI concerns
+- Difficult to test individual UI pieces in isolation
+- Mixed concerns: navigation logic, UI rendering, and event handling
+- Large component difficult to maintain and understand
+
+**Proposed Modular Structure:**
+
+```markdown
+apps/client-ui/src/components/chat/chat-interface/
+├── chat-interface.tsx # Main orchestration component
+├── components/
+│ ├── chat-header/
+│ │ ├── chat-header.tsx # Chat header with title and actions
+│ │ ├── chat-title.tsx # Editable chat title component
+│ │ └── chat-actions.tsx # Header action buttons
+│ ├── chat-messages/
+│ │ ├── chat-messages.tsx # Messages container component
+│ │ ├── message-list.tsx # Scrollable message list
+│ │ └── message-item.tsx # Individual message component
+│ ├── chat-status/
+│ │ ├── chat-status.tsx # Status indicator component
+│ │ ├── typing-indicator.tsx # AI typing indicator
+│ │ └── connection-status.tsx # Connection status display
+│ └── chat-empty-state/
+│ ├── chat-empty-state.tsx # Empty chat state
+│ └── welcome-message.tsx # Welcome message component
+├── hooks/
+│ ├── useChatInterface.tsx # Interface-specific logic
+│ ├── useChatNavigation.tsx # Navigation and routing logic
+│ └── useChatKeyboard.tsx # Keyboard shortcut handling
+├── utils/
+│ ├── chat-interface.utils.ts # Interface utility functions
+│ └── chat-interface.constants.ts # Interface constants
+└── **tests**/
+├── chat-interface.test.tsx # Main component tests
+├── chat-header.test.tsx # Header component tests
+└── chat-messages.test.tsx # Messages component tests
+```
+
+**Benefits:**
+
+- Smaller, focused components easier to understand and maintain
+- Better reusability of individual UI components
+- Improved testability with isolated component testing
+- Clear separation of UI concerns and business logic
+- Easier styling and theme customization per component
+
+**Implementation Strategy:**
+
+1. Extract header functionality into dedicated `chat-header` components
+2. Create focused `chat-messages` components for message display
+3. Separate status indicators into `chat-status` components
+4. Create empty state components for better UX
+5. Extract interface logic into custom hooks
+6. Create utility modules for helper functions and constants
+7. Maintain main component interface for existing usage
+8. Implement comprehensive component tests for each extracted piece
 
 ## Implementation Priority Matrix
 
