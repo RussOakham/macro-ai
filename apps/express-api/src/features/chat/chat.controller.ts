@@ -1,7 +1,11 @@
 import type { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
-import { tryCatch, tryCatchSync } from '../../utils/error-handling/try-catch.ts'
+import {
+	tryCatch,
+	tryCatchStream,
+	tryCatchSync,
+} from '../../utils/error-handling/try-catch.ts'
 import { pino } from '../../utils/logger.ts'
 
 import {
@@ -452,18 +456,14 @@ export class ChatController implements IChatController {
 			}
 
 			// Stream AI response using text protocol
-			let fullResponse = ''
 			const { messageId, stream } = streamingResult.streamingResponse
 
-			// Process streaming chunks - send text content for AI SDK
-			const [, streamingError] = await tryCatch(
-				(async () => {
-					for await (const chunk of stream) {
-						fullResponse += chunk
-						// Send the text chunk directly (no SSE formatting needed)
-						sendTextChunk(chunk)
-					}
-				})(),
+			// Process streaming chunks with immediate sending for real-time streaming
+			const [fullResponse, streamingError] = await tryCatchStream(
+				stream,
+				(chunk) => {
+					sendTextChunk(chunk)
+				}, // Immediate processing enables streaming
 				'streamChatMessage - streaming',
 			)
 

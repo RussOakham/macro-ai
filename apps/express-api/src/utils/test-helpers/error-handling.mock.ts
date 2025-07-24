@@ -1,6 +1,10 @@
 import { type MockedFunction, vi } from 'vitest'
 
-import { tryCatch, tryCatchSync } from '../error-handling/try-catch.ts'
+import {
+	tryCatch,
+	tryCatchStream,
+	tryCatchSync,
+} from '../error-handling/try-catch.ts'
 import { AppError, Result } from '../errors.ts'
 
 /**
@@ -22,6 +26,7 @@ import { AppError, Result } from '../errors.ts'
  */
 type TryCatchType = typeof tryCatch
 type TryCatchSyncType = typeof tryCatchSync
+type TryCatchStreamType = typeof tryCatchStream
 
 /**
  * Mock interface for error handling utilities
@@ -30,6 +35,7 @@ type TryCatchSyncType = typeof tryCatchSync
 interface MockErrorHandling {
 	tryCatch: MockedFunction<TryCatchType>
 	tryCatchSync: MockedFunction<TryCatchSyncType>
+	tryCatchStream: MockedFunction<TryCatchStreamType>
 }
 
 /**
@@ -40,16 +46,18 @@ interface MockErrorHandling {
 export const createErrorHandlingMock = (): MockErrorHandling => ({
 	tryCatch: vi.fn(),
 	tryCatchSync: vi.fn(),
+	tryCatchStream: vi.fn(),
 })
 
 /**
  * Mock factory for vi.mock() calls
  * Creates the complete module mock structure expected by the error handling module
- * @returns Object with tryCatch and tryCatchSync mocks for module mocking
+ * @returns Object with tryCatch, tryCatchSync, and tryCatchStream mocks for module mocking
  */
 export const createErrorHandlingModuleMock = () => ({
 	tryCatch: vi.fn(),
 	tryCatchSync: vi.fn(),
+	tryCatchStream: vi.fn(),
 })
 
 /**
@@ -125,6 +133,36 @@ export const mockTryCatchSyncWithRealImplementation =
 			},
 		)
 		return mockTryCatchSync
+	}
+
+/**
+ * Helper function to create a tryCatchStream mock with real implementation
+ * Useful for testing actual streaming error handling logic while still being able to spy on calls
+ * @returns MockedFunction that behaves like the real tryCatchStream
+ */
+export const mockTryCatchStreamWithRealImplementation =
+	(): MockedFunction<TryCatchStreamType> => {
+		const mockTryCatchStream = vi.fn() as MockedFunction<TryCatchStreamType>
+		mockTryCatchStream.mockImplementation(
+			async <T>(
+				stream: AsyncIterable<T>,
+				onChunk: (chunk: T) => void,
+				context = 'unknown',
+			): Promise<Result<string>> => {
+				let accumulated = ''
+				try {
+					for await (const chunk of stream) {
+						onChunk(chunk)
+						accumulated += String(chunk)
+					}
+					return [accumulated, null]
+				} catch (error: unknown) {
+					const appError = AppError.from(error, context)
+					return [null, appError]
+				}
+			},
+		)
+		return mockTryCatchStream
 	}
 
 /**
@@ -205,6 +243,8 @@ export const mockErrorHandling = {
 	withRealTryCatch: mockTryCatchWithRealImplementation,
 	/** Create tryCatchSync mock with real implementation */
 	withRealTryCatchSync: mockTryCatchSyncWithRealImplementation,
+	/** Create tryCatchStream mock with real implementation */
+	withRealTryCatchStream: mockTryCatchStreamWithRealImplementation,
 
 	// Error scenario creators
 	/** Create common error scenarios for testing */
