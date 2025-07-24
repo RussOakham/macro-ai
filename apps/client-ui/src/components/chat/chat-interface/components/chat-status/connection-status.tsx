@@ -37,6 +37,18 @@ const ConnectionStatus = ({
 		)
 	}
 
+	if (status === 'error') {
+		return (
+			<div
+				className={`flex items-center gap-1 text-destructive ${className ?? ''}`}
+				{...props}
+			>
+				<div className="w-2 h-2 bg-destructive rounded-full" />
+				<span className="hidden sm:inline">Error</span>
+			</div>
+		)
+	}
+
 	// Default ready state
 	return (
 		<div

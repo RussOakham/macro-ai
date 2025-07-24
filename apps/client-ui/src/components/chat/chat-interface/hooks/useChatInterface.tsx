@@ -39,6 +39,26 @@ const useChatInterface = ({
 }: UseChatInterfaceOptions): UseChatInterfaceReturn => {
 	const messagesEndRef = useRef<HTMLDivElement>(null)
 
+	const scrollToBottom = () => {
+		messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+	}
+
+	if (!chatId) {
+		return {
+			messages: [],
+			input: '',
+			handleInputChange: () => void {},
+			handleSubmit: async () => {
+				await Promise.resolve()
+			},
+			status: 'ready',
+			isChatLoading: false,
+			chatData: undefined,
+			messagesEndRef,
+			scrollToBottom,
+		}
+	}
+
 	// Use enhanced chat hook for streaming with TanStack Query integration
 	const {
 		messages,
@@ -49,7 +69,7 @@ const useChatInterface = ({
 		isChatLoading,
 		chatData,
 	} = useEnhancedChat({
-		chatId: chatId ?? '',
+		chatId: chatId,
 		onMessageSent: (messageId) => {
 			logger.info('[ChatInterface]: Message sent', {
 				messageId,
@@ -64,10 +84,6 @@ const useChatInterface = ({
 			})
 		},
 	})
-
-	const scrollToBottom = () => {
-		messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-	}
 
 	// Auto-scroll when messages change or during streaming
 	useEffect(() => {

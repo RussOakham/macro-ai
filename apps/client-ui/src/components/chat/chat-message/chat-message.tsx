@@ -9,7 +9,6 @@ interface ChatMessageProps {
 const ChatMessage = ({ message }: ChatMessageProps) => {
 	return (
 		<div
-			key={message.id}
 			className={`border-b border-border ${message.role === 'assistant' ? 'bg-muted/50' : 'bg-background'}`}
 		>
 			<div className="max-w-4xl mx-auto p-6">

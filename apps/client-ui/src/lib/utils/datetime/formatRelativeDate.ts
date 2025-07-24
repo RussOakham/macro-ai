@@ -11,6 +11,7 @@
 const formatRelativeDate = (date: Date | string) => {
 	const now = new Date()
 	const dateObj = date instanceof Date ? date : new Date(date)
+
 	const diffInDays = Math.floor(
 		(now.getTime() - dateObj.getTime()) / (1000 * 60 * 60 * 24),
 	)

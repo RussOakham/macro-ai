@@ -43,6 +43,11 @@ const ChatHeader = ({
 							<div className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
 							<span className="hidden sm:inline">Processing</span>
 						</div>
+					) : status === 'error' ? (
+						<div className="flex items-center gap-1 text-destructive">
+							<div className="w-2 h-2 bg-destructive rounded-full" />
+							<span className="hidden sm:inline">Error</span>
+						</div>
 					) : (
 						<div className="flex items-center gap-1 text-muted-foreground">
 							<div className="w-2 h-2 bg-green-500 rounded-full" />

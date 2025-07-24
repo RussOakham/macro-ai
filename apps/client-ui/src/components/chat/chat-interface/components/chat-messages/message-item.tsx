@@ -1,13 +1,10 @@
 import type React from 'react'
 
 import { ChatMessage } from '@/components/chat/chat-message/chat-message'
+import { TChatMessage } from '@/services/hooks/chat/useEnhancedChat'
 
 interface MessageItemProps extends React.ComponentPropsWithoutRef<'div'> {
-	message: {
-		id: string
-		role: 'user' | 'assistant' | 'system' | 'data'
-		content: string
-	}
+	message: TChatMessage
 }
 
 /**

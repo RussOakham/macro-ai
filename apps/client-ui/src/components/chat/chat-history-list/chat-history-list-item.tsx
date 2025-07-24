@@ -32,7 +32,7 @@ const ChatHistoryListItem = ({
 	const handleDeleteChat = (chatId: string) => {
 		// Show confirmation state
 		setConfirmDeleteChatId(chatId)
-		logger.info('[ChatSidebar]: Delete chat confirmation requested', {
+		logger.info('[ChatHistoryListItem]: Delete chat confirmation requested', {
 			chatId,
 		})
 	}

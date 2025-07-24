@@ -1,13 +1,11 @@
 import type React from 'react'
 
+import { TChatMessage } from '@/services/hooks/chat/useEnhancedChat'
+
 import { MessageList } from './message-list'
 
 interface ChatMessagesProps extends React.ComponentPropsWithoutRef<'div'> {
-	messages: {
-		id: string
-		role: 'user' | 'assistant' | 'system' | 'data'
-		content: string
-	}[]
+	messages: TChatMessage[]
 	status: 'ready' | 'submitted' | 'streaming' | 'error'
 	messagesEndRef: React.RefObject<HTMLDivElement | null>
 }
