@@ -186,6 +186,11 @@ const ChatInterface = ({
 								<div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
 								<span className="hidden sm:inline">Streaming</span>
 							</div>
+						) : status === 'submitted' ? (
+							<div className="flex items-center gap-1 text-muted-foreground">
+								<div className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
+								<span className="hidden sm:inline">Processing</span>
+							</div>
 						) : (
 							<div className="flex items-center gap-1 text-muted-foreground">
 								<div className="w-2 h-2 bg-green-500 rounded-full" />
@@ -198,7 +203,9 @@ const ChatInterface = ({
 
 			{/* Messages */}
 			<div className="flex-1 overflow-y-auto min-h-0">
-				{messages.length === 0 && status !== 'streaming' ? (
+				{messages.length === 0 &&
+				status !== 'streaming' &&
+				status !== 'submitted' ? (
 					<div className="flex-1 flex items-center justify-center h-full">
 						<div className="text-center max-w-md">
 							<Bot className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -244,6 +251,39 @@ const ChatInterface = ({
 							</div>
 						</div>
 					))
+				)}
+
+				{/* Loading state indicator - appears after message submission */}
+				{status === 'submitted' && (
+					<div className="border-b border-border bg-muted/30">
+						<div className="max-w-4xl mx-auto p-6">
+							<div className="flex gap-6">
+								<div className="flex-shrink-0">
+									<div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+										<Bot className="h-4 w-4 text-primary-foreground" />
+									</div>
+								</div>
+								<div className="flex-1 min-w-0">
+									<div className="flex items-center gap-3">
+										<div className="flex gap-1">
+											<div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-pulse" />
+											<div
+												className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-pulse"
+												style={{ animationDelay: '0.2s' }}
+											/>
+											<div
+												className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-pulse"
+												style={{ animationDelay: '0.4s' }}
+											/>
+										</div>
+										<span className="text-sm text-muted-foreground">
+											Preparing response...
+										</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
 				)}
 
 				{/* Enhanced streaming indicator */}
