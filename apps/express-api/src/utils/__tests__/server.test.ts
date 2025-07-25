@@ -203,19 +203,57 @@ describe('createServer', () => {
 	})
 
 	describe('Body Parsing Middleware', () => {
-		it('should configure compression middleware', async () => {
+		it('should configure compression middleware with streaming filter', async () => {
 			// Arrange
 			const mockCompressionMiddleware = vi.fn()
 			const compression = await import('compression')
 			vi.mocked(compression.default).mockReturnValue(mockCompressionMiddleware)
+			// Mock the filter function
+			vi.mocked(compression.default).filter = vi.fn().mockReturnValue(true)
 
 			// Act
 			const { createServer } = await import('../server.ts')
 			createServer()
 
 			// Assert
-			expect(compression.default).toHaveBeenCalledTimes(1)
+			expect(compression.default).toHaveBeenCalledWith({
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+				filter: expect.any(Function),
+			})
 			expect(mockApp.use).toHaveBeenCalledWith(mockCompressionMiddleware)
+		})
+
+		it('should disable compression for streaming endpoints', async () => {
+			// Arrange
+			const mockCompressionMiddleware = vi.fn()
+			const compression = await import('compression')
+			vi.mocked(compression.default).mockReturnValue(mockCompressionMiddleware)
+			vi.mocked(compression.default).filter = vi.fn().mockReturnValue(true)
+
+			// Act
+			const { createServer } = await import('../server.ts')
+			createServer()
+
+			// Get the filter function that was passed to compression
+			const compressionCall = vi.mocked(compression.default).mock.calls[0]?.[0]
+			const filterFunction = compressionCall?.filter
+
+			// Assert
+			expect(filterFunction).toBeDefined()
+			if (filterFunction) {
+				// Test streaming endpoint - should return false (no compression)
+				const streamingReq = { path: '/api/chats/123/stream' }
+				const mockRes = {}
+				expect(filterFunction(streamingReq, mockRes)).toBe(false)
+
+				// Test regular endpoint - should use default filter
+				const regularReq = { path: '/api/chats' }
+				expect(filterFunction(regularReq, mockRes)).toBe(true)
+				expect(compression.default.filter).toHaveBeenCalledWith(
+					regularReq,
+					mockRes,
+				)
+			}
 		})
 
 		it('should configure body-parser JSON middleware', async () => {

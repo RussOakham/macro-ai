@@ -400,15 +400,21 @@ export class ChatController implements IChatController {
 			'Content-Type': 'text/plain; charset=utf-8',
 			'Cache-Control': 'no-cache',
 			Connection: 'keep-alive',
+			'Transfer-Encoding': 'chunked',
+			'X-Accel-Buffering': 'no', // Disable nginx buffering
 			// CORS headers are handled by the main CORS middleware
 		})
 
 		// Helper function to send text chunks for Vercel AI SDK
 		const sendTextChunk = (text: string): void => {
-			const [, writeError] = tryCatchSync(
-				() => res.write(text),
-				'streamChatMessage - sendTextChunk',
-			)
+			const [, writeError] = tryCatchSync(() => {
+				res.write(text)
+				// Force immediate sending of the chunk
+				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+				if (res.flush) {
+					res.flush()
+				}
+			}, 'streamChatMessage - sendTextChunk')
 
 			if (writeError) {
 				logger.error({
