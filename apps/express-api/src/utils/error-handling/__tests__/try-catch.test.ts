@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { AppError, ErrorType, Result } from '../../errors.ts'
 import { pino } from '../../logger.ts'
 import { createErrorScenarios } from '../../test-helpers/error-handling.mock.ts'
-import { tryCatch, tryCatchSync } from '../try-catch.ts'
+import { tryCatch, tryCatchStream, tryCatchSync } from '../try-catch.ts'
 
 // Mock the logger module
 vi.mock('../../logger.ts', () => ({
@@ -319,7 +319,7 @@ describe('Error Handling Utilities', () => {
 		describe('Error Cases', () => {
 			it('should return [null, AppError] when function throws Error', () => {
 				// Arrange
-				const originalError = new Error('Sync test error')
+				const originalError = new Error(`Sync test error`)
 				const throwingFunction = () => {
 					throw originalError
 				}
@@ -393,6 +393,196 @@ describe('Error Handling Utilities', () => {
 				expect(mockLogger.error).toHaveBeenCalledWith(
 					'[unknown]: Default context test',
 				)
+			})
+		})
+	})
+
+	describe('tryCatchStream', () => {
+		// Helper to create a mock stream that can be consumed
+		const createMockStream = (chunks: string[]): AsyncIterable<string> => {
+			return {
+				// eslint-disable-next-line @typescript-eslint/require-await
+				[Symbol.asyncIterator]: async function* (): AsyncGenerator<
+					string,
+					void,
+					unknown
+				> {
+					for (const chunk of chunks) {
+						yield chunk
+					}
+				},
+			}
+		}
+
+		// Helper to create a mock stream that throws an error
+		const createErrorStream = (
+			chunks: string[],
+			errorAtIndex: number,
+		): AsyncIterable<string> => {
+			return {
+				// eslint-disable-next-line @typescript-eslint/require-await
+				[Symbol.asyncIterator]: async function* (): AsyncGenerator<
+					string,
+					void,
+					unknown
+				> {
+					for (let i = 0; i < chunks.length; i++) {
+						if (i === errorAtIndex) {
+							throw new Error('Stream error')
+						}
+						const chunk = chunks[i]
+						if (chunk !== undefined) {
+							yield chunk
+						}
+					}
+				},
+			}
+		}
+
+		describe('Success Cases', () => {
+			it('should process stream chunks immediately and return accumulated content', async () => {
+				// Arrange
+				const chunks = ['Hello', ' ', 'world', '!']
+				const stream = createMockStream(chunks)
+				const processedChunks: string[] = []
+				const onChunk = (chunk: string) => {
+					processedChunks.push(chunk)
+				}
+
+				// Act
+				const result = await tryCatchStream(stream, onChunk, 'streamTest')
+
+				// Assert
+				expect(result[0]).toBe('Hello world!')
+				expect(result[1]).toBeNull()
+				expect(processedChunks).toEqual(chunks)
+				expect(mockLogger.error).not.toHaveBeenCalled()
+			})
+
+			it('should handle empty stream correctly', async () => {
+				// Arrange
+				const stream = createMockStream([])
+				const processedChunks: string[] = []
+				const onChunk = (chunk: string) => {
+					processedChunks.push(chunk)
+				}
+
+				// Act
+				const result = await tryCatchStream(stream, onChunk, 'emptyStreamTest')
+
+				// Assert
+				expect(result[0]).toBe('')
+				expect(result[1]).toBeNull()
+				expect(processedChunks).toEqual([])
+				expect(mockLogger.error).not.toHaveBeenCalled()
+			})
+
+			it('should use default context when no context provided', async () => {
+				// Arrange
+				const chunks = ['test']
+				const stream = createMockStream(chunks)
+				const processedChunks: string[] = []
+				const onChunk = (chunk: string) => {
+					processedChunks.push(chunk)
+				}
+
+				// Act
+				const result = await tryCatchStream(stream, onChunk)
+
+				// Assert
+				expect(result[0]).toBe('test')
+				expect(result[1]).toBeNull()
+				expect(processedChunks).toEqual(['test'])
+			})
+		})
+
+		describe('Error Cases', () => {
+			it('should return [null, AppError] when stream throws error', async () => {
+				// Arrange
+				const chunks = ['chunk1', 'chunk2', 'chunk3']
+				const stream = createErrorStream(chunks, 1) // Error at index 1
+				const processedChunks: string[] = []
+				const onChunk = (chunk: string) => {
+					processedChunks.push(chunk)
+				}
+
+				// Act
+				const result = await tryCatchStream(stream, onChunk, 'errorStreamTest')
+
+				// Assert
+				expect(result[0]).toBeNull()
+				expect(result[1]).toBeInstanceOf(AppError)
+				expect(result[1]?.message).toBe('Stream error')
+				expect(result[1]?.service).toBe('errorStreamTest')
+				expect(processedChunks).toEqual(['chunk1']) // Only first chunk processed
+				expect(mockLogger.error).toHaveBeenCalledWith(
+					'[errorStreamTest]: Stream error',
+				)
+			})
+
+			it('should handle errors in onChunk processor', async () => {
+				// Arrange
+				const chunks = ['chunk1', 'chunk2']
+				const stream = createMockStream(chunks)
+				const onChunk = (chunk: string) => {
+					if (chunk === 'chunk2') {
+						throw new Error('Processor error')
+					}
+				}
+
+				// Act
+				const result = await tryCatchStream(
+					stream,
+					onChunk,
+					'processorErrorTest',
+				)
+
+				// Assert
+				expect(result[0]).toBeNull()
+				expect(result[1]).toBeInstanceOf(AppError)
+				expect(result[1]?.message).toBe('Processor error')
+				expect(result[1]?.service).toBe('processorErrorTest')
+				expect(mockLogger.error).toHaveBeenCalledWith(
+					'[processorErrorTest]: Processor error',
+				)
+			})
+		})
+
+		describe('Streaming Behavior', () => {
+			it('should process chunks immediately without waiting for stream completion', async () => {
+				// Arrange
+				const chunks = ['chunk1', 'chunk2', 'chunk3']
+				const processedChunks: string[] = []
+				const processingOrder: number[] = []
+
+				// Create a stream that yields chunks with delays
+				const delayedStream: AsyncIterable<string> = {
+					[Symbol.asyncIterator]: async function* () {
+						for (const element of chunks) {
+							yield element
+							// Simulate processing delay
+							await new Promise((resolve) => setTimeout(resolve, 10))
+						}
+					},
+				}
+
+				const onChunk = (chunk: string) => {
+					processedChunks.push(chunk)
+					processingOrder.push(processedChunks.length)
+				}
+
+				// Act
+				const result = await tryCatchStream(
+					delayedStream,
+					onChunk,
+					'streamingBehaviorTest',
+				)
+
+				// Assert
+				expect(result[0]).toBe('chunk1chunk2chunk3')
+				expect(result[1]).toBeNull()
+				expect(processedChunks).toEqual(chunks)
+				expect(processingOrder).toEqual([1, 2, 3]) // Chunks processed in order
 			})
 		})
 	})

@@ -832,6 +832,7 @@ describe('ChatController', () => {
 			mockResponse.writeHead = vi.fn()
 			mockResponse.write = vi.fn()
 			mockResponse.end = vi.fn()
+			mockResponse.flush = vi.fn()
 		})
 
 		it('should successfully stream chat message response', async () => {
@@ -861,6 +862,8 @@ describe('ChatController', () => {
 				'Content-Type': 'text/plain; charset=utf-8',
 				'Cache-Control': 'no-cache',
 				Connection: 'keep-alive',
+				'Transfer-Encoding': 'chunked',
+				'X-Accel-Buffering': 'no',
 			})
 
 			expect(mockedChatService.sendMessageStreaming).toHaveBeenCalledWith({

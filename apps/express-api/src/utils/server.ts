@@ -44,7 +44,19 @@ const createServer = (): Express => {
 			maxAge: 86400, // 24 hours
 		}),
 	)
-	app.use(compression())
+	// Conditional compression - disable for streaming endpoints
+	app.use(
+		compression({
+			filter: (req, res) => {
+				// Don't compress streaming endpoints
+				if (req.path.includes('/stream')) {
+					return false
+				}
+				// Use default compression filter for other endpoints
+				return compression.filter(req, res)
+			},
+		}),
+	)
 	app.use(bodyParser.json())
 	app.use(express.urlencoded({ extended: true }))
 	app.use(cookieParser())
