@@ -1,4 +1,4 @@
-import express, { Express, NextFunction } from 'express'
+import express, { Express, NextFunction, Request, Response } from 'express'
 import path from 'path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -241,13 +241,29 @@ describe('createServer', () => {
 			// Assert
 			expect(filterFunction).toBeDefined()
 			if (filterFunction) {
+				// Create mock request objects with minimal required properties
+				const streamingReq = {
+					path: '/api/chats/123/stream',
+					method: 'POST',
+					url: '/api/chats/123/stream',
+					headers: {},
+					cookies: {},
+				} as Request
+
+				const regularReq = {
+					path: '/api/chats',
+					method: 'GET',
+					url: '/api/chats',
+					headers: {},
+					cookies: {},
+				} as Request
+
+				const mockRes = {} as Response
+
 				// Test streaming endpoint - should return false (no compression)
-				const streamingReq = { path: '/api/chats/123/stream' }
-				const mockRes = {}
 				expect(filterFunction(streamingReq, mockRes)).toBe(false)
 
 				// Test regular endpoint - should use default filter
-				const regularReq = { path: '/api/chats' }
 				expect(filterFunction(regularReq, mockRes)).toBe(true)
 				expect(compression.default.filter).toHaveBeenCalledWith(
 					regularReq,

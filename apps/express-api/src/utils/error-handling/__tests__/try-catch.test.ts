@@ -402,7 +402,11 @@ describe('Error Handling Utilities', () => {
 		const createMockStream = (chunks: string[]): AsyncIterable<string> => {
 			return {
 				// eslint-disable-next-line @typescript-eslint/require-await
-				[Symbol.asyncIterator]: async function* () {
+				[Symbol.asyncIterator]: async function* (): AsyncGenerator<
+					string,
+					void,
+					unknown
+				> {
 					for (const chunk of chunks) {
 						yield chunk
 					}
@@ -417,12 +421,19 @@ describe('Error Handling Utilities', () => {
 		): AsyncIterable<string> => {
 			return {
 				// eslint-disable-next-line @typescript-eslint/require-await
-				[Symbol.asyncIterator]: async function* () {
+				[Symbol.asyncIterator]: async function* (): AsyncGenerator<
+					string,
+					void,
+					unknown
+				> {
 					for (let i = 0; i < chunks.length; i++) {
 						if (i === errorAtIndex) {
 							throw new Error('Stream error')
 						}
-						yield chunks[i]
+						const chunk = chunks[i]
+						if (chunk !== undefined) {
+							yield chunk
+						}
 					}
 				},
 			}
