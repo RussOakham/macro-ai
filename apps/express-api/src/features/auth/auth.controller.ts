@@ -340,7 +340,7 @@ class AuthController implements IAuthController {
 				secure: nodeEnv === 'production',
 				domain: cookieDomain,
 				sameSite: 'strict',
-				maxAge: loginResponse.tokens.expiresIn * 1000,
+				maxAge: (loginResponse.tokens.expiresIn + 300) * 1000, // JWT expiration + 5 minute buffer for refresh
 			})
 			.cookie('macro-ai-refreshToken', loginResponse.tokens.refreshToken, {
 				httpOnly: true,
@@ -522,7 +522,7 @@ class AuthController implements IAuthController {
 				secure: nodeEnv === 'production',
 				domain: cookieDomain,
 				sameSite: 'strict',
-				maxAge: refreshLoginResponse.tokens.expiresIn * 1000,
+				maxAge: (refreshLoginResponse.tokens.expiresIn + 300) * 1000, // JWT expiration + 5 minute buffer for refresh
 			})
 			.cookie(
 				'macro-ai-refreshToken',
