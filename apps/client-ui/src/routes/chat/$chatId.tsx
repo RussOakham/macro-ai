@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { z } from 'zod'
 
+import { AuthRouteLoading } from '@/components/auth/auth-route-loading'
 import { ChatInterface } from '@/components/chat/chat-interface/chat-interface'
 import { ChatSidebar } from '@/components/chat/chat-sidebar/chat-sidebar'
 import { attemptAuthenticationWithRefresh } from '@/lib/auth/auth-utils'
@@ -32,8 +33,9 @@ const ChatPage = () => {
 		<div className="flex h-full w-full min-h-0 relative">
 			{/* Mobile Sidebar Overlay */}
 			{isMobileSidebarOpen && (
-				<div
+				<button
 					className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+					aria-label="Close sidebar"
 					onClick={() => {
 						setIsMobileSidebarOpen(false)
 					}}
@@ -67,6 +69,7 @@ const ChatPage = () => {
 
 export const Route = createFileRoute('/chat/$chatId')({
 	component: ChatPage,
+	pendingComponent: AuthRouteLoading,
 	params: {
 		parse: (params) => chatParamsSchema.parse(params),
 		stringify: ({ chatId }) => ({ chatId }),

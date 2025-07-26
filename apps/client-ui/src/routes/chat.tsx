@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, redirect } from '@tanstack/react-router'
 
+import { AuthRouteLoading } from '@/components/auth/auth-route-loading'
 import { ChatInterface } from '@/components/chat/chat-interface/chat-interface'
 import { ChatSidebar } from '@/components/chat/chat-sidebar/chat-sidebar'
 import { attemptAuthenticationWithRefresh } from '@/lib/auth/auth-utils'
@@ -60,6 +61,7 @@ const ChatLayout = () => {
 
 export const Route = createFileRoute('/chat')({
 	component: ChatLayout,
+	pendingComponent: AuthRouteLoading,
 	beforeLoad: async ({ context, location }) => {
 		const { queryClient } = context
 

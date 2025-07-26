@@ -1,5 +1,6 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 
+import { AuthRouteLoading } from '@/components/auth/auth-route-loading'
 import { attemptAuthenticationWithRefresh } from '@/lib/auth/auth-utils'
 
 const Index = () => {
@@ -9,6 +10,7 @@ const Index = () => {
 
 export const Route = createFileRoute('/')({
 	component: Index,
+	pendingComponent: AuthRouteLoading,
 	beforeLoad: async ({ context, location }) => {
 		const { queryClient } = context
 

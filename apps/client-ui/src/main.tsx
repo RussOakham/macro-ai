@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 
+import { AuthRouteLoading } from './components/auth/auth-route-loading.tsx'
 import { ThemeProvider } from './components/providers/theme-provider.tsx'
 import { standardizeError } from './lib/errors/standardize-error.ts'
 import { routeTree } from './routeTree.gen.ts'
@@ -34,6 +35,7 @@ export const router = createRouter({
 	},
 	defaultPreload: 'intent',
 	defaultPreloadStaleTime: 0,
+	defaultPendingComponent: AuthRouteLoading,
 })
 
 // Register the router instance for type safety
