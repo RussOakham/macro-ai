@@ -7,8 +7,13 @@ import Axios, {
 import { router } from '@/main'
 import { postRefreshToken } from '@/services/network/auth/postRefreshToken'
 
+import {
+	clearSharedRefreshPromise,
+	setSharedRefreshPromise,
+} from '../auth/shared-refresh-promise'
 import { standardizeError } from '../errors/standardize-error'
 import { logger } from '../logger/logger'
+import { IStandardizedError } from '../types'
 import { validateEnvironment } from '../validation/environment'
 
 interface IExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
@@ -98,28 +103,37 @@ axiosWithCredentials.interceptors.response.use(
 			originalRequest._retry = true
 			isRefreshing = true
 
+			// Create and set the shared refresh promise
+			const refreshPromise = (async (): Promise<void> => {
+				try {
+					await postRefreshToken()
+					processQueue(null)
+				} catch (refreshError: unknown) {
+					const err = standardizeError(refreshError)
+					logger.error(`Refresh token failed: ${err.message}`)
+					processQueue(err, null)
+
+					// Redirect to login page
+					await router.navigate({
+						to: '/auth/login',
+						search: {
+							redirect: router.state.location.pathname,
+						},
+					})
+					throw err
+				} finally {
+					isRefreshing = false
+					clearSharedRefreshPromise()
+				}
+			})()
+
+			setSharedRefreshPromise(refreshPromise)
+
 			try {
-				await postRefreshToken()
-
-				processQueue(null)
-				isRefreshing = false
-
+				await refreshPromise
 				return await axiosWithCredentials(originalRequest)
-			} catch (refreshError: unknown) {
-				const err = standardizeError(refreshError)
-				logger.error(`Refresh token failed: ${err.message}`)
-
-				processQueue(err, null)
-				isRefreshing = false
-
-				// Redirect to login page
-				await router.navigate({
-					to: '/auth/login',
-					search: {
-						redirect: router.state.location.pathname,
-					},
-				})
-				return Promise.reject(err)
+			} catch (err: unknown) {
+				return Promise.reject(err as IStandardizedError)
 			}
 		}
 

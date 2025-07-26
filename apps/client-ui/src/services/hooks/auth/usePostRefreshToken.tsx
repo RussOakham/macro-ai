@@ -25,7 +25,7 @@ const usePostRefreshToken = () => {
 				`Refresh token failed: ${err.status.toString()} ${err.message}`,
 			)
 			Cookies.remove('macro-ai-accessToken')
-			Cookies.remove('marco-ai-refreshToken')
+			Cookies.remove('macro-ai-refreshToken')
 			await navigate({ to: '/auth/login' })
 			return err
 		},
