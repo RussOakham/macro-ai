@@ -7,6 +7,29 @@ import { logger } from '@/lib/logger/logger'
 import { getAuthUser } from '@/services/network/auth/getAuthUser'
 import { postRefreshToken } from '@/services/network/auth/postRefreshToken'
 
+import { waitForRefreshCompletion } from './shared-refresh-promise'
+
+// Module-level variable to store ongoing refresh promise (singleton pattern)
+let ongoingRefreshPromise: ReturnType<typeof postRefreshToken> | null = null
+
+/**
+ * Cross-platform base64 decoding utility
+ * Works in both browser and Node.js environments (SSR-compatible)
+ *
+ * @param base64String - The base64 encoded string to decode
+ * @returns The decoded string
+ */
+const decodeBase64 = (base64String: string): string => {
+	// Check if we're in a Node.js environment (SSR)
+	if (typeof window === 'undefined' && typeof Buffer !== 'undefined') {
+		// Node.js environment - use Buffer
+		return Buffer.from(base64String, 'base64').toString('utf-8')
+	} else {
+		// Browser environment - use atob
+		return atob(base64String)
+	}
+}
+
 /**
  * JWT payload interface for type safety
  * Contains the standard JWT claims we need for token validation
@@ -55,9 +78,17 @@ export const attemptAuthenticationWithRefresh = async (
 		logger.debug('No access token found, attempting refresh')
 
 		try {
-			// Attempt to refresh token using httpOnly refresh token
-			await postRefreshToken()
-			logger.debug('Token refresh successful, retrying auth user fetch')
+			// Implement singleton pattern to prevent concurrent refresh requests
+			ongoingRefreshPromise ??= postRefreshToken()
+
+			try {
+				// Await the ongoing refresh promise (either new or existing)
+				await ongoingRefreshPromise
+				logger.debug('Token refresh successful, retrying auth user fetch')
+			} finally {
+				// Reset the promise to allow future refresh attempts
+				ongoingRefreshPromise = null
+			}
 
 			// After successful refresh, try to get auth user
 			const authUser = await getAuthUser()
@@ -108,12 +139,12 @@ export const attemptAuthenticationWithRefresh = async (
 		logger.debug(`Auth validation failed: ${err.message}`)
 
 		// If we get a 401, the axios interceptor should handle token refresh automatically
-		// We should wait a moment and retry once to give the interceptor time to work
+		// We should wait for any ongoing refresh operation to complete
 		if (err.status === 401) {
 			logger.debug('Got 401, waiting for axios interceptor to handle refresh')
 
-			// Wait briefly for the axios interceptor to potentially refresh the token
-			await new Promise((resolve) => setTimeout(resolve, 1000))
+			// Wait for any ongoing refresh operation to complete
+			await waitForRefreshCompletion()
 
 			try {
 				const authUser = await getAuthUser()
@@ -150,7 +181,7 @@ export const isTokenExpired = (token: string): boolean => {
 		if (parts.length !== 3 || !parts[1]) {
 			return true
 		}
-		const payload = JSON.parse(atob(parts[1])) as JwtPayload
+		const payload = JSON.parse(decodeBase64(parts[1])) as JwtPayload
 		const currentTime = Math.floor(Date.now() / 1000)
 		return payload.exp < currentTime
 	} catch {
@@ -172,7 +203,7 @@ export const shouldRefreshToken = (token: string): boolean => {
 		if (parts.length !== 3 || !parts[1]) {
 			return true
 		}
-		const payload = JSON.parse(atob(parts[1])) as JwtPayload
+		const payload = JSON.parse(decodeBase64(parts[1])) as JwtPayload
 		const currentTime = Math.floor(Date.now() / 1000)
 		const timeUntilExpiry = payload.exp - currentTime
 		return timeUntilExpiry < 300 // Refresh if less than 5 minutes remaining
