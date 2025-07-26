@@ -11,7 +11,10 @@
 		"dev": "tsup --watch",
 		"clean": "rm -rf dist && find src -type f \\( -name '*.ts' -o -name '*.js' \\) ! -name 'index.ts' -delete",
 		"type-check": "tsc --noEmit",
-		"generate": "cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && tsx --tsconfig scripts/tsconfig.json scripts/generate.ts",
+		"generate": "cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && tsx --tsconfig scripts/tsconfig.json scripts/generate-modular.ts",
+		"generate-legacy": "cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && tsx --tsconfig scripts/tsconfig.json scripts/generate.ts",
+		"test": "vitest run",
+		"test:watch": "vitest",
 		"lint": "eslint ."
 	},
 	"devDependencies": {
@@ -34,7 +37,8 @@
 		"prettier": "catalog:",
 		"tsup": "^8.0.0",
 		"tsx": "^4.7.0",
-		"typescript": "catalog:"
+		"typescript": "catalog:",
+		"vitest": "catalog:"
 	},
 	"dependencies": {
 		"@zodios/core": "^10.9.6",
