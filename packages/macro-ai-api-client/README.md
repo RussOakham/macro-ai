@@ -1,14 +1,14 @@
 # Macro AI API Client
 
-Auto-generated TypeScript client for the Macro AI Express API, built with Zodios and Zod for full type safety.
+Modular TypeScript client for the Macro AI Express API, built with Zodios and Zod for full type safety.
 
 ## Features
 
-- 🔒 **Full Type Safety** - Generated from OpenAPI spec with Zod schemas
+- 🔒 **Full Type Safety** - Built with Zod schemas for runtime validation
 - 🏗️ **Modular Architecture** - Domain-specific clients for better tree-shaking
-- 🔄 **Backward Compatible** - Existing imports continue to work
-- 🚀 **Auto-generated** - Always in sync with the API specification
+- 🚀 **Production Ready** - Stable modular implementation
 - 📦 **Multiple Export Formats** - ESM, CJS, and TypeScript declarations
+- 🎯 **Domain Separation** - Auth, Chat, and User clients
 
 ## Installation
 
@@ -19,51 +19,68 @@ pnpm install
 
 ## Usage
 
-### Current Usage (Backward Compatible)
+### Modular Client Usage
 
 ```typescript
-import { createApiClient, schemas } from '@repo/macro-ai-api-client'
+// Import specific domain clients for better tree-shaking
+import {
+	createAuthClient,
+	createChatClient,
+	createUserClient,
+} from '@repo/macro-ai-api-client'
 
-// Create API client
-const apiClient = createApiClient('http://localhost:3030/api')
+// Create domain-specific clients
+const authClient = createAuthClient('http://localhost:3030/api')
+const chatClient = createChatClient('http://localhost:3030/api')
+const userClient = createUserClient('http://localhost:3030/api')
 
 // Use schemas for validation
-const loginData = schemas.postAuthlogin_Body.parse({
+import { postAuthlogin_Body } from '@repo/macro-ai-api-client'
+
+const loginData = postAuthlogin_Body.parse({
 	email: 'user@example.com',
 	password: 'password123',
 })
 
-// Make API calls
-const response = await apiClient.post('/auth/login', loginData)
+// Make API calls with domain-specific clients
+const authResponse = await authClient.post('/auth/login', loginData)
+const chats = await chatClient.get('/chats')
+const profile = await userClient.get('/users/me')
 ```
 
-### Future Modular Usage (Coming Soon)
+### Client Configuration
 
 ```typescript
-// Import specific domain clients for better tree-shaking
-import { createAuthClient } from '@repo/macro-ai-api-client/auth'
-import { createChatClient } from '@repo/macro-ai-api-client/chat'
-import { createUserClient } from '@repo/macro-ai-api-client/user'
+import { createAuthClient } from '@repo/macro-ai-api-client'
 
-// Or import specific schemas
-import { authSchemas } from '@repo/macro-ai-api-client/schemas/auth'
+// Basic client
+const authClient = createAuthClient('http://localhost:3030/api')
+
+// Client with custom configuration
+const authClient = createAuthClient('http://localhost:3030/api', {
+	axiosConfig: {
+		headers: {
+			'X-API-KEY': 'your-api-key',
+		},
+		withCredentials: true,
+	},
+})
 ```
 
 ## Architecture
 
-### Current Structure
+### Modular Structure
 
 ```markdown
 src/
-├── index.ts # Main exports (backward compatible)
-├── output.ts # Auto-generated unified client
-├── schemas/ # Domain-specific schemas (future)
+├── index.ts # Main exports
+├── schemas/ # Domain-specific schemas
 │ ├── auth.schemas.ts # Authentication schemas
 │ ├── chat.schemas.ts # Chat and messaging schemas
 │ ├── user.schemas.ts # User management schemas
 │ ├── shared.schemas.ts # Common schemas
 │ └── index.ts # Schema re-exports
-└── clients/ # Domain-specific clients (future)
+└── clients/ # Domain-specific clients
 ├── auth.client.ts # Auth API client
 ├── chat.client.ts # Chat API client
 ├── user.client.ts # User API client
@@ -82,7 +99,7 @@ src/
 ### Scripts
 
 ```bash
-# Generate API client from OpenAPI spec
+# Verify modular structure
 pnpm generate
 
 # Build the package
@@ -98,44 +115,59 @@ pnpm lint
 pnpm clean
 ```
 
-### Generation Process
+### Modular Architecture
 
-1. **Swagger Generation**: Express API generates `swagger.json`
-2. **Client Generation**: `openapi-zod-client` creates TypeScript client
-3. **Modular Split**: Custom script splits into domain-specific files
-4. **Build**: `tsup` creates distribution files
+The package uses a modular architecture with domain-specific clients:
 
-## Migration Guide
+1. **Domain Separation**: Auth, Chat, and User clients are separate
+2. **Tree Shaking**: Import only the clients you need
+3. **Type Safety**: Full TypeScript support with Zod schemas
+4. **Maintainability**: Each domain is independently maintained
 
-### Current State (v0.0.1)
+## Available Exports
 
-All existing imports continue to work without changes:
+### Client Creators
 
 ```typescript
-// ✅ These imports still work
-import { createApiClient, schemas, api } from '@repo/macro-ai-api-client'
+import {
+	createAuthClient,
+	createChatClient,
+	createUserClient,
+} from '@repo/macro-ai-api-client'
 ```
 
-### Future State (v0.1.0+)
-
-New modular imports will be available:
+### Schema Exports
 
 ```typescript
-// 🚀 Future modular imports
-import { createAuthClient } from '@repo/macro-ai-api-client/auth'
-import { authSchemas } from '@repo/macro-ai-api-client/schemas/auth'
+import {
+	// Auth schemas
+	postAuthlogin_Body,
+	postAuthregister_Body,
+	postAuthconfirmRegistration_Body,
+	postAuthforgotPassword_Body,
+	postAuthconfirmForgotPassword_Body,
+
+	// Chat schemas
+	postChats_Body,
+	postChatsId_Body,
+	postChatsIdstream_Body,
+
+	// User schemas
+	userSchemas,
+} from '@repo/macro-ai-api-client'
 ```
 
 ## Contributing
 
-This package is auto-generated. To make changes:
+This package uses a modular architecture. To make changes:
 
-1. Update the Express API OpenAPI specifications
-2. Run `pnpm generate` to regenerate the client
-3. Test with `pnpm type-check` and `pnpm build`
+1. Update the individual client or schema files in `src/clients/` or `src/schemas/`
+2. Run `pnpm type-check` to verify TypeScript compatibility
+3. Run `pnpm build` to create distribution files
+4. Test the changes in the consuming applications
 
 ## Related Packages
 
-- `@repo/express-api` - The source API that generates the OpenAPI spec
+- `@repo/express-api` - The source API specification
 - `@zodios/core` - The underlying HTTP client library
-- `openapi-zod-client` - Code generation tool
+- `zod` - Schema validation library

@@ -1,10 +1,7 @@
-// Main API client exports with backward compatibility
-// This file maintains the existing API surface while supporting the new modular structure
+// Modular API client exports
+// Domain-specific clients for better tree-shaking and maintainability
 
-// Backward compatibility: re-export everything from output.ts
-export * from './output'
-
-// New modular exports - Auth, Chat, and User clients are now implemented
+// Modular client exports
 export {
 	authClient,
 	authEndpoints,
@@ -22,16 +19,26 @@ export {
 } from './clients/user.client'
 export { userSchemas } from './schemas/user.schemas'
 
-// Future modular exports (for when other clients are implemented)
-// TODO: Uncomment when modular generation is complete for other domains
-// export * from './schemas'
-// export * from './clients'
+// Schema exports for type definitions
+export * from './schemas/auth.schemas'
+export * from './schemas/chat.schemas'
+export * from './schemas/shared.schemas'
 
-// Domain-specific exports for tree-shaking (future)
-// TODO: Uncomment when modular generation is complete
-// export { authSchemas } from './schemas/auth.schemas'
-// export { chatSchemas } from './schemas/chat.schemas'
-// export { sharedSchemas } from './schemas/shared.schemas'
+// Backward compatible schemas object export
+import {
+	postAuthconfirmForgotPassword_Body,
+	postAuthconfirmRegistration_Body,
+	postAuthlogin_Body,
+	postAuthregister_Body,
+} from './schemas/auth.schemas'
+import { postChatsIdstream_Body } from './schemas/chat.schemas'
 
-// export { createAuthClient, authClient } from './clients/auth.client'
-// export { createChatClient, chatClient } from './clients/chat.client'
+export const schemas = {
+	// Auth schemas
+	postAuthconfirmForgotPassword_Body,
+	postAuthconfirmRegistration_Body,
+	postAuthlogin_Body,
+	postAuthregister_Body,
+	// Chat schemas
+	postChatsIdstream_Body,
+}

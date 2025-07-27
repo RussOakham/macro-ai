@@ -1,7 +1,6 @@
-// Shared schemas - auto-generated, do not edit manually
 // import { z } from 'zod'
 
-// Common response schemas that are used across domains
+// Shared schemas will be added here when available
 export const sharedSchemas = {
-	// Will be populated with common schemas like ErrorResponse, etc.
+	// Schemas will be exported individually
 }

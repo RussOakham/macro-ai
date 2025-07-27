@@ -15,7 +15,7 @@ export type Result<T, E = IStandardizedError> = [T, null] | [null, E]
  *
  * @example
  * const [response, error] = await tryCatch(
- *   apiClient.get('/users'),
+ *   userClient.get('/users'),
  *   'userService - fetchUsers'
  * )
  *

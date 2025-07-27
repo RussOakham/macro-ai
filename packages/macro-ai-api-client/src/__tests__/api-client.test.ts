@@ -1,21 +1,28 @@
 import { describe, expect, it } from 'vitest'
 
-import { api, createApiClient, schemas } from '../index'
+import {
+	createAuthClient,
+	createChatClient,
+	createUserClient,
+	postAuthconfirmForgotPassword_Body,
+	postAuthconfirmRegistration_Body,
+	postAuthlogin_Body,
+	postAuthregister_Body,
+	postChatsIdstream_Body,
+} from '../index'
 
-describe('API Client', () => {
-	describe('Exports', () => {
-		it('should export createApiClient function', () => {
-			expect(typeof createApiClient).toBe('function')
+describe('Modular API Client', () => {
+	describe('Client Exports', () => {
+		it('should export createAuthClient function', () => {
+			expect(typeof createAuthClient).toBe('function')
 		})
 
-		it('should export schemas object', () => {
-			expect(schemas).toBeDefined()
-			expect(typeof schemas).toBe('object')
+		it('should export createChatClient function', () => {
+			expect(typeof createChatClient).toBe('function')
 		})
 
-		it('should export api instance', () => {
-			expect(api).toBeDefined()
-			expect(typeof api).toBe('object')
+		it('should export createUserClient function', () => {
+			expect(typeof createUserClient).toBe('function')
 		})
 	})
 
@@ -26,7 +33,7 @@ describe('API Client', () => {
 				password: 'password123',
 			}
 
-			const result = schemas.postAuthlogin_Body.safeParse(validLoginData)
+			const result = postAuthlogin_Body.safeParse(validLoginData)
 			expect(result.success).toBe(true)
 		})
 
@@ -36,7 +43,7 @@ describe('API Client', () => {
 				password: '123', // too short
 			}
 
-			const result = schemas.postAuthlogin_Body.safeParse(invalidLoginData)
+			const result = postAuthlogin_Body.safeParse(invalidLoginData)
 			expect(result.success).toBe(false)
 		})
 
@@ -47,7 +54,7 @@ describe('API Client', () => {
 				confirmPassword: 'password123',
 			}
 
-			const result = schemas.postAuthregister_Body.safeParse(validRegisterData)
+			const result = postAuthregister_Body.safeParse(validRegisterData)
 			expect(result.success).toBe(true)
 		})
 
@@ -61,21 +68,35 @@ describe('API Client', () => {
 				],
 			}
 
-			const result = schemas.postChatsIdstream_Body.safeParse(validChatData)
+			const result = postChatsIdstream_Body.safeParse(validChatData)
 			expect(result.success).toBe(true)
 		})
 	})
 
 	describe('Client Creation', () => {
-		it('should create API client with base URL', () => {
-			const client = createApiClient('http://localhost:3030/api')
+		it('should create auth client with base URL', () => {
+			const client = createAuthClient('http://localhost:3030/api')
 			expect(client).toBeDefined()
 			expect(typeof client.get).toBe('function')
 			expect(typeof client.post).toBe('function')
 		})
 
-		it('should create API client with options', () => {
-			const client = createApiClient('http://localhost:3030/api', {
+		it('should create chat client with base URL', () => {
+			const client = createChatClient('http://localhost:3030/api')
+			expect(client).toBeDefined()
+			expect(typeof client.get).toBe('function')
+			expect(typeof client.post).toBe('function')
+		})
+
+		it('should create user client with base URL', () => {
+			const client = createUserClient('http://localhost:3030/api')
+			expect(client).toBeDefined()
+			expect(typeof client.get).toBe('function')
+			expect(typeof client.post).toBe('function')
+		})
+
+		it('should create auth client with options', () => {
+			const client = createAuthClient('http://localhost:3030/api', {
 				axiosConfig: {
 					timeout: 5000,
 				},
@@ -84,37 +105,46 @@ describe('API Client', () => {
 		})
 	})
 
-	describe('Backward Compatibility', () => {
-		it('should maintain all expected schema exports', () => {
-			// Verify that all expected schemas are exported
-			const expectedSchemas = [
-				'postAuthregister_Body',
-				'postAuthconfirmRegistration_Body',
-				'postAuthlogin_Body',
-				'postAuthconfirmForgotPassword_Body',
-				'postChatsIdstream_Body',
-			]
+	describe('Schema Exports', () => {
+		it('should export all expected auth schemas', () => {
+			// Verify that all expected auth schemas are exported
+			expect(postAuthregister_Body).toBeDefined()
+			expect(typeof postAuthregister_Body.parse).toBe('function')
 
-			for (const schemaName of expectedSchemas) {
-				expect((schemas as Record<string, unknown>)[schemaName]).toBeDefined()
-				expect(
-					typeof (
-						(schemas as Record<string, unknown>)[schemaName] as {
-							parse: unknown
-						}
-					).parse,
-				).toBe('function')
-			}
+			expect(postAuthconfirmRegistration_Body).toBeDefined()
+			expect(typeof postAuthconfirmRegistration_Body.parse).toBe('function')
+
+			expect(postAuthlogin_Body).toBeDefined()
+			expect(typeof postAuthlogin_Body.parse).toBe('function')
+
+			expect(postAuthconfirmForgotPassword_Body).toBeDefined()
+			expect(typeof postAuthconfirmForgotPassword_Body.parse).toBe('function')
 		})
 
-		it('should maintain API client interface', () => {
-			// Verify that the API client has expected methods
+		it('should export all expected chat schemas', () => {
+			// Verify that all expected chat schemas are exported
+			expect(postChatsIdstream_Body).toBeDefined()
+			expect(typeof postChatsIdstream_Body.parse).toBe('function')
+		})
+
+		it('should maintain modular client interfaces', () => {
+			// Verify that each domain client has expected methods
 			const expectedMethods = ['get', 'post', 'put', 'delete', 'patch']
 
+			const authClient = createAuthClient('http://localhost:3030/api')
+			const chatClient = createChatClient('http://localhost:3030/api')
+			const userClient = createUserClient('http://localhost:3030/api')
+
 			for (const method of expectedMethods) {
-				expect(typeof (api as unknown as Record<string, unknown>)[method]).toBe(
-					'function',
-				)
+				expect(
+					typeof (authClient as unknown as Record<string, unknown>)[method],
+				).toBe('function')
+				expect(
+					typeof (chatClient as unknown as Record<string, unknown>)[method],
+				).toBe('function')
+				expect(
+					typeof (userClient as unknown as Record<string, unknown>)[method],
+				).toBe('function')
 			}
 		})
 	})
