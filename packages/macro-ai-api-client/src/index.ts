@@ -4,8 +4,26 @@
 // Backward compatibility: re-export everything from output.ts
 export * from './output'
 
-// New modular exports (for future use when fully implemented)
-// TODO: Uncomment when modular generation is complete
+// New modular exports - Auth, Chat, and User clients are now implemented
+export {
+	authClient,
+	authEndpoints,
+	createAuthClient,
+} from './clients/auth.client'
+export {
+	chatClient,
+	chatEndpoints,
+	createChatClient,
+} from './clients/chat.client'
+export {
+	createUserClient,
+	userClient,
+	userEndpoints,
+} from './clients/user.client'
+export { userSchemas } from './schemas/user.schemas'
+
+// Future modular exports (for when other clients are implemented)
+// TODO: Uncomment when modular generation is complete for other domains
 // export * from './schemas'
 // export * from './clients'
 
@@ -13,9 +31,7 @@ export * from './output'
 // TODO: Uncomment when modular generation is complete
 // export { authSchemas } from './schemas/auth.schemas'
 // export { chatSchemas } from './schemas/chat.schemas'
-// export { userSchemas } from './schemas/user.schemas'
 // export { sharedSchemas } from './schemas/shared.schemas'
 
 // export { createAuthClient, authClient } from './clients/auth.client'
 // export { createChatClient, chatClient } from './clients/chat.client'
-// export { createUserClient, userClient } from './clients/user.client'

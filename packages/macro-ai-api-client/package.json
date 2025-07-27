@@ -7,7 +7,9 @@
 	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "pnpm generate && tsup",
+		"build": "pnpm build:modular",
+		"build:legacy": "pnpm generate && tsup",
+		"build:modular": "tsup",
 		"dev": "tsup --watch",
 		"clean": "rm -rf dist && find src -type f \\( -name '*.ts' -o -name '*.js' \\) ! -name 'index.ts' -delete",
 		"type-check": "tsc --noEmit",

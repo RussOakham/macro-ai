@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { z } from 'zod'
 
 const postChatsIdstream_Body = z
@@ -15,6 +14,6 @@ const postChatsIdstream_Body = z
 			.min(1),
 	})
 	.passthrough()
-export const chatSchemas = {
-	// Schemas will be exported individually
-}
+
+// Individual exports for direct access
+export { postChatsIdstream_Body }

@@ -1,6 +1,129 @@
+// MANUAL IMPLEMENTATION - Do not overwrite during generation
 import { makeApi, Zodios, type ZodiosOptions } from '@zodios/core'
+import { z } from 'zod'
 
-const userEndpoints = makeApi([])
+// User endpoints extracted from output.ts
+const userEndpoints = makeApi([
+	{
+		method: 'get',
+		path: '/users/:id',
+		description: `Retrieves a user's profile information by their unique identifier. Requires authentication.`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'id',
+				type: 'Path',
+				schema: z.string().uuid(),
+			},
+		],
+		response: z
+			.object({
+				user: z
+					.object({
+						id: z.string().uuid(),
+						email: z.string().max(255),
+						emailVerified: z.boolean().nullable(),
+						firstName: z.string().max(255).nullable(),
+						lastName: z.string().max(255).nullable(),
+						createdAt: z.string().nullable(),
+						updatedAt: z.string().nullable(),
+						lastLogin: z.string().nullable(),
+					})
+					.passthrough(),
+			})
+			.passthrough(),
+		errors: [
+			{
+				status: 400,
+				description: `Invalid user ID format or missing required parameters`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 401,
+				description: `Unauthorized - Authentication required, token expired, or invalid token`,
+				schema: z.object({ message: z.string() }).passthrough(),
+			},
+			{
+				status: 404,
+				description: `User not found - No user exists with the specified ID`,
+				schema: z.object({ message: z.string() }).passthrough(),
+			},
+			{
+				status: 429,
+				description: `Too many requests - rate limit exceeded`,
+				schema: z
+					.object({ status: z.number(), message: z.string() })
+					.passthrough(),
+			},
+			{
+				status: 500,
+				description: `Internal server error - Database or service error`,
+				schema: z.object({ message: z.string() }).passthrough(),
+			},
+		],
+	},
+	{
+		method: 'get',
+		path: '/users/me',
+		description: `Retrieves the authenticated user's profile information including personal details and account status`,
+		requestFormat: 'json',
+		response: z
+			.object({
+				user: z
+					.object({
+						id: z.string().uuid(),
+						email: z.string().max(255),
+						emailVerified: z.boolean().nullable(),
+						firstName: z.string().max(255).nullable(),
+						lastName: z.string().max(255).nullable(),
+						createdAt: z.string().nullable(),
+						updatedAt: z.string().nullable(),
+						lastLogin: z.string().nullable(),
+					})
+					.passthrough(),
+			})
+			.passthrough(),
+		errors: [
+			{
+				status: 400,
+				description: `Invalid request - Authentication token validation failed`,
+				schema: z
+					.object({
+						message: z.string(),
+						details: z.record(z.unknown().nullable()).optional(),
+					})
+					.passthrough(),
+			},
+			{
+				status: 401,
+				description: `Unauthorized - Authentication required, token expired, or invalid token`,
+				schema: z.object({ message: z.string() }).passthrough(),
+			},
+			{
+				status: 404,
+				description: `User not found - The authenticated user does not exist in the system`,
+				schema: z.object({ message: z.string() }).passthrough(),
+			},
+			{
+				status: 429,
+				description: `Too many requests - rate limit exceeded`,
+				schema: z
+					.object({ status: z.number(), message: z.string() })
+					.passthrough(),
+			},
+			{
+				status: 500,
+				description: `Internal server error - Database or service error`,
+				schema: z.object({ message: z.string() }).passthrough(),
+			},
+		],
+	},
+])
 
 export const userClient = new Zodios(userEndpoints)
 

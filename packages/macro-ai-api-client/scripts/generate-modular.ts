@@ -120,13 +120,19 @@ async function splitIntoModularFiles(outputContent: string, outputDir: string) {
 		}
 
 		if (inEndpoints) {
-			if (line.includes('{')) {
-				braceCount++
-				currentEndpoint.push(line)
-			} else if (line.includes('}')) {
-				braceCount--
+			// Check if this line starts a new endpoint object
+			if (line.trim() === '{' && braceCount === 0) {
+				currentEndpoint = [line]
+				braceCount = 1
+			} else if (braceCount > 0) {
 				currentEndpoint.push(line)
 
+				// Count braces to track nesting
+				const openBraces = (line.match(/{/g) ?? []).length
+				const closeBraces = (line.match(/}/g) ?? []).length
+				braceCount += openBraces - closeBraces
+
+				// When we close the main endpoint object
 				if (braceCount === 0 && currentEndpoint.length > 0) {
 					// Determine domain based on path
 					const pathLine = currentEndpoint.find((l) => l.includes('path:'))
@@ -144,11 +150,17 @@ async function splitIntoModularFiles(outputContent: string, outputDir: string) {
 				}
 			} else if (line.includes('])')) {
 				inEndpoints = false
-			} else {
-				currentEndpoint.push(line)
 			}
 		}
 	}
+
+	// Log endpoint and schema counts for debugging
+	console.log(`Auth schemas found: ${authSchemas.length.toString()}`)
+	console.log(`Chat schemas found: ${chatSchemas.length.toString()}`)
+	console.log(`User schemas found: ${userSchemas.length.toString()}`)
+	console.log(`Auth endpoints found: ${authEndpoints.length.toString()}`)
+	console.log(`Chat endpoints found: ${chatEndpoints.length.toString()}`)
+	console.log(`User endpoints found: ${userEndpoints.length.toString()}`)
 
 	// Generate domain-specific schema files
 	await generateDomainSchemaFile('auth', authSchemas, outputDir)
@@ -175,11 +187,38 @@ async function generateDomainSchemaFile(
 	schemas: string[],
 	outputDir: string,
 ) {
-	const imports = "import { z } from 'zod'\n\n"
-	const schemaContent = schemas.join('\n')
-	const exports = `\nexport const ${domain}Schemas = {\n  // Schemas will be exported individually\n}\n`
+	if (schemas.length === 0) {
+		// Generate empty schema file with placeholder
+		const imports = "import { z } from 'zod'\n\n"
+		const exports = `export const ${domain}Schemas = {\n\t// Schemas will be exported individually\n}\n`
+		const content = imports + exports
+		const filePath = path.join(outputDir, 'schemas', `${domain}.schemas.ts`)
+		await fs.writeFile(filePath, content)
+		return
+	}
 
-	const content = imports + schemaContent + exports
+	const imports = "import { z } from 'zod'\n\n"
+	const schemaContent = schemas.join('\n') + '\n'
+
+	// Extract schema names for exports
+	const schemaNames: string[] = []
+	schemas.forEach((schemaLine) => {
+		const line = schemaLine
+		if (line.includes('const ') && line.includes('_Body = z')) {
+			const schemaName = line.split('const ')[1]?.split(' =')[0]
+			if (schemaName) {
+				schemaNames.push(schemaName)
+			}
+		}
+	})
+
+	// Generate exports
+	const schemaExports =
+		schemaNames.length > 0
+			? `\n// Individual exports for direct access\nexport {\n\t${schemaNames.join(',\n\t')},\n}\n`
+			: `\nexport const ${domain}Schemas = {\n\t// Schemas will be exported individually\n}\n`
+
+	const content = imports + schemaContent + schemaExports
 	const filePath = path.join(outputDir, 'schemas', `${domain}.schemas.ts`)
 	await fs.writeFile(filePath, content)
 }
@@ -189,13 +228,50 @@ async function generateDomainClientFile(
 	endpoints: string[],
 	outputDir: string,
 ) {
-	const imports =
-		"import { makeApi, Zodios, type ZodiosOptions } from '@zodios/core'\n\n"
+	const filePath = path.join(outputDir, 'clients', `${domain}.client.ts`)
+
+	// Check if file exists and has manual implementation
+	try {
+		const existingContent = await fs.readFile(filePath, 'utf-8')
+
+		// Check for manual implementation markers
+		if (
+			existingContent.includes('// MANUAL IMPLEMENTATION') ||
+			existingContent.includes('extracted from output.ts') ||
+			(existingContent.includes('makeApi([') &&
+				!existingContent.includes('makeApi([\n\n])'))
+		) {
+			console.log(
+				`⚠️  Skipping ${domain}.client.ts - manual implementation detected`,
+			)
+			return
+		}
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	} catch (error: unknown) {
+		// File doesn't exist, proceed with generation
+		console.log(`Generating ${domain}.client.ts...`)
+	}
+
+	const imports = `import { makeApi, Zodios, type ZodiosOptions } from '@zodios/core'
+import { z } from 'zod'
+import {
+	postAuthconfirmForgotPassword_Body,
+	postAuthconfirmRegistration_Body,
+	postAuthforgotPassword_Body,
+	postAuthlogin_Body,
+	postAuthlogout_Body,
+	postAuthregister_Body,
+	postAuthresendConfirmationCode_Body,
+	postChats_Body,
+	postChatsId_Body,
+	postChatsIdstream_Body,
+} from '../output'
+
+`
 	const endpointsContent = `const ${domain}Endpoints = makeApi([\n${endpoints.join('\n')}\n])\n\n`
 	const exports = `export const ${domain}Client = new Zodios(${domain}Endpoints)\n\nexport function create${domain.charAt(0).toUpperCase() + domain.slice(1)}Client(baseUrl: string, options?: ZodiosOptions) {\n  return new Zodios(baseUrl, ${domain}Endpoints, options)\n}\n\nexport { ${domain}Endpoints }\n`
 
 	const content = imports + endpointsContent + exports
-	const filePath = path.join(outputDir, 'clients', `${domain}.client.ts`)
 	await fs.writeFile(filePath, content)
 }
 

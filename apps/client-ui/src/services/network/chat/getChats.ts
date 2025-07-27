@@ -1,5 +1,19 @@
-import { apiClient } from '@/lib/api'
+import { createChatClient } from '@repo/macro-ai-api-client'
+
 import type { PaginationOptions } from '@/lib/types'
+import { validateEnvironment } from '@/lib/validation/environment'
+
+const env = validateEnvironment()
+
+// Create the chat client with proper typing
+const chatClient = createChatClient(env.VITE_API_URL, {
+	axiosConfig: {
+		headers: {
+			'X-API-KEY': env.VITE_API_KEY,
+		},
+		withCredentials: true,
+	},
+})
 
 // infer ReturnType of getChats
 type TGetChatsResponse = Awaited<ReturnType<typeof getChats>>
@@ -10,7 +24,7 @@ type TGetChatsResponse = Awaited<ReturnType<typeof getChats>>
  * @returns Promise<ChatListResponse>
  */
 const getChats = async (options?: PaginationOptions) => {
-	const response = await apiClient.get('/chats', {
+	const response = await chatClient.get('/chats', {
 		queries: {
 			page: options?.page,
 			limit: options?.limit,

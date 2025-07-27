@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { z } from 'zod'
 
 const postAuthregister_Body = z
@@ -25,6 +24,11 @@ const postAuthconfirmForgotPassword_Body = z
 		confirmPassword: z.string().min(8).max(15).regex(/\d/),
 	})
 	.passthrough()
-export const authSchemas = {
-	// Schemas will be exported individually
+
+// Individual exports for direct access
+export {
+	postAuthconfirmForgotPassword_Body,
+	postAuthconfirmRegistration_Body,
+	postAuthlogin_Body,
+	postAuthregister_Body,
 }
