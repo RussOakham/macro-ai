@@ -239,7 +239,7 @@ export function createDomainOpenAPISpec(
 		filteredSpec.paths[endpoint.path] ??= {}
 
 		// Add the specific method for this endpoint
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 		filteredSpec.paths[endpoint.path][endpoint.method] = endpoint.operation
 	}
 

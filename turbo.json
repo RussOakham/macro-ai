@@ -35,6 +35,7 @@
 		"lint": {},
 		"type-check": {},
 		"test": {
+			"cache": false,
 			"dependsOn": ["^build"]
 		},
 		"test:ui": {

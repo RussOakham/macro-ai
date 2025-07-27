@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { validateEnvironment } from '@/lib/validation/environment'
+
 import {
 	authClient,
 	authClientWithoutCredentials,
@@ -10,6 +12,7 @@ import {
 describe('Token Refresh Integration Tests', () => {
 	describe('Client Integration', () => {
 		it('should have all clients properly configured for token refresh', () => {
+			const env = validateEnvironment()
 			const clients = [
 				authClient,
 				chatClient,
@@ -27,8 +30,10 @@ describe('Token Refresh Integration Tests', () => {
 				expect(typeof client.axios.interceptors.response.eject).toBe('function')
 
 				// Verify base configuration
-				expect(client.axios.defaults.baseURL).toBe('http://localhost:3000')
-				expect(client.axios.defaults.headers['X-API-KEY']).toBe('test-api-key')
+				expect(client.axios.defaults.baseURL).toBe(env.VITE_API_URL)
+				expect(client.axios.defaults.headers['X-API-KEY']).toBe(
+					env.VITE_API_KEY,
+				)
 			})
 		})
 

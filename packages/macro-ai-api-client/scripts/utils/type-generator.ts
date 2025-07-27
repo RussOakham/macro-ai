@@ -1,4 +1,4 @@
-import type { OperationObject, SchemaObject } from 'openapi3-ts'
+import type { SchemaObject } from 'openapi3-ts'
 
 import type { DomainEndpoint } from './domain-parser.js'
 
@@ -184,7 +184,7 @@ export function extractTypeDefinitions(
 	const types: TypeDefinition[] = []
 
 	for (const endpoint of endpoints) {
-		const operation = endpoint.operation as OperationObject
+		const operation = endpoint.operation
 
 		// Extract request body types
 		if (hasJsonSchema(operation.requestBody)) {

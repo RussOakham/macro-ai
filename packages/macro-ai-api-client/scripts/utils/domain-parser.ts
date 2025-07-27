@@ -1,9 +1,51 @@
-import type { OpenAPIObject, PathItemObject } from 'openapi3-ts'
+import type {
+	OpenAPIObject,
+	OperationObject,
+	ParameterObject,
+	PathItemObject,
+	ReferenceObject,
+	RequestBodyObject,
+	ResponseObject,
+} from 'openapi3-ts'
+
+/**
+ * Type guard to check if an object is a ReferenceObject
+ */
+function isReferenceObject(obj: unknown): obj is ReferenceObject {
+	return typeof obj === 'object' && obj !== null && '$ref' in obj
+}
+
+/**
+ * Type guard to check if a request body is a RequestBodyObject (not a ReferenceObject)
+ */
+function isRequestBodyObject(
+	obj: RequestBodyObject | ReferenceObject,
+): obj is RequestBodyObject {
+	return !isReferenceObject(obj)
+}
+
+/**
+ * Type guard to check if a response is a ResponseObject (not a ReferenceObject)
+ */
+function isResponseObject(
+	obj: ResponseObject | ReferenceObject,
+): obj is ResponseObject {
+	return !isReferenceObject(obj)
+}
+
+/**
+ * Type guard to check if a parameter is a ParameterObject (not a ReferenceObject)
+ */
+function isParameterObject(
+	obj: ParameterObject | ReferenceObject,
+): obj is ParameterObject {
+	return !isReferenceObject(obj)
+}
 
 export interface DomainEndpoint {
 	path: string
 	method: string
-	operation: any // eslint-disable-line @typescript-eslint/no-explicit-any
+	operation: OperationObject
 	domain: string
 }
 
@@ -74,57 +116,41 @@ export function getSchemasByDomain(endpoints: DomainEndpoint[]): Set<string> {
 	const schemas = new Set<string>()
 
 	for (const endpoint of endpoints) {
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 		const operation = endpoint.operation
 
 		// Extract request body schemas
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-		if (operation.requestBody?.content) {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+		if (operation.requestBody && isRequestBodyObject(operation.requestBody)) {
 			const content = operation.requestBody.content
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 			for (const mediaType of Object.values(content)) {
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-				if ((mediaType as any)?.schema?.$ref) {
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any
-					const schemaName = (mediaType as any).schema.$ref.split('/').pop()
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+				if (mediaType.schema && '$ref' in mediaType.schema) {
+					const schemaName = mediaType.schema.$ref.split('/').pop()
 					if (schemaName) schemas.add(schemaName)
 				}
 			}
 		}
 
 		// Extract response schemas
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-		if (operation.responses) {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-			for (const response of Object.values(operation.responses)) {
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-				if ((response as any)?.content) {
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-					for (const mediaType of Object.values((response as any).content)) {
-						// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-						if ((mediaType as any)?.schema?.$ref) {
-							// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any
-							const schemaName = (mediaType as any).schema.$ref.split('/').pop()
-							// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-							if (schemaName) schemas.add(schemaName)
-						}
+		for (const response of Object.values(operation.responses)) {
+			const responseObj = response as ResponseObject | ReferenceObject
+			if (isResponseObject(responseObj) && responseObj.content) {
+				for (const mediaType of Object.values(responseObj.content)) {
+					if (mediaType.schema && '$ref' in mediaType.schema) {
+						const schemaName = mediaType.schema.$ref.split('/').pop()
+						if (schemaName) schemas.add(schemaName)
 					}
 				}
 			}
 		}
 
 		// Extract parameter schemas
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 		if (operation.parameters) {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 			for (const param of operation.parameters) {
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-				if (param?.schema?.$ref) {
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+				if (
+					isParameterObject(param) &&
+					param.schema &&
+					'$ref' in param.schema
+				) {
 					const schemaName = param.schema.$ref.split('/').pop()
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 					if (schemaName) schemas.add(schemaName)
 				}
 			}
