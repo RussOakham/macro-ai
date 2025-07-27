@@ -1,20 +1,7 @@
-import { createChatClient } from '@repo/macro-ai-api-client'
 import { z } from 'zod'
 
+import { chatClient } from '@/lib/api/clients'
 import type { ApiResponse, Chat } from '@/lib/types'
-import { validateEnvironment } from '@/lib/validation/environment'
-
-const env = validateEnvironment()
-
-// Create the chat client with proper typing
-const chatClient = createChatClient(env.VITE_API_URL, {
-	axiosConfig: {
-		headers: {
-			'X-API-KEY': env.VITE_API_KEY,
-		},
-		withCredentials: true,
-	},
-})
 
 // Client-side validation schema for createChat request
 const createChatSchemaClient = z.object({

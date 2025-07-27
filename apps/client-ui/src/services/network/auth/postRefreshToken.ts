@@ -1,7 +1,7 @@
-import { apiClient } from '@/lib/api'
+import { authClient } from '@/lib/api/clients'
 
 const postRefreshToken = async () => {
-	const response = await apiClient.post('/auth/refresh', undefined)
+	const response = await authClient.post('/auth/refresh', undefined)
 
 	return response
 }

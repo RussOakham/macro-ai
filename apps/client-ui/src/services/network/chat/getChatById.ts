@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/api'
+import { chatClient } from '@/lib/api/clients'
 
 // Infer ReturnType of getChatById
 type TGetChatByIdResponse = Awaited<ReturnType<typeof getChatById>>
@@ -9,7 +9,7 @@ type TGetChatByIdResponse = Awaited<ReturnType<typeof getChatById>>
  * @returns Promise<ChatWithMessagesResponse>
  */
 const getChatById = async (chatId: string) => {
-	const response = await apiClient.get('/chats/:id', {
+	const response = await chatClient.get('/chats/:id', {
 		params: {
 			id: chatId,
 		},

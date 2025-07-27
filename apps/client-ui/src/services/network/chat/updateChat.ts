@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { apiClient } from '@/lib/api'
+import { chatClient } from '@/lib/api/clients'
 
 // Client-side validation schema for updateChat request
 // Uses same validation as createChat since backend uses createChatRequestSchema
@@ -25,7 +25,7 @@ type UpdateChatResponse = Awaited<ReturnType<typeof updateChat>>
  * @returns Promise<UpdateChatResponse>
  */
 const updateChat = async (chatId: string, request: TUpdateChatRequest) => {
-	const response = await apiClient.put(
+	const response = await chatClient.put(
 		`/chats/:id`,
 		{
 			title: request.title,

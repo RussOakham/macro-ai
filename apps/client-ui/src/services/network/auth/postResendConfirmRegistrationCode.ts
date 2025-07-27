@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { apiClient } from '@/lib/api'
+import { authClient } from '@/lib/api/clients'
 
 const resendConfirmationCodeSchemaClient = z.object({
 	email: z.string().email(),
@@ -13,7 +13,7 @@ type TResendConfirmationCodeClient = z.infer<
 const postResendConfirmRegistrationCode = async ({
 	email,
 }: TResendConfirmationCodeClient) => {
-	const response = await apiClient.post('/auth/resend-confirmation-code', {
+	const response = await authClient.post('/auth/resend-confirmation-code', {
 		email,
 	})
 

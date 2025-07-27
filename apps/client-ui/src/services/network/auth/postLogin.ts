@@ -1,20 +1,8 @@
-import { createAuthClient, schemas } from '@repo/macro-ai-api-client'
+import { schemas } from '@repo/macro-ai-api-client'
 import { z } from 'zod'
 
-import { validateEnvironment } from '@/lib/validation/environment'
+import { authClient } from '@/lib/api/clients'
 import { emailValidation, passwordValidation } from '@/lib/validation/inputs'
-
-const env = validateEnvironment()
-
-// Create the auth client with proper typing
-const authClient = createAuthClient(env.VITE_API_URL, {
-	axiosConfig: {
-		headers: {
-			'X-API-KEY': env.VITE_API_KEY,
-		},
-		withCredentials: true,
-	},
-})
 
 const loginSchemaClient = schemas.postAuthlogin_Body.extend({
 	email: emailValidation(),

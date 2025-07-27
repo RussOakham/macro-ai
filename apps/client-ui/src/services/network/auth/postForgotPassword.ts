@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { apiClient } from '@/lib/api'
+import { authClient } from '@/lib/api/clients'
 
 const forgotPasswordSchemaClient = z.object({
 	email: z.string().email(),
@@ -9,7 +9,7 @@ const forgotPasswordSchemaClient = z.object({
 type TForgotPasswordClient = z.infer<typeof forgotPasswordSchemaClient>
 
 const postForgotPassword = async ({ email }: TForgotPasswordClient) => {
-	const response = await apiClient.post('/auth/forgot-password', {
+	const response = await authClient.post('/auth/forgot-password', {
 		email,
 	})
 

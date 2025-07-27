@@ -1,18 +1,4 @@
-import { createUserClient } from '@repo/macro-ai-api-client'
-
-import { validateEnvironment } from '@/lib/validation/environment'
-
-const env = validateEnvironment()
-
-// Create the user client with proper typing
-const userClient = createUserClient(env.VITE_API_URL, {
-	axiosConfig: {
-		headers: {
-			'X-API-KEY': env.VITE_API_KEY,
-		},
-		withCredentials: true,
-	},
-})
+import { userClient } from '@/lib/api/clients'
 
 // infer ReturnType of getUser with proper typing
 type TGetUserResponse = Awaited<ReturnType<typeof getUser>>
