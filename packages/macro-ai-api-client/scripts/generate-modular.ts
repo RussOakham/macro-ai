@@ -34,16 +34,21 @@ const main = async () => {
 		// Ensure directories exist
 		await fs.mkdir(path.join(OUTPUT_DIR, 'schemas'), { recursive: true })
 		await fs.mkdir(path.join(OUTPUT_DIR, 'clients'), { recursive: true })
+		await fs.mkdir(path.join(OUTPUT_DIR, 'types'), { recursive: true })
 
-		// Generate domain-specific clients and schemas from OpenAPI spec
+		// Generate domain-specific clients, schemas, and types from OpenAPI spec
 		console.log(
-			'Generating domain-specific clients and schemas from OpenAPI spec...',
+			'Generating domain-specific clients, schemas, and types from OpenAPI spec...',
 		)
 		await generateDomainClients(openApiDoc, OUTPUT_DIR, prettierConfig)
 
 		// Generate unified client
 		console.log('Generating unified client...')
 		await generateUnifiedClient(OUTPUT_DIR)
+
+		// Generate unified types index
+		console.log('Generating unified types index...')
+		await generateUnifiedTypesIndex(OUTPUT_DIR)
 
 		console.log('✅ Modular API client generation complete!')
 		console.log('📁 Generated files:')
@@ -55,6 +60,10 @@ const main = async () => {
 		console.log('  - clients/chat.client.ts (auto-generated)')
 		console.log('  - clients/user.client.ts (auto-generated)')
 		console.log('  - clients/unified.client.ts (auto-generated)')
+		console.log('  - types/auth.types.ts (auto-generated)')
+		console.log('  - types/chat.types.ts (auto-generated)')
+		console.log('  - types/user.types.ts (auto-generated)')
+		console.log('  - types/index.ts (auto-generated)')
 		console.log('')
 		console.log('ℹ️  All files are auto-generated from OpenAPI spec.')
 		console.log('   No manual maintenance required!')
@@ -150,6 +159,30 @@ export function createApiClient(baseUrl: string, options?: ZodiosOptions) {
 
 	const clientPath = path.join(outputDir, 'clients', 'unified.client.ts')
 	await fs.writeFile(clientPath, unifiedClientContent)
+}
+
+async function generateUnifiedTypesIndex(outputDir: string) {
+	const unifiedTypesContent = `// Unified types index - auto-generated, do not edit manually
+
+// Re-export all domain-specific types
+export * from './auth.types.js'
+export * from './chat.types.js'
+export * from './user.types.js'
+
+// Type utilities for easier consumption
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface ApiRequestTypes {
+	// Request types will be available here as they are generated
+}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface ApiResponseTypes {
+	// Response types will be available here as they are generated
+}
+`
+
+	const typesIndexPath = path.join(outputDir, 'types', 'index.ts')
+	await fs.writeFile(typesIndexPath, unifiedTypesContent)
 }
 
 await main()

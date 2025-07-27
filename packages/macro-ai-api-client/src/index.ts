@@ -24,6 +24,9 @@ export * from './schemas/auth.schemas'
 export * from './schemas/chat.schemas'
 export * from './schemas/shared.schemas'
 
+// TypeScript type exports for API requests and responses
+export * from './types/index'
+
 // Backward compatible schemas object export
 import {
 	postAuthconfirmForgotPassword_Body,

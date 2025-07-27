@@ -4,6 +4,10 @@ import type { OpenAPIObject } from 'openapi3-ts'
 import path from 'path'
 
 import type { DomainEndpoint } from './domain-parser.ts'
+import {
+	extractTypeDefinitions,
+	generateDomainTypesFile,
+} from './type-generator.js'
 
 /**
  * Creates a filtered OpenAPI spec containing only the specified endpoints
@@ -68,6 +72,12 @@ export async function generateDomainClient(
 		const clientPath = path.join(outputDir, 'clients', `${domain}.client.ts`)
 		await fs.writeFile(clientPath, endpointCode)
 
+		// Generate and write domain-specific types file
+		const typeDefinitions = extractTypeDefinitions(endpoints, domain)
+		const typesContent = generateDomainTypesFile(domain, typeDefinitions)
+		const typesPath = path.join(outputDir, 'types', `${domain}.types.ts`)
+		await fs.writeFile(typesPath, typesContent)
+
 		// Clean up temp file
 		await fs.unlink(tempOutputPath)
 
@@ -96,9 +106,12 @@ function extractSchemasAndEndpoints(
 	let inSchemas = false
 	let inEndpoints = false
 
-	// Add imports for schemas
-	schemaLines.push("import { z } from 'zod'")
-	schemaLines.push('')
+	// Add imports for schemas only if there are schemas to generate
+	const hasSchemas = content.includes('_Body = z')
+	if (hasSchemas) {
+		schemaLines.push("import { z } from 'zod'")
+		schemaLines.push('')
+	}
 
 	// Extract schema names used in content first
 	const usedSchemas = new Set<string>()
@@ -107,7 +120,7 @@ function extractSchemasAndEndpoints(
 		schemaMatches.forEach((schema) => usedSchemas.add(schema))
 	}
 
-	// Add imports for endpoints
+	// Add imports for endpoints (external imports first, then internal)
 	endpointLines.push(
 		"import { makeApi, Zodios, type ZodiosOptions } from '@zodios/core'",
 	)
@@ -116,8 +129,12 @@ function extractSchemasAndEndpoints(
 	// Add schema import if any schemas are used
 	if (usedSchemas.size > 0) {
 		endpointLines.push('')
+		// Sort schema imports alphabetically
+		const sortedSchemas = Array.from(usedSchemas).sort((a, b) =>
+			a.localeCompare(b),
+		)
 		endpointLines.push(`import {`)
-		endpointLines.push(`  ${Array.from(usedSchemas).join(',\n  ')}`)
+		endpointLines.push(`  ${sortedSchemas.join(',\n  ')},`)
 		endpointLines.push(`} from '../schemas/${domain}.schemas.js'`)
 	}
 
@@ -171,14 +188,20 @@ function extractSchemasAndEndpoints(
 
 	if (schemaNames.length > 0) {
 		schemaLines.push('// Individual exports for direct access')
+		// Sort schema names alphabetically for consistent exports
+		const sortedSchemaNames = [...schemaNames].sort((a, b) =>
+			a.localeCompare(b),
+		)
 		schemaLines.push(`export {`)
-		for (const schemaName of schemaNames) {
+		for (const schemaName of sortedSchemaNames) {
 			schemaLines.push(`  ${schemaName},`)
 		}
 		schemaLines.push('}')
 	} else {
 		// Export empty schemas object for domains with no schemas
-		schemaLines.push('')
+		if (!hasSchemas) {
+			schemaLines.push('')
+		}
 		schemaLines.push(
 			`// ${domain.charAt(0).toUpperCase() + domain.slice(1)} schemas will be added here when available`,
 		)
