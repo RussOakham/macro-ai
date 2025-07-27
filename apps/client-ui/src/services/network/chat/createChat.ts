@@ -1,10 +1,12 @@
+import { postChats_Body } from '@repo/macro-ai-api-client'
 import { z } from 'zod'
 
 import { chatClient } from '@/lib/api/clients'
-import type { ApiResponse, Chat } from '@/lib/types'
+import type { ChatPostChatsResponse } from '@/lib/types'
+import { validateCreateChatResponse } from '@/lib/validation/api-response'
 
-// Client-side validation schema for createChat request
-const createChatSchemaClient = z.object({
+// Client-side validation schema extending API client schema
+const createChatSchemaClient = postChats_Body.extend({
 	title: z
 		.string()
 		.min(1, 'Title is required')
@@ -12,11 +14,11 @@ const createChatSchemaClient = z.object({
 		.trim(),
 })
 
-// TypeScript type for the request
+// TypeScript type for the request (inferred from enhanced schema)
 type TCreateChatRequest = z.infer<typeof createChatSchemaClient>
 
-// Response type for createChat API
-type CreateChatResponse = ApiResponse<Chat>
+// Response type for createChat API (using API client type)
+type CreateChatResponse = ChatPostChatsResponse
 
 /**
  * Create a new chat for the authenticated user
@@ -29,8 +31,8 @@ const createChat = async (request: TCreateChatRequest) => {
 		title: request.title,
 	})
 
-	// Transform the response to match frontend types
-	return response
+	// Validate response at runtime for type safety
+	return validateCreateChatResponse(response)
 }
 
 export { createChat, createChatSchemaClient }

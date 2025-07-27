@@ -1,7 +1,9 @@
+import type { UserGetUsersMeResponse } from '@repo/macro-ai-api-client'
+
 import { userClient } from '@/lib/api/clients'
 
-// infer ReturnType of getUser with proper typing
-type TGetUserResponse = Awaited<ReturnType<typeof getUser>>
+// Use API client response type for better type safety
+type TGetUserResponse = UserGetUsersMeResponse
 
 const getUser = async () => {
 	// This should now have full type safety and intellisense

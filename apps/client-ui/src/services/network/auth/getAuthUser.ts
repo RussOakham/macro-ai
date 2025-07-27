@@ -1,7 +1,9 @@
+import type { AuthGetUserResponse } from '@repo/macro-ai-api-client'
+
 import { authClient } from '@/lib/api/clients'
 
-// infer ReturnType of getAuthUser
-type TGetAuthUserResponse = Awaited<ReturnType<typeof getAuthUser>>
+// Use API client response type for better type safety
+type TGetAuthUserResponse = AuthGetUserResponse
 
 const getAuthUser = async () => {
 	const response = await authClient.get('/auth/user')

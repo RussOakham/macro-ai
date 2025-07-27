@@ -5,11 +5,11 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { logger } from '@/lib/logger/logger'
-import { Chat } from '@/lib/types'
+import { ChatWithDates } from '@/lib/types'
 import { useDeleteChatMutation } from '@/services/hooks/chat/useDeleteChatMutation'
 
 interface ChatHistoryItemDeleteProps {
-	chat: Chat
+	chat: ChatWithDates
 	isPendingExternal: boolean
 	setConfirmDeleteChatId: (chatId: string | null) => void
 	cancelDeleteChat: () => void

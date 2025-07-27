@@ -23,6 +23,7 @@ export { userSchemas } from './schemas/user.schemas'
 export * from './schemas/auth.schemas'
 export * from './schemas/chat.schemas'
 export * from './schemas/shared.schemas'
+export * from './schemas/user.schemas'
 
 // TypeScript type exports for API requests and responses
 export * from './types/index'

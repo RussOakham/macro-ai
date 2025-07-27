@@ -5,11 +5,11 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { logger } from '@/lib/logger/logger'
-import { Chat } from '@/lib/types'
+import { ChatWithDates } from '@/lib/types'
 import { useUpdateChatMutation } from '@/services/hooks/chat/useUpdateChatMutation'
 
 interface ChatHistoryItemEditProps {
-	chat: Chat
+	chat: ChatWithDates
 	isPending: boolean
 	editTitle: string
 	editingChatId: string | null

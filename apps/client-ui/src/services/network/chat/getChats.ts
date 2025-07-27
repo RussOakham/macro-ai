@@ -1,8 +1,9 @@
 import { chatClient } from '@/lib/api/clients'
-import type { PaginationOptions } from '@/lib/types'
+import type { ChatGetChatsResponse, PaginationOptions } from '@/lib/types'
+import { validateGetChatsResponse } from '@/lib/validation/api-response'
 
-// infer ReturnType of getChats
-type TGetChatsResponse = Awaited<ReturnType<typeof getChats>>
+// Use API client response type for better type safety
+type TGetChatsResponse = ChatGetChatsResponse
 
 /**
  * Get user's chats with pagination
@@ -17,8 +18,8 @@ const getChats = async (options?: PaginationOptions) => {
 		},
 	})
 
-	// Transform the response to match frontend types
-	return response
+	// Validate response at runtime for type safety
+	return validateGetChatsResponse(response)
 }
 
 export { getChats }

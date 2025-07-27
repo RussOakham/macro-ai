@@ -1,7 +1,8 @@
 import { chatClient } from '@/lib/api/clients'
+import type { ChatGetChatsByIdResponse } from '@/lib/types'
 
-// Infer ReturnType of getChatById
-type TGetChatByIdResponse = Awaited<ReturnType<typeof getChatById>>
+// Use API client response type for better type safety
+type TGetChatByIdResponse = ChatGetChatsByIdResponse
 
 /**
  * Get a specific chat with its messages by ID

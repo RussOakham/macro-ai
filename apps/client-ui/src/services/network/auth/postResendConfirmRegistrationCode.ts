@@ -1,10 +1,13 @@
+import { postAuthresendConfirmationCode_Body } from '@repo/macro-ai-api-client'
 import { z } from 'zod'
 
 import { authClient } from '@/lib/api/clients'
+import { emailValidation } from '@/lib/validation/inputs'
 
-const resendConfirmationCodeSchemaClient = z.object({
-	email: z.string().email(),
-})
+const resendConfirmationCodeSchemaClient =
+	postAuthresendConfirmationCode_Body.extend({
+		email: emailValidation(),
+	})
 
 type TResendConfirmationCodeClient = z.infer<
 	typeof resendConfirmationCodeSchemaClient

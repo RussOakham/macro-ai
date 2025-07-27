@@ -117,11 +117,24 @@ export const sharedSchemas = {
 	await fs.writeFile(sharedSchemasPath, sharedSchemasContent)
 
 	// Generate empty user schemas file if no schemas were generated
-	const userSchemasPath = path.join(outputDir, 'schemas', 'user.schemas.ts')
-	try {
-		const userSchemasContent = await fs.readFile(userSchemasPath, 'utf-8')
-		if (userSchemasContent.trim().length <= 20) {
-			// Just imports
+	// Skip if user domain is using custom schema-based approach
+	if (!schemaBasedDomains.includes('user')) {
+		const userSchemasPath = path.join(outputDir, 'schemas', 'user.schemas.ts')
+		try {
+			const userSchemasContent = await fs.readFile(userSchemasPath, 'utf-8')
+			if (userSchemasContent.trim().length <= 20) {
+				// Just imports
+				const emptyUserSchemasContent = `// import { z } from 'zod'
+
+// User schemas will be added here when available
+export const userSchemas = {
+	// Schemas will be exported individually
+}
+`
+				await fs.writeFile(userSchemasPath, emptyUserSchemasContent)
+			}
+		} catch {
+			// File doesn't exist, create it
 			const emptyUserSchemasContent = `// import { z } from 'zod'
 
 // User schemas will be added here when available
@@ -131,16 +144,6 @@ export const userSchemas = {
 `
 			await fs.writeFile(userSchemasPath, emptyUserSchemasContent)
 		}
-	} catch {
-		// File doesn't exist, create it
-		const emptyUserSchemasContent = `// import { z } from 'zod'
-
-// User schemas will be added here when available
-export const userSchemas = {
-	// Schemas will be exported individually
-}
-`
-		await fs.writeFile(userSchemasPath, emptyUserSchemasContent)
 	}
 }
 
