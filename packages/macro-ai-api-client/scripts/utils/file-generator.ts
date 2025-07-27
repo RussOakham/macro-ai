@@ -10,6 +10,100 @@ import {
 } from './type-generator.js'
 
 /**
+ * Generates schema-based types file for a domain
+ */
+function generateSchemaBasedTypesFile(domain: string): string {
+	const lines: string[] = []
+
+	// Add file header
+	lines.push(
+		`// ${domain.charAt(0).toUpperCase() + domain.slice(1)} API Types - auto-generated, do not edit manually`,
+	)
+	lines.push(
+		'// Types are now inferred from Zod schemas for runtime validation and type safety',
+	)
+	lines.push('')
+	lines.push("import type { z } from 'zod'")
+	lines.push('')
+
+	// Add schema imports based on domain
+	if (domain === 'chat') {
+		lines.push('import type {')
+		lines.push('  getChats_Response,')
+		lines.push('  getChatsId_Response,')
+		lines.push('  postChats_Body,')
+		lines.push('  postChats_Response,')
+		lines.push('  putChatsId_Body,')
+		lines.push('  putChatsId_Response,')
+		lines.push('  deleteChatsId_Response,')
+		lines.push('  postChatsIdstream_Body,')
+		lines.push(`} from '../schemas/${domain}.schemas.js'`)
+		lines.push('')
+
+		// Add type definitions
+		lines.push(
+			'// ============================================================================',
+		)
+		lines.push('// REQUEST TYPES (inferred from Zod schemas)')
+		lines.push(
+			'// ============================================================================',
+		)
+		lines.push('')
+		lines.push(
+			'export type ChatPostChatsRequest = z.infer<typeof postChats_Body>',
+		)
+		lines.push('')
+		lines.push(
+			'export type ChatPutChatsByIdRequest = z.infer<typeof putChatsId_Body>',
+		)
+		lines.push('')
+		lines.push(
+			'export type ChatPostChatsByIdStreamRequest = z.infer<typeof postChatsIdstream_Body>',
+		)
+		lines.push('')
+		lines.push(
+			'// ============================================================================',
+		)
+		lines.push('// RESPONSE TYPES (inferred from Zod schemas)')
+		lines.push(
+			'// ============================================================================',
+		)
+		lines.push('')
+		lines.push(
+			'export type ChatGetChatsResponse = z.infer<typeof getChats_Response>',
+		)
+		lines.push('')
+		lines.push(
+			'export type ChatPostChatsResponse = z.infer<typeof postChats_Response>',
+		)
+		lines.push('')
+		lines.push(
+			'export type ChatGetChatsByIdResponse = z.infer<typeof getChatsId_Response>',
+		)
+		lines.push('')
+		lines.push(
+			'export type ChatPutChatsByIdResponse = z.infer<typeof putChatsId_Response>',
+		)
+		lines.push('')
+		lines.push(
+			'export type ChatDeleteChatsByIdResponse = z.infer<typeof deleteChatsId_Response>',
+		)
+	} else {
+		// For other domains, fall back to the original approach
+		lines.push(`// No schema-based types available for ${domain} domain yet`)
+		lines.push(
+			`// Types will be added here when ${domain} endpoints are migrated to schema-based approach`,
+		)
+		lines.push('')
+		lines.push(
+			`export type ${domain.charAt(0).toUpperCase() + domain.slice(1)}Types = Record<string, never>`,
+		)
+	}
+
+	return lines.join('\n')
+}
+
+/**
  * Creates a filtered OpenAPI spec containing only the specified endpoints
  */
 export function createDomainOpenAPISpec(
@@ -73,8 +167,15 @@ export async function generateDomainClient(
 		await fs.writeFile(clientPath, endpointCode)
 
 		// Generate and write domain-specific types file
-		const typeDefinitions = extractTypeDefinitions(endpoints, domain)
-		const typesContent = generateDomainTypesFile(domain, typeDefinitions)
+		let typesContent: string
+		if (domain === 'chat') {
+			// Use schema-based type generation for chat domain
+			typesContent = generateSchemaBasedTypesFile(domain)
+		} else {
+			// Use original approach for other domains
+			const typeDefinitions = extractTypeDefinitions(endpoints, domain)
+			typesContent = generateDomainTypesFile(domain, typeDefinitions)
+		}
 		const typesPath = path.join(outputDir, 'types', `${domain}.types.ts`)
 		await fs.writeFile(typesPath, typesContent)
 

@@ -86,6 +86,13 @@ async function generateDomainClients(
 	for (const domain of domains) {
 		const endpoints = domainGroups[domain]
 		if (endpoints.length > 0) {
+			// Skip chat domain - using custom schema-based approach
+			if (domain === 'chat') {
+				console.log(
+					`Skipping ${domain} domain - using custom schema-based approach`,
+				)
+				continue
+			}
 			await generateDomainClient(
 				domain,
 				endpoints,

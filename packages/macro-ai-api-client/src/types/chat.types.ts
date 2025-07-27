@@ -1,79 +1,41 @@
 // Chat API Types - auto-generated, do not edit manually
+// Types are now inferred from Zod schemas for runtime validation and type safety
 
-export interface ChatGetChatsResponse {
-	success: boolean
-	data: {
-		id: string
-		userId: string
-		title: string
-		createdAt: string
-		updatedAt: string
-	}[]
-	meta: {
-		page: number
-		limit: number
-		total: number
-	}
-}
+import type { z } from 'zod'
 
-export interface ChatPostChatsRequest {
-	title: string
-}
+import type {
+	deleteChatsId_Response,
+	getChats_Response,
+	getChatsId_Response,
+	postChats_Body,
+	postChats_Response,
+	postChatsIdstream_Body,
+	putChatsId_Body,
+	putChatsId_Response,
+} from '../schemas/chat.schemas.js'
 
-export interface ChatPostChatsResponse {
-	success: boolean
-	data: {
-		id: string
-		userId: string
-		title: string
-		createdAt: string
-		updatedAt: string
-	}
-}
+// ============================================================================
+// REQUEST TYPES (inferred from Zod schemas)
+// ============================================================================
 
-export interface ChatGetChatsByIdResponse {
-	success: boolean
-	data: {
-		id: string
-		userId: string
-		title: string
-		createdAt: string
-		updatedAt: string
-		messages: {
-			id: string
-			chatId: string
-			role: string
-			content: string
-			metadata: unknown
-			embedding: number[]
-			createdAt: string
-		}[]
-	}
-}
+export type ChatPostChatsRequest = z.infer<typeof postChats_Body>
 
-export interface ChatPutChatsByIdRequest {
-	title: string
-}
+export type ChatPutChatsByIdRequest = z.infer<typeof putChatsId_Body>
 
-export interface ChatPutChatsByIdResponse {
-	success: boolean
-	data: {
-		id: string
-		userId: string
-		title: string
-		createdAt: string
-		updatedAt: string
-	}
-}
+export type ChatPostChatsByIdStreamRequest = z.infer<
+	typeof postChatsIdstream_Body
+>
 
-export interface ChatDeleteChatsByIdResponse {
-	success?: boolean
-	message?: string
-}
+// ============================================================================
+// RESPONSE TYPES (inferred from Zod schemas)
+// ============================================================================
 
-export interface ChatPostChatsByIdStreamRequest {
-	messages: {
-		role: 'user' | 'assistant' | 'system'
-		content: string
-	}[]
-}
+export type ChatGetChatsResponse = z.infer<typeof getChats_Response>
+
+export type ChatPostChatsResponse = z.infer<typeof postChats_Response>
+
+export type ChatGetChatsByIdResponse = z.infer<typeof getChatsId_Response>
+
+export type ChatPutChatsByIdResponse = z.infer<typeof putChatsId_Response>
+
+export type ChatDeleteChatsByIdResponse = z.infer<typeof deleteChatsId_Response>
