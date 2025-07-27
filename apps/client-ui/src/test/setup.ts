@@ -1,0 +1,78 @@
+import { vi } from 'vitest'
+
+import { IStandardizedError } from '@/lib/types'
+
+import '@testing-library/jest-dom'
+
+// Mock environment variables
+vi.mock('@/lib/validation/environment', () => ({
+	validateEnvironment: vi.fn(() => ({
+		VITE_API_URL: 'http://localhost:3000',
+		VITE_API_KEY: 'test-api-key',
+		VITE_APP_ENV: 'test',
+	})),
+}))
+
+// Mock router
+vi.mock('@/main', () => ({
+	router: {
+		navigate: vi.fn(),
+		state: {
+			location: {
+				pathname: '/test',
+			},
+		},
+	},
+}))
+
+// Mock logger
+vi.mock('@/lib/logger/logger', () => ({
+	logger: {
+		error: vi.fn(),
+		warn: vi.fn(),
+		info: vi.fn(),
+		debug: vi.fn(),
+	},
+}))
+
+// Mock shared refresh promise utilities
+vi.mock('@/lib/auth/shared-refresh-promise', () => ({
+	setSharedRefreshPromise: vi.fn(),
+	clearSharedRefreshPromise: vi.fn(),
+	getSharedRefreshPromise: vi.fn(() => null),
+	waitForRefreshCompletion: vi.fn(() => Promise.resolve()),
+}))
+
+// Mock error standardization
+vi.mock('@/lib/errors/standardize-error', () => ({
+	standardizeError: vi.fn((error) => error as IStandardizedError),
+}))
+
+// Global test utilities
+global.ResizeObserver = vi.fn().mockImplementation(() => ({
+	observe: vi.fn(),
+	unobserve: vi.fn(),
+	disconnect: vi.fn(),
+}))
+
+// Mock IntersectionObserver
+global.IntersectionObserver = vi.fn().mockImplementation(() => ({
+	observe: vi.fn(),
+	unobserve: vi.fn(),
+	disconnect: vi.fn(),
+}))
+
+// Mock matchMedia
+Object.defineProperty(window, 'matchMedia', {
+	writable: true,
+	value: vi.fn().mockImplementation((query: string) => ({
+		matches: false,
+		media: query,
+		onchange: null,
+		addListener: vi.fn(), // deprecated
+		removeListener: vi.fn(), // deprecated
+		addEventListener: vi.fn(),
+		removeEventListener: vi.fn(),
+		dispatchEvent: vi.fn(),
+	})),
+})
