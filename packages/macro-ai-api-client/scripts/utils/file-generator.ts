@@ -100,10 +100,27 @@ function extractSchemasAndEndpoints(
 	schemaLines.push("import { z } from 'zod'")
 	schemaLines.push('')
 
+	// Extract schema names used in content first
+	const usedSchemas = new Set<string>()
+	const schemaMatches = content.match(/\b\w+_Body\b/g)
+	if (schemaMatches) {
+		schemaMatches.forEach((schema) => usedSchemas.add(schema))
+	}
+
 	// Add imports for endpoints
 	endpointLines.push(
 		"import { makeApi, Zodios, type ZodiosOptions } from '@zodios/core'",
 	)
+	endpointLines.push("import { z } from 'zod'")
+
+	// Add schema import if any schemas are used
+	if (usedSchemas.size > 0) {
+		endpointLines.push('')
+		endpointLines.push(`import {`)
+		endpointLines.push(`  ${Array.from(usedSchemas).join(',\n  ')}`)
+		endpointLines.push(`} from '../schemas/${domain}.schemas.js'`)
+	}
+
 	endpointLines.push('')
 
 	for (const line of lines) {
@@ -118,31 +135,17 @@ function extractSchemasAndEndpoints(
 
 		// Detect endpoints
 		if (line.includes('const endpoints = makeApi([')) {
+			inSchemas = false // Stop collecting schemas
 			inEndpoints = true
 			endpointLines.push(`const ${domain}Endpoints = makeApi([`)
 			continue
 		}
 
-		// Detect exports
+		// Skip original exports - we'll add our own at the end
 		if (
 			line.includes('export const api') ||
 			line.includes('export function createApiClient')
 		) {
-			if (line.includes('export const api')) {
-				endpointLines.push(
-					`export const ${domain}Client = new Zodios(${domain}Endpoints)`,
-				)
-			} else if (line.includes('export function createApiClient')) {
-				const capitalizedDomain =
-					domain.charAt(0).toUpperCase() + domain.slice(1)
-				endpointLines.push(
-					`export function create${capitalizedDomain}Client(baseUrl: string, options?: ZodiosOptions) {`,
-				)
-				endpointLines.push(
-					`  return new Zodios(baseUrl, ${domain}Endpoints, options)`,
-				)
-				endpointLines.push('}')
-			}
 			continue
 		}
 
@@ -151,27 +154,57 @@ function extractSchemasAndEndpoints(
 			schemaLines.push(line)
 		} else if (inEndpoints && !line.includes('export')) {
 			endpointLines.push(line)
-		}
-
-		// End of endpoints section
-		if (inEndpoints && line.includes('])')) {
-			inEndpoints = false
+			// End of endpoints section - look for closing bracket
+			if (line.trim() === '])') {
+				inEndpoints = false
+			}
 		}
 	}
 
-	// Add schema exports
+	// Add individual schema exports
 	schemaLines.push('')
-	schemaLines.push(`export const ${domain}Schemas = {`)
-	// Extract schema names and add to export object
+	// Extract schema names and add individual exports
 	const schemaNames = schemaLines
 		.filter((line) => line.includes('const ') && line.includes('_Body = z'))
 		.map((line) => line.split('const ')[1]?.split(' =')[0])
 		.filter((name): name is string => Boolean(name))
 
-	for (const schemaName of schemaNames) {
-		schemaLines.push(`  ${schemaName},`)
+	if (schemaNames.length > 0) {
+		schemaLines.push('// Individual exports for direct access')
+		schemaLines.push(`export {`)
+		for (const schemaName of schemaNames) {
+			schemaLines.push(`  ${schemaName},`)
+		}
+		schemaLines.push('}')
+	} else {
+		// Export empty schemas object for domains with no schemas
+		schemaLines.push('')
+		schemaLines.push(
+			`// ${domain.charAt(0).toUpperCase() + domain.slice(1)} schemas will be added here when available`,
+		)
+		schemaLines.push(`export const ${domain}Schemas = {`)
+		schemaLines.push('  // Schemas will be exported individually')
+		schemaLines.push('}')
 	}
-	schemaLines.push('}')
+
+	// Schema imports were already added at the beginning
+
+	// Add endpoint exports
+	endpointLines.push('')
+	endpointLines.push(
+		`export const ${domain}Client = new Zodios(${domain}Endpoints)`,
+	)
+	endpointLines.push('')
+	const capitalizedDomain = domain.charAt(0).toUpperCase() + domain.slice(1)
+	endpointLines.push(
+		`export function create${capitalizedDomain}Client(baseUrl: string, options?: ZodiosOptions) {`,
+	)
+	endpointLines.push(
+		`  return new Zodios(baseUrl, ${domain}Endpoints, options)`,
+	)
+	endpointLines.push('}')
+	endpointLines.push('')
+	endpointLines.push(`export { ${domain}Endpoints }`)
 
 	return {
 		schemas: schemaLines.join('\n'),

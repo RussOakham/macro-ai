@@ -1,8 +1,7 @@
-// MANUAL IMPLEMENTATION - Do not overwrite during generation
 import { makeApi, Zodios, type ZodiosOptions } from '@zodios/core'
 import { z } from 'zod'
 
-import { postChatsIdstream_Body } from '../schemas/chat.schemas'
+import { postChatsIdstream_Body } from '../schemas/chat.schemas.js'
 
 const chatEndpoints = makeApi([
 	{

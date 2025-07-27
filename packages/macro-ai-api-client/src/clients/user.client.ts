@@ -1,13 +1,11 @@
-// MANUAL IMPLEMENTATION - Do not overwrite during generation
 import { makeApi, Zodios, type ZodiosOptions } from '@zodios/core'
 import { z } from 'zod'
 
-// User endpoints extracted from output.ts
 const userEndpoints = makeApi([
 	{
 		method: 'get',
 		path: '/users/:id',
-		description: `Retrieves a user's profile information by their unique identifier. Requires authentication.`,
+		description: `Retrieves a user&#x27;s profile information by their unique identifier. Requires authentication.`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -70,7 +68,7 @@ const userEndpoints = makeApi([
 	{
 		method: 'get',
 		path: '/users/me',
-		description: `Retrieves the authenticated user's profile information including personal details and account status`,
+		description: `Retrieves the authenticated user&#x27;s profile information including personal details and account status`,
 		requestFormat: 'json',
 		response: z
 			.object({

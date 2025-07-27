@@ -99,14 +99,20 @@ src/
 ### Scripts
 
 ```bash
-# Verify modular structure
+# Generate API clients and schemas from OpenAPI spec
 pnpm generate
 
-# Build the package
+# Build the package (includes auto-generation)
 pnpm build
+
+# Start development mode with watch (includes auto-generation)
+pnpm dev
 
 # Type check
 pnpm type-check
+
+# Run tests
+pnpm test
 
 # Lint code
 pnpm lint
@@ -115,14 +121,16 @@ pnpm lint
 pnpm clean
 ```
 
-### Modular Architecture
+### Auto-Generated Architecture
 
-The package uses a modular architecture with domain-specific clients:
+The package uses **automatic code generation** from the OpenAPI specification:
 
-1. **Domain Separation**: Auth, Chat, and User clients are separate
-2. **Tree Shaking**: Import only the clients you need
-3. **Type Safety**: Full TypeScript support with Zod schemas
-4. **Maintainability**: Each domain is independently maintained
+1. **Zero Manual Maintenance**: All clients and schemas are auto-generated from the API spec
+2. **Always in Sync**: Clients automatically reflect the latest API changes
+3. **Domain Separation**: Auth, Chat, and User clients are generated separately
+4. **Tree Shaking**: Import only the clients you need
+5. **Type Safety**: Full TypeScript support with auto-generated Zod schemas
+6. **Build Integration**: Generation runs automatically during dev and build processes
 
 ## Available Exports
 
@@ -159,12 +167,22 @@ import {
 
 ## Contributing
 
-This package uses a modular architecture. To make changes:
+This package uses **automatic code generation**. To make changes:
 
-1. Update the individual client or schema files in `src/clients/` or `src/schemas/`
-2. Run `pnpm type-check` to verify TypeScript compatibility
-3. Run `pnpm build` to create distribution files
-4. Test the changes in the consuming applications
+1. **API Changes**: Modify the OpenAPI specification in the express-api project
+2. **Generation Logic**: Update `scripts/generate-modular.ts` or `scripts/utils/` if needed
+3. **Test Changes**: Run `pnpm test` to ensure compatibility
+4. **Regenerate**: Run `pnpm generate` to update clients and schemas
+5. **Update Documentation**: Keep this README current with any architectural changes
+
+### Important Notes
+
+- **Never edit generated files manually** - they will be overwritten on next generation
+- **All client and schema files are auto-generated** from the OpenAPI specification
+- **Changes to the API** automatically flow through to the clients when regenerated
+- **The generation process** runs automatically during `pnpm dev` and `pnpm build`
+
+The auto-generation approach ensures that the API clients are always in sync with the backend specification, eliminating manual maintenance overhead and reducing the risk of inconsistencies.
 
 ## Related Packages
 

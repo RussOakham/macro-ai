@@ -1,4 +1,3 @@
-// MANUAL IMPLEMENTATION - Do not overwrite during generation
 import { makeApi, Zodios, type ZodiosOptions } from '@zodios/core'
 import { z } from 'zod'
 
@@ -7,7 +6,7 @@ import {
 	postAuthconfirmRegistration_Body,
 	postAuthlogin_Body,
 	postAuthregister_Body,
-} from '../schemas/auth.schemas'
+} from '../schemas/auth.schemas.js'
 
 const authEndpoints = makeApi([
 	{

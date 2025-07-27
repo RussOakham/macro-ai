@@ -24,6 +24,12 @@ const postAuthconfirmForgotPassword_Body = z
 		confirmPassword: z.string().min(8).max(15).regex(/\d/),
 	})
 	.passthrough()
+export const schemas = {
+	postAuthregister_Body,
+	postAuthconfirmRegistration_Body,
+	postAuthlogin_Body,
+	postAuthconfirmForgotPassword_Body,
+}
 
 // Individual exports for direct access
 export {

@@ -14,6 +14,9 @@ const postChatsIdstream_Body = z
 			.min(1),
 	})
 	.passthrough()
+export const schemas = {
+	postChatsIdstream_Body,
+}
 
 // Individual exports for direct access
 export { postChatsIdstream_Body }
