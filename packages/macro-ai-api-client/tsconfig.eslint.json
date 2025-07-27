@@ -4,5 +4,6 @@
 		"noEmit": true,
 		"types": ["node"]
 	},
-	"include": ["src/**/*", "scripts/**/*", "*.ts", "*.js", "*.mjs", "*.cjs"]
+	"include": ["src/**/*", "scripts/**/*", "*.ts", "*.js", "*.mjs", "*.cjs"],
+	"exclude": ["node_modules", "dist", "coverage"]
 }

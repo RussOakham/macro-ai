@@ -8,6 +8,18 @@ const absolutePathToOutput = path.resolve(__dirname, 'src/output.ts')
 
 /** @type {import("@typescript-eslint/utils").TSESLint.FlatConfig.Config} */
 export default repoConfig.config(
+	// Global ignores - must be first
+	{
+		ignores: [
+			'dist/**',
+			'node_modules/**',
+			'coverage/**',
+			'coverage-final.json',
+			'coverage-summary.json',
+			'*.lcov',
+			absolutePathToOutput,
+		],
+	},
 	...repoConfig.configs.base,
 	{
 		languageOptions: {
@@ -18,8 +30,6 @@ export default repoConfig.config(
 				ecmaVersion: 2022,
 			},
 		},
-		// Use absolute path for output.ts
-		ignores: ['dist/**', 'node_modules/**', absolutePathToOutput],
 		rules: {
 			'func-style': 'off',
 		},
@@ -34,6 +44,5 @@ export default repoConfig.config(
 				ecmaVersion: 2022,
 			},
 		},
-		ignores: ['dist/**', 'node_modules/**', absolutePathToOutput],
 	},
 )
