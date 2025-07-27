@@ -83,11 +83,13 @@ async function generateDomainClients(
 
 	// Generate client for each domain
 	const domains = ['auth', 'chat', 'user'] as const
+	const schemaBasedDomains = ['auth', 'chat', 'user'] // All domains now use schema-based approach
+
 	for (const domain of domains) {
 		const endpoints = domainGroups[domain]
 		if (endpoints.length > 0) {
-			// Skip chat domain - using custom schema-based approach
-			if (domain === 'chat') {
+			// Skip domains using custom schema-based approach
+			if (schemaBasedDomains.includes(domain)) {
 				console.log(
 					`Skipping ${domain} domain - using custom schema-based approach`,
 				)

@@ -1,6 +1,11 @@
 import { makeApi, Zodios, type ZodiosOptions } from '@zodios/core'
 import { z } from 'zod'
 
+import {
+	getUsersId_Response,
+	getUsersMe_Response,
+} from '../schemas/user.schemas.js'
+
 const userEndpoints = makeApi([
 	{
 		method: 'get',
@@ -14,22 +19,7 @@ const userEndpoints = makeApi([
 				schema: z.string().uuid(),
 			},
 		],
-		response: z
-			.object({
-				user: z
-					.object({
-						id: z.string().uuid(),
-						email: z.string().max(255),
-						emailVerified: z.boolean().nullable(),
-						firstName: z.string().max(255).nullable(),
-						lastName: z.string().max(255).nullable(),
-						createdAt: z.string().nullable(),
-						updatedAt: z.string().nullable(),
-						lastLogin: z.string().nullable(),
-					})
-					.passthrough(),
-			})
-			.passthrough(),
+		response: getUsersId_Response,
 		errors: [
 			{
 				status: 400,
@@ -70,22 +60,7 @@ const userEndpoints = makeApi([
 		path: '/users/me',
 		description: `Retrieves the authenticated user&#x27;s profile information including personal details and account status`,
 		requestFormat: 'json',
-		response: z
-			.object({
-				user: z
-					.object({
-						id: z.string().uuid(),
-						email: z.string().max(255),
-						emailVerified: z.boolean().nullable(),
-						firstName: z.string().max(255).nullable(),
-						lastName: z.string().max(255).nullable(),
-						createdAt: z.string().nullable(),
-						updatedAt: z.string().nullable(),
-						lastLogin: z.string().nullable(),
-					})
-					.passthrough(),
-			})
-			.passthrough(),
+		response: getUsersMe_Response,
 		errors: [
 			{
 				status: 400,

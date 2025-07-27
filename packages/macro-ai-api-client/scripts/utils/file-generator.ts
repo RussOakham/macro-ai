@@ -88,6 +88,125 @@ function generateSchemaBasedTypesFile(domain: string): string {
 		lines.push(
 			'export type ChatDeleteChatsByIdResponse = z.infer<typeof deleteChatsId_Response>',
 		)
+	} else if (domain === 'auth') {
+		lines.push('import type {')
+		lines.push('  postAuthregister_Body,')
+		lines.push('  postAuthconfirmRegistration_Body,')
+		lines.push('  postAuthresendConfirmationCode_Body,')
+		lines.push('  postAuthlogin_Body,')
+		lines.push('  postAuthforgotPassword_Body,')
+		lines.push('  postAuthconfirmForgotPassword_Body,')
+		lines.push('  postAuthregister_Response,')
+		lines.push('  postAuthconfirmRegistration_Response,')
+		lines.push('  postAuthresendConfirmationCode_Response,')
+		lines.push('  postAuthlogin_Response,')
+		lines.push('  postAuthlogout_Response,')
+		lines.push('  postAuthrefresh_Response,')
+		lines.push('  postAuthforgotPassword_Response,')
+		lines.push('  postAuthconfirmForgotPassword_Response,')
+		lines.push('  getAuthuser_Response,')
+		lines.push(`} from '../schemas/${domain}.schemas.js'`)
+		lines.push('')
+
+		// Add type definitions
+		lines.push(
+			'// ============================================================================',
+		)
+		lines.push('// REQUEST TYPES (inferred from Zod schemas)')
+		lines.push(
+			'// ============================================================================',
+		)
+		lines.push('')
+		lines.push(
+			'export type AuthPostRegisterRequest = z.infer<typeof postAuthregister_Body>',
+		)
+		lines.push('')
+		lines.push(
+			'export type AuthPostConfirmRegistrationRequest = z.infer<typeof postAuthconfirmRegistration_Body>',
+		)
+		lines.push('')
+		lines.push(
+			'export type AuthPostResendConfirmationCodeRequest = z.infer<typeof postAuthresendConfirmationCode_Body>',
+		)
+		lines.push('')
+		lines.push(
+			'export type AuthPostLoginRequest = z.infer<typeof postAuthlogin_Body>',
+		)
+		lines.push('')
+		lines.push(
+			'export type AuthPostForgotPasswordRequest = z.infer<typeof postAuthforgotPassword_Body>',
+		)
+		lines.push('')
+		lines.push(
+			'export type AuthPostConfirmForgotPasswordRequest = z.infer<typeof postAuthconfirmForgotPassword_Body>',
+		)
+		lines.push('')
+		lines.push(
+			'// ============================================================================',
+		)
+		lines.push('// RESPONSE TYPES (inferred from Zod schemas)')
+		lines.push(
+			'// ============================================================================',
+		)
+		lines.push('')
+		lines.push(
+			'export type AuthPostRegisterResponse = z.infer<typeof postAuthregister_Response>',
+		)
+		lines.push('')
+		lines.push(
+			'export type AuthPostConfirmRegistrationResponse = z.infer<typeof postAuthconfirmRegistration_Response>',
+		)
+		lines.push('')
+		lines.push(
+			'export type AuthPostResendConfirmationCodeResponse = z.infer<typeof postAuthresendConfirmationCode_Response>',
+		)
+		lines.push('')
+		lines.push(
+			'export type AuthPostLoginResponse = z.infer<typeof postAuthlogin_Response>',
+		)
+		lines.push('')
+		lines.push(
+			'export type AuthPostLogoutResponse = z.infer<typeof postAuthlogout_Response>',
+		)
+		lines.push('')
+		lines.push(
+			'export type AuthPostRefreshResponse = z.infer<typeof postAuthrefresh_Response>',
+		)
+		lines.push('')
+		lines.push(
+			'export type AuthPostForgotPasswordResponse = z.infer<typeof postAuthforgotPassword_Response>',
+		)
+		lines.push('')
+		lines.push(
+			'export type AuthPostConfirmForgotPasswordResponse = z.infer<typeof postAuthconfirmForgotPassword_Response>',
+		)
+		lines.push('')
+		lines.push(
+			'export type AuthGetUserResponse = z.infer<typeof getAuthuser_Response>',
+		)
+	} else if (domain === 'user') {
+		lines.push('import type {')
+		lines.push('  getUsersId_Response,')
+		lines.push('  getUsersMe_Response,')
+		lines.push(`} from '../schemas/${domain}.schemas.js'`)
+		lines.push('')
+
+		// Add type definitions
+		lines.push(
+			'// ============================================================================',
+		)
+		lines.push('// RESPONSE TYPES (inferred from Zod schemas)')
+		lines.push(
+			'// ============================================================================',
+		)
+		lines.push('')
+		lines.push(
+			'export type UserGetUsersByIdResponse = z.infer<typeof getUsersId_Response>',
+		)
+		lines.push('')
+		lines.push(
+			'export type UserGetUsersMeResponse = z.infer<typeof getUsersMe_Response>',
+		)
 	} else {
 		// For other domains, fall back to the original approach
 		lines.push(`// No schema-based types available for ${domain} domain yet`)
@@ -168,8 +287,8 @@ export async function generateDomainClient(
 
 		// Generate and write domain-specific types file
 		let typesContent: string
-		if (domain === 'chat') {
-			// Use schema-based type generation for chat domain
+		if (['chat', 'auth', 'user'].includes(domain)) {
+			// Use schema-based type generation for schema-driven domains
 			typesContent = generateSchemaBasedTypesFile(domain)
 		} else {
 			// Use original approach for other domains

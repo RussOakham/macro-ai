@@ -1,80 +1,76 @@
 // Auth API Types - auto-generated, do not edit manually
+// Types are now inferred from Zod schemas for runtime validation and type safety
 
-export interface AuthPostRegisterRequest {
-	email: string
-	password: string
-	confirmPassword: string
-}
+import type { z } from 'zod'
 
-export interface AuthPostRegisterResponse {
-	message: string
-}
+import type {
+	getAuthuser_Response,
+	postAuthconfirmForgotPassword_Body,
+	postAuthconfirmForgotPassword_Response,
+	postAuthconfirmRegistration_Body,
+	postAuthconfirmRegistration_Response,
+	postAuthforgotPassword_Body,
+	postAuthforgotPassword_Response,
+	postAuthlogin_Body,
+	postAuthlogin_Response,
+	postAuthlogout_Response,
+	postAuthrefresh_Response,
+	postAuthregister_Body,
+	postAuthregister_Response,
+	postAuthresendConfirmationCode_Body,
+	postAuthresendConfirmationCode_Response,
+} from '../schemas/auth.schemas.js'
 
-export interface AuthPostConfirmRegistrationRequest {
-	email: string
-	code: number
-}
+// ============================================================================
+// REQUEST TYPES (inferred from Zod schemas)
+// ============================================================================
 
-export interface AuthPostConfirmRegistrationResponse {
-	message: string
-}
+export type AuthPostRegisterRequest = z.infer<typeof postAuthregister_Body>
 
-export interface AuthPostResendConfirmationCodeRequest {
-	email: string
-}
+export type AuthPostConfirmRegistrationRequest = z.infer<
+	typeof postAuthconfirmRegistration_Body
+>
 
-export interface AuthPostResendConfirmationCodeResponse {
-	message: string
-}
+export type AuthPostResendConfirmationCodeRequest = z.infer<
+	typeof postAuthresendConfirmationCode_Body
+>
 
-export interface AuthPostLoginRequest {
-	email: string
-	password: string
-}
+export type AuthPostLoginRequest = z.infer<typeof postAuthlogin_Body>
 
-export interface AuthPostLoginResponse {
-	message: string
-	tokens: {
-		accessToken: string
-		refreshToken: string
-		expiresIn: number
-	}
-}
+export type AuthPostForgotPasswordRequest = z.infer<
+	typeof postAuthforgotPassword_Body
+>
 
-export interface AuthPostForgotPasswordRequest {
-	email: string
-}
+export type AuthPostConfirmForgotPasswordRequest = z.infer<
+	typeof postAuthconfirmForgotPassword_Body
+>
 
-export interface AuthPostForgotPasswordResponse {
-	message: string
-}
+// ============================================================================
+// RESPONSE TYPES (inferred from Zod schemas)
+// ============================================================================
 
-export interface AuthPostConfirmForgotPasswordRequest {
-	email: string
-	code: string
-	newPassword: string
-	confirmPassword: string
-}
+export type AuthPostRegisterResponse = z.infer<typeof postAuthregister_Response>
 
-export interface AuthPostConfirmForgotPasswordResponse {
-	message: string
-}
+export type AuthPostConfirmRegistrationResponse = z.infer<
+	typeof postAuthconfirmRegistration_Response
+>
 
-export interface AuthPostLogoutResponse {
-	message: string
-}
+export type AuthPostResendConfirmationCodeResponse = z.infer<
+	typeof postAuthresendConfirmationCode_Response
+>
 
-export interface AuthPostRefreshResponse {
-	message: string
-	tokens: {
-		accessToken: string
-		refreshToken: string
-		expiresIn: number
-	}
-}
+export type AuthPostLoginResponse = z.infer<typeof postAuthlogin_Response>
 
-export interface AuthGetUserResponse {
-	id: string
-	email: string
-	emailVerified: boolean
-}
+export type AuthPostLogoutResponse = z.infer<typeof postAuthlogout_Response>
+
+export type AuthPostRefreshResponse = z.infer<typeof postAuthrefresh_Response>
+
+export type AuthPostForgotPasswordResponse = z.infer<
+	typeof postAuthforgotPassword_Response
+>
+
+export type AuthPostConfirmForgotPasswordResponse = z.infer<
+	typeof postAuthconfirmForgotPassword_Response
+>
+
+export type AuthGetUserResponse = z.infer<typeof getAuthuser_Response>

@@ -2,10 +2,21 @@ import { makeApi, Zodios, type ZodiosOptions } from '@zodios/core'
 import { z } from 'zod'
 
 import {
+	getAuthuser_Response,
 	postAuthconfirmForgotPassword_Body,
+	postAuthconfirmForgotPassword_Response,
 	postAuthconfirmRegistration_Body,
+	postAuthconfirmRegistration_Response,
+	postAuthforgotPassword_Body,
+	postAuthforgotPassword_Response,
 	postAuthlogin_Body,
+	postAuthlogin_Response,
+	postAuthlogout_Response,
+	postAuthrefresh_Response,
 	postAuthregister_Body,
+	postAuthregister_Response,
+	postAuthresendConfirmationCode_Body,
+	postAuthresendConfirmationCode_Response,
 } from '../schemas/auth.schemas.js'
 
 const authEndpoints = makeApi([
@@ -21,7 +32,7 @@ const authEndpoints = makeApi([
 				schema: postAuthconfirmForgotPassword_Body,
 			},
 		],
-		response: z.object({ message: z.string() }).passthrough(),
+		response: postAuthconfirmForgotPassword_Response,
 		errors: [
 			{
 				status: 400,
@@ -64,7 +75,7 @@ const authEndpoints = makeApi([
 				schema: postAuthconfirmRegistration_Body,
 			},
 		],
-		response: z.object({ message: z.string() }).passthrough(),
+		response: postAuthconfirmRegistration_Response,
 		errors: [
 			{
 				status: 400,
@@ -109,10 +120,10 @@ const authEndpoints = makeApi([
 			{
 				name: 'body',
 				type: 'Body',
-				schema: z.object({ email: z.string().email() }).passthrough(),
+				schema: postAuthforgotPassword_Body,
 			},
 		],
-		response: z.object({ message: z.string() }).passthrough(),
+		response: postAuthforgotPassword_Response,
 		errors: [
 			{
 				status: 400,
@@ -155,18 +166,7 @@ const authEndpoints = makeApi([
 				schema: postAuthlogin_Body,
 			},
 		],
-		response: z
-			.object({
-				message: z.string(),
-				tokens: z
-					.object({
-						accessToken: z.string(),
-						refreshToken: z.string(),
-						expiresIn: z.number(),
-					})
-					.passthrough(),
-			})
-			.passthrough(),
+		response: postAuthlogin_Response,
 		errors: [
 			{
 				status: 400,
@@ -207,7 +207,7 @@ const authEndpoints = makeApi([
 		path: '/auth/logout',
 		description: `Logs out the authenticated user and invalidates their session.`,
 		requestFormat: 'json',
-		response: z.object({ message: z.string() }).passthrough(),
+		response: postAuthlogout_Response,
 		errors: [
 			{
 				status: 401,
@@ -226,18 +226,7 @@ const authEndpoints = makeApi([
 		path: '/auth/refresh',
 		description: `Refreshes the user&#x27;s access token using a valid refresh token.`,
 		requestFormat: 'json',
-		response: z
-			.object({
-				message: z.string(),
-				tokens: z
-					.object({
-						accessToken: z.string(),
-						refreshToken: z.string(),
-						expiresIn: z.number(),
-					})
-					.passthrough(),
-			})
-			.passthrough(),
+		response: postAuthrefresh_Response,
 		errors: [
 			{
 				status: 400,
@@ -273,7 +262,7 @@ const authEndpoints = makeApi([
 				schema: postAuthregister_Body,
 			},
 		],
-		response: z.object({ message: z.string() }).passthrough(),
+		response: postAuthregister_Response,
 		errors: [
 			{
 				status: 400,
@@ -318,10 +307,10 @@ const authEndpoints = makeApi([
 			{
 				name: 'body',
 				type: 'Body',
-				schema: z.object({ email: z.string().email() }).passthrough(),
+				schema: postAuthresendConfirmationCode_Body,
 			},
 		],
-		response: z.object({ message: z.string() }).passthrough(),
+		response: postAuthresendConfirmationCode_Response,
 		errors: [
 			{
 				status: 400,
@@ -362,9 +351,7 @@ const authEndpoints = makeApi([
 		path: '/auth/user',
 		description: `Retrieves the authenticated user&#x27;s information from Cognito.`,
 		requestFormat: 'json',
-		response: z
-			.object({ id: z.string(), email: z.string(), emailVerified: z.boolean() })
-			.passthrough(),
+		response: getAuthuser_Response,
 		errors: [
 			{
 				status: 401,
