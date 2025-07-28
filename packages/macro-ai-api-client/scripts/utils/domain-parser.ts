@@ -69,7 +69,19 @@ export function getDomainFromPath(path: string): string {
 }
 
 /**
+ * Validates that a path item is a valid PathItemObject
+ */
+function isValidPathItem(pathItem: unknown): pathItem is PathItemObject {
+	return (
+		typeof pathItem === 'object' &&
+		pathItem !== null &&
+		!Array.isArray(pathItem)
+	)
+}
+
+/**
  * Parses OpenAPI spec and groups endpoints by domain
+ * Includes validation to handle malformed OpenAPI specs gracefully
  */
 export function parseEndpointsByDomain(openApiDoc: OpenAPIObject): DomainGroup {
 	const domains: DomainGroup = {
@@ -79,31 +91,70 @@ export function parseEndpointsByDomain(openApiDoc: OpenAPIObject): DomainGroup {
 		system: [],
 	}
 
-	for (const [path, pathItem] of Object.entries(openApiDoc.paths)) {
-		const pathItemObj = pathItem as PathItemObject
-		const domain = getDomainFromPath(path)
+	// Validate that paths is a valid object with entries
+	if (typeof openApiDoc.paths !== 'object') {
+		console.warn('[Domain Parser] OpenAPI spec has invalid paths object')
+		return domains
+	}
 
-		// Skip system endpoints for now (health, system-info)
-		if (domain === 'system' || domain === 'shared') continue
+	// Check if paths object is empty
+	if (Object.keys(openApiDoc.paths).length === 0) {
+		console.warn('[Domain Parser] OpenAPI spec has no paths defined')
+		return domains
+	}
 
-		// Extract all HTTP methods for this path
-		const methods = ['get', 'post', 'put', 'delete', 'patch'] as const
+	try {
+		for (const [path, pathItem] of Object.entries(openApiDoc.paths)) {
+			// Validate path is a string
+			if (typeof path !== 'string' || !path) {
+				console.warn(`[Domain Parser] Invalid path: ${String(path)}`)
+				continue
+			}
 
-		for (const method of methods) {
-			const operation = pathItemObj[method]
-			if (operation) {
-				const endpoint: DomainEndpoint = {
-					path,
-					method,
-					operation,
-					domain,
+			// Validate pathItem structure
+			if (!isValidPathItem(pathItem)) {
+				console.warn(`[Domain Parser] Invalid path item for path: ${path}`)
+				continue
+			}
+
+			// pathItem is now validated as PathItemObject
+			const pathItemObj = pathItem
+			const domain = getDomainFromPath(path)
+
+			// Skip system endpoints for now (health, system-info)
+			if (domain === 'system' || domain === 'shared') continue
+
+			// Extract all HTTP methods for this path
+			const methods = ['get', 'post', 'put', 'delete', 'patch'] as const
+
+			for (const method of methods) {
+				try {
+					const operation = pathItemObj[method]
+					if (operation && typeof operation === 'object') {
+						const endpoint: DomainEndpoint = {
+							path,
+							method,
+							operation,
+							domain,
+						}
+
+						if (domain === 'auth') domains.auth.push(endpoint)
+						else if (domain === 'chat') domains.chat.push(endpoint)
+						else if (domain === 'user') domains.user.push(endpoint)
+					}
+				} catch (error: unknown) {
+					console.warn(
+						`[Domain Parser] Error processing method ${method} for path ${path}:`,
+						error instanceof Error ? error.message : 'Unknown error',
+					)
 				}
-
-				if (domain === 'auth') domains.auth.push(endpoint)
-				else if (domain === 'chat') domains.chat.push(endpoint)
-				else if (domain === 'user') domains.user.push(endpoint)
 			}
 		}
+	} catch (error: unknown) {
+		console.error(
+			'[Domain Parser] Error parsing OpenAPI spec:',
+			error instanceof Error ? error.message : 'Unknown error',
+		)
 	}
 
 	return domains
