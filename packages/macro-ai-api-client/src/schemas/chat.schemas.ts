@@ -22,15 +22,7 @@ const chatMessageSchema = z
 		chatId: z.string().uuid(),
 		role: z.string().max(20),
 		content: z.string(),
-		metadata: z.union([
-			z.string(),
-			z.number(),
-			z.boolean(),
-			z.unknown(),
-			z.record(z.unknown().nullable()),
-			z.array(z.unknown().nullable()),
-			z.unknown(),
-		]),
+		metadata: z.record(z.any()).nullable(),
 		embedding: z.array(z.number()).nullable(),
 		createdAt: z.string().nullable(),
 	})
@@ -124,7 +116,6 @@ const deleteChatsId_Response = z
 		success: z.boolean(),
 		message: z.string(),
 	})
-	.partial()
 	.passthrough()
 
 // ============================================================================
