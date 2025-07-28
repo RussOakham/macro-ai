@@ -2,6 +2,7 @@ import fs from 'fs/promises'
 import { generateZodClientFromOpenAPI } from 'openapi-zod-client'
 import type { OpenAPIObject } from 'openapi3-ts'
 import path from 'path'
+import type { Options as PrettierOptions } from 'prettier'
 
 import type { DomainEndpoint } from './domain-parser.ts'
 import {
@@ -254,7 +255,7 @@ export async function generateDomainClient(
 	endpoints: DomainEndpoint[],
 	originalSpec: OpenAPIObject,
 	outputDir: string,
-	prettierConfig: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+	prettierConfig: PrettierOptions | null,
 ): Promise<void> {
 	const domainSpec = createDomainOpenAPISpec(originalSpec, endpoints)
 	const tempOutputPath = path.join(outputDir, `temp-${domain}.ts`)
@@ -264,7 +265,6 @@ export async function generateDomainClient(
 		await generateZodClientFromOpenAPI({
 			openApiDoc: domainSpec,
 			distPath: tempOutputPath,
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 			prettierConfig,
 		})
 
@@ -307,7 +307,12 @@ export async function generateDomainClient(
 		// Clean up temp file if it exists
 		try {
 			await fs.unlink(tempOutputPath)
-		} catch {}
+		} catch (cleanupError: unknown) {
+			console.warn(
+				`Failed to clean up temp file ${tempOutputPath}:`,
+				cleanupError instanceof Error ? cleanupError.message : 'Unknown error',
+			)
+		}
 		throw error
 	}
 }

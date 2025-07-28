@@ -352,15 +352,13 @@
 					"password": {
 						"type": "string",
 						"minLength": 8,
-						"maxLength": 15,
-						"pattern": "\\d",
+						"pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=[\\]{}|;:,.<>?])",
 						"description": "User password"
 					},
 					"confirmPassword": {
 						"type": "string",
 						"minLength": 8,
-						"maxLength": 15,
-						"pattern": "\\d",
+						"pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=[\\]{}|;:,.<>?])",
 						"description": "Confirm password"
 					}
 				},
@@ -431,8 +429,7 @@
 					"password": {
 						"type": "string",
 						"minLength": 8,
-						"maxLength": 15,
-						"pattern": "\\d",
+						"pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=[\\]{}|;:,.<>?])",
 						"description": "User password"
 					}
 				},
@@ -487,15 +484,13 @@
 					"newPassword": {
 						"type": "string",
 						"minLength": 8,
-						"maxLength": 15,
-						"pattern": "\\d",
+						"pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=[\\]{}|;:,.<>?])",
 						"description": "New password"
 					},
 					"confirmPassword": {
 						"type": "string",
 						"minLength": 8,
-						"maxLength": 15,
-						"pattern": "\\d",
+						"pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=[\\]{}|;:,.<>?])",
 						"description": "Confirm new password"
 					}
 				},
@@ -1310,15 +1305,13 @@
 									"password": {
 										"type": "string",
 										"minLength": 8,
-										"maxLength": 15,
-										"pattern": "\\d",
+										"pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=[\\]{}|;:,.<>?])",
 										"description": "User password"
 									},
 									"confirmPassword": {
 										"type": "string",
 										"minLength": 8,
-										"maxLength": 15,
-										"pattern": "\\d",
+										"pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=[\\]{}|;:,.<>?])",
 										"description": "Confirm password"
 									}
 								},
@@ -1782,8 +1775,7 @@
 									"password": {
 										"type": "string",
 										"minLength": 8,
-										"maxLength": 15,
-										"pattern": "\\d",
+										"pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=[\\]{}|;:,.<>?])",
 										"description": "User password"
 									}
 								},
@@ -2095,15 +2087,13 @@
 									"newPassword": {
 										"type": "string",
 										"minLength": 8,
-										"maxLength": 15,
-										"pattern": "\\d",
+										"pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=[\\]{}|;:,.<>?])",
 										"description": "New password"
 									},
 									"confirmPassword": {
 										"type": "string",
 										"minLength": 8,
-										"maxLength": 15,
-										"pattern": "\\d",
+										"pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=[\\]{}|;:,.<>?])",
 										"description": "Confirm new password"
 									}
 								},

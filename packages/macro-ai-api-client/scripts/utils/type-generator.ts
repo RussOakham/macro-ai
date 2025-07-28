@@ -78,51 +78,109 @@ function convertSchemaToTypeScript(
 }
 
 /**
- * Converts OpenAPI schema type to TypeScript type
+ * Cache for memoizing schema type conversions to prevent infinite recursion
  */
-function getTypeScriptType(schema: SchemaObject): string {
+const typeConversionCache = new Map<string, string>()
+
+/**
+ * Clears the type conversion cache (useful for testing or memory management)
+ */
+export function clearTypeConversionCache(): void {
+	typeConversionCache.clear()
+}
+
+/**
+ * Maximum recursion depth to prevent infinite loops
+ */
+const MAX_RECURSION_DEPTH = 10
+
+/**
+ * Converts OpenAPI schema type to TypeScript type with recursion protection
+ */
+function getTypeScriptType(
+	schema: SchemaObject,
+	depth = 0,
+	visited = new Set<string>(),
+): string {
+	// Prevent infinite recursion by checking depth
+	if (depth > MAX_RECURSION_DEPTH) {
+		console.warn(
+			`[Type Generator] Maximum recursion depth (${String(MAX_RECURSION_DEPTH)}) exceeded, returning 'unknown'`,
+		)
+		return 'unknown'
+	}
+
+	// Create a unique key for this schema to detect circular references
+	const schemaKey = JSON.stringify(schema)
+
+	// Check if we've already processed this exact schema
+	if (visited.has(schemaKey)) {
+		console.warn(
+			"[Type Generator] Circular reference detected in schema, returning 'unknown'",
+		)
+		return 'unknown'
+	}
+
+	// Check memoization cache
+	const cachedResult = typeConversionCache.get(schemaKey)
+	if (cachedResult !== undefined) {
+		return cachedResult
+	}
+
+	// Add to visited set to track circular references
+	const newVisited = new Set(visited)
+	newVisited.add(schemaKey)
+
+	let result: string
 	if (schema.type === 'string') {
 		if (schema.enum) {
-			return schema.enum.map((val) => `'${String(val)}'`).join(' | ')
+			result = schema.enum.map((val) => `'${String(val)}'`).join(' | ')
+		} else {
+			result = 'string'
 		}
-		return 'string'
-	}
-
-	if (schema.type === 'number' || schema.type === 'integer') {
-		return 'number'
-	}
-
-	if (schema.type === 'boolean') {
-		return 'boolean'
-	}
-
-	if (schema.type === 'array' && schema.items) {
-		const itemType = getTypeScriptType(schema.items as SchemaObject)
-		return `${itemType}[]`
-	}
-
-	if (schema.type === 'object' && schema.properties) {
+	} else if (schema.type === 'number' || schema.type === 'integer') {
+		result = 'number'
+	} else if (schema.type === 'boolean') {
+		result = 'boolean'
+	} else if (schema.type === 'array' && schema.items) {
+		const itemType = getTypeScriptType(
+			schema.items as SchemaObject,
+			depth + 1,
+			newVisited,
+		)
+		result = `${itemType}[]`
+	} else if (schema.type === 'object' && schema.properties) {
 		const properties: string[] = []
 
 		for (const [propName, propSchema] of Object.entries(schema.properties)) {
 			const isRequired = schema.required?.includes(propName) ?? false
 			const optional = isRequired ? '' : '?'
-			const propType = getTypeScriptType(propSchema as SchemaObject)
+			const propType = getTypeScriptType(
+				propSchema as SchemaObject,
+				depth + 1,
+				newVisited,
+			)
 
 			properties.push(`  ${propName}${optional}: ${propType}`)
 		}
 
-		return `{\n${properties.join('\n')}\n}`
+		result = `{\n${properties.join('\n')}\n}`
+	} else if (schema.nullable) {
+		// Handle nullable types
+		const baseType = getTypeScriptType(
+			{ ...schema, nullable: false },
+			depth + 1,
+			newVisited,
+		)
+		result = `${baseType} | null`
+	} else {
+		// Fallback
+		result = 'unknown'
 	}
 
-	// Handle nullable types
-	if (schema.nullable) {
-		const baseType = getTypeScriptType({ ...schema, nullable: false })
-		return `${baseType} | null`
-	}
-
-	// Fallback
-	return 'unknown'
+	// Cache the result for future use
+	typeConversionCache.set(schemaKey, result)
+	return result
 }
 
 /**

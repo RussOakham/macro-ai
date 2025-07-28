@@ -1,6 +1,27 @@
 import { z } from 'zod'
 
 // ============================================================================
+// Password Validation
+// ============================================================================
+
+/**
+ * Secure password validation schema
+ * Requirements:
+ * - Minimum 8 characters
+ * - At least one uppercase letter (A-Z)
+ * - At least one lowercase letter (a-z)
+ * - At least one digit (0-9)
+ * - At least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)
+ */
+const passwordSchema = z
+	.string()
+	.min(8, 'Password must be at least 8 characters long')
+	.regex(
+		/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{}|;:,.<>?])/,
+		'Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character',
+	)
+
+// ============================================================================
 // SHARED SCHEMAS
 // ============================================================================
 
@@ -37,8 +58,8 @@ const messageResponseSchema = z
 const postAuthregister_Body = z
 	.object({
 		email: z.string().email(),
-		password: z.string().min(8).max(15).regex(/\d/),
-		confirmPassword: z.string().min(8).max(15).regex(/\d/),
+		password: passwordSchema,
+		confirmPassword: passwordSchema,
 	})
 	.passthrough()
 
@@ -61,7 +82,7 @@ const postAuthresendConfirmationCode_Body = z
 const postAuthlogin_Body = z
 	.object({
 		email: z.string().email(),
-		password: z.string().min(8).max(15).regex(/\d/),
+		password: passwordSchema,
 	})
 	.passthrough()
 
@@ -77,8 +98,8 @@ const postAuthconfirmForgotPassword_Body = z
 	.object({
 		email: z.string().email(),
 		code: z.string().min(6).max(6),
-		newPassword: z.string().min(8).max(15).regex(/\d/),
-		confirmPassword: z.string().min(8).max(15).regex(/\d/),
+		newPassword: passwordSchema,
+		confirmPassword: passwordSchema,
 	})
 	.passthrough()
 
