@@ -22,20 +22,20 @@ future decisions.
 
 - **[002: Authentication Approach](./002-authentication-approach.md)** - AWS Cognito integration decision
 
-  - **Status**: 📋 Planned
+  - **Status**: ✅ Accepted (Implemented)
   - **Decision**: Use AWS Cognito for user authentication and management
   - **Context**: Need for secure, scalable authentication solution
   - **Consequences**: Reduced authentication complexity, improved security
 
 - **[003: Database Technology](./003-database-technology.md)** - PostgreSQL and pgvector choice
 
-  - **Status**: 📋 Planned
+  - **Status**: ✅ Accepted (Implemented)
   - **Decision**: Use PostgreSQL with pgvector extension for data storage
   - **Context**: Need for relational data with vector similarity search
   - **Consequences**: Unified database solution with AI capabilities
 
 - **[004: API Client Generation](./004-api-client-generation.md)** - OpenAPI auto-generation strategy
-  - **Status**: 📋 Planned
+  - **Status**: ✅ Accepted (Implemented)
   - **Decision**: Auto-generate TypeScript clients from OpenAPI specifications
   - **Context**: Need for type-safe, maintainable API integration
   - **Consequences**: Improved type safety and reduced maintenance overhead

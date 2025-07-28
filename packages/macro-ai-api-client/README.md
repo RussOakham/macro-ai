@@ -182,10 +182,27 @@ This package uses **automatic code generation**. To make changes:
 - **Changes to the API** automatically flow through to the clients when regenerated
 - **The generation process** runs automatically during `pnpm dev` and `pnpm build`
 
-The auto-generation approach ensures that the API clients are always in sync with the backend specification, eliminating manual maintenance overhead and reducing the risk of inconsistencies.
+The auto-generation approach ensures that the API clients are always in sync with the backend specification,
+eliminating manual maintenance overhead and reducing the risk of inconsistencies.
+
+## 📚 Documentation
+
+For comprehensive documentation and usage examples:
+
+- **[API Client Feature Documentation](../../docs/features/api-client/README.md)** - Complete feature overview
+- **[Auto-Generation Guide](../../docs/features/api-client/auto-generation.md)** - Generation process and architecture
+- **[Usage Examples](../../docs/features/api-client/usage-examples.md)** - Practical usage patterns and examples
+- **[API Reference](../../docs/reference/api-reference.md)** - Complete API endpoint documentation
+- **[ADR-004: API Client Generation](../../docs/adr/004-api-client-generation.md)** - Architectural decision rationale
 
 ## Related Packages
 
 - `@repo/express-api` - The source API specification
 - `@zodios/core` - The underlying HTTP client library
 - `zod` - Schema validation library
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/RussOakham/macro-ai/issues)
+- **Documentation**: [Complete Documentation](../../docs/README.md)
+- **Development Guide**: [Development Setup](../../docs/getting-started/development-setup.md)

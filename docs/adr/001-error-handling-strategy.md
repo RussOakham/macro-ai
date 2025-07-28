@@ -141,7 +141,7 @@ team's experience level and provides the core benefits we need without external 
 
 ## References
 
-- [Original comparison document](../documentation/ADR/try-catch-vs-neverthrow.md) - Detailed analysis
+- [Error Handling Development Guide](../development/error-handling.md) - Implementation patterns and best practices
 - [AppError implementation](../../apps/express-api/src/utils/errors/app-error.ts) - Error standardization
 - [Go error handling patterns](https://blog.golang.org/error-handling-and-go) - Inspiration
 - [Neverthrow library](https://github.com/supermacro/neverthrow) - Alternative considered

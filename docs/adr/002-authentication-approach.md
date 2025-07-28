@@ -6,11 +6,14 @@
 
 ## Context
 
-The Macro AI application requires a robust authentication system to secure user accounts, manage sessions, and protect API endpoints. We needed to choose between building a custom authentication solution or leveraging an existing service, considering factors like security, scalability, compliance, and development velocity.
+The Macro AI application requires a robust authentication system to secure user accounts, manage sessions, and
+protect API endpoints. We needed to choose between building a custom authentication solution or leveraging an
+existing service, considering factors like security, scalability, compliance, and development velocity.
 
 ## Decision
 
-We will use **AWS Cognito** as our primary authentication provider with **cookie-based session management** for web clients and **API key authentication** for programmatic access.
+We will use **AWS Cognito** as our primary authentication provider with **cookie-based session management**
+for web clients and **API key authentication** for programmatic access.
 
 ### Key Components
 
