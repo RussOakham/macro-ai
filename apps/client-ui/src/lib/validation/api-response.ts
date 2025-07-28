@@ -3,6 +3,8 @@ import {
 	getAuthuser_Response,
 	getChats_Response,
 	getChatsId_Response,
+	getUsersId_Response,
+	getUsersMe_Response,
 	postAuthconfirmForgotPassword_Response,
 	postAuthconfirmRegistration_Response,
 	postAuthforgotPassword_Response,
@@ -191,7 +193,19 @@ export const validateResendConfirmationCodeResponse = (data: unknown) => {
 // User Response Validators
 // ============================================================================
 
-// No schemas currently defined for user responses
+export const validateGetUserByIdResponse = (data: unknown) =>
+	validateApiResponse(
+		getUsersId_Response,
+		data,
+		'Invalid user profile response format',
+	)
+
+export const validateGetCurrentUserResponse = (data: unknown) =>
+	validateApiResponse(
+		getUsersMe_Response,
+		data,
+		'Invalid current user response format',
+	)
 
 // ============================================================================
 // Generic Response Validator

@@ -18,7 +18,7 @@ const OUTPUT_DIR = path.resolve(__dirname, '../src')
 const main = async () => {
 	try {
 		await SwaggerParser.validate(SWAGGER_PATH)
-	} catch (error) {
+	} catch (error: unknown) {
 		console.error('Invalid Swagger file:', error)
 		process.exit(1)
 	}
@@ -32,9 +32,17 @@ const main = async () => {
 		const prettierConfig = await resolveConfig('./')
 
 		// Ensure directories exist
-		await fs.mkdir(path.join(OUTPUT_DIR, 'schemas'), { recursive: true })
-		await fs.mkdir(path.join(OUTPUT_DIR, 'clients'), { recursive: true })
-		await fs.mkdir(path.join(OUTPUT_DIR, 'types'), { recursive: true })
+		try {
+			await fs.mkdir(path.join(OUTPUT_DIR, 'schemas'), { recursive: true })
+			await fs.mkdir(path.join(OUTPUT_DIR, 'clients'), { recursive: true })
+			await fs.mkdir(path.join(OUTPUT_DIR, 'types'), { recursive: true })
+			console.log('Output directories created successfully')
+		} catch (error: unknown) {
+			console.error('Failed to create output directories:', error)
+			throw new Error(
+				`Directory creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			)
+		}
 
 		// Generate domain-specific clients, schemas, and types from OpenAPI spec
 		console.log(
