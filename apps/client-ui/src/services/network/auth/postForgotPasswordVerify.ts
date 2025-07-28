@@ -1,7 +1,7 @@
 import { schemas } from '@repo/macro-ai-api-client'
 import { z } from 'zod'
 
-import { apiClient } from '@/lib/api'
+import { authClient } from '@/lib/api/clients'
 
 type TConfirmForgotPassword = z.infer<
 	typeof schemas.postAuthconfirmForgotPassword_Body
@@ -39,7 +39,7 @@ const postForgotPasswordVerify = async ({
 		confirmPassword: confirmPassword,
 	}
 
-	const response = await apiClient.post(
+	const response = await authClient.post(
 		'/auth/confirm-forgot-password',
 		requestBody,
 	)

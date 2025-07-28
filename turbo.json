@@ -34,11 +34,16 @@
 		},
 		"lint": {},
 		"type-check": {},
-		"test": {},
+		"test": {
+			"cache": false,
+			"dependsOn": ["^build"]
+		},
 		"test:ui": {
-			"cache": false
+			"cache": false,
+			"dependsOn": ["^build"]
 		},
 		"test:coverage": {
+			"dependsOn": ["^build"],
 			"outputs": ["coverage/**"]
 		},
 		"dev": {

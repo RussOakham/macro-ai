@@ -8,19 +8,21 @@
 	"types": "./dist/index.d.ts",
 	"scripts": {
 		"build": "pnpm generate && tsup",
-		"dev": "tsup --watch",
+		"dev": "pnpm generate && tsup --watch",
 		"clean": "rm -rf dist && find src -type f \\( -name '*.ts' -o -name '*.js' \\) ! -name 'index.ts' -delete",
 		"type-check": "tsc --noEmit",
-		"generate": "cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && tsx --tsconfig scripts/tsconfig.json scripts/generate.ts",
+		"generate": "cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && tsx --tsconfig scripts/tsconfig.json scripts/generate-modular.ts",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
 		"lint": "eslint ."
 	},
 	"devDependencies": {
 		"@apidevtools/swagger-parser": "^10.1.1",
 		"@repo/config-typescript": "workspace:*",
 		"@repo/config-eslint": "workspace:*",
-		"@types/express": "^5.0.0",
-		"@types/glob": "^8.1.0",
 		"@types/node": "catalog:",
+		"@vitest/coverage-v8": "catalog:",
 		"eslint": "catalog:",
 		"eslint-config-prettier": "catalog:",
 		"eslint-plugin-import": "catalog:",
@@ -28,18 +30,18 @@
 		"eslint-plugin-react-hooks": "catalog:",
 		"eslint-plugin-jsx-a11y": "catalog:",
 		"eslint-plugin-unused-imports": "catalog:",
-		"globals": "^15.15.0",
-		"glob": "^10.3.10",
+		"globals": "catalog:",
 		"openapi-zod-client": "^1.15.0",
 		"prettier": "catalog:",
 		"tsup": "^8.0.0",
-		"tsx": "^4.7.0",
-		"typescript": "catalog:"
+		"tsx": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
 	},
 	"dependencies": {
 		"@zodios/core": "^10.9.6",
 		"openapi3-ts": "^3.0.2",
-		"zod": "^3.24.1"
+		"zod": "catalog:"
 	},
 	"exports": {
 		".": {

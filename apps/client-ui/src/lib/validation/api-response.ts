@@ -1,0 +1,264 @@
+import {
+	deleteChatsId_Response,
+	getAuthuser_Response,
+	getChats_Response,
+	getChatsId_Response,
+	getUsersId_Response,
+	getUsersMe_Response,
+	postAuthconfirmForgotPassword_Response,
+	postAuthconfirmRegistration_Response,
+	postAuthforgotPassword_Response,
+	postAuthlogin_Response,
+	postAuthlogout_Response,
+	postAuthrefresh_Response,
+	postAuthregister_Response,
+	postAuthresendConfirmationCode_Response,
+	postChats_Response,
+	putChatsId_Response,
+} from '@repo/macro-ai-api-client'
+import { z } from 'zod'
+
+import { logger } from '@/lib/logger/logger'
+
+/**
+ * Runtime validation utility for API responses using Zod schemas
+ * Provides type safety and catches schema mismatches at runtime
+ */
+
+// ============================================================================
+// Chat Response Validators
+// ============================================================================
+
+export const validateGetChatsResponse = (data: unknown) => {
+	try {
+		return getChats_Response.parse(data)
+	} catch (error: unknown) {
+		logger.error('[API Validation] Invalid getChats response', { error, data })
+		throw new Error('Invalid chat list response format')
+	}
+}
+
+export const validateGetChatByIdResponse = (data: unknown) => {
+	try {
+		return getChatsId_Response.parse(data)
+	} catch (error: unknown) {
+		logger.error('[API Validation] Invalid getChatById response', {
+			error,
+			data,
+		})
+		throw new Error('Invalid chat response format')
+	}
+}
+
+export const validateCreateChatResponse = (data: unknown) => {
+	try {
+		return postChats_Response.parse(data)
+	} catch (error: unknown) {
+		logger.error('[API Validation] Invalid createChat response', {
+			error,
+			data,
+		})
+		throw new Error('Invalid create chat response format')
+	}
+}
+
+export const validateUpdateChatResponse = (data: unknown) => {
+	try {
+		return putChatsId_Response.parse(data)
+	} catch (error: unknown) {
+		logger.error('[API Validation] Invalid updateChat response', {
+			error,
+			data,
+		})
+		throw new Error('Invalid update chat response format')
+	}
+}
+
+export const validateDeleteChatResponse = (data: unknown) => {
+	try {
+		return deleteChatsId_Response.parse(data)
+	} catch (error: unknown) {
+		logger.error('[API Validation] Invalid deleteChat response', {
+			error,
+			data,
+		})
+		throw new Error('Invalid delete chat response format')
+	}
+}
+
+// ============================================================================
+// Auth Response Validators
+// ============================================================================
+
+export const validateGetAuthUserResponse = (data: unknown) => {
+	try {
+		return getAuthuser_Response.parse(data)
+	} catch (error: unknown) {
+		logger.error('[API Validation] Invalid getAuthUser response', {
+			error,
+			data,
+		})
+		throw new Error('Invalid auth user response format')
+	}
+}
+
+export const validateLoginResponse = (data: unknown) => {
+	try {
+		return postAuthlogin_Response.parse(data)
+	} catch (error: unknown) {
+		logger.error('[API Validation] Invalid login response', { error, data })
+		throw new Error('Invalid login response format')
+	}
+}
+
+export const validateRegisterResponse = (data: unknown) => {
+	try {
+		return postAuthregister_Response.parse(data)
+	} catch (error: unknown) {
+		logger.error('[API Validation] Invalid register response', { error, data })
+		throw new Error('Invalid register response format')
+	}
+}
+
+export const validateLogoutResponse = (data: unknown) => {
+	try {
+		return postAuthlogout_Response.parse(data)
+	} catch (error: unknown) {
+		logger.error('[API Validation] Invalid logout response', { error, data })
+		throw new Error('Invalid logout response format')
+	}
+}
+
+export const validateRefreshTokenResponse = (data: unknown) => {
+	try {
+		return postAuthrefresh_Response.parse(data)
+	} catch (error: unknown) {
+		logger.error('[API Validation] Invalid refresh token response', {
+			error,
+			data,
+		})
+		throw new Error('Invalid refresh token response format')
+	}
+}
+
+export const validateForgotPasswordResponse = (data: unknown) => {
+	try {
+		return postAuthforgotPassword_Response.parse(data)
+	} catch (error: unknown) {
+		logger.error('[API Validation] Invalid forgot password response', {
+			error,
+			data,
+		})
+		throw new Error('Invalid forgot password response format')
+	}
+}
+
+export const validateConfirmForgotPasswordResponse = (data: unknown) => {
+	try {
+		return postAuthconfirmForgotPassword_Response.parse(data)
+	} catch (error: unknown) {
+		logger.error('[API Validation] Invalid confirm forgot password response', {
+			error,
+			data,
+		})
+		throw new Error('Invalid confirm forgot password response format')
+	}
+}
+
+export const validateConfirmRegistrationResponse = (data: unknown) => {
+	try {
+		return postAuthconfirmRegistration_Response.parse(data)
+	} catch (error: unknown) {
+		logger.error('[API Validation] Invalid confirm registration response', {
+			error,
+			data,
+		})
+		throw new Error('Invalid confirm registration response format')
+	}
+}
+
+export const validateResendConfirmationCodeResponse = (data: unknown) => {
+	try {
+		return postAuthresendConfirmationCode_Response.parse(data)
+	} catch (error: unknown) {
+		logger.error('[API Validation] Invalid resend confirmation code response', {
+			error,
+			data,
+		})
+		throw new Error('Invalid resend confirmation code response format')
+	}
+}
+
+// ============================================================================
+// User Response Validators
+// ============================================================================
+
+export const validateGetUserByIdResponse = (data: unknown) =>
+	validateApiResponse(
+		getUsersId_Response,
+		data,
+		'Invalid user profile response format',
+	)
+
+export const validateGetCurrentUserResponse = (data: unknown) =>
+	validateApiResponse(
+		getUsersMe_Response,
+		data,
+		'Invalid current user response format',
+	)
+
+// ============================================================================
+// Generic Response Validator
+// ============================================================================
+
+/**
+ * Generic response validator that can be used with any Zod schema
+ * @param schema - Zod schema to validate against
+ * @param data - Data to validate
+ * @param errorMessage - Custom error message for validation failures
+ * @returns Parsed and validated data
+ */
+export const validateApiResponse = <T>(
+	schema: z.ZodSchema<T>,
+	data: unknown,
+	errorMessage = 'Invalid API response format',
+): T => {
+	try {
+		return schema.parse(data)
+	} catch (error: unknown) {
+		logger.error('[API Validation] Generic validation failed', { error, data })
+		throw new Error(errorMessage)
+	}
+}
+
+// ============================================================================
+// Safe Response Validator (returns result object instead of throwing)
+// ============================================================================
+
+export type ValidationResult<T> =
+	| { success: true; data: T }
+	| { success: false; error: string }
+
+/**
+ * Safe response validator that returns a result object instead of throwing
+ * @param schema - Zod schema to validate against
+ * @param data - Data to validate
+ * @returns Result object with success/error status
+ */
+export const safeValidateApiResponse = <T>(
+	schema: z.ZodSchema<T>,
+	data: unknown,
+): ValidationResult<T> => {
+	try {
+		const validatedData = schema.parse(data)
+		return { success: true, data: validatedData }
+	} catch (error: unknown) {
+		const errorMessage =
+			error instanceof z.ZodError
+				? `Validation failed: ${error.errors.map((e) => e.message).join(', ')}`
+				: 'Unknown validation error'
+
+		logger.error('[API Validation] Safe validation failed', { error, data })
+		return { success: false, error: errorMessage }
+	}
+}

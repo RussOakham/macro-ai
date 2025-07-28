@@ -1,10 +1,13 @@
+import { postAuthresendConfirmationCode_Body } from '@repo/macro-ai-api-client'
 import { z } from 'zod'
 
-import { apiClient } from '@/lib/api'
+import { authClient } from '@/lib/api/clients'
+import { emailValidation } from '@/lib/validation/inputs'
 
-const resendConfirmationCodeSchemaClient = z.object({
-	email: z.string().email(),
-})
+const resendConfirmationCodeSchemaClient =
+	postAuthresendConfirmationCode_Body.extend({
+		email: emailValidation(),
+	})
 
 type TResendConfirmationCodeClient = z.infer<
 	typeof resendConfirmationCodeSchemaClient
@@ -13,7 +16,7 @@ type TResendConfirmationCodeClient = z.infer<
 const postResendConfirmRegistrationCode = async ({
 	email,
 }: TResendConfirmationCodeClient) => {
-	const response = await apiClient.post('/auth/resend-confirmation-code', {
+	const response = await authClient.post('/auth/resend-confirmation-code', {
 		email,
 	})
 

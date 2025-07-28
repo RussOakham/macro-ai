@@ -1,7 +1,7 @@
 import { schemas } from '@repo/macro-ai-api-client'
 import { z } from 'zod'
 
-import { apiClient } from '@/lib/api'
+import { authClient } from '@/lib/api/clients'
 import { emailValidation, passwordValidation } from '@/lib/validation/inputs'
 
 const registerSchemaClient = schemas.postAuthregister_Body
@@ -22,7 +22,7 @@ const postRegister = async ({
 	password,
 	confirmPassword,
 }: TRegister) => {
-	const response = await apiClient.post('/auth/register', {
+	const response = await authClient.post('/auth/register', {
 		email,
 		password,
 		confirmPassword,

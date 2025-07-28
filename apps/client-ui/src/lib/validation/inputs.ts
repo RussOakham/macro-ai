@@ -3,35 +3,27 @@
 import { z } from 'zod'
 
 /**
- * Password validation function
- * - Minimum length: 8 characters
- * - Maximum length: 15 characters
- * - Must contain at least 1 number
- * - Must contain at least 1 special character
- * - Must contain at least 1 uppercase letter
- * - Must contain at least 1 lowercase letter
+ * Secure password validation function
+ * Requirements:
+ * - Minimum 8 characters
+ * - At least one uppercase letter (A-Z)
+ * - At least one lowercase letter (a-z)
+ * - At least one digit (0-9)
+ * - At least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)
  */
 const passwordValidation = () =>
 	z
 		.string()
 		.min(8, {
-			message: 'Password must be at least 8 characters',
+			message: 'Password must be at least 8 characters long',
 		})
-		.max(15, {
-			message: 'Password must be at most 15 characters',
-		})
-		.regex(/\d/, {
-			message: 'Password must contain at least one number',
-		})
-		.regex(/[!@#$%^&*(),.?":{}|<>]/, {
-			message: 'Password must contain at least one special character',
-		})
-		.regex(/[A-Z]/, {
-			message: 'Password must contain at least one uppercase letter',
-		})
-		.regex(/[a-z]/, {
-			message: 'Password must contain at least one lowercase letter',
-		})
+		.regex(
+			/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{}|;:,.<>?])/,
+			{
+				message:
+					'Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character',
+			},
+		)
 
 const emailValidation = () =>
 	z.string().email({

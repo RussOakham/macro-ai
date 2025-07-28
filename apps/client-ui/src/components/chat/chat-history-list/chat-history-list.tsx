@@ -1,7 +1,7 @@
 import { AlertCircle, Loader2, MessageSquare } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Chat } from '@/lib/types'
+import { ChatWithDates } from '@/lib/types'
 import { formatRelativeDate } from '@/lib/utils/datetime/formatRelativeDate'
 import { useChats } from '@/services/hooks/chat/useChats'
 
@@ -34,12 +34,15 @@ const ChatHistoryList = ({
 	}
 
 	// Group chats by date
-	const groupedChats = chats.reduce<Record<string, Chat[]>>((groups, chat) => {
-		const dateKey = formatRelativeDate(chat.updatedAt)
-		groups[dateKey] ??= []
-		groups[dateKey].push(chat)
-		return groups
-	}, {})
+	const groupedChats = chats.reduce<Record<string, ChatWithDates[]>>(
+		(groups, chat) => {
+			const dateKey = formatRelativeDate(chat.updatedAt)
+			groups[dateKey] ??= []
+			groups[dateKey].push(chat)
+			return groups
+		},
+		{},
+	)
 
 	if (isChatsLoading) {
 		return (

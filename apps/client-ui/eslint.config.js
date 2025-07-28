@@ -4,6 +4,17 @@ import pluginRouter from '@tanstack/eslint-plugin-router'
 import pluginQuery from '@tanstack/eslint-plugin-query'
 
 export default repoConfig.config(
+	// Global ignores - must be first
+	{
+		ignores: [
+			'dist/**',
+			'node_modules/**',
+			'coverage/**',
+			'coverage-final.json',
+			'coverage-summary.json',
+			'*.lcov',
+		],
+	},
 	...repoConfig.configs.base,
 	...repoConfig.configs.react,
 	...pluginRouter.configs['flat/recommended'],
@@ -16,7 +27,6 @@ export default repoConfig.config(
 				globals: globals.browser,
 			},
 		},
-		ignores: ['dist', 'node_modules'],
 		rules: {
 			'@typescript-eslint/no-misused-promises': [
 				2,

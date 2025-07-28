@@ -3,13 +3,13 @@ import { useNavigate, useParams } from '@tanstack/react-router'
 import { Edit3, MessageSquare, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Chat } from '@/lib/types'
+import { ChatWithDates } from '@/lib/types'
 
 interface ChatHistoryItemProps {
-	chat: Chat
+	chat: ChatWithDates
 	isPending: boolean
 	onMobileClose?: () => void
-	startEditing: (chat: Chat) => void
+	startEditing: (chat: ChatWithDates) => void
 	handleDeleteChat: (chatId: string) => void
 	confirmDeleteChatId: string | null
 }

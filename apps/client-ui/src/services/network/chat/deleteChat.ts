@@ -1,7 +1,8 @@
-import { apiClient } from '@/lib/api'
+import { chatClient } from '@/lib/api/clients'
+import type { ChatDeleteChatsByIdResponse } from '@/lib/types'
 
-// Response type for deleteChat API - inferred from auto-generated client
-type DeleteChatResponse = Awaited<ReturnType<typeof deleteChat>>
+// Use API client response type for better type safety
+type DeleteChatResponse = ChatDeleteChatsByIdResponse
 
 /**
  * Delete an existing chat and all its messages for the authenticated user
@@ -9,7 +10,7 @@ type DeleteChatResponse = Awaited<ReturnType<typeof deleteChat>>
  * @returns Promise<DeleteChatResponse>
  */
 const deleteChat = async (chatId: string) => {
-	const response = await apiClient.delete('/chats/:id', undefined, {
+	const response = await chatClient.delete('/chats/:id', undefined, {
 		params: {
 			id: chatId,
 		},

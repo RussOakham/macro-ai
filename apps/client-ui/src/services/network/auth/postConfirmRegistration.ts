@@ -1,7 +1,7 @@
 import { schemas } from '@repo/macro-ai-api-client'
 import { z } from 'zod'
 
-import { apiClient } from '@/lib/api'
+import { authClient } from '@/lib/api/clients'
 import { emailValidation } from '@/lib/validation/inputs'
 
 const confirmRegistrationSchemaClient =
@@ -21,7 +21,7 @@ const postConfirmRegistration = async ({
 	// fix bug for leading zeros - create custom input OTP for number values?
 	const parsedCode = z.coerce.number().parse(code)
 
-	const response = await apiClient.post('/auth/confirm-registration', {
+	const response = await authClient.post('/auth/confirm-registration', {
 		email,
 		code: parsedCode,
 	})

@@ -1,14 +1,14 @@
 import { useState } from 'react'
 
 import { logger } from '@/lib/logger/logger'
-import { Chat } from '@/lib/types'
+import { ChatWithDates } from '@/lib/types'
 
 import { ChatHistoryItem } from '../chat-history-item/chat-history-item'
 import { ChatHistoryItemDelete } from '../chat-history-item/chat-history-item-delete'
 import { ChatHistoryItemEdit } from '../chat-history-item/chat-history-item-edit'
 
 interface ChatHistoryListItemProps {
-	chat: Chat
+	chat: ChatWithDates
 	isPending: boolean
 	onMobileClose?: () => void
 }
@@ -24,7 +24,7 @@ const ChatHistoryListItem = ({
 		null,
 	)
 
-	const startEditing = (chat: Chat) => {
+	const startEditing = (chat: ChatWithDates) => {
 		setEditingChatId(chat.id)
 		setEditTitle(chat.title)
 	}
