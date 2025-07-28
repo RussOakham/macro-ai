@@ -604,7 +604,7 @@ console.log('OpenAI key format:', process.env.OPENAI_API_KEY?.substring(0, 3));
 
 ### Issue Reporting Template
 
-```markdown
+````markdown
 ## Issue Description
 
 Brief description of the problem
@@ -634,6 +634,7 @@ What actually happens
 ```text
 [Paste relevant logs here]
 ```
+````
 
 ## Additional Context
 

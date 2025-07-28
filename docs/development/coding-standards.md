@@ -579,28 +579,28 @@ Description of error handling patterns used.
 ```typescript
 // ✅ Good: Explain complex business logic
 function calculateUserScore(user: User, activities: Activity[]): number {
-  // Base score starts at 100 for all users
-  let score = 100
+	// Base score starts at 100 for all users
+	let score = 100
 
-  // Reduce score for inactive users (no activity in 30 days)
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-  const recentActivities = activities.filter(a => a.createdAt > thirtyDaysAgo)
+	// Reduce score for inactive users (no activity in 30 days)
+	const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+	const recentActivities = activities.filter((a) => a.createdAt > thirtyDaysAgo)
 
-  if (recentActivities.length === 0) {
-    score -= 50 // Penalty for inactivity
-  }
+	if (recentActivities.length === 0) {
+		score -= 50 // Penalty for inactivity
+	}
 
-  // Bonus points for premium users
-  if (user.isPremium) {
-    score += 25
-  }
+	// Bonus points for premium users
+	if (user.isPremium) {
+		score += 25
+	}
 
-  return Math.max(0, score) // Ensure score never goes below 0
+	return Math.max(0, score) // Ensure score never goes below 0
 }
 
 // ❌ Bad: Obvious comments
 const userCount = users.length // Get the length of users array
-````
+```
 
 ## 🚀 Performance Standards
 

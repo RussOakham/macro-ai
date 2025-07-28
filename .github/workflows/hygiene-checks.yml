@@ -10,11 +10,11 @@ permissions:
 on:
   push:
     branches:
-    - main
+      - main
   pull_request:
-    types: [ opened, reopened, synchronize ]
+    types: [opened, reopened, synchronize]
     branches:
-    - main
+      - main
 
 concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
@@ -28,246 +28,246 @@ jobs:
       express_env: ${{ steps.create_express_env.outputs.env_content }}
       client_env: ${{ steps.create_client_env.outputs.env_content }}
     steps:
-    - name: Create Express API .env content
-      id: create_express_env
-      run: |
-        ENV_CONTENT=$(cat << EOF
-        # API Configuration
-        API_KEY=${{ secrets.API_KEY }}
-        SERVER_PORT=${{ secrets.SERVER_PORT || '3030' }}
-        NODE_ENV=test
+      - name: Create Express API .env content
+        id: create_express_env
+        run: |
+          ENV_CONTENT=$(cat << EOF
+          # API Configuration
+          API_KEY=${{ secrets.API_KEY }}
+          SERVER_PORT=${{ secrets.SERVER_PORT || '3030' }}
+          NODE_ENV=test
 
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION=${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-        AWS_COGNITO_USER_POOL_ID=${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-        AWS_COGNITO_USER_POOL_CLIENT_ID=${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-        AWS_COGNITO_USER_POOL_SECRET_KEY=${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-        AWS_COGNITO_ACCESS_KEY=${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
-        AWS_COGNITO_SECRET_KEY=${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY=${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
+          # AWS Cognito Configuration
+          AWS_COGNITO_REGION=${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
+          AWS_COGNITO_USER_POOL_ID=${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
+          AWS_COGNITO_USER_POOL_CLIENT_ID=${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
+          AWS_COGNITO_USER_POOL_SECRET_KEY=${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
+          AWS_COGNITO_ACCESS_KEY=${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
+          AWS_COGNITO_SECRET_KEY=${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
 
-        # Cookie Configuration
-        COOKIE_DOMAIN=${{ secrets.COOKIE_DOMAIN || 'localhost' }}
-        COOKIE_ENCRYPTION_KEY=${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+          # Cookie Configuration
+          COOKIE_DOMAIN=${{ secrets.COOKIE_DOMAIN || 'localhost' }}
+          COOKIE_ENCRYPTION_KEY=${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
 
-        # Databases
-        NON_RELATIONAL_DATABASE_URL=${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
-        RELATIONAL_DATABASE_URL=${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          # Databases
+          NON_RELATIONAL_DATABASE_URL=${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          RELATIONAL_DATABASE_URL=${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
 
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS=${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-        RATE_LIMIT_MAX_REQUESTS=${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-        AUTH_RATE_LIMIT_WINDOW_MS=${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-        AUTH_RATE_LIMIT_MAX_REQUESTS=${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-        API_RATE_LIMIT_WINDOW_MS=${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-        API_RATE_LIMIT_MAX_REQUESTS=${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
-        REDIS_URL=${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
-        EOF
-        )
-        echo "env_content<<EOF" >> $GITHUB_OUTPUT
-        echo "$ENV_CONTENT" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS=${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
+          RATE_LIMIT_MAX_REQUESTS=${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
+          AUTH_RATE_LIMIT_WINDOW_MS=${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS=${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
+          API_RATE_LIMIT_WINDOW_MS=${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
+          API_RATE_LIMIT_MAX_REQUESTS=${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+          REDIS_URL=${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
+          EOF
+          )
+          echo "env_content<<EOF" >> $GITHUB_OUTPUT
+          echo "$ENV_CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-    - name: Create Client UI .env content
-      id: create_client_env
-      run: |
-        ENV_CONTENT=$(cat << EOF
-        VITE_API_URL=${{ secrets.VITE_API_URL || 'http://localhost:3030/api' }}
-        VITE_API_KEY=${{ secrets.VITE_API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-        EOF
-        )
-        echo "env_content<<EOF" >> $GITHUB_OUTPUT
-        echo "$ENV_CONTENT" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
+      - name: Create Client UI .env content
+        id: create_client_env
+        run: |
+          ENV_CONTENT=$(cat << EOF
+          VITE_API_URL=${{ secrets.VITE_API_URL || 'http://localhost:3030/api' }}
+          VITE_API_KEY=${{ secrets.VITE_API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+          EOF
+          )
+          echo "env_content<<EOF" >> $GITHUB_OUTPUT
+          echo "$ENV_CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
   build:
     needs: setup
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [ 20.x ]
+        node-version: [20.x]
     steps:
-    - uses: actions/checkout@v4
-    - name: Install pnpm
-      uses: pnpm/action-setup@v3
-      with:
-        version: 9
-    - name: Use Node.JS
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'pnpm'
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
+      - uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - name: Use Node.JS
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-    # Create .env files using the output from setup job
-    - name: Create Express API .env file
-      run: |
-        echo "${{ needs.setup.outputs.express_env }}" > apps/express-api/.env
+      # Create .env files using the output from setup job
+      - name: Create Express API .env file
+        run: |
+          echo "${{ needs.setup.outputs.express_env }}" > apps/express-api/.env
 
-    - name: Create Client UI .env file
-      run: |
-        echo "${{ needs.setup.outputs.client_env }}" > apps/client-ui/.env
+      - name: Create Client UI .env file
+        run: |
+          echo "${{ needs.setup.outputs.client_env }}" > apps/client-ui/.env
 
-    - name: Run build
-      run: pnpm build
-      env:
-        API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-        AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-        AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-        AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-        AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-        AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
-        AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
-        COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
-        NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
-        RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+      - name: Run build
+        run: pnpm build
+        env:
+          API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+          AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
+          AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
+          AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
+          AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
+          AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
+          AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
+          COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+          NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
 
   lint:
     needs: setup
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [ 20.x ]
+        node-version: [20.x]
     steps:
-    - uses: actions/checkout@v4
-    - name: Install pnpm
-      uses: pnpm/action-setup@v3
-      with:
-        version: 9
-    - name: Use Node.JS
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'pnpm'
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
+      - uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - name: Use Node.JS
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-    # Create .env files using the output from setup job
-    - name: Create Express API .env file
-      run: |
-        echo "${{ needs.setup.outputs.express_env }}" > apps/express-api/.env
+      # Create .env files using the output from setup job
+      - name: Create Express API .env file
+        run: |
+          echo "${{ needs.setup.outputs.express_env }}" > apps/express-api/.env
 
-    - name: Create Client UI .env file
-      run: |
-        echo "${{ needs.setup.outputs.client_env }}" > apps/client-ui/.env
+      - name: Create Client UI .env file
+        run: |
+          echo "${{ needs.setup.outputs.client_env }}" > apps/client-ui/.env
 
-    - name: Build types package
-      run: pnpm --filter @repo/macro-ai-api-client build
-      env:
-        API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-        AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-        AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-        AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-        AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-        AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
-        AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
-        COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
-        NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
-        RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
-    - name: Run lint
-      run: pnpm lint
+      - name: Build types package
+        run: pnpm --filter @repo/macro-ai-api-client build
+        env:
+          API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+          AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
+          AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
+          AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
+          AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
+          AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
+          AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
+          COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+          NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+      - name: Run lint
+        run: pnpm lint
 
   test:
     needs: setup
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [ 20.x ]
+        node-version: [20.x]
     steps:
-    - uses: actions/checkout@v4
-    - name: Install pnpm
-      uses: pnpm/action-setup@v3
-      with:
-        version: 9
-    - name: Use Node.JS
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'pnpm'
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
+      - uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - name: Use Node.JS
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-    # Create .env files using the output from setup job
-    - name: Create Express API .env file
-      run: |
-        echo "${{ needs.setup.outputs.express_env }}" > apps/express-api/.env
+      # Create .env files using the output from setup job
+      - name: Create Express API .env file
+        run: |
+          echo "${{ needs.setup.outputs.express_env }}" > apps/express-api/.env
 
-    - name: Create Client UI .env file
-      run: |
-        echo "${{ needs.setup.outputs.client_env }}" > apps/client-ui/.env
+      - name: Create Client UI .env file
+        run: |
+          echo "${{ needs.setup.outputs.client_env }}" > apps/client-ui/.env
 
-    - name: Run test with coverage
-      run: pnpm test:coverage
-      env:
-        API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-        AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-        AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-        AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-        AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-        AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
-        AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
-        COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
-        NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
-        RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+      - name: Run test with coverage
+        run: pnpm test:coverage
+        env:
+          API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+          AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
+          AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
+          AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
+          AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
+          AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
+          AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
+          COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+          NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
 
-    - name: Upload coverage reports
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: coverage-reports
-        path: |
-          apps/express-api/coverage/
-          **/coverage/
-        retention-days: 30
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-reports
+          path: |
+            apps/express-api/coverage/
+            **/coverage/
+          retention-days: 30
 
-    - name: Extract coverage percentage
-      id: coverage
-      if: always()
-      run: |
-        # Extract coverage percentage from the JSON report
-        if [ -f "apps/express-api/coverage/coverage-summary.json" ]; then
-          COVERAGE=$(node -p "
-            const fs = require('fs');
-            const coverage = JSON.parse(fs.readFileSync('apps/express-api/coverage/coverage-summary.json', 'utf8'));
-            Math.round(coverage.total.lines.pct || 0);
-          ")
-          echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
-          echo "Coverage: $COVERAGE%"
-        else
-          echo "percentage=0" >> $GITHUB_OUTPUT
-          echo "Coverage file not found"
-        fi
+      - name: Extract coverage percentage
+        id: coverage
+        if: always()
+        run: |
+          # Extract coverage percentage from the JSON report
+          if [ -f "apps/express-api/coverage/coverage-summary.json" ]; then
+            COVERAGE=$(node -p "
+              const fs = require('fs');
+              const coverage = JSON.parse(fs.readFileSync('apps/express-api/coverage/coverage-summary.json', 'utf8'));
+              Math.round(coverage.total.lines.pct || 0);
+            ")
+            echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
+            echo "Coverage: $COVERAGE%"
+          else
+            echo "percentage=0" >> $GITHUB_OUTPUT
+            echo "Coverage file not found"
+          fi
 
-    - name: Create coverage badge
-      if: github.ref == 'refs/heads/main' && always()
-      uses: schneegans/dynamic-badges-action@v1.7.0
-      with:
-        auth: ${{ secrets.GITHUB_TOKEN }}
-        gistID: ${{ secrets.COVERAGE_GIST_ID }}
-        filename: macro-ai-coverage.json
-        label: coverage
-        message: ${{ steps.coverage.outputs.percentage }}%
-        color: ${{ steps.coverage.outputs.percentage >= 80 && 'brightgreen' || steps.coverage.outputs.percentage >= 60 && 'yellow' || 'red' }}
+      - name: Create coverage badge
+        if: github.ref == 'refs/heads/main' && always()
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GITHUB_TOKEN }}
+          gistID: ${{ secrets.COVERAGE_GIST_ID }}
+          filename: macro-ai-coverage.json
+          label: coverage
+          message: ${{ steps.coverage.outputs.percentage }}%
+          color: ${{ steps.coverage.outputs.percentage >= 80 && 'brightgreen' || steps.coverage.outputs.percentage >= 60 && 'yellow' || 'red' }}
 
   lint-md:
     name: Lint Markdown
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Install pnpm
-      uses: pnpm/action-setup@v3
-      with:
-        version: 9
-    - name: Use Node.JS
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20.x
-        cache: 'pnpm'
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
-    - name: Lint markdown files
-      run: pnpm lint:md
+      - uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - name: Use Node.JS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint markdown files
+        run: pnpm lint:md
