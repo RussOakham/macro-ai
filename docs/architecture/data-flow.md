@@ -136,6 +136,43 @@ export const authenticationMiddleware = async (
 }
 ```
 
+#### CORS Configuration for Credentials ✅ IMPLEMENTED
+
+**Secure CORS Setup**: The application uses explicit origins instead of wildcards to enable credential support:
+
+```typescript
+// CORS middleware configuration
+app.use(
+	cors({
+		origin: ['http://localhost:3000', 'http://localhost:3030'],
+		credentials: true, // Enable cookies and authorization headers
+		exposedHeaders: ['set-cookie', 'cache-control'],
+		methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+		allowedHeaders: [
+			'Origin',
+			'X-Requested-With',
+			'Content-Type',
+			'Accept',
+			'Authorization',
+			'X-API-KEY',
+			'Cache-Control',
+		],
+		maxAge: 86400, // 24 hours
+	}),
+)
+```
+
+**Key Security Points**:
+
+- ✅ **Explicit Origins**: Uses specific allowed origins instead of `'*'` wildcard
+- ✅ **Credentials Enabled**: `credentials: true` allows cookies and auth headers
+- ✅ **Secure Headers**: Exposes only necessary headers to the client
+- ✅ **Method Restrictions**: Limits allowed HTTP methods
+- ✅ **Preflight Caching**: 24-hour cache for OPTIONS requests
+
+**Why This Matters**: Using `Access-Control-Allow-Origin: '*'` with credentials would cause browsers to block requests.
+The explicit origin list ensures secure credential handling while maintaining CORS compliance.
+
 #### 2. Controller Layer
 
 ```typescript
@@ -265,7 +302,10 @@ export async function streamChatResponse(req: Request, res: Response) {
 		'Content-Type': 'text/plain; charset=utf-8',
 		'Cache-Control': 'no-cache',
 		Connection: 'keep-alive',
-		'Access-Control-Allow-Origin': '*',
+		'Transfer-Encoding': 'chunked',
+		'X-Accel-Buffering': 'no', // Disable nginx buffering
+		// CORS headers are handled by the main CORS middleware
+		// which sets specific origins and credentials: true
 	})
 
 	try {

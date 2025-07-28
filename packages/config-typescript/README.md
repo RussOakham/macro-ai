@@ -43,7 +43,7 @@ Specialized configuration for React applications with JSX support.
 
 **Features:**
 
-- JSX support with React 18+ optimizations
+- JSX support with React 19+ optimizations
 - DOM type definitions included
 - React-specific compiler options
 - Vite integration support

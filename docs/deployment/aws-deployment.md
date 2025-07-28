@@ -603,11 +603,77 @@ const uiLogGroup = new logs.LogGroup(this, 'UiLogGroup', {
 taskDefinition.addContainer('api', {
 	// ... other configuration
 	environment: {
-		_X_AMZN_TRACE_ID: 'Root=1-5e1b4151-5ac6c58b1b5c6b5c6b5c6b5c',
+		// X-Ray configuration - _X_AMZN_TRACE_ID is automatically injected by X-Ray
 		AWS_XRAY_TRACING_NAME: 'macro-ai-api',
 		AWS_XRAY_DEBUG_MODE: 'TRUE',
 	},
+	// Enable X-Ray tracing at the container level
+	logging: ecs.LogDrivers.awsLogs({
+		streamPrefix: 'macro-ai-api',
+		logGroup: logGroup,
+	}),
 })
+
+// Add X-Ray daemon as a sidecar container
+taskDefinition.addContainer('xray-daemon', {
+	image: ecs.ContainerImage.fromRegistry('amazon/aws-xray-daemon:latest'),
+	memoryLimitMiB: 32,
+	cpu: 32,
+	essential: false,
+	portMappings: [
+		{
+			containerPort: 2000,
+			protocol: ecs.Protocol.UDP,
+		},
+	],
+	environment: {
+		AWS_REGION: 'us-east-1', // Replace with your region
+	},
+})
+```
+
+#### X-Ray Configuration Notes ⚠️ IMPORTANT
+
+**Automatic Trace ID Injection**:
+The `_X_AMZN_TRACE_ID` environment variable should **never** be manually set in container configurations.
+X-Ray automatically injects this trace header at runtime when:
+
+- The X-Ray daemon is running as a sidecar container
+- The ECS task has the necessary IAM permissions
+- The application uses the AWS X-Ray SDK
+
+**Required IAM Permissions**:
+
+```typescript
+// Add X-Ray permissions to the task role
+taskRole.addToPolicy(
+	new iam.PolicyStatement({
+		effect: iam.Effect.ALLOW,
+		actions: [
+			'xray:PutTraceSegments',
+			'xray:PutTelemetryRecords',
+			'xray:GetSamplingRules',
+			'xray:GetSamplingTargets',
+		],
+		resources: ['*'],
+	}),
+)
+```
+
+**Application Integration**: To enable X-Ray tracing in the Express application, add the AWS X-Ray SDK:
+
+```typescript
+// Add to your Express app setup
+import AWSXRay from 'aws-xray-sdk-express'
+
+const app = express()
+
+// Enable X-Ray tracing (only in production)
+if (process.env.NODE_ENV === 'production') {
+	app.use(AWSXRay.express.openSegment('macro-ai-api'))
+	// ... other middleware
+	app.use(AWSXRay.express.closeSegment())
+}
 ```
 
 ## 💰 Cost Optimization
