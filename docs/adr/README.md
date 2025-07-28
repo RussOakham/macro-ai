@@ -12,27 +12,27 @@ Architecture Decision Records are documents that capture important architectural
 
 - **[001: Error Handling Strategy](./001-error-handling-strategy.md)** - Go-style error handling approach
 
-  - **Status**: Accepted
-  - **Decision**: Use custom tryCatch utilities instead of traditional try/catch
-  - **Context**: Need for consistent, functional error handling patterns
-  - **Consequences**: Improved error handling consistency and type safety
+  - **Status**: ✅ Accepted (Implemented)
+  - **Decision**: Use custom tryCatch utilities instead of traditional try/catch or neverthrow
+  - **Context**: Need for consistent, type-safe error handling with automatic logging
+  - **Consequences**: Improved error handling consistency, type safety, and zero external dependencies
 
 - **[002: Authentication Approach](./002-authentication-approach.md)** - AWS Cognito integration decision
 
-  - **Status**: Accepted
+  - **Status**: 📋 Planned
   - **Decision**: Use AWS Cognito for user authentication and management
   - **Context**: Need for secure, scalable authentication solution
   - **Consequences**: Reduced authentication complexity, improved security
 
 - **[003: Database Technology](./003-database-technology.md)** - PostgreSQL and pgvector choice
 
-  - **Status**: Accepted
+  - **Status**: 📋 Planned
   - **Decision**: Use PostgreSQL with pgvector extension for data storage
   - **Context**: Need for relational data with vector similarity search
   - **Consequences**: Unified database solution with AI capabilities
 
 - **[004: API Client Generation](./004-api-client-generation.md)** - OpenAPI auto-generation strategy
-  - **Status**: Accepted
+  - **Status**: 📋 Planned
   - **Decision**: Auto-generate TypeScript clients from OpenAPI specifications
   - **Context**: Need for type-safe, maintainable API integration
   - **Consequences**: Improved type safety and reduced maintenance overhead

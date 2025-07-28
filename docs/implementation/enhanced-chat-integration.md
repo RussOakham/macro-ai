@@ -115,7 +115,7 @@ pnpm type-check  # ✅ Passes without errors
 
 ### ✅ Server Logs Evidence
 
-```
+```log
 [21:39:54.215] INFO: Streaming message exchange initiated
 [21:39:54.341] INFO: Streaming completed successfully
 [21:39:54.869] INFO: Successfully retrieved chat (cache invalidation working!)

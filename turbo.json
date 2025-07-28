@@ -33,6 +33,10 @@
 			]
 		},
 		"lint": {},
+		"lint:md": {
+			"inputs": ["**/*.md", ".markdownlint.json"],
+			"outputs": []
+		},
 		"type-check": {},
 		"test": {
 			"cache": false,
