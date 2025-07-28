@@ -10,16 +10,19 @@ and documentation. All terms reflect the **current production implementation** a
 ### A
 
 **ADR (Architecture Decision Record)**
-: A document that captures an important architectural decision made along with its context and consequences. Used to track the reasoning behind technical choices in the Macro AI project.
+: A document that captures an important architectural decision made along with its context and consequences.
+Used to track the reasoning behind technical choices in the Macro AI project.
 
 **API Client**
-: Auto-generated TypeScript client library that provides type-safe access to the Macro AI API endpoints. Generated from OpenAPI specifications using Zodios.
+: Auto-generated TypeScript client library that provides type-safe access to the Macro AI API endpoints.
+Generated from OpenAPI specifications using Zodios.
 
 **API Key Authentication**
 : Alternative authentication method using X-API-KEY header for programmatic access and service-to-service communication.
 
 **AWS Cognito**
-: Amazon Web Services identity and access management service used for user authentication, registration, and session management in Macro AI.
+: Amazon Web Services identity and access management service used for user authentication, registration,
+and session management in Macro AI.
 
 ### B
 
@@ -71,7 +74,8 @@ and documentation. All terms reflect the **current production implementation** a
 ### I
 
 **Incident Response**
-: Systematic approach to handling system outages, performance issues, and other operational problems with defined severity levels and procedures.
+: Systematic approach to handling system outages, performance issues, and other operational problems with
+defined severity levels and procedures.
 
 ### J
 

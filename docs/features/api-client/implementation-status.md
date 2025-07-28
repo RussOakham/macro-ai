@@ -209,7 +209,7 @@ Macro AI monorepo. The core functionality is **fully implemented and production-
 
 ### Key Files and Structure
 
-```
+```text
 apps/express-api/
 ├── src/utils/swagger/
 │   ├── openapi-registry.ts    # Central OpenAPI schema registry

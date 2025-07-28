@@ -6,7 +6,9 @@
 
 ## Context
 
-The Macro AI application requires a robust data storage solution to handle user data, chat conversations, AI-generated content, and vector embeddings for semantic search. We needed to select database technologies that could support:
+The Macro AI application requires a robust data storage solution to handle user data, chat conversations,
+AI-generated content, and vector embeddings for semantic search. We needed to select database technologies that
+could support:
 
 1. **Relational Data**: User profiles, chat metadata, structured application data
 2. **Unstructured Content**: Chat messages, AI responses, variable-length text

@@ -1,10 +1,13 @@
 # Operations Documentation
 
-This section covers operational procedures, workflows, and processes for maintaining and managing the Macro AI application in production.
+This section covers operational procedures, workflows, and processes for maintaining and managing the Macro AI
+application in production.
 
 ## 🔧 Operations Overview
 
-Our operations approach emphasizes **trunk-based development**, **automated processes**, **comprehensive monitoring**, and **rapid incident response**. We maintain high availability while ensuring code quality and deployment safety.
+Our operations approach emphasizes **trunk-based development**, **automated processes**, **comprehensive
+monitoring**, and **rapid incident response**. We maintain high availability while ensuring code quality and
+deployment safety.
 
 ## 📚 Operations Documentation
 

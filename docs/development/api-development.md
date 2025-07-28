@@ -265,7 +265,7 @@ const generateSwaggerSpec = async () => {
 
 ### API Client Package Structure
 
-```
+```text
 packages/macro-ai-api-client/
 ├── scripts/generate.ts     # Client generation script
 ├── src/index.ts           # Main client export

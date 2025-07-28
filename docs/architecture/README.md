@@ -1,10 +1,12 @@
 # Architecture Documentation
 
-This section provides comprehensive documentation of the Macro AI system architecture, including high-level design, data flows, security model, and technology decisions.
+This section provides comprehensive documentation of the Macro AI system architecture, including high-level
+design, data flows, security model, and technology decisions.
 
 ## 🏗️ Architecture Overview
 
-Macro AI is built as a modern monorepo application with a React frontend, Express.js backend, PostgreSQL database with pgvector for AI embeddings, and AWS Cognito for authentication.
+Macro AI is built as a modern monorepo application with a React frontend, Express.js backend, PostgreSQL
+database with pgvector for AI embeddings, and AWS Cognito for authentication.
 
 ## 📚 Architecture Documentation
 

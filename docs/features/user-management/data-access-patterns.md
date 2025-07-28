@@ -1,10 +1,12 @@
 # Data Access Patterns
 
-This document provides detailed information about the repository pattern implementation and data access strategies used in the Macro AI user management system.
+This document provides detailed information about the repository pattern implementation and data access
+strategies used in the Macro AI user management system.
 
 ## 🔧 Current Implementation Status: ✅ COMPLETE
 
-The data access layer is fully implemented and production-ready with repository pattern, Go-style error handling, and comprehensive Zod validation.
+The data access layer is fully implemented and production-ready with repository pattern, Go-style error
+handling, and comprehensive Zod validation.
 
 ## 🏗️ Repository Pattern Architecture
 

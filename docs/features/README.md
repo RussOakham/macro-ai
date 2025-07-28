@@ -1,10 +1,12 @@
 # Features Documentation
 
-This section provides detailed documentation for all major features of the Macro AI application, including implementation details, usage examples, and integration patterns.
+This section provides detailed documentation for all major features of the Macro AI application, including
+implementation details, usage examples, and integration patterns.
 
 ## 🎯 Feature Overview
 
-Macro AI includes four core feature domains: **Authentication**, **Chat System**, **User Management**, and **API Client**. Each feature is designed with modularity, type safety, and comprehensive testing in mind.
+Macro AI includes four core feature domains: **Authentication**, **Chat System**, **User Management**, and
+**API Client**. Each feature is designed with modularity, type safety, and comprehensive testing in mind.
 
 ## 📚 Feature Documentation
 
@@ -141,4 +143,5 @@ graph TB
 
 ---
 
-**Explore Features**: [Authentication](./authentication/README.md) | [Chat System](./chat-system/README.md) | [User Management](./user-management/README.md) | [API Client](./api-client/README.md)
+**Explore Features**: [Authentication](./authentication/README.md) | [Chat System](./chat-system/README.md) |
+[User Management](./user-management/README.md) | [API Client](./api-client/README.md)

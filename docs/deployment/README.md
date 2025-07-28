@@ -1,10 +1,12 @@
 # Deployment Documentation
 
-This section covers deployment strategies, infrastructure setup, CI/CD pipelines, and production environment management for the Macro AI application.
+This section covers deployment strategies, infrastructure setup, CI/CD pipelines, and production environment
+management for the Macro AI application.
 
 ## 🚀 Deployment Overview
 
-Macro AI is designed for deployment on AWS infrastructure with automated CI/CD pipelines, comprehensive monitoring, and scalable architecture patterns.
+Macro AI is designed for deployment on AWS infrastructure with automated CI/CD pipelines, comprehensive
+monitoring, and scalable architecture patterns.
 
 ## 📚 Deployment Documentation
 

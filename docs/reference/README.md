@@ -1,6 +1,7 @@
 # Reference Documentation
 
-This section provides comprehensive reference materials for the Macro AI application, including API documentation, configuration options, database schemas, and terminology.
+This section provides comprehensive reference materials for the Macro AI application, including API
+documentation, configuration options, database schemas, and terminology.
 
 ## 📚 Reference Materials
 
@@ -198,4 +199,5 @@ users (1) ←→ (many) user_sessions
 
 ---
 
-**Quick Access**: [API Reference](./api-reference.md) | [Configuration](./configuration-reference.md) | [Database Schema](./database-schema.md) | [Glossary](./glossary.md)
+**Quick Access**: [API Reference](./api-reference.md) | [Configuration](./configuration-reference.md) |
+[Database Schema](./database-schema.md) | [Glossary](./glossary.md)

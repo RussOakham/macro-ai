@@ -6,7 +6,9 @@
 
 ## Context
 
-The Macro AI application requires a robust API client for the frontend application to communicate with the backend API. We needed to choose between manually maintaining API client code or implementing an automated generation system. Key considerations included:
+The Macro AI application requires a robust API client for the frontend application to communicate with the
+backend API. We needed to choose between manually maintaining API client code or implementing an automated
+generation system. Key considerations included:
 
 1. **Type Safety**: Ensuring compile-time type checking between frontend and backend
 2. **Maintenance Overhead**: Minimizing manual synchronization between API changes and client code

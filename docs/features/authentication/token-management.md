@@ -4,7 +4,8 @@ This document provides detailed information about JWT and refresh token handling
 
 ## 🔧 Current Implementation Status: ✅ COMPLETE
 
-The token management system is fully implemented and production-ready with automatic token refresh, secure cookie storage, and comprehensive error handling.
+The token management system is fully implemented and production-ready with automatic token refresh, secure
+cookie storage, and comprehensive error handling.
 
 ## 🎯 Token Architecture
 

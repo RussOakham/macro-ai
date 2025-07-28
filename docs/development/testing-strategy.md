@@ -340,7 +340,7 @@ interface DatabaseType {
 3. **Factory Pattern**: Create factory functions for flexible mock creation
 4. **Comprehensive Coverage**: Include both success and error scenarios
 5. **Documentation**: Add JSDoc comments for all exported functions
-6. **Go-Style Error Handling**: Use Result<T> tuples and tryCatch patterns
+6. **Go-Style Error Handling**: Use `Result<T>` tuples and tryCatch patterns
 
 ### File Structure Template
 

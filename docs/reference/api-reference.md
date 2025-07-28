@@ -382,7 +382,7 @@ POST /chats/{chatId}/stream
 
 **Response**: Server-Sent Events (text/plain)
 
-```
+```text
 Machine learning is a subset of artificial intelligence...
 ```
 

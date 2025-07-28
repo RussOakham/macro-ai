@@ -125,7 +125,7 @@ management in a single file.
 
 **Proposed Modular Structure:**
 
-```
+```text
 apps/client-ui/src/routes/
 ├── __root.tsx              # Simplified root route
 ├── components/
@@ -168,7 +168,7 @@ in a single component.
 
 **Proposed Modular Structure:**
 
-```
+```text
 apps/client-ui/src/components/chat/chat-interface/
 ├── ChatInterface.tsx       # Main orchestrating component
 ├── components/
@@ -201,7 +201,7 @@ password reset, and session handling in a single service class.
 
 **Proposed Modular Structure:**
 
-```
+```text
 apps/express-api/src/features/auth/services/
 ├── AuthService.ts          # Main service orchestrator
 ├── CognitoService.ts       # AWS Cognito operations
@@ -228,7 +228,7 @@ All database table definitions, relationships, and schema exports in a single fi
 
 **Proposed Modular Structure:**
 
-```
+```text
 apps/express-api/src/db/schema/
 ├── tables/
 │   ├── users.schema.ts     # User table definitions

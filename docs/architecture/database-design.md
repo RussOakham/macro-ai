@@ -1,10 +1,12 @@
 # Database Design and Architecture
 
-This document provides comprehensive documentation of the database design, schema architecture, and data access patterns for the Macro AI application.
+This document provides comprehensive documentation of the database design, schema architecture, and data access
+patterns for the Macro AI application.
 
 ## 🔧 Current Implementation Status: ✅ PRODUCTION-READY
 
-The database system is **fully implemented and production-ready** with Drizzle ORM, PostgreSQL, pgvector support, and comprehensive Go-style error handling throughout the data access layer.
+The database system is **fully implemented and production-ready** with Drizzle ORM, PostgreSQL, pgvector
+support, and comprehensive Go-style error handling throughout the data access layer.
 
 ## 🏗️ Database Architecture Overview
 

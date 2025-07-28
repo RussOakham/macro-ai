@@ -1,10 +1,12 @@
 # Chat System
 
-The Macro AI chat system provides AI-powered conversational capabilities with OpenAI integration, real-time streaming responses, and persistent chat history with semantic search.
+The Macro AI chat system provides AI-powered conversational capabilities with OpenAI integration, real-time
+streaming responses, and persistent chat history with semantic search.
 
 ## 💬 Chat System Overview
 
-Our chat system integrates OpenAI's GPT models with Vercel's AI SDK to provide streaming responses, comprehensive chat management, and vector-based semantic search capabilities.
+Our chat system integrates OpenAI's GPT models with Vercel's AI SDK to provide streaming responses,
+comprehensive chat management, and vector-based semantic search capabilities.
 
 ## 🚧 Current Implementation Status: IN DEVELOPMENT
 
@@ -218,4 +220,5 @@ CREATE INDEX ON messages USING ivfflat (embedding vector_cosine_ops);
 
 ---
 
-**Implementation Details**: [AI Integration](./ai-integration.md) | [Streaming Responses](./streaming-responses.md) | [Data Persistence](./data-persistence.md)
+**Implementation Details**: [AI Integration](./ai-integration.md) | [Streaming Responses](./streaming-responses.md) |
+[Data Persistence](./data-persistence.md)

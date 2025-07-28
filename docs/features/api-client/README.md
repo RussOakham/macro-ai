@@ -1,10 +1,12 @@
 # API Client System
 
-The Macro AI API client provides auto-generated TypeScript clients with full type safety, modular architecture, and seamless integration with the Express API through OpenAPI specification.
+The Macro AI API client provides auto-generated TypeScript clients with full type safety, modular
+architecture, and seamless integration with the Express API through OpenAPI specification.
 
 ## 🔌 API Client Overview
 
-Our API client system automatically generates type-safe TypeScript clients from OpenAPI specifications, providing modular domain-specific clients with comprehensive error handling and token management.
+Our API client system automatically generates type-safe TypeScript clients from OpenAPI specifications,
+providing modular domain-specific clients with comprehensive error handling and token management.
 
 ## ✅ Current Implementation Status: COMPLETE
 

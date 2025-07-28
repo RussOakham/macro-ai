@@ -19,7 +19,7 @@ Shadcn/ui components, and modern development tooling.
 
 ### Application Structure
 
-```
+```text
 apps/client-ui/
 ├── src/
 │   ├── components/          # Reusable UI components
