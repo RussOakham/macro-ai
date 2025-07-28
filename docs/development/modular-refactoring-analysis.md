@@ -35,7 +35,7 @@ Auto-generated API client containing all schema definitions and client configura
 
 **Proposed Modular Structure:**
 
-```
+```text
 packages/macro-ai-api-client/src/
 ├── schemas/
 │   ├── auth.schemas.ts     # Authentication schemas
@@ -83,7 +83,7 @@ registrations in a single file.
 
 **Proposed Modular Structure:**
 
-```
+```text
 apps/express-api/src/routes/
 ├── auth/
 │   ├── auth.routes.ts      # Authentication endpoints
