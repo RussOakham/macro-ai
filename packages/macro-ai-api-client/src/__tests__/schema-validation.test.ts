@@ -141,14 +141,14 @@ describe('Schema Runtime Validation', () => {
 			it('should validate valid postAuthlogin_Body request', () => {
 				const validRequest = {
 					email: 'test@example.com',
-					password: 'password123',
+					password: 'Password123!',
 				}
 
 				const result = postAuthlogin_Body.safeParse(validRequest)
 				expect(result.success).toBe(true)
 				if (result.success) {
 					expect(result.data.email).toBe('test@example.com')
-					expect(result.data.password).toBe('password123')
+					expect(result.data.password).toBe('Password123!')
 				}
 			})
 
@@ -165,16 +165,16 @@ describe('Schema Runtime Validation', () => {
 			it('should validate valid postAuthregister_Body request', () => {
 				const validRequest = {
 					email: 'test@example.com',
-					password: 'password123',
-					confirmPassword: 'password123',
+					password: 'Password123!',
+					confirmPassword: 'Password123!',
 				}
 
 				const result = postAuthregister_Body.safeParse(validRequest)
 				expect(result.success).toBe(true)
 				if (result.success) {
 					expect(result.data.email).toBe('test@example.com')
-					expect(result.data.password).toBe('password123')
-					expect(result.data.confirmPassword).toBe('password123')
+					expect(result.data.password).toBe('Password123!')
+					expect(result.data.confirmPassword).toBe('Password123!')
 				}
 			})
 		})

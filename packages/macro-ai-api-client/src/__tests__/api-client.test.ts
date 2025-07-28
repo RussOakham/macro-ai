@@ -30,7 +30,7 @@ describe('Modular API Client', () => {
 		it('should validate auth login schema', () => {
 			const validLoginData = {
 				email: 'test@example.com',
-				password: 'password123',
+				password: 'Password123!',
 			}
 
 			const result = postAuthlogin_Body.safeParse(validLoginData)
@@ -50,8 +50,8 @@ describe('Modular API Client', () => {
 		it('should validate auth registration schema', () => {
 			const validRegisterData = {
 				email: 'test@example.com',
-				password: 'password123',
-				confirmPassword: 'password123',
+				password: 'Password123!',
+				confirmPassword: 'Password123!',
 			}
 
 			const result = postAuthregister_Body.safeParse(validRegisterData)
