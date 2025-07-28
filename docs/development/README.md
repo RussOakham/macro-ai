@@ -1,10 +1,13 @@
 # Development Guidelines
 
-This section contains comprehensive development guidelines, coding standards, testing strategies, and best practices for contributing to the Macro AI project.
+This section contains comprehensive development guidelines, coding standards, testing strategies, and best practices for
+contributing to the Macro AI project.
 
 ## 🎯 Development Philosophy
 
-We prioritize **type safety**, **consistent error handling**, **comprehensive testing**, and **maintainable code**. Our development approach emphasizes Go-style error handling, repository patterns, and extensive use of TypeScript for end-to-end type safety.
+We prioritize **type safety**, **consistent error handling**, **comprehensive testing**, and **maintainable code**.
+Our development approach emphasizes Go-style error handling, repository patterns, and extensive use of TypeScript for
+end-to-end type safety.
 
 ## 📚 Development Documentation
 

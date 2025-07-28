@@ -6,7 +6,9 @@
 
 ## Context
 
-The Macro AI application requires a consistent, type-safe error handling strategy across all services, controllers, and data access layers. Traditional JavaScript try/catch blocks lead to inconsistent error handling, poor type safety, and scattered error logging throughout the codebase.
+The Macro AI application requires a consistent, type-safe error handling strategy across all services, controllers,
+and data access layers. Traditional JavaScript try/catch blocks lead to inconsistent error handling, poor type safety,
+and scattered error logging throughout the codebase.
 
 Key requirements identified:
 
@@ -19,7 +21,8 @@ Key requirements identified:
 
 ## Decision
 
-We have chosen to implement **custom tryCatch and tryCatchSync utilities** that provide Go-style error handling with automatic error standardization and logging, rather than adopting the neverthrow library.
+We have chosen to implement **custom tryCatch and tryCatchSync utilities** that provide Go-style error handling with
+automatic error standardization and logging, rather than adopting the neverthrow library.
 
 ### Implementation
 
@@ -116,7 +119,8 @@ res.json({ user })
 - Requires extensive refactoring of existing codebase
 - Different programming paradigm from current team practices
 
-**Decision Rationale:** While neverthrow provides more advanced features, our custom implementation better fits our team's experience level and provides the core benefits we need without external dependencies.
+**Decision Rationale:** While neverthrow provides more advanced features, our custom implementation better fits our
+team's experience level and provides the core benefits we need without external dependencies.
 
 ### Traditional Try/Catch
 

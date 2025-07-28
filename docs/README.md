@@ -1,6 +1,7 @@
 # Macro AI Documentation
 
-Welcome to the comprehensive documentation for the Macro AI monorepo. This documentation provides everything you need to understand, develop, deploy, and maintain the Macro AI application.
+Welcome to the comprehensive documentation for the Macro AI monorepo. This documentation provides everything you need to
+understand, develop, deploy, and maintain the Macro AI application.
 
 ## 🚀 Quick Start
 

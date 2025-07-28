@@ -1,10 +1,13 @@
 # Architecture Decision Records (ADRs)
 
-This section contains Architecture Decision Records (ADRs) that document important architectural and technical decisions made during the development of the Macro AI application.
+This section contains Architecture Decision Records (ADRs) that document important architectural and technical decisions
+made during the development of the Macro AI application.
 
 ## 📋 What are ADRs?
 
-Architecture Decision Records are documents that capture important architectural decisions along with their context and consequences. They help teams understand why certain technical choices were made and provide historical context for future decisions.
+Architecture Decision Records are documents that capture important architectural decisions along with their context and
+consequences. They help teams understand why certain technical choices were made and provide historical context for
+future decisions.
 
 ## 📚 Current ADRs
 
@@ -182,4 +185,6 @@ Decisions that affect:
 
 ---
 
-**Browse ADRs**: [001: Error Handling](./001-error-handling-strategy.md) | [002: Authentication](./002-authentication-approach.md) | [003: Database](./003-database-technology.md) | [004: API Client](./004-api-client-generation.md)
+**Browse ADRs**: [001: Error Handling](./001-error-handling-strategy.md) |
+[002: Authentication](./002-authentication-approach.md) | [003: Database](./003-database-technology.md) |
+[004: API Client](./004-api-client-generation.md)

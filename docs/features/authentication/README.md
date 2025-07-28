@@ -2,7 +2,9 @@
 
 ## Current Implementation Status ✅ COMPLETE
 
-This document tracks the authentication implementation across the Macro AI application. The authentication system is **fully implemented and production-ready** with AWS Cognito integration, cookie-based authentication, and comprehensive client-side token management.
+This document tracks the authentication implementation across the Macro AI application. The authentication system is
+**fully implemented and production-ready** with AWS Cognito integration, cookie-based authentication, and
+comprehensive client-side token management.
 
 ## Authentication Architecture Overview
 
