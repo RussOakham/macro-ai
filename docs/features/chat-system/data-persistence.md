@@ -855,8 +855,9 @@ export class CacheService {
 		}
 
 		// Invalidate memory cache
+		const regex = this.wildcardToRegExp(pattern)
 		for (const key of this.memoryCache.keys()) {
-			if (key.match(pattern.replace('*', '.*'))) {
+			if (regex.test(key)) {
 				this.memoryCache.delete(key)
 			}
 		}
@@ -897,6 +898,21 @@ export class CacheService {
 	): Promise<void> {
 		const cacheKey = `search:${userId}:${queryHash}`
 		await this.set(cacheKey, results, ttl)
+	}
+
+	/**
+	 * Convert wildcard pattern to RegExp for memory cache invalidation
+	 * Handles multiple wildcards and escapes special regex characters
+	 */
+	private wildcardToRegExp(pattern: string): RegExp {
+		// Split on '*' to get segments, escape each segment, then join with '.*'
+		const escapedSegments = pattern
+			.split('*')
+			.map((segment) => segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+
+		// Join segments with '.*' and wrap with anchors for exact matching
+		const regexPattern = '^' + escapedSegments.join('.*') + '$'
+		return new RegExp(regexPattern)
 	}
 }
 ```

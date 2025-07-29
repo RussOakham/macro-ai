@@ -146,7 +146,7 @@ app.use(
 	cors({
 		origin: ['http://localhost:3000', 'http://localhost:3030'],
 		credentials: true, // Enable cookies and authorization headers
-		exposedHeaders: ['set-cookie', 'cache-control'],
+		exposedHeaders: ['cache-control'], // Note: 'set-cookie' cannot be exposed via CORS¹
 		methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 		allowedHeaders: [
 			'Origin',
@@ -172,6 +172,10 @@ app.use(
 
 **Why This Matters**: Using `Access-Control-Allow-Origin: '*'` with credentials would cause browsers to block requests.
 The explicit origin list ensures secure credential handling while maintaining CORS compliance.
+
+**¹ Security Note**: The `Set-Cookie` header cannot be exposed via `Access-Control-Expose-Headers` due to browser
+security policies. Browsers automatically handle `Set-Cookie` headers in CORS requests when `credentials: true`
+is set, making explicit exposure unnecessary and ignored.
 
 #### 2. Controller Layer
 
@@ -764,8 +768,9 @@ export class CacheService {
 		await this.invalidateRedisKeys(pattern)
 
 		// Invalidate memory cache
+		const regex = this.wildcardToRegExp(pattern)
 		for (const key of this.memoryCache.keys()) {
-			if (key.match(pattern.replace('*', '.*'))) {
+			if (regex.test(key)) {
 				this.memoryCache.delete(key)
 			}
 		}
@@ -792,6 +797,21 @@ export class CacheService {
 
 			cursor = nextCursor
 		} while (cursor !== '0') // Continue until we've scanned all keys
+	}
+
+	/**
+	 * Convert wildcard pattern to RegExp for memory cache invalidation
+	 * Handles multiple wildcards and escapes special regex characters
+	 */
+	private wildcardToRegExp(pattern: string): RegExp {
+		// Split on '*' to get segments, escape each segment, then join with '.*'
+		const escapedSegments = pattern
+			.split('*')
+			.map((segment) => segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+
+		// Join segments with '.*' and wrap with anchors for exact matching
+		const regexPattern = '^' + escapedSegments.join('.*') + '$'
+		return new RegExp(regexPattern)
 	}
 }
 ```

@@ -245,12 +245,16 @@ export function ChatInterface({ chatId }: { chatId: string }) {
 The chat interface includes sophisticated loading state management that provides immediate feedback during the brief
 period between message submission and streaming initiation.
 
-**Status States**:
+**Status States** (from AI SDK's `useChat` hook):
 
 - `'ready'` - Chat is ready for input
 - `'submitted'` - Message has been submitted, waiting for streaming to begin
 - `'streaming'` - AI response is actively streaming
 - `'error'` - An error occurred
+
+**Note**: The `useEnhancedChat` hook correctly exposes all status values from the underlying `@ai-sdk/react`
+`useChat` hook, including the `'submitted'` state which provides important user feedback during the brief
+period between message submission and streaming initiation.
 
 **Loading State Indicator**:
 

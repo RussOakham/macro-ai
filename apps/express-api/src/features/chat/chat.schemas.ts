@@ -49,6 +49,8 @@ export const chatMessagesTable = pgTable(
 	(table) => [
 		index('idx_chat_messages_chat_id').on(table.chatId),
 		index('idx_chat_messages_created_at').on(table.createdAt),
+		// Composite index for efficient pagination within chats
+		index('idx_chat_messages_chat_created').on(table.chatId, table.createdAt),
 		// pgvector index for similarity search
 		index('idx_chat_messages_embedding').using(
 			'hnsw',

@@ -122,9 +122,14 @@ export const streamChatResponse = async (
 	message: string,
 	res: Response,
 ) => {
-	res.setHeader('Content-Type', 'text/event-stream')
-	res.setHeader('Cache-Control', 'no-cache')
-	res.setHeader('Connection', 'keep-alive')
+	// Set headers for text streaming (Vercel AI SDK compatible)
+	res.writeHead(200, {
+		'Content-Type': 'text/plain; charset=utf-8',
+		'Cache-Control': 'no-cache',
+		Connection: 'keep-alive',
+		'Transfer-Encoding': 'chunked',
+		'X-Accel-Buffering': 'no', // Disable nginx buffering
+	})
 
 	const stream = await openai.chat.completions.create({
 		model: 'gpt-4',
@@ -132,14 +137,22 @@ export const streamChatResponse = async (
 		stream: true,
 	})
 
-	for await (const chunk of stream) {
-		const content = chunk.choices[0]?.delta?.content
-		if (content) {
-			res.write(`data: ${JSON.stringify({ content })}\n\n`)
+	// Helper function to send text chunks with immediate flushing
+	const sendTextChunk = (text: string) => {
+		res.write(text)
+		// Force immediate sending of the chunk to prevent buffering
+		if (res.flush) {
+			res.flush()
 		}
 	}
 
-	res.write('data: [DONE]\n\n')
+	for await (const chunk of stream) {
+		const content = chunk.choices[0]?.delta?.content
+		if (content) {
+			sendTextChunk(content) // Send raw text content for AI SDK compatibility
+		}
+	}
+
 	res.end()
 }
 ```
@@ -157,17 +170,24 @@ CREATE TABLE chats (
 );
 
 -- Chat messages with vector embeddings
-CREATE TABLE messages (
-  id UUID PRIMARY KEY,
-  chat_id UUID NOT NULL REFERENCES chats(id),
-  role VARCHAR(20) NOT NULL, -- 'user' or 'assistant'
+CREATE TABLE chat_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  chat_id UUID NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+  role VARCHAR(20) NOT NULL, -- 'user', 'assistant', or 'system'
   content TEXT NOT NULL,
+  metadata JSONB DEFAULT '{}',
   embedding VECTOR(1536), -- OpenAI embedding dimension
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Vector similarity index
-CREATE INDEX ON messages USING ivfflat (embedding vector_cosine_ops);
+-- Performance indexes for message queries
+CREATE INDEX idx_chat_messages_chat_id ON chat_messages(chat_id);
+CREATE INDEX idx_chat_messages_created_at ON chat_messages(created_at);
+CREATE INDEX idx_chat_messages_chat_created ON chat_messages(chat_id, created_at);
+
+-- Vector similarity index using HNSW for better performance
+CREATE INDEX idx_chat_messages_embedding ON chat_messages
+  USING hnsw (embedding vector_cosine_ops);
 ```
 
 ## 🧪 Testing Strategy

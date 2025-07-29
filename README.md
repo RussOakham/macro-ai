@@ -169,9 +169,9 @@ pnpm format:fix       # Fix formatting issues
 # Commits
 pnpm commit           # Use commitizen for standardized commits
 
-# Package-specific
-pnpm ui               # Run UI-related tasks
-pnpm api              # Run API-related tasks
+# Package-specific development servers
+pnpm ui               # Start React frontend development server
+pnpm api              # Start Express API development server
 ```
 
 ## 🤝 Contributing

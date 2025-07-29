@@ -179,7 +179,7 @@ app.use(
 	cors({
 		origin: allowedOrigins,
 		credentials: true,
-		exposedHeaders: ['set-cookie'],
+		exposedHeaders: ['cache-control'], // 'set-cookie' cannot be exposed via CORS
 		methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 		allowedHeaders: [
 			'Origin',
