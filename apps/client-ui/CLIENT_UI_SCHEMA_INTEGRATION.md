@@ -2,7 +2,9 @@
 
 ## Overview
 
-Successfully updated the `client-ui` application to fully leverage the new schema-driven API client architecture. This integration eliminates type duplication, provides runtime validation, and ensures type safety across the entire frontend application.
+Successfully updated the `client-ui` application to fully leverage the new schema-driven API client architecture.
+This integration eliminates type duplication, provides runtime validation, and ensures type safety across the entire
+frontend application.
 
 ## What Was Accomplished
 
@@ -235,6 +237,9 @@ import type { ApiResponseType } from '@repo/macro-ai-api-client'
 
 ## Conclusion
 
-The client-ui application now provides a **fully integrated, type-safe, and runtime-validated** interface with the backend API. This implementation demonstrates the power of schema-driven development and serves as a model for frontend-backend integration best practices.
+The client-ui application now provides a **fully integrated, type-safe, and runtime-validated** interface with the
+backend API. This implementation demonstrates the power of schema-driven development and serves as a model for
+frontend-backend integration best practices.
 
-The integration eliminates type duplication, provides comprehensive runtime safety, and maintains excellent developer experience while ensuring data integrity across the entire application stack.
+The integration eliminates type duplication, provides comprehensive runtime safety, and maintains excellent developer
+experience while ensuring data integrity across the entire application stack.

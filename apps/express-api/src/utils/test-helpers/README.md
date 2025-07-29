@@ -1,6 +1,7 @@
 # Test Helpers
 
-This directory contains reusable test helpers and mocking utilities to reduce code duplication and improve test maintainability across the express-api project.
+This directory contains reusable test helpers and mocking utilities to reduce code duplication and improve test
+maintainability across the express-api project.
 
 ## Available Helpers
 
@@ -101,7 +102,8 @@ describe('Your Test', () => {
 
 ### Express Mocks (`express-mocks.ts`)
 
-Reusable factory functions for creating Express Request, Response, and NextFunction mocks with proper TypeScript typing and chainable methods.
+Reusable factory functions for creating Express Request, Response, and NextFunction mocks with proper TypeScript typing
+and chainable methods.
 
 #### Basic Usage
 
