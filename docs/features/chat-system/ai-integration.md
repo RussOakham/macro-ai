@@ -168,7 +168,7 @@ export const aiService = new AIService()
 // apps/express-api/src/features/chat/chat.controller.ts
 export class ChatController {
 	/**
-	 * Stream chat message response using Server-Sent Events (SSE)
+	 * Stream chat message response using text streaming (Vercel AI SDK compatible)
 	 * POST /api/chats/:id/stream
 	 */
 	public streamChatMessage = async (
@@ -179,18 +179,30 @@ export class ChatController {
 		const chatId = req.params.id
 		const { messages } = req.body as SendMessageRequest
 
-		// Set up Server-Sent Events headers
+		// Set headers for Vercel AI SDK text streaming
 		res.writeHead(200, {
 			'Content-Type': 'text/plain; charset=utf-8',
 			'Cache-Control': 'no-cache',
 			Connection: 'keep-alive',
-			'Access-Control-Allow-Origin': '*',
-			'Access-Control-Allow-Headers': 'Cache-Control',
+			'Transfer-Encoding': 'chunked',
+			'X-Accel-Buffering': 'no', // Disable nginx buffering
+			// CORS headers are handled by the main CORS middleware
 		})
 
-		// Helper function to send text chunks
-		const sendTextChunk = (chunk: string) => {
-			res.write(chunk)
+		// Helper function to send text chunks for Vercel AI SDK
+		const sendTextChunk = (text: string): void => {
+			const [, writeError] = tryCatchSync(() => {
+				res.write(text)
+			}, 'streamChatMessage - sendTextChunk')
+
+			if (writeError) {
+				logger.error({
+					msg: '[streamChatMessage]: Error writing chunk',
+					error: writeError.message,
+					userId,
+					chatId,
+				})
+			}
 		}
 
 		try {

@@ -17,13 +17,14 @@ common authentication vulnerabilities.
 ```typescript
 const cookieOptions = {
 	httpOnly: true, // Prevents XSS access to tokens
-	secure: true, // HTTPS only in production
+	secure: nodeEnv === 'production', // HTTPS only in production
 	sameSite: 'strict', // CSRF protection
-	maxAge: tokenLifetime, // Automatic expiration
+	maxAge: tokenLifetime * 1000, // Convert seconds to milliseconds for cookie expiration
 	path: '/', // Appropriate scope
+	domain: cookieDomain, // Domain restriction
 }
 
-res.cookie('accessToken', token, cookieOptions)
+res.cookie('macro-ai-accessToken', token, cookieOptions)
 ```
 
 **Security Benefits:**

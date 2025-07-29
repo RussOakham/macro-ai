@@ -364,24 +364,70 @@ public async findUserById(id: string): Promise<Result<TUser | undefined>> {
 ### Crypto Operations ✅ COMPLETE
 
 ```typescript
-// Encryption with error handling
+import crypto from 'crypto'
+
+// Use a secure encryption key from environment variables
+const encryptionKey = config.cookieEncryptionKey
+const ALGORITHM = 'aes-256-gcm'
+const IV_LENGTH = 12 // For GCM, recommended IV length is 12 bytes
+
+// Encryption with error handling using secure AES-256-GCM
 export const encrypt = (text: string): Result<string> => {
 	return tryCatchSync(() => {
-		const cipher = createCipher('aes-256-gcm', config.encryptionKey)
+		// Generate a random 12-byte IV for GCM mode
+		const iv = crypto.randomBytes(IV_LENGTH)
+
+		// Create cipher with IV and proper key handling
+		const cipher = crypto.createCipheriv(
+			ALGORITHM,
+			Buffer.from(encryptionKey, 'hex'),
+			iv,
+		)
+
+		// Encrypt the text
 		let encrypted = cipher.update(text, 'utf8', 'hex')
 		encrypted += cipher.final('hex')
-		return encrypted
-	}, 'crypto - encrypt')
+
+		// Get the authentication tag
+		const authTag = cipher.getAuthTag()
+
+		// Format: IV:AuthTag:EncryptedText (colon-separated for readability)
+		const encryptedOutput = `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`
+
+		return encryptedOutput
+	}, 'cryptoUtils - encrypt')
 }
 
-// Decryption with error handling
+// Decryption with error handling using secure AES-256-GCM
 export const decrypt = (encryptedText: string): Result<string> => {
 	return tryCatchSync(() => {
-		const decipher = createDecipher('aes-256-gcm', config.encryptionKey)
-		let decrypted = decipher.update(encryptedText, 'hex', 'utf8')
+		// Parse the colon-separated format: IV:AuthTag:EncryptedText
+		const parts = encryptedText.split(':')
+		if (parts.length !== 3) {
+			throw new Error('Invalid encrypted text format')
+		}
+
+		const [ivHex, authTagHex, encryptedHex] = parts
+		if (!ivHex || !authTagHex || !encryptedHex) {
+			throw new Error('Invalid encrypted text format')
+		}
+
+		// Create decipher with IV and proper key handling
+		const decipher = crypto.createDecipheriv(
+			ALGORITHM,
+			Buffer.from(encryptionKey, 'hex'),
+			Buffer.from(ivHex, 'hex'),
+		)
+
+		// Set the authentication tag for verification
+		decipher.setAuthTag(Buffer.from(authTagHex, 'hex'))
+
+		// Decrypt the data
+		let decrypted = decipher.update(encryptedHex, 'hex', 'utf8')
 		decrypted += decipher.final('utf8')
+
 		return decrypted
-	}, 'crypto - decrypt')
+	}, 'cryptoUtils - decrypt')
 }
 
 // Usage in services

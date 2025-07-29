@@ -760,11 +760,8 @@ export class CacheService {
 	}
 
 	async invalidate(pattern: string): Promise<void> {
-		// Invalidate Redis keys
-		const keys = await this.redis.keys(pattern)
-		if (keys.length > 0) {
-			await this.redis.del(...keys)
-		}
+		// Invalidate Redis keys using SCAN for non-blocking iteration
+		await this.invalidateRedisKeys(pattern)
 
 		// Invalidate memory cache
 		for (const key of this.memoryCache.keys()) {
@@ -772,6 +769,29 @@ export class CacheService {
 				this.memoryCache.delete(key)
 			}
 		}
+	}
+
+	private async invalidateRedisKeys(pattern: string): Promise<void> {
+		let cursor = '0'
+		const batchSize = 100 // Process keys in batches to avoid memory spikes
+
+		do {
+			// Use SCAN to iterate over keys matching the pattern
+			const [nextCursor, keys] = await this.redis.scan(
+				cursor,
+				'MATCH',
+				pattern,
+				'COUNT',
+				batchSize,
+			)
+
+			// Delete found keys in batches
+			if (keys.length > 0) {
+				await this.redis.del(...keys)
+			}
+
+			cursor = nextCursor
+		} while (cursor !== '0') // Continue until we've scanned all keys
 	}
 }
 ```

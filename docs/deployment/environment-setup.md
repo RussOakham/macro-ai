@@ -200,27 +200,100 @@ class SecretManager {
 	}
 
 	async getSecret(secretName: string): Promise<Record<string, string>> {
-		const command = new GetSecretValueCommand({ SecretId: secretName })
-		const response = await this.client.send(command)
-		return JSON.parse(response.SecretString || '{}')
+		try {
+			const command = new GetSecretValueCommand({ SecretId: secretName })
+			const response = await this.client.send(command)
+
+			// Check if SecretString exists and is not null/undefined
+			if (!response.SecretString) {
+				console.warn(`Secret ${secretName} has no SecretString value`)
+				return {}
+			}
+
+			// Safely parse JSON with error handling
+			try {
+				const parsed = JSON.parse(response.SecretString)
+
+				// Ensure the parsed result is an object
+				if (
+					typeof parsed !== 'object' ||
+					parsed === null ||
+					Array.isArray(parsed)
+				) {
+					console.warn(
+						`Secret ${secretName} does not contain a valid JSON object`,
+					)
+					return {}
+				}
+
+				return parsed
+			} catch (parseError) {
+				console.error(
+					`Failed to parse JSON for secret ${secretName}:`,
+					parseError,
+				)
+				return {}
+			}
+		} catch (error) {
+			console.error(`Failed to retrieve secret ${secretName}:`, error)
+			return {}
+		}
+	}
+
+	private mergeSecretsWithEnvCheck(
+		secrets: Record<string, string>,
+		secretType: string,
+	): void {
+		const overrides: string[] = []
+
+		for (const [key, value] of Object.entries(secrets)) {
+			// Check if environment variable already exists
+			if (process.env[key] !== undefined) {
+				overrides.push(key)
+				console.warn(
+					`Environment variable ${key} already exists and will be overridden by ${secretType} secret`,
+				)
+			}
+
+			// Set the environment variable
+			process.env[key] = value
+		}
+
+		if (overrides.length > 0) {
+			console.info(
+				`Overridden ${overrides.length} existing environment variables from ${secretType}:`,
+				overrides,
+			)
+		}
 	}
 
 	async loadEnvironmentSecrets(): Promise<void> {
 		const environment = process.env.NODE_ENV || 'development'
 
 		if (environment === 'production' || environment === 'staging') {
-			const apiSecrets = await this.getSecret(
-				`/macro-ai/${environment}/api-keys`,
-			)
-			const dbSecrets = await this.getSecret(
-				`/macro-ai/${environment}/database-credentials`,
-			)
-			const serviceSecrets = await this.getSecret(
-				`/macro-ai/${environment}/external-services`,
-			)
+			try {
+				const apiSecrets = await this.getSecret(
+					`/macro-ai/${environment}/api-keys`,
+				)
+				const dbSecrets = await this.getSecret(
+					`/macro-ai/${environment}/database-credentials`,
+				)
+				const serviceSecrets = await this.getSecret(
+					`/macro-ai/${environment}/external-services`,
+				)
 
-			// Merge secrets into process.env
-			Object.assign(process.env, apiSecrets, dbSecrets, serviceSecrets)
+				// Merge secrets into process.env with conflict detection
+				this.mergeSecretsWithEnvCheck(apiSecrets, 'API keys')
+				this.mergeSecretsWithEnvCheck(dbSecrets, 'database credentials')
+				this.mergeSecretsWithEnvCheck(serviceSecrets, 'external services')
+
+				console.info(
+					`Successfully loaded secrets for ${environment} environment`,
+				)
+			} catch (error) {
+				console.error('Failed to load environment secrets:', error)
+				// Don't throw - allow application to continue with existing env vars
+			}
 		}
 	}
 }

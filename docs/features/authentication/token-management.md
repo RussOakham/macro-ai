@@ -39,10 +39,11 @@ cookie storage, and comprehensive error handling.
 // Secure cookie settings
 const cookieOptions = {
 	httpOnly: true, // Prevent XSS attacks
-	secure: true, // HTTPS only in production
+	secure: nodeEnv === 'production', // HTTPS only in production
 	sameSite: 'strict', // CSRF protection
-	maxAge: tokenLifetime, // Automatic expiration
+	maxAge: tokenLifetime * 1000, // Convert seconds to milliseconds for cookie expiration
 	path: '/', // Available site-wide
+	domain: cookieDomain, // Domain restriction
 }
 ```
 
@@ -135,25 +136,70 @@ api.interceptors.response.use(
 ### Encryption for Synchronize Tokens
 
 ```typescript
-// Encrypt username for synchronize token
-export const encrypt = (text: string): string => {
-	const cipher = createCipher('aes-256-gcm', encryptionKey)
-	let encrypted = cipher.update(text, 'utf8', 'hex')
-	encrypted += cipher.final('hex')
-	const authTag = cipher.getAuthTag()
-	return encrypted + ':' + authTag.toString('hex')
+import crypto from 'crypto'
+
+// Use a secure encryption key from environment variables
+const encryptionKey = config.cookieEncryptionKey
+const ALGORITHM = 'aes-256-gcm'
+const IV_LENGTH = 12 // For GCM, recommended IV length is 12 bytes
+
+// Encrypt username for synchronize token using secure AES-256-GCM
+export const encrypt = (text: string) => {
+	return tryCatchSync(() => {
+		// Generate a random 12-byte IV for each encryption
+		const iv = crypto.randomBytes(IV_LENGTH)
+
+		// Create cipher with IV and proper key handling
+		const cipher = crypto.createCipheriv(
+			ALGORITHM,
+			Buffer.from(encryptionKey, 'hex'),
+			iv,
+		)
+
+		// Encrypt the text
+		let encrypted = cipher.update(text, 'utf8', 'hex')
+		encrypted += cipher.final('hex')
+
+		// Get the 16-byte authentication tag
+		const authTag = cipher.getAuthTag()
+
+		// Format: IV:AuthTag:EncryptedText (colon-separated for parsing)
+		const encryptedOutput = `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`
+
+		return encryptedOutput
+	}, 'cryptoUtils - encrypt')
 }
 
-// Decrypt synchronize token
+// Decrypt synchronize token using secure AES-256-GCM
 export const decrypt = (encryptedText: string): Result<string> => {
 	return tryCatchSync(() => {
-		const [encrypted, authTag] = encryptedText.split(':')
-		const decipher = createDecipher('aes-256-gcm', encryptionKey)
-		decipher.setAuthTag(Buffer.from(authTag, 'hex'))
-		let decrypted = decipher.update(encrypted, 'hex', 'utf8')
+		// Parse the colon-separated format: IV:AuthTag:EncryptedText
+		const parts = encryptedText.split(':')
+		if (parts.length !== 3) {
+			throw new Error('Invalid encrypted text format')
+		}
+
+		const [ivHex, authTagHex, encryptedHex] = parts
+		if (!ivHex || !authTagHex || !encryptedHex) {
+			throw new Error('Invalid encrypted text format')
+		}
+
+		// Create decipher with extracted IV and proper key handling
+		const decipher = crypto.createDecipheriv(
+			ALGORITHM,
+			Buffer.from(encryptionKey, 'hex'),
+			Buffer.from(ivHex, 'hex'),
+		)
+
+		// Set the 16-byte authentication tag for verification
+		decipher.setAuthTag(Buffer.from(authTagHex, 'hex'))
+
+		// Decrypt and verify the data
+		let decrypted = decipher.update(encryptedHex, 'hex', 'utf8')
 		decrypted += decipher.final('utf8')
+
 		return decrypted
-	}, 'crypto - decrypt')
+	}, 'cryptoUtils - decrypt')
 }
 ```
 

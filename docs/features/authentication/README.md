@@ -171,16 +171,16 @@ comprehensive client-side token management.
 
 ### Authentication Endpoints
 
-```typescript
-// Authentication API endpoints
-POST / auth / register // User registration
-POST / auth / login // User authentication
-POST / auth / logout // User logout
-POST / auth / refresh // Token refresh
-POST / auth / confirm // Email confirmation
-POST / auth / resend // Resend confirmation
-POST / auth / reset - password // Password reset request
-POST / auth / confirm - reset // Confirm password reset
+```http
+# Authentication API endpoints
+POST /auth/register        # User registration
+POST /auth/login           # User authentication
+POST /auth/logout          # User logout
+POST /auth/refresh         # Token refresh
+POST /auth/confirm         # Email confirmation
+POST /auth/resend          # Resend confirmation
+POST /auth/reset-password  # Password reset request
+POST /auth/confirm-reset   # Confirm password reset
 ```
 
 ### Token Storage Strategy
@@ -239,10 +239,6 @@ return handleAuthSuccess(user)
   - [x] ✅ Concurrent request handling without duplicate refresh calls
   - [x] ✅ Automatic logout and redirect on refresh failure
   - [x] ✅ Cookie-based authentication with credentials included
-        }
-
-// Proceed with successful authentication
-return handleAuthSuccess(user)
 
 ## Current Architecture Summary
 
