@@ -153,6 +153,11 @@ export const configs = {
 			plugin: {
 				'react-compiler': reactCompiler,
 			},
+			settings: {
+				react: {
+					version: '19.0',
+				},
+			},
 			rules: {
 				'react/react-in-jsx-scope': 'off', // no-longer needed in newer React versions
 				'react-refresh/only-export-components': [

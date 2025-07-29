@@ -27,6 +27,7 @@ catalog:
   # Build & Development Tools
   tsx: ^4.19.4
   globals: ^15.15.0
+  markdownlint-cli2: ^0.18.1
 
   # Core Dependencies
   zod: ^3.24.1

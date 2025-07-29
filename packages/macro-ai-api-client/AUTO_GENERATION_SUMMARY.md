@@ -2,7 +2,8 @@
 
 ## 🎯 Objective Completed ✅
 
-Successfully implemented **automatic code generation** for the `@repo/macro-ai-api-client` package, eliminating manual maintenance overhead and ensuring perfect synchronization with the backend OpenAPI specification.
+Successfully implemented **automatic code generation** for the `@repo/macro-ai-api-client` package, eliminating manual
+maintenance overhead and ensuring perfect synchronization with the backend OpenAPI specification.
 
 ## ✅ What Was Accomplished
 
@@ -29,7 +30,7 @@ Successfully implemented **automatic code generation** for the `@repo/macro-ai-a
 
 ### 4. Generated File Structure ✅
 
-```
+```text
 src/
 ├── schemas/
 │   ├── auth.schemas.ts (auto-generated)
@@ -113,4 +114,5 @@ pnpm generate
 - **Generation runs automatically** during dev and build processes
 - **API changes flow through automatically** when regenerated
 
-This implementation successfully eliminates the manual maintenance overhead while preserving full backward compatibility and improving the development workflow.
+This implementation successfully eliminates the manual maintenance overhead while preserving full backward compatibility
+and improving the development workflow.

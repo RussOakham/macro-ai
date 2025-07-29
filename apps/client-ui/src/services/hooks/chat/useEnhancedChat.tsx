@@ -224,11 +224,12 @@ const useEnhancedChat = ({
 	)
 
 	return {
-		// Expose all useChat properties
+		// Expose all useChat properties including all status values:
+		// 'ready', 'submitted', 'streaming', 'error'
 		messages: chatHook.messages,
 		input: chatHook.input,
 		handleInputChange: chatHook.handleInputChange,
-		status: chatHook.status,
+		status: chatHook.status, // Directly exposes AI SDK's useChat status
 		error: chatHook.error,
 
 		// Enhanced submit function

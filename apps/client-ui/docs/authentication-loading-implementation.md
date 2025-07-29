@@ -2,11 +2,13 @@
 
 ## Overview
 
-This implementation provides a comprehensive loading UI system for authentication processes, specifically addressing the blank screen issue that occurs during the `beforeLoad` authentication check in TanStack Router.
+This implementation provides a comprehensive loading UI system for authentication processes, specifically addressing the
+blank screen issue that occurs during the `beforeLoad` authentication check in TanStack Router.
 
 ## Problem Solved
 
-When users navigate to the root route (`/`), the `attemptAuthenticationWithRefresh` function runs in the `beforeLoad` hook, which can take time to:
+When users navigate to the root route (`/`), the `attemptAuthenticationWithRefresh` function runs in the `beforeLoad`
+hook, which can take time to:
 
 - Validate existing tokens
 - Refresh expired tokens
