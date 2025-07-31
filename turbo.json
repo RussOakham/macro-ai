@@ -9,6 +9,7 @@
 			"env": [
 				"API_KEY",
 				"NODE_ENV",
+				"APP_ENV",
 				"SERVER_PORT",
 				"AWS_COGNITO_USER_POOL_ID",
 				"AWS_COGNITO_USER_POOL_CLIENT_ID",

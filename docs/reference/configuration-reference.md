@@ -66,17 +66,33 @@ macro-ai/
 
 #### API Configuration
 
-| Variable      | Type   | Required | Default       | Description                                      |
-| ------------- | ------ | -------- | ------------- | ------------------------------------------------ |
-| `API_KEY`     | string | ✅       | -             | API authentication key (min 32 chars)            |
-| `NODE_ENV`    | enum   | ❌       | `development` | Environment: `development`, `production`, `test` |
-| `SERVER_PORT` | number | ❌       | `3040`        | Server port number                               |
+| Variable      | Type   | Required | Default       | Description                                                             |
+| ------------- | ------ | -------- | ------------- | ----------------------------------------------------------------------- |
+| `API_KEY`     | string | ✅       | -             | API authentication key (min 32 chars)                                   |
+| `NODE_ENV`    | enum   | ❌       | `development` | Environment: `development`, `production`, `test`                        |
+| `APP_ENV`     | enum   | ❌       | `development` | Application environment: `development`, `staging`, `production`, `test` |
+| `SERVER_PORT` | number | ❌       | `3040`        | Server port number                                                      |
 
 **API_KEY Generation**:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
+
+**Environment Variable Strategy**:
+
+Macro AI uses a **two-variable environment pattern** for enterprise-grade deployments:
+
+- **`NODE_ENV`**: Controls third-party library behavior (Express, React, webpack optimizations)
+- **`APP_ENV`**: Controls application-specific logic (URLs, feature flags, configurations)
+
+**Why Two Variables?**
+
+- **Library Optimizations**: Staging environments use `NODE_ENV=production` to get the same performance optimizations as
+  production
+- **Application Logic**: `APP_ENV=staging` allows staging-specific behavior while maintaining production-level library
+  performance
+- **Enterprise Best Practice**: Aligns with industry standards for multi-environment deployments
 
 #### AWS Cognito Configuration
 
@@ -323,6 +339,7 @@ export const validateEnvironment = () => {
 ```bash
 # Express API (.env)
 NODE_ENV=development
+APP_ENV=development
 API_KEY=dev-32-character-key-for-local-development
 SERVER_PORT=3040
 COOKIE_DOMAIN=localhost
@@ -347,7 +364,8 @@ VITE_API_KEY=dev-32-character-key-for-local-development
 
 ```bash
 # Express API
-NODE_ENV=staging
+NODE_ENV=production    # Uses production for library optimizations
+APP_ENV=staging        # Application knows it's staging
 API_KEY=staging-unique-32-character-key-here
 SERVER_PORT=3040
 COOKIE_DOMAIN=staging.macro-ai.com
@@ -366,6 +384,7 @@ VITE_API_KEY=staging-unique-32-character-key-here
 ```bash
 # Express API
 NODE_ENV=production
+APP_ENV=production
 API_KEY=production-unique-32-character-key-here
 SERVER_PORT=3040
 COOKIE_DOMAIN=macro-ai.com

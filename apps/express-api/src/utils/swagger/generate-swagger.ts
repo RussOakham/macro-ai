@@ -25,7 +25,7 @@ const generateSwaggerSpec = async () => {
 
 		// Generate server URL from configuration
 		const getServerConfig = () => {
-			switch (config.nodeEnv) {
+			switch (config.appEnv) {
 				case 'production':
 					return {
 						protocol: 'https',

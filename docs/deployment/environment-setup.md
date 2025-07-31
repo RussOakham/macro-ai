@@ -51,6 +51,7 @@ graph TB
 
 ```bash
 NODE_ENV=development
+APP_ENV=development
 API_KEY=dev-32-character-key-for-local-development
 SERVER_PORT=3040
 COOKIE_DOMAIN=localhost
@@ -63,7 +64,7 @@ RELATIONAL_DATABASE_URL=postgresql://postgres:password@localhost:5432/macro_ai_d
 
 **Characteristics**:
 
-- Production-like configuration
+- Production-like configuration with library optimizations
 - Reduced scale and redundancy
 - Full feature testing capability
 - Isolated from production data
@@ -71,12 +72,18 @@ RELATIONAL_DATABASE_URL=postgresql://postgres:password@localhost:5432/macro_ai_d
 **Configuration**:
 
 ```bash
-NODE_ENV=staging
+NODE_ENV=production    # Uses production for library optimizations
+APP_ENV=staging        # Application knows it's staging environment
 API_KEY=staging-unique-32-character-key-here
 SERVER_PORT=3040
 COOKIE_DOMAIN=staging.macro-ai.com
 RELATIONAL_DATABASE_URL=postgresql://staging_user:secure_pass@staging-db:5432/macro_ai_staging
 ```
+
+**Environment Variable Strategy**:
+
+- `NODE_ENV=production` ensures staging gets the same library optimizations as production (Express, logging, security)
+- `APP_ENV=staging` allows application-specific staging behavior (URLs, feature flags, etc.)
 
 #### Production Environment 📋 PLANNED
 
@@ -93,10 +100,63 @@ RELATIONAL_DATABASE_URL=postgresql://staging_user:secure_pass@staging-db:5432/ma
 
 ```bash
 NODE_ENV=production
+APP_ENV=production
 API_KEY=production-unique-32-character-key-here
 SERVER_PORT=3040
 COOKIE_DOMAIN=macro-ai.com
 RELATIONAL_DATABASE_URL=postgresql://prod_user:very_secure_pass@prod-db:5432/macro_ai_prod?sslmode=require
+```
+
+## 🔧 Environment Variable Strategy
+
+### Two-Variable Pattern: NODE_ENV + APP_ENV
+
+Macro AI uses a **two-variable environment pattern** that aligns with enterprise best practices:
+
+#### Why Two Variables?
+
+**NODE_ENV (Library Behavior)**:
+
+- Controls third-party library optimizations (Express, React, webpack, etc.)
+- Standard Node.js convention: `development`, `production`, `test`
+- Libraries trigger production optimizations only on `NODE_ENV=production`
+
+**APP_ENV (Application Behavior)**:
+
+- Controls application-specific logic (URLs, feature flags, configurations)
+- Custom values: `development`, `staging`, `production`, `test`
+- Allows staging to get production optimizations while maintaining staging behavior
+
+#### Benefits
+
+1. **Library Optimizations**: Staging environments get the same performance optimizations as production
+2. **Security Hardening**: Production-level security settings apply to staging
+3. **Convention Compliance**: Maintains standard Node.js ecosystem conventions
+4. **Third-party Compatibility**: Avoids unexpected behavior from libraries expecting standard NODE_ENV values
+
+#### Usage Guidelines
+
+**For Library-Dependent Logic** (use `NODE_ENV`):
+
+```typescript
+// Security, logging, performance optimizations
+if (config.nodeEnv === 'production') {
+	// Production-level behavior for both staging and production
+}
+```
+
+**For Application-Specific Logic** (use `APP_ENV`):
+
+```typescript
+// URLs, feature flags, environment-specific configurations
+switch (config.appEnv) {
+	case 'staging':
+		return 'https://api-staging.macro-ai.com'
+	case 'production':
+		return 'https://api.macro-ai.com'
+	default:
+		return 'http://localhost:3040'
+}
 ```
 
 ## 🔐 Secrets Management
@@ -693,6 +753,7 @@ import { z } from 'zod'
 
 const productionConfigSchema = z.object({
 	NODE_ENV: z.literal('production'),
+	APP_ENV: z.literal('production'),
 	API_KEY: z.string().min(32),
 	SERVER_PORT: z.coerce.number().default(3040),
 	COOKIE_DOMAIN: z.string().min(1),
@@ -708,20 +769,20 @@ const productionConfigSchema = z.object({
 })
 
 const stagingConfigSchema = productionConfigSchema.extend({
-	NODE_ENV: z.literal('staging'),
+	APP_ENV: z.literal('staging'), // NODE_ENV stays 'production' for library optimizations
 })
 
 export function validateEnvironmentConfig() {
-	const env = process.env.NODE_ENV
+	const appEnv = process.env.APP_ENV
 
 	try {
-		if (env === 'production') {
+		if (appEnv === 'production') {
 			productionConfigSchema.parse(process.env)
-		} else if (env === 'staging') {
+		} else if (appEnv === 'staging') {
 			stagingConfigSchema.parse(process.env)
 		}
 
-		console.log(`✅ Environment configuration validated for ${env}`)
+		console.log(`✅ Environment configuration validated for ${appEnv}`)
 	} catch (error) {
 		console.error(`❌ Environment configuration validation failed:`, error)
 		process.exit(1)
@@ -742,9 +803,9 @@ interface FeatureFlags {
 }
 
 export const getFeatureFlags = (): FeatureFlags => {
-	const env = process.env.NODE_ENV
+	const appEnv = process.env.APP_ENV
 
-	switch (env) {
+	switch (appEnv) {
 		case 'production':
 			return {
 				enableAdvancedAnalytics: true,

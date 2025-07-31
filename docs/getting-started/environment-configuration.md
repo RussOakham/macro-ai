@@ -311,6 +311,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 ```bash
 # Express API (.env)
+NODE_ENV=development
+APP_ENV=development
 API_KEY=dev-32-character-key-for-local-development
 SERVER_PORT=3040
 COOKIE_DOMAIN=localhost
@@ -326,6 +328,8 @@ VITE_API_KEY=dev-32-character-key-for-local-development
 
 ```bash
 # Express API
+NODE_ENV=production    # Uses production for library optimizations
+APP_ENV=staging        # Application knows it's staging
 API_KEY=staging-unique-32-character-key-here
 SERVER_PORT=3040
 COOKIE_DOMAIN=staging.macro-ai.com
@@ -341,6 +345,8 @@ VITE_API_KEY=staging-unique-32-character-key-here
 
 ```bash
 # Express API
+NODE_ENV=production
+APP_ENV=production
 API_KEY=production-unique-32-character-key-here
 SERVER_PORT=3040
 COOKIE_DOMAIN=macro-ai.com
