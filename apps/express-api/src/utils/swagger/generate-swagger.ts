@@ -43,7 +43,7 @@ Rate limit headers are included in responses to help track usage.`,
 			},
 			servers: [
 				{
-					url: 'http://localhost:3030/api',
+					url: 'http://localhost:3040/api',
 				},
 			],
 		})

@@ -212,6 +212,72 @@ POST /auth/logout
 }
 ```
 
+#### Confirm Registration
+
+```http
+POST /auth/confirm-registration
+```
+
+**Description**: Confirms user registration with verification code sent to email
+
+**Authentication**: Not required
+
+**Request Body**:
+
+```json
+{
+	"email": "user@example.com",
+	"confirmationCode": "123456"
+}
+```
+
+**Response** (200 OK):
+
+```json
+{
+	"success": true,
+	"message": "Registration confirmed successfully"
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request`: Invalid confirmation code or expired code
+- `404 Not Found`: User not found or already confirmed
+- `429 Too Many Requests`: Rate limit exceeded
+
+#### Resend Confirmation Code
+
+```http
+POST /auth/resend-confirmation-code
+```
+
+**Description**: Resends confirmation code to user's email for registration verification
+
+**Authentication**: Not required
+
+**Request Body**:
+
+```json
+{
+	"email": "user@example.com"
+}
+```
+
+**Response** (200 OK):
+
+```json
+{
+	"success": true,
+	"message": "Confirmation code resent to email"
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request`: User already confirmed or invalid email
+- `429 Too Many Requests`: Rate limit exceeded (3 requests per hour)
+
 #### Password Reset
 
 ```http
@@ -236,6 +302,75 @@ POST /auth/forgot-password
 	"message": "Password reset code sent to your email"
 }
 ```
+
+**Error Responses**:
+
+- `404 Not Found`: User not found
+- `429 Too Many Requests`: Rate limit exceeded
+
+#### Confirm Forgot Password
+
+```http
+POST /auth/confirm-forgot-password
+```
+
+**Description**: Completes password reset process with verification code and new password
+
+**Authentication**: Not required
+
+**Request Body**:
+
+```json
+{
+	"email": "user@example.com",
+	"confirmationCode": "123456",
+	"newPassword": "NewSecurePassword123!"
+}
+```
+
+**Response** (200 OK):
+
+```json
+{
+	"success": true,
+	"message": "Password reset successfully"
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request`: Invalid confirmation code, expired code, or weak password
+- `404 Not Found`: User not found
+
+#### Get Current User
+
+```http
+GET /auth/user
+```
+
+**Description**: Retrieves current authenticated user information
+
+**Authentication**: Required (Cookie or API Key)
+
+**Response** (200 OK):
+
+```json
+{
+	"success": true,
+	"data": {
+		"id": "user-uuid",
+		"email": "user@example.com",
+		"firstName": "John",
+		"lastName": "Doe",
+		"createdAt": "2024-01-01T00:00:00.000Z",
+		"updatedAt": "2024-01-01T00:00:00.000Z"
+	}
+}
+```
+
+**Error Responses**:
+
+- `401 Unauthorized`: Authentication required or invalid token
 
 ### Chat Endpoints ✅ IMPLEMENTED
 
@@ -397,10 +532,10 @@ Machine learning is a subset of artificial intelligence...
 #### Update Chat
 
 ```http
-PATCH /chats/{chatId}
+PUT /chats/{chatId}
 ```
 
-**Description**: Updates chat properties (title, etc.)
+**Description**: Updates chat title (with ownership verification)
 
 **Authentication**: Required
 
@@ -425,6 +560,13 @@ PATCH /chats/{chatId}
 	}
 }
 ```
+
+**Error Responses**:
+
+- `400 Bad Request`: Invalid chat ID or missing title
+- `401 Unauthorized`: Authentication required
+- `403 Forbidden`: User doesn't own this chat
+- `404 Not Found`: Chat not found
 
 #### Delete Chat
 
