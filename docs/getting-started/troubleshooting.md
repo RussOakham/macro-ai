@@ -16,7 +16,7 @@ node --version && pnpm --version
 
 # Check if development servers are running
 lsof -i :3000  # Frontend
-lsof -i :3030  # Backend API
+lsof -i :3040  # Backend API
 
 # Test database connection
 psql -U postgres -d macro_ai_dev -c "SELECT version();"
@@ -29,13 +29,13 @@ cd apps/express-api && node -e "require('dotenv').config(); console.log('Env loa
 
 ```bash
 # Check API health endpoint
-curl http://localhost:3030/api/health
+curl http://localhost:3040/api/health
 
 # Check frontend accessibility
 curl -I http://localhost:3000
 
 # Verify API documentation
-curl -I http://localhost:3030/api-docs
+curl -I http://localhost:3040/api-docs
 ```
 
 ## 🔧 Installation and Setup Issues
@@ -406,7 +406,7 @@ Cannot GET /api/health
 
 ```bash
 # Check if Express server is running
-curl http://localhost:3030/api/health
+curl http://localhost:3040/api/health
 
 # Check server logs for errors
 cd apps/express-api

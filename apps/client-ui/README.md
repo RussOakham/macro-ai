@@ -87,7 +87,7 @@ For comprehensive documentation and development guides:
 
 ```bash
 # Required environment variables
-VITE_API_URL=http://localhost:3030/api
+VITE_API_URL=http://localhost:3040/api
 VITE_API_KEY=your-32-character-api-key
 ```
 

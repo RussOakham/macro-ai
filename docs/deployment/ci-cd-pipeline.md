@@ -95,7 +95,7 @@ concurrency:
 ```yaml
 # API Configuration
 API_KEY: ${{ secrets.API_KEY }}
-SERVER_PORT: ${{ secrets.SERVER_PORT || '3030' }}
+SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
 NODE_ENV: test
 
 # AWS Cognito Configuration
@@ -280,7 +280,7 @@ REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
 
 ```bash
 API_KEY                           # 32+ character API key
-SERVER_PORT                       # Default: 3030
+SERVER_PORT                       # Default: 3040
 COOKIE_DOMAIN                     # Default: localhost
 COOKIE_ENCRYPTION_KEY             # 32+ character encryption key
 ```

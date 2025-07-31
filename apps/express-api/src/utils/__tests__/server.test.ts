@@ -183,7 +183,7 @@ describe('createServer', () => {
 
 			// Assert
 			expect(cors.default).toHaveBeenCalledWith({
-				origin: ['http://localhost:3000', 'http://localhost:3030'],
+				origin: ['http://localhost:3000', 'http://localhost:3040'],
 				credentials: true,
 				exposedHeaders: ['cache-control'], // 'set-cookie' cannot be exposed via CORS
 				methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

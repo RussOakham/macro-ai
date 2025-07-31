@@ -286,7 +286,7 @@ Complete `apps/express-api/.env` configuration:
 ```bash
 # API Configuration
 API_KEY=your-32-character-api-key-here
-SERVER_PORT=3030
+SERVER_PORT=3040
 
 # Cookie Configuration
 COOKIE_DOMAIN=localhost

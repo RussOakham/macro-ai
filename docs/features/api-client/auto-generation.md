@@ -150,7 +150,7 @@ export async function generateSwaggerSpec(): Promise<void> {
 
 	console.log('✅ OpenAPI specification generated successfully')
 	console.log(`📄 Specification written to: ${outputPath}`)
-	console.log(`🌐 Swagger UI available at: http://localhost:3030/api-docs`)
+	console.log(`🌐 Swagger UI available at: http://localhost:3040/api-docs`)
 }
 
 // Auto-generate on module load in development
@@ -333,7 +333,7 @@ import path from 'path'
  * Main generation function
  */
 async function main() {
-	const swaggerUrl = 'http://localhost:3030/swagger.json'
+	const swaggerUrl = 'http://localhost:3040/swagger.json'
 	const outputDir = path.join(process.cwd(), 'src')
 
 	try {
@@ -420,7 +420,7 @@ async function generateDomainClient(
 		options: {
 			shouldExportAllTypes: true,
 			withAlias: true,
-			baseUrl: process.env.VITE_API_URL || 'http://localhost:3030/api',
+			baseUrl: process.env.VITE_API_URL || 'http://localhost:3040/api',
 		},
 	})
 
@@ -621,7 +621,7 @@ const execAsync = promisify(exec)
  * Watch for OpenAPI spec changes and auto-regenerate client
  */
 async function watchAndGenerate() {
-	const swaggerUrl = 'http://localhost:3030/swagger.json'
+	const swaggerUrl = 'http://localhost:3040/swagger.json'
 
 	console.log('👀 Watching for OpenAPI specification changes...')
 

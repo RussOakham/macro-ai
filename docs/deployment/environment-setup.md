@@ -73,7 +73,7 @@ RELATIONAL_DATABASE_URL=postgresql://postgres:password@localhost:5432/macro_ai_d
 ```bash
 NODE_ENV=staging
 API_KEY=staging-unique-32-character-key-here
-SERVER_PORT=3030
+SERVER_PORT=3040
 COOKIE_DOMAIN=staging.macro-ai.com
 RELATIONAL_DATABASE_URL=postgresql://staging_user:secure_pass@staging-db:5432/macro_ai_staging
 ```
@@ -94,7 +94,7 @@ RELATIONAL_DATABASE_URL=postgresql://staging_user:secure_pass@staging-db:5432/ma
 ```bash
 NODE_ENV=production
 API_KEY=production-unique-32-character-key-here
-SERVER_PORT=3030
+SERVER_PORT=3040
 COOKIE_DOMAIN=macro-ai.com
 RELATIONAL_DATABASE_URL=postgresql://prod_user:very_secure_pass@prod-db:5432/macro_ai_prod?sslmode=require
 ```
@@ -449,7 +449,7 @@ const vpc = new ec2.Vpc(this, 'MacroAiVpc', {
 
 **ECS Security Group**:
 
-- Inbound: HTTP (3030) from ALB security group
+- Inbound: HTTP (3040) from ALB security group
 - Outbound: HTTPS (443) to 0.0.0.0/0, PostgreSQL (5432) to database security group
 
 **Database Security Group**:
@@ -666,7 +666,7 @@ app.get('/api/health', async (req, res) => {
 
 ```typescript
 const targetGroup = new elbv2.ApplicationTargetGroup(this, 'ApiTargetGroup', {
-	port: 3030,
+	port: 3040,
 	vpc,
 	protocol: elbv2.ApplicationProtocol.HTTP,
 	healthCheck: {
@@ -694,7 +694,7 @@ import { z } from 'zod'
 const productionConfigSchema = z.object({
 	NODE_ENV: z.literal('production'),
 	API_KEY: z.string().min(32),
-	SERVER_PORT: z.coerce.number().default(3030),
+	SERVER_PORT: z.coerce.number().default(3040),
 	COOKIE_DOMAIN: z.string().min(1),
 	COOKIE_ENCRYPTION_KEY: z.string().min(32),
 	RELATIONAL_DATABASE_URL: z.string().url(),

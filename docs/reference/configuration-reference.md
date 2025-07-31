@@ -154,7 +154,7 @@ const envSchema = z.object({
 	NODE_ENV: z
 		.enum(['development', 'production', 'test'])
 		.default('development'),
-	SERVER_PORT: z.coerce.number().default(3030),
+	SERVER_PORT: z.coerce.number().default(3040),
 
 	// AWS Cognito
 	AWS_COGNITO_REGION: z.string().min(1, 'AWS Cognito region is required'),
@@ -324,7 +324,7 @@ export const validateEnvironment = () => {
 # Express API (.env)
 NODE_ENV=development
 API_KEY=dev-32-character-key-for-local-development
-SERVER_PORT=3030
+SERVER_PORT=3040
 COOKIE_DOMAIN=localhost
 COOKIE_ENCRYPTION_KEY=dev-32-character-encryption-key-here
 RELATIONAL_DATABASE_URL=postgresql://postgres:password@localhost:5432/macro_ai_dev
@@ -367,7 +367,7 @@ VITE_API_KEY=staging-unique-32-character-key-here
 # Express API
 NODE_ENV=production
 API_KEY=production-unique-32-character-key-here
-SERVER_PORT=3030
+SERVER_PORT=3040
 COOKIE_DOMAIN=macro-ai.com
 COOKIE_ENCRYPTION_KEY=production-32-character-encryption-key
 RELATIONAL_DATABASE_URL=postgresql://prod_user:very_secure_pass@prod-db:5432/macro_ai_prod?sslmode=require

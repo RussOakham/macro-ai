@@ -393,7 +393,7 @@ The Macro AI Team
 
 ```bash
 # 1. API Health Check Failures
-curl -f http://localhost:3030/api/health
+curl -f http://localhost:3040/api/health
 
 # If unhealthy, check:
 # - Database connectivity

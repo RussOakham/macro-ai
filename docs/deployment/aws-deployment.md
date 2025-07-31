@@ -257,7 +257,7 @@ export class MacroAiStack extends cdk.Stack {
 
 		taskDef.addContainer('api', {
 			image: ecs.ContainerImage.fromRegistry('macro-ai/express-api:latest'),
-			portMappings: [{ containerPort: 3030 }],
+			portMappings: [{ containerPort: 3040 }],
 			logging: ecs.LogDrivers.awsLogs({
 				streamPrefix: 'api',
 			}),

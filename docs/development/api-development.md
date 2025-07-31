@@ -282,7 +282,7 @@ import SwaggerParser from '@apidevtools/swagger-parser'
 
 const main = async () => {
 	const openApiDoc = await SwaggerParser.parse(
-		'http://localhost:3030/swagger.json',
+		'http://localhost:3040/swagger.json',
 	)
 	await generateZodClientFromOpenAPI({
 		openApiDoc,

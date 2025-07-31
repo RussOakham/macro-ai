@@ -181,7 +181,7 @@ The Express API validates all environment variables using this Zod schema:
 const envSchema = z.object({
 	// API Configuration
 	API_KEY: z.string().min(32, 'API key must be at least 32 characters'),
-	SERVER_PORT: z.coerce.number().default(3030),
+	SERVER_PORT: z.coerce.number().default(3040),
 
 	// AWS Cognito
 	AWS_COGNITO_REGION: z.string().min(1),
