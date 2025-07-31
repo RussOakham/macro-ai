@@ -346,7 +346,7 @@ curl https://api.openai.com/v1/models \
 # Error message
 Error: listen EADDRINUSE: address already in use :::3000
 # OR
-Error: listen EADDRINUSE: address already in use :::3030
+Error: listen EADDRINUSE: address already in use :::3040
 ```
 
 #### Solution
@@ -354,14 +354,14 @@ Error: listen EADDRINUSE: address already in use :::3030
 ```bash
 # Find process using the port
 lsof -i :3000  # Frontend
-lsof -i :3030  # Backend
+lsof -i :3040  # Backend
 
 # Kill the process
 kill -9 <PID>
 
 # Or use different ports
 # Update .env files
-SERVER_PORT=3031  # Express API
+SERVER_PORT=3041  # Express API
 # Update Vite config for frontend port
 ```
 

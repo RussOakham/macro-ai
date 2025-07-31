@@ -70,7 +70,7 @@ macro-ai/
 | ------------- | ------ | -------- | ------------- | ------------------------------------------------ |
 | `API_KEY`     | string | ✅       | -             | API authentication key (min 32 chars)            |
 | `NODE_ENV`    | enum   | ❌       | `development` | Environment: `development`, `production`, `test` |
-| `SERVER_PORT` | number | ❌       | `3030`        | Server port number                               |
+| `SERVER_PORT` | number | ❌       | `3040`        | Server port number                               |
 
 **API_KEY Generation**:
 
@@ -339,7 +339,7 @@ AWS_COGNITO_SECRET_KEY=YourSecretKey
 AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30
 
 # Client UI (.env)
-VITE_API_URL=http://localhost:3030/api
+VITE_API_URL=http://localhost:3040/api
 VITE_API_KEY=dev-32-character-key-for-local-development
 ```
 
@@ -349,7 +349,7 @@ VITE_API_KEY=dev-32-character-key-for-local-development
 # Express API
 NODE_ENV=staging
 API_KEY=staging-unique-32-character-key-here
-SERVER_PORT=3030
+SERVER_PORT=3040
 COOKIE_DOMAIN=staging.macro-ai.com
 COOKIE_ENCRYPTION_KEY=staging-32-character-encryption-key
 RELATIONAL_DATABASE_URL=postgresql://staging_user:secure_pass@staging-db:5432/macro_ai_staging?sslmode=require

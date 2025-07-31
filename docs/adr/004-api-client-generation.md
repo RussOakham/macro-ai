@@ -230,7 +230,7 @@ export function createChatClient(baseUrl: string, options?: ZodiosOptions) {
 export async function generateApiClient(): Promise<void> {
   console.log('🔄 Fetching OpenAPI specification...')
 
-  const response = await fetch('http://localhost:3030/swagger.json')
+  const response = await fetch('http://localhost:3040/swagger.json')
   if (!response.ok) {
     throw new Error(`Failed to fetch OpenAPI spec: ${response.statusText}`)
   }
@@ -432,7 +432,7 @@ describe('Generated API Client', () => {
 
 	it('should maintain type safety', () => {
 		// TypeScript compilation serves as the test
-		const client = createChatClient('http://localhost:3030/api')
+		const client = createChatClient('http://localhost:3040/api')
 
 		// This should compile without errors
 		const response = client.post('/chats', {
@@ -443,7 +443,7 @@ describe('Generated API Client', () => {
 	})
 
 	it('should handle errors correctly', async () => {
-		const client = createChatClient('http://localhost:3030/api')
+		const client = createChatClient('http://localhost:3040/api')
 
 		try {
 			await client.post('/chats', {

@@ -52,7 +52,7 @@ graph TB
 ```bash
 NODE_ENV=development
 API_KEY=dev-32-character-key-for-local-development
-SERVER_PORT=3030
+SERVER_PORT=3040
 COOKIE_DOMAIN=localhost
 RELATIONAL_DATABASE_URL=postgresql://postgres:password@localhost:5432/macro_ai_dev
 ```

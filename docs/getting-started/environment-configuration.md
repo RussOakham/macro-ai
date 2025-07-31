@@ -44,7 +44,7 @@ cp apps/express-api/.env.example apps/express-api/.env
 ```bash
 # API Configuration
 API_KEY=your-32-character-api-key-here
-SERVER_PORT=3030
+SERVER_PORT=3040
 ```
 
 **API_KEY Requirements:**
@@ -55,7 +55,7 @@ SERVER_PORT=3030
 
 **SERVER_PORT:**
 
-- Default: 3030
+- Default: 3040
 - Must not conflict with other services
 - Frontend expects API on this port
 
@@ -230,7 +230,7 @@ cp apps/client-ui/.env.example apps/client-ui/.env
 
 ```bash
 # API Configuration
-VITE_API_URL=http://localhost:3030/api
+VITE_API_URL=http://localhost:3040/api
 VITE_API_KEY=your-32-character-api-key-here
 ```
 
@@ -244,7 +244,7 @@ VITE_API_KEY=your-32-character-api-key-here
 
 ```bash
 # Development
-VITE_API_URL=http://localhost:3030/api
+VITE_API_URL=http://localhost:3040/api
 
 # Staging
 VITE_API_URL=https://api-staging.macro-ai.com/api
@@ -312,13 +312,13 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```bash
 # Express API (.env)
 API_KEY=dev-32-character-key-for-local-development
-SERVER_PORT=3030
+SERVER_PORT=3040
 COOKIE_DOMAIN=localhost
 RELATIONAL_DATABASE_URL=postgresql://postgres:password@localhost:5432/macro_ai_dev
 OPENAI_API_KEY=sk-your-development-openai-key
 
 # Client UI (.env)
-VITE_API_URL=http://localhost:3030/api
+VITE_API_URL=http://localhost:3040/api
 VITE_API_KEY=dev-32-character-key-for-local-development
 ```
 
@@ -327,7 +327,7 @@ VITE_API_KEY=dev-32-character-key-for-local-development
 ```bash
 # Express API
 API_KEY=staging-unique-32-character-key-here
-SERVER_PORT=3030
+SERVER_PORT=3040
 COOKIE_DOMAIN=staging.macro-ai.com
 RELATIONAL_DATABASE_URL=postgresql://staging_user:secure_pass@staging-db:5432/macro_ai_staging
 OPENAI_API_KEY=sk-your-staging-openai-key
@@ -342,7 +342,7 @@ VITE_API_KEY=staging-unique-32-character-key-here
 ```bash
 # Express API
 API_KEY=production-unique-32-character-key-here
-SERVER_PORT=3030
+SERVER_PORT=3040
 COOKIE_DOMAIN=macro-ai.com
 RELATIONAL_DATABASE_URL=postgresql://prod_user:very_secure_pass@prod-db:5432/macro_ai_prod?sslmode=require
 OPENAI_API_KEY=sk-your-production-openai-key

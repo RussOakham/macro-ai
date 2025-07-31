@@ -10,7 +10,7 @@ endpoints, authentication methods, request/response schemas, error codes, and us
 
 ### Base Information ✅ IMPLEMENTED
 
-- **Base URL**: `http://localhost:3030/api` (development) / `https://api.macro-ai.com/api` (production)
+- **Base URL**: `http://localhost:3040/api` (development) / `https://api.macro-ai.com/api` (production)
 - **API Version**: v0.0.1
 - **OpenAPI Version**: 3.0.0
 - **Content Type**: `application/json`
@@ -18,8 +18,8 @@ endpoints, authentication methods, request/response schemas, error codes, and us
 
 ### Access Points ✅ AVAILABLE
 
-- **Interactive Documentation**: `http://localhost:3030/api-docs` (Swagger UI)
-- **OpenAPI Specification**: `http://localhost:3030/swagger.json` (Raw JSON spec)
+- **Interactive Documentation**: `http://localhost:3040/api-docs` (Swagger UI)
+- **OpenAPI Specification**: `http://localhost:3040/swagger.json` (Raw JSON spec)
 - **Generated TypeScript Client**: `@repo/macro-ai-api-client` package
 
 ## 🔐 Authentication

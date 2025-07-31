@@ -117,8 +117,8 @@ pnpm build
 
 ### 4. Test and Validate
 
-- **Swagger UI**: Visit `http://localhost:3030/api-docs` for interactive testing
-- **Raw Spec**: Access `http://localhost:3030/swagger.json` for the JSON specification
+- **Swagger UI**: Visit `http://localhost:3040/api-docs` for interactive testing
+- **Raw Spec**: Access `http://localhost:3040/swagger.json` for the JSON specification
 - **Generated Client**: Use the auto-generated TypeScript client
 
 ## OpenAPI Registry Setup
@@ -239,7 +239,7 @@ const generateSwaggerSpec = async () => {
 - **API**: 60 requests per minute`,
 			license: { name: 'MIT' },
 		},
-		servers: [{ url: 'http://localhost:3030/api' }],
+		servers: [{ url: 'http://localhost:3040/api' }],
 	})
 
 	await fs.writeFile(
@@ -317,8 +317,8 @@ const main = async () => {
 
 ## Access Points
 
-- **Swagger UI**: `http://localhost:3030/api-docs` - Interactive API documentation
-- **OpenAPI Spec**: `http://localhost:3030/swagger.json` - Raw JSON specification
+- **Swagger UI**: `http://localhost:3040/api-docs` - Interactive API documentation
+- **OpenAPI Spec**: `http://localhost:3040/swagger.json` - Raw JSON specification
 - **Generated Client**: `@repo/macro-ai-api-client` - TypeScript client package
 
 ## Benefits Achieved ✅

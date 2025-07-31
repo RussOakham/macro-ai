@@ -239,8 +239,8 @@ apps/client-ui/
 
 ### Access Points
 
-- **Swagger UI**: `http://localhost:3030/api-docs`
-- **OpenAPI Spec**: `http://localhost:3030/swagger.json`
+- **Swagger UI**: `http://localhost:3040/api-docs`
+- **OpenAPI Spec**: `http://localhost:3040/swagger.json`
 - **Generated Client**: `@repo/macro-ai-api-client` package
 
 ## Next Steps Priority
