@@ -83,7 +83,7 @@ provider-specific requirements.
 #### Model Router Component
 
 **Responsibility**: Intelligent routing of requests to optimal AI models based on task analysis, user preferences, and
- performance criteria.
+performance criteria.
 
 **Technical Specifications**:
 
@@ -772,7 +772,7 @@ interface MonitoringIntegration {
 ### Implementation Planning
 
 - **[Multi-Model Implementation Plan](../../planning/implementation-plans/multi-model-implementation.md)** - Development
- approach
+  approach
 - **[Feature Flags Strategy](../../planning/feature-flags/README.md)** - Rollout strategy
 
 ### System Architecture
