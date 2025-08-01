@@ -683,8 +683,19 @@ class HealthCheckService {
 
 ## 📚 Related Documentation
 
+### Technical Architecture
+
 - **[Database Design](./database-design.md)** - Detailed database schema and relationships
 - **[Data Flow](./data-flow.md)** - Data movement and processing patterns
 - **[Technology Stack](./technology-stack.md)** - Technology choices and rationale
 - **[Security Architecture](./security-architecture.md)** - Security implementation details
 - **[AWS Deployment](../deployment/aws-deployment.md)** - Cloud infrastructure architecture
+
+### Product Strategy
+
+- **[Multi-Model Architecture Design](../product/requirements/technical-designs/multi-model-architecture.md)** - Strategic
+  multi-model technical requirements
+- **[Response Sources Implementation](../product/requirements/technical-designs/response-sources-implementation.md)** -
+  Source attribution technical design
+- **[Product Roadmap](../product/strategy/product-roadmap.md)** - Strategic context for architecture evolution
+- **[Success Metrics](../product/strategy/success-metrics.md)** - Performance targets for system architecture

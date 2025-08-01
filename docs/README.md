@@ -1,7 +1,28 @@
 # Macro AI Documentation
 
 Welcome to the comprehensive documentation for the Macro AI monorepo. This documentation provides everything you need to
-understand, develop, deploy, and maintain the Macro AI application.
+understand, develop, deploy, and maintain the Macro AI application, including our strategic evolution toward multi-model
+AI capabilities and research-grade source attribution.
+
+## 🎯 Strategic Overview
+
+Macro AI is evolving from a ChatGPT-style interface to a comprehensive multi-model AI platform with research-grade
+source attribution capabilities. Our strategic initiatives establish competitive differentiation in the AI assistance
+market:
+
+### Current Strategic Initiatives
+
+- **[Multi-Model Chat Platform](./product/requirements/prds/multi-model-chat.md)** (Q2 2025) - Seamless integration of
+  multiple AI models with intelligent routing and cost optimization
+- **[Response Sources Sidebar](./product/requirements/prds/response-sources-sidebar.md)** (Q3 2025) - Research-grade
+  source attribution and verification capabilities
+- **[Product Roadmap](./product/strategy/product-roadmap.md)** - Complete strategic timeline and feature prioritization
+
+### Key Success Metrics
+
+- **40% Multi-Model Adoption** by Q2 2025
+- **80% Source Attribution Coverage** by Q3 2025
+- **8.5/10 User Satisfaction** across all strategic features
 
 ## 🚀 Quick Start
 
@@ -10,6 +31,7 @@ New to Macro AI? Start here:
 - **[Getting Started Guide](./getting-started/README.md)** - Set up your development environment
 - **[Development Setup](./getting-started/development-setup.md)** - Detailed environment configuration
 - **[System Architecture](./architecture/system-architecture.md)** - Understand the overall system design
+- **[Product Strategy](./product/strategy/README.md)** - Understand our strategic direction and competitive positioning
 
 ## 📚 Documentation Structure
 
@@ -70,13 +92,29 @@ New to Macro AI? Start here:
 
 ### 🎯 Product Management
 
-**[`./product/`](./product/README.md)**
+**[`./product/`](./product/README.md)** - ✅ **Strategic Framework Complete**
 
-- [Strategy](./product/strategy/README.md) - Product roadmap, user personas, competitive analysis, and success metrics
-- [Requirements](./product/requirements/README.md) - PRDs, user stories, and technical design documents
-- [Planning](./product/planning/README.md) - Implementation plans, feature flags, and release planning
-- [Communication](./product/communication/README.md) - Release notes, user feedback, and stakeholder updates
-- [Analysis](./product/analysis/README.md) - Post-release analysis, metrics tracking, and market analysis
+#### Strategic Foundation
+
+- **[Product Roadmap](./product/strategy/product-roadmap.md)** - Q2 2025 multi-model, Q3 2025 response sources milestones
+- **[User Personas](./product/strategy/user-personas.md)** - Alex the Optimizer, Dr. Sarah the Verifier, Marcus the Strategist
+- **[Success Metrics](./product/strategy/success-metrics.md)** - 40% multi-model adoption, 80% source coverage targets
+- **[Competitive Analysis](./product/strategy/competitive-analysis.md)** - Multi-model leadership and research differentiation
+
+#### Strategic Initiatives
+
+- **[Multi-Model Chat PRD](./product/requirements/prds/multi-model-chat.md)** - Comprehensive multi-model platform requirements
+- **[Response Sources PRD](./product/requirements/prds/response-sources-sidebar.md)** - Research-grade source
+  attribution requirements
+- **[Implementation Plans](./product/planning/implementation-plans/README.md)** - Development coordination and resource allocation
+- **[Feature Flags Strategy](./product/planning/feature-flags/strategy.md)** - Strategic rollout and risk management
+
+#### Communication & Analysis
+
+- **[Release Notes](./product/communication/release-notes/README.md)** - v1.2.0 Chat V2 and v2.0.0 Multi-model templates
+- **[Stakeholder Updates](./product/communication/stakeholder-updates/README.md)** - Executive summaries and monthly reporting
+- **[Dashboard Metrics](./product/analysis/metrics/dashboard-metrics.md)** - Real-time KPI tracking and success measurement
+- **[User Engagement](./product/analysis/metrics/user-engagement.md)** - Multi-model and response sources engagement tracking
 
 ### 📖 Reference
 
@@ -115,6 +153,30 @@ New to Macro AI? Start here:
 - **Testing**: Vitest + Playwright
 - **Build System**: TurboRepo + pnpm workspaces
 - **Deployment**: AWS (planned)
+
+## 🎯 Strategic Quick Access
+
+For stakeholders and team members looking for specific strategic information:
+
+### Executive Level
+
+- **[Executive Summaries](./product/communication/stakeholder-updates/executive-summaries.md)** - Strategic progress
+  and decision support
+- **[Product Roadmap](./product/strategy/product-roadmap.md)** - Strategic timeline and competitive positioning
+- **[Success Metrics](./product/strategy/success-metrics.md)** - KPIs and strategic measurement framework
+
+### Product Management
+
+- **[Multi-Model Chat PRD](./product/requirements/prds/multi-model-chat.md)** - Core strategic initiative requirements
+- **[Response Sources PRD](./product/requirements/prds/response-sources-sidebar.md)** - Research differentiation requirements
+- **[Implementation Plans](./product/planning/implementation-plans/README.md)** - Development coordination and timelines
+
+### Development Teams
+
+- **[Multi-Model Architecture](./product/requirements/technical-designs/multi-model-architecture.md)** - Technical
+  design for strategic features
+- **[Feature Flags Strategy](./product/planning/feature-flags/strategy.md)** - Rollout approach and risk management
+- **[Chat System Features](./features/chat-system/README.md)** - Current production infrastructure
 
 ## 🤝 Contributing
 
