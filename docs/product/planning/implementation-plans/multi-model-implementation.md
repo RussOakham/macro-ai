@@ -605,13 +605,14 @@ experience.
 
 ### Product Requirements
 
-- **[Multi-Model Chat PRD](../requirements/prds/multi-model-chat.md)** - Comprehensive product requirements
-- **[Multi-Model User Stories](../requirements/user-stories/multi-model-functionality.md)** - Detailed user requirements
-- **[Chat System User Stories](../requirements/user-stories/chat-system.md)** - Integration requirements
+- **[Multi-Model Chat PRD](../../requirements/prds/multi-model-chat.md)** - Comprehensive product requirements
+- **[Multi-Model User Stories](../../requirements/user-stories/multi-model-functionality.md)** - Detailed user requirements
+- **[Chat System User Stories](../../requirements/user-stories/chat-system.md)** - Integration requirements
 
 ### Technical Implementation
 
-- **[Multi-Model Architecture](../requirements/technical-designs/multi-model-architecture.md)** - Technical design and architecture
+- **[Multi-Model Architecture](../../requirements/technical-designs/multi-model-architecture.md)** - Technical design and
+  architecture
 - **[System Architecture](../../architecture/system-architecture.md)** - Overall system integration context
 - **[Chat System Features](../../features/chat-system/README.md)** - Current chat implementation
 

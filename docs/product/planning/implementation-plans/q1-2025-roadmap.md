@@ -423,12 +423,12 @@ became our core competitive differentiator in subsequent quarters.
 - **[Response Sources Technical Design](../../requirements/technical-designs/response-sources-implementation.md)** -
   Q3 technical approach
 - **[System Architecture](../../../architecture/system-architecture.md)** - Overall system enhanced by Q1 deliverables
-- **[Chat System Features](../../../features/chat-system/README.md)** - Features delivered in Q1 2025
+- **[Chat System Features](../../features/README.md#chat-system)** - Features delivered in Q1 2025
 
 ### Operations and Deployment
 
 - **[Release Planning](../release-planning/README.md)** - Release coordination for Q1 deliverables
-- **[Feature Documentation](../../../features/README.md)** - Current feature baseline established in Q1
+- **[Feature Documentation](../../features/README.md)** - Current feature baseline established in Q1
 - **[CI/CD Pipeline](../../../deployment/ci-cd-pipeline.md)** - Deployment processes used for Q1 delivery
 - **[Monitoring & Logging](../../../deployment/monitoring-logging.md)** - Monitoring systems validated in Q1
 

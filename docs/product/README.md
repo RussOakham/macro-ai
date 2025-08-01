@@ -59,6 +59,15 @@ of our multi-model AI platform and research-grade source attribution capabilitie
 - [Metrics](./analysis/metrics/README.md) - Dashboard metrics and user engagement tracking for strategic features
 - [Market Analysis](./analysis/market-analysis/README.md) - Competitive and industry trend analysis
 
+### 🚀 Features
+
+**[`./features/`](./features/README.md)** - ⚠️ **Product Features Framework**
+
+- [Feature Portfolio](./features/README.md) - Strategic context and roadmap for all product features
+- [Multi-Model Platform](./features/README.md#multi-model-ai-platform) - Q2 2025 multi-model chat capabilities
+- [Response Sources](./features/README.md#response-sources--research-tools) - Q3 2025 research-grade source attribution
+- [Strategic Roadmap](./features/README.md#strategic-feature-roadmap) - Feature evolution and competitive positioning
+
 ## 🔗 Integration with Technical Documentation
 
 This product management documentation integrates seamlessly with our existing technical documentation structure:

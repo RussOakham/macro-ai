@@ -18,7 +18,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 
 #### **Master Control Flags**
 
-**`enable_multi_model_chat`**
+**`chat.multi_model.master`**
 
 - **Status**: 🔄 ROLLING_OUT
 - **Current Rollout**: 25% of users
@@ -33,7 +33,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 - **Owner**: Backend Team Lead
 - **Last Updated**: January 15, 2025
 
-**`enable_multi_model_ui`**
+**`chat.multi_model.ui`**
 
 - **Status**: ✅ ENABLED
 - **Current Rollout**: 100% of multi-model users
@@ -49,7 +49,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 
 #### **Model Integration Flags**
 
-**`enable_openai_integration`**
+**`chat.models.openai`**
 
 - **Status**: ✅ ENABLED
 - **Current Rollout**: 100% of multi-model users
@@ -63,7 +63,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 - **Owner**: Backend Team Lead
 - **Last Updated**: January 8, 2025
 
-**`enable_anthropic_integration`**
+**`chat.models.anthropic`**
 
 - **Status**: ✅ ENABLED
 - **Current Rollout**: 100% of multi-model users
@@ -77,7 +77,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 - **Owner**: Backend Team Lead
 - **Last Updated**: January 8, 2025
 
-**`enable_google_integration`**
+**`chat.models.google`**
 
 - **Status**: 🔧 DEVELOPMENT
 - **Current Rollout**: 0% (Internal testing only)
@@ -90,7 +90,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 
 #### **Advanced Feature Flags**
 
-**`enable_intelligent_routing`**
+**`chat.multi_model.routing`**
 
 - **Status**: 🧪 BETA
 - **Current Rollout**: 10% of multi-model users
@@ -104,7 +104,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 - **Owner**: Data Engineering Team
 - **Last Updated**: January 12, 2025
 
-**`enable_cost_optimization`**
+**`chat.multi_model.cost_optimization`**
 
 - **Status**: 🔄 ROLLING_OUT
 - **Current Rollout**: 15% of users (enterprise customers first)
@@ -118,7 +118,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 - **Owner**: Backend Team Lead
 - **Last Updated**: January 14, 2025
 
-**`enable_context_preservation`**
+**`chat.multi_model.context_preservation`**
 
 - **Status**: ✅ ENABLED
 - **Current Rollout**: 100% of multi-model users
@@ -136,7 +136,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 
 #### **Master Control Flags**
 
-**`enable_response_sources`**
+**`sources.master`**
 
 - **Status**: 🔧 DEVELOPMENT
 - **Current Rollout**: 0% (Internal testing only)
@@ -147,7 +147,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 - **Owner**: Backend Team Lead
 - **Last Updated**: January 15, 2025
 
-**`enable_sources_sidebar`**
+**`sources.sidebar.ui`**
 
 - **Status**: 🔧 DEVELOPMENT
 - **Current Rollout**: 0% (Internal testing only)
@@ -160,7 +160,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 
 #### **Source Provider Flags**
 
-**`enable_academic_sources`**
+**`sources.providers.academic`**
 
 - **Status**: 🔧 DEVELOPMENT
 - **Current Rollout**: 0% (API integration testing)
@@ -171,7 +171,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 - **Owner**: Data Engineering Team
 - **Last Updated**: January 15, 2025
 
-**`enable_news_sources`**
+**`sources.providers.news`**
 
 - **Status**: 🔧 DEVELOPMENT
 - **Current Rollout**: 0% (API integration testing)
@@ -182,7 +182,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 - **Owner**: Data Engineering Team
 - **Last Updated**: January 15, 2025
 
-**`enable_government_sources`**
+**`sources.providers.government`**
 
 - **Status**: 📋 PLANNED
 - **Current Rollout**: 0% (Planning phase)
@@ -195,7 +195,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 
 #### **Advanced Feature Flags**
 
-**`enable_citation_management`**
+**`sources.features.citations`**
 
 - **Status**: 📋 PLANNED
 - **Current Rollout**: 0% (Design phase)
@@ -206,7 +206,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 - **Owner**: Frontend Team Lead
 - **Last Updated**: January 15, 2025
 
-**`enable_research_sessions`**
+**`sources.features.research_sessions`**
 
 - **Status**: 📋 PLANNED
 - **Current Rollout**: 0% (Design phase)
@@ -217,7 +217,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 - **Owner**: Product Team Lead
 - **Last Updated**: January 15, 2025
 
-**`enable_source_quality_assessment`**
+**`sources.features.quality_assessment`**
 
 - **Status**: 🔧 DEVELOPMENT
 - **Current Rollout**: 0% (Algorithm development)
@@ -346,14 +346,14 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 
 #### **Planned Rollout Expansions**
 
-**`enable_multi_model_chat`**:
+**`chat.multi_model.master`**:
 
 - **Current**: 25% of users
 - **Target**: 50% of users
 - **Timeline**: February 15, 2025
 - **Prerequisites**: Context preservation optimization, performance validation
 
-**`enable_cost_optimization`**:
+**`chat.multi_model.cost_optimization`**:
 
 - **Current**: 15% of users
 - **Target**: 30% of users
@@ -362,7 +362,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 
 #### **New Flag Activations**
 
-**`enable_response_sources`**:
+**`sources.master`**:
 
 - **Current**: Development only
 - **Target**: 5% alpha release to research users
@@ -373,14 +373,14 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 
 #### **Feature Enhancements**
 
-**`enable_intelligent_routing`**:
+**`chat.multi_model.routing`**:
 
 - **Current**: 10% beta users
 - **Target**: 25% of multi-model users
 - **Timeline**: March 30, 2025
 - **Prerequisites**: Routing accuracy improvement to 80%
 
-**`enable_sources_sidebar`**:
+**`sources.sidebar.ui`**:
 
 - **Current**: Development only
 - **Target**: Internal demo and usability testing
@@ -391,7 +391,7 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 
 #### **Major Feature Launches**
 
-**`enable_google_integration`**:
+**`chat.models.google`**:
 
 - **Current**: Development only
 - **Target**: 5% alpha release
@@ -455,22 +455,22 @@ tracking to coordinate the rollout of multi-model chat functionality and respons
 
 **Completed Rollouts (100% enabled)**:
 
-- `enable_multi_model_ui` - Candidate for removal after 30-day stability period
-- `enable_openai_integration` - Candidate for removal after 30-day stability period
-- `enable_anthropic_integration` - Candidate for removal after 30-day stability period
-- `enable_context_preservation` - Candidate for removal after performance optimization
+- `chat.multi_model.ui` - Candidate for removal after 30-day stability period
+- `chat.models.openai` - Candidate for removal after 30-day stability period
+- `chat.models.anthropic` - Candidate for removal after 30-day stability period
+- `chat.multi_model.context_preservation` - Candidate for removal after performance optimization
 
 #### **Flags Requiring Attention**
 
 **Performance Optimization Needed**:
 
-- `enable_intelligent_routing` - Accuracy improvement required
-- `enable_context_preservation` - Minor accuracy optimization needed
+- `chat.multi_model.routing` - Accuracy improvement required
+- `chat.multi_model.context_preservation` - Minor accuracy optimization needed
 
 **Development Acceleration Needed**:
 
-- `enable_response_sources` - Timeline acceleration for Q2 targets
-- `enable_sources_sidebar` - UI development acceleration needed
+- `sources.master` - Timeline acceleration for Q2 targets
+- `sources.sidebar.ui` - UI development acceleration needed
 
 ### Team Responsibilities
 

@@ -400,7 +400,7 @@ maintaining performance, security, and reliability standards.
 ### Technical Implementation
 
 - **[Multi-Model Architecture Design](../technical-designs/multi-model-architecture.md)** - Detailed technical approach
-- **[Chat System Features](../../../features/chat-system/README.md)** - Current chat system integration points
+- **[Chat System Features](../../features/README.md#chat-system)** - Current chat system integration points
 - **[AI Integration](../../../features/chat-system/ai-integration.md)** - Existing AI integration architecture
 - **[System Architecture](../../../architecture/system-architecture.md)** - Overall system integration context
 

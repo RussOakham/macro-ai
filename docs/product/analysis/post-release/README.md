@@ -37,7 +37,7 @@ Each post-release analysis should include:
 - **[PRD Documentation](../../requirements/prds/README.md)** - Original requirements for comparison
 - **[User Feedback](../../communication/user-feedback/README.md)** - User insights for retrospective analysis
 - **[Implementation Plans](../../planning/implementation-plans/README.md)** - Development execution for retrospective
-- **[Feature Documentation](../../../features/README.md)** - Technical implementation details
+- **[Product Features Documentation](../../features/README.md)** - Product features and strategic context
 
 ## 🚀 Post-Release Analysis Process
 

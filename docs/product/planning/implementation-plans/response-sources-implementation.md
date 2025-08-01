@@ -698,15 +698,15 @@ multi-model chat capabilities.
 
 ### Product Requirements
 
-- **[Response Sources Sidebar PRD](../requirements/prds/response-sources-sidebar.md)** - Comprehensive product requirements
-- **[Chat System User Stories](../requirements/user-stories/chat-system.md)** - Source attribution user requirements
-- **[Multi-Model Chat PRD](../requirements/prds/multi-model-chat.md)** - Integration with multi-model functionality
+- **[Response Sources Sidebar PRD](../../requirements/prds/response-sources-sidebar.md)** - Comprehensive product requirements
+- **[Chat System User Stories](../../requirements/user-stories/chat-system.md)** - Source attribution user requirements
+- **[Multi-Model Chat PRD](../../requirements/prds/multi-model-chat.md)** - Integration with multi-model functionality
 
 ### Technical Implementation
 
-- **[Response Sources Technical Design](../requirements/technical-designs/response-sources-implementation.md)** -
+- **[Response Sources Technical Design](../../requirements/technical-designs/response-sources-implementation.md)** -
   Technical architecture
-- **[Multi-Model Architecture](../requirements/technical-designs/multi-model-architecture.md)** - Integration with
+- **[Multi-Model Architecture](../../requirements/technical-designs/multi-model-architecture.md)** - Integration with
   multi-model system
 - **[System Architecture](../../architecture/system-architecture.md)** - Overall system integration context
 

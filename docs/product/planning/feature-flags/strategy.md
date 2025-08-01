@@ -93,7 +93,7 @@ We coordinate feature flags across related features to ensure optimal user exper
 
 #### **Master Control Flags**
 
-**`enable_multi_model_chat`**:
+**`chat.multi_model.master`**:
 
 - **Purpose**: Master flag for all multi-model functionality
 - **Scope**: Controls access to multi-model features across the application
@@ -101,64 +101,64 @@ We coordinate feature flags across related features to ensure optimal user exper
 - **Dependencies**: None (top-level flag)
 - **Monitoring**: Overall multi-model adoption and performance impact
 
-**`enable_multi_model_ui`**:
+**`chat.multi_model.ui`**:
 
 - **Purpose**: Controls multi-model user interface components
 - **Scope**: Model selection dropdown, switching interface, performance indicators
-- **Rollout Strategy**: Enabled for users with `enable_multi_model_chat`
-- **Dependencies**: `enable_multi_model_chat`
+- **Rollout Strategy**: Enabled for users with `chat.multi_model.master`
+- **Dependencies**: `chat.multi_model.master`
 - **Monitoring**: UI engagement, model selection patterns, user satisfaction
 
 #### **Model-Specific Flags**
 
-**`enable_openai_integration`**:
+**`chat.models.openai`**:
 
 - **Purpose**: Controls OpenAI GPT model access and integration
 - **Scope**: GPT-3.5, GPT-4, GPT-4-turbo model availability
 - **Rollout Strategy**: Enabled by default for multi-model users
-- **Dependencies**: `enable_multi_model_chat`
+- **Dependencies**: `chat.multi_model.master`
 - **Monitoring**: OpenAI API performance, cost tracking, usage patterns
 
-**`enable_anthropic_integration`**:
+**`chat.models.anthropic`**:
 
 - **Purpose**: Controls Anthropic Claude model access and integration
 - **Scope**: Claude-3, Claude-3.5 model availability
 - **Rollout Strategy**: Enabled by default for multi-model users
-- **Dependencies**: `enable_multi_model_chat`
+- **Dependencies**: `chat.multi_model.master`
 - **Monitoring**: Anthropic API performance, cost tracking, usage patterns
 
-**`enable_google_integration`**:
+**`chat.models.google`**:
 
 - **Purpose**: Controls Google Gemini model access and integration
 - **Scope**: Gemini Pro, Gemini Ultra model availability
 - **Rollout Strategy**: Gradual rollout starting Q2 2025
-- **Dependencies**: `enable_multi_model_chat`
+- **Dependencies**: `chat.multi_model.master`
 - **Monitoring**: Google API performance, multimodal usage, integration effectiveness
 
 #### **Advanced Feature Flags**
 
-**`enable_intelligent_routing`**:
+**`chat.multi_model.routing`**:
 
 - **Purpose**: Controls AI-powered model recommendation and routing
 - **Scope**: Task-based model suggestions, automatic model selection
 - **Rollout Strategy**: Beta rollout to power users first
-- **Dependencies**: `enable_multi_model_chat`, all model integration flags
+- **Dependencies**: `chat.multi_model.master`, all model integration flags
 - **Monitoring**: Routing accuracy, user acceptance rate, task completion improvement
 
-**`enable_cost_optimization`**:
+**`chat.multi_model.cost_optimization`**:
 
 - **Purpose**: Controls cost tracking and optimization features
 - **Scope**: Real-time cost tracking, budget alerts, optimization recommendations
 - **Rollout Strategy**: Gradual rollout with enterprise users first
-- **Dependencies**: `enable_multi_model_chat`
+- **Dependencies**: `chat.multi_model.master`
 - **Monitoring**: Cost reduction achieved, budget compliance, user engagement
 
-**`enable_context_preservation`**:
+**`chat.multi_model.context_preservation`**:
 
 - **Purpose**: Controls advanced context preservation across model switches
 - **Scope**: Context translation, optimization, and synchronization
 - **Rollout Strategy**: Enabled by default with performance monitoring
-- **Dependencies**: `enable_multi_model_chat`
+- **Dependencies**: `chat.multi_model.master`
 - **Monitoring**: Context preservation accuracy, performance impact, user satisfaction
 
 ### Multi-Model Rollout Timeline
@@ -167,14 +167,14 @@ We coordinate feature flags across related features to ensure optimal user exper
 
 **Week 1-2: Internal Testing**:
 
-- **Flags**: `enable_multi_model_chat` (internal team only)
+- **Flags**: `chat.multi_model.master` (internal team only)
 - **Scope**: Engineering team, product team, selected beta users
 - **Success Criteria**: Core functionality operational, no critical issues
 - **Monitoring**: Technical performance, basic functionality validation
 
 **Week 3-4: Alpha Release**:
 
-- **Flags**: `enable_multi_model_chat`, `enable_multi_model_ui` (5% of users)
+- **Flags**: `chat.multi_model.master`, `chat.multi_model.ui` (5% of users)
 - **Scope**: Power users, early adopters, beta program participants
 - **Success Criteria**: UI usability validated, initial user feedback positive
 - **Monitoring**: User engagement, model selection patterns, performance impact
@@ -190,7 +190,7 @@ We coordinate feature flags across related features to ensure optimal user exper
 
 **Week 3-4: Feature Enhancement**:
 
-- **Flags**: `enable_intelligent_routing`, `enable_cost_optimization` (25% of users)
+- **Flags**: `chat.multi_model.routing`, `chat.multi_model.cost_optimization` (25% of users)
 - **Scope**: Users showing high engagement with multi-model features
 - **Success Criteria**: Advanced features improve user experience and efficiency
 - **Monitoring**: Routing accuracy, cost optimization effectiveness, user satisfaction
@@ -210,7 +210,7 @@ We coordinate feature flags across related features to ensure optimal user exper
 
 #### **Master Control Flags**
 
-**`enable_response_sources`**:
+**`sources.master`**:
 
 - **Purpose**: Master flag for all response sources functionality
 - **Scope**: Controls access to source attribution features across the application
@@ -218,64 +218,64 @@ We coordinate feature flags across related features to ensure optimal user exper
 - **Dependencies**: None (top-level flag)
 - **Monitoring**: Source attribution coverage, user engagement, performance impact
 
-**`enable_sources_sidebar`**:
+**`sources.sidebar.ui`**:
 
 - **Purpose**: Controls response sources sidebar interface
 - **Scope**: Sidebar display, source cards, filtering, and interaction
-- **Rollout Strategy**: Enabled for users with `enable_response_sources`
-- **Dependencies**: `enable_response_sources`
+- **Rollout Strategy**: Enabled for users with `sources.master`
+- **Dependencies**: `sources.master`
 - **Monitoring**: Sidebar engagement rate, user interaction patterns, satisfaction
 
 #### **Source Provider Flags**
 
-**`enable_academic_sources`**:
+**`sources.providers.academic`**:
 
 - **Purpose**: Controls academic database integration and source extraction
 - **Scope**: CrossRef, PubMed, ArXiv, Google Scholar integration
 - **Rollout Strategy**: Enabled by default for research users
-- **Dependencies**: `enable_response_sources`
+- **Dependencies**: `sources.master`
 - **Monitoring**: Academic source quality, coverage, user satisfaction
 
-**`enable_news_sources`**:
+**`sources.providers.news`**:
 
 - **Purpose**: Controls news and media source integration
 - **Scope**: NewsAPI, Guardian, Reuters, Associated Press integration
 - **Rollout Strategy**: Enabled by default for all users
-- **Dependencies**: `enable_response_sources`
+- **Dependencies**: `sources.master`
 - **Monitoring**: News source quality, relevance, user engagement
 
-**`enable_government_sources`**:
+**`sources.providers.government`**:
 
 - **Purpose**: Controls government data source integration
 - **Scope**: Data.gov, European Data Portal, World Bank, UN Data
 - **Rollout Strategy**: Gradual rollout with quality validation
-- **Dependencies**: `enable_response_sources`
+- **Dependencies**: `sources.master`
 - **Monitoring**: Government source accuracy, user adoption, quality scores
 
 #### **Advanced Feature Flags**
 
-**`enable_citation_management`**:
+**`sources.features.citations`**:
 
 - **Purpose**: Controls citation generation and bibliography features
 - **Scope**: Multi-format citations, bibliography compilation, export functionality
 - **Rollout Strategy**: Beta rollout to academic and professional users
-- **Dependencies**: `enable_response_sources`
+- **Dependencies**: `sources.master`
 - **Monitoring**: Citation accuracy, format usage, export functionality
 
-**`enable_research_sessions`**:
+**`sources.features.research_sessions`**:
 
 - **Purpose**: Controls research session and source collection features
 - **Scope**: Session management, source organization, collaboration tools
 - **Rollout Strategy**: Targeted rollout to research professionals
-- **Dependencies**: `enable_response_sources`, `enable_citation_management`
+- **Dependencies**: `sources.master`, `sources.features.citations`
 - **Monitoring**: Research workflow usage, session creation, collaboration engagement
 
-**`enable_source_quality_assessment`**:
+**`sources.features.quality_assessment`**:
 
 - **Purpose**: Controls advanced source quality and credibility scoring
 - **Scope**: Multi-factor quality assessment, bias detection, credibility indicators
 - **Rollout Strategy**: Gradual rollout with quality validation
-- **Dependencies**: `enable_response_sources`
+- **Dependencies**: `sources.master`
 - **Monitoring**: Quality score accuracy, user trust indicators, source reliability
 
 ### Response Sources Rollout Timeline
@@ -284,14 +284,14 @@ We coordinate feature flags across related features to ensure optimal user exper
 
 **Week 1-2: Internal Testing**:
 
-- **Flags**: `enable_response_sources` (internal team only)
+- **Flags**: `sources.master` (internal team only)
 - **Scope**: Engineering team, product team, research-focused beta users
 - **Success Criteria**: Basic source attribution operational, quality acceptable
 - **Monitoring**: Source extraction accuracy, performance impact, basic functionality
 
 **Week 3-4: Research Beta**:
 
-- **Flags**: `enable_response_sources`, `enable_sources_sidebar` (Dr. Sarah persona users)
+- **Flags**: `sources.master`, `sources.sidebar.ui` (Dr. Sarah persona users)
 - **Scope**: Researchers, analysts, academic users, professional beta participants
 - **Success Criteria**: Sidebar engagement >15%, source quality >7.0/10
 - **Monitoring**: Research user engagement, source quality feedback, workflow impact
@@ -307,7 +307,7 @@ We coordinate feature flags across related features to ensure optimal user exper
 
 **Week 3-4: Advanced Features**:
 
-- **Flags**: `enable_citation_management`, `enable_research_sessions` (research users)
+- **Flags**: `sources.features.citations`, `sources.features.research_sessions` (research users)
 - **Scope**: Users showing high engagement with source features
 - **Success Criteria**: Citation accuracy >85%, research session adoption >30%
 - **Monitoring**: Citation usage, research workflow adoption, user satisfaction
@@ -347,7 +347,7 @@ We will introduce multi-model and response sources features in a coordinated seq
 
 **Primary Dependencies**:
 
-- `enable_response_sources` depends on `enable_multi_model_chat` for optimal experience
+- `sources.master` depends on `chat.multi_model.master` for optimal experience
 - Advanced source features require stable multi-model foundation
 - Enterprise features require both multi-model and sources functionality
 

@@ -13,6 +13,8 @@ maintain PRDs to provide comprehensive specifications that guide feature develop
 
 ### Active PRDs
 
+- **[Multi-Model Chat](./multi-model-chat.md)** - Multi-model AI chat functionality with unified interface
+- **[Response Sources Sidebar](./response-sources-sidebar.md)** - Source attribution and verification capabilities
 - **[Chat Enhancements V2](./chat-enhancements-v2.md)** - Advanced chat system improvements and AI capabilities
 - **[User Dashboard](./user-dashboard.md)** - Comprehensive user management and profile features
 

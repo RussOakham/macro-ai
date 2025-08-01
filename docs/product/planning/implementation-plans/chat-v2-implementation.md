@@ -19,7 +19,7 @@ adherence.
   approach for performance improvements
 - **[Vector Search Enhancement Design](../../requirements/technical-designs/vector-search-enhancement.md)** - Technical
   approach for search capabilities
-- **[Chat System Features](../../../features/chat-system/README.md)** - Current chat implementation baseline
+- **[Chat System Features](../../features/README.md#chat-system)** - Current chat implementation baseline
 - **[Feature Flags Strategy](../feature-flags/strategy.md)** - Rollout approach for Chat V2 features
 
 ---

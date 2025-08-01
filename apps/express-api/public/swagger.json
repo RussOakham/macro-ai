@@ -11,7 +11,7 @@
 	},
 	"servers": [
 		{
-			"url": "http://localhost:3030/api",
+			"url": "http://localhost:3040/api",
 			"description": "Development server"
 		}
 	],
