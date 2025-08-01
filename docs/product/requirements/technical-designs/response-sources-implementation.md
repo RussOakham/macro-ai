@@ -94,7 +94,8 @@ interface SourceExtractor {
 	// Extract sources for AI response
 	extractSources(
 		response: AIResponse,
-		context: ConversationContext,
+		context?: ConversationContext,
+		abortSignal?: AbortSignal,
 	): Promise<SourceExtraction>
 
 	// Search for additional sources
@@ -109,6 +110,21 @@ interface SourceExtractor {
 	// Update source extraction algorithms
 	updateExtractionLogic(feedback: ExtractionFeedback): void
 }
+
+/**
+ * Note: Extractor implementations should monitor the abortSignal and stop processing
+ * when aborted to prevent resource waste. Example implementation:
+ *
+ * async extractSources(response, context, abortSignal) {
+ *   if (abortSignal?.aborted) throw new Error('Operation aborted')
+ *
+ *   // Check abort signal periodically during long operations
+ *   const result = await longRunningOperation()
+ *   if (abortSignal?.aborted) throw new Error('Operation aborted')
+ *
+ *   return result
+ * }
+ */
 
 interface SourceExtraction {
 	sources: AttributedSource[]
@@ -458,6 +474,18 @@ class CitationGenerator {
 		])
 	}
 
+	private extractMetadata(source: Source): Record<string, any> {
+		return {
+			sourceType: source.sourceType,
+			publishDate: source.publishDate?.toISOString(),
+			author: source.author,
+			accessDate: new Date().toISOString(),
+			credibilityScore: source.credibilityScore,
+			relevanceScore: source.relevanceScore,
+			extractedAt: new Date().toISOString(),
+		}
+	}
+
 	async generateCitation(
 		source: Source,
 		format: CitationFormat,
@@ -623,17 +651,17 @@ class SourceExtractionPipeline {
 	private cache: SourceCache
 
 	async extractSources(response: AIResponse): Promise<SourceExtraction> {
-		// Step 1: Parallel source extraction from multiple providers
+		// Step 1: Parallel source extraction from multiple providers with timeout support
 		const extractionPromises = this.extractors.map((extractor) =>
-			extractor.extractSources(response),
+			this.withTimeout(
+				(abortController) =>
+					extractor.extractSources(response, undefined, abortController.signal),
+				3000, // 3 second timeout per extractor
+			),
 		)
 
 		// Step 2: Aggregate results with timeout
-		const extractionResults = await Promise.allSettled(
-			extractionPromises.map(
-				(promise) => this.withTimeout(promise, 3000), // 3 second timeout per extractor
-			),
-		)
+		const extractionResults = await Promise.allSettled(extractionPromises)
 
 		// Step 3: Merge and deduplicate sources
 		const allSources = this.mergeExtractionResults(extractionResults)
@@ -650,14 +678,35 @@ class SourceExtractionPipeline {
 	}
 
 	private async withTimeout<T>(
-		promise: Promise<T>,
+		promiseFactory: (abortController: AbortController) => Promise<T>,
 		timeoutMs: number,
 	): Promise<T> {
-		const timeout = new Promise<never>((_, reject) =>
-			setTimeout(() => reject(new Error('Timeout')), timeoutMs),
-		)
+		const abortController = new AbortController()
+		let timeoutId: NodeJS.Timeout
 
-		return Promise.race([promise, timeout])
+		const timeout = new Promise<never>((_, reject) => {
+			timeoutId = setTimeout(() => {
+				abortController.abort()
+				console.warn(
+					`Extractor timed out after ${timeoutMs}ms - aborting operation`,
+				)
+				reject(new Error(`Operation timed out after ${timeoutMs}ms`))
+			}, timeoutMs)
+		})
+
+		const promise = promiseFactory(abortController)
+
+		try {
+			const result = await Promise.race([promise, timeout])
+			clearTimeout(timeoutId)
+			return result
+		} catch (error) {
+			clearTimeout(timeoutId)
+			if (!abortController.signal.aborted) {
+				abortController.abort()
+			}
+			throw error
+		}
 	}
 }
 ```
