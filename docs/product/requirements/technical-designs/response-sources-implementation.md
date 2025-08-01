@@ -454,6 +454,7 @@ class CitationGenerator {
 			[CitationFormat.MLA, new MLAFormatter()],
 			[CitationFormat.CHICAGO, new ChicagoFormatter()],
 			[CitationFormat.IEEE, new IEEEFormatter()],
+			[CitationFormat.HARVARD, new HarvardFormatter()],
 		])
 	}
 
@@ -497,6 +498,36 @@ class APAFormatter implements CitationFormatter {
 
 	private formatTitle(title: string): string {
 		// Title formatting logic for APA style
+	}
+}
+
+class HarvardFormatter implements CitationFormatter {
+	async format(source: Source): Promise<string> {
+		// Harvard format: Author (Year) 'Title', Source. Available at: URL (Accessed: Date)
+		const author = this.formatAuthor(source.author)
+		const year = source.publishDate?.getFullYear() || 'n.d.'
+		const title = this.formatTitle(source.title)
+		const publication = this.formatPublication(source.publication)
+		const url = source.url
+		const accessDate = new Date().toLocaleDateString('en-GB')
+
+		return `${author} (${year}) '${title}', ${publication}. Available at: ${url} (Accessed: ${accessDate})`
+	}
+
+	private formatAuthor(author?: string): string {
+		// Author name formatting logic for Harvard style
+		if (!author) return 'Anonymous'
+		return author
+	}
+
+	private formatTitle(title: string): string {
+		// Title formatting logic for Harvard style
+		return title
+	}
+
+	private formatPublication(publication?: string): string {
+		// Publication formatting logic for Harvard style
+		return publication || 'Unknown source'
 	}
 }
 ```
@@ -594,10 +625,7 @@ class SourceExtractionPipeline {
 	async extractSources(response: AIResponse): Promise<SourceExtraction> {
 		// Step 1: Parallel source extraction from multiple providers
 		const extractionPromises = this.extractors.map((extractor) =>
-			extractor.extractSources(response).catch((error) => {
-				console.error(`Extractor ${extractor.name} failed:`, error)
-				return []
-			}),
+			extractor.extractSources(response),
 		)
 
 		// Step 2: Aggregate results with timeout

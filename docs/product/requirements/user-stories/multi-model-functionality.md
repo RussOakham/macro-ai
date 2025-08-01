@@ -37,7 +37,8 @@ key characteristics, so that I can quickly choose the most appropriate model for
 - **And** each model should display its name, version, and key capabilities summary
 - **And** I should see current availability status (available, busy, maintenance)
 - **And** I should see estimated cost per interaction for each model
-- **And** the dropdown should load and display within 500ms
+- **And** the dropdown should provide immediate visual feedback with a skeleton UI, then load complete model data within
+  1000ms
 - **And** the interface should be accessible via keyboard navigation
 
 **Priority**: High  
@@ -48,7 +49,7 @@ key characteristics, so that I can quickly choose the most appropriate model for
 - Availability status reflects real-time service status
 - Cost estimates are current and accurate
 - Interface meets accessibility standards (WCAG 2.1)
-- Performance targets met for dropdown loading
+- Skeleton UI displays immediately on click, complete data loads within 1000ms
 
 #### Story 2: Model Information Display
 

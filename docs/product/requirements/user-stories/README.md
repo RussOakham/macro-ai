@@ -16,6 +16,7 @@ feature validation.
 
 - **[Authentication](./authentication.md)** - User stories for authentication and account management
 - **[Chat System](./chat-system.md)** - User stories for AI chat interactions and conversation management
+- **[Multi-Model Functionality](./multi-model-functionality.md)** - User stories for multi-model AI selection and optimization
 - **[User Management](./user-management.md)** - User stories for profile management and user preferences
 
 ## 🎯 Purpose

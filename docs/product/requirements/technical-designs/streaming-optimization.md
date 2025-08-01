@@ -12,6 +12,14 @@ The streaming optimization design addresses performance bottlenecks in the curre
 providing technical solutions for improved throughput, reduced latency, and better resource management while maintaining
 response quality.
 
+## 📋 Protocol Requirements
+
+**Plain-Text Streaming Constraint**: All streaming optimizations must maintain the agreed plain-text streaming protocol
+with content type header `text/plain; charset=utf-8`. This constraint ensures compatibility with existing client
+implementations and prevents migration to alternative streaming protocols such as Server-Sent Events (SSE) or WebSocket
+streaming. Future optimizations must work within this plain-text streaming contract to maintain API consistency and
+client compatibility.
+
 ## 🔗 Related Documentation
 
 - **[Chat Enhancements V2 PRD](../prds/chat-enhancements-v2.md)** - Product requirements driving optimization

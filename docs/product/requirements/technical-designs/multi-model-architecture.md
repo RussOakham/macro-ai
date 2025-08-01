@@ -544,13 +544,32 @@ class AWSCredentialManager implements CredentialManager {
 		provider: string,
 		credentials: ProviderCredentials,
 	): Promise<void> {
-		await this.secretsManager
-			.createSecret({
-				Name: `macro-ai/ai-providers/${provider}`,
-				SecretString: JSON.stringify(credentials),
-				Description: `API credentials for ${provider} AI model provider`,
-			})
-			.promise()
+		const secretName = `macro-ai/ai-providers/${provider}`
+		const secretString = JSON.stringify(credentials)
+
+		try {
+			// Try to create a new secret
+			await this.secretsManager
+				.createSecret({
+					Name: secretName,
+					SecretString: secretString,
+					Description: `API credentials for ${provider} AI model provider`,
+				})
+				.promise()
+		} catch (error) {
+			// If secret already exists, update it instead
+			if (error.code === 'ResourceExistsException') {
+				await this.secretsManager
+					.putSecretValue({
+						SecretId: secretName,
+						SecretString: secretString,
+					})
+					.promise()
+			} else {
+				// Re-throw any other errors
+				throw error
+			}
+		}
 	}
 }
 ```
