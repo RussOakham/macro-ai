@@ -8,10 +8,10 @@
 ## 🎯 Executive Summary
 
 This document provides a comprehensive deployment implementation plan for Macro AI v1.0.0, optimizing the balance between
- **performance**, **scalability**, and **cost-effectiveness**.
+**performance**, **scalability**, and **cost-effectiveness**.
 
 The architecture leverages AWS managed services with Infrastructure as Code (CDK), automated CI/CD pipelines, and
- enterprise-grade security practices.
+enterprise-grade security practices.
 
 ### Key Objectives
 
