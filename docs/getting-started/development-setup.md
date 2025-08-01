@@ -76,8 +76,8 @@ pnpm dev
 **Access Points:**
 
 - **Frontend**: <http://localhost:3000>
-- **Backend API**: <http://localhost:3030>
-- **API Documentation**: <http://localhost:3030/api-docs>
+- **Backend API**: <http://localhost:3040>
+- **API Documentation**: <http://localhost:3040/api-docs>
 
 ## 🛠️ Detailed Setup Instructions
 
@@ -286,7 +286,7 @@ Complete `apps/express-api/.env` configuration:
 ```bash
 # API Configuration
 API_KEY=your-32-character-api-key-here
-SERVER_PORT=3030
+SERVER_PORT=3040
 
 # Cookie Configuration
 COOKIE_DOMAIN=localhost
@@ -310,7 +310,7 @@ Complete `apps/client-ui/.env` configuration:
 
 ```bash
 # API Configuration
-VITE_API_URL=http://localhost:3030/api
+VITE_API_URL=http://localhost:3040/api
 VITE_API_KEY=your-32-character-api-key-here
 ```
 
@@ -468,10 +468,10 @@ pnpm --filter @repo/client-ui dev       # Frontend only
 
 ```bash
 # Check API health
-curl http://localhost:3030/api/health
+curl http://localhost:3040/api/health
 
 # Check Swagger documentation
-open http://localhost:3030/api-docs
+open http://localhost:3040/api-docs
 ```
 
 #### 2. Frontend Verification
@@ -575,9 +575,9 @@ psql -U postgres -d macro_ai_dev -c "SELECT version();"
 #### Port Conflicts
 
 ```bash
-# Check what's using port 3000/3030
+# Check what's using port 3000/3040
 lsof -i :3000
-lsof -i :3030
+lsof -i :3040
 
 # Kill processes if needed
 kill -9 <PID>

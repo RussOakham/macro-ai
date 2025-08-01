@@ -290,7 +290,7 @@ import { generateZodClientFromOpenAPI } from 'openapi-zod-client'
 import fs from 'fs/promises'
 
 async function generateClient() {
-	const swaggerUrl = 'http://localhost:3030/swagger.json'
+	const swaggerUrl = 'http://localhost:3040/swagger.json'
 
 	try {
 		const response = await fetch(swaggerUrl)
@@ -301,7 +301,7 @@ async function generateClient() {
 			options: {
 				shouldExportAllTypes: true,
 				withAlias: true,
-				baseUrl: process.env.VITE_API_URL || 'http://localhost:3030/api',
+				baseUrl: process.env.VITE_API_URL || 'http://localhost:3040/api',
 			},
 		})
 

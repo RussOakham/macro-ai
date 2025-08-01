@@ -10,6 +10,9 @@ const envSchema = z.object({
 	NODE_ENV: z
 		.enum(['development', 'production', 'test'])
 		.default('development'),
+	APP_ENV: z
+		.enum(['development', 'staging', 'production', 'test'])
+		.default('development'),
 	SERVER_PORT: z.coerce.number().default(3040),
 
 	// AWS Cognito

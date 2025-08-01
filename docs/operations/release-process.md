@@ -359,7 +359,7 @@ aws ecs register-task-definition \
   --container-definitions '[{
     "name": "api",
     "image": "macro-ai/express-api:'$VERSION'",
-    "portMappings": [{"containerPort": 3030}],
+    "portMappings": [{"containerPort": 3040}],
     "essential": true
   }]'
 

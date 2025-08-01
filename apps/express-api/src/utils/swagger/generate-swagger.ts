@@ -8,6 +8,7 @@ import '../../features/chat/chat.routes.ts'
 import '../../features/user/user.routes.ts'
 import '../../features/utility/utility.routes.ts'
 
+import { config } from '../../../config/default.ts'
 import { standardizeError } from '../errors.ts'
 import { pino } from '../logger.ts'
 
@@ -21,6 +22,34 @@ const generateSwaggerSpec = async () => {
 
 		// Generate OpenAPI document from registry
 		const generator = new OpenApiGeneratorV3(registry.definitions)
+
+		// Generate server URL from configuration
+		const getServerConfig = () => {
+			switch (config.appEnv) {
+				case 'production':
+					return {
+						protocol: 'https',
+						host: 'api.macro-ai.com',
+						description: 'Production server',
+					}
+				case 'staging':
+					return {
+						protocol: 'https',
+						host: 'api-staging.macro-ai.com',
+						description: 'Staging server',
+					}
+				default: // development, test
+					return {
+						protocol: 'http',
+						host: `localhost:${config.port.toString()}`,
+						description: 'Development server',
+					}
+			}
+		}
+
+		const serverConfig = getServerConfig()
+		const serverUrl = `${serverConfig.protocol}://${serverConfig.host}/api`
+
 		const openApiDocument = generator.generateDocument({
 			openapi: '3.0.0',
 			info: {
@@ -43,7 +72,8 @@ Rate limit headers are included in responses to help track usage.`,
 			},
 			servers: [
 				{
-					url: 'http://localhost:3030/api',
+					url: serverUrl,
+					description: serverConfig.description,
 				},
 			],
 		})

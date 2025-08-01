@@ -22,7 +22,7 @@ import {
 } from '@repo/macro-ai-api-client'
 
 // Create clients with base URL
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3030/api'
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3040/api'
 
 const authClient = createAuthClient(apiUrl)
 const chatClient = createChatClient(apiUrl)

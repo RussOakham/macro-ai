@@ -14,6 +14,7 @@ configureLogger(env.NODE_ENV)
 const config = {
 	apiKey: env.API_KEY,
 	nodeEnv: env.NODE_ENV,
+	appEnv: env.APP_ENV,
 	port: env.SERVER_PORT,
 	awsCognitoRegion: env.AWS_COGNITO_REGION,
 	awsCognitoUserPoolId: env.AWS_COGNITO_USER_POOL_ID,

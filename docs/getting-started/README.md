@@ -37,8 +37,8 @@ pnpm dev
 **🌐 Access Points:**
 
 - Frontend: `http://localhost:3000`
-- API: `http://localhost:3030/api`
-- API Docs: `http://localhost:3030/api-docs`
+- API: `http://localhost:3040/api`
+- API Docs: `http://localhost:3040/api-docs`
 
 ## 📋 Prerequisites
 
@@ -114,7 +114,7 @@ cp apps/client-ui/.env.example apps/client-ui/.env
 ```bash
 # API Configuration
 API_KEY=your-32-character-api-key-here  # Generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-SERVER_PORT=3030
+SERVER_PORT=3040
 
 # Database
 RELATIONAL_DATABASE_URL=postgresql://postgres:password@localhost:5432/macro_ai_dev
@@ -133,7 +133,7 @@ AWS_COGNITO_USER_POOL_CLIENT_ID=your-client-id
 
 ```bash
 # API Configuration
-VITE_API_URL=http://localhost:3030/api
+VITE_API_URL=http://localhost:3040/api
 VITE_API_KEY=your-32-character-api-key-here  # Same as Express API
 ```
 
@@ -159,8 +159,8 @@ pnpm --filter @repo/client-ui dev      # Frontend UI
 ### Step 6: Verify Setup
 
 1. **Frontend**: Visit `http://localhost:3000` - should show login page
-2. **API Health**: Visit `http://localhost:3030/api/health` - should return `{"status": "healthy"}`
-3. **API Docs**: Visit `http://localhost:3030/api-docs` - should show Swagger UI
+2. **API Health**: Visit `http://localhost:3040/api/health` - should return `{"status": "healthy"}`
+3. **API Docs**: Visit `http://localhost:3040/api-docs` - should show Swagger UI
 4. **Database**: Check connection in API logs
 
 ## 📚 Essential Documentation
@@ -219,7 +219,7 @@ graph TB
         CLIENT[Auto-Generated API Client]
     end
 
-    subgraph "Backend (Port 3030)"
+    subgraph "Backend (Port 3040)"
         API[Express.js + TypeScript]
         AUTH[AWS Cognito Integration]
         AI[OpenAI Integration]

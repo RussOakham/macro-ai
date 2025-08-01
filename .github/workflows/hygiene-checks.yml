@@ -34,7 +34,7 @@ jobs:
           ENV_CONTENT=$(cat << EOF
           # API Configuration
           API_KEY=${{ secrets.API_KEY }}
-          SERVER_PORT=${{ secrets.SERVER_PORT || '3030' }}
+          SERVER_PORT=${{ secrets.SERVER_PORT || '3040' }}
           NODE_ENV=test
 
           # AWS Cognito Configuration
@@ -72,7 +72,7 @@ jobs:
         id: create_client_env
         run: |
           ENV_CONTENT=$(cat << EOF
-          VITE_API_URL=${{ secrets.VITE_API_URL || 'http://localhost:3030/api' }}
+          VITE_API_URL=${{ secrets.VITE_API_URL || 'http://localhost:3040/api' }}
           VITE_API_KEY=${{ secrets.VITE_API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
           EOF
           )

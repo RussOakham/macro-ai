@@ -103,7 +103,7 @@ src/
 ```bash
 # API Configuration
 API_KEY=your-32-character-api-key
-SERVER_PORT=3030
+SERVER_PORT=3040
 
 # Database
 RELATIONAL_DATABASE_URL=postgresql://user:pass@localhost:5432/macro_ai_dev
@@ -141,8 +141,8 @@ The API uses PostgreSQL with the following main tables:
 
 When running locally, access the interactive API documentation:
 
-- **Swagger UI**: `http://localhost:3030/api-docs`
-- **OpenAPI Spec**: `http://localhost:3030/swagger.json`
+- **Swagger UI**: `http://localhost:3040/api-docs`
+- **OpenAPI Spec**: `http://localhost:3040/swagger.json`
 
 ### Authentication
 

@@ -144,7 +144,7 @@ export const authenticationMiddleware = async (
 // CORS middleware configuration
 app.use(
 	cors({
-		origin: ['http://localhost:3000', 'http://localhost:3030'],
+		origin: ['http://localhost:3000', 'http://localhost:3040'],
 		credentials: true, // Enable cookies and authorization headers
 		exposedHeaders: ['cache-control'], // Note: 'set-cookie' cannot be exposed via CORS¹
 		methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

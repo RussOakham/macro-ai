@@ -29,6 +29,7 @@ export const defaultTestConfig: ConfigType = {
 	// API Configuration
 	apiKey: 'test-api-key-12345678901234567890',
 	nodeEnv: 'test',
+	appEnv: 'test',
 	port: 3000,
 
 	// AWS Cognito Configuration
@@ -107,6 +108,7 @@ export const setupConfigMock = (overrides: Partial<ConfigType> = {}) => {
 export const createDevelopmentConfig = () =>
 	createConfigMock({
 		nodeEnv: 'development',
+		appEnv: 'development',
 		port: 3001,
 	})
 
@@ -117,7 +119,19 @@ export const createDevelopmentConfig = () =>
 export const createProductionConfig = () =>
 	createConfigMock({
 		nodeEnv: 'production',
+		appEnv: 'production',
 		port: 8080,
+	})
+
+/**
+ * Create staging environment config
+ * @returns Config mock configured for staging environment
+ */
+export const createStagingConfig = () =>
+	createConfigMock({
+		nodeEnv: 'production', // Staging uses NODE_ENV=production for library optimizations
+		appEnv: 'staging',
+		port: 3040,
 	})
 
 /**
@@ -127,6 +141,7 @@ export const createProductionConfig = () =>
 export const createTestConfig = () =>
 	createConfigMock({
 		nodeEnv: 'test',
+		appEnv: 'test',
 		port: 3000,
 	})
 
@@ -227,6 +242,8 @@ export const mockConfig = {
 	// Environment-specific creators
 	/** Create development environment config */
 	development: createDevelopmentConfig,
+	/** Create staging environment config */
+	staging: createStagingConfig,
 	/** Create production environment config */
 	production: createProductionConfig,
 	/** Create test environment config */
