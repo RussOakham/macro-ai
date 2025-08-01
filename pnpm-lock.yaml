@@ -286,7 +286,7 @@ importers:
         version: 4.6.2(eslint@9.25.1(jiti@2.4.2))
       eslint-plugin-unused-imports:
         specifier: 'catalog:'
-        version: 3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))
+        version: 3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@8.31.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))
       globals:
         specifier: 'catalog:'
         version: 15.15.0
@@ -488,7 +488,7 @@ importers:
         version: 4.6.2(eslint@9.25.1(jiti@2.4.2))
       eslint-plugin-unused-imports:
         specifier: 'catalog:'
-        version: 3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))
+        version: 3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@8.31.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))
       globals:
         specifier: 'catalog:'
         version: 15.15.0
@@ -557,7 +557,7 @@ importers:
         version: 12.1.1(eslint@9.25.1(jiti@2.4.2))
       eslint-plugin-unused-imports:
         specifier: 'catalog:'
-        version: 3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))
+        version: 3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@8.31.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))
       globals:
         specifier: 'catalog:'
         version: 15.15.0
@@ -620,7 +620,7 @@ importers:
         version: 4.6.2(eslint@9.25.1(jiti@2.4.2))
       eslint-plugin-unused-imports:
         specifier: 'catalog:'
-        version: 3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))
+        version: 3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@8.31.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))
       globals:
         specifier: 'catalog:'
         version: 15.15.0
@@ -14717,7 +14717,6 @@ snapshots:
       magic-string: 0.30.17
     optionalDependencies:
       vite: 5.4.19(@types/node@22.15.3)(lightningcss@1.29.2)
-    optional: true
 
   '@vitest/pretty-format@3.1.2':
     dependencies:
@@ -14747,7 +14746,7 @@ snapshots:
       sirv: 3.0.1
       tinyglobby: 0.2.13
       tinyrainbow: 2.0.0
-      vitest: 3.1.2(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.2)(jsdom@26.1.0)(lightningcss@1.29.2)
+      vitest: 3.1.2(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/ui@3.1.2)(jsdom@26.1.0)(lightningcss@1.29.2)
 
   '@vitest/utils@3.1.2':
     dependencies:
@@ -16150,7 +16149,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-unused-imports@3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2)):
+  eslint-plugin-unused-imports@3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@8.31.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2)):
     dependencies:
       eslint: 9.25.1(jiti@2.4.2)
       eslint-rule-composer: 0.3.0
@@ -19599,7 +19598,6 @@ snapshots:
       - sugarss
       - supports-color
       - terser
-    optional: true
 
   vite@5.4.19(@types/node@20.17.32)(lightningcss@1.29.2):
     dependencies:
@@ -19620,7 +19618,6 @@ snapshots:
       '@types/node': 22.15.3
       fsevents: 2.3.3
       lightningcss: 1.29.2
-    optional: true
 
   vitest@3.1.2(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.2)(jsdom@26.1.0)(lightningcss@1.29.2):
     dependencies:
@@ -19699,7 +19696,6 @@ snapshots:
       - sugarss
       - supports-color
       - terser
-    optional: true
 
   w3c-xmlserializer@5.0.0:
     dependencies:

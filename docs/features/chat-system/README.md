@@ -225,10 +225,20 @@ CREATE INDEX idx_chat_messages_embedding ON chat_messages
 
 ## 🔗 Related Documentation
 
+### Technical Integration
+
 - **[Authentication](../authentication/README.md)** - User authentication and authorization
 - **[User Management](../user-management/README.md)** - User profile integration
 - **[Database Design](../../architecture/database-design.md)** - Chat data storage
 - **[API Development](../../development/api-development.md)** - API development patterns
+
+### Product Management
+
+- **[Multi-Model Chat PRD](../../product/requirements/prds/multi-model-chat.md)** - Strategic multi-model extension requirements
+- **[Chat System User Stories](../../product/requirements/user-stories/chat-system.md)** - User requirements for chat enhancements
+- **[Multi-Model Architecture](../../product/requirements/technical-designs/multi-model-architecture.md)** - Technical
+  design for multi-model integration
+- **[Product Roadmap](../../product/strategy/product-roadmap.md)** - Strategic context for chat system evolution
 
 ## 🎯 Chat System Goals
 
