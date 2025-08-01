@@ -68,6 +68,16 @@ New to Macro AI? Start here:
 - [Database Operations](./operations/database-operations.md) - Migrations and maintenance
 - [Incident Response](./operations/incident-response.md) - Troubleshooting and support
 
+### 🎯 Product Management
+
+**[`./product/`](./product/README.md)**
+
+- [Strategy](./product/strategy/README.md) - Product roadmap, user personas, competitive analysis, and success metrics
+- [Requirements](./product/requirements/README.md) - PRDs, user stories, and technical design documents
+- [Planning](./product/planning/README.md) - Implementation plans, feature flags, and release planning
+- [Communication](./product/communication/README.md) - Release notes, user feedback, and stakeholder updates
+- [Analysis](./product/analysis/README.md) - Post-release analysis, metrics tracking, and market analysis
+
 ### 📖 Reference
 
 **[`./reference/`](./reference/README.md)**
