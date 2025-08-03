@@ -25,15 +25,16 @@ enterprise-grade security practices.
 
 ### AWS Services Stack
 
-| Service                       | Purpose                        | Environment Sizing             |
-| ----------------------------- | ------------------------------ | ------------------------------ |
-| **ECS Fargate**               | Containerized compute          | Dev: 1 task, Prod: 2-10 tasks  |
-| **RDS PostgreSQL**            | Primary database with pgvector | Dev: t3.micro, Prod: t3.medium |
-| **ElastiCache Redis**         | Session & API caching          | Dev: t3.micro, Prod: t3.small  |
-| **Application Load Balancer** | Traffic distribution           | Shared across environments     |
-| **CloudFront**                | CDN for static assets          | Global edge locations          |
-| **AWS Cognito**               | User authentication            | Pay-per-use                    |
-| **S3**                        | Static assets & backups        | Standard/IA storage classes    |
+| Service                       | Purpose                         | Environment Sizing             |
+| ----------------------------- | ------------------------------- | ------------------------------ |
+| **ECS Fargate**               | Containerized compute           | Dev: 1 task, Prod: 2-10 tasks  |
+| **RDS PostgreSQL**            | Primary database with pgvector  | Dev: t3.micro, Prod: t3.medium |
+| **ElastiCache Redis**         | Session & API caching           | Dev: t3.micro, Prod: t3.small  |
+| **Application Load Balancer** | Traffic distribution            | Shared across environments     |
+| **CloudFront**                | CDN for static assets           | Global edge locations          |
+| **AWS Cognito**               | User authentication             | Pay-per-use                    |
+| **AWS Secrets Manager**       | Secrets & credential management | ~$7/month for all environments |
+| **S3**                        | Static assets & backups         | Standard/IA storage classes    |
 
 ### Performance Optimization Strategy
 
@@ -259,8 +260,308 @@ CREATE INDEX ON embeddings USING ivfflat (embedding vector_cosine_ops);
 
 - **Encryption at Rest**: RDS, S3, and EBS encryption
 - **Encryption in Transit**: TLS for all communications
-- **Secrets Management**: AWS Secrets Manager rotation
+- **Secrets Management**: AWS Secrets Manager with automatic rotation
 - **Backup Encryption**: Automated encrypted backups
+
+## 🔐 AWS Secrets Manager Implementation
+
+### Production Secrets Manager
+
+```typescript
+// src/config/production-secrets.ts
+import {
+	SecretsManagerClient,
+	GetSecretValueCommand,
+} from '@aws-sdk/client-secrets-manager'
+
+const secretsClient = new SecretsManagerClient({
+	region: process.env.AWS_REGION || 'us-east-1',
+})
+
+export class ProductionSecretsManager {
+	private static cache = new Map<string, { value: any; expires: number }>()
+
+	static async getSecret(secretId: string, useCache = true): Promise<any> {
+		// Check cache first (10-minute TTL for production)
+		if (useCache) {
+			const cached = this.cache.get(secretId)
+			if (cached && Date.now() < cached.expires) {
+				return cached.value
+			}
+		}
+
+		try {
+			const command = new GetSecretValueCommand({ SecretId: secretId })
+			const response = await secretsClient.send(command)
+
+			let secretValue
+			if (response.SecretString) {
+				try {
+					secretValue = JSON.parse(response.SecretString)
+				} catch {
+					secretValue = response.SecretString
+				}
+			} else if (response.SecretBinary) {
+				secretValue = Buffer.from(response.SecretBinary).toString('ascii')
+			}
+
+			// Cache for 10 minutes
+			if (useCache) {
+				this.cache.set(secretId, {
+					value: secretValue,
+					expires: Date.now() + 10 * 60 * 1000,
+				})
+			}
+
+			return secretValue
+		} catch (error) {
+			console.error(`Failed to retrieve secret ${secretId}:`, error)
+			throw error
+		}
+	}
+
+	// Automatic rotation validation
+	static async validateRotation(secretId: string): Promise<boolean> {
+		try {
+			const secret = await this.getSecret(secretId, false)
+
+			// Test secret functionality based on type
+			switch (secretId) {
+				case 'macro-ai/prod/database':
+					return await this.testDatabaseConnection(secret)
+				case 'macro-ai/prod/openai-api-key':
+					return await this.testOpenAIKey(secret)
+				case 'macro-ai/prod/redis-credentials':
+					return await this.testRedisConnection(secret)
+				default:
+					return true
+			}
+		} catch (error) {
+			console.error(`Rotation validation failed for ${secretId}:`, error)
+			return false
+		}
+	}
+
+	private static async testDatabaseConnection(
+		credentials: any,
+	): Promise<boolean> {
+		try {
+			// Test database connection with new credentials
+			const { drizzle } = await import('drizzle-orm/postgres-js')
+			const postgres = (await import('postgres')).default
+
+			const sql = postgres(credentials.url, { max: 1 })
+			const db = drizzle(sql)
+
+			await sql`SELECT 1`
+			await sql.end()
+
+			return true
+		} catch (error) {
+			console.error('Database connection test failed:', error)
+			return false
+		}
+	}
+
+	private static async testOpenAIKey(apiKey: string): Promise<boolean> {
+		try {
+			const response = await fetch('https://api.openai.com/v1/models', {
+				headers: {
+					Authorization: `Bearer ${apiKey}`,
+				},
+			})
+
+			return response.ok
+		} catch (error) {
+			console.error('OpenAI API key test failed:', error)
+			return false
+		}
+	}
+
+	private static async testRedisConnection(credentials: any): Promise<boolean> {
+		try {
+			const Redis = (await import('ioredis')).default
+			const redis = new Redis(credentials.url)
+
+			await redis.ping()
+			await redis.disconnect()
+
+			return true
+		} catch (error) {
+			console.error('Redis connection test failed:', error)
+			return false
+		}
+	}
+}
+```
+
+### CDK Secrets Manager Implementation
+
+```typescript
+// infrastructure/lib/constructs/secrets/production-secrets-manager.ts
+import {
+	aws_secretsmanager as secretsmanager,
+	aws_iam as iam,
+	aws_lambda as lambda,
+	Duration,
+} from 'aws-cdk-lib'
+import { Construct } from 'constructs'
+
+export interface ProductionSecretsManagerProps {
+	environment: string
+	lambdaRole: iam.Role
+	databaseInstance?: any
+}
+
+export class ProductionSecretsManager extends Construct {
+	public readonly secrets: { [key: string]: secretsmanager.Secret } = {}
+	public readonly rotationLambda: lambda.Function
+
+	constructor(
+		scope: Construct,
+		id: string,
+		props: ProductionSecretsManagerProps,
+	) {
+		super(scope, id)
+
+		// Database credentials with automatic rotation
+		this.secrets.database = new secretsmanager.Secret(this, 'DatabaseSecret', {
+			secretName: `macro-ai/${props.environment}/database`,
+			description: 'Database credentials for macro-ai',
+			generateSecretString: {
+				secretStringTemplate: JSON.stringify({
+					username: 'postgres',
+					engine: 'postgres',
+					host: props.databaseInstance?.instanceEndpoint?.hostname,
+					port: 5432,
+					dbname: 'macro_ai',
+				}),
+				generateStringKey: 'password',
+				excludeCharacters: '"@/\\\'',
+			},
+		})
+
+		// OpenAI API key (manual rotation)
+		this.secrets.openaiApiKey = new secretsmanager.Secret(
+			this,
+			'OpenAIApiKeySecret',
+			{
+				secretName: `macro-ai/${props.environment}/openai-api-key`,
+				description: 'OpenAI API key for macro-ai',
+			},
+		)
+
+		// JWT signing secrets
+		this.secrets.jwtSecrets = new secretsmanager.Secret(
+			this,
+			'JWTSecretsSecret',
+			{
+				secretName: `macro-ai/${props.environment}/jwt-secrets`,
+				description: 'JWT signing secrets for macro-ai',
+				generateSecretString: {
+					secretStringTemplate: JSON.stringify({}),
+					generateStringKey: 'accessTokenSecret',
+					passwordLength: 64,
+					excludeCharacters: '"@/\\\'',
+				},
+			},
+		)
+
+		// Redis credentials
+		this.secrets.redisCredentials = new secretsmanager.Secret(
+			this,
+			'RedisCredentialsSecret',
+			{
+				secretName: `macro-ai/${props.environment}/redis-credentials`,
+				description: 'Redis connection credentials for macro-ai',
+			},
+		)
+
+		// Third-party API credentials
+		this.secrets.thirdPartyApis = new secretsmanager.Secret(
+			this,
+			'ThirdPartyApisSecret',
+			{
+				secretName: `macro-ai/${props.environment}/third-party-apis`,
+				description: 'Third-party API credentials for macro-ai',
+			},
+		)
+
+		// Create rotation Lambda for database credentials
+		this.rotationLambda = new lambda.Function(this, 'RotationLambda', {
+			runtime: lambda.Runtime.NODEJS_20_X,
+			handler: 'index.handler',
+			code: lambda.Code.fromInline(`
+        exports.handler = async (event) => {
+          console.log('Rotation event:', JSON.stringify(event, null, 2));
+          // Implement rotation logic here
+          return { statusCode: 200 };
+        };
+      `),
+			timeout: Duration.minutes(5),
+		})
+
+		// Enable automatic rotation for database credentials
+		if (props.databaseInstance) {
+			this.secrets.database.addRotationSchedule('DatabaseRotationSchedule', {
+				automaticallyAfter: Duration.days(30),
+				rotationLambda: this.rotationLambda,
+			})
+		}
+
+		// Create IAM policy for Lambda access to secrets
+		this.createSecretsAccessPolicy(props.lambdaRole)
+
+		// Create cross-region replication for critical secrets
+		if (props.environment === 'prod') {
+			this.setupCrossRegionReplication()
+		}
+	}
+
+	private createSecretsAccessPolicy(lambdaRole: iam.Role) {
+		lambdaRole.addToPolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: [
+					'secretsmanager:GetSecretValue',
+					'secretsmanager:DescribeSecret',
+				],
+				resources: Object.values(this.secrets).map(
+					(secret) => secret.secretArn,
+				),
+			}),
+		)
+
+		// Allow rotation Lambda to update secrets
+		this.rotationLambda.addToRolePolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: [
+					'secretsmanager:DescribeSecret',
+					'secretsmanager:GetSecretValue',
+					'secretsmanager:PutSecretValue',
+					'secretsmanager:UpdateSecretVersionStage',
+				],
+				resources: Object.values(this.secrets).map(
+					(secret) => secret.secretArn,
+				),
+			}),
+		)
+	}
+
+	private setupCrossRegionReplication() {
+		// Replicate critical secrets to backup region
+		const criticalSecrets = [this.secrets.database, this.secrets.jwtSecrets]
+
+		criticalSecrets.forEach((secret, index) => {
+			secret.addReplicaRegion({
+				region: 'us-west-2', // Backup region
+				encryptionKey: undefined, // Use default KMS key in backup region
+			})
+		})
+	}
+}
+```
 
 ## 📊 Monitoring & Observability
 
@@ -1070,6 +1371,23 @@ jobs:
       - name: Install CDK
         run: npm install -g aws-cdk
 
+      - name: Update Secrets Manager
+        run: |
+          # Update production secrets with latest values
+          aws secretsmanager update-secret \
+            --secret-id "macro-ai/prod/openai-api-key" \
+            --secret-string "${{ secrets.OPENAI_API_KEY }}"
+
+          # Update database credentials if needed
+          aws secretsmanager update-secret \
+            --secret-id "macro-ai/prod/database" \
+            --secret-string '{"username":"postgres","password":"${{ secrets.DB_PASSWORD }}","host":"${{ secrets.DB_HOST }}","port":5432,"dbname":"macro_ai"}'
+
+          # Update Redis credentials
+          aws secretsmanager update-secret \
+            --secret-id "macro-ai/prod/redis-credentials" \
+            --secret-string '{"url":"${{ secrets.REDIS_URL }}"}'
+
       - name: Deploy infrastructure
         run: |
           cd infrastructure
@@ -1198,10 +1516,11 @@ ECS Fargate (1 task):           $15/month
 RDS t3.micro:                   $12/month
 ElastiCache t3.micro:           $11/month
 ALB:                            $16/month
+AWS Secrets Manager:            $2.15/month
 Data Transfer:                  $3/month
 CloudWatch Logs:                $2/month
 S3 Storage:                     $1/month
-Total:                          ~$60/month
+Total:                          ~$62/month
 ```
 
 **Staging Environment** (~$120/month):
@@ -1211,10 +1530,11 @@ ECS Fargate (1-3 tasks):        $45/month
 RDS t3.small:                   $25/month
 ElastiCache t3.small:           $35/month
 ALB:                            $16/month
+AWS Secrets Manager:            $2.15/month
 Data Transfer:                  $8/month
 CloudWatch Logs:                $5/month
 S3 Storage:                     $2/month
-Total:                          ~$136/month
+Total:                          ~$138/month
 ```
 
 **Production Environment** (~$400-800/month):
@@ -1224,12 +1544,13 @@ ECS Fargate (2-10 tasks):       $150-750/month
 RDS t3.medium + Read Replica:   $100/month
 ElastiCache t3.small:           $35/month
 ALB:                            $16/month
+AWS Secrets Manager:            $2.15/month
 CloudFront:                     $10/month
 Data Transfer:                  $20/month
 CloudWatch Logs:                $15/month
 S3 Storage:                     $5/month
 Backup & Monitoring:            $10/month
-Total:                          ~$361-961/month
+Total:                          ~$363-963/month
 ```
 
 ### Cost Optimization Strategies
@@ -1246,6 +1567,78 @@ Total:                          ~$361-961/month
 Development: Scale to 0 tasks 6 PM - 8 AM weekdays, weekends
 Staging: Scale to 1 task 10 PM - 6 AM weekdays
 ```
+
+## 🔒 Security Comparison: Secrets Manager vs Parameter Store
+
+### AWS Secrets Manager (Production Choice)
+
+**Security Features:**
+
+- ✅ **Automatic Rotation**: Built-in rotation for RDS, custom rotation for API keys
+- ✅ **Customer-Managed KMS Keys**: Full control over encryption keys
+- ✅ **Cross-Region Replication**: Disaster recovery with separate encryption
+- ✅ **Fine-Grained Access Control**: Resource-based policies with conditions
+- ✅ **Comprehensive Audit Logging**: Detailed access logs and compliance reporting
+- ✅ **Version Management**: Multiple versions with staging labels
+- ✅ **Rollback Capabilities**: Easy reversion to previous versions
+
+**Cost Impact:**
+
+```text
+Secret Storage (5 secrets):      $2.00/month
+API Calls (~100k/month):         $0.50/month
+Total Secrets Manager Cost:      $2.50/month per environment
+```
+
+**Use Cases:**
+
+- Database credentials requiring automatic rotation
+- API keys with compliance requirements
+- Production environments with enterprise security needs
+- Multi-region deployments requiring replication
+
+### Parameter Store Alternative (Hobby/Development)
+
+**Security Features:**
+
+- ✅ **Basic Encryption**: AWS managed KMS keys
+- ✅ **Cost Effective**: Free tier for standard parameters
+- ⚠️ **Manual Rotation**: Requires custom rotation procedures
+- ⚠️ **Limited Audit**: Basic CloudTrail logging only
+- ❌ **No Versioning**: Cannot rollback to previous values
+- ❌ **No Cross-Region Replication**: Manual backup required
+
+**Cost Impact:**
+
+```text
+Standard Parameters:             $0.00/month (free tier)
+Advanced Parameters:             $0.05 per 10k calls
+Total Parameter Store Cost:      $0.00-0.15/month
+```
+
+**Use Cases:**
+
+- Development and testing environments
+- Cost-sensitive hobby projects
+- Non-critical configuration data
+- Simple secrets without rotation requirements
+
+### Migration Strategy
+
+**When to Upgrade from Parameter Store to Secrets Manager:**
+
+1. **User Growth**: >100 active users requiring enterprise security
+2. **Compliance Requirements**: SOC, PCI DSS, or other regulatory standards
+3. **Operational Maturity**: Need for automatic rotation and lifecycle management
+4. **Budget Flexibility**: Can accommodate $2.50/month per environment
+
+**Migration Process:**
+
+1. **Parallel Implementation**: Deploy hybrid secrets manager
+2. **Data Migration**: Transfer secrets with validation
+3. **Rotation Setup**: Configure automatic rotation schedules
+4. **Validation**: Test all secret access patterns
+5. **Cutover**: Switch to Secrets Manager with zero downtime
 
 **S3 Storage Optimization**:
 

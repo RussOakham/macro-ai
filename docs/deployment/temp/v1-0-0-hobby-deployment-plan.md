@@ -50,8 +50,9 @@ AWS Lambda (API Backend):                   £0.00/month (free tier)
 Neon PostgreSQL (Database):                 £0.00/month (free tier)
 Upstash Redis (Caching):                    £0.00/month (free tier)
 API Gateway (Load Balancing):               £0.00/month (free tier)
-Vercel (Frontend Hosting):                  £0.00/month (free tier)
+AWS Amplify (Frontend Hosting):             £0.00/month (free tier)
 AWS Cognito (Authentication):               £0.00/month (free tier)
+AWS Systems Manager Parameter Store:        £0.00/month (free tier)
 S3 (File Storage):                          £0.00/month (free tier)
 CloudWatch (Basic Monitoring):              £0.00/month (free tier)
 Domain Name (optional):                     £10.00/year (£0.83/month)
@@ -64,16 +65,17 @@ Total Hobby Cost:                           £0.83/month
 
 ### Service Comparison Matrix
 
-| Component          | Production Solution | Hobby Alternative | Monthly Cost | Free Tier Limits        |
-| ------------------ | ------------------- | ----------------- | ------------ | ----------------------- |
-| **API Backend**    | ECS Fargate         | AWS Lambda        | £0           | 1M requests/month       |
-| **Database**       | RDS PostgreSQL      | Neon PostgreSQL   | £0           | 512MB storage, pgvector |
-| **Caching**        | ElastiCache Redis   | Upstash Redis     | £0           | 10k requests/day        |
-| **Load Balancer**  | ALB                 | API Gateway       | £0           | 1M API calls/month      |
-| **Frontend**       | ECS + CloudFront    | Vercel            | £0           | 100GB bandwidth         |
-| **Authentication** | AWS Cognito         | AWS Cognito       | £0           | 50k MAU                 |
-| **File Storage**   | S3                  | S3                | £0           | 5GB storage             |
-| **Monitoring**     | CloudWatch          | CloudWatch        | £0           | Basic metrics           |
+| Component          | Production Solution | Hobby Alternative | Monthly Cost | Free Tier Limits             |
+| ------------------ | ------------------- | ----------------- | ------------ | ---------------------------- |
+| **API Backend**    | ECS Fargate         | AWS Lambda        | £0           | 1M requests/month            |
+| **Database**       | RDS PostgreSQL      | Neon PostgreSQL   | £0           | 512MB storage, pgvector      |
+| **Caching**        | ElastiCache Redis   | Upstash Redis     | £0           | 10k requests/day             |
+| **Load Balancer**  | ALB                 | API Gateway       | £0           | 1M API calls/month           |
+| **Frontend**       | ECS + CloudFront    | AWS Amplify       | £0           | 15GB bandwidth, 1k build min |
+| **Authentication** | AWS Cognito         | AWS Cognito       | £0           | 50k MAU                      |
+| **Secrets**        | AWS Secrets Manager | Parameter Store   | £0           | 10k API calls/month          |
+| **File Storage**   | S3                  | S3                | £0           | 5GB storage                  |
+| **Monitoring**     | CloudWatch          | CloudWatch        | £0           | Basic metrics                |
 
 ### Architecture Diagram
 
@@ -82,7 +84,9 @@ Total Hobby Cost:                           £0.83/month
 │                 Hobby Architecture (£0.83/month)            │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  Users ──► Vercel CDN ──► React UI (Static Hosting)        │
+│  Users ──► AWS Amplify ──► React UI (Amplify Hosting)      │
+│     │           │                                           │
+│     │           └──► CloudFront CDN (Built-in)             │
 │     │                                                       │
 │     └──► API Gateway ──► Lambda Functions                   │
 │                    │            │                          │
@@ -99,6 +103,7 @@ Total Hobby Cost:                           £0.83/month
 │  🎯 Target: <100 users, <1000 requests/day                 │
 │  💰 Cost: £0.83/month (domain only)                        │
 │  🚀 Performance: 200-500ms (including cold starts)        │
+│  🔗 AWS Native: Better integration across services         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -198,31 +203,375 @@ Total Hobby Cost:                           £0.83/month
 - CORS handling
 - Monitoring and logging
 
-### 5. Vercel (Frontend Hosting)
+### 5. AWS Amplify (Frontend Hosting)
 
 **Free Tier Limits:**
 
-- 100 GB bandwidth per month
-- Unlimited static sites
-- Global CDN
-- Automatic deployments
+- 1,000 build minutes per month
+- 15 GB served per month
+- Unlimited requests
+- Always free (not just first 12 months)
 
 **Your Usage (Personal project):**
 
+- Estimated 10 builds/month × 2 minutes = 20 minutes
 - Estimated 1-5 GB bandwidth/month
 - Well within limits
 - Cost: £0/month
 
 **Features:**
 
-- Git integration
-- Preview deployments
-- Custom domains
-- Edge functions
+- Git integration with GitHub/GitLab
+- Built-in CloudFront CDN
+- Custom domains with Route 53 integration
+- Environment-specific deployments
+- Native AWS Cognito integration
+- Automatic HTTPS certificates
+
+### 6. AWS Systems Manager Parameter Store (Secrets Management)
+
+**Free Tier Limits:**
+
+- 10,000 standard parameter API calls per month
+- Unlimited advanced parameter storage
+- AWS managed KMS encryption included
+- Always free (not just first 12 months)
+
+**Your Usage (Personal project):**
+
+- Estimated 1,000 parameter retrievals/month
+- 5-8 parameters for secrets storage
+- Well within free tier limits
+- Cost: £0/month
+
+**Security Features:**
+
+- AES-256 encryption at rest
+- TLS 1.2+ encryption in transit
+- AWS managed or customer managed KMS keys
+- CloudTrail integration for audit logging
+- IAM-based access control
+- Parameter hierarchies for organization
+
+**Parameter Types:**
+
+- **Standard Parameters**: Free, 4KB limit, AWS managed keys
+- **Advanced Parameters**: £0.05 per 10k calls, 8KB limit, customer managed keys
+- **SecureString**: Encrypted parameters for sensitive data
+
+## 🔐 Enhanced Security Implementation
+
+### Secure Hobby Secrets Manager
+
+```typescript
+// src/config/secure-secrets.ts
+import {
+	SSMClient,
+	GetParameterCommand,
+	PutParameterCommand,
+} from '@aws-sdk/client-ssm'
+
+export class SecureHobbySecretsManager {
+	private static readonly ssmClient = new SSMClient({
+		region: process.env.AWS_REGION || 'us-east-1',
+	})
+
+	private static readonly cache = new Map<
+		string,
+		{ value: string; expires: number }
+	>()
+
+	// Critical secrets requiring advanced parameters
+	private static readonly CRITICAL_SECRETS = [
+		'openai-api-key',
+		'neon-database-url',
+	]
+
+	// Non-critical secrets using standard parameters
+	private static readonly NON_CRITICAL_SECRETS = [
+		'upstash-redis-url',
+		'cognito-user-pool-id',
+		'cognito-user-pool-client-id',
+	]
+
+	static async getSecret(
+		parameterName: string,
+		useCache = true,
+	): Promise<string> {
+		// Check cache first (5-minute TTL)
+		if (useCache) {
+			const cached = this.cache.get(parameterName)
+			if (cached && Date.now() < cached.expires) {
+				return cached.value
+			}
+		}
+
+		try {
+			const isCritical = this.CRITICAL_SECRETS.includes(parameterName)
+			const fullParameterName = isCritical
+				? `/macro-ai/prod/critical/${parameterName}`
+				: `/macro-ai/prod/standard/${parameterName}`
+
+			const command = new GetParameterCommand({
+				Name: fullParameterName,
+				WithDecryption: true,
+			})
+
+			const response = await this.ssmClient.send(command)
+			const value = response.Parameter?.Value
+
+			if (!value) {
+				throw new Error(`Parameter ${parameterName} not found`)
+			}
+
+			// Log access for audit trail
+			console.log(`Secret accessed: ${parameterName}`, {
+				timestamp: new Date().toISOString(),
+				source: 'lambda',
+				parameter: parameterName,
+				critical: isCritical,
+			})
+
+			// Cache for 5 minutes
+			if (useCache) {
+				this.cache.set(parameterName, {
+					value,
+					expires: Date.now() + 5 * 60 * 1000,
+				})
+			}
+
+			return value
+		} catch (error) {
+			console.error(`Failed to retrieve parameter ${parameterName}:`, error)
+			throw error
+		}
+	}
+
+	// Manual rotation for critical secrets
+	static async rotateCriticalSecrets(): Promise<void> {
+		console.log('Starting manual rotation of critical secrets')
+
+		for (const secretName of this.CRITICAL_SECRETS) {
+			try {
+				await this.rotateSecretByType(secretName)
+				console.log(`Successfully rotated: ${secretName}`)
+			} catch (error) {
+				console.error(`Failed to rotate ${secretName}:`, error)
+			}
+		}
+	}
+
+	private static async rotateSecretByType(secretName: string): Promise<void> {
+		switch (secretName) {
+			case 'openai-api-key':
+				// Implement OpenAI API key rotation logic
+				console.log('Manual OpenAI key rotation required')
+				break
+			case 'neon-database-url':
+				// Implement database credential rotation logic
+				console.log('Manual database credential rotation required')
+				break
+			default:
+				console.log(`No rotation logic defined for ${secretName}`)
+		}
+	}
+
+	// Fallback to environment variables for non-sensitive config
+	static getEnvVar(key: string, defaultValue?: string): string {
+		const value = process.env[key]
+		if (!value && !defaultValue) {
+			throw new Error(`Environment variable ${key} is required`)
+		}
+		return value || defaultValue!
+	}
+}
+```
+
+### Manual Rotation Procedures
+
+**Monthly API Key Rotation:**
+
+```typescript
+// scripts/rotate-api-keys.ts
+import { SecureHobbySecretsManager } from '../src/config/secure-secrets'
+import { SSMClient, PutParameterCommand } from '@aws-sdk/client-ssm'
+
+export class ManualRotationProcedures {
+	private static readonly ssmClient = new SSMClient({})
+
+	static async rotateOpenAIKey(newApiKey: string): Promise<void> {
+		try {
+			// Test new API key first
+			const testResponse = await fetch('https://api.openai.com/v1/models', {
+				headers: {
+					Authorization: `Bearer ${newApiKey}`,
+				},
+			})
+
+			if (!testResponse.ok) {
+				throw new Error('New OpenAI API key validation failed')
+			}
+
+			// Update parameter
+			await this.ssmClient.send(
+				new PutParameterCommand({
+					Name: '/macro-ai/prod/critical/openai-api-key',
+					Value: newApiKey,
+					Type: 'SecureString',
+					Overwrite: true,
+				}),
+			)
+
+			console.log('OpenAI API key rotated successfully')
+		} catch (error) {
+			console.error('Failed to rotate OpenAI API key:', error)
+			throw error
+		}
+	}
+
+	static async rotateDatabaseCredentials(
+		newConnectionString: string,
+	): Promise<void> {
+		try {
+			// Test new connection string
+			// Implementation depends on your database client
+
+			// Update parameter
+			await this.ssmClient.send(
+				new PutParameterCommand({
+					Name: '/macro-ai/prod/critical/neon-database-url',
+					Value: newConnectionString,
+					Type: 'SecureString',
+					Overwrite: true,
+				}),
+			)
+
+			console.log('Database credentials rotated successfully')
+		} catch (error) {
+			console.error('Failed to rotate database credentials:', error)
+			throw error
+		}
+	}
+}
+```
 
 ## 📋 Implementation Guide
 
-### Phase 1: Database Setup (Day 1)
+### Phase 1: Secrets Management Setup (Day 1)
+
+**1. Set up AWS Systems Manager Parameter Store:**
+
+```bash
+# Install AWS CLI if not already installed
+aws --version
+
+# Create parameter hierarchy for critical secrets (Advanced Parameters)
+aws ssm put-parameter \
+  --name "/macro-ai/prod/critical/openai-api-key" \
+  --value "PLACEHOLDER_OPENAI_KEY" \
+  --type "SecureString" \
+  --tier "Advanced" \
+  --description "OpenAI API key for macro-ai hobby deployment"
+
+aws ssm put-parameter \
+  --name "/macro-ai/prod/critical/neon-database-url" \
+  --value "PLACEHOLDER_DATABASE_URL" \
+  --type "SecureString" \
+  --tier "Advanced" \
+  --description "Neon PostgreSQL connection string"
+
+# Create parameter hierarchy for standard secrets (Standard Parameters)
+aws ssm put-parameter \
+  --name "/macro-ai/prod/standard/upstash-redis-url" \
+  --value "PLACEHOLDER_REDIS_URL" \
+  --type "SecureString" \
+  --description "Upstash Redis connection string"
+
+aws ssm put-parameter \
+  --name "/macro-ai/prod/standard/cognito-user-pool-id" \
+  --value "PLACEHOLDER_USER_POOL_ID" \
+  --type "String" \
+  --description "AWS Cognito User Pool ID"
+
+aws ssm put-parameter \
+  --name "/macro-ai/prod/standard/cognito-user-pool-client-id" \
+  --value "PLACEHOLDER_CLIENT_ID" \
+  --type "String" \
+  --description "AWS Cognito User Pool Client ID"
+```
+
+**2. Update Lambda Environment Configuration:**
+
+```typescript
+// src/config/environment.ts
+import { SecureHobbySecretsManager } from './secure-secrets'
+
+export class EnvironmentConfig {
+	private static secrets: { [key: string]: string } = {}
+
+	static async initialize(): Promise<void> {
+		try {
+			// Load critical secrets
+			this.secrets.openaiApiKey =
+				await SecureHobbySecretsManager.getSecret('openai-api-key')
+			this.secrets.databaseUrl =
+				await SecureHobbySecretsManager.getSecret('neon-database-url')
+
+			// Load standard secrets
+			this.secrets.redisUrl =
+				await SecureHobbySecretsManager.getSecret('upstash-redis-url')
+			this.secrets.userPoolId = await SecureHobbySecretsManager.getSecret(
+				'cognito-user-pool-id',
+			)
+			this.secrets.userPoolClientId = await SecureHobbySecretsManager.getSecret(
+				'cognito-user-pool-client-id',
+			)
+
+			console.log('Environment configuration loaded successfully')
+		} catch (error) {
+			console.error('Failed to load environment configuration:', error)
+			throw error
+		}
+	}
+
+	static get(key: string): string {
+		const value = this.secrets[key]
+		if (!value) {
+			throw new Error(`Configuration key '${key}' not found`)
+		}
+		return value
+	}
+}
+```
+
+**3. Create IAM Policy for Lambda Parameter Access:**
+
+```json
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"Action": [
+				"ssm:GetParameter",
+				"ssm:GetParameters",
+				"ssm:GetParametersByPath"
+			],
+			"Resource": [
+				"arn:aws:ssm:*:*:parameter/macro-ai/prod/critical/*",
+				"arn:aws:ssm:*:*:parameter/macro-ai/prod/standard/*"
+			]
+		},
+		{
+			"Effect": "Allow",
+			"Action": ["kms:Decrypt"],
+			"Resource": ["arn:aws:kms:*:*:alias/aws/ssm"]
+		}
+	]
+}
+```
+
+### Phase 2: Database Setup (Day 1)
 
 **1. Create Neon PostgreSQL Database:**
 
@@ -329,18 +678,26 @@ export const handler = serverless(app, {
 
 ### Phase 4: Frontend Deployment (Day 3)
 
-**1. Deploy to Vercel:**
+**1. Deploy to AWS Amplify:**
 
 ```bash
-# Install Vercel CLI
-npm install -g vercel
+# Install Amplify CLI
+npm install -g @aws-amplify/cli
 
-# Deploy from client-ui directory
+# Initialize Amplify project
 cd apps/client-ui
-vercel --prod
+amplify init
 
-# Configure environment variables in Vercel dashboard:
-# VITE_API_URL=https://your-api-gateway-url.amazonaws.com/dev
+# Add hosting
+amplify add hosting
+# Choose: Amazon CloudFront and S3
+
+# Configure environment variables
+amplify env add prod
+# Set VITE_API_URL=https://your-api-gateway-url.amazonaws.com/dev
+
+# Deploy
+amplify publish
 ```
 
 **2. Update API URLs:**
@@ -438,7 +795,7 @@ Upgrade Triggers: >50 users, >500 requests/day
 Services to Upgrade:
 ├── Neon Pro: £15/month (more compute, 10GB storage)
 ├── Upstash Pro: £8/month (unlimited requests, 1GB cache)
-├── Vercel Pro: £16/month (more bandwidth, team features)
+├── AWS Amplify Pro: £16/month (more bandwidth, team features)
 └── Total: ~£39/month
 ```
 
@@ -512,7 +869,7 @@ const hobbyBudget = new budgets.CfnBudget(this, 'HobbyBudget', {
 - **Lambda**: CloudWatch metrics for invocations, duration, errors
 - **Neon**: Built-in dashboard for connections, storage, compute usage
 - **Upstash**: Dashboard for requests, memory usage, hit rates
-- **Vercel**: Analytics for page views, bandwidth, build minutes
+- **AWS Amplify**: Console analytics for page views, bandwidth, build minutes
 - **API Gateway**: Request count, latency, error rates
 
 **Key Metrics to Monitor:**
@@ -549,9 +906,75 @@ const hobbyBudget = new budgets.CfnBudget(this, 'HobbyBudget', {
 
 **Environment Security:**
 
-- Environment variables in Vercel/Lambda
+- Environment variables in AWS Amplify/Lambda
 - No secrets in code repository
 - Separate environments for dev/prod
+
+### Parameter Store Security Best Practices
+
+**Parameter Organization:**
+
+- **Critical Secrets**: Use Advanced Parameters with customer-managed KMS keys
+- **Standard Secrets**: Use Standard Parameters with AWS-managed keys
+- **Hierarchical Structure**: Organize by environment and sensitivity level
+- **Naming Convention**: `/macro-ai/{environment}/{tier}/{secret-name}`
+
+**Access Control:**
+
+- **Principle of Least Privilege**: Grant minimal required permissions
+- **Resource-Based Policies**: Restrict access to specific parameter paths
+- **IAM Conditions**: Use conditions for additional security constraints
+- **Regular Access Reviews**: Quarterly review of parameter access permissions
+
+**Operational Security:**
+
+- **Manual Rotation Schedule**: Monthly for API keys, quarterly for database credentials
+- **Access Logging**: Monitor parameter access through CloudTrail
+- **Cache Management**: Implement secure caching with appropriate TTL
+- **Error Handling**: Avoid logging sensitive parameter values
+
+**Security Monitoring:**
+
+```typescript
+// src/utils/security-monitoring.ts
+export class SecurityMonitoring {
+	static logParameterAccess(parameterName: string, success: boolean): void {
+		const logEntry = {
+			timestamp: new Date().toISOString(),
+			event: 'parameter_access',
+			parameter: parameterName,
+			success,
+			source: 'lambda',
+			environment: process.env.NODE_ENV || 'unknown',
+		}
+
+		// Log to CloudWatch (avoid logging actual values)
+		console.log('Parameter access:', JSON.stringify(logEntry))
+	}
+
+	static async validateParameterIntegrity(): Promise<boolean> {
+		try {
+			// Validate that critical parameters exist and are accessible
+			const criticalParams = ['openai-api-key', 'neon-database-url']
+
+			for (const param of criticalParams) {
+				const value = await SecureHobbySecretsManager.getSecret(param, false)
+				if (!value || value === 'PLACEHOLDER_VALUE') {
+					console.error(
+						`Critical parameter ${param} is missing or not configured`,
+					)
+					return false
+				}
+			}
+
+			return true
+		} catch (error) {
+			console.error('Parameter integrity validation failed:', error)
+			return false
+		}
+	}
+}
+```
 
 ## 📋 Implementation Checklist
 
@@ -559,11 +982,15 @@ const hobbyBudget = new budgets.CfnBudget(this, 'HobbyBudget', {
 
 - [ ] Sign up for Neon PostgreSQL free tier
 - [ ] Sign up for Upstash Redis free tier
-- [ ] Sign up for Vercel free tier
+- [ ] Sign up for AWS Amplify free tier
 - [ ] Set up AWS budget alerts (£5 threshold)
+- [ ] Set up AWS Systems Manager Parameter Store
+- [ ] Create parameter hierarchy for secrets management
+- [ ] Configure IAM policies for Lambda parameter access
 - [ ] Create Neon database with pgvector extension
 - [ ] Create Upstash Redis database
 - [ ] Test database and cache connections
+- [ ] Test Parameter Store secret retrieval
 
 ### Week 2: API Conversion
 
@@ -578,7 +1005,7 @@ const hobbyBudget = new budgets.CfnBudget(this, 'HobbyBudget', {
 ### Week 3: Frontend Deployment
 
 - [ ] Update API URLs in React app
-- [ ] Deploy React app to Vercel
+- [ ] Deploy React app to AWS Amplify
 - [ ] Configure custom domain (optional)
 - [ ] Test end-to-end functionality
 - [ ] Set up monitoring dashboards
@@ -845,6 +1272,42 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Update Parameter Store secrets
+        run: |
+          # Update critical parameters (Advanced tier)
+          aws ssm put-parameter \
+            --name "/macro-ai/prod/critical/neon-database-url" \
+            --value "${{ secrets.NEON_DATABASE_URL }}" \
+            --type "SecureString" \
+            --tier "Advanced" \
+            --overwrite
+
+          aws ssm put-parameter \
+            --name "/macro-ai/prod/critical/openai-api-key" \
+            --value "${{ secrets.OPENAI_API_KEY }}" \
+            --type "SecureString" \
+            --tier "Advanced" \
+            --overwrite
+
+          # Update standard parameters
+          aws ssm put-parameter \
+            --name "/macro-ai/prod/standard/upstash-redis-url" \
+            --value "${{ secrets.UPSTASH_REDIS_URL }}" \
+            --type "SecureString" \
+            --overwrite
+
+          aws ssm put-parameter \
+            --name "/macro-ai/prod/standard/cognito-user-pool-id" \
+            --value "${{ secrets.COGNITO_USER_POOL_ID }}" \
+            --type "String" \
+            --overwrite
+
+          aws ssm put-parameter \
+            --name "/macro-ai/prod/standard/cognito-user-pool-client-id" \
+            --value "${{ secrets.COGNITO_USER_POOL_CLIENT_ID }}" \
+            --type "String" \
+            --overwrite
+
       - name: Build API
         run: |
           cd apps/express-api
@@ -854,10 +1317,6 @@ jobs:
         run: |
           cd apps/express-api
           npx serverless deploy --stage prod
-        env:
-          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
-          UPSTASH_REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
   deploy-frontend:
     needs: test
@@ -873,6 +1332,13 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -883,14 +1349,13 @@ jobs:
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: apps/client-ui
-          vercel-args: '--prod'
+      - name: Deploy to AWS Amplify
+        run: |
+          cd apps/client-ui
+          npx @aws-amplify/cli publish --yes
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 ```
 
 ## 📈 Performance Optimization for Free Tier
@@ -1123,3 +1588,130 @@ export class MemoryOptimizer {
 
 **Migration Support**: This hobby architecture provides a clear path to scale up to the full production architecture
 when your project grows beyond personal use.
+
+## 🔄 Migration Path to Production
+
+### When to Migrate from Parameter Store to Secrets Manager
+
+**Trigger Points:**
+
+- **User Growth**: >100 active users per month
+- **Security Requirements**: Need for automatic secret rotation
+- **Compliance Needs**: Enterprise security standards required
+- **Operational Complexity**: Manual rotation becomes burdensome
+- **Budget Flexibility**: Can accommodate $7/month for enhanced security
+
+### Migration Strategy
+
+**Phase 1: Parallel Implementation (Week 1)**
+
+```typescript
+// src/config/hybrid-secrets.ts
+import { SecureHobbySecretsManager } from './secure-secrets'
+import { ProductionSecretsManager } from './production-secrets'
+
+export class HybridSecretsManager {
+	private static useSecretsManager = process.env.USE_SECRETS_MANAGER === 'true'
+
+	static async getSecret(secretName: string): Promise<string> {
+		if (this.useSecretsManager) {
+			// Use Secrets Manager for production
+			return await ProductionSecretsManager.getSecret(
+				`macro-ai/prod/${secretName}`,
+			)
+		} else {
+			// Use Parameter Store for hobby
+			return await SecureHobbySecretsManager.getSecret(secretName)
+		}
+	}
+}
+```
+
+**Phase 2: Data Migration (Week 2)**
+
+```bash
+# Migration script: migrate-to-secrets-manager.sh
+#!/bin/bash
+
+# Get values from Parameter Store
+OPENAI_KEY=$(aws ssm get-parameter --name "/macro-ai/prod/critical/openai-api-key" --with-decryption --query 'Parameter.Value' --output text)
+DATABASE_URL=$(aws ssm get-parameter --name "/macro-ai/prod/critical/neon-database-url" --with-decryption --query 'Parameter.Value' --output text)
+REDIS_URL=$(aws ssm get-parameter --name "/macro-ai/prod/standard/upstash-redis-url" --with-decryption --query 'Parameter.Value' --output text)
+
+# Create secrets in Secrets Manager
+aws secretsmanager create-secret \
+  --name "macro-ai/prod/openai-api-key" \
+  --description "OpenAI API key for macro-ai production" \
+  --secret-string "$OPENAI_KEY"
+
+aws secretsmanager create-secret \
+  --name "macro-ai/prod/database" \
+  --description "Database credentials for macro-ai production" \
+  --secret-string "{\"url\":\"$DATABASE_URL\"}"
+
+aws secretsmanager create-secret \
+  --name "macro-ai/prod/redis-url" \
+  --description "Redis connection string for macro-ai production" \
+  --secret-string "$REDIS_URL"
+
+echo "Migration to Secrets Manager completed"
+```
+
+**Phase 3: Validation and Cutover (Week 3)**
+
+```typescript
+// src/utils/migration-validator.ts
+export class MigrationValidator {
+	static async validateMigration(): Promise<boolean> {
+		try {
+			// Test Parameter Store access
+			const parameterStoreValue =
+				await SecureHobbySecretsManager.getSecret('openai-api-key')
+
+			// Test Secrets Manager access
+			const secretsManagerValue = await ProductionSecretsManager.getSecret(
+				'macro-ai/prod/openai-api-key',
+			)
+
+			// Validate values match (for non-rotated secrets)
+			if (parameterStoreValue !== secretsManagerValue) {
+				console.warn(
+					'Secret values differ between Parameter Store and Secrets Manager',
+				)
+			}
+
+			console.log('Migration validation successful')
+			return true
+		} catch (error) {
+			console.error('Migration validation failed:', error)
+			return false
+		}
+	}
+}
+```
+
+### Cost Impact of Migration
+
+**Before Migration (Parameter Store):**
+
+```text
+Parameter Store:                             £0.00/month
+Total Secrets Management Cost:               £0.00/month
+```
+
+**After Migration (Secrets Manager):**
+
+```text
+Secrets Manager Storage (5 secrets):         £2.00/month
+Secrets Manager API Calls:                   £0.15/month
+Total Secrets Management Cost:               £2.15/month
+```
+
+**Migration Timeline:**
+
+- **Week 1**: Implement hybrid secrets manager
+- **Week 2**: Migrate secrets data
+- **Week 3**: Validate and enable automatic rotation
+- **Week 4**: Remove Parameter Store dependencies
+
+This migration path ensures zero downtime while upgrading to enterprise-grade secrets management capabilities.
