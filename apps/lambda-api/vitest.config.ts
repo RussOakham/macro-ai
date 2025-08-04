@@ -6,6 +6,8 @@ export default defineConfig({
 		globals: true,
 		environment: 'node',
 		setupFiles: ['./src/test/setup.ts'],
+		// Suppress console output for passing tests
+		silent: 'passed-only',
 		coverage: {
 			provider: 'v8',
 			reporter: ['text', 'json', 'html'],
