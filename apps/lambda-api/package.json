@@ -1,0 +1,66 @@
+{
+	"$schema": "http://json.schemastore.org/package",
+	"name": "@repo/lambda-api",
+	"license": "MIT",
+	"private": true,
+	"version": "0.0.0",
+	"description": "AWS Lambda function for Macro AI Express API using serverless-http wrapper",
+	"main": "dist/lambda.js",
+	"type": "module",
+	"scripts": {
+		"build": "pnpm run clean && pnpm run compile && pnpm run bundle",
+		"clean": "rimraf dist",
+		"compile": "tsc",
+		"bundle": "esbuild src/lambda.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/lambda.js --external:aws-sdk --minify --sourcemap",
+		"bundle:dev": "esbuild src/lambda.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/lambda.js --external:aws-sdk --sourcemap",
+		"package": "pnpm run build && cd dist && zip -r ../lambda-deployment.zip .",
+		"deploy:local": "pnpm run package",
+		"test": "vitest run",
+		"test:ui": "vitest --ui",
+		"test:coverage": "vitest run --coverage",
+		"lint": "eslint ./src",
+		"type-check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@aws-sdk/client-ssm": "catalog:",
+		"dotenv": "^16.4.5",
+		"serverless-http": "^3.2.0",
+		"zod": "catalog:",
+		"zod-validation-error": "catalog:"
+	},
+	"devDependencies": {
+		"@repo/config-eslint": "workspace:*",
+		"@repo/config-typescript": "workspace:*",
+		"@types/aws-lambda": "^8.10.131",
+		"@types/express": "catalog:",
+		"@types/node": "catalog:",
+		"@vitest/coverage-v8": "catalog:",
+		"@vitest/ui": "catalog:",
+		"aws-sdk-client-mock": "^4.1.0",
+		"esbuild": "^0.19.11",
+		"eslint": "catalog:",
+		"globals": "catalog:",
+		"rimraf": "^5.0.5",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	},
+	"peerDependencies": {
+		"@repo/express-api": "workspace:*"
+	},
+	"engines": {
+		"node": ">=20.0.0"
+	},
+	"keywords": [
+		"aws",
+		"lambda",
+		"serverless",
+		"express",
+		"macro-ai"
+	],
+	"author": "Macro AI Team",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/RussOakham/macro-ai.git",
+		"directory": "apps/lambda-api"
+	}
+}

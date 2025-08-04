@@ -4,6 +4,7 @@ packages:
 
 catalog:
   '@types/eslint': ^8
+  '@types/express': ^4.17.21
   '@types/node': ^20
   '@typescript-eslint/eslint-plugin': ^7.8.0
   '@typescript-eslint/parser': ^7.8.0
@@ -37,6 +38,7 @@ catalog:
 
   # AWS SDK
   '@aws-sdk/client-cognito-identity-provider': ^3.713.0
+  '@aws-sdk/client-ssm': ^3.713.0
 
 catalogs:
   react18:

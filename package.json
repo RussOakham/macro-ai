@@ -45,6 +45,11 @@
 	"engines": {
 		"node": ">=20"
 	},
+	"pnpm": {
+		"overrides": {
+			"@smithy/types": "4.3.1"
+		}
+	},
 	"config": {
 		"commitizen": {
 			"path": "cz-conventional-changelog"

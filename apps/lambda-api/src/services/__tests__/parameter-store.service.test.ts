@@ -1,0 +1,333 @@
+/**
+ * Tests for Parameter Store Service
+ */
+
+import {
+	GetParameterCommand,
+	GetParametersCommand,
+	SSMClient,
+} from '@aws-sdk/client-ssm'
+import { mockClient } from 'aws-sdk-client-mock'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { mockParameterStoreService } from '../../utils/test-helpers/parameter-store.mock.js'
+import { ParameterStoreService } from '../parameter-store.service.js'
+
+// Create AWS SDK mock - using type assertion to work around @smithy/types version conflict
+const ssmMock = mockClient(SSMClient)
+
+describe('ParameterStoreService', () => {
+	let service: ParameterStoreService
+
+	beforeEach(() => {
+		// Reset singleton instance
+		ParameterStoreService.resetInstance()
+		service = ParameterStoreService.getInstance()
+	})
+
+	afterEach(() => {
+		service.clearCache()
+		ssmMock.reset()
+	})
+
+	describe('getInstance', () => {
+		it('should return singleton instance', () => {
+			const instance1 = ParameterStoreService.getInstance()
+			const instance2 = ParameterStoreService.getInstance()
+
+			expect(instance1).toBe(instance2)
+		})
+	})
+
+	describe('getParameter', () => {
+		it('should retrieve parameter successfully', async () => {
+			// Arrange
+			const mockResponse = mockParameterStoreService.createParameter({
+				Parameter: {
+					Name: 'test-param',
+					Value: 'test-value',
+				},
+			})
+			ssmMock.on(GetParameterCommand).resolves(mockResponse)
+
+			// Act
+			const result = await service.getParameter('test-param')
+
+			// Assert
+			expect(result).toBe('test-value')
+			expect(ssmMock.commandCalls(GetParameterCommand)).toHaveLength(1)
+			expect(
+				ssmMock.commandCalls(GetParameterCommand)[0]?.args[0].input,
+			).toEqual({
+				Name: 'test-param',
+				WithDecryption: true,
+			})
+		})
+
+		it('should cache parameter values', async () => {
+			// Arrange
+			const mockResponse = mockParameterStoreService.createParameter({
+				Parameter: {
+					Name: 'cached-param',
+					Value: 'cached-value',
+				},
+			})
+			ssmMock.on(GetParameterCommand).resolves(mockResponse)
+
+			// Act - First call
+			const result1 = await service.getParameter('cached-param')
+			expect(result1).toBe('cached-value')
+			expect(ssmMock.commandCalls(GetParameterCommand)).toHaveLength(1)
+
+			// Act - Second call should use cache
+			const result2 = await service.getParameter('cached-param')
+			expect(result2).toBe('cached-value')
+			expect(ssmMock.commandCalls(GetParameterCommand)).toHaveLength(1) // No additional call
+		})
+
+		it('should handle parameter not found', async () => {
+			// Arrange
+			const mockResponse = mockParameterStoreService.createParameter({
+				Parameter: undefined,
+			})
+			ssmMock.on(GetParameterCommand).resolves(mockResponse)
+
+			// Act & Assert
+			await expect(service.getParameter('missing-param')).rejects.toThrow(
+				'Parameter missing-param not found or has no value',
+			)
+		})
+
+		it('should handle AWS SDK errors', async () => {
+			// Arrange
+			ssmMock.on(GetParameterCommand).rejects(new Error('AWS SDK Error'))
+
+			// Act & Assert
+			await expect(service.getParameter('error-param')).rejects.toThrow(
+				'Failed to retrieve parameter error-param: AWS SDK Error',
+			)
+		})
+
+		it('should support withDecryption parameter', async () => {
+			// Arrange
+			const mockResponse = mockParameterStoreService.createParameter({
+				Parameter: {
+					Name: 'encrypted-param',
+					Value: 'decrypted-value',
+				},
+			})
+			ssmMock.on(GetParameterCommand).resolves(mockResponse)
+
+			// Act
+			await service.getParameter('encrypted-param', false)
+
+			// Assert
+			expect(ssmMock.commandCalls(GetParameterCommand)).toHaveLength(1)
+			expect(
+				ssmMock.commandCalls(GetParameterCommand)[0]?.args[0].input,
+			).toEqual({
+				Name: 'encrypted-param',
+				WithDecryption: false,
+			})
+		})
+	})
+
+	describe('getParameters', () => {
+		it('should retrieve multiple parameters successfully', async () => {
+			// Arrange
+			const mockResponse = mockParameterStoreService.createParameters({
+				param1: 'value1',
+				param2: 'value2',
+			})
+			ssmMock.on(GetParametersCommand).resolves(mockResponse)
+
+			// Act
+			const result = await service.getParameters(['param1', 'param2'])
+
+			// Assert
+			expect(result).toEqual({
+				param1: 'value1',
+				param2: 'value2',
+			})
+		})
+
+		it('should use cached parameters when available', async () => {
+			// Arrange - Pre-populate cache
+			const mockResponse1 = mockParameterStoreService.createParameter({
+				Parameter: { Name: 'cached-param', Value: 'cached-value' },
+			})
+			ssmMock.on(GetParameterCommand).resolves(mockResponse1)
+			await service.getParameter('cached-param')
+
+			ssmMock.reset()
+
+			// Request multiple parameters including cached one
+			const mockResponse2 = mockParameterStoreService.createParameters({
+				'new-param': 'new-value',
+			})
+			ssmMock.on(GetParametersCommand).resolves(mockResponse2)
+
+			// Act
+			const result = await service.getParameters(['cached-param', 'new-param'])
+
+			// Assert
+			expect(result).toEqual({
+				'cached-param': 'cached-value',
+				'new-param': 'new-value',
+			})
+
+			// Should only fetch the non-cached parameter
+			expect(ssmMock.commandCalls(GetParametersCommand)).toHaveLength(1)
+			expect(
+				ssmMock.commandCalls(GetParametersCommand)[0]?.args[0].input,
+			).toEqual({
+				Names: ['new-param'],
+				WithDecryption: true,
+			})
+		})
+
+		it('should handle invalid parameters', async () => {
+			// Arrange
+			const mockResponse = mockParameterStoreService.createParameters(
+				{ 'valid-param': 'valid-value' },
+				{ InvalidParameters: ['invalid-param'] },
+			)
+			ssmMock.on(GetParametersCommand).resolves(mockResponse)
+
+			// Act & Assert
+			await expect(
+				service.getParameters(['valid-param', 'invalid-param']),
+			).rejects.toThrow('Invalid parameters: invalid-param')
+		})
+
+		it('should handle empty parameter list', async () => {
+			// Act
+			const result = await service.getParameters([])
+
+			// Assert
+			expect(result).toEqual({})
+			expect(ssmMock.commandCalls(GetParametersCommand)).toHaveLength(0)
+		})
+	})
+
+	describe('initializeParameters', () => {
+		it('should initialize all required parameters', async () => {
+			// Arrange
+			const mockParameters = mockParameterStoreService.createMacroAiParameters()
+			const mockResponse =
+				mockParameterStoreService.createParameters(mockParameters)
+			ssmMock.on(GetParametersCommand).resolves(mockResponse)
+
+			// Act
+			const result = await service.initializeParameters()
+
+			// Assert
+			expect(result).toEqual(mockParameters)
+		})
+
+		it('should handle missing required parameters', async () => {
+			// Arrange - Only provide partial parameters
+			const mockResponse = mockParameterStoreService.createParameters({
+				'macro-ai-openai-key': 'openai-key',
+				// Missing other required parameters
+			})
+			ssmMock.on(GetParametersCommand).resolves(mockResponse)
+
+			// Act & Assert
+			await expect(service.initializeParameters()).rejects.toThrow(
+				'Missing required parameters:',
+			)
+		})
+	})
+
+	describe('clearCache', () => {
+		it('should clear parameter cache', async () => {
+			// Arrange - Add item to cache
+			const mockResponse = mockParameterStoreService.createParameter({
+				Parameter: { Name: 'test-param', Value: 'cached-value' },
+			})
+			ssmMock.on(GetParameterCommand).resolves(mockResponse)
+			await service.getParameter('test-param')
+
+			expect(service.getCacheStats().size).toBe(1)
+
+			// Act
+			service.clearCache()
+
+			// Assert
+			expect(service.getCacheStats().size).toBe(0)
+		})
+	})
+
+	describe('getCacheStats', () => {
+		it('should return cache statistics', async () => {
+			// Arrange
+			const mockResponse = mockParameterStoreService.createParameter({
+				Parameter: { Name: 'param1', Value: 'test-value' },
+			})
+			ssmMock.on(GetParameterCommand).resolves(mockResponse)
+
+			// Act
+			await service.getParameter('param1')
+			await service.getParameter('param2')
+
+			// Assert
+			const stats = service.getCacheStats()
+			expect(stats.size).toBe(2)
+			expect(stats.keys).toContain('param1')
+			expect(stats.keys).toContain('param2')
+		})
+	})
+
+	describe('healthCheck', () => {
+		it('should return true for successful health check', async () => {
+			// Arrange
+			const mockResponse = mockParameterStoreService.createParameter({
+				Parameter: { Name: 'health-check', Value: 'health-check-value' },
+			})
+			ssmMock.on(GetParameterCommand).resolves(mockResponse)
+
+			// Act
+			const result = await service.healthCheck()
+
+			// Assert
+			expect(result).toBe(true)
+		})
+
+		it('should return false for failed health check', async () => {
+			// Arrange
+			ssmMock.on(GetParameterCommand).rejects(new Error('Health check failed'))
+
+			// Act
+			const result = await service.healthCheck()
+
+			// Assert
+			expect(result).toBe(false)
+		})
+	})
+
+	describe('cache expiration', () => {
+		it('should expire cached parameters after TTL', async () => {
+			// Arrange
+			const mockResponse = mockParameterStoreService.createParameter({
+				Parameter: { Name: 'expiring-param', Value: 'test-value' },
+			})
+			ssmMock.on(GetParameterCommand).resolves(mockResponse)
+
+			// Act - First call
+			await service.getParameter('expiring-param')
+			expect(ssmMock.commandCalls(GetParameterCommand)).toHaveLength(1)
+
+			// Mock time passage (5+ minutes)
+			const originalDateNow = Date.now
+			Date.now = vi.fn(() => originalDateNow() + 6 * 60 * 1000)
+
+			// Act - Second call should fetch again due to expiration
+			await service.getParameter('expiring-param')
+			expect(ssmMock.commandCalls(GetParameterCommand)).toHaveLength(2)
+
+			// Restore Date.now
+			Date.now = originalDateNow
+		})
+	})
+})

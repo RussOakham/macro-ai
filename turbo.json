@@ -30,10 +30,25 @@
 				"API_RATE_LIMIT_MAX_REQUESTS",
 				"REDIS_URL",
 				"VITE_API_URL",
-				"VITE_API_KEY"
+				"VITE_API_KEY",
+				"AWS_REGION",
+				"AWS_LAMBDA_FUNCTION_NAME",
+				"AWS_LAMBDA_RUNTIME_API",
+				"LAMBDA_RUNTIME_DIR",
+				"TEST_VAR1",
+				"TEST_VAR2"
 			]
 		},
-		"lint": {},
+		"lint": {
+			"env": [
+				"AWS_REGION",
+				"AWS_LAMBDA_FUNCTION_NAME",
+				"AWS_LAMBDA_RUNTIME_API",
+				"LAMBDA_RUNTIME_DIR",
+				"TEST_VAR1",
+				"TEST_VAR2"
+			]
+		},
 		"lint:md": {
 			"inputs": ["**/*.md", ".markdownlint.json"],
 			"outputs": []
@@ -41,7 +56,19 @@
 		"type-check": {},
 		"test": {
 			"cache": false,
-			"dependsOn": ["^build"]
+			"dependsOn": ["^build"],
+			"env": [
+				"AWS_REGION",
+				"AWS_LAMBDA_FUNCTION_NAME",
+				"AWS_LAMBDA_RUNTIME_API",
+				"LAMBDA_RUNTIME_DIR",
+				"PARAMETER_STORE_CACHE_TTL",
+				"LOG_LEVEL",
+				"LAMBDA_MEMORY_SIZE",
+				"LAMBDA_TIMEOUT",
+				"TEST_VAR1",
+				"TEST_VAR2"
+			]
 		},
 		"test:ui": {
 			"cache": false,
