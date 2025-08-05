@@ -3,7 +3,9 @@
  * Comprehensive mocking utilities for AWS Lambda Powertools with observability integration
  */
 
-import { expect, vi } from 'vitest'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { expect, type MockedFunction, vi } from 'vitest'
 
 import type { ObservabilityConfig } from '../observability-config.js'
 import { createTestTools } from '../observability-factory.js'
@@ -12,33 +14,33 @@ import { createTestTools } from '../observability-factory.js'
  * Mock Logger interface for type safety
  */
 export interface MockLogger {
-	debug: ReturnType<typeof vi.fn>
-	info: ReturnType<typeof vi.fn>
-	warn: ReturnType<typeof vi.fn>
-	error: ReturnType<typeof vi.fn>
-	createChild: ReturnType<typeof vi.fn>
+	debug: MockedFunction<(...args: any[]) => void>
+	info: MockedFunction<(...args: any[]) => void>
+	warn: MockedFunction<(...args: any[]) => void>
+	error: MockedFunction<(...args: any[]) => void>
+	createChild: MockedFunction<(...args: any[]) => MockLogger>
 }
 
 /**
  * Mock Metrics interface for type safety
  */
 export interface MockMetrics {
-	addMetric: ReturnType<typeof vi.fn>
-	publishStoredMetrics: ReturnType<typeof vi.fn>
-	clearMetrics: ReturnType<typeof vi.fn>
-	setDefaultDimensions: ReturnType<typeof vi.fn>
+	addMetric: MockedFunction<(...args: any[]) => void>
+	publishStoredMetrics: MockedFunction<(...args: any[]) => Promise<void>>
+	clearMetrics: MockedFunction<(...args: any[]) => void>
+	setDefaultDimensions: MockedFunction<(...args: any[]) => void>
 }
 
 /**
  * Mock Tracer interface for type safety
  */
 export interface MockTracer {
-	putAnnotation: ReturnType<typeof vi.fn>
-	putMetadata: ReturnType<typeof vi.fn>
-	getSegment: ReturnType<typeof vi.fn>
-	addErrorAsMetadata: ReturnType<typeof vi.fn>
-	captureAWS: ReturnType<typeof vi.fn>
-	captureHTTPsGlobal: ReturnType<typeof vi.fn>
+	putAnnotation: MockedFunction<(...args: any[]) => void>
+	putMetadata: MockedFunction<(...args: any[]) => void>
+	getSegment: MockedFunction<(...args: any[]) => any>
+	addErrorAsMetadata: MockedFunction<(...args: any[]) => void>
+	captureAWS: MockedFunction<(...args: any[]) => any>
+	captureHTTPsGlobal: MockedFunction<(...args: any[]) => void>
 }
 
 /**
@@ -190,6 +192,13 @@ export const createTracerModuleMock = (mockTracer?: MockTracer) => {
  */
 export const createErrorLoggingModuleMock = () => ({
 	logErrorWithFullObservability: vi.fn(),
+	logAppError: vi.fn(),
+	logGenericError: vi.fn(),
+	logResultError: vi.fn(),
+	logOperationSuccess: vi.fn(),
+	logOperationStart: vi.fn(),
+	resultFromPromise: vi.fn(),
+	resultFromSync: vi.fn(),
 })
 
 /**
