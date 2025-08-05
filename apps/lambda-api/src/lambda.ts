@@ -249,23 +249,27 @@ const coreHandler = async (
 	try {
 		// Initialize Express app on cold start
 		if (!app || !serverlessHandler) {
-			logger.info(
-				'Cold start - initializing Express app with Powertools coordination',
-				{
-					operation: 'coldStartInit',
-					coldStart: middlewareContext.isColdStart,
+			try {
+				logger.info(
+					'Cold start - initializing Express app with Powertools coordination',
+					{
+						operation: 'coldStartInit',
+						coldStart: middlewareContext.isColdStart,
+						requestId: middlewareContext.requestId,
+					},
+				)
+
+				app = await initializeExpressApp()
+				serverlessHandler = initializeServerlessHandler(app, middlewareContext)
+				isInitialized = true
+
+				logger.info('Cold start completed with Powertools coordination', {
+					operation: 'coldStartComplete',
 					requestId: middlewareContext.requestId,
-				},
-			)
-
-			app = await initializeExpressApp()
-			serverlessHandler = initializeServerlessHandler(app, middlewareContext)
-			isInitialized = true
-
-			logger.info('Cold start completed with Powertools coordination', {
-				operation: 'coldStartComplete',
-				requestId: middlewareContext.requestId,
-			})
+				})
+			} catch (error) {
+				throw error
+			}
 		} else {
 			// Update cold start flag for warm invocations
 			lambdaConfig.setColdStart(false)
@@ -417,6 +421,12 @@ export const handler = applyMiddlewareWithTracing(
 	enhancedMiddlewareStack,
 	subsegmentNames.EXPRESS_ROUTES,
 )
+
+/**
+ * Export core handler for testing
+ * @internal This function is only intended for use in tests
+ */
+export const __coreHandlerForTesting = coreHandler
 
 /**
  * Reset function for testing - resets module-level state

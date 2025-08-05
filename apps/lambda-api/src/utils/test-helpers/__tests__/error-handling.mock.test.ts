@@ -224,7 +224,10 @@ describe('Error Handling Test Helpers', () => {
 			})
 
 			it('should throw for error result', () => {
-				const result: [null, AppError] = [null, AppError.from(new Error('test'), 'test')]
+				const result: [null, AppError] = [
+					null,
+					AppError.from(new Error('test'), 'test'),
+				]
 
 				expect(() => {
 					resultAssertions.expectSuccess(result)

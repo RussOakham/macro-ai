@@ -132,7 +132,12 @@ export const createMetricsModuleMock = (mockMetrics?: MockMetrics) => {
 	return {
 		metrics,
 		addMetric: vi.fn(),
-		measureAndRecordExecutionTime: vi.fn(),
+		measureAndRecordExecutionTime: vi.fn(
+			async (operation: () => Promise<unknown>) => {
+				// Actually call the operation to ensure it executes
+				return await operation()
+			},
+		),
 		recordColdStart: vi.fn(),
 		recordMemoryUsage: vi.fn(),
 		MetricName: {
@@ -164,6 +169,9 @@ export const createTracerModuleMock = (mockTracer?: MockTracer) => {
 		withSubsegment: vi.fn((name: string, operation: () => Promise<unknown>) =>
 			operation(),
 		),
+		withSubsegmentSync: vi.fn((name: string, operation: () => unknown) =>
+			operation(),
+		),
 		subsegmentNames: {
 			EXPRESS_ROUTES: 'express-routes',
 			DATABASE_QUERY: 'database-query',
@@ -186,7 +194,8 @@ export const createErrorLoggingModuleMock = () => ({
 
 /**
  * Complete module mocking setup for Powertools
- * Use this in beforeEach or describe blocks to mock all Powertools modules
+ * Note: This function cannot use vi.mock() due to hoisting issues.
+ * Use individual mock creators and vi.mock() calls at the top level instead.
  */
 export const setupPowertoolsMocks = (
 	customMocks: {
@@ -199,12 +208,6 @@ export const setupPowertoolsMocks = (
 	const metricsMock = createMetricsModuleMock(customMocks.metrics)
 	const tracerMock = createTracerModuleMock(customMocks.tracer)
 	const errorLoggingMock = createErrorLoggingModuleMock()
-
-	// Mock all Powertools modules
-	vi.mock('../powertools-logger.js', () => loggerMock)
-	vi.mock('../powertools-metrics.js', () => metricsMock)
-	vi.mock('../powertools-tracer.js', () => tracerMock)
-	vi.mock('../powertools-error-logging.js', () => errorLoggingMock)
 
 	return {
 		logger: loggerMock,
