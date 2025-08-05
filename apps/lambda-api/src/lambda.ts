@@ -355,3 +355,13 @@ export const healthCheck = async (_event: any, context: Context) => {
 		}),
 	}
 }
+
+/**
+ * Reset function for testing - resets module-level state
+ * @internal This function is only intended for use in tests
+ */
+export const __resetForTesting = () => {
+	app = null
+	serverlessHandler = null
+	isInitialized = false
+}

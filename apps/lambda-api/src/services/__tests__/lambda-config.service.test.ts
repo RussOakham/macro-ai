@@ -29,6 +29,24 @@ vi.mock('../../utils/load-config.js', () => ({
 	loadConfig: vi.fn(),
 }))
 
+// Mock Powertools Logger to suppress console output during tests
+vi.mock('../../utils/powertools-logger.js', () => ({
+	logger: {
+		debug: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		critical: vi.fn(),
+		createChild: vi.fn().mockReturnValue({
+			debug: vi.fn(),
+			info: vi.fn(),
+			warn: vi.fn(),
+			error: vi.fn(),
+			critical: vi.fn(),
+		}),
+	},
+}))
+
 // Helper function to create valid mock parameters
 const createValidMockParameters = (): ValidatedParameterStoreData => ({
 	'macro-ai-database-url': 'postgresql://user:pass@localhost:5432/testdb',

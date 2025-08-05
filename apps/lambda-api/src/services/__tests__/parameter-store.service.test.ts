@@ -13,6 +13,29 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockParameterStoreService } from '../../utils/test-helpers/parameter-store.mock.js'
 import { ParameterStoreService } from '../parameter-store.service.js'
 
+// Mock Powertools Logger to suppress console output during tests
+vi.mock('../../utils/powertools-logger.js', () => ({
+	logger: {
+		debug: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		critical: vi.fn(),
+		createChild: vi.fn().mockReturnValue({
+			debug: vi.fn(),
+			info: vi.fn(),
+			warn: vi.fn(),
+			error: vi.fn(),
+			critical: vi.fn(),
+		}),
+	},
+}))
+
+// Mock Powertools Metrics to suppress console output during tests
+vi.mock('../../utils/powertools-metrics.js', () => ({
+	recordParameterStoreMetrics: vi.fn(),
+}))
+
 // Create AWS SDK mock - using type assertion to work around @smithy/types version conflict
 const ssmMock = mockClient(SSMClient)
 

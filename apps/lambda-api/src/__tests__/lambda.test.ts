@@ -137,7 +137,8 @@ vi.mock('../utils/powertools-metrics.js', () => ({
 		addDimension: vi.fn(),
 	},
 	addMetric: vi.fn(),
-	measureAndRecordExecutionTime: vi.fn(),
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
+	measureAndRecordExecutionTime: vi.fn(async (fn) => await fn()),
 	recordColdStart: vi.fn(),
 	recordMemoryUsage: vi.fn(),
 	recordParameterStoreMetrics: vi.fn(),
@@ -179,9 +180,6 @@ describe('Lambda Handler', () => {
 
 	beforeEach(async () => {
 		vi.clearAllMocks()
-
-		// Reset module state
-		vi.resetModules()
 
 		// Get Powertools mocks from the mocked modules
 		const loggerModule = await import('../utils/powertools-logger.js')
@@ -226,6 +224,9 @@ describe('Lambda Handler', () => {
 		const lambdaModule = await import('../lambda.js')
 		handler = lambdaModule.handler
 		healthCheck = lambdaModule.healthCheck
+
+		// Reset lambda module state for fresh test
+		lambdaModule.__resetForTesting()
 	})
 
 	afterEach(() => {
