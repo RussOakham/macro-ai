@@ -210,13 +210,11 @@ Closes #[issue_number]
 **Exactly one label required** (enforced by GitHub Actions):
 
 - **`major`**: Breaking changes that require major version bump
-
   - API changes that break backward compatibility
   - Database schema changes requiring migration
   - Removal of deprecated features
 
 - **`minor`**: New features that are backward compatible
-
   - New API endpoints
   - New UI features
   - Enhanced functionality

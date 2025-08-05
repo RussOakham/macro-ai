@@ -19,28 +19,28 @@
 	},
 	"devDependencies": {
 		"@apidevtools/swagger-parser": "^10.1.1",
-		"@repo/config-typescript": "workspace:*",
 		"@repo/config-eslint": "workspace:*",
+		"@repo/config-typescript": "workspace:*",
 		"@types/node": "catalog:",
 		"@vitest/coverage-v8": "catalog:",
 		"eslint": "catalog:",
 		"eslint-config-prettier": "catalog:",
 		"eslint-plugin-import": "catalog:",
+		"eslint-plugin-jsx-a11y": "catalog:",
 		"eslint-plugin-react": "catalog:",
 		"eslint-plugin-react-hooks": "catalog:",
-		"eslint-plugin-jsx-a11y": "catalog:",
 		"eslint-plugin-unused-imports": "catalog:",
 		"globals": "catalog:",
-		"openapi-zod-client": "^1.15.0",
+		"openapi-zod-client": "^1.18.3",
 		"prettier": "catalog:",
-		"tsup": "^8.0.0",
+		"tsup": "^8.5.0",
 		"tsx": "catalog:",
 		"typescript": "catalog:",
 		"vitest": "catalog:"
 	},
 	"dependencies": {
 		"@zodios/core": "^10.9.6",
-		"openapi3-ts": "^3.0.2",
+		"openapi3-ts": "^3.2.0",
 		"zod": "catalog:"
 	},
 	"exports": {

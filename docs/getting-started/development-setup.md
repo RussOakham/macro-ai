@@ -203,7 +203,6 @@ pnpm db:push
 
 1. Navigate to AWS Cognito in the AWS Console
 2. Create a new User Pool with these settings:
-
    - **Sign-in options**: Email
    - **Password policy**: Custom (8-15 characters, mixed case, numbers, symbols)
    - **MFA**: Optional (recommended for production)

@@ -18,7 +18,6 @@ required for production deployment.
 ### Core Implementation
 
 - **[Profile Management](./profile-management.md)** - User profiles and preferences
-
   - User profile creation and updates
   - Profile validation with Zod schemas
   - User preferences and settings

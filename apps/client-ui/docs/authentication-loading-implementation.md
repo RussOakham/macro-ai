@@ -142,19 +142,16 @@ import { AuthLoading, AuthLoadingCompact } from '@/components/auth'
 ## Benefits
 
 1. **Improved User Experience**
-
    - No more blank screens during authentication
    - Clear visual feedback about what's happening
    - Consistent loading states across the application
 
 2. **Design System Consistency**
-
    - Matches existing chat interface patterns
    - Uses semantic color tokens for theme support
    - Consistent with Shadcn/ui design principles
 
 3. **Developer Experience**
-
    - Reusable components with clear APIs
    - Easy integration with TanStack Router
    - TypeScript support with proper typing

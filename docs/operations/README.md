@@ -14,7 +14,6 @@ deployment safety.
 ### Development Operations
 
 - **[Merge Strategy](./merge-strategy.md)** - Trunk-based development workflow
-
   - Branch naming conventions and policies
   - Pull request requirements and review process
   - Continuous integration workflow
@@ -31,7 +30,6 @@ deployment safety.
 ### Production Operations
 
 - **[Database Operations](./database-operations.md)** - Database management and maintenance
-
   - Migration procedures and rollback strategies
   - Backup and recovery procedures
   - Performance monitoring and optimization

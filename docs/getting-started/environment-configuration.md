@@ -152,12 +152,10 @@ REDIS_URL=redis://localhost:6379
 **Rate Limiting Tiers:**
 
 1. **Global Rate Limiting:**
-
    - Window: 15 minutes (900000ms)
    - Max requests: 100 per window
 
 2. **Authentication Rate Limiting:**
-
    - Window: 1 hour (3600000ms)
    - Max requests: 10 per window
    - Protects against brute force attacks

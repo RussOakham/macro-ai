@@ -295,13 +295,11 @@ try {
 ### Common Issues
 
 1. **Parameter Store Access Denied**
-
    - Verify IAM role has `SSMReadOnlyAccess` policy
    - Check parameter names match exactly
    - Ensure parameters exist in correct AWS region
 
 2. **Cold Start Timeouts**
-
    - Increase Lambda timeout setting
    - Check Parameter Store response times
    - Verify database connectivity

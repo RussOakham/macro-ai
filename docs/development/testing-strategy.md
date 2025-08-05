@@ -413,14 +413,12 @@ export const mockSomeService = {
 **Frontend Integration Testing (Phase 5)**:
 
 1. **React Component Testing Patterns**
-
    - Chat UI component testing with streaming responses
    - EventSource client testing for Server-Sent Events
    - Real-time state management testing (Zustand store)
    - Component integration with backend streaming APIs
 
 2. **End-to-End Testing Strategy**
-
    - Full chat workflow testing (create, send, stream, persist)
    - Authentication flow integration testing
    - Error handling and recovery testing

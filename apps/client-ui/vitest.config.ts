@@ -1,4 +1,4 @@
-import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import { defineConfig } from 'vite'
@@ -9,7 +9,7 @@ const ReactCompilerConfig = {
 
 export default defineConfig({
 	plugins: [
-		TanStackRouterVite(),
+		tanstackRouter(),
 		react({
 			babel: {
 				plugins: [['babel-plugin-react-compiler', ReactCompilerConfig]],

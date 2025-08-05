@@ -168,7 +168,6 @@ pnpm --filter @repo/client-ui dev      # Frontend UI
 ### Detailed Setup Guides
 
 - **[Development Setup](./development-setup.md)** - Complete development environment setup
-
   - Node.js and pnpm installation
   - Database setup (PostgreSQL + pgvector)
   - AWS Cognito configuration
@@ -176,7 +175,6 @@ pnpm --filter @repo/client-ui dev      # Frontend UI
   - Docker setup (optional)
 
 - **[Environment Configuration](./environment-configuration.md)** - Environment variables and configuration
-
   - Required environment variables
   - Configuration validation with Zod
   - Development vs production settings
@@ -264,13 +262,11 @@ macro-ai/
 ### Learning Path
 
 1. **Architecture Understanding**
-
    - [System Architecture](../architecture/system-architecture.md) - High-level system design
    - [Data Flow](../architecture/data-flow.md) - Request/response cycles
    - [Technology Stack](../architecture/technology-stack.md) - Technology choices
 
 2. **Development Workflow**
-
    - [Development Guidelines](../development/README.md) - Development best practices
    - [API Development](../development/api-development.md) - API development patterns
    - [Testing Strategy](../development/testing-strategy.md) - Testing approaches

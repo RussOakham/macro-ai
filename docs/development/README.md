@@ -14,7 +14,6 @@ end-to-end type safety.
 ### Core Development Practices
 
 - **[Coding Standards](./coding-standards.md)** - Code style conventions and best practices
-
   - TypeScript coding standards
   - ESLint and Prettier configuration
   - Naming conventions and file organization
@@ -22,7 +21,6 @@ end-to-end type safety.
   - Documentation standards
 
 - **[Testing Strategy](./testing-strategy.md)** - Comprehensive testing approach
-
   - Unit testing with Vitest
   - Integration testing patterns
   - Mock strategies and test helpers
@@ -39,7 +37,6 @@ end-to-end type safety.
 ### Development Workflow
 
 - **[API Development](./api-development.md)** - API development guidelines
-
   - OpenAPI specification and documentation
   - Route organization and middleware
   - Request/response validation with Zod

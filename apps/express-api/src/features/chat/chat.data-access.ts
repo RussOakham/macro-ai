@@ -103,7 +103,7 @@ class ChatRepository implements IChatRepository {
 			return [null, totalError]
 		}
 
-		const total = Number(totalResult[0]?.count ?? 0)
+		const total = totalResult[0]?.count ?? 0
 
 		// Validate each chat
 		const validatedChats: TChat[] = []

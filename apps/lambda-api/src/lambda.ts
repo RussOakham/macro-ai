@@ -12,22 +12,21 @@ import type { Express } from 'express'
 import serverless from 'serverless-http'
 
 import { lambdaConfig } from './services/lambda-config.service.js'
+import {
+	applyMiddlewareWithTracing,
+	createMiddlewareStack,
+} from './utils/lambda-middleware.js'
 import { logger } from './utils/powertools-logger.js'
 import {
 	addMetric,
 	measureAndRecordExecutionTime,
 	MetricName,
 	MetricUnit,
-	recordColdStart,
-	recordMemoryUsage,
 } from './utils/powertools-metrics.js'
 import {
-	addCommonAnnotations,
-	addCommonMetadata,
 	captureError,
 	subsegmentNames,
 	traceErrorTypes,
-	tracer,
 	withSubsegment,
 	withSubsegmentSync,
 } from './utils/powertools-tracer.js'
@@ -222,202 +221,6 @@ const initializeServerlessHandler = (expressApp: Express) => {
 }
 
 /**
- * Main Lambda handler function with X-Ray tracing
- */
-const lambdaHandlerImpl = async (
-	event: APIGatewayProxyEvent,
-	context: Context,
-): Promise<APIGatewayProxyResult> => {
-	// Configure Lambda context
-	context.callbackWaitsForEmptyEventLoop = false
-
-	const startTime = Date.now()
-	const isColdStart = !isInitialized
-
-	// Add common trace annotations and metadata
-	addCommonAnnotations()
-	addCommonMetadata()
-
-	// Add request-specific annotations
-	tracer.putAnnotation('coldStart', isColdStart)
-	tracer.putAnnotation('requestId', context.awsRequestId)
-	tracer.putAnnotation('functionName', context.functionName)
-	tracer.putAnnotation('functionVersion', context.functionVersion)
-
-	// Add request metadata
-	tracer.putMetadata('request', {
-		httpMethod: event.httpMethod,
-		path: event.path,
-		userAgent: event.headers['User-Agent'] ?? 'unknown',
-		sourceIp: event.requestContext.identity.sourceIp,
-		stage: event.requestContext.stage,
-	})
-
-	// Create child logger with request context
-	const requestLogger = logger.createChild({
-		persistentLogAttributes: {
-			requestId: context.awsRequestId,
-			functionName: context.functionName,
-			coldStart: isColdStart,
-			traceId: process.env._X_AMZN_TRACE_ID,
-		},
-	})
-
-	requestLogger.info('Lambda invocation started', {
-		operation: 'lambdaHandler',
-		coldStart: isColdStart,
-		requestId: context.awsRequestId,
-		functionName: context.functionName,
-		functionVersion: context.functionVersion,
-		traceId: process.env._X_AMZN_TRACE_ID,
-	})
-
-	// Record cold start metrics with comprehensive dimensions
-	recordColdStart(isColdStart)
-
-	// Record additional cold start context metrics
-	addMetric(MetricName.ColdStart, MetricUnit.Count, isColdStart ? 1 : 0, {
-		Environment: process.env.NODE_ENV ?? 'unknown',
-		FunctionName: context.functionName,
-		FunctionVersion: context.functionVersion,
-		Region: process.env.AWS_REGION ?? 'unknown',
-	})
-
-	// Record memory usage at start of invocation
-	recordMemoryUsage()
-
-	try {
-		// Initialize Express app on cold start
-		if (!app || !serverlessHandler) {
-			requestLogger.info('Cold start - initializing Express app', {
-				operation: 'coldStartInit',
-			})
-
-			app = await initializeExpressApp()
-			serverlessHandler = initializeServerlessHandler(app)
-			isInitialized = true
-
-			const initTime = Date.now() - startTime
-			requestLogger.info('Cold start completed', {
-				operation: 'coldStartComplete',
-				initTime,
-				duration: `${String(initTime)}ms`,
-			})
-
-			// Record cold start initialization time metric with dimensions
-			addMetric('ColdStartInitTime', MetricUnit.Milliseconds, initTime, {
-				Environment: process.env.NODE_ENV ?? 'unknown',
-				FunctionName: context.functionName,
-				FunctionVersion: context.functionVersion,
-				Region: process.env.AWS_REGION ?? 'unknown',
-				InitPhase: 'Complete',
-			})
-
-			// Record memory usage after cold start initialization
-			recordMemoryUsage()
-		} else {
-			// Update cold start flag for warm invocations
-			lambdaConfig.setColdStart(false)
-			requestLogger.info('Warm start - reusing existing Express app', {
-				operation: 'warmStart',
-			})
-
-			// Record warm start metrics
-			addMetric('WarmStart', MetricUnit.Count, 1, {
-				Environment: process.env.NODE_ENV ?? 'unknown',
-				FunctionName: context.functionName,
-				FunctionVersion: context.functionVersion,
-				Region: process.env.AWS_REGION ?? 'unknown',
-			})
-		}
-
-		// Handle the request with serverless-http
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-		const result = await serverlessHandler(event, context)
-
-		const totalTime = Date.now() - startTime
-
-		requestLogger.info('Request completed successfully', {
-			operation: 'requestComplete',
-			totalTime,
-			duration: `${String(totalTime)}ms`,
-			coldStart: isColdStart,
-		})
-
-		// Record request metrics with cold start context
-		addMetric('RequestDuration', MetricUnit.Milliseconds, totalTime, {
-			ColdStart: String(isColdStart),
-			Status: 'Success',
-			Environment: process.env.NODE_ENV ?? 'unknown',
-			FunctionName: context.functionName,
-		})
-		addMetric('RequestCount', MetricUnit.Count, 1, {
-			Status: 'Success',
-			ColdStart: String(isColdStart),
-			Environment: process.env.NODE_ENV ?? 'unknown',
-		})
-
-		// Record memory usage
-		const memoryUsage = process.memoryUsage()
-		addMetric('MemoryUsed', 'Bytes', memoryUsage.heapUsed)
-
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
-		return result
-	} catch (error) {
-		const totalTime = Date.now() - startTime
-		const errorMessage =
-			error instanceof Error ? error.message : 'Unknown error'
-
-		requestLogger.error('Lambda handler error', {
-			operation: 'requestError',
-			error: errorMessage,
-			errorType:
-				error instanceof Error ? error.constructor.name : 'UnknownError',
-			totalTime,
-			duration: `${String(totalTime)}ms`,
-			coldStart: isColdStart,
-		})
-
-		// Record error metrics with cold start context
-		addMetric('RequestDuration', MetricUnit.Milliseconds, totalTime, {
-			ColdStart: String(isColdStart),
-			Status: 'Error',
-			Environment: process.env.NODE_ENV ?? 'unknown',
-			FunctionName: context.functionName,
-		})
-		addMetric('RequestCount', MetricUnit.Count, 1, {
-			Status: 'Error',
-			ColdStart: String(isColdStart),
-			Environment: process.env.NODE_ENV ?? 'unknown',
-		})
-		addMetric('RequestError', MetricUnit.Count, 1, {
-			ErrorType:
-				error instanceof Error ? error.constructor.name : 'UnknownError',
-			ColdStart: String(isColdStart),
-			Environment: process.env.NODE_ENV ?? 'unknown',
-		})
-
-		// Return error response
-		return {
-			statusCode: 500,
-			headers: {
-				'Content-Type': 'application/json',
-				'Access-Control-Allow-Origin': '*',
-				'Access-Control-Allow-Credentials': 'true',
-				'x-lambda-request-id': context.awsRequestId,
-				'x-lambda-error': 'true',
-			},
-			body: JSON.stringify({
-				error: 'Internal Server Error',
-				message: 'Lambda function encountered an error',
-				requestId: context.awsRequestId,
-				timestamp: new Date().toISOString(),
-			}),
-		}
-	}
-}
-
-/**
  * Health check handler (optional - for direct Lambda invocation)
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/require-await
@@ -442,9 +245,122 @@ export const healthCheck = async (_event: any, context: Context) => {
 }
 
 /**
- * Export the main handler with X-Ray tracing
+ * Core Lambda handler implementation (without middleware)
+ * This handles Express app initialization and serverless-http integration
  */
-export const handler: typeof lambdaHandlerImpl = lambdaHandlerImpl
+const coreHandler = async (
+	event: APIGatewayProxyEvent,
+	context: Context,
+): Promise<APIGatewayProxyResult> => {
+	// Configure Lambda context
+	context.callbackWaitsForEmptyEventLoop = false
+
+	try {
+		// Initialize Express app on cold start
+		if (!app || !serverlessHandler) {
+			logger.info('Cold start - initializing Express app', {
+				operation: 'coldStartInit',
+			})
+
+			app = await initializeExpressApp()
+			serverlessHandler = initializeServerlessHandler(app)
+			isInitialized = true
+
+			logger.info('Cold start completed', {
+				operation: 'coldStartComplete',
+			})
+		} else {
+			// Update cold start flag for warm invocations
+			lambdaConfig.setColdStart(false)
+			logger.info('Warm start - reusing existing Express app', {
+				operation: 'warmStart',
+			})
+		}
+
+		// Handle the request with serverless-http
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+		const result = await serverlessHandler(event, context)
+
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+		return result
+	} catch (error) {
+		const errorMessage =
+			error instanceof Error ? error.message : 'Unknown error'
+
+		logger.error('Lambda handler error', {
+			operation: 'requestError',
+			error: errorMessage,
+			errorType:
+				error instanceof Error ? error.constructor.name : 'UnknownError',
+		})
+
+		// Return error response
+		return {
+			statusCode: 500,
+			headers: {
+				'Content-Type': 'application/json',
+				'Access-Control-Allow-Origin': '*',
+				'Access-Control-Allow-Credentials': 'true',
+				'x-lambda-request-id': context.awsRequestId,
+				'x-lambda-error': 'true',
+			},
+			body: JSON.stringify({
+				error: 'Internal Server Error',
+				message: 'Lambda function encountered an error',
+				requestId: context.awsRequestId,
+				timestamp: new Date().toISOString(),
+			}),
+		}
+	}
+}
+
+/**
+ * Create middleware stack with comprehensive observability
+ */
+const middlewareStack = createMiddlewareStack({
+	requestLogging: {
+		enabled: true,
+		options: {
+			enableRequestBody: false, // Disabled for security
+			enableResponseBody: false, // Disabled for security
+			enableHeaders: true,
+			maxBodySize: 1024,
+		},
+	},
+	observability: {
+		enabled: true,
+		options: {
+			enableRequestLogging: true,
+			enablePerformanceMetrics: true,
+			enableTracingAnnotations: true,
+		},
+	},
+	performance: {
+		enabled: true,
+		options: {
+			enableExecutionTime: true,
+			enableMemoryUsage: true,
+			enableColdStartTracking: true,
+		},
+	},
+	errorHandling: {
+		enabled: true,
+		options: {
+			enableFullObservability: true,
+			enableErrorMetrics: true,
+			enableErrorTracing: true,
+		},
+	},
+})
+
+/**
+ * Export the main handler with middleware and X-Ray tracing
+ */
+export const handler = applyMiddlewareWithTracing(
+	coreHandler,
+	middlewareStack,
+	subsegmentNames.EXPRESS_ROUTES,
+)
 
 /**
  * Reset function for testing - resets module-level state

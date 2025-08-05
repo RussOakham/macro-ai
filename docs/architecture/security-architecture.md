@@ -103,12 +103,10 @@ const helmetMiddleware = helmet({
 **Rate Limiting Strategy:**
 
 1. **Global Rate Limiting** - Applied to all API endpoints
-
    - 100 requests per 15 minutes per IP address
    - Protects against general API abuse
 
 2. **Authentication Rate Limiting** - Applied to auth endpoints
-
    - 10 requests per hour per IP address
    - Prevents brute force attacks on login/registration
 
