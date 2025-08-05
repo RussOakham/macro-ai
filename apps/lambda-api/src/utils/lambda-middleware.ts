@@ -43,6 +43,14 @@ import {
 let isInitialized = false
 
 /**
+ * Reset function for testing - resets module-level state
+ * @internal This function is only intended for use in tests
+ */
+export const __resetMiddlewareForTesting = () => {
+	isInitialized = false
+}
+
+/**
  * Create middleware context from Lambda event and context
  */
 export const createMiddlewareContext = (
