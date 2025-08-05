@@ -168,31 +168,127 @@ For 1000 requests/month:
 - **Compute**: 1000 × 200ms × £0.000001667 = £0.0003
 - **Total**: ~£0.0005/month (within AWS free tier)
 
-## Monitoring
+## Observability & Monitoring
 
-### CloudWatch Logs
+This Lambda API includes comprehensive observability features powered by **AWS Lambda Powertools**
+for structured logging, metrics, and error handling.
 
-All console output is automatically sent to CloudWatch Logs:
+### Structured Logging
 
-- Function initialization logs
-- Request/response logs (development mode)
-- Error logs with stack traces
-- Performance metrics
+The application uses **AWS Lambda Powertools Logger** for structured JSON logging with
+automatic correlation IDs and contextual information:
 
-### Custom Metrics
+#### Features
 
-The Lambda function includes built-in logging for:
+- **Structured JSON logs** with consistent format
+- **Automatic correlation IDs** for request tracing
+- **Environment-based log levels** (DEBUG in development, INFO in production)
+- **Service metadata** automatically included (service name, version, environment)
+- **Go-style error handling integration** with structured error logging
 
-- Cold start detection
-- Execution time measurement
-- Memory usage tracking
-- Parameter Store cache statistics
+#### Log Levels
+
+- `DEBUG`: Detailed debugging information (development only)
+- `INFO`: General operational messages
+- `WARN`: Warning conditions that should be monitored
+- `ERROR`: Error conditions requiring attention
+- `CRITICAL`: Critical errors requiring immediate action
+
+#### Example Log Output
+
+```json
+{
+	"level": "INFO",
+	"message": "Lambda request received",
+	"timestamp": "2025-01-15T10:30:00.000Z",
+	"service": "macro-ai-lambda-api",
+	"environment": "production",
+	"functionName": "macro-ai-lambda-api",
+	"region": "us-east-1",
+	"version": "lambda-api-v1.0.0",
+	"operation": "lambdaRequest",
+	"requestId": "abc123-def456",
+	"method": "POST",
+	"path": "/api/users"
+}
+```
+
+### CloudWatch Metrics
+
+The application emits custom CloudWatch metrics using **AWS Lambda Powertools Metrics**:
+
+#### Cold Start Metrics
+
+- `ColdStart`: Tracks Lambda cold start occurrences
+- `WarmStart`: Tracks warm start invocations
+- Dimensions: `service`, `Environment`, `Service`, `FunctionName`, `Region`
+
+#### Performance Metrics
+
+- `ExecutionTime`: Measures operation execution time in milliseconds
+- `MemoryUsage`: Tracks memory utilization
+- Dimensions: `service`, `Environment`, `Service`, `FunctionName`, `Region`, `Operation`
+
+#### Parameter Store Metrics
+
+- `ParameterStoreCacheHit`: Cache hit events
+- `ParameterStoreCacheMiss`: Cache miss events requiring Parameter Store calls
+- `ParameterStoreRetrievalTime`: Time taken to retrieve parameters (milliseconds)
+- `ParameterStoreError`: Parameter Store operation failures
+- Dimensions: `service`, `Environment`, `Service`, `FunctionName`, `Region`, `ParameterName`
+
+#### Metric Namespace
+
+All metrics are published to the `MacroAI/Lambda` namespace in CloudWatch.
+
+### Error Handling & Logging
+
+#### Go-Style Error Handling Integration
+
+The application includes utilities for structured error logging with Go-style Result tuples:
+
+```typescript
+import {
+	logResultError,
+	resultFromPromise,
+} from './utils/powertools-error-logging'
+
+// Automatic error logging with Result tuples
+const [data, error] = await resultFromPromise(
+	fetchUserData(userId),
+	'fetchUserData',
+	{ userId },
+)
+
+if (error) {
+	// Error was automatically logged with structured context
+	return createErrorResponse(500, 'Failed to fetch user data')
+}
+```
+
+#### AppError Integration
+
+Custom AppError instances are logged with appropriate severity levels:
+
+```typescript
+import { logAppError } from './utils/powertools-error-logging'
+
+try {
+	// some operation
+} catch (error) {
+	if (error instanceof AppError) {
+		logAppError(error, 'processUserRequest', { userId: '123' })
+		// Logs with WARN level for 4xx errors, ERROR level for 5xx errors
+	}
+}
+```
 
 ### Health Checks
 
 - `/health` endpoint for basic health checks
 - Parameter Store connectivity validation
 - Database connection verification
+- Structured health check logging with operation context
 
 ## Troubleshooting
 

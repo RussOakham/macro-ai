@@ -10,6 +10,8 @@ import {
 import { mockClient } from 'aws-sdk-client-mock'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+// Import the mocked module to get reference to the mock function
+import * as powertoolsMetrics from '../../utils/powertools-metrics.js'
 import { mockParameterStoreService } from '../../utils/test-helpers/parameter-store.mock.js'
 import { ParameterStoreService } from '../parameter-store.service.js'
 
@@ -41,16 +43,23 @@ const ssmMock = mockClient(SSMClient)
 
 describe('ParameterStoreService', () => {
 	let service: ParameterStoreService
+	let mockRecordParameterStoreMetrics: ReturnType<typeof vi.fn>
 
 	beforeEach(() => {
 		// Reset singleton instance
 		ParameterStoreService.resetInstance()
 		service = ParameterStoreService.getInstance()
+
+		// Get reference to the mocked function
+		mockRecordParameterStoreMetrics = vi.mocked(
+			powertoolsMetrics.recordParameterStoreMetrics,
+		)
 	})
 
 	afterEach(() => {
 		service.clearCache()
 		ssmMock.reset()
+		mockRecordParameterStoreMetrics.mockClear()
 	})
 
 	describe('getInstance', () => {
@@ -85,6 +94,13 @@ describe('ParameterStoreService', () => {
 				Name: 'test-param',
 				WithDecryption: true,
 			})
+
+			// Verify metrics - should record cache miss with duration
+			expect(mockRecordParameterStoreMetrics).toHaveBeenCalledWith(
+				'miss',
+				'test-param',
+				expect.any(Number), // duration
+			)
 		})
 
 		it('should cache parameter values', async () => {
@@ -102,10 +118,26 @@ describe('ParameterStoreService', () => {
 			expect(result1).toBe('cached-value')
 			expect(ssmMock.commandCalls(GetParameterCommand)).toHaveLength(1)
 
+			// Verify first call metrics - should record cache miss
+			expect(mockRecordParameterStoreMetrics).toHaveBeenCalledWith(
+				'miss',
+				'cached-param',
+				expect.any(Number), // duration
+			)
+
+			// Clear metrics for second call
+			mockRecordParameterStoreMetrics.mockClear()
+
 			// Act - Second call should use cache
 			const result2 = await service.getParameter('cached-param')
 			expect(result2).toBe('cached-value')
 			expect(ssmMock.commandCalls(GetParameterCommand)).toHaveLength(1) // No additional call
+
+			// Verify second call metrics - should record cache hit
+			expect(mockRecordParameterStoreMetrics).toHaveBeenCalledWith(
+				'hit',
+				'cached-param',
+			)
 		})
 
 		it('should handle parameter not found', async () => {
@@ -119,6 +151,12 @@ describe('ParameterStoreService', () => {
 			await expect(service.getParameter('missing-param')).rejects.toThrow(
 				'Parameter missing-param not found or has no value',
 			)
+
+			// Verify error metrics
+			expect(mockRecordParameterStoreMetrics).toHaveBeenCalledWith(
+				'error',
+				'missing-param',
+			)
 		})
 
 		it('should handle AWS SDK errors', async () => {
@@ -128,6 +166,12 @@ describe('ParameterStoreService', () => {
 			// Act & Assert
 			await expect(service.getParameter('error-param')).rejects.toThrow(
 				'Failed to retrieve parameter error-param: AWS SDK Error',
+			)
+
+			// Verify error metrics
+			expect(mockRecordParameterStoreMetrics).toHaveBeenCalledWith(
+				'error',
+				'error-param',
 			)
 		})
 
@@ -172,6 +216,16 @@ describe('ParameterStoreService', () => {
 				param1: 'value1',
 				param2: 'value2',
 			})
+
+			// Verify metrics - should record cache miss for both parameters
+			expect(mockRecordParameterStoreMetrics).toHaveBeenCalledWith(
+				'miss',
+				'param1',
+			)
+			expect(mockRecordParameterStoreMetrics).toHaveBeenCalledWith(
+				'miss',
+				'param2',
+			)
 		})
 
 		it('should use cached parameters when available', async () => {
