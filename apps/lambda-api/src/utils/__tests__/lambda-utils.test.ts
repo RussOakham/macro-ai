@@ -2,8 +2,119 @@
  * Tests for Lambda Utility Functions
  */
 
+// Import actual Powertools types for type-safe mocking
+import type { Logger } from '@aws-lambda-powertools/logger'
+import type { Metrics } from '@aws-lambda-powertools/metrics'
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+// Type-safe mock interfaces using TypeScript utility types
+type MockLogger = {
+	[K in keyof Pick<
+		Logger,
+		'debug' | 'info' | 'warn' | 'error' | 'critical' | 'createChild'
+	>]: ReturnType<typeof vi.fn>
+}
+
+type MockMetrics = {
+	[K in keyof Pick<
+		Metrics,
+		'addMetric' | 'singleMetric' | 'addDimension'
+	>]: ReturnType<typeof vi.fn>
+}
+
+// Type-safe mock interfaces for utility functions
+interface MockLoggerUtils {
+	logger: MockLogger
+	createChildLogger: ReturnType<typeof vi.fn>
+	logWithCorrelationId: ReturnType<typeof vi.fn>
+	LogLevel: {
+		DEBUG: string
+		INFO: string
+		WARN: string
+		ERROR: string
+		CRITICAL: string
+	}
+	createLoggerConfig: ReturnType<typeof vi.fn>
+	createPowertoolsLogger: ReturnType<typeof vi.fn>
+}
+
+interface MockMetricsUtils {
+	metrics: MockMetrics
+	addMetric: ReturnType<typeof vi.fn>
+	measureAndRecordExecutionTime: ReturnType<typeof vi.fn>
+	recordColdStart: ReturnType<typeof vi.fn>
+	recordMemoryUsage: ReturnType<typeof vi.fn>
+	recordParameterStoreMetrics: ReturnType<typeof vi.fn>
+	MetricName: {
+		ColdStart: string
+		ExecutionTime: string
+		MemoryUsage: string
+	}
+	MetricUnit: {
+		Count: string
+		Milliseconds: string
+		Bytes: string
+	}
+	createMetricsConfig: ReturnType<typeof vi.fn>
+	createPowertoolsMetrics: ReturnType<typeof vi.fn>
+}
+
+// Mock Powertools Logger
+vi.mock('../powertools-logger.js', () => ({
+	logger: {
+		debug: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		critical: vi.fn(),
+		createChild: vi.fn().mockReturnValue({
+			debug: vi.fn(),
+			info: vi.fn(),
+			warn: vi.fn(),
+			error: vi.fn(),
+			critical: vi.fn(),
+			createChild: vi.fn(),
+		}),
+	},
+	createChildLogger: vi.fn(),
+	logWithCorrelationId: vi.fn(),
+	LogLevel: {
+		DEBUG: 'DEBUG',
+		INFO: 'INFO',
+		WARN: 'WARN',
+		ERROR: 'ERROR',
+		CRITICAL: 'CRITICAL',
+	},
+	createLoggerConfig: vi.fn(),
+	createPowertoolsLogger: vi.fn(),
+}))
+
+// Mock Powertools Metrics
+vi.mock('../powertools-metrics.js', () => ({
+	metrics: {
+		addMetric: vi.fn(),
+		singleMetric: vi.fn(),
+		addDimension: vi.fn(),
+	},
+	addMetric: vi.fn(),
+	measureAndRecordExecutionTime: vi.fn(),
+	recordColdStart: vi.fn(),
+	recordMemoryUsage: vi.fn(),
+	recordParameterStoreMetrics: vi.fn(),
+	MetricName: {
+		ColdStart: 'ColdStart',
+		ExecutionTime: 'ExecutionTime',
+		MemoryUsage: 'MemoryUsage',
+	},
+	MetricUnit: {
+		Count: 'Count',
+		Milliseconds: 'Milliseconds',
+		Bytes: 'Bytes',
+	},
+	createMetricsConfig: vi.fn(),
+	createPowertoolsMetrics: vi.fn(),
+}))
 
 import {
 	createErrorResponse,
@@ -24,7 +135,11 @@ describe('Lambda Utils', () => {
 	let mockEvent: APIGatewayProxyEvent
 	let mockContext: Context
 
-	beforeEach(() => {
+	// Powertools mock references with complete type safety
+	let loggerMocks: { logger: MockLogger; utils: MockLoggerUtils }
+	let metricsMocks: { utils: MockMetricsUtils }
+
+	beforeEach(async () => {
 		mockEvent = global.createMockAPIGatewayEvent() as APIGatewayProxyEvent
 		mockContext = global.createMockLambdaContext() as Context
 
@@ -32,6 +147,19 @@ describe('Lambda Utils', () => {
 		delete process.env.AWS_LAMBDA_FUNCTION_NAME
 		delete process.env.AWS_LAMBDA_RUNTIME_API
 		delete process.env.LAMBDA_RUNTIME_DIR
+
+		// Get Powertools mocks from the mocked modules
+		const loggerModule = await import('../powertools-logger.js')
+		const metricsModule = await import('../powertools-metrics.js')
+
+		// Setup mocks with complete type safety
+		loggerMocks = {
+			logger: loggerModule.logger as unknown as MockLogger,
+			utils: loggerModule as unknown as MockLoggerUtils,
+		}
+		metricsMocks = {
+			utils: metricsModule as unknown as MockMetricsUtils,
+		}
 	})
 
 	afterEach(() => {
@@ -250,57 +378,101 @@ describe('Lambda Utils', () => {
 
 	describe('logRequest', () => {
 		it('should log request in development mode', () => {
-			const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {
-				// Mock implementation for testing
-			})
 			process.env.NODE_ENV = 'development'
 
 			logRequest(mockEvent, mockContext)
 
-			expect(consoleSpy).toHaveBeenCalledWith(
-				'📥 Lambda Request:',
+			// Verify Powertools logger calls (development mode uses debug level)
+			expect(loggerMocks.logger.debug).toHaveBeenCalledWith(
+				'Lambda request received',
 				expect.objectContaining({
+					operation: 'lambdaRequest',
+					requestId: mockContext.awsRequestId,
+					method: mockEvent.httpMethod,
+					path: mockEvent.path,
+					headers: mockEvent.headers,
+				}),
+			)
+
+			// Verify Powertools metrics calls
+			expect(metricsMocks.utils.addMetric).toHaveBeenCalledWith(
+				'RequestReceived',
+				'Count',
+				1,
+				expect.objectContaining({
+					Method: mockEvent.httpMethod,
+					Path: mockEvent.path,
+					Stage: mockEvent.requestContext.stage,
+				}),
+			)
+		})
+
+		it('should not log request in production mode', () => {
+			process.env.NODE_ENV = 'production'
+
+			logRequest(mockEvent, mockContext)
+
+			// Verify Powertools logger calls (production mode uses info level)
+			expect(loggerMocks.logger.info).toHaveBeenCalledWith(
+				'Lambda request received',
+				expect.objectContaining({
+					operation: 'lambdaRequest',
 					requestId: mockContext.awsRequestId,
 					method: mockEvent.httpMethod,
 					path: mockEvent.path,
 				}),
 			)
 
-			consoleSpy.mockRestore()
-		})
-
-		it('should not log request in production mode', () => {
-			const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {
-				// Mock implementation for testing
-			})
-			process.env.NODE_ENV = 'production'
-
-			logRequest(mockEvent, mockContext)
-
-			expect(consoleSpy).not.toHaveBeenCalled()
-			consoleSpy.mockRestore()
+			// Verify Powertools metrics calls (same in both modes)
+			expect(metricsMocks.utils.addMetric).toHaveBeenCalledWith(
+				'RequestReceived',
+				'Count',
+				1,
+				expect.objectContaining({
+					Method: mockEvent.httpMethod,
+					Path: mockEvent.path,
+					Stage: mockEvent.requestContext.stage,
+				}),
+			)
 		})
 	})
 
 	describe('logResponse', () => {
 		it('should log response in development mode', () => {
-			const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {
-				// Mock implementation for testing
-			})
 			process.env.NODE_ENV = 'development'
 
 			const response = createLambdaResponse(200, { message: 'test' })
 			logResponse(response, mockContext)
 
-			expect(consoleSpy).toHaveBeenCalledWith(
-				'📤 Lambda Response:',
+			// Verify Powertools logger calls (development mode uses debug level for 2xx)
+			expect(loggerMocks.logger.debug).toHaveBeenCalledWith(
+				'Lambda response sent',
 				expect.objectContaining({
+					operation: 'lambdaResponse',
 					requestId: mockContext.awsRequestId,
 					statusCode: 200,
+					isError: false,
+					headers: response.headers,
 				}),
 			)
 
-			consoleSpy.mockRestore()
+			// Verify Powertools metrics calls
+			expect(metricsMocks.utils.addMetric).toHaveBeenCalledWith(
+				'ResponseSent',
+				'Count',
+				1,
+				expect.objectContaining({
+					StatusCode: '200',
+					StatusClass: '2xx',
+				}),
+			)
+
+			// Verify response size metric
+			expect(metricsMocks.utils.addMetric).toHaveBeenCalledWith(
+				'ResponseSize',
+				'Bytes',
+				expect.any(Number),
+			)
 		})
 	})
 
@@ -311,39 +483,109 @@ describe('Lambda Utils', () => {
 				await new Promise((resolve) => setTimeout(resolve, 1))
 				return 'success'
 			})
-			const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {
-				// Mock implementation for testing
-			})
 
 			const result = await measureExecutionTime(operation, 'test operation')
 
 			expect(result.result).toBe('success')
 			expect(result.duration).toBeGreaterThanOrEqual(0)
-			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining('⏱️ test operation completed in'),
+
+			// Verify Powertools logger calls
+			expect(loggerMocks.logger.debug).toHaveBeenCalledWith(
+				'Operation started',
+				expect.objectContaining({
+					operation: 'measureExecutionTime',
+					operationName: 'test operation',
+				}),
 			)
 
-			consoleSpy.mockRestore()
+			expect(loggerMocks.logger.info).toHaveBeenCalledWith(
+				'Operation completed successfully',
+				expect.objectContaining({
+					operation: 'measureExecutionTime',
+					operationName: 'test operation',
+					duration: expect.any(Number) as number,
+				}),
+			)
+
+			// Verify Powertools metrics calls
+			expect(metricsMocks.utils.addMetric).toHaveBeenCalledWith(
+				'OperationDuration',
+				'Milliseconds',
+				expect.any(Number),
+				expect.objectContaining({
+					OperationName: 'test operation',
+					Status: 'Success',
+				}),
+			)
+
+			expect(metricsMocks.utils.addMetric).toHaveBeenCalledWith(
+				'OperationCount',
+				'Count',
+				1,
+				expect.objectContaining({
+					OperationName: 'test operation',
+					Status: 'Success',
+				}),
+			)
 		})
 
 		it('should measure failed operation', async () => {
 			const operation = vi.fn().mockRejectedValue(new Error('operation failed'))
-			const consoleErrorSpy = vi
-				.spyOn(console, 'error')
-				.mockImplementation(() => {
-					// Mock implementation for testing
-				})
 
 			await expect(
 				measureExecutionTime(operation, 'failing operation'),
 			).rejects.toThrow('operation failed')
 
-			expect(consoleErrorSpy).toHaveBeenCalledWith(
-				expect.stringContaining('❌ failing operation failed after'),
-				expect.any(Error),
+			// Verify Powertools logger calls for error case
+			expect(loggerMocks.logger.debug).toHaveBeenCalledWith(
+				'Operation started',
+				expect.objectContaining({
+					operation: 'measureExecutionTime',
+					operationName: 'failing operation',
+				}),
 			)
 
-			consoleErrorSpy.mockRestore()
+			expect(loggerMocks.logger.error).toHaveBeenCalledWith(
+				'Operation failed',
+				expect.objectContaining({
+					operation: 'measureExecutionTime',
+					operationName: 'failing operation',
+					duration: expect.any(Number) as number,
+					error: 'operation failed',
+					errorType: 'Error',
+				}),
+			)
+
+			// Verify Powertools metrics calls for error case
+			expect(metricsMocks.utils.addMetric).toHaveBeenCalledWith(
+				'OperationDuration',
+				'Milliseconds',
+				expect.any(Number),
+				expect.objectContaining({
+					OperationName: 'failing operation',
+					Status: 'Error',
+				}),
+			)
+
+			expect(metricsMocks.utils.addMetric).toHaveBeenCalledWith(
+				'OperationCount',
+				'Count',
+				1,
+				expect.objectContaining({
+					OperationName: 'failing operation',
+					Status: 'Error',
+				}),
+			)
+
+			expect(metricsMocks.utils.addMetric).toHaveBeenCalledWith(
+				'OperationError',
+				'Count',
+				1,
+				expect.objectContaining({
+					OperationName: 'failing operation',
+					ErrorType: 'Error',
+				}),
+			)
 		})
 	})
 

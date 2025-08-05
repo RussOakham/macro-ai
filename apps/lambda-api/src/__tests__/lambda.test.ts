@@ -2,12 +2,67 @@
  * Tests for main Lambda handler
  */
 
+// Import actual Powertools types for type-safe mocking
+import type { Logger } from '@aws-lambda-powertools/logger'
+import type { Metrics } from '@aws-lambda-powertools/metrics'
 import type {
 	APIGatewayProxyEvent,
 	APIGatewayProxyResult,
 	Context,
 } from 'aws-lambda'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+// Type-safe mock interfaces using TypeScript utility types
+type MockLogger = {
+	[K in keyof Pick<
+		Logger,
+		'debug' | 'info' | 'warn' | 'error' | 'critical' | 'createChild'
+	>]: ReturnType<typeof vi.fn>
+}
+
+type MockMetrics = {
+	[K in keyof Pick<
+		Metrics,
+		'addMetric' | 'singleMetric' | 'addDimension'
+	>]: ReturnType<typeof vi.fn>
+}
+
+// Type-safe mock interfaces for utility functions
+interface MockLoggerUtils {
+	logger: MockLogger
+	createChildLogger: ReturnType<typeof vi.fn>
+	logWithCorrelationId: ReturnType<typeof vi.fn>
+	LogLevel: {
+		DEBUG: string
+		INFO: string
+		WARN: string
+		ERROR: string
+		CRITICAL: string
+	}
+	createLoggerConfig: ReturnType<typeof vi.fn>
+	createPowertoolsLogger: ReturnType<typeof vi.fn>
+}
+
+interface MockMetricsUtils {
+	metrics: MockMetrics
+	addMetric: ReturnType<typeof vi.fn>
+	measureAndRecordExecutionTime: ReturnType<typeof vi.fn>
+	recordColdStart: ReturnType<typeof vi.fn>
+	recordMemoryUsage: ReturnType<typeof vi.fn>
+	recordParameterStoreMetrics: ReturnType<typeof vi.fn>
+	MetricName: {
+		ColdStart: string
+		ExecutionTime: string
+		MemoryUsage: string
+	}
+	MetricUnit: {
+		Count: string
+		Milliseconds: string
+		Bytes: string
+	}
+	createMetricsConfig: ReturnType<typeof vi.fn>
+	createPowertoolsMetrics: ReturnType<typeof vi.fn>
+}
 
 // Mock serverless-http before importing the handler
 const mockServerlessHandler = vi.fn()
@@ -40,6 +95,66 @@ vi.mock('../services/lambda-config.service.js', () => ({
 	lambdaConfig: mockLambdaConfig,
 }))
 
+// Mock Powertools Logger
+vi.mock('../utils/powertools-logger.js', () => {
+	const mockChildLogger = {
+		debug: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		critical: vi.fn(),
+		createChild: vi.fn(),
+	}
+
+	return {
+		logger: {
+			debug: vi.fn(),
+			info: vi.fn(),
+			warn: vi.fn(),
+			error: vi.fn(),
+			critical: vi.fn(),
+			createChild: vi.fn().mockReturnValue(mockChildLogger),
+		},
+		createChildLogger: vi.fn(),
+		logWithCorrelationId: vi.fn(),
+		LogLevel: {
+			DEBUG: 'DEBUG',
+			INFO: 'INFO',
+			WARN: 'WARN',
+			ERROR: 'ERROR',
+			CRITICAL: 'CRITICAL',
+		},
+		createLoggerConfig: vi.fn(),
+		createPowertoolsLogger: vi.fn(),
+	}
+})
+
+// Mock Powertools Metrics
+vi.mock('../utils/powertools-metrics.js', () => ({
+	metrics: {
+		addMetric: vi.fn(),
+		singleMetric: vi.fn(),
+		addDimension: vi.fn(),
+	},
+	addMetric: vi.fn(),
+	measureAndRecordExecutionTime: vi.fn(),
+	recordColdStart: vi.fn(),
+	recordMemoryUsage: vi.fn(),
+	recordParameterStoreMetrics: vi.fn(),
+	MetricName: {
+		ColdStart: 'ColdStart',
+		ExecutionTime: 'ExecutionTime',
+		MemoryUsage: 'MemoryUsage',
+	},
+	MetricUnit: {
+		Count: 'Count',
+		Milliseconds: 'Milliseconds',
+		Bytes: 'Bytes',
+	},
+	createMetricsConfig: vi.fn(),
+	createPowertoolsMetrics: vi.fn(),
+}))
+
 describe('Lambda Handler', () => {
 	let handler: (
 		event: APIGatewayProxyEvent,
@@ -54,11 +169,33 @@ describe('Lambda Handler', () => {
 		body: string
 	}>
 
+	// Powertools mock references with complete type safety
+	let loggerMocks: {
+		logger: MockLogger
+		childLogger: MockLogger
+		utils: MockLoggerUtils
+	}
+	let metricsMocks: { utils: MockMetricsUtils }
+
 	beforeEach(async () => {
 		vi.clearAllMocks()
 
 		// Reset module state
 		vi.resetModules()
+
+		// Get Powertools mocks from the mocked modules
+		const loggerModule = await import('../utils/powertools-logger.js')
+		const metricsModule = await import('../utils/powertools-metrics.js')
+
+		// Get the child logger that will be created by logger.createChild()
+		const childLogger = loggerModule.logger.createChild()
+
+		loggerMocks = {
+			logger: loggerModule.logger as unknown as MockLogger,
+			childLogger: childLogger as unknown as MockLogger,
+			utils: loggerModule as unknown as MockLoggerUtils,
+		}
+		metricsMocks = { utils: metricsModule as unknown as MockMetricsUtils }
 
 		// Setup default mocks
 		mockLambdaConfig.initialize.mockResolvedValue({
@@ -109,6 +246,18 @@ describe('Lambda Handler', () => {
 			expect(mockLambdaConfig.getConfigSummary).toHaveBeenCalled()
 			expect(mockServerlessHandler).toHaveBeenCalledWith(event, context)
 			expect(result.statusCode).toBe(200)
+
+			// Verify Powertools logger calls (using child logger)
+			expect(loggerMocks.childLogger.info).toHaveBeenCalledWith(
+				expect.stringContaining('Lambda invocation started'),
+				expect.objectContaining({
+					operation: 'lambdaHandler',
+					coldStart: true,
+				}),
+			)
+
+			// Verify Powertools metrics calls
+			expect(metricsMocks.utils.recordColdStart).toHaveBeenCalledWith(true)
 		})
 
 		it('should handle warm start without re-initialization', async () => {
@@ -127,6 +276,17 @@ describe('Lambda Handler', () => {
 			expect(mockLambdaConfig.initialize).not.toHaveBeenCalled()
 			expect(mockLambdaConfig.setColdStart).toHaveBeenCalledWith(false)
 			expect(mockServerlessHandler).toHaveBeenCalledWith(event2, context2)
+
+			// Verify warm start metrics are recorded
+			expect(metricsMocks.utils.addMetric).toHaveBeenCalledWith(
+				'WarmStart',
+				'Count',
+				1,
+				expect.objectContaining({
+					Environment: expect.any(String) as string,
+					FunctionName: context2.functionName,
+				}),
+			)
 		})
 
 		it('should set callbackWaitsForEmptyEventLoop to false', async () => {

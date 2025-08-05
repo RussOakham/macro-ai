@@ -8,6 +8,7 @@ import { fromZodError } from 'zod-validation-error'
 
 import type { TEnv } from '../utils/env.schema.js'
 import { loadConfig } from '../utils/load-config.js'
+import { logger } from '../utils/powertools-logger.js'
 
 import { parameterStore } from './parameter-store.service.js'
 
@@ -90,7 +91,10 @@ export class LambdaConfigService {
 			return this.config
 		}
 
-		console.log('🔧 Initializing Lambda configuration...')
+		logger.info('Initializing Lambda configuration', {
+			operation: 'initialize',
+			isColdStart,
+		})
 
 		try {
 			// Load and validate environment configuration first

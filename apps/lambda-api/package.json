@@ -23,6 +23,8 @@
 		"type-check": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@aws-lambda-powertools/logger": "^2.24.1",
+		"@aws-lambda-powertools/metrics": "^2.24.1",
 		"@aws-sdk/client-ssm": "catalog:",
 		"dotenv": "^16.4.5",
 		"serverless-http": "^3.2.0",

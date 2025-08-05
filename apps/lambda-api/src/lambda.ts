@@ -12,6 +12,15 @@ import type { Express } from 'express'
 import serverless from 'serverless-http'
 
 import { lambdaConfig } from './services/lambda-config.service.js'
+import { logger } from './utils/powertools-logger.js'
+import {
+	addMetric,
+	measureAndRecordExecutionTime,
+	MetricName,
+	MetricUnit,
+	recordColdStart,
+	recordMemoryUsage,
+} from './utils/powertools-metrics.js'
 
 // Global variables for Lambda container reuse
 let app: Express | null = null
@@ -23,15 +32,29 @@ let isInitialized = false
  * Initialize Express application for Lambda environment
  */
 const initializeExpressApp = async (): Promise<Express> => {
-	console.log('🚀 Initializing Express app for Lambda...')
+	logger.info('Initializing Express app for Lambda', {
+		operation: 'initializeExpressApp',
+		coldStart: !isInitialized,
+	})
 
 	try {
 		// Initialize Lambda configuration with Parameter Store
 		const isColdStart = !isInitialized
-		await lambdaConfig.initialize(isColdStart)
+
+		// Measure configuration initialization time
+		await measureAndRecordExecutionTime(
+			() => lambdaConfig.initialize(isColdStart),
+			MetricName.ConfigurationLoadTime,
+			{ Operation: 'ParameterStoreInit' },
+		)
 
 		// Log configuration summary (without sensitive data)
-		console.log('📋 Configuration summary:', lambdaConfig.getConfigSummary())
+		const configSummary = lambdaConfig.getConfigSummary()
+		logger.info('Configuration loaded successfully', {
+			operation: 'configurationLoad',
+			configSummary,
+			coldStart: isColdStart,
+		})
 
 		// Dynamically import and create Express server
 		const { createServer } = await import(
@@ -41,17 +64,37 @@ const initializeExpressApp = async (): Promise<Express> => {
 		// Create Express app (createServer doesn't take parameters)
 		const expressApp = createServer()
 
-		console.log('✅ Express app initialized successfully for Lambda')
+		logger.info('Express app initialized successfully for Lambda', {
+			operation: 'expressAppInit',
+			coldStart: isColdStart,
+		})
+
+		// Record successful initialization metric
+		addMetric(MetricName.ExpressAppInitTime, MetricUnit.Count, 1, {
+			Status: 'Success',
+		})
+
 		// eslint-disable-next-line @typescript-eslint/no-misused-promises
 		return expressApp
 	} catch (error: unknown) {
-		console.error(
-			'❌ Failed to initialize Express app:',
-			error instanceof Error ? error.message : 'Unknown error',
-		)
-		throw new Error(
-			`Express app initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-		)
+		const errorMessage =
+			error instanceof Error ? error.message : 'Unknown error'
+
+		logger.error('Failed to initialize Express app', {
+			operation: 'initializeExpressApp',
+			error: errorMessage,
+			errorType:
+				error instanceof Error ? error.constructor.name : 'UnknownError',
+			coldStart: !isInitialized,
+		})
+
+		// Record error metric
+		addMetric(MetricName.ExpressAppInitError, MetricUnit.Count, 1, {
+			ErrorType:
+				error instanceof Error ? error.constructor.name : 'UnknownError',
+		})
+
+		throw new Error(`Express app initialization failed: ${errorMessage}`)
 	}
 }
 
@@ -59,7 +102,9 @@ const initializeExpressApp = async (): Promise<Express> => {
  * Initialize serverless-http handler
  */
 const initializeServerlessHandler = (expressApp: Express) => {
-	console.log('🔧 Initializing serverless-http handler...')
+	logger.info('Initializing serverless-http handler', {
+		operation: 'initializeServerlessHandler',
+	})
 
 	return serverless(expressApp, {
 		// Request/response transformation options
@@ -125,25 +170,80 @@ export const handler = async (
 	const startTime = Date.now()
 	const isColdStart = !isInitialized
 
-	console.log(
-		`🔍 Lambda invocation - Cold start: ${String(isColdStart)}, Request ID: ${context.awsRequestId}`,
-	)
+	// Create child logger with request context
+	const requestLogger = logger.createChild({
+		persistentLogAttributes: {
+			requestId: context.awsRequestId,
+			functionName: context.functionName,
+			coldStart: isColdStart,
+		},
+	})
+
+	requestLogger.info('Lambda invocation started', {
+		operation: 'lambdaHandler',
+		coldStart: isColdStart,
+		requestId: context.awsRequestId,
+		functionName: context.functionName,
+		functionVersion: context.functionVersion,
+	})
+
+	// Record cold start metrics with comprehensive dimensions
+	recordColdStart(isColdStart)
+
+	// Record additional cold start context metrics
+	addMetric(MetricName.ColdStart, MetricUnit.Count, isColdStart ? 1 : 0, {
+		Environment: process.env.NODE_ENV ?? 'unknown',
+		FunctionName: context.functionName,
+		FunctionVersion: context.functionVersion,
+		Region: process.env.AWS_REGION ?? 'unknown',
+	})
+
+	// Record memory usage at start of invocation
+	recordMemoryUsage()
 
 	try {
 		// Initialize Express app on cold start
 		if (!app || !serverlessHandler) {
-			console.log('❄️ Cold start - initializing Express app...')
+			requestLogger.info('Cold start - initializing Express app', {
+				operation: 'coldStartInit',
+			})
 
 			app = await initializeExpressApp()
 			serverlessHandler = initializeServerlessHandler(app)
 			isInitialized = true
 
 			const initTime = Date.now() - startTime
-			console.log(`✅ Cold start completed in ${String(initTime)}ms`)
+			requestLogger.info('Cold start completed', {
+				operation: 'coldStartComplete',
+				initTime,
+				duration: `${String(initTime)}ms`,
+			})
+
+			// Record cold start initialization time metric with dimensions
+			addMetric('ColdStartInitTime', MetricUnit.Milliseconds, initTime, {
+				Environment: process.env.NODE_ENV ?? 'unknown',
+				FunctionName: context.functionName,
+				FunctionVersion: context.functionVersion,
+				Region: process.env.AWS_REGION ?? 'unknown',
+				InitPhase: 'Complete',
+			})
+
+			// Record memory usage after cold start initialization
+			recordMemoryUsage()
 		} else {
 			// Update cold start flag for warm invocations
 			lambdaConfig.setColdStart(false)
-			console.log('🔥 Warm start - reusing existing Express app')
+			requestLogger.info('Warm start - reusing existing Express app', {
+				operation: 'warmStart',
+			})
+
+			// Record warm start metrics
+			addMetric('WarmStart', MetricUnit.Count, 1, {
+				Environment: process.env.NODE_ENV ?? 'unknown',
+				FunctionName: context.functionName,
+				FunctionVersion: context.functionVersion,
+				Region: process.env.AWS_REGION ?? 'unknown',
+			})
 		}
 
 		// Handle the request with serverless-http
@@ -151,14 +251,66 @@ export const handler = async (
 		const result = await serverlessHandler(event, context)
 
 		const totalTime = Date.now() - startTime
-		console.log(
-			`✅ Request completed in ${String(totalTime)}ms (Cold start: ${String(isColdStart)})`,
-		)
+
+		requestLogger.info('Request completed successfully', {
+			operation: 'requestComplete',
+			totalTime,
+			duration: `${String(totalTime)}ms`,
+			coldStart: isColdStart,
+		})
+
+		// Record request metrics with cold start context
+		addMetric('RequestDuration', MetricUnit.Milliseconds, totalTime, {
+			ColdStart: String(isColdStart),
+			Status: 'Success',
+			Environment: process.env.NODE_ENV ?? 'unknown',
+			FunctionName: context.functionName,
+		})
+		addMetric('RequestCount', MetricUnit.Count, 1, {
+			Status: 'Success',
+			ColdStart: String(isColdStart),
+			Environment: process.env.NODE_ENV ?? 'unknown',
+		})
+
+		// Record memory usage
+		const memoryUsage = process.memoryUsage()
+		addMetric('MemoryUsed', 'Bytes', memoryUsage.heapUsed)
 
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
 		return result
 	} catch (error) {
-		console.error('❌ Lambda handler error:', error)
+		const totalTime = Date.now() - startTime
+		const errorMessage =
+			error instanceof Error ? error.message : 'Unknown error'
+
+		requestLogger.error('Lambda handler error', {
+			operation: 'requestError',
+			error: errorMessage,
+			errorType:
+				error instanceof Error ? error.constructor.name : 'UnknownError',
+			totalTime,
+			duration: `${String(totalTime)}ms`,
+			coldStart: isColdStart,
+		})
+
+		// Record error metrics with cold start context
+		addMetric('RequestDuration', MetricUnit.Milliseconds, totalTime, {
+			ColdStart: String(isColdStart),
+			Status: 'Error',
+			Environment: process.env.NODE_ENV ?? 'unknown',
+			FunctionName: context.functionName,
+		})
+		addMetric('RequestCount', MetricUnit.Count, 1, {
+			Status: 'Error',
+			ColdStart: String(isColdStart),
+			Environment: process.env.NODE_ENV ?? 'unknown',
+		})
+		addMetric('RequestError', MetricUnit.Count, 1, {
+			ErrorType:
+				error instanceof Error ? error.constructor.name : 'UnknownError',
+			ColdStart: String(isColdStart),
+			Environment: process.env.NODE_ENV ?? 'unknown',
+		})
 
 		// Return error response
 		return {

@@ -9,6 +9,9 @@ import type {
 	Context,
 } from 'aws-lambda'
 
+import { logger } from './powertools-logger.js'
+import { addMetric } from './powertools-metrics.js'
+
 /**
  * Create a standardized Lambda response
  */
@@ -143,44 +146,96 @@ export const getLambdaContext = (context: Context) => {
 }
 
 /**
- * Log request/response for debugging
+ * Log request information with structured logging
  */
 export const logRequest = (
 	event: APIGatewayProxyEvent,
 	context: Context,
 ): void => {
-	if (process.env.NODE_ENV === 'development') {
-		console.log('📥 Lambda Request:', {
-			requestId: context.awsRequestId,
-			method: event.httpMethod,
-			path: event.path,
-			headers: event.headers,
-			queryParams: event.queryStringParameters,
-			pathParams: event.pathParameters,
-			bodySize: event.body ? event.body.length : 0,
-		})
+	const requestInfo = {
+		operation: 'lambdaRequest',
+		requestId: context.awsRequestId,
+		method: event.httpMethod,
+		path: event.path,
+		queryParams: event.queryStringParameters,
+		pathParams: event.pathParameters,
+		bodySize: event.body ? event.body.length : 0,
+		userAgent: event.headers['User-Agent'] ?? event.headers['user-agent'],
+		sourceIp: event.requestContext.identity.sourceIp,
+		stage: event.requestContext.stage,
 	}
+
+	// Log with appropriate level based on environment
+	if (process.env.NODE_ENV === 'development') {
+		logger.debug('Lambda request received', {
+			...requestInfo,
+			headers: event.headers, // Include full headers in development
+		})
+	} else {
+		logger.info('Lambda request received', requestInfo)
+	}
+
+	// Record request metrics
+	addMetric('RequestReceived', 'Count', 1, {
+		Method: event.httpMethod,
+		Path: event.path,
+		Stage: event.requestContext.stage,
+	})
 }
 
 /**
- * Log response for debugging
+ * Log response information with structured logging
  */
 export const logResponse = (
 	response: APIGatewayProxyResult,
 	context: Context,
 ): void => {
-	if (process.env.NODE_ENV === 'development') {
-		console.log('📤 Lambda Response:', {
-			requestId: context.awsRequestId,
-			statusCode: response.statusCode,
+	const responseInfo = {
+		operation: 'lambdaResponse',
+		requestId: context.awsRequestId,
+		statusCode: response.statusCode,
+		bodySize: response.body ? response.body.length : 0,
+		isError: response.statusCode >= 400,
+	}
+
+	// Log with appropriate level based on status code
+	if (response.statusCode >= 500) {
+		logger.error('Lambda response sent', {
+			...responseInfo,
 			headers: response.headers,
-			bodySize: response.body ? response.body.length : 0,
 		})
+	} else if (response.statusCode >= 400) {
+		logger.warn('Lambda response sent', responseInfo)
+	} else if (process.env.NODE_ENV === 'development') {
+		logger.debug('Lambda response sent', {
+			...responseInfo,
+			headers: response.headers, // Include full headers in development
+		})
+	} else {
+		logger.info('Lambda response sent', responseInfo)
+	}
+
+	// Record response metrics
+	const getStatusClass = (statusCode: number): string => {
+		if (statusCode >= 500) return '5xx'
+		if (statusCode >= 400) return '4xx'
+		if (statusCode >= 300) return '3xx'
+		return '2xx'
+	}
+
+	addMetric('ResponseSent', 'Count', 1, {
+		StatusCode: String(response.statusCode),
+		StatusClass: getStatusClass(response.statusCode),
+	})
+
+	// Record response size metric
+	if (response.body) {
+		addMetric('ResponseSize', 'Bytes', response.body.length)
 	}
 }
 
 /**
- * Measure execution time
+ * Measure execution time with structured logging and metrics
  */
 export const measureExecutionTime = async <T>(
 	operation: () => Promise<T>,
@@ -188,18 +243,66 @@ export const measureExecutionTime = async <T>(
 ): Promise<{ result: T; duration: number }> => {
 	const startTime = Date.now()
 
+	logger.debug('Operation started', {
+		operation: 'measureExecutionTime',
+		operationName,
+		startTime,
+	})
+
 	try {
 		const result = await operation()
 		const duration = Date.now() - startTime
 
-		console.log(`⏱️ ${operationName} completed in ${String(duration)}ms`)
+		logger.info('Operation completed successfully', {
+			operation: 'measureExecutionTime',
+			operationName,
+			duration,
+			durationMs: `${String(duration)}ms`,
+		})
+
+		// Record success metrics
+		addMetric('OperationDuration', 'Milliseconds', duration, {
+			OperationName: operationName,
+			Status: 'Success',
+		})
+
+		addMetric('OperationCount', 'Count', 1, {
+			OperationName: operationName,
+			Status: 'Success',
+		})
+
 		return { result, duration }
 	} catch (error) {
 		const duration = Date.now() - startTime
-		console.error(
-			`❌ ${operationName} failed after ${String(duration)}ms:`,
-			error,
-		)
+		const errorMessage = error instanceof Error ? error.message : String(error)
+
+		logger.error('Operation failed', {
+			operation: 'measureExecutionTime',
+			operationName,
+			duration,
+			durationMs: `${String(duration)}ms`,
+			error: errorMessage,
+			errorType:
+				error instanceof Error ? error.constructor.name : 'UnknownError',
+		})
+
+		// Record error metrics
+		addMetric('OperationDuration', 'Milliseconds', duration, {
+			OperationName: operationName,
+			Status: 'Error',
+		})
+
+		addMetric('OperationCount', 'Count', 1, {
+			OperationName: operationName,
+			Status: 'Error',
+		})
+
+		addMetric('OperationError', 'Count', 1, {
+			OperationName: operationName,
+			ErrorType:
+				error instanceof Error ? error.constructor.name : 'UnknownError',
+		})
+
 		throw error instanceof Error ? error : new Error(String(error))
 	}
 }

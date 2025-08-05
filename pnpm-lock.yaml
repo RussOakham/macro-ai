@@ -295,7 +295,7 @@ importers:
         version: 4.6.2(eslint@9.25.1(jiti@2.4.2))
       eslint-plugin-unused-imports:
         specifier: 'catalog:'
-        version: 3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))
+        version: 3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@8.31.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))
       globals:
         specifier: 'catalog:'
         version: 15.15.0
@@ -497,7 +497,7 @@ importers:
         version: 4.6.2(eslint@9.25.1(jiti@2.4.2))
       eslint-plugin-unused-imports:
         specifier: 'catalog:'
-        version: 3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))
+        version: 3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@8.31.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))
       globals:
         specifier: 'catalog:'
         version: 15.15.0
@@ -522,6 +522,12 @@ importers:
 
   apps/lambda-api:
     dependencies:
+      '@aws-lambda-powertools/logger':
+        specifier: ^2.24.1
+        version: 2.24.1
+      '@aws-lambda-powertools/metrics':
+        specifier: ^2.24.1
+        version: 2.24.1
       '@aws-sdk/client-ssm':
         specifier: 'catalog:'
         version: 3.859.0
@@ -630,7 +636,7 @@ importers:
         version: 12.1.1(eslint@9.25.1(jiti@2.4.2))
       eslint-plugin-unused-imports:
         specifier: 'catalog:'
-        version: 3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))
+        version: 3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@8.31.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))
       globals:
         specifier: 'catalog:'
         version: 15.15.0
@@ -693,7 +699,7 @@ importers:
         version: 4.6.2(eslint@9.25.1(jiti@2.4.2))
       eslint-plugin-unused-imports:
         specifier: 'catalog:'
-        version: 3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))
+        version: 3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@8.31.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))
       globals:
         specifier: 'catalog:'
         version: 15.15.0
@@ -864,6 +870,37 @@ packages:
       {
         integrity: sha512-4RkU9EsI6ZpBve5fseQlGNUWKMa1RLPQ1dnjnQoe07ldfIzcsGb5hC5W0Dm7u423KWzawlrpbjXBrXCEv9zazQ==,
       }
+
+  '@aws-lambda-powertools/commons@2.24.1':
+    resolution:
+      {
+        integrity: sha512-/CnngAi5HeWPWshGPyfctR/Cbmx1jVPa5mwutfmM2Z1sE8hRkJ4tsdpzXyub8RiwptU8QD7XfyhJts+0whjwkg==,
+      }
+
+  '@aws-lambda-powertools/logger@2.24.1':
+    resolution:
+      {
+        integrity: sha512-rIM3Nprv8bxPGYn5uf0bvG64m/TISCjf89E/CWMCAKDlC7cAJbM5O0EmPI0woduMeJk8LuUOqFbADd4JUiLGmw==,
+      }
+    peerDependencies:
+      '@aws-lambda-powertools/jmespath': 2.24.1
+      '@middy/core': 4.x || 5.x || 6.x
+    peerDependenciesMeta:
+      '@aws-lambda-powertools/jmespath':
+        optional: true
+      '@middy/core':
+        optional: true
+
+  '@aws-lambda-powertools/metrics@2.24.1':
+    resolution:
+      {
+        integrity: sha512-EYpAwB9lEqH57Zbt+xAsC+wN2qumC9Rw6J088IW/Z3rsqBtnt0toAPmwZFnXNk/QOkDcdVd1D4kwjqa5tTUO8w==,
+      }
+    peerDependencies:
+      '@middy/core': 4.x || 5.x || 6.x
+    peerDependenciesMeta:
+      '@middy/core':
+        optional: true
 
   '@aws-sdk/client-cognito-identity-provider@3.799.0':
     resolution:
@@ -12710,6 +12747,17 @@ snapshots:
       '@smithy/util-utf8': 2.3.0
       tslib: 2.8.1
 
+  '@aws-lambda-powertools/commons@2.24.1': {}
+
+  '@aws-lambda-powertools/logger@2.24.1':
+    dependencies:
+      '@aws-lambda-powertools/commons': 2.24.1
+      lodash.merge: 4.6.2
+
+  '@aws-lambda-powertools/metrics@2.24.1':
+    dependencies:
+      '@aws-lambda-powertools/commons': 2.24.1
+
   '@aws-sdk/client-cognito-identity-provider@3.799.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
@@ -17513,7 +17561,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-unused-imports@3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2)):
+  eslint-plugin-unused-imports@3.2.0(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@8.31.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.25.1(jiti@2.4.2)):
     dependencies:
       eslint: 9.25.1(jiti@2.4.2)
       eslint-rule-composer: 0.3.0
