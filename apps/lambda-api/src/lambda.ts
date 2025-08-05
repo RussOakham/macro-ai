@@ -21,6 +21,11 @@ import {
 	recordColdStart,
 	recordMemoryUsage,
 } from './utils/powertools-metrics.js'
+import {
+	addCommonAnnotations,
+	addCommonMetadata,
+	tracer,
+} from './utils/powertools-tracer.js'
 
 // Global variables for Lambda container reuse
 let app: Express | null = null
@@ -158,9 +163,9 @@ const initializeServerlessHandler = (expressApp: Express) => {
 }
 
 /**
- * Main Lambda handler function
+ * Main Lambda handler function with X-Ray tracing
  */
-export const handler = async (
+const lambdaHandlerImpl = async (
 	event: APIGatewayProxyEvent,
 	context: Context,
 ): Promise<APIGatewayProxyResult> => {
@@ -170,12 +175,32 @@ export const handler = async (
 	const startTime = Date.now()
 	const isColdStart = !isInitialized
 
+	// Add common trace annotations and metadata
+	addCommonAnnotations()
+	addCommonMetadata()
+
+	// Add request-specific annotations
+	tracer.putAnnotation('coldStart', isColdStart)
+	tracer.putAnnotation('requestId', context.awsRequestId)
+	tracer.putAnnotation('functionName', context.functionName)
+	tracer.putAnnotation('functionVersion', context.functionVersion)
+
+	// Add request metadata
+	tracer.putMetadata('request', {
+		httpMethod: event.httpMethod,
+		path: event.path,
+		userAgent: event.headers['User-Agent'] ?? 'unknown',
+		sourceIp: event.requestContext.identity.sourceIp,
+		stage: event.requestContext.stage,
+	})
+
 	// Create child logger with request context
 	const requestLogger = logger.createChild({
 		persistentLogAttributes: {
 			requestId: context.awsRequestId,
 			functionName: context.functionName,
 			coldStart: isColdStart,
+			traceId: process.env._X_AMZN_TRACE_ID,
 		},
 	})
 
@@ -185,6 +210,7 @@ export const handler = async (
 		requestId: context.awsRequestId,
 		functionName: context.functionName,
 		functionVersion: context.functionVersion,
+		traceId: process.env._X_AMZN_TRACE_ID,
 	})
 
 	// Record cold start metrics with comprehensive dimensions
@@ -355,6 +381,11 @@ export const healthCheck = async (_event: any, context: Context) => {
 		}),
 	}
 }
+
+/**
+ * Export the main handler with X-Ray tracing
+ */
+export const handler: typeof lambdaHandlerImpl = lambdaHandlerImpl
 
 /**
  * Reset function for testing - resets module-level state
