@@ -1,15 +1,64 @@
 # Lambda API Test Helpers
 
-This directory contains reusable test utilities for the Lambda API, providing type-safe mocking patterns for AWS services
-and Lambda functionality.
+This directory contains comprehensive reusable test utilities for the Lambda API, providing
+type-safe mocking patterns for AWS services, middleware testing, observability tools, and error handling.
 
 ## Overview
 
-The test helpers follow established patterns using `aws-sdk-client-mock` for better type safety and more reliable AWS SDK
-mocking. The lambda-api primarily uses **AWS Systems Manager Parameter Store** for configuration management and AWS X-Ray
-for tracing.
+The test helpers follow established patterns using `aws-sdk-client-mock` for better type safety and
+more reliable AWS SDK mocking. The lambda-api primarily uses **AWS Systems Manager Parameter Store**
+for configuration management, AWS X-Ray for tracing, and comprehensive middleware patterns with
+observability integration.
+
+## New Features ✨
+
+### Middleware Test Helpers
+
+- **Complete test suite factory** for middleware testing
+- **Mock API Gateway events and Lambda contexts** with sensible defaults
+- **Middleware chain testing utilities** for complex middleware compositions
+- **Pre-defined test scenarios** for common middleware testing patterns
+
+### Powertools Test Helpers
+
+- **Comprehensive Powertools mocking** with proper TypeScript types
+- **Observability configuration integration** with test-specific settings
+- **Assertion helpers** for verifying Powertools interactions
+- **Test scenarios** for different observability configurations
+
+### Error Handling Test Helpers
+
+- **Go-style error handling mocks** with Result pattern support
+- **AppError factory** for creating consistent test errors
+- **Result assertion helpers** for testing success/error outcomes
+- **Error classification testing utilities**
 
 ## Quick Start
+
+### Middleware Testing
+
+```typescript
+import {
+	createMiddlewareTestSuite,
+	setupPowertoolsMocks,
+} from '../utils/test-helpers/index.js'
+
+describe('My Middleware', () => {
+	beforeEach(() => {
+		setupPowertoolsMocks()
+	})
+
+	it('should handle requests correctly', async () => {
+		const suite = createMiddlewareTestSuite()
+		const middleware = myMiddleware()
+		const wrappedHandler = middleware(suite.mockHandler)
+
+		const result = await wrappedHandler(suite.mockEvent, suite.mockContext)
+
+		expect(result.statusCode).toBe(200)
+	})
+})
+```
 
 ### Parameter Store Testing
 
