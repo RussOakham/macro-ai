@@ -6,6 +6,9 @@
 // Parameter Store mocking utilities
 export { mockParameterStoreService } from './parameter-store.mock.js'
 
+// X-Ray Tracing mocking utilities
+export { mockTracingUtils } from './tracing.mock.js'
+
 // Re-export types for convenience
 export type {
 	GetParameterCommandOutput,

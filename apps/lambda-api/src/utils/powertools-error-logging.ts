@@ -5,6 +5,8 @@
 
 import type { AppError } from './errors.js'
 import { logger } from './powertools-logger.js'
+import { addMetric, MetricName, MetricUnit } from './powertools-metrics.js'
+import { captureError, traceErrorTypes } from './powertools-tracer.js'
 
 /**
  * Type definition for Go-style Result tuple
@@ -12,7 +14,7 @@ import { logger } from './powertools-logger.js'
 export type Result<T> = [T, null] | [null, Error]
 
 /**
- * Log errors from Result<T> tuples using structured logging
+ * Log errors from Result<T> tuples using structured logging with trace correlation
  *
  * @param result - The Result tuple to check for errors
  * @param operation - The operation name for context
@@ -33,11 +35,19 @@ export const logResultError = <T>(
 	const [, error] = result
 
 	if (error) {
+		// Log error with structured logging
 		logger.error('Operation failed', {
 			operation,
 			error: error.message,
 			errorType: error.constructor.name,
 			stack: error.stack,
+			traceId: process.env._X_AMZN_TRACE_ID,
+			...context,
+		})
+
+		// Also capture error in X-Ray trace for correlation
+		captureError(error, traceErrorTypes.DEPENDENCY_ERROR, {
+			operation,
 			...context,
 		})
 	}
@@ -75,6 +85,7 @@ export const logAppError = (
 		errorDetails: error.details,
 		service: error.service,
 		stack: error.stack,
+		traceId: process.env._X_AMZN_TRACE_ID,
 		...context,
 	}
 
@@ -89,6 +100,19 @@ export const logAppError = (
 		// Other errors - use info level
 		logger.info('Application error occurred', logData)
 	}
+
+	// Also capture error in X-Ray trace for correlation
+	const traceErrorType =
+		error.status >= 500
+			? traceErrorTypes.DEPENDENCY_ERROR
+			: traceErrorTypes.PARAMETER_STORE_ERROR // Use as generic client error type
+
+	captureError(error, traceErrorType, {
+		operation,
+		statusCode: error.status,
+		service: error.service,
+		...context,
+	})
 }
 
 /**
@@ -118,6 +142,13 @@ export const logGenericError = (
 		error: error.message,
 		errorType: error.constructor.name,
 		stack: error.stack,
+		traceId: process.env._X_AMZN_TRACE_ID,
+		...context,
+	})
+
+	// Also capture error in X-Ray trace for correlation
+	captureError(error, traceErrorTypes.DEPENDENCY_ERROR, {
+		operation,
 		...context,
 	})
 }
@@ -253,5 +284,38 @@ export const logOperationStart = (
 	logger.debug('Operation started', {
 		operation,
 		...context,
+	})
+}
+
+/**
+ * Comprehensive observability correlation utility
+ * Logs errors, captures in X-Ray traces, and emits error metrics with full correlation
+ */
+export const logErrorWithFullObservability = (
+	error: Error,
+	operation: string,
+	context?: Record<string, unknown>,
+): void => {
+	// 1. Structured logging with trace correlation
+	logger.error('Operation failed with full observability', {
+		operation,
+		error: error.message,
+		errorType: error.constructor.name,
+		stack: error.stack,
+		traceId: process.env._X_AMZN_TRACE_ID,
+		...context,
+	})
+
+	// 2. X-Ray trace error capture
+	captureError(error, traceErrorTypes.DEPENDENCY_ERROR, {
+		operation,
+		...context,
+	})
+
+	// 3. CloudWatch error metric with trace correlation
+	addMetric(MetricName.ExecutionTime, MetricUnit.Count, 1, {
+		Operation: operation,
+		Status: 'Error',
+		ErrorType: error.constructor.name,
 	})
 }

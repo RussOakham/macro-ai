@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Import the mocked module to get reference to the mock function
 import * as powertoolsMetrics from '../../utils/powertools-metrics.js'
+import * as powertoolsTracer from '../../utils/powertools-tracer.js'
 import { mockParameterStoreService } from '../../utils/test-helpers/parameter-store.mock.js'
 import { ParameterStoreService } from '../parameter-store.service.js'
 
@@ -38,28 +39,55 @@ vi.mock('../../utils/powertools-metrics.js', () => ({
 	recordParameterStoreMetrics: vi.fn(),
 }))
 
+// Mock Powertools Tracer to suppress console output during tests
+vi.mock('../../utils/powertools-tracer.js', () => ({
+	withSubsegment: vi
+		.fn()
+		.mockImplementation(
+			async <T>(name: string, operation: () => Promise<T>): Promise<T> => {
+				return operation()
+			},
+		),
+	captureError: vi.fn(),
+	subsegmentNames: {
+		PARAMETER_STORE_GET: 'parameter-store-get',
+		PARAMETER_STORE_GET_MULTIPLE: 'parameter-store-get-multiple',
+		PARAMETER_STORE_INIT: 'parameter-store-initialization',
+		PARAMETER_STORE_HEALTH: 'parameter-store-health-check',
+	},
+	traceErrorTypes: {
+		PARAMETER_STORE_ERROR: 'ParameterStoreError',
+	},
+}))
+
 // Create AWS SDK mock - using type assertion to work around @smithy/types version conflict
 const ssmMock = mockClient(SSMClient)
 
 describe('ParameterStoreService', () => {
 	let service: ParameterStoreService
 	let mockRecordParameterStoreMetrics: ReturnType<typeof vi.fn>
+	let mockWithSubsegment: ReturnType<typeof vi.fn>
+	let mockCaptureError: ReturnType<typeof vi.fn>
 
 	beforeEach(() => {
 		// Reset singleton instance
 		ParameterStoreService.resetInstance()
 		service = ParameterStoreService.getInstance()
 
-		// Get reference to the mocked function
+		// Get reference to the mocked functions
 		mockRecordParameterStoreMetrics = vi.mocked(
 			powertoolsMetrics.recordParameterStoreMetrics,
 		)
+		mockWithSubsegment = vi.mocked(powertoolsTracer.withSubsegment)
+		mockCaptureError = vi.mocked(powertoolsTracer.captureError)
 	})
 
 	afterEach(() => {
 		service.clearCache()
 		ssmMock.reset()
 		mockRecordParameterStoreMetrics.mockClear()
+		mockWithSubsegment.mockClear()
+		mockCaptureError.mockClear()
 	})
 
 	describe('getInstance', () => {
@@ -94,6 +122,22 @@ describe('ParameterStoreService', () => {
 				Name: 'test-param',
 				WithDecryption: true,
 			})
+
+			// Verify tracing was called
+			expect(mockWithSubsegment).toHaveBeenCalledWith(
+				'parameter-store-get',
+				expect.any(Function),
+				expect.objectContaining({
+					parameterName: 'test-param',
+					withDecryption: true,
+					operation: 'getParameter',
+				}),
+				expect.objectContaining({
+					parameterName: 'test-param',
+					withDecryption: true,
+					cacheEnabled: true,
+				}),
+			)
 
 			// Verify metrics - should record cache miss with duration
 			expect(mockRecordParameterStoreMetrics).toHaveBeenCalledWith(
@@ -156,6 +200,17 @@ describe('ParameterStoreService', () => {
 			expect(mockRecordParameterStoreMetrics).toHaveBeenCalledWith(
 				'error',
 				'missing-param',
+			)
+
+			// Verify error was captured in trace
+			expect(mockCaptureError).toHaveBeenCalledWith(
+				expect.any(Error),
+				'ParameterStoreError',
+				expect.objectContaining({
+					parameterName: 'missing-param',
+					operation: 'getParameter',
+					errorType: 'ParameterNotFound',
+				}),
 			)
 		})
 
@@ -225,6 +280,22 @@ describe('ParameterStoreService', () => {
 			expect(mockRecordParameterStoreMetrics).toHaveBeenCalledWith(
 				'miss',
 				'param2',
+			)
+
+			// Verify tracing was called
+			expect(mockWithSubsegment).toHaveBeenCalledWith(
+				'parameter-store-get-multiple',
+				expect.any(Function),
+				expect.objectContaining({
+					parameterCount: 2,
+					withDecryption: true,
+					operation: 'getParameters',
+				}),
+				expect.objectContaining({
+					parameterNames: ['param1', 'param2'],
+					withDecryption: true,
+					cacheEnabled: true,
+				}),
 			)
 		})
 

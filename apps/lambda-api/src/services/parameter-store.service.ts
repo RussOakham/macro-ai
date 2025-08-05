@@ -17,6 +17,12 @@ import { fromZodError } from 'zod-validation-error'
 
 import { logger } from '../utils/powertools-logger.js'
 import { recordParameterStoreMetrics } from '../utils/powertools-metrics.js'
+import {
+	captureError,
+	subsegmentNames,
+	traceErrorTypes,
+	withSubsegment,
+} from '../utils/powertools-tracer.js'
 
 interface CachedParameter {
 	value: string
@@ -110,89 +116,127 @@ export class ParameterStoreService {
 		name: string,
 		withDecryption = true,
 	): Promise<string> {
-		const startTime = Date.now()
+		return withSubsegment(
+			subsegmentNames.PARAMETER_STORE_GET,
+			async () => {
+				const startTime = Date.now()
 
-		// Check cache first
-		const cached = this.cache.get(name)
-		if (cached && cached.expires > Date.now()) {
-			logger.debug('Parameter cache hit', {
-				operation: 'getParameter',
-				parameterName: name,
-				cacheExpires: new Date(cached.expires).toISOString(),
-			})
+				// Check cache first
+				const cached = this.cache.get(name)
+				if (cached && cached.expires > Date.now()) {
+					logger.debug('Parameter cache hit', {
+						operation: 'getParameter',
+						parameterName: name,
+						cacheExpires: new Date(cached.expires).toISOString(),
+					})
 
-			// Record cache hit metric
-			recordParameterStoreMetrics('hit', name)
-			return cached.value
-		}
+					// Record cache hit metric
+					recordParameterStoreMetrics('hit', name)
+					return cached.value
+				}
 
-		logger.debug('Parameter cache miss, fetching from Parameter Store', {
-			operation: 'getParameter',
-			parameterName: name,
-			withDecryption,
-		})
-
-		try {
-			const command = new GetParameterCommand({
-				Name: name,
-				WithDecryption: withDecryption,
-			})
-
-			const response: GetParameterCommandOutput =
-				await this.ssmClient.send(command)
-			const value = response.Parameter?.Value
-
-			if (!value) {
-				const errorMessage = `Parameter ${name} not found or has no value`
-				logger.error('Parameter retrieval failed', {
+				logger.debug('Parameter cache miss, fetching from Parameter Store', {
 					operation: 'getParameter',
 					parameterName: name,
-					error: errorMessage,
+					withDecryption,
 				})
 
-				// Record error metric
-				recordParameterStoreMetrics('error', name)
-				throw new Error(errorMessage)
-			}
+				try {
+					const command = new GetParameterCommand({
+						Name: name,
+						WithDecryption: withDecryption,
+					})
 
-			const duration = Date.now() - startTime
+					const response: GetParameterCommandOutput =
+						await this.ssmClient.send(command)
+					const value = response.Parameter?.Value
 
-			// Cache the parameter
-			this.cache.set(name, {
-				value,
-				expires: Date.now() + this.CACHE_TTL,
-			})
+					if (!value) {
+						const errorMessage = `Parameter ${name} not found or has no value`
+						logger.error('Parameter retrieval failed', {
+							operation: 'getParameter',
+							parameterName: name,
+							error: errorMessage,
+						})
 
-			logger.info('Parameter retrieved successfully', {
-				operation: 'getParameter',
+						// Record error metric
+						recordParameterStoreMetrics('error', name)
+
+						// Capture error in X-Ray trace
+						const error = new Error(errorMessage)
+						captureError(error, traceErrorTypes.PARAMETER_STORE_ERROR, {
+							parameterName: name,
+							operation: 'getParameter',
+							errorType: 'ParameterNotFound',
+						})
+						throw error
+					}
+
+					const duration = Date.now() - startTime
+
+					// Cache the parameter
+					this.cache.set(name, {
+						value,
+						expires: Date.now() + this.CACHE_TTL,
+					})
+
+					logger.info('Parameter retrieved successfully', {
+						operation: 'getParameter',
+						parameterName: name,
+						duration,
+						cached: true,
+					})
+
+					// Record cache miss and retrieval time metrics
+					recordParameterStoreMetrics('miss', name, duration)
+
+					return value
+				} catch (error) {
+					const duration = Date.now() - startTime
+					const errorMessage =
+						error instanceof Error ? error.message : 'Unknown error'
+
+					logger.error('Failed to get parameter', {
+						operation: 'getParameter',
+						parameterName: name,
+						duration,
+						error: errorMessage,
+						errorType:
+							error instanceof Error ? error.constructor.name : 'UnknownError',
+					})
+
+					// Record error metric
+					recordParameterStoreMetrics('error', name)
+
+					// Capture error in X-Ray trace
+					captureError(
+						error instanceof Error ? error : new Error(errorMessage),
+						traceErrorTypes.PARAMETER_STORE_ERROR,
+						{
+							parameterName: name,
+							operation: 'getParameter',
+							duration,
+							withDecryption,
+						},
+					)
+
+					throw new Error(
+						`Failed to retrieve parameter ${name}: ${errorMessage}`,
+					)
+				}
+			},
+			{
 				parameterName: name,
-				duration,
-				cached: true,
-			})
-
-			// Record cache miss and retrieval time metrics
-			recordParameterStoreMetrics('miss', name, duration)
-
-			return value
-		} catch (error) {
-			const duration = Date.now() - startTime
-			const errorMessage =
-				error instanceof Error ? error.message : 'Unknown error'
-
-			logger.error('Failed to get parameter', {
+				withDecryption,
 				operation: 'getParameter',
+			},
+			{
 				parameterName: name,
-				duration,
-				error: errorMessage,
-				errorType:
-					error instanceof Error ? error.constructor.name : 'UnknownError',
-			})
-
-			// Record error metric
-			recordParameterStoreMetrics('error', name)
-
-			throw new Error(`Failed to retrieve parameter ${name}: ${errorMessage}`)
-		}
+				withDecryption,
+				cacheEnabled: true,
+				cacheTTL: this.CACHE_TTL,
+			},
+		)
 	}
 
 	/**
@@ -202,118 +246,157 @@ export class ParameterStoreService {
 		names: string[],
 		withDecryption = true,
 	): Promise<Record<string, string>> {
-		const startTime = Date.now()
-		const uncachedNames: string[] = []
-		const result: Record<string, string> = {}
+		return withSubsegment(
+			subsegmentNames.PARAMETER_STORE_GET_MULTIPLE,
+			async () => {
+				const startTime = Date.now()
+				const uncachedNames: string[] = []
+				const result: Record<string, string> = {}
 
-		logger.debug('Getting multiple parameters', {
-			operation: 'getParameters',
-			parameterCount: names.length,
-			parameterNames: names,
-			withDecryption,
-		})
-
-		// Check cache for each parameter
-		for (const name of names) {
-			const cached = this.cache.get(name)
-			if (cached && cached.expires > Date.now()) {
-				result[name] = cached.value
-				// Record individual cache hit
-				recordParameterStoreMetrics('hit', name)
-			} else {
-				uncachedNames.push(name)
-			}
-		}
-
-		// Fetch uncached parameters
-		if (uncachedNames.length > 0) {
-			logger.debug('Fetching uncached parameters from Parameter Store', {
-				operation: 'getParameters',
-				uncachedCount: uncachedNames.length,
-				uncachedNames,
-			})
-
-			try {
-				const command = new GetParametersCommand({
-					Names: uncachedNames,
-					WithDecryption: withDecryption,
+				logger.debug('Getting multiple parameters', {
+					operation: 'getParameters',
+					parameterCount: names.length,
+					parameterNames: names,
+					withDecryption,
 				})
 
-				const response: GetParametersCommandOutput =
-					await this.ssmClient.send(command)
-
-				// Process successful parameters
-				if (response.Parameters) {
-					for (const param of response.Parameters) {
-						if (param.Name && param.Value) {
-							result[param.Name] = param.Value
-
-							// Cache the parameter
-							this.cache.set(param.Name, {
-								value: param.Value,
-								expires: Date.now() + this.CACHE_TTL,
-							})
-
-							// Record cache miss for each retrieved parameter
-							recordParameterStoreMetrics('miss', param.Name)
-						}
+				// Check cache for each parameter
+				for (const name of names) {
+					const cached = this.cache.get(name)
+					if (cached && cached.expires > Date.now()) {
+						result[name] = cached.value
+						// Record individual cache hit
+						recordParameterStoreMetrics('hit', name)
+					} else {
+						uncachedNames.push(name)
 					}
 				}
 
-				// Check for invalid parameters
-				if (
-					response.InvalidParameters &&
-					response.InvalidParameters.length > 0
-				) {
-					logger.warn('Invalid parameters detected', {
+				// Fetch uncached parameters
+				if (uncachedNames.length > 0) {
+					logger.debug('Fetching uncached parameters from Parameter Store', {
 						operation: 'getParameters',
-						invalidParameters: response.InvalidParameters,
+						uncachedCount: uncachedNames.length,
+						uncachedNames,
 					})
 
-					// Record error metrics for invalid parameters
-					for (const invalidParam of response.InvalidParameters) {
-						recordParameterStoreMetrics('error', invalidParam)
+					try {
+						const command = new GetParametersCommand({
+							Names: uncachedNames,
+							WithDecryption: withDecryption,
+						})
+
+						const response: GetParametersCommandOutput =
+							await this.ssmClient.send(command)
+
+						// Process successful parameters
+						if (response.Parameters) {
+							for (const param of response.Parameters) {
+								if (param.Name && param.Value) {
+									result[param.Name] = param.Value
+
+									// Cache the parameter
+									this.cache.set(param.Name, {
+										value: param.Value,
+										expires: Date.now() + this.CACHE_TTL,
+									})
+
+									// Record cache miss for each retrieved parameter
+									recordParameterStoreMetrics('miss', param.Name)
+								}
+							}
+						}
+
+						// Check for invalid parameters
+						if (
+							response.InvalidParameters &&
+							response.InvalidParameters.length > 0
+						) {
+							logger.warn('Invalid parameters detected', {
+								operation: 'getParameters',
+								invalidParameters: response.InvalidParameters,
+							})
+
+							// Record error metrics for invalid parameters
+							for (const invalidParam of response.InvalidParameters) {
+								recordParameterStoreMetrics('error', invalidParam)
+							}
+
+							const error = new Error(
+								`Invalid parameters: ${response.InvalidParameters.join(', ')}`,
+							)
+
+							// Capture error in X-Ray trace
+							captureError(error, traceErrorTypes.PARAMETER_STORE_ERROR, {
+								operation: 'getParameters',
+								invalidParameters: response.InvalidParameters,
+								errorType: 'InvalidParameters',
+							})
+
+							throw error
+						}
+					} catch (error) {
+						const duration = Date.now() - startTime
+						const errorMessage =
+							error instanceof Error ? error.message : 'Unknown error'
+
+						logger.error('Failed to get parameters', {
+							operation: 'getParameters',
+							uncachedNames,
+							duration,
+							error: errorMessage,
+							errorType:
+								error instanceof Error
+									? error.constructor.name
+									: 'UnknownError',
+						})
+
+						// Record error metrics for all uncached parameters
+						for (const paramName of uncachedNames) {
+							recordParameterStoreMetrics('error', paramName)
+						}
+
+						// Capture error in X-Ray trace
+						captureError(
+							error instanceof Error ? error : new Error(errorMessage),
+							traceErrorTypes.PARAMETER_STORE_ERROR,
+							{
+								operation: 'getParameters',
+								uncachedNames,
+								duration,
+								parameterCount: names.length,
+							},
+						)
+
+						throw new Error(`Failed to retrieve parameters: ${errorMessage}`)
 					}
-
-					throw new Error(
-						`Invalid parameters: ${response.InvalidParameters.join(', ')}`,
-					)
 				}
-			} catch (error) {
-				const duration = Date.now() - startTime
-				const errorMessage =
-					error instanceof Error ? error.message : 'Unknown error'
 
-				logger.error('Failed to get parameters', {
+				const totalDuration = Date.now() - startTime
+				const cacheHits = names.length - uncachedNames.length
+
+				logger.info('Parameters retrieved successfully', {
 					operation: 'getParameters',
-					uncachedNames,
-					duration,
-					error: errorMessage,
-					errorType:
-						error instanceof Error ? error.constructor.name : 'UnknownError',
+					totalParams: names.length,
+					cacheHits,
+					cacheMisses: uncachedNames.length,
+					totalDuration,
 				})
 
-				// Record error metrics for all uncached parameters
-				for (const paramName of uncachedNames) {
-					recordParameterStoreMetrics('error', paramName)
-				}
-
-				throw new Error(`Failed to retrieve parameters: ${errorMessage}`)
-			}
-		}
-
-		const totalDuration = Date.now() - startTime
-		const cacheHits = names.length - uncachedNames.length
-
-		logger.info('Parameters retrieved successfully', {
-			operation: 'getParameters',
-			totalParams: names.length,
-			cacheHits,
-			cacheMisses: uncachedNames.length,
-			totalDuration,
-		})
-
-		return result
+				return result
+			},
+			{
+				parameterCount: names.length,
+				withDecryption,
+				operation: 'getParameters',
+			},
+			{
+				parameterNames: names,
+				withDecryption,
+				cacheEnabled: true,
+				cacheTTL: this.CACHE_TTL,
+			},
+		)
 	}
 
 	/**
@@ -321,91 +404,121 @@ export class ParameterStoreService {
 	 * Call this on Lambda cold start for optimal performance
 	 */
 	public async initializeParameters(): Promise<ValidatedParameterStoreData> {
-		const startTime = Date.now()
+		return withSubsegment(
+			subsegmentNames.PARAMETER_STORE_INIT,
+			async () => {
+				const startTime = Date.now()
 
-		logger.info('Initializing Parameter Store parameters', {
-			operation: 'initializeParameters',
-			parameterCount: this.PARAMETERS.length,
-			requiredParams: this.PARAMETERS.filter((p) => p.required).length,
-		})
-
-		const parameterNames = this.PARAMETERS.map((p) => p.name)
-
-		try {
-			const rawParameters = await this.getParameters(parameterNames, true)
-
-			// Basic presence validation (existing logic)
-			const missingParams = this.PARAMETERS.filter(
-				(p) => p.required && !rawParameters[p.name],
-			).map((p) => p.name)
-
-			if (missingParams.length > 0) {
-				logger.error('Missing required parameters', {
+				logger.info('Initializing Parameter Store parameters', {
 					operation: 'initializeParameters',
-					missingParams,
-					requiredParams: this.PARAMETERS.filter((p) => p.required).map(
-						(p) => p.name,
-					),
+					parameterCount: this.PARAMETERS.length,
+					requiredParams: this.PARAMETERS.filter((p) => p.required).length,
 				})
 
-				// Record error metrics for missing parameters
-				for (const missingParam of missingParams) {
-					recordParameterStoreMetrics('error', missingParam)
+				const parameterNames = this.PARAMETERS.map((p) => p.name)
+
+				try {
+					const rawParameters = await this.getParameters(parameterNames, true)
+
+					// Basic presence validation (existing logic)
+					const missingParams = this.PARAMETERS.filter(
+						(p) => p.required && !rawParameters[p.name],
+					).map((p) => p.name)
+
+					if (missingParams.length > 0) {
+						logger.error('Missing required parameters', {
+							operation: 'initializeParameters',
+							missingParams,
+							requiredParams: this.PARAMETERS.filter((p) => p.required).map(
+								(p) => p.name,
+							),
+						})
+
+						// Record error metrics for missing parameters
+						for (const missingParam of missingParams) {
+							recordParameterStoreMetrics('error', missingParam)
+						}
+
+						throw new Error(
+							`Missing required parameters: ${missingParams.join(', ')}`,
+						)
+					}
+
+					// Data integrity validation using Zod
+					let validatedParameters: ValidatedParameterStoreData
+					try {
+						validatedParameters = ParameterStoreDataSchema.parse(rawParameters)
+					} catch (zodError) {
+						const validationError = fromZodError(zodError as z.ZodError)
+
+						logger.error('Parameter validation failed', {
+							operation: 'initializeParameters',
+							validationError: validationError.message,
+							parameterNames,
+						})
+
+						// Record validation error metrics
+						for (const paramName of parameterNames) {
+							recordParameterStoreMetrics('error', paramName)
+						}
+
+						throw new Error(
+							`Parameter validation failed: ${validationError.message}`,
+						)
+					}
+
+					const duration = Date.now() - startTime
+
+					logger.info('Successfully loaded and validated parameters', {
+						operation: 'initializeParameters',
+						parameterCount: Object.keys(validatedParameters).length,
+						duration,
+						durationMs: `${String(duration)}ms`,
+					})
+
+					return validatedParameters
+				} catch (error) {
+					const duration = Date.now() - startTime
+					const errorMessage =
+						error instanceof Error ? error.message : 'Unknown error'
+
+					logger.error('Failed to initialize parameters', {
+						operation: 'initializeParameters',
+						duration,
+						error: errorMessage,
+						errorType:
+							error instanceof Error ? error.constructor.name : 'UnknownError',
+					})
+
+					// Capture error in X-Ray trace
+					captureError(
+						error instanceof Error ? error : new Error(errorMessage),
+						traceErrorTypes.PARAMETER_STORE_ERROR,
+						{
+							operation: 'initializeParameters',
+							duration,
+							requiredParameters: this.PARAMETERS.filter((p) => p.required).map(
+								(p) => p.name,
+							),
+						},
+					)
+
+					throw error
 				}
-
-				throw new Error(
-					`Missing required parameters: ${missingParams.join(', ')}`,
-				)
-			}
-
-			// Data integrity validation using Zod
-			let validatedParameters: ValidatedParameterStoreData
-			try {
-				validatedParameters = ParameterStoreDataSchema.parse(rawParameters)
-			} catch (zodError) {
-				const validationError = fromZodError(zodError as z.ZodError)
-
-				logger.error('Parameter validation failed', {
-					operation: 'initializeParameters',
-					validationError: validationError.message,
-					parameterNames,
-				})
-
-				// Record validation error metrics
-				for (const paramName of parameterNames) {
-					recordParameterStoreMetrics('error', paramName)
-				}
-
-				throw new Error(
-					`Parameter validation failed: ${validationError.message}`,
-				)
-			}
-
-			const duration = Date.now() - startTime
-
-			logger.info('Successfully loaded and validated parameters', {
+			},
+			{
 				operation: 'initializeParameters',
-				parameterCount: Object.keys(validatedParameters).length,
-				duration,
-				durationMs: `${String(duration)}ms`,
-			})
-
-			return validatedParameters
-		} catch (error) {
-			const duration = Date.now() - startTime
-			const errorMessage =
-				error instanceof Error ? error.message : 'Unknown error'
-
-			logger.error('Failed to initialize parameters', {
-				operation: 'initializeParameters',
-				duration,
-				error: errorMessage,
-				errorType:
-					error instanceof Error ? error.constructor.name : 'UnknownError',
-			})
-
-			throw error
-		}
+				requiredParameterCount: this.PARAMETERS.filter((p) => p.required)
+					.length,
+			},
+			{
+				requiredParameters: this.PARAMETERS.filter((p) => p.required).map(
+					(p) => p.name,
+				),
+				cacheEnabled: true,
+				cacheTTL: this.CACHE_TTL,
+			},
+		)
 	}
 
 	/**
@@ -429,44 +542,68 @@ export class ParameterStoreService {
 	 * Health check for Parameter Store connectivity with metrics
 	 */
 	public async healthCheck(): Promise<boolean> {
-		const startTime = Date.now()
+		return withSubsegment(
+			subsegmentNames.PARAMETER_STORE_HEALTH,
+			async () => {
+				const startTime = Date.now()
 
-		logger.debug('Starting Parameter Store health check', {
-			operation: 'healthCheck',
-		})
+				logger.debug('Starting Parameter Store health check', {
+					operation: 'healthCheck',
+				})
 
-		try {
-			// Try to get a simple parameter to test connectivity
-			await this.getParameter('macro-ai-cognito-user-pool-id', false)
+				try {
+					// Try to get a simple parameter to test connectivity
+					await this.getParameter('macro-ai-cognito-user-pool-id', false)
 
-			const duration = Date.now() - startTime
+					const duration = Date.now() - startTime
 
-			logger.info('Parameter Store health check passed', {
+					logger.info('Parameter Store health check passed', {
+						operation: 'healthCheck',
+						duration,
+						status: 'healthy',
+					})
+
+					return true
+				} catch (error) {
+					const duration = Date.now() - startTime
+					const errorMessage =
+						error instanceof Error ? error.message : 'Unknown error'
+
+					logger.error('Parameter Store health check failed', {
+						operation: 'healthCheck',
+						duration,
+						error: errorMessage,
+						errorType:
+							error instanceof Error ? error.constructor.name : 'UnknownError',
+						status: 'unhealthy',
+					})
+
+					// Record health check failure metric
+					recordParameterStoreMetrics('error', 'health-check')
+
+					// Capture error in X-Ray trace
+					captureError(
+						error instanceof Error ? error : new Error(errorMessage),
+						traceErrorTypes.PARAMETER_STORE_ERROR,
+						{
+							operation: 'healthCheck',
+							duration,
+							testParameter: 'macro-ai-cognito-user-pool-id',
+						},
+					)
+
+					return false
+				}
+			},
+			{
 				operation: 'healthCheck',
-				duration,
-				status: 'healthy',
-			})
-
-			return true
-		} catch (error) {
-			const duration = Date.now() - startTime
-			const errorMessage =
-				error instanceof Error ? error.message : 'Unknown error'
-
-			logger.error('Parameter Store health check failed', {
-				operation: 'healthCheck',
-				duration,
-				error: errorMessage,
-				errorType:
-					error instanceof Error ? error.constructor.name : 'UnknownError',
-				status: 'unhealthy',
-			})
-
-			// Record health check failure metric
-			recordParameterStoreMetrics('error', 'health-check')
-
-			return false
-		}
+				testParameter: 'macro-ai-cognito-user-pool-id',
+			},
+			{
+				testParameter: 'macro-ai-cognito-user-pool-id',
+				withDecryption: false,
+			},
+		)
 	}
 }
 

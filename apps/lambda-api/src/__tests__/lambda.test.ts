@@ -64,6 +64,22 @@ interface MockMetricsUtils {
 	createPowertoolsMetrics: ReturnType<typeof vi.fn>
 }
 
+interface MockTracerUtils {
+	addCommonAnnotations: ReturnType<typeof vi.fn>
+	addCommonMetadata: ReturnType<typeof vi.fn>
+	captureError: ReturnType<typeof vi.fn>
+	subsegmentNames: Record<string, string>
+	traceErrorTypes: Record<string, string>
+	tracer: {
+		putAnnotation: ReturnType<typeof vi.fn>
+		putMetadata: ReturnType<typeof vi.fn>
+		addErrorAsMetadata: ReturnType<typeof vi.fn>
+		getSegment: ReturnType<typeof vi.fn>
+	}
+	withSubsegment: ReturnType<typeof vi.fn>
+	withSubsegmentSync: ReturnType<typeof vi.fn>
+}
+
 // Mock serverless-http before importing the handler
 const mockServerlessHandler = vi.fn()
 vi.mock('serverless-http', () => ({
@@ -156,6 +172,40 @@ vi.mock('../utils/powertools-metrics.js', () => ({
 	createPowertoolsMetrics: vi.fn(),
 }))
 
+// Mock Powertools Tracer
+vi.mock('../utils/powertools-tracer.js', () => ({
+	addCommonAnnotations: vi.fn(),
+	addCommonMetadata: vi.fn(),
+	captureError: vi.fn(),
+	subsegmentNames: {
+		EXPRESS_INIT: 'express-app-initialization',
+		EXPRESS_MIDDLEWARE: 'express-middleware-setup',
+		EXPRESS_ROUTES: 'express-routes-registration',
+		PARAMETER_STORE_GET: 'parameter-store-get',
+		PARAMETER_STORE_GET_MULTIPLE: 'parameter-store-get-multiple',
+		PARAMETER_STORE_INIT: 'parameter-store-initialization',
+		PARAMETER_STORE_HEALTH: 'parameter-store-health-check',
+	},
+	traceErrorTypes: {
+		DEPENDENCY_ERROR: 'DependencyError',
+		PARAMETER_STORE_ERROR: 'ParameterStoreError',
+	},
+	tracer: {
+		putAnnotation: vi.fn(),
+		putMetadata: vi.fn(),
+		addErrorAsMetadata: vi.fn(),
+		getSegment: vi.fn(),
+	},
+	withSubsegment: vi.fn().mockImplementation((_name, operation) => {
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
+		return operation()
+	}),
+	withSubsegmentSync: vi.fn().mockImplementation((_name, operation) => {
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
+		return operation()
+	}),
+}))
+
 describe('Lambda Handler', () => {
 	let handler: (
 		event: APIGatewayProxyEvent,
@@ -177,6 +227,7 @@ describe('Lambda Handler', () => {
 		utils: MockLoggerUtils
 	}
 	let metricsMocks: { utils: MockMetricsUtils }
+	let tracerMocks: { utils: MockTracerUtils }
 
 	beforeEach(async () => {
 		vi.clearAllMocks()
@@ -184,6 +235,7 @@ describe('Lambda Handler', () => {
 		// Get Powertools mocks from the mocked modules
 		const loggerModule = await import('../utils/powertools-logger.js')
 		const metricsModule = await import('../utils/powertools-metrics.js')
+		const tracerModule = await import('../utils/powertools-tracer.js')
 
 		// Get the child logger that will be created by logger.createChild()
 		const childLogger = loggerModule.logger.createChild()
@@ -194,6 +246,7 @@ describe('Lambda Handler', () => {
 			utils: loggerModule as unknown as MockLoggerUtils,
 		}
 		metricsMocks = { utils: metricsModule as unknown as MockMetricsUtils }
+		tracerMocks = { utils: tracerModule as unknown as MockTracerUtils }
 
 		// Setup default mocks
 		mockLambdaConfig.initialize.mockResolvedValue({
@@ -259,6 +312,33 @@ describe('Lambda Handler', () => {
 
 			// Verify Powertools metrics calls
 			expect(metricsMocks.utils.recordColdStart).toHaveBeenCalledWith(true)
+
+			// Verify Powertools tracer calls
+			expect(tracerMocks.utils.addCommonAnnotations).toHaveBeenCalled()
+			expect(tracerMocks.utils.addCommonMetadata).toHaveBeenCalled()
+			expect(tracerMocks.utils.withSubsegment).toHaveBeenCalledWith(
+				'express-app-initialization',
+				expect.any(Function),
+				expect.objectContaining({
+					operation: 'initializeExpressApp',
+					coldStart: true,
+				}),
+				expect.objectContaining({
+					coldStart: true,
+					expressModule: '@repo/express-api/src/utils/server.js',
+				}),
+			)
+			expect(tracerMocks.utils.withSubsegmentSync).toHaveBeenCalledWith(
+				'express-routes-registration',
+				expect.any(Function),
+				expect.objectContaining({
+					operation: 'initializeServerlessHandler',
+				}),
+				expect.objectContaining({
+					serverlessHttpModule: 'serverless-http',
+					binaryMode: false,
+				}),
+			)
 		})
 
 		it('should handle warm start without re-initialization', async () => {

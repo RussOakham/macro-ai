@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppError } from '../errors.js'
 import {
 	logAppError,
+	logErrorWithFullObservability,
 	logGenericError,
 	logOperationStart,
 	logOperationSuccess,
@@ -16,8 +17,10 @@ import {
 	resultFromPromise,
 	resultFromSync,
 } from '../powertools-error-logging.js'
-// Import the mocked module to get reference to the mock function
+// Import the mocked modules to get reference to the mock functions
 import * as powertoolsLogger from '../powertools-logger.js'
+import * as powertoolsMetrics from '../powertools-metrics.js'
+import * as powertoolsTracer from '../powertools-tracer.js'
 
 // Mock Powertools Logger to suppress console output during tests
 vi.mock('../powertools-logger.js', () => ({
@@ -34,6 +37,26 @@ vi.mock('../powertools-logger.js', () => ({
 			error: vi.fn(),
 			critical: vi.fn(),
 		}),
+	},
+}))
+
+// Mock Powertools Metrics
+vi.mock('../powertools-metrics.js', () => ({
+	addMetric: vi.fn(),
+	MetricName: {
+		ExecutionTime: 'ExecutionTime',
+	},
+	MetricUnit: {
+		Count: 'Count',
+	},
+}))
+
+// Mock Powertools Tracer
+vi.mock('../powertools-tracer.js', () => ({
+	captureError: vi.fn(),
+	traceErrorTypes: {
+		DEPENDENCY_ERROR: 'DependencyError',
+		PARAMETER_STORE_ERROR: 'ParameterStoreError',
 	},
 }))
 
@@ -304,6 +327,58 @@ describe('Powertools Error Logging Utilities', () => {
 				expect.objectContaining({
 					operation: 'startOperation',
 					requestId: 'req-789',
+				}),
+			)
+		})
+	})
+
+	describe('logErrorWithFullObservability', () => {
+		it('should log error, capture in trace, and emit metric with full correlation', () => {
+			// Arrange
+			const testError = new Error('Test observability error')
+			const operation = 'testObservabilityOperation'
+			const context = { userId: '123', requestId: 'req-456' }
+
+			// Mock the tracer and metrics modules
+			const mockCaptureError = vi.mocked(powertoolsTracer.captureError)
+			const mockAddMetric = vi.mocked(powertoolsMetrics.addMetric)
+
+			// Act
+			logErrorWithFullObservability(testError, operation, context)
+
+			// Assert - Structured logging
+			expect(mockLogger.error).toHaveBeenCalledWith(
+				'Operation failed with full observability',
+				expect.objectContaining({
+					operation,
+					error: testError.message,
+					errorType: 'Error',
+					stack: testError.stack,
+					userId: '123',
+					requestId: 'req-456',
+				}),
+			)
+
+			// Assert - X-Ray trace capture
+			expect(mockCaptureError).toHaveBeenCalledWith(
+				testError,
+				'DependencyError',
+				expect.objectContaining({
+					operation,
+					userId: '123',
+					requestId: 'req-456',
+				}),
+			)
+
+			// Assert - CloudWatch metric
+			expect(mockAddMetric).toHaveBeenCalledWith(
+				'ExecutionTime',
+				'Count',
+				1,
+				expect.objectContaining({
+					Operation: operation,
+					Status: 'Error',
+					ErrorType: 'Error',
 				}),
 			)
 		})

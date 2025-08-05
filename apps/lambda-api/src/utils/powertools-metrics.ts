@@ -106,7 +106,26 @@ const createPowertoolsMetrics = (config?: Partial<MetricsConfig>): Metrics => {
 export const metrics = createPowertoolsMetrics()
 
 /**
- * Utility function to add a metric with common error handling
+ * Get trace context for metrics correlation
+ */
+const getTraceContext = (): Record<string, string> => {
+	const traceId = process.env._X_AMZN_TRACE_ID
+	if (traceId) {
+		// Extract trace ID from X-Amzn-Trace-Id header format
+		// Format: Root=1-5e1b4151-5ac6c58f5b5dbd6b5b5dbd6b;Parent=5ac6c58f5b5dbd6b;Sampled=1
+		const traceIdRegex = /Root=([^;]+)/
+		const traceIdMatch = traceIdRegex.exec(traceId)
+		if (traceIdMatch?.[1]) {
+			return {
+				TraceId: traceIdMatch[1],
+			}
+		}
+	}
+	return {}
+}
+
+/**
+ * Utility function to add a metric with common error handling and trace correlation
  */
 export const addMetric = (
 	name: MetricName | string,
@@ -115,10 +134,16 @@ export const addMetric = (
 	additionalDimensions?: Record<string, string>,
 ): void => {
 	try {
-		if (additionalDimensions) {
+		// Combine additional dimensions with trace context
+		const allDimensions = {
+			...getTraceContext(),
+			...additionalDimensions,
+		}
+
+		if (Object.keys(allDimensions).length > 0) {
 			// Create a temporary metrics instance with additional dimensions
 			const tempMetrics = metrics.singleMetric()
-			Object.entries(additionalDimensions).forEach(([key, val]) => {
+			Object.entries(allDimensions).forEach(([key, val]) => {
 				tempMetrics.addDimension(key, val)
 			})
 

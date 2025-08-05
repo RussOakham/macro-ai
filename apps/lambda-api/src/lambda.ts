@@ -24,7 +24,12 @@ import {
 import {
 	addCommonAnnotations,
 	addCommonMetadata,
+	captureError,
+	subsegmentNames,
+	traceErrorTypes,
 	tracer,
+	withSubsegment,
+	withSubsegmentSync,
 } from './utils/powertools-tracer.js'
 
 // Global variables for Lambda container reuse
@@ -37,129 +42,183 @@ let isInitialized = false
  * Initialize Express application for Lambda environment
  */
 const initializeExpressApp = async (): Promise<Express> => {
-	logger.info('Initializing Express app for Lambda', {
-		operation: 'initializeExpressApp',
-		coldStart: !isInitialized,
-	})
+	return withSubsegment(
+		subsegmentNames.EXPRESS_INIT,
+		async () => {
+			logger.info('Initializing Express app for Lambda', {
+				operation: 'initializeExpressApp',
+				coldStart: !isInitialized,
+			})
 
-	try {
-		// Initialize Lambda configuration with Parameter Store
-		const isColdStart = !isInitialized
+			try {
+				// Initialize Lambda configuration with Parameter Store
+				const isColdStart = !isInitialized
 
-		// Measure configuration initialization time
-		await measureAndRecordExecutionTime(
-			() => lambdaConfig.initialize(isColdStart),
-			MetricName.ConfigurationLoadTime,
-			{ Operation: 'ParameterStoreInit' },
-		)
+				// Measure configuration initialization time
+				await measureAndRecordExecutionTime(
+					() => lambdaConfig.initialize(isColdStart),
+					MetricName.ConfigurationLoadTime,
+					{ Operation: 'ParameterStoreInit' },
+				)
 
-		// Log configuration summary (without sensitive data)
-		const configSummary = lambdaConfig.getConfigSummary()
-		logger.info('Configuration loaded successfully', {
-			operation: 'configurationLoad',
-			configSummary,
-			coldStart: isColdStart,
-		})
+				// Log configuration summary (without sensitive data)
+				const configSummary = lambdaConfig.getConfigSummary()
+				logger.info('Configuration loaded successfully', {
+					operation: 'configurationLoad',
+					configSummary,
+					coldStart: isColdStart,
+				})
 
-		// Dynamically import and create Express server
-		const { createServer } = await import(
-			'@repo/express-api/src/utils/server.js'
-		)
+				// Dynamically import and create Express server with tracing
+				const expressApp = await withSubsegment(
+					subsegmentNames.EXPRESS_MIDDLEWARE,
+					async () => {
+						const { createServer } = await import(
+							'@repo/express-api/src/utils/server.js'
+						)
 
-		// Create Express app (createServer doesn't take parameters)
-		const expressApp = createServer()
+						// Create Express app (createServer doesn't take parameters)
+						return createServer()
+					},
+					{
+						operation: 'createExpressServer',
+						coldStart: isColdStart,
+					},
+					{
+						serverModule: '@repo/express-api/src/utils/server.js',
+						coldStart: isColdStart,
+					},
+				)
 
-		logger.info('Express app initialized successfully for Lambda', {
-			operation: 'expressAppInit',
-			coldStart: isColdStart,
-		})
+				logger.info('Express app initialized successfully for Lambda', {
+					operation: 'expressAppInit',
+					coldStart: isColdStart,
+				})
 
-		// Record successful initialization metric
-		addMetric(MetricName.ExpressAppInitTime, MetricUnit.Count, 1, {
-			Status: 'Success',
-		})
+				// Record successful initialization metric
+				addMetric(MetricName.ExpressAppInitTime, MetricUnit.Count, 1, {
+					Status: 'Success',
+				})
 
-		// eslint-disable-next-line @typescript-eslint/no-misused-promises
-		return expressApp
-	} catch (error: unknown) {
-		const errorMessage =
-			error instanceof Error ? error.message : 'Unknown error'
+				return expressApp
+			} catch (error: unknown) {
+				const errorMessage =
+					error instanceof Error ? error.message : 'Unknown error'
 
-		logger.error('Failed to initialize Express app', {
+				logger.error('Failed to initialize Express app', {
+					operation: 'initializeExpressApp',
+					error: errorMessage,
+					errorType:
+						error instanceof Error ? error.constructor.name : 'UnknownError',
+					coldStart: !isInitialized,
+				})
+
+				// Record error metric
+				addMetric(MetricName.ExpressAppInitError, MetricUnit.Count, 1, {
+					ErrorType:
+						error instanceof Error ? error.constructor.name : 'UnknownError',
+				})
+
+				// Capture error in X-Ray trace
+				captureError(
+					error instanceof Error ? error : new Error(errorMessage),
+					traceErrorTypes.DEPENDENCY_ERROR,
+					{
+						operation: 'initializeExpressApp',
+						coldStart: !isInitialized,
+						errorType:
+							error instanceof Error ? error.constructor.name : 'UnknownError',
+					},
+				)
+
+				throw new Error(`Express app initialization failed: ${errorMessage}`)
+			}
+		},
+		{
 			operation: 'initializeExpressApp',
-			error: errorMessage,
-			errorType:
-				error instanceof Error ? error.constructor.name : 'UnknownError',
 			coldStart: !isInitialized,
-		})
-
-		// Record error metric
-		addMetric(MetricName.ExpressAppInitError, MetricUnit.Count, 1, {
-			ErrorType:
-				error instanceof Error ? error.constructor.name : 'UnknownError',
-		})
-
-		throw new Error(`Express app initialization failed: ${errorMessage}`)
-	}
+		},
+		{
+			coldStart: !isInitialized,
+			expressModule: '@repo/express-api/src/utils/server.js',
+		},
+	)
 }
 
 /**
  * Initialize serverless-http handler
  */
 const initializeServerlessHandler = (expressApp: Express) => {
-	logger.info('Initializing serverless-http handler', {
-		operation: 'initializeServerlessHandler',
-	})
+	return withSubsegmentSync(
+		subsegmentNames.EXPRESS_ROUTES,
+		() => {
+			logger.info('Initializing serverless-http handler', {
+				operation: 'initializeServerlessHandler',
+			})
 
-	return serverless(expressApp, {
-		// Request/response transformation options
-		binary: false,
+			return serverless(expressApp, {
+				// Request/response transformation options
+				binary: false,
 
-		// Custom request transformation
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		request: (request: any, event: APIGatewayProxyEvent, context: Context) => {
-			// Add Lambda context to request for potential use in Express middleware
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			request.lambda = {
-				event,
-				context,
-				isLambda: true,
-				coldStart: !isInitialized,
-				functionName: context.functionName,
-				functionVersion: context.functionVersion,
-				requestId: context.awsRequestId,
-			}
+				// Custom request transformation
+				request: (
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					request: any,
+					event: APIGatewayProxyEvent,
+					context: Context,
+				) => {
+					// Add Lambda context to request for potential use in Express middleware
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+					request.lambda = {
+						event,
+						context,
+						isLambda: true,
+						coldStart: !isInitialized,
+						functionName: context.functionName,
+						functionVersion: context.functionVersion,
+						requestId: context.awsRequestId,
+					}
 
-			// Add custom headers for Lambda context
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			request.headers['x-lambda-request-id'] = context.awsRequestId
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			request.headers['x-lambda-function-name'] = context.functionName
+					// Add custom headers for Lambda context
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+					request.headers['x-lambda-request-id'] = context.awsRequestId
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+					request.headers['x-lambda-function-name'] = context.functionName
 
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-return
-			return request
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+					return request
+				},
+
+				// Custom response transformation
+				response: (
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					response: any,
+					_event: APIGatewayProxyEvent,
+					context: Context,
+				) => {
+					// Add Lambda-specific headers
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+					if (response.headers) {
+						// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+						response.headers['x-lambda-request-id'] = context.awsRequestId
+						// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+						response.headers['x-lambda-cold-start'] =
+							(!isInitialized).toString()
+					}
+
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+					return response
+				},
+			})
 		},
-
-		// Custom response transformation
-		response: (
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			response: any,
-			_event: APIGatewayProxyEvent,
-			context: Context,
-		) => {
-			// Add Lambda-specific headers
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			if (response.headers) {
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-				response.headers['x-lambda-request-id'] = context.awsRequestId
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-				response.headers['x-lambda-cold-start'] = (!isInitialized).toString()
-			}
-
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-return
-			return response
+		{
+			operation: 'initializeServerlessHandler',
 		},
-	})
+		{
+			serverlessHttpModule: 'serverless-http',
+			binaryMode: false,
+		},
+	)
 }
 
 /**
