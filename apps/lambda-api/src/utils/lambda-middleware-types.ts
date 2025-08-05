@@ -124,6 +124,44 @@ export interface RequestLoggingConfig extends MiddlewareConfig {
 }
 
 /**
+ * Comprehensive request/response logging middleware configuration
+ */
+export interface ComprehensiveRequestLoggingConfig extends MiddlewareConfig {
+	options?: {
+		/** Enable request body logging */
+		enableRequestBody?: boolean
+		/** Enable response body logging */
+		enableResponseBody?: boolean
+		/** Enable headers logging */
+		enableHeaders?: boolean
+		/** Enable query parameters logging */
+		enableQueryParameters?: boolean
+		/** Enable path parameters logging */
+		enablePathParameters?: boolean
+		/** Enable timing metrics */
+		enableTimingMetrics?: boolean
+		/** Enable request/response size metrics */
+		enableSizeMetrics?: boolean
+		/** Enable X-Ray correlation */
+		enableXRayCorrelation?: boolean
+		/** Enable Express-style logging compatibility */
+		enableExpressCompatibility?: boolean
+		/** Sensitive fields to redact */
+		redactFields?: string[]
+		/** Maximum body size to log (bytes) */
+		maxBodySize?: number
+		/** Maximum header value size to log (bytes) */
+		maxHeaderSize?: number
+		/** Log level for requests */
+		requestLogLevel?: 'debug' | 'info' | 'warn'
+		/** Log level for responses */
+		responseLogLevel?: 'debug' | 'info' | 'warn'
+		/** Log level for errors */
+		errorLogLevel?: 'warn' | 'error'
+	}
+}
+
+/**
  * Complete middleware configuration
  */
 export interface LambdaMiddlewareConfig {
@@ -131,6 +169,7 @@ export interface LambdaMiddlewareConfig {
 	errorHandling?: ErrorHandlingConfig
 	performance?: PerformanceConfig
 	requestLogging?: RequestLoggingConfig
+	comprehensiveRequestLogging?: ComprehensiveRequestLoggingConfig
 }
 
 /**
@@ -256,6 +295,35 @@ export const defaultMiddlewareConfig: LambdaMiddlewareConfig = {
 			enableResponseBody: false, // Disabled by default for security
 			enableHeaders: true,
 			maxBodySize: 1024, // 1KB max
+		},
+	},
+	comprehensiveRequestLogging: {
+		enabled: false, // Disabled by default, use explicit configuration
+		options: {
+			enableRequestBody: false,
+			enableResponseBody: false,
+			enableHeaders: true,
+			enableQueryParameters: true,
+			enablePathParameters: true,
+			enableTimingMetrics: true,
+			enableSizeMetrics: true,
+			enableXRayCorrelation: true,
+			enableExpressCompatibility: true,
+			redactFields: [
+				'password',
+				'token',
+				'secret',
+				'key',
+				'authorization',
+				'cookie',
+				'x-api-key',
+				'x-auth-token',
+			],
+			maxBodySize: 1024,
+			maxHeaderSize: 512,
+			requestLogLevel: 'info' as const,
+			responseLogLevel: 'info' as const,
+			errorLogLevel: 'error' as const,
 		},
 	},
 } as const

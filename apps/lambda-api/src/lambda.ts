@@ -12,10 +12,15 @@ import type { Express } from 'express'
 import serverless from 'serverless-http'
 
 import { lambdaConfig } from './services/lambda-config.service.js'
+import { withStandardizedErrorHandling } from './utils/lambda-error-handling-middleware.js'
 import {
 	applyMiddlewareWithTracing,
+	createMiddlewareContext,
 	createMiddlewareStack,
 } from './utils/lambda-middleware.js'
+import type { MiddlewareContext } from './utils/lambda-middleware-types.js'
+import { withComprehensiveRequestResponseLogging } from './utils/lambda-request-response-logging-middleware.js'
+import { createEnhancedLambdaContextInjection } from './utils/powertools-express-logger-coordination.js'
 import { logger } from './utils/powertools-logger.js'
 import {
 	addMetric,
@@ -68,31 +73,37 @@ const initializeExpressApp = async (): Promise<Express> => {
 					coldStart: isColdStart,
 				})
 
-				// Dynamically import and create Express server with tracing
+				// Dynamically import and create coordinated Express server with tracing
 				const expressApp = await withSubsegment(
 					subsegmentNames.EXPRESS_MIDDLEWARE,
 					async () => {
-						const { createServer } = await import(
-							'@repo/express-api/src/utils/server.js'
+						const { createLambdaExpressServer } = await import(
+							'./utils/coordinated-express-server.js'
 						)
 
-						// Create Express app (createServer doesn't take parameters)
-						return createServer()
+						// Create coordinated Express app with Powertools integration
+						return createLambdaExpressServer()
 					},
 					{
-						operation: 'createExpressServer',
+						operation: 'createCoordinatedExpressServer',
 						coldStart: isColdStart,
+						powertoolsCoordination: true,
 					},
 					{
-						serverModule: '@repo/express-api/src/utils/server.js',
+						serverModule: 'coordinated-express-server',
 						coldStart: isColdStart,
+						powertoolsCoordination: true,
 					},
 				)
 
-				logger.info('Express app initialized successfully for Lambda', {
-					operation: 'expressAppInit',
-					coldStart: isColdStart,
-				})
+				logger.info(
+					'Coordinated Express app initialized successfully for Lambda',
+					{
+						operation: 'coordinatedExpressAppInit',
+						coldStart: isColdStart,
+						powertoolsCoordination: true,
+					},
+				)
 
 				// Record successful initialization metric
 				addMetric(MetricName.ExpressAppInitTime, MetricUnit.Count, 1, {
@@ -145,9 +156,12 @@ const initializeExpressApp = async (): Promise<Express> => {
 }
 
 /**
- * Initialize serverless-http handler
+ * Initialize serverless-http handler with enhanced Powertools-Express coordination
  */
-const initializeServerlessHandler = (expressApp: Express) => {
+const initializeServerlessHandler = (
+	expressApp: Express,
+	middlewareContext: MiddlewareContext,
+) => {
 	return withSubsegmentSync(
 		subsegmentNames.EXPRESS_ROUTES,
 		() => {
@@ -159,34 +173,8 @@ const initializeServerlessHandler = (expressApp: Express) => {
 				// Request/response transformation options
 				binary: false,
 
-				// Custom request transformation
-				request: (
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					request: any,
-					event: APIGatewayProxyEvent,
-					context: Context,
-				) => {
-					// Add Lambda context to request for potential use in Express middleware
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-					request.lambda = {
-						event,
-						context,
-						isLambda: true,
-						coldStart: !isInitialized,
-						functionName: context.functionName,
-						functionVersion: context.functionVersion,
-						requestId: context.awsRequestId,
-					}
-
-					// Add custom headers for Lambda context
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-					request.headers['x-lambda-request-id'] = context.awsRequestId
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-					request.headers['x-lambda-function-name'] = context.functionName
-
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-return
-					return request
-				},
+				// Enhanced request transformation with Powertools coordination
+				request: createEnhancedLambdaContextInjection(middlewareContext),
 
 				// Custom response transformation
 				response: (
@@ -255,19 +243,28 @@ const coreHandler = async (
 	// Configure Lambda context
 	context.callbackWaitsForEmptyEventLoop = false
 
+	// Create middleware context for coordination
+	const middlewareContext = createMiddlewareContext(event, context)
+
 	try {
 		// Initialize Express app on cold start
 		if (!app || !serverlessHandler) {
-			logger.info('Cold start - initializing Express app', {
-				operation: 'coldStartInit',
-			})
+			logger.info(
+				'Cold start - initializing Express app with Powertools coordination',
+				{
+					operation: 'coldStartInit',
+					coldStart: middlewareContext.isColdStart,
+					requestId: middlewareContext.requestId,
+				},
+			)
 
 			app = await initializeExpressApp()
-			serverlessHandler = initializeServerlessHandler(app)
+			serverlessHandler = initializeServerlessHandler(app, middlewareContext)
 			isInitialized = true
 
-			logger.info('Cold start completed', {
+			logger.info('Cold start completed with Powertools coordination', {
 				operation: 'coldStartComplete',
+				requestId: middlewareContext.requestId,
 			})
 		} else {
 			// Update cold start flag for warm invocations
@@ -315,7 +312,7 @@ const coreHandler = async (
 }
 
 /**
- * Create middleware stack with comprehensive observability
+ * Create middleware stack with comprehensive observability and standardized error handling
  */
 const middlewareStack = createMiddlewareStack({
 	requestLogging: {
@@ -354,11 +351,70 @@ const middlewareStack = createMiddlewareStack({
 })
 
 /**
- * Export the main handler with middleware and X-Ray tracing
+ * Enhanced middleware stack with comprehensive logging and standardized error handling
+ * Combines comprehensive request/response logging, standard middleware, and advanced error handling
+ */
+const enhancedMiddlewareStack = (handler: typeof coreHandler) => {
+	// Apply comprehensive request/response logging first (innermost layer)
+	const withComprehensiveLogging = withComprehensiveRequestResponseLogging({
+		enabled: true,
+		options: {
+			enableHeaders: true,
+			enableQueryParameters: true,
+			enablePathParameters: true,
+			enableTimingMetrics: true,
+			enableSizeMetrics: true,
+			enableXRayCorrelation: true,
+			enableExpressCompatibility: true,
+			enableRequestBody: false, // Security default
+			enableResponseBody: false, // Security default
+			redactFields: [
+				'password',
+				'token',
+				'secret',
+				'key',
+				'authorization',
+				'cookie',
+				'x-api-key',
+				'x-auth-token',
+			],
+			maxBodySize: 1024,
+			maxHeaderSize: 512,
+			requestLogLevel: 'info',
+			responseLogLevel: 'info',
+			errorLogLevel: 'error',
+		},
+	})
+
+	// Apply standardized error handling (middle layer)
+	const withErrorHandling = withStandardizedErrorHandling({
+		enabled: true,
+		options: {
+			enableFullObservability: true,
+			enableErrorMetrics: true,
+			enableErrorTracing: true,
+			enableStandardizedResponses: true,
+			enableGoStyleIntegration: true,
+			enableErrorClassification: true,
+			includeStackTrace: process.env.NODE_ENV !== 'production',
+		},
+	})
+
+	// Apply standard middleware stack (outermost layer)
+	const withStandardMiddleware = middlewareStack
+
+	// Combine all middleware layers: Standard -> Error Handling -> Comprehensive Logging -> Handler
+	return withStandardMiddleware(
+		withErrorHandling(withComprehensiveLogging(handler)),
+	)
+}
+
+/**
+ * Export the main handler with enhanced middleware and X-Ray tracing
  */
 export const handler = applyMiddlewareWithTracing(
 	coreHandler,
-	middlewareStack,
+	enhancedMiddlewareStack,
 	subsegmentNames.EXPRESS_ROUTES,
 )
 
