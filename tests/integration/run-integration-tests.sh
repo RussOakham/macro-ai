@@ -63,6 +63,13 @@ if ! command -v pnpm &> /dev/null; then
     exit 1
 fi
 
+# Check if jq is available (required for JSON parsing)
+if ! command -v jq &> /dev/null; then
+    print_error "jq is required but not installed"
+    print_error "Install jq: https://stedolan.github.io/jq/download/"
+    exit 1
+fi
+
 print_status "Prerequisites check passed"
 
 # Get deployment information
@@ -108,9 +115,6 @@ export TEST_USER_USERNAME="${TEST_USER_USERNAME:-testuser}"
 
 print_status "Test environment configured"
 
-# Create results directory
-mkdir -p tests/integration/results
-
 # Pre-flight check - verify API is accessible
 echo -e "${BLUE}🚀 Running pre-flight check...${NC}"
 
@@ -132,6 +136,10 @@ fi
 # Install test dependencies
 echo -e "${BLUE}📦 Installing test dependencies...${NC}"
 cd "$(dirname "$0")"
+
+# Create results directory (now that we're in the correct working directory)
+mkdir -p results
+
 pnpm install --frozen-lockfile
 print_status "Dependencies installed"
 
@@ -155,11 +163,11 @@ if [ ${TEST_EXIT_CODE:-0} -eq 0 ]; then
     echo -e "${BLUE}📊 Test Summary${NC}"
     echo "=================================="
     
-    if [ -f "tests/integration/results/integration-test-results.json" ]; then
+    if [ -f "results/integration-test-results.json" ]; then
         # Parse test results if available
-        TOTAL_TESTS=$(jq '.numTotalTests // 0' tests/integration/results/integration-test-results.json 2>/dev/null || echo "Unknown")
-        PASSED_TESTS=$(jq '.numPassedTests // 0' tests/integration/results/integration-test-results.json 2>/dev/null || echo "Unknown")
-        FAILED_TESTS=$(jq '.numFailedTests // 0' tests/integration/results/integration-test-results.json 2>/dev/null || echo "Unknown")
+        TOTAL_TESTS=$(jq '.numTotalTests // 0' results/integration-test-results.json 2>/dev/null || echo "Unknown")
+        PASSED_TESTS=$(jq '.numPassedTests // 0' results/integration-test-results.json 2>/dev/null || echo "Unknown")
+        FAILED_TESTS=$(jq '.numFailedTests // 0' results/integration-test-results.json 2>/dev/null || echo "Unknown")
         
         echo "  Total Tests: $TOTAL_TESTS"
         echo "  Passed: $PASSED_TESTS"
@@ -179,16 +187,16 @@ else
     print_error "Integration tests failed with exit code: ${TEST_EXIT_CODE:-1}"
     
     # Show failed test summary if available
-    if [ -f "tests/integration/results/integration-test-results.json" ]; then
+    if [ -f "results/integration-test-results.json" ]; then
         echo ""
         echo -e "${BLUE}📊 Failure Summary${NC}"
         echo "=================================="
-        
-        FAILED_TESTS=$(jq '.numFailedTests // 0' tests/integration/results/integration-test-results.json 2>/dev/null || echo "Unknown")
+
+        FAILED_TESTS=$(jq '.numFailedTests // 0' results/integration-test-results.json 2>/dev/null || echo "Unknown")
         echo "  Failed Tests: $FAILED_TESTS"
-        
+
         # Show first few failures
-        jq -r '.testResults[]?.assertionResults[]? | select(.status == "failed") | .title' tests/integration/results/integration-test-results.json 2>/dev/null | head -5 | while read -r test_name; do
+        jq -r '.testResults[]?.assertionResults[]? | select(.status == "failed") | .title' results/integration-test-results.json 2>/dev/null | head -5 | while read -r test_name; do
             echo "  - $test_name"
         done
     fi

@@ -133,7 +133,7 @@ describe('Lambda Utils', () => {
 			expect(response.statusCode).toBe(500)
 			expect(body).toEqual({
 				error: 'Internal Server Error',
-				message: 'An unexpected error occurred',
+				message: 'Test error',
 				requestId: 'test-request-id',
 				timestamp: expect.any(String),
 			})

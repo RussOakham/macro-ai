@@ -110,8 +110,7 @@ const initializeServerlessHandler = (expressApp: Express) => {
 			logger.debug('Processing Lambda response', {
 				operation: 'responseTransformation',
 				requestId: context.awsRequestId,
-				statusCode: (response as Express.Response & { statusCode: number })
-					.statusCode,
+				statusCode: response.statusCode,
 			})
 		},
 	})

@@ -35,6 +35,10 @@ permissions:
 env:
   AWS_REGION: us-east-1
   NODE_VERSION: '20'
+  # CDK environment variables
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_REGION: us-east-1
 
 jobs:
   validate:

@@ -14,35 +14,13 @@ import {
 } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
 
+import {
+	CacheEntry,
+	ParameterMetadata,
+	ParameterStoreConfig,
+} from './parameter-store.types.ts'
+
 const { logger } = pino
-
-/**
- * Cache entry interface for parameter values
- */
-interface CacheEntry {
-	value: string
-	expires: number
-}
-
-/**
- * Parameter Store Service configuration
- */
-interface ParameterStoreConfig {
-	region: string
-	environment: string
-	cacheEnabled: boolean
-	cacheTtlMs: number
-}
-
-/**
- * Parameter metadata for logging and categorization
- */
-interface ParameterMetadata {
-	name: string
-	fullPath: string
-	isCritical: boolean
-	category: 'critical' | 'standard'
-}
 
 /**
  * SecureHobbySecretsManager - Parameter Store service with caching
@@ -139,8 +117,8 @@ export class ParameterStoreService {
 		)
 
 		if (error) {
-			// Handle specific AWS errors
-			if (error.message.includes('ParameterNotFound')) {
+			// Handle specific AWS errors using error codes/names
+			if (error.name === 'ParameterNotFound') {
 				const notFoundError = new NotFoundError(
 					`Parameter ${parameterName} not found`,
 					'parameterStoreService',

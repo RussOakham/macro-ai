@@ -50,7 +50,34 @@ class DatabaseTestClient {
 			})
 
 			const responseTime = Date.now() - startTime
-			const data = await response.json().catch(() => ({}))
+
+			// Parse JSON response with proper error handling
+			let data: any
+			try {
+				data = await response.json()
+			} catch (jsonError) {
+				// Get response text for better error diagnostics
+				const responseText = await response
+					.text()
+					.catch(() => 'Unable to read response body')
+				const contentType = response.headers.get('content-type') || 'unknown'
+
+				console.error('JSON parsing failed:', {
+					status: response.status,
+					statusText: response.statusText,
+					contentType,
+					responseText: responseText.substring(0, 500), // Limit to first 500 chars
+					url: response.url,
+					parseError:
+						jsonError instanceof Error ? jsonError.message : String(jsonError),
+				})
+
+				throw new Error(
+					`Failed to parse JSON response (${response.status} ${response.statusText}): ` +
+						`Content-Type: ${contentType}, ` +
+						`Response: ${responseText.substring(0, 200)}...`,
+				)
+			}
 
 			return {
 				status: response.status,
@@ -100,7 +127,7 @@ describe('Database Integration Tests', () => {
 	describe('Database Connectivity', () => {
 		it('should connect to database through Lambda function', async () => {
 			// Test an endpoint that requires database access
-			const response = await dbClient.makeRequest('GET', 'api/health')
+			const response = await dbClient.makeRequest('GET', '/api/health')
 
 			expect(response.status).toBe(200)
 			expect(response.responseTime).toBeLessThan(10000) // Should connect within 10 seconds
@@ -114,7 +141,7 @@ describe('Database Integration Tests', () => {
 		it('should handle database connection timeouts gracefully', async () => {
 			// This test verifies that the Lambda function handles database timeouts properly
 			// We can't easily simulate a timeout, but we can verify the response structure
-			const response = await dbClient.makeRequest('GET', 'api/health')
+			const response = await dbClient.makeRequest('GET', '/api/health')
 
 			expect(response.status).toBe(200)
 			// Response should be structured properly even if database is slow
@@ -125,7 +152,7 @@ describe('Database Integration Tests', () => {
 	describe('Parameter Store Integration', () => {
 		it('should successfully load configuration from Parameter Store', async () => {
 			// The health endpoint should work if Parameter Store is accessible
-			const response = await dbClient.makeRequest('GET', 'api/health')
+			const response = await dbClient.makeRequest('GET', '/api/health')
 
 			expect(response.status).toBe(200)
 			expect(response.responseTime).toBeLessThan(15000) // Parameter Store access + response
@@ -135,23 +162,72 @@ describe('Database Integration Tests', () => {
 		})
 
 		it('should handle Parameter Store caching effectively', async () => {
-			// Make multiple requests to test caching
-			const response1 = await dbClient.makeRequest('GET', 'api/health')
-			const response2 = await dbClient.makeRequest('GET', 'api/health')
+			// Test caching by comparing average response times over multiple requests
+			const initialRequestCount = 3
+			const cachedRequestCount = 5
 
-			expect(response1.status).toBe(200)
-			expect(response2.status).toBe(200)
+			// Make initial requests to warm up the cache
+			const initialResponses = []
+			for (let i = 0; i < initialRequestCount; i++) {
+				const response = await dbClient.makeRequest('GET', '/api/health')
+				expect(response.status).toBe(200)
+				initialResponses.push(response)
 
-			// Second request should be faster due to caching
-			expect(response2.responseTime).toBeLessThanOrEqual(
-				response1.responseTime + 1000,
-			)
+				// Small delay between requests to avoid overwhelming the service
+				if (i < initialRequestCount - 1) {
+					await new Promise((resolve) => setTimeout(resolve, 100))
+				}
+			}
+
+			// Make cached requests (should benefit from Parameter Store caching)
+			const cachedResponses = []
+			for (let i = 0; i < cachedRequestCount; i++) {
+				const response = await dbClient.makeRequest('GET', '/api/health')
+				expect(response.status).toBe(200)
+				cachedResponses.push(response)
+
+				// Small delay between requests
+				if (i < cachedRequestCount - 1) {
+					await new Promise((resolve) => setTimeout(resolve, 50))
+				}
+			}
+
+			// Calculate average response times
+			const initialAverage =
+				initialResponses.reduce((sum, r) => sum + r.responseTime, 0) /
+				initialResponses.length
+			const cachedAverage =
+				cachedResponses.reduce((sum, r) => sum + r.responseTime, 0) /
+				cachedResponses.length
+
+			// Cached requests should show improvement or at least not be significantly slower
+			// Allow for 20% variance to account for network variability
+			const improvementThreshold = initialAverage * 1.2
+
+			expect(cachedAverage).toBeLessThanOrEqual(improvementThreshold)
+
+			// Additional validation: ensure responses are consistent
+			const allResponses = [...initialResponses, ...cachedResponses]
+			allResponses.forEach((response) => {
+				expect(response.data).toHaveProperty('message')
+				expect(response.responseTime).toBeLessThan(30000) // Reasonable upper bound
+			})
+
+			// Log performance metrics for debugging
+			console.log(`Caching test metrics:`, {
+				initialAverage: Math.round(initialAverage),
+				cachedAverage: Math.round(cachedAverage),
+				improvement: Math.round(
+					((initialAverage - cachedAverage) / initialAverage) * 100,
+				),
+				threshold: Math.round(improvementThreshold),
+			})
 		})
 
 		it('should validate required parameters are accessible', async () => {
 			// Test that the Lambda function can access required parameters
 			// This is implicit - if the function runs, parameters were loaded
-			const response = await dbClient.makeRequest('GET', 'api/health')
+			const response = await dbClient.makeRequest('GET', '/api/health')
 
 			expect(response.status).toBe(200)
 
@@ -166,7 +242,7 @@ describe('Database Integration Tests', () => {
 		it('should handle database operations without errors', async () => {
 			// Test endpoints that might involve database operations
 			const endpoints = [
-				'api/health',
+				'/api/health',
 				// Add other endpoints that involve database operations
 			]
 
@@ -189,7 +265,7 @@ describe('Database Integration Tests', () => {
 			// Test multiple concurrent requests to verify connection pooling
 			const concurrentRequests = 3
 			const promises = Array.from({ length: concurrentRequests }, () =>
-				dbClient.makeRequest('GET', 'api/health'),
+				dbClient.makeRequest('GET', '/api/health'),
 			)
 
 			const responses = await Promise.all(promises)
@@ -209,7 +285,7 @@ describe('Database Integration Tests', () => {
 		it('should handle database errors gracefully', async () => {
 			// Test that the application handles database errors properly
 			// We can't easily simulate database errors, but we can verify error structure
-			const response = await dbClient.makeRequest('GET', 'api/nonexistent')
+			const response = await dbClient.makeRequest('GET', '/api/nonexistent')
 
 			expect(response.status).toBe(404)
 			expect(response.data).toHaveProperty('error')
@@ -224,8 +300,8 @@ describe('Database Integration Tests', () => {
 		it('should not expose sensitive configuration in errors', async () => {
 			// Test various error scenarios to ensure no sensitive data is leaked
 			const testCases = [
-				{ method: 'GET', path: 'api/nonexistent' },
-				{ method: 'POST', path: 'api/auth/login', body: { invalid: 'data' } },
+				{ method: 'GET', path: '/api/nonexistent' },
+				{ method: 'POST', path: '/api/auth/login', body: { invalid: 'data' } },
 			]
 
 			for (const testCase of testCases) {
@@ -252,7 +328,7 @@ describe('Database Integration Tests', () => {
 
 	describe('Performance Tests', () => {
 		it('should maintain acceptable response times with database operations', async () => {
-			const response = await dbClient.makeRequest('GET', 'api/health')
+			const response = await dbClient.makeRequest('GET', '/api/health')
 
 			expect(response.status).toBe(200)
 			expect(response.responseTime).toBeLessThan(8000) // 8 seconds max for database operations
@@ -263,7 +339,7 @@ describe('Database Integration Tests', () => {
 			const responses: DatabaseTestResponse[] = []
 
 			for (let i = 0; i < requestCount; i++) {
-				const response = await dbClient.makeRequest('GET', 'api/health')
+				const response = await dbClient.makeRequest('GET', '/api/health')
 				responses.push(response)
 
 				// Small delay between requests
@@ -291,7 +367,7 @@ describe('Database Integration Tests', () => {
 
 	describe('Environment Configuration', () => {
 		it('should use correct database configuration for test environment', async () => {
-			const response = await dbClient.makeRequest('GET', 'api/health')
+			const response = await dbClient.makeRequest('GET', '/api/health')
 
 			expect(response.status).toBe(200)
 
@@ -302,7 +378,7 @@ describe('Database Integration Tests', () => {
 
 		it('should load environment-specific parameters correctly', async () => {
 			// Test that environment-specific configuration is loaded
-			const response = await dbClient.makeRequest('GET', 'api/health')
+			const response = await dbClient.makeRequest('GET', '/api/health')
 
 			expect(response.status).toBe(200)
 

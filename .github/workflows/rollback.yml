@@ -199,8 +199,10 @@ jobs:
           export VITE_APP_ENV="${{ github.event.inputs.environment }}"
 
           # Get API endpoint for the environment
+          ENV_NAME="${{ github.event.inputs.environment }}"
+          ENV_CAPITALIZED=$(echo "$ENV_NAME" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')
           API_ENDPOINT=$(aws cloudformation describe-stacks \
-            --stack-name MacroAi$(echo ${{ github.event.inputs.environment }} | sed 's/.*/\u&/')Stack \
+            --stack-name "MacroAi${ENV_CAPITALIZED}Stack" \
             --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
             --output text 2>/dev/null || echo "")
 

@@ -66,7 +66,10 @@ export class LambdaConstruct extends Construct {
 		} = props
 
 		// Create execution role for Lambda
-		this.executionRole = this.createExecutionRole(parameterStoreConstruct)
+		this.executionRole = this.createExecutionRole(
+			parameterStoreConstruct,
+			enableDetailedMonitoring,
+		)
 
 		// Create CloudWatch log group
 		this.logGroup = this.createLogGroup(environmentName)
@@ -95,6 +98,7 @@ export class LambdaConstruct extends Construct {
 
 	private createExecutionRole(
 		parameterStoreConstruct: ParameterStoreConstruct,
+		enableDetailedMonitoring: boolean,
 	): iam.Role {
 		const role = new iam.Role(this, 'ExecutionRole', {
 			assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
@@ -107,18 +111,23 @@ export class LambdaConstruct extends Construct {
 			],
 		})
 
-		// Add additional permissions for AWS Powertools
-		role.addToPolicy(
-			new iam.PolicyStatement({
-				effect: iam.Effect.ALLOW,
-				actions: [
-					'logs:CreateLogGroup',
-					'logs:CreateLogStream',
-					'logs:PutLogEvents',
-				],
-				resources: ['*'],
-			}),
-		)
+		// Add X-Ray permissions only when detailed monitoring (tracing) is enabled
+		if (enableDetailedMonitoring) {
+			role.addToPolicy(
+				new iam.PolicyStatement({
+					effect: iam.Effect.ALLOW,
+					actions: [
+						'xray:PutTraceSegments',
+						'xray:PutTelemetryRecords',
+						'xray:GetSamplingRules',
+						'xray:GetSamplingTargets',
+					],
+					resources: [
+						`arn:aws:xray:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:*`,
+					],
+				}),
+			)
+		}
 
 		return role
 	}
@@ -192,9 +201,9 @@ export class LambdaConstruct extends Construct {
 
 				// Application configuration (will be overridden by Parameter Store)
 				// These are fallback values - actual values come from Parameter Store
-				API_KEY: 'PLACEHOLDER_UPDATE_VIA_PARAMETER_STORE',
+				API_KEY: '',
 				COOKIE_DOMAIN: 'api.macro-ai.com',
-				COOKIE_ENCRYPTION_KEY: 'PLACEHOLDER_UPDATE_VIA_PARAMETER_STORE',
+				COOKIE_ENCRYPTION_KEY: '',
 
 				// Rate limiting defaults
 				RATE_LIMIT_WINDOW_MS: '900000', // 15 minutes
@@ -205,8 +214,7 @@ export class LambdaConstruct extends Construct {
 				API_RATE_LIMIT_MAX_REQUESTS: '60',
 
 				// AWS Cognito configuration (will be overridden by Parameter Store)
-				AWS_COGNITO_REGION:
-					this.node.tryGetContext('aws:region') ?? 'us-east-1',
+				AWS_COGNITO_REGION: cdk.Stack.of(this).region,
 				AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30',
 			},
 			// Cost optimization: disable provisioned concurrency

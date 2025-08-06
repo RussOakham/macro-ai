@@ -12,6 +12,28 @@ import type {
 /**
  * Create a standardized Lambda response
  */
+/**
+ * Get allowed CORS origin based on environment
+ */
+const getAllowedOrigin = (): string => {
+	const environment =
+		process.env.NODE_ENV ?? process.env.ENVIRONMENT ?? 'development'
+	const trustedOrigin = process.env.CORS_ALLOWED_ORIGIN
+
+	// In production, use specific trusted origin if configured, otherwise restrict to known domains
+	if (environment === 'production') {
+		return trustedOrigin ?? 'https://your-production-domain.com'
+	}
+
+	// In staging, use staging-specific origin if configured
+	if (environment === 'staging') {
+		return trustedOrigin ?? 'https://your-staging-domain.com'
+	}
+
+	// In development/testing, allow all origins for easier development
+	return '*'
+}
+
 export const createLambdaResponse = (
 	statusCode: number,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,7 +43,7 @@ export const createLambdaResponse = (
 ): APIGatewayProxyResult => {
 	const defaultHeaders: Record<string, string> = {
 		'Content-Type': 'application/json',
-		'Access-Control-Allow-Origin': '*',
+		'Access-Control-Allow-Origin': getAllowedOrigin(),
 		'Access-Control-Allow-Credentials': 'true',
 		'Access-Control-Allow-Headers':
 			'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
@@ -55,7 +77,7 @@ export const createErrorResponse = (
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const errorBody: any = {
 		error: 'Internal Server Error',
-		message: 'An unexpected error occurred',
+		message: message,
 		requestId: context?.awsRequestId,
 		timestamp: new Date().toISOString(),
 	}

@@ -66,19 +66,30 @@ print_status "Amplify CLI version: $AMPLIFY_VERSION"
 # Check if this is a new Amplify project
 if [ ! -f "amplify/.config/project-config.json" ]; then
     echo -e "${BLUE}📋 Initializing new Amplify project...${NC}"
-    
-    # Initialize Amplify project
-    amplify init --yes \
-        --appId "$APP_NAME" \
-        --envName "$ENVIRONMENT" \
-        --defaultEditor code \
-        --frontend javascript \
-        --framework react \
-        --srcDir src \
-        --distDir dist \
-        --buildCommand "pnpm build" \
-        --startCommand "pnpm dev"
-    
+
+    # Create Amplify configuration JSON
+    cat > amplify-config.json << EOF
+{
+    "projectName": "$APP_NAME",
+    "envName": "$ENVIRONMENT",
+    "defaultEditor": "code",
+    "appType": "javascript",
+    "framework": "react",
+    "srcDir": "src",
+    "distDir": "dist",
+    "buildCommand": "pnpm build",
+    "startCommand": "pnpm dev",
+    "useProfile": false,
+    "profileName": "default"
+}
+EOF
+
+    # Initialize Amplify project with JSON configuration
+    amplify init --amplify amplify-config.json --yes
+
+    # Clean up temporary config file
+    rm -f amplify-config.json
+
     print_status "Amplify project initialized"
 else
     print_status "Existing Amplify project detected"

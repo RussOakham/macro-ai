@@ -78,13 +78,19 @@ jobs:
 
       - name: Run tests
         if: steps.check.outputs.should-deploy == 'true'
+        env:
+          TEST_API_KEY: ${{ secrets.TEST_API_KEY }}
         run: |
-          # Create test environment files
-          echo "VITE_API_URL=http://localhost:3040/api" > apps/client-ui/.env
-          echo "VITE_API_KEY=test-api-key-32-characters-long-dummy" >> apps/client-ui/.env
+          # Create test environment files with dynamic API keys
+          {
+            echo "VITE_API_URL=http://localhost:3040/api"
+            echo "VITE_API_KEY=${TEST_API_KEY}"
+          } > apps/client-ui/.env
 
-          echo "API_KEY=test-api-key-32-characters-long-dummy" > apps/express-api/.env
-          echo "NODE_ENV=test" >> apps/express-api/.env
+          {
+            echo "API_KEY=${TEST_API_KEY}"
+            echo "NODE_ENV=test"
+          } > apps/express-api/.env
 
           pnpm test
 

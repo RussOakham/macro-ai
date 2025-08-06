@@ -61,7 +61,35 @@ class E2ETestClient {
 			})
 
 			const responseTime = Date.now() - startTime
-			const data = await response.json().catch(() => ({}))
+
+			// Parse JSON response with proper error handling
+			let data: any
+			try {
+				data = await response.json()
+			} catch (jsonError) {
+				// Get response text for better error diagnostics
+				const responseText = await response
+					.text()
+					.catch(() => 'Unable to read response body')
+				const contentType = response.headers.get('content-type') || 'unknown'
+
+				console.error('JSON parsing failed in E2E test:', {
+					status: response.status,
+					statusText: response.statusText,
+					contentType,
+					responseText: responseText.substring(0, 500), // Limit to first 500 chars
+					url: response.url,
+					method,
+					parseError:
+						jsonError instanceof Error ? jsonError.message : String(jsonError),
+				})
+
+				throw new Error(
+					`Failed to parse JSON response in E2E test (${response.status} ${response.statusText}): ` +
+						`Content-Type: ${contentType}, ` +
+						`Response: ${responseText.substring(0, 200)}...`,
+				)
+			}
 
 			const headers: Record<string, string> = {}
 			response.headers.forEach((value, key) => {

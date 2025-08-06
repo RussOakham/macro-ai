@@ -5,6 +5,28 @@
 name: Deploy Full-Stack Application
 
 on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'hobby'
+        type: string
+      deploy_backend:
+        description: 'Deploy backend infrastructure'
+        required: false
+        default: true
+        type: boolean
+      deploy_frontend:
+        description: 'Deploy frontend to Amplify'
+        required: false
+        default: true
+        type: boolean
+      run_tests:
+        description: 'Run integration tests after deployment'
+        required: false
+        default: true
+        type: boolean
   workflow_dispatch:
     inputs:
       environment:
@@ -44,6 +66,10 @@ env:
   NODE_VERSION: '20'
   AWS_REGION: 'us-east-1'
   PNPM_VERSION: '9'
+  # CDK environment variables
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_REGION: 'us-east-1'
 
 permissions:
   id-token: write
@@ -100,21 +126,21 @@ jobs:
         id: changes
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "backend-changed=${{ github.event.inputs.deploy_backend }}" >> $GITHUB_OUTPUT
-            echo "frontend-changed=${{ github.event.inputs.deploy_frontend }}" >> $GITHUB_OUTPUT
+            echo "backend-changed=${{ github.event.inputs.deploy_backend }}" >> "$GITHUB_OUTPUT"
+            echo "frontend-changed=${{ github.event.inputs.deploy_frontend }}" >> "$GITHUB_OUTPUT"
           else
             # Check for changes in backend files
             if git diff --name-only HEAD~1 HEAD | grep -E "(apps/express-api|infrastructure)" > /dev/null; then
-              echo "backend-changed=true" >> $GITHUB_OUTPUT
+              echo "backend-changed=true" >> "$GITHUB_OUTPUT"
             else
-              echo "backend-changed=false" >> $GITHUB_OUTPUT
+              echo "backend-changed=false" >> "$GITHUB_OUTPUT"
             fi
-            
+
             # Check for changes in frontend files
             if git diff --name-only HEAD~1 HEAD | grep -E "apps/client-ui" > /dev/null; then
-              echo "frontend-changed=true" >> $GITHUB_OUTPUT
+              echo "frontend-changed=true" >> "$GITHUB_OUTPUT"
             else
-              echo "frontend-changed=false" >> $GITHUB_OUTPUT
+              echo "frontend-changed=false" >> "$GITHUB_OUTPUT"
             fi
           fi
 
@@ -206,7 +232,7 @@ jobs:
             --stack-name MacroAiHobbyStack \
             --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
             --output text)
-          echo "api-endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
+          echo "api-endpoint=$API_ENDPOINT" >> "$GITHUB_OUTPUT"
 
       - name: Validate backend deployment
         run: |
@@ -366,41 +392,52 @@ jobs:
     steps:
       - name: Create deployment summary
         run: |
-          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Environment:** ${{ github.event.inputs.environment || 'hobby' }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          # Generate deployment summary header
+          {
+            echo "## 🚀 Deployment Summary"
+            echo ""
+            echo "**Environment:** ${{ github.event.inputs.environment || 'hobby' }}"
+            echo "**Trigger:** ${{ github.event_name }}"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
 
+          # Backend deployment status
           if [[ "${{ needs.deploy-backend.result }}" == "success" ]]; then
-            echo "✅ **Backend Deployment:** Success" >> $GITHUB_STEP_SUMMARY
-            echo "   - API Endpoint: ${{ needs.deploy-backend.outputs.api-endpoint }}" >> $GITHUB_STEP_SUMMARY
+            {
+              echo "✅ **Backend Deployment:** Success"
+              echo "   - API Endpoint: ${{ needs.deploy-backend.outputs.api-endpoint }}"
+            } >> "$GITHUB_STEP_SUMMARY"
           elif [[ "${{ needs.deploy-backend.result }}" == "skipped" ]]; then
-            echo "⏭️ **Backend Deployment:** Skipped (no changes)" >> $GITHUB_STEP_SUMMARY
+            echo "⏭️ **Backend Deployment:** Skipped (no changes)" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "❌ **Backend Deployment:** Failed" >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Backend Deployment:** Failed" >> "$GITHUB_STEP_SUMMARY"
           fi
 
+          # Frontend deployment status
           if [[ "${{ needs.deploy-frontend.result }}" == "success" ]]; then
-            echo "✅ **Frontend Deployment:** Success" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **Frontend Deployment:** Success" >> "$GITHUB_STEP_SUMMARY"
           elif [[ "${{ needs.deploy-frontend.result }}" == "skipped" ]]; then
-            echo "⏭️ **Frontend Deployment:** Skipped (no changes)" >> $GITHUB_STEP_SUMMARY
+            echo "⏭️ **Frontend Deployment:** Skipped (no changes)" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "❌ **Frontend Deployment:** Failed" >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Frontend Deployment:** Failed" >> "$GITHUB_STEP_SUMMARY"
           fi
 
+          # Integration tests status
           if [[ "${{ needs.integration-tests.result }}" == "success" ]]; then
-            echo "✅ **Integration Tests:** Passed" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **Integration Tests:** Passed" >> "$GITHUB_STEP_SUMMARY"
           elif [[ "${{ needs.integration-tests.result }}" == "skipped" ]]; then
-            echo "⏭️ **Integration Tests:** Skipped" >> $GITHUB_STEP_SUMMARY
+            echo "⏭️ **Integration Tests:** Skipped" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "❌ **Integration Tests:** Failed" >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Integration Tests:** Failed" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**🔗 Useful Links:**" >> $GITHUB_STEP_SUMMARY
-          if [[ -n "${{ needs.deploy-backend.outputs.api-endpoint }}" ]]; then
-            echo "- [API Health Check](${{ needs.deploy-backend.outputs.api-endpoint }}api/health)" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "- [AWS CloudFormation Console](https://console.aws.amazon.com/cloudformation/)" >> $GITHUB_STEP_SUMMARY
-          echo "- [AWS Amplify Console](https://console.aws.amazon.com/amplify/)" >> $GITHUB_STEP_SUMMARY
+          # Generate useful links section
+          {
+            echo ""
+            echo "**🔗 Useful Links:**"
+            if [[ -n "${{ needs.deploy-backend.outputs.api-endpoint }}" ]]; then
+              echo "- [API Health Check](${{ needs.deploy-backend.outputs.api-endpoint }}api/health)"
+            fi
+            echo "- [AWS CloudFormation Console](https://console.aws.amazon.com/cloudformation/)"
+            echo "- [AWS Amplify Console](https://console.aws.amazon.com/amplify/)"
+          } >> "$GITHUB_STEP_SUMMARY"

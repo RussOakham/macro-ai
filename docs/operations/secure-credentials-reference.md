@@ -104,24 +104,66 @@ aws ssm get-parameter \
 # Test database connectivity
 cd apps/express-api
 node -e "
-import { Client } from 'pg';
-import { execSync } from 'child_process';
-const url = execSync('aws ssm get-parameter --name \"macro-ai-database-url\" --with-decryption --query \"Parameter.Value\" --output text', { encoding: 'utf8' }).trim();
-const client = new Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
-await client.connect();
-console.log('✅ Database connected');
-await client.end();
+const { Client } = require('pg');
+const { execSync } = require('child_process');
+
+(async () => {
+  try {
+    // Get database URL from Parameter Store with error handling
+    let url;
+    try {
+      url = execSync('aws ssm get-parameter --name \"macro-ai-database-url\" --with-decryption --query \"Parameter.Value\" --output text', { encoding: 'utf8' }).trim();
+    } catch (error) {
+      console.error('❌ Failed to retrieve database URL from Parameter Store:', error.message);
+      process.exit(1);
+    }
+
+    // Configure SSL based on environment
+    const sslConfig = process.env.NODE_ENV === 'production'
+      ? { rejectUnauthorized: true }  // Strict SSL in production
+      : { rejectUnauthorized: false }; // Relaxed SSL for development/testing
+
+    const client = new Client({
+      connectionString: url,
+      ssl: sslConfig
+    });
+
+    await client.connect();
+    console.log('✅ Database connected successfully');
+    await client.end();
+  } catch (error) {
+    console.error('❌ Database connection failed:', error.message);
+    process.exit(1);
+  }
+})();
 "
 
 # Test Redis connectivity
 node -e "
-import { createClient } from 'redis';
-import { execSync } from 'child_process';
-const url = execSync('aws ssm get-parameter --name \"macro-ai-redis-url\" --with-decryption --query \"Parameter.Value\" --output text', { encoding: 'utf8' }).trim();
-const client = createClient({ url });
-await client.connect();
-console.log('✅ Redis connected');
-await client.quit();
+const { createClient } = require('redis');
+const { execSync } = require('child_process');
+
+(async () => {
+  try {
+    // Get Redis URL from Parameter Store with error handling
+    let url;
+    try {
+      url = execSync('aws ssm get-parameter --name \"macro-ai-redis-url\" --with-decryption --query \"Parameter.Value\" --output text', { encoding: 'utf8' }).trim();
+    } catch (error) {
+      console.error('❌ Failed to retrieve Redis URL from Parameter Store:', error.message);
+      process.exit(1);
+    }
+
+    const client = createClient({ url });
+
+    await client.connect();
+    console.log('✅ Redis connected successfully');
+    await client.quit();
+  } catch (error) {
+    console.error('❌ Redis connection failed:', error.message);
+    process.exit(1);
+  }
+})();
 "
 ```
 

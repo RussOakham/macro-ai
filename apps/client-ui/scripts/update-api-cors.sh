@@ -17,6 +17,12 @@ ENVIRONMENT=${CDK_DEPLOY_ENV:-hobby}
 AWS_REGION=${AWS_REGION:-us-east-1}
 STACK_NAME="MacroAiHobbyStack"
 
+# Determine script and project paths
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+INFRASTRUCTURE_DIR="$PROJECT_ROOT/infrastructure"
+PATCH_FILE="$SCRIPT_DIR/cors-update.patch"
+
 echo -e "${BLUE}🔧 API Gateway CORS Update for Amplify Frontend${NC}"
 echo -e "${BLUE}Environment: $ENVIRONMENT${NC}"
 echo -e "${BLUE}Region: $AWS_REGION${NC}"
@@ -117,7 +123,8 @@ echo "CORS settings are configured in the CDK ApiGatewayConstruct."
 echo "To update CORS origins, modify the infrastructure code:"
 echo ""
 echo "File: infrastructure/src/constructs/api-gateway-construct.ts"
-echo "Update the allowOrigins array to include: $AMPLIFY_URL"
+echo "Update the allowOrigins array to include the following origins:"
+echo "  $ALLOWED_ORIGINS"
 echo ""
 echo "Then redeploy the infrastructure:"
 echo "  cd ../../infrastructure"
@@ -125,14 +132,15 @@ echo "  pnpm deploy"
 echo ""
 
 # Create a patch file for easy CORS update
-cat > cors-update.patch << EOF
+cat > "$PATCH_FILE" << EOF
 --- a/infrastructure/src/constructs/api-gateway-construct.ts
 +++ b/infrastructure/src/constructs/api-gateway-construct.ts
-@@ -200,7 +200,8 @@ export class ApiGatewayConstruct extends Construct {
+@@ -200,7 +200,9 @@ export class ApiGatewayConstruct extends Construct {
  				allowCredentials: true,
  				allowOrigins: [
- 					'http://localhost:3000',
+-					'http://localhost:3000',
 -					'https://localhost:3000'
++					'http://localhost:3000',
 +					'https://localhost:3000',
 +					'$AMPLIFY_URL'
  				],
@@ -140,25 +148,28 @@ cat > cors-update.patch << EOF
  				allowHeaders: [
 EOF
 
-print_status "Created CORS update patch file: cors-update.patch"
+print_status "Created CORS update patch file: $PATCH_FILE"
 
 echo ""
 echo -e "${BLUE}📊 CORS Update Summary${NC}"
 echo "=================================="
 echo "  Amplify URL: $AMPLIFY_URL"
 echo "  API Gateway ID: $API_ID"
-echo "  Patch file: cors-update.patch"
+echo "  Allowed Origins: $ALLOWED_ORIGINS"
+echo "  Patch file: $PATCH_FILE"
+echo "  Infrastructure dir: $INFRASTRUCTURE_DIR"
 echo ""
 
 echo -e "${BLUE}💡 Next Steps:${NC}"
 echo "1. Apply the CORS patch to your infrastructure code:"
-echo "   cd ../../infrastructure"
-echo "   git apply ../apps/client-ui/cors-update.patch"
+echo "   cd \"$INFRASTRUCTURE_DIR\""
+echo "   git apply \"$PATCH_FILE\""
 echo ""
 echo "2. Or manually update the allowOrigins array in:"
-echo "   infrastructure/src/constructs/api-gateway-construct.ts"
+echo "   $INFRASTRUCTURE_DIR/src/constructs/api-gateway-construct.ts"
 echo ""
 echo "3. Redeploy the infrastructure:"
+echo "   cd \"$INFRASTRUCTURE_DIR\""
 echo "   pnpm deploy"
 echo ""
 echo "4. Test the frontend-backend connection:"

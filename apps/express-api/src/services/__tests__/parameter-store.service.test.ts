@@ -232,7 +232,8 @@ describe('ParameterStoreService', () => {
 					await promise
 					return [null, null]
 				} catch {
-					const appError = new Error('ParameterNotFound: Parameter not found')
+					const appError = new Error('Parameter not found')
+					appError.name = 'ParameterNotFound'
 					return [null, appError as AppError]
 				}
 			})

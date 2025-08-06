@@ -86,6 +86,48 @@ export class ApiGatewayConstruct extends Construct {
 	public readonly domainName?: apigateway.DomainName
 	public readonly cognitoAuthorizer?: apigateway.CognitoUserPoolsAuthorizer
 
+	/**
+	 * Get allowed CORS origins based on environment
+	 */
+	private getAllowedOrigins(environmentName: string): string[] {
+		// Get allowed origins from environment variable or use defaults
+		const customOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',').map(
+			(origin) => origin.trim(),
+		)
+
+		// Production environment - restrict to specific domains
+		if (environmentName === 'production') {
+			return (
+				customOrigins || [
+					'https://app.macro-ai.com',
+					'https://www.macro-ai.com',
+				]
+			)
+		}
+
+		// Staging environment - allow staging domains
+		if (environmentName === 'staging') {
+			return (
+				customOrigins || [
+					'https://staging.macro-ai.com',
+					'https://dev.macro-ai.com',
+					'http://localhost:3000',
+					'https://localhost:3000',
+				]
+			)
+		}
+
+		// Development/hobby environment - allow local development
+		return (
+			customOrigins || [
+				'http://localhost:3000',
+				'https://localhost:3000',
+				'http://127.0.0.1:3000',
+				'https://127.0.0.1:3000',
+			]
+		)
+	}
+
 	constructor(scope: Construct, id: string, props: ApiGatewayConstructProps) {
 		super(scope, id)
 
@@ -101,6 +143,13 @@ export class ApiGatewayConstruct extends Construct {
 
 		// Create REST API
 		this.restApi = this.createRestApi(environmentName, enableDetailedMonitoring)
+
+		// Log CORS configuration for transparency
+		const allowedOrigins = this.getAllowedOrigins(environmentName)
+		new cdk.CfnOutput(this, 'CorsAllowedOrigins', {
+			value: allowedOrigins.join(', '),
+			description: `CORS allowed origins for ${environmentName} environment`,
+		})
 
 		// Create Cognito authorizer if configuration is provided
 		if (cognitoConfig) {
@@ -167,7 +216,7 @@ export class ApiGatewayConstruct extends Construct {
 			},
 			// CORS configuration for frontend integration
 			defaultCorsPreflightOptions: {
-				allowOrigins: apigateway.Cors.ALL_ORIGINS, // In production, restrict to specific domains
+				allowOrigins: this.getAllowedOrigins(environmentName),
 				allowMethods: apigateway.Cors.ALL_METHODS,
 				allowHeaders: [
 					'Content-Type',
