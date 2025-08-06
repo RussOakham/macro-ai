@@ -8,13 +8,18 @@
 	"scripts": {
 		"dev": "vite",
 		"build": "vite build",
+		"build:staging": "vite build --mode staging",
+		"build:production": "vite build --mode production",
 		"lint": "eslint .",
 		"preview": "vite preview",
 		"type-check": "tsc --noEmit --project tsconfig.app.json",
 		"test": "vitest run",
 		"test:ui": "vitest --ui",
 		"test:run": "vitest run",
-		"test:coverage": "vitest run --coverage"
+		"test:coverage": "vitest run --coverage",
+		"deploy:amplify": "./scripts/deploy-amplify.sh",
+		"deploy:staging": "AMPLIFY_ENV=staging ./scripts/deploy-amplify.sh",
+		"deploy:production": "AMPLIFY_ENV=production ./scripts/deploy-amplify.sh"
 	},
 	"dependencies": {
 		"@ai-sdk/react": "^1.2.12",
