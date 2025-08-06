@@ -32,8 +32,12 @@
 		"@vitest/coverage-v8": "^2.0.5",
 		"aws-cdk": "^2.161.1",
 		"eslint": "^9.9.1",
+		"eslint-config-prettier": "catalog:",
+		"eslint-config-turbo": "^2.5.5",
+		"eslint-plugin-simple-import-sort": "^12.1.1",
 		"tsx": "^4.0.0",
 		"typescript": "^5.6.2",
+		"typescript-eslint": "^8.39.0",
 		"vitest": "^2.0.5"
 	},
 	"engines": {

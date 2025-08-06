@@ -205,7 +205,6 @@ export class LambdaConstruct extends Construct {
 				API_RATE_LIMIT_MAX_REQUESTS: '60',
 
 				// AWS Cognito configuration (will be overridden by Parameter Store)
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 				AWS_COGNITO_REGION:
 					this.node.tryGetContext('aws:region') ?? 'us-east-1',
 				AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30',
