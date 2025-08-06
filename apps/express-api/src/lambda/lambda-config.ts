@@ -82,20 +82,3 @@ export const validateLambdaEnvironment = (): void => {
 		)
 	}
 }
-
-/**
- * Get Lambda runtime information
- */
-export const getLambdaRuntimeInfo = () => {
-	return {
-		functionName: process.env.AWS_LAMBDA_FUNCTION_NAME,
-		functionVersion: process.env.AWS_LAMBDA_FUNCTION_VERSION,
-		logGroupName: process.env.AWS_LAMBDA_LOG_GROUP_NAME,
-		logStreamName: process.env.AWS_LAMBDA_LOG_STREAM_NAME,
-		memorySize: process.env.AWS_LAMBDA_FUNCTION_MEMORY_SIZE,
-		timeout: process.env.AWS_LAMBDA_FUNCTION_TIMEOUT,
-		runtime: process.env.AWS_EXECUTION_ENV,
-		region: process.env.AWS_REGION,
-		architecture: process.env.AWS_LAMBDA_INITIALIZATION_TYPE,
-	}
-}
