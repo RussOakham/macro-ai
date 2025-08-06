@@ -4,7 +4,7 @@ packages:
 
 catalog:
   '@aws-sdk/client-cognito-identity-provider': ^3.859.0
-  '@aws-sdk/client-ssm': ^3.859.0
+  '@aws-sdk/client-ssm': 3.859.0
   '@types/eslint': ^8
   '@types/express': ^5.0.3
   '@types/node': ^20.19.9
