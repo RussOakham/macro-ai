@@ -34,11 +34,27 @@ const mockPowertoolsLogger = {
 	info: vi.fn(),
 	error: vi.fn(),
 	debug: vi.fn(),
+	warn: vi.fn(),
 	addContext: vi.fn(),
 }
 
 vi.mock('@aws-lambda-powertools/logger', () => ({
 	Logger: vi.fn(() => mockPowertoolsLogger),
+}))
+
+// Mock Enhanced Config Service
+const mockEnhancedConfigService = {
+	preloadParameters: vi.fn(),
+	getConfig: vi.fn(),
+	getAllMappedConfig: vi.fn(),
+	clearCache: vi.fn(),
+	getCacheStats: vi.fn(),
+	isLambda: vi.fn(),
+	getParameterMappings: vi.fn(),
+}
+
+vi.mock('../services/enhanced-config.service.ts', () => ({
+	enhancedConfigService: mockEnhancedConfigService,
 }))
 
 describe('Lambda Handler', () => {
@@ -112,6 +128,27 @@ describe('Lambda Handler', () => {
 		mockConfig.setup()
 		mockLogger.setup()
 
+		// Reset Enhanced Config Service mocks
+		mockEnhancedConfigService.preloadParameters.mockClear()
+		mockEnhancedConfigService.getConfig.mockClear()
+		mockEnhancedConfigService.getAllMappedConfig.mockClear()
+		mockEnhancedConfigService.clearCache.mockClear()
+		mockEnhancedConfigService.getCacheStats.mockClear()
+		mockEnhancedConfigService.isLambda.mockClear()
+		mockEnhancedConfigService.getParameterMappings.mockClear()
+
+		// Set default successful preload response
+		mockEnhancedConfigService.preloadParameters.mockResolvedValue([
+			{
+				'openai-api-key': {
+					value: 'sk-test-key',
+					source: 'parameter-store',
+					cached: true,
+				},
+			},
+			null,
+		])
+
 		// Reset module state by re-importing
 		vi.resetModules()
 		const lambdaModule = await import('../lambda.ts')
@@ -145,7 +182,17 @@ describe('Lambda Handler', () => {
 					coldStart: true,
 				}),
 			)
-		})
+			// Verify Parameter Store preload was called
+			expect(mockEnhancedConfigService.preloadParameters).toHaveBeenCalled()
+			expect(mockPowertoolsLogger.info).toHaveBeenCalledWith(
+				'Parameters preloaded successfully',
+				expect.objectContaining({
+					operation: 'preloadParametersSuccess',
+					requestId: mockContext.awsRequestId,
+					parametersLoaded: 1,
+				}),
+			)
+		}, 10000)
 
 		it('should handle warm start correctly', async () => {
 			// Arrange - First call (cold start)

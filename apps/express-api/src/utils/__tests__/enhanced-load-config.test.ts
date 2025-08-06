@@ -89,12 +89,12 @@ describe('Enhanced Configuration Loader', () => {
 			details: [],
 		})
 
-		// Mock envSchema to return success by default
+		// Mock envSchema to return success with the actual environment data
 		const mockSafeParse = vi.mocked(envSchema.safeParse)
-		mockSafeParse.mockReturnValue({
+		mockSafeParse.mockImplementation((env) => ({
 			success: true,
-			data: {} as import('../env.schema.ts').TEnv,
-		})
+			data: env as import('../env.schema.ts').TEnv,
+		}))
 	})
 
 	afterEach(() => {
@@ -204,8 +204,6 @@ describe('Enhanced Configuration Loader', () => {
 			// Act
 			const [result, error] = await loadEnhancedConfig()
 
-			console.log(result)
-
 			// Assert
 			expect(error).toBeNull()
 			expect(result).toBeDefined()
@@ -271,6 +269,15 @@ describe('Enhanced Configuration Loader', () => {
 
 			process.env = { ...process.env, ...invalidEnv }
 			vi.mocked(dotenvConfig).mockReturnValue({ parsed: invalidEnv })
+
+			// Mock schema validation to fail for this test
+			const mockSafeParse = vi.mocked(envSchema.safeParse)
+			mockSafeParse.mockReturnValueOnce({
+				success: false,
+				error: {
+					issues: [{ message: 'API_KEY must be at least 32 characters' }],
+				},
+			} as ReturnType<typeof envSchema.safeParse>)
 
 			// Act
 			const [result, error] = await loadEnhancedConfig()
