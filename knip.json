@@ -160,7 +160,8 @@
 		".env",
 		".env.local",
 		".env.development",
-		".env.production"
+		".env.production",
+		"process.env.*"
 	],
 	"ignoreDependencies": ["husky", "lint-staged", "prettier", "turbo", "knip"],
 	"ignoreExportsUsedInFile": true,

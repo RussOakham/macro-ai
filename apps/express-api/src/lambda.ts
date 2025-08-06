@@ -12,6 +12,7 @@ import type {
 import type { Express } from 'express'
 import serverless from 'serverless-http'
 
+import { enhancedConfigService } from './services/enhanced-config.service.ts'
 import { createServer } from './utils/server.ts'
 
 // Initialize Powertools Logger for Lambda
@@ -109,7 +110,8 @@ const initializeServerlessHandler = (expressApp: Express) => {
 			logger.debug('Processing Lambda response', {
 				operation: 'responseTransformation',
 				requestId: context.awsRequestId,
-				statusCode: (response as Express.Response & { statusCode: number }).statusCode,
+				statusCode: (response as Express.Response & { statusCode: number })
+					.statusCode,
 			})
 		},
 	})
@@ -141,6 +143,32 @@ export const handler = async (
 				operation: 'coldStartInit',
 				requestId: context.awsRequestId,
 			})
+
+			// Preload parameters from Parameter Store during cold start
+			logger.info('Preloading parameters from Parameter Store', {
+				operation: 'preloadParameters',
+				requestId: context.awsRequestId,
+			})
+
+			const [preloadResult, preloadError] =
+				await enhancedConfigService.preloadParameters()
+
+			if (preloadError) {
+				logger.warn(
+					'Parameter Store preload failed, continuing with fallbacks',
+					{
+						operation: 'preloadParametersFailed',
+						requestId: context.awsRequestId,
+						error: preloadError.message,
+					},
+				)
+			} else {
+				logger.info('Parameters preloaded successfully', {
+					operation: 'preloadParametersSuccess',
+					requestId: context.awsRequestId,
+					parametersLoaded: Object.keys(preloadResult).length,
+				})
+			}
 
 			app = initializeExpressApp()
 			serverlessHandler = initializeServerlessHandler(app)
