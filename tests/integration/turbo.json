@@ -1,0 +1,29 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"test": {
+			"env": [
+				"TEST_API_ENDPOINT",
+				"TEST_API_KEY",
+				"TEST_ENVIRONMENT",
+				"TEST_TIMEOUT",
+				"TEST_FRONTEND_URL",
+				"TEST_USER_EMAIL",
+				"TEST_USER_PASSWORD",
+				"TEST_USER_USERNAME",
+				"VITE_API_URL",
+				"VITE_API_KEY",
+				"AWS_REGION",
+				"NODE_ENV",
+				"VITEST_INTEGRATION"
+			]
+		},
+		"lint": {
+			"env": []
+		},
+		"type-check": {
+			"env": []
+		}
+	}
+}

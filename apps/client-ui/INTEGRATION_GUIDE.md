@@ -1,6 +1,7 @@
 # Frontend-Backend Integration Guide
 
-This guide covers the complete integration between the AWS Amplify-hosted React frontend and the AWS Lambda-based backend API.
+This guide covers the complete integration between the AWS Amplify-hosted React frontend and the AWS
+Lambda-based backend API.
 
 ## 🎯 Architecture Overview
 

@@ -25,7 +25,7 @@ The CI/CD pipeline provides:
 
 ### Deployment Strategy
 
-```
+```text
 develop branch ──► Staging Environment
      │
      └──► PR to main ──► Production Environment

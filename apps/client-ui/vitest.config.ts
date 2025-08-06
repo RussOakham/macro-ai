@@ -1,13 +1,14 @@
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 
 const ReactCompilerConfig = {
 	target: '19',
 }
 
 export default defineConfig({
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 	plugins: [
 		tanstackRouter(),
 		react({
@@ -15,7 +16,7 @@ export default defineConfig({
 				plugins: [['babel-plugin-react-compiler', ReactCompilerConfig]],
 			},
 		}),
-	],
+	] as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- Type assertion to resolve Vite version conflicts
 	resolve: {
 		alias: {
 			'@': path.resolve(__dirname, './src'),
