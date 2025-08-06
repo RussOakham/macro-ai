@@ -1,0 +1,259 @@
+name: Deploy Infrastructure
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'infrastructure/**'
+      - 'apps/express-api/**'
+      - '.github/workflows/deploy-infrastructure.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'infrastructure/**'
+      - 'apps/express-api/**'
+      - '.github/workflows/deploy-infrastructure.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'hobby'
+        type: choice
+        options:
+          - hobby
+          - staging
+          - production
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20'
+
+jobs:
+  validate:
+    name: Validate Infrastructure
+    runs-on: ubuntu-latest
+    outputs:
+      should-deploy: ${{ steps.changes.outputs.should-deploy }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: |
+          cd infrastructure
+          pnpm install --frozen-lockfile
+
+      - name: Lint infrastructure code
+        run: |
+          cd infrastructure
+          pnpm lint
+
+      - name: Type check infrastructure
+        run: |
+          cd infrastructure
+          pnpm type-check
+
+      - name: Run infrastructure tests
+        run: |
+          cd infrastructure
+          pnpm test
+
+      - name: Build infrastructure
+        run: |
+          cd infrastructure
+          pnpm build
+
+      - name: Synthesize CDK template
+        run: |
+          cd infrastructure
+          pnpm synth
+
+      - name: Upload CDK template as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cdk-template
+          path: infrastructure/cdk.out/
+          retention-days: 30
+
+      - name: Determine if deployment should proceed
+        id: changes
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "should-deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+  build-lambda:
+    name: Build Lambda Package
+    runs-on: ubuntu-latest
+    needs: validate
+    if: needs.validate.outputs.should-deploy == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install Express API dependencies
+        run: |
+          cd apps/express-api
+          pnpm install --frozen-lockfile
+
+      - name: Build Lambda package
+        run: |
+          cd apps/express-api
+          pnpm build:lambda
+          pnpm bundle:lambda
+          pnpm package:lambda
+
+      - name: Upload Lambda package as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lambda-package
+          path: apps/express-api/dist/lambda.zip
+          retention-days: 30
+
+  deploy:
+    name: Deploy to AWS
+    runs-on: ubuntu-latest
+    needs: [validate, build-lambda]
+    if: needs.validate.outputs.should-deploy == 'true'
+    environment: ${{ github.event.inputs.environment || 'hobby' }}
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download Lambda package
+        uses: actions/download-artifact@v4
+        with:
+          name: lambda-package
+          path: apps/express-api/dist/
+
+      - name: Install infrastructure dependencies
+        run: |
+          cd infrastructure
+          pnpm install --frozen-lockfile
+
+      - name: Build infrastructure
+        run: |
+          cd infrastructure
+          pnpm build
+
+      - name: Deploy infrastructure
+        run: |
+          cd infrastructure
+          pnpm deploy
+        env:
+          CDK_DEPLOY_ENV: ${{ github.event.inputs.environment || 'hobby' }}
+
+      - name: Get deployment outputs
+        id: outputs
+        run: |
+          cd infrastructure
+          API_ENDPOINT=$(aws cloudformation describe-stacks \
+            --stack-name MacroAiHobbyStack \
+            --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
+            --output text)
+          echo "api-endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
+
+      - name: Test deployment
+        run: |
+          # Wait a moment for the deployment to be ready
+          sleep 10
+
+          # Test the health endpoint
+          curl -f "${{ steps.outputs.outputs.api-endpoint }}api/health" || {
+            echo "Health check failed"
+            exit 1
+          }
+
+      - name: Comment on PR with deployment info
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🚀 Infrastructure Deployment Preview
+              
+              **Environment:** ${{ github.event.inputs.environment || 'hobby' }}
+              **API Endpoint:** ${{ steps.outputs.outputs.api-endpoint }}
+              
+              ### Test the deployment:
+              \`\`\`bash
+              curl ${{ steps.outputs.outputs.api-endpoint }}api/health
+              \`\`\`
+              
+              **Note:** This is a preview deployment. Merge to main to deploy to production.`
+            })
+
+  cleanup:
+    name: Cleanup Artifacts
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: always()
+
+    steps:
+      - name: Delete artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+            });
+
+            for (const artifact of artifacts.data.artifacts) {
+              if (artifact.name === 'cdk-template' || artifact.name === 'lambda-package') {
+                await github.rest.actions.deleteArtifact({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  artifact_id: artifact.id,
+                });
+              }
+            }

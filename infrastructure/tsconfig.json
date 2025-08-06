@@ -1,0 +1,23 @@
+{
+	"extends": "@repo/config-typescript/tsconfig-base.json",
+	"compilerOptions": {
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"target": "ES2022",
+		"module": "ES2022",
+		"moduleResolution": "bundler",
+		"lib": ["ES2022"],
+		"declaration": true,
+		"experimentalDecorators": true,
+		"strictPropertyInitialization": false,
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"typeRoots": ["./node_modules/@types"],
+		"strict": true,
+		"strictNullChecks": true,
+		"noEmit": false,
+		"allowImportingTsExtensions": false
+	},
+	"include": ["src/**/*"],
+	"exclude": ["node_modules", "**/*.d.ts", "dist", "cdk.out"]
+}
