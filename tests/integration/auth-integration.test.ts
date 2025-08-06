@@ -39,6 +39,7 @@ class AuthTestClient {
 		path: string,
 		body?: any,
 		includeAuth = false,
+		customAuthHeader?: string,
 	): Promise<{ status: number; data: any; headers: Record<string, string> }> {
 		const url = `${this.config.apiEndpoint}${path}`
 
@@ -47,7 +48,9 @@ class AuthTestClient {
 			'X-API-Key': this.config.apiKey,
 		}
 
-		if (includeAuth && this.accessToken) {
+		if (customAuthHeader) {
+			headers.Authorization = customAuthHeader
+		} else if (includeAuth && this.accessToken) {
 			headers.Authorization = `Bearer ${this.accessToken}`
 		}
 
@@ -58,15 +61,17 @@ class AuthTestClient {
 		})
 
 		// Parse JSON response with proper error handling
+		// Clone the response to preserve the body for error diagnostics
+		const responseClone = response.clone()
 		let data: any
 		try {
 			data = await response.json()
 		} catch (jsonError) {
-			// Get response text for better error diagnostics
-			const responseText = await response
+			// Get response text for better error diagnostics using the cloned response
+			const responseText = await responseClone
 				.text()
 				.catch(() => 'Unable to read response body')
-			const contentType = response.headers.get('content-type') || 'unknown'
+			const contentType = response.headers.get('content-type') ?? 'unknown'
 
 			console.error('JSON parsing failed in Auth integration test:', {
 				status: response.status,
@@ -80,7 +85,7 @@ class AuthTestClient {
 			})
 
 			throw new Error(
-				`Failed to parse JSON response in Auth test (${response.status} ${response.statusText}): ` +
+				`Failed to parse JSON response in Auth test (${response.status.toString()} ${response.statusText}): ` +
 					`Content-Type: ${contentType}, ` +
 					`Response: ${responseText.substring(0, 200)}...`,
 			)
@@ -126,9 +131,9 @@ describe('Authentication Integration Tests', () => {
 			apiEndpoint: apiEndpoint.replace('/api', ''),
 			apiKey,
 			testUser: {
-				email: process.env.TEST_USER_EMAIL ?? 'test@example.com',
-				password: process.env.TEST_USER_PASSWORD ?? 'TestPassword123!',
-				username: process.env.TEST_USER_USERNAME ?? 'testuser',
+				email: 'test@example.com',
+				password: 'TestPassword123!',
+				username: 'testuser',
 			},
 		}
 
@@ -240,10 +245,17 @@ describe('Authentication Integration Tests', () => {
 		})
 
 		it('should reject access with malformed Authorization header', async () => {
-			const response = await authClient.makeAuthRequest('GET', 'api/auth/user')
-			response.headers.Authorization = 'InvalidFormat TEST_TOKEN'
+			// Send a malformed Authorization header that doesn't follow Bearer format
+			const response = await authClient.makeAuthRequest(
+				'GET',
+				'api/auth/user',
+				undefined,
+				false, // Don't use standard auth
+				'InvalidFormat TEST_TOKEN', // Send malformed auth header
+			)
 
 			expect(response.status).toBe(401)
+			expect(response.data).toHaveProperty('error')
 		})
 	})
 

@@ -70,12 +70,14 @@ class ApiGatewayTestClient {
 			const responseTime = Date.now() - startTime
 
 			// Parse JSON response with proper error handling
+			// Clone the response to preserve the body for error diagnostics
+			const responseClone = response.clone()
 			let data: any
 			try {
 				data = await response.json()
 			} catch (jsonError) {
-				// Get response text for better error diagnostics
-				const responseText = await response
+				// Get response text for better error diagnostics using the cloned response
+				const responseText = await responseClone
 					.text()
 					.catch(() => 'Unable to read response body')
 				const contentType = response.headers.get('content-type') || 'unknown'
