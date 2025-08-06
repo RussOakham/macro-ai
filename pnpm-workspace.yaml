@@ -2,7 +2,6 @@ packages:
   - apps/*
   - packages/*
   - infrastructure
-  - tests/integration
 
 catalog:
   '@aws-sdk/client-cognito-identity-provider': ^3.859.0

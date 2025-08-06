@@ -24,7 +24,7 @@
 		"updated": 0,
 		"didUpdate": false
 	},
-	"startTime": 1754495787112,
+	"startTime": 1754496170702,
 	"success": false,
 	"testResults": [
 		{
@@ -219,8 +219,8 @@
 					"meta": {}
 				}
 			],
-			"startTime": 1754495787112,
-			"endTime": 1754495787112,
+			"startTime": 1754496170702,
+			"endTime": 1754496170702,
 			"status": "failed",
 			"message": "",
 			"name": "/Users/russell.oakham/repos/personal/macro-ai/tests/integration/api-gateway-integration.test.ts"
@@ -415,8 +415,8 @@
 					"meta": {}
 				}
 			],
-			"startTime": 1754495787112,
-			"endTime": 1754495787112,
+			"startTime": 1754496170702,
+			"endTime": 1754496170702,
 			"status": "failed",
 			"message": "",
 			"name": "/Users/russell.oakham/repos/personal/macro-ai/tests/integration/auth-integration.test.ts"
@@ -555,8 +555,8 @@
 					"meta": {}
 				}
 			],
-			"startTime": 1754495787112,
-			"endTime": 1754495787112,
+			"startTime": 1754496170702,
+			"endTime": 1754496170702,
 			"status": "failed",
 			"message": "",
 			"name": "/Users/russell.oakham/repos/personal/macro-ai/tests/integration/database-integration.test.ts"
@@ -707,8 +707,8 @@
 					"meta": {}
 				}
 			],
-			"startTime": 1754495787112,
-			"endTime": 1754495787112,
+			"startTime": 1754496170702,
+			"endTime": 1754496170702,
 			"status": "failed",
 			"message": "",
 			"name": "/Users/russell.oakham/repos/personal/macro-ai/tests/integration/end-to-end.test.ts"
