@@ -158,11 +158,13 @@ export class LambdaConstruct extends Construct {
 		} = config
 
 		// Use the actual built Lambda package
-		// Verify the package exists before deployment
-		const code = lambda.Code.fromAsset(deploymentPackagePath, {
-			// Exclude source maps from deployment to reduce package size
-			exclude: ['*.map'],
-		})
+		// Check if the deployment package path is a zip file or directory
+		const code = deploymentPackagePath.endsWith('.zip')
+			? lambda.Code.fromAsset(deploymentPackagePath)
+			: lambda.Code.fromAsset(deploymentPackagePath, {
+					// Exclude source maps from deployment to reduce package size
+					exclude: ['*.map'],
+				})
 
 		return new lambda.Function(this, 'Function', {
 			functionName: `macro-ai-${environmentName}-api`,
@@ -197,7 +199,7 @@ export class LambdaConstruct extends Construct {
 				LOG_LEVEL: 'INFO',
 
 				// Lambda-specific configuration
-				AWS_LAMBDA_FUNCTION_NAME: `macro-ai-${environmentName}-api`,
+				// AWS_LAMBDA_FUNCTION_NAME is automatically set by AWS Lambda runtime
 
 				// Application configuration (will be overridden by Parameter Store)
 				// These are fallback values - actual values come from Parameter Store
