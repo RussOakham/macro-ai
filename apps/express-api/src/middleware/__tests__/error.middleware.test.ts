@@ -818,7 +818,7 @@ describe('errorHandler Middleware', () => {
 		it('should not expose sensitive information in production', async () => {
 			// Arrange
 			const sensitiveError = new InternalError(
-				'Database connection failed: password=secret123',
+				'Database connection failed: password=FAKE_TEST_PASSWORD_123',
 				'database service',
 			)
 			process.env.NODE_ENV = 'production'
@@ -833,7 +833,7 @@ describe('errorHandler Middleware', () => {
 
 			// Assert - In production, only message is exposed, not details or type
 			expect(mockResponse.json).toHaveBeenCalledWith({
-				message: 'Database connection failed: password=secret123',
+				message: 'Database connection failed: password=FAKE_TEST_PASSWORD_123',
 			})
 			expect(mockResponse.json).toHaveBeenCalledTimes(1)
 		})

@@ -199,7 +199,7 @@ describe('Authentication Integration Tests', () => {
 		})
 
 		it('should reject access with invalid JWT token', async () => {
-			authClient.setAccessToken('invalid.jwt.token')
+			authClient.setAccessToken('INVALID_TEST_JWT_TOKEN')
 
 			const response = await authClient.makeAuthRequest(
 				'GET',
@@ -214,7 +214,7 @@ describe('Authentication Integration Tests', () => {
 
 		it('should reject access with malformed Authorization header', async () => {
 			const response = await authClient.makeAuthRequest('GET', 'api/auth/user')
-			response.headers.Authorization = 'InvalidFormat token'
+			response.headers.Authorization = 'InvalidFormat TEST_TOKEN'
 
 			expect(response.status).toBe(401)
 		})
@@ -222,9 +222,9 @@ describe('Authentication Integration Tests', () => {
 
 	describe('JWT Token Validation', () => {
 		it('should validate JWT token structure', async () => {
-			// Test with a properly structured but invalid JWT
+			// Test with an obviously fake JWT token for testing
 			const fakeJwt =
-				'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+				'FAKE_JWT_TOKEN_FOR_TESTING.INVALID_PAYLOAD.MOCK_SIGNATURE'
 			authClient.setAccessToken(fakeJwt)
 
 			const response = await authClient.makeAuthRequest(
@@ -241,7 +241,7 @@ describe('Authentication Integration Tests', () => {
 		it('should handle expired JWT tokens', async () => {
 			// This would require a pre-generated expired token or mocking
 			// For now, test the error handling structure
-			authClient.setAccessToken('expired.jwt.token')
+			authClient.setAccessToken('EXPIRED_TEST_JWT_TOKEN')
 
 			const response = await authClient.makeAuthRequest(
 				'GET',

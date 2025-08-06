@@ -27,6 +27,11 @@ on:
           - staging
           - production
 
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+
 env:
   AWS_REGION: us-east-1
   NODE_VERSION: '20'
