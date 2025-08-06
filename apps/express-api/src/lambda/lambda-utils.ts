@@ -76,7 +76,7 @@ export const createErrorResponse = (
 ): APIGatewayProxyResult => {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const errorBody: any = {
-		error: 'Internal Server Error',
+		error: message,
 		message: message,
 		requestId: context?.awsRequestId,
 		timestamp: new Date().toISOString(),

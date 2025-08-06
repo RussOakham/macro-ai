@@ -16,6 +16,7 @@ node_modules
 coverage
 tests/integration/results/
 tests/integration/tests/integration/results/
+**/integration-test-results.json
 
 # Turbo
 .turbo/

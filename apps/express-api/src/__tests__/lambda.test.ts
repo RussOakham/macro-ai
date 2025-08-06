@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-return */
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda'
+import type { Express } from 'express'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { mockConfig } from '../utils/test-helpers/config.mock.ts'
@@ -23,7 +23,7 @@ const mockExpressApp = {
 	get: vi.fn(),
 	post: vi.fn(),
 	listen: vi.fn(),
-} as any
+} as unknown as Express
 
 vi.mock('../utils/server.ts', () => ({
 	createServer: vi.fn(() => mockExpressApp),
@@ -242,7 +242,11 @@ describe('Lambda Handler', () => {
 				'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
 			})
 
-			const body = JSON.parse(result.body)
+			const body = JSON.parse(result.body) as {
+				error: string
+				message: string
+				requestId: string
+			}
 			expect(body).toEqual({
 				error: 'Internal Server Error',
 				message: 'An unexpected error occurred',
@@ -307,7 +311,9 @@ describe('Lambda Handler', () => {
 				mockExpressApp,
 				expect.objectContaining({
 					binary: false,
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 					request: expect.any(Function),
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 					response: expect.any(Function),
 				}),
 			)

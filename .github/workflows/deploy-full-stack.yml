@@ -10,7 +10,6 @@ on:
       environment:
         description: 'Deployment environment'
         required: true
-        default: 'hobby'
         type: string
       deploy_backend:
         description: 'Deploy backend infrastructure'

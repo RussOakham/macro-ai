@@ -33,6 +33,7 @@ class ApiGatewayTestClient {
 		path: string,
 		options: {
 			body?: any
+			rawBody?: string | Buffer
 			headers?: Record<string, string>
 			expectStatus?: number
 		} = {},
@@ -46,16 +47,56 @@ class ApiGatewayTestClient {
 			...options.headers,
 		}
 
+		// Determine the body to send
+		let requestBody: string | Buffer | undefined
+		if (options.rawBody !== undefined) {
+			// Use raw body without JSON.stringify for malformed JSON testing
+			requestBody = options.rawBody
+		} else if (options.body) {
+			// Normal JSON.stringify behavior
+			requestBody = JSON.stringify(options.body)
+		} else {
+			requestBody = undefined
+		}
+
 		try {
 			const response = await fetch(url, {
 				method,
 				headers: requestHeaders,
-				body: options.body ? JSON.stringify(options.body) : undefined,
+				body: requestBody,
 				signal: AbortSignal.timeout(this.config.timeout),
 			})
 
 			const responseTime = Date.now() - startTime
-			const data = await response.json().catch(() => ({}))
+
+			// Parse JSON response with proper error handling
+			let data: any
+			try {
+				data = await response.json()
+			} catch (jsonError) {
+				// Get response text for better error diagnostics
+				const responseText = await response
+					.text()
+					.catch(() => 'Unable to read response body')
+				const contentType = response.headers.get('content-type') || 'unknown'
+
+				console.error('JSON parsing failed in API Gateway integration test:', {
+					status: response.status,
+					statusText: response.statusText,
+					contentType,
+					responseText: responseText.substring(0, 500), // Limit to first 500 chars
+					url: response.url,
+					method,
+					parseError:
+						jsonError instanceof Error ? jsonError.message : String(jsonError),
+				})
+
+				throw new Error(
+					`Failed to parse JSON response in API Gateway test (${response.status} ${response.statusText}): ` +
+						`Content-Type: ${contentType}, ` +
+						`Response: ${responseText.substring(0, 200)}...`,
+				)
+			}
 
 			const headers: Record<string, string> = {}
 			response.headers.forEach((value, key) => {
@@ -211,7 +252,7 @@ describe('API Gateway Integration Tests', () => {
 		it('should handle malformed JSON in request body', async () => {
 			const response = await testClient.makeRequest('POST', 'api/auth/login', {
 				headers: { 'Content-Type': 'application/json' },
-				body: '{ invalid json }',
+				rawBody: '{ invalid json }', // Use rawBody to bypass JSON.stringify
 			})
 
 			expect(response.status).toBe(400)

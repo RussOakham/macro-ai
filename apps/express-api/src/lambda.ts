@@ -9,7 +9,7 @@ import type {
 	APIGatewayProxyResult,
 	Context,
 } from 'aws-lambda'
-import type { Express } from 'express'
+import type { Express, Response } from 'express'
 import serverless from 'serverless-http'
 
 import { enhancedConfigService } from './services/enhanced-config.service.ts'
@@ -103,7 +103,7 @@ const initializeServerlessHandler = (expressApp: Express) => {
 
 		// Response transformation
 		response: (
-			response: Express.Response,
+			response: Response,
 			event: APIGatewayProxyEvent,
 			context: Context,
 		) => {

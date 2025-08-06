@@ -132,7 +132,7 @@ describe('Lambda Utils', () => {
 			const body = JSON.parse(response.body)
 			expect(response.statusCode).toBe(500)
 			expect(body).toEqual({
-				error: 'Internal Server Error',
+				error: 'Test error',
 				message: 'Test error',
 				requestId: 'test-request-id',
 				timestamp: expect.any(String),
