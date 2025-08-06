@@ -329,20 +329,32 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Run integration tests
+      - name: Install integration test dependencies
         run: |
-          # Test API Gateway health endpoint
-          API_ENDPOINT="${{ needs.deploy-backend.outputs.api-endpoint }}"
-          if [[ -n "$API_ENDPOINT" ]]; then
-            echo "Testing API endpoint: ${API_ENDPOINT}api/health"
-            curl -f "${API_ENDPOINT}api/health" || {
-              echo "API health check failed"
-              exit 1
-            }
-          fi
+          cd tests/integration
+          pnpm install --frozen-lockfile
 
-          # Additional integration tests can be added here
-          echo "Integration tests completed successfully"
+      - name: Run comprehensive integration tests
+        run: |
+          # Set up test environment variables
+          export TEST_API_ENDPOINT="${{ needs.deploy-backend.outputs.api-endpoint }}"
+          export TEST_API_KEY="${{ secrets.FRONTEND_API_KEY }}"
+          export TEST_ENVIRONMENT="${{ github.event.inputs.environment || 'hobby' }}"
+          export TEST_TIMEOUT="300"
+
+          # Run integration test suite
+          cd tests/integration
+          ./run-integration-tests.sh
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+
+      - name: Upload integration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: tests/integration/results/
+          retention-days: 7
 
   # Deployment Summary
   deployment-summary:

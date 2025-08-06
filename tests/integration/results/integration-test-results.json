@@ -1,1 +1,717 @@
-{"numTotalTestSuites":33,"numPassedTestSuites":25,"numFailedTestSuites":8,"numPendingTestSuites":0,"numTotalTests":61,"numPassedTests":0,"numFailedTests":0,"numPendingTests":61,"numTodoTests":0,"snapshot":{"added":0,"failure":false,"filesAdded":0,"filesRemoved":0,"filesRemovedList":[],"filesUnmatched":0,"filesUpdated":0,"matched":0,"total":0,"unchecked":0,"uncheckedKeysByFile":[],"unmatched":0,"updated":0,"didUpdate":false},"startTime":1754495787112,"success":false,"testResults":[{"assertionResults":[{"ancestorTitles":["API Gateway Integration Tests","Health Check Endpoint"],"fullName":"API Gateway Integration Tests Health Check Endpoint should return 200 OK for health check","status":"skipped","title":"should return 200 OK for health check","failureMessages":[],"meta":{}},{"ancestorTitles":["API Gateway Integration Tests","Health Check Endpoint"],"fullName":"API Gateway Integration Tests Health Check Endpoint should include proper headers in health check response","status":"skipped","title":"should include proper headers in health check response","failureMessages":[],"meta":{}},{"ancestorTitles":["API Gateway Integration Tests","Health Check Endpoint"],"fullName":"API Gateway Integration Tests Health Check Endpoint should handle health check without API key","status":"skipped","title":"should handle health check without API key","failureMessages":[],"meta":{}},{"ancestorTitles":["API Gateway Integration Tests","CORS Configuration"],"fullName":"API Gateway Integration Tests CORS Configuration should handle CORS preflight requests","status":"skipped","title":"should handle CORS preflight requests","failureMessages":[],"meta":{}},{"ancestorTitles":["API Gateway Integration Tests","CORS Configuration"],"fullName":"API Gateway Integration Tests CORS Configuration should allow requests from development origins","status":"skipped","title":"should allow requests from development origins","failureMessages":[],"meta":{}},{"ancestorTitles":["API Gateway Integration Tests","CORS Configuration"],"fullName":"API Gateway Integration Tests CORS Configuration should handle CORS for different HTTP methods","status":"skipped","title":"should handle CORS for different HTTP methods","failureMessages":[],"meta":{}},{"ancestorTitles":["API Gateway Integration Tests","API Key Validation"],"fullName":"API Gateway Integration Tests API Key Validation should reject requests with invalid API key for protected endpoints","status":"skipped","title":"should reject requests with invalid API key for protected endpoints","failureMessages":[],"meta":{}},{"ancestorTitles":["API Gateway Integration Tests","API Key Validation"],"fullName":"API Gateway Integration Tests API Key Validation should accept requests with valid API key","status":"skipped","title":"should accept requests with valid API key","failureMessages":[],"meta":{}},{"ancestorTitles":["API Gateway Integration Tests","Error Handling"],"fullName":"API Gateway Integration Tests Error Handling should return 404 for non-existent endpoints","status":"skipped","title":"should return 404 for non-existent endpoints","failureMessages":[],"meta":{}},{"ancestorTitles":["API Gateway Integration Tests","Error Handling"],"fullName":"API Gateway Integration Tests Error Handling should handle malformed JSON in request body","status":"skipped","title":"should handle malformed JSON in request body","failureMessages":[],"meta":{}},{"ancestorTitles":["API Gateway Integration Tests","Error Handling"],"fullName":"API Gateway Integration Tests Error Handling should return proper error format","status":"skipped","title":"should return proper error format","failureMessages":[],"meta":{}},{"ancestorTitles":["API Gateway Integration Tests","Performance Tests"],"fullName":"API Gateway Integration Tests Performance Tests should respond to health check within acceptable time","status":"skipped","title":"should respond to health check within acceptable time","failureMessages":[],"meta":{}},{"ancestorTitles":["API Gateway Integration Tests","Performance Tests"],"fullName":"API Gateway Integration Tests Performance Tests should handle concurrent requests","status":"skipped","title":"should handle concurrent requests","failureMessages":[],"meta":{}},{"ancestorTitles":["API Gateway Integration Tests","Performance Tests"],"fullName":"API Gateway Integration Tests Performance Tests should maintain performance under sequential requests","status":"skipped","title":"should maintain performance under sequential requests","failureMessages":[],"meta":{}},{"ancestorTitles":["API Gateway Integration Tests","Lambda Function Integration"],"fullName":"API Gateway Integration Tests Lambda Function Integration should properly handle Lambda cold starts","status":"skipped","title":"should properly handle Lambda cold starts","failureMessages":[],"meta":{}},{"ancestorTitles":["API Gateway Integration Tests","Lambda Function Integration"],"fullName":"API Gateway Integration Tests Lambda Function Integration should include Lambda execution context in responses","status":"skipped","title":"should include Lambda execution context in responses","failureMessages":[],"meta":{}},{"ancestorTitles":["API Gateway Integration Tests","Environment-Specific Tests"],"fullName":"API Gateway Integration Tests Environment-Specific Tests should return correct environment information","status":"skipped","title":"should return correct environment information","failureMessages":[],"meta":{}},{"ancestorTitles":["API Gateway Integration Tests","Environment-Specific Tests"],"fullName":"API Gateway Integration Tests Environment-Specific Tests should have appropriate configuration for test environment","status":"skipped","title":"should have appropriate configuration for test environment","failureMessages":[],"meta":{}}],"startTime":1754495787112,"endTime":1754495787112,"status":"failed","message":"","name":"/Users/russell.oakham/repos/personal/macro-ai/tests/integration/api-gateway-integration.test.ts"},{"assertionResults":[{"ancestorTitles":["Authentication Integration Tests","Authentication Endpoints"],"fullName":"Authentication Integration Tests Authentication Endpoints should validate registration request format","status":"skipped","title":"should validate registration request format","failureMessages":[],"meta":{}},{"ancestorTitles":["Authentication Integration Tests","Authentication Endpoints"],"fullName":"Authentication Integration Tests Authentication Endpoints should validate login request format","status":"skipped","title":"should validate login request format","failureMessages":[],"meta":{}},{"ancestorTitles":["Authentication Integration Tests","Authentication Endpoints"],"fullName":"Authentication Integration Tests Authentication Endpoints should handle login with invalid credentials","status":"skipped","title":"should handle login with invalid credentials","failureMessages":[],"meta":{}},{"ancestorTitles":["Authentication Integration Tests","Authentication Endpoints"],"fullName":"Authentication Integration Tests Authentication Endpoints should validate email format in registration","status":"skipped","title":"should validate email format in registration","failureMessages":[],"meta":{}},{"ancestorTitles":["Authentication Integration Tests","Authentication Endpoints"],"fullName":"Authentication Integration Tests Authentication Endpoints should validate password strength in registration","status":"skipped","title":"should validate password strength in registration","failureMessages":[],"meta":{}},{"ancestorTitles":["Authentication Integration Tests","Protected Routes"],"fullName":"Authentication Integration Tests Protected Routes should reject access to protected routes without authentication","status":"skipped","title":"should reject access to protected routes without authentication","failureMessages":[],"meta":{}},{"ancestorTitles":["Authentication Integration Tests","Protected Routes"],"fullName":"Authentication Integration Tests Protected Routes should reject access with invalid JWT token","status":"skipped","title":"should reject access with invalid JWT token","failureMessages":[],"meta":{}},{"ancestorTitles":["Authentication Integration Tests","Protected Routes"],"fullName":"Authentication Integration Tests Protected Routes should reject access with malformed Authorization header","status":"skipped","title":"should reject access with malformed Authorization header","failureMessages":[],"meta":{}},{"ancestorTitles":["Authentication Integration Tests","JWT Token Validation"],"fullName":"Authentication Integration Tests JWT Token Validation should validate JWT token structure","status":"skipped","title":"should validate JWT token structure","failureMessages":[],"meta":{}},{"ancestorTitles":["Authentication Integration Tests","JWT Token Validation"],"fullName":"Authentication Integration Tests JWT Token Validation should handle expired JWT tokens","status":"skipped","title":"should handle expired JWT tokens","failureMessages":[],"meta":{}},{"ancestorTitles":["Authentication Integration Tests","Rate Limiting"],"fullName":"Authentication Integration Tests Rate Limiting should apply rate limiting to authentication endpoints","status":"skipped","title":"should apply rate limiting to authentication endpoints","failureMessages":[],"meta":{}},{"ancestorTitles":["Authentication Integration Tests","Rate Limiting"],"fullName":"Authentication Integration Tests Rate Limiting should include rate limit headers in responses","status":"skipped","title":"should include rate limit headers in responses","failureMessages":[],"meta":{}},{"ancestorTitles":["Authentication Integration Tests","CORS for Authentication"],"fullName":"Authentication Integration Tests CORS for Authentication should handle CORS preflight for auth endpoints","status":"skipped","title":"should handle CORS preflight for auth endpoints","failureMessages":[],"meta":{}},{"ancestorTitles":["Authentication Integration Tests","Error Response Format"],"fullName":"Authentication Integration Tests Error Response Format should return consistent error format for authentication failures","status":"skipped","title":"should return consistent error format for authentication failures","failureMessages":[],"meta":{}},{"ancestorTitles":["Authentication Integration Tests","Error Response Format"],"fullName":"Authentication Integration Tests Error Response Format should return consistent error format for validation failures","status":"skipped","title":"should return consistent error format for validation failures","failureMessages":[],"meta":{}},{"ancestorTitles":["Authentication Integration Tests","Security Headers"],"fullName":"Authentication Integration Tests Security Headers should include security headers in authentication responses","status":"skipped","title":"should include security headers in authentication responses","failureMessages":[],"meta":{}},{"ancestorTitles":["Authentication Integration Tests","Security Headers"],"fullName":"Authentication Integration Tests Security Headers should not expose sensitive information in error responses","status":"skipped","title":"should not expose sensitive information in error responses","failureMessages":[],"meta":{}}],"startTime":1754495787112,"endTime":1754495787112,"status":"failed","message":"","name":"/Users/russell.oakham/repos/personal/macro-ai/tests/integration/auth-integration.test.ts"},{"assertionResults":[{"ancestorTitles":["Database Integration Tests","Database Connectivity"],"fullName":"Database Integration Tests Database Connectivity should connect to database through Lambda function","status":"skipped","title":"should connect to database through Lambda function","failureMessages":[],"meta":{}},{"ancestorTitles":["Database Integration Tests","Database Connectivity"],"fullName":"Database Integration Tests Database Connectivity should handle database connection timeouts gracefully","status":"skipped","title":"should handle database connection timeouts gracefully","failureMessages":[],"meta":{}},{"ancestorTitles":["Database Integration Tests","Parameter Store Integration"],"fullName":"Database Integration Tests Parameter Store Integration should successfully load configuration from Parameter Store","status":"skipped","title":"should successfully load configuration from Parameter Store","failureMessages":[],"meta":{}},{"ancestorTitles":["Database Integration Tests","Parameter Store Integration"],"fullName":"Database Integration Tests Parameter Store Integration should handle Parameter Store caching effectively","status":"skipped","title":"should handle Parameter Store caching effectively","failureMessages":[],"meta":{}},{"ancestorTitles":["Database Integration Tests","Parameter Store Integration"],"fullName":"Database Integration Tests Parameter Store Integration should validate required parameters are accessible","status":"skipped","title":"should validate required parameters are accessible","failureMessages":[],"meta":{}},{"ancestorTitles":["Database Integration Tests","Data Persistence Tests"],"fullName":"Database Integration Tests Data Persistence Tests should handle database operations without errors","status":"skipped","title":"should handle database operations without errors","failureMessages":[],"meta":{}},{"ancestorTitles":["Database Integration Tests","Data Persistence Tests"],"fullName":"Database Integration Tests Data Persistence Tests should maintain database connection pool efficiently","status":"skipped","title":"should maintain database connection pool efficiently","failureMessages":[],"meta":{}},{"ancestorTitles":["Database Integration Tests","Error Handling"],"fullName":"Database Integration Tests Error Handling should handle database errors gracefully","status":"skipped","title":"should handle database errors gracefully","failureMessages":[],"meta":{}},{"ancestorTitles":["Database Integration Tests","Error Handling"],"fullName":"Database Integration Tests Error Handling should not expose sensitive configuration in errors","status":"skipped","title":"should not expose sensitive configuration in errors","failureMessages":[],"meta":{}},{"ancestorTitles":["Database Integration Tests","Performance Tests"],"fullName":"Database Integration Tests Performance Tests should maintain acceptable response times with database operations","status":"skipped","title":"should maintain acceptable response times with database operations","failureMessages":[],"meta":{}},{"ancestorTitles":["Database Integration Tests","Performance Tests"],"fullName":"Database Integration Tests Performance Tests should handle sequential database requests efficiently","status":"skipped","title":"should handle sequential database requests efficiently","failureMessages":[],"meta":{}},{"ancestorTitles":["Database Integration Tests","Environment Configuration"],"fullName":"Database Integration Tests Environment Configuration should use correct database configuration for test environment","status":"skipped","title":"should use correct database configuration for test environment","failureMessages":[],"meta":{}},{"ancestorTitles":["Database Integration Tests","Environment Configuration"],"fullName":"Database Integration Tests Environment Configuration should load environment-specific parameters correctly","status":"skipped","title":"should load environment-specific parameters correctly","failureMessages":[],"meta":{}}],"startTime":1754495787112,"endTime":1754495787112,"status":"failed","message":"","name":"/Users/russell.oakham/repos/personal/macro-ai/tests/integration/database-integration.test.ts"},{"assertionResults":[{"ancestorTitles":["End-to-End Integration Tests","Frontend-Backend CORS Integration"],"fullName":"End-to-End Integration Tests Frontend-Backend CORS Integration should handle CORS preflight and actual requests from localhost","status":"skipped","title":"should handle CORS preflight and actual requests from localhost","failureMessages":[],"meta":{}},{"ancestorTitles":["End-to-End Integration Tests","Frontend-Backend CORS Integration"],"fullName":"End-to-End Integration Tests Frontend-Backend CORS Integration should handle CORS for POST requests with JSON body","status":"skipped","title":"should handle CORS for POST requests with JSON body","failureMessages":[],"meta":{}},{"ancestorTitles":["End-to-End Integration Tests","Frontend-Backend CORS Integration"],"fullName":"End-to-End Integration Tests Frontend-Backend CORS Integration should handle CORS for different development origins","status":"skipped","title":"should handle CORS for different development origins","failureMessages":[],"meta":{}},{"ancestorTitles":["End-to-End Integration Tests","Complete Authentication Flow"],"fullName":"End-to-End Integration Tests Complete Authentication Flow should handle complete authentication request flow with CORS","status":"skipped","title":"should handle complete authentication request flow with CORS","failureMessages":[],"meta":{}},{"ancestorTitles":["End-to-End Integration Tests","Complete Authentication Flow"],"fullName":"End-to-End Integration Tests Complete Authentication Flow should handle login flow with proper CORS headers","status":"skipped","title":"should handle login flow with proper CORS headers","failureMessages":[],"meta":{}},{"ancestorTitles":["End-to-End Integration Tests","Complete Authentication Flow"],"fullName":"End-to-End Integration Tests Complete Authentication Flow should handle protected route access with CORS","status":"skipped","title":"should handle protected route access with CORS","failureMessages":[],"meta":{}},{"ancestorTitles":["End-to-End Integration Tests","API Response Format Consistency"],"fullName":"End-to-End Integration Tests API Response Format Consistency should return consistent JSON format across all endpoints","status":"skipped","title":"should return consistent JSON format across all endpoints","failureMessages":[],"meta":{}},{"ancestorTitles":["End-to-End Integration Tests","API Response Format Consistency"],"fullName":"End-to-End Integration Tests API Response Format Consistency should include proper security headers in all responses","status":"skipped","title":"should include proper security headers in all responses","failureMessages":[],"meta":{}},{"ancestorTitles":["End-to-End Integration Tests","Performance and Reliability"],"fullName":"End-to-End Integration Tests Performance and Reliability should maintain acceptable response times for frontend requests","status":"skipped","title":"should maintain acceptable response times for frontend requests","failureMessages":[],"meta":{}},{"ancestorTitles":["End-to-End Integration Tests","Performance and Reliability"],"fullName":"End-to-End Integration Tests Performance and Reliability should handle multiple concurrent frontend requests","status":"skipped","title":"should handle multiple concurrent frontend requests","failureMessages":[],"meta":{}},{"ancestorTitles":["End-to-End Integration Tests","Performance and Reliability"],"fullName":"End-to-End Integration Tests Performance and Reliability should maintain CORS consistency under load","status":"skipped","title":"should maintain CORS consistency under load","failureMessages":[],"meta":{}},{"ancestorTitles":["End-to-End Integration Tests","Error Handling Across Origins"],"fullName":"End-to-End Integration Tests Error Handling Across Origins should handle errors consistently with CORS headers","status":"skipped","title":"should handle errors consistently with CORS headers","failureMessages":[],"meta":{}},{"ancestorTitles":["End-to-End Integration Tests","Error Handling Across Origins"],"fullName":"End-to-End Integration Tests Error Handling Across Origins should not expose sensitive information in cross-origin errors","status":"skipped","title":"should not expose sensitive information in cross-origin errors","failureMessages":[],"meta":{}}],"startTime":1754495787112,"endTime":1754495787112,"status":"failed","message":"","name":"/Users/russell.oakham/repos/personal/macro-ai/tests/integration/end-to-end.test.ts"}]}
+{
+	"numTotalTestSuites": 33,
+	"numPassedTestSuites": 25,
+	"numFailedTestSuites": 8,
+	"numPendingTestSuites": 0,
+	"numTotalTests": 61,
+	"numPassedTests": 0,
+	"numFailedTests": 0,
+	"numPendingTests": 61,
+	"numTodoTests": 0,
+	"snapshot": {
+		"added": 0,
+		"failure": false,
+		"filesAdded": 0,
+		"filesRemoved": 0,
+		"filesRemovedList": [],
+		"filesUnmatched": 0,
+		"filesUpdated": 0,
+		"matched": 0,
+		"total": 0,
+		"unchecked": 0,
+		"uncheckedKeysByFile": [],
+		"unmatched": 0,
+		"updated": 0,
+		"didUpdate": false
+	},
+	"startTime": 1754495787112,
+	"success": false,
+	"testResults": [
+		{
+			"assertionResults": [
+				{
+					"ancestorTitles": [
+						"API Gateway Integration Tests",
+						"Health Check Endpoint"
+					],
+					"fullName": "API Gateway Integration Tests Health Check Endpoint should return 200 OK for health check",
+					"status": "skipped",
+					"title": "should return 200 OK for health check",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"API Gateway Integration Tests",
+						"Health Check Endpoint"
+					],
+					"fullName": "API Gateway Integration Tests Health Check Endpoint should include proper headers in health check response",
+					"status": "skipped",
+					"title": "should include proper headers in health check response",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"API Gateway Integration Tests",
+						"Health Check Endpoint"
+					],
+					"fullName": "API Gateway Integration Tests Health Check Endpoint should handle health check without API key",
+					"status": "skipped",
+					"title": "should handle health check without API key",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"API Gateway Integration Tests",
+						"CORS Configuration"
+					],
+					"fullName": "API Gateway Integration Tests CORS Configuration should handle CORS preflight requests",
+					"status": "skipped",
+					"title": "should handle CORS preflight requests",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"API Gateway Integration Tests",
+						"CORS Configuration"
+					],
+					"fullName": "API Gateway Integration Tests CORS Configuration should allow requests from development origins",
+					"status": "skipped",
+					"title": "should allow requests from development origins",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"API Gateway Integration Tests",
+						"CORS Configuration"
+					],
+					"fullName": "API Gateway Integration Tests CORS Configuration should handle CORS for different HTTP methods",
+					"status": "skipped",
+					"title": "should handle CORS for different HTTP methods",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"API Gateway Integration Tests",
+						"API Key Validation"
+					],
+					"fullName": "API Gateway Integration Tests API Key Validation should reject requests with invalid API key for protected endpoints",
+					"status": "skipped",
+					"title": "should reject requests with invalid API key for protected endpoints",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"API Gateway Integration Tests",
+						"API Key Validation"
+					],
+					"fullName": "API Gateway Integration Tests API Key Validation should accept requests with valid API key",
+					"status": "skipped",
+					"title": "should accept requests with valid API key",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": ["API Gateway Integration Tests", "Error Handling"],
+					"fullName": "API Gateway Integration Tests Error Handling should return 404 for non-existent endpoints",
+					"status": "skipped",
+					"title": "should return 404 for non-existent endpoints",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": ["API Gateway Integration Tests", "Error Handling"],
+					"fullName": "API Gateway Integration Tests Error Handling should handle malformed JSON in request body",
+					"status": "skipped",
+					"title": "should handle malformed JSON in request body",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": ["API Gateway Integration Tests", "Error Handling"],
+					"fullName": "API Gateway Integration Tests Error Handling should return proper error format",
+					"status": "skipped",
+					"title": "should return proper error format",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"API Gateway Integration Tests",
+						"Performance Tests"
+					],
+					"fullName": "API Gateway Integration Tests Performance Tests should respond to health check within acceptable time",
+					"status": "skipped",
+					"title": "should respond to health check within acceptable time",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"API Gateway Integration Tests",
+						"Performance Tests"
+					],
+					"fullName": "API Gateway Integration Tests Performance Tests should handle concurrent requests",
+					"status": "skipped",
+					"title": "should handle concurrent requests",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"API Gateway Integration Tests",
+						"Performance Tests"
+					],
+					"fullName": "API Gateway Integration Tests Performance Tests should maintain performance under sequential requests",
+					"status": "skipped",
+					"title": "should maintain performance under sequential requests",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"API Gateway Integration Tests",
+						"Lambda Function Integration"
+					],
+					"fullName": "API Gateway Integration Tests Lambda Function Integration should properly handle Lambda cold starts",
+					"status": "skipped",
+					"title": "should properly handle Lambda cold starts",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"API Gateway Integration Tests",
+						"Lambda Function Integration"
+					],
+					"fullName": "API Gateway Integration Tests Lambda Function Integration should include Lambda execution context in responses",
+					"status": "skipped",
+					"title": "should include Lambda execution context in responses",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"API Gateway Integration Tests",
+						"Environment-Specific Tests"
+					],
+					"fullName": "API Gateway Integration Tests Environment-Specific Tests should return correct environment information",
+					"status": "skipped",
+					"title": "should return correct environment information",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"API Gateway Integration Tests",
+						"Environment-Specific Tests"
+					],
+					"fullName": "API Gateway Integration Tests Environment-Specific Tests should have appropriate configuration for test environment",
+					"status": "skipped",
+					"title": "should have appropriate configuration for test environment",
+					"failureMessages": [],
+					"meta": {}
+				}
+			],
+			"startTime": 1754495787112,
+			"endTime": 1754495787112,
+			"status": "failed",
+			"message": "",
+			"name": "/Users/russell.oakham/repos/personal/macro-ai/tests/integration/api-gateway-integration.test.ts"
+		},
+		{
+			"assertionResults": [
+				{
+					"ancestorTitles": [
+						"Authentication Integration Tests",
+						"Authentication Endpoints"
+					],
+					"fullName": "Authentication Integration Tests Authentication Endpoints should validate registration request format",
+					"status": "skipped",
+					"title": "should validate registration request format",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Authentication Integration Tests",
+						"Authentication Endpoints"
+					],
+					"fullName": "Authentication Integration Tests Authentication Endpoints should validate login request format",
+					"status": "skipped",
+					"title": "should validate login request format",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Authentication Integration Tests",
+						"Authentication Endpoints"
+					],
+					"fullName": "Authentication Integration Tests Authentication Endpoints should handle login with invalid credentials",
+					"status": "skipped",
+					"title": "should handle login with invalid credentials",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Authentication Integration Tests",
+						"Authentication Endpoints"
+					],
+					"fullName": "Authentication Integration Tests Authentication Endpoints should validate email format in registration",
+					"status": "skipped",
+					"title": "should validate email format in registration",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Authentication Integration Tests",
+						"Authentication Endpoints"
+					],
+					"fullName": "Authentication Integration Tests Authentication Endpoints should validate password strength in registration",
+					"status": "skipped",
+					"title": "should validate password strength in registration",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Authentication Integration Tests",
+						"Protected Routes"
+					],
+					"fullName": "Authentication Integration Tests Protected Routes should reject access to protected routes without authentication",
+					"status": "skipped",
+					"title": "should reject access to protected routes without authentication",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Authentication Integration Tests",
+						"Protected Routes"
+					],
+					"fullName": "Authentication Integration Tests Protected Routes should reject access with invalid JWT token",
+					"status": "skipped",
+					"title": "should reject access with invalid JWT token",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Authentication Integration Tests",
+						"Protected Routes"
+					],
+					"fullName": "Authentication Integration Tests Protected Routes should reject access with malformed Authorization header",
+					"status": "skipped",
+					"title": "should reject access with malformed Authorization header",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Authentication Integration Tests",
+						"JWT Token Validation"
+					],
+					"fullName": "Authentication Integration Tests JWT Token Validation should validate JWT token structure",
+					"status": "skipped",
+					"title": "should validate JWT token structure",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Authentication Integration Tests",
+						"JWT Token Validation"
+					],
+					"fullName": "Authentication Integration Tests JWT Token Validation should handle expired JWT tokens",
+					"status": "skipped",
+					"title": "should handle expired JWT tokens",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Authentication Integration Tests",
+						"Rate Limiting"
+					],
+					"fullName": "Authentication Integration Tests Rate Limiting should apply rate limiting to authentication endpoints",
+					"status": "skipped",
+					"title": "should apply rate limiting to authentication endpoints",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Authentication Integration Tests",
+						"Rate Limiting"
+					],
+					"fullName": "Authentication Integration Tests Rate Limiting should include rate limit headers in responses",
+					"status": "skipped",
+					"title": "should include rate limit headers in responses",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Authentication Integration Tests",
+						"CORS for Authentication"
+					],
+					"fullName": "Authentication Integration Tests CORS for Authentication should handle CORS preflight for auth endpoints",
+					"status": "skipped",
+					"title": "should handle CORS preflight for auth endpoints",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Authentication Integration Tests",
+						"Error Response Format"
+					],
+					"fullName": "Authentication Integration Tests Error Response Format should return consistent error format for authentication failures",
+					"status": "skipped",
+					"title": "should return consistent error format for authentication failures",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Authentication Integration Tests",
+						"Error Response Format"
+					],
+					"fullName": "Authentication Integration Tests Error Response Format should return consistent error format for validation failures",
+					"status": "skipped",
+					"title": "should return consistent error format for validation failures",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Authentication Integration Tests",
+						"Security Headers"
+					],
+					"fullName": "Authentication Integration Tests Security Headers should include security headers in authentication responses",
+					"status": "skipped",
+					"title": "should include security headers in authentication responses",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Authentication Integration Tests",
+						"Security Headers"
+					],
+					"fullName": "Authentication Integration Tests Security Headers should not expose sensitive information in error responses",
+					"status": "skipped",
+					"title": "should not expose sensitive information in error responses",
+					"failureMessages": [],
+					"meta": {}
+				}
+			],
+			"startTime": 1754495787112,
+			"endTime": 1754495787112,
+			"status": "failed",
+			"message": "",
+			"name": "/Users/russell.oakham/repos/personal/macro-ai/tests/integration/auth-integration.test.ts"
+		},
+		{
+			"assertionResults": [
+				{
+					"ancestorTitles": [
+						"Database Integration Tests",
+						"Database Connectivity"
+					],
+					"fullName": "Database Integration Tests Database Connectivity should connect to database through Lambda function",
+					"status": "skipped",
+					"title": "should connect to database through Lambda function",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Database Integration Tests",
+						"Database Connectivity"
+					],
+					"fullName": "Database Integration Tests Database Connectivity should handle database connection timeouts gracefully",
+					"status": "skipped",
+					"title": "should handle database connection timeouts gracefully",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Database Integration Tests",
+						"Parameter Store Integration"
+					],
+					"fullName": "Database Integration Tests Parameter Store Integration should successfully load configuration from Parameter Store",
+					"status": "skipped",
+					"title": "should successfully load configuration from Parameter Store",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Database Integration Tests",
+						"Parameter Store Integration"
+					],
+					"fullName": "Database Integration Tests Parameter Store Integration should handle Parameter Store caching effectively",
+					"status": "skipped",
+					"title": "should handle Parameter Store caching effectively",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Database Integration Tests",
+						"Parameter Store Integration"
+					],
+					"fullName": "Database Integration Tests Parameter Store Integration should validate required parameters are accessible",
+					"status": "skipped",
+					"title": "should validate required parameters are accessible",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Database Integration Tests",
+						"Data Persistence Tests"
+					],
+					"fullName": "Database Integration Tests Data Persistence Tests should handle database operations without errors",
+					"status": "skipped",
+					"title": "should handle database operations without errors",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Database Integration Tests",
+						"Data Persistence Tests"
+					],
+					"fullName": "Database Integration Tests Data Persistence Tests should maintain database connection pool efficiently",
+					"status": "skipped",
+					"title": "should maintain database connection pool efficiently",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": ["Database Integration Tests", "Error Handling"],
+					"fullName": "Database Integration Tests Error Handling should handle database errors gracefully",
+					"status": "skipped",
+					"title": "should handle database errors gracefully",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": ["Database Integration Tests", "Error Handling"],
+					"fullName": "Database Integration Tests Error Handling should not expose sensitive configuration in errors",
+					"status": "skipped",
+					"title": "should not expose sensitive configuration in errors",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": ["Database Integration Tests", "Performance Tests"],
+					"fullName": "Database Integration Tests Performance Tests should maintain acceptable response times with database operations",
+					"status": "skipped",
+					"title": "should maintain acceptable response times with database operations",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": ["Database Integration Tests", "Performance Tests"],
+					"fullName": "Database Integration Tests Performance Tests should handle sequential database requests efficiently",
+					"status": "skipped",
+					"title": "should handle sequential database requests efficiently",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Database Integration Tests",
+						"Environment Configuration"
+					],
+					"fullName": "Database Integration Tests Environment Configuration should use correct database configuration for test environment",
+					"status": "skipped",
+					"title": "should use correct database configuration for test environment",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"Database Integration Tests",
+						"Environment Configuration"
+					],
+					"fullName": "Database Integration Tests Environment Configuration should load environment-specific parameters correctly",
+					"status": "skipped",
+					"title": "should load environment-specific parameters correctly",
+					"failureMessages": [],
+					"meta": {}
+				}
+			],
+			"startTime": 1754495787112,
+			"endTime": 1754495787112,
+			"status": "failed",
+			"message": "",
+			"name": "/Users/russell.oakham/repos/personal/macro-ai/tests/integration/database-integration.test.ts"
+		},
+		{
+			"assertionResults": [
+				{
+					"ancestorTitles": [
+						"End-to-End Integration Tests",
+						"Frontend-Backend CORS Integration"
+					],
+					"fullName": "End-to-End Integration Tests Frontend-Backend CORS Integration should handle CORS preflight and actual requests from localhost",
+					"status": "skipped",
+					"title": "should handle CORS preflight and actual requests from localhost",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"End-to-End Integration Tests",
+						"Frontend-Backend CORS Integration"
+					],
+					"fullName": "End-to-End Integration Tests Frontend-Backend CORS Integration should handle CORS for POST requests with JSON body",
+					"status": "skipped",
+					"title": "should handle CORS for POST requests with JSON body",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"End-to-End Integration Tests",
+						"Frontend-Backend CORS Integration"
+					],
+					"fullName": "End-to-End Integration Tests Frontend-Backend CORS Integration should handle CORS for different development origins",
+					"status": "skipped",
+					"title": "should handle CORS for different development origins",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"End-to-End Integration Tests",
+						"Complete Authentication Flow"
+					],
+					"fullName": "End-to-End Integration Tests Complete Authentication Flow should handle complete authentication request flow with CORS",
+					"status": "skipped",
+					"title": "should handle complete authentication request flow with CORS",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"End-to-End Integration Tests",
+						"Complete Authentication Flow"
+					],
+					"fullName": "End-to-End Integration Tests Complete Authentication Flow should handle login flow with proper CORS headers",
+					"status": "skipped",
+					"title": "should handle login flow with proper CORS headers",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"End-to-End Integration Tests",
+						"Complete Authentication Flow"
+					],
+					"fullName": "End-to-End Integration Tests Complete Authentication Flow should handle protected route access with CORS",
+					"status": "skipped",
+					"title": "should handle protected route access with CORS",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"End-to-End Integration Tests",
+						"API Response Format Consistency"
+					],
+					"fullName": "End-to-End Integration Tests API Response Format Consistency should return consistent JSON format across all endpoints",
+					"status": "skipped",
+					"title": "should return consistent JSON format across all endpoints",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"End-to-End Integration Tests",
+						"API Response Format Consistency"
+					],
+					"fullName": "End-to-End Integration Tests API Response Format Consistency should include proper security headers in all responses",
+					"status": "skipped",
+					"title": "should include proper security headers in all responses",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"End-to-End Integration Tests",
+						"Performance and Reliability"
+					],
+					"fullName": "End-to-End Integration Tests Performance and Reliability should maintain acceptable response times for frontend requests",
+					"status": "skipped",
+					"title": "should maintain acceptable response times for frontend requests",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"End-to-End Integration Tests",
+						"Performance and Reliability"
+					],
+					"fullName": "End-to-End Integration Tests Performance and Reliability should handle multiple concurrent frontend requests",
+					"status": "skipped",
+					"title": "should handle multiple concurrent frontend requests",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"End-to-End Integration Tests",
+						"Performance and Reliability"
+					],
+					"fullName": "End-to-End Integration Tests Performance and Reliability should maintain CORS consistency under load",
+					"status": "skipped",
+					"title": "should maintain CORS consistency under load",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"End-to-End Integration Tests",
+						"Error Handling Across Origins"
+					],
+					"fullName": "End-to-End Integration Tests Error Handling Across Origins should handle errors consistently with CORS headers",
+					"status": "skipped",
+					"title": "should handle errors consistently with CORS headers",
+					"failureMessages": [],
+					"meta": {}
+				},
+				{
+					"ancestorTitles": [
+						"End-to-End Integration Tests",
+						"Error Handling Across Origins"
+					],
+					"fullName": "End-to-End Integration Tests Error Handling Across Origins should not expose sensitive information in cross-origin errors",
+					"status": "skipped",
+					"title": "should not expose sensitive information in cross-origin errors",
+					"failureMessages": [],
+					"meta": {}
+				}
+			],
+			"startTime": 1754495787112,
+			"endTime": 1754495787112,
+			"status": "failed",
+			"message": "",
+			"name": "/Users/russell.oakham/repos/personal/macro-ai/tests/integration/end-to-end.test.ts"
+		}
+	]
+}
