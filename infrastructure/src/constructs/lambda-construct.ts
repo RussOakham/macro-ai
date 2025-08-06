@@ -145,26 +145,15 @@ export class LambdaConstruct extends Construct {
 			enableDetailedMonitoring,
 			timeoutSeconds,
 			memorySize,
+			deploymentPackagePath,
 		} = config
 
-		// For now, use inline code since the deployment package will be built separately
-		// In production, this would reference the actual built package
-		const code = lambda.Code.fromInline(`
-			exports.handler = async (event) => {
-				return {
-					statusCode: 200,
-					headers: {
-						'Content-Type': 'application/json',
-						'Access-Control-Allow-Origin': '*',
-					},
-					body: JSON.stringify({
-						message: 'Macro AI API - CDK Infrastructure Deployed',
-						timestamp: new Date().toISOString(),
-						environment: '${environmentName}',
-					}),
-				};
-			};
-		`)
+		// Use the actual built Lambda package
+		// Verify the package exists before deployment
+		const code = lambda.Code.fromAsset(deploymentPackagePath, {
+			// Exclude source maps from deployment to reduce package size
+			exclude: ['*.map'],
+		})
 
 		return new lambda.Function(this, 'Function', {
 			functionName: `macro-ai-${environmentName}-api`,
@@ -177,9 +166,13 @@ export class LambdaConstruct extends Construct {
 			memorySize,
 			logGroup: this.logGroup,
 			environment: {
+				// Node.js and application environment
 				NODE_ENV: 'production',
 				APP_ENV: environmentName,
+
+				// Parameter Store configuration
 				PARAMETER_STORE_PREFIX: parameterStoreConstruct.parameterPrefix,
+
 				// AWS Powertools configuration
 				POWERTOOLS_SERVICE_NAME: 'macro-ai-api',
 				POWERTOOLS_LOG_LEVEL: 'INFO',
@@ -188,6 +181,34 @@ export class LambdaConstruct extends Construct {
 					? 'true'
 					: 'false',
 				POWERTOOLS_METRICS_NAMESPACE: 'MacroAI/Hobby',
+
+				// Service configuration
+				SERVICE_NAME: 'macro-ai-express-api',
+				SERVICE_VERSION: '1.0.0',
+				LOG_LEVEL: 'INFO',
+
+				// Lambda-specific configuration
+				AWS_LAMBDA_FUNCTION_NAME: `macro-ai-${environmentName}-api`,
+
+				// Application configuration (will be overridden by Parameter Store)
+				// These are fallback values - actual values come from Parameter Store
+				API_KEY: 'PLACEHOLDER_UPDATE_VIA_PARAMETER_STORE',
+				COOKIE_DOMAIN: 'api.macro-ai.com',
+				COOKIE_ENCRYPTION_KEY: 'PLACEHOLDER_UPDATE_VIA_PARAMETER_STORE',
+
+				// Rate limiting defaults
+				RATE_LIMIT_WINDOW_MS: '900000', // 15 minutes
+				RATE_LIMIT_MAX_REQUESTS: '100',
+				AUTH_RATE_LIMIT_WINDOW_MS: '3600000', // 1 hour
+				AUTH_RATE_LIMIT_MAX_REQUESTS: '10',
+				API_RATE_LIMIT_WINDOW_MS: '60000', // 1 minute
+				API_RATE_LIMIT_MAX_REQUESTS: '60',
+
+				// AWS Cognito configuration (will be overridden by Parameter Store)
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+				AWS_COGNITO_REGION:
+					this.node.tryGetContext('aws:region') ?? 'us-east-1',
+				AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30',
 			},
 			// Cost optimization: disable provisioned concurrency
 			reservedConcurrentExecutions: undefined,

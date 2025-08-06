@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib'
 import * as apigateway from 'aws-cdk-lib/aws-apigateway'
 import * as certificatemanager from 'aws-cdk-lib/aws-certificatemanager'
+import * as cognito from 'aws-cdk-lib/aws-cognito'
 import * as lambda from 'aws-cdk-lib/aws-lambda'
 import * as route53 from 'aws-cdk-lib/aws-route53'
 import * as route53targets from 'aws-cdk-lib/aws-route53-targets'
@@ -41,6 +42,16 @@ export interface ApiGatewayConstructProps {
 		rateLimit: number
 		burstLimit: number
 	}
+
+	/**
+	 * Cognito User Pool configuration for API Gateway authorizers (optional)
+	 * If provided, will create Cognito authorizers for protected routes
+	 * Note: Current implementation uses Lambda-level authentication for cost optimization
+	 */
+	readonly cognitoConfig?: {
+		userPoolId: string
+		userPoolClientId: string
+	}
 }
 
 /**
@@ -48,12 +59,32 @@ export interface ApiGatewayConstructProps {
  *
  * Creates a REST API with Lambda proxy integration, CORS configuration,
  * and optional custom domain setup for the hobby deployment.
+ *
+ * ## Authentication Strategy
+ *
+ * This construct supports dual authentication approaches:
+ *
+ * 1. **Lambda-level Authentication (Current/Primary)**:
+ *    - Authentication handled by Express middleware within Lambda
+ *    - Cost-optimized (no API Gateway authorizer charges)
+ *    - Flexible and consistent across deployment modes
+ *    - Uses Cognito JWT validation in Express middleware
+ *
+ * 2. **API Gateway Cognito Authorizers (Optional)**:
+ *    - Can be enabled by providing cognitoConfig
+ *    - Provides API Gateway-level authentication
+ *    - Useful for additional security layers or specific use cases
+ *    - Requires additional AWS charges for authorizer usage
+ *
+ * The current implementation prioritizes cost optimization and uses Lambda-level
+ * authentication as the primary method.
  */
 export class ApiGatewayConstruct extends Construct {
 	public readonly restApi: apigateway.RestApi
 	public readonly deployment: apigateway.Deployment
 	public readonly stage: apigateway.Stage
 	public readonly domainName?: apigateway.DomainName
+	public readonly cognitoAuthorizer?: apigateway.CognitoUserPoolsAuthorizer
 
 	constructor(scope: Construct, id: string, props: ApiGatewayConstructProps) {
 		super(scope, id)
@@ -65,10 +96,16 @@ export class ApiGatewayConstruct extends Construct {
 			hostedZoneId,
 			enableDetailedMonitoring = false,
 			throttling = { rateLimit: 100, burstLimit: 200 }, // Conservative limits for hobby use
+			cognitoConfig,
 		} = props
 
 		// Create REST API
 		this.restApi = this.createRestApi(environmentName, enableDetailedMonitoring)
+
+		// Create Cognito authorizer if configuration is provided
+		if (cognitoConfig) {
+			this.cognitoAuthorizer = this.createCognitoAuthorizer(cognitoConfig)
+		}
 
 		// Create Lambda integration
 		const lambdaIntegration = this.createLambdaIntegration(lambdaFunction)
@@ -147,6 +184,28 @@ export class ApiGatewayConstruct extends Construct {
 		})
 	}
 
+	private createCognitoAuthorizer(cognitoConfig: {
+		userPoolId: string
+		userPoolClientId: string
+	}): apigateway.CognitoUserPoolsAuthorizer {
+		return new apigateway.CognitoUserPoolsAuthorizer(
+			this,
+			'CognitoAuthorizer',
+			{
+				cognitoUserPools: [
+					cognito.UserPool.fromUserPoolId(
+						this,
+						'UserPool',
+						cognitoConfig.userPoolId,
+					),
+				],
+				identitySource: 'method.request.header.Authorization',
+				authorizerName: 'MacroAICognitoAuthorizer',
+				resultsCacheTtl: cdk.Duration.minutes(5), // Cache for cost optimization
+			},
+		)
+	}
+
 	private createLambdaIntegration(
 		lambdaFunction: lambda.Function,
 	): apigateway.LambdaIntegration {
@@ -191,7 +250,20 @@ export class ApiGatewayConstruct extends Construct {
 			tracingEnabled: enableDetailedMonitoring,
 		})
 
-		// Note: Throttling will be configured at the API level via usage plans if needed
+		// Configure throttling via usage plan for cost control and protection
+		const usagePlan = this.restApi.addUsagePlan('ThrottlingPlan', {
+			name: `${environmentName}-throttling-plan`,
+			description: 'Usage plan for API throttling and cost control',
+			throttle: {
+				rateLimit: throttling.rateLimit,
+				burstLimit: throttling.burstLimit,
+			},
+		})
+
+		// Associate the usage plan with the stage
+		usagePlan.addApiStage({
+			stage,
+		})
 
 		return { deployment, stage }
 	}
@@ -243,5 +315,34 @@ export class ApiGatewayConstruct extends Construct {
 		})
 
 		return customDomain
+	}
+
+	/**
+	 * Create a protected resource with Cognito authorization
+	 * Note: This is optional - the current implementation uses Lambda-level authentication
+	 * for cost optimization and flexibility
+	 */
+	public addProtectedResource(
+		path: string,
+		methods: string[] = ['GET', 'POST', 'PUT', 'DELETE'],
+	): apigateway.Resource | null {
+		if (!this.cognitoAuthorizer) {
+			console.warn(
+				'Cognito authorizer not configured. Protected routes will rely on Lambda-level authentication.',
+			)
+			return null
+		}
+
+		const resource = this.restApi.root.addResource(path)
+
+		// Add methods with Cognito authorization
+		for (const method of methods) {
+			resource.addMethod(method, undefined, {
+				authorizer: this.cognitoAuthorizer,
+				authorizationType: apigateway.AuthorizationType.COGNITO,
+			})
+		}
+
+		return resource
 	}
 }

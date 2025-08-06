@@ -16,7 +16,7 @@
 		"clean:lambda": "rimraf dist/lambda.bundle.js dist/lambda.bundle.js.map",
 		"bundle:lambda": "esbuild src/lambda.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/lambda.bundle.js --external:aws-sdk --minify --sourcemap",
 		"bundle:lambda:dev": "esbuild src/lambda.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/lambda.bundle.js --external:aws-sdk --sourcemap",
-		"package:lambda": "pnpm run build:lambda && cd dist && zip -r ../lambda-deployment.zip lambda.bundle.js lambda.bundle.js.map",
+		"package:lambda": "pnpm run build:lambda && cd dist && zip -r lambda.zip lambda.bundle.js lambda.bundle.js.map",
 		"db:generate": "drizzle-kit generate",
 		"db:push": "drizzle-kit push",
 		"lint": "eslint ./src",
