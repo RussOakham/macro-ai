@@ -227,7 +227,7 @@ jobs:
           sleep 10
 
           # Test the health endpoint
-          curl -f "${{ steps.outputs.outputs.api-endpoint }}api/health" || {
+          curl -f "${{ steps.outputs.outputs.api-endpoint }}/api/health" || {
             echo "Health check failed"
             exit 1
           }
