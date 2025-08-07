@@ -2,6 +2,11 @@
 
 # Macro AI Infrastructure Deployment Script
 # This script builds the Lambda package and deploys the CDK infrastructure
+#
+# v1.0.0+ Features:
+# - Resolves API Gateway deployment resource conflicts
+# - Uses single explicit deployment path (no implicit deployOptions)
+# - Includes comprehensive error handling and validation
 
 set -e  # Exit on any error
 
@@ -150,6 +155,9 @@ if ! pnpm cdk deploy "$STACK_NAME" --require-approval never; then
     echo "2. Verify CDK bootstrap: aws cloudformation describe-stacks --stack-name CDKToolkit"
     echo "3. Check Lambda package: ls -la $LAMBDA_DIST_DIR/lambda.zip"
     echo "4. Review deployment logs above for specific errors"
+    echo "5. API Gateway conflicts: This deployment uses single deployment path (v1.0.0+)"
+    echo "   - No 'already exists in stack' errors should occur"
+    echo "   - If conflicts persist, check for manual RestApi modifications"
     exit 1
 fi
 

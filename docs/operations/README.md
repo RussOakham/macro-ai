@@ -43,6 +43,13 @@ deployment safety.
   - Communication protocols during incidents
   - Recovery and restoration procedures
 
+- **[API Gateway Deployment Troubleshooting](./api-gateway-deployment-troubleshooting.md)** - Infrastructure deployment issues
+  - Resource conflict resolution (v1.0.0+ fixes)
+  - Stack update and rollback procedures
+  - Permission and authentication issues
+  - Diagnostic commands and health checks
+  - Prevention best practices and monitoring
+
 ## 🔄 Development Workflow
 
 ### Git Flow Development

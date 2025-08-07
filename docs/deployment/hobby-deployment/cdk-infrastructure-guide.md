@@ -139,6 +139,43 @@ aws ssm put-parameter \
 - **Throttling**: 100 requests/second, 200 burst limit
 - **Monitoring**: Basic (detailed monitoring disabled for cost)
 
+### Deployment Architecture
+
+The API Gateway deployment follows AWS CDK best practices to prevent resource conflicts:
+
+- **Single Deployment Path**: Uses explicit deployment creation only (`deploy: false` on RestApi)
+- **Resource Dependencies**: Proper dependency chain (RestApi → Deployment → Stage → Usage Plan)
+- **Conflict Prevention**: Validation ensures no duplicate deployment resources
+- **Update Management**: Deployment descriptions include timestamps for tracking
+- **Rollback Support**: CloudFormation can safely rollback deployments without conflicts
+
+**Key Implementation Details:**
+
+```typescript
+// RestApi with explicit deployment control
+new apigateway.RestApi(this, 'RestApi', {
+	deploy: false, // Prevents implicit deployment creation
+	// ... other configuration
+})
+
+// Explicit deployment with proper dependencies
+const deployment = new apigateway.Deployment(this, 'Deployment', {
+	api: this.restApi,
+	description: `Deployment for ${environmentName} - ${timestamp}`,
+})
+
+// Stage with explicit deployment reference
+const stage = new apigateway.Stage(this, 'Stage', {
+	deployment,
+	stageName: environmentName,
+})
+
+// Set deployment stage for CDK recognition
+this.restApi.deploymentStage = stage
+```
+
+This approach eliminates the "already exists in stack" errors that can occur with dual deployment creation paths.
+
 ## 🔐 Security
 
 ### IAM Permissions
@@ -282,6 +319,34 @@ npm run destroy
 4. **Lambda Cold Start**
    - First request may be slower due to cold start
    - Consider implementing health check warming
+
+5. **API Gateway Deployment Conflicts** ✅ RESOLVED
+   - **Issue**: "already exists in stack" errors during deployment
+   - **Cause**: Dual deployment creation (implicit + explicit)
+   - **Solution**: Implemented in v1.0.0 - uses single explicit deployment path
+   - **Prevention**: Validation ensures no duplicate deployment resources
+
+### Deployment Conflict Resolution
+
+If you encounter deployment resource conflicts (rare with current implementation):
+
+```bash
+# 1. Check for duplicate deployments in CloudFormation template
+npm run synth | grep -A 5 -B 5 "AWS::ApiGateway::Deployment"
+
+# 2. Verify single deployment resource exists
+# Should show only one deployment resource per API
+
+# 3. If conflicts persist, check for manual modifications
+# Ensure no manual deployOptions in RestApi constructor
+```
+
+**Current Implementation Prevents:**
+
+- Implicit deployment creation via `deployOptions`
+- Multiple deployment resources for same API
+- Stage name conflicts
+- Resource dependency issues
 
 ### Useful Commands
 

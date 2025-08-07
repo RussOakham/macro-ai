@@ -240,6 +240,7 @@ jobs:
           pnpm build
 
           # Make deploy script executable and run it
+          # v1.0.0+ includes API Gateway deployment conflict fixes
           chmod +x scripts/deploy.sh
           ./scripts/deploy.sh
         env:

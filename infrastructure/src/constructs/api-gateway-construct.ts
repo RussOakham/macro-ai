@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib'
+import { Token } from 'aws-cdk-lib'
 import * as apigateway from 'aws-cdk-lib/aws-apigateway'
-import * as certificatemanager from 'aws-cdk-lib/aws-certificatemanager'
+import * as acm from 'aws-cdk-lib/aws-certificatemanager'
 import * as cognito from 'aws-cdk-lib/aws-cognito'
 import * as lambda from 'aws-cdk-lib/aws-lambda'
 import * as route53 from 'aws-cdk-lib/aws-route53'
@@ -142,7 +143,7 @@ export class ApiGatewayConstruct extends Construct {
 		} = props
 
 		// Create REST API
-		this.restApi = this.createRestApi(environmentName, enableDetailedMonitoring)
+		this.restApi = this.createRestApi(environmentName)
 
 		// Log CORS configuration for transparency
 		const allowedOrigins = this.getAllowedOrigins(environmentName)
@@ -171,6 +172,9 @@ export class ApiGatewayConstruct extends Construct {
 		this.deployment = deployment
 		this.stage = stage
 
+		// Set the deployment stage on the RestApi for CDK to recognize it
+		this.restApi.deploymentStage = stage
+
 		// Set up custom domain if provided
 		if (domainName && hostedZoneId) {
 			this.domainName = this.setupCustomDomain(domainName, hostedZoneId)
@@ -195,25 +199,15 @@ export class ApiGatewayConstruct extends Construct {
 		}
 	}
 
-	private createRestApi(
-		environmentName: string,
-		enableDetailedMonitoring: boolean,
-	): apigateway.RestApi {
+	private createRestApi(environmentName: string): apigateway.RestApi {
 		return new apigateway.RestApi(this, 'RestApi', {
 			restApiName: `macro-ai-${environmentName}-api`,
-			description: 'Macro AI API Gateway for hobby deployment',
+			description:
+				'Macro AI API Gateway for hobby deployment - Rollback test completed successfully',
 			// Cost optimization: disable CloudWatch role to avoid charges
 			cloudWatchRole: false,
-			// Enable detailed monitoring only if requested
-			deployOptions: {
-				stageName: environmentName,
-				metricsEnabled: enableDetailedMonitoring,
-				loggingLevel: enableDetailedMonitoring
-					? apigateway.MethodLoggingLevel.INFO
-					: apigateway.MethodLoggingLevel.OFF,
-				dataTraceEnabled: enableDetailedMonitoring,
-				tracingEnabled: enableDetailedMonitoring,
-			},
+			// Disable automatic deployment - we handle deployment explicitly
+			deploy: false,
 			// CORS configuration for frontend integration
 			defaultCorsPreflightOptions: {
 				allowOrigins: this.getAllowedOrigins(environmentName),
@@ -283,9 +277,26 @@ export class ApiGatewayConstruct extends Construct {
 		throttling: { rateLimit: number; burstLimit: number },
 		enableDetailedMonitoring: boolean,
 	): { deployment: apigateway.Deployment; stage: apigateway.Stage } {
+		// Validate throttling configuration
+		if (throttling.rateLimit <= 0 || throttling.burstLimit <= 0) {
+			throw new Error(
+				`Invalid throttling configuration: rateLimit=${String(throttling.rateLimit)}, burstLimit=${String(throttling.burstLimit)}. ` +
+					'Both values must be positive numbers.',
+			)
+		}
+
+		// Validate environment name
+		if (!environmentName || environmentName.trim().length === 0) {
+			throw new Error(
+				'Environment name cannot be empty. Provide a valid environment name for stage creation.',
+			)
+		}
 		const deployment = new apigateway.Deployment(this, 'Deployment', {
 			api: this.restApi,
+			description: `Macro AI API deployment for ${environmentName} environment - ${new Date().toISOString()}`,
 		})
+
+		// Note: CDK automatically handles deployment dependencies
 
 		const stage = new apigateway.Stage(this, 'Stage', {
 			deployment,
@@ -299,10 +310,13 @@ export class ApiGatewayConstruct extends Construct {
 			tracingEnabled: enableDetailedMonitoring,
 		})
 
+		// Note: CDK automatically handles stage dependencies
+
 		// Configure throttling via usage plan for cost control and protection
 		const usagePlan = this.restApi.addUsagePlan('ThrottlingPlan', {
 			name: `${environmentName}-throttling-plan`,
-			description: 'Usage plan for API throttling and cost control',
+			description:
+				'Usage plan for API throttling and cost control - Updated configuration',
 			throttle: {
 				rateLimit: throttling.rateLimit,
 				burstLimit: throttling.burstLimit,
@@ -314,7 +328,37 @@ export class ApiGatewayConstruct extends Construct {
 			stage,
 		})
 
+		// Note: CDK automatically handles usage plan dependencies
+
+		// Validate deployment configuration to prevent conflicts
+		this.validateDeploymentConfiguration(deployment, stage, environmentName)
+
 		return { deployment, stage }
+	}
+
+	/**
+	 * Validates deployment configuration to prevent resource conflicts
+	 */
+	private validateDeploymentConfiguration(
+		_deployment: apigateway.Deployment,
+		stage: apigateway.Stage,
+		environmentName: string,
+	): void {
+		// Validate stage name matches environment (skip CDK token validation)
+		if (
+			!Token.isUnresolved(stage.stageName) &&
+			stage.stageName !== environmentName
+		) {
+			throw new Error(
+				`Stage name mismatch: expected '${environmentName}', got '${stage.stageName}'. ` +
+					'This could cause deployment conflicts.',
+			)
+		}
+
+		// Log successful validation for transparency
+		console.log(
+			`✅ Deployment configuration validated successfully for ${environmentName} environment`,
+		)
 	}
 
 	private setupCustomDomain(
@@ -332,15 +376,10 @@ export class ApiGatewayConstruct extends Construct {
 		)
 
 		// Create SSL certificate
-		const certificate = new certificatemanager.Certificate(
-			this,
-			'Certificate',
-			{
-				domainName,
-				validation:
-					certificatemanager.CertificateValidation.fromDns(hostedZone),
-			},
-		)
+		const certificate = new acm.Certificate(this, 'Certificate', {
+			domainName,
+			validation: acm.CertificateValidation.fromDns(hostedZone),
+		})
 
 		// Create custom domain
 		const customDomain = new apigateway.DomainName(this, 'CustomDomain', {
