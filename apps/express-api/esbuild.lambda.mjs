@@ -28,7 +28,6 @@ const config = {
 	banner: {
 		js: '// AWS Lambda CommonJS Handler\n',
 	},
-
 }
 
 async function buildLambda() {

@@ -1,13 +1,40 @@
 import { HttpLogger, Options, pinoHttp } from 'pino-http'
 
+/**
+ * Check if running in Lambda environment
+ */
+const isLambdaEnvironment = (): boolean => {
+	return !!(
+		process.env.AWS_LAMBDA_FUNCTION_NAME ??
+		process.env.AWS_LAMBDA_RUNTIME_API ??
+		process.env.LAMBDA_RUNTIME_DIR
+	)
+}
+
 const createLogger = (nodeEnv: string): HttpLogger => {
+	const isLambda = isLambdaEnvironment()
+	const isDevelopment = nodeEnv === 'development'
+
+	// Only use pino-pretty in development and NOT in Lambda
+	const shouldUsePrettyTransport = isDevelopment && !isLambda
+
 	const pinoOptions: Options = {
-		transport: {
-			target: 'pino-pretty',
-		},
+		// Only add transport in development (not in Lambda/production)
+		...(shouldUsePrettyTransport && {
+			transport: {
+				target: 'pino-pretty',
+			},
+		}),
 		enabled: nodeEnv !== 'test',
 		quietReqLogger: true,
 		quietResLogger: true,
+		// Add structured logging for Lambda/production
+		...(!shouldUsePrettyTransport && {
+			formatters: {
+				level: (label) => ({ level: label }),
+			},
+			timestamp: true,
+		}),
 	}
 
 	return pinoHttp(pinoOptions)
