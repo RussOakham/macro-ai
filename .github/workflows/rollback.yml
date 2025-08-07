@@ -37,7 +37,7 @@ on:
 env:
   NODE_VERSION: '20'
   AWS_REGION: 'us-east-1'
-  PNPM_VERSION: '9'
+  PNPM_VERSION: '10.14.0'
 
 permissions:
   id-token: write

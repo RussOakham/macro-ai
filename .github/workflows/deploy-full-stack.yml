@@ -65,7 +65,7 @@ on:
 env:
   NODE_VERSION: '20'
   AWS_REGION: 'us-east-1'
-  PNPM_VERSION: '9'
+  PNPM_VERSION: '10.14.0'
   # CDK environment variables
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
