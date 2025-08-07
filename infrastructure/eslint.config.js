@@ -1,20 +1,22 @@
-import js from '@eslint/js'
-import ts from 'typescript-eslint'
-import prettier from 'eslint-config-prettier'
+import * as repoConfig from '@repo/config-eslint'
 import turboConfig from 'eslint-config-turbo/flat'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 
-export default ts.config(
-	// Base JavaScript rules
-	js.configs.recommended,
-	// TypeScript rules without strict type checking
-	...ts.configs.recommended,
-	...ts.configs.stylistic,
+export default repoConfig.config(
+	// Global ignores - must be first
+	{
+		ignores: ['dist/**', 'cdk.out/**', '*.d.ts', 'node_modules/**'],
+	},
+	// Use shared base config
+	...repoConfig.configs.base,
 	// Turbo config
 	...turboConfig,
+	// Infrastructure-specific overrides
 	{
 		files: ['**/*.ts', '**/*.tsx'],
-		plugins: { 'simple-import-sort': simpleImportSort },
+		plugins: {
+			'simple-import-sort': simpleImportSort,
+		},
 		languageOptions: {
 			parserOptions: {
 				project: './tsconfig.json',
@@ -48,10 +50,5 @@ export default ts.config(
 			],
 			'simple-import-sort/exports': 'error',
 		},
-	},
-	// Prettier must be last
-	prettier,
-	{
-		ignores: ['dist/**', 'cdk.out/**', '*.d.ts', 'node_modules/**'],
 	},
 )

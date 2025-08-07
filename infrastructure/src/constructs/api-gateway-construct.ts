@@ -98,7 +98,7 @@ export class ApiGatewayConstruct extends Construct {
 		// Production environment - restrict to specific domains
 		if (environmentName === 'production') {
 			return (
-				customOrigins || [
+				customOrigins ?? [
 					'https://app.macro-ai.com',
 					'https://www.macro-ai.com',
 				]
@@ -108,7 +108,7 @@ export class ApiGatewayConstruct extends Construct {
 		// Staging environment - allow staging domains
 		if (environmentName === 'staging') {
 			return (
-				customOrigins || [
+				customOrigins ?? [
 					'https://staging.macro-ai.com',
 					'https://dev.macro-ai.com',
 					'http://localhost:3000',
@@ -119,7 +119,7 @@ export class ApiGatewayConstruct extends Construct {
 
 		// Development/hobby environment - allow local development
 		return (
-			customOrigins || [
+			customOrigins ?? [
 				'http://localhost:3000',
 				'https://localhost:3000',
 				'http://127.0.0.1:3000',

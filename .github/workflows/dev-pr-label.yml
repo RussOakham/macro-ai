@@ -1,5 +1,5 @@
 # Workflow: Dev - PR Label Check
-# Purpose: Ensures every PR to develop or main has exactly one versioning label: major, minor, or patch.
+# Purpose: Ensures every PR to main has exactly one versioning label: major, minor, or patch.
 # Maintainers: Keep label list in sync with dev-pr-open.yml
 
 name: Dev - PR Label Check
@@ -8,7 +8,6 @@ on:
   pull_request:
     types: [opened, reopened, labeled, unlabeled, synchronize]
     branches:
-      - develop
       - main
 
 concurrency:
