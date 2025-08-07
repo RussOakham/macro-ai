@@ -5,7 +5,6 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable turbo/no-undeclared-env-vars */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 

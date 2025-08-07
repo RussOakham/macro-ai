@@ -45,6 +45,32 @@ export class EnhancedConfigService {
 
 	// Parameter mappings for sensitive configuration
 	private static readonly PARAMETER_MAPPINGS: ParameterMapping[] = [
+		// Critical parameters (SecureString)
+		{
+			envVar: 'API_KEY',
+			parameterName: 'api-key',
+			required: true,
+		},
+		{
+			envVar: 'COOKIE_ENCRYPTION_KEY',
+			parameterName: 'cookie-encryption-key',
+			required: true,
+		},
+		{
+			envVar: 'AWS_COGNITO_USER_POOL_SECRET_KEY',
+			parameterName: 'cognito-user-pool-secret-key',
+			required: true,
+		},
+		{
+			envVar: 'AWS_COGNITO_ACCESS_KEY',
+			parameterName: 'cognito-access-key',
+			required: true,
+		},
+		{
+			envVar: 'AWS_COGNITO_SECRET_KEY',
+			parameterName: 'cognito-secret-key',
+			required: true,
+		},
 		{
 			envVar: 'OPENAI_API_KEY',
 			parameterName: 'openai-api-key',
@@ -53,6 +79,12 @@ export class EnhancedConfigService {
 		{
 			envVar: 'RELATIONAL_DATABASE_URL',
 			parameterName: 'neon-database-url',
+			required: true,
+		},
+		// Standard parameters (String)
+		{
+			envVar: 'NON_RELATIONAL_DATABASE_URL',
+			parameterName: 'upstash-redis-url',
 			required: true,
 		},
 		{

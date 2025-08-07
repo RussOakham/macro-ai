@@ -26,6 +26,30 @@ const createServer = (): Express => {
 	app.use(express.static(path.join(process.cwd(), 'public')))
 
 	app.use(pino)
+
+	// Public endpoints: allow broad CORS for browser access (no credentials)
+	app.use(
+		'/api/health',
+		cors({
+			origin: true, // reflect request origin
+			credentials: false,
+			methods: ['GET', 'OPTIONS'],
+			allowedHeaders: [
+				'Origin',
+				'X-Requested-With',
+				'Content-Type',
+				'Accept',
+				'Authorization',
+				'X-API-KEY',
+				'Cache-Control',
+			],
+			maxAge: 86400,
+		}),
+	)
+	app.use('/api-docs', cors({ origin: true, credentials: false }))
+	app.use('/swagger.json', cors({ origin: true, credentials: false }))
+
+	// Default CORS for application routes (credentialed dev origins)
 	app.use(
 		cors({
 			origin: ['http://localhost:3000', 'http://localhost:3040'],

@@ -44,6 +44,64 @@ const loadConfig = (): Result<TEnv> => {
 			{ envPath, errors: validationError.details },
 			'configLoader',
 		)
+
+		// In Lambda environment, don't fail immediately - let Parameter Store populate values first
+		if (isLambdaEnvironment) {
+			logger.warn(
+				'Configuration validation failed in Lambda environment, Parameter Store will populate missing values',
+				{
+					operation: 'configValidationWarning',
+					error: validationError.message,
+				},
+			)
+			// Return a minimal config that won't crash the app
+			return [
+				{
+					API_KEY: process.env.API_KEY ?? '',
+					NODE_ENV: (process.env.NODE_ENV ?? 'production') as
+						| 'production'
+						| 'development'
+						| 'test',
+					APP_ENV: (process.env.APP_ENV ?? 'development') as
+						| 'production'
+						| 'staging'
+						| 'development'
+						| 'test',
+					SERVER_PORT: Number(process.env.SERVER_PORT) || 3040,
+					AWS_COGNITO_REGION: process.env.AWS_COGNITO_REGION ?? 'us-east-1',
+					AWS_COGNITO_USER_POOL_ID: process.env.AWS_COGNITO_USER_POOL_ID ?? '',
+					AWS_COGNITO_USER_POOL_CLIENT_ID:
+						process.env.AWS_COGNITO_USER_POOL_CLIENT_ID ?? '',
+					AWS_COGNITO_USER_POOL_SECRET_KEY:
+						process.env.AWS_COGNITO_USER_POOL_SECRET_KEY ?? '',
+					AWS_COGNITO_ACCESS_KEY: process.env.AWS_COGNITO_ACCESS_KEY ?? '',
+					AWS_COGNITO_SECRET_KEY: process.env.AWS_COGNITO_SECRET_KEY ?? '',
+					AWS_COGNITO_REFRESH_TOKEN_EXPIRY:
+						Number(process.env.AWS_COGNITO_REFRESH_TOKEN_EXPIRY) || 30,
+					COOKIE_DOMAIN: process.env.COOKIE_DOMAIN ?? 'localhost',
+					COOKIE_ENCRYPTION_KEY: process.env.COOKIE_ENCRYPTION_KEY ?? '',
+					NON_RELATIONAL_DATABASE_URL:
+						process.env.NON_RELATIONAL_DATABASE_URL ?? '',
+					RELATIONAL_DATABASE_URL: process.env.RELATIONAL_DATABASE_URL ?? '',
+					OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? '',
+					RATE_LIMIT_WINDOW_MS:
+						Number(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
+					RATE_LIMIT_MAX_REQUESTS:
+						Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+					AUTH_RATE_LIMIT_WINDOW_MS:
+						Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS) || 3600000,
+					AUTH_RATE_LIMIT_MAX_REQUESTS:
+						Number(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS) || 10,
+					API_RATE_LIMIT_WINDOW_MS:
+						Number(process.env.API_RATE_LIMIT_WINDOW_MS) || 60000,
+					API_RATE_LIMIT_MAX_REQUESTS:
+						Number(process.env.API_RATE_LIMIT_MAX_REQUESTS) || 60,
+					REDIS_URL: process.env.REDIS_URL,
+				},
+				null,
+			]
+		}
+
 		return [null, appError]
 	}
 

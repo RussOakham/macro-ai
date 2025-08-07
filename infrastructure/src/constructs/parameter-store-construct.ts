@@ -56,6 +56,36 @@ export class ParameterStoreConstruct extends Construct {
 		// Critical parameters (Advanced tier for higher throughput)
 		const criticalParams = [
 			{
+				name: 'api-key',
+				description: 'Application API key for authentication',
+				isSecure: true,
+				tier: ssm.ParameterTier.ADVANCED,
+			},
+			{
+				name: 'cookie-encryption-key',
+				description: 'Cookie encryption key for session security',
+				isSecure: true,
+				tier: ssm.ParameterTier.ADVANCED,
+			},
+			{
+				name: 'cognito-user-pool-secret-key',
+				description: 'AWS Cognito User Pool Client Secret',
+				isSecure: true,
+				tier: ssm.ParameterTier.ADVANCED,
+			},
+			{
+				name: 'cognito-access-key',
+				description: 'AWS IAM Access Key for Cognito operations',
+				isSecure: true,
+				tier: ssm.ParameterTier.ADVANCED,
+			},
+			{
+				name: 'cognito-secret-key',
+				description: 'AWS IAM Secret Key for Cognito operations',
+				isSecure: true,
+				tier: ssm.ParameterTier.ADVANCED,
+			},
+			{
 				name: 'openai-api-key',
 				description: 'OpenAI API key for AI chat functionality',
 				isSecure: true,
