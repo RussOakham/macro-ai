@@ -3,20 +3,20 @@ name: Deploy Infrastructure
 on:
   # Wait for hygiene checks to complete successfully before deploying
   workflow_run:
-    workflows: ['Hygiene Checks']
+    workflows: [ 'Hygiene Checks' ]
     types:
-      - completed
+    - completed
     branches:
-      - develop # Deploy to staging
-      - main # Deploy to production
+    - develop # Deploy to staging
+    - main # Deploy to production
   pull_request:
     branches:
-      - develop # PR validation for staging
-      - main # PR validation for production
+    - develop # PR validation for staging
+    - main # PR validation for production
     paths:
-      - 'infrastructure/**'
-      - 'apps/express-api/**'
-      - '.github/workflows/deploy-infrastructure.yml'
+    - 'infrastructure/**'
+    - 'apps/express-api/**'
+    - '.github/workflows/deploy-infrastructure.yml'
   workflow_dispatch:
     inputs:
       environment:
@@ -25,8 +25,8 @@ on:
         default: 'staging'
         type: choice
         options:
-          - staging
-          - production
+        - staging
+        - production
 
 permissions:
   contents: read
@@ -51,50 +51,61 @@ jobs:
       should-deploy: ${{ steps.changes.outputs.should-deploy }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 10.14.0
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: 10.14.0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'pnpm'
 
-      - name: Install Express API dependencies
-        run: |
-          cd apps/express-api
-          pnpm install --frozen-lockfile
+    - name: Install Express API dependencies
+      run: |
+        cd apps/express-api
+        pnpm install --frozen-lockfile
 
-      - name: Build Lambda package
-        run: |
-          cd apps/express-api
-          pnpm build:lambda
-          pnpm bundle:lambda
-          pnpm package:lambda
+    - name: Build Lambda package
+      run: |
+        cd apps/express-api
+        pnpm build:lambda
+        pnpm bundle:lambda
+        pnpm package:lambda
 
-      - name: Upload Lambda package as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: lambda-package
-          path: apps/express-api/dist/lambda.zip
-          retention-days: 30
+    - name: Upload Lambda package as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: lambda-package
+        path: apps/express-api/dist/lambda.zip
+        retention-days: 30
 
-      - name: Determine if deployment should proceed
-        id: changes
-        run: |
-          # Only deploy for workflow_dispatch, pushes to main/develop, NOT for pull_requests
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || [[ "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
-            echo "should-deploy=true" >> $GITHUB_OUTPUT
-            echo "🚀 Deployment will proceed"
+    - name: Determine if deployment should proceed
+      id: changes
+      run: |
+        # Deploy for workflow_dispatch, pushes to main/develop, AND pull_requests (to development env)
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || [[ "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.ref }}" == "refs/heads/develop" ]] || [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          echo "should-deploy=true" >> $GITHUB_OUTPUT
+          echo "🚀 Deployment will proceed"
+
+          # Determine target environment
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "🔧 PR detected - deploying to development environment"
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "🔧 Main branch - deploying to production environment"
+          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            echo "🔧 Develop branch - deploying to staging environment"
           else
-            echo "should-deploy=false" >> $GITHUB_OUTPUT
-            echo "🔍 Validation only (no deployment for PRs)"
+            echo "🔧 Manual dispatch - deploying to selected environment"
           fi
+        else
+          echo "should-deploy=false" >> $GITHUB_OUTPUT
+          echo "🔍 No deployment conditions met"
+        fi
 
   validate:
     name: Validate Infrastructure
@@ -104,208 +115,219 @@ jobs:
     if: needs.build-lambda.outputs.should-deploy == 'true' && (github.event.workflow_run.conclusion == 'success' || github.event_name != 'workflow_run')
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 10.14.0
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: 10.14.0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'pnpm'
 
-      - name: Download Lambda package
-        uses: actions/download-artifact@v4
-        with:
-          name: lambda-package
-          path: apps/express-api/dist/
+    - name: Download Lambda package
+      uses: actions/download-artifact@v4
+      with:
+        name: lambda-package
+        path: apps/express-api/dist/
 
-      - name: Install dependencies
-        run: |
-          cd infrastructure
-          pnpm install --frozen-lockfile
+    - name: Install dependencies
+      run: |
+        cd infrastructure
+        pnpm install --frozen-lockfile
 
-      - name: Lint infrastructure code
-        run: |
-          cd infrastructure
-          pnpm lint
+    - name: Lint infrastructure code
+      run: |
+        cd infrastructure
+        pnpm lint
 
-      - name: Type check infrastructure
-        run: |
-          cd infrastructure
-          pnpm type-check
+    - name: Type check infrastructure
+      run: |
+        cd infrastructure
+        pnpm type-check
 
-      - name: Run infrastructure tests
-        run: |
-          cd infrastructure
-          pnpm test
+    - name: Run infrastructure tests
+      run: |
+        cd infrastructure
+        pnpm test
 
-      - name: Build infrastructure
-        run: |
-          cd infrastructure
-          pnpm build
+    - name: Build infrastructure
+      run: |
+        cd infrastructure
+        pnpm build
 
-      - name: Synthesize CDK template
-        run: |
-          cd infrastructure
-          pnpm synth
+    - name: Synthesize CDK template
+      run: |
+        cd infrastructure
+        pnpm synth
 
-      - name: Upload CDK template as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: cdk-template
-          path: infrastructure/cdk.out/
-          retention-days: 30
+    - name: Upload CDK template as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: cdk-template
+        path: infrastructure/cdk.out/
+        retention-days: 30
 
   deploy:
     name: Deploy to AWS
     runs-on: ubuntu-latest
-    needs: [validate, build-lambda]
+    needs: [ validate, build-lambda ]
     # Only run if hygiene checks passed and deployment should proceed
     if: needs.build-lambda.outputs.should-deploy == 'true' && (github.event.workflow_run.conclusion == 'success' || github.event_name != 'workflow_run')
-    environment: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/develop' && 'staging') || 'development' }}
+    environment: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/develop' && 'staging') || (github.event_name == 'pull_request' && 'development') || 'development' }}
 
     permissions:
       id-token: write
       contents: read
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 10.14.0
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: 10.14.0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'pnpm'
 
-      - name: Install AWS CDK CLI globally
-        run: pnpm add -g aws-cdk
+    - name: Install AWS CDK CLI globally
+      run: pnpm add -g aws-cdk
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
 
-      - name: Download Lambda package
-        uses: actions/download-artifact@v4
-        with:
-          name: lambda-package
-          path: apps/express-api/dist/
+    - name: Download Lambda package
+      uses: actions/download-artifact@v4
+      with:
+        name: lambda-package
+        path: apps/express-api/dist/
 
-      - name: Install infrastructure dependencies
-        run: |
-          cd infrastructure
-          pnpm install --frozen-lockfile
+    - name: Install infrastructure dependencies
+      run: |
+        cd infrastructure
+        pnpm install --frozen-lockfile
 
-      - name: Build infrastructure
-        run: |
-          cd infrastructure
-          pnpm build
+    - name: Build infrastructure
+      run: |
+        cd infrastructure
+        pnpm build
 
-      - name: Pre-deployment validation
-        run: |
-          echo "🔍 Running pre-deployment validation..."
+    - name: Pre-deployment validation
+      run: |
+        echo "🔍 Running pre-deployment validation..."
 
-          # Validate AWS credentials
-          echo "✓ Checking AWS credentials..."
-          aws sts get-caller-identity
+        # Validate AWS credentials
+        echo "✓ Checking AWS credentials..."
+        aws sts get-caller-identity
 
-          # Validate environment configuration
-          echo "✓ Validating environment configuration..."
-          DEPLOY_ENV="${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/develop' && 'staging') || 'development' }}"
-          echo "Environment: $DEPLOY_ENV"
-          echo "Region: ${{ env.AWS_REGION }}"
-          echo "Trigger: ${{ github.event_name }}"
-          echo "Branch: ${{ github.ref }}"
+        # Validate environment configuration
+        echo "✓ Validating environment configuration..."
+        DEPLOY_ENV="${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/develop' && 'staging') || (github.event_name == 'pull_request' && 'development') || 'development' }}"
+        echo "Environment: $DEPLOY_ENV"
+        echo "Region: ${{ env.AWS_REGION }}"
+        echo "Trigger: ${{ github.event_name }}"
+        echo "Branch: ${{ github.ref }}"
 
-          # Check CDK bootstrap status
-          echo "✓ Checking CDK bootstrap status..."
-          if aws cloudformation describe-stacks --stack-name CDKToolkit --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
-            echo "CDK is bootstrapped in ${{ env.AWS_REGION }}"
-          else
-            echo "⚠️ CDK not bootstrapped in ${{ env.AWS_REGION }}, deployment will bootstrap automatically"
-          fi
+        # Log deployment strategy
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          echo "📋 Deployment Strategy: Feature branch PR → Development environment"
+        elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          echo "📋 Deployment Strategy: Main branch → Production environment"
+        elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+          echo "📋 Deployment Strategy: Develop branch → Staging environment"
+        else
+          echo "📋 Deployment Strategy: Manual dispatch → Selected environment"
+        fi
 
-          echo "✅ Pre-deployment validation completed"
+        # Check CDK bootstrap status
+        echo "✓ Checking CDK bootstrap status..."
+        if aws cloudformation describe-stacks --stack-name CDKToolkit --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
+          echo "CDK is bootstrapped in ${{ env.AWS_REGION }}"
+        else
+          echo "⚠️ CDK not bootstrapped in ${{ env.AWS_REGION }}, deployment will bootstrap automatically"
+        fi
 
-      - name: Deploy infrastructure
-        run: |
-          cd infrastructure
-          pnpm install --frozen-lockfile
-          pnpm build
+        echo "✅ Pre-deployment validation completed"
 
-          # Make deploy script executable and run it
-          # v1.0.0+ includes API Gateway deployment conflict fixes
-          chmod +x scripts/deploy.sh
-          ./scripts/deploy.sh
-        env:
-          CDK_DEPLOY_ENV: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/develop' && 'staging') || 'development' }}
-          CDK_DEPLOY_SCALE: 'hobby'
-          AWS_REGION: ${{ env.AWS_REGION }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-          NODE_ENV: 'production'
+    - name: Deploy infrastructure
+      run: |
+        cd infrastructure
+        pnpm install --frozen-lockfile
+        pnpm build
 
-      - name: Get deployment outputs
-        id: outputs
-        run: |
-          cd infrastructure
-          ENVIRONMENT="${{ github.event.inputs.environment || 'staging' }}"
-          ENV_CAPITALIZED="$(echo "$ENVIRONMENT" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')"
-          STACK_NAME="MacroAi${ENV_CAPITALIZED}Stack"
-          API_ENDPOINT=$(aws cloudformation describe-stacks \
-            --stack-name "$STACK_NAME" \
-            --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
-            --output text)
-          echo "api-endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
+        # Make deploy script executable and run it
+        # v1.0.0+ includes API Gateway deployment conflict fixes
+        chmod +x scripts/deploy.sh
+        ./scripts/deploy.sh
+      env:
+        CDK_DEPLOY_ENV: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/develop' && 'staging') || (github.event_name == 'pull_request' && 'development') || 'development' }}
+        CDK_DEPLOY_SCALE: 'hobby'
+        AWS_REGION: ${{ env.AWS_REGION }}
+        AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        NODE_ENV: 'production'
 
-      - name: Test deployment
-        run: |
-          # Wait a moment for the deployment to be ready
-          sleep 10
+    - name: Get deployment outputs
+      id: outputs
+      run: |
+        cd infrastructure
+        ENVIRONMENT="${{ github.event.inputs.environment || 'staging' }}"
+        ENV_CAPITALIZED="$(echo "$ENVIRONMENT" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')"
+        STACK_NAME="MacroAi${ENV_CAPITALIZED}Stack"
+        API_ENDPOINT=$(aws cloudformation describe-stacks \
+          --stack-name "$STACK_NAME" \
+          --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
+          --output text)
+        echo "api-endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
 
-          # Test the health endpoint
-          curl -f "${{ steps.outputs.outputs.api-endpoint }}/api/health" || {
-            echo "Health check failed"
-            exit 1
-          }
+    - name: Test deployment
+      run: |
+        # Wait a moment for the deployment to be ready
+        sleep 10
 
-      - name: Comment on PR with deployment info
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## 🚀 Infrastructure Deployment Preview
+        # Test the health endpoint
+        curl -f "${{ steps.outputs.outputs.api-endpoint }}/api/health" || {
+          echo "Health check failed"
+          exit 1
+        }
 
-              **Environment:** ${{ github.event.inputs.environment || 'development' }}
-              **API Endpoint:** ${{ steps.outputs.outputs.api-endpoint }}
-              
-              ### Test the deployment:
-              \`\`\`bash
-              curl ${{ steps.outputs.outputs.api-endpoint }}api/health
-              \`\`\`
-              
-              **Note:** This is a preview deployment. Merge to main to deploy to production.`
-            })
+    - name: Comment on PR with deployment info
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## 🚀 Infrastructure Deployment Preview
+
+            **Environment:** ${{ github.event.inputs.environment || 'development' }}
+            **API Endpoint:** ${{ steps.outputs.outputs.api-endpoint }}
+            
+            ### Test the deployment:
+            \`\`\`bash
+            curl ${{ steps.outputs.outputs.api-endpoint }}api/health
+            \`\`\`
+            
+            **Note:** This is a preview deployment. Merge to main to deploy to production.`
+          })
 
   cleanup:
     name: Cleanup Artifacts
     runs-on: ubuntu-latest
-    needs: [deploy]
+    needs: [ deploy ]
     if: always()
 
     permissions:
@@ -313,22 +335,22 @@ jobs:
       contents: read
 
     steps:
-      - name: Delete artifacts
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: context.runId,
-            });
+    - name: Delete artifacts
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            run_id: context.runId,
+          });
 
-            for (const artifact of artifacts.data.artifacts) {
-              if (artifact.name === 'cdk-template' || artifact.name === 'lambda-package') {
-                await github.rest.actions.deleteArtifact({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  artifact_id: artifact.id,
-                });
-              }
+          for (const artifact of artifacts.data.artifacts) {
+            if (artifact.name === 'cdk-template' || artifact.name === 'lambda-package') {
+              await github.rest.actions.deleteArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id,
+              });
             }
+          }
