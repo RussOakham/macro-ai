@@ -34,9 +34,9 @@ on:
         default: 'development'
         type: choice
         options:
-          - development
-          - staging
-          - production
+        - development
+        - staging
+        - production
       deploy_backend:
         description: 'Deploy backend infrastructure'
         required: false
@@ -54,12 +54,12 @@ on:
         type: boolean
   # Wait for hygiene checks to complete successfully before deploying
   workflow_run:
-    workflows: ['Hygiene Checks']
+    workflows: [ 'Hygiene Checks' ]
     types:
-      - completed
+    - completed
     branches:
-      - develop # Deploy to staging
-      - main # Deploy to production
+    - develop # Deploy to staging
+    - main # Deploy to production
 
 env:
   NODE_VERSION: '20'
@@ -87,63 +87,63 @@ jobs:
       should-deploy-frontend: ${{ steps.changes.outputs.frontend-changed }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'pnpm'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: ${{ env.PNPM_VERSION }}
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: ${{ env.PNPM_VERSION }}
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
 
-      - name: Create environment files
-        run: |
-          # Create test environment files
-          echo "VITE_API_URL=http://localhost:3040/api" > apps/client-ui/.env
-          echo "VITE_API_KEY=test-api-key-32-characters-long-dummy" >> apps/client-ui/.env
+    - name: Create environment files
+      run: |
+        # Create test environment files
+        echo "VITE_API_URL=http://localhost:3040/api" > apps/client-ui/.env
+        echo "VITE_API_KEY=test-api-key-32-characters-long-dummy" >> apps/client-ui/.env
 
-          echo "API_KEY=test-api-key-32-characters-long-dummy" > apps/express-api/.env
-          echo "NODE_ENV=test" >> apps/express-api/.env
+        echo "API_KEY=test-api-key-32-characters-long-dummy" > apps/express-api/.env
+        echo "NODE_ENV=test" >> apps/express-api/.env
 
-      - name: Run tests
-        run: |
-          pnpm test
-          pnpm type-check
+    - name: Run tests
+      run: |
+        pnpm test
+        pnpm type-check
 
-      - name: Lint code
-        run: pnpm lint
+    - name: Lint code
+      run: pnpm lint
 
-      - name: Detect changes
-        id: changes
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "backend-changed=${{ github.event.inputs.deploy_backend }}" >> "$GITHUB_OUTPUT"
-            echo "frontend-changed=${{ github.event.inputs.deploy_frontend }}" >> "$GITHUB_OUTPUT"
+    - name: Detect changes
+      id: changes
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "backend-changed=${{ github.event.inputs.deploy_backend }}" >> "$GITHUB_OUTPUT"
+          echo "frontend-changed=${{ github.event.inputs.deploy_frontend }}" >> "$GITHUB_OUTPUT"
+        else
+          # Check for changes in backend files
+          if git diff --name-only HEAD~1 HEAD | grep -E "(apps/express-api|infrastructure)" > /dev/null; then
+            echo "backend-changed=true" >> "$GITHUB_OUTPUT"
           else
-            # Check for changes in backend files
-            if git diff --name-only HEAD~1 HEAD | grep -E "(apps/express-api|infrastructure)" > /dev/null; then
-              echo "backend-changed=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "backend-changed=false" >> "$GITHUB_OUTPUT"
-            fi
-
-            # Check for changes in frontend files
-            if git diff --name-only HEAD~1 HEAD | grep -E "apps/client-ui" > /dev/null; then
-              echo "frontend-changed=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "frontend-changed=false" >> "$GITHUB_OUTPUT"
-            fi
+            echo "backend-changed=false" >> "$GITHUB_OUTPUT"
           fi
+
+          # Check for changes in frontend files
+          if git diff --name-only HEAD~1 HEAD | grep -E "apps/client-ui" > /dev/null; then
+            echo "frontend-changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "frontend-changed=false" >> "$GITHUB_OUTPUT"
+          fi
+        fi
 
   # Build Lambda Package
   build-lambda:
@@ -153,398 +153,398 @@ jobs:
     if: needs.quality-gates.outputs.should-deploy-backend == 'true'
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'pnpm'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: ${{ env.PNPM_VERSION }}
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: ${{ env.PNPM_VERSION }}
 
-      - name: Build Lambda package
-        run: |
-          cd apps/express-api
-          pnpm install --frozen-lockfile
-          pnpm package:lambda
+    - name: Build Lambda package
+      run: |
+        cd apps/express-api
+        pnpm install --frozen-lockfile
+        pnpm package:lambda
 
-      - name: Upload Lambda package
-        uses: actions/upload-artifact@v4
-        with:
-          name: lambda-package
-          path: apps/express-api/dist/lambda.zip
-          retention-days: 7
+    - name: Upload Lambda package
+      uses: actions/upload-artifact@v4
+      with:
+        name: lambda-package
+        path: apps/express-api/dist/lambda.zip
+        retention-days: 7
 
   # Deploy Backend Infrastructure
   deploy-backend:
     name: Deploy Backend Infrastructure
     runs-on: ubuntu-latest
-    needs: [quality-gates, build-lambda]
+    needs: [ quality-gates, build-lambda ]
     if: needs.quality-gates.outputs.should-deploy-backend == 'true'
-    environment: ${{ github.event.inputs.environment || 'development' }}
+    environment: ${{ inputs.environment || github.event.inputs.environment || 'development' }}
     outputs:
       api-endpoint: ${{ steps.outputs.outputs.api-endpoint }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'pnpm'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: ${{ env.PNPM_VERSION }}
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: ${{ env.PNPM_VERSION }}
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
 
-      - name: Download Lambda package
-        uses: actions/download-artifact@v4
-        with:
-          name: lambda-package
-          path: apps/express-api/dist/
+    - name: Download Lambda package
+      uses: actions/download-artifact@v4
+      with:
+        name: lambda-package
+        path: apps/express-api/dist/
 
-      - name: Pre-deployment validation
-        run: |
-          echo "🔍 Running pre-deployment validation..."
+    - name: Pre-deployment validation
+      run: |
+        echo "🔍 Running pre-deployment validation..."
 
-          # Validate AWS credentials
-          echo "✓ Checking AWS credentials..."
-          aws sts get-caller-identity
+        # Validate AWS credentials
+        echo "✓ Checking AWS credentials..."
+        aws sts get-caller-identity
 
-          # Validate Lambda package
-          echo "✓ Validating Lambda package..."
-          if [ ! -f "apps/express-api/dist/lambda.zip" ]; then
-            echo "❌ Lambda package not found!"
-            exit 1
-          fi
+        # Validate Lambda package
+        echo "✓ Validating Lambda package..."
+        if [ ! -f "apps/express-api/dist/lambda.zip" ]; then
+          echo "❌ Lambda package not found!"
+          exit 1
+        fi
 
-          PACKAGE_SIZE=$(stat -f%z "apps/express-api/dist/lambda.zip" 2>/dev/null || stat -c%s "apps/express-api/dist/lambda.zip")
-          echo "Lambda package size: ${PACKAGE_SIZE} bytes"
+        PACKAGE_SIZE=$(stat -f%z "apps/express-api/dist/lambda.zip" 2>/dev/null || stat -c%s "apps/express-api/dist/lambda.zip")
+        echo "Lambda package size: ${PACKAGE_SIZE} bytes"
 
-          if [ "$PACKAGE_SIZE" -lt 1000000 ]; then
-            echo "⚠️ Lambda package seems small (< 1MB), please verify"
-          fi
+        if [ "$PACKAGE_SIZE" -lt 1000000 ]; then
+          echo "⚠️ Lambda package seems small (< 1MB), please verify"
+        fi
 
-          # Validate environment configuration
-          echo "✓ Validating environment configuration..."
-          echo "Environment: ${{ github.event.inputs.environment || 'development' }}"
-          echo "Scale: hobby"
-          echo "Region: ${{ env.AWS_REGION }}"
+        # Validate environment configuration
+        echo "✓ Validating environment configuration..."
+        echo "Environment: ${{ inputs.environment || github.event.inputs.environment || 'development' }}"
+        echo "Scale: hobby"
+        echo "Region: ${{ env.AWS_REGION }}"
 
-          # Check CDK bootstrap status
-          echo "✓ Checking CDK bootstrap status..."
-          if aws cloudformation describe-stacks --stack-name CDKToolkit --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
-            echo "CDK is bootstrapped in ${{ env.AWS_REGION }}"
-          else
-            echo "⚠️ CDK not bootstrapped in ${{ env.AWS_REGION }}, deployment will bootstrap automatically"
-          fi
+        # Check CDK bootstrap status
+        echo "✓ Checking CDK bootstrap status..."
+        if aws cloudformation describe-stacks --stack-name CDKToolkit --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
+          echo "CDK is bootstrapped in ${{ env.AWS_REGION }}"
+        else
+          echo "⚠️ CDK not bootstrapped in ${{ env.AWS_REGION }}, deployment will bootstrap automatically"
+        fi
 
-          echo "✅ Pre-deployment validation completed"
+        echo "✅ Pre-deployment validation completed"
 
-      - name: Deploy infrastructure
-        run: |
-          cd infrastructure
-          pnpm install --frozen-lockfile
-          pnpm build
+    - name: Deploy infrastructure
+      run: |
+        cd infrastructure
+        pnpm install --frozen-lockfile
+        pnpm build
 
-          # Make deploy script executable and run it
-          chmod +x scripts/deploy.sh
-          ./scripts/deploy.sh
-        env:
-          CDK_DEPLOY_ENV: ${{ github.event.inputs.environment || 'development' }}
-          CDK_DEPLOY_SCALE: 'hobby'
-          AWS_REGION: ${{ env.AWS_REGION }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-          NODE_ENV: 'production'
+        # Make deploy script executable and run it
+        chmod +x scripts/deploy.sh
+        ./scripts/deploy.sh
+      env:
+        CDK_DEPLOY_ENV: ${{ inputs.environment || github.event.inputs.environment || 'development' }}
+        CDK_DEPLOY_SCALE: 'hobby'
+        AWS_REGION: ${{ env.AWS_REGION }}
+        AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        NODE_ENV: 'production'
 
-      - name: Get deployment outputs
-        id: outputs
-        run: |
-          # Calculate stack name based on environment
-          ENVIRONMENT="${{ github.event.inputs.environment || 'development' }}"
-          ENV_CAPITALIZED="$(echo "$ENVIRONMENT" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')"
-          STACK_NAME="MacroAi${ENV_CAPITALIZED}Stack"
+    - name: Get deployment outputs
+      id: outputs
+      run: |
+        # Calculate stack name based on environment
+        ENVIRONMENT="${{ inputs.environment || github.event.inputs.environment || 'development' }}"
+        ENV_CAPITALIZED="$(echo "$ENVIRONMENT" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')"
+        STACK_NAME="MacroAi${ENV_CAPITALIZED}Stack"
 
-          API_ENDPOINT=$(aws cloudformation describe-stacks \
-            --stack-name "$STACK_NAME" \
-            --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
-            --output text)
-          echo "api-endpoint=$API_ENDPOINT" >> "$GITHUB_OUTPUT"
+        API_ENDPOINT=$(aws cloudformation describe-stacks \
+          --stack-name "$STACK_NAME" \
+          --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
+          --output text)
+        echo "api-endpoint=$API_ENDPOINT" >> "$GITHUB_OUTPUT"
 
-      - name: Validate backend deployment
-        run: |
-          echo "🔍 Running post-deployment validation..."
+    - name: Validate backend deployment
+      run: |
+        echo "🔍 Running post-deployment validation..."
 
-          # Get API endpoint from outputs
-          API_ENDPOINT="${{ steps.outputs.outputs.api-endpoint }}"
+        # Get API endpoint from outputs
+        API_ENDPOINT="${{ steps.outputs.outputs.api-endpoint }}"
 
-          if [ -z "$API_ENDPOINT" ]; then
-            echo "❌ API endpoint not found in deployment outputs"
-            exit 1
-          fi
+        if [ -z "$API_ENDPOINT" ]; then
+          echo "❌ API endpoint not found in deployment outputs"
+          exit 1
+        fi
 
-          echo "✓ API endpoint: $API_ENDPOINT"
+        echo "✓ API endpoint: $API_ENDPOINT"
 
-          # Wait for deployment to be ready
-          echo "⏳ Waiting for deployment to be ready..."
-          sleep 30
+        # Wait for deployment to be ready
+        echo "⏳ Waiting for deployment to be ready..."
+        sleep 30
 
-          # Test health endpoint
-          echo "✓ Testing health endpoint..."
-          HEALTH_RESPONSE=$(curl -s -w "%{http_code}" "${API_ENDPOINT}api/health" || echo "000")
+        # Test health endpoint
+        echo "✓ Testing health endpoint..."
+        HEALTH_RESPONSE=$(curl -s -w "%{http_code}" "${API_ENDPOINT}api/health" || echo "000")
 
-          if [[ "$HEALTH_RESPONSE" == *"200" ]]; then
-            echo "✅ Health check passed"
-          else
-            echo "⚠️ Health check returned: $HEALTH_RESPONSE"
-            echo "This may be expected for a new deployment without Parameter Store values"
-          fi
+        if [[ "$HEALTH_RESPONSE" == *"200" ]]; then
+          echo "✅ Health check passed"
+        else
+          echo "⚠️ Health check returned: $HEALTH_RESPONSE"
+          echo "This may be expected for a new deployment without Parameter Store values"
+        fi
 
-          # Test CORS configuration
-          echo "✓ Testing CORS configuration..."
-          CORS_RESPONSE=$(curl -s -w "%{http_code}" \
-            -H "Origin: http://localhost:3000" \
-            -H "Access-Control-Request-Method: GET" \
-            -X OPTIONS "${API_ENDPOINT}api/health" || echo "000")
+        # Test CORS configuration
+        echo "✓ Testing CORS configuration..."
+        CORS_RESPONSE=$(curl -s -w "%{http_code}" \
+          -H "Origin: http://localhost:3000" \
+          -H "Access-Control-Request-Method: GET" \
+          -X OPTIONS "${API_ENDPOINT}api/health" || echo "000")
 
-          if [[ "$CORS_RESPONSE" == *"200" ]] || [[ "$CORS_RESPONSE" == *"204" ]]; then
-            echo "✅ CORS configuration working"
-          else
-            echo "⚠️ CORS response: $CORS_RESPONSE"
-          fi
+        if [[ "$CORS_RESPONSE" == *"200" ]] || [[ "$CORS_RESPONSE" == *"204" ]]; then
+          echo "✅ CORS configuration working"
+        else
+          echo "⚠️ CORS response: $CORS_RESPONSE"
+        fi
 
-          # Validate CloudFormation stack status
-          echo "✓ Validating CloudFormation stack..."
-          ENVIRONMENT="${{ github.event.inputs.environment || 'development' }}"
-          ENV_CAPITALIZED="$(echo "$ENVIRONMENT" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')"
-          STACK_NAME="MacroAi${ENV_CAPITALIZED}Stack"
+        # Validate CloudFormation stack status
+        echo "✓ Validating CloudFormation stack..."
+        ENVIRONMENT="${{ inputs.environment || github.event.inputs.environment || 'development' }}"
+        ENV_CAPITALIZED="$(echo "$ENVIRONMENT" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')"
+        STACK_NAME="MacroAi${ENV_CAPITALIZED}Stack"
 
-          STACK_STATUS=$(aws cloudformation describe-stacks \
-            --stack-name "$STACK_NAME" \
-            --query 'Stacks[0].StackStatus' \
-            --output text)
+        STACK_STATUS=$(aws cloudformation describe-stacks \
+          --stack-name "$STACK_NAME" \
+          --query 'Stacks[0].StackStatus' \
+          --output text)
 
-          if [ "$STACK_STATUS" = "CREATE_COMPLETE" ] || [ "$STACK_STATUS" = "UPDATE_COMPLETE" ]; then
-            echo "✅ CloudFormation stack is in healthy state: $STACK_STATUS"
-          else
-            echo "⚠️ CloudFormation stack status: $STACK_STATUS"
-          fi
+        if [ "$STACK_STATUS" = "CREATE_COMPLETE" ] || [ "$STACK_STATUS" = "UPDATE_COMPLETE" ]; then
+          echo "✅ CloudFormation stack is in healthy state: $STACK_STATUS"
+        else
+          echo "⚠️ CloudFormation stack status: $STACK_STATUS"
+        fi
 
-          echo "✅ Post-deployment validation completed"
+        echo "✅ Post-deployment validation completed"
 
   # Build Frontend
   build-frontend:
     name: Build Frontend
     runs-on: ubuntu-latest
-    needs: [quality-gates, deploy-backend]
+    needs: [ quality-gates, deploy-backend ]
     if: always() && needs.quality-gates.outputs.should-deploy-frontend == 'true'
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'pnpm'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: ${{ env.PNPM_VERSION }}
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: ${{ env.PNPM_VERSION }}
 
-      - name: Build frontend
-        run: |
-          cd apps/client-ui
-          pnpm install --frozen-lockfile
+    - name: Build frontend
+      run: |
+        cd apps/client-ui
+        pnpm install --frozen-lockfile
 
-          # Set API URL from backend deployment or use default
-          if [[ -n "${{ needs.deploy-backend.outputs.api-endpoint }}" ]]; then
-            export VITE_API_URL="${{ needs.deploy-backend.outputs.api-endpoint }}api"
-          else
-            export VITE_API_URL="https://api.macro-ai.com/api"
-          fi
+        # Set API URL from backend deployment or use default
+        if [[ -n "${{ needs.deploy-backend.outputs.api-endpoint }}" ]]; then
+          export VITE_API_URL="${{ needs.deploy-backend.outputs.api-endpoint }}api"
+        else
+          export VITE_API_URL="https://api.macro-ai.com/api"
+        fi
 
-          export VITE_API_KEY="${{ secrets.FRONTEND_API_KEY }}"
-          export VITE_APP_ENV="${{ github.event.inputs.environment || 'development' }}"
+        export VITE_API_KEY="${{ secrets.FRONTEND_API_KEY }}"
+        export VITE_APP_ENV="${{ inputs.environment || github.event.inputs.environment || 'development' }}"
 
-          pnpm build
+        pnpm build
 
-      - name: Upload frontend build
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-build
-          path: apps/client-ui/dist/
-          retention-days: 7
+    - name: Upload frontend build
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-build
+        path: apps/client-ui/dist/
+        retention-days: 7
 
   # Deploy Frontend to Amplify
   deploy-frontend:
     name: Deploy Frontend to Amplify
     runs-on: ubuntu-latest
-    needs: [quality-gates, build-frontend]
+    needs: [ quality-gates, build-frontend ]
     if: always() && needs.quality-gates.outputs.should-deploy-frontend == 'true'
-    environment: ${{ github.event.inputs.environment || 'development' }}
+    environment: ${{ inputs.environment || github.event.inputs.environment || 'development' }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'pnpm'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: ${{ env.PNPM_VERSION }}
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: ${{ env.PNPM_VERSION }}
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install Amplify CLI
-        run: npm install -g @aws-amplify/cli
+    - name: Install Amplify CLI
+      run: npm install -g @aws-amplify/cli
 
-      - name: Download frontend build
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-build
-          path: apps/client-ui/dist/
+    - name: Download frontend build
+      uses: actions/download-artifact@v4
+      with:
+        name: frontend-build
+        path: apps/client-ui/dist/
 
-      - name: Deploy to Amplify
-        run: |
-          cd apps/client-ui
+    - name: Deploy to Amplify
+      run: |
+        cd apps/client-ui
 
-          # Set environment variables for Amplify
-          export AMPLIFY_ENV="${{ github.event.inputs.environment || 'development' }}"
+        # Set environment variables for Amplify
+        export AMPLIFY_ENV="${{ inputs.environment || github.event.inputs.environment || 'development' }}"
 
-          # Deploy using the deployment script
-          ./scripts/deploy-amplify.sh
+        # Deploy using the deployment script
+        ./scripts/deploy-amplify.sh
 
   # Integration Tests
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
-    needs: [deploy-backend, deploy-frontend]
+    needs: [ deploy-backend, deploy-frontend ]
     if: always() && (github.event.inputs.run_tests == 'true' || github.event.inputs.run_tests == null)
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install integration test dependencies
-        run: |
-          cd tests/integration
-          pnpm install --frozen-lockfile
+    - name: Install integration test dependencies
+      run: |
+        cd tests/integration
+        pnpm install --frozen-lockfile
 
-      - name: Run comprehensive integration tests
-        run: |
-          # Set up test environment variables
-          export TEST_API_ENDPOINT="${{ needs.deploy-backend.outputs.api-endpoint }}"
-          export TEST_API_KEY="${{ secrets.FRONTEND_API_KEY }}"
-          export TEST_ENVIRONMENT="${{ github.event.inputs.environment || 'development' }}"
-          export TEST_TIMEOUT="300"
+    - name: Run comprehensive integration tests
+      run: |
+        # Set up test environment variables
+        export TEST_API_ENDPOINT="${{ needs.deploy-backend.outputs.api-endpoint }}"
+        export TEST_API_KEY="${{ secrets.FRONTEND_API_KEY }}"
+        export TEST_ENVIRONMENT="${{ inputs.environment || github.event.inputs.environment || 'development' }}"
+        export TEST_TIMEOUT="300"
 
-          # Run integration test suite
-          cd tests/integration
-          ./run-integration-tests.sh
-        env:
-          AWS_REGION: ${{ env.AWS_REGION }}
+        # Run integration test suite
+        cd tests/integration
+        ./run-integration-tests.sh
+      env:
+        AWS_REGION: ${{ env.AWS_REGION }}
 
-      - name: Upload integration test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: integration-test-results
-          path: tests/integration/results/
-          retention-days: 7
+    - name: Upload integration test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: integration-test-results
+        path: tests/integration/results/
+        retention-days: 7
 
   # Deployment Summary
   deployment-summary:
     name: Deployment Summary
     runs-on: ubuntu-latest
-    needs: [deploy-backend, deploy-frontend, integration-tests]
+    needs: [ deploy-backend, deploy-frontend, integration-tests ]
     if: always()
 
     steps:
-      - name: Create deployment summary
-        run: |
-          # Generate deployment summary header
+    - name: Create deployment summary
+      run: |
+        # Generate deployment summary header
+        {
+          echo "## 🚀 Deployment Summary"
+          echo ""
+          echo "**Environment:** ${{ inputs.environment || github.event.inputs.environment || 'development' }}"
+          echo "**Trigger:** ${{ github.event_name }}"
+          echo ""
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        # Backend deployment status
+        if [[ "${{ needs.deploy-backend.result }}" == "success" ]]; then
           {
-            echo "## 🚀 Deployment Summary"
-            echo ""
-            echo "**Environment:** ${{ github.event.inputs.environment || 'development' }}"
-            echo "**Trigger:** ${{ github.event_name }}"
-            echo ""
+            echo "✅ **Backend Deployment:** Success"
+            echo "   - API Endpoint: ${{ needs.deploy-backend.outputs.api-endpoint }}"
           } >> "$GITHUB_STEP_SUMMARY"
+        elif [[ "${{ needs.deploy-backend.result }}" == "skipped" ]]; then
+          echo "⏭️ **Backend Deployment:** Skipped (no changes)" >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "❌ **Backend Deployment:** Failed" >> "$GITHUB_STEP_SUMMARY"
+        fi
 
-          # Backend deployment status
-          if [[ "${{ needs.deploy-backend.result }}" == "success" ]]; then
-            {
-              echo "✅ **Backend Deployment:** Success"
-              echo "   - API Endpoint: ${{ needs.deploy-backend.outputs.api-endpoint }}"
-            } >> "$GITHUB_STEP_SUMMARY"
-          elif [[ "${{ needs.deploy-backend.result }}" == "skipped" ]]; then
-            echo "⏭️ **Backend Deployment:** Skipped (no changes)" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "❌ **Backend Deployment:** Failed" >> "$GITHUB_STEP_SUMMARY"
+        # Frontend deployment status
+        if [[ "${{ needs.deploy-frontend.result }}" == "success" ]]; then
+          echo "✅ **Frontend Deployment:** Success" >> "$GITHUB_STEP_SUMMARY"
+        elif [[ "${{ needs.deploy-frontend.result }}" == "skipped" ]]; then
+          echo "⏭️ **Frontend Deployment:** Skipped (no changes)" >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "❌ **Frontend Deployment:** Failed" >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+        # Integration tests status
+        if [[ "${{ needs.integration-tests.result }}" == "success" ]]; then
+          echo "✅ **Integration Tests:** Passed" >> "$GITHUB_STEP_SUMMARY"
+        elif [[ "${{ needs.integration-tests.result }}" == "skipped" ]]; then
+          echo "⏭️ **Integration Tests:** Skipped" >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "❌ **Integration Tests:** Failed" >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+        # Generate useful links section
+        {
+          echo ""
+          echo "**🔗 Useful Links:**"
+          if [[ -n "${{ needs.deploy-backend.outputs.api-endpoint }}" ]]; then
+            echo "- [API Health Check](${{ needs.deploy-backend.outputs.api-endpoint }}api/health)"
           fi
-
-          # Frontend deployment status
-          if [[ "${{ needs.deploy-frontend.result }}" == "success" ]]; then
-            echo "✅ **Frontend Deployment:** Success" >> "$GITHUB_STEP_SUMMARY"
-          elif [[ "${{ needs.deploy-frontend.result }}" == "skipped" ]]; then
-            echo "⏭️ **Frontend Deployment:** Skipped (no changes)" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "❌ **Frontend Deployment:** Failed" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-          # Integration tests status
-          if [[ "${{ needs.integration-tests.result }}" == "success" ]]; then
-            echo "✅ **Integration Tests:** Passed" >> "$GITHUB_STEP_SUMMARY"
-          elif [[ "${{ needs.integration-tests.result }}" == "skipped" ]]; then
-            echo "⏭️ **Integration Tests:** Skipped" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "❌ **Integration Tests:** Failed" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-          # Generate useful links section
-          {
-            echo ""
-            echo "**🔗 Useful Links:**"
-            if [[ -n "${{ needs.deploy-backend.outputs.api-endpoint }}" ]]; then
-              echo "- [API Health Check](${{ needs.deploy-backend.outputs.api-endpoint }}api/health)"
-            fi
-            echo "- [AWS CloudFormation Console](https://console.aws.amazon.com/cloudformation/)"
-            echo "- [AWS Amplify Console](https://console.aws.amazon.com/amplify/)"
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "- [AWS CloudFormation Console](https://console.aws.amazon.com/cloudformation/)"
+          echo "- [AWS Amplify Console](https://console.aws.amazon.com/amplify/)"
+        } >> "$GITHUB_STEP_SUMMARY"
