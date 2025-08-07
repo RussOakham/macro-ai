@@ -1,7 +1,7 @@
 # Macro AI Infrastructure
 
-AWS CDK infrastructure code for the Macro AI hobby deployment. This creates a cost-optimized serverless architecture
-targeting <£10/month operational costs.
+AWS CDK infrastructure code for the Macro AI development deployment. This creates a cost-optimized serverless architecture
+targeting <£10/month operational costs using hobby-scale infrastructure.
 
 ## Architecture Overview
 
@@ -48,7 +48,7 @@ pnpm bootstrap
 pnpm deploy
 
 # Or with custom environment name
-CDK_DEPLOY_ENV=hobby pnpm deploy
+CDK_DEPLOY_ENV=development pnpm deploy
 ```
 
 ### 4. Update Parameter Store Values
@@ -58,14 +58,14 @@ After deployment, update the placeholder parameter values:
 ```bash
 # Update OpenAI API key
 aws ssm put-parameter \
-  --name "/macro-ai/hobby/critical/openai-api-key" \
+  --name "/macro-ai/development/critical/openai-api-key" \
   --value "sk-your-actual-openai-key" \
   --type "SecureString" \
   --overwrite
 
 # Update Neon database URL
 aws ssm put-parameter \
-  --name "/macro-ai/hobby/critical/neon-database-url" \
+  --name "/macro-ai/development/critical/neon-database-url" \
   --value "postgresql://user:pass@host:5432/db" \
   --type "SecureString" \
   --overwrite
@@ -79,14 +79,14 @@ aws ssm put-parameter \
 
 - `AWS_ACCOUNT_ID` or `CDK_DEFAULT_ACCOUNT`: AWS account ID
 - `AWS_REGION` or `CDK_DEFAULT_REGION`: AWS region (default: us-east-1)
-- `CDK_DEPLOY_ENV`: Environment name (default: hobby)
+- `CDK_DEPLOY_ENV`: Environment name (default: development)
 
 ### Custom Domain (Optional)
 
 To use a custom domain:
 
 ```typescript
-new MacroAiHobbyStack(app, 'MacroAiHobbyStack', {
+new MacroAiHobbyStack(app, 'MacroAiDevelopmentStack', {
 	domainName: 'api.yourdomain.com',
 	hostedZoneId: 'Z1234567890ABC',
 	// ... other props
@@ -138,7 +138,7 @@ pnpm destroy
 ## Parameter Store Hierarchy
 
 ```text
-/macro-ai/hobby/
+/macro-ai/development/
 ├── critical/           # Advanced tier parameters
 │   ├── openai-api-key
 │   └── neon-database-url
@@ -176,11 +176,11 @@ Basic monitoring included:
 
 ```bash
 # Check stack status
-aws cloudformation describe-stacks --stack-name MacroAiHobbyStack
+aws cloudformation describe-stacks --stack-name MacroAiDevelopmentStack
 
 # View Lambda logs
-aws logs tail /aws/lambda/macro-ai-hobby-api --follow
+aws logs tail /aws/lambda/macro-ai-development-api --follow
 
 # Test API endpoint
-curl https://your-api-id.execute-api.region.amazonaws.com/hobby/api/health
+curl https://your-api-id.execute-api.region.amazonaws.com/development/api/health
 ```

@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-ENVIRONMENT=${CDK_DEPLOY_ENV:-hobby}
+ENVIRONMENT=${CDK_DEPLOY_ENV:-development}
 AWS_REGION=${AWS_REGION:-us-east-1}
 PARAMETER_PREFIX="/macro-ai/$ENVIRONMENT"
 

@@ -19,7 +19,7 @@ if (!account) {
 }
 
 // Get deployment configuration
-const deploymentEnv = process.env.CDK_DEPLOY_ENV ?? 'staging'
+const deploymentEnv = process.env.CDK_DEPLOY_ENV ?? 'development'
 const deploymentScale = process.env.CDK_DEPLOY_SCALE ?? 'hobby'
 
 // Create environment-specific stack

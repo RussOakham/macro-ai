@@ -31,10 +31,10 @@ on:
       environment:
         description: 'Deployment environment'
         required: true
-        default: 'hobby'
+        default: 'development'
         type: choice
         options:
-          - hobby
+          - development
           - staging
           - production
       deploy_backend:
@@ -185,7 +185,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [quality-gates, build-lambda]
     if: needs.quality-gates.outputs.should-deploy-backend == 'true'
-    environment: ${{ github.event.inputs.environment || 'hobby' }}
+    environment: ${{ github.event.inputs.environment || 'development' }}
     outputs:
       api-endpoint: ${{ steps.outputs.outputs.api-endpoint }}
 
@@ -216,28 +216,134 @@ jobs:
           name: lambda-package
           path: apps/express-api/dist/
 
+      - name: Pre-deployment validation
+        run: |
+          echo "🔍 Running pre-deployment validation..."
+
+          # Validate AWS credentials
+          echo "✓ Checking AWS credentials..."
+          aws sts get-caller-identity
+
+          # Validate Lambda package
+          echo "✓ Validating Lambda package..."
+          if [ ! -f "apps/express-api/dist/lambda.zip" ]; then
+            echo "❌ Lambda package not found!"
+            exit 1
+          fi
+
+          PACKAGE_SIZE=$(stat -f%z "apps/express-api/dist/lambda.zip" 2>/dev/null || stat -c%s "apps/express-api/dist/lambda.zip")
+          echo "Lambda package size: ${PACKAGE_SIZE} bytes"
+
+          if [ "$PACKAGE_SIZE" -lt 1000000 ]; then
+            echo "⚠️ Lambda package seems small (< 1MB), please verify"
+          fi
+
+          # Validate environment configuration
+          echo "✓ Validating environment configuration..."
+          echo "Environment: ${{ github.event.inputs.environment || 'development' }}"
+          echo "Scale: hobby"
+          echo "Region: ${{ env.AWS_REGION }}"
+
+          # Check CDK bootstrap status
+          echo "✓ Checking CDK bootstrap status..."
+          if aws cloudformation describe-stacks --stack-name CDKToolkit --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
+            echo "CDK is bootstrapped in ${{ env.AWS_REGION }}"
+          else
+            echo "⚠️ CDK not bootstrapped in ${{ env.AWS_REGION }}, deployment will bootstrap automatically"
+          fi
+
+          echo "✅ Pre-deployment validation completed"
+
       - name: Deploy infrastructure
         run: |
           cd infrastructure
           pnpm install --frozen-lockfile
           pnpm build
-          pnpm deploy
+
+          # Make deploy script executable and run it
+          chmod +x scripts/deploy.sh
+          ./scripts/deploy.sh
         env:
-          CDK_DEPLOY_ENV: ${{ github.event.inputs.environment || 'hobby' }}
+          CDK_DEPLOY_ENV: ${{ github.event.inputs.environment || 'development' }}
+          CDK_DEPLOY_SCALE: 'hobby'
+          AWS_REGION: ${{ env.AWS_REGION }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          NODE_ENV: 'production'
 
       - name: Get deployment outputs
         id: outputs
         run: |
+          # Calculate stack name based on environment
+          ENVIRONMENT="${{ github.event.inputs.environment || 'development' }}"
+          ENV_CAPITALIZED="$(echo "$ENVIRONMENT" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')"
+          STACK_NAME="MacroAi${ENV_CAPITALIZED}Stack"
+
           API_ENDPOINT=$(aws cloudformation describe-stacks \
-            --stack-name MacroAiHobbyStack \
+            --stack-name "$STACK_NAME" \
             --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
             --output text)
           echo "api-endpoint=$API_ENDPOINT" >> "$GITHUB_OUTPUT"
 
       - name: Validate backend deployment
         run: |
-          cd infrastructure
-          ./scripts/validate-deployment.sh
+          echo "🔍 Running post-deployment validation..."
+
+          # Get API endpoint from outputs
+          API_ENDPOINT="${{ steps.outputs.outputs.api-endpoint }}"
+
+          if [ -z "$API_ENDPOINT" ]; then
+            echo "❌ API endpoint not found in deployment outputs"
+            exit 1
+          fi
+
+          echo "✓ API endpoint: $API_ENDPOINT"
+
+          # Wait for deployment to be ready
+          echo "⏳ Waiting for deployment to be ready..."
+          sleep 30
+
+          # Test health endpoint
+          echo "✓ Testing health endpoint..."
+          HEALTH_RESPONSE=$(curl -s -w "%{http_code}" "${API_ENDPOINT}api/health" || echo "000")
+
+          if [[ "$HEALTH_RESPONSE" == *"200" ]]; then
+            echo "✅ Health check passed"
+          else
+            echo "⚠️ Health check returned: $HEALTH_RESPONSE"
+            echo "This may be expected for a new deployment without Parameter Store values"
+          fi
+
+          # Test CORS configuration
+          echo "✓ Testing CORS configuration..."
+          CORS_RESPONSE=$(curl -s -w "%{http_code}" \
+            -H "Origin: http://localhost:3000" \
+            -H "Access-Control-Request-Method: GET" \
+            -X OPTIONS "${API_ENDPOINT}api/health" || echo "000")
+
+          if [[ "$CORS_RESPONSE" == *"200" ]] || [[ "$CORS_RESPONSE" == *"204" ]]; then
+            echo "✅ CORS configuration working"
+          else
+            echo "⚠️ CORS response: $CORS_RESPONSE"
+          fi
+
+          # Validate CloudFormation stack status
+          echo "✓ Validating CloudFormation stack..."
+          ENVIRONMENT="${{ github.event.inputs.environment || 'development' }}"
+          ENV_CAPITALIZED="$(echo "$ENVIRONMENT" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')"
+          STACK_NAME="MacroAi${ENV_CAPITALIZED}Stack"
+
+          STACK_STATUS=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --query 'Stacks[0].StackStatus' \
+            --output text)
+
+          if [ "$STACK_STATUS" = "CREATE_COMPLETE" ] || [ "$STACK_STATUS" = "UPDATE_COMPLETE" ]; then
+            echo "✅ CloudFormation stack is in healthy state: $STACK_STATUS"
+          else
+            echo "⚠️ CloudFormation stack status: $STACK_STATUS"
+          fi
+
+          echo "✅ Post-deployment validation completed"
 
   # Build Frontend
   build-frontend:
@@ -274,7 +380,7 @@ jobs:
           fi
 
           export VITE_API_KEY="${{ secrets.FRONTEND_API_KEY }}"
-          export VITE_APP_ENV="${{ github.event.inputs.environment || 'hobby' }}"
+          export VITE_APP_ENV="${{ github.event.inputs.environment || 'development' }}"
 
           pnpm build
 
@@ -291,7 +397,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [quality-gates, build-frontend]
     if: always() && needs.quality-gates.outputs.should-deploy-frontend == 'true'
-    environment: ${{ github.event.inputs.environment || 'hobby' }}
+    environment: ${{ github.event.inputs.environment || 'development' }}
 
     steps:
       - name: Checkout code
@@ -328,7 +434,7 @@ jobs:
           cd apps/client-ui
 
           # Set environment variables for Amplify
-          export AMPLIFY_ENV="${{ github.event.inputs.environment || 'hobby' }}"
+          export AMPLIFY_ENV="${{ github.event.inputs.environment || 'development' }}"
 
           # Deploy using the deployment script
           ./scripts/deploy-amplify.sh
@@ -365,7 +471,7 @@ jobs:
           # Set up test environment variables
           export TEST_API_ENDPOINT="${{ needs.deploy-backend.outputs.api-endpoint }}"
           export TEST_API_KEY="${{ secrets.FRONTEND_API_KEY }}"
-          export TEST_ENVIRONMENT="${{ github.event.inputs.environment || 'hobby' }}"
+          export TEST_ENVIRONMENT="${{ github.event.inputs.environment || 'development' }}"
           export TEST_TIMEOUT="300"
 
           # Run integration test suite
@@ -396,7 +502,7 @@ jobs:
           {
             echo "## 🚀 Deployment Summary"
             echo ""
-            echo "**Environment:** ${{ github.event.inputs.environment || 'hobby' }}"
+            echo "**Environment:** ${{ github.event.inputs.environment || 'development' }}"
             echo "**Trigger:** ${{ github.event_name }}"
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"

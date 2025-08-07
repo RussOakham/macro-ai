@@ -13,14 +13,16 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-ENVIRONMENT=${CDK_DEPLOY_ENV:-staging}
+ENVIRONMENT=${CDK_DEPLOY_ENV:-development}
 SCALE=${CDK_DEPLOY_SCALE:-hobby}
 AWS_REGION=${AWS_REGION:-us-east-1}
-EXPRESS_API_DIR="../apps/express-api"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
+EXPRESS_API_DIR="$PROJECT_ROOT/apps/express-api"
 LAMBDA_DIST_DIR="$EXPRESS_API_DIR/dist"
 
 # Generate stack name
-ENV_CAPITALIZED=$(echo "$ENVIRONMENT" | sed 's/.*/\u&/')
+ENV_CAPITALIZED="$(echo "$ENVIRONMENT" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')"
 STACK_NAME="MacroAi${ENV_CAPITALIZED}Stack"
 
 echo -e "${BLUE}🚀 Macro AI Infrastructure Deployment${NC}"
@@ -141,17 +143,29 @@ fi
 
 # Deploy the stack
 echo -e "${BLUE}🚀 Deploying infrastructure...${NC}"
-pnpm deploy
+if ! cdk deploy "$STACK_NAME" --require-approval never; then
+    print_error "Infrastructure deployment failed!"
+    echo -e "${YELLOW}💡 Troubleshooting tips:${NC}"
+    echo "1. Check AWS credentials: aws sts get-caller-identity"
+    echo "2. Verify CDK bootstrap: aws cloudformation describe-stacks --stack-name CDKToolkit"
+    echo "3. Check Lambda package: ls -la $LAMBDA_DIST_DIR/lambda.zip"
+    echo "4. Review deployment logs above for specific errors"
+    exit 1
+fi
 
 print_status "Infrastructure deployed successfully!"
 
 # Get stack outputs
 echo -e "${BLUE}📋 Stack Outputs:${NC}"
-aws cloudformation describe-stacks \
+if ! aws cloudformation describe-stacks \
     --stack-name "$STACK_NAME" \
     --region "$AWS_REGION" \
     --query 'Stacks[0].Outputs[*].[OutputKey,OutputValue,Description]' \
-    --output table
+    --output table; then
+    print_warning "Could not retrieve stack outputs. Stack may still be updating."
+    echo "You can check outputs later with:"
+    echo "aws cloudformation describe-stacks --stack-name $STACK_NAME --region $AWS_REGION"
+fi
 
 echo ""
 echo -e "${GREEN}🎉 Deployment completed successfully!${NC}"
@@ -164,4 +178,4 @@ echo ""
 echo -e "${BLUE}💡 Useful Commands:${NC}"
 echo "• View logs: aws logs tail /aws/lambda/macro-ai-$ENVIRONMENT-api --follow"
 echo "• Update parameters: aws ssm put-parameter --name '/macro-ai/$ENVIRONMENT/critical/openai-api-key' --value 'your-key' --type SecureString --overwrite"
-echo "• Test API: curl \$(aws cloudformation describe-stacks --stack-name MacroAiHobbyStack --query 'Stacks[0].Outputs[?OutputKey==\`ApiEndpoint\`].OutputValue' --output text)api/health"
+echo "• Test API: curl \$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs[?OutputKey==\`ApiEndpoint\`].OutputValue' --output text)api/health"

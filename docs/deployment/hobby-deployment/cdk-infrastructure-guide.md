@@ -92,7 +92,7 @@ npm run deploy
 
 # Or manual updates
 aws ssm put-parameter \
-  --name "/macro-ai/hobby/critical/openai-api-key" \
+  --name "/macro-ai/development/critical/openai-api-key" \
   --value "sk-your-actual-openai-key" \
   --type "SecureString" \
   --overwrite
@@ -104,7 +104,7 @@ aws ssm put-parameter \
 
 - `AWS_ACCOUNT_ID` or `CDK_DEFAULT_ACCOUNT`: AWS account ID
 - `AWS_REGION` or `CDK_DEFAULT_REGION`: AWS region (default: us-east-1)
-- `CDK_DEPLOY_ENV`: Environment name (default: staging)
+- `CDK_DEPLOY_ENV`: Environment name (default: development)
 - `CDK_DEPLOY_SCALE`: Infrastructure scale (default: hobby)
 
 ### Parameter Store Hierarchy
@@ -152,7 +152,7 @@ The Lambda execution role includes:
 ### Parameter Store Security
 
 - **SecureString Parameters**: Encrypted with AWS managed KMS key
-- **Path-based Access**: Lambda can only access `/macro-ai/hobby/*` parameters
+- **Path-based Access**: Lambda can only access `/macro-ai/development/*` parameters
 - **Least Privilege**: No write permissions to Parameter Store
 
 ### Network Security
@@ -164,7 +164,7 @@ The Lambda execution role includes:
 
 ### CloudWatch Logs
 
-- **Log Group**: `/aws/lambda/macro-ai-hobby-api`
+- **Log Group**: `/aws/lambda/macro-ai-development-api`
 - **Retention**: 1 week (cost optimization)
 - **Log Level**: INFO (configurable via environment variables)
 
@@ -301,7 +301,7 @@ curl $(aws cloudformation describe-stacks \
 
 # Check Parameter Store values
 aws ssm get-parameters-by-path \
-  --path "/macro-ai/hobby" \
+  --path "/macro-ai/development" \
   --recursive \
   --query 'Parameters[*].[Name,Type,LastModifiedDate]' \
   --output table

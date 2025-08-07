@@ -62,15 +62,15 @@ The Lambda function is configured with the following environment variables:
 #### Core Configuration
 
 - `NODE_ENV=production`
-- `APP_ENV=hobby` (or your environment)
+- `APP_ENV=development` (or your environment)
 - `SERVICE_NAME=macro-ai-express-api`
 - `LOG_LEVEL=INFO`
 
 #### AWS Configuration
 
 - `AWS_REGION` (automatically set by Lambda)
-- `AWS_LAMBDA_FUNCTION_NAME=macro-ai-hobby-api`
-- `PARAMETER_STORE_PREFIX=/macro-ai/hobby`
+- `AWS_LAMBDA_FUNCTION_NAME=macro-ai-development-api`
+- `PARAMETER_STORE_PREFIX=/macro-ai/development`
 
 #### Parameter Store Integration
 
@@ -78,14 +78,14 @@ The Lambda function uses Parameter Store for sensitive configuration:
 
 **Critical Parameters (Advanced Tier):**
 
-- `/macro-ai/hobby/critical/openai-api-key`
-- `/macro-ai/hobby/critical/neon-database-url`
+- `/macro-ai/development/critical/openai-api-key`
+- `/macro-ai/development/critical/neon-database-url`
 
 **Standard Parameters (Standard Tier):**
 
-- `/macro-ai/hobby/standard/upstash-redis-url`
-- `/macro-ai/hobby/standard/cognito-user-pool-id`
-- `/macro-ai/hobby/standard/cognito-user-pool-client-id`
+- `/macro-ai/development/standard/upstash-redis-url`
+- `/macro-ai/development/standard/cognito-user-pool-id`
+- `/macro-ai/development/standard/cognito-user-pool-client-id`
 
 ### IAM Permissions
 
@@ -98,7 +98,7 @@ The Lambda function has the following permissions:
 
 #### Parameter Store Access
 
-- `ssm:GetParameter` on `/macro-ai/hobby/*`
+- `ssm:GetParameter` on `/macro-ai/development/*`
 - `ssm:GetParameters` for batch retrieval
 - Decrypt permissions for SecureString parameters
 
@@ -111,13 +111,13 @@ After deployment, update the placeholder parameters with actual values:
 ```bash
 # Critical parameters (SecureString)
 aws ssm put-parameter \
-  --name '/macro-ai/hobby/critical/openai-api-key' \
+  --name '/macro-ai/development/critical/openai-api-key' \
   --value 'sk-your-actual-openai-key' \
   --type SecureString \
   --overwrite
 
 aws ssm put-parameter \
-  --name '/macro-ai/hobby/critical/neon-database-url' \
+  --name '/macro-ai/development/critical/neon-database-url' \
   --value 'postgresql://user:pass@host:5432/db' \
   --type SecureString \
   --overwrite
@@ -130,14 +130,14 @@ aws ssm put-parameter \
   --overwrite
 
 aws ssm put-parameter \
-  --name '/macro-ai/hobby/standard/cognito-user-pool-client-id' \
+  --name '/macro-ai/development/standard/cognito-user-pool-client-id' \
   --value 'your-client-id' \
   --type String \
   --overwrite
 
 # Optional Redis URL
 aws ssm put-parameter \
-  --name '/macro-ai/hobby/standard/upstash-redis-url' \
+  --name '/macro-ai/development/standard/upstash-redis-url' \
   --value 'redis://your-redis-url' \
   --type String \
   --overwrite
@@ -172,20 +172,20 @@ Expected response:
 ### View Lambda Logs
 
 ```bash
-aws logs tail /aws/lambda/macro-ai-hobby-api --follow
+aws logs tail /aws/lambda/macro-ai-development-api --follow
 ```
 
 ### Check Lambda Function Status
 
 ```bash
-aws lambda get-function --function-name macro-ai-hobby-api
+aws lambda get-function --function-name macro-ai-development-api
 ```
 
 ### Test Lambda Function Directly
 
 ```bash
 aws lambda invoke \
-  --function-name macro-ai-hobby-api \
+  --function-name macro-ai-development-api \
   --payload '{"httpMethod":"GET","path":"/api/health","headers":{}}' \
   response.json && cat response.json
 ```
@@ -225,7 +225,7 @@ The deployment is optimized for cost:
 cd apps/express-api
 pnpm package:lambda
 aws lambda update-function-code \
-  --function-name macro-ai-hobby-api \
+  --function-name macro-ai-development-api \
   --zip-file fileb://dist/lambda.zip
 ```
 
