@@ -170,7 +170,7 @@ export class LambdaConstruct extends Construct {
 			functionName: `macro-ai-${environmentName}-api`,
 			description: 'Macro AI API backend for hobby deployment',
 			runtime: lambda.Runtime.NODEJS_20_X,
-			handler: 'lambda.bundle.handler',
+			handler: 'lambda.bundle.cjs.handler',
 			code,
 			role: this.executionRole,
 			timeout: cdk.Duration.seconds(timeoutSeconds),
