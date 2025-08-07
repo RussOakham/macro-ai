@@ -10,24 +10,28 @@ const { logger } = pino
 
 const loadConfig = (): Result<TEnv> => {
 	const envPath = resolve(process.cwd(), '.env')
+	const isLambdaEnvironment = Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME)
 
 	const enableDebug =
 		process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test'
 
-	// Load environment variables from .env file
-	const result = config({
-		path: envPath,
-		encoding: 'UTF-8',
-		debug: enableDebug,
-	})
+	// Only load .env file if not in Lambda environment
+	if (!isLambdaEnvironment) {
+		// Load environment variables from .env file
+		const result = config({
+			path: envPath,
+			encoding: 'UTF-8',
+			debug: enableDebug,
+		})
 
-	if (result.error) {
-		const appError = AppError.validation(
-			`Cannot parse .env file '${envPath}': ${result.error.message}`,
-			{ envPath, error: result.error },
-			'configLoader',
-		)
-		return [null, appError]
+		if (result.error) {
+			const appError = AppError.validation(
+				`Cannot parse .env file '${envPath}': ${result.error.message}`,
+				{ envPath, error: result.error },
+				'configLoader',
+			)
+			return [null, appError]
+		}
 	}
 
 	// Validate environment variables
@@ -43,7 +47,11 @@ const loadConfig = (): Result<TEnv> => {
 		return [null, appError]
 	}
 
-	logger.info(`Loaded configuration from ${envPath}`)
+	if (isLambdaEnvironment) {
+		logger.info('Loaded configuration from Lambda environment variables')
+	} else {
+		logger.info(`Loaded configuration from ${envPath}`)
+	}
 
 	return [env.data, null]
 }

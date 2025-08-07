@@ -18,7 +18,7 @@ const config = {
 	platform: 'node',
 	target: 'node20',
 	format: 'cjs',
-	outfile: 'dist/lambda.bundle.cjs',
+	outfile: 'dist/lambda.js',
 	external: ['aws-sdk', 'pino-pretty'],
 	minify: !isDev,
 	sourcemap: true,
