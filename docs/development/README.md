@@ -98,7 +98,7 @@ expect(result.id).toBeTruthy()
 
 ### Daily Development
 
-1. **Pull Latest Changes**: `git pull origin main`
+1. **Pull Latest Changes**: `git pull origin develop`
 2. **Install Dependencies**: `pnpm install`
 3. **Start Development**: `pnpm dev`
 4. **Run Tests**: `pnpm test` (before committing)
@@ -110,7 +110,7 @@ expect(result.id).toBeTruthy()
 2. **Implement with Tests**: Write tests alongside implementation
 3. **Update Documentation**: Keep docs current with changes
 4. **Code Review**: Submit PR with comprehensive description
-5. **Merge**: Use trunk-based development workflow
+5. **Merge**: Use Git Flow development workflow (feature → develop → main)
 
 ## 📋 Code Quality Standards
 

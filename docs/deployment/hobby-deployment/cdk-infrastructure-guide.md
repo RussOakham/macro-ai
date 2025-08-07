@@ -104,12 +104,13 @@ aws ssm put-parameter \
 
 - `AWS_ACCOUNT_ID` or `CDK_DEFAULT_ACCOUNT`: AWS account ID
 - `AWS_REGION` or `CDK_DEFAULT_REGION`: AWS region (default: us-east-1)
-- `CDK_DEPLOY_ENV`: Environment name (default: hobby)
+- `CDK_DEPLOY_ENV`: Environment name (default: staging)
+- `CDK_DEPLOY_SCALE`: Infrastructure scale (default: hobby)
 
 ### Parameter Store Hierarchy
 
 ```text
-/macro-ai/hobby/
+/macro-ai/{environment}/
 ├── critical/           # Advanced tier parameters (higher throughput)
 │   ├── openai-api-key
 │   └── neon-database-url
@@ -117,6 +118,10 @@ aws ssm put-parameter \
     ├── upstash-redis-url
     ├── cognito-user-pool-id
     └── cognito-user-pool-client-id
+
+# Examples:
+# /macro-ai/staging/ (hobby scale)
+# /macro-ai/production/ (hobby or enterprise scale)
 ```
 
 ### Lambda Configuration
@@ -281,15 +286,16 @@ npm run destroy
 ### Useful Commands
 
 ```bash
-# Check stack status
-aws cloudformation describe-stacks --stack-name MacroAiHobbyStack
+# Check stack status (replace {Environment} with staging or production)
+aws cloudformation describe-stacks --stack-name MacroAi{Environment}Stack
 
 # View stack events
-aws cloudformation describe-stack-events --stack-name MacroAiHobbyStack
+aws cloudformation describe-stack-events --stack-name MacroAi{Environment}Stack
 
 # Test API endpoint
+STACK_NAME="MacroAi${ENVIRONMENT}Stack"  # where ENVIRONMENT=staging or production
 curl $(aws cloudformation describe-stacks \
-  --stack-name MacroAiHobbyStack \
+  --stack-name "$STACK_NAME" \
   --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
   --output text)api/health
 

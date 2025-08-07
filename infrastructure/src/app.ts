@@ -18,19 +18,27 @@ if (!account) {
 	)
 }
 
-// Create the main hobby deployment stack
-new MacroAiHobbyStack(app, 'MacroAiHobbyStack', {
+// Get deployment configuration
+const deploymentEnv = process.env.CDK_DEPLOY_ENV ?? 'staging'
+const deploymentScale = process.env.CDK_DEPLOY_SCALE ?? 'hobby'
+
+// Create environment-specific stack
+const stackName = `MacroAi${deploymentEnv.charAt(0).toUpperCase() + deploymentEnv.slice(1)}Stack`
+const stackDescription = `Macro AI ${deploymentEnv} Environment - ${deploymentScale} scale serverless architecture`
+
+new MacroAiHobbyStack(app, stackName, {
 	env: {
 		account,
 		region,
 	},
-	description:
-		'Macro AI Hobby Deployment - Cost-optimized serverless architecture',
+	description: stackDescription,
+	environmentName: deploymentEnv,
 	tags: {
 		Project: 'MacroAI',
-		Environment: 'hobby',
-		CostCenter: 'personal',
-		Owner: 'hobby-deployment',
+		Environment: deploymentEnv,
+		Scale: deploymentScale,
+		CostCenter: deploymentEnv === 'production' ? 'production' : 'development',
+		Owner: `${deploymentEnv}-deployment`,
 	},
 })
 

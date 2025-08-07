@@ -287,14 +287,14 @@ DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 
 Create the following environments in GitHub:
 
-- `hobby` (production)
-- `staging`
+- `production` (hobby → enterprise scale)
+- `staging` (hobby scale)
 
 Each environment should have:
 
-- **Protection rules**: Require review for production
+- **Protection rules**: Require review for production (2 approvals), staging (1 approval)
 - **Environment secrets**: Environment-specific values
-- **Deployment branches**: Restrict to appropriate branches
+- **Deployment branches**: Restrict to appropriate branches (`main` for production, `develop` for staging)
 
 ## 📋 Workflow Details
 
@@ -321,7 +321,7 @@ Each environment should have:
 # Select environment and components to deploy
 
 # Automatic deployment
-git push origin main  # Deploys to hobby environment
+git push origin main  # Deploys to production environment
 ```
 
 ### Staging Deployment (`deploy-staging.yml`)
@@ -342,7 +342,7 @@ git push origin main  # Deploys to hobby environment
 
 ```bash
 # Automatic staging deployment
-git push origin develop
+git push origin develop  # Deploys to staging environment
 
 # Manual staging deployment
 # Go to Actions tab → Deploy to Staging → Run workflow

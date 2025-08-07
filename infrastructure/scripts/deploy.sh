@@ -13,13 +13,20 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-ENVIRONMENT=${CDK_DEPLOY_ENV:-hobby}
+ENVIRONMENT=${CDK_DEPLOY_ENV:-staging}
+SCALE=${CDK_DEPLOY_SCALE:-hobby}
 AWS_REGION=${AWS_REGION:-us-east-1}
 EXPRESS_API_DIR="../apps/express-api"
 LAMBDA_DIST_DIR="$EXPRESS_API_DIR/dist"
 
+# Generate stack name
+ENV_CAPITALIZED=$(echo "$ENVIRONMENT" | sed 's/.*/\u&/')
+STACK_NAME="MacroAi${ENV_CAPITALIZED}Stack"
+
 echo -e "${BLUE}🚀 Macro AI Infrastructure Deployment${NC}"
 echo -e "${BLUE}Environment: $ENVIRONMENT${NC}"
+echo -e "${BLUE}Scale: $SCALE${NC}"
+echo -e "${BLUE}Stack Name: $STACK_NAME${NC}"
 echo -e "${BLUE}Region: $AWS_REGION${NC}"
 echo ""
 
@@ -125,7 +132,7 @@ print_status "CloudFormation template synthesized"
 
 # Show diff if stack exists
 echo -e "${BLUE}📊 Checking for changes...${NC}"
-if aws cloudformation describe-stacks --stack-name MacroAiHobbyStack --region "$AWS_REGION" &> /dev/null; then
+if aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region "$AWS_REGION" &> /dev/null; then
     echo -e "${YELLOW}Showing differences from current deployment:${NC}"
     pnpm diff || true  # Don't fail if diff shows changes
 else
@@ -141,7 +148,7 @@ print_status "Infrastructure deployed successfully!"
 # Get stack outputs
 echo -e "${BLUE}📋 Stack Outputs:${NC}"
 aws cloudformation describe-stacks \
-    --stack-name MacroAiHobbyStack \
+    --stack-name "$STACK_NAME" \
     --region "$AWS_REGION" \
     --query 'Stacks[0].Outputs[*].[OutputKey,OutputValue,Description]' \
     --output table

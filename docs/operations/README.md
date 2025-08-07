@@ -5,7 +5,7 @@ application in production.
 
 ## 🔧 Operations Overview
 
-Our operations approach emphasizes **trunk-based development**, **automated processes**, **comprehensive
+Our operations approach emphasizes **Git Flow development**, **automated processes**, **comprehensive
 monitoring**, and **rapid incident response**. We maintain high availability while ensuring code quality and
 deployment safety.
 
@@ -13,7 +13,7 @@ deployment safety.
 
 ### Development Operations
 
-- **[Merge Strategy](./merge-strategy.md)** - Trunk-based development workflow
+- **[Merge Strategy](./merge-strategy.md)** - Git flow-based development workflow
   - Branch naming conventions and policies
   - Pull request requirements and review process
   - Continuous integration workflow
@@ -45,16 +45,20 @@ deployment safety.
 
 ## 🔄 Development Workflow
 
-### Trunk-Based Development
+### Git Flow Development
 
 ```bash
-main branch (trunk)
+develop branch (integration)
     ↓
 feature/short-lived-branch
     ↓
-Pull Request → Review → Merge
+Pull Request → Review → Merge to develop
     ↓
-Automated CI/CD → Deploy
+Staging Deployment → Validation
+    ↓
+Release PR: develop → main
+    ↓
+Production Deployment
 ```
 
 ### Daily Operations
@@ -70,7 +74,7 @@ Automated CI/CD → Deploy
 ### Release Cycle
 
 - **Sprint Planning**: 2-week development cycles
-- **Feature Development**: Continuous integration with trunk
+- **Feature Development**: Continuous integration through develop branch
 - **Release Preparation**: Testing and validation
 - **Production Deployment**: Automated with manual approval gates
 - **Post-Release Monitoring**: Health checks and performance validation

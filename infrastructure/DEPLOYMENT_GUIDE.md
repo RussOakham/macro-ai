@@ -124,7 +124,7 @@ aws ssm put-parameter \
 
 # Standard parameters (String)
 aws ssm put-parameter \
-  --name '/macro-ai/hobby/standard/cognito-user-pool-id' \
+  --name "/macro-ai/${ENVIRONMENT}/standard/cognito-user-pool-id" \
   --value 'us-east-1_XXXXXXXXX' \
   --type String \
   --overwrite
@@ -147,8 +147,11 @@ aws ssm put-parameter \
 
 ```bash
 # Get the API endpoint from stack outputs
+ENVIRONMENT=${CDK_DEPLOY_ENV:-staging}
+ENV_CAPITALIZED=$(echo "$ENVIRONMENT" | sed 's/.*/\u&/')
+STACK_NAME="MacroAi${ENV_CAPITALIZED}Stack"
 API_ENDPOINT=$(aws cloudformation describe-stacks \
-  --stack-name MacroAiHobbyStack \
+  --stack-name "$STACK_NAME" \
   --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
   --output text)
 

@@ -54,7 +54,8 @@ on:
         type: boolean
   push:
     branches:
-      - main
+      - develop # Deploy to staging
+      - main # Deploy to production
     paths:
       - 'apps/express-api/**'
       - 'apps/client-ui/**'
