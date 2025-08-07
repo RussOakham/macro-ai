@@ -18,23 +18,31 @@ const createLogger = (nodeEnv: string): HttpLogger => {
 	// Only use pino-pretty in development and NOT in Lambda
 	const shouldUsePrettyTransport = isDevelopment && !isLambda
 
-	const pinoOptions: Options = {
-		// Only add transport in development (not in Lambda/production)
-		...(shouldUsePrettyTransport && {
-			transport: {
-				target: 'pino-pretty',
-			},
-		}),
+	let pinoOptions: Options
+
+	const baseOptions = {
 		enabled: nodeEnv !== 'test',
 		quietReqLogger: true,
 		quietResLogger: true,
-		// Add structured logging for Lambda/production
-		...(!shouldUsePrettyTransport && {
+	}
+
+	if (shouldUsePrettyTransport) {
+		// Development configuration with pino-pretty
+		pinoOptions = {
+			...baseOptions,
+			transport: {
+				target: 'pino-pretty',
+			},
+		}
+	} else {
+		// Lambda/production configuration without pino-pretty
+		pinoOptions = {
+			...baseOptions,
 			formatters: {
 				level: (label) => ({ level: label }),
 			},
 			timestamp: true,
-		}),
+		}
 	}
 
 	return pinoHttp(pinoOptions)

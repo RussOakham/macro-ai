@@ -10,8 +10,11 @@ import { pino } from '../utils/logger.ts'
 
 const { logger } = pino
 
-// Initialize Redis store for production environments
-let store = undefined
+// Initialize Redis stores for production environments
+// Each rate limiter needs its own store instance with unique prefix
+let defaultStore = undefined
+let authStore = undefined
+let apiStore = undefined
 
 if (config.nodeEnv === 'production' && config.redisUrl) {
 	const redisClient = createClient({
@@ -28,8 +31,20 @@ if (config.nodeEnv === 'production' && config.redisUrl) {
 		)
 	})
 
-	store = new RedisStore({
+	// Create separate store instances with unique prefixes
+	defaultStore = new RedisStore({
 		sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+		prefix: 'rl:default:',
+	})
+
+	authStore = new RedisStore({
+		sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+		prefix: 'rl:auth:',
+	})
+
+	apiStore = new RedisStore({
+		sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+		prefix: 'rl:api:',
 	})
 
 	logger.info('[middleware - rateLimit]: Using Redis store for rate limiting')
@@ -41,7 +56,7 @@ const defaultRateLimiter = rateLimit({
 	limit: config.rateLimitMaxRequests || 100, // 100 requests per windowMs by default
 	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
 	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-	store: store, // Use Redis store in production if available
+	store: defaultStore, // Use Redis store in production if available
 	message: {
 		status: StatusCodes.TOO_MANY_REQUESTS,
 		message: 'Too many requests, please try again later.',
@@ -65,7 +80,7 @@ const authRateLimiter = rateLimit({
 	limit: config.authRateLimitMaxRequests || 10, // 10 requests per hour by default
 	standardHeaders: true,
 	legacyHeaders: false,
-	store: store, // Use Redis store in production if available
+	store: authStore, // Use Redis store in production if available
 	message: {
 		status: StatusCodes.TOO_MANY_REQUESTS,
 		message: 'Too many authentication attempts, please try again later.',
@@ -89,7 +104,7 @@ const apiRateLimiter = rateLimit({
 	limit: config.apiRateLimitMaxRequests || 60, // 60 requests per minute by default
 	standardHeaders: true,
 	legacyHeaders: false,
-	store: store, // Use Redis store in production if available
+	store: apiStore, // Use Redis store in production if available
 	message: {
 		status: StatusCodes.TOO_MANY_REQUESTS,
 		message: 'API rate limit exceeded, please try again later.',
