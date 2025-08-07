@@ -12,13 +12,13 @@ on:
         required: false
         default: false
         type: boolean
-  push:
+  # Wait for hygiene checks to complete successfully before deploying
+  workflow_run:
+    workflows: ['Hygiene Checks']
+    types:
+      - completed
     branches:
       - develop
-    paths:
-      - 'apps/express-api/**'
-      - 'apps/client-ui/**'
-      - 'infrastructure/**'
 
 env:
   NODE_VERSION: '20'
@@ -36,6 +36,8 @@ jobs:
   validate:
     name: Validate Staging Deployment
     runs-on: ubuntu-latest
+    # Only run if hygiene checks passed or if triggered manually
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name != 'workflow_run' }}
     outputs:
       should-deploy: ${{ steps.check.outputs.should-deploy }}
 

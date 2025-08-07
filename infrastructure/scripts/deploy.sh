@@ -121,7 +121,7 @@ echo -e "${BLUE}🔍 Checking CDK bootstrap status...${NC}"
 if ! aws cloudformation describe-stacks --stack-name CDKToolkit --region "$AWS_REGION" &> /dev/null; then
     print_warning "CDK not bootstrapped in region $AWS_REGION"
     echo -e "${YELLOW}Running CDK bootstrap...${NC}"
-    pnpm bootstrap
+    pnpm cdk bootstrap
     print_status "CDK bootstrap completed"
 else
     print_status "CDK already bootstrapped"
@@ -143,7 +143,7 @@ fi
 
 # Deploy the stack
 echo -e "${BLUE}🚀 Deploying infrastructure...${NC}"
-if ! cdk deploy "$STACK_NAME" --require-approval never; then
+if ! pnpm cdk deploy "$STACK_NAME" --require-approval never; then
     print_error "Infrastructure deployment failed!"
     echo -e "${YELLOW}💡 Troubleshooting tips:${NC}"
     echo "1. Check AWS credentials: aws sts get-caller-identity"

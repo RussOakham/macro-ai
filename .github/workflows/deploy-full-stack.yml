@@ -52,15 +52,14 @@ on:
         required: false
         default: true
         type: boolean
-  push:
+  # Wait for hygiene checks to complete successfully before deploying
+  workflow_run:
+    workflows: ['Hygiene Checks']
+    types:
+      - completed
     branches:
       - develop # Deploy to staging
       - main # Deploy to production
-    paths:
-      - 'apps/express-api/**'
-      - 'apps/client-ui/**'
-      - 'infrastructure/**'
-      - '.github/workflows/deploy-full-stack.yml'
 
 env:
   NODE_VERSION: '20'
@@ -81,6 +80,8 @@ jobs:
   quality-gates:
     name: Quality Gates
     runs-on: ubuntu-latest
+    # Only run if hygiene checks passed or if triggered manually
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name != 'workflow_run' }}
     outputs:
       should-deploy-backend: ${{ steps.changes.outputs.backend-changed }}
       should-deploy-frontend: ${{ steps.changes.outputs.frontend-changed }}
