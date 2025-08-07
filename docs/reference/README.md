@@ -8,7 +8,6 @@ documentation, configuration options, database schemas, and terminology.
 ### API & Integration Reference
 
 - **[API Reference](./api-reference.md)** - Complete API endpoint documentation
-
   - Authentication endpoints and flows
   - Chat system API with streaming support
   - User management operations
@@ -27,7 +26,6 @@ documentation, configuration options, database schemas, and terminology.
 ### Data & Schema Reference
 
 - **[Database Schema](./database-schema.md)** - Complete database schema reference
-
   - Table definitions and relationships
   - Index strategies and performance considerations
   - pgvector configuration for embeddings

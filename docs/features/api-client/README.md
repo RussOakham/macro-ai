@@ -17,7 +17,6 @@ The API client system is fully implemented with auto-generation, modular archite
 ### Core Implementation
 
 - **[Auto-Generation](./auto-generation.md)** - OpenAPI client generation process
-
   - OpenAPI specification generation from Express routes
   - Automated TypeScript client generation with Zodios
   - Build integration and development workflow

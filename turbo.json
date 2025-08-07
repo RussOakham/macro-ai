@@ -30,10 +30,44 @@
 				"API_RATE_LIMIT_MAX_REQUESTS",
 				"REDIS_URL",
 				"VITE_API_URL",
-				"VITE_API_KEY"
+				"VITE_API_KEY",
+				"AWS_REGION",
+				"AWS_LAMBDA_FUNCTION_NAME",
+				"AWS_LAMBDA_RUNTIME_API",
+				"LAMBDA_RUNTIME_DIR",
+				"SERVICE_NAME",
+				"SERVICE_VERSION",
+				"AWS_LAMBDA_FUNCTION_VERSION",
+				"AWS_LAMBDA_LOG_GROUP_NAME",
+				"AWS_LAMBDA_LOG_STREAM_NAME",
+				"AWS_LAMBDA_FUNCTION_MEMORY_SIZE",
+				"AWS_LAMBDA_FUNCTION_TIMEOUT",
+				"AWS_EXECUTION_ENV",
+				"AWS_LAMBDA_INITIALIZATION_TYPE",
+				"ENVIRONMENT",
+				"CORS_ALLOWED_ORIGIN",
+				"TEST_API_ENDPOINT",
+				"TEST_API_KEY"
 			]
 		},
-		"lint": {},
+		"lint": {
+			"env": [
+				"AWS_REGION",
+				"AWS_LAMBDA_FUNCTION_NAME",
+				"AWS_LAMBDA_RUNTIME_API",
+				"AWS_LAMBDA_FUNCTION_ARCHITECTURE",
+				"LAMBDA_RUNTIME_DIR",
+				"SERVICE_NAME",
+				"SERVICE_VERSION",
+				"AWS_LAMBDA_FUNCTION_VERSION",
+				"AWS_LAMBDA_LOG_GROUP_NAME",
+				"AWS_LAMBDA_LOG_STREAM_NAME",
+				"AWS_LAMBDA_FUNCTION_MEMORY_SIZE",
+				"AWS_LAMBDA_FUNCTION_TIMEOUT",
+				"AWS_EXECUTION_ENV",
+				"AWS_LAMBDA_INITIALIZATION_TYPE"
+			]
+		},
 		"lint:md": {
 			"inputs": ["**/*.md", ".markdownlint.json"],
 			"outputs": []
@@ -41,7 +75,26 @@
 		"type-check": {},
 		"test": {
 			"cache": false,
-			"dependsOn": ["^build"]
+			"dependsOn": ["^build"],
+			"env": [
+				"AWS_REGION",
+				"AWS_LAMBDA_FUNCTION_NAME",
+				"AWS_LAMBDA_RUNTIME_API",
+				"LAMBDA_RUNTIME_DIR",
+				"LOG_LEVEL",
+				"SERVICE_NAME",
+				"SERVICE_VERSION",
+				"AWS_LAMBDA_FUNCTION_VERSION",
+				"AWS_LAMBDA_LOG_GROUP_NAME",
+				"AWS_LAMBDA_LOG_STREAM_NAME",
+				"AWS_LAMBDA_FUNCTION_MEMORY_SIZE",
+				"AWS_LAMBDA_FUNCTION_TIMEOUT",
+				"AWS_EXECUTION_ENV",
+				"AWS_LAMBDA_INITIALIZATION_TYPE",
+				"TEST_VAR",
+				"TEST_VAR1",
+				"TEST_VAR2"
+			]
 		},
 		"test:ui": {
 			"cache": false,

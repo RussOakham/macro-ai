@@ -14,21 +14,18 @@ future decisions.
 ### Core Architecture Decisions
 
 - **[001: Error Handling Strategy](./001-error-handling-strategy.md)** - Go-style error handling approach
-
   - **Status**: ✅ Accepted (Implemented)
   - **Decision**: Use custom tryCatch utilities instead of traditional try/catch or neverthrow
   - **Context**: Need for consistent, type-safe error handling with automatic logging
   - **Consequences**: Improved error handling consistency, type safety, and zero external dependencies
 
 - **[002: Authentication Approach](./002-authentication-approach.md)** - AWS Cognito integration decision
-
   - **Status**: ✅ Accepted (Implemented)
   - **Decision**: Use AWS Cognito for user authentication and management
   - **Context**: Need for secure, scalable authentication solution
   - **Consequences**: Reduced authentication complexity, improved security
 
 - **[003: Database Technology](./003-database-technology.md)** - PostgreSQL and pgvector choice
-
   - **Status**: ✅ Accepted (Implemented)
   - **Decision**: Use PostgreSQL with pgvector extension for data storage
   - **Context**: Need for relational data with vector similarity search

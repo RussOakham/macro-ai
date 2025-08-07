@@ -1,0 +1,42 @@
+version: 1
+backend:
+  phases:
+    build:
+      commands:
+        - '# No backend build required - using separate Lambda deployment'
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "Installing dependencies..."
+        - npm install -g pnpm
+        - pnpm install --frozen-lockfile
+    build:
+      commands:
+        - echo "Building React application..."
+        - echo "API URL: $VITE_API_URL"
+        - pnpm build
+  artifacts:
+    baseDirectory: dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .pnpm-store/**/*
+test:
+  phases:
+    preTest:
+      commands:
+        - echo "Installing test dependencies..."
+        - pnpm install --frozen-lockfile
+    test:
+      commands:
+        - echo "Running tests..."
+        - pnpm test:run
+        - echo "Running type check..."
+        - pnpm type-check
+  artifacts:
+    baseDirectory: coverage
+    files:
+      - '**/*'

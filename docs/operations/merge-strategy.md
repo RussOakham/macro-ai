@@ -1,48 +1,68 @@
-# Trunk-Based Merge Strategy
+# Git Flow Merge Strategy
 
 ## Current Implementation Status ✅ PRODUCTION-READY
 
-This document outlines the trunk-based development workflow for the Macro AI project, including branch naming
+This document outlines the Git Flow development workflow for the Macro AI project, including branch naming
 conventions, pull request requirements, review processes, and continuous integration workflows. The merge strategy
 is **fully implemented and enforced** through GitHub branch protection rules and automated workflows.
 
-## 🌳 Trunk-Based Development Overview
+## � Git Flow Development Overview
 
 ### Development Philosophy ✅ IMPLEMENTED
 
 **Core Principles**:
 
-- **Single Main Branch**: All development flows through the `main` branch
-- **Short-Lived Feature Branches**: Feature branches exist for days, not weeks
-- **Continuous Integration**: Every commit triggers automated testing
-- **Small, Frequent Commits**: Encourage small, focused changes
-- **Fast Feedback Loops**: Quick validation and integration cycles
+- **Dual-Branch Strategy**: Development flows through `develop` branch, releases through `main` branch
+- **Environment-Aligned Branches**: `develop` = staging environment, `main` = production environment
+- **Controlled Release Process**: Explicit release PRs from `develop` to `main`
+- **Feature Integration**: All features integrate through `develop` before production
+- **Continuous Integration**: Every commit triggers automated testing and deployment
 
 ### Branch Strategy
 
 ```mermaid
 gitGraph
     commit id: "Initial"
+    branch develop
+    checkout develop
+    commit id: "Setup develop"
+
     branch feature/user-auth
     checkout feature/user-auth
     commit id: "Add auth"
     commit id: "Add tests"
-    checkout main
+    checkout develop
     merge feature/user-auth
-    commit id: "Deploy v1.1"
+    commit id: "Staging v1.1"
+
     branch feature/chat-ui
     checkout feature/chat-ui
     commit id: "Chat UI"
-    checkout main
+    checkout develop
     merge feature/chat-ui
-    commit id: "Deploy v1.2"
+    commit id: "Staging v1.2"
+
+    checkout main
+    merge develop
+    commit id: "Release v1.2"
+
+    checkout develop
     branch hotfix/security-fix
     checkout hotfix/security-fix
     commit id: "Security fix"
-    checkout main
+    checkout develop
     merge hotfix/security-fix
-    commit id: "Deploy v1.2.1"
+    checkout main
+    merge develop
+    commit id: "Hotfix v1.2.1"
 ```
+
+### Environment-Branch Alignment
+
+| Branch    | Environment    | Deployment Trigger | Purpose                         |
+| --------- | -------------- | ------------------ | ------------------------------- |
+| `develop` | **Staging**    | Push to develop    | Feature integration and testing |
+| `main`    | **Production** | Release PR merge   | Stable production releases      |
 
 ## 🏷️ Branch Naming Conventions
 
@@ -150,9 +170,13 @@ refactor/ui-component-structure
 
 ## 📋 Pull Request Requirements
 
-### PR Creation Requirements ✅ ENFORCED
+### PR Types and Targets ✅ ENFORCED
 
-#### Required Elements
+#### Feature/Fix PRs → `develop` Branch
+
+**Target**: All feature, fix, docs, and refactor branches create PRs targeting `develop`
+
+**Required Elements**:
 
 1. **Descriptive Title**: Clear, concise description of changes
 2. **Detailed Description**: What, why, and how of the changes
@@ -160,7 +184,19 @@ refactor/ui-component-structure
 4. **Linked Issues**: Reference related GitHub issues
 5. **Testing Evidence**: Screenshots, test results, or manual testing notes
 
-#### PR Template ✅ IMPLEMENTED
+#### Release PRs → `main` Branch
+
+**Target**: Release PRs from `develop` to `main` for production deployment
+
+**Required Elements**:
+
+1. **Release Title**: Format: "Release v{version} - {brief description}"
+2. **Release Notes**: Comprehensive changelog with all features and fixes
+3. **Staging Validation**: Evidence of successful staging deployment and testing
+4. **Breaking Changes**: Clear documentation of any breaking changes
+5. **Migration Guide**: Instructions for any required migrations or updates
+
+#### Feature/Fix PR Template ✅ IMPLEMENTED
 
 ```markdown
 ## Description
@@ -173,6 +209,7 @@ Brief description of the changes made.
 - [ ] New feature (non-breaking change which adds functionality)
 - [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
 - [ ] Documentation update
+- [ ] Refactoring (no functional changes)
 
 ## Testing
 
@@ -180,6 +217,7 @@ Brief description of the changes made.
 - [ ] Integration tests pass
 - [ ] Manual testing completed
 - [ ] Screenshots attached (for UI changes)
+- [ ] Staging deployment tested (after merge to develop)
 
 ## Checklist
 
@@ -189,6 +227,7 @@ Brief description of the changes made.
 - [ ] Corresponding changes to documentation made
 - [ ] No new warnings introduced
 - [ ] Tests added that prove the fix is effective or feature works
+- [ ] PR targets `develop` branch
 
 ## Related Issues
 
@@ -203,6 +242,57 @@ Closes #[issue_number]
 [Any additional information]
 ```
 
+#### Release PR Template ✅ IMPLEMENTED
+
+```markdown
+## Release v{version}
+
+Brief description of this release.
+
+## Changes Included
+
+### ✨ New Features
+
+- Feature 1 description
+- Feature 2 description
+
+### 🐛 Bug Fixes
+
+- Fix 1 description
+- Fix 2 description
+
+### 📚 Documentation
+
+- Documentation updates
+
+### 🔧 Technical Changes
+
+- Refactoring or technical improvements
+
+## Breaking Changes
+
+- [ ] No breaking changes
+- [ ] Breaking changes documented below
+
+[Document any breaking changes and migration steps]
+
+## Staging Validation
+
+- [ ] All features tested in staging environment
+- [ ] Performance validated
+- [ ] Integration tests passing
+- [ ] No critical issues identified
+
+## Deployment Notes
+
+[Any special deployment considerations or steps]
+
+## Related PRs
+
+- #[pr_number] - Feature/fix description
+- #[pr_number] - Feature/fix description
+```
+
 ### Semantic Versioning Labels ✅ ENFORCED
 
 #### Label Requirements
@@ -210,13 +300,11 @@ Closes #[issue_number]
 **Exactly one label required** (enforced by GitHub Actions):
 
 - **`major`**: Breaking changes that require major version bump
-
   - API changes that break backward compatibility
   - Database schema changes requiring migration
   - Removal of deprecated features
 
 - **`minor`**: New features that are backward compatible
-
   - New API endpoints
   - New UI features
   - Enhanced functionality
@@ -285,9 +373,11 @@ Closes #[issue_number]
 
 ### Review Process Flow
 
+#### Feature/Fix PR Flow
+
 ```mermaid
 flowchart TD
-    A[Create PR] --> B[Automated Checks]
+    A[Create Feature PR → develop] --> B[Automated Checks]
     B --> C{All Checks Pass?}
     C -->|No| D[Fix Issues]
     D --> B
@@ -296,12 +386,32 @@ flowchart TD
     F --> G{Approved?}
     G -->|No| H[Address Feedback]
     H --> F
-    G -->|Yes| I[Merge to Main]
+    G -->|Yes| I[Merge to develop]
     I --> J[Deploy to Staging]
-    J --> K[Integration Tests]
+    J --> K[Staging Tests]
     K --> L{Tests Pass?}
-    L -->|No| M[Rollback & Fix]
-    L -->|Yes| N[Deploy to Production]
+    L -->|No| M[Fix in develop]
+    L -->|Yes| N[Ready for Release]
+```
+
+#### Release PR Flow
+
+```mermaid
+flowchart TD
+    A[Create Release PR: develop → main] --> B[Release Validation]
+    B --> C{Staging Validated?}
+    C -->|No| D[Fix in develop]
+    D --> A
+    C -->|Yes| E[Release Review]
+    E --> F{Release Approved?}
+    F -->|No| G[Address Feedback]
+    G --> E
+    F -->|Yes| H[Merge to main]
+    H --> I[Deploy to Production]
+    I --> J[Production Tests]
+    J --> K{Tests Pass?}
+    K -->|No| L[Emergency Rollback]
+    K -->|Yes| M[Release Complete]
 ```
 
 ### Review Guidelines
@@ -356,8 +466,13 @@ flowchart TD
 #### GitHub Actions Workflow
 
 ```yaml
-# Triggered on PR creation and updates
+# Triggered on PR creation and updates to develop
 on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [develop]
+
+# Also triggered on release PRs to main
   pull_request:
     types: [opened, reopened, synchronize]
     branches: [main]
@@ -377,7 +492,7 @@ jobs:
 
 ### Branch Protection Rules ✅ ENFORCED
 
-#### Main Branch Protection
+#### Develop Branch Protection
 
 ```yaml
 Protection Rules:
@@ -397,6 +512,25 @@ Protection Rules:
   - Allow deletions: ❌
 ```
 
+#### Main Branch Protection (Release PRs)
+
+```yaml
+Protection Rules:
+  - Require pull request reviews before merging: ✅
+  - Required approving reviews: 2 (higher threshold for production)
+  - Dismiss stale PR approvals when new commits are pushed: ✅
+  - Require review from code owners: ✅
+  - Require status checks to pass before merging: ✅
+    - staging-deployment-success
+    - integration-tests-pass
+    - release-validation
+  - Require branches to be up to date before merging: ✅
+  - Require conversation resolution before merging: ✅
+  - Restrict pushes that create files: ✅
+  - Allow force pushes: ❌
+  - Allow deletions: ❌
+```
+
 ## 🚀 Deployment Integration
 
 ### Deployment Triggers ✅ IMPLEMENTED
@@ -405,32 +539,58 @@ Protection Rules:
 
 ```yaml
 deploy-staging:
-  if: github.ref == 'refs/heads/main'
+  if: github.ref == 'refs/heads/develop'
   needs: [build, lint, test]
   runs-on: ubuntu-latest
   steps:
     - name: Deploy to staging environment
     - name: Run smoke tests
+    - name: Run integration tests
     - name: Notify team of deployment
 ```
 
-#### Production Deployment Process
+#### Automatic Production Deployment
 
-1. **Staging Validation**: Changes must be validated in staging
-2. **Manual Approval**: Production deployments require manual approval
-3. **Deployment Window**: Deployments during business hours preferred
-4. **Rollback Plan**: Automated rollback capability available
+```yaml
+deploy-production:
+  if: github.ref == 'refs/heads/main'
+  needs: [build, lint, test]
+  runs-on: ubuntu-latest
+  steps:
+    - name: Deploy to production environment
+    - name: Run production smoke tests
+    - name: Monitor deployment health
+    - name: Notify team of release
+```
+
+#### Deployment Strategy
+
+1. **Feature Development**: Merge to `develop` → Deploy to staging
+2. **Staging Validation**: Test features in staging environment
+3. **Release Process**: Create release PR from `develop` to `main`
+4. **Production Deployment**: Merge release PR → Deploy to production
+5. **Rollback Plan**: Automated rollback capability for both environments
 
 ### Release Process
+
+#### Git Flow Release Workflow
+
+1. **Prepare Release**: Ensure all features are merged to `develop` and tested in staging
+2. **Create Release PR**: Create PR from `develop` to `main` with release notes
+3. **Release Review**: Team reviews release PR and validates staging deployment
+4. **Merge Release**: Merge release PR triggers production deployment
+5. **Tag Release**: Automatic version tagging based on semantic labels
 
 #### Version Tagging
 
 ```bash
-# Automatic version bumping based on PR labels
-# major label: 1.0.0 -> 2.0.0
-# minor label: 1.0.0 -> 1.1.0
-# patch label: 1.0.0 -> 1.0.1
+# Automatic version bumping based on accumulated PR labels in release
+# Highest semantic level determines version bump:
+# Any major label in release: 1.0.0 -> 2.0.0
+# Any minor label (no major): 1.0.0 -> 1.1.0
+# Only patch labels: 1.0.0 -> 1.0.1
 
+# Triggered automatically on main branch merge
 git tag -a v1.2.0 -m "Release version 1.2.0"
 git push origin v1.2.0
 ```
@@ -443,22 +603,36 @@ git push origin v1.2.0
   with:
     config-name: release-drafter.yml
     publish: true
+    tag: ${{ steps.version.outputs.tag }}
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
+#### Release Validation Checklist
+
+Before creating release PR from `develop` to `main`:
+
+- [ ] All planned features merged to `develop`
+- [ ] Staging deployment successful and stable
+- [ ] Integration tests passing in staging
+- [ ] Performance validation completed
+- [ ] Security review completed (if applicable)
+- [ ] Documentation updated
+- [ ] Breaking changes documented with migration guide
+- [ ] Release notes prepared
+
 ## 🛠️ Development Workflow
 
-### Daily Development Process ✅ RECOMMENDED
+### Git Flow Development Process ✅ RECOMMENDED
 
 #### 1. Start New Work
 
 ```bash
-# Ensure main is up to date
-git checkout main
-git pull origin main
+# Ensure develop is up to date
+git checkout develop
+git pull origin develop
 
-# Create feature branch
+# Create feature branch from develop
 git checkout -b feature/new-feature-name
 
 # Make changes and commit frequently
@@ -469,24 +643,24 @@ git commit -m "Add initial feature implementation"
 #### 2. Keep Branch Updated
 
 ```bash
-# Regularly sync with main
-git checkout main
-git pull origin main
+# Regularly sync with develop
+git checkout develop
+git pull origin develop
 git checkout feature/new-feature-name
-git rebase main
+git rebase develop
 
 # Or merge if rebase is complex
-git merge main
+git merge develop
 ```
 
 #### 3. Prepare for Review
 
 ```bash
 # Final sync and cleanup
-git rebase -i main  # Interactive rebase to clean up commits
+git rebase -i develop  # Interactive rebase to clean up commits
 git push origin feature/new-feature-name
 
-# Create pull request with proper labels and description
+# Create pull request targeting develop branch with proper labels
 ```
 
 #### 4. Address Review Feedback
@@ -500,15 +674,67 @@ git push origin feature/new-feature-name
 # Re-request review
 ```
 
-#### 5. Post-Merge Cleanup
+#### 5. Post-Merge Cleanup (Feature PR)
 
 ```bash
-# After PR is merged
-git checkout main
-git pull origin main
+# After PR is merged to develop
+git checkout develop
+git pull origin develop
 git branch -d feature/new-feature-name  # Delete local branch
 git push origin --delete feature/new-feature-name  # Delete remote branch
 ```
+
+#### 6. Release Process (When Ready)
+
+```bash
+# Ensure develop is ready for release
+git checkout develop
+git pull origin develop
+
+# Create release PR from develop to main
+# This is done through GitHub UI with release template
+
+# After release PR is merged
+git checkout main
+git pull origin main
+git checkout develop
+git pull origin develop  # Sync develop with any hotfixes
+```
+
+### Hotfix Process ✅ IMPLEMENTED
+
+#### Emergency Production Fixes
+
+For critical production issues that can't wait for the normal release cycle:
+
+```bash
+# Create hotfix branch from main (current production)
+git checkout main
+git pull origin main
+git checkout -b hotfix/critical-security-fix
+
+# Make minimal fix
+git add .
+git commit -m "Fix critical security vulnerability"
+git push origin hotfix/critical-security-fix
+
+# Create PR to main for immediate production deployment
+# After hotfix is merged to main and deployed:
+
+# Merge hotfix back to develop to keep branches in sync
+git checkout develop
+git pull origin develop
+git merge main  # Bring hotfix into develop
+git push origin develop
+```
+
+#### Hotfix Guidelines
+
+1. **Minimal Changes**: Only fix the critical issue, no additional features
+2. **Fast Review**: Expedited review process for critical fixes
+3. **Immediate Deployment**: Deploy to production as soon as merged
+4. **Sync Branches**: Always merge hotfix back to develop
+5. **Documentation**: Update release notes and incident reports
 
 ### Best Practices ✅ RECOMMENDED
 
@@ -521,17 +747,21 @@ git push origin --delete feature/new-feature-name  # Delete remote branch
 
 #### Branch Management
 
-1. **Short-Lived Branches**: Keep feature branches small and focused
-2. **Regular Updates**: Sync with main frequently to avoid conflicts
+1. **Short-Lived Feature Branches**: Keep feature branches small and focused
+2. **Regular Updates**: Sync with develop frequently to avoid conflicts
 3. **Clean History**: Use interactive rebase to clean up commit history
-4. **Delete Merged Branches**: Clean up branches after merging
+4. **Delete Merged Branches**: Clean up feature branches after merging
+5. **Protect Main Branches**: Never push directly to develop or main
+6. **Branch from Develop**: Always create feature branches from develop
 
-#### Collaboration
+#### Git Flow Collaboration
 
 1. **Communicate Changes**: Discuss significant changes with team
-2. **Pair Programming**: Use pair programming for complex features
-3. **Knowledge Sharing**: Document decisions and share knowledge
-4. **Code Reviews**: Participate actively in code review process
+2. **Staging Validation**: Test features thoroughly in staging before release
+3. **Release Coordination**: Coordinate release timing with team
+4. **Hotfix Communication**: Immediately communicate critical production issues
+5. **Knowledge Sharing**: Document decisions and share knowledge
+6. **Code Reviews**: Participate actively in code review process
 
 ## 📊 Metrics and Monitoring
 
@@ -576,8 +806,15 @@ git push origin --delete feature/new-feature-name  # Delete remote branch
 
 ## 📚 Related Documentation
 
-- **[CI/CD Pipeline](../deployment/ci-cd-pipeline.md)** - Automated testing and deployment workflows
+- **[GitHub Workflows Overview](../ci-cd/github-workflows-overview.md)** - Complete CI/CD pipeline documentation
+- **[Environment Optimization Migration Plan](../deployment/environment-optimization-migration-plan.md)** - Git Flow
+  implementation details
+- **[CI/CD Setup Guide](../deployment/ci-cd-setup-guide.md)** - Deployment automation configuration
 - **[Coding Standards](../development/coding-standards.md)** - Code quality and style guidelines
 - **[Testing Strategy](../development/testing-strategy.md)** - Testing approaches and coverage requirements
 - **[Release Process](./release-process.md)** - Version management and release procedures
 - **[Development Setup](../getting-started/development-setup.md)** - Local development environment setup
+
+---
+
+**🌊 Git Flow Summary**: Feature branches → `develop` (staging) → Release PRs → `main` (production)

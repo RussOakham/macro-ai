@@ -1,0 +1,443 @@
+# Full-Stack Deployment Workflow
+# Purpose: Deploy both backend (Lambda/CDK) and frontend (AWS Amplify) with proper environment management
+# Triggers: Manual dispatch, main branch pushes, and environment-specific deployments
+
+name: Deploy Full-Stack Application
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: string
+      deploy_backend:
+        description: 'Deploy backend infrastructure'
+        required: false
+        default: true
+        type: boolean
+      deploy_frontend:
+        description: 'Deploy frontend to Amplify'
+        required: false
+        default: true
+        type: boolean
+      run_tests:
+        description: 'Run integration tests after deployment'
+        required: false
+        default: true
+        type: boolean
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'hobby'
+        type: choice
+        options:
+          - hobby
+          - staging
+          - production
+      deploy_backend:
+        description: 'Deploy backend infrastructure'
+        required: false
+        default: true
+        type: boolean
+      deploy_frontend:
+        description: 'Deploy frontend to Amplify'
+        required: false
+        default: true
+        type: boolean
+      run_tests:
+        description: 'Run integration tests after deployment'
+        required: false
+        default: true
+        type: boolean
+  push:
+    branches:
+      - develop # Deploy to staging
+      - main # Deploy to production
+    paths:
+      - 'apps/express-api/**'
+      - 'apps/client-ui/**'
+      - 'infrastructure/**'
+      - '.github/workflows/deploy-full-stack.yml'
+
+env:
+  NODE_VERSION: '20'
+  AWS_REGION: 'us-east-1'
+  PNPM_VERSION: '9'
+  # CDK environment variables
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_REGION: 'us-east-1'
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  # Quality Gates - Run tests and validation
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    outputs:
+      should-deploy-backend: ${{ steps.changes.outputs.backend-changed }}
+      should-deploy-frontend: ${{ steps.changes.outputs.frontend-changed }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create environment files
+        run: |
+          # Create test environment files
+          echo "VITE_API_URL=http://localhost:3040/api" > apps/client-ui/.env
+          echo "VITE_API_KEY=test-api-key-32-characters-long-dummy" >> apps/client-ui/.env
+
+          echo "API_KEY=test-api-key-32-characters-long-dummy" > apps/express-api/.env
+          echo "NODE_ENV=test" >> apps/express-api/.env
+
+      - name: Run tests
+        run: |
+          pnpm test
+          pnpm type-check
+
+      - name: Lint code
+        run: pnpm lint
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "backend-changed=${{ github.event.inputs.deploy_backend }}" >> "$GITHUB_OUTPUT"
+            echo "frontend-changed=${{ github.event.inputs.deploy_frontend }}" >> "$GITHUB_OUTPUT"
+          else
+            # Check for changes in backend files
+            if git diff --name-only HEAD~1 HEAD | grep -E "(apps/express-api|infrastructure)" > /dev/null; then
+              echo "backend-changed=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "backend-changed=false" >> "$GITHUB_OUTPUT"
+            fi
+
+            # Check for changes in frontend files
+            if git diff --name-only HEAD~1 HEAD | grep -E "apps/client-ui" > /dev/null; then
+              echo "frontend-changed=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "frontend-changed=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+  # Build Lambda Package
+  build-lambda:
+    name: Build Lambda Package
+    runs-on: ubuntu-latest
+    needs: quality-gates
+    if: needs.quality-gates.outputs.should-deploy-backend == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Build Lambda package
+        run: |
+          cd apps/express-api
+          pnpm install --frozen-lockfile
+          pnpm package:lambda
+
+      - name: Upload Lambda package
+        uses: actions/upload-artifact@v4
+        with:
+          name: lambda-package
+          path: apps/express-api/dist/lambda.zip
+          retention-days: 7
+
+  # Deploy Backend Infrastructure
+  deploy-backend:
+    name: Deploy Backend Infrastructure
+    runs-on: ubuntu-latest
+    needs: [quality-gates, build-lambda]
+    if: needs.quality-gates.outputs.should-deploy-backend == 'true'
+    environment: ${{ github.event.inputs.environment || 'hobby' }}
+    outputs:
+      api-endpoint: ${{ steps.outputs.outputs.api-endpoint }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download Lambda package
+        uses: actions/download-artifact@v4
+        with:
+          name: lambda-package
+          path: apps/express-api/dist/
+
+      - name: Deploy infrastructure
+        run: |
+          cd infrastructure
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm deploy
+        env:
+          CDK_DEPLOY_ENV: ${{ github.event.inputs.environment || 'hobby' }}
+
+      - name: Get deployment outputs
+        id: outputs
+        run: |
+          API_ENDPOINT=$(aws cloudformation describe-stacks \
+            --stack-name MacroAiHobbyStack \
+            --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
+            --output text)
+          echo "api-endpoint=$API_ENDPOINT" >> "$GITHUB_OUTPUT"
+
+      - name: Validate backend deployment
+        run: |
+          cd infrastructure
+          ./scripts/validate-deployment.sh
+
+  # Build Frontend
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    needs: [quality-gates, deploy-backend]
+    if: always() && needs.quality-gates.outputs.should-deploy-frontend == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Build frontend
+        run: |
+          cd apps/client-ui
+          pnpm install --frozen-lockfile
+
+          # Set API URL from backend deployment or use default
+          if [[ -n "${{ needs.deploy-backend.outputs.api-endpoint }}" ]]; then
+            export VITE_API_URL="${{ needs.deploy-backend.outputs.api-endpoint }}api"
+          else
+            export VITE_API_URL="https://api.macro-ai.com/api"
+          fi
+
+          export VITE_API_KEY="${{ secrets.FRONTEND_API_KEY }}"
+          export VITE_APP_ENV="${{ github.event.inputs.environment || 'hobby' }}"
+
+          pnpm build
+
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: apps/client-ui/dist/
+          retention-days: 7
+
+  # Deploy Frontend to Amplify
+  deploy-frontend:
+    name: Deploy Frontend to Amplify
+    runs-on: ubuntu-latest
+    needs: [quality-gates, build-frontend]
+    if: always() && needs.quality-gates.outputs.should-deploy-frontend == 'true'
+    environment: ${{ github.event.inputs.environment || 'hobby' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Amplify CLI
+        run: npm install -g @aws-amplify/cli
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: apps/client-ui/dist/
+
+      - name: Deploy to Amplify
+        run: |
+          cd apps/client-ui
+
+          # Set environment variables for Amplify
+          export AMPLIFY_ENV="${{ github.event.inputs.environment || 'hobby' }}"
+
+          # Deploy using the deployment script
+          ./scripts/deploy-amplify.sh
+
+  # Integration Tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, deploy-frontend]
+    if: always() && (github.event.inputs.run_tests == 'true' || github.event.inputs.run_tests == null)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install integration test dependencies
+        run: |
+          cd tests/integration
+          pnpm install --frozen-lockfile
+
+      - name: Run comprehensive integration tests
+        run: |
+          # Set up test environment variables
+          export TEST_API_ENDPOINT="${{ needs.deploy-backend.outputs.api-endpoint }}"
+          export TEST_API_KEY="${{ secrets.FRONTEND_API_KEY }}"
+          export TEST_ENVIRONMENT="${{ github.event.inputs.environment || 'hobby' }}"
+          export TEST_TIMEOUT="300"
+
+          # Run integration test suite
+          cd tests/integration
+          ./run-integration-tests.sh
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+
+      - name: Upload integration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: tests/integration/results/
+          retention-days: 7
+
+  # Deployment Summary
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, deploy-frontend, integration-tests]
+    if: always()
+
+    steps:
+      - name: Create deployment summary
+        run: |
+          # Generate deployment summary header
+          {
+            echo "## 🚀 Deployment Summary"
+            echo ""
+            echo "**Environment:** ${{ github.event.inputs.environment || 'hobby' }}"
+            echo "**Trigger:** ${{ github.event_name }}"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Backend deployment status
+          if [[ "${{ needs.deploy-backend.result }}" == "success" ]]; then
+            {
+              echo "✅ **Backend Deployment:** Success"
+              echo "   - API Endpoint: ${{ needs.deploy-backend.outputs.api-endpoint }}"
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "${{ needs.deploy-backend.result }}" == "skipped" ]]; then
+            echo "⏭️ **Backend Deployment:** Skipped (no changes)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ **Backend Deployment:** Failed" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # Frontend deployment status
+          if [[ "${{ needs.deploy-frontend.result }}" == "success" ]]; then
+            echo "✅ **Frontend Deployment:** Success" >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "${{ needs.deploy-frontend.result }}" == "skipped" ]]; then
+            echo "⏭️ **Frontend Deployment:** Skipped (no changes)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ **Frontend Deployment:** Failed" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # Integration tests status
+          if [[ "${{ needs.integration-tests.result }}" == "success" ]]; then
+            echo "✅ **Integration Tests:** Passed" >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "${{ needs.integration-tests.result }}" == "skipped" ]]; then
+            echo "⏭️ **Integration Tests:** Skipped" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ **Integration Tests:** Failed" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # Generate useful links section
+          {
+            echo ""
+            echo "**🔗 Useful Links:**"
+            if [[ -n "${{ needs.deploy-backend.outputs.api-endpoint }}" ]]; then
+              echo "- [API Health Check](${{ needs.deploy-backend.outputs.api-endpoint }}api/health)"
+            fi
+            echo "- [AWS CloudFormation Console](https://console.aws.amazon.com/cloudformation/)"
+            echo "- [AWS Amplify Console](https://console.aws.amazon.com/amplify/)"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -103,6 +103,7 @@ class ChatRepository implements IChatRepository {
 			return [null, totalError]
 		}
 
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion
 		const total = Number(totalResult[0]?.count ?? 0)
 
 		// Validate each chat

@@ -107,7 +107,7 @@ export function parseEndpointsByDomain(openApiDoc: OpenAPIObject): DomainGroup {
 		for (const [path, pathItem] of Object.entries(openApiDoc.paths)) {
 			// Validate path is a string
 			if (typeof path !== 'string' || !path) {
-				console.warn(`[Domain Parser] Invalid path: ${String(path)}`)
+				console.warn(`[Domain Parser] Invalid path: ${path}`)
 				continue
 			}
 

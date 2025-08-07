@@ -14,7 +14,6 @@ end-to-end type safety.
 ### Core Development Practices
 
 - **[Coding Standards](./coding-standards.md)** - Code style conventions and best practices
-
   - TypeScript coding standards
   - ESLint and Prettier configuration
   - Naming conventions and file organization
@@ -22,7 +21,6 @@ end-to-end type safety.
   - Documentation standards
 
 - **[Testing Strategy](./testing-strategy.md)** - Comprehensive testing approach
-
   - Unit testing with Vitest
   - Integration testing patterns
   - Mock strategies and test helpers
@@ -39,7 +37,6 @@ end-to-end type safety.
 ### Development Workflow
 
 - **[API Development](./api-development.md)** - API development guidelines
-
   - OpenAPI specification and documentation
   - Route organization and middleware
   - Request/response validation with Zod
@@ -101,7 +98,7 @@ expect(result.id).toBeTruthy()
 
 ### Daily Development
 
-1. **Pull Latest Changes**: `git pull origin main`
+1. **Pull Latest Changes**: `git pull origin develop`
 2. **Install Dependencies**: `pnpm install`
 3. **Start Development**: `pnpm dev`
 4. **Run Tests**: `pnpm test` (before committing)
@@ -113,7 +110,7 @@ expect(result.id).toBeTruthy()
 2. **Implement with Tests**: Write tests alongside implementation
 3. **Update Documentation**: Keep docs current with changes
 4. **Code Review**: Submit PR with comprehensive description
-5. **Merge**: Use trunk-based development workflow
+5. **Merge**: Use Git Flow development workflow (feature → develop → main)
 
 ## 📋 Code Quality Standards
 

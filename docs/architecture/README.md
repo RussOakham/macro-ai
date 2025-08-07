@@ -13,14 +13,12 @@ database with pgvector for AI embeddings, and AWS Cognito for authentication.
 ### Core Architecture
 
 - **[System Architecture](./system-architecture.md)** - High-level system overview and component diagrams
-
   - System components and relationships
   - Service boundaries and interactions
   - Deployment architecture
   - Scalability considerations
 
 - **[Data Flow](./data-flow.md)** - Request/response flows and system interactions
-
   - Authentication flow diagrams
   - Chat system data flow
   - API request/response patterns
@@ -37,7 +35,6 @@ database with pgvector for AI embeddings, and AWS Cognito for authentication.
 ### Specialized Architecture
 
 - **[Database Design](./database-design.md)** - Database schema and data relationships
-
   - PostgreSQL schema design
   - pgvector integration for embeddings
   - Drizzle ORM patterns and migrations

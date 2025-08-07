@@ -1,20 +1,24 @@
-# Macro AI v1.0.0 Hobby Deployment Plan
+# Macro AI v1.0.0 Cost-Optimized Deployment Plan (Hobby Scale)
 
-**Status**: 📋 PLANNED  
-**Version**: v1.0.0 (Hobby Edition)  
-**Target Date**: TBD  
-**Environment**: Personal/Hobby Projects  
+**Status**: 📋 PLANNED
+**Version**: v1.0.0 (Hobby Scale Infrastructure)
+**Target Date**: TBD
+**Infrastructure Scale**: Hobby (cost-optimized)
+**Target Environments**: Staging and Production
 **Target Cost**: <£10 ($12 USD) per month
 
 ## 🎯 Executive Summary
 
-This document provides a cost-optimized deployment plan for Macro AI v1.0.0 specifically designed for personal hobby
-projects with minimal traffic expectations.
+This document provides a cost-optimized deployment plan for Macro AI v1.0.0 using hobby scale infrastructure, designed
+for personal projects with minimal traffic expectations.
 
 The architecture leverages AWS free tier services and alternative free/low-cost providers to maintain full functionality
 while targeting total monthly costs under £10 ($12 USD).
 
-The hobby deployment maintains the same core features as the production architecture:
+**Deployment Strategy**: Both staging and production environments start with hobby scale infrastructure, with production
+having a clear upgrade path to enterprise scale as user base grows.
+
+The hobby scale deployment maintains the same core features as the enterprise architecture:
 
 - React UI with modern tooling
 - Express API with OpenAPI documentation
@@ -1211,17 +1215,21 @@ module.exports = {
 }
 ```
 
-## 🔄 CI/CD Pipeline for Hobby Projects
+## 🔄 CI/CD Pipeline for Hobby Scale Infrastructure
 
 ### GitHub Actions Workflow
 
+This workflow deploys hobby scale infrastructure to both staging and production environments:
+
 ```yaml
-# .github/workflows/hobby-deploy.yml
-name: Deploy Hobby Architecture
+# .github/workflows/deploy-optimized.yml
+name: Deploy Application (Hobby Scale)
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main # Deploy to production (hobby scale)
+      - develop # Deploy to staging (hobby scale)
     paths: ['apps/express-api/**', 'apps/client-ui/**']
 
 env:

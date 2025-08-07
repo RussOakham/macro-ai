@@ -68,8 +68,8 @@ graph TB
 
 **Triggers**:
 
-- Push to `main` branch
-- Pull requests to `main` branch (opened, reopened, synchronized)
+- Push to `develop` and `main` branches
+- Pull requests to `develop` and `main` branches (opened, reopened, synchronized)
 
 **Concurrency Control**:
 

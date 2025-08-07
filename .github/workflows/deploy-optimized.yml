@@ -1,0 +1,341 @@
+# Optimized Deployment Workflow
+# Purpose: Streamlined deployment strategy with staging and production environments
+# Supports hobby → enterprise infrastructure scaling within environments
+
+name: Deploy Application
+
+on:
+  push:
+    branches:
+      - main # Deploy to production
+      - develop # Deploy to staging
+    paths:
+      - 'apps/**'
+      - 'infrastructure/**'
+      - '.github/workflows/deploy-optimized.yml'
+
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'apps/**'
+      - 'infrastructure/**'
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: 'staging'
+      scale:
+        description: 'Infrastructure scale'
+        required: true
+        type: choice
+        options:
+          - hobby
+          - enterprise
+        default: 'hobby'
+      deploy_backend:
+        description: 'Deploy backend infrastructure'
+        required: false
+        default: true
+        type: boolean
+      deploy_frontend:
+        description: 'Deploy frontend'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  NODE_VERSION: '20'
+  AWS_REGION: 'us-east-1'
+  PNPM_VERSION: '9'
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  # Determine deployment configuration
+  config:
+    name: Deployment Configuration
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.config.outputs.environment }}
+      scale: ${{ steps.config.outputs.scale }}
+      should-deploy: ${{ steps.config.outputs.should-deploy }}
+      is-preview: ${{ steps.config.outputs.is-preview }}
+      stack-name: ${{ steps.config.outputs.stack-name }}
+
+    steps:
+      - name: Determine deployment configuration
+        id: config
+        run: |
+          # Determine environment and scale based on trigger
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENVIRONMENT="${{ github.event.inputs.environment }}"
+            SCALE="${{ github.event.inputs.scale }}"
+            SHOULD_DEPLOY="true"
+            IS_PREVIEW="false"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+              ENVIRONMENT="production"
+              SCALE="hobby"  # Start with hobby, can be upgraded
+              SHOULD_DEPLOY="true"
+              IS_PREVIEW="false"
+            elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+              ENVIRONMENT="staging"
+              SCALE="hobby"
+              SHOULD_DEPLOY="true"
+              IS_PREVIEW="false"
+            else
+              ENVIRONMENT="staging"
+              SCALE="hobby"
+              SHOULD_DEPLOY="false"
+              IS_PREVIEW="false"
+            fi
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            ENVIRONMENT="preview"
+            SCALE="hobby"
+            SHOULD_DEPLOY="true"
+            IS_PREVIEW="true"
+          else
+            ENVIRONMENT="staging"
+            SCALE="hobby"
+            SHOULD_DEPLOY="false"
+            IS_PREVIEW="false"
+          fi
+
+          # Generate stack name
+          if [[ "$IS_PREVIEW" == "true" ]]; then
+            STACK_NAME="MacroAiPreview${{ github.event.number }}Stack"
+          else
+            ENV_CAPITALIZED=$(echo "$ENVIRONMENT" | sed 's/.*/\u&/')
+            STACK_NAME="MacroAi${ENV_CAPITALIZED}Stack"
+          fi
+
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+          echo "scale=$SCALE" >> $GITHUB_OUTPUT
+          echo "should-deploy=$SHOULD_DEPLOY" >> $GITHUB_OUTPUT
+          echo "is-preview=$IS_PREVIEW" >> $GITHUB_OUTPUT
+          echo "stack-name=$STACK_NAME" >> $GITHUB_OUTPUT
+
+          # Log configuration
+          echo "🔧 Deployment Configuration:"
+          echo "  Environment: $ENVIRONMENT"
+          echo "  Scale: $SCALE"
+          echo "  Should Deploy: $SHOULD_DEPLOY"
+          echo "  Is Preview: $IS_PREVIEW"
+          echo "  Stack Name: $STACK_NAME"
+
+  # Quality gates
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    needs: config
+    if: needs.config.outputs.should-deploy == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create environment files
+        run: |
+          echo "VITE_API_URL=http://localhost:3040/api" > apps/client-ui/.env
+          echo "VITE_API_KEY=test-api-key-32-characters-long-dummy" >> apps/client-ui/.env
+          echo "API_KEY=test-api-key-32-characters-long-dummy" > apps/express-api/.env
+          echo "NODE_ENV=test" >> apps/express-api/.env
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Lint code
+        run: pnpm lint
+
+  # Build Lambda package
+  build-lambda:
+    name: Build Lambda Package
+    runs-on: ubuntu-latest
+    needs: [config, quality-gates]
+    if: needs.config.outputs.should-deploy == 'true' && (github.event.inputs.deploy_backend != 'false')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Build Lambda package
+        run: |
+          cd apps/express-api
+          pnpm install --frozen-lockfile
+          pnpm package:lambda
+
+      - name: Upload Lambda package
+        uses: actions/upload-artifact@v4
+        with:
+          name: lambda-package-${{ needs.config.outputs.environment }}
+          path: apps/express-api/dist/lambda.zip
+          retention-days: 7
+
+  # Deploy backend infrastructure
+  deploy-backend:
+    name: Deploy Backend
+    runs-on: ubuntu-latest
+    needs: [config, build-lambda]
+    if: needs.config.outputs.should-deploy == 'true' && (github.event.inputs.deploy_backend != 'false')
+    environment: ${{ needs.config.outputs.environment }}
+    outputs:
+      api-endpoint: ${{ steps.outputs.outputs.api-endpoint }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download Lambda package
+        uses: actions/download-artifact@v4
+        with:
+          name: lambda-package-${{ needs.config.outputs.environment }}
+          path: apps/express-api/dist/
+
+      - name: Deploy infrastructure
+        run: |
+          cd infrastructure
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm deploy
+        env:
+          CDK_DEPLOY_ENV: ${{ needs.config.outputs.environment }}
+          CDK_DEPLOY_SCALE: ${{ needs.config.outputs.scale }}
+
+      - name: Get deployment outputs
+        id: outputs
+        run: |
+          API_ENDPOINT=$(aws cloudformation describe-stacks \
+            --stack-name ${{ needs.config.outputs.stack-name }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
+            --output text)
+          echo "api-endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
+
+  # Build and deploy frontend
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: [config, deploy-backend]
+    if: always() && needs.config.outputs.should-deploy == 'true' && (github.event.inputs.deploy_frontend != 'false')
+    environment: ${{ needs.config.outputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build and deploy frontend
+        run: |
+          cd apps/client-ui
+          pnpm install --frozen-lockfile
+
+          # Set environment variables
+          export VITE_API_KEY="${{ secrets.FRONTEND_API_KEY }}"
+          export VITE_APP_ENV="${{ needs.config.outputs.environment }}"
+
+          # Set API URL from backend deployment
+          if [[ -n "${{ needs.deploy-backend.outputs.api-endpoint }}" ]]; then
+            export VITE_API_URL="${{ needs.deploy-backend.outputs.api-endpoint }}api"
+          fi
+
+          pnpm build
+
+          # Deploy to Amplify
+          export AMPLIFY_ENV="${{ needs.config.outputs.environment }}"
+          ./scripts/deploy-amplify.sh
+
+  # Cleanup preview environments
+  cleanup-preview:
+    name: Cleanup Preview Environment
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Delete preview stack
+        run: |
+          STACK_NAME="MacroAiPreview${{ github.event.number }}Stack"
+          echo "🗑️ Cleaning up preview environment: $STACK_NAME"
+
+          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then
+            aws cloudformation delete-stack --stack-name "$STACK_NAME"
+            echo "✅ Preview stack deletion initiated"
+          else
+            echo "ℹ️ Preview stack not found, nothing to clean up"
+          fi

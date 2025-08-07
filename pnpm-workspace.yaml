@@ -1,42 +1,37 @@
 packages:
   - apps/*
   - packages/*
+  - infrastructure
 
 catalog:
+  '@aws-sdk/client-cognito-identity-provider': ^3.859.0
+  '@aws-sdk/client-ssm': 3.859.0
   '@types/eslint': ^8
-  '@types/node': ^20
-  '@typescript-eslint/eslint-plugin': ^7.8.0
-  '@typescript-eslint/parser': ^7.8.0
-  '@vitest/ui': 3.1.2
-  eslint: ^9.25.1
-  eslint-config-prettier: ^9.1.0
-  eslint-plugin-import: ^2.29.1
-  eslint-plugin-jsx-a11y: ^6.8.0
-  eslint-plugin-react: ^7.34.1
-  eslint-plugin-react-hooks: ^4.6.0
-  eslint-plugin-unused-imports: ^3.1.0
-  lucide-react: ^0.474.0
-  prettier: ^3.3.3
-  tailwindcss: ^3.4.13
-  typescript: ^5.6.3
-  vitest: 3.1.2
-
-  # Testing & Coverage
+  '@types/express': ^5.0.3
+  '@types/node': ^20.19.9
+  '@typescript-eslint/eslint-plugin': ^8.31.1
+  '@typescript-eslint/parser': ^8.31.1
   '@vitest/coverage-v8': 3.1.2
-
-  # Build & Development Tools
-  tsx: ^4.19.4
+  '@vitest/ui': 3.1.2
+  eslint: ^9.32.0
+  eslint-config-prettier: 9.1.2
+  eslint-plugin-import: ^2.32.0
+  eslint-plugin-jsx-a11y: ^6.10.2
+  eslint-plugin-react: ^7.37.5
+  eslint-plugin-react-hooks: ^4.6.2
+  eslint-plugin-unused-imports: ^3.2.0
   globals: ^15.15.0
+  lucide-react: ^0.474.0
   markdownlint-cli2: ^0.18.1
-
-  # Core Dependencies
-  zod: ^3.24.1
-  'zod-validation-error': ^3.4.0
-  pino: ^9.5.0
-  'pino-pretty': ^11.3.0
-
-  # AWS SDK
-  '@aws-sdk/client-cognito-identity-provider': ^3.713.0
+  pino: ^9.7.0
+  pino-pretty: ^11.3.0
+  prettier: ^3.6.2
+  tailwindcss: ^3.4.17
+  tsx: ^4.20.3
+  typescript: ^5.9.2
+  vitest: 3.1.2
+  zod: ^3.25.76
+  zod-validation-error: ^3.5.3
 
 catalogs:
   react18:

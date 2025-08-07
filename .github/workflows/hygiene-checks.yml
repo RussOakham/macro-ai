@@ -1,19 +1,22 @@
 # Workflow: Hygiene Checks
-# Purpose: Runs build, lint, and test jobs on pushes and PRs to main.
-# Maintainers: Ensure this workflow covers all required quality gates for main branch.
+# Purpose: Runs build, lint, and test jobs on pushes and PRs to develop and main branches.
+# Maintainers: Ensure this workflow covers all required quality gates for both branches.
 
 name: Hygiene Checks
 
 permissions:
   contents: read
+  actions: read
 
 on:
   push:
     branches:
+      - develop
       - main
   pull_request:
     types: [opened, reopened, synchronize]
     branches:
+      - develop
       - main
 
 concurrency:

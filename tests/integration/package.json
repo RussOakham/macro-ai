@@ -1,0 +1,36 @@
+{
+	"$schema": "http://json.schemastore.org/package",
+	"name": "@repo/integration-tests",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Integration tests for Macro AI full-stack deployment",
+	"scripts": {
+		"test": "vitest run --config vitest.config.ts",
+		"test:watch": "vitest --config vitest.config.ts",
+		"test:ui": "vitest --ui --config vitest.config.ts",
+		"test:api": "vitest run --config vitest.config.ts api-gateway-integration.test.ts",
+		"test:auth": "vitest run --config vitest.config.ts auth-integration.test.ts",
+		"test:database": "vitest run --config vitest.config.ts database-integration.test.ts",
+		"test:full": "./run-integration-tests.sh",
+		"test:staging": "TEST_ENVIRONMENT=staging ./run-integration-tests.sh",
+		"test:production": "TEST_ENVIRONMENT=hobby ./run-integration-tests.sh",
+		"clean": "rm -rf results coverage node_modules",
+		"lint": "eslint .",
+		"lint:fix": "eslint . --fix",
+		"type-check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"vitest": "catalog:"
+	},
+	"devDependencies": {
+		"@repo/config-eslint": "workspace:*",
+		"@repo/config-typescript": "workspace:*",
+		"@types/node": "catalog:",
+		"eslint": "catalog:",
+		"typescript": "catalog:"
+	},
+	"engines": {
+		"node": ">=20.0.0"
+	}
+}

@@ -85,7 +85,7 @@ New to Macro AI? Start here:
 
 **[`./operations/`](./operations/README.md)**
 
-- [Merge Strategy](./operations/merge-strategy.md) - Trunk-based development workflow
+- [Merge Strategy](./operations/merge-strategy.md) - Git flow-based development workflow
 - [Release Process](./operations/release-process.md) - Versioning and release procedures
 - [Database Operations](./operations/database-operations.md) - Migrations and maintenance
 - [Incident Response](./operations/incident-response.md) - Troubleshooting and support

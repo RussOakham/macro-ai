@@ -1,0 +1,46 @@
+{
+	"name": "@repo/infrastructure",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "AWS CDK infrastructure for Macro AI hobby deployment",
+	"scripts": {
+		"build": "tsc",
+		"watch": "tsc -w",
+		"test": "vitest run --passWithNoTests",
+		"test:coverage": "vitest --coverage --passWithNoTests",
+		"clean": "rm -rf dist lib cdk.out",
+		"cdk": "cdk",
+		"deploy": "cdk deploy",
+		"destroy": "cdk destroy",
+		"diff": "cdk diff",
+		"synth": "cdk synth",
+		"bootstrap": "cdk bootstrap",
+		"lint": "eslint . --ext .ts,.tsx",
+		"lint:fix": "eslint . --ext .ts,.tsx --fix",
+		"type-check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"aws-cdk-lib": "^2.161.1",
+		"constructs": "^10.3.0",
+		"source-map-support": "^0.5.21"
+	},
+	"devDependencies": {
+		"@repo/config-eslint": "workspace:*",
+		"@repo/config-typescript": "workspace:*",
+		"@types/node": "^22.5.4",
+		"@vitest/coverage-v8": "^2.0.5",
+		"aws-cdk": "^2.161.1",
+		"eslint": "^9.9.1",
+		"eslint-config-prettier": "catalog:",
+		"eslint-config-turbo": "^2.5.5",
+		"eslint-plugin-simple-import-sort": "^12.1.1",
+		"tsx": "^4.0.0",
+		"typescript": "^5.6.2",
+		"typescript-eslint": "^8.39.0",
+		"vitest": "^2.0.5"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	}
+}
