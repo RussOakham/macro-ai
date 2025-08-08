@@ -56,17 +56,6 @@ vi.mock('../services/enhanced-config.service.ts', () => ({
 	enhancedConfigService: mockEnhancedConfigService,
 }))
 
-// Mock the validateConfigAfterParameterStore function
-const mockValidateConfigAfterParameterStore = vi.fn()
-vi.mock('../utils/load-config.ts', async (importOriginal) => {
-	const actual =
-		await importOriginal<typeof import('../utils/load-config.ts')>()
-	return {
-		...actual,
-		validateConfigAfterParameterStore: mockValidateConfigAfterParameterStore,
-	}
-})
-
 describe('Lambda Handler', () => {
 	let handler: typeof import('../lambda.ts').handler
 	let initializeExpressApp: typeof import('../lambda.ts').initializeExpressApp
@@ -138,11 +127,6 @@ describe('Lambda Handler', () => {
 		mockConfig.setup()
 		mockLogger.setup()
 
-		// Set up Lambda environment variables
-		process.env.AWS_LAMBDA_FUNCTION_NAME = 'test-lambda-function'
-		process.env.NODE_ENV = 'production'
-		process.env.APP_ENV = 'development'
-
 		// Reset Enhanced Config Service mocks
 		mockEnhancedConfigService.getConfig.mockClear()
 		mockEnhancedConfigService.getAllMappedConfig.mockClear()
@@ -151,56 +135,11 @@ describe('Lambda Handler', () => {
 		mockEnhancedConfigService.isLambda.mockClear()
 		mockEnhancedConfigService.getParameterMappings.mockClear()
 
-		// Set default successful getAllMappedConfig response with all required values
+		// Set default successful getAllMappedConfig response
 		mockEnhancedConfigService.getAllMappedConfig.mockResolvedValue([
 			{
 				API_KEY: {
 					value: 'test-api-key-12345678901234567890',
-					source: 'parameter-store',
-					cached: true,
-				},
-				AWS_COGNITO_REGION: {
-					value: 'us-east-1',
-					source: 'parameter-store',
-					cached: true,
-				},
-				AWS_COGNITO_USER_POOL_ID: {
-					value: 'us-east-1_testpool',
-					source: 'parameter-store',
-					cached: true,
-				},
-				AWS_COGNITO_USER_POOL_CLIENT_ID: {
-					value: 'test-client-id',
-					source: 'parameter-store',
-					cached: true,
-				},
-				AWS_COGNITO_USER_POOL_SECRET_KEY: {
-					value: 'test-secret-key',
-					source: 'parameter-store',
-					cached: true,
-				},
-				AWS_COGNITO_ACCESS_KEY: {
-					value: 'test-access-key',
-					source: 'parameter-store',
-					cached: true,
-				},
-				AWS_COGNITO_SECRET_KEY: {
-					value: 'test-secret-key',
-					source: 'parameter-store',
-					cached: true,
-				},
-				COOKIE_ENCRYPTION_KEY: {
-					value: 'test-cookie-encryption-key-32chars',
-					source: 'parameter-store',
-					cached: true,
-				},
-				NON_RELATIONAL_DATABASE_URL: {
-					value: 'redis://test-redis:6379',
-					source: 'parameter-store',
-					cached: true,
-				},
-				RELATIONAL_DATABASE_URL: {
-					value: 'postgresql://test:test@localhost:5432/test',
 					source: 'parameter-store',
 					cached: true,
 				},
@@ -209,36 +148,6 @@ describe('Lambda Handler', () => {
 					source: 'parameter-store',
 					cached: true,
 				},
-			},
-			null,
-		])
-
-		// Mock validateConfigAfterParameterStore to return success by default
-		mockValidateConfigAfterParameterStore.mockReturnValue([
-			{
-				API_KEY: 'test-api-key-12345678901234567890',
-				NODE_ENV: 'production',
-				APP_ENV: 'development',
-				SERVER_PORT: 3040,
-				AWS_COGNITO_REGION: 'us-east-1',
-				AWS_COGNITO_USER_POOL_ID: 'us-east-1_testpool',
-				AWS_COGNITO_USER_POOL_CLIENT_ID: 'test-client-id',
-				AWS_COGNITO_USER_POOL_SECRET_KEY: 'test-secret-key',
-				AWS_COGNITO_ACCESS_KEY: 'test-access-key',
-				AWS_COGNITO_SECRET_KEY: 'test-secret-key',
-				AWS_COGNITO_REFRESH_TOKEN_EXPIRY: 30,
-				COOKIE_DOMAIN: 'localhost',
-				COOKIE_ENCRYPTION_KEY: 'test-cookie-encryption-key-32chars',
-				NON_RELATIONAL_DATABASE_URL: 'redis://test-redis:6379',
-				RELATIONAL_DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
-				OPENAI_API_KEY: 'sk-test-key',
-				RATE_LIMIT_WINDOW_MS: 900000,
-				RATE_LIMIT_MAX_REQUESTS: 100,
-				AUTH_RATE_LIMIT_WINDOW_MS: 3600000,
-				AUTH_RATE_LIMIT_MAX_REQUESTS: 10,
-				API_RATE_LIMIT_WINDOW_MS: 60000,
-				API_RATE_LIMIT_MAX_REQUESTS: 60,
-				REDIS_URL: undefined,
 			},
 			null,
 		])
@@ -283,17 +192,7 @@ describe('Lambda Handler', () => {
 				expect.objectContaining({
 					operation: 'loadParametersSuccess',
 					requestId: mockContext.awsRequestId,
-					parametersLoaded: 11, // Updated to match the new mock with all required parameters
-				}),
-			)
-
-			// Verify configuration validation after Parameter Store loading
-			expect(mockValidateConfigAfterParameterStore).toHaveBeenCalled()
-			expect(mockPowertoolsLogger.info).toHaveBeenCalledWith(
-				'Configuration validated successfully after Parameter Store loading',
-				expect.objectContaining({
-					operation: 'postParameterStoreValidationSuccess',
-					requestId: mockContext.awsRequestId,
+					parametersLoaded: 2,
 				}),
 			)
 		}, 10000)
@@ -362,40 +261,6 @@ describe('Lambda Handler', () => {
 				expect.objectContaining({
 					operation: 'lambdaInvocationError',
 					error: 'Test error',
-				}),
-			)
-		})
-
-		it('should handle configuration validation failure after Parameter Store loading', async () => {
-			// Arrange
-			const validationError = {
-				message:
-					'Configuration validation failed after Parameter Store loading: Missing required fields',
-				code: 'VALIDATION_ERROR',
-				context: { errors: ['Missing API_KEY'] },
-				operation: 'configLoader',
-			}
-
-			// Mock validation to fail
-			mockValidateConfigAfterParameterStore.mockReturnValue([
-				null,
-				validationError,
-			])
-
-			// Act
-			const result = await handler(mockEvent, mockContext)
-
-			// Assert
-			expect(result.statusCode).toBe(500)
-			expect(mockValidateConfigAfterParameterStore).toHaveBeenCalledWith({
-				allowDeploymentMode: true,
-			})
-			expect(mockPowertoolsLogger.error).toHaveBeenCalledWith(
-				'Configuration validation failed after Parameter Store loading',
-				expect.objectContaining({
-					operation: 'postParameterStoreValidationFailed',
-					requestId: mockContext.awsRequestId,
-					error: validationError.message,
 				}),
 			)
 		})

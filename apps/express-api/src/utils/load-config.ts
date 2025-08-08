@@ -8,107 +8,6 @@ import { pino } from './logger.ts'
 
 const { logger } = pino
 
-/**
- * Create minimal configuration for Lambda startup
- * Contains only the absolutely required keys to prevent crashes
- * Parameter Store will populate the rest, then we'll re-validate
- */
-const createMinimalLambdaConfig = (): TEnv => {
-	// Use envSchema defaults where available, minimal fallbacks otherwise
-	const minimalEnv = {
-		// Required for basic app startup
-		NODE_ENV: (process.env.NODE_ENV ?? 'production') as
-			| 'production'
-			| 'development'
-			| 'test',
-		APP_ENV: (process.env.APP_ENV ?? 'development') as
-			| 'production'
-			| 'staging'
-			| 'development'
-			| 'test',
-		SERVER_PORT: Number(process.env.SERVER_PORT) || 3040,
-
-		// AWS region for Parameter Store access
-		AWS_COGNITO_REGION: process.env.AWS_COGNITO_REGION ?? 'us-east-1',
-
-		// Placeholder values - Parameter Store will populate these
-		API_KEY: process.env.API_KEY ?? 'placeholder-will-be-populated',
-		AWS_COGNITO_USER_POOL_ID:
-			process.env.AWS_COGNITO_USER_POOL_ID ?? 'placeholder',
-		AWS_COGNITO_USER_POOL_CLIENT_ID:
-			process.env.AWS_COGNITO_USER_POOL_CLIENT_ID ?? 'placeholder',
-		AWS_COGNITO_USER_POOL_SECRET_KEY:
-			process.env.AWS_COGNITO_USER_POOL_SECRET_KEY ?? 'placeholder',
-		AWS_COGNITO_ACCESS_KEY: process.env.AWS_COGNITO_ACCESS_KEY ?? 'placeholder',
-		AWS_COGNITO_SECRET_KEY: process.env.AWS_COGNITO_SECRET_KEY ?? 'placeholder',
-		COOKIE_ENCRYPTION_KEY:
-			process.env.COOKIE_ENCRYPTION_KEY ??
-			'placeholder-32-chars-minimum-length',
-		NON_RELATIONAL_DATABASE_URL:
-			process.env.NON_RELATIONAL_DATABASE_URL ?? 'placeholder',
-		RELATIONAL_DATABASE_URL:
-			process.env.RELATIONAL_DATABASE_URL ?? 'placeholder',
-		OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? 'sk-placeholder',
-	}
-
-	// Parse through schema to get defaults for remaining fields
-	const schemaDefaults = envSchema.parse(minimalEnv)
-	return schemaDefaults
-}
-
-/**
- * Re-validate configuration after Parameter Store has populated environment variables
- * This ensures all required values are present and correctly typed
- *
- * @param options Configuration options for validation behavior
- */
-const validateConfigAfterParameterStore = (options?: {
-	/** Allow validation to pass with warnings during CI/CD deployment */
-	allowDeploymentMode?: boolean
-}): Result<TEnv> => {
-	const env = envSchema.safeParse(process.env)
-	const isDeploymentEnvironment = Boolean(
-		process.env.GITHUB_ACTIONS ??
-			process.env.CI ??
-			process.env.AWS_EXECUTION_ENV?.includes('AWS_Lambda_'),
-	)
-	const allowDeploymentMode = options?.allowDeploymentMode ?? false
-
-	if (!env.success) {
-		const validationError = fromError(env.error)
-
-		// In CI/CD environments, log validation errors but don't fail immediately
-		// This allows the deployment to proceed while still logging issues for debugging
-		if (isDeploymentEnvironment && allowDeploymentMode) {
-			logger.warn(
-				'Configuration validation failed in CI/CD environment - proceeding with deployment',
-				{
-					operation: 'configValidationWarningDeployment',
-					error: validationError.message,
-					details: validationError.details,
-					environment: {
-						githubActions: Boolean(process.env.GITHUB_ACTIONS),
-						ci: Boolean(process.env.CI),
-						awsExecutionEnv: process.env.AWS_EXECUTION_ENV,
-					},
-				},
-			)
-
-			// Return minimal config for CI/CD deployment
-			return [createMinimalLambdaConfig(), null]
-		}
-
-		const appError = AppError.validation(
-			`Configuration validation failed after Parameter Store loading: ${validationError.message}`,
-			{ errors: validationError.details },
-			'configLoader',
-		)
-		return [null, appError]
-	}
-
-	return [env.data, null]
-}
-
 const loadConfig = (): Result<TEnv> => {
 	const envPath = resolve(process.cwd(), '.env')
 	const isLambdaEnvironment = Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME)
@@ -155,9 +54,52 @@ const loadConfig = (): Result<TEnv> => {
 					error: validationError.message,
 				},
 			)
-			// Return a minimal config with only absolutely required keys for Lambda startup
-			// Parameter Store will populate the rest, then we'll re-validate
-			return [createMinimalLambdaConfig(), null]
+			// Return a minimal config that won't crash the app
+			return [
+				{
+					API_KEY: process.env.API_KEY ?? '',
+					NODE_ENV: (process.env.NODE_ENV ?? 'production') as
+						| 'production'
+						| 'development'
+						| 'test',
+					APP_ENV: (process.env.APP_ENV ?? 'development') as
+						| 'production'
+						| 'staging'
+						| 'development'
+						| 'test',
+					SERVER_PORT: Number(process.env.SERVER_PORT) || 3040,
+					AWS_COGNITO_REGION: process.env.AWS_COGNITO_REGION ?? 'us-east-1',
+					AWS_COGNITO_USER_POOL_ID: process.env.AWS_COGNITO_USER_POOL_ID ?? '',
+					AWS_COGNITO_USER_POOL_CLIENT_ID:
+						process.env.AWS_COGNITO_USER_POOL_CLIENT_ID ?? '',
+					AWS_COGNITO_USER_POOL_SECRET_KEY:
+						process.env.AWS_COGNITO_USER_POOL_SECRET_KEY ?? '',
+					AWS_COGNITO_ACCESS_KEY: process.env.AWS_COGNITO_ACCESS_KEY ?? '',
+					AWS_COGNITO_SECRET_KEY: process.env.AWS_COGNITO_SECRET_KEY ?? '',
+					AWS_COGNITO_REFRESH_TOKEN_EXPIRY:
+						Number(process.env.AWS_COGNITO_REFRESH_TOKEN_EXPIRY) || 30,
+					COOKIE_DOMAIN: process.env.COOKIE_DOMAIN ?? 'localhost',
+					COOKIE_ENCRYPTION_KEY: process.env.COOKIE_ENCRYPTION_KEY ?? '',
+					NON_RELATIONAL_DATABASE_URL:
+						process.env.NON_RELATIONAL_DATABASE_URL ?? '',
+					RELATIONAL_DATABASE_URL: process.env.RELATIONAL_DATABASE_URL ?? '',
+					OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? '',
+					RATE_LIMIT_WINDOW_MS:
+						Number(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
+					RATE_LIMIT_MAX_REQUESTS:
+						Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+					AUTH_RATE_LIMIT_WINDOW_MS:
+						Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS) || 3600000,
+					AUTH_RATE_LIMIT_MAX_REQUESTS:
+						Number(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS) || 10,
+					API_RATE_LIMIT_WINDOW_MS:
+						Number(process.env.API_RATE_LIMIT_WINDOW_MS) || 60000,
+					API_RATE_LIMIT_MAX_REQUESTS:
+						Number(process.env.API_RATE_LIMIT_MAX_REQUESTS) || 60,
+					REDIS_URL: process.env.REDIS_URL,
+				},
+				null,
+			]
 		}
 
 		return [null, appError]
@@ -172,5 +114,5 @@ const loadConfig = (): Result<TEnv> => {
 	return [env.data, null]
 }
 
-// Export the functions
-export { loadConfig, validateConfigAfterParameterStore }
+// Export the function instead of the loaded config
+export { loadConfig }

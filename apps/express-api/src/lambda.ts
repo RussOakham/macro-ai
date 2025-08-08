@@ -13,7 +13,6 @@ import type { Express, Response } from 'express'
 import serverless from 'serverless-http'
 
 import { enhancedConfigService } from './services/enhanced-config.service.ts'
-import { validateConfigAfterParameterStore } from './utils/load-config.ts'
 import { createServer } from './utils/server.ts'
 
 // Initialize Powertools Logger for Lambda
@@ -181,25 +180,6 @@ export const handler = async (
 					requestId: context.awsRequestId,
 					parametersLoaded: Object.keys(configValues).length,
 				})
-
-				// Re-validate configuration after Parameter Store has populated values
-				// Allow deployment mode during CI/CD to prevent deployment failures
-				const [, validationError] = validateConfigAfterParameterStore({
-					allowDeploymentMode: true,
-				})
-				if (validationError) {
-					logger.error(
-						'Configuration validation failed after Parameter Store loading',
-						{
-							operation: 'postParameterStoreValidationFailed',
-							requestId: context.awsRequestId,
-							error: validationError.message,
-						},
-					)
-					throw new Error(
-						`Configuration validation failed: ${validationError.message}`,
-					)
-				}
 
 				logger.info(
 					'Configuration validated successfully after Parameter Store loading',
