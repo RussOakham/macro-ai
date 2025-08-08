@@ -310,11 +310,18 @@ describe('EnhancedConfigService', () => {
 
 	describe('getAllMappedConfig', () => {
 		it('should get all mapped configuration successfully', async () => {
-			// Arrange
+			// Arrange - Set all required environment variables
+			process.env.API_KEY = 'test-api-key-12345678901234567890'
+			process.env.COOKIE_ENCRYPTION_KEY = 'test-cookie-encryption-key-32-chars'
+			process.env.AWS_COGNITO_USER_POOL_SECRET_KEY = 'test-pool-secret'
+			process.env.AWS_COGNITO_ACCESS_KEY = 'test-access-key'
+			process.env.AWS_COGNITO_SECRET_KEY = 'test-secret-key'
 			process.env.OPENAI_API_KEY = 'sk-env-openai-key'
 			process.env.RELATIONAL_DATABASE_URL = 'postgresql://env:5432/db'
+			process.env.NON_RELATIONAL_DATABASE_URL = 'mongodb://localhost:27017/test'
 			process.env.AWS_COGNITO_USER_POOL_ID = 'us-east-1_env'
 			process.env.AWS_COGNITO_USER_POOL_CLIENT_ID = 'env-client-id'
+			process.env.REDIS_URL = 'redis://localhost:6379'
 
 			// Act
 			const [result, error] = await enhancedConfigService.getAllMappedConfig()
@@ -323,7 +330,7 @@ describe('EnhancedConfigService', () => {
 			expect(error).toBeNull()
 			expect(result).toBeDefined()
 			if (result) {
-				expect(Object.keys(result)).toHaveLength(5) // All mapped parameters
+				expect(Object.keys(result)).toHaveLength(11) // All mapped parameters
 				expect(result.OPENAI_API_KEY?.value).toBe('sk-env-openai-key')
 				expect(result.OPENAI_API_KEY?.source).toBe('environment')
 			}

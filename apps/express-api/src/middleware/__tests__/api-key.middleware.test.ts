@@ -25,6 +25,9 @@ describe('apiKeyAuth Middleware', () => {
 		mockConfig.setup()
 		mockLogger.setup()
 
+		// Set API key in environment for middleware to read
+		process.env.API_KEY = 'test-api-key-12345678901234567890'
+
 		// Setup Express mocks with default properties for API key middleware tests
 		const expressMocks = mockExpress.setup({
 			path: '/api/test',

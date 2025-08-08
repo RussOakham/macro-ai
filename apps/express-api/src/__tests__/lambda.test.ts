@@ -44,7 +44,6 @@ vi.mock('@aws-lambda-powertools/logger', () => ({
 
 // Mock Enhanced Config Service
 const mockEnhancedConfigService = {
-	preloadParameters: vi.fn(),
 	getConfig: vi.fn(),
 	getAllMappedConfig: vi.fn(),
 	clearCache: vi.fn(),
@@ -129,7 +128,6 @@ describe('Lambda Handler', () => {
 		mockLogger.setup()
 
 		// Reset Enhanced Config Service mocks
-		mockEnhancedConfigService.preloadParameters.mockClear()
 		mockEnhancedConfigService.getConfig.mockClear()
 		mockEnhancedConfigService.getAllMappedConfig.mockClear()
 		mockEnhancedConfigService.clearCache.mockClear()
@@ -137,10 +135,15 @@ describe('Lambda Handler', () => {
 		mockEnhancedConfigService.isLambda.mockClear()
 		mockEnhancedConfigService.getParameterMappings.mockClear()
 
-		// Set default successful preload response
-		mockEnhancedConfigService.preloadParameters.mockResolvedValue([
+		// Set default successful getAllMappedConfig response
+		mockEnhancedConfigService.getAllMappedConfig.mockResolvedValue([
 			{
-				'openai-api-key': {
+				API_KEY: {
+					value: 'test-api-key-12345678901234567890',
+					source: 'parameter-store',
+					cached: true,
+				},
+				OPENAI_API_KEY: {
 					value: 'sk-test-key',
 					source: 'parameter-store',
 					cached: true,
@@ -182,14 +185,14 @@ describe('Lambda Handler', () => {
 					coldStart: true,
 				}),
 			)
-			// Verify Parameter Store preload was called
-			expect(mockEnhancedConfigService.preloadParameters).toHaveBeenCalled()
+			// Verify Parameter Store config loading was called
+			expect(mockEnhancedConfigService.getAllMappedConfig).toHaveBeenCalled()
 			expect(mockPowertoolsLogger.info).toHaveBeenCalledWith(
-				'Parameters preloaded successfully',
+				'Parameters loaded and environment populated',
 				expect.objectContaining({
-					operation: 'preloadParametersSuccess',
+					operation: 'loadParametersSuccess',
 					requestId: mockContext.awsRequestId,
-					parametersLoaded: 1,
+					parametersLoaded: 2,
 				}),
 			)
 		}, 10000)
