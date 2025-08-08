@@ -8,28 +8,65 @@ both backend (Lambda/CDK) and frontend (AWS Amplify) components.
 The CI/CD pipeline provides:
 
 - **Automated Testing**: Quality gates with build, lint, and test validation
-- **Multi-Environment Deployment**: Staging and production environments
+- **Ephemeral PR Environments**: Automatic preview environments for every pull request
+- **Multi-Environment Deployment**: Development (ephemeral), staging, and production environments
 - **Full-Stack Deployment**: Backend infrastructure and frontend hosting
 - **Integration Testing**: End-to-end validation after deployment
 - **Rollback Capabilities**: Emergency rollback for both components
 - **Branch-Based Workflows**: Different strategies for different branches
+- **Security-First Access Control**: CODEOWNERS-based deployment restrictions
 
 ## 🚀 Workflow Architecture
 
 ### Core Workflows
 
-1. **`deploy-full-stack.yml`** - Main deployment workflow
-2. **`deploy-staging.yml`** - Staging environment deployment
-3. **`rollback.yml`** - Emergency rollback workflow
-4. **`hygiene-checks.yml`** - Quality gates (existing)
+#### Ephemeral PR Environment Workflows
+
+1. **`deploy-preview.yml`** - Automatic PR preview deployment
+2. **`destroy-preview.yml`** - Automatic PR environment cleanup
+3. **`deploy-forked-pr-preview.yml`** - Manual forked PR preview deployment
+
+#### Persistent Environment Workflows
+
+1. **`deploy-infrastructure.yml`** - Backend infrastructure deployment
+2. **`deploy-full-stack.yml`** - Main deployment workflow
+3. **`deploy-staging.yml`** - Staging environment deployment
+
+#### Manual Teardown Workflows
+
+1. **`teardown-dev.yml`** - Manual development environment cleanup
+2. **`teardown-staging.yml`** - Manual staging environment teardown
+3. **`teardown-production.yml`** - Manual production environment teardown
+
+#### Quality & Emergency Workflows
+
+1. **`rollback.yml`** - Emergency rollback workflow
+2. **`hygiene-checks.yml`** - Quality gates (existing)
 
 ### Deployment Strategy
 
 ```text
+Pull Request ──► Ephemeral Environment (pr-123)
+     │                    │
+     │                    └──► Auto-cleanup on PR close
+     │
 develop branch ──► Staging Environment
      │
      └──► PR to main ──► Production Environment
 ```
+
+#### Environment Lifecycle
+
+- **Ephemeral (pr-{number})**: Created on PR open, destroyed on PR close
+- **Staging**: Persistent, updated on develop branch pushes
+- **Production**: Persistent, updated on main branch pushes
+
+#### Access Control Requirements
+
+- **Ephemeral deployments**: Same-repo PRs by code owners only
+- **Forked PR deployments**: Manual override by code owners using trusted base code
+- **Persistent deployments**: Code owners only
+- **Manual teardowns**: Code owners with confirmation requirements
 
 ## 🔧 Setup Requirements
 
@@ -480,6 +517,154 @@ cd apps/client-ui
 - **Artifact Retention**: 7-day retention for build artifacts
 - **Efficient Resource Usage**: ARM64 Lambda, optimized build processes
 
+## 🔐 Access Control Matrix
+
+### Workflow Permissions
+
+| Workflow                         | Trigger      | Who Can Run           | Requirements    | Confirmations       |
+| -------------------------------- | ------------ | --------------------- | --------------- | ------------------- |
+| **deploy-preview.yml**           | PR open/sync | Same-repo code owners | Auto            | None                |
+| **destroy-preview.yml**          | PR close     | Same-repo code owners | Auto            | None                |
+| **deploy-forked-pr-preview.yml** | Manual       | Code owners           | Manual dispatch | "I UNDERSTAND"      |
+| **teardown-dev.yml**             | Manual       | Code owners           | Manual dispatch | "I UNDERSTAND"      |
+| **teardown-staging.yml**         | Manual       | Code owners           | Manual dispatch | Double confirmation |
+| **teardown-production.yml**      | Manual       | Code owners           | Manual dispatch | Triple confirmation |
+| **deploy-infrastructure.yml**    | Push/Manual  | Code owners           | Branch/Manual   | None                |
+
+### Code Owner Management
+
+#### Adding New Code Owners
+
+1. Edit `.github/CODEOWNERS`:
+
+   ```bash
+   # Infrastructure and deployment code
+   infrastructure/ @RussOakham @NewOwner
+
+   # GitHub Actions workflows
+   .github/workflows/ @RussOakham @NewOwner
+
+   # Default ownership
+   * @RussOakham @NewOwner
+   ```
+
+2. Test access with a test PR or manual workflow
+
+#### Code Owner Validation Process
+
+All deployment workflows use the `.github/actions/check-codeowner` composite action:
+
+- Reads `.github/CODEOWNERS` from trusted base repository
+- Normalizes usernames to lowercase for comparison
+- Validates either PR author or workflow actor
+- Outputs `is-owner: true/false` for workflow decisions
+
+## 📋 Operational Runbooks
+
+### Ephemeral PR Environment Operations
+
+#### Deploying Preview for Forked PR
+
+1. **Navigate to Actions tab** in GitHub repository
+2. **Select "Deploy Forked PR Preview (Manual)" workflow**
+3. **Click "Run workflow"**
+4. **Fill inputs**:
+   - `pr_number`: The PR number (e.g., 123)
+   - `confirm`: Type exactly "I UNDERSTAND"
+5. **Review security warning**: Preview uses trusted base code, not forked changes
+6. **Run workflow** - only code owners can execute
+7. **Check PR comment** for deployment status and endpoints
+
+#### Manual Cleanup of PR Environment
+
+1. **Navigate to Actions tab**
+2. **Select "Manual Teardown - Development Environment" workflow**
+3. **Click "Run workflow"**
+4. **Fill inputs**:
+   - `pr_number`: The PR number to clean up
+   - `confirm`: Type exactly "I UNDERSTAND"
+5. **Run workflow** - only code owners can execute
+6. **Verify cleanup** in workflow summary
+
+#### Troubleshooting Preview Deployments
+
+**Preview not deploying automatically:**
+
+- Verify PR is from same repository (not a fork)
+- Check if PR author is listed in `.github/CODEOWNERS`
+- Review workflow logs for validation failures
+
+**Preview deployment failed:**
+
+- Check AWS credentials and permissions
+- Verify `/macro-ai/development` Parameter Store values exist
+- Check for resource naming conflicts
+- Review CloudFormation events in AWS Console
+
+**Preview not cleaning up:**
+
+- Verify PR was from same-repo code owner
+- Use manual teardown workflow with PR number
+- Check CloudFormation stack status in AWS Console
+
+### Staging Environment Operations
+
+#### Manual Staging Teardown
+
+⚠️ **CRITICAL**: This destroys the staging environment completely
+
+1. **Navigate to Actions tab**
+2. **Select "Manual Teardown - Staging Environment" workflow**
+3. **Click "Run workflow"**
+4. **Fill inputs**:
+   - `confirm`: Type exactly "I UNDERSTAND STAGING TEARDOWN"
+   - `additional_confirm`: Type exactly "STAGING"
+5. **Review impact**: All staging data will be lost
+6. **Run workflow** - only code owners can execute
+7. **Monitor progress** and verify completion
+
+#### Staging Recovery
+
+After staging teardown, to restore:
+
+1. **Push to develop branch** (triggers automatic staging deployment)
+2. **Or use manual deployment**:
+   - Run "Deploy Full-Stack" workflow
+   - Select environment: staging
+3. **Update Parameter Store** values if needed
+4. **Redeploy frontend** to staging environment
+
+### Production Environment Operations
+
+#### Manual Production Teardown
+
+🚨 **EXTREME CAUTION**: This destroys the live production environment
+
+1. **Notify all stakeholders** before proceeding
+2. **Navigate to Actions tab**
+3. **Select "Manual Teardown - Production Environment" workflow**
+4. **Click "Run workflow"**
+5. **Fill all three confirmations**:
+   - `confirm`: "I UNDERSTAND PRODUCTION TEARDOWN"
+   - `additional_confirm`: "PRODUCTION"
+   - `final_confirm`: "DESTROY PRODUCTION NOW"
+6. **Review critical warnings** about business impact
+7. **Run workflow** - only code owners can execute
+8. **Monitor 30-second countdown** (last chance to abort)
+9. **Verify completion** and begin recovery procedures
+
+#### Production Recovery
+
+After production teardown:
+
+1. **Activate disaster recovery** procedures
+2. **Restore from backups** if available
+3. **Deploy production** from main branch
+4. **Restore Parameter Store** production values
+5. **Redeploy frontend** to production
+6. **Communicate with customers** about service restoration
+7. **Conduct post-incident review**
+
 ## 🔐 Security Considerations
 
 ### Secrets Management
@@ -487,12 +672,15 @@ cd apps/client-ui
 - **GitHub Secrets**: Encrypted storage for sensitive values
 - **Environment Separation**: Different secrets for staging/production
 - **Least Privilege**: IAM roles with minimal required permissions
+- **Parameter Store**: Shared development secrets for cost optimization
 
 ### Access Control
 
+- **CODEOWNERS Enforcement**: All deployments require code owner approval
 - **Branch Protection**: Require reviews for main branch
 - **Environment Protection**: Manual approval for production
 - **Audit Trail**: All deployments logged and traceable
+- **Forked PR Protection**: Never uses pull_request_target for deployments
 
 ## 📞 Support and Troubleshooting
 

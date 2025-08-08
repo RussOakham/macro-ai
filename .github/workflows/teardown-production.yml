@@ -1,0 +1,315 @@
+name: Manual Teardown - Production Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "I UNDERSTAND PRODUCTION TEARDOWN" to confirm production environment destruction'
+        required: true
+        type: string
+      additional_confirm:
+        description: 'Type "PRODUCTION" to double-confirm this destructive action'
+        required: true
+        type: string
+      final_confirm:
+        description: 'Type "DESTROY PRODUCTION NOW" for final confirmation'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20'
+  PNPM_VERSION: '10.14.0'
+  ENVIRONMENT: 'production'
+  STACK_NAME: 'MacroAiProductionStack'
+  # CDK environment variables
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_REGION: us-east-1
+
+jobs:
+  # Validate inputs and code ownership with maximum security
+  validate-request:
+    name: Validate Production Teardown Request
+    runs-on: ubuntu-latest
+    outputs:
+      is-owner: ${{ steps.codeowner-check.outputs.is-owner }}
+      target-user: ${{ steps.codeowner-check.outputs.target-user }}
+      should-destroy: ${{ steps.decision.outputs.should-destroy }}
+
+    steps:
+      - name: Validate all confirmation inputs
+        run: |
+          echo "🚨 PRODUCTION ENVIRONMENT TEARDOWN REQUEST"
+          echo "Validating triple confirmation inputs..."
+
+          if [[ "${{ inputs.confirm }}" != "I UNDERSTAND PRODUCTION TEARDOWN" ]]; then
+            echo "❌ Primary confirmation failed."
+            echo "Expected: 'I UNDERSTAND PRODUCTION TEARDOWN'"
+            echo "Got: '${{ inputs.confirm }}'"
+            exit 1
+          fi
+
+          if [[ "${{ inputs.additional_confirm }}" != "PRODUCTION" ]]; then
+            echo "❌ Secondary confirmation failed."
+            echo "Expected: 'PRODUCTION'"
+            echo "Got: '${{ inputs.additional_confirm }}'"
+            exit 1
+          fi
+
+          if [[ "${{ inputs.final_confirm }}" != "DESTROY PRODUCTION NOW" ]]; then
+            echo "❌ Final confirmation failed."
+            echo "Expected: 'DESTROY PRODUCTION NOW'"
+            echo "Got: '${{ inputs.final_confirm }}'"
+            exit 1
+          fi
+
+          echo "✅ All three confirmations validated"
+          echo "🚨 PRODUCTION ENVIRONMENT TEARDOWN AUTHORIZED"
+
+      - name: Check code ownership of workflow actor
+        id: codeowner-check
+        uses: ./.github/actions/check-codeowner
+        with:
+          mode: 'manual'
+          base-ref: 'main'
+
+      - name: Make destruction decision with critical warnings
+        id: decision
+        run: |
+          IS_OWNER="${{ steps.codeowner-check.outputs.is-owner }}"
+          ACTOR="${{ steps.codeowner-check.outputs.target-user }}"
+
+          if [[ "${IS_OWNER}" == "true" ]]; then
+            echo "should-destroy=true" >> $GITHUB_OUTPUT
+            echo "✅ PRODUCTION TEARDOWN approved for code owner: ${ACTOR}"
+            echo ""
+            echo "🚨🚨🚨 CRITICAL WARNING 🚨🚨🚨"
+            echo "   This will destroy the PRODUCTION environment"
+            echo "   ALL PRODUCTION DATA will be permanently lost"
+            echo "   This affects the live macro-ai.com application"
+            echo "   ALL USERS will lose access to the service"
+            echo "   This action is IRREVERSIBLE"
+            echo "   Business operations will be severely impacted"
+            echo "🚨🚨🚨 CRITICAL WARNING 🚨🚨🚨"
+          else
+            echo "should-destroy=false" >> $GITHUB_OUTPUT
+            echo "❌ PRODUCTION TEARDOWN blocked: ${ACTOR} is not a code owner"
+            exit 1
+          fi
+
+  # Check production stack with termination protection handling
+  check-production-stack:
+    name: Check Production Stack
+    runs-on: ubuntu-latest
+    needs: validate-request
+    if: needs.validate-request.outputs.should-destroy == 'true'
+    outputs:
+      stack-exists: ${{ steps.check.outputs.stack-exists }}
+      stack-status: ${{ steps.check.outputs.stack-status }}
+      termination-protection: ${{ steps.check.outputs.termination-protection }}
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Check production stack existence and protection
+        id: check
+        run: |
+          echo "🔍 Checking PRODUCTION stack: ${{ env.STACK_NAME }}"
+
+          # Check if stack exists and get its status
+          STACK_INFO=$(aws cloudformation describe-stacks \
+            --stack-name "${{ env.STACK_NAME }}" \
+            --query 'Stacks[0].{Status:StackStatus,TerminationProtection:EnableTerminationProtection}' \
+            --output json 2>/dev/null || echo '{"Status":"DOES_NOT_EXIST","TerminationProtection":false}')
+
+          STACK_STATUS=$(echo "$STACK_INFO" | jq -r '.Status')
+          TERMINATION_PROTECTION=$(echo "$STACK_INFO" | jq -r '.TerminationProtection')
+
+          if [[ "${STACK_STATUS}" == "DOES_NOT_EXIST" ]]; then
+            echo "stack-exists=false" >> $GITHUB_OUTPUT
+            echo "stack-status=DOES_NOT_EXIST" >> $GITHUB_OUTPUT
+            echo "termination-protection=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Production stack does not exist - no teardown needed"
+          else
+            echo "stack-exists=true" >> $GITHUB_OUTPUT
+            echo "stack-status=${STACK_STATUS}" >> $GITHUB_OUTPUT
+            echo "termination-protection=${TERMINATION_PROTECTION}" >> $GITHUB_OUTPUT
+            echo "✅ Production stack found with status: ${STACK_STATUS}"
+            echo "🛡️ Termination protection: ${TERMINATION_PROTECTION}"
+            
+            # List critical production resources
+            echo ""
+            echo "🚨 PRODUCTION RESOURCES TO BE DESTROYED:"
+            aws cloudformation list-stack-resources \
+              --stack-name "${{ env.STACK_NAME }}" \
+              --query 'StackResourceSummaries[].{Type:ResourceType,LogicalId:LogicalResourceId,Status:ResourceStatus}' \
+              --output table || echo "Could not list resources"
+            
+            # Get production stack outputs
+            echo ""
+            echo "🚨 PRODUCTION STACK OUTPUTS (WILL BE LOST):"
+            aws cloudformation describe-stacks \
+              --stack-name "${{ env.STACK_NAME }}" \
+              --query 'Stacks[0].Outputs[].{Key:OutputKey,Value:OutputValue}' \
+              --output table || echo "Could not list outputs"
+          fi
+
+  # Disable termination protection if enabled
+  disable-protection:
+    name: Disable Termination Protection
+    runs-on: ubuntu-latest
+    needs: [validate-request, check-production-stack]
+    if: needs.validate-request.outputs.should-destroy == 'true' && needs.check-production-stack.outputs.stack-exists == 'true' && needs.check-production-stack.outputs.termination-protection == 'true'
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Disable termination protection
+        run: |
+          echo "🛡️ Disabling termination protection for PRODUCTION stack"
+          echo "This is required before stack destruction can proceed"
+
+          aws cloudformation update-termination-protection \
+            --stack-name "${{ env.STACK_NAME }}" \
+            --no-enable-termination-protection
+
+          echo "✅ Termination protection disabled"
+          echo "🚨 PRODUCTION stack is now vulnerable to deletion"
+
+  # Destroy the production environment with maximum safeguards
+  destroy-production:
+    name: Destroy Production Environment
+    runs-on: ubuntu-latest
+    needs: [validate-request, check-production-stack, disable-protection]
+    if: always() && needs.validate-request.outputs.should-destroy == 'true' && needs.check-production-stack.outputs.stack-exists == 'true' && (needs.disable-protection.result == 'success' || needs.check-production-stack.outputs.termination-protection == 'false')
+
+    permissions:
+      id-token: write
+      contents: read
+
+    outputs:
+      destroy-result: ${{ steps.destroy.outputs.destroy-result }}
+      verification-result: ${{ steps.verify.outputs.verification-result }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install AWS CDK CLI globally
+        run: pnpm add -g aws-cdk
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install infrastructure dependencies
+        run: |
+          cd infrastructure
+          pnpm install --frozen-lockfile
+
+      - name: Final countdown and destroy production
+        id: destroy
+        run: |
+          cd infrastructure
+
+          echo "🚨🚨🚨 FINAL WARNING: PRODUCTION ENVIRONMENT DESTRUCTION 🚨🚨🚨"
+          echo "📦 Stack: ${{ env.STACK_NAME }}"
+          echo "🌍 Environment: ${{ env.ENVIRONMENT }}"
+          echo "👤 Requested by: ${{ needs.validate-request.outputs.target-user }}"
+          echo "📅 Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo ""
+          echo "🚨 This will permanently destroy the PRODUCTION environment"
+          echo "🚨 ALL PRODUCTION DATA will be irreversibly lost"
+          echo "🚨 The live application will become unavailable"
+          echo "🚨 ALL USERS will lose access immediately"
+          echo "🚨 Business operations will be severely impacted"
+          echo ""
+          echo "⏰ Final countdown before destruction:"
+          for i in {30..1}; do
+            echo "   Destroying in ${i} seconds... (Ctrl+C to abort)"
+            sleep 1
+          done
+          echo ""
+          echo "🗑️ INITIATING PRODUCTION DESTRUCTION"
+
+          # Attempt to destroy the stack with extended retries for production
+          DESTROY_SUCCESS=false
+          for attempt in {1..10}; do
+            echo "🔄 PRODUCTION destruction attempt ${attempt}/10..."
+
+            if pnpm cdk destroy "${{ env.STACK_NAME }}" --force; then
+              DESTROY_SUCCESS=true
+              echo "✅ PRODUCTION stack destroyed successfully"
+              break
+            else
+              echo "❌ PRODUCTION destruction attempt ${attempt} failed"
+              if [[ ${attempt} -lt 10 ]]; then
+                echo "⏳ Waiting 120 seconds before retry..."
+                sleep 120
+              fi
+            fi
+          done
+
+          if [[ "${DESTROY_SUCCESS}" == "true" ]]; then
+            echo "destroy-result=success" >> $GITHUB_OUTPUT
+          else
+            echo "destroy-result=failed" >> $GITHUB_OUTPUT
+            echo "❌ All PRODUCTION destruction attempts failed"
+            exit 1
+          fi
+
+      - name: Verify production stack deletion
+        id: verify
+        run: |
+          echo "🔍 Verifying PRODUCTION stack deletion..."
+
+          # Wait extended time for production stack deletion
+          sleep 60
+
+          # Check if stack still exists
+          STACK_STATUS=$(aws cloudformation describe-stacks \
+            --stack-name "${{ env.STACK_NAME }}" \
+            --query 'Stacks[0].StackStatus' \
+            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+
+          if [[ "${STACK_STATUS}" == "DOES_NOT_EXIST" ]]; then
+            echo "verification-result=success" >> $GITHUB_OUTPUT
+            echo "✅ PRODUCTION stack deletion verified - environment completely destroyed"
+          else
+            echo "verification-result=partial" >> $GITHUB_OUTPUT
+            echo "⚠️ PRODUCTION stack still exists with status: ${STACK_STATUS}"
+            echo "This may be normal if deletion is still in progress"
+          fi

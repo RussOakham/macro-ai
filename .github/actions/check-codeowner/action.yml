@@ -1,0 +1,98 @@
+name: 'Check Code Owner'
+description: 'Validates if a user is listed as a code owner in the CODEOWNERS file'
+author: 'macro-ai'
+
+inputs:
+  mode:
+    description: 'Validation mode: "pr" for PR author validation, "manual" for workflow actor validation'
+    required: true
+    default: 'pr'
+
+  base-ref:
+    description: 'Base repository reference to read CODEOWNERS from (for security)'
+    required: false
+    default: 'develop'
+
+outputs:
+  is-owner:
+    description: 'Whether the target user is a code owner (true/false)'
+    value: ${{ steps.validate.outputs.is-owner }}
+
+  target-user:
+    description: 'The username that was validated'
+    value: ${{ steps.validate.outputs.target-user }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout base repository for CODEOWNERS
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.base-ref }}
+        path: codeowner-check-repo
+
+    - name: Validate code ownership
+      id: validate
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # Determine target user based on mode
+        if [[ "${{ inputs.mode }}" == "pr" ]]; then
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            TARGET_USER="${{ github.event.pull_request.user.login }}"
+          else
+            echo "::error::Mode 'pr' requires pull_request event"
+            exit 1
+          fi
+        elif [[ "${{ inputs.mode }}" == "manual" ]]; then
+          TARGET_USER="${{ github.actor }}"
+        else
+          echo "::error::Invalid mode '${{ inputs.mode }}'. Must be 'pr' or 'manual'"
+          exit 1
+        fi
+
+        echo "target-user=${TARGET_USER}" >> $GITHUB_OUTPUT
+        echo "::notice::Validating code ownership for user: ${TARGET_USER}"
+
+        # Read and parse CODEOWNERS file
+        CODEOWNERS_FILE="codeowner-check-repo/.github/CODEOWNERS"
+
+        if [[ ! -f "${CODEOWNERS_FILE}" ]]; then
+          echo "::error::CODEOWNERS file not found at ${CODEOWNERS_FILE}"
+          exit 1
+        fi
+
+        # Extract owners from CODEOWNERS (ignore comments and empty lines)
+        # This handles @username and @org/team format and normalizes to lowercase
+        OWNERS=$(grep -v '^#' "${CODEOWNERS_FILE}" | grep -v '^[[:space:]]*$' | \
+                 grep -o '@[a-zA-Z0-9_/-]*' | \
+                 sed 's/@//' | \
+                 tr '[:upper:]' '[:lower:]' | \
+                 sort -u)
+
+        echo "::debug::Found code owners: ${OWNERS}"
+
+        # Normalize target user to lowercase for comparison
+        TARGET_USER_LOWER=$(echo "${TARGET_USER}" | tr '[:upper:]' '[:lower:]')
+
+        # Check if target user is in the owners list
+        IS_OWNER="false"
+        for owner in ${OWNERS}; do
+          if [[ "${owner}" == "${TARGET_USER_LOWER}" ]]; then
+            IS_OWNER="true"
+            break
+          fi
+        done
+
+        echo "is-owner=${IS_OWNER}" >> $GITHUB_OUTPUT
+
+        if [[ "${IS_OWNER}" == "true" ]]; then
+          echo "::notice::✅ User ${TARGET_USER} is a code owner"
+        else
+          echo "::notice::❌ User ${TARGET_USER} is not a code owner"
+        fi
+
+    - name: Cleanup checkout
+      shell: bash
+      run: rm -rf codeowner-check-repo

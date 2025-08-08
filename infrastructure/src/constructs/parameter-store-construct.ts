@@ -34,19 +34,45 @@ export class ParameterStoreConstruct extends Construct {
 	) {
 		super(scope, id)
 
-		this.parameterPrefix =
-			props.parameterPrefix ?? `/macro-ai/${props.environmentName}`
+		// Detect ephemeral preview environments and use shared development parameters
+		const isPreviewEnvironment = props.environmentName
+			.toLowerCase()
+			.startsWith('pr-')
 
-		// Create placeholder parameters that will be updated manually or via CI/CD
-		this.parameters = this.createParameters()
+		if (isPreviewEnvironment) {
+			// Use shared development parameter prefix for all preview environments
+			this.parameterPrefix = '/macro-ai/development'
 
-		// Create IAM policy for Lambda to read parameters
+			// Skip parameter creation for preview environments (use existing shared parameters)
+			this.parameters = {}
+
+			console.log(`✅ Preview environment detected: ${props.environmentName}`)
+			console.log(`📋 Using shared parameter prefix: ${this.parameterPrefix}`)
+			console.log(
+				`💰 Cost optimization: No new parameters created for ephemeral environment`,
+			)
+		} else {
+			// Standard behavior for staging/production environments
+			this.parameterPrefix =
+				props.parameterPrefix ?? `/macro-ai/${props.environmentName}`
+
+			// Create placeholder parameters that will be updated manually or via CI/CD
+			this.parameters = this.createParameters()
+
+			console.log(`✅ Persistent environment: ${props.environmentName}`)
+			console.log(`📋 Parameter prefix: ${this.parameterPrefix}`)
+			console.log(
+				`🔧 Created ${Object.keys(this.parameters).length.toString()} parameter placeholders`,
+			)
+		}
+
+		// Create IAM policy for Lambda to read parameters (works for both modes)
 		this.readPolicy = this.createReadPolicy()
 
 		// Output the parameter prefix for reference
 		new cdk.CfnOutput(this, 'ParameterPrefix', {
 			value: this.parameterPrefix,
-			description: 'Parameter Store prefix for this environment',
+			description: `Parameter Store prefix for ${props.environmentName} environment${isPreviewEnvironment ? ' (shared development)' : ''}`,
 		})
 	}
 

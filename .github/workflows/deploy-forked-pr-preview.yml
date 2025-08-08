@@ -1,0 +1,357 @@
+name: Deploy Forked PR Preview (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to deploy preview for'
+        required: true
+        type: string
+      confirm:
+        description: 'Type "I UNDERSTAND" to confirm deployment with trusted base code'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: forked-preview-${{ inputs.pr_number }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+    # Enforce strict mode globally for safer scripts
+    # Note: GitHub doesn't support -euo pipefail directly here, but -e is honored.
+    # Add `set -euo pipefail` explicitly inside multi-line run steps where needed.
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20'
+  PNPM_VERSION: '10.14.0'
+  # CDK environment variables
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_REGION: us-east-1
+
+jobs:
+  # Validate inputs and code ownership
+  validate-request:
+    name: Validate Manual Deploy Request
+    runs-on: ubuntu-latest
+    outputs:
+      is-owner: ${{ steps.codeowner-check.outputs.is-owner }}
+      target-user: ${{ steps.codeowner-check.outputs.target-user }}
+      should-deploy: ${{ steps.decision.outputs.should-deploy }}
+      env-name: ${{ steps.env-name.outputs.env-name }}
+      stack-name: ${{ steps.stack-info.outputs.stack-name }}
+      pr-title: ${{ steps.pr-info.outputs.pr-title }}
+      pr-author: ${{ steps.pr-info.outputs.pr-author }}
+      pr-repo: ${{ steps.pr-info.outputs.pr-repo }}
+
+    steps:
+      - name: Validate confirmation input
+        run: |
+          if [[ "${{ inputs.confirm }}" != "I UNDERSTAND" ]]; then
+            echo "❌ Confirmation failed. Expected 'I UNDERSTAND', got '${{ inputs.confirm }}'"
+            echo "This deployment uses trusted base repository code, not forked PR changes."
+            exit 1
+          fi
+          echo "✅ Confirmation validated"
+
+      - name: Validate PR number format
+        run: |
+          if [[ ! "${{ inputs.pr_number }}" =~ ^[0-9]+$ ]]; then
+            echo "❌ Invalid PR number format: '${{ inputs.pr_number }}'"
+            echo "PR number must be a positive integer"
+            exit 1
+          fi
+          echo "✅ PR number format valid: ${{ inputs.pr_number }}"
+
+      - name: Check code ownership of workflow actor
+        id: codeowner-check
+        uses: ./.github/actions/check-codeowner
+        with:
+          mode: 'manual'
+          base-ref: 'develop'
+
+      - name: Get PR information
+        id: pr-info
+        run: |
+          # Get PR details using GitHub CLI
+          PR_INFO=$(gh pr view ${{ inputs.pr_number }} --json title,author,headRepository --repo ${{ github.repository }})
+
+          PR_TITLE=$(echo "$PR_INFO" | jq -r '.title')
+          PR_AUTHOR=$(echo "$PR_INFO" | jq -r '.author.login')
+          PR_REPO=$(echo "$PR_INFO" | jq -r '.headRepository.nameWithOwner')
+
+          echo "pr-title=${PR_TITLE}" >> $GITHUB_OUTPUT
+          echo "pr-author=${PR_AUTHOR}" >> $GITHUB_OUTPUT
+          echo "pr-repo=${PR_REPO}" >> $GITHUB_OUTPUT
+
+          echo "📋 PR Information:"
+          echo "  Title: ${PR_TITLE}"
+          echo "  Author: ${PR_AUTHOR}"
+          echo "  Repository: ${PR_REPO}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Generate environment and stack names
+        id: env-name
+        run: |
+          ENV_NAME="pr-${{ inputs.pr_number }}"
+          echo "env-name=${ENV_NAME}" >> $GITHUB_OUTPUT
+          echo "Environment name: ${ENV_NAME}"
+
+      - name: Generate stack information
+        id: stack-info
+        run: |
+          ENV_NAME="pr-${{ inputs.pr_number }}"
+          # Capitalize first letter for stack name (pr-123 -> Pr-123)
+          STACK_NAME="MacroAi$(echo "${ENV_NAME}" | sed 's/^./\U&/')Stack"
+          echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
+          echo "Stack name: ${STACK_NAME}"
+
+      - name: Make deployment decision
+        id: decision
+        run: |
+          IS_OWNER="${{ steps.codeowner-check.outputs.is-owner }}"
+          ACTOR="${{ steps.codeowner-check.outputs.target-user }}"
+
+          if [[ "${IS_OWNER}" == "true" ]]; then
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+            echo "✅ Manual deployment approved for code owner: ${ACTOR}"
+            echo ""
+            echo "⚠️  IMPORTANT SECURITY NOTICE:"
+            echo "   This deployment uses TRUSTED BASE REPOSITORY CODE (develop branch)"
+            echo "   It does NOT include changes from the forked PR"
+            echo "   The preview will show base functionality, not forked modifications"
+          else
+            echo "should-deploy=false" >> $GITHUB_OUTPUT
+            echo "❌ Manual deployment blocked: ${ACTOR} is not a code owner"
+            exit 1
+          fi
+
+  # Build Lambda package using trusted base code
+  build-lambda:
+    name: Build Lambda Package (Trusted Code)
+    runs-on: ubuntu-latest
+    needs: validate-request
+    if: needs.validate-request.outputs.should-deploy == 'true'
+
+    steps:
+      - name: Checkout trusted base code
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Build Lambda package from trusted code
+        run: |
+          echo "🔒 Building Lambda package from trusted develop branch"
+          echo "⚠️  This does NOT include forked PR changes"
+
+          cd apps/express-api
+          pnpm install --frozen-lockfile
+          pnpm build:lambda
+          pnpm bundle:lambda
+          pnpm package:lambda
+
+      - name: Upload Lambda package
+        uses: actions/upload-artifact@v4
+        with:
+          name: lambda-package-${{ needs.validate-request.outputs.env-name }}-trusted
+          path: apps/express-api/dist/lambda.zip
+          retention-days: 7
+
+  # Deploy preview using trusted base code
+  deploy-forked-preview:
+    name: Deploy Forked PR Preview
+    runs-on: ubuntu-latest
+    needs: [validate-request, build-lambda]
+    if: needs.validate-request.outputs.should-deploy == 'true'
+    environment: development
+
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
+    outputs:
+      api-endpoint: ${{ steps.outputs.outputs.api-endpoint }}
+      deployment-result: ${{ steps.deploy.outputs.deployment-result }}
+
+    steps:
+      - name: Checkout trusted base code
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install AWS CDK CLI globally
+        run: pnpm add -g aws-cdk@2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download Lambda package
+        uses: actions/download-artifact@v4
+        with:
+          name: lambda-package-${{ needs.validate-request.outputs.env-name }}-trusted
+          path: apps/express-api/dist/
+
+      - name: Deploy infrastructure
+        id: deploy
+        run: |
+          cd infrastructure
+          pnpm install --frozen-lockfile
+          pnpm build
+
+          echo "🚀 Deploying forked PR preview environment"
+          echo "📦 Stack: ${{ needs.validate-request.outputs.stack-name }}"
+          echo "🔒 Using trusted develop branch code"
+          echo "👤 Requested by: ${{ needs.validate-request.outputs.target-user }}"
+          echo "📋 For PR: #${{ inputs.pr_number }} by @${{ needs.validate-request.outputs.pr-author }}"
+          echo "🏠 From repo: ${{ needs.validate-request.outputs.pr-repo }}"
+
+          # Deploy with trusted code
+          chmod +x scripts/deploy.sh
+          if ./scripts/deploy.sh; then
+            echo "deployment-result=success" >> $GITHUB_OUTPUT
+            echo "✅ Deployment completed successfully"
+          else
+            echo "deployment-result=failed" >> $GITHUB_OUTPUT
+            echo "❌ Deployment failed"
+            exit 1
+          fi
+        env:
+          CDK_DEPLOY_ENV: ${{ needs.validate-request.outputs.env-name }}
+          CDK_DEPLOY_SCALE: 'hobby'
+          AWS_REGION: ${{ env.AWS_REGION }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          NODE_ENV: 'production'
+
+      - name: Get deployment outputs
+        id: outputs
+        run: |
+          STACK_NAME="${{ needs.validate-request.outputs.stack-name }}"
+
+          # Get API endpoint from CloudFormation outputs
+          API_ENDPOINT=$(aws cloudformation describe-stacks \
+            --stack-name "${STACK_NAME}" \
+            --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
+            --output text 2>/dev/null || echo "")
+
+          if [[ -n "${API_ENDPOINT}" ]]; then
+            echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
+            echo "✅ API endpoint: ${API_ENDPOINT}"
+          else
+            echo "⚠️ Could not retrieve API endpoint"
+          fi
+
+      - name: Health check
+        run: |
+          API_ENDPOINT="${{ steps.outputs.outputs.api-endpoint }}"
+
+          if [[ -n "${API_ENDPOINT}" ]]; then
+            echo "🔍 Testing health endpoint: ${API_ENDPOINT}api/health"
+            sleep 10
+            
+            HEALTH_RESPONSE=$(curl -s -w "%{http_code}" "${API_ENDPOINT}api/health" 2>/dev/null || echo "000")
+            if [[ "$HEALTH_RESPONSE" == *"200" ]]; then
+              echo "✅ Health check passed"
+            else
+              echo "⚠️ Health check failed: $HEALTH_RESPONSE"
+            fi
+          fi
+
+  # Comment on PR with deployment information
+  comment-pr:
+    name: Comment on PR
+    runs-on: ubuntu-latest
+    needs: [validate-request, deploy-forked-preview]
+    if: always() && needs.validate-request.outputs.should-deploy == 'true'
+
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Create PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = '${{ inputs.pr_number }}';
+            const envName = '${{ needs.validate-request.outputs.env-name }}';
+            const stackName = '${{ needs.validate-request.outputs.stack-name }}';
+            const apiEndpoint = '${{ needs.deploy-forked-preview.outputs.api-endpoint }}';
+            const deployResult = '${{ needs.deploy-forked-preview.result }}';
+            const requestedBy = '${{ needs.validate-request.outputs.target-user }}';
+            const prAuthor = '${{ needs.validate-request.outputs.pr-author }}';
+            const prRepo = '${{ needs.validate-request.outputs.pr-repo }}';
+
+            let comment = `## 🔒 Forked PR Preview Deployed (Manual)\n\n`;
+            comment += `**Environment:** \`${envName}\`\n`;
+            comment += `**Stack:** \`${stackName}\`\n`;
+            comment += `**Deployed by:** @${requestedBy} (code owner)\n`;
+            comment += `**PR Author:** @${prAuthor}\n`;
+            comment += `**Source Repository:** ${prRepo}\n\n`;
+
+            comment += `### ⚠️ IMPORTANT SECURITY NOTICE\n`;
+            comment += `This preview environment was deployed using **TRUSTED BASE REPOSITORY CODE** from the \`develop\` branch.\n\n`;
+            comment += `**This preview does NOT include:**\n`;
+            comment += `- Changes from the forked repository\n`;
+            comment += `- Modifications proposed in this PR\n`;
+            comment += `- Any untrusted code from the fork\n\n`;
+            comment += `**This preview shows:**\n`;
+            comment += `- Base functionality from the main repository\n`;
+            comment += `- Current state of the \`develop\` branch\n`;
+            comment += `- Infrastructure and deployment validation\n\n`;
+
+            if (deployResult === 'success' && apiEndpoint) {
+              comment += `### 🌐 Endpoints\n`;
+              comment += `- **API:** ${apiEndpoint}api/\n`;
+              comment += `- **Health:** ${apiEndpoint}api/health\n\n`;
+            } else {
+              comment += `### ❌ Deployment Failed\n`;
+              comment += `The manual preview deployment encountered an error. Check the workflow logs for details.\n\n`;
+            }
+
+            comment += `### 🧹 Cleanup\n`;
+            comment += `- **Auto-cleanup:** When this PR is closed/merged\n`;
+            comment += `- **Manual cleanup:** Use \`teardown-dev.yml\` workflow with PR number ${prNumber}\n\n`;
+            comment += `---\n`;
+            comment += `*Manual forked PR preview deployed by @${requestedBy} using trusted base repository code*`;
+
+            github.rest.issues.createComment({
+              issue_number: parseInt(prNumber),
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

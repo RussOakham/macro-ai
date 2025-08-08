@@ -22,9 +22,35 @@ if (!account) {
 const deploymentEnv = process.env.CDK_DEPLOY_ENV ?? 'development'
 const deploymentScale = process.env.CDK_DEPLOY_SCALE ?? 'hobby'
 
+// Detect ephemeral preview environments
+const isPreviewEnvironment = deploymentEnv.startsWith('pr-')
+const environmentType = isPreviewEnvironment ? 'ephemeral' : 'persistent'
+
 // Create environment-specific stack
 const stackName = `MacroAi${deploymentEnv.charAt(0).toUpperCase() + deploymentEnv.slice(1)}Stack`
-const stackDescription = `Macro AI ${deploymentEnv} Environment - ${deploymentScale} scale serverless architecture`
+const stackDescription = `Macro AI ${deploymentEnv} Environment - ${deploymentScale} scale serverless architecture${isPreviewEnvironment ? ' (ephemeral)' : ''}`
+
+// Build comprehensive tags for resource management and cost allocation
+const baseTags = {
+	Project: 'MacroAI',
+	Environment: deploymentEnv,
+	EnvironmentType: environmentType,
+	Scale: deploymentScale,
+	CostCenter: deploymentEnv === 'production' ? 'production' : 'development',
+	Owner: `${deploymentEnv}-deployment`,
+	CreatedBy: 'github-actions',
+}
+
+// Add preview-specific tags for ephemeral environments
+const tags = isPreviewEnvironment
+	? {
+			...baseTags,
+			PrNumber: deploymentEnv.replace('pr-', ''),
+			Branch: process.env.GITHUB_HEAD_REF ?? 'unknown',
+			// Optional: Add TTL for governance (could be used by cleanup automation)
+			ExpiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
+		}
+	: baseTags
 
 new MacroAiHobbyStack(app, stackName, {
 	env: {
@@ -33,13 +59,7 @@ new MacroAiHobbyStack(app, stackName, {
 	},
 	description: stackDescription,
 	environmentName: deploymentEnv,
-	tags: {
-		Project: 'MacroAI',
-		Environment: deploymentEnv,
-		Scale: deploymentScale,
-		CostCenter: deploymentEnv === 'production' ? 'production' : 'development',
-		Owner: `${deploymentEnv}-deployment`,
-	},
+	tags,
 })
 
 app.synth()

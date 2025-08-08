@@ -1,0 +1,35 @@
+# CODEOWNERS file for macro-ai repository
+
+# This file defines code ownership for automated review assignment and workflow access control
+
+#
+
+# Syntax: Each line is a file pattern followed by one or more owners
+
+# Patterns are ordered from most specific to least specific
+
+# The last matching pattern takes precedence
+
+#
+
+# For more information: <https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners>
+
+# Infrastructure and deployment code
+
+infrastructure/ @RussOakham
+
+# GitHub Actions workflows and CI/CD configuration
+
+.github/workflows/ @RussOakham
+
+# Deployment documentation
+
+docs/deployment/ @RussOakham
+
+# CI/CD documentation
+
+docs/ci-cd/ @RussOakham
+
+# Default ownership for all other files
+
+* @RussOakham
