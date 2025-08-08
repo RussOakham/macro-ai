@@ -1,0 +1,319 @@
+name: Destroy PR Preview Environment
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [develop, main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20'
+  PNPM_VERSION: '10.14.0'
+  # CDK environment variables
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_REGION: us-east-1
+
+jobs:
+  # Check if PR author is a code owner and from same repo
+  validate-access:
+    name: Validate PR Access
+    runs-on: ubuntu-latest
+    outputs:
+      is-owner: ${{ steps.codeowner-check.outputs.is-owner }}
+      target-user: ${{ steps.codeowner-check.outputs.target-user }}
+      is-same-repo: ${{ steps.repo-check.outputs.is-same-repo }}
+      should-destroy: ${{ steps.decision.outputs.should-destroy }}
+      env-name: ${{ steps.env-name.outputs.env-name }}
+      stack-name: ${{ steps.stack-info.outputs.stack-name }}
+
+    steps:
+      - name: Check repository ownership
+        id: repo-check
+        run: |
+          if [[ "${{ github.event.pull_request.head.repo.full_name }}" == "${{ github.repository }}" ]]; then
+            echo "is-same-repo=true" >> $GITHUB_OUTPUT
+            echo "✅ PR from same repository: ${{ github.event.pull_request.head.repo.full_name }}"
+          else
+            echo "is-same-repo=false" >> $GITHUB_OUTPUT
+            echo "❌ PR from forked repository: ${{ github.event.pull_request.head.repo.full_name }}"
+          fi
+
+      - name: Check code ownership
+        id: codeowner-check
+        uses: ./.github/actions/check-codeowner
+        with:
+          mode: 'pr'
+          base-ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Generate environment and stack names
+        id: env-name
+        run: |
+          ENV_NAME="pr-${{ github.event.pull_request.number }}"
+          echo "env-name=${ENV_NAME}" >> $GITHUB_OUTPUT
+          echo "Environment name: ${ENV_NAME}"
+
+      - name: Generate stack information
+        id: stack-info
+        run: |
+          ENV_NAME="pr-${{ github.event.pull_request.number }}"
+          # Capitalize first letter for stack name (pr-123 -> Pr-123)
+          STACK_NAME="MacroAi$(echo "${ENV_NAME}" | sed 's/^./\U&/')Stack"
+          echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
+          echo "Stack name: ${STACK_NAME}"
+
+      - name: Make destruction decision
+        id: decision
+        run: |
+          IS_SAME_REPO="${{ steps.repo-check.outputs.is-same-repo }}"
+          IS_OWNER="${{ steps.codeowner-check.outputs.is-owner }}"
+
+          if [[ "${IS_SAME_REPO}" == "true" && "${IS_OWNER}" == "true" ]]; then
+            echo "should-destroy=true" >> $GITHUB_OUTPUT
+            echo "✅ Destruction approved: same-repo PR by code owner ${{ steps.codeowner-check.outputs.target-user }}"
+          else
+            echo "should-destroy=false" >> $GITHUB_OUTPUT
+            echo "❌ Destruction skipped:"
+            echo "  - Same repo: ${IS_SAME_REPO}"
+            echo "  - Code owner: ${IS_OWNER}"
+            echo "  - User: ${{ steps.codeowner-check.outputs.target-user }}"
+            echo "  - Reason: No preview environment was deployed for this PR"
+          fi
+
+  # Check if stack exists before attempting destruction
+  check-stack:
+    name: Check Stack Existence
+    runs-on: ubuntu-latest
+    needs: validate-access
+    if: needs.validate-access.outputs.should-destroy == 'true'
+    outputs:
+      stack-exists: ${{ steps.check.outputs.stack-exists }}
+      stack-status: ${{ steps.check.outputs.stack-status }}
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Check if stack exists
+        id: check
+        run: |
+          STACK_NAME="${{ needs.validate-access.outputs.stack-name }}"
+
+          echo "🔍 Checking for stack: ${STACK_NAME}"
+
+          # Check if stack exists and get its status
+          STACK_STATUS=$(aws cloudformation describe-stacks \
+            --stack-name "${STACK_NAME}" \
+            --query 'Stacks[0].StackStatus' \
+            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+
+          if [[ "${STACK_STATUS}" == "DOES_NOT_EXIST" ]]; then
+            echo "stack-exists=false" >> $GITHUB_OUTPUT
+            echo "stack-status=DOES_NOT_EXIST" >> $GITHUB_OUTPUT
+            echo "ℹ️ Stack does not exist - no cleanup needed"
+          else
+            echo "stack-exists=true" >> $GITHUB_OUTPUT
+            echo "stack-status=${STACK_STATUS}" >> $GITHUB_OUTPUT
+            echo "✅ Stack found with status: ${STACK_STATUS}"
+            
+            # List stack resources for logging
+            echo "📋 Stack resources to be destroyed:"
+            aws cloudformation list-stack-resources \
+              --stack-name "${STACK_NAME}" \
+              --query 'StackResourceSummaries[].{Type:ResourceType,LogicalId:LogicalResourceId,Status:ResourceStatus}' \
+              --output table || echo "Could not list resources"
+          fi
+
+  # Destroy the ephemeral preview environment
+  destroy-preview:
+    name: Destroy Preview Environment
+    runs-on: ubuntu-latest
+    needs: [validate-access, check-stack]
+    if: needs.validate-access.outputs.should-destroy == 'true' && needs.check-stack.outputs.stack-exists == 'true'
+
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install AWS CDK CLI globally
+        run: pnpm add -g aws-cdk
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install infrastructure dependencies
+        run: |
+          cd infrastructure
+          pnpm install --frozen-lockfile
+
+      - name: Destroy infrastructure
+        id: destroy
+        run: |
+          cd infrastructure
+
+          STACK_NAME="${{ needs.validate-access.outputs.stack-name }}"
+          ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
+
+          echo "🗑️ Destroying ephemeral environment: ${ENV_NAME}"
+          echo "📦 Stack: ${STACK_NAME}"
+          echo "👤 PR Author: ${{ needs.validate-access.outputs.target-user }}"
+          echo "🔗 PR: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}"
+
+          # Attempt to destroy the stack with retries
+          DESTROY_SUCCESS=false
+          for attempt in {1..3}; do
+            echo "🔄 Destruction attempt ${attempt}/3..."
+            
+            if pnpm cdk destroy "${STACK_NAME}" --force; then
+              DESTROY_SUCCESS=true
+              echo "✅ Stack destroyed successfully"
+              break
+            else
+              echo "❌ Destruction attempt ${attempt} failed"
+              if [[ ${attempt} -lt 3 ]]; then
+                echo "⏳ Waiting 30 seconds before retry..."
+                sleep 30
+              fi
+            fi
+          done
+
+          if [[ "${DESTROY_SUCCESS}" == "true" ]]; then
+            echo "destroy-result=success" >> $GITHUB_OUTPUT
+          else
+            echo "destroy-result=failed" >> $GITHUB_OUTPUT
+            echo "❌ All destruction attempts failed"
+            exit 1
+          fi
+
+      - name: Verify stack deletion
+        id: verify
+        run: |
+          STACK_NAME="${{ needs.validate-access.outputs.stack-name }}"
+
+          echo "🔍 Verifying stack deletion..."
+
+          # Wait a moment for AWS to process the deletion
+          sleep 10
+
+          # Check if stack still exists
+          STACK_STATUS=$(aws cloudformation describe-stacks \
+            --stack-name "${STACK_NAME}" \
+            --query 'Stacks[0].StackStatus' \
+            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+
+          if [[ "${STACK_STATUS}" == "DOES_NOT_EXIST" ]]; then
+            echo "verification-result=success" >> $GITHUB_OUTPUT
+            echo "✅ Stack deletion verified - environment fully cleaned up"
+          else
+            echo "verification-result=partial" >> $GITHUB_OUTPUT
+            echo "⚠️ Stack still exists with status: ${STACK_STATUS}"
+            echo "This may be normal if deletion is still in progress"
+          fi
+
+  # Comment on PR with destruction results
+  comment-pr:
+    name: Comment on PR
+    runs-on: ubuntu-latest
+    needs: [validate-access, check-stack, destroy-preview]
+    if: always() && needs.validate-access.outputs.should-destroy == 'true'
+
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Create PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const envName = '${{ needs.validate-access.outputs.env-name }}';
+            const stackName = '${{ needs.validate-access.outputs.stack-name }}';
+            const stackExists = '${{ needs.check-stack.outputs.stack-exists }}' === 'true';
+            const destroyResult = '${{ needs.destroy-preview.result }}';
+            const verificationResult = '${{ needs.destroy-preview.outputs.verification-result }}';
+
+            let comment = `## 🗑️ Preview Environment Cleanup\n\n`;
+            comment += `**Environment:** \`${envName}\`\n`;
+            comment += `**Stack:** \`${stackName}\`\n`;
+            comment += `**PR Author:** @${{ needs.validate-access.outputs.target-user }}\n\n`;
+
+            if (!stackExists) {
+              comment += `### ℹ️ No Cleanup Needed\n`;
+              comment += `No preview environment was found for this PR. This is normal if:\n`;
+              comment += `- The PR was from a forked repository\n`;
+              comment += `- The PR author was not a code owner\n`;
+              comment += `- The preview deployment failed initially\n\n`;
+            } else if (destroyResult === 'success') {
+              const verifyIcon = verificationResult === 'success' ? '✅' : '⚠️';
+              comment += `### ✅ Cleanup Successful\n`;
+              comment += `The ephemeral preview environment has been destroyed.\n\n`;
+              comment += `**Verification:** ${verifyIcon} ${verificationResult === 'success' ? 'Complete' : 'In Progress'}\n\n`;
+              comment += `### 🧹 Resources Cleaned Up\n`;
+              comment += `- AWS Lambda function\n`;
+              comment += `- API Gateway REST API\n`;
+              comment += `- CloudWatch Log Groups\n`;
+              comment += `- IAM roles and policies\n`;
+              comment += `- CloudFormation stack\n\n`;
+            } else {
+              comment += `### ❌ Cleanup Failed\n`;
+              comment += `The preview environment cleanup encountered an error. `;
+              comment += `A repository maintainer may need to manually clean up resources.\n\n`;
+              comment += `**Manual cleanup options:**\n`;
+              comment += `- Use the \`teardown-dev.yml\` workflow with PR number ${{ github.event.pull_request.number }}\n`;
+              comment += `- Check AWS Console for remaining resources\n\n`;
+            }
+
+            comment += `---\n`;
+            comment += `*Preview environment lifecycle completed for PR #${{ github.event.pull_request.number }}*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # Log skipped destruction (for forked PRs or non-code-owners)
+  log-skipped:
+    name: Log Skipped Destruction
+    runs-on: ubuntu-latest
+    needs: validate-access
+    if: needs.validate-access.outputs.should-destroy == 'false'
+
+    steps:
+      - name: Log skip reason
+        run: |
+          echo "🔍 Preview environment destruction skipped"
+          echo "Reason: PR from ${{ needs.validate-access.outputs.target-user }} did not meet deployment criteria"
+          echo "- Same repo: ${{ needs.validate-access.outputs.is-same-repo }}"
+          echo "- Code owner: ${{ needs.validate-access.outputs.is-owner }}"
+          echo "Since no preview environment was deployed, no cleanup is needed."

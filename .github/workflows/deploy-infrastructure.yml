@@ -88,21 +88,23 @@ jobs:
       - name: Determine if deployment should proceed
         id: changes
         run: |
-          # Deploy for workflow_dispatch, pushes to main/develop, AND pull_requests (to development env)
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || [[ "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.ref }}" == "refs/heads/develop" ]] || [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          # Deploy for workflow_dispatch and pushes to main/develop only
+          # PRs are validated but not deployed (ephemeral PR environments handled by deploy-preview.yml)
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || [[ "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
             echo "should-deploy=true" >> $GITHUB_OUTPUT
             echo "🚀 Deployment will proceed"
 
             # Determine target environment
-            if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-              echo "🔧 PR detected - deploying to development environment"
-            elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
               echo "🔧 Main branch - deploying to production environment"
             elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
               echo "🔧 Develop branch - deploying to staging environment"
             else
               echo "🔧 Manual dispatch - deploying to selected environment"
             fi
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "should-deploy=false" >> $GITHUB_OUTPUT
+            echo "🔍 PR detected - validation only (deployment handled by deploy-preview.yml)"
           else
             echo "should-deploy=false" >> $GITHUB_OUTPUT
             echo "🔍 No deployment conditions met"
@@ -179,7 +181,7 @@ jobs:
     needs: [validate, build-lambda]
     # Only run if hygiene checks passed and deployment should proceed
     if: needs.build-lambda.outputs.should-deploy == 'true' && (github.event.workflow_run.conclusion == 'success' || github.event_name != 'workflow_run')
-    environment: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/develop' && 'staging') || (github.event_name == 'pull_request' && 'development') || 'development' }}
+    environment: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/develop' && 'staging') || 'staging' }}
 
     permissions:
       id-token: write
@@ -275,7 +277,7 @@ jobs:
           chmod +x scripts/deploy.sh
           ./scripts/deploy.sh
         env:
-          CDK_DEPLOY_ENV: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/develop' && 'staging') || (github.event_name == 'pull_request' && 'development') || 'development' }}
+          CDK_DEPLOY_ENV: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/develop' && 'staging') || 'staging' }}
           CDK_DEPLOY_SCALE: 'hobby'
           AWS_REGION: ${{ env.AWS_REGION }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}

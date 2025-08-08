@@ -8,8 +8,8 @@ and emergency rollbacks.
 
 ## 🔄 Workflow Architecture Overview
 
-Our CI/CD pipeline consists of 7 specialized workflows that work together to ensure code quality, automate
-deployments, and maintain system reliability:
+Our CI/CD pipeline consists of 13 specialized workflows that work together to ensure code quality, automate
+deployments, maintain system reliability, and manage ephemeral preview environments:
 
 ```mermaid
 graph TB
@@ -19,10 +19,22 @@ graph TB
         LABEL_OPEN[PR Open Assistant]
     end
 
-    subgraph "Deployment Workflows"
+    subgraph "Ephemeral PR Environments"
+        DEPLOY_PREVIEW[Deploy Preview]
+        DESTROY_PREVIEW[Destroy Preview]
+        DEPLOY_FORKED[Deploy Forked PR Preview]
+    end
+
+    subgraph "Persistent Environment Deployment"
         INFRA[Deploy Infrastructure]
         FULL_STACK[Deploy Full-Stack]
         STAGING[Deploy Staging]
+    end
+
+    subgraph "Manual Teardown Operations"
+        TEARDOWN_DEV[Teardown Development]
+        TEARDOWN_STAGING[Teardown Staging]
+        TEARDOWN_PROD[Teardown Production]
     end
 
     subgraph "Emergency Operations"
@@ -31,26 +43,37 @@ graph TB
 
     subgraph "Triggers"
         PR[Pull Request]
+        PR_CLOSE[PR Close/Merge]
         PUSH_MAIN[Push to main]
         PUSH_DEV[Push to develop]
         MANUAL[Manual Dispatch]
     end
 
+    %% PR Environment Lifecycle
     PR --> HYGIENE
     PR --> LABEL_CHECK
     PR --> LABEL_OPEN
+    PR --> DEPLOY_PREVIEW
+    PR_CLOSE --> DESTROY_PREVIEW
 
+    %% Persistent Environment Deployments
     PUSH_MAIN --> HYGIENE
     PUSH_MAIN --> INFRA
     PUSH_MAIN --> FULL_STACK
 
     PUSH_DEV --> STAGING
 
+    %% Manual Operations
     MANUAL --> INFRA
     MANUAL --> FULL_STACK
     MANUAL --> STAGING
     MANUAL --> ROLLBACK
+    MANUAL --> DEPLOY_FORKED
+    MANUAL --> TEARDOWN_DEV
+    MANUAL --> TEARDOWN_STAGING
+    MANUAL --> TEARDOWN_PROD
 
+    %% Workflow Dependencies
     HYGIENE --> INFRA
     INFRA --> FULL_STACK
     STAGING --> FULL_STACK
@@ -58,15 +81,195 @@ graph TB
 
 ## 📋 Workflow Summary
 
+### Core CI/CD Workflows
+
 | Workflow                  | Purpose                           | Triggers                            | Environment              |
 | ------------------------- | --------------------------------- | ----------------------------------- | ------------------------ |
 | **Hygiene Checks**        | Code quality validation           | PR, Push to main                    | CI                       |
 | **PR Label Check**        | Enforce semantic versioning       | PR label changes                    | CI                       |
 | **PR Open Assistant**     | Guide PR labeling                 | PR open/reopen                      | CI                       |
-| **Deploy Infrastructure** | Backend infrastructure deployment | Push to main, Manual                | hobby/staging/production |
+| **Deploy Infrastructure** | Backend infrastructure deployment | Push to main/develop, Manual        | staging/production       |
 | **Deploy Full-Stack**     | Complete application deployment   | Push to main, Manual, Workflow call | hobby/staging/production |
 | **Deploy Staging**        | Staging environment deployment    | Push to develop, Manual             | staging                  |
-| **Emergency Rollback**    | Emergency rollback operations     | Manual only                         | hobby/staging/production |
+
+### 🚀 Ephemeral PR Environment Workflows
+
+| Workflow                     | Purpose                               | Triggers            | Environment | Access Control         |
+| ---------------------------- | ------------------------------------- | ------------------- | ----------- | ---------------------- |
+| **Deploy Preview**           | Auto-deploy PR preview environments   | PR open/sync/reopen | pr-{number} | Same-repo + Code owner |
+| **Destroy Preview**          | Auto-cleanup PR environments on close | PR close/merge      | pr-{number} | Same-repo + Code owner |
+| **Deploy Forked PR Preview** | Manual preview deploy for forked PRs  | Manual dispatch     | pr-{number} | Code owner only        |
+
+### 🗑️ Manual Teardown Workflows
+
+| Workflow                 | Purpose                               | Triggers        | Environment | Access Control | Confirmations Required |
+| ------------------------ | ------------------------------------- | --------------- | ----------- | -------------- | ---------------------- |
+| **Teardown Development** | Manual cleanup of PR environments     | Manual dispatch | pr-{number} | Code owner     | "I UNDERSTAND"         |
+| **Teardown Staging**     | Manual staging environment cleanup    | Manual dispatch | staging     | Code owner     | Double confirmation    |
+| **Teardown Production**  | Manual production environment cleanup | Manual dispatch | production  | Code owner     | Triple confirmation    |
+
+### 🚨 Emergency Operations
+
+| Workflow               | Purpose                       | Triggers        | Environment              | Access Control | Confirmations Required |
+| ---------------------- | ----------------------------- | --------------- | ------------------------ | -------------- | ---------------------- |
+| **Emergency Rollback** | Emergency rollback operations | Manual dispatch | hobby/staging/production | Code owner     | Environment-specific   |
+
+## 🚀 Ephemeral PR Environment System
+
+### Overview
+
+Our ephemeral PR environment system provides automatic, isolated preview environments for every pull request. Each PR gets
+its own unique environment that automatically deploys on PR creation and cleans up on PR closure, enabling safe testing
+and review of changes without affecting persistent environments.
+
+### Key Features
+
+- **🔒 Security-First**: CODEOWNERS-based access control with same-repository restrictions
+- **💰 Cost-Optimized**: Shared Parameter Store secrets and automatic cleanup
+- **🏷️ Unique Isolation**: Each PR gets `pr-{number}` environment with dedicated AWS resources
+- **🤖 Fully Automated**: Zero manual intervention for standard same-repo PR lifecycle
+- **🔧 Manual Override**: Maintainer-controlled deployment for forked PRs using trusted base code
+
+### Environment Lifecycle
+
+```mermaid
+graph LR
+    subgraph "Same-Repo PR (Code Owner)"
+        PR_OPEN[PR Opened] --> VALIDATE[Validate Access]
+        VALIDATE --> DEPLOY[Deploy pr-123]
+        DEPLOY --> COMMENT[PR Comment with Endpoints]
+        COMMENT --> READY[Environment Ready]
+        READY --> PR_CLOSE[PR Closed/Merged]
+        PR_CLOSE --> DESTROY[Auto Destroy]
+        DESTROY --> CLEANUP[Resources Cleaned]
+    end
+
+    subgraph "Forked PR"
+        FORK_PR[Forked PR] --> BLOCK[Block Auto-Deploy]
+        BLOCK --> EXPLAIN[Explain Restriction]
+        EXPLAIN --> MANUAL_REQ[Manual Override Available]
+    end
+
+    subgraph "Manual Override (Maintainer)"
+        MANUAL_TRIGGER[Manual Dispatch] --> VALIDATE_OWNER[Validate Code Owner]
+        VALIDATE_OWNER --> TRUSTED_DEPLOY[Deploy with Trusted Code]
+        TRUSTED_DEPLOY --> FORK_COMMENT[Comment on PR]
+    end
+```
+
+### Access Control Matrix
+
+| PR Type   | Author Type | Auto Deploy  | Manual Deploy      | Teardown     |
+| --------- | ----------- | ------------ | ------------------ | ------------ |
+| Same-repo | Code owner  | ✅ Automatic | ✅ Available       | ✅ Automatic |
+| Same-repo | Non-owner   | ❌ Blocked   | ✅ Available       | ❌ N/A       |
+| Forked    | Any         | ❌ Blocked   | ✅ Maintainer only | ❌ N/A       |
+
+### Security Model
+
+#### CODEOWNERS Integration
+
+- All deployment workflows validate against `.github/CODEOWNERS`
+- Uses composite action `.github/actions/check-codeowner` for consistent validation
+- Supports both PR author validation and manual workflow actor validation
+
+#### Forked PR Protection
+
+- **Never** uses `pull_request_target` for deployments (security best practice)
+- Automatic deployments restricted to same-repository PRs only
+- Manual override uses trusted base repository code (develop branch), not forked changes
+- Clear warnings about security implications in all manual workflows
+
+#### Code Owner Requirements
+
+```yaml
+# .github/CODEOWNERS
+infrastructure/ @RussOakham
+.github/workflows/ @RussOakham
+docs/deployment/ @RussOakham
+docs/ci-cd/ @RussOakham
+* @RussOakham
+```
+
+### Cost Optimization Strategy
+
+#### Shared Parameter Store
+
+- All ephemeral environments use shared `/macro-ai/development` parameter prefix
+- No per-PR parameter creation (significant cost savings)
+- Maintains infrastructure isolation while sharing secrets
+
+#### Resource Management
+
+- Conservative API Gateway throttling for preview environments
+- Short CloudWatch log retention (7 days)
+- Automatic cleanup prevents resource accumulation
+- ARM64 Lambda architecture for cost efficiency
+
+#### Tagging Strategy
+
+```yaml
+# Ephemeral environment tags
+Project: MacroAI
+Environment: pr-123
+EnvironmentType: ephemeral
+PrNumber: 123
+Branch: feature-branch-name
+CreatedBy: github-actions
+CostCenter: development
+ExpiryDate: 2024-01-15T10:30:00Z # 7 days from creation
+```
+
+### Environment Naming Conventions
+
+| Resource Type        | Naming Pattern                         | Example                           |
+| -------------------- | -------------------------------------- | --------------------------------- |
+| CloudFormation Stack | `MacroAiPr-{number}Stack`              | `MacroAiPr-123Stack`              |
+| Lambda Function      | `macro-ai-pr-{number}-api`             | `macro-ai-pr-123-api`             |
+| API Gateway          | `macro-ai-pr-{number}-api`             | `macro-ai-pr-123-api`             |
+| API Stage            | `pr-{number}`                          | `pr-123`                          |
+| Log Group            | `/aws/lambda/macro-ai-pr-{number}-api` | `/aws/lambda/macro-ai-pr-123-api` |
+| Parameter Prefix     | `/macro-ai/development` (shared)       | `/macro-ai/development`           |
+
+### Troubleshooting Guide
+
+#### Common Issues
+
+**"My PR didn't get a preview environment"**
+
+- Check if you're a code owner in `.github/CODEOWNERS`
+- Verify PR is from same repository (not a fork)
+- Check workflow logs for validation failures
+
+**"Preview deployment failed"**
+
+- Check AWS credentials and permissions
+- Verify Parameter Store `/macro-ai/development` exists and is populated
+- Check for resource naming conflicts
+
+**"Forked PR needs preview"**
+
+- Use manual `deploy-forked-pr-preview.yml` workflow
+- Remember: uses trusted base code, not forked changes
+- Requires code owner to trigger
+
+**"Environment not cleaning up"**
+
+- Check if PR was from same-repo code owner (required for auto-cleanup)
+- Use manual `teardown-dev.yml` workflow with PR number
+- Verify CloudFormation stack status in AWS Console
+
+#### Manual Cleanup Commands
+
+```bash
+# List all preview stacks
+aws cloudformation list-stacks --query 'StackSummaries[?contains(StackName, `MacroAiPr-`)].{Name:StackName,Status:StackStatus}'
+
+# Manual cleanup via workflow
+# Use teardown-dev.yml with:
+# - pr_number: 123
+# - confirm: "I UNDERSTAND"
+```
 
 ## 🧪 Code Quality Workflows
 

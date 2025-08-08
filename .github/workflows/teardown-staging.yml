@@ -1,0 +1,330 @@
+name: Manual Teardown - Staging Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "I UNDERSTAND STAGING TEARDOWN" to confirm staging environment destruction'
+        required: true
+        type: string
+      additional_confirm:
+        description: 'Type "STAGING" to double-confirm this destructive action'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20'
+  PNPM_VERSION: '10.14.0'
+  ENVIRONMENT: 'staging'
+  STACK_NAME: 'MacroAiStagingStack'
+  # CDK environment variables
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_REGION: us-east-1
+
+jobs:
+  # Validate inputs and code ownership
+  validate-request:
+    name: Validate Staging Teardown Request
+    runs-on: ubuntu-latest
+    outputs:
+      is-owner: ${{ steps.codeowner-check.outputs.is-owner }}
+      target-user: ${{ steps.codeowner-check.outputs.target-user }}
+      should-destroy: ${{ steps.decision.outputs.should-destroy }}
+
+    steps:
+      - name: Validate confirmation inputs
+        run: |
+          if [[ "${{ inputs.confirm }}" != "I UNDERSTAND STAGING TEARDOWN" ]]; then
+            echo "❌ Primary confirmation failed."
+            echo "Expected: 'I UNDERSTAND STAGING TEARDOWN'"
+            echo "Got: '${{ inputs.confirm }}'"
+            exit 1
+          fi
+
+          if [[ "${{ inputs.additional_confirm }}" != "STAGING" ]]; then
+            echo "❌ Secondary confirmation failed."
+            echo "Expected: 'STAGING'"
+            echo "Got: '${{ inputs.additional_confirm }}'"
+            exit 1
+          fi
+
+          echo "✅ Both confirmations validated"
+          echo "⚠️  STAGING ENVIRONMENT TEARDOWN AUTHORIZED"
+
+      - name: Check code ownership of workflow actor
+        id: codeowner-check
+        uses: ./.github/actions/check-codeowner
+        with:
+          mode: 'manual'
+          base-ref: 'develop'
+
+      - name: Make destruction decision
+        id: decision
+        run: |
+          IS_OWNER="${{ steps.codeowner-check.outputs.is-owner }}"
+          ACTOR="${{ steps.codeowner-check.outputs.target-user }}"
+
+          if [[ "${IS_OWNER}" == "true" ]]; then
+            echo "should-destroy=true" >> $GITHUB_OUTPUT
+            echo "✅ STAGING TEARDOWN approved for code owner: ${ACTOR}"
+            echo ""
+            echo "🚨 CRITICAL WARNING:"
+            echo "   This will destroy the STAGING environment"
+            echo "   All staging data and configurations will be permanently lost"
+            echo "   This action affects the staging.macro-ai.com environment"
+            echo "   Frontend deployments may be impacted"
+          else
+            echo "should-destroy=false" >> $GITHUB_OUTPUT
+            echo "❌ STAGING TEARDOWN blocked: ${ACTOR} is not a code owner"
+            exit 1
+          fi
+
+  # Check if staging stack exists
+  check-stack:
+    name: Check Staging Stack
+    runs-on: ubuntu-latest
+    needs: validate-request
+    if: needs.validate-request.outputs.should-destroy == 'true'
+    outputs:
+      stack-exists: ${{ steps.check.outputs.stack-exists }}
+      stack-status: ${{ steps.check.outputs.stack-status }}
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Check staging stack existence
+        id: check
+        run: |
+          echo "🔍 Checking for staging stack: ${{ env.STACK_NAME }}"
+
+          # Check if stack exists and get its status
+          STACK_STATUS=$(aws cloudformation describe-stacks \
+            --stack-name "${{ env.STACK_NAME }}" \
+            --query 'Stacks[0].StackStatus' \
+            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+
+          if [[ "${STACK_STATUS}" == "DOES_NOT_EXIST" ]]; then
+            echo "stack-exists=false" >> $GITHUB_OUTPUT
+            echo "stack-status=DOES_NOT_EXIST" >> $GITHUB_OUTPUT
+            echo "ℹ️ Staging stack does not exist - no teardown needed"
+          else
+            echo "stack-exists=true" >> $GITHUB_OUTPUT
+            echo "stack-status=${STACK_STATUS}" >> $GITHUB_OUTPUT
+            echo "✅ Staging stack found with status: ${STACK_STATUS}"
+            
+            # List stack resources for logging
+            echo "📋 STAGING RESOURCES TO BE DESTROYED:"
+            aws cloudformation list-stack-resources \
+              --stack-name "${{ env.STACK_NAME }}" \
+              --query 'StackResourceSummaries[].{Type:ResourceType,LogicalId:LogicalResourceId,Status:ResourceStatus}' \
+              --output table || echo "Could not list resources"
+            
+            # Get stack outputs for reference
+            echo ""
+            echo "📋 STAGING STACK OUTPUTS:"
+            aws cloudformation describe-stacks \
+              --stack-name "${{ env.STACK_NAME }}" \
+              --query 'Stacks[0].Outputs[].{Key:OutputKey,Value:OutputValue}' \
+              --output table || echo "Could not list outputs"
+          fi
+
+  # Destroy the staging environment
+  destroy-staging:
+    name: Destroy Staging Environment
+    runs-on: ubuntu-latest
+    needs: [validate-request, check-stack]
+    if: needs.validate-request.outputs.should-destroy == 'true' && needs.check-stack.outputs.stack-exists == 'true'
+
+    permissions:
+      id-token: write
+      contents: read
+
+    outputs:
+      destroy-result: ${{ steps.destroy.outputs.destroy-result }}
+      verification-result: ${{ steps.verify.outputs.verification-result }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install AWS CDK CLI globally
+        run: pnpm add -g aws-cdk
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install infrastructure dependencies
+        run: |
+          cd infrastructure
+          pnpm install --frozen-lockfile
+
+      - name: Final confirmation and destroy
+        id: destroy
+        run: |
+          cd infrastructure
+
+          echo "🚨 FINAL WARNING: STAGING ENVIRONMENT DESTRUCTION"
+          echo "📦 Stack: ${{ env.STACK_NAME }}"
+          echo "🌍 Environment: ${{ env.ENVIRONMENT }}"
+          echo "👤 Requested by: ${{ needs.validate-request.outputs.target-user }}"
+          echo "📅 Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo ""
+          echo "⚠️  This will permanently destroy the STAGING environment"
+          echo "⚠️  All staging data, configurations, and resources will be lost"
+          echo "⚠️  Frontend staging deployments will be affected"
+          echo ""
+          echo "🔄 Proceeding with destruction in 10 seconds..."
+          sleep 10
+
+          # Attempt to destroy the stack with retries
+          DESTROY_SUCCESS=false
+          for attempt in {1..5}; do
+            echo "🔄 STAGING destruction attempt ${attempt}/5..."
+            
+            if pnpm cdk destroy "${{ env.STACK_NAME }}" --force; then
+              DESTROY_SUCCESS=true
+              echo "✅ STAGING stack destroyed successfully"
+              break
+            else
+              echo "❌ STAGING destruction attempt ${attempt} failed"
+              if [[ ${attempt} -lt 5 ]]; then
+                echo "⏳ Waiting 60 seconds before retry..."
+                sleep 60
+              fi
+            fi
+          done
+
+          if [[ "${DESTROY_SUCCESS}" == "true" ]]; then
+            echo "destroy-result=success" >> $GITHUB_OUTPUT
+          else
+            echo "destroy-result=failed" >> $GITHUB_OUTPUT
+            echo "❌ All STAGING destruction attempts failed"
+            exit 1
+          fi
+
+      - name: Verify staging stack deletion
+        id: verify
+        run: |
+          echo "🔍 Verifying STAGING stack deletion..."
+
+          # Wait longer for staging stack deletion
+          sleep 30
+
+          # Check if stack still exists
+          STACK_STATUS=$(aws cloudformation describe-stacks \
+            --stack-name "${{ env.STACK_NAME }}" \
+            --query 'Stacks[0].StackStatus' \
+            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+
+          if [[ "${STACK_STATUS}" == "DOES_NOT_EXIST" ]]; then
+            echo "verification-result=success" >> $GITHUB_OUTPUT
+            echo "✅ STAGING stack deletion verified - environment fully destroyed"
+          else
+            echo "verification-result=partial" >> $GITHUB_OUTPUT
+            echo "⚠️ STAGING stack still exists with status: ${STACK_STATUS}"
+            echo "This may be normal if deletion is still in progress"
+          fi
+
+  # Report results with critical warnings
+  report-results:
+    name: Report Staging Teardown Results
+    runs-on: ubuntu-latest
+    needs: [validate-request, check-stack, destroy-staging]
+    if: always() && needs.validate-request.outputs.should-destroy == 'true'
+
+    steps:
+      - name: Generate staging teardown report
+        run: |
+          echo "## 🚨 STAGING ENVIRONMENT TEARDOWN REPORT" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** STAGING" >> $GITHUB_STEP_SUMMARY
+          echo "**Stack:** \`${{ env.STACK_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Requested by:** @${{ needs.validate-request.outputs.target-user }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          STACK_EXISTS="${{ needs.check-stack.outputs.stack-exists }}"
+          DESTROY_RESULT="${{ needs.destroy-staging.result }}"
+          VERIFICATION_RESULT="${{ needs.destroy-staging.outputs.verification-result }}"
+
+          if [[ "${STACK_EXISTS}" == "false" ]]; then
+            echo "### ℹ️ No Action Needed" >> $GITHUB_STEP_SUMMARY
+            echo "The staging environment did not exist." >> $GITHUB_STEP_SUMMARY
+          elif [[ "${DESTROY_RESULT}" == "success" ]]; then
+            echo "### ✅ STAGING TEARDOWN SUCCESSFUL" >> $GITHUB_STEP_SUMMARY
+            echo "The staging environment has been completely destroyed." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Verification:** ${VERIFICATION_RESULT}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🚨 CRITICAL IMPACT" >> $GITHUB_STEP_SUMMARY
+            echo "- **staging.macro-ai.com** is no longer available" >> $GITHUB_STEP_SUMMARY
+            echo "- All staging data has been permanently lost" >> $GITHUB_STEP_SUMMARY
+            echo "- Frontend staging deployments will fail until backend is redeployed" >> $GITHUB_STEP_SUMMARY
+            echo "- Parameter Store staging configurations remain (manual cleanup required)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🔄 Recovery Steps" >> $GITHUB_STEP_SUMMARY
+            echo "To restore staging environment:" >> $GITHUB_STEP_SUMMARY
+            echo "1. Push to \`develop\` branch to trigger automatic staging deployment" >> $GITHUB_STEP_SUMMARY
+            echo "2. Or use \`deploy-full-stack.yml\` workflow with environment: staging" >> $GITHUB_STEP_SUMMARY
+            echo "3. Update Parameter Store values if needed" >> $GITHUB_STEP_SUMMARY
+            echo "4. Redeploy frontend to staging" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ STAGING TEARDOWN FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "The staging teardown encountered errors. Manual intervention required." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Immediate Actions Required:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Check AWS Console for stuck resources" >> $GITHUB_STEP_SUMMARY
+            echo "- Review CloudFormation events for specific errors" >> $GITHUB_STEP_SUMMARY
+            echo "- Contact AWS support if resources cannot be deleted" >> $GITHUB_STEP_SUMMARY
+            echo "- Monitor for unexpected charges from stuck resources" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Handle case where no staging stack exists
+  report-no-stack:
+    name: Report No Staging Stack
+    runs-on: ubuntu-latest
+    needs: [validate-request, check-stack]
+    if: needs.validate-request.outputs.should-destroy == 'true' && needs.check-stack.outputs.stack-exists == 'false'
+
+    steps:
+      - name: Generate no-stack report
+        run: |
+          echo "## ℹ️ STAGING ENVIRONMENT NOT FOUND" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** STAGING" >> $GITHUB_STEP_SUMMARY
+          echo "**Stack:** \`${{ env.STACK_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Requested by:** @${{ needs.validate-request.outputs.target-user }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The staging environment does not exist. This could mean:" >> $GITHUB_STEP_SUMMARY
+          echo "- It was never deployed" >> $GITHUB_STEP_SUMMARY
+          echo "- It was already destroyed" >> $GITHUB_STEP_SUMMARY
+          echo "- There was a deployment failure" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No teardown action was needed."
