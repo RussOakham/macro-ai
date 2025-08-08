@@ -25,7 +25,7 @@ export interface ParameterStoreConstructProps {
 export class ParameterStoreConstruct extends Construct {
 	public readonly parameterPrefix: string
 	public readonly readPolicy: iam.ManagedPolicy
-	public readonly parameters: Record<string, ssm.IStringParameter>
+	public readonly parameters: Record<string, ssm.StringParameter>
 
 	constructor(
 		scope: Construct,
@@ -50,8 +50,8 @@ export class ParameterStoreConstruct extends Construct {
 		})
 	}
 
-	private createParameters(): Record<string, ssm.IStringParameter> {
-		const parameters: Record<string, ssm.IStringParameter> = {}
+	private createParameters(): Record<string, ssm.StringParameter> {
+		const parameters: Record<string, ssm.StringParameter> = {}
 
 		// Critical parameters (Advanced tier for higher throughput)
 		const criticalParams = [
@@ -147,7 +147,8 @@ export class ParameterStoreConstruct extends Construct {
 	}
 
 	/**
-	 * Creates a parameter with the appropriate type based on the isSecure flag
+	 * Creates a parameter as String type initially (CloudFormation requirement)
+	 * Parameters marked with isSecure will be converted to SecureString post-deployment
 	 * @param param Parameter configuration
 	 * @param parameterName Full parameter name with prefix
 	 * @param constructId Unique construct ID
@@ -162,33 +163,27 @@ export class ParameterStoreConstruct extends Construct {
 		},
 		parameterName: string,
 		constructId: string,
-	): ssm.IStringParameter {
-		if (param.isSecure) {
-			// Use CfnParameter for SecureString parameters to have direct control over the type
-			new ssm.CfnParameter(this, `${constructId}CfnParam`, {
-				name: parameterName,
-				description: param.description,
-				tier: param.tier,
-				type: 'SecureString',
-				value: 'PLACEHOLDER_VALUE_UPDATE_AFTER_DEPLOYMENT',
-			})
+	): ssm.StringParameter {
+		// Create all parameters as String type initially (CloudFormation requirement)
+		// SecureString conversion happens post-deployment via update script
+		const parameter = new ssm.StringParameter(this, constructId, {
+			parameterName,
+			description: param.description,
+			tier: param.tier,
+			stringValue: 'PLACEHOLDER_VALUE_UPDATE_AFTER_DEPLOYMENT',
+		})
 
-			// Create a StringParameter wrapper for consistency with the interface
-			// This allows the rest of the code to work with the same interface
-			return ssm.StringParameter.fromStringParameterName(
-				this,
-				constructId,
+		// Add metadata to indicate which parameters should be converted to SecureString
+		if (param.isSecure) {
+			parameter.node.addMetadata('SecureStringConversion', {
+				required: true,
+				postDeploymentAction: `Convert to SecureString: aws ssm put-parameter --name "${parameterName}" --type SecureString --tier ${param.tier} --overwrite --value "ACTUAL_VALUE"`,
 				parameterName,
-			)
-		} else {
-			// Use regular StringParameter for non-secure parameters
-			return new ssm.StringParameter(this, constructId, {
-				parameterName,
-				description: param.description,
 				tier: param.tier,
-				stringValue: 'PLACEHOLDER_VALUE_UPDATE_AFTER_DEPLOYMENT',
 			})
 		}
+
+		return parameter
 	}
 
 	private createReadPolicy(): iam.ManagedPolicy {

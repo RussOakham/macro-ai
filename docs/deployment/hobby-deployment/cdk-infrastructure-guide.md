@@ -41,7 +41,8 @@ infrastructure/
 │       └── parameter-store-construct.ts # Parameter Store hierarchy
 ├── scripts/
 │   ├── deploy.sh                       # Deployment automation script
-│   └── update-parameters.sh            # Parameter management script
+│   ├── update-parameters.sh            # Parameter management script
+│   └── convert-to-secure-parameters.sh # SecureString conversion script
 ├── package.json                        # Dependencies and scripts
 ├── tsconfig.json                       # TypeScript configuration
 ├── cdk.json                           # CDK configuration
@@ -84,7 +85,20 @@ npm run build
 npm run deploy
 ```
 
-### 4. Update Parameter Store Values
+### 4. Convert Parameters to SecureString (Post-Deployment)
+
+⚠️ **Important**: Due to CloudFormation limitations, secure parameters are initially created as String type and must be
+converted to SecureString after deployment.
+
+```bash
+# Convert critical parameters to SecureString type
+./scripts/convert-to-secure-parameters.sh development
+
+# Or convert all environments
+./scripts/convert-to-secure-parameters.sh
+```
+
+### 5. Update Parameter Store Values
 
 ```bash
 # Interactive parameter update
