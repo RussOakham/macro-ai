@@ -111,13 +111,16 @@ jobs:
 
 ```markdown
 # Infrastructure and deployment code
+
 infrastructure/ @RussOakham
 
 # GitHub Actions workflows
+
 .github/workflows/ @RussOakham
 
 # Default ownership
-* @RussOakham
+
+- @RussOakham
 ```
 
 The action extracts all `@username` patterns and validates against any of them, supporting both specific path ownership
