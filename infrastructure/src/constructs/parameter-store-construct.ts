@@ -35,7 +35,8 @@ export class ParameterStoreConstruct extends Construct {
 		super(scope, id)
 
 		// Detect ephemeral preview environments and use shared development parameters
-		const isPreviewEnvironment = props.environmentName.startsWith('pr-')
+		const isPreviewEnvironment =
+			props.environmentName.toLowerCase().startsWith('pr-')
 
 		if (isPreviewEnvironment) {
 			// Use shared development parameter prefix for all preview environments

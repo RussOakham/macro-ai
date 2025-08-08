@@ -162,7 +162,7 @@ graph LR
 | PR Type   | Author Type | Auto Deploy  | Manual Deploy      | Teardown     |
 | --------- | ----------- | ------------ | ------------------ | ------------ |
 | Same-repo | Code owner  | ✅ Automatic | ✅ Available       | ✅ Automatic |
-| Same-repo | Non-owner   | ❌ Blocked   | ✅ Available       | ❌ N/A       |
+| Same-repo | Non-owner   | ❌ Blocked   | ❌ Maintainer only | ❌ N/A       |
 | Forked    | Any         | ❌ Blocked   | ✅ Maintainer only | ❌ N/A       |
 
 ### Security Model
@@ -198,6 +198,13 @@ docs/ci-cd/ @RussOakham
 - All ephemeral environments use shared `/macro-ai/development` parameter prefix
 - No per-PR parameter creation (significant cost savings)
 - Maintains infrastructure isolation while sharing secrets
+
+**Isolation Guardrails:**
+- Preview stacks have **read-only access** to shared parameters
+- Application code **must not mutate** shared parameters to maintain isolation
+- Environment-specific endpoints are **not stored** in shared parameters (prevents cross-contamination)
+- Shared parameters contain only **static configuration** (API keys, database URLs, etc.)
+- Each PR environment gets **dedicated AWS resources** (Lambda, API Gateway, CloudFormation stack)
 
 #### Resource Management
 
@@ -263,7 +270,7 @@ ExpiryDate: 2024-01-15T10:30:00Z # 7 days from creation
 
 ```bash
 # List all preview stacks
-aws cloudformation list-stacks --query 'StackSummaries[?contains(StackName, `MacroAiPr-`)].{Name:StackName,Status:StackStatus}'
+aws cloudformation list-stacks --query "StackSummaries[?contains(StackName, 'MacroAiPr-')].{Name:StackName,Status:StackStatus}"
 
 # Manual cleanup via workflow
 # Use teardown-dev.yml with:

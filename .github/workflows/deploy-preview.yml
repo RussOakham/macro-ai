@@ -2,13 +2,13 @@ name: Deploy PR Preview Environment
 
 on:
   pull_request:
-    types: [ opened, reopened, synchronize ]
-    branches: [ develop, main ]
+    types: [opened, reopened, synchronize]
+    branches: [develop, main]
     paths:
-    - 'infrastructure/**'
-    - 'apps/express-api/**'
-    - '.github/workflows/deploy-preview.yml'
-    - '.github/actions/check-codeowner/**'
+      - 'infrastructure/**'
+      - 'apps/express-api/**'
+      - '.github/workflows/deploy-preview.yml'
+      - '.github/actions/check-codeowner/**'
 
 permissions:
   contents: read
@@ -38,52 +38,52 @@ jobs:
       env-name: ${{ steps.env-name.outputs.env-name }}
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ github.event.pull_request.head.sha }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
-    - name: Check repository ownership
-      id: repo-check
-      run: |
-        if [[ "${{ github.event.pull_request.head.repo.full_name }}" == "${{ github.repository }}" ]]; then
-          echo "is-same-repo=true" >> $GITHUB_OUTPUT
-          echo "✅ PR from same repository: ${{ github.event.pull_request.head.repo.full_name }}"
-        else
-          echo "is-same-repo=false" >> $GITHUB_OUTPUT
-          echo "❌ PR from forked repository: ${{ github.event.pull_request.head.repo.full_name }}"
-        fi
+      - name: Check repository ownership
+        id: repo-check
+        run: |
+          if [[ "${{ github.event.pull_request.head.repo.full_name }}" == "${{ github.repository }}" ]]; then
+            echo "is-same-repo=true" >> $GITHUB_OUTPUT
+            echo "✅ PR from same repository: ${{ github.event.pull_request.head.repo.full_name }}"
+          else
+            echo "is-same-repo=false" >> $GITHUB_OUTPUT
+            echo "❌ PR from forked repository: ${{ github.event.pull_request.head.repo.full_name }}"
+          fi
 
-    - name: Check code ownership
-      id: codeowner-check
-      uses: ./.github/actions/check-codeowner
-      with:
-        mode: 'pr'
-        base-ref: ${{ github.event.pull_request.head.ref }}
+      - name: Check code ownership
+        id: codeowner-check
+        uses: ./.github/actions/check-codeowner
+        with:
+          mode: 'pr'
+          base-ref: ${{ github.event.pull_request.head.ref }}
 
-    - name: Generate environment name
-      id: env-name
-      run: |
-        ENV_NAME="pr-${{ github.event.pull_request.number }}"
-        echo "env-name=${ENV_NAME}" >> $GITHUB_OUTPUT
-        echo "Environment name: ${ENV_NAME}"
+      - name: Generate environment name
+        id: env-name
+        run: |
+          ENV_NAME="pr-${{ github.event.pull_request.number }}"
+          echo "env-name=${ENV_NAME}" >> $GITHUB_OUTPUT
+          echo "Environment name: ${ENV_NAME}"
 
-    - name: Make deployment decision
-      id: decision
-      run: |
-        IS_SAME_REPO="${{ steps.repo-check.outputs.is-same-repo }}"
-        IS_OWNER="${{ steps.codeowner-check.outputs.is-owner }}"
+      - name: Make deployment decision
+        id: decision
+        run: |
+          IS_SAME_REPO="${{ steps.repo-check.outputs.is-same-repo }}"
+          IS_OWNER="${{ steps.codeowner-check.outputs.is-owner }}"
 
-        if [[ "${IS_SAME_REPO}" == "true" && "${IS_OWNER}" == "true" ]]; then
-          echo "should-deploy=true" >> $GITHUB_OUTPUT
-          echo "✅ Deployment approved: same-repo PR by code owner ${{ steps.codeowner-check.outputs.target-user }}"
-        else
-          echo "should-deploy=false" >> $GITHUB_OUTPUT
-          echo "❌ Deployment blocked:"
-          echo "  - Same repo: ${IS_SAME_REPO}"
-          echo "  - Code owner: ${IS_OWNER}"
-          echo "  - User: ${{ steps.codeowner-check.outputs.target-user }}"
-        fi
+          if [[ "${IS_SAME_REPO}" == "true" && "${IS_OWNER}" == "true" ]]; then
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+            echo "✅ Deployment approved: same-repo PR by code owner ${{ steps.codeowner-check.outputs.target-user }}"
+          else
+            echo "should-deploy=false" >> $GITHUB_OUTPUT
+            echo "❌ Deployment blocked:"
+            echo "  - Same repo: ${IS_SAME_REPO}"
+            echo "  - Code owner: ${IS_OWNER}"
+            echo "  - User: ${{ steps.codeowner-check.outputs.target-user }}"
+          fi
 
   # Build Lambda package for deployment
   build-lambda:
@@ -93,40 +93,40 @@ jobs:
     if: needs.validate-access.outputs.should-deploy == 'true'
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install pnpm
-      uses: pnpm/action-setup@v3
-      with:
-        version: ${{ env.PNPM_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'pnpm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
 
-    - name: Build Lambda package
-      run: |
-        cd apps/express-api
-        pnpm install --frozen-lockfile
-        pnpm build:lambda
-        pnpm bundle:lambda
-        pnpm package:lambda
+      - name: Build Lambda package
+        run: |
+          cd apps/express-api
+          pnpm install --frozen-lockfile
+          pnpm build:lambda
+          pnpm bundle:lambda
+          pnpm package:lambda
 
-    - name: Upload Lambda package
-      uses: actions/upload-artifact@v4
-      with:
-        name: lambda-package-${{ needs.validate-access.outputs.env-name }}
-        path: apps/express-api/dist/lambda.zip
-        retention-days: 7
+      - name: Upload Lambda package
+        uses: actions/upload-artifact@v4
+        with:
+          name: lambda-package-${{ needs.validate-access.outputs.env-name }}
+          path: apps/express-api/dist/lambda.zip
+          retention-days: 7
 
   # Deploy ephemeral PR environment
   deploy-preview:
     name: Deploy Preview Environment
     runs-on: ubuntu-latest
-    needs: [ validate-access, build-lambda ]
+    needs: [validate-access, build-lambda]
     if: needs.validate-access.outputs.should-deploy == 'true'
     environment: development
 
@@ -141,165 +141,165 @@ jobs:
       stack-name: ${{ steps.stack-info.outputs.stack-name }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install pnpm
-      uses: pnpm/action-setup@v3
-      with:
-        version: ${{ env.PNPM_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'pnpm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
 
-    - name: Install AWS CDK CLI globally
-      run: pnpm add -g aws-cdk
+      - name: Install AWS CDK CLI globally
+        run: pnpm add -g aws-cdk
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Download Lambda package
-      uses: actions/download-artifact@v4
-      with:
-        name: lambda-package-${{ needs.validate-access.outputs.env-name }}
-        path: apps/express-api/dist/
+      - name: Download Lambda package
+        uses: actions/download-artifact@v4
+        with:
+          name: lambda-package-${{ needs.validate-access.outputs.env-name }}
+          path: apps/express-api/dist/
 
-    - name: Generate stack information
-      id: stack-info
-      run: |
-        ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
-        # Capitalize first letter for stack name (pr-123 -> Pr-123)
-        STACK_NAME="MacroAi$(echo "${ENV_NAME}" | sed 's/^./\U&/')Stack"
-        echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
-        echo "Stack name: ${STACK_NAME}"
+      - name: Generate stack information
+        id: stack-info
+        run: |
+          ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
+          # Capitalize first letter for stack name (pr-123 -> Pr-123)
+          STACK_NAME="MacroAi$(echo "${ENV_NAME}" | sed 's/^./\U&/')Stack"
+          echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
+          echo "Stack name: ${STACK_NAME}"
 
-    - name: Deploy infrastructure
-      run: |
-        cd infrastructure
-        pnpm install --frozen-lockfile
-        pnpm build
+      - name: Deploy infrastructure
+        run: |
+          cd infrastructure
+          pnpm install --frozen-lockfile
+          pnpm build
 
-        echo "🚀 Deploying ephemeral environment: ${{ needs.validate-access.outputs.env-name }}"
-        echo "📦 Stack: ${{ steps.stack-info.outputs.stack-name }}"
-        echo "👤 Requested by: ${{ needs.validate-access.outputs.target-user }}"
+          echo "🚀 Deploying ephemeral environment: ${{ needs.validate-access.outputs.env-name }}"
+          echo "📦 Stack: ${{ steps.stack-info.outputs.stack-name }}"
+          echo "👤 Requested by: ${{ needs.validate-access.outputs.target-user }}"
 
-        # Make deploy script executable and run it
-        chmod +x scripts/deploy.sh
-        ./scripts/deploy.sh
-      env:
-        CDK_DEPLOY_ENV: ${{ needs.validate-access.outputs.env-name }}
-        CDK_DEPLOY_SCALE: 'hobby'
-        AWS_REGION: ${{ env.AWS_REGION }}
-        AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-        NODE_ENV: 'production'
+          # Make deploy script executable and run it
+          chmod +x scripts/deploy.sh
+          ./scripts/deploy.sh
+        env:
+          CDK_DEPLOY_ENV: ${{ needs.validate-access.outputs.env-name }}
+          CDK_DEPLOY_SCALE: 'hobby'
+          AWS_REGION: ${{ env.AWS_REGION }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          NODE_ENV: 'production'
 
-    - name: Get deployment outputs
-      id: outputs
-      run: |
-        STACK_NAME="${{ steps.stack-info.outputs.stack-name }}"
+      - name: Get deployment outputs
+        id: outputs
+        run: |
+          STACK_NAME="${{ steps.stack-info.outputs.stack-name }}"
 
-        # Get API endpoint from CloudFormation outputs
-        API_ENDPOINT=$(aws cloudformation describe-stacks \
-          --stack-name "${STACK_NAME}" \
-          --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
-          --output text 2>/dev/null || echo "")
+          # Get API endpoint from CloudFormation outputs
+          API_ENDPOINT=$(aws cloudformation describe-stacks \
+            --stack-name "${STACK_NAME}" \
+            --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
+            --output text 2>/dev/null || echo "")
 
-        if [[ -n "${API_ENDPOINT}" ]]; then
-          echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
-          echo "✅ API endpoint: ${API_ENDPOINT}"
-        else
-          echo "⚠️ Could not retrieve API endpoint"
-        fi
+          if [[ -n "${API_ENDPOINT}" ]]; then
+            echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
+            echo "✅ API endpoint: ${API_ENDPOINT}"
+          else
+            echo "⚠️ Could not retrieve API endpoint"
+          fi
 
-    - name: Health check
-      id: health-check
-      run: |
-        API_ENDPOINT="${{ steps.outputs.outputs.api-endpoint }}"
+      - name: Health check
+        id: health-check
+        run: |
+          API_ENDPOINT="${{ steps.outputs.outputs.api-endpoint }}"
 
-        if [[ -n "${API_ENDPOINT}" ]]; then
-          echo "🔍 Testing health endpoint: ${API_ENDPOINT}api/health"
-          
-          # Wait a moment for deployment to stabilize
-          sleep 10
-          
-          # Test health endpoint with retries
-          for i in {1..3}; do
-            HEALTH_RESPONSE=$(curl -s -w "%{http_code}" "${API_ENDPOINT}api/health" 2>/dev/null || echo "000")
-            if [[ "$HEALTH_RESPONSE" == *"200" ]]; then
-              echo "health-status=healthy" >> $GITHUB_OUTPUT
-              echo "✅ Health check passed (attempt $i)"
-              break
-            else
-              echo "⚠️ Health check failed (attempt $i): $HEALTH_RESPONSE"
-              if [[ $i -eq 3 ]]; then
-                echo "health-status=unhealthy" >> $GITHUB_OUTPUT
+          if [[ -n "${API_ENDPOINT}" ]]; then
+            echo "🔍 Testing health endpoint: ${API_ENDPOINT}api/health"
+            
+            # Wait a moment for deployment to stabilize
+            sleep 10
+            
+            # Test health endpoint with retries
+            for i in {1..3}; do
+              HEALTH_RESPONSE=$(curl -s -w "%{http_code}" "${API_ENDPOINT}api/health" 2>/dev/null || echo "000")
+              if [[ "$HEALTH_RESPONSE" == *"200" ]]; then
+                echo "health-status=healthy" >> $GITHUB_OUTPUT
+                echo "✅ Health check passed (attempt $i)"
+                break
+              else
+                echo "⚠️ Health check failed (attempt $i): $HEALTH_RESPONSE"
+                if [[ $i -eq 3 ]]; then
+                  echo "health-status=unhealthy" >> $GITHUB_OUTPUT
+                fi
+                sleep 5
               fi
-              sleep 5
-            fi
-          done
-        else
-          echo "health-status=unknown" >> $GITHUB_OUTPUT
-          echo "⚠️ Cannot perform health check - no API endpoint"
-        fi
+            done
+          else
+            echo "health-status=unknown" >> $GITHUB_OUTPUT
+            echo "⚠️ Cannot perform health check - no API endpoint"
+          fi
 
   # Comment on PR with deployment information
   comment-pr:
     name: Comment on PR
     runs-on: ubuntu-latest
-    needs: [ validate-access, deploy-preview ]
+    needs: [validate-access, deploy-preview]
     if: always() && needs.validate-access.outputs.should-deploy == 'true'
 
     permissions:
       pull-requests: write
 
     steps:
-    - name: Create PR comment
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const envName = '${{ needs.validate-access.outputs.env-name }}';
-          const stackName = '${{ needs.deploy-preview.outputs.stack-name }}';
-          const apiEndpoint = '${{ needs.deploy-preview.outputs.api-endpoint }}';
-          const healthStatus = '${{ needs.deploy-preview.outputs.health-status }}';
-          const deployResult = '${{ needs.deploy-preview.result }}';
+      - name: Create PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const envName = '${{ needs.validate-access.outputs.env-name }}';
+            const stackName = '${{ needs.deploy-preview.outputs.stack-name }}';
+            const apiEndpoint = '${{ needs.deploy-preview.outputs.api-endpoint }}';
+            const healthStatus = '${{ needs.deploy-preview.outputs.health-status }}';
+            const deployResult = '${{ needs.deploy-preview.result }}';
 
-          let comment = `## 🚀 Preview Environment Deployed\n\n`;
-          comment += `**Environment:** \`${envName}\`\n`;
-          comment += `**Stack:** \`${stackName}\`\n`;
-          comment += `**Requested by:** @${{ needs.validate-access.outputs.target-user }}\n\n`;
+            let comment = `## 🚀 Preview Environment Deployed\n\n`;
+            comment += `**Environment:** \`${envName}\`\n`;
+            comment += `**Stack:** \`${stackName}\`\n`;
+            comment += `**Requested by:** @${{ needs.validate-access.outputs.target-user }}\n\n`;
 
-          if (deployResult === 'success' && apiEndpoint) {
-            comment += `### 🌐 Endpoints\n`;
-            comment += `- **API:** ${apiEndpoint}api/\n`;
-            comment += `- **Health:** ${apiEndpoint}api/health\n\n`;
-            
-            const healthIcon = healthStatus === 'healthy' ? '✅' : '⚠️';
-            comment += `### ${healthIcon} Health Status\n`;
-            comment += `Health check: **${healthStatus}**\n\n`;
-          } else {
-            comment += `### ❌ Deployment Failed\n`;
-            comment += `The preview environment deployment encountered an error. Check the workflow logs for details.\n\n`;
-          }
+            if (deployResult === 'success' && apiEndpoint) {
+              comment += `### 🌐 Endpoints\n`;
+              comment += `- **API:** ${apiEndpoint}api/\n`;
+              comment += `- **Health:** ${apiEndpoint}api/health\n\n`;
+              
+              const healthIcon = healthStatus === 'healthy' ? '✅' : '⚠️';
+              comment += `### ${healthIcon} Health Status\n`;
+              comment += `Health check: **${healthStatus}**\n\n`;
+            } else {
+              comment += `### ❌ Deployment Failed\n`;
+              comment += `The preview environment deployment encountered an error. Check the workflow logs for details.\n\n`;
+            }
 
-          comment += `### 📋 Environment Details\n`;
-          comment += `- **Parameter Store:** \`/macro-ai/development\` (shared)\n`;
-          comment += `- **Auto-cleanup:** When PR is closed/merged\n`;
-          comment += `- **Manual cleanup:** Use \`teardown-dev.yml\` workflow\n\n`;
-          comment += `---\n`;
-          comment += `*This preview environment uses shared development secrets and will be automatically destroyed when the PR is closed.*`;
+            comment += `### 📋 Environment Details\n`;
+            comment += `- **Parameter Store:** \`/macro-ai/development\` (shared)\n`;
+            comment += `- **Auto-cleanup:** When PR is closed/merged\n`;
+            comment += `- **Manual cleanup:** Use \`teardown-dev.yml\` workflow\n\n`;
+            comment += `---\n`;
+            comment += `*This preview environment uses shared development secrets and will be automatically destroyed when the PR is closed.*`;
 
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: comment
-          });
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
 
   # Handle blocked deployments (forked PRs or non-code-owners)
   explain-blocked:
@@ -312,42 +312,42 @@ jobs:
       pull-requests: write
 
     steps:
-    - name: Comment on blocked PR
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const isSameRepo = '${{ needs.validate-access.outputs.is-same-repo }}' === 'true';
-          const isOwner = '${{ needs.validate-access.outputs.is-owner }}' === 'true';
-          const targetUser = '${{ needs.validate-access.outputs.target-user }}';
+      - name: Comment on blocked PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const isSameRepo = '${{ needs.validate-access.outputs.is-same-repo }}' === 'true';
+            const isOwner = '${{ needs.validate-access.outputs.is-owner }}' === 'true';
+            const targetUser = '${{ needs.validate-access.outputs.target-user }}';
 
-          let comment = `## 🚫 Preview Environment Deployment Blocked\n\n`;
+            let comment = `## 🚫 Preview Environment Deployment Blocked\n\n`;
 
-          if (!isSameRepo) {
-            comment += `### 🔒 Forked Repository\n`;
-            comment += `This PR originates from a forked repository. For security reasons, automatic preview deployments are restricted to the main repository.\n\n`;
-            comment += `**Options:**\n`;
-            comment += `- A repository maintainer can manually deploy a preview using the \`deploy-forked-pr-preview.yml\` workflow\n`;
-            comment += `- The preview will use trusted base repository code (not fork changes)\n\n`;
-          }
+            if (!isSameRepo) {
+              comment += `### 🔒 Forked Repository\n`;
+              comment += `This PR originates from a forked repository. For security reasons, automatic preview deployments are restricted to the main repository.\n\n`;
+              comment += `**Options:**\n`;
+              comment += `- A repository maintainer can manually deploy a preview using the \`deploy-forked-pr-preview.yml\` workflow\n`;
+              comment += `- The preview will use trusted base repository code (not fork changes)\n\n`;
+            }
 
-          if (!isOwner) {
-            comment += `### 👤 Code Owner Required\n`;
-            comment += `User \`@${targetUser}\` is not listed as a code owner in \`.github/CODEOWNERS\`.\n\n`;
-            comment += `**To enable automatic preview deployments:**\n`;
-            comment += `- Add \`@${targetUser}\` to the \`.github/CODEOWNERS\` file\n`;
-            comment += `- Or have a code owner create the PR\n\n`;
-          }
+            if (!isOwner) {
+              comment += `### 👤 Code Owner Required\n`;
+              comment += `User \`@${targetUser}\` is not listed as a code owner in \`.github/CODEOWNERS\`.\n\n`;
+              comment += `**To enable automatic preview deployments:**\n`;
+              comment += `- Add \`@${targetUser}\` to the \`.github/CODEOWNERS\` file\n`;
+              comment += `- Or have a code owner create the PR\n\n`;
+            }
 
-          comment += `### 🔍 Current Status\n`;
-          comment += `- **Same repository:** ${isSameRepo ? '✅' : '❌'}\n`;
-          comment += `- **Code owner:** ${isOwner ? '✅' : '❌'}\n`;
-          comment += `- **User:** \`@${targetUser}\`\n\n`;
-          comment += `---\n`;
-          comment += `*For questions about preview environments, contact a repository maintainer.*`;
+            comment += `### 🔍 Current Status\n`;
+            comment += `- **Same repository:** ${isSameRepo ? '✅' : '❌'}\n`;
+            comment += `- **Code owner:** ${isOwner ? '✅' : '❌'}\n`;
+            comment += `- **User:** \`@${targetUser}\`\n\n`;
+            comment += `---\n`;
+            comment += `*For questions about preview environments, contact a repository maintainer.*`;
 
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: comment
-          });
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
