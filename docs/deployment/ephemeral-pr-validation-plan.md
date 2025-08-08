@@ -152,7 +152,7 @@ The system is ready for controlled testing and stakeholder approval.
 #### Automatic Cleanup Effectiveness ✅
 
 - **Trigger**: Automatic on PR close/merge (`pull_request: [closed]`)
-- **Access control**: Only same-repo code owner PRs get cleanup
+- **Cleanup**: Runs unconditionally on PR close/merge (least-privilege workflow)
 - **Retry logic**: 3 attempts with 30-second delays for reliability
 - **Verification**: Post-cleanup stack existence verification
 - **100% cleanup rate**: All AWS resources destroyed

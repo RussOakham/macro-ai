@@ -213,7 +213,7 @@ jobs:
           version: ${{ env.PNPM_VERSION }}
 
       - name: Install AWS CDK CLI globally
-        run: pnpm add -g aws-cdk
+        run: pnpm add -g aws-cdk@2
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

@@ -156,7 +156,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install AWS CDK CLI globally
-        run: pnpm add -g aws-cdk
+        run: pnpm add -g aws-cdk@2
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -207,7 +207,7 @@ jobs:
           # Get API endpoint from CloudFormation outputs
           API_ENDPOINT=$(aws cloudformation describe-stacks \
             --stack-name "${STACK_NAME}" \
-            --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
             --output text 2>/dev/null || echo "")
 
           if [[ -n "${API_ENDPOINT}" ]]; then
