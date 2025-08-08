@@ -126,13 +126,13 @@ update_all_parameters() {
     echo -e "${YELLOW}=== Critical Parameters (Advanced Tier) ===${NC}"
     update_parameter "$PARAMETER_PREFIX/critical/openai-api-key" "SecureString" "OpenAI API key for AI chat functionality"
     update_parameter "$PARAMETER_PREFIX/critical/neon-database-url" "SecureString" "Neon PostgreSQL connection string"
-    
+    update_parameter "$PARAMETER_PREFIX/critical/upstash-redis-url" "SecureString" "Upstash Redis connection string"
+
     echo ""
     echo -e "${YELLOW}=== Standard Parameters ===${NC}"
-    update_parameter "$PARAMETER_PREFIX/standard/upstash-redis-url" "SecureString" "Upstash Redis connection string"
     update_parameter "$PARAMETER_PREFIX/standard/cognito-user-pool-id" "String" "AWS Cognito User Pool ID"
     update_parameter "$PARAMETER_PREFIX/standard/cognito-user-pool-client-id" "String" "AWS Cognito User Pool Client ID"
-    
+
     print_status "All parameters updated!"
 }
 
@@ -151,11 +151,10 @@ update_critical_parameters() {
 update_standard_parameters() {
     echo -e "${BLUE}📊 Updating standard parameters...${NC}"
     echo ""
-    
-    update_parameter "$PARAMETER_PREFIX/standard/upstash-redis-url" "SecureString" "Upstash Redis connection string"
+
     update_parameter "$PARAMETER_PREFIX/standard/cognito-user-pool-id" "String" "AWS Cognito User Pool ID"
     update_parameter "$PARAMETER_PREFIX/standard/cognito-user-pool-client-id" "String" "AWS Cognito User Pool Client ID"
-    
+
     print_status "Standard parameters updated!"
 }
 
@@ -164,7 +163,7 @@ update_specific_parameter() {
     echo -e "${BLUE}🎯 Available parameters:${NC}"
     echo "1. openai-api-key (Critical/SecureString)"
     echo "2. neon-database-url (Critical/SecureString)"
-    echo "3. upstash-redis-url (Standard/SecureString)"
+    echo "3. upstash-redis-url (Critical/SecureString)"
     echo "4. cognito-user-pool-id (Standard/String)"
     echo "5. cognito-user-pool-client-id (Standard/String)"
     echo ""
@@ -174,7 +173,7 @@ update_specific_parameter() {
     case $param_choice in
         1) update_parameter "$PARAMETER_PREFIX/critical/openai-api-key" "SecureString" "OpenAI API key for AI chat functionality" ;;
         2) update_parameter "$PARAMETER_PREFIX/critical/neon-database-url" "SecureString" "Neon PostgreSQL connection string" ;;
-        3) update_parameter "$PARAMETER_PREFIX/standard/upstash-redis-url" "SecureString" "Upstash Redis connection string" ;;
+        3) update_parameter "$PARAMETER_PREFIX/critical/upstash-redis-url" "SecureString" "Upstash Redis connection string" ;;
         4) update_parameter "$PARAMETER_PREFIX/standard/cognito-user-pool-id" "String" "AWS Cognito User Pool ID" ;;
         5) update_parameter "$PARAMETER_PREFIX/standard/cognito-user-pool-client-id" "String" "AWS Cognito User Pool Client ID" ;;
         *) print_error "Invalid choice" ;;

@@ -43,6 +43,7 @@ export class ParameterStoreService {
 		// External services / databases
 		'openai-api-key',
 		'neon-database-url',
+		'upstash-redis-url',
 	] as const
 
 	constructor(config?: Partial<ParameterStoreConfig>) {

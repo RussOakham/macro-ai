@@ -46,13 +46,15 @@ export interface CacheStats {
 /**
  * Critical parameter names (requiring advanced tier)
  */
-export type CriticalParameterName = 'openai-api-key' | 'neon-database-url'
+export type CriticalParameterName =
+	| 'openai-api-key'
+	| 'neon-database-url'
+	| 'upstash-redis-url'
 
 /**
  * Standard parameter names (using standard tier)
  */
 export type StandardParameterName =
-	| 'upstash-redis-url'
 	| 'cognito-user-pool-id'
 	| 'cognito-user-pool-client-id'
 

@@ -102,12 +102,6 @@ export class ParameterStoreConstruct extends Construct {
 		// Standard parameters (Standard tier for cost optimization)
 		const standardParams = [
 			{
-				name: 'upstash-redis-url',
-				description: 'Upstash Redis connection string',
-				isSecure: true,
-				tier: ssm.ParameterTier.STANDARD,
-			},
-			{
 				name: 'cognito-user-pool-id',
 				description: 'AWS Cognito User Pool ID',
 				isSecure: false,
@@ -120,6 +114,14 @@ export class ParameterStoreConstruct extends Construct {
 				tier: ssm.ParameterTier.STANDARD,
 			},
 		]
+
+		// Move Upstash Redis URL to critical parameters (Advanced tier)
+		criticalParams.push({
+			name: 'upstash-redis-url',
+			description: 'Upstash Redis connection string',
+			isSecure: true,
+			tier: ssm.ParameterTier.ADVANCED,
+		})
 
 		// Create critical parameters
 		for (const param of criticalParams) {

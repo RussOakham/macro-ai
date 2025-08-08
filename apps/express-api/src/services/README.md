@@ -65,10 +65,10 @@ The service supports two parameter tiers:
 
 - `openai-api-key` → `/macro-ai/prod/critical/openai-api-key`
 - `neon-database-url` → `/macro-ai/prod/critical/neon-database-url`
+- `upstash-redis-url` → `/macro-ai/prod/critical/upstash-redis-url`
 
 ### Standard Parameters (Standard Tier)
 
-- `upstash-redis-url` → `/macro-ai/prod/standard/upstash-redis-url`
 - `cognito-user-pool-id` → `/macro-ai/prod/standard/cognito-user-pool-id`
 - `cognito-user-pool-client-id` → `/macro-ai/prod/standard/cognito-user-pool-client-id`
 

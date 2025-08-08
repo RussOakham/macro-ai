@@ -123,17 +123,17 @@ describe('ParameterStoreService', () => {
 			})
 		})
 
-		it('should retrieve standard parameter successfully', async () => {
+		it('should retrieve critical parameter (redis url) successfully', async () => {
 			// Arrange
 			const parameterName = 'upstash-redis-url'
 			const expectedValue = 'redis://test-redis:6379'
-			const expectedPath = '/macro-ai/test/standard/upstash-redis-url'
+			const expectedPath = '/macro-ai/test/critical/upstash-redis-url'
 
 			ssmMock.on(GetParameterCommand).resolves({
 				Parameter: {
 					Name: expectedPath,
 					Value: expectedValue,
-					Type: 'String',
+					Type: 'SecureString',
 				},
 			})
 
@@ -323,14 +323,14 @@ describe('ParameterStoreService', () => {
 					},
 				})
 				.on(GetParameterCommand, {
-					Name: '/macro-ai/test/standard/upstash-redis-url',
+					Name: '/macro-ai/test/critical/upstash-redis-url',
 					WithDecryption: true,
 				})
 				.resolves({
 					Parameter: {
-						Name: '/macro-ai/test/standard/upstash-redis-url',
+						Name: '/macro-ai/test/critical/upstash-redis-url',
 						Value: expectedValues['upstash-redis-url'],
-						Type: 'String',
+						Type: 'SecureString',
 					},
 				})
 

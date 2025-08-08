@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { UnauthorizedError } from '../../utils/errors.ts'
 import { mockConfig } from '../../utils/test-helpers/config.mock.ts'
@@ -15,6 +15,8 @@ vi.mock('../../../config/default.ts', () => mockConfig.createModule())
 // Import after mocking
 import { apiKeyAuth } from '../api-key.middleware.ts'
 
+let originalApiKey: string | undefined
+
 describe('apiKeyAuth Middleware', () => {
 	let mockRequest: Partial<Request>
 	let mockResponse: Partial<Response>
@@ -25,6 +27,9 @@ describe('apiKeyAuth Middleware', () => {
 		mockConfig.setup()
 		mockLogger.setup()
 
+		// Save original API key so we can restore it after each test
+		originalApiKey = process.env.API_KEY
+
 		// Set API key in environment for middleware to read
 		process.env.API_KEY = 'test-api-key-12345678901234567890'
 
@@ -34,6 +39,12 @@ describe('apiKeyAuth Middleware', () => {
 			headers: {},
 			ip: '127.0.0.1',
 		})
+
+		afterEach(() => {
+			// Restore original API key to avoid leaking state across tests
+			process.env.API_KEY = originalApiKey
+		})
+
 		mockRequest = expressMocks.req
 		mockResponse = expressMocks.res
 		mockNext = expressMocks.next
