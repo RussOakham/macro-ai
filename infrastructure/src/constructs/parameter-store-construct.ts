@@ -25,7 +25,7 @@ export interface ParameterStoreConstructProps {
 export class ParameterStoreConstruct extends Construct {
 	public readonly parameterPrefix: string
 	public readonly readPolicy: iam.ManagedPolicy
-	public readonly parameters: Record<string, ssm.StringParameter>
+	public readonly parameters: Record<string, ssm.IStringParameter>
 
 	constructor(
 		scope: Construct,
@@ -50,8 +50,8 @@ export class ParameterStoreConstruct extends Construct {
 		})
 	}
 
-	private createParameters(): Record<string, ssm.StringParameter> {
-		const parameters: Record<string, ssm.StringParameter> = {}
+	private createParameters(): Record<string, ssm.IStringParameter> {
+		const parameters: Record<string, ssm.IStringParameter> = {}
 
 		// Critical parameters (Advanced tier for higher throughput)
 		const criticalParams = [
@@ -126,34 +126,69 @@ export class ParameterStoreConstruct extends Construct {
 		// Create critical parameters
 		for (const param of criticalParams) {
 			const parameterName = `${this.parameterPrefix}/critical/${param.name}`
-			parameters[param.name] = new ssm.StringParameter(
-				this,
+			parameters[param.name] = this.createParameter(
+				param,
+				parameterName,
 				`Critical${this.toPascalCase(param.name)}`,
-				{
-					parameterName,
-					description: param.description,
-					tier: param.tier,
-					stringValue: 'PLACEHOLDER_VALUE_UPDATE_AFTER_DEPLOYMENT',
-				},
 			)
 		}
 
 		// Create standard parameters
 		for (const param of standardParams) {
 			const parameterName = `${this.parameterPrefix}/standard/${param.name}`
-			parameters[param.name] = new ssm.StringParameter(
-				this,
+			parameters[param.name] = this.createParameter(
+				param,
+				parameterName,
 				`Standard${this.toPascalCase(param.name)}`,
-				{
-					parameterName,
-					description: param.description,
-					tier: param.tier,
-					stringValue: 'PLACEHOLDER_VALUE_UPDATE_AFTER_DEPLOYMENT',
-				},
 			)
 		}
 
 		return parameters
+	}
+
+	/**
+	 * Creates a parameter with the appropriate type based on the isSecure flag
+	 * @param param Parameter configuration
+	 * @param parameterName Full parameter name with prefix
+	 * @param constructId Unique construct ID
+	 * @returns StringParameter instance
+	 */
+	private createParameter(
+		param: {
+			name: string
+			description: string
+			isSecure: boolean
+			tier: ssm.ParameterTier
+		},
+		parameterName: string,
+		constructId: string,
+	): ssm.IStringParameter {
+		if (param.isSecure) {
+			// Use CfnParameter for SecureString parameters to have direct control over the type
+			new ssm.CfnParameter(this, `${constructId}CfnParam`, {
+				name: parameterName,
+				description: param.description,
+				tier: param.tier,
+				type: 'SecureString',
+				value: 'PLACEHOLDER_VALUE_UPDATE_AFTER_DEPLOYMENT',
+			})
+
+			// Create a StringParameter wrapper for consistency with the interface
+			// This allows the rest of the code to work with the same interface
+			return ssm.StringParameter.fromStringParameterName(
+				this,
+				constructId,
+				parameterName,
+			)
+		} else {
+			// Use regular StringParameter for non-secure parameters
+			return new ssm.StringParameter(this, constructId, {
+				parameterName,
+				description: param.description,
+				tier: param.tier,
+				stringValue: 'PLACEHOLDER_VALUE_UPDATE_AFTER_DEPLOYMENT',
+			})
+		}
 	}
 
 	private createReadPolicy(): iam.ManagedPolicy {

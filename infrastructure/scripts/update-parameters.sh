@@ -46,12 +46,34 @@ update_parameter() {
     local param_type="$2"
     local description="$3"
     local current_value
-    
+
     echo -e "${BLUE}📝 Updating parameter: $param_name${NC}"
     echo "Description: $description"
-    
-    # Get current value (if exists)
-    if current_value=$(aws ssm get-parameter --name "$param_name" --query 'Parameter.Value' --output text 2>/dev/null); then
+
+    # Determine if this is a critical parameter and set appropriate tier
+    local tier_option=""
+    if [[ "$param_name" == *"/critical/"* ]]; then
+        tier_option="--tier Advanced"
+        echo -e "${YELLOW}Critical parameter detected - using Advanced tier${NC}"
+    fi
+
+    # Enhanced current value check with decryption for SecureString parameters
+    local current_value=""
+    local parameter_exists=false
+
+    if [ "$param_type" = "SecureString" ]; then
+        # For SecureString, use --with-decryption to get the actual value
+        if current_value=$(aws ssm get-parameter --name "$param_name" --with-decryption --query 'Parameter.Value' --output text 2>/dev/null); then
+            parameter_exists=true
+        fi
+    else
+        # For regular String parameters, no decryption needed
+        if current_value=$(aws ssm get-parameter --name "$param_name" --query 'Parameter.Value' --output text 2>/dev/null); then
+            parameter_exists=true
+        fi
+    fi
+
+    if [ "$parameter_exists" = true ]; then
         if [ "$current_value" != "PLACEHOLDER_VALUE_UPDATE_AFTER_DEPLOYMENT" ]; then
             echo -e "${YELLOW}Current value exists (not showing for security)${NC}"
             read -p "Do you want to update this parameter? (y/N): " -n 1 -r
@@ -62,7 +84,7 @@ update_parameter() {
             fi
         fi
     fi
-    
+
     # Prompt for new value
     if [ "$param_type" = "SecureString" ]; then
         read -s -p "Enter new value for $param_name (input hidden): " new_value
@@ -70,20 +92,36 @@ update_parameter() {
     else
         read -p "Enter new value for $param_name: " new_value
     fi
-    
+
     if [ -z "$new_value" ]; then
         print_warning "Empty value provided, skipping $param_name"
         return
     fi
-    
-    # Update the parameter
-    aws ssm put-parameter \
-        --name "$param_name" \
-        --value "$new_value" \
-        --type "$param_type" \
-        --overwrite \
-        --region "$AWS_REGION"
-    
+
+    # Check if the new value is the same as current value to avoid unnecessary updates
+    if [ "$parameter_exists" = true ] && [ "$current_value" = "$new_value" ]; then
+        print_info "New value is the same as current value, skipping update for $param_name"
+        return
+    fi
+
+    # Update the parameter with appropriate tier
+    if [ -n "$tier_option" ]; then
+        aws ssm put-parameter \
+            --name "$param_name" \
+            --value "$new_value" \
+            --type "$param_type" \
+            $tier_option \
+            --overwrite \
+            --region "$AWS_REGION"
+    else
+        aws ssm put-parameter \
+            --name "$param_name" \
+            --value "$new_value" \
+            --type "$param_type" \
+            --overwrite \
+            --region "$AWS_REGION"
+    fi
+
     print_status "Updated $param_name"
 }
 
@@ -140,10 +178,11 @@ update_all_parameters() {
 update_critical_parameters() {
     echo -e "${BLUE}🔒 Updating critical parameters...${NC}"
     echo ""
-    
+
     update_parameter "$PARAMETER_PREFIX/critical/openai-api-key" "SecureString" "OpenAI API key for AI chat functionality"
     update_parameter "$PARAMETER_PREFIX/critical/neon-database-url" "SecureString" "Neon PostgreSQL connection string"
-    
+    update_parameter "$PARAMETER_PREFIX/critical/upstash-redis-url" "SecureString" "Upstash Redis connection string"
+
     print_status "Critical parameters updated!"
 }
 
