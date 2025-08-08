@@ -56,6 +56,36 @@ export class ParameterStoreConstruct extends Construct {
 		// Critical parameters (Advanced tier for higher throughput)
 		const criticalParams = [
 			{
+				name: 'api-key',
+				description: 'Application API key for authentication',
+				isSecure: true,
+				tier: ssm.ParameterTier.ADVANCED,
+			},
+			{
+				name: 'cookie-encryption-key',
+				description: 'Cookie encryption key for session security',
+				isSecure: true,
+				tier: ssm.ParameterTier.ADVANCED,
+			},
+			{
+				name: 'cognito-user-pool-secret-key',
+				description: 'AWS Cognito User Pool Client Secret',
+				isSecure: true,
+				tier: ssm.ParameterTier.ADVANCED,
+			},
+			{
+				name: 'cognito-access-key',
+				description: 'AWS IAM Access Key for Cognito operations',
+				isSecure: true,
+				tier: ssm.ParameterTier.ADVANCED,
+			},
+			{
+				name: 'cognito-secret-key',
+				description: 'AWS IAM Secret Key for Cognito operations',
+				isSecure: true,
+				tier: ssm.ParameterTier.ADVANCED,
+			},
+			{
 				name: 'openai-api-key',
 				description: 'OpenAI API key for AI chat functionality',
 				isSecure: true,
@@ -72,12 +102,6 @@ export class ParameterStoreConstruct extends Construct {
 		// Standard parameters (Standard tier for cost optimization)
 		const standardParams = [
 			{
-				name: 'upstash-redis-url',
-				description: 'Upstash Redis connection string',
-				isSecure: true,
-				tier: ssm.ParameterTier.STANDARD,
-			},
-			{
 				name: 'cognito-user-pool-id',
 				description: 'AWS Cognito User Pool ID',
 				isSecure: false,
@@ -91,37 +115,75 @@ export class ParameterStoreConstruct extends Construct {
 			},
 		]
 
+		// Move Upstash Redis URL to critical parameters (Advanced tier)
+		criticalParams.push({
+			name: 'upstash-redis-url',
+			description: 'Upstash Redis connection string',
+			isSecure: true,
+			tier: ssm.ParameterTier.ADVANCED,
+		})
+
 		// Create critical parameters
 		for (const param of criticalParams) {
 			const parameterName = `${this.parameterPrefix}/critical/${param.name}`
-			parameters[param.name] = new ssm.StringParameter(
-				this,
+			parameters[param.name] = this.createParameter(
+				param,
+				parameterName,
 				`Critical${this.toPascalCase(param.name)}`,
-				{
-					parameterName,
-					description: param.description,
-					tier: param.tier,
-					stringValue: 'PLACEHOLDER_VALUE_UPDATE_AFTER_DEPLOYMENT',
-				},
 			)
 		}
 
 		// Create standard parameters
 		for (const param of standardParams) {
 			const parameterName = `${this.parameterPrefix}/standard/${param.name}`
-			parameters[param.name] = new ssm.StringParameter(
-				this,
+			parameters[param.name] = this.createParameter(
+				param,
+				parameterName,
 				`Standard${this.toPascalCase(param.name)}`,
-				{
-					parameterName,
-					description: param.description,
-					tier: param.tier,
-					stringValue: 'PLACEHOLDER_VALUE_UPDATE_AFTER_DEPLOYMENT',
-				},
 			)
 		}
 
 		return parameters
+	}
+
+	/**
+	 * Creates a parameter as String type initially (CloudFormation requirement)
+	 * Parameters marked with isSecure will be converted to SecureString post-deployment
+	 * @param param Parameter configuration
+	 * @param parameterName Full parameter name with prefix
+	 * @param constructId Unique construct ID
+	 * @returns StringParameter instance
+	 */
+	private createParameter(
+		param: {
+			name: string
+			description: string
+			isSecure: boolean
+			tier: ssm.ParameterTier
+		},
+		parameterName: string,
+		constructId: string,
+	): ssm.StringParameter {
+		// Create all parameters as String type initially (CloudFormation requirement)
+		// SecureString conversion happens post-deployment via update script
+		const parameter = new ssm.StringParameter(this, constructId, {
+			parameterName,
+			description: param.description,
+			tier: param.tier,
+			stringValue: 'PLACEHOLDER_VALUE_UPDATE_AFTER_DEPLOYMENT',
+		})
+
+		// Add metadata to indicate which parameters should be converted to SecureString
+		if (param.isSecure) {
+			parameter.node.addMetadata('SecureStringConversion', {
+				required: true,
+				postDeploymentAction: `Convert to SecureString: aws ssm put-parameter --name "${parameterName}" --type SecureString --tier ${param.tier} --overwrite --value "ACTUAL_VALUE"`,
+				parameterName,
+				tier: param.tier,
+			})
+		}
+
+		return parameter
 	}
 
 	private createReadPolicy(): iam.ManagedPolicy {

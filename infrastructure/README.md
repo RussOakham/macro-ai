@@ -141,9 +141,9 @@ pnpm destroy
 /macro-ai/development/
 ├── critical/           # Advanced tier parameters
 │   ├── openai-api-key
-│   └── neon-database-url
+│   ├── neon-database-url
+│   └── upstash-redis-url
 └── standard/           # Standard tier parameters
-    ├── upstash-redis-url
     ├── cognito-user-pool-id
     └── cognito-user-pool-client-id
 ```

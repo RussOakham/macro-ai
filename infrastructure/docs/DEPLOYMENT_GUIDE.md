@@ -80,10 +80,10 @@ The Lambda function uses Parameter Store for sensitive configuration:
 
 - `/macro-ai/development/critical/openai-api-key`
 - `/macro-ai/development/critical/neon-database-url`
+- `/macro-ai/development/critical/upstash-redis-url`
 
 **Standard Parameters (Standard Tier):**
 
-- `/macro-ai/development/standard/upstash-redis-url`
 - `/macro-ai/development/standard/cognito-user-pool-id`
 - `/macro-ai/development/standard/cognito-user-pool-client-id`
 
@@ -135,11 +135,11 @@ aws ssm put-parameter \
   --type String \
   --overwrite
 
-# Optional Redis URL
+# Redis URL (Critical)
 aws ssm put-parameter \
-  --name '/macro-ai/development/standard/upstash-redis-url' \
+  --name '/macro-ai/development/critical/upstash-redis-url' \
   --value 'redis://your-redis-url' \
-  --type String \
+  --type SecureString \
   --overwrite
 ```
 

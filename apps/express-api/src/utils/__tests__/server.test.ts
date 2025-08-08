@@ -496,7 +496,10 @@ describe('createServer', () => {
 				(call) => call[0] === defaultRateLimiter,
 			)
 			const apiRouterIndex = useCalls.findIndex((call) => call[0] === '/api')
-			const swaggerIndex = useCalls.findIndex((call) => call[0] === '/api-docs')
+			// Find the swagger setup (not the early CORS middleware)
+			const swaggerIndex = useCalls.findIndex(
+				(call) => call[0] === '/api-docs' && call.length > 2, // swagger setup has multiple middleware
+			)
 			const errorHandlerIndex = useCalls.findIndex(
 				(call) => call[0] === errorHandler,
 			)
@@ -508,8 +511,10 @@ describe('createServer', () => {
 			expect(securityIndex).toBeGreaterThan(helmetIndex)
 			expect(rateLimitIndex).toBeGreaterThan(securityIndex)
 			expect(apiRouterIndex).toBeGreaterThan(rateLimitIndex)
-			expect(swaggerIndex).toBeGreaterThan(apiRouterIndex)
-			expect(errorHandlerIndex).toBeGreaterThan(swaggerIndex)
+			expect(swaggerIndex).toBeGreaterThan(rateLimitIndex)
+			expect(errorHandlerIndex).toBeGreaterThan(
+				Math.max(apiRouterIndex, swaggerIndex),
+			)
 			expect(errorHandlerIndex).toBe(useCalls.length - 1) // Error handler should be last
 		})
 	})

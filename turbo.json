@@ -47,7 +47,11 @@
 				"ENVIRONMENT",
 				"CORS_ALLOWED_ORIGIN",
 				"TEST_API_ENDPOINT",
-				"TEST_API_KEY"
+				"TEST_API_KEY",
+				"OPENAI_API_KEY",
+				"SOME_OPTIONAL_CONFIG",
+				"GITHUB_ACTIONS",
+				"CI"
 			]
 		},
 		"lint": {

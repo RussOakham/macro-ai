@@ -152,7 +152,7 @@ echo -e "${BLUE}🔍 Test 4: Parameter Store Integration${NC}"
 PARAMETER_PREFIX="/macro-ai/$ENVIRONMENT"
 
 # Check if critical parameters exist
-CRITICAL_PARAMS=("critical/openai-api-key" "critical/neon-database-url")
+CRITICAL_PARAMS=("critical/openai-api-key" "critical/neon-database-url" "critical/upstash-redis-url")
 STANDARD_PARAMS=("standard/cognito-user-pool-id" "standard/cognito-user-pool-client-id")
 
 PARAM_ERRORS=0

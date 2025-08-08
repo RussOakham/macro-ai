@@ -170,7 +170,7 @@ export class LambdaConstruct extends Construct {
 			functionName: `macro-ai-${environmentName}-api`,
 			description: 'Macro AI API backend for hobby deployment',
 			runtime: lambda.Runtime.NODEJS_20_X,
-			handler: 'lambda.bundle.handler',
+			handler: 'lambda.handler',
 			code,
 			role: this.executionRole,
 			timeout: cdk.Duration.seconds(timeoutSeconds),
@@ -202,10 +202,26 @@ export class LambdaConstruct extends Construct {
 				// AWS_LAMBDA_FUNCTION_NAME is automatically set by AWS Lambda runtime
 
 				// Application configuration (will be overridden by Parameter Store)
-				// These are fallback values - actual values come from Parameter Store
+				// These are placeholder values - actual values come from Parameter Store
 				API_KEY: '',
 				COOKIE_DOMAIN: 'api.macro-ai.com',
 				COOKIE_ENCRYPTION_KEY: '',
+
+				// Database configuration (will be overridden by Parameter Store)
+				RELATIONAL_DATABASE_URL: '',
+				NON_RELATIONAL_DATABASE_URL: '',
+
+				// External service configuration (will be overridden by Parameter Store)
+				OPENAI_API_KEY: '',
+
+				// AWS Cognito configuration (will be overridden by Parameter Store)
+				AWS_COGNITO_REGION: cdk.Stack.of(this).region,
+				AWS_COGNITO_USER_POOL_ID: '',
+				AWS_COGNITO_USER_POOL_CLIENT_ID: '',
+				AWS_COGNITO_USER_POOL_SECRET_KEY: '',
+				AWS_COGNITO_ACCESS_KEY: '',
+				AWS_COGNITO_SECRET_KEY: '',
+				AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30',
 
 				// Rate limiting defaults
 				RATE_LIMIT_WINDOW_MS: '900000', // 15 minutes
@@ -214,10 +230,6 @@ export class LambdaConstruct extends Construct {
 				AUTH_RATE_LIMIT_MAX_REQUESTS: '10',
 				API_RATE_LIMIT_WINDOW_MS: '60000', // 1 minute
 				API_RATE_LIMIT_MAX_REQUESTS: '60',
-
-				// AWS Cognito configuration (will be overridden by Parameter Store)
-				AWS_COGNITO_REGION: cdk.Stack.of(this).region,
-				AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30',
 			},
 			// Cost optimization: disable provisioned concurrency
 			reservedConcurrentExecutions: undefined,

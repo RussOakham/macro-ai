@@ -1,13 +1,11 @@
 import { NextFunction, Request, Response } from 'express'
 
-import { config } from '../../config/default.ts'
 import { InternalError, UnauthorizedError } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
 
 const { logger } = pino
 
 const API_KEY_HEADER = 'X-API-KEY'
-const apiKey = config.apiKey
 
 /**
  * Middleware to validate API key authentication
@@ -15,8 +13,10 @@ const apiKey = config.apiKey
  * Checks for API key in the X-API-KEY header
  */
 const apiKeyAuth = (req: Request, res: Response, next: NextFunction) => {
-	// Skip API key check for Swagger documentation
-	if (req.path.startsWith('/api-docs')) {
+	// Skip API key check for health endpoints and Swagger documentation
+	const isSwagger = req.path.startsWith('/api-docs')
+	const isHealth = req.path === '/api/health' || req.path === '/health'
+	if (isSwagger || isHealth) {
 		next()
 		return
 	}
@@ -25,7 +25,10 @@ const apiKeyAuth = (req: Request, res: Response, next: NextFunction) => {
 		| string
 		| undefined
 
-	if (!apiKey) {
+	// Read configured key at request time so Parameter Store population is visible
+	const configuredApiKey = process.env.API_KEY ?? ''
+
+	if (!configuredApiKey) {
 		logger.error('[middleware - apiKeyAuth]: API key not configured')
 		const error = new InternalError(
 			'Server configuration error',
@@ -35,7 +38,7 @@ const apiKeyAuth = (req: Request, res: Response, next: NextFunction) => {
 		return
 	}
 
-	if (!clientApiKey || clientApiKey !== apiKey) {
+	if (!clientApiKey || clientApiKey !== configuredApiKey) {
 		logger.warn(
 			`[apiKeyAuth]: Invalid API key attempt from IP: ${req.ip ?? ''}`,
 		)

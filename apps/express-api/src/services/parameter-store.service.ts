@@ -33,8 +33,17 @@ export class ParameterStoreService {
 
 	// Critical secrets requiring advanced parameters
 	private static readonly CRITICAL_SECRETS = [
+		// Application
+		'api-key',
+		'cookie-encryption-key',
+		// Cognito secrets
+		'cognito-user-pool-secret-key',
+		'cognito-access-key',
+		'cognito-secret-key',
+		// External services / databases
 		'openai-api-key',
 		'neon-database-url',
+		'upstash-redis-url',
 	] as const
 
 	constructor(config?: Partial<ParameterStoreConfig>) {
@@ -117,6 +126,17 @@ export class ParameterStoreService {
 		)
 
 		if (error) {
+			// Log detailed error information for debugging
+			logger.error('Parameter Store error details', {
+				operation: 'getParameterError',
+				parameter: parameterName,
+				fullPath: metadata.fullPath,
+				errorName: error.name,
+				errorMessage: error.message,
+				errorType: error.type,
+				errorStack: error.stack,
+			})
+
 			// Handle specific AWS errors using error codes/names
 			if (error.name === 'ParameterNotFound') {
 				const notFoundError = new NotFoundError(

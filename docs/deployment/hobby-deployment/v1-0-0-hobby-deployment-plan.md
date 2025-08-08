@@ -484,11 +484,12 @@ aws ssm put-parameter \
   --tier "Advanced" \
   --description "Neon PostgreSQL connection string"
 
-# Create parameter hierarchy for standard secrets (Standard Parameters)
+# Create parameter hierarchy for critical secrets (Advanced Parameters)
 aws ssm put-parameter \
-  --name "/macro-ai/prod/standard/upstash-redis-url" \
+  --name "/macro-ai/prod/critical/upstash-redis-url" \
   --value "PLACEHOLDER_REDIS_URL" \
   --type "SecureString" \
+  --tier "Advanced" \
   --description "Upstash Redis connection string"
 
 aws ssm put-parameter \

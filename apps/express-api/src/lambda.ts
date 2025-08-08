@@ -28,6 +28,9 @@ const logger = new Logger({
 	environment: process.env.NODE_ENV ?? 'production',
 })
 
+// Force cold start for testing - version 1.1
+logger.info('Lambda handler version 1.1 - testing Parameter Store fix')
+
 // Global variables for Lambda container reuse
 let app: Express | null = null
 let serverlessHandler: ReturnType<typeof serverless> | null = null
@@ -143,30 +146,48 @@ export const handler = async (
 				requestId: context.awsRequestId,
 			})
 
-			// Preload parameters from Parameter Store during cold start
-			logger.info('Preloading parameters from Parameter Store', {
-				operation: 'preloadParameters',
+			// Load parameters from Parameter Store and populate process.env
+			logger.info('Loading parameters from Parameter Store', {
+				operation: 'loadParameters',
 				requestId: context.awsRequestId,
 			})
 
-			const [preloadResult, preloadError] =
-				await enhancedConfigService.preloadParameters()
+			const [configValues, configError] =
+				await enhancedConfigService.getAllMappedConfig()
 
-			if (preloadError) {
+			if (configError) {
 				logger.warn(
-					'Parameter Store preload failed, continuing with fallbacks',
+					'Parameter Store loading failed, continuing with environment variables',
 					{
-						operation: 'preloadParametersFailed',
+						operation: 'loadParametersFailed',
 						requestId: context.awsRequestId,
-						error: preloadError.message,
+						error: configError.message,
 					},
 				)
 			} else {
-				logger.info('Parameters preloaded successfully', {
-					operation: 'preloadParametersSuccess',
+				// Populate process.env with Parameter Store values
+				for (const [envVar, configValue] of Object.entries(configValues)) {
+					process.env[envVar] = configValue.value
+					logger.debug('Environment variable populated from Parameter Store', {
+						operation: 'envVarPopulated',
+						envVar,
+						source: configValue.source,
+					})
+				}
+
+				logger.info('Parameters loaded and environment populated', {
+					operation: 'loadParametersSuccess',
 					requestId: context.awsRequestId,
-					parametersLoaded: Object.keys(preloadResult).length,
+					parametersLoaded: Object.keys(configValues).length,
 				})
+
+				logger.info(
+					'Configuration validated successfully after Parameter Store loading',
+					{
+						operation: 'postParameterStoreValidationSuccess',
+						requestId: context.awsRequestId,
+					},
+				)
 			}
 
 			app = initializeExpressApp()

@@ -32,6 +32,7 @@ permissions:
   contents: read
   actions: read
   pull-requests: write
+  issues: write
 
 env:
   AWS_REGION: us-east-1
@@ -183,6 +184,8 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      pull-requests: write
+      issues: write
 
     steps:
       - name: Checkout code
@@ -358,6 +361,7 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -367,12 +371,12 @@ jobs:
 
               **Environment:** ${{ github.event.inputs.environment || 'development' }}
               **API Endpoint:** ${{ steps.outputs.outputs.api-endpoint }}
-              
+
               ### Test the deployment:
               \`\`\`bash
               curl ${{ steps.outputs.outputs.api-endpoint }}api/health
               \`\`\`
-              
+
               **Note:** This is a preview deployment. Merge to main to deploy to production.`
             })
 
