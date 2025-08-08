@@ -200,6 +200,7 @@ docs/ci-cd/ @RussOakham
 - Maintains infrastructure isolation while sharing secrets
 
 **Isolation Guardrails:**
+
 - Preview stacks have **read-only access** to shared parameters
 - Application code **must not mutate** shared parameters to maintain isolation
 - Environment-specific endpoints are **not stored** in shared parameters (prevents cross-contamination)
