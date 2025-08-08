@@ -59,7 +59,7 @@ jobs:
         uses: ./.github/actions/check-codeowner
         with:
           mode: 'pr'
-          base-ref: ${{ github.event.pull_request.head.ref }}
+          base-ref: ${{ github.event.pull_request.base.ref }}
 
       - name: Generate environment name
         id: env-name
