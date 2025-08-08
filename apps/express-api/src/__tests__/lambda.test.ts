@@ -387,6 +387,9 @@ describe('Lambda Handler', () => {
 
 			// Assert
 			expect(result.statusCode).toBe(500)
+			expect(mockValidateConfigAfterParameterStore).toHaveBeenCalledWith({
+				allowDeploymentMode: true,
+			})
 			expect(mockPowertoolsLogger.error).toHaveBeenCalledWith(
 				'Configuration validation failed after Parameter Store loading',
 				expect.objectContaining({

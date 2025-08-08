@@ -49,7 +49,9 @@
 				"TEST_API_ENDPOINT",
 				"TEST_API_KEY",
 				"OPENAI_API_KEY",
-				"SOME_OPTIONAL_CONFIG"
+				"SOME_OPTIONAL_CONFIG",
+				"GITHUB_ACTIONS",
+				"CI"
 			]
 		},
 		"lint": {

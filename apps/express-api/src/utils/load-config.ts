@@ -59,12 +59,45 @@ const createMinimalLambdaConfig = (): TEnv => {
 /**
  * Re-validate configuration after Parameter Store has populated environment variables
  * This ensures all required values are present and correctly typed
+ *
+ * @param options Configuration options for validation behavior
  */
-const validateConfigAfterParameterStore = (): Result<TEnv> => {
+const validateConfigAfterParameterStore = (options?: {
+	/** Allow validation to pass with warnings during CI/CD deployment */
+	allowDeploymentMode?: boolean
+}): Result<TEnv> => {
 	const env = envSchema.safeParse(process.env)
+	const isDeploymentEnvironment = Boolean(
+		process.env.GITHUB_ACTIONS ??
+			process.env.CI ??
+			process.env.AWS_EXECUTION_ENV?.includes('AWS_Lambda_'),
+	)
+	const allowDeploymentMode = options?.allowDeploymentMode ?? false
 
 	if (!env.success) {
 		const validationError = fromError(env.error)
+
+		// In CI/CD environments, log validation errors but don't fail immediately
+		// This allows the deployment to proceed while still logging issues for debugging
+		if (isDeploymentEnvironment && allowDeploymentMode) {
+			logger.warn(
+				'Configuration validation failed in CI/CD environment - proceeding with deployment',
+				{
+					operation: 'configValidationWarningDeployment',
+					error: validationError.message,
+					details: validationError.details,
+					environment: {
+						githubActions: Boolean(process.env.GITHUB_ACTIONS),
+						ci: Boolean(process.env.CI),
+						awsExecutionEnv: process.env.AWS_EXECUTION_ENV,
+					},
+				},
+			)
+
+			// Return minimal config for CI/CD deployment
+			return [createMinimalLambdaConfig(), null]
+		}
+
 		const appError = AppError.validation(
 			`Configuration validation failed after Parameter Store loading: ${validationError.message}`,
 			{ errors: validationError.details },

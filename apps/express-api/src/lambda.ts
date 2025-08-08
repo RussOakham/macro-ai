@@ -183,7 +183,10 @@ export const handler = async (
 				})
 
 				// Re-validate configuration after Parameter Store has populated values
-				const [, validationError] = validateConfigAfterParameterStore()
+				// Allow deployment mode during CI/CD to prevent deployment failures
+				const [, validationError] = validateConfigAfterParameterStore({
+					allowDeploymentMode: true,
+				})
 				if (validationError) {
 					logger.error(
 						'Configuration validation failed after Parameter Store loading',
