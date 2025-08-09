@@ -747,7 +747,6 @@ jobs:
           APP_ID=$(aws amplify create-app \
             --name "${AMPLIFY_APP_NAME}" \
             --description "Frontend preview for PR #${{ github.event.pull_request.number }}" \
-            --repository "https://github.com/${{ github.repository }}" \
             --platform WEB \
             --region ${{ env.AWS_REGION }} \
             --query 'app.appId' \
@@ -780,17 +779,40 @@ jobs:
           echo "✅ Branch already exists: ${BRANCH_NAME}"
         fi
 
-        # Start deployment
-        echo "🚀 Starting deployment..."
-        JOB_ID=$(aws amplify start-job \
+        # Manual deployment flow (no repo connection required)
+        echo "🚀 Starting manual deployment via create-deployment..."
+
+        # Ensure build artifacts exist and zip them
+        if [[ -d "dist" ]]; then
+          (cd dist && zip -qr ../build.zip .)
+        else
+          echo "❌ Build artifacts not found in apps/client-ui/dist"
+          exit 1
+        fi
+
+        # Request a deployment to obtain jobId and pre-signed upload URL
+        DEPLOY_JSON=$(aws amplify create-deployment \
           --app-id "$APP_ID" \
           --branch-name "${BRANCH_NAME}" \
-          --job-type RELEASE \
-          --region ${{ env.AWS_REGION }} \
-          --query 'jobSummary.jobId' \
-          --output text)
+          --region ${{ env.AWS_REGION }})
+        JOB_ID=$(echo "$DEPLOY_JSON" | jq -r '.jobId')
+        UPLOAD_URL=$(echo "$DEPLOY_JSON" | jq -r '.zipUploadUrl')
+
+        if [[ -z "$JOB_ID" || -z "$UPLOAD_URL" || "$JOB_ID" == "null" || "$UPLOAD_URL" == "null" ]]; then
+          echo "❌ Failed to create deployment or retrieve upload URL"
+          exit 1
+        fi
 
         echo "📋 Deployment job ID: ${JOB_ID}"
+        echo "⬆️ Uploading build.zip to pre-signed URL"
+        curl -sS -X PUT -H "Content-Type: application/zip" --upload-file build.zip "$UPLOAD_URL"
+
+        # Start the deployment
+        aws amplify start-deployment \
+          --app-id "$APP_ID" \
+          --branch-name "${BRANCH_NAME}" \
+          --job-id "$JOB_ID" \
+          --region ${{ env.AWS_REGION }}
 
         # Wait for deployment to complete
         echo "⏳ Waiting for deployment to complete..."
@@ -810,7 +832,6 @@ jobs:
           --output text)
 
         if [[ "$JOB_STATUS" == "SUCCEED" ]]; then
-          # Get the app URL
           APP_URL="https://${BRANCH_NAME}.${APP_ID}.amplifyapp.com"
           echo "✅ Deployment successful!"
           echo "🌐 Frontend URL: ${APP_URL}"
