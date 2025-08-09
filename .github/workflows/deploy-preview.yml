@@ -565,7 +565,12 @@ jobs:
 
         # Load environment variables from .env.preview using temporary file approach
         TEMP_ENV_FILE=$(mktemp)
-        grep '^[A-Za-z_][A-Za-z0-9_]*=' .env.preview > "$TEMP_ENV_FILE" || true
+        if grep '^[A-Za-z_][A-Za-z0-9_]*=' .env.preview > "$TEMP_ENV_FILE"; then
+          echo "Found environment variables in .env.preview"
+        else
+          echo "No environment variables found in .env.preview"
+          touch "$TEMP_ENV_FILE"
+        fi
 
         # Source the temporary file
         if [[ -s "$TEMP_ENV_FILE" ]]; then
@@ -581,28 +586,28 @@ jobs:
         rm -f "$TEMP_ENV_FILE"
 
         # Generate amplify.yml configuration using echo statements
-        echo "version: 1" > amplify.yml
-        echo "applications:" >> amplify.yml
-        echo "  - appRoot: apps/client-ui" >> amplify.yml
-        echo "    frontend:" >> amplify.yml
-        echo "      phases:" >> amplify.yml
-        echo "        preBuild:" >> amplify.yml
-        echo "          commands:" >> amplify.yml
-        echo "            - echo \"Installing dependencies...\"" >> amplify.yml
+        echo 'version: 1' > amplify.yml
+        echo 'applications:' >> amplify.yml
+        echo '  - appRoot: apps/client-ui' >> amplify.yml
+        echo '    frontend:' >> amplify.yml
+        echo '      phases:' >> amplify.yml
+        echo '        preBuild:' >> amplify.yml
+        echo '          commands:' >> amplify.yml
+        echo '            - echo "Installing dependencies..."' >> amplify.yml
         echo "            - npm install -g pnpm@${PNPM_VERSION}" >> amplify.yml
-        echo "            - pnpm install --frozen-lockfile" >> amplify.yml
-        echo "        build:" >> amplify.yml
-        echo "          commands:" >> amplify.yml
-        echo "            - echo \"Building React application...\"" >> amplify.yml
-        echo "            - pnpm run build" >> amplify.yml
-        echo "      artifacts:" >> amplify.yml
-        echo "        baseDirectory: dist" >> amplify.yml
-        echo "        files:" >> amplify.yml
+        echo '            - pnpm install --frozen-lockfile' >> amplify.yml
+        echo '        build:' >> amplify.yml
+        echo '          commands:' >> amplify.yml
+        echo '            - echo "Building React application..."' >> amplify.yml
+        echo '            - pnpm run build' >> amplify.yml
+        echo '      artifacts:' >> amplify.yml
+        echo '        baseDirectory: dist' >> amplify.yml
+        echo '        files:' >> amplify.yml
         echo "          - '**/*'" >> amplify.yml
-        echo "      cache:" >> amplify.yml
-        echo "        paths:" >> amplify.yml
-        echo "          - node_modules/**/*" >> amplify.yml
-        echo "          - .pnpm-store/**/*" >> amplify.yml
+        echo '      cache:' >> amplify.yml
+        echo '        paths:' >> amplify.yml
+        echo '          - node_modules/**/*' >> amplify.yml
+        echo '          - .pnpm-store/**/*' >> amplify.yml
 
         echo "✅ Generated amplify.yml configuration"
 
