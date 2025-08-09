@@ -1,0 +1,156 @@
+{
+	"environments": {
+		"preview": {
+			"pattern": "pr-*",
+			"backend_stack_pattern": "MacroAiPr{number}Stack",
+			"fallback_api_url": "https://api-development.macro-ai.com/api",
+			"variables": {
+				"VITE_APP_NAME": "Macro AI (Preview)",
+				"VITE_ENABLE_DEVTOOLS": "true",
+				"VITE_ENABLE_DEBUG_LOGGING": "true",
+				"VITE_PREVIEW_MODE": "true",
+				"VITE_SHOW_BUILD_INFO": "true",
+				"VITE_ENABLE_PERFORMANCE_MONITORING": "true",
+				"VITE_ENABLE_ERROR_REPORTING": "true",
+				"VITE_ENABLE_ANALYTICS": "false"
+			}
+		},
+		"development": {
+			"pattern": "development|dev",
+			"backend_stack_pattern": "MacroAiDevelopmentStack",
+			"fallback_api_url": "https://api-development.macro-ai.com/api",
+			"variables": {
+				"VITE_APP_NAME": "Macro AI (Development)",
+				"VITE_ENABLE_DEVTOOLS": "true",
+				"VITE_ENABLE_DEBUG_LOGGING": "true",
+				"VITE_PREVIEW_MODE": "false",
+				"VITE_SHOW_BUILD_INFO": "true",
+				"VITE_ENABLE_PERFORMANCE_MONITORING": "true",
+				"VITE_ENABLE_ERROR_REPORTING": "true",
+				"VITE_ENABLE_ANALYTICS": "false"
+			}
+		},
+		"staging": {
+			"pattern": "staging|stage",
+			"backend_stack_pattern": "MacroAiStagingStack",
+			"fallback_api_url": "https://api-staging.macro-ai.com/api",
+			"variables": {
+				"VITE_APP_NAME": "Macro AI (Staging)",
+				"VITE_ENABLE_DEVTOOLS": "true",
+				"VITE_ENABLE_DEBUG_LOGGING": "true",
+				"VITE_PREVIEW_MODE": "false",
+				"VITE_SHOW_BUILD_INFO": "true",
+				"VITE_ENABLE_PERFORMANCE_MONITORING": "true",
+				"VITE_ENABLE_ERROR_REPORTING": "true",
+				"VITE_ENABLE_ANALYTICS": "false"
+			}
+		},
+		"production": {
+			"pattern": "production|prod",
+			"backend_stack_pattern": "MacroAiProductionStack",
+			"fallback_api_url": "https://api.macro-ai.com/api",
+			"variables": {
+				"VITE_APP_NAME": "Macro AI",
+				"VITE_ENABLE_DEVTOOLS": "false",
+				"VITE_ENABLE_DEBUG_LOGGING": "false",
+				"VITE_PREVIEW_MODE": "false",
+				"VITE_SHOW_BUILD_INFO": "false",
+				"VITE_ENABLE_PERFORMANCE_MONITORING": "false",
+				"VITE_ENABLE_ERROR_REPORTING": "true",
+				"VITE_ENABLE_ANALYTICS": "true"
+			}
+		}
+	},
+	"backend_resolution": {
+		"strategies": [
+			{
+				"name": "direct_stack",
+				"description": "Direct CloudFormation stack lookup using standard naming",
+				"priority": 1,
+				"enabled": true
+			},
+			{
+				"name": "alternative_patterns",
+				"description": "Try alternative stack naming patterns",
+				"priority": 2,
+				"enabled": true,
+				"patterns": [
+					"MacroAiPr{number}Stack",
+					"MacroAiPreview{number}Stack",
+					"MacroAiDev{number}Stack",
+					"macro-ai-pr-{number}"
+				]
+			},
+			{
+				"name": "environment_fallback",
+				"description": "Use environment-specific fallback URLs",
+				"priority": 3,
+				"enabled": true
+			},
+			{
+				"name": "generic_fallback",
+				"description": "Use generic fallback URL",
+				"priority": 4,
+				"enabled": true
+			}
+		]
+	},
+	"validation": {
+		"required_variables": ["VITE_API_URL", "VITE_API_KEY", "VITE_APP_ENV"],
+		"url_validation": {
+			"pattern": "^https?://",
+			"allowed_domains": [
+				"api.macro-ai.com",
+				"api-staging.macro-ai.com",
+				"api-development.macro-ai.com",
+				"*.execute-api.*.amazonaws.com"
+			]
+		},
+		"environment_validation": {
+			"allowed_patterns": ["^pr-[0-9]+$", "^(development|staging|production)$"]
+		}
+	},
+	"build_metadata": {
+		"include_git_info": true,
+		"include_build_timestamp": true,
+		"include_pr_info": true,
+		"include_environment_info": true
+	},
+	"amplify_integration": {
+		"app_naming": {
+			"prefix": "macro-ai-frontend",
+			"separator": "-",
+			"include_environment": true
+		},
+		"build_settings": {
+			"node_version": "20",
+			"package_manager": "pnpm",
+			"build_command": "pnpm build",
+			"output_directory": "dist"
+		},
+		"environment_variables": {
+			"exclude_from_amplify": [
+				"GITHUB_SHA",
+				"GITHUB_REF_NAME",
+				"GITHUB_PR_NUMBER",
+				"BUILD_TIMESTAMP"
+			]
+		}
+	},
+	"monitoring": {
+		"health_check": {
+			"enabled": true,
+			"timeout": 30,
+			"checks": [
+				"connectivity",
+				"content_validity",
+				"api_connectivity",
+				"performance"
+			]
+		},
+		"performance_thresholds": {
+			"response_time_ms": 2000,
+			"content_size_kb": 10
+		}
+	}
+}

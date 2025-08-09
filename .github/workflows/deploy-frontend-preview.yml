@@ -187,26 +187,41 @@ jobs:
 
           ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
 
-          # Set API URL from backend deployment or use fallback
+          echo "🔧 Configuring environment variables for ${ENV_NAME}"
+
+          # Set environment variables for injection script
+          export PR_NUMBER="${{ github.event.pull_request.number }}"
+          export ENVIRONMENT_NAME="${ENV_NAME}"
+          export BUILD_MODE="preview"
+          export VITE_API_KEY="${{ secrets.FRONTEND_API_KEY }}"
+          export GITHUB_SHA="${{ github.sha }}"
+          export GITHUB_REF_NAME="${{ github.ref_name }}"
+          export GITHUB_PR_NUMBER="${{ github.event.pull_request.number }}"
+
+          # Override API URL if backend preview is available
           if [[ -n "${{ needs.check-backend-environment.outputs.api-endpoint }}" ]]; then
-            API_URL="${{ needs.check-backend-environment.outputs.api-endpoint }}api"
-            echo "✅ Using backend preview API: ${API_URL}"
+            export VITE_API_URL="${{ needs.check-backend-environment.outputs.api-endpoint }}api"
+            echo "✅ Using backend preview API: ${VITE_API_URL}"
           else
-            API_URL="https://api-development.macro-ai.com/api"
-            echo "⚠️ Using fallback API URL: ${API_URL}"
+            echo "⚠️ Backend preview not available, will use fallback API"
           fi
 
-          # Create environment file for build
-          cat > .env.preview << EOF
-          VITE_API_URL=${API_URL}
-          VITE_API_KEY=${{ secrets.FRONTEND_API_KEY }}
-          VITE_APP_ENV=${ENV_NAME}
-          VITE_APP_NAME=Macro AI (Preview)
-          VITE_ENABLE_DEVTOOLS=true
-          VITE_ENABLE_DEBUG_LOGGING=true
-          EOF
+          # Run environment variable injection script
+          chmod +x scripts/inject-preview-env.sh
+          if ./scripts/inject-preview-env.sh --environment "${ENV_NAME}" --build-mode preview; then
+            echo "✅ Environment configuration generated successfully"
+          else
+            echo "❌ Environment configuration failed"
+            exit 1
+          fi
 
-          echo "📝 Environment configuration created for ${ENV_NAME}"
+          # Display configuration summary
+          echo ""
+          echo "📋 Environment Configuration Summary:"
+          echo "  Environment: ${ENV_NAME}"
+          echo "  API URL: $(grep VITE_API_URL .env.preview | cut -d'=' -f2)"
+          echo "  Build Mode: preview"
+          echo "  Configuration file: .env.preview"
 
       - name: Build React application
         run: |

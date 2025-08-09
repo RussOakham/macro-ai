@@ -1,0 +1,148 @@
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Sid": "AmplifyAppManagement",
+			"Effect": "Allow",
+			"Action": [
+				"amplify:CreateApp",
+				"amplify:DeleteApp",
+				"amplify:GetApp",
+				"amplify:ListApps",
+				"amplify:UpdateApp"
+			],
+			"Resource": "*",
+			"Condition": {
+				"StringLike": {
+					"amplify:appName": [
+						"macro-ai-frontend-pr-*",
+						"macro-ai-frontend-staging",
+						"macro-ai-frontend-production"
+					]
+				}
+			}
+		},
+		{
+			"Sid": "AmplifyBranchManagement",
+			"Effect": "Allow",
+			"Action": [
+				"amplify:CreateBranch",
+				"amplify:DeleteBranch",
+				"amplify:GetBranch",
+				"amplify:ListBranches",
+				"amplify:UpdateBranch"
+			],
+			"Resource": "arn:aws:amplify:*:*:apps/*/branches/*"
+		},
+		{
+			"Sid": "AmplifyDeploymentManagement",
+			"Effect": "Allow",
+			"Action": [
+				"amplify:StartDeployment",
+				"amplify:StartJob",
+				"amplify:StopJob",
+				"amplify:GetJob",
+				"amplify:ListJobs"
+			],
+			"Resource": [
+				"arn:aws:amplify:*:*:apps/*",
+				"arn:aws:amplify:*:*:apps/*/branches/*",
+				"arn:aws:amplify:*:*:apps/*/branches/*/jobs/*"
+			]
+		},
+		{
+			"Sid": "AmplifyDomainManagement",
+			"Effect": "Allow",
+			"Action": [
+				"amplify:CreateDomainAssociation",
+				"amplify:DeleteDomainAssociation",
+				"amplify:GetDomainAssociation",
+				"amplify:ListDomainAssociations",
+				"amplify:UpdateDomainAssociation"
+			],
+			"Resource": "arn:aws:amplify:*:*:apps/*/domains/*"
+		},
+		{
+			"Sid": "CloudFormationStackAccess",
+			"Effect": "Allow",
+			"Action": [
+				"cloudformation:DescribeStacks",
+				"cloudformation:DescribeStackResources",
+				"cloudformation:DescribeStackEvents",
+				"cloudformation:GetTemplate"
+			],
+			"Resource": [
+				"arn:aws:cloudformation:*:*:stack/MacroAi*Stack/*",
+				"arn:aws:cloudformation:*:*:stack/macro-ai-*/*"
+			]
+		},
+		{
+			"Sid": "CloudFormationStackOutputs",
+			"Effect": "Allow",
+			"Action": [
+				"cloudformation:ListStacks",
+				"cloudformation:ListStackResources"
+			],
+			"Resource": "*",
+			"Condition": {
+				"StringLike": {
+					"cloudformation:StackName": ["MacroAi*Stack", "macro-ai-*"]
+				}
+			}
+		},
+		{
+			"Sid": "S3AmplifyDeploymentBuckets",
+			"Effect": "Allow",
+			"Action": [
+				"s3:GetObject",
+				"s3:PutObject",
+				"s3:DeleteObject",
+				"s3:ListBucket"
+			],
+			"Resource": ["arn:aws:s3:::amplify-*", "arn:aws:s3:::amplify-*/*"]
+		},
+		{
+			"Sid": "IAMServiceLinkedRoles",
+			"Effect": "Allow",
+			"Action": ["iam:CreateServiceLinkedRole"],
+			"Resource": "arn:aws:iam::*:role/aws-service-role/amplify.amazonaws.com/AWSServiceRoleForAmplifyBackend",
+			"Condition": {
+				"StringEquals": {
+					"iam:AWSServiceName": "amplify.amazonaws.com"
+				}
+			}
+		},
+		{
+			"Sid": "STSAssumeRole",
+			"Effect": "Allow",
+			"Action": ["sts:GetCallerIdentity"],
+			"Resource": "*"
+		},
+		{
+			"Sid": "LogsAccess",
+			"Effect": "Allow",
+			"Action": [
+				"logs:CreateLogGroup",
+				"logs:CreateLogStream",
+				"logs:PutLogEvents",
+				"logs:DescribeLogGroups",
+				"logs:DescribeLogStreams"
+			],
+			"Resource": [
+				"arn:aws:logs:*:*:log-group:/aws/amplify/*",
+				"arn:aws:logs:*:*:log-group:/aws/amplify/*:*"
+			]
+		},
+		{
+			"Sid": "AmplifyServiceRole",
+			"Effect": "Allow",
+			"Action": ["iam:PassRole"],
+			"Resource": "arn:aws:iam::*:role/amplifyconsole-*",
+			"Condition": {
+				"StringEquals": {
+					"iam:PassedToService": "amplify.amazonaws.com"
+				}
+			}
+		}
+	]
+}

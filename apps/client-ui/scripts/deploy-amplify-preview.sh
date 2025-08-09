@@ -199,67 +199,137 @@ if [ ! -d "dist" ]; then
     exit 1
 fi
 
-# Create a deployment package
-DEPLOYMENT_PACKAGE="deployment-$(date +%s).zip"
+# Get build info for deployment metadata
+BUILD_SIZE=$(du -sh dist | cut -f1)
+BUILD_FILES=$(find dist -type f | wc -l)
+BUILD_TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+
+print_status "Build artifacts validated (${BUILD_SIZE}, ${BUILD_FILES} files)"
+
+# Create a deployment package with metadata
+DEPLOYMENT_PACKAGE="deployment-${ENVIRONMENT_NAME}-$(date +%s).zip"
 cd dist
+
+# Create deployment metadata
+cat > deployment-info.json << EOF
+{
+  "environment": "${ENVIRONMENT_NAME}",
+  "pr_number": "${PR_NUMBER}",
+  "build_timestamp": "${BUILD_TIMESTAMP}",
+  "build_size": "${BUILD_SIZE}",
+  "build_files": ${BUILD_FILES},
+  "api_url": "${VITE_API_URL}",
+  "deployment_timestamp": "$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+}
+EOF
+
 zip -r "../$DEPLOYMENT_PACKAGE" . > /dev/null
 cd ..
 
 print_status "Deployment package created: $DEPLOYMENT_PACKAGE"
 
-# Start deployment
+# Start deployment with enhanced error handling
+echo -e "${BLUE}🚀 Starting Amplify deployment...${NC}"
 DEPLOYMENT_RESULT=$(aws amplify start-deployment \
     --app-id "$APP_ID" \
     --branch-name "main" \
     --source-url "file://$PWD/$DEPLOYMENT_PACKAGE" \
-    --output json)
+    --output json 2>&1)
 
-if [[ $? -eq 0 ]]; then
-    JOB_ID=$(echo "$DEPLOYMENT_RESULT" | jq -r '.jobSummary.jobId')
-    print_status "Deployment started: $JOB_ID"
+DEPLOYMENT_EXIT_CODE=$?
+
+if [[ $DEPLOYMENT_EXIT_CODE -eq 0 ]]; then
+    JOB_ID=$(echo "$DEPLOYMENT_RESULT" | jq -r '.jobSummary.jobId' 2>/dev/null || echo "")
+    if [[ -n "$JOB_ID" && "$JOB_ID" != "null" ]]; then
+        print_status "Deployment started: $JOB_ID"
+
+        # Store job info for monitoring
+        echo "$JOB_ID" > amplify-job-id.txt
+        echo "$APP_ID" > amplify-app-id.txt
+    else
+        print_error "Deployment started but could not extract job ID"
+        print_error "AWS response: $DEPLOYMENT_RESULT"
+        exit 1
+    fi
 else
     print_error "Failed to start deployment"
+    print_error "AWS CLI output: $DEPLOYMENT_RESULT"
     exit 1
 fi
 
-# Wait for deployment to complete (with timeout)
+# Wait for deployment to complete (with enhanced monitoring)
 echo -e "${BLUE}⏳ Waiting for deployment to complete...${NC}"
 
 TIMEOUT=600  # 10 minutes
 ELAPSED=0
 SLEEP_INTERVAL=15
+LAST_STATUS=""
 
 while [[ $ELAPSED -lt $TIMEOUT ]]; do
-    JOB_STATUS=$(aws amplify get-job \
+    JOB_INFO=$(aws amplify get-job \
         --app-id "$APP_ID" \
         --branch-name "main" \
         --job-id "$JOB_ID" \
-        --query 'job.summary.status' \
-        --output text 2>/dev/null || echo "UNKNOWN")
-    
-    case "$JOB_STATUS" in
-        "SUCCEED")
-            print_status "Deployment completed successfully"
-            break
-            ;;
-        "FAILED"|"CANCELLED")
-            print_error "Deployment failed with status: $JOB_STATUS"
-            exit 1
-            ;;
-        "PENDING"|"PROVISIONING"|"RUNNING")
-            echo -e "${YELLOW}⏳${NC} Deployment in progress... (${ELAPSED}s elapsed)"
-            ;;
-        *)
-            print_warning "Unknown deployment status: $JOB_STATUS"
-            ;;
-    esac
-    
+        --output json 2>/dev/null || echo "{}")
+
+    if [[ "$JOB_INFO" != "{}" ]]; then
+        JOB_STATUS=$(echo "$JOB_INFO" | jq -r '.job.summary.status' 2>/dev/null || echo "UNKNOWN")
+        JOB_START_TIME=$(echo "$JOB_INFO" | jq -r '.job.summary.startTime' 2>/dev/null || echo "")
+
+        # Only print status changes to reduce noise
+        if [[ "$JOB_STATUS" != "$LAST_STATUS" ]]; then
+            case "$JOB_STATUS" in
+                "SUCCEED")
+                    print_status "Deployment completed successfully"
+
+                    # Get deployment URL and additional info
+                    DEPLOYMENT_URL=$(echo "$JOB_INFO" | jq -r '.job.summary.jobArn' 2>/dev/null || echo "")
+                    if [[ -n "$JOB_START_TIME" ]]; then
+                        echo "  Start time: $JOB_START_TIME"
+                    fi
+                    break
+                    ;;
+                "FAILED"|"CANCELLED")
+                    print_error "Deployment failed with status: $JOB_STATUS"
+
+                    # Try to get failure reason
+                    FAILURE_REASON=$(echo "$JOB_INFO" | jq -r '.job.summary.statusReason' 2>/dev/null || echo "")
+                    if [[ -n "$FAILURE_REASON" && "$FAILURE_REASON" != "null" ]]; then
+                        print_error "Failure reason: $FAILURE_REASON"
+                    fi
+
+                    # Get job logs URL for debugging
+                    echo "Check deployment logs in Amplify Console:"
+                    echo "https://console.aws.amazon.com/amplify/home?region=${AWS_REGION}#/${APP_ID}/YnJhbmNoZXM/main/deployments/${JOB_ID}"
+                    exit 1
+                    ;;
+                "PENDING")
+                    echo -e "${YELLOW}⏳${NC} Deployment pending... (${ELAPSED}s elapsed)"
+                    ;;
+                "PROVISIONING")
+                    echo -e "${YELLOW}🔧${NC} Provisioning resources... (${ELAPSED}s elapsed)"
+                    ;;
+                "RUNNING")
+                    echo -e "${YELLOW}🏗️${NC} Building and deploying... (${ELAPSED}s elapsed)"
+                    ;;
+                *)
+                    print_warning "Unknown deployment status: $JOB_STATUS (${ELAPSED}s elapsed)"
+                    ;;
+            esac
+            LAST_STATUS="$JOB_STATUS"
+        fi
+    else
+        print_warning "Could not retrieve job status (${ELAPSED}s elapsed)"
+    fi
+
     sleep $SLEEP_INTERVAL
     ELAPSED=$((ELAPSED + SLEEP_INTERVAL))
 done
 
 if [[ $ELAPSED -ge $TIMEOUT ]]; then
-    print_warning "Deployment timeout reached. Check Amplify console for status."
+    print_warning "Deployment timeout reached after ${TIMEOUT} seconds"
+    print_warning "Deployment may still be in progress. Check Amplify console:"
+    echo "https://console.aws.amazon.com/amplify/home?region=${AWS_REGION}#/${APP_ID}"
 fi
 
 # Get the deployed URL
