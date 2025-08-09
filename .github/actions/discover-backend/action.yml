@@ -62,173 +62,191 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Validate inputs
-      shell: bash
-      run: |
-        echo "🔍 Backend Discovery Action"
-        echo "=========================="
-        echo "Environment: ${{ inputs.environment }}"
-        echo "PR Number: ${{ inputs.pr-number || 'N/A' }}"
-        echo "Validate Connectivity: ${{ inputs.validate-connectivity }}"
-        echo "Force Refresh: ${{ inputs.force-refresh }}"
-        echo "Fallback Only: ${{ inputs.fallback-only }}"
-        echo "AWS Region: ${{ inputs.aws-region }}"
-        echo "Debug: ${{ inputs.debug }}"
+  - name: Validate inputs
+    shell: bash
+    run: |
+      echo "🔍 Backend Discovery Action"
+      echo "=========================="
+      echo "Environment: ${{ inputs.environment }}"
+      echo "PR Number: ${{ inputs.pr-number || 'N/A' }}"
+      echo "Validate Connectivity: ${{ inputs.validate-connectivity }}"
+      echo "Force Refresh: ${{ inputs.force-refresh }}"
+      echo "Fallback Only: ${{ inputs.fallback-only }}"
+      echo "AWS Region: ${{ inputs.aws-region }}"
+      echo "Debug: ${{ inputs.debug }}"
+      echo ""
+
+  - name: Setup backend discovery environment
+    shell: bash
+    run: |
+      # Export environment variables for discovery services
+      export AWS_REGION="${{ inputs.aws-region }}"
+      export DEBUG="${{ inputs.debug }}"
+
+      # Validate required tools
+      if ! command -v aws &> /dev/null; then
+        echo "❌ AWS CLI not found"
+        exit 1
+      fi
+
+      if ! command -v jq &> /dev/null; then
+        echo "❌ jq not found"
+        exit 1
+      fi
+
+      # Verify AWS credentials
+      if ! aws sts get-caller-identity &> /dev/null; then
+        echo "❌ AWS credentials not configured or invalid"
+        exit 1
+      fi
+
+      echo "✅ Backend discovery environment ready"
+
+  - name: Discover backend environment
+    id: discover
+    shell: bash
+    run: |
+      cd apps/client-ui
+
+      # Make scripts executable
+      chmod +x scripts/backend-discovery-service.sh
+      chmod +x scripts/api-resolution-service.sh
+
+      # Prepare discovery arguments
+      DISCOVERY_ARGS=(
+        "--environment" "${{ inputs.environment }}"
+        "--output-format" "json"
+        "--region" "${{ inputs.aws-region }}"
+        "--timeout" "${{ inputs.timeout }}"
+      )
+
+      # Add optional arguments
+      if [[ "${{ inputs.pr-number }}" != "" ]]; then
+        DISCOVERY_ARGS+=("--pr-number" "${{ inputs.pr-number }}")
+      fi
+
+      if [[ "${{ inputs.validate-connectivity }}" == "true" ]]; then
+        DISCOVERY_ARGS+=("--validate-connectivity")
+      fi
+
+      if [[ "${{ inputs.force-refresh }}" == "true" ]]; then
+        DISCOVERY_ARGS+=("--force-refresh")
+      fi
+
+      if [[ "${{ inputs.fallback-only }}" == "true" ]]; then
+        DISCOVERY_ARGS+=("--fallback-only")
+      fi
+
+      if [[ "${{ inputs.debug }}" == "true" ]]; then
+        DISCOVERY_ARGS+=("--debug")
+      fi
+
+      # Run API resolution service
+      echo "🔍 Running backend discovery..."
+      echo "Command: ./scripts/api-resolution-service.sh ${DISCOVERY_ARGS[*]}"
+
+      # Capture both stdout and stderr for debugging
+      DISCOVERY_OUTPUT=$(./scripts/api-resolution-service.sh "${DISCOVERY_ARGS[@]}" 2>&1)
+      DISCOVERY_EXIT_CODE=$?
+
+      echo "Discovery output:"
+      echo "$DISCOVERY_OUTPUT"
+      echo "Exit code: $DISCOVERY_EXIT_CODE"
+
+      # Try to extract JSON from the output (in case there are debug messages mixed in)
+      DISCOVERY_RESULT=$(echo "$DISCOVERY_OUTPUT" | tail -n 1)
+
+      # Validate that we have valid JSON
+      if ! echo "$DISCOVERY_RESULT" | jq . >/dev/null 2>&1; then
+        echo "❌ Invalid JSON output from discovery service"
+        echo "Raw output: $DISCOVERY_OUTPUT"
+        DISCOVERY_RESULT='{"success": false, "error": "invalid_json_output"}'
+      fi
+
+      echo "Parsed discovery result: $DISCOVERY_RESULT"
+
+      # Parse discovery results
+      SUCCESS=$(echo "$DISCOVERY_RESULT" | jq -r '.success // false')
+
+      if [[ "$SUCCESS" == "true" ]]; then
+        # Extract all relevant information
+        BACKEND_FOUND=$(echo "$DISCOVERY_RESULT" | jq -r '.backend_found // false')
+        API_ENDPOINT=$(echo "$DISCOVERY_RESULT" | jq -r '.final_api_url // ""')
+        STACK_NAME=$(echo "$DISCOVERY_RESULT" | jq -r '.backend_stack // ""')
+        RESOLUTION_METHOD=$(echo "$DISCOVERY_RESULT" | jq -r '.resolution_method // "unknown"')
+        FALLBACK_USED=$(echo "$DISCOVERY_RESULT" | jq -r '.fallback_used // false')
+        
+        # Validation information
+        VALIDATION_PERFORMED=$(echo "$DISCOVERY_RESULT" | jq -r '.validation.performed // false')
+        CONNECTIVITY_STATUS="unknown"
+        RESPONSE_TIME="0"
+        
+        if [[ "$VALIDATION_PERFORMED" == "true" ]]; then
+          CONNECTIVITY_STATUS=$(echo "$DISCOVERY_RESULT" | jq -r '.validation.connectivity_status // "unknown"')
+          RESPONSE_TIME=$(echo "$DISCOVERY_RESULT" | jq -r '.validation.response_time_ms // 0')
+        fi
+        
+        # Set outputs
+        echo "backend-found=$BACKEND_FOUND" >> $GITHUB_OUTPUT
+        echo "api-endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
+        echo "stack-name=$STACK_NAME" >> $GITHUB_OUTPUT
+        echo "resolution-method=$RESOLUTION_METHOD" >> $GITHUB_OUTPUT
+        echo "fallback-used=$FALLBACK_USED" >> $GITHUB_OUTPUT
+        echo "connectivity-status=$CONNECTIVITY_STATUS" >> $GITHUB_OUTPUT
+        echo "response-time=$RESPONSE_TIME" >> $GITHUB_OUTPUT
+        echo "discovery-result=$DISCOVERY_RESULT" >> $GITHUB_OUTPUT
+        
+        # Log results
         echo ""
-
-    - name: Setup backend discovery environment
-      shell: bash
-      run: |
-        # Export environment variables for discovery services
-        export AWS_REGION="${{ inputs.aws-region }}"
-        export DEBUG="${{ inputs.debug }}"
-
-        # Validate required tools
-        if ! command -v aws &> /dev/null; then
-          echo "❌ AWS CLI not found"
-          exit 1
+        echo "🎯 Backend Discovery Results:"
+        echo "  Backend Found: $BACKEND_FOUND"
+        echo "  API Endpoint: $API_ENDPOINT"
+        echo "  Stack Name: $STACK_NAME"
+        echo "  Resolution Method: $RESOLUTION_METHOD"
+        echo "  Fallback Used: $FALLBACK_USED"
+        
+        if [[ "$VALIDATION_PERFORMED" == "true" ]]; then
+          echo "  Connectivity Status: $CONNECTIVITY_STATUS"
+          echo "  Response Time: ${RESPONSE_TIME}ms"
         fi
-
-        if ! command -v jq &> /dev/null; then
-          echo "❌ jq not found"
-          exit 1
-        fi
-
-        # Verify AWS credentials
-        if ! aws sts get-caller-identity &> /dev/null; then
-          echo "❌ AWS credentials not configured or invalid"
-          exit 1
-        fi
-
-        echo "✅ Backend discovery environment ready"
-
-    - name: Discover backend environment
-      id: discover
-      shell: bash
-      run: |
-        cd apps/client-ui
-
-        # Make scripts executable
-        chmod +x scripts/backend-discovery-service.sh
-        chmod +x scripts/api-resolution-service.sh
-
-        # Prepare discovery arguments
-        DISCOVERY_ARGS=(
-          "--environment" "${{ inputs.environment }}"
-          "--output-format" "json"
-          "--region" "${{ inputs.aws-region }}"
-          "--timeout" "${{ inputs.timeout }}"
-        )
-
-        # Add optional arguments
-        if [[ "${{ inputs.pr-number }}" != "" ]]; then
-          DISCOVERY_ARGS+=("--pr-number" "${{ inputs.pr-number }}")
-        fi
-
-        if [[ "${{ inputs.validate-connectivity }}" == "true" ]]; then
-          DISCOVERY_ARGS+=("--validate-connectivity")
-        fi
-
-        if [[ "${{ inputs.force-refresh }}" == "true" ]]; then
-          DISCOVERY_ARGS+=("--force-refresh")
-        fi
-
-        if [[ "${{ inputs.fallback-only }}" == "true" ]]; then
-          DISCOVERY_ARGS+=("--fallback-only")
-        fi
-
-        if [[ "${{ inputs.debug }}" == "true" ]]; then
-          DISCOVERY_ARGS+=("--debug")
-        fi
-
-        # Run API resolution service
-        echo "🔍 Running backend discovery..."
-        DISCOVERY_RESULT=$(./scripts/api-resolution-service.sh "${DISCOVERY_ARGS[@]}" 2>/dev/null || echo '{"success": false, "error": "discovery_failed"}')
-
-        echo "Discovery result: $DISCOVERY_RESULT"
-
-        # Parse discovery results
-        SUCCESS=$(echo "$DISCOVERY_RESULT" | jq -r '.success // false')
-
-        if [[ "$SUCCESS" == "true" ]]; then
-          # Extract all relevant information
-          BACKEND_FOUND=$(echo "$DISCOVERY_RESULT" | jq -r '.backend_found // false')
-          API_ENDPOINT=$(echo "$DISCOVERY_RESULT" | jq -r '.final_api_url // ""')
-          STACK_NAME=$(echo "$DISCOVERY_RESULT" | jq -r '.backend_stack // ""')
-          RESOLUTION_METHOD=$(echo "$DISCOVERY_RESULT" | jq -r '.resolution_method // "unknown"')
-          FALLBACK_USED=$(echo "$DISCOVERY_RESULT" | jq -r '.fallback_used // false')
-          
-          # Validation information
-          VALIDATION_PERFORMED=$(echo "$DISCOVERY_RESULT" | jq -r '.validation.performed // false')
-          CONNECTIVITY_STATUS="unknown"
-          RESPONSE_TIME="0"
-          
-          if [[ "$VALIDATION_PERFORMED" == "true" ]]; then
-            CONNECTIVITY_STATUS=$(echo "$DISCOVERY_RESULT" | jq -r '.validation.connectivity_status // "unknown"')
-            RESPONSE_TIME=$(echo "$DISCOVERY_RESULT" | jq -r '.validation.response_time_ms // 0')
-          fi
-          
-          # Set outputs
-          echo "backend-found=$BACKEND_FOUND" >> $GITHUB_OUTPUT
-          echo "api-endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
-          echo "stack-name=$STACK_NAME" >> $GITHUB_OUTPUT
-          echo "resolution-method=$RESOLUTION_METHOD" >> $GITHUB_OUTPUT
-          echo "fallback-used=$FALLBACK_USED" >> $GITHUB_OUTPUT
-          echo "connectivity-status=$CONNECTIVITY_STATUS" >> $GITHUB_OUTPUT
-          echo "response-time=$RESPONSE_TIME" >> $GITHUB_OUTPUT
-          echo "discovery-result=$DISCOVERY_RESULT" >> $GITHUB_OUTPUT
-          
-          # Log results
-          echo ""
-          echo "🎯 Backend Discovery Results:"
-          echo "  Backend Found: $BACKEND_FOUND"
-          echo "  API Endpoint: $API_ENDPOINT"
-          echo "  Stack Name: $STACK_NAME"
-          echo "  Resolution Method: $RESOLUTION_METHOD"
-          echo "  Fallback Used: $FALLBACK_USED"
-          
-          if [[ "$VALIDATION_PERFORMED" == "true" ]]; then
-            echo "  Connectivity Status: $CONNECTIVITY_STATUS"
-            echo "  Response Time: ${RESPONSE_TIME}ms"
-          fi
-          
-          if [[ "$BACKEND_FOUND" == "true" ]]; then
-            echo "✅ Backend discovery successful"
-          else
-            echo "⚠️ No backend found, using fallback"
-          fi
+        
+        if [[ "$BACKEND_FOUND" == "true" ]]; then
+          echo "✅ Backend discovery successful"
         else
-          # Discovery failed
-          ERROR_MSG=$(echo "$DISCOVERY_RESULT" | jq -r '.error // "unknown_error"')
-          echo "❌ Backend discovery failed: $ERROR_MSG"
-          
-          # Set default outputs
-          echo "backend-found=false" >> $GITHUB_OUTPUT
-          echo "api-endpoint=" >> $GITHUB_OUTPUT
-          echo "stack-name=" >> $GITHUB_OUTPUT
-          echo "resolution-method=failed" >> $GITHUB_OUTPUT
-          echo "fallback-used=false" >> $GITHUB_OUTPUT
-          echo "connectivity-status=unknown" >> $GITHUB_OUTPUT
-          echo "response-time=0" >> $GITHUB_OUTPUT
-          echo "discovery-result=$DISCOVERY_RESULT" >> $GITHUB_OUTPUT
-          
-          exit 1
+          echo "⚠️ No backend found, using fallback"
         fi
+      else
+        # Discovery failed
+        ERROR_MSG=$(echo "$DISCOVERY_RESULT" | jq -r '.error // "unknown_error"')
+        echo "❌ Backend discovery failed: $ERROR_MSG"
+        
+        # Set default outputs
+        echo "backend-found=false" >> $GITHUB_OUTPUT
+        echo "api-endpoint=" >> $GITHUB_OUTPUT
+        echo "stack-name=" >> $GITHUB_OUTPUT
+        echo "resolution-method=failed" >> $GITHUB_OUTPUT
+        echo "fallback-used=false" >> $GITHUB_OUTPUT
+        echo "connectivity-status=unknown" >> $GITHUB_OUTPUT
+        echo "response-time=0" >> $GITHUB_OUTPUT
+        echo "discovery-result=$DISCOVERY_RESULT" >> $GITHUB_OUTPUT
+        
+        exit 1
+      fi
 
-    - name: Summary
-      shell: bash
-      run: |
-        echo ""
-        echo "📊 Backend Discovery Summary"
-        echo "============================"
-        echo "Environment: ${{ inputs.environment }}"
-        echo "Backend Found: ${{ steps.discover.outputs.backend-found }}"
-        echo "API Endpoint: ${{ steps.discover.outputs.api-endpoint }}"
-        echo "Resolution Method: ${{ steps.discover.outputs.resolution-method }}"
-        echo "Fallback Used: ${{ steps.discover.outputs.fallback-used }}"
+  - name: Summary
+    shell: bash
+    run: |
+      echo ""
+      echo "📊 Backend Discovery Summary"
+      echo "============================"
+      echo "Environment: ${{ inputs.environment }}"
+      echo "Backend Found: ${{ steps.discover.outputs.backend-found }}"
+      echo "API Endpoint: ${{ steps.discover.outputs.api-endpoint }}"
+      echo "Resolution Method: ${{ steps.discover.outputs.resolution-method }}"
+      echo "Fallback Used: ${{ steps.discover.outputs.fallback-used }}"
 
-        if [[ "${{ inputs.validate-connectivity }}" == "true" ]]; then
-          echo "Connectivity: ${{ steps.discover.outputs.connectivity-status }}"
-          echo "Response Time: ${{ steps.discover.outputs.response-time }}ms"
-        fi
-        echo ""
+      if [[ "${{ inputs.validate-connectivity }}" == "true" ]]; then
+        echo "Connectivity: ${{ steps.discover.outputs.connectivity-status }}"
+        echo "Response Time: ${{ steps.discover.outputs.response-time }}ms"
+      fi
+      echo ""
