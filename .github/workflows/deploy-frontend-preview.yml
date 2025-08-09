@@ -179,9 +179,14 @@ jobs:
         export GITHUB_PR_NUMBER="${{ github.event.pull_request.number }}"
 
         # Load environment variables from .env.preview (filter comments and handle special chars)
+        TEMP_ENV_FILE=$(mktemp)
+        grep -E '^[A-Za-z_][A-Za-z0-9_]*=' .env.preview | while IFS='=' read -r key value; do
+          echo "${key}=\"${value}\"" >> "$TEMP_ENV_FILE"
+        done
         set -a  # automatically export all variables
-        source <(grep -E '^[A-Za-z_][A-Za-z0-9_]*=' .env.preview)
+        source "$TEMP_ENV_FILE"
         set +a  # disable automatic export
+        rm -f "$TEMP_ENV_FILE"
 
         # Generate environment-specific Amplify configuration
         chmod +x scripts/generate-amplify-config.sh
@@ -204,9 +209,14 @@ jobs:
         cd apps/client-ui
 
         # Load preview environment variables (filter comments and handle special chars)
+        TEMP_ENV_FILE=$(mktemp)
+        grep -E '^[A-Za-z_][A-Za-z0-9_]*=' .env.preview | while IFS='=' read -r key value; do
+          echo "${key}=\"${value}\"" >> "$TEMP_ENV_FILE"
+        done
         set -a  # automatically export all variables
-        source <(grep -E '^[A-Za-z_][A-Za-z0-9_]*=' .env.preview)
+        source "$TEMP_ENV_FILE"
         set +a  # disable automatic export
+        rm -f "$TEMP_ENV_FILE"
 
         echo "🔨 Building React application..."
         echo "API URL: $VITE_API_URL"
