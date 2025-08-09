@@ -11,12 +11,20 @@ const { logger } = pino
 const loadConfig = (): Result<TEnv> => {
 	const envPath = resolve(process.cwd(), '.env')
 	const isLambdaEnvironment = Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME)
+	const isCiEnvironment = Boolean(
+		process.env.CI ??
+			process.env.GITHUB_ACTIONS ??
+			process.env.GITLAB_CI ??
+			process.env.CIRCLECI ??
+			process.env.JENKINS_URL ??
+			process.env.BUILDKITE,
+	)
 
 	const enableDebug =
 		process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test'
 
-	// Only load .env file if not in Lambda environment
-	if (!isLambdaEnvironment) {
+	// Only load .env file if not in Lambda or CI environment
+	if (!isLambdaEnvironment && !isCiEnvironment) {
 		// Load environment variables from .env file
 		const result = config({
 			path: envPath,
@@ -107,6 +115,8 @@ const loadConfig = (): Result<TEnv> => {
 
 	if (isLambdaEnvironment) {
 		logger.info('Loaded configuration from Lambda environment variables')
+	} else if (isCiEnvironment) {
+		logger.info('Loaded configuration from CI environment variables')
 	} else {
 		logger.info(`Loaded configuration from ${envPath}`)
 	}
