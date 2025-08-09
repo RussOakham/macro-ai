@@ -524,13 +524,13 @@ jobs:
         echo "📋 Generating OpenAPI specification..."
         pnpm run generate-swagger
 
-        # Generate the API client package
-        echo "📦 Generating API client package..."
+        # Build the API client package (compile to dist for Vite)
+        echo "📦 Building API client package..."
         cd ../../packages/macro-ai-api-client
         pnpm install --frozen-lockfile
-        pnpm run generate
+        pnpm run build
 
-        echo "✅ API client package generated successfully"
+        echo "✅ API client package built successfully"
 
     - name: Generate environment configuration
       id: generate-env
