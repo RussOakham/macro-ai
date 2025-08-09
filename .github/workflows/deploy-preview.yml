@@ -230,10 +230,10 @@ jobs:
 
         if [[ -n "${API_ENDPOINT}" ]]; then
           echo "🔍 Testing health endpoint: ${API_ENDPOINT}api/health"
-          
+
           # Wait a moment for deployment to stabilize
           sleep 10
-          
+
           # Test health endpoint with retries
           for i in {1..3}; do
             HEALTH_RESPONSE=$(curl -s -w "%{http_code}" "${API_ENDPOINT}api/health" 2>/dev/null || echo "000")
@@ -284,7 +284,7 @@ jobs:
             comment += `### 🌐 Endpoints\n`;
             comment += `- **API:** ${apiEndpoint}api/\n`;
             comment += `- **Health:** ${apiEndpoint}api/health\n\n`;
-            
+
             const healthIcon = healthStatus === 'healthy' ? '✅' : '⚠️';
             comment += `### ${healthIcon} Health Status\n`;
             comment += `Health check: **${healthStatus}**\n\n`;
@@ -547,6 +547,19 @@ jobs:
         include-build-metadata: 'true'
         validate-variables: 'true'
         debug: 'false'
+
+    - name: Debug .env.preview (sanitized)
+      if: always()
+      run: |
+        echo "### .env.preview (sanitized)" >> "$GITHUB_STEP_SUMMARY"
+        if [ -f apps/client-ui/.env.preview ]; then
+          sed -E 's/^(.*(SECRET|TOKEN|PASSWORD|API_KEY|KEY)=).*/\1<masked>/' apps/client-ui/.env.preview \
+            >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "(apps/client-ui/.env.preview not found)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Contents of apps/client-ui:" >> "$GITHUB_STEP_SUMMARY"
+          ls -la apps/client-ui >> "$GITHUB_STEP_SUMMARY"
+        fi
 
     - name: Generate Amplify configuration
       run: |
