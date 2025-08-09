@@ -572,11 +572,29 @@ jobs:
           touch "$TEMP_ENV_FILE"
         fi
 
-        # Source the temporary file
+        # Export variables safely without sourcing (handles spaces, parentheses)
         if [[ -s "$TEMP_ENV_FILE" ]]; then
-          set -a
-          source "$TEMP_ENV_FILE"
-          set +a
+          while IFS= read -r line; do
+            # Skip empty lines and comments
+            [[ -z "$line" || "${line:0:1}" == "#" ]] && continue
+
+            # Only process KEY=VALUE lines starting with a valid var name
+            if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+              key="${line%%=*}"
+              value="${line#*=}"
+
+              # Trim surrounding quotes if present
+              if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+                value="${value:1:-1}"
+              elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+                value="${value:1:-1}"
+              fi
+
+              # Assign without eval, then export
+              printf -v "$key" '%s' "$value"
+              export "$key"
+            fi
+          done < "$TEMP_ENV_FILE"
           echo "✅ Loaded $(wc -l < "$TEMP_ENV_FILE") environment variables"
         else
           echo "⚠️ No valid environment variables found in .env.preview"
