@@ -110,6 +110,7 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'pnpm'
+        cache-dependency-path: 'pnpm-lock.yaml'
 
     - name: Build Lambda package
       run: |
@@ -158,6 +159,7 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'pnpm'
+        cache-dependency-path: 'pnpm-lock.yaml'
 
     - name: Install AWS CDK CLI globally
       run: pnpm add -g aws-cdk@2
@@ -478,7 +480,7 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'pnpm'
-        cache-dependency-path: 'apps/client-ui/pnpm-lock.yaml'
+        cache-dependency-path: 'pnpm-lock.yaml'
 
     - name: Install dependencies
       run: |
