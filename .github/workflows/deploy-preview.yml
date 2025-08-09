@@ -580,31 +580,29 @@ jobs:
         # Clean up temporary file
         rm -f "$TEMP_ENV_FILE"
 
-        # Generate amplify.yml configuration
-        cat > amplify.yml << EOF
-        version: 1
-        applications:
-          - appRoot: apps/client-ui
-            frontend:
-              phases:
-                preBuild:
-                  commands:
-                    - echo "Installing dependencies..."
-                    - npm install -g pnpm@${PNPM_VERSION}
-                    - pnpm install --frozen-lockfile
-                build:
-                  commands:
-                    - echo "Building React application..."
-                    - pnpm run build
-              artifacts:
-                baseDirectory: dist
-                files:
-                  - '**/*'
-              cache:
-                paths:
-                  - node_modules/**/*
-                  - .pnpm-store/**/*
-        EOF
+        # Generate amplify.yml configuration using echo statements
+        echo "version: 1" > amplify.yml
+        echo "applications:" >> amplify.yml
+        echo "  - appRoot: apps/client-ui" >> amplify.yml
+        echo "    frontend:" >> amplify.yml
+        echo "      phases:" >> amplify.yml
+        echo "        preBuild:" >> amplify.yml
+        echo "          commands:" >> amplify.yml
+        echo "            - echo \"Installing dependencies...\"" >> amplify.yml
+        echo "            - npm install -g pnpm@${PNPM_VERSION}" >> amplify.yml
+        echo "            - pnpm install --frozen-lockfile" >> amplify.yml
+        echo "        build:" >> amplify.yml
+        echo "          commands:" >> amplify.yml
+        echo "            - echo \"Building React application...\"" >> amplify.yml
+        echo "            - pnpm run build" >> amplify.yml
+        echo "      artifacts:" >> amplify.yml
+        echo "        baseDirectory: dist" >> amplify.yml
+        echo "        files:" >> amplify.yml
+        echo "          - '**/*'" >> amplify.yml
+        echo "      cache:" >> amplify.yml
+        echo "        paths:" >> amplify.yml
+        echo "          - node_modules/**/*" >> amplify.yml
+        echo "          - .pnpm-store/**/*" >> amplify.yml
 
         echo "✅ Generated amplify.yml configuration"
 
