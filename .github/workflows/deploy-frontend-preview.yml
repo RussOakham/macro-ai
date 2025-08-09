@@ -134,7 +134,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
-        cache: 'pnpm'
 
     - name: Install pnpm
       uses: pnpm/action-setup@v3
@@ -262,7 +261,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
-        cache: 'pnpm'
 
     - name: Install pnpm
       uses: pnpm/action-setup@v3
