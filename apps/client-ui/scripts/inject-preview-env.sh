@@ -313,10 +313,32 @@ validate_configuration() {
         return 1
     fi
     
-    # Source the configuration file
-    set -a  # Export all variables
-    source "$config_file"
-    set +a  # Stop exporting
+    # Load variables safely without sourcing (handles spaces, parentheses)
+    TEMP_ENV_FILE=$(mktemp)
+    if grep '^[A-Za-z_][A-Za-z0-9_]*=' "$config_file" > "$TEMP_ENV_FILE"; then
+        :
+    else
+        :
+    fi
+
+    if [[ -s "$TEMP_ENV_FILE" ]]; then
+        while IFS= read -r line; do
+            [[ -z "$line" || "${line:0:1}" == "#" ]] && continue
+            if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+                key="${line%%=*}"
+                value="${line#*=}"
+                # Trim surrounding quotes
+                if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+                    value="${value:1:-1}"
+                elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+                    value="${value:1:-1}"
+                fi
+                printf -v "$key" '%s' "$value"
+                export "$key"
+            fi
+        done < "$TEMP_ENV_FILE"
+    fi
+    rm -f "$TEMP_ENV_FILE"
     
     local validation_errors=0
     
