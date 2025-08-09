@@ -488,6 +488,31 @@ jobs:
         pnpm install --frozen-lockfile
 
     - name: Generate API client package
+      env:
+        # Minimal environment variables required for swagger generation
+        # These are placeholder values that satisfy schema validation
+        API_KEY: "placeholder-api-key-for-swagger-generation-32chars"
+        NODE_ENV: "development"
+        APP_ENV: "development"
+        SERVER_PORT: "3040"
+        AWS_COGNITO_REGION: "us-east-1"
+        AWS_COGNITO_USER_POOL_ID: "us-east-1_placeholder"
+        AWS_COGNITO_USER_POOL_CLIENT_ID: "placeholder-client-id"
+        AWS_COGNITO_USER_POOL_SECRET_KEY: "placeholder-secret-key"
+        AWS_COGNITO_ACCESS_KEY: "placeholder-access-key"
+        AWS_COGNITO_SECRET_KEY: "placeholder-secret-key"
+        AWS_COGNITO_REFRESH_TOKEN_EXPIRY: "30"
+        COOKIE_DOMAIN: "localhost"
+        COOKIE_ENCRYPTION_KEY: "placeholder-cookie-encryption-key-32chars"
+        NON_RELATIONAL_DATABASE_URL: "redis://localhost:6379"
+        RELATIONAL_DATABASE_URL: "postgresql://localhost:5432/placeholder"
+        OPENAI_API_KEY: "sk-placeholder-openai-api-key-for-swagger-generation"
+        RATE_LIMIT_WINDOW_MS: "900000"
+        RATE_LIMIT_MAX_REQUESTS: "100"
+        AUTH_RATE_LIMIT_WINDOW_MS: "3600000"
+        AUTH_RATE_LIMIT_MAX_REQUESTS: "10"
+        API_RATE_LIMIT_WINDOW_MS: "60000"
+        API_RATE_LIMIT_MAX_REQUESTS: "60"
       run: |
         echo "🔧 Generating API client package from OpenAPI specification"
 
