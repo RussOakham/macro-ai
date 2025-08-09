@@ -153,12 +153,50 @@ runs:
       echo "$DISCOVERY_OUTPUT"
       echo "Exit code: $DISCOVERY_EXIT_CODE"
 
-      # Try to extract JSON from the output (in case there are debug messages mixed in)
-      DISCOVERY_RESULT=$(echo "$DISCOVERY_OUTPUT" | tail -n 1)
+      # Extract JSON from the output by finding the JSON object
+      # Look for lines that start with '{' and end with '}' (potentially multi-line JSON)
+      DISCOVERY_RESULT=""
+
+      # Method 1: Try to extract a complete JSON object from the output
+      if echo "$DISCOVERY_OUTPUT" | grep -q '^{'; then
+        # Extract from first '{' to last '}'
+        DISCOVERY_RESULT=$(echo "$DISCOVERY_OUTPUT" | sed -n '/^{/,/^}/p' | jq -c .)
+      fi
+
+      # Method 2: If that fails, try to find any valid JSON in the output
+      if [[ -z "$DISCOVERY_RESULT" ]] || ! echo "$DISCOVERY_RESULT" | jq . >/dev/null 2>&1; then
+        echo "🔍 Attempting to extract JSON from mixed output..."
+
+        # Try each line to see if it's valid JSON
+        while IFS= read -r line; do
+          # Remove ANSI color codes
+          clean_line=$(echo "$line" | sed 's/\x1b\[[0-9;]*m//g')
+
+          # Check if this line is valid JSON
+          if echo "$clean_line" | jq . >/dev/null 2>&1; then
+            DISCOVERY_RESULT="$clean_line"
+            break
+          fi
+        done <<< "$DISCOVERY_OUTPUT"
+      fi
+
+      # Method 3: Final fallback - try to extract JSON between { and }
+      if [[ -z "$DISCOVERY_RESULT" ]] || ! echo "$DISCOVERY_RESULT" | jq . >/dev/null 2>&1; then
+        echo "🔍 Attempting to extract JSON block from output..."
+
+        # Extract everything between the first { and last }
+        DISCOVERY_RESULT=$(echo "$DISCOVERY_OUTPUT" | sed -n '/^{/,/^}/p' | tr -d '\n' | sed 's/\x1b\[[0-9;]*m//g')
+
+        # If still not valid, try a more aggressive approach
+        if ! echo "$DISCOVERY_RESULT" | jq . >/dev/null 2>&1; then
+          # Look for JSON pattern in the entire output
+          DISCOVERY_RESULT=$(echo "$DISCOVERY_OUTPUT" | grep -o '{[^}]*}' | head -n 1)
+        fi
+      fi
 
       # Validate that we have valid JSON
-      if ! echo "$DISCOVERY_RESULT" | jq . >/dev/null 2>&1; then
-        echo "❌ Invalid JSON output from discovery service"
+      if [[ -z "$DISCOVERY_RESULT" ]] || ! echo "$DISCOVERY_RESULT" | jq . >/dev/null 2>&1; then
+        echo "❌ Could not extract valid JSON from discovery service output"
         echo "Raw output: $DISCOVERY_OUTPUT"
         DISCOVERY_RESULT='{"success": false, "error": "invalid_json_output"}'
       fi
