@@ -656,9 +656,20 @@ jobs:
         fi
 
         if [[ -s "$TEMP_ENV_FILE" ]]; then
-          set -a
-          source "$TEMP_ENV_FILE"
-          set +a
+          while IFS= read -r line; do
+            [[ -z "$line" || "${line:0:1}" == "#" ]] && continue
+            if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+              key="${line%%=*}"
+              value="${line#*=}"
+              if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+                value="${value:1:-1}"
+              elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+                value="${value:1:-1}"
+              fi
+              printf -v "$key" '%s' "$value"
+              export "$key"
+            fi
+          done < "$TEMP_ENV_FILE"
           echo "✅ Loaded environment variables for build"
         fi
 
