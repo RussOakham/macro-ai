@@ -21,26 +21,26 @@ CACHE_TTL=${CACHE_TTL:-300}  # 5 minutes default cache TTL
 AWS_REGION=${AWS_REGION:-"us-east-1"}
 DEBUG=${DEBUG:-"false"}
 
-# Function to print status messages
+# Function to print status messages (all output to stderr to avoid contaminating JSON output)
 print_status() {
-    echo -e "${GREEN}✓${NC} $1"
+    echo -e "${GREEN}✓${NC} $1" >&2
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠${NC} $1"
+    echo -e "${YELLOW}⚠${NC} $1" >&2
 }
 
 print_error() {
-    echo -e "${RED}✗${NC} $1"
+    echo -e "${RED}✗${NC} $1" >&2
 }
 
 print_info() {
-    echo -e "${CYAN}ℹ${NC} $1"
+    echo -e "${CYAN}ℹ${NC} $1" >&2
 }
 
 print_debug() {
     if [[ "$DEBUG" == "true" ]]; then
-        echo -e "${BLUE}🐛${NC} $1"
+        echo -e "${BLUE}🐛${NC} $1" >&2
     fi
 }
 
