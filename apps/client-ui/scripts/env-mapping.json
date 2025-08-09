@@ -62,38 +62,59 @@
 		}
 	},
 	"backend_resolution": {
+		"cache_ttl_seconds": 300,
+		"default_timeout_seconds": 10,
+		"max_retry_attempts": 3,
 		"strategies": [
 			{
 				"name": "direct_stack",
 				"description": "Direct CloudFormation stack lookup using standard naming",
 				"priority": 1,
-				"enabled": true
+				"enabled": true,
+				"timeout_seconds": 5
 			},
 			{
 				"name": "alternative_patterns",
 				"description": "Try alternative stack naming patterns",
 				"priority": 2,
 				"enabled": true,
+				"timeout_seconds": 10,
 				"patterns": [
 					"MacroAiPr{number}Stack",
 					"MacroAiPreview{number}Stack",
 					"MacroAiDev{number}Stack",
-					"macro-ai-pr-{number}"
+					"macro-ai-pr-{number}",
+					"MacroAi{environment}Stack"
 				]
 			},
 			{
 				"name": "environment_fallback",
 				"description": "Use environment-specific fallback URLs",
 				"priority": 3,
-				"enabled": true
+				"enabled": true,
+				"validate_connectivity": true
 			},
 			{
 				"name": "generic_fallback",
 				"description": "Use generic fallback URL",
 				"priority": 4,
-				"enabled": true
+				"enabled": true,
+				"validate_connectivity": false
 			}
-		]
+		],
+		"stack_output_keys": [
+			"ApiEndpoint",
+			"ApiGatewayUrl",
+			"RestApiUrl",
+			"ApiUrl",
+			"BackendApiUrl"
+		],
+		"health_check": {
+			"enabled": true,
+			"endpoint_path": "/health",
+			"timeout_seconds": 10,
+			"expected_status_codes": [200, 404, 401, 403]
+		}
 	},
 	"validation": {
 		"required_variables": ["VITE_API_URL", "VITE_API_KEY", "VITE_APP_ENV"],

@@ -103,30 +103,66 @@ validate_required_variables() {
     return $validation_errors
 }
 
-# Function to resolve API URL using backend resolution script
+# Function to resolve API URL using enhanced API resolution service
 resolve_api_url() {
     local env_name="$1"
-    
+
     print_info "Resolving backend API URL for environment: $env_name"
-    
-    # Check if backend resolution script exists
-    local resolver_script="./scripts/resolve-backend-api.sh"
+
+    # Check if API resolution service exists
+    local resolver_script="./scripts/api-resolution-service.sh"
     if [[ ! -f "$resolver_script" ]]; then
-        print_warning "Backend API resolver not found: $resolver_script"
+        print_warning "API resolution service not found: $resolver_script"
+
+        # Fallback to legacy resolver
+        local legacy_resolver="./scripts/resolve-backend-api.sh"
+        if [[ -f "$legacy_resolver" ]]; then
+            print_info "Using legacy backend resolver"
+            local api_url=""
+            if api_url=$("$legacy_resolver" --environment "$env_name" --output-format url 2>/dev/null); then
+                if [[ -n "$api_url" ]]; then
+                    print_status "Resolved API URL: $api_url"
+                    echo "$api_url"
+                    return 0
+                fi
+            fi
+        fi
+
         return 1
     fi
-    
-    # Run the resolver script
+
+    # Prepare arguments for API resolution service
+    local resolver_args=(
+        "--environment" "$env_name"
+        "--output-format" "url"
+    )
+
+    # Add PR number if available
+    if [[ -n "$PR_NUMBER" ]]; then
+        resolver_args+=("--pr-number" "$PR_NUMBER")
+    fi
+
+    # Enable connectivity validation if requested
+    if [[ "${VALIDATE_API_CONNECTIVITY:-false}" == "true" ]]; then
+        resolver_args+=("--validate-connectivity")
+    fi
+
+    # Enable debug mode if set
+    if [[ "${DEBUG:-false}" == "true" ]]; then
+        resolver_args+=("--debug")
+    fi
+
+    # Run the API resolution service
     local api_url=""
-    if api_url=$("$resolver_script" --environment "$env_name" --output-format url 2>/dev/null); then
-        if [[ -n "$api_url" ]]; then
-            print_status "Resolved API URL: $api_url"
+    if api_url=$(bash "$resolver_script" "${resolver_args[@]}" 2>/dev/null); then
+        if [[ -n "$api_url" && "$api_url" != "null" ]]; then
+            print_status "API URL resolved: $api_url"
             echo "$api_url"
             return 0
         fi
     fi
-    
-    print_warning "Could not resolve API URL via backend resolver"
+
+    print_warning "Could not resolve API URL via API resolution service"
     return 1
 }
 

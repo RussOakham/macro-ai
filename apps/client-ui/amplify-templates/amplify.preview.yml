@@ -9,11 +9,11 @@ backend:
     build:
       commands:
         - echo "=== Preview Environment Backend Phase ==="
-        - echo "Environment: pr-123 (Preview)"
-        - echo "PR Number: 123"
+        - echo "Environment: $AMPLIFY_ENVIRONMENT_NAME (Preview)"
+        - echo "PR Number: $VITE_PR_NUMBER"
         - echo "Build timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-        - echo "Commit: 5776ee9a6c8af72d4f96e8856d54ed6344751111"
-        - echo "Branch: feature/frontend-preview-deployment"
+        - echo "Commit: $VITE_BUILD_COMMIT"
+        - echo "Branch: $VITE_BUILD_BRANCH"
 
 # Frontend configuration optimized for preview deployments
 frontend:
@@ -52,17 +52,17 @@ frontend:
         # Validate critical environment variables
         - echo "=== Environment Validation ==="
         - |
-          if [ -z "https://api-test.example.com/api" ]; then
+          if [ -z "$VITE_API_URL" ]; then
             echo "ERROR: VITE_API_URL is not set"
             exit 1
           fi
         - |
-          if [ -z "test-key" ]; then
+          if [ -z "$VITE_API_KEY" ]; then
             echo "ERROR: VITE_API_KEY is not set"
             exit 1
           fi
         - |
-          if [ -z "123" ]; then
+          if [ -z "$VITE_PR_NUMBER" ]; then
             echo "WARNING: VITE_PR_NUMBER is not set (may not be a PR deployment)"
           fi
         - echo "Environment validation completed"
@@ -71,8 +71,9 @@ frontend:
       commands:
         - echo "=== Preview Environment Build Phase ==="
         - echo "Building React application for preview..."
-        - echo "Target environment: pr-123"
-        - echo "Preview mode: enabled"
+        - echo "Target environment: $VITE_APP_ENV"
+        - echo "Preview mode: $VITE_PREVIEW_MODE"
+
         # Skip type checking in preview for faster builds (optional)
         - echo "Running TypeScript type check..."
         - pnpm type-check
@@ -86,15 +87,15 @@ frontend:
         - |
           cat > dist/build-info.json << EOF
           {
-            "environment": "pr-123",
-            "pr_number": "123",
-            "build_timestamp": "2025-08-09 10:03:27 UTC",
-            "commit": "5776ee9a6c8af72d4f96e8856d54ed6344751111",
-            "branch": "feature/frontend-preview-deployment",
-            "api_url": "https://api-test.example.com/api",
-            "preview_mode": "",
-            "amplify_app_id": "",
-            "amplify_branch": ""
+            "environment": "$VITE_APP_ENV",
+            "pr_number": "$VITE_PR_NUMBER",
+            "build_timestamp": "$VITE_BUILD_TIMESTAMP",
+            "commit": "$VITE_BUILD_COMMIT",
+            "branch": "$VITE_BUILD_BRANCH",
+            "api_url": "$VITE_API_URL",
+            "preview_mode": "$VITE_PREVIEW_MODE",
+            "amplify_app_id": "$AWS_APP_ID",
+            "amplify_branch": "$AWS_BRANCH"
           }
           EOF
 
@@ -115,7 +116,7 @@ frontend:
     baseDirectory: dist
     files:
       - '**/*'
-    name: macro-ai-frontend-preview-pr123-$(date +%Y%m%d-%H%M%S)
+    name: macro-ai-frontend-preview-pr$VITE_PR_NUMBER-$(date +%Y%m%d-%H%M%S)
 
   # Aggressive caching for faster preview builds
   cache:
@@ -153,7 +154,7 @@ test:
     baseDirectory: coverage
     files:
       - '**/*'
-    name: test-results-preview-pr123-$(date +%Y%m%d-%H%M%S)
+    name: test-results-preview-pr$VITE_PR_NUMBER-$(date +%Y%m%d-%H%M%S)
 
 # Preview-specific custom headers for debugging and security
 customHeaders:
@@ -171,9 +172,9 @@ customHeaders:
       - key: 'X-Preview-Environment'
         value: 'true'
       - key: 'X-PR-Number'
-        value: '123'
+        value: '$VITE_PR_NUMBER'
       - key: 'X-Build-Timestamp'
-        value: '2025-08-09 10:03:27 UTC'
+        value: '$VITE_BUILD_TIMESTAMP'
 
       # CORS headers for preview (more permissive)
       - key: 'Access-Control-Allow-Origin'

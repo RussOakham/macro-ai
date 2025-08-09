@@ -88,9 +88,12 @@ jobs:
       contents: read
 
     outputs:
-      backend-exists: ${{ steps.check-backend.outputs.backend-exists }}
-      api-endpoint: ${{ steps.check-backend.outputs.api-endpoint }}
-      backend-stack-name: ${{ steps.backend-info.outputs.backend-stack-name }}
+      backend-exists: ${{ steps.discover.outputs.backend-found }}
+      api-endpoint: ${{ steps.discover.outputs.api-endpoint }}
+      stack-name: ${{ steps.discover.outputs.stack-name }}
+      resolution-method: ${{ steps.discover.outputs.resolution-method }}
+      fallback-used: ${{ steps.discover.outputs.fallback-used }}
+      connectivity-status: ${{ steps.discover.outputs.connectivity-status }}
 
     steps:
       - name: Checkout code
@@ -102,53 +105,15 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Generate backend stack info
-        id: backend-info
-        run: |
-          ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
-          ENV_CAPITALIZED="$(echo "$ENV_NAME" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')"
-          BACKEND_STACK_NAME="MacroAi${ENV_CAPITALIZED}Stack"
-          echo "backend-stack-name=${BACKEND_STACK_NAME}" >> $GITHUB_OUTPUT
-          echo "📦 Backend stack name: ${BACKEND_STACK_NAME}"
-
-      - name: Check backend environment
-        id: check-backend
-        run: |
-          BACKEND_STACK_NAME="${{ steps.backend-info.outputs.backend-stack-name }}"
-
-          echo "🔍 Checking for backend environment: ${BACKEND_STACK_NAME}"
-
-          # Check if backend stack exists
-          STACK_STATUS=$(aws cloudformation describe-stacks \
-            --stack-name "${BACKEND_STACK_NAME}" \
-            --query 'Stacks[0].StackStatus' \
-            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
-
-          if [[ "${STACK_STATUS}" == "DOES_NOT_EXIST" ]]; then
-            echo "backend-exists=false" >> $GITHUB_OUTPUT
-            echo "api-endpoint=" >> $GITHUB_OUTPUT
-            echo "⚠️ Backend environment not found - frontend will use fallback API URL"
-          elif [[ "${STACK_STATUS}" =~ ^(CREATE_COMPLETE|UPDATE_COMPLETE)$ ]]; then
-            echo "backend-exists=true" >> $GITHUB_OUTPUT
-            
-            # Get API endpoint from stack outputs
-            API_ENDPOINT=$(aws cloudformation describe-stacks \
-              --stack-name "${BACKEND_STACK_NAME}" \
-              --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
-              --output text 2>/dev/null || echo "")
-            
-            if [[ -n "$API_ENDPOINT" ]]; then
-              echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
-              echo "✅ Backend environment found with API endpoint: ${API_ENDPOINT}"
-            else
-              echo "api-endpoint=" >> $GITHUB_OUTPUT
-              echo "⚠️ Backend environment found but API endpoint not available"
-            fi
-          else
-            echo "backend-exists=false" >> $GITHUB_OUTPUT
-            echo "api-endpoint=" >> $GITHUB_OUTPUT
-            echo "⚠️ Backend environment in transitional state: ${STACK_STATUS}"
-          fi
+      - name: Discover backend environment
+        id: discover
+        uses: ./.github/actions/discover-backend
+        with:
+          environment: ${{ needs.validate-access.outputs.env-name }}
+          pr-number: ${{ github.event.pull_request.number }}
+          validate-connectivity: 'true'
+          aws-region: ${{ env.AWS_REGION }}
+          debug: 'false'
 
   # Build the React frontend
   build-frontend:
@@ -181,47 +146,56 @@ jobs:
           cd apps/client-ui
           pnpm install --frozen-lockfile
 
-      - name: Configure environment variables
+      - name: Generate environment configuration
+        id: generate-env
+        uses: ./.github/actions/generate-frontend-env
+        with:
+          environment: ${{ needs.validate-access.outputs.env-name }}
+          pr-number: ${{ github.event.pull_request.number }}
+          build-mode: 'preview'
+          api-endpoint: ${{ needs.check-backend-environment.outputs.api-endpoint }}
+          api-key: ${{ secrets.FRONTEND_API_KEY }}
+          backend-stack-name: ${{ needs.check-backend-environment.outputs.stack-name }}
+          resolution-method: ${{ needs.check-backend-environment.outputs.resolution-method }}
+          output-file: '.env.preview'
+          include-build-metadata: 'true'
+          validate-variables: 'true'
+          debug: 'false'
+
+      - name: Generate Amplify configuration
         run: |
           cd apps/client-ui
 
           ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
 
-          echo "🔧 Configuring environment variables for ${ENV_NAME}"
+          echo "🔧 Generating Amplify configuration for environment: ${ENV_NAME}"
 
-          # Set environment variables for injection script
+          # Set environment variables for configuration generation
           export PR_NUMBER="${{ github.event.pull_request.number }}"
           export ENVIRONMENT_NAME="${ENV_NAME}"
           export BUILD_MODE="preview"
-          export VITE_API_KEY="${{ secrets.FRONTEND_API_KEY }}"
           export GITHUB_SHA="${{ github.sha }}"
           export GITHUB_REF_NAME="${{ github.ref_name }}"
           export GITHUB_PR_NUMBER="${{ github.event.pull_request.number }}"
 
-          # Override API URL if backend preview is available
-          if [[ -n "${{ needs.check-backend-environment.outputs.api-endpoint }}" ]]; then
-            export VITE_API_URL="${{ needs.check-backend-environment.outputs.api-endpoint }}api"
-            echo "✅ Using backend preview API: ${VITE_API_URL}"
-          else
-            echo "⚠️ Backend preview not available, will use fallback API"
-          fi
+          # Load environment variables from .env.preview
+          export $(cat .env.preview | xargs)
 
-          # Run environment variable injection script
-          chmod +x scripts/inject-preview-env.sh
-          if ./scripts/inject-preview-env.sh --environment "${ENV_NAME}" --build-mode preview; then
-            echo "✅ Environment configuration generated successfully"
-          else
-            echo "❌ Environment configuration failed"
-            exit 1
-          fi
+          # Generate environment-specific Amplify configuration
+          chmod +x scripts/generate-amplify-config.sh
+          ./scripts/generate-amplify-config.sh \
+            --environment preview \
+            --pr-number "${{ github.event.pull_request.number }}" \
+            --output-file amplify.yml
 
-          # Display configuration summary
-          echo ""
-          echo "📋 Environment Configuration Summary:"
-          echo "  Environment: ${ENV_NAME}"
-          echo "  API URL: $(grep VITE_API_URL .env.preview | cut -d'=' -f2)"
-          echo "  Build Mode: preview"
-          echo "  Configuration file: .env.preview"
+          # Validate generated configuration
+          chmod +x scripts/validate-amplify-config.sh
+          ./scripts/validate-amplify-config.sh \
+            --config-file amplify.yml \
+            --environment preview
+
+          echo "✅ Amplify configuration generated and validated"
+          echo "📄 Configuration file: amplify.yml"
 
       - name: Build React application
         run: |

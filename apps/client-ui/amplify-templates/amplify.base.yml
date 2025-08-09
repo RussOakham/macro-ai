@@ -1,0 +1,141 @@
+# Base Amplify Configuration Template for Macro AI Frontend
+# This template provides the foundation for all environment-specific configurations
+
+version: 1
+
+# Backend configuration (minimal since we use separate Lambda deployment)
+backend:
+  phases:
+    build:
+      commands:
+        - echo "Backend build phase - using separate Lambda deployment"
+        - echo "Environment: $AMPLIFY_ENVIRONMENT_NAME"
+        - echo "Build timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+
+# Frontend configuration with comprehensive build process
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "=== Pre-Build Phase ==="
+        - echo "Node version: $(node --version)"
+        - echo "NPM version: $(npm --version)"
+        - echo "Environment: $AMPLIFY_ENVIRONMENT_NAME"
+        - echo "API URL: $VITE_API_URL"
+
+        # Install pnpm globally
+        - echo "Installing pnpm package manager..."
+        - npm install -g pnpm@10.14.0
+        - echo "pnpm version: $(pnpm --version)"
+
+        # Install dependencies
+        - echo "Installing project dependencies..."
+        - pnpm install --frozen-lockfile
+
+        # Display environment configuration
+        - echo "=== Environment Configuration ==="
+        - echo "VITE_API_URL: $VITE_API_URL"
+        - echo "VITE_APP_ENV: $VITE_APP_ENV"
+        - echo "VITE_APP_NAME: $VITE_APP_NAME"
+        - echo "VITE_ENABLE_DEVTOOLS: $VITE_ENABLE_DEVTOOLS"
+        - echo "VITE_ENABLE_DEBUG_LOGGING: $VITE_ENABLE_DEBUG_LOGGING"
+
+        # Validate environment variables
+        - echo "=== Environment Validation ==="
+        - |
+          if [ -z "$VITE_API_URL" ]; then
+            echo "ERROR: VITE_API_URL is not set"
+            exit 1
+          fi
+        - |
+          if [ -z "$VITE_API_KEY" ]; then
+            echo "ERROR: VITE_API_KEY is not set"
+            exit 1
+          fi
+        - echo "Environment validation passed"
+
+    build:
+      commands:
+        - echo "=== Build Phase ==="
+        - echo "Starting React application build..."
+        - echo "Build mode: ${VITE_BUILD_MODE:-production}"
+        - echo "Target environment: $VITE_APP_ENV"
+
+        # Run type checking
+        - echo "Running TypeScript type check..."
+        - pnpm type-check
+
+        # Run build
+        - echo "Building application..."
+        - pnpm build
+
+        # Validate build output
+        - echo "=== Build Validation ==="
+        - |
+          if [ ! -d "dist" ]; then
+            echo "ERROR: Build output directory 'dist' not found"
+            exit 1
+          fi
+        - echo "Build output size: $(du -sh dist | cut -f1)"
+        - echo "Build files count: $(find dist -type f | wc -l)"
+        - echo "Build completed successfully"
+
+  # Build artifacts configuration
+  artifacts:
+    baseDirectory: dist
+    files:
+      - '**/*'
+    name: macro-ai-frontend-$AMPLIFY_ENVIRONMENT_NAME-$(date +%Y%m%d-%H%M%S)
+
+  # Cache configuration for faster builds
+  cache:
+    paths:
+      - node_modules/**/*
+      - .pnpm-store/**/*
+      - ~/.pnpm-store/**/*
+
+# Test configuration (optional, can be enabled per environment)
+test:
+  phases:
+    preTest:
+      commands:
+        - echo "=== Pre-Test Phase ==="
+        - echo "Installing test dependencies..."
+        - pnpm install --frozen-lockfile
+
+    test:
+      commands:
+        - echo "=== Test Phase ==="
+        - echo "Running unit tests..."
+        - pnpm test:run
+
+        - echo "Running TypeScript type check..."
+        - pnpm type-check
+
+        - echo "Running linting..."
+        - pnpm lint
+
+        - echo "All tests completed successfully"
+
+  # Test artifacts
+  artifacts:
+    baseDirectory: coverage
+    files:
+      - '**/*'
+    name: test-results-$AMPLIFY_ENVIRONMENT_NAME-$(date +%Y%m%d-%H%M%S)
+# Environment-specific customization points
+# These will be overridden in environment-specific templates:
+#
+# customHeaders:
+#   - pattern: '**/*'
+#     headers:
+#       - key: 'Strict-Transport-Security'
+#         value: 'max-age=31536000; includeSubDomains'
+#       - key: 'X-Frame-Options'
+#         value: 'DENY'
+#       - key: 'X-Content-Type-Options'
+#         value: 'nosniff'
+#       - key: 'Referrer-Policy'
+#         value: 'strict-origin-when-cross-origin'
+#       - key: 'Content-Security-Policy'
+#         value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api*.macro-ai.com https://*.execute-api.*.amazonaws.com"
