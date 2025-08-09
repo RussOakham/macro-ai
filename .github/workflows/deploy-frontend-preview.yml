@@ -2,12 +2,12 @@ name: Deploy Frontend PR Preview Environment
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
-    branches: [develop, main]
+    types: [ opened, reopened, synchronize ]
+    branches: [ develop, main ]
     paths:
-      - 'apps/client-ui/**'
-      - '.github/workflows/deploy-frontend-preview.yml'
-      - '.github/actions/check-codeowner/**'
+    - 'apps/client-ui/**'
+    - '.github/workflows/deploy-frontend-preview.yml'
+    - '.github/actions/check-codeowner/**'
 
 permissions:
   contents: read
@@ -27,7 +27,7 @@ jobs:
   validate-access:
     name: Validate Access and Environment
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
+    # Deploy for both draft and ready PRs to enable testing during development
 
     outputs:
       should-deploy: ${{ steps.decision.outputs.should-deploy }}
@@ -36,51 +36,51 @@ jobs:
       amplify-app-name: ${{ steps.amplify-info.outputs.amplify-app-name }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Check code ownership
-        id: codeowner-check
-        uses: ./.github/actions/check-codeowner
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Check code ownership
+      id: codeowner-check
+      uses: ./.github/actions/check-codeowner
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate environment name
-        id: env-name
-        run: |
-          ENV_NAME="pr-${{ github.event.pull_request.number }}"
-          echo "env-name=${ENV_NAME}" >> $GITHUB_OUTPUT
-          echo "🌍 Environment name: ${ENV_NAME}"
+    - name: Generate environment name
+      id: env-name
+      run: |
+        ENV_NAME="pr-${{ github.event.pull_request.number }}"
+        echo "env-name=${ENV_NAME}" >> $GITHUB_OUTPUT
+        echo "🌍 Environment name: ${ENV_NAME}"
 
-      - name: Generate Amplify app info
-        id: amplify-info
-        run: |
-          AMPLIFY_APP_NAME="macro-ai-frontend-pr-${{ github.event.pull_request.number }}"
-          echo "amplify-app-name=${AMPLIFY_APP_NAME}" >> $GITHUB_OUTPUT
-          echo "📱 Amplify app name: ${AMPLIFY_APP_NAME}"
+    - name: Generate Amplify app info
+      id: amplify-info
+      run: |
+        AMPLIFY_APP_NAME="macro-ai-frontend-pr-${{ github.event.pull_request.number }}"
+        echo "amplify-app-name=${AMPLIFY_APP_NAME}" >> $GITHUB_OUTPUT
+        echo "📱 Amplify app name: ${AMPLIFY_APP_NAME}"
 
-      - name: Make deployment decision
-        id: decision
-        run: |
-          IS_OWNER="${{ steps.codeowner-check.outputs.is-owner }}"
-          ACTOR="${{ steps.codeowner-check.outputs.target-user }}"
+    - name: Make deployment decision
+      id: decision
+      run: |
+        IS_OWNER="${{ steps.codeowner-check.outputs.is-owner }}"
+        ACTOR="${{ steps.codeowner-check.outputs.target-user }}"
 
-          if [[ "${IS_OWNER}" == "true" ]]; then
-            echo "should-deploy=true" >> $GITHUB_OUTPUT
-            echo "✅ Frontend preview deployment approved for code owner: ${ACTOR}"
-            echo "🌍 Target environment: ${{ steps.env-name.outputs.env-name }}"
-            echo "📱 Amplify app: ${{ steps.amplify-info.outputs.amplify-app-name }}"
-          else
-            echo "should-deploy=false" >> $GITHUB_OUTPUT
-            echo "❌ Frontend preview deployment blocked: ${ACTOR} is not a code owner"
-            echo "💡 Only code owners can deploy frontend preview environments"
-          fi
+        if [[ "${IS_OWNER}" == "true" ]]; then
+          echo "should-deploy=true" >> $GITHUB_OUTPUT
+          echo "✅ Frontend preview deployment approved for code owner: ${ACTOR}"
+          echo "🌍 Target environment: ${{ steps.env-name.outputs.env-name }}"
+          echo "📱 Amplify app: ${{ steps.amplify-info.outputs.amplify-app-name }}"
+        else
+          echo "should-deploy=false" >> $GITHUB_OUTPUT
+          echo "❌ Frontend preview deployment blocked: ${ACTOR} is not a code owner"
+          echo "💡 Only code owners can deploy frontend preview environments"
+        fi
 
   # Check if backend preview environment exists and get API endpoint
   check-backend-environment:
     name: Check Backend Environment
     runs-on: ubuntu-latest
-    needs: [validate-access]
+    needs: [ validate-access ]
     if: needs.validate-access.outputs.should-deploy == 'true'
 
     permissions:
@@ -96,30 +96,30 @@ jobs:
       connectivity-status: ${{ steps.discover.outputs.connectivity-status }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
 
-      - name: Discover backend environment
-        id: discover
-        uses: ./.github/actions/discover-backend
-        with:
-          environment: ${{ needs.validate-access.outputs.env-name }}
-          pr-number: ${{ github.event.pull_request.number }}
-          validate-connectivity: 'true'
-          aws-region: ${{ env.AWS_REGION }}
-          debug: 'false'
+    - name: Discover backend environment
+      id: discover
+      uses: ./.github/actions/discover-backend
+      with:
+        environment: ${{ needs.validate-access.outputs.env-name }}
+        pr-number: ${{ github.event.pull_request.number }}
+        validate-connectivity: 'true'
+        aws-region: ${{ env.AWS_REGION }}
+        debug: 'false'
 
   # Build the React frontend
   build-frontend:
     name: Build React Frontend
     runs-on: ubuntu-latest
-    needs: [validate-access, check-backend-environment]
+    needs: [ validate-access, check-backend-environment ]
     if: needs.validate-access.outputs.should-deploy == 'true'
 
     outputs:
@@ -127,121 +127,121 @@ jobs:
       build-files: ${{ steps.build-info.outputs.build-files }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'pnpm'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: ${{ env.PNPM_VERSION }}
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: ${{ env.PNPM_VERSION }}
 
-      - name: Install dependencies
-        run: |
-          cd apps/client-ui
-          pnpm install --frozen-lockfile
+    - name: Install dependencies
+      run: |
+        cd apps/client-ui
+        pnpm install --frozen-lockfile
 
-      - name: Generate environment configuration
-        id: generate-env
-        uses: ./.github/actions/generate-frontend-env
-        with:
-          environment: ${{ needs.validate-access.outputs.env-name }}
-          pr-number: ${{ github.event.pull_request.number }}
-          build-mode: 'preview'
-          api-endpoint: ${{ needs.check-backend-environment.outputs.api-endpoint }}
-          api-key: ${{ secrets.FRONTEND_API_KEY }}
-          backend-stack-name: ${{ needs.check-backend-environment.outputs.stack-name }}
-          resolution-method: ${{ needs.check-backend-environment.outputs.resolution-method }}
-          output-file: '.env.preview'
-          include-build-metadata: 'true'
-          validate-variables: 'true'
-          debug: 'false'
+    - name: Generate environment configuration
+      id: generate-env
+      uses: ./.github/actions/generate-frontend-env
+      with:
+        environment: ${{ needs.validate-access.outputs.env-name }}
+        pr-number: ${{ github.event.pull_request.number }}
+        build-mode: 'preview'
+        api-endpoint: ${{ needs.check-backend-environment.outputs.api-endpoint }}
+        api-key: ${{ secrets.FRONTEND_API_KEY }}
+        backend-stack-name: ${{ needs.check-backend-environment.outputs.stack-name }}
+        resolution-method: ${{ needs.check-backend-environment.outputs.resolution-method }}
+        output-file: '.env.preview'
+        include-build-metadata: 'true'
+        validate-variables: 'true'
+        debug: 'false'
 
-      - name: Generate Amplify configuration
-        run: |
-          cd apps/client-ui
+    - name: Generate Amplify configuration
+      run: |
+        cd apps/client-ui
 
-          ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
+        ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
 
-          echo "🔧 Generating Amplify configuration for environment: ${ENV_NAME}"
+        echo "🔧 Generating Amplify configuration for environment: ${ENV_NAME}"
 
-          # Set environment variables for configuration generation
-          export PR_NUMBER="${{ github.event.pull_request.number }}"
-          export ENVIRONMENT_NAME="${ENV_NAME}"
-          export BUILD_MODE="preview"
-          export GITHUB_SHA="${{ github.sha }}"
-          export GITHUB_REF_NAME="${{ github.ref_name }}"
-          export GITHUB_PR_NUMBER="${{ github.event.pull_request.number }}"
+        # Set environment variables for configuration generation
+        export PR_NUMBER="${{ github.event.pull_request.number }}"
+        export ENVIRONMENT_NAME="${ENV_NAME}"
+        export BUILD_MODE="preview"
+        export GITHUB_SHA="${{ github.sha }}"
+        export GITHUB_REF_NAME="${{ github.ref_name }}"
+        export GITHUB_PR_NUMBER="${{ github.event.pull_request.number }}"
 
-          # Load environment variables from .env.preview
-          export $(cat .env.preview | xargs)
+        # Load environment variables from .env.preview
+        export $(cat .env.preview | xargs)
 
-          # Generate environment-specific Amplify configuration
-          chmod +x scripts/generate-amplify-config.sh
-          ./scripts/generate-amplify-config.sh \
-            --environment preview \
-            --pr-number "${{ github.event.pull_request.number }}" \
-            --output-file amplify.yml
+        # Generate environment-specific Amplify configuration
+        chmod +x scripts/generate-amplify-config.sh
+        ./scripts/generate-amplify-config.sh \
+          --environment preview \
+          --pr-number "${{ github.event.pull_request.number }}" \
+          --output-file amplify.yml
 
-          # Validate generated configuration
-          chmod +x scripts/validate-amplify-config.sh
-          ./scripts/validate-amplify-config.sh \
-            --config-file amplify.yml \
-            --environment preview
+        # Validate generated configuration
+        chmod +x scripts/validate-amplify-config.sh
+        ./scripts/validate-amplify-config.sh \
+          --config-file amplify.yml \
+          --environment preview
 
-          echo "✅ Amplify configuration generated and validated"
-          echo "📄 Configuration file: amplify.yml"
+        echo "✅ Amplify configuration generated and validated"
+        echo "📄 Configuration file: amplify.yml"
 
-      - name: Build React application
-        run: |
-          cd apps/client-ui
+    - name: Build React application
+      run: |
+        cd apps/client-ui
 
-          # Load preview environment variables
-          export $(cat .env.preview | xargs)
+        # Load preview environment variables
+        export $(cat .env.preview | xargs)
 
-          echo "🔨 Building React application..."
-          echo "API URL: $VITE_API_URL"
-          echo "Environment: $VITE_APP_ENV"
+        echo "🔨 Building React application..."
+        echo "API URL: $VITE_API_URL"
+        echo "Environment: $VITE_APP_ENV"
 
-          pnpm build
+        pnpm build
 
-      - name: Validate build output
-        id: build-info
-        run: |
-          cd apps/client-ui
+    - name: Validate build output
+      id: build-info
+      run: |
+        cd apps/client-ui
 
-          if [ ! -d "dist" ]; then
-            echo "❌ Build output directory 'dist' not found"
-            exit 1
-          fi
+        if [ ! -d "dist" ]; then
+          echo "❌ Build output directory 'dist' not found"
+          exit 1
+        fi
 
-          BUILD_SIZE=$(du -sh dist | cut -f1)
-          BUILD_FILES=$(find dist -type f | wc -l)
+        BUILD_SIZE=$(du -sh dist | cut -f1)
+        BUILD_FILES=$(find dist -type f | wc -l)
 
-          echo "build-size=${BUILD_SIZE}" >> $GITHUB_OUTPUT
-          echo "build-files=${BUILD_FILES}" >> $GITHUB_OUTPUT
+        echo "build-size=${BUILD_SIZE}" >> $GITHUB_OUTPUT
+        echo "build-files=${BUILD_FILES}" >> $GITHUB_OUTPUT
 
-          echo "✅ Build validation successful"
-          echo "📦 Build size: ${BUILD_SIZE}"
-          echo "📄 Files: ${BUILD_FILES}"
+        echo "✅ Build validation successful"
+        echo "📦 Build size: ${BUILD_SIZE}"
+        echo "📄 Files: ${BUILD_FILES}"
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-build-${{ needs.validate-access.outputs.env-name }}
-          path: apps/client-ui/dist/
-          retention-days: 7
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-build-${{ needs.validate-access.outputs.env-name }}
+        path: apps/client-ui/dist/
+        retention-days: 7
 
   # Deploy to AWS Amplify
   deploy-frontend-preview:
     name: Deploy Frontend Preview
     runs-on: ubuntu-latest
-    needs: [validate-access, check-backend-environment, build-frontend]
+    needs: [ validate-access, check-backend-environment, build-frontend ]
     if: needs.validate-access.outputs.should-deploy == 'true'
     environment: development
 
@@ -255,171 +255,165 @@ jobs:
       deployment-result: ${{ steps.deploy.outputs.deployment-result }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'pnpm'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: ${{ env.PNPM_VERSION }}
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: ${{ env.PNPM_VERSION }}
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-build-${{ needs.validate-access.outputs.env-name }}
-          path: apps/client-ui/dist/
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: frontend-build-${{ needs.validate-access.outputs.env-name }}
+        path: apps/client-ui/dist/
 
-      - name: Install Amplify CLI
-        run: |
-          npm install -g @aws-amplify/cli
-          amplify --version
+    - name: Install Amplify CLI
+      run: |
+        npm install -g @aws-amplify/cli
+        amplify --version
 
-      - name: Deploy to Amplify
-        id: deploy
-        run: |
-          cd apps/client-ui
+    - name: Deploy to Amplify
+      id: deploy
+      run: |
+        cd apps/client-ui
 
-          ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
-          AMPLIFY_APP_NAME="${{ needs.validate-access.outputs.amplify-app-name }}"
+        ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
+        AMPLIFY_APP_NAME="${{ needs.validate-access.outputs.amplify-app-name }}"
 
-          echo "🚀 Deploying frontend preview environment"
-          echo "📱 Amplify app: ${AMPLIFY_APP_NAME}"
-          echo "🌍 Environment: ${ENV_NAME}"
-          echo "👤 Requested by: ${{ needs.validate-access.outputs.target-user }}"
+        echo "🚀 Deploying frontend preview environment"
+        echo "📱 Amplify app: ${AMPLIFY_APP_NAME}"
+        echo "🌍 Environment: ${ENV_NAME}"
+        echo "👤 Requested by: ${{ needs.validate-access.outputs.target-user }}"
 
-          # Set environment variables for the script
-          export AMPLIFY_APP_NAME="${AMPLIFY_APP_NAME}"
-          export ENVIRONMENT_NAME="${ENV_NAME}"
-          export PR_NUMBER="${{ github.event.pull_request.number }}"
-          export AWS_REGION="${{ env.AWS_REGION }}"
+        # Set environment variables for the script
+        export AMPLIFY_APP_NAME="${AMPLIFY_APP_NAME}"
+        export ENVIRONMENT_NAME="${ENV_NAME}"
+        export PR_NUMBER="${{ github.event.pull_request.number }}"
+        export AWS_REGION="${{ env.AWS_REGION }}"
 
-          # Set API URL for deployment
-          if [[ -n "${{ needs.check-backend-environment.outputs.api-endpoint }}" ]]; then
-            export VITE_API_URL="${{ needs.check-backend-environment.outputs.api-endpoint }}api"
-            echo "✅ Using backend preview API: ${VITE_API_URL}"
-          else
-            export VITE_API_URL="https://api-development.macro-ai.com/api"
-            echo "⚠️ Using fallback API URL: ${VITE_API_URL}"
-          fi
+        # Set API URL for deployment
+        if [[ -n "${{ needs.check-backend-environment.outputs.api-endpoint }}" ]]; then
+          export VITE_API_URL="${{ needs.check-backend-environment.outputs.api-endpoint }}api"
+          echo "✅ Using backend preview API: ${VITE_API_URL}"
+        else
+          export VITE_API_URL="https://api-development.macro-ai.com/api"
+          echo "⚠️ Using fallback API URL: ${VITE_API_URL}"
+        fi
 
-          export VITE_API_KEY="${{ secrets.FRONTEND_API_KEY }}"
-          export VITE_APP_ENV="${ENV_NAME}"
+        export VITE_API_KEY="${{ secrets.FRONTEND_API_KEY }}"
+        export VITE_APP_ENV="${ENV_NAME}"
 
-          # Run deployment script with error handling
-          echo "🚀 Starting Amplify deployment..."
-          if ./scripts/deploy-amplify-preview.sh; then
-            echo "deployment-result=success" >> $GITHUB_OUTPUT
-            echo "✅ Deployment script completed successfully"
+        # Run deployment script with error handling
+        echo "🚀 Starting Amplify deployment..."
+        if ./scripts/deploy-amplify-preview.sh; then
+          echo "deployment-result=success" >> $GITHUB_OUTPUT
+          echo "✅ Deployment script completed successfully"
 
-            # Extract Amplify URL (script should output it)
-            if [[ -f "amplify-deployment-url.txt" ]]; then
-              AMPLIFY_URL=$(cat amplify-deployment-url.txt)
-              if [[ -n "$AMPLIFY_URL" && "$AMPLIFY_URL" != "deployment-pending" ]]; then
-                echo "amplify-url=${AMPLIFY_URL}" >> $GITHUB_OUTPUT
-                echo "🌐 Preview URL: ${AMPLIFY_URL}"
-              else
-                echo "amplify-url=deployment-pending" >> $GITHUB_OUTPUT
-                echo "⏳ Deployment in progress, URL will be available shortly"
-              fi
+          # Extract Amplify URL (script should output it)
+          if [[ -f "amplify-deployment-url.txt" ]]; then
+            AMPLIFY_URL=$(cat amplify-deployment-url.txt)
+            if [[ -n "$AMPLIFY_URL" && "$AMPLIFY_URL" != "deployment-pending" ]]; then
+              echo "amplify-url=${AMPLIFY_URL}" >> $GITHUB_OUTPUT
+              echo "🌐 Preview URL: ${AMPLIFY_URL}"
             else
               echo "amplify-url=deployment-pending" >> $GITHUB_OUTPUT
-              echo "⚠️ URL file not found, deployment may still be in progress"
+              echo "⏳ Deployment in progress, URL will be available shortly"
             fi
           else
-            echo "deployment-result=failed" >> $GITHUB_OUTPUT
-            echo "❌ Amplify deployment script failed"
-
-            # Try to get error details
-            if [[ -f "amplify-deployment-error.txt" ]]; then
-              echo "Error details:"
-              cat amplify-deployment-error.txt
-            fi
-
-            exit 1
+            echo "amplify-url=deployment-pending" >> $GITHUB_OUTPUT
+            echo "⚠️ URL file not found, deployment may still be in progress"
           fi
+        else
+          echo "deployment-result=failed" >> $GITHUB_OUTPUT
+          echo "❌ Amplify deployment script failed"
+
+          # Try to get error details
+          if [[ -f "amplify-deployment-error.txt" ]]; then
+            echo "Error details:"
+            cat amplify-deployment-error.txt
+          fi
+
+          exit 1
+        fi
 
   # Comment on PR with deployment information
   comment-deployment-info:
     name: Comment Deployment Info
     runs-on: ubuntu-latest
-    needs:
-      [
-        validate-access,
-        check-backend-environment,
-        build-frontend,
-        deploy-frontend-preview,
-      ]
+    needs: [ validate-access, check-backend-environment, build-frontend, deploy-frontend-preview ]
     if: always() && needs.validate-access.outputs.should-deploy == 'true'
 
     permissions:
       pull-requests: write
 
     steps:
-      - name: Generate deployment comment
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const envName = '${{ needs.validate-access.outputs.env-name }}';
-            const amplifyAppName = '${{ needs.validate-access.outputs.amplify-app-name }}';
-            const deploymentResult = '${{ needs.deploy-frontend-preview.outputs.deployment-result }}';
-            const amplifyUrl = '${{ needs.deploy-frontend-preview.outputs.amplify-url }}';
-            const buildSize = '${{ needs.build-frontend.outputs.build-size }}';
-            const buildFiles = '${{ needs.build-frontend.outputs.build-files }}';
-            const backendExists = '${{ needs.check-backend-environment.outputs.backend-exists }}';
-            const apiEndpoint = '${{ needs.check-backend-environment.outputs.api-endpoint }}';
+    - name: Generate deployment comment
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const envName = '${{ needs.validate-access.outputs.env-name }}';
+          const amplifyAppName = '${{ needs.validate-access.outputs.amplify-app-name }}';
+          const deploymentResult = '${{ needs.deploy-frontend-preview.outputs.deployment-result }}';
+          const amplifyUrl = '${{ needs.deploy-frontend-preview.outputs.amplify-url }}';
+          const buildSize = '${{ needs.build-frontend.outputs.build-size }}';
+          const buildFiles = '${{ needs.build-frontend.outputs.build-files }}';
+          const backendExists = '${{ needs.check-backend-environment.outputs.backend-exists }}';
+          const apiEndpoint = '${{ needs.check-backend-environment.outputs.api-endpoint }}';
 
-            let comment = `## 🎨 Frontend Preview Deployment\n\n`;
+          let comment = `## 🎨 Frontend Preview Deployment\n\n`;
 
-            if (deploymentResult === 'success') {
-              comment += `✅ **Frontend preview deployed successfully!**\n\n`;
-              comment += `### 📱 Preview Information\n`;
-              comment += `- **Environment**: \`${envName}\`\n`;
-              comment += `- **Amplify App**: \`${amplifyAppName}\`\n`;
-              if (amplifyUrl && amplifyUrl !== 'deployment-pending') {
-                comment += `- **Preview URL**: ${amplifyUrl}\n`;
-              } else {
-                comment += `- **Preview URL**: ⏳ Deployment in progress\n`;
-              }
-              comment += `- **Build Size**: ${buildSize}\n`;
-              comment += `- **Files**: ${buildFiles}\n\n`;
-              
-              comment += `### 🔗 Backend Integration\n`;
-              if (backendExists === 'true' && apiEndpoint) {
-                comment += `✅ **Connected to backend preview**: \`${apiEndpoint}api\`\n\n`;
-              } else {
-                comment += `⚠️ **Using fallback API**: Backend preview not available\n\n`;
-              }
-              
-              comment += `### 🛠️ Useful Commands\n`;
-              comment += `\`\`\`bash\n`;
-              comment += `# View Amplify app status\n`;
-              comment += `aws amplify get-app --app-id <app-id>\n\n`;
-              comment += `# View deployment logs\n`;
-              comment += `aws amplify list-jobs --app-id <app-id> --branch-name main\n`;
-              comment += `\`\`\`\n\n`;
+          if (deploymentResult === 'success') {
+            comment += `✅ **Frontend preview deployed successfully!**\n\n`;
+            comment += `### 📱 Preview Information\n`;
+            comment += `- **Environment**: \`${envName}\`\n`;
+            comment += `- **Amplify App**: \`${amplifyAppName}\`\n`;
+            if (amplifyUrl && amplifyUrl !== 'deployment-pending') {
+              comment += `- **Preview URL**: ${amplifyUrl}\n`;
             } else {
-              comment += `❌ **Frontend preview deployment failed**\n\n`;
-              comment += `Please check the [workflow logs](${context.payload.pull_request.html_url}/checks) for details.\n\n`;
+              comment += `- **Preview URL**: ⏳ Deployment in progress\n`;
             }
+            comment += `- **Build Size**: ${buildSize}\n`;
+            comment += `- **Files**: ${buildFiles}\n\n`;
+            
+            comment += `### 🔗 Backend Integration\n`;
+            if (backendExists === 'true' && apiEndpoint) {
+              comment += `✅ **Connected to backend preview**: \`${apiEndpoint}api\`\n\n`;
+            } else {
+              comment += `⚠️ **Using fallback API**: Backend preview not available\n\n`;
+            }
+            
+            comment += `### 🛠️ Useful Commands\n`;
+            comment += `\`\`\`bash\n`;
+            comment += `# View Amplify app status\n`;
+            comment += `aws amplify get-app --app-id <app-id>\n\n`;
+            comment += `# View deployment logs\n`;
+            comment += `aws amplify list-jobs --app-id <app-id> --branch-name main\n`;
+            comment += `\`\`\`\n\n`;
+          } else {
+            comment += `❌ **Frontend preview deployment failed**\n\n`;
+            comment += `Please check the [workflow logs](${context.payload.pull_request.html_url}/checks) for details.\n\n`;
+          }
 
-            comment += `---\n`;
-            comment += `*This comment will be updated when the deployment status changes.*`;
+          comment += `---\n`;
+          comment += `*This comment will be updated when the deployment status changes.*`;
 
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
