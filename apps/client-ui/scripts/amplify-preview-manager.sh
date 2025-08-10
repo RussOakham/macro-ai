@@ -7,16 +7,16 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 
 # Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly BLUE='\033[0;34m'
+readonly CYAN='\033[0;36m'
+readonly NC='\033[0m' # No Color
 
 # Configuration
-AWS_REGION=${AWS_REGION:-"us-east-1"}
-APP_NAME_PREFIX="macro-ai-frontend-pr-"
+readonly AWS_REGION=${AWS_REGION:-"us-east-1"}
+readonly APP_NAME_PREFIX="macro-ai-frontend-pr-"
 
 # Function to print status messages
 print_status() {
@@ -87,42 +87,47 @@ list_preview_environments() {
     echo ""
 
     # Get all Amplify apps that match our naming pattern
-    APPS=$(aws amplify list-apps \
+    local apps
+    apps=$(aws amplify list-apps \
         --query "apps[?starts_with(name, '${APP_NAME_PREFIX}')].{name:name,appId:appId,status:status,createTime:createTime}" \
         --output json 2>/dev/null || echo "[]")
 
-    if [[ "$APPS" == "[]" ]] || [[ -z "$APPS" ]]; then
+    if [[ "$apps" == "[]" ]] || [[ -z "$apps" ]]; then
         print_info "No preview environments found"
         return 0
     fi
 
     # Parse and display apps
-    echo "$APPS" | jq -r '.[] | "\(.name)|\(.appId)|\(.status)|\(.createTime)"' | while IFS='|' read -r name app_id status create_time; do
+    echo "$apps" | jq -r '.[] | "\(.name)|\(.appId)|\(.status)|\(.createTime)"' | while IFS='|' read -r name app_id status create_time; do
         # Extract PR number from name
-        PR_NUMBER=$(echo "$name" | sed "s/${APP_NAME_PREFIX}//")
-        
+        local pr_number
+        pr_number=$(echo "$name" | sed "s/${APP_NAME_PREFIX}//")
+
         # Format create time
-        FORMATTED_TIME=$(date -d "$create_time" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "$create_time")
+        local formatted_time
+        formatted_time=$(date -d "$create_time" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "$create_time")
         
         # Color code status
+        local status_color
         case "$status" in
             "AVAILABLE")
-                STATUS_COLOR="${GREEN}$status${NC}"
+                status_color="${GREEN}$status${NC}"
                 ;;
             "FAILED")
-                STATUS_COLOR="${RED}$status${NC}"
+                status_color="${RED}$status${NC}"
                 ;;
             *)
-                STATUS_COLOR="${YELLOW}$status${NC}"
+                status_color="${YELLOW}$status${NC}"
                 ;;
         esac
-        
-        echo -e "PR #${PR_NUMBER}: ${STATUS_COLOR} (${app_id}) - Created: ${FORMATTED_TIME}"
-        
+
+        echo -e "PR #${pr_number}: ${status_color} (${app_id}) - Created: ${formatted_time}"
+
         # Get app URL if available
-        APP_URL=$(aws amplify get-app --app-id "$app_id" --query 'app.defaultDomain' --output text 2>/dev/null || echo "")
-        if [[ -n "$APP_URL" && "$APP_URL" != "None" ]]; then
-            echo -e "  🌐 URL: https://main.${APP_URL}"
+        local app_url
+        app_url=$(aws amplify get-app --app-id "$app_id" --query 'app.defaultDomain' --output text 2>/dev/null || echo "")
+        if [[ -n "$app_url" && "$app_url" != "None" ]]; then
+            echo -e "  🌐 URL: https://main.${app_url}"
         fi
         
         echo ""

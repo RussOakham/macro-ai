@@ -7,18 +7,18 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 
 # Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly BLUE='\033[0;34m'
+readonly NC='\033[0m' # No Color
 
 # Configuration from environment variables
 AMPLIFY_APP_ID=${AMPLIFY_APP_ID:-""}
 AMPLIFY_APP_NAME=${AMPLIFY_APP_NAME:-"macro-ai-frontend-preview"}
 ENVIRONMENT_NAME=${ENVIRONMENT_NAME:-"preview"}
 PR_NUMBER=${PR_NUMBER:-"unknown"}
-AWS_REGION=${AWS_REGION:-"us-east-1"}
+readonly AWS_REGION=${AWS_REGION:-"us-east-1"}
 
 # Clean up any previous error files
 rm -f amplify-destroy-error.txt

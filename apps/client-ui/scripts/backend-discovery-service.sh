@@ -7,21 +7,21 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 
 # Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly BLUE='\033[0;34m'
+readonly CYAN='\033[0;36m'
+readonly NC='\033[0m' # No Color
 
 # Configuration
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="${SCRIPT_DIR}/env-mapping.json"
-CACHE_DIR="${SCRIPT_DIR}/.cache"
-CACHE_TTL=${CACHE_TTL:-300}  # 5 minutes default cache TTL
-AWS_REGION=${AWS_REGION:-"us-east-1"}
-TIMEOUT=${TIMEOUT:-10}
-DEBUG=${DEBUG:-"false"}
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly CONFIG_FILE="${SCRIPT_DIR}/env-mapping.json"
+readonly CACHE_DIR="${SCRIPT_DIR}/.cache"
+readonly CACHE_TTL=${CACHE_TTL:-300}  # 5 minutes default cache TTL
+readonly AWS_REGION=${AWS_REGION:-"us-east-1"}
+readonly TIMEOUT=${TIMEOUT:-10}
+readonly DEBUG=${DEBUG:-"false"}
 
 # Function to print status messages (all output to stderr to avoid contaminating JSON output)
 print_status() {

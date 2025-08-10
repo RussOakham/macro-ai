@@ -7,16 +7,16 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 
 # Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly BLUE='\033[0;34m'
+readonly NC='\033[0m' # No Color
 
 # Configuration
-ENVIRONMENT=${AMPLIFY_ENV:-hobby}
-AWS_REGION=${AWS_REGION:-us-east-1}
-APP_NAME="macro-ai-frontend"
+readonly ENVIRONMENT=${AMPLIFY_ENV:-hobby}
+readonly AWS_REGION=${AWS_REGION:-us-east-1}
+readonly APP_NAME="macro-ai-frontend"
 
 echo -e "${BLUE}🚀 AWS Amplify Deployment for Macro AI Frontend${NC}"
 echo -e "${BLUE}Environment: $ENVIRONMENT${NC}"

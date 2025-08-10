@@ -7,23 +7,23 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 
 # Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly BLUE='\033[0;34m'
+readonly NC='\033[0m' # No Color
 
 # Configuration
 PR_NUMBER=${PR_NUMBER:-""}
 ENVIRONMENT_NAME=${ENVIRONMENT_NAME:-"preview"}
-AWS_REGION=${AWS_REGION:-"us-east-1"}
-APP_NAME_PREFIX="macro-ai-frontend-pr-"
+readonly AWS_REGION=${AWS_REGION:-"us-east-1"}
+readonly APP_NAME_PREFIX="macro-ai-frontend-pr-"
 
 # Environment variable defaults
-DEFAULT_VITE_API_URL="https://api-development.macro-ai.com/api"
-DEFAULT_VITE_APP_NAME="Macro AI (Preview)"
-DEFAULT_VITE_ENABLE_DEVTOOLS="true"
-DEFAULT_VITE_ENABLE_DEBUG_LOGGING="true"
+readonly DEFAULT_VITE_API_URL="https://api-development.macro-ai.com/api"
+readonly DEFAULT_VITE_APP_NAME="Macro AI (Preview)"
+readonly DEFAULT_VITE_ENABLE_DEVTOOLS="true"
+readonly DEFAULT_VITE_ENABLE_DEBUG_LOGGING="true"
 
 # Function to print status messages
 print_status() {
