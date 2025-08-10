@@ -238,11 +238,22 @@ Environment-specific build optimizations:
 
 ### Artifact Management
 
-Environment-specific artifact naming:
+Amplify recognizes artifacts.baseDirectory and artifacts.files. It does not support an artifacts.name field.
+
+If timestamp metadata is helpful for debugging, we can inject a BUILD_TS environment variable during preBuild and use it in logs or generated files:
 
 ```yaml
-artifacts:
-  name: macro-ai-frontend-${environment}-$(date +%Y%m%d-%H%M%S)
+# Inside preBuild
+- echo "BUILD_TS=$(date +%Y%m%d-%H%M%S)" >> "$BASH_ENV"
+- echo "Using build timestamp: $BUILD_TS"
+
+# Example: write metadata file
+- |
+  cat > dist/build-info.json << EOF
+  {
+    "build_timestamp": "$BUILD_TS"
+  }
+  EOF
 ```
 
 ## 🧪 Testing Integration

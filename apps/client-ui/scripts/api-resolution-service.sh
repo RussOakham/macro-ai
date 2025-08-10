@@ -178,12 +178,17 @@ resolve_api_with_strategies() {
         fi
         
         local discovery_result=""
-        # Capture both stdout and stderr, but don't fail if backend discovery fails
-        if discovery_result=$(bash "$BACKEND_DISCOVERY_SERVICE" "${discovery_args[@]}" 2>&1); then
+        # Capture JSON from stdout only; send stderr to debug
+        if discovery_result="$(
+            bash "$BACKEND_DISCOVERY_SERVICE" "${discovery_args[@]}" \
+                2> >(while read -r line; do print_debug "discovery: $line"; done)
+        )"; then
             # Check if the result is valid JSON
             if echo "$discovery_result" | jq . >/dev/null 2>&1; then
-                local backend_found=$(echo "$discovery_result" | jq -r '.backend_found // false')
-                local api_endpoint=$(echo "$discovery_result" | jq -r '.api_endpoint // null')
+                local backend_found
+                backend_found="$(echo "$discovery_result" | jq -r '.backend_found // false')"
+                local api_endpoint
+                api_endpoint="$(echo "$discovery_result" | jq -r '.api_endpoint // null')"
 
                 if [[ "$backend_found" == "true" && -n "$api_endpoint" && "$api_endpoint" != "null" ]]; then
                     resolution_result=$(echo "$resolution_result" | jq \
