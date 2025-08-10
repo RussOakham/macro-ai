@@ -43,6 +43,29 @@ print_error() {
     echo -e "${RED}✗${NC} $1"
 }
 
+# Validate required tools are available
+validate_dependencies() {
+    local missing_tools=()
+
+    # Check for required tools
+    if ! command -v aws >/dev/null 2>&1; then
+        missing_tools+=("aws")
+    fi
+
+    if ! command -v grep >/dev/null 2>&1; then
+        missing_tools+=("grep")
+    fi
+
+    if [[ ${#missing_tools[@]} -gt 0 ]]; then
+        print_error "Missing required tools: ${missing_tools[*]}"
+        print_error "Please install the missing tools and try again."
+        exit 1
+    fi
+}
+
+# Validate dependencies
+validate_dependencies
+
 # Check if AWS CLI is available
 if ! command -v aws &> /dev/null; then
     print_error "AWS CLI is not installed or not in PATH"

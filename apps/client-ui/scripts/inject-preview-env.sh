@@ -169,7 +169,8 @@ resolve_api_url() {
 
 # Function to get build metadata
 get_build_metadata() {
-    local build_timestamp=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+    local build_timestamp
+    build_timestamp=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
     local build_commit="${GITHUB_SHA:-$(git rev-parse HEAD 2>/dev/null || echo "unknown")}"
     local build_branch="${GITHUB_REF_NAME:-$(git branch --show-current 2>/dev/null || echo "unknown")}"
     local build_pr="${PR_NUMBER:-${GITHUB_PR_NUMBER:-"unknown"}}"
@@ -185,7 +186,8 @@ generate_environment_config() {
     print_info "Generating environment configuration for: $env_name"
     
     # Get build metadata
-    local metadata=$(get_build_metadata)
+    local metadata
+    metadata=$(get_build_metadata)
     IFS='|' read -r build_timestamp build_commit build_branch build_pr <<< "$metadata"
     
     # Resolve API URL if not already set
@@ -218,7 +220,8 @@ generate_environment_config() {
     print_debug "Normalized API URL: $api_url"
     
     # Create output directory if needed
-    local output_dir=$(dirname "$output_file")
+    local output_dir
+    output_dir=$(dirname "$output_file")
     if [[ "$output_dir" != "." && ! -d "$output_dir" ]]; then
         mkdir -p "$output_dir"
         print_debug "Created output directory: $output_dir"
@@ -458,11 +461,38 @@ main() {
         exit 1
     fi
     
+    # Validate required tools are available
+    validate_dependencies() {
+        local missing_tools=()
+
+        # Check for required tools
+        if ! command -v git >/dev/null 2>&1; then
+            missing_tools+=("git")
+        fi
+
+        if ! command -v date >/dev/null 2>&1; then
+            missing_tools+=("date")
+        fi
+
+        if ! command -v grep >/dev/null 2>&1; then
+            missing_tools+=("grep")
+        fi
+
+        if [[ ${#missing_tools[@]} -gt 0 ]]; then
+            print_error "Missing required tools: ${missing_tools[*]}"
+            print_error "Please install the missing tools and try again."
+            exit 1
+        fi
+    }
+
+    # Validate dependencies
+    validate_dependencies
+
     print_debug "Starting environment variable injection"
     print_debug "Environment: $ENVIRONMENT_NAME"
     print_debug "Build Mode: $BUILD_MODE"
     print_debug "Output File: $OUTPUT_FILE"
-    
+
     # Validate required environment variables
     if ! validate_required_variables; then
         print_error "Environment validation failed"

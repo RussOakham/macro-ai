@@ -52,9 +52,10 @@ check_url_health() {
     local description="$2"
     
     print_info "Checking $description: $url"
-    
+
     # Check if URL responds with 200 status
-    local http_status=$(curl -s -o /dev/null -w "%{http_code}" --max-time $TIMEOUT "$url" 2>/dev/null || echo "000")
+    local http_status
+    http_status=$(curl -s -o /dev/null -w "%{http_code}" --max-time $TIMEOUT "$url" 2>/dev/null || echo "000")
     
     case "$http_status" in
         "200")
@@ -77,9 +78,10 @@ check_content_validity() {
     local url="$1"
     
     print_info "Checking content validity..."
-    
+
     # Get page content
-    local content=$(curl -s --max-time $TIMEOUT "$url" 2>/dev/null || echo "")
+    local content
+    content=$(curl -s --max-time $TIMEOUT "$url" 2>/dev/null || echo "")
     
     if [[ -z "$content" ]]; then
         print_error "No content received from URL"
@@ -129,7 +131,8 @@ check_api_connectivity() {
     
     # Try to get environment variables from Amplify app
     if [[ -n "$APP_ID" ]]; then
-        local app_info=$(aws amplify get-app --app-id "$APP_ID" --output json 2>/dev/null || echo "{}")
+        local app_info
+        app_info=$(aws amplify get-app --app-id "$APP_ID" --output json 2>/dev/null || echo "{}")
         api_url=$(echo "$app_info" | jq -r '.app.environmentVariables.VITE_API_URL // empty' 2>/dev/null || echo "")
     fi
     
@@ -137,7 +140,8 @@ check_api_connectivity() {
         print_info "Testing API endpoint: $api_url"
         
         # Check if API endpoint is accessible
-        local api_status=$(curl -s -o /dev/null -w "%{http_code}" --max-time $TIMEOUT "$api_url/health" 2>/dev/null || echo "000")
+        local api_status
+        api_status=$(curl -s -o /dev/null -w "%{http_code}" --max-time $TIMEOUT "$api_url/health" 2>/dev/null || echo "000")
         
         case "$api_status" in
             "200")
@@ -163,9 +167,10 @@ check_performance() {
     local url="$1"
     
     print_info "Checking performance metrics..."
-    
+
     # Measure response time
-    local response_time=$(curl -s -o /dev/null -w "%{time_total}" --max-time $TIMEOUT "$url" 2>/dev/null || echo "0")
+    local response_time
+    response_time=$(curl -s -o /dev/null -w "%{time_total}" --max-time $TIMEOUT "$url" 2>/dev/null || echo "0")
     
     if [[ "$response_time" != "0" ]]; then
         local response_ms=$(echo "$response_time * 1000" | bc 2>/dev/null || echo "0")
@@ -182,7 +187,8 @@ check_performance() {
     fi
     
     # Check content size
-    local content_size=$(curl -s --max-time $TIMEOUT "$url" 2>/dev/null | wc -c || echo "0")
+    local content_size
+    content_size=$(curl -s --max-time $TIMEOUT "$url" 2>/dev/null | wc -c || echo "0")
     
     if [[ "$content_size" -gt 0 ]]; then
         local size_kb=$((content_size / 1024))
@@ -205,7 +211,8 @@ perform_health_check() {
     echo ""
     
     # Get app info
-    local app_info=$(aws amplify list-apps \
+    local app_info
+    app_info=$(aws amplify list-apps \
         --query "apps[?name=='${app_name}'].{appId:appId,status:status}" \
         --output json 2>/dev/null || echo "[]")
     
@@ -215,7 +222,8 @@ perform_health_check() {
     fi
     
     APP_ID=$(echo "$app_info" | jq -r '.[0].appId')
-    local status=$(echo "$app_info" | jq -r '.[0].status')
+    local status
+    status=$(echo "$app_info" | jq -r '.[0].status')
     
     print_info "App ID: $APP_ID"
     print_info "Status: $status"
@@ -228,8 +236,10 @@ perform_health_check() {
     fi
     
     # Get app URL
-    local detailed_info=$(aws amplify get-app --app-id "$APP_ID" --output json 2>/dev/null || echo "{}")
-    local default_domain=$(echo "$detailed_info" | jq -r '.app.defaultDomain // empty')
+    local detailed_info
+    detailed_info=$(aws amplify get-app --app-id "$APP_ID" --output json 2>/dev/null || echo "{}")
+    local default_domain
+    default_domain=$(echo "$detailed_info" | jq -r '.app.defaultDomain // empty')
     
     if [[ -z "$default_domain" ]]; then
         print_error "Could not determine app URL"

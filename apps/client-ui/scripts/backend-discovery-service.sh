@@ -107,8 +107,9 @@ check_cache() {
     local cache_file="${CACHE_DIR}/${cache_key}.json"
     
     if [[ -f "$cache_file" ]]; then
-        local cache_age=$(($(date +%s) - $(stat -f %m "$cache_file" 2>/dev/null || stat -c %Y "$cache_file" 2>/dev/null || echo 0)))
-        
+        local cache_age
+        cache_age=$(($(date +%s) - $(stat -f %m "$cache_file" 2>/dev/null || stat -c %Y "$cache_file" 2>/dev/null || echo 0)))
+
         if [[ $cache_age -lt $CACHE_TTL ]]; then
             print_debug "Cache hit for key: $cache_key (age: ${cache_age}s)"
             cat "$cache_file"
@@ -187,8 +188,9 @@ check_stack_status() {
     local stack_name="$1"
     
     print_debug "Checking stack status: $stack_name"
-    
-    local stack_info=$(aws cloudformation describe-stacks \
+
+    local stack_info
+    stack_info=$(aws cloudformation describe-stacks \
         --stack-name "$stack_name" \
         --query 'Stacks[0].{Status:StackStatus,Outputs:Outputs}' \
         --output json 2>/dev/null || echo "null")
@@ -196,8 +198,10 @@ check_stack_status() {
     if [[ "$stack_info" == "null" ]]; then
         echo '{"exists": false, "status": "DOES_NOT_EXIST"}'
     else
-        local status=$(echo "$stack_info" | jq -r '.Status')
-        local outputs=$(echo "$stack_info" | jq '.Outputs // []')
+        local status
+        status=$(echo "$stack_info" | jq -r '.Status')
+        local outputs
+        outputs=$(echo "$stack_info" | jq '.Outputs // []')
         
         echo "{\"exists\": true, \"status\": \"$status\", \"outputs\": $outputs}"
     fi
@@ -213,8 +217,9 @@ extract_api_endpoint() {
     local endpoint_keys=("ApiEndpoint" "ApiGatewayUrl" "RestApiUrl" "ApiUrl")
     
     for key in "${endpoint_keys[@]}"; do
-        local endpoint=$(echo "$stack_outputs" | jq -r ".[] | select(.OutputKey == \"$key\") | .OutputValue" 2>/dev/null || echo "")
-        
+        local endpoint
+        endpoint=$(echo "$stack_outputs" | jq -r ".[] | select(.OutputKey == \"$key\") | .OutputValue" 2>/dev/null || echo "")
+
         if [[ -n "$endpoint" && "$endpoint" != "null" ]]; then
             print_debug "Found API endpoint via key '$key': $endpoint"
             echo "$endpoint"
@@ -235,7 +240,8 @@ discover_backend() {
     print_info "Discovering backend for environment: $environment"
     
     # Check cache first
-    local cache_key=$(get_cache_key "$environment" "$pr_number")
+    local cache_key
+    cache_key=$(get_cache_key "$environment" "$pr_number")
     if cached_result=$(check_cache "$cache_key"); then
         echo "$cached_result"
         return 0
@@ -265,21 +271,26 @@ discover_backend() {
     # Try each pattern
     for pattern in "${patterns[@]}"; do
         print_debug "Trying stack pattern: $pattern"
-        
-        local stack_status=$(check_stack_status "$pattern")
-        local exists=$(echo "$stack_status" | jq -r '.exists')
-        local status=$(echo "$stack_status" | jq -r '.status')
+
+        local stack_status
+        stack_status=$(check_stack_status "$pattern")
+        local exists
+        exists=$(echo "$stack_status" | jq -r '.exists')
+        local status
+        status=$(echo "$stack_status" | jq -r '.status')
         
         if [[ "$exists" == "true" && "$status" =~ ^(CREATE_COMPLETE|UPDATE_COMPLETE)$ ]]; then
-            local outputs=$(echo "$stack_status" | jq '.outputs')
-            
+            local outputs
+            outputs=$(echo "$stack_status" | jq '.outputs')
+
             if api_endpoint=$(extract_api_endpoint "$outputs"); then
                 # Ensure API endpoint ends with /api if not already
                 if [[ ! "$api_endpoint" =~ /api/?$ ]]; then
                     api_endpoint="${api_endpoint%/}/api"
                 fi
                 
-                discovery_result=$(echo "$discovery_result" | jq \
+                local discovery_result_temp
+                discovery_result_temp=$(echo "$discovery_result" | jq \
                     --arg endpoint "$api_endpoint" \
                     --arg stack "$pattern" \
                     --arg status "$status" \
@@ -289,7 +300,8 @@ discover_backend() {
                      .stack_name = $stack |
                      .stack_status = $status |
                      .resolution_method = $method')
-                
+                discovery_result="$discovery_result_temp"
+
                 print_status "Backend discovered: $pattern -> $api_endpoint"
                 break
             fi
@@ -298,25 +310,32 @@ discover_backend() {
     
     # If no backend found, set fallback URL
     if [[ "$(echo "$discovery_result" | jq -r '.backend_found')" == "false" ]]; then
-        local fallback_url=$(get_fallback_url "$environment")
-        discovery_result=$(echo "$discovery_result" | jq \
+        local fallback_url
+        fallback_url=$(get_fallback_url "$environment")
+        local discovery_result_temp
+        discovery_result_temp=$(echo "$discovery_result" | jq \
             --arg fallback "$fallback_url" \
             --arg method "fallback_url" \
             '.api_endpoint = $fallback |
              .fallback_url = $fallback |
              .resolution_method = $method')
-        
+        discovery_result="$discovery_result_temp"
+
         print_warning "No backend stack found, using fallback: $fallback_url"
     fi
     
     # Validate connectivity if requested
     if [[ "$validate_connectivity" == "true" ]]; then
-        local api_endpoint=$(echo "$discovery_result" | jq -r '.api_endpoint')
+        local api_endpoint
+        api_endpoint=$(echo "$discovery_result" | jq -r '.api_endpoint')
         if [[ -n "$api_endpoint" && "$api_endpoint" != "null" ]]; then
-            local validation_result=$(validate_api_connectivity "$api_endpoint")
-            discovery_result=$(echo "$discovery_result" | jq \
+            local validation_result
+            validation_result=$(validate_api_connectivity "$api_endpoint")
+            local discovery_result_temp
+            discovery_result_temp=$(echo "$discovery_result" | jq \
                 --argjson validation "$validation_result" \
                 '.validation = $validation')
+            discovery_result="$discovery_result_temp"
         fi
     fi
     
@@ -348,10 +367,13 @@ validate_api_connectivity() {
     local api_url="$1"
     
     print_debug "Validating API connectivity: $api_url"
-    
-    local start_time=$(date +%s%3N)
-    local http_status=$(curl -s -o /dev/null -w "%{http_code}" --max-time "$TIMEOUT" "$api_url/health" 2>/dev/null || echo "000")
-    local end_time=$(date +%s%3N)
+
+    local start_time
+    start_time=$(date +%s%3N)
+    local http_status
+    http_status=$(curl -s -o /dev/null -w "%{http_code}" --max-time "$TIMEOUT" "$api_url/health" 2>/dev/null || echo "000")
+    local end_time
+    end_time=$(date +%s%3N)
     local response_time=$((end_time - start_time))
     
     local connectivity_status="unknown"
@@ -378,8 +400,9 @@ validate_api_connectivity() {
 # Function to list available backend stacks
 list_backend_stacks() {
     print_info "Listing available backend stacks in region: $AWS_REGION"
-    
-    local stacks=$(aws cloudformation list-stacks \
+
+    local stacks
+    stacks=$(aws cloudformation list-stacks \
         --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE \
         --query 'StackSummaries[?contains(StackName, `MacroAi`)].{Name:StackName,Status:StackStatus,Created:CreationTime}' \
         --output json)
@@ -448,6 +471,37 @@ main() {
         esac
     done
     
+    # Validate required tools are available
+    validate_dependencies() {
+        local missing_tools=()
+
+        # Check for required tools
+        if ! command -v aws >/dev/null 2>&1; then
+            missing_tools+=("aws")
+        fi
+
+        if ! command -v jq >/dev/null 2>&1; then
+            missing_tools+=("jq")
+        fi
+
+        if ! command -v curl >/dev/null 2>&1; then
+            missing_tools+=("curl")
+        fi
+
+        if ! command -v date >/dev/null 2>&1; then
+            missing_tools+=("date")
+        fi
+
+        if [[ ${#missing_tools[@]} -gt 0 ]]; then
+            print_error "Missing required tools: ${missing_tools[*]}"
+            print_error "Please install the missing tools and try again."
+            exit 1
+        fi
+    }
+
+    # Validate dependencies
+    validate_dependencies
+
     # Validate AWS CLI
     if ! command -v aws &> /dev/null; then
         print_error "AWS CLI not found. Please install AWS CLI."
