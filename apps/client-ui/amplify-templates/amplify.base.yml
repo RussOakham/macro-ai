@@ -22,6 +22,8 @@ frontend:
         - echo "NPM version: $(npm --version)"
         - echo "Environment: $AMPLIFY_ENVIRONMENT_NAME"
         - echo "API URL: $VITE_API_URL"
+        # Precompute build timestamp for artifact naming via $BASH_ENV (Amplify supports env expansion)
+        - echo "BUILD_TS=$(date +%Y%m%d-%H%M%S)" >> "$BASH_ENV"
 
         # Install pnpm globally
         - echo "Installing pnpm package manager..."
@@ -85,6 +87,7 @@ frontend:
     baseDirectory: dist
     files:
       - '**/*'
+    name: macro-ai-frontend-$AMPLIFY_ENVIRONMENT_NAME-$BUILD_TS
 
   # Cache configuration for faster builds
   cache:

@@ -10,21 +10,25 @@ const { logger } = pino
 
 const loadConfig = (): Result<TEnv> => {
 	const envPath = resolve(process.cwd(), '.env')
+	const isTruthy = (v?: string) => /^(?:1|true|yes)$/i.test(v ?? '')
 	const isLambdaEnvironment = Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME)
-	const isCiEnvironment = Boolean(
-		process.env.CI ??
-			process.env.GITHUB_ACTIONS ??
-			process.env.GITLAB_CI ??
-			process.env.CIRCLECI ??
-			process.env.JENKINS_URL ??
-			process.env.BUILDKITE,
-	)
+	const isServerlessEnv =
+		Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
+		Boolean(process.env.AWS_EXECUTION_ENV) ||
+		Boolean(process.env.LAMBDA_TASK_ROOT)
+	const isCiEnvironment =
+		isTruthy(process.env.CI) ||
+		isTruthy(process.env.GITHUB_ACTIONS) ||
+		isTruthy(process.env.GITLAB_CI) ||
+		isTruthy(process.env.CIRCLECI) ||
+		Boolean(process.env.JENKINS_URL) ||
+		isTruthy(process.env.BUILDKITE)
 
 	const enableDebug =
 		process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test'
 
-	// Only load .env file if not in Lambda or CI environment
-	if (!isLambdaEnvironment && !isCiEnvironment) {
+	// Only load .env file if not in serverless or CI environment
+	if (!isServerlessEnv && !isCiEnvironment) {
 		// Load environment variables from .env file
 		const result = config({
 			path: envPath,
@@ -113,8 +117,8 @@ const loadConfig = (): Result<TEnv> => {
 		return [null, appError]
 	}
 
-	if (isLambdaEnvironment) {
-		logger.info('Loaded configuration from Lambda environment variables')
+	if (isServerlessEnv) {
+		logger.info('Loaded configuration from serverless environment variables')
 	} else if (isCiEnvironment) {
 		logger.info('Loaded configuration from CI environment variables')
 	} else {
