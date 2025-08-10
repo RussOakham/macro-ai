@@ -48,10 +48,46 @@ print_error() {
     echo "$1" >> amplify-deployment-error.txt
 }
 
+# Validate required tools are available
+validate_dependencies() {
+    local missing_tools=()
+
+    # Check for required tools
+    if ! command -v zip >/dev/null 2>&1; then
+        missing_tools+=("zip")
+    fi
+
+    if ! command -v jq >/dev/null 2>&1; then
+        missing_tools+=("jq")
+    fi
+
+    if ! command -v find >/dev/null 2>&1; then
+        missing_tools+=("find")
+    fi
+
+    if ! command -v du >/dev/null 2>&1; then
+        missing_tools+=("du")
+    fi
+
+    if [[ ${#missing_tools[@]} -gt 0 ]]; then
+        print_error "Missing required tools: ${missing_tools[*]}"
+        print_error "Please install missing tools before running this script"
+        exit 1
+    fi
+
+    print_status "All required tools are available"
+}
+
+# Validate dependencies first
+validate_dependencies
+
 # Validate required environment variables
 if [[ -z "$VITE_API_KEY" ]]; then
-    print_error "VITE_API_KEY environment variable is required"
-    exit 1
+    print_warning "VITE_API_KEY not set - frontend-only preview mode"
+    print_warning "API functionality may be limited without authentication"
+    VITE_API_KEY="frontend-only-preview"
+else
+    print_status "API key configured for backend integration"
 fi
 
 print_status "Environment variables validated"

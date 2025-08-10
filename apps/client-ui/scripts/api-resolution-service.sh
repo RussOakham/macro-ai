@@ -291,10 +291,13 @@ format_output() {
     local resolution_result="$1"
     local output_format="$2"
     local environment="$3"
-    
+    local output_file="$4"
+
+    local output_content=""
+
     case "$output_format" in
         "json")
-            echo "$resolution_result" | jq .
+            output_content=$(echo "$resolution_result" | jq .)
             ;;
         "env")
             local api_url=$(echo "$resolution_result" | jq -r '.final_api_url')
@@ -303,7 +306,7 @@ format_output() {
             local fallback_used=$(echo "$resolution_result" | jq -r '.fallback_used')
             local resolved_at=$(echo "$resolution_result" | jq -r '.resolved_at')
             
-            cat << EOF
+            output_content=$(cat << EOF
 # API Resolution Results
 # Generated on: $resolved_at
 # Environment: $environment
@@ -316,15 +319,24 @@ VITE_BACKEND_STACK_NAME=$backend_stack
 VITE_API_FALLBACK_USED=$fallback_used
 VITE_API_RESOLVED_AT=$resolved_at
 EOF
+)
             ;;
         "url")
-            echo "$resolution_result" | jq -r '.final_api_url'
+            output_content=$(echo "$resolution_result" | jq -r '.final_api_url')
             ;;
         *)
             print_error "Invalid output format: $output_format"
             exit 1
             ;;
     esac
+
+    # Output to file or stdout
+    if [[ -n "$output_file" ]]; then
+        echo "$output_content" > "$output_file"
+        print_debug "Output written to: $output_file"
+    else
+        echo "$output_content"
+    fi
 }
 
 # Function to log resolution summary
@@ -361,6 +373,7 @@ main() {
     local environment="${ENVIRONMENT_NAME:-}"
     local pr_number="${PR_NUMBER:-}"
     local output_format="env"
+    local output_file=""
     local validate_connectivity="false"
     local force_refresh="false"
     local fallback_only="false"
@@ -380,6 +393,10 @@ main() {
                 ;;
             --output-format)
                 output_format="$2"
+                shift 2
+                ;;
+            --output-file)
+                output_file="$2"
                 shift 2
                 ;;
             --validate-connectivity)
@@ -463,7 +480,7 @@ main() {
     fi
     
     # Format and output results
-    format_output "$resolution_result" "$output_format" "$environment"
+    format_output "$resolution_result" "$output_format" "$environment" "$output_file"
     
     # Log summary to stderr (doesn't interfere with output)
     log_resolution_summary "$resolution_result"

@@ -122,10 +122,25 @@ else
     print_status "No branches found to delete"
 fi
 
-# Wait a moment for branch deletions to complete
+# Wait for branch deletions to complete with polling
 if [[ -n "$BRANCHES" ]]; then
     echo -e "${BLUE}⏳ Waiting for branch deletions to complete...${NC}"
-    sleep 10
+
+    # Poll until no branches remain (timeout 120s)
+    deadline=$((SECONDS+120))
+    while [[ -n "$BRANCHES" && $SECONDS -lt $deadline ]]; do
+        sleep 5
+        BRANCHES=$(aws --region "$AWS_REGION" amplify list-branches --app-id "$AMPLIFY_APP_ID" --query 'branches[].branchName' --output text 2>/dev/null || echo "")
+        if [[ -n "$BRANCHES" ]]; then
+            echo -e "${YELLOW}⏳ Branches still exist: $BRANCHES${NC}"
+        fi
+    done
+
+    if [[ -n "$BRANCHES" ]]; then
+        echo -e "${YELLOW}⚠️ Warning: Some branches may still exist after timeout${NC}"
+    else
+        echo -e "${GREEN}✅ All branches deleted successfully${NC}"
+    fi
 fi
 
 # Delete the Amplify app
@@ -156,9 +171,19 @@ else
     fi
 fi
 
-# Wait for deletion to propagate
+# Wait for deletion to propagate with polling
 echo -e "${BLUE}⏳ Waiting for deletion to complete...${NC}"
-sleep 15
+
+# Poll until app no longer exists (timeout 180s)
+deadline=$((SECONDS+180))
+while [[ $SECONDS -lt $deadline ]]; do
+    sleep 5
+    if ! aws --region "$AWS_REGION" amplify get-app --app-id "$AMPLIFY_APP_ID" >/dev/null 2>&1; then
+        echo -e "${GREEN}✅ App deletion confirmed${NC}"
+        break
+    fi
+    echo -e "${YELLOW}⏳ App still exists, continuing to wait...${NC}"
+done
 
 # Verify deletion by attempting to get the app
 echo -e "${BLUE}🔍 Verifying app deletion...${NC}"

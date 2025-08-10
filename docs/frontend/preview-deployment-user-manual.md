@@ -165,6 +165,33 @@ VITE_ENABLE_DEBUG_LOGGING=true
 VITE_SHOW_BUILD_INFO=true
 ```
 
+### ⚠️ Security Considerations for Build Metadata
+
+**Important**: All `VITE_*` environment variables become **publicly accessible** in the
+compiled frontend bundle. Consider the security implications:
+
+**🔒 Sensitive Information Exposure**:
+
+- `VITE_BUILD_COMMIT`: Commit hashes can aid reconnaissance of your codebase
+- `VITE_API_URL`: API endpoints become publicly visible
+- `VITE_BACKEND_STACK_NAME`: Infrastructure details are exposed
+- `VITE_API_KEY`: Must be non-sensitive, public-safe API keys only
+
+**🛡️ Security Best Practices**:
+
+- **Never include sensitive API keys** in VITE_* variables
+- **Use least-privilege API keys** that are safe for public exposure
+- **Consider obfuscating or omitting** commit hashes in production builds
+- **Rotate API keys regularly** for preview environments
+- **Monitor for exposed credentials** in build artifacts
+
+**🔍 Mitigation Options**:
+
+- Disable `VITE_SHOW_BUILD_INFO` for production environments
+- Use token-based authentication flows (Cognito/OIDC) instead of API keys
+- Implement API key rotation and short TTL for preview environments
+- Consider IP allowlisting or basic auth for sensitive preview deployments
+
 ### Environment Configuration
 
 **Configuration Sources** (in order of precedence):

@@ -196,13 +196,13 @@ generate_environment_config() {
             # Use environment-specific fallback
             case "$env_name" in
                 "staging"|"stage")
-                    api_url="https://api-staging.macro-ai.com/api"
+                    api_url="https://api-staging.macro-ai.com/api/"
                     ;;
                 "production"|"prod")
-                    api_url="https://api.macro-ai.com/api"
+                    api_url="https://api.macro-ai.com/api/"
                     ;;
                 *)
-                    api_url="https://api-development.macro-ai.com/api"
+                    api_url="https://api-development.macro-ai.com/api/"
                     ;;
             esac
             print_warning "Using fallback API URL: $api_url"
@@ -210,6 +210,11 @@ generate_environment_config() {
     else
         print_status "Using provided API URL: $api_url"
     fi
+
+    # Normalize trailing slash for consistency
+    api_url="${api_url%/}"
+    api_url="${api_url}/"
+    print_debug "Normalized API URL: $api_url"
     
     # Create output directory if needed
     local output_dir=$(dirname "$output_file")

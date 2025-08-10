@@ -165,7 +165,10 @@ export class AmplifyPermissionsConstruct extends cdk.NestedStack {
 						's3:DeleteObject',
 						's3:ListBucket',
 					],
-					resources: ['arn:aws:s3:::amplify-*', 'arn:aws:s3:::amplify-*/*'],
+					resources: [
+						`arn:aws:s3:::amplify-${cdk.Stack.of(this).account}-${cdk.Stack.of(this).region}-*`,
+						`arn:aws:s3:::amplify-${cdk.Stack.of(this).account}-${cdk.Stack.of(this).region}-*/*`,
+					],
 				}),
 
 				// CloudWatch Logs for Amplify
@@ -285,7 +288,7 @@ export class AmplifyPermissionsConstruct extends cdk.NestedStack {
 						'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com',
 					},
 					StringLike: {
-						'token.actions.githubusercontent.com:sub': `repo:${gitHubRepository}:*`,
+						'token.actions.githubusercontent.com:sub': `repo:${gitHubRepository}:pull_request`,
 					},
 				},
 			),

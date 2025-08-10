@@ -107,6 +107,20 @@ management.
 - `validate-variables` (optional): Validate generated variables
 - `debug` (optional): Enable debug output
 
+**⚠️ Security Warning for API Keys**:
+
+**Critical**: The `api-key` input becomes a `VITE_API_KEY` environment variable that is
+**publicly accessible** in the compiled frontend bundle. This means:
+
+- **Never use sensitive API keys** - Any key provided will be visible to end users
+- **Use public-safe keys only** - Keys must be designed for client-side exposure
+- **Implement least-privilege access** - Keys should have minimal required permissions
+- **Consider token-based auth** - Prefer Cognito/OIDC flows over static API keys
+- **Rotate keys regularly** - Especially for preview environments
+
+**Recommended Approach**: Use non-sensitive API keys for frontend builds and implement
+proper authentication flows (JWT tokens, Cognito) for sensitive operations.
+
 **Outputs**:
 
 - `env-file`: Path to generated environment file
