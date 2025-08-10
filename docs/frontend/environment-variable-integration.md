@@ -2,7 +2,8 @@
 
 ## 📋 Overview
 
-This guide covers how environment variables are generated, injected, and managed across different deployment environments in the frontend preview system.
+This guide covers how environment variables are generated, injected, and managed across different deployment
+environments in the frontend preview system.
 
 ## 🔧 Environment Variable Generation
 

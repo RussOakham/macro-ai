@@ -2,7 +2,8 @@
 
 ## 📋 Overview
 
-This guide covers the complete process for deploying frontend preview environments using AWS Amplify, including automated backend discovery, environment configuration, and deployment management.
+This guide covers the complete process for deploying frontend preview environments using AWS Amplify, including
+automated backend discovery, environment configuration, and deployment management.
 
 ## 🏗️ Architecture
 

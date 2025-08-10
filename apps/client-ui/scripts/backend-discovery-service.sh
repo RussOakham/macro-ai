@@ -232,6 +232,13 @@ extract_api_endpoint() {
 }
 
 # Function to discover backend for environment
+# Discovers backend API endpoint for a given environment using multiple strategies
+# Parameters:
+#   $1 - environment: Target environment (development, staging, production, pr-123)
+#   $2 - pr_number: PR number for preview environments (optional)
+#   $3 - validate_connectivity: Whether to validate API connectivity (true/false)
+# Returns:
+#   JSON object with discovery results including api_endpoint, method, and validation
 discover_backend() {
     local environment="$1"
     local pr_number="$2"
