@@ -97,7 +97,8 @@ normalize_environment_name() {
 # Function to resolve backend stack name
 resolve_backend_stack_name() {
     local env_name="$1"
-    local normalized_env=$(normalize_environment_name "$env_name")
+    local normalized_env
+    normalized_env=$(normalize_environment_name "$env_name")
     echo "${BACKEND_STACK_PREFIX}${normalized_env}${BACKEND_STACK_SUFFIX}"
 }
 
@@ -106,8 +107,9 @@ check_stack_exists() {
     local stack_name="$1"
     
     print_debug "Checking if stack exists: $stack_name"
-    
-    local stack_status=$(aws cloudformation describe-stacks \
+
+    local stack_status
+    stack_status=$(aws cloudformation describe-stacks \
         --stack-name "$stack_name" \
         --query 'Stacks[0].StackStatus' \
         --output text 2>/dev/null || echo "DOES_NOT_EXIST")
@@ -133,8 +135,9 @@ get_api_endpoint_from_stack() {
     local stack_name="$1"
     
     print_debug "Getting API endpoint from stack: $stack_name"
-    
-    local api_endpoint=$(aws cloudformation describe-stacks \
+
+    local api_endpoint
+    api_endpoint=$(aws cloudformation describe-stacks \
         --stack-name "$stack_name" \
         --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
         --output text 2>/dev/null || echo "")
@@ -157,11 +160,13 @@ resolve_api_url() {
     print_info "Resolving API URL for environment: $env_name"
     
     # Strategy 1: Direct environment-based stack lookup
-    local stack_name=$(resolve_backend_stack_name "$env_name")
+    local stack_name
+    stack_name=$(resolve_backend_stack_name "$env_name")
     print_debug "Trying stack name: $stack_name"
-    
+
     if [[ "$(check_stack_exists "$stack_name")" == "true" ]]; then
-        local endpoint=$(get_api_endpoint_from_stack "$stack_name")
+        local endpoint
+        endpoint=$(get_api_endpoint_from_stack "$stack_name")
         if [[ -n "$endpoint" ]]; then
             api_url="${endpoint}api"
             resolution_method="direct_stack"
@@ -182,7 +187,8 @@ resolve_api_url() {
         for pattern in "${alt_patterns[@]}"; do
             print_debug "Trying alternative pattern: $pattern"
             if [[ "$(check_stack_exists "$pattern")" == "true" ]]; then
-                local endpoint=$(get_api_endpoint_from_stack "$pattern")
+                local endpoint
+                endpoint=$(get_api_endpoint_from_stack "$pattern")
                 if [[ -n "$endpoint" ]]; then
                     api_url="${endpoint}api"
                     resolution_method="alternative_pattern"
@@ -237,7 +243,8 @@ validate_api_endpoint() {
     
     # Optional: Test connectivity (can be disabled for speed)
     if [[ "${VALIDATE_CONNECTIVITY:-false}" == "true" ]]; then
-        local http_status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$api_url" 2>/dev/null || echo "000")
+        local http_status
+        http_status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$api_url" 2>/dev/null || echo "000")
         
         case "$http_status" in
             "200"|"404"|"401"|"403")
@@ -347,6 +354,37 @@ main() {
         exit 1
     fi
     
+    # Validate required tools are available
+    validate_dependencies() {
+        local missing_tools=()
+
+        # Check for required tools
+        if ! command -v aws >/dev/null 2>&1; then
+            missing_tools+=("aws")
+        fi
+
+        if ! command -v sed >/dev/null 2>&1; then
+            missing_tools+=("sed")
+        fi
+
+        if ! command -v awk >/dev/null 2>&1; then
+            missing_tools+=("awk")
+        fi
+
+        if ! command -v curl >/dev/null 2>&1; then
+            missing_tools+=("curl")
+        fi
+
+        if [[ ${#missing_tools[@]} -gt 0 ]]; then
+            print_error "Missing required tools: ${missing_tools[*]}"
+            print_error "Please install the missing tools and try again."
+            exit 1
+        fi
+    }
+
+    # Validate dependencies
+    validate_dependencies
+
     # Validate AWS CLI
     if ! command -v aws &> /dev/null; then
         print_error "AWS CLI not found. Please install AWS CLI."

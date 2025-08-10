@@ -360,8 +360,9 @@ validate_all_templates() {
     for template in "$templates_dir"/*.yml; do
         if [[ -f "$template" ]]; then
             total_templates=$((total_templates + 1))
-            local template_name=$(basename "$template")
-            
+            local template_name
+            template_name=$(basename "$template")
+
             echo ""
             print_info "Validating template: $template_name"
             
@@ -497,6 +498,25 @@ main() {
         exit 1
     fi
 }
+
+# Validate required tools are available
+validate_dependencies() {
+    local missing_tools=()
+
+    # Check for required tools
+    if ! command -v grep >/dev/null 2>&1; then
+        missing_tools+=("grep")
+    fi
+
+    if [[ ${#missing_tools[@]} -gt 0 ]]; then
+        print_error "Missing required tools: ${missing_tools[*]}"
+        print_error "Please install the missing tools and try again."
+        exit 1
+    fi
+}
+
+# Validate dependencies
+validate_dependencies
 
 # Run main function
 main "$@"

@@ -82,14 +82,17 @@ list_templates() {
     if [[ -d "$templates_path" ]]; then
         for template in "$templates_path"/*.yml; do
             if [[ -f "$template" ]]; then
-                local template_name=$(basename "$template" .yml)
-                local template_env=$(echo "$template_name" | sed 's/amplify\.//')
+                local template_name
+                template_name=$(basename "$template" .yml)
+                local template_env
+                template_env=$(echo "$template_name" | sed 's/amplify\.//')
                 
                 echo "  📄 $template_env"
                 echo "     File: $template"
                 
                 # Extract description from template if available
-                local description=$(grep -m 1 "^# " "$template" | sed 's/^# //' || echo "")
+                local description
+                description=$(grep -m 1 "^# " "$template" | sed 's/^# //' || echo "")
                 if [[ -n "$description" ]]; then
                     echo "     Description: $description"
                 fi
@@ -156,8 +159,9 @@ substitute_variables() {
     print_debug "Substituting variables in template"
     
     # Create a temporary file for processing
-    local temp_file=$(mktemp)
-    
+    local temp_file
+    temp_file=$(mktemp)
+
     # Copy template to temp file
     cp "$template_file" "$temp_file"
     
@@ -261,8 +265,9 @@ display_configuration_preview() {
     else
         head -50 "$config_file"
     fi
-    
-    local total_lines=$(wc -l < "$config_file")
+
+    local total_lines
+    total_lines=$(wc -l < "$config_file")
     if [[ $total_lines -gt 50 ]]; then
         echo ""
         print_info "... (showing first 50 lines of $total_lines total)"
@@ -361,6 +366,37 @@ main() {
         exit 1
     fi
 }
+
+# Validate required tools are available
+validate_dependencies() {
+    local missing_tools=()
+
+    # Check for required tools
+    if ! command -v envsubst >/dev/null 2>&1; then
+        missing_tools+=("envsubst (gettext package)")
+    fi
+
+    if ! command -v grep >/dev/null 2>&1; then
+        missing_tools+=("grep")
+    fi
+
+    if ! command -v sed >/dev/null 2>&1; then
+        missing_tools+=("sed")
+    fi
+
+    if ! command -v wc >/dev/null 2>&1; then
+        missing_tools+=("wc")
+    fi
+
+    if [[ ${#missing_tools[@]} -gt 0 ]]; then
+        print_error "Missing required tools: ${missing_tools[*]}"
+        print_error "Please install the missing tools and try again."
+        exit 1
+    fi
+}
+
+# Validate dependencies
+validate_dependencies
 
 # Validate required tools
 if ! command -v envsubst &> /dev/null; then
