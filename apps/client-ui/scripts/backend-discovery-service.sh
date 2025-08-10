@@ -3,7 +3,8 @@
 # Backend Discovery Service for Frontend-Backend Integration
 # Advanced service for discovering and validating backend API endpoints
 
-set -e  # Exit on any error
+set -Eeuo pipefail
+IFS=$'\n\t'
 
 # Colors for output
 RED='\033[0;31m'

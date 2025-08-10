@@ -3,7 +3,8 @@
 # Generate Environment-Specific Amplify Configuration
 # Creates amplify.yml files based on environment templates and variables
 
-set -e  # Exit on any error
+set -Eeuo pipefail
+IFS=$'\n\t'
 
 # Colors for output
 RED='\033[0;31m'

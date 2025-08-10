@@ -3,7 +3,8 @@
 # Environment Variable Injection Script for Frontend Preview Builds
 # Dynamically injects environment variables for preview deployments
 
-set -e  # Exit on any error
+set -Eeuo pipefail
+IFS=$'\n\t'
 
 # Colors for output
 RED='\033[0;31m'

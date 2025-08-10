@@ -3,7 +3,8 @@
 # AWS Amplify Deployment Script for Macro AI Frontend
 # Follows the hobby deployment strategy documented in docs/deployment/hobby-deployment/v1-0-0-hobby-deployment-plan.md
 
-set -e  # Exit on any error
+set -Eeuo pipefail
+IFS=$'\n\t'
 
 # Colors for output
 RED='\033[0;31m'

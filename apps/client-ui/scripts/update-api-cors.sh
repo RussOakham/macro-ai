@@ -3,7 +3,8 @@
 # Update API Gateway CORS Settings for Amplify Frontend
 # This script updates the API Gateway CORS configuration to allow the deployed Amplify frontend
 
-set -e  # Exit on any error
+set -Eeuo pipefail
+IFS=$'\n\t'
 
 # Colors for output
 RED='\033[0;31m'

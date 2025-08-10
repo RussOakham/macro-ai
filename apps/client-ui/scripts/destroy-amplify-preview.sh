@@ -3,7 +3,8 @@
 # AWS Amplify Preview Destruction Script for Macro AI Frontend
 # Destroys ephemeral Amplify apps for PR preview environments
 
-set -e  # Exit on any error
+set -Eeuo pipefail
+IFS=$'\n\t'
 
 # Colors for output
 RED='\033[0;31m'

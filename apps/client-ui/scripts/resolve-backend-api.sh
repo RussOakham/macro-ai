@@ -3,7 +3,8 @@
 # Backend API Resolution Script for Frontend Preview Environments
 # Dynamically resolves backend API endpoints for frontend preview deployments
 
-set -e  # Exit on any error
+set -Eeuo pipefail
+IFS=$'\n\t'
 
 # Colors for output
 RED='\033[0;31m'

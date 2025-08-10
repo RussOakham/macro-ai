@@ -3,7 +3,8 @@
 # Validate Amplify Configuration Files
 # Comprehensive validation for amplify.yml configurations
 
-set -e  # Exit on any error
+set -Eeuo pipefail
+IFS=$'\n\t'
 
 # Colors for output
 RED='\033[0;31m'

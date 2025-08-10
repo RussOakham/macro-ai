@@ -3,7 +3,8 @@
 # Environment Variable Integration Test Script
 # Tests the complete environment variable integration system
 
-set -e  # Exit on any error
+set -Eeuo pipefail
+IFS=$'\n\t'
 
 # Colors for output
 RED='\033[0;31m'

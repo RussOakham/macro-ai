@@ -3,7 +3,8 @@
 # Integration Test Script for Frontend-Backend Integration
 # Tests the complete backend discovery and API resolution system
 
-set -e  # Exit on any error
+set -Eeuo pipefail
+IFS=$'\n\t'
 
 # Colors for output
 RED='\033[0;31m'
