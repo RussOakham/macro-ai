@@ -240,7 +240,8 @@ Environment-specific build optimizations:
 
 Amplify recognizes artifacts.baseDirectory and artifacts.files. It does not support an artifacts.name field.
 
-If timestamp metadata is helpful for debugging, we can inject a BUILD_TS environment variable during preBuild and use it in logs or generated files:
+If timestamp metadata is helpful for debugging, we can inject a BUILD_TS environment variable during preBuild and use it
+in logs or generated files:
 
 ```yaml
 # Inside preBuild
