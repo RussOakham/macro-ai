@@ -70,6 +70,42 @@ show_usage() {
     echo "  $0 --skip-aws-tests         # Skip AWS-dependent tests"
 }
 
+# Validate required tools are available
+validate_dependencies() {
+    local missing_tools=()
+
+    # Check for required tools
+    if ! command -v bash >/dev/null 2>&1; then
+        missing_tools+=("bash")
+    fi
+
+    if ! command -v jq >/dev/null 2>&1; then
+        missing_tools+=("jq")
+    fi
+
+    if ! command -v grep >/dev/null 2>&1; then
+        missing_tools+=("grep")
+    fi
+
+    if ! command -v cut >/dev/null 2>&1; then
+        missing_tools+=("cut")
+    fi
+
+    if ! command -v mktemp >/dev/null 2>&1; then
+        missing_tools+=("mktemp")
+    fi
+
+    if ! command -v printf >/dev/null 2>&1; then
+        missing_tools+=("printf")
+    fi
+
+    if [[ ${#missing_tools[@]} -gt 0 ]]; then
+        print_error "Missing required tools: ${missing_tools[*]}"
+        print_error "Please install the missing tools and try again."
+        exit 1
+    fi
+}
+
 # Function to setup test environment
 setup_test_environment() {
     print_info "Setting up test environment"
@@ -146,10 +182,12 @@ test_backend_discovery_service() {
     if [[ "${SKIP_AWS_TESTS:-false}" != "true" ]]; then
         print_info "Test 4: Discovery for development environment"
         if aws sts get-caller-identity >/dev/null 2>&1; then
-            local discovery_result=$(bash "${SCRIPT_DIR}/backend-discovery-service.sh" discover development --output-format json 2>/dev/null || echo "null")
-            
+            local discovery_result
+            discovery_result=$(bash "${SCRIPT_DIR}/backend-discovery-service.sh" discover development --output-format json 2>/dev/null || echo "null")
+
             if [[ "$discovery_result" != "null" ]]; then
-                local api_endpoint=$(echo "$discovery_result" | jq -r '.api_endpoint // "null"')
+                local api_endpoint
+                api_endpoint=$(echo "$discovery_result" | jq -r '.api_endpoint // "null"')
                 if [[ "$api_endpoint" != "null" ]]; then
                     print_status "Development environment discovery works"
                     test_results+=("discovery_development:PASS")
@@ -191,7 +229,8 @@ test_api_resolution_service() {
     
     # Test 2: Fallback-only mode
     print_info "Test 2: Fallback-only mode"
-    local fallback_result=$(bash "${SCRIPT_DIR}/api-resolution-service.sh" \
+    local fallback_result
+    fallback_result=$(bash "${SCRIPT_DIR}/api-resolution-service.sh" \
         --environment development \
         --fallback-only \
         --output-format url 2>/dev/null || echo "")
@@ -206,7 +245,8 @@ test_api_resolution_service() {
     
     # Test 3: JSON output format
     print_info "Test 3: JSON output format"
-    local json_result=$(bash "${SCRIPT_DIR}/api-resolution-service.sh" \
+    local json_result
+    json_result=$(bash "${SCRIPT_DIR}/api-resolution-service.sh" \
         --environment development \
         --fallback-only \
         --output-format json 2>/dev/null || echo "null")
@@ -221,7 +261,8 @@ test_api_resolution_service() {
     
     # Test 4: Environment variables output
     print_info "Test 4: Environment variables output"
-    local env_result=$(bash "${SCRIPT_DIR}/api-resolution-service.sh" \
+    local env_result
+    env_result=$(bash "${SCRIPT_DIR}/api-resolution-service.sh" \
         --environment development \
         --fallback-only \
         --output-format env 2>/dev/null || echo "")
@@ -236,7 +277,8 @@ test_api_resolution_service() {
     
     # Test 5: Preview environment with PR number
     print_info "Test 5: Preview environment with PR number"
-    local preview_result=$(bash "${SCRIPT_DIR}/api-resolution-service.sh" \
+    local preview_result
+    preview_result=$(bash "${SCRIPT_DIR}/api-resolution-service.sh" \
         --environment pr-123 \
         --pr-number 123 \
         --fallback-only \
@@ -268,16 +310,18 @@ test_integration() {
     export ENVIRONMENT_NAME="pr-123"
     export BUILD_MODE="preview"
     export VITE_API_KEY="test-api-key-for-integration-testing"
-    
-    local env_file=$(mktemp)
-    
+
+    local env_file
+    env_file=$(mktemp)
+
     if bash "${SCRIPT_DIR}/inject-preview-env.sh" \
         --pr-number 123 \
         --environment-name pr-123 \
         --output-file "$env_file" >/dev/null 2>&1; then
-        
+
         if [[ -f "$env_file" ]] && grep -q "VITE_API_URL=" "$env_file"; then
-            local api_url=$(grep "VITE_API_URL=" "$env_file" | cut -d'=' -f2)
+            local api_url
+            api_url=$(grep "VITE_API_URL=" "$env_file" | cut -d'=' -f2)
             print_status "Environment injection works, API URL: $api_url"
             test_results+=("integration_env_injection:PASS")
         else
@@ -311,19 +355,21 @@ test_integration() {
     local env_test_results=()
     
     for env in "${environments[@]}"; do
-        local result=$(bash "${SCRIPT_DIR}/api-resolution-service.sh" \
+        local result
+        result=$(bash "${SCRIPT_DIR}/api-resolution-service.sh" \
             --environment "$env" \
             --fallback-only \
             --output-format url 2>/dev/null || echo "")
-        
+
         if [[ -n "$result" && "$result" =~ ^https?:// ]]; then
             env_test_results+=("$env:PASS")
         else
             env_test_results+=("$env:FAIL")
         fi
     done
-    
-    local passed_envs=$(printf '%s\n' "${env_test_results[@]}" | grep -c ":PASS" || echo "0")
+
+    local passed_envs
+    passed_envs=$(printf '%s\n' "${env_test_results[@]}" | grep -c ":PASS" || echo "0")
     local total_envs=${#environments[@]}
     
     if [[ $passed_envs -eq $total_envs ]]; then
@@ -445,6 +491,9 @@ main() {
     # Setup test environment
     setup_test_environment
     
+    # Validate dependencies
+    validate_dependencies
+
     # Run tests based on suite selection
     local all_results=()
     

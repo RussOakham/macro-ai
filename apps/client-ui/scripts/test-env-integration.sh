@@ -62,11 +62,32 @@ cleanup_test_files() {
     done
 }
 
-# Verify jq is available before tests that require it
-if ! command -v jq >/dev/null 2>&1; then
-    print_error "jq is required for JSON validation in tests. Please install jq."
-    exit 1
-fi
+# Validate required tools are available
+validate_dependencies() {
+    local missing_tools=()
+
+    # Check for required tools
+    if ! command -v jq >/dev/null 2>&1; then
+        missing_tools+=("jq")
+    fi
+
+    if ! command -v grep >/dev/null 2>&1; then
+        missing_tools+=("grep")
+    fi
+
+    if ! command -v bash >/dev/null 2>&1; then
+        missing_tools+=("bash")
+    fi
+
+    if [[ ${#missing_tools[@]} -gt 0 ]]; then
+        print_error "Missing required tools: ${missing_tools[*]}"
+        print_error "Please install the missing tools and try again."
+        exit 1
+    fi
+}
+
+# Validate dependencies
+validate_dependencies
 
 
 # Test 1: Backend API Resolution Script
