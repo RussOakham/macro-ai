@@ -86,6 +86,9 @@ jobs:
   build:
     needs: setup
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     strategy:
       matrix:
         node-version: [20.x]
@@ -101,7 +104,10 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          echo "📦 Installing dependencies..."
+          pnpm install --frozen-lockfile
+          echo "✅ Dependencies installed successfully"
 
       # Create .env files using the output from setup job
       - name: Create Express API .env file
@@ -113,7 +119,10 @@ jobs:
           echo "${{ needs.setup.outputs.client_env }}" > apps/client-ui/.env
 
       - name: Run build
-        run: pnpm build
+        run: |
+          echo "🔨 Starting build process..."
+          pnpm build
+          echo "✅ Build completed successfully"
         env:
           API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
           AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
@@ -130,6 +139,9 @@ jobs:
   lint:
     needs: setup
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     strategy:
       matrix:
         node-version: [20.x]
@@ -145,7 +157,10 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          echo "📦 Installing dependencies for lint job..."
+          pnpm install --frozen-lockfile
+          echo "✅ Dependencies installed successfully"
 
       # Create .env files using the output from setup job
       - name: Create Express API .env file
@@ -171,11 +186,17 @@ jobs:
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
       - name: Run lint
-        run: pnpm lint
+        run: |
+          echo "🔍 Starting lint checks..."
+          pnpm lint
+          echo "✅ Lint checks passed successfully"
 
   test:
     needs: setup
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write # For uploading artifacts
     strategy:
       matrix:
         node-version: [20.x]
@@ -231,18 +252,25 @@ jobs:
         id: coverage
         if: always()
         run: |
+          echo "📊 Extracting test coverage percentage..."
           # Extract coverage percentage from the JSON report
           if [ -f "apps/express-api/coverage/coverage-summary.json" ]; then
+            echo "✅ Coverage file found, extracting percentage..."
             COVERAGE=$(node -p "
               const fs = require('fs');
-              const coverage = JSON.parse(fs.readFileSync('apps/express-api/coverage/coverage-summary.json', 'utf8'));
-              Math.round(coverage.total.lines.pct || 0);
+              try {
+                const coverage = JSON.parse(fs.readFileSync('apps/express-api/coverage/coverage-summary.json', 'utf8'));
+                Math.round(coverage.total.lines.pct || 0);
+              } catch (error) {
+                console.error('Error parsing coverage file:', error.message);
+                0;
+              }
             ")
             echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
-            echo "Coverage: $COVERAGE%"
+            echo "✅ Coverage extracted: $COVERAGE%"
           else
+            echo "⚠️ Coverage file not found, setting coverage to 0%"
             echo "percentage=0" >> $GITHUB_OUTPUT
-            echo "Coverage file not found"
           fi
 
       - name: Create coverage badge

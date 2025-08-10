@@ -96,6 +96,10 @@ jobs:
     needs: [validate-access, check-backend-changes]
     if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-backend-changes.outputs.has-backend-changes == 'true'
 
+    permissions:
+      contents: read
+      actions: write # For uploading artifacts
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -111,6 +115,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
           cache-dependency-path: 'pnpm-lock.yaml'
+
+      - name: Cache TypeScript build info
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/tsconfig.tsbuildinfo
+            **/dist
+            **/.turbo
+          key: ${{ runner.os }}-typescript-${{ hashFiles('**/tsconfig*.json', '**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-typescript-
 
       - name: Build Lambda package
         run: |
@@ -337,6 +352,10 @@ jobs:
     name: Check Backend Changes
     runs-on: ubuntu-latest
     needs: [validate-access]
+
+    permissions:
+      contents: read
+
     outputs:
       has-backend-changes: ${{ steps.check.outputs.has-backend-changes }}
 
@@ -514,6 +533,18 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
           cache-dependency-path: 'pnpm-lock.yaml'
+
+      - name: Cache TypeScript build info
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/tsconfig.tsbuildinfo
+            **/dist
+            **/.turbo
+            apps/client-ui/src/api-client
+          key: ${{ runner.os }}-frontend-build-${{ hashFiles('**/tsconfig*.json', '**/pnpm-lock.yaml', 'apps/express-api/src/**/*.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-frontend-build-
 
       - name: Install dependencies
         run: |
