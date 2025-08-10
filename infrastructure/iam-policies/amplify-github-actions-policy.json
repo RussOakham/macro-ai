@@ -11,14 +11,14 @@
 				"amplify:ListApps",
 				"amplify:UpdateApp"
 			],
-			"Resource": "*",
+			"Resource": [
+				"arn:aws:amplify:*:*:apps/macro-ai-frontend-pr-*",
+				"arn:aws:amplify:*:*:apps/macro-ai-frontend-staging",
+				"arn:aws:amplify:*:*:apps/macro-ai-frontend-production"
+			],
 			"Condition": {
-				"StringLike": {
-					"amplify:appName": [
-						"macro-ai-frontend-pr-*",
-						"macro-ai-frontend-staging",
-						"macro-ai-frontend-production"
-					]
+				"StringEqualsIfExists": {
+					"aws:ResourceTag/Project": "macro-ai"
 				}
 			}
 		},
