@@ -2,7 +2,7 @@
 
 **Status**: 📋 PLANNED
 **Version**: v1.0.0 (Hobby Scale Infrastructure)
-**Target Date**: TBD
+**Target Date**: Q2 2025 (pending resource allocation)
 **Infrastructure Scale**: Hobby (cost-optimized)
 **Target Environments**: Staging and Production
 **Target Cost**: <£10 ($12 USD) per month
