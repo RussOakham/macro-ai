@@ -16,10 +16,10 @@ graph TD
     D --> E[Deploy to Amplify]
     E --> F[Health Check]
     F --> G[Update PR Status]
-    
+
     C --> C1[CloudFormation Discovery]
     C --> C2[Fallback Configuration]
-    
+
     D --> D1[Environment Variables]
     D --> D2[Build Metadata]
     D --> D3[API Configuration]
@@ -28,7 +28,7 @@ graph TD
 ### Components
 
 - **Backend Discovery**: Automatic CloudFormation stack detection
-- **Environment Generation**: Dynamic VITE_* variable creation
+- **Environment Generation**: Dynamic VITE\_\* variable creation
 - **Amplify Integration**: Automated app and branch management
 - **Health Validation**: API endpoint connectivity testing
 
@@ -37,6 +37,7 @@ graph TD
 ### 1. Automatic Trigger
 
 Preview deployments are triggered by:
+
 - Pull request creation
 - Pull request updates
 - Manual workflow dispatch
@@ -62,7 +63,7 @@ VITE_API_URL=https://api-pr123.example.com/api/
 VITE_API_KEY=***
 VITE_API_RESOLUTION_METHOD=direct_stack_discovery
 
-# Environment Identification  
+# Environment Identification
 VITE_APP_ENV=pr-123
 VITE_APP_NAME=Macro AI (Preview)
 VITE_PREVIEW_MODE=true
@@ -77,6 +78,7 @@ VITE_PR_NUMBER=123
 ### 4. Amplify Deployment
 
 The deployment process:
+
 1. Creates or updates Amplify app
 2. Configures environment variables
 3. Triggers build and deployment
@@ -100,13 +102,13 @@ Configure backend discovery in `apps/client-ui/scripts/env-mapping.json`:
 
 ```json
 {
-  "environments": {
-    "preview": {
-      "stack_pattern": "MacroAiPr{pr_number}Stack",
-      "api_endpoint_key": "ApiEndpoint",
-      "fallback_url": "https://api-staging.macro-ai.com/api/"
-    }
-  }
+	"environments": {
+		"preview": {
+			"stack_pattern": "MacroAiPr{pr_number}Stack",
+			"api_endpoint_key": "ApiEndpoint",
+			"fallback_url": "https://api-staging.macro-ai.com/api/"
+		}
+	}
 }
 ```
 

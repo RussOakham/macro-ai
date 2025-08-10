@@ -179,7 +179,7 @@ compiled frontend bundle. Consider the security implications:
 
 **🛡️ Security Best Practices**:
 
-- **Never include sensitive API keys** in VITE_* variables
+- **Never include sensitive API keys** in VITE\_\* variables
 - **Use least-privilege API keys** that are safe for public exposure
 - **Consider obfuscating or omitting** commit hashes in production builds
 - **Rotate API keys regularly** for preview environments

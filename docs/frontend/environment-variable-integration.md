@@ -66,13 +66,15 @@ VITE_SHOW_BUILD_INFO           # Show build information in UI
 
 ### Secure Variable Handling
 
-**✅ Safe for VITE_* Variables**:
+**✅ Safe for VITE\_\* Variables**:
+
 - Non-sensitive API keys designed for client-side use
 - Public API endpoints
 - Environment identifiers
 - Build metadata (with caution)
 
-**❌ Never Use in VITE_* Variables**:
+**❌ Never Use in VITE\_\* Variables**:
+
 - Database credentials
 - Private API keys
 - Internal service URLs
@@ -81,6 +83,7 @@ VITE_SHOW_BUILD_INFO           # Show build information in UI
 ### API Key Security
 
 For `VITE_API_KEY`:
+
 - Use least-privilege keys with minimal permissions
 - Implement rate limiting and IP restrictions
 - Rotate keys regularly (especially for preview environments)
@@ -94,27 +97,27 @@ Configure variable generation in `apps/client-ui/scripts/env-mapping.json`:
 
 ```json
 {
-  "environments": {
-    "preview": {
-      "stack_pattern": "MacroAiPr{pr_number}Stack",
-      "api_endpoint_key": "ApiEndpoint",
-      "fallback_url": "https://api-staging.macro-ai.com/api/",
-      "app_name": "Macro AI (Preview)",
-      "enable_debug": true
-    },
-    "staging": {
-      "stack_pattern": "MacroAiStagingStack",
-      "api_endpoint_key": "ApiEndpoint", 
-      "fallback_url": "https://api-staging.macro-ai.com/api/",
-      "app_name": "Macro AI (Staging)",
-      "enable_debug": false
-    }
-  },
-  "backend_resolution": {
-    "endpoint_key": "ApiEndpoint",
-    "timeout_seconds": 30,
-    "retry_attempts": 3
-  }
+	"environments": {
+		"preview": {
+			"stack_pattern": "MacroAiPr{pr_number}Stack",
+			"api_endpoint_key": "ApiEndpoint",
+			"fallback_url": "https://api-staging.macro-ai.com/api/",
+			"app_name": "Macro AI (Preview)",
+			"enable_debug": true
+		},
+		"staging": {
+			"stack_pattern": "MacroAiStagingStack",
+			"api_endpoint_key": "ApiEndpoint",
+			"fallback_url": "https://api-staging.macro-ai.com/api/",
+			"app_name": "Macro AI (Staging)",
+			"enable_debug": false
+		}
+	},
+	"backend_resolution": {
+		"endpoint_key": "ApiEndpoint",
+		"timeout_seconds": 30,
+		"retry_attempts": 3
+	}
 }
 ```
 
@@ -135,7 +138,7 @@ Variables can be overridden at multiple levels:
 api-endpoint: "https://custom-api.example.com/api/"
 
 # 2. Environment mapping configuration
-# 3. Backend discovery results  
+# 3. Backend discovery results
 # 4. Default fallback values (lowest priority)
 ```
 
@@ -144,6 +147,7 @@ api-endpoint: "https://custom-api.example.com/api/"
 ### Variable Validation
 
 The system validates:
+
 - Required variables are present
 - URL formats are correct
 - API endpoints are accessible
@@ -177,7 +181,7 @@ The system validates:
    - Verify URL normalization logic
 
 3. **Build Failures**
-   - Check for undefined VITE_* variables in code
+   - Check for undefined VITE\_\* variables in code
    - Validate variable formats and types
    - Review build logs for specific errors
 
