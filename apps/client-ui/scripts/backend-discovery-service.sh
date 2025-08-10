@@ -19,6 +19,7 @@ CONFIG_FILE="${SCRIPT_DIR}/env-mapping.json"
 CACHE_DIR="${SCRIPT_DIR}/.cache"
 CACHE_TTL=${CACHE_TTL:-300}  # 5 minutes default cache TTL
 AWS_REGION=${AWS_REGION:-"us-east-1"}
+TIMEOUT=${TIMEOUT:-10}
 DEBUG=${DEBUG:-"false"}
 
 # Function to print status messages (all output to stderr to avoid contaminating JSON output)
@@ -62,6 +63,7 @@ show_usage() {
     echo "  --region <region>           AWS region (default: us-east-1)"
     echo "  --cache-ttl <seconds>       Cache TTL in seconds (default: 300)"
     echo "  --output-format <format>    Output format: json|env|url (default: json)"
+    echo "  --timeout <seconds>         HTTP max-time for validations (default: 10)"
     echo "  --validate-connectivity     Enable connectivity validation"
     echo "  --debug                     Enable debug output"
     echo "  --help                      Show this help message"
@@ -347,7 +349,7 @@ validate_api_connectivity() {
     print_debug "Validating API connectivity: $api_url"
     
     local start_time=$(date +%s%3N)
-    local http_status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$api_url/health" 2>/dev/null || echo "000")
+    local http_status=$(curl -s -o /dev/null -w "%{http_code}" --max-time "$TIMEOUT" "$api_url/health" 2>/dev/null || echo "000")
     local end_time=$(date +%s%3N)
     local response_time=$((end_time - start_time))
     
@@ -419,6 +421,10 @@ main() {
                 ;;
             --output-format)
                 output_format="$2"
+                shift 2
+                ;;
+            --timeout)
+                TIMEOUT="$2"
                 shift 2
                 ;;
             --validate-connectivity)
