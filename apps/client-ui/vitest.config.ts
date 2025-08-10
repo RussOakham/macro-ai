@@ -7,13 +7,21 @@ const ReactCompilerConfig = {
 	target: '19',
 }
 
+// Conditionally include React Compiler plugin based on environment variable
+const shouldUseReactCompiler =
+	process.env.PREVIEW === 'true' || process.env.NODE_ENV === 'development'
+
+const babelPlugins = shouldUseReactCompiler
+	? [['babel-plugin-react-compiler', ReactCompilerConfig]]
+	: []
+
 export default defineConfig({
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 	plugins: [
 		tanstackRouter(),
 		react({
 			babel: {
-				plugins: [['babel-plugin-react-compiler', ReactCompilerConfig]],
+				plugins: babelPlugins,
 			},
 		}),
 	] as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- Type assertion to resolve Vite version conflicts
