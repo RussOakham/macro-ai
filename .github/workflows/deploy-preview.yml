@@ -127,9 +127,9 @@ jobs:
           path: apps/express-api/dist/lambda.zip
           retention-days: 7
 
-  # Deploy ephemeral PR environment
-  deploy-preview:
-    name: Deploy Preview Environment
+  # Deploy Backend Preview Environment (Backend stack and API Gateway)
+  deploy-backend-preview:
+    name: Deploy Backend Preview
     runs-on: ubuntu-latest
     needs: [validate-access, build-lambda, check-backend-changes]
     if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-backend-changes.outputs.has-backend-changes == 'true'
@@ -392,14 +392,14 @@ jobs:
         validate-access,
         check-backend-changes,
         check-frontend-changes,
-        deploy-preview,
+        deploy-backend-preview,
       ]
     # Run if frontend has changes, regardless of whether backend was deployed or not
     if: |
       always() &&
       needs.validate-access.outputs.should-deploy == 'true' &&
       needs.check-frontend-changes.outputs.has-frontend-changes == 'true' &&
-      (needs.deploy-preview.result == 'success' || needs.deploy-preview.result == 'skipped')
+      (needs.deploy-backend-preview.result == 'success' || needs.deploy-backend-preview.result == 'skipped')
 
     permissions:
       id-token: write
@@ -942,7 +942,7 @@ jobs:
         validate-access,
         check-backend-changes,
         check-frontend-changes,
-        deploy-preview,
+        deploy-backend-preview,
         deploy-frontend,
       ]
     if: always() && needs.validate-access.outputs.should-deploy == 'true'
@@ -955,7 +955,7 @@ jobs:
 
           # Backend deployment status
           BACKEND_CHANGES="${{ needs.check-backend-changes.outputs.has-backend-changes }}"
-          BACKEND_RESULT="${{ needs.deploy-preview.result }}"
+          BACKEND_RESULT="${{ needs.deploy-backend-preview.result }}"
 
           echo "### 🔧 Backend Deployment"
           if [[ "$BACKEND_CHANGES" == "true" ]]; then
