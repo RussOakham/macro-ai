@@ -7,17 +7,17 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 
 # Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly BLUE='\033[0;34m'
+readonly NC='\033[0m' # No Color
 
 # Configuration
 PR_NUMBER=${1:-""}
-AWS_REGION=${AWS_REGION:-"us-east-1"}
-APP_NAME_PREFIX="macro-ai-frontend-pr-"
-TIMEOUT=30
+readonly AWS_REGION=${AWS_REGION:-"us-east-1"}
+readonly APP_NAME_PREFIX="macro-ai-frontend-pr-"
+readonly TIMEOUT=30
 
 # Function to print status messages
 print_status() {

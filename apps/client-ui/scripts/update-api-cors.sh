@@ -7,22 +7,22 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 
 # Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly BLUE='\033[0;34m'
+readonly NC='\033[0m' # No Color
 
 # Configuration
 ENVIRONMENT=${CDK_DEPLOY_ENV:-hobby}
-AWS_REGION=${AWS_REGION:-us-east-1}
-STACK_NAME="MacroAiHobbyStack"
+readonly AWS_REGION=${AWS_REGION:-us-east-1}
+readonly STACK_NAME="MacroAiHobbyStack"
 
 # Determine script and project paths
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-INFRASTRUCTURE_DIR="$PROJECT_ROOT/infrastructure"
-PATCH_FILE="$SCRIPT_DIR/cors-update.patch"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+readonly INFRASTRUCTURE_DIR="$PROJECT_ROOT/infrastructure"
+readonly PATCH_FILE="$SCRIPT_DIR/cors-update.patch"
 
 echo -e "${BLUE}🔧 API Gateway CORS Update for Amplify Frontend${NC}"
 echo -e "${BLUE}Environment: $ENVIRONMENT${NC}"
