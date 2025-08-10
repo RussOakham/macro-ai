@@ -3,7 +3,8 @@
 # AWS Amplify Preview Deployment Script for Macro AI Frontend
 # Creates ephemeral Amplify apps for PR preview environments
 
-set -e  # Exit on any error
+set -Eeuo pipefail
+IFS=$'\n\t'
 
 # Colors for output
 RED='\033[0;31m'

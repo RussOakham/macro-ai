@@ -122,7 +122,7 @@ The frontend preview deployment system requires specific AWS IAM permissions to:
 	"Sid": "IAMServiceLinkedRoles",
 	"Effect": "Allow",
 	"Action": ["iam:CreateServiceLinkedRole"],
-	"Resource": "arn:aws:iam::*:role/aws-service-role/amplify.amazonaws.com/AWSServiceRoleForAmplifyBackend",
+	"Resource": "*",
 	"Condition": {
 		"StringEquals": {
 			"iam:AWSServiceName": "amplify.amazonaws.com"

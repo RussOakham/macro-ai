@@ -8,219 +8,219 @@ backend:
   phases:
     build:
       commands:
-      - echo "=== Staging Environment Backend Phase ==="
-      - echo "Environment: $AMPLIFY_ENVIRONMENT_NAME (Staging)"
-      - echo "Build timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-      - echo "Commit: $VITE_BUILD_COMMIT"
-      - echo "Branch: $VITE_BUILD_BRANCH"
+        - echo "=== Staging Environment Backend Phase ==="
+        - echo "Environment: $AMPLIFY_ENVIRONMENT_NAME (Staging)"
+        - echo "Build timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+        - echo "Commit: $VITE_BUILD_COMMIT"
+        - echo "Branch: $VITE_BUILD_BRANCH"
 
 # Frontend configuration optimized for staging deployments
 frontend:
   phases:
     preBuild:
       commands:
-      - echo "=== Staging Environment Pre-Build Phase ==="
-      - echo "Node version: $(node --version)"
-      - echo "Environment: $AMPLIFY_ENVIRONMENT_NAME (Staging)"
-      - echo "API URL: $VITE_API_URL"
+        - echo "=== Staging Environment Pre-Build Phase ==="
+        - echo "Node version: $(node --version)"
+        - echo "Environment: $AMPLIFY_ENVIRONMENT_NAME (Staging)"
+        - echo "API URL: $VITE_API_URL"
 
-      # Install pnpm with specific version
-      - echo "Installing pnpm package manager..."
-      - npm install -g pnpm@10.14.0
-      - echo "pnpm version: $(pnpm --version)"
+        # Install pnpm with specific version
+        - echo "Installing pnpm package manager..."
+        - npm install -g pnpm@10.14.0
+        - echo "pnpm version: $(pnpm --version)"
 
-      # Install dependencies
-      - echo "Installing project dependencies..."
-      - pnpm install --frozen-lockfile
+        # Install dependencies
+        - echo "Installing project dependencies..."
+        - pnpm install --frozen-lockfile
 
-      # Display environment configuration
-      - echo "=== Staging Environment Configuration ==="
-      - echo "VITE_API_URL: $VITE_API_URL"
-      - echo "VITE_APP_ENV: $VITE_APP_ENV"
-      - echo "VITE_APP_NAME: $VITE_APP_NAME"
-      - echo "VITE_ENABLE_DEVTOOLS: $VITE_ENABLE_DEVTOOLS"
-      - echo "VITE_ENABLE_DEBUG_LOGGING: $VITE_ENABLE_DEBUG_LOGGING"
-      - echo "VITE_ENABLE_PERFORMANCE_MONITORING: $VITE_ENABLE_PERFORMANCE_MONITORING"
-      - echo "VITE_BUILD_TIMESTAMP: $VITE_BUILD_TIMESTAMP"
-      - echo "VITE_BUILD_COMMIT: $VITE_BUILD_COMMIT"
+        # Display environment configuration
+        - echo "=== Staging Environment Configuration ==="
+        - echo "VITE_API_URL: $VITE_API_URL"
+        - echo "VITE_APP_ENV: $VITE_APP_ENV"
+        - echo "VITE_APP_NAME: $VITE_APP_NAME"
+        - echo "VITE_ENABLE_DEVTOOLS: $VITE_ENABLE_DEVTOOLS"
+        - echo "VITE_ENABLE_DEBUG_LOGGING: $VITE_ENABLE_DEBUG_LOGGING"
+        - echo "VITE_ENABLE_PERFORMANCE_MONITORING: $VITE_ENABLE_PERFORMANCE_MONITORING"
+        - echo "VITE_BUILD_TIMESTAMP: $VITE_BUILD_TIMESTAMP"
+        - echo "VITE_BUILD_COMMIT: $VITE_BUILD_COMMIT"
 
-      # Validate environment variables
-      - echo "=== Environment Validation ==="
-      - |
-        if [ -z "$VITE_API_URL" ]; then
-          echo "ERROR: VITE_API_URL is not set"
-          exit 1
-        fi
-      - |
-        if [ -z "$VITE_API_KEY" ]; then
-          echo "ERROR: VITE_API_KEY is not set"
-          exit 1
-        fi
-      - |
-        if [[ "$VITE_API_URL" != *"staging"* ]]; then
-          echo "WARNING: API URL does not contain 'staging' - verify correct environment"
-        fi
-      - echo "Environment validation completed"
+        # Validate environment variables
+        - echo "=== Environment Validation ==="
+        - |
+          if [ -z "$VITE_API_URL" ]; then
+            echo "ERROR: VITE_API_URL is not set"
+            exit 1
+          fi
+        - |
+          if [ -z "$VITE_API_KEY" ]; then
+            echo "ERROR: VITE_API_KEY is not set"
+            exit 1
+          fi
+        - |
+          if [[ "$VITE_API_URL" != *"staging"* ]]; then
+            echo "WARNING: API URL does not contain 'staging' - verify correct environment"
+          fi
+        - echo "Environment validation completed"
 
     build:
       commands:
-      - echo "=== Staging Environment Build Phase ==="
-      - echo "Building React application for staging..."
-      - echo "Target environment: $VITE_APP_ENV"
+        - echo "=== Staging Environment Build Phase ==="
+        - echo "Building React application for staging..."
+        - echo "Target environment: $VITE_APP_ENV"
 
-      # Run comprehensive type checking
-      - echo "Running TypeScript type check..."
-      - pnpm type-check
+        # Run comprehensive type checking
+        - echo "Running TypeScript type check..."
+        - pnpm type-check
 
-      # Run linting for code quality
-      - echo "Running ESLint..."
-      - pnpm lint
+        # Run linting for code quality
+        - echo "Running ESLint..."
+        - pnpm lint
 
-      # Build the application with staging optimizations
-      - echo "Building application..."
-      - pnpm build:staging
+        # Build the application with staging optimizations
+        - echo "Building application..."
+        - pnpm build:staging
 
-      # Create build metadata
-      - echo "=== Creating Build Metadata ==="
-      - |
-        cat > dist/build-info.json << EOF
-        {
-          "environment": "$VITE_APP_ENV",
-          "build_timestamp": "$VITE_BUILD_TIMESTAMP",
-          "commit": "$VITE_BUILD_COMMIT",
-          "branch": "$VITE_BUILD_BRANCH",
-          "api_url": "$VITE_API_URL",
-          "amplify_app_id": "$AWS_APP_ID",
-          "amplify_branch": "$AWS_BRANCH",
-          "node_version": "$(node --version)",
-          "pnpm_version": "$(pnpm --version)"
-        }
-        EOF
+        # Create build metadata
+        - echo "=== Creating Build Metadata ==="
+        - |
+          cat > dist/build-info.json << EOF
+          {
+            "environment": "$VITE_APP_ENV",
+            "build_timestamp": "$VITE_BUILD_TIMESTAMP",
+            "commit": "$VITE_BUILD_COMMIT",
+            "branch": "$VITE_BUILD_BRANCH",
+            "api_url": "$VITE_API_URL",
+            "amplify_app_id": "$AWS_APP_ID",
+            "amplify_branch": "$AWS_BRANCH",
+            "node_version": "$(node --version)",
+            "pnpm_version": "$(pnpm --version)"
+          }
+          EOF
 
-      # Validate build output
-      - echo "=== Build Validation ==="
-      - |
-        if [ ! -d "dist" ]; then
-          echo "ERROR: Build output directory 'dist' not found"
-          exit 1
-        fi
-      - echo "Build output size: $(du -sh dist | cut -f1)"
-      - echo "Build files count: $(find dist -type f | wc -l)"
+        # Validate build output
+        - echo "=== Build Validation ==="
+        - |
+          if [ ! -d "dist" ]; then
+            echo "ERROR: Build output directory 'dist' not found"
+            exit 1
+          fi
+        - echo "Build output size: $(du -sh dist | cut -f1)"
+        - echo "Build files count: $(find dist -type f | wc -l)"
 
-      # Check for critical files
-      - |
-        if [ ! -f "dist/index.html" ]; then
-          echo "ERROR: index.html not found in build output"
-          exit 1
-        fi
-      - echo "Staging build completed successfully"
+        # Check for critical files
+        - |
+          if [ ! -f "dist/index.html" ]; then
+            echo "ERROR: index.html not found in build output"
+            exit 1
+          fi
+        - echo "Staging build completed successfully"
 
   # Build artifacts with staging-specific naming
   artifacts:
     baseDirectory: dist
     files:
-    - '**/*'
+      - '**/*'
 
   # Optimized caching for staging
   cache:
     paths:
-    - node_modules/**/*
-    - .pnpm-store/**/*
-    - ~/.pnpm-store/**/*
+      - node_modules/**/*
+      - .pnpm-store/**/*
+      - ~/.pnpm-store/**/*
 
 # Comprehensive test configuration for staging
 test:
   phases:
     preTest:
       commands:
-      - echo "=== Staging Environment Pre-Test Phase ==="
-      - echo "Installing test dependencies..."
-      - pnpm install --frozen-lockfile
+        - echo "=== Staging Environment Pre-Test Phase ==="
+        - echo "Installing test dependencies..."
+        - pnpm install --frozen-lockfile
 
     test:
       commands:
-      - echo "=== Staging Environment Test Phase ==="
+        - echo "=== Staging Environment Test Phase ==="
 
-      # Run unit tests with coverage
-      - echo "Running unit tests with coverage..."
-      - pnpm test:coverage
+        # Run unit tests with coverage
+        - echo "Running unit tests with coverage..."
+        - pnpm test:coverage
 
-      # Run type checking
-      - echo "Running TypeScript type check..."
-      - pnpm type-check
+        # Run type checking
+        - echo "Running TypeScript type check..."
+        - pnpm type-check
 
-      # Run linting
-      - echo "Running ESLint..."
-      - pnpm lint
+        # Run linting
+        - echo "Running ESLint..."
+        - pnpm lint
 
-      # Additional staging-specific tests could go here
-      - echo "All staging tests completed successfully"
+        # Additional staging-specific tests could go here
+        - echo "All staging tests completed successfully"
 
   # Test artifacts with coverage reports
   artifacts:
     baseDirectory: coverage
     files:
-    - '**/*'
+      - '**/*'
 
 # Staging-specific custom headers (production-like security)
 customHeaders:
-- pattern: '**/*'
-  headers:
-  # Security headers
-  - key: 'Strict-Transport-Security'
-    value: 'max-age=31536000; includeSubDomains'
-  - key: 'X-Frame-Options'
-    value: 'DENY'
-  - key: 'X-Content-Type-Options'
-    value: 'nosniff'
-  - key: 'Referrer-Policy'
-    value: 'strict-origin-when-cross-origin'
-  - key: 'X-XSS-Protection'
-    value: '1; mode=block'
+  - pattern: '**/*'
+    headers:
+      # Security headers
+      - key: 'Strict-Transport-Security'
+        value: 'max-age=31536000; includeSubDomains'
+      - key: 'X-Frame-Options'
+        value: 'DENY'
+      - key: 'X-Content-Type-Options'
+        value: 'nosniff'
+      - key: 'Referrer-Policy'
+        value: 'strict-origin-when-cross-origin'
+      - key: 'X-XSS-Protection'
+        value: '1; mode=block'
 
-  # Environment identification
-  - key: 'X-Environment'
-    value: 'staging'
-  - key: 'X-Build-Timestamp'
-    value: '$VITE_BUILD_TIMESTAMP'
+      # Environment identification
+      - key: 'X-Environment'
+        value: 'staging'
+      - key: 'X-Build-Timestamp'
+        value: '$VITE_BUILD_TIMESTAMP'
 
-  # Content Security Policy (staging-appropriate)
-  - key: 'Content-Security-Policy'
-    value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api-staging.macro-ai.com https://*.execute-api.*.amazonaws.com; frame-src 'none'"
+      # Content Security Policy (staging-appropriate)
+      - key: 'Content-Security-Policy'
+        value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api-staging.macro-ai.com https://*.execute-api.*.amazonaws.com; frame-src 'none'"
 
-  # Cache control for static assets
-  - key: 'Cache-Control'
-    value: 'public, max-age=31536000, immutable'
+      # Cache control for static assets
+      - key: 'Cache-Control'
+        value: 'public, max-age=31536000, immutable'
 
-# Special handling for HTML files (no caching)
-- pattern: '*.html'
-  headers:
-  - key: 'Cache-Control'
-    value: 'no-cache, no-store, must-revalidate'
-  - key: 'Pragma'
-    value: 'no-cache'
-  - key: 'Expires'
-    value: '0'
+  # Special handling for HTML files (no caching)
+  - pattern: '*.html'
+    headers:
+      - key: 'Cache-Control'
+        value: 'no-cache, no-store, must-revalidate'
+      - key: 'Pragma'
+        value: 'no-cache'
+      - key: 'Expires'
+        value: '0'
 
-# API for build info (no caching)
-- pattern: '/build-info.json'
-  headers:
-  - key: 'Content-Type'
-    value: 'application/json'
-  - key: 'Cache-Control'
-    value: 'no-cache, no-store, must-revalidate'
+  # API for build info (no caching)
+  - pattern: '/build-info.json'
+    headers:
+      - key: 'Content-Type'
+        value: 'application/json'
+      - key: 'Cache-Control'
+        value: 'no-cache, no-store, must-revalidate'
 
 # Staging-specific redirects and rewrites
 redirects:
-- source: '/health'
-  target: '/build-info.json'
-  status: '200'
-- source: '/api/<*>'
-  target: 'https://api-staging.macro-ai.com/api/<*>'
-  status: '200'
-- source: '/<*>'
-  target: '/index.html'
-  status: '404-200'
+  - source: '/health'
+    target: '/build-info.json'
+    status: '200'
+  - source: '/api/<*>'
+    target: 'https://api-staging.macro-ai.com/api/<*>'
+    status: '200'
+  - source: '/<*>'
+    target: '/index.html'
+    status: '404-200'
 
 # Performance optimizations for staging
 performance:

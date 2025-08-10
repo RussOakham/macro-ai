@@ -3,7 +3,8 @@
 # API Resolution Service for Frontend-Backend Integration
 # High-level service that orchestrates backend discovery and API resolution
 
-set -e  # Exit on any error
+set -Eeuo pipefail
+IFS=$'\n\t'
 
 # Colors for output
 RED='\033[0;31m'
@@ -78,12 +79,14 @@ show_usage() {
 validate_dependencies() {
     print_debug "Validating dependencies"
     
-    # Check if backend discovery service exists
-    if [[ ! -f "$BACKEND_DISCOVERY_SERVICE" ]]; then
-        print_error "Backend discovery service not found: $BACKEND_DISCOVERY_SERVICE"
-        exit 1
+    # Check if backend discovery service exists (only when not in fallback-only mode)
+    if [[ "${FALLBACK_ONLY:-false}" != "true" ]]; then
+        if [[ ! -f "$BACKEND_DISCOVERY_SERVICE" ]]; then
+            print_error "Backend discovery service not found: $BACKEND_DISCOVERY_SERVICE"
+            exit 1
+        fi
     fi
-    
+
     # Check if configuration file exists
     if [[ ! -f "$CONFIG_FILE" ]]; then
         print_error "Configuration file not found: $CONFIG_FILE"
@@ -91,14 +94,17 @@ validate_dependencies() {
     fi
     
     # Check required tools
-    local required_tools=("aws" "jq" "curl")
+    local required_tools=("jq" "curl")
+    if [[ "${FALLBACK_ONLY:-false}" != "true" ]]; then
+        required_tools+=("aws")
+    fi
     for tool in "${required_tools[@]}"; do
         if ! command -v "$tool" &> /dev/null; then
             print_error "Required tool not found: $tool"
             exit 1
         fi
     done
-    
+
     print_debug "All dependencies validated"
 }
 
@@ -168,15 +174,23 @@ resolve_api_with_strategies() {
         if [[ -n "$pr_number" ]]; then
             discovery_args+=("--pr-number" "$pr_number")
         fi
-        
+
         if [[ "$validate_connectivity" == "true" ]]; then
             discovery_args+=("--validate-connectivity")
         fi
-        
+
+        if [[ "$force_refresh" == "true" ]]; then
+            discovery_args+=("--cache-ttl" "0")
+        fi
+
+        if [[ -n "$aws_region" ]]; then
+            discovery_args+=("--region" "$aws_region")
+        fi
+
         if [[ "$DEBUG" == "true" ]]; then
             discovery_args+=("--debug")
         fi
-        
+
         local discovery_result=""
         # Capture JSON from stdout only; send stderr to debug
         if discovery_result="$(
@@ -243,7 +257,8 @@ resolve_api_with_strategies() {
         
         # Validate fallback if requested
         if [[ "$validate_connectivity" == "true" ]]; then
-            local validation_result=$(bash "$BACKEND_DISCOVERY_SERVICE" validate "$fallback_url" 2>/dev/null || echo '{"connectivity_checked": false}')
+            local validation_result
+            validation_result="$(bash "$BACKEND_DISCOVERY_SERVICE" validate "$fallback_url" --timeout "$timeout" 2>/dev/null || echo '{"connectivity_checked": false}')"
             resolution_result=$(echo "$resolution_result" | jq \
                 --argjson validation "$validation_result" \
                 '.validation = $validation')
@@ -413,12 +428,13 @@ main() {
     # Export environment variables for child processes
     export AWS_REGION="$aws_region"
     export DEBUG
-    
+    export FALLBACK_ONLY="$fallback_only"
+
     print_debug "Starting API resolution for environment: $environment"
-    
-    # Validate dependencies
+
+    # Validate dependencies (after args and with FALLBACK_ONLY awareness)
     validate_dependencies
-    
+
     # Resolve API with multiple strategies
     local resolution_result=$(resolve_api_with_strategies "$environment" "$pr_number" "$validate_connectivity" "$force_refresh" "$fallback_only")
     

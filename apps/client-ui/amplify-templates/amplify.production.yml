@@ -8,258 +8,258 @@ backend:
   phases:
     build:
       commands:
-      - echo "=== Production Environment Backend Phase ==="
-      - echo "Environment: $AMPLIFY_ENVIRONMENT_NAME (Production)"
-      - echo "Build timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-      - echo "Commit: $VITE_BUILD_COMMIT"
-      - echo "Branch: $VITE_BUILD_BRANCH"
+        - echo "=== Production Environment Backend Phase ==="
+        - echo "Environment: $AMPLIFY_ENVIRONMENT_NAME (Production)"
+        - echo "Build timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+        - echo "Commit: $VITE_BUILD_COMMIT"
+        - echo "Branch: $VITE_BUILD_BRANCH"
 
 # Frontend configuration optimized for production
 frontend:
   phases:
     preBuild:
       commands:
-      - echo "=== Production Environment Pre-Build Phase ==="
-      - echo "Node version: $(node --version)"
-      - echo "Environment: $AMPLIFY_ENVIRONMENT_NAME (Production)"
-      - echo "API URL: $VITE_API_URL"
+        - echo "=== Production Environment Pre-Build Phase ==="
+        - echo "Node version: $(node --version)"
+        - echo "Environment: $AMPLIFY_ENVIRONMENT_NAME (Production)"
+        - echo "API URL: $VITE_API_URL"
 
-      # Install pnpm with specific version for consistency
-      - echo "Installing pnpm package manager..."
-      - npm install -g pnpm@10.14.0
-      - echo "pnpm version: $(pnpm --version)"
+        # Install pnpm with specific version for consistency
+        - echo "Installing pnpm package manager..."
+        - npm install -g pnpm@10.14.0
+        - echo "pnpm version: $(pnpm --version)"
 
-      # Install dependencies with frozen lockfile
-      - echo "Installing project dependencies..."
-      - pnpm install --frozen-lockfile --production=false
+        # Install dependencies with frozen lockfile
+        - echo "Installing project dependencies..."
+        - pnpm install --frozen-lockfile --production=false
 
-      # Display minimal environment configuration (security)
-      - echo "=== Production Environment Configuration ==="
-      - echo "VITE_APP_ENV: $VITE_APP_ENV"
-      - echo "VITE_APP_NAME: $VITE_APP_NAME"
-      - echo "VITE_ENABLE_DEVTOOLS: $VITE_ENABLE_DEVTOOLS"
-      - echo "VITE_ENABLE_DEBUG_LOGGING: $VITE_ENABLE_DEBUG_LOGGING"
-      - echo "VITE_BUILD_TIMESTAMP: $VITE_BUILD_TIMESTAMP"
-      - echo "API URL configured: $(echo $VITE_API_URL | sed 's/.*\(\/\/[^\/]*\).*/\1/')"
+        # Display minimal environment configuration (security)
+        - echo "=== Production Environment Configuration ==="
+        - echo "VITE_APP_ENV: $VITE_APP_ENV"
+        - echo "VITE_APP_NAME: $VITE_APP_NAME"
+        - echo "VITE_ENABLE_DEVTOOLS: $VITE_ENABLE_DEVTOOLS"
+        - echo "VITE_ENABLE_DEBUG_LOGGING: $VITE_ENABLE_DEBUG_LOGGING"
+        - echo "VITE_BUILD_TIMESTAMP: $VITE_BUILD_TIMESTAMP"
+        - echo "API URL configured: $(echo $VITE_API_URL | sed 's/.*\(\/\/[^\/]*\).*/\1/')"
 
-      # Strict environment validation for production
-      - echo "=== Environment Validation ==="
-      - |
-        if [ -z "$VITE_API_URL" ]; then
-          echo "ERROR: VITE_API_URL is not set"
-          exit 1
-        fi
-      - |
-        if [ -z "$VITE_API_KEY" ]; then
-          echo "ERROR: VITE_API_KEY is not set"
-          exit 1
-        fi
-      - |
-        if [[ "$VITE_API_URL" == *"staging"* ]] || [[ "$VITE_API_URL" == *"development"* ]]; then
-          echo "ERROR: Production environment cannot use staging/development API"
-          exit 1
-        fi
-      - |
-        if [[ "$VITE_ENABLE_DEVTOOLS" == "true" ]]; then
-          echo "ERROR: DevTools must be disabled in production"
-          exit 1
-        fi
-      - |
-        if [[ "$VITE_ENABLE_DEBUG_LOGGING" == "true" ]]; then
-          echo "ERROR: Debug logging must be disabled in production"
-          exit 1
-        fi
-      - echo "Production environment validation passed"
+        # Strict environment validation for production
+        - echo "=== Environment Validation ==="
+        - |
+          if [ -z "$VITE_API_URL" ]; then
+            echo "ERROR: VITE_API_URL is not set"
+            exit 1
+          fi
+        - |
+          if [ -z "$VITE_API_KEY" ]; then
+            echo "ERROR: VITE_API_KEY is not set"
+            exit 1
+          fi
+        - |
+          if [[ "$VITE_API_URL" == *"staging"* ]] || [[ "$VITE_API_URL" == *"development"* ]]; then
+            echo "ERROR: Production environment cannot use staging/development API"
+            exit 1
+          fi
+        - |
+          if [[ "$VITE_ENABLE_DEVTOOLS" == "true" ]]; then
+            echo "ERROR: DevTools must be disabled in production"
+            exit 1
+          fi
+        - |
+          if [[ "$VITE_ENABLE_DEBUG_LOGGING" == "true" ]]; then
+            echo "ERROR: Debug logging must be disabled in production"
+            exit 1
+          fi
+        - echo "Production environment validation passed"
 
     build:
       commands:
-      - echo "=== Production Environment Build Phase ==="
-      - echo "Building React application for production..."
-      - echo "Target environment: $VITE_APP_ENV"
+        - echo "=== Production Environment Build Phase ==="
+        - echo "Building React application for production..."
+        - echo "Target environment: $VITE_APP_ENV"
 
-      # Run comprehensive type checking
-      - echo "Running TypeScript type check..."
-      - pnpm type-check
+        # Run comprehensive type checking
+        - echo "Running TypeScript type check..."
+        - pnpm type-check
 
-      # Run linting with strict rules
-      - echo "Running ESLint..."
-      - pnpm lint
+        # Run linting with strict rules
+        - echo "Running ESLint..."
+        - pnpm lint
 
-      # Run tests before production build
-      - echo "Running unit tests..."
-      - pnpm test:run
+        # Run tests before production build
+        - echo "Running unit tests..."
+        - pnpm test:run
 
-      # Build the application with production optimizations
-      - echo "Building application with production optimizations..."
-      - pnpm build:production
+        # Build the application with production optimizations
+        - echo "Building application with production optimizations..."
+        - pnpm build:production
 
-      # Create minimal build metadata (security consideration)
-      - echo "=== Creating Build Metadata ==="
-      - |
-        cat > dist/build-info.json << EOF
-        {
-          "environment": "$VITE_APP_ENV",
-          "build_timestamp": "$VITE_BUILD_TIMESTAMP",
-          "version": "$VITE_APP_VERSION",
-          "amplify_app_id": "$AWS_APP_ID",
-          "amplify_branch": "$AWS_BRANCH"
-        }
-        EOF
+        # Create minimal build metadata (security consideration)
+        - echo "=== Creating Build Metadata ==="
+        - |
+          cat > dist/build-info.json << EOF
+          {
+            "environment": "$VITE_APP_ENV",
+            "build_timestamp": "$VITE_BUILD_TIMESTAMP",
+            "version": "$VITE_APP_VERSION",
+            "amplify_app_id": "$AWS_APP_ID",
+            "amplify_branch": "$AWS_BRANCH"
+          }
+          EOF
 
-      # Comprehensive build validation
-      - echo "=== Build Validation ==="
-      - |
-        if [ ! -d "dist" ]; then
-          echo "ERROR: Build output directory 'dist' not found"
-          exit 1
-        fi
-      - |
-        if [ ! -f "dist/index.html" ]; then
-          echo "ERROR: index.html not found in build output"
-          exit 1
-        fi
-      - echo "Build output size: $(du -sh dist | cut -f1)"
-      - echo "Build files count: $(find dist -type f | wc -l)"
+        # Comprehensive build validation
+        - echo "=== Build Validation ==="
+        - |
+          if [ ! -d "dist" ]; then
+            echo "ERROR: Build output directory 'dist' not found"
+            exit 1
+          fi
+        - |
+          if [ ! -f "dist/index.html" ]; then
+            echo "ERROR: index.html not found in build output"
+            exit 1
+          fi
+        - echo "Build output size: $(du -sh dist | cut -f1)"
+        - echo "Build files count: $(find dist -type f | wc -l)"
 
-      # Check for source maps (should not be in production)
-      - |
-        if find dist -name "*.map" | grep -q .; then
-          echo "WARNING: Source maps found in production build"
-        fi
+        # Check for source maps (should not be in production)
+        - |
+          if find dist -name "*.map" | grep -q .; then
+            echo "WARNING: Source maps found in production build"
+          fi
 
-      # Validate critical assets
-      - |
-        if [ ! -f "dist/assets/index-*.js" ] && [ ! -f "dist/assets/index.js" ]; then
-          echo "ERROR: Main JavaScript bundle not found"
-          exit 1
-        fi
-      - echo "Production build completed successfully"
+        # Validate critical assets
+        - |
+          if [ ! -f "dist/assets/index-*.js" ] && [ ! -f "dist/assets/index.js" ]; then
+            echo "ERROR: Main JavaScript bundle not found"
+            exit 1
+          fi
+        - echo "Production build completed successfully"
 
   # Build artifacts with production-specific naming
   artifacts:
     baseDirectory: dist
     files:
-    - '**/*'
+      - '**/*'
 
   # Production-optimized caching
   cache:
     paths:
-    - node_modules/**/*
-    - .pnpm-store/**/*
-    - ~/.pnpm-store/**/*
+      - node_modules/**/*
+      - .pnpm-store/**/*
+      - ~/.pnpm-store/**/*
 
 # Production test configuration (comprehensive)
 test:
   phases:
     preTest:
       commands:
-      - echo "=== Production Environment Pre-Test Phase ==="
-      - echo "Installing test dependencies..."
-      - pnpm install --frozen-lockfile
+        - echo "=== Production Environment Pre-Test Phase ==="
+        - echo "Installing test dependencies..."
+        - pnpm install --frozen-lockfile
 
     test:
       commands:
-      - echo "=== Production Environment Test Phase ==="
+        - echo "=== Production Environment Test Phase ==="
 
-      # Run comprehensive unit tests with coverage
-      - echo "Running unit tests with coverage..."
-      - pnpm test:coverage
+        # Run comprehensive unit tests with coverage
+        - echo "Running unit tests with coverage..."
+        - pnpm test:coverage
 
-      # Run type checking
-      - echo "Running TypeScript type check..."
-      - pnpm type-check
+        # Run type checking
+        - echo "Running TypeScript type check..."
+        - pnpm type-check
 
-      # Run linting with strict rules
-      - echo "Running ESLint..."
-      - pnpm lint
+        # Run linting with strict rules
+        - echo "Running ESLint..."
+        - pnpm lint
 
-      # Validate test coverage thresholds
-      - echo "Validating test coverage..."
-      - |
-        if [ -f "coverage/coverage-summary.json" ]; then
-          echo "Coverage report generated successfully"
-        else
-          echo "WARNING: Coverage report not found"
-        fi
+        # Validate test coverage thresholds
+        - echo "Validating test coverage..."
+        - |
+          if [ -f "coverage/coverage-summary.json" ]; then
+            echo "Coverage report generated successfully"
+          else
+            echo "WARNING: Coverage report not found"
+          fi
 
-      - echo "All production tests completed successfully"
+        - echo "All production tests completed successfully"
 
   # Test artifacts
   artifacts:
     baseDirectory: coverage
     files:
-    - '**/*'
+      - '**/*'
 
 # Production-grade security headers
 customHeaders:
-- pattern: '**/*'
-  headers:
-  # Strict security headers
-  - key: 'Strict-Transport-Security'
-    value: 'max-age=63072000; includeSubDomains; preload'
-  - key: 'X-Frame-Options'
-    value: 'DENY'
-  - key: 'X-Content-Type-Options'
-    value: 'nosniff'
-  - key: 'Referrer-Policy'
-    value: 'strict-origin-when-cross-origin'
-  - key: 'X-XSS-Protection'
-    value: '1; mode=block'
-  - key: 'Permissions-Policy'
-    value: 'camera=(), microphone=(), geolocation=(), payment=()'
+  - pattern: '**/*'
+    headers:
+      # Strict security headers
+      - key: 'Strict-Transport-Security'
+        value: 'max-age=63072000; includeSubDomains; preload'
+      - key: 'X-Frame-Options'
+        value: 'DENY'
+      - key: 'X-Content-Type-Options'
+        value: 'nosniff'
+      - key: 'Referrer-Policy'
+        value: 'strict-origin-when-cross-origin'
+      - key: 'X-XSS-Protection'
+        value: '1; mode=block'
+      - key: 'Permissions-Policy'
+        value: 'camera=(), microphone=(), geolocation=(), payment=()'
 
-  # Environment identification (minimal)
-  - key: 'X-Environment'
-    value: 'production'
+      # Environment identification (minimal)
+      - key: 'X-Environment'
+        value: 'production'
 
-  # Strict Content Security Policy
-  - key: 'Content-Security-Policy'
-    value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.macro-ai.com; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
+      # Strict Content Security Policy
+      - key: 'Content-Security-Policy'
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.macro-ai.com; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
 
-  # Aggressive caching for static assets
-  - key: 'Cache-Control'
-    value: 'public, max-age=31536000, immutable'
+      # Aggressive caching for static assets
+      - key: 'Cache-Control'
+        value: 'public, max-age=31536000, immutable'
 
-# HTML files - no caching for dynamic content
-- pattern: '*.html'
-  headers:
-  - key: 'Cache-Control'
-    value: 'no-cache, no-store, must-revalidate'
-  - key: 'Pragma'
-    value: 'no-cache'
-  - key: 'Expires'
-    value: '0'
+  # HTML files - no caching for dynamic content
+  - pattern: '*.html'
+    headers:
+      - key: 'Cache-Control'
+        value: 'no-cache, no-store, must-revalidate'
+      - key: 'Pragma'
+        value: 'no-cache'
+      - key: 'Expires'
+        value: '0'
 
-# Service worker - short cache for updates
-- pattern: '/sw.js'
-  headers:
-  - key: 'Cache-Control'
-    value: 'no-cache, no-store, must-revalidate'
+  # Service worker - short cache for updates
+  - pattern: '/sw.js'
+    headers:
+      - key: 'Cache-Control'
+        value: 'no-cache, no-store, must-revalidate'
 
-# Build info - no caching
-- pattern: '/build-info.json'
-  headers:
-  - key: 'Content-Type'
-    value: 'application/json'
-  - key: 'Cache-Control'
-    value: 'no-cache, no-store, must-revalidate'
+  # Build info - no caching
+  - pattern: '/build-info.json'
+    headers:
+      - key: 'Content-Type'
+        value: 'application/json'
+      - key: 'Cache-Control'
+        value: 'no-cache, no-store, must-revalidate'
 
 # Production redirects and rewrites
 redirects:
-# Health check endpoint
-- source: '/health'
-  target: '/build-info.json'
-  status: '200'
+  # Health check endpoint
+  - source: '/health'
+    target: '/build-info.json'
+    status: '200'
 
-# API proxy (if needed)
-- source: '/api/<*>'
-  target: 'https://api.macro-ai.com/api/<*>'
-  status: '200'
+  # API proxy (if needed)
+  - source: '/api/<*>'
+    target: 'https://api.macro-ai.com/api/<*>'
+    status: '200'
 
-# SPA fallback
-- source: '/<*>'
-  target: '/index.html'
-  status: '404-200'
+  # SPA fallback
+  - source: '/<*>'
+    target: '/index.html'
+    status: '404-200'
 
 # Production performance optimizations
 performance:
