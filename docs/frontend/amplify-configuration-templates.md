@@ -190,7 +190,7 @@ Each environment has tailored security configurations:
 #### Preview Environment
 
 - **Relaxed CSP**: Allows `unsafe-inline` and `unsafe-eval` for debugging
-- **Permissive CORS**: Allows all origins for development
+- **CI-managed CORS**: Backend CORS uses CORS_ALLOWED_ORIGINS to allow localhost and the exact Amplify preview URL
 - **Debug Headers**: Includes build and PR information
 
 #### Staging Environment

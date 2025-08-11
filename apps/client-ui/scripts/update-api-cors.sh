@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Update API Gateway CORS Settings for Amplify Frontend
-# This script updates the API Gateway CORS configuration to allow the deployed Amplify frontend
+# Preferred: CI-driven update via CORS_ALLOWED_ORIGINS in deploy-preview.yml (see update-backend-cors job).
+# This script is a fallback/manual helper for local ops.
 
 set -Eeuo pipefail
 IFS=$'\n\t'

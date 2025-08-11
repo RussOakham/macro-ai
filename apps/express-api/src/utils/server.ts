@@ -49,10 +49,19 @@ const createServer = (): Express => {
 	app.use('/api-docs', cors({ origin: true, credentials: false }))
 	app.use('/swagger.json', cors({ origin: true, credentials: false }))
 
-	// Default CORS for application routes (credentialed dev origins)
+	// Default CORS for application routes (credentialed dev/preview origins)
+	// Parse CORS_ALLOWED_ORIGINS if provided; fall back to localhost defaults
+	const parsedCorsOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? '')
+		.split(',')
+		.map((o) => o.trim())
+		.filter((o) => o.length > 0)
+	const effectiveOrigins =
+		parsedCorsOrigins.length > 0
+			? parsedCorsOrigins
+			: ['http://localhost:3000', 'http://localhost:3040']
 	app.use(
 		cors({
-			origin: ['http://localhost:3000', 'http://localhost:3040'],
+			origin: effectiveOrigins,
 			credentials: true,
 			exposedHeaders: ['cache-control'], // 'set-cookie' cannot be exposed via CORS
 			methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

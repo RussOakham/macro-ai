@@ -230,6 +230,9 @@ export class LambdaConstruct extends Construct {
 				AUTH_RATE_LIMIT_MAX_REQUESTS: '10',
 				API_RATE_LIMIT_WINDOW_MS: '60000', // 1 minute
 				API_RATE_LIMIT_MAX_REQUESTS: '60',
+
+				// CORS configuration propagated to the application layer
+				CORS_ALLOWED_ORIGINS: process.env.CORS_ALLOWED_ORIGINS ?? '',
 			},
 			// Cost optimization: disable provisioned concurrency
 			reservedConcurrentExecutions: undefined,

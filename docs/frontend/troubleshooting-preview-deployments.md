@@ -334,6 +334,144 @@ curl -I https://pr123.d1234567890.amplifyapp.com/
 # Wait for cache TTL to expire (usually 5-15 minutes)
 ```
 
+## 🌐 Troubleshooting CORS in Preview Deployments
+
+CORS issues are common in cross-origin preview setups (Amplify frontend → API Gateway/Lambda backend).
+Below are targeted checks and fixes.
+
+### 1) Origin mismatch (exact URL matching required)
+
+Symptoms:
+
+- Browser error: "has been blocked by CORS policy"
+- Response/status may be 200/204 but missing or wrong Access-Control-Allow-Origin
+
+What to check:
+
+- The exact Amplify preview URL must be present in the backend allowlist.
+  Wildcards like \*.amplifyapp.com are not used when credentials are enabled.
+- Compare the printed origins in the update-backend-cors job with your Amplify URL.
+
+Fix:
+
+- Ensure CI sets CORS_ALLOWED_ORIGINS to include the exact preview origin.
+- Re-run the Deploy Preview workflow or push a new commit to retrigger.
+
+Verification:
+
+```bash
+# Replace APP_URL and API_URL
+curl -s -i -X OPTIONS "${API_URL%/}/health" \
+  -H "Origin: ${APP_URL%/}" \
+  -H "Access-Control-Request-Method: GET" | \
+  grep -i "Access-Control-Allow-Origin: ${APP_URL%/}"
+```
+
+### 2) Trailing slash mismatches (frontend vs backend URLs)
+
+Symptoms:
+
+- OPTIONS succeeds locally, but fails in CI or browser
+- ACAO header missing when Origin ends with a slash
+
+What to check:
+
+- Normalize both APP_URL and API_URL without trailing slash before comparison and usage.
+
+Fix:
+
+- In scripts and manual checks, strip trailing slashes: ${VAR%/}
+- Our CI already does this in the verification step; mirror that locally.
+
+Verification:
+
+```bash
+APP_URL="${APP_URL%/}"; API_URL="${API_URL%/}"
+curl -s -i -X OPTIONS "$API_URL/health" \
+  -H "Origin: $APP_URL" \
+  -H "Access-Control-Request-Method: GET" | grep -i "Access-Control-Allow-Origin: $APP_URL"
+```
+
+### 3) Browser caching of preflight responses
+
+Symptoms:
+
+- You fixed CORS config but browser still shows CORS errors
+- Incognito works but normal session fails
+
+What to check:
+
+- Browsers cache successful preflights for the Access-Control-Max-Age duration.
+
+Fix:
+
+- Hard refresh the page or open DevTools Network tab and disable cache while DevTools is open.
+- Use a new private/incognito window.
+- Optionally change request headers (e.g., add a temporary X-Debug header) to force a fresh preflight.
+
+Verification:
+
+```bash
+# Use curl to bypass browser cache and check headers
+curl -s -i -X OPTIONS "${API_URL%/}/health" \
+  -H "Origin: ${APP_URL%/}" \
+  -H "Access-Control-Request-Method: GET" | \
+  grep -Ei "Access-Control-Allow-Origin|Access-Control-Max-Age"
+```
+
+### 4) Timing/propagation delays after CORS update
+
+Symptoms:
+
+- CI shows CORS updated, but browser still fails for a few minutes
+
+What to check:
+
+- API Gateway and CloudFront can take a short time to reflect updates.
+
+Fix:
+
+- Wait 2–5 minutes and retry.
+- Confirm the CI step "Verify CORS preflight and GET" passed in the deploy-preview workflow.
+
+Verification:
+
+```bash
+# Quick loop to re-check every 10s up to 2 minutes
+for i in {1..12}; do
+  if curl -s -i -X OPTIONS "${API_URL%/}/health" \
+    -H "Origin: ${APP_URL%/}" \
+    -H "Access-Control-Request-Method: GET" | \
+    grep -qi "Access-Control-Allow-Origin: ${APP_URL%/}"; then
+    echo "CORS OK"; break; fi; echo "retry..."; sleep 10; done
+```
+
+### 5) Verify CORS end-to-end
+
+We can validate both preflight and actual request behavior.
+
+Steps:
+
+1. Preflight: OPTIONS request returns ACAO matching the Amplify origin
+2. Simple GET: GET /health returns ACAO matching the Amplify origin
+
+Commands:
+
+```bash
+# Preflight
+curl -s -i -X OPTIONS "${API_URL%/}/health" \
+  -H "Origin: ${APP_URL%/}" \
+  -H "Access-Control-Request-Method: GET"
+
+# GET
+curl -s -i "${API_URL%/}/health" -H "Origin: ${APP_URL%/}"
+```
+
+Notes:
+
+- Our /health endpoint uses permissive CORS (origin: true, credentials: false) to ease diagnostics.
+- Application endpoints use the CORS_ALLOWED_ORIGINS allowlist with credentials enabled; an exact origin match is required.
+
 **C. Build Cache**
 
 ```bash

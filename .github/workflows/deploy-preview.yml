@@ -775,6 +775,10 @@ jobs:
       ]
     if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-frontend-changes.outputs.has-frontend-changes == 'true'
 
+    outputs:
+      app-url: ${{ steps.deploy.outputs.app-url }}
+      app-id: ${{ steps.deploy.outputs.app-id }}
+
     permissions:
       id-token: write
       contents: read
@@ -986,60 +990,82 @@ jobs:
 
     steps:
       - name: Generate deployment summary
+        run: ''
+  # Update backend CORS to allow Amplify preview origin
+  update-backend-cors:
+    name: Update Backend CORS for Preview Frontend
+    runs-on: ubuntu-latest
+    needs: [validate-access, deploy-frontend, discover-backend-for-frontend]
+    if: |
+      needs.validate-access.outputs.should-deploy == 'true' &&
+      needs.discover-backend-for-frontend.outputs.backend-found == 'true' &&
+      needs.deploy-frontend.result == 'success'
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build and deploy with CORS origins
         run: |
-          echo "## 📋 Deployment Summary for PR #${{ github.event.pull_request.number }}"
-          echo ""
+          APP_URL="${{ needs.deploy-frontend.outputs.app-url }}"
+          API_URL="${{ needs.discover-backend-for-frontend.outputs.api-endpoint }}"
+          ORIGINS="http://localhost:3000,https://localhost:3000,${APP_URL%/}"
 
-          # Backend deployment status
-          BACKEND_CHANGES="${{ needs.check-backend-changes.outputs.has-backend-changes }}"
-          BACKEND_RESULT="${{ needs.deploy-backend-preview.result }}"
+          echo "🔧 Setting CORS_ALLOWED_ORIGINS to: $ORIGINS"
+          cd infrastructure
+          pnpm install --frozen-lockfile
+          pnpm build
+          chmod +x scripts/deploy.sh
+          CORS_ALLOWED_ORIGINS="$ORIGINS" CDK_DEPLOY_ENV="${{ needs.validate-access.outputs.env-name }}" \
+            CDK_DEPLOY_SCALE='hobby' AWS_REGION='${{ env.AWS_REGION }}' \
+            AWS_ACCOUNT_ID='${{ secrets.AWS_ACCOUNT_ID }}' NODE_ENV='production' ./scripts/deploy.sh
 
-          echo "### 🔧 Backend Deployment"
-          if [[ "$BACKEND_CHANGES" == "true" ]]; then
-            if [[ "$BACKEND_RESULT" == "success" ]]; then
-              echo "✅ **Backend deployed successfully** - Changes detected and deployed"
-            elif [[ "$BACKEND_RESULT" == "failure" ]]; then
-              echo "❌ **Backend deployment failed** - Check logs for details"
-            else
-              echo "⏳ **Backend deployment in progress** - Status: $BACKEND_RESULT"
-            fi
-          else
-            echo "⏭️ **Backend deployment skipped** - No backend changes detected"
-            echo "ℹ️ Using existing backend environment from previous deployment"
-          fi
-          echo ""
+      - name: Output summary
+        run: |
+          echo "## 🔁 Backend CORS Update" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Environment: ${{ needs.validate-access.outputs.env-name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Amplify URL: ${{ needs.deploy-frontend.outputs.app-url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- API Endpoint: ${{ needs.discover-backend-for-frontend.outputs.api-endpoint }}" >> "$GITHUB_STEP_SUMMARY"
 
-          # Frontend deployment status
-          FRONTEND_CHANGES="${{ needs.check-frontend-changes.outputs.has-frontend-changes }}"
-          FRONTEND_RESULT="${{ needs.deploy-frontend.result }}"
+      - name: Verify CORS preflight and GET
+        shell: bash
+        run: |
+          APP_URL="${{ needs.deploy-frontend.outputs.app-url }}"
+          API_URL="${{ needs.discover-backend-for-frontend.outputs.api-endpoint }}"
+          HEALTH_URL="${API_URL%/}/health"
 
-          echo "### 🎨 Frontend Deployment"
-          if [[ "$FRONTEND_CHANGES" == "true" ]]; then
-            if [[ "$FRONTEND_RESULT" == "success" ]]; then
-              echo "✅ **Frontend deployed successfully** - Changes detected and deployed"
-            elif [[ "$FRONTEND_RESULT" == "failure" ]]; then
-              echo "❌ **Frontend deployment failed** - Check logs for details"
-            else
-              echo "⏳ **Frontend deployment in progress** - Status: $FRONTEND_RESULT"
-            fi
-          else
-            echo "⏭️ **Frontend deployment skipped** - No frontend changes detected"
-            echo "ℹ️ Existing frontend deployment remains active"
-          fi
-          echo ""
+          echo "🔍 Checking preflight: $HEALTH_URL"
+          PRE=$(curl -s -i -X OPTIONS "$HEALTH_URL" \
+            -H "Origin: ${APP_URL%/}" \
+            -H "Access-Control-Request-Method: GET")
+          echo "--- PRELIGHT RESPONSE ---" && echo "$PRE"
 
-          # Optimization summary
-          echo "### ⚡ Optimization Summary"
-          if [[ "$BACKEND_CHANGES" == "true" && "$FRONTEND_CHANGES" == "true" ]]; then
-            echo "🔄 **Full deployment** - Both backend and frontend changes detected"
-          elif [[ "$BACKEND_CHANGES" == "true" && "$FRONTEND_CHANGES" == "false" ]]; then
-            echo "🔧 **Backend-only deployment** - Optimized to skip frontend"
-          elif [[ "$BACKEND_CHANGES" == "false" && "$FRONTEND_CHANGES" == "true" ]]; then
-            echo "🎨 **Frontend-only deployment** - Optimized to skip backend rebuild"
-          else
-            echo "⏭️ **No deployments needed** - No changes detected in either component"
-          fi
+          echo "$PRE" | grep -i "Access-Control-Allow-Origin: ${APP_URL%/}" >/dev/null && echo "✅ ACAO matches" || { echo "❌ ACAO mismatch in preflight"; exit 1; }
+          echo "$PRE" | head -n 1 | grep -E "HTTP/.[.]. 200|HTTP/.[.]. 204" >/dev/null && echo "✅ Preflight status OK" || { echo "⚠️ Preflight not 200/204"; }
 
-          echo ""
-          echo "---"
-          echo "*This summary shows the optimized deployment strategy based on detected changes.*"
+          echo "🔍 Checking GET: $HEALTH_URL"
+          GETR=$(curl -s -i "$HEALTH_URL" -H "Origin: ${APP_URL%/}")
+          echo "--- GET RESPONSE ---" && echo "$GETR"
+          echo "$GETR" | grep -i "Access-Control-Allow-Origin: ${APP_URL%/}" >/dev/null && echo "✅ ACAO present on GET" || { echo "❌ ACAO missing on GET"; exit 1; }

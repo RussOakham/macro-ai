@@ -91,42 +91,56 @@ export class ApiGatewayConstruct extends Construct {
 	 * Get allowed CORS origins based on environment
 	 */
 	private getAllowedOrigins(environmentName: string): string[] {
-		// Get allowed origins from environment variable or use defaults
-		const customOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',').map(
-			(origin) => origin.trim(),
-		)
+		// Helper: parse comma-separated env var safely
+		const parsedEnvOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? '')
+			.split(',')
+			.map((o) => o.trim())
+			.filter((o) => o.length > 0)
 
-		// Production environment - restrict to specific domains
+		// If explicit origins are provided via env for non-prod, prefer them
+		// This allows CI to inject the exact Amplify preview origin per PR.
+		const isPreview = environmentName.startsWith('pr-')
+
+		// Production environment - restrict to specific domains unless explicitly overridden
 		if (environmentName === 'production') {
-			return (
-				customOrigins ?? [
-					'https://app.macro-ai.com',
-					'https://www.macro-ai.com',
-				]
-			)
+			return parsedEnvOrigins.length > 0
+				? parsedEnvOrigins
+				: ['https://app.macro-ai.com', 'https://www.macro-ai.com']
 		}
 
-		// Staging environment - allow staging domains
+		// Staging environment - allow staging domains unless explicitly overridden
 		if (environmentName === 'staging') {
-			return (
-				customOrigins ?? [
-					'https://staging.macro-ai.com',
-					'https://dev.macro-ai.com',
+			return parsedEnvOrigins.length > 0
+				? parsedEnvOrigins
+				: [
+						'https://staging.macro-ai.com',
+						'https://dev.macro-ai.com',
+						'http://localhost:3000',
+						'https://localhost:3000',
+					]
+		}
+
+		// Preview (pr-*) and development/hobby environments
+		if (isPreview) {
+			return parsedEnvOrigins.length > 0
+				? parsedEnvOrigins
+				: [
+						'http://localhost:3000',
+						'https://localhost:3000',
+						'http://127.0.0.1:3000',
+						'https://127.0.0.1:3000',
+					]
+		}
+
+		// Development/hobby default - allow local development unless overridden
+		return parsedEnvOrigins.length > 0
+			? parsedEnvOrigins
+			: [
 					'http://localhost:3000',
 					'https://localhost:3000',
+					'http://127.0.0.1:3000',
+					'https://127.0.0.1:3000',
 				]
-			)
-		}
-
-		// Development/hobby environment - allow local development
-		return (
-			customOrigins ?? [
-				'http://localhost:3000',
-				'https://localhost:3000',
-				'http://127.0.0.1:3000',
-				'https://127.0.0.1:3000',
-			]
-		)
 	}
 
 	constructor(scope: Construct, id: string, props: ApiGatewayConstructProps) {

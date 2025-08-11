@@ -202,6 +202,44 @@ describe('createServer', () => {
 		})
 	})
 
+	it('should configure CORS with env-driven origins when CORS_ALLOWED_ORIGINS is set', async () => {
+		// Arrange
+		process.env.CORS_ALLOWED_ORIGINS =
+			'https://example.com, http://localhost:3000'
+		const mockCorsMiddleware = vi.fn()
+		const cors = await import('cors')
+		vi.mocked(cors.default).mockReturnValue(mockCorsMiddleware)
+
+		// Need to re-import the module to pick up env var
+		vi.resetModules()
+		const { createServer } = await import('../server.ts')
+
+		// Act
+		createServer()
+
+		// Assert
+		expect(cors.default).toHaveBeenCalledWith({
+			origin: ['https://example.com', 'http://localhost:3000'],
+			credentials: true,
+			exposedHeaders: ['cache-control'],
+			methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+			allowedHeaders: [
+				'Origin',
+				'X-Requested-With',
+				'Content-Type',
+				'Accept',
+				'Authorization',
+				'X-API-KEY',
+				'Cache-Control',
+			],
+			maxAge: 86400,
+		})
+		expect(mockApp.use).toHaveBeenCalledWith(mockCorsMiddleware)
+
+		// Cleanup
+		delete process.env.CORS_ALLOWED_ORIGINS
+	})
+
 	describe('Body Parsing Middleware', () => {
 		it('should configure compression middleware with streaming filter', async () => {
 			// Arrange
