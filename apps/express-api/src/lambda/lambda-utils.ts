@@ -35,7 +35,7 @@ const getAllowedOrigins = (): string[] => {
  */
 const getPrimaryAllowedOrigin = (): string => {
 	const origins = getAllowedOrigins()
-	return origins[0] || '*'
+	return origins[0] ?? '*'
 }
 
 export const createLambdaResponse = (
@@ -174,15 +174,15 @@ export const handleCorsPreflightRequest = (
 ): APIGatewayProxyResult | null => {
 	if (event.httpMethod === 'OPTIONS') {
 		// Get the request origin
-		const requestOrigin = event.headers.origin || event.headers.Origin
+		const requestOrigin = event.headers.origin ?? event.headers.Origin
 		const allowedOrigins = getAllowedOrigins()
 
 		// Check if the request origin is allowed
 		const isAllowedOrigin =
-			allowedOrigins.includes(requestOrigin || '') ||
+			allowedOrigins.includes(requestOrigin ?? '') ||
 			allowedOrigins.includes('*')
 		const responseOrigin = isAllowedOrigin
-			? requestOrigin || getPrimaryAllowedOrigin()
+			? (requestOrigin ?? getPrimaryAllowedOrigin())
 			: getPrimaryAllowedOrigin()
 
 		return createLambdaResponse(

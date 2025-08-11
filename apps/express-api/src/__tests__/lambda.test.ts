@@ -248,20 +248,14 @@ describe('Lambda Handler', () => {
 				'x-lambda-function-name': 'test-function',
 			})
 
-			const body = JSON.parse(result.body) as {
-				error: string
-				message: string
-				requestId: string
-				timestamp: string
-				details?: string
-				stack?: string
-			}
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+			const body = JSON.parse(result.body)
 			expect(body).toEqual(
 				expect.objectContaining({
 					error: 'An unexpected error occurred',
 					message: 'An unexpected error occurred',
 					requestId: mockContext.awsRequestId,
-					timestamp: expect.any(String),
+					timestamp: expect.any(String) as string,
 				}),
 			)
 
