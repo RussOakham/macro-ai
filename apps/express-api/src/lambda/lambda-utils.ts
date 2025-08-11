@@ -13,25 +13,29 @@ import type {
  * Create a standardized Lambda response
  */
 /**
- * Get allowed CORS origin based on environment
+ * Get allowed CORS origins based on environment
  */
-const getAllowedOrigin = (): string => {
-	const environment =
-		process.env.NODE_ENV ?? process.env.ENVIRONMENT ?? 'development'
-	const trustedOrigin = process.env.CORS_ALLOWED_ORIGIN
+const getAllowedOrigins = (): string[] => {
+	// Parse CORS_ALLOWED_ORIGINS if provided; fall back to localhost defaults
+	const parsedCorsOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? '')
+		.split(',')
+		.map((o) => o.trim())
+		.filter((o) => o.length > 0)
 
-	// In production, use specific trusted origin if configured, otherwise restrict to known domains
-	if (environment === 'production') {
-		return trustedOrigin ?? 'https://your-production-domain.com'
-	}
+	const effectiveOrigins =
+		parsedCorsOrigins.length > 0
+			? parsedCorsOrigins
+			: ['http://localhost:3000', 'http://localhost:3040']
 
-	// In staging, use staging-specific origin if configured
-	if (environment === 'staging') {
-		return trustedOrigin ?? 'https://your-staging-domain.com'
-	}
+	return effectiveOrigins
+}
 
-	// In development/testing, allow all origins for easier development
-	return '*'
+/**
+ * Get the primary allowed CORS origin (first in the list)
+ */
+const getPrimaryAllowedOrigin = (): string => {
+	const origins = getAllowedOrigins()
+	return origins[0] || '*'
 }
 
 export const createLambdaResponse = (
@@ -43,7 +47,7 @@ export const createLambdaResponse = (
 ): APIGatewayProxyResult => {
 	const defaultHeaders: Record<string, string> = {
 		'Content-Type': 'application/json',
-		'Access-Control-Allow-Origin': getAllowedOrigin(),
+		'Access-Control-Allow-Origin': getPrimaryAllowedOrigin(),
 		'Access-Control-Allow-Credentials': 'true',
 		'Access-Control-Allow-Headers':
 			'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
@@ -169,11 +173,24 @@ export const handleCorsPreflightRequest = (
 	context: Context,
 ): APIGatewayProxyResult | null => {
 	if (event.httpMethod === 'OPTIONS') {
+		// Get the request origin
+		const requestOrigin = event.headers.origin || event.headers.Origin
+		const allowedOrigins = getAllowedOrigins()
+
+		// Check if the request origin is allowed
+		const isAllowedOrigin =
+			allowedOrigins.includes(requestOrigin || '') ||
+			allowedOrigins.includes('*')
+		const responseOrigin = isAllowedOrigin
+			? requestOrigin || getPrimaryAllowedOrigin()
+			: getPrimaryAllowedOrigin()
+
 		return createLambdaResponse(
 			200,
 			'',
 			{
-				'Access-Control-Allow-Origin': '*',
+				'Access-Control-Allow-Origin': responseOrigin,
+				'Access-Control-Allow-Credentials': 'true',
 				'Access-Control-Allow-Headers':
 					'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
 				'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',

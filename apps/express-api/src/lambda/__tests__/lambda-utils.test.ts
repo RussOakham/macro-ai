@@ -87,7 +87,7 @@ describe('Lambda Utils', () => {
 				statusCode: 200,
 				headers: {
 					'Content-Type': 'application/json',
-					'Access-Control-Allow-Origin': '*',
+					'Access-Control-Allow-Origin': 'http://localhost:3000', // Now uses first allowed origin
 					'Access-Control-Allow-Credentials': 'true',
 					'Access-Control-Allow-Headers':
 						'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
@@ -95,6 +95,27 @@ describe('Lambda Utils', () => {
 				},
 				body: JSON.stringify({ message: 'success' }),
 			})
+		})
+
+		it('should use CORS_ALLOWED_ORIGINS environment variable when set', () => {
+			// Arrange
+			const originalEnv = process.env.CORS_ALLOWED_ORIGINS
+			process.env.CORS_ALLOWED_ORIGINS = 'https://example.com,https://test.com'
+
+			// Act
+			const response = createLambdaResponse(200, { message: 'success' })
+
+			// Assert
+			expect(response.headers['Access-Control-Allow-Origin']).toBe(
+				'https://example.com',
+			)
+
+			// Cleanup
+			if (originalEnv !== undefined) {
+				process.env.CORS_ALLOWED_ORIGINS = originalEnv
+			} else {
+				delete process.env.CORS_ALLOWED_ORIGINS
+			}
 		})
 
 		it('should add Lambda context headers when context is provided', () => {
@@ -249,19 +270,68 @@ describe('Lambda Utils', () => {
 	})
 
 	describe('handleCorsPreflightRequest', () => {
-		it('should handle OPTIONS request', () => {
-			const optionsEvent = { ...mockEvent, httpMethod: 'OPTIONS' }
+		it('should handle OPTIONS request with allowed origin', () => {
+			const optionsEvent = {
+				...mockEvent,
+				httpMethod: 'OPTIONS',
+				headers: { ...mockEvent.headers, origin: 'http://localhost:3000' },
+			}
 			const response = handleCorsPreflightRequest(optionsEvent, mockContext)
 
 			expect(response).not.toBeNull()
 			expect(response!.statusCode).toBe(200)
 			expect(response!.headers).toEqual(
 				expect.objectContaining({
-					'Access-Control-Allow-Origin': '*',
+					'Access-Control-Allow-Origin': 'http://localhost:3000',
+					'Access-Control-Allow-Credentials': 'true',
 					'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
 					'Access-Control-Max-Age': '86400',
 				}),
 			)
+		})
+
+		it('should handle OPTIONS request with custom CORS origins', () => {
+			// Arrange
+			const originalEnv = process.env.CORS_ALLOWED_ORIGINS
+			process.env.CORS_ALLOWED_ORIGINS = 'https://example.com,https://test.com'
+
+			const optionsEvent = {
+				...mockEvent,
+				httpMethod: 'OPTIONS',
+				headers: { ...mockEvent.headers, origin: 'https://example.com' },
+			}
+
+			// Act
+			const response = handleCorsPreflightRequest(optionsEvent, mockContext)
+
+			// Assert
+			expect(response).not.toBeNull()
+			expect(response!.statusCode).toBe(200)
+			expect(response!.headers['Access-Control-Allow-Origin']).toBe(
+				'https://example.com',
+			)
+
+			// Cleanup
+			if (originalEnv !== undefined) {
+				process.env.CORS_ALLOWED_ORIGINS = originalEnv
+			} else {
+				delete process.env.CORS_ALLOWED_ORIGINS
+			}
+		})
+
+		it('should handle OPTIONS request with disallowed origin', () => {
+			const optionsEvent = {
+				...mockEvent,
+				httpMethod: 'OPTIONS',
+				headers: { ...mockEvent.headers, origin: 'https://malicious.com' },
+			}
+			const response = handleCorsPreflightRequest(optionsEvent, mockContext)
+
+			expect(response).not.toBeNull()
+			expect(response!.statusCode).toBe(200)
+			expect(response!.headers['Access-Control-Allow-Origin']).toBe(
+				'http://localhost:3000',
+			) // Falls back to primary origin
 		})
 
 		it('should return null for non-OPTIONS request', () => {
