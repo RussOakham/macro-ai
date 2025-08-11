@@ -1027,6 +1027,9 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Install AWS CDK CLI globally
+        run: pnpm add -g aws-cdk@2
+
       - name: Build and deploy with CORS origins
         run: |
           APP_URL="${{ needs.deploy-frontend.outputs.app-url }}"
