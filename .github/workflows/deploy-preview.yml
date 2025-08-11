@@ -2,17 +2,17 @@ name: Deploy PR Preview Environment
 
 on:
   pull_request:
-    types: [ opened, reopened, synchronize ]
-    branches: [ develop, main ]
+    types: [opened, reopened, synchronize]
+    branches: [develop, main]
     paths:
-    - 'infrastructure/**'
-    - 'apps/express-api/**'
-    - 'apps/client-ui/**'
-    - '.github/workflows/deploy-preview.yml'
-    - '.github/workflows/deploy-frontend-preview.yml'
-    - '.github/actions/check-codeowner/**'
-    - '.github/actions/discover-backend/**'
-    - '.github/actions/generate-frontend-env/**'
+      - 'infrastructure/**'
+      - 'apps/express-api/**'
+      - 'apps/client-ui/**'
+      - '.github/workflows/deploy-preview.yml'
+      - '.github/workflows/deploy-frontend-preview.yml'
+      - '.github/actions/check-codeowner/**'
+      - '.github/actions/discover-backend/**'
+      - '.github/actions/generate-frontend-env/**'
 
 permissions:
   contents: read
@@ -40,60 +40,163 @@ jobs:
       is-same-repo: ${{ steps.repo-check.outputs.is-same-repo }}
       should-deploy: ${{ steps.decision.outputs.should-deploy }}
       env-name: ${{ steps.env-name.outputs.env-name }}
+      # Pre-calculated URLs for parallel deployment
+      amplify-app-id: ${{ steps.url-precalc.outputs.amplify-app-id }}
+      frontend-url: ${{ steps.url-precalc.outputs.frontend-url }}
+      backend-url: ${{ steps.url-precalc.outputs.backend-url }}
+      backend-stack-name: ${{ steps.url-precalc.outputs.backend-stack-name }}
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ github.event.pull_request.head.sha }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
-    - name: Check repository ownership
-      id: repo-check
-      run: |
-        if [[ "${{ github.event.pull_request.head.repo.full_name }}" == "${{ github.repository }}" ]]; then
-          echo "is-same-repo=true" >> $GITHUB_OUTPUT
-          echo "✅ PR from same repository: ${{ github.event.pull_request.head.repo.full_name }}"
-        else
-          echo "is-same-repo=false" >> $GITHUB_OUTPUT
-          echo "❌ PR from forked repository: ${{ github.event.pull_request.head.repo.full_name }}"
-        fi
+      - name: Check repository ownership
+        id: repo-check
+        run: |
+          if [[ "${{ github.event.pull_request.head.repo.full_name }}" == "${{ github.repository }}" ]]; then
+            echo "is-same-repo=true" >> $GITHUB_OUTPUT
+            echo "✅ PR from same repository: ${{ github.event.pull_request.head.repo.full_name }}"
+          else
+            echo "is-same-repo=false" >> $GITHUB_OUTPUT
+            echo "❌ PR from forked repository: ${{ github.event.pull_request.head.repo.full_name }}"
+          fi
 
-    - name: Check code ownership
-      id: codeowner-check
-      uses: ./.github/actions/check-codeowner
-      with:
-        mode: 'pr'
-        base-ref: ${{ github.event.pull_request.base.ref }}
+      - name: Check code ownership
+        id: codeowner-check
+        uses: ./.github/actions/check-codeowner
+        with:
+          mode: 'pr'
+          base-ref: ${{ github.event.pull_request.base.ref }}
 
-    - name: Generate environment name
-      id: env-name
-      run: |
-        ENV_NAME="pr-${{ github.event.pull_request.number }}"
-        echo "env-name=${ENV_NAME}" >> $GITHUB_OUTPUT
-        echo "Environment name: ${ENV_NAME}"
+      - name: Generate environment name
+        id: env-name
+        run: |
+          ENV_NAME="pr-${{ github.event.pull_request.number }}"
+          echo "env-name=${ENV_NAME}" >> $GITHUB_OUTPUT
+          echo "Environment name: ${ENV_NAME}"
 
-    - name: Make deployment decision
-      id: decision
-      run: |
-        IS_SAME_REPO="${{ steps.repo-check.outputs.is-same-repo }}"
-        IS_OWNER="${{ steps.codeowner-check.outputs.is-owner }}"
+      - name: Make deployment decision
+        id: decision
+        run: |
+          IS_SAME_REPO="${{ steps.repo-check.outputs.is-same-repo }}"
+          IS_OWNER="${{ steps.codeowner-check.outputs.is-owner }}"
 
-        if [[ "${IS_SAME_REPO}" == "true" && "${IS_OWNER}" == "true" ]]; then
-          echo "should-deploy=true" >> $GITHUB_OUTPUT
-          echo "✅ Deployment approved: same-repo PR by code owner ${{ steps.codeowner-check.outputs.target-user }}"
-        else
-          echo "should-deploy=false" >> $GITHUB_OUTPUT
-          echo "❌ Deployment blocked:"
-          echo "  - Same repo: ${IS_SAME_REPO}"
-          echo "  - Code owner: ${IS_OWNER}"
-          echo "  - User: ${{ steps.codeowner-check.outputs.target-user }}"
-        fi
+          if [[ "${IS_SAME_REPO}" == "true" && "${IS_OWNER}" == "true" ]]; then
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+            echo "✅ Deployment approved: same-repo PR by code owner ${{ steps.codeowner-check.outputs.target-user }}"
+          else
+            echo "should-deploy=false" >> $GITHUB_OUTPUT
+            echo "❌ Deployment blocked:"
+            echo "  - Same repo: ${IS_SAME_REPO}"
+            echo "  - Code owner: ${IS_OWNER}"
+            echo "  - User: ${{ steps.codeowner-check.outputs.target-user }}"
+          fi
+
+      - name: Configure AWS credentials for URL pre-calculation
+        if: steps.decision.outputs.should-deploy == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Pre-calculate deployment URLs
+        id: url-precalc
+        if: steps.decision.outputs.should-deploy == 'true'
+        run: |
+          ENV_NAME="${{ steps.env-name.outputs.env-name }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          BRANCH_NAME="${{ github.head_ref }}"
+
+          echo "🔍 Pre-calculating deployment URLs..."
+          echo "Environment: $ENV_NAME"
+          echo "PR Number: $PR_NUMBER"
+          echo "Branch: $BRANCH_NAME"
+          echo ""
+
+          # 1. Pre-calculate Amplify App ID
+          AMPLIFY_APP_NAME="macro-ai-frontend-${ENV_NAME}"
+          echo "🔍 Checking for existing Amplify app: $AMPLIFY_APP_NAME"
+
+          APP_ID=$(aws amplify list-apps --region ${{ env.AWS_REGION }} \
+            --query "apps[?name=='${AMPLIFY_APP_NAME}'].appId" \
+            --output text 2>/dev/null || echo "")
+
+          if [[ -z "$APP_ID" || "$APP_ID" == "None" ]]; then
+            echo "📱 Amplify app does not exist yet - will be created during deployment"
+            echo "🎯 Predicted App Name: $AMPLIFY_APP_NAME"
+            APP_ID="<will-be-created>"
+          else
+            echo "✅ Found existing Amplify app with ID: $APP_ID"
+          fi
+
+          # 2. Pre-calculate Frontend URL
+          # Sanitize branch for Amplify subdomain: replace '/' with '-'
+          SANITIZED_BRANCH="${BRANCH_NAME//\//-}"
+
+          if [[ "$APP_ID" == "<will-be-created>" ]]; then
+            FRONTEND_URL="<will-be-generated-during-deployment>"
+            echo "🌐 Frontend URL will be generated during Amplify deployment"
+          else
+            FRONTEND_URL="https://${SANITIZED_BRANCH}.${APP_ID}.amplifyapp.com/"
+            echo "🌐 Pre-calculated Frontend URL: $FRONTEND_URL"
+          fi
+
+          # 3. Pre-calculate Backend Stack Name and URL
+          BACKEND_STACK_NAME="MacroAiPr${PR_NUMBER}Stack"
+          echo "📦 Backend Stack Name: $BACKEND_STACK_NAME"
+
+          # Check if backend stack exists to pre-calculate URL
+          BACKEND_URL=""
+          echo "🔍 Checking if backend stack exists..."
+
+          STACK_EXISTS=$(aws cloudformation describe-stacks \
+            --stack-name "$BACKEND_STACK_NAME" \
+            --query "Stacks[0].StackStatus" \
+            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+
+          if [[ "$STACK_EXISTS" != "DOES_NOT_EXIST" ]]; then
+            echo "✅ Backend stack exists, extracting API endpoint..."
+            BACKEND_URL=$(aws cloudformation describe-stacks \
+              --stack-name "$BACKEND_STACK_NAME" \
+              --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
+              --output text 2>/dev/null || echo "")
+
+            if [[ -n "$BACKEND_URL" ]]; then
+              # Normalize to ensure single /api suffix
+              BACKEND_URL="${BACKEND_URL%/}"
+              if [[ "$BACKEND_URL" != */api ]]; then
+                BACKEND_URL="${BACKEND_URL}/api"
+              fi
+              echo "🌐 Pre-calculated Backend URL: $BACKEND_URL"
+            else
+              echo "⚠️ Backend stack exists but no ApiEndpoint output found"
+              BACKEND_URL="<will-be-generated-during-deployment>"
+            fi
+          else
+            echo "📦 Backend stack does not exist yet - will be created during deployment"
+            BACKEND_URL="<will-be-generated-during-deployment>"
+          fi
+
+          # Output all pre-calculated values
+          echo "amplify-app-id=$APP_ID" >> $GITHUB_OUTPUT
+          echo "frontend-url=$FRONTEND_URL" >> $GITHUB_OUTPUT
+          echo "backend-url=$BACKEND_URL" >> $GITHUB_OUTPUT
+          echo "backend-stack-name=$BACKEND_STACK_NAME" >> $GITHUB_OUTPUT
+
+          echo ""
+          echo "📋 URL Pre-calculation Summary:"
+          echo "  Amplify App ID: $APP_ID"
+          echo "  Frontend URL: $FRONTEND_URL"
+          echo "  Backend URL: $BACKEND_URL"
+          echo "  Backend Stack: $BACKEND_STACK_NAME"
 
   # Build Lambda package for deployment
   build-lambda:
     name: Build Lambda Package
     runs-on: ubuntu-latest
-    needs: [ validate-access, check-backend-changes ]
+    needs: [validate-access, check-backend-changes]
     if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-backend-changes.outputs.has-backend-changes == 'true'
 
     permissions:
@@ -101,52 +204,52 @@ jobs:
       actions: write # For uploading artifacts
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install pnpm
-      uses: pnpm/action-setup@v3
-      with:
-        version: ${{ env.PNPM_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'pnpm'
-        cache-dependency-path: 'pnpm-lock.yaml'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
 
-    - name: Cache TypeScript build info
-      uses: actions/cache@v4
-      with:
-        path: |
-          **/tsconfig.tsbuildinfo
-          **/dist
-          **/.turbo
-        key: ${{ runner.os }}-typescript-${{ hashFiles('**/tsconfig*.json', '**/pnpm-lock.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-typescript-
+      - name: Cache TypeScript build info
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/tsconfig.tsbuildinfo
+            **/dist
+            **/.turbo
+          key: ${{ runner.os }}-typescript-${{ hashFiles('**/tsconfig*.json', '**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-typescript-
 
-    - name: Build Lambda package
-      run: |
-        cd apps/express-api
-        pnpm install --frozen-lockfile
-        pnpm build:lambda
-        pnpm bundle:lambda
-        pnpm package:lambda
+      - name: Build Lambda package
+        run: |
+          cd apps/express-api
+          pnpm install --frozen-lockfile
+          pnpm build:lambda
+          pnpm bundle:lambda
+          pnpm package:lambda
 
-    - name: Upload Lambda package
-      uses: actions/upload-artifact@v4
-      with:
-        name: lambda-package-${{ needs.validate-access.outputs.env-name }}
-        path: apps/express-api/dist/lambda.zip
-        retention-days: 7
+      - name: Upload Lambda package
+        uses: actions/upload-artifact@v4
+        with:
+          name: lambda-package-${{ needs.validate-access.outputs.env-name }}
+          path: apps/express-api/dist/lambda.zip
+          retention-days: 7
 
   # Deploy Backend Preview Environment (Backend stack and API Gateway)
   deploy-backend-preview:
     name: Deploy Backend Preview
     runs-on: ubuntu-latest
-    needs: [ validate-access, build-lambda, check-backend-changes ]
+    needs: [validate-access, build-lambda, check-backend-changes]
     if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-backend-changes.outputs.has-backend-changes == 'true'
     environment: development
 
@@ -161,140 +264,157 @@ jobs:
       stack-name: ${{ steps.stack-info.outputs.stack-name }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install pnpm
-      uses: pnpm/action-setup@v3
-      with:
-        version: ${{ env.PNPM_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'pnpm'
-        cache-dependency-path: 'pnpm-lock.yaml'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
 
-    - name: Install AWS CDK CLI globally
-      run: pnpm add -g aws-cdk@2
+      - name: Install AWS CDK CLI globally
+        run: pnpm add -g aws-cdk@2
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Download Lambda package
-      uses: actions/download-artifact@v4
-      with:
-        name: lambda-package-${{ needs.validate-access.outputs.env-name }}
-        path: apps/express-api/dist/
+      - name: Download Lambda package
+        uses: actions/download-artifact@v4
+        with:
+          name: lambda-package-${{ needs.validate-access.outputs.env-name }}
+          path: apps/express-api/dist/
 
-    - name: Generate stack information
-      id: stack-info
-      run: |
-        ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
-        # Capitalize first letter for stack name (pr-123 -> Pr-123)
-        STACK_NAME="MacroAi$(echo "${ENV_NAME}" | sed 's/^./\U&/')Stack"
-        echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
-        echo "Stack name: ${STACK_NAME}"
+      - name: Generate stack information
+        id: stack-info
+        run: |
+          ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
+          # Capitalize first letter for stack name (pr-123 -> Pr-123)
+          STACK_NAME="MacroAi$(echo "${ENV_NAME}" | sed 's/^./\U&/')Stack"
+          echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
+          echo "Stack name: ${STACK_NAME}"
 
-    - name: Deploy infrastructure
-      run: |
-        cd infrastructure
-        pnpm install --frozen-lockfile
-        pnpm build
+      - name: Deploy infrastructure with CORS configuration
+        run: |
+          cd infrastructure
+          pnpm install --frozen-lockfile
+          pnpm build
 
-        echo "🚀 Deploying ephemeral environment: ${{ needs.validate-access.outputs.env-name }}"
-        echo "📦 Stack: ${{ steps.stack-info.outputs.stack-name }}"
-        echo "👤 Requested by: ${{ needs.validate-access.outputs.target-user }}"
+          echo "🚀 Deploying ephemeral environment: ${{ needs.validate-access.outputs.env-name }}"
+          echo "📦 Stack: ${{ steps.stack-info.outputs.stack-name }}"
+          echo "👤 Requested by: ${{ needs.validate-access.outputs.target-user }}"
 
-        # Make deploy script executable and run it
-        chmod +x scripts/deploy.sh
-        ./scripts/deploy.sh
-      env:
-        CDK_DEPLOY_ENV: ${{ needs.validate-access.outputs.env-name }}
-        CDK_DEPLOY_SCALE: 'hobby'
-        AWS_REGION: ${{ env.AWS_REGION }}
-        AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-        NODE_ENV: 'production'
-
-    - name: Get deployment outputs
-      id: outputs
-      run: |
-        STACK_NAME="${{ steps.stack-info.outputs.stack-name }}"
-
-        # Get API endpoint from CloudFormation outputs
-        API_ENDPOINT=$(aws cloudformation describe-stacks \
-          --stack-name "${STACK_NAME}" \
-          --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
-          --output text 2>/dev/null || echo "")
-
-        if [[ -n "${API_ENDPOINT}" ]]; then
-          # Normalize to ensure single /api suffix (no duplication)
-          API_BASE="${API_ENDPOINT%/}"
-          if [[ "$API_BASE" != */api ]]; then
-            API_BASE="${API_BASE}/api"
+          # Configure CORS origins using pre-calculated frontend URL
+          FRONTEND_URL="${{ needs.validate-access.outputs.frontend-url }}"
+          if [[ "$FRONTEND_URL" != "<will-be-generated-during-deployment>" ]]; then
+            # Use pre-calculated frontend URL for CORS
+            CORS_ORIGINS="${FRONTEND_URL%/}"
+            echo "🔧 CORS Configuration:"
+            echo "  Pre-calculated Frontend URL: $FRONTEND_URL"
+            echo "  Setting CORS_ALLOWED_ORIGINS to: $CORS_ORIGINS"
+          else
+            # Fallback to localhost for development (should rarely happen in PR previews)
+            CORS_ORIGINS="http://localhost:5173,http://localhost:3000"
+            echo "🔧 CORS Configuration (fallback):"
+            echo "  Frontend URL not yet available, using localhost origins"
+            echo "  Setting CORS_ALLOWED_ORIGINS to: $CORS_ORIGINS"
           fi
-          echo "api-endpoint=${API_BASE}" >> $GITHUB_OUTPUT
-          echo "✅ API endpoint: ${API_BASE}"
-        else
-          echo "⚠️ Could not retrieve API endpoint"
-        fi
 
-    - name: Health check
-      id: health-check
-      run: |
-        API_ENDPOINT="${{ steps.outputs.outputs.api-endpoint }}"
+          # Make deploy script executable and run it
+          chmod +x scripts/deploy.sh
+          ./scripts/deploy.sh
+        env:
+          CDK_DEPLOY_ENV: ${{ needs.validate-access.outputs.env-name }}
+          CDK_DEPLOY_SCALE: 'hobby'
+          AWS_REGION: ${{ env.AWS_REGION }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          NODE_ENV: 'production'
+          CORS_ALLOWED_ORIGINS: ${{ needs.validate-access.outputs.frontend-url != '<will-be-generated-during-deployment>' && format('{0}', needs.validate-access.outputs.frontend-url) || 'http://localhost:5173,http://localhost:3000' }}
 
-        if [[ -n "${API_ENDPOINT}" ]]; then
-          HEALTH_URL="${API_ENDPOINT%/}/health"
-          echo "🔍 Testing health endpoint: ${HEALTH_URL}"
+      - name: Get deployment outputs
+        id: outputs
+        run: |
+          STACK_NAME="${{ steps.stack-info.outputs.stack-name }}"
 
-          # Wait a moment for deployment to stabilize
-          sleep 10
+          # Get API endpoint from CloudFormation outputs
+          API_ENDPOINT=$(aws cloudformation describe-stacks \
+            --stack-name "${STACK_NAME}" \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
+            --output text 2>/dev/null || echo "")
 
-          # Test health endpoint with retries
-          for i in {1..3}; do
-            HEALTH_RESPONSE=$(curl -s -w "%{http_code}" "${HEALTH_URL}" 2>/dev/null || echo "000")
-            if [[ "$HEALTH_RESPONSE" == *"200" ]]; then
-              echo "health-status=healthy" >> $GITHUB_OUTPUT
-              echo "✅ Health check passed (attempt $i)"
-              break
-            else
-              echo "⚠️ Health check failed (attempt $i): $HEALTH_RESPONSE"
-              if [[ $i -eq 3 ]]; then
-                echo "health-status=unhealthy" >> $GITHUB_OUTPUT
-              fi
-              sleep 5
+          if [[ -n "${API_ENDPOINT}" ]]; then
+            # Normalize to ensure single /api suffix (no duplication)
+            API_BASE="${API_ENDPOINT%/}"
+            if [[ "$API_BASE" != */api ]]; then
+              API_BASE="${API_BASE}/api"
             fi
-          done
-        else
-          echo "health-status=unknown" >> $GITHUB_OUTPUT
-          echo "⚠️ Cannot perform health check - no API endpoint"
-        fi
+            echo "api-endpoint=${API_BASE}" >> $GITHUB_OUTPUT
+            echo "✅ API endpoint: ${API_BASE}"
+          else
+            echo "⚠️ Could not retrieve API endpoint"
+          fi
 
-    - name: Save backend info artifact
-      if: always()
-      run: |
-        mkdir -p backend-info
-        jq -n \
-          --arg env "${{ needs.validate-access.outputs.env-name }}" \
-          --arg stack "${{ steps.stack-info.outputs.stack-name }}" \
-          --arg api "${{ steps.outputs.outputs.api-endpoint }}" \
-          --arg health "${{ steps.health-check.outputs.health-status }}" \
-          '{environment:$env, stack_name:$stack, api_endpoint:$api, health_status:$health}' \
-          > backend-info/backend-info.json
+      - name: Health check
+        id: health-check
+        run: |
+          API_ENDPOINT="${{ steps.outputs.outputs.api-endpoint }}"
 
-    - name: Upload backend info artifact
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: backend-info-${{ needs.validate-access.outputs.env-name }}
-        path: backend-info/backend-info.json
-        retention-days: 7
-        if-no-files-found: ignore
+          if [[ -n "${API_ENDPOINT}" ]]; then
+            HEALTH_URL="${API_ENDPOINT%/}/health"
+            echo "🔍 Testing health endpoint: ${HEALTH_URL}"
+
+            # Wait a moment for deployment to stabilize
+            sleep 10
+
+            # Test health endpoint with retries
+            for i in {1..3}; do
+              HEALTH_RESPONSE=$(curl -s -w "%{http_code}" "${HEALTH_URL}" 2>/dev/null || echo "000")
+              if [[ "$HEALTH_RESPONSE" == *"200" ]]; then
+                echo "health-status=healthy" >> $GITHUB_OUTPUT
+                echo "✅ Health check passed (attempt $i)"
+                break
+              else
+                echo "⚠️ Health check failed (attempt $i): $HEALTH_RESPONSE"
+                if [[ $i -eq 3 ]]; then
+                  echo "health-status=unhealthy" >> $GITHUB_OUTPUT
+                fi
+                sleep 5
+              fi
+            done
+          else
+            echo "health-status=unknown" >> $GITHUB_OUTPUT
+            echo "⚠️ Cannot perform health check - no API endpoint"
+          fi
+
+      - name: Save backend info artifact
+        if: always()
+        run: |
+          mkdir -p backend-info
+          jq -n \
+            --arg env "${{ needs.validate-access.outputs.env-name }}" \
+            --arg stack "${{ steps.stack-info.outputs.stack-name }}" \
+            --arg api "${{ steps.outputs.outputs.api-endpoint }}" \
+            --arg health "${{ steps.health-check.outputs.health-status }}" \
+            '{environment:$env, stack_name:$stack, api_endpoint:$api, health_status:$health}' \
+            > backend-info/backend-info.json
+
+      - name: Upload backend info artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-info-${{ needs.validate-access.outputs.env-name }}
+          path: backend-info/backend-info.json
+          retention-days: 7
+          if-no-files-found: ignore
 
   # Handle blocked deployments (forked PRs or non-code-owners)
   explain-blocked:
@@ -307,51 +427,51 @@ jobs:
       pull-requests: write
 
     steps:
-    - name: Comment on blocked PR
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const isSameRepo = '${{ needs.validate-access.outputs.is-same-repo }}' === 'true';
-          const isOwner = '${{ needs.validate-access.outputs.is-owner }}' === 'true';
-          const targetUser = '${{ needs.validate-access.outputs.target-user }}';
+      - name: Comment on blocked PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const isSameRepo = '${{ needs.validate-access.outputs.is-same-repo }}' === 'true';
+            const isOwner = '${{ needs.validate-access.outputs.is-owner }}' === 'true';
+            const targetUser = '${{ needs.validate-access.outputs.target-user }}';
 
-          let comment = `## 🚫 Preview Environment Deployment Blocked\n\n`;
+            let comment = `## 🚫 Preview Environment Deployment Blocked\n\n`;
 
-          if (!isSameRepo) {
-            comment += `### 🔒 Forked Repository\n`;
-            comment += `This PR originates from a forked repository. For security reasons, automatic preview deployments are restricted to the main repository.\n\n`;
-            comment += `**Options:**\n`;
-            comment += `- A repository maintainer can manually deploy a preview using the \`deploy-forked-pr-preview.yml\` workflow\n`;
-            comment += `- The preview will use trusted base repository code (not fork changes)\n\n`;
-          }
+            if (!isSameRepo) {
+              comment += `### 🔒 Forked Repository\n`;
+              comment += `This PR originates from a forked repository. For security reasons, automatic preview deployments are restricted to the main repository.\n\n`;
+              comment += `**Options:**\n`;
+              comment += `- A repository maintainer can manually deploy a preview using the \`deploy-forked-pr-preview.yml\` workflow\n`;
+              comment += `- The preview will use trusted base repository code (not fork changes)\n\n`;
+            }
 
-          if (!isOwner) {
-            comment += `### 👤 Code Owner Required\n`;
-            comment += `User \`@${targetUser}\` is not listed as a code owner in \`.github/CODEOWNERS\`.\n\n`;
-            comment += `**To enable automatic preview deployments:**\n`;
-            comment += `- Add \`@${targetUser}\` to the \`.github/CODEOWNERS\` file\n`;
-            comment += `- Or have a code owner create the PR\n\n`;
-          }
+            if (!isOwner) {
+              comment += `### 👤 Code Owner Required\n`;
+              comment += `User \`@${targetUser}\` is not listed as a code owner in \`.github/CODEOWNERS\`.\n\n`;
+              comment += `**To enable automatic preview deployments:**\n`;
+              comment += `- Add \`@${targetUser}\` to the \`.github/CODEOWNERS\` file\n`;
+              comment += `- Or have a code owner create the PR\n\n`;
+            }
 
-          comment += `### 🔍 Current Status\n`;
-          comment += `- **Same repository:** ${isSameRepo ? '✅' : '❌'}\n`;
-          comment += `- **Code owner:** ${isOwner ? '✅' : '❌'}\n`;
-          comment += `- **User:** \`@${targetUser}\`\n\n`;
-          comment += `---\n`;
-          comment += `*For questions about preview environments, contact a repository maintainer.*`;
+            comment += `### 🔍 Current Status\n`;
+            comment += `- **Same repository:** ${isSameRepo ? '✅' : '❌'}\n`;
+            comment += `- **Code owner:** ${isOwner ? '✅' : '❌'}\n`;
+            comment += `- **User:** \`@${targetUser}\`\n\n`;
+            comment += `---\n`;
+            comment += `*For questions about preview environments, contact a repository maintainer.*`;
 
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: comment
-          });
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
 
   # Change detection jobs (run in parallel to optimize workflow)
   check-backend-changes:
     name: Check Backend Changes
     runs-on: ubuntu-latest
-    needs: [ validate-access ]
+    needs: [validate-access]
 
     permissions:
       contents: read
@@ -360,406 +480,310 @@ jobs:
       has-backend-changes: ${{ steps.check.outputs.has-backend-changes }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Check for backend changes
-      id: check
-      run: |
-        # Check if there are any backend-related changes in this PR
-        BACKEND_CHANGES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^infrastructure/|^apps/express-api/|^\.github/workflows/deploy-preview\.yml|^\.github/actions/check-codeowner/' || true)
+      - name: Check for backend changes
+        id: check
+        run: |
+          # Check if there are any backend-related changes in this PR
+          BACKEND_CHANGES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^infrastructure/|^apps/express-api/|^\.github/workflows/deploy-preview\.yml|^\.github/actions/check-codeowner/' || true)
 
-        if [[ -n "$BACKEND_CHANGES" ]]; then
-          echo "✅ Backend changes detected:"
-          echo "$BACKEND_CHANGES"
-          echo "has-backend-changes=true" >> $GITHUB_OUTPUT
-        else
-          echo "ℹ️ No backend changes detected, skipping backend deployment"
-          echo "has-backend-changes=false" >> $GITHUB_OUTPUT
-        fi
+          if [[ -n "$BACKEND_CHANGES" ]]; then
+            echo "✅ Backend changes detected:"
+            echo "$BACKEND_CHANGES"
+            echo "has-backend-changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️ No backend changes detected, skipping backend deployment"
+            echo "has-backend-changes=false" >> $GITHUB_OUTPUT
+          fi
 
   check-frontend-changes:
     name: Check Frontend Changes
     runs-on: ubuntu-latest
-    needs: [ validate-access ]
+    needs: [validate-access]
     outputs:
       has-frontend-changes: ${{ steps.check.outputs.has-frontend-changes }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Check for frontend changes
-      id: check
-      run: |
-        # Check if there are any frontend-related changes in this PR
-        FRONTEND_CHANGES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^apps/client-ui/|^\.github/actions/(discover-backend|generate-frontend-env)/' || true)
+      - name: Check for frontend changes
+        id: check
+        run: |
+          # Check if there are any frontend-related changes in this PR
+          FRONTEND_CHANGES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^apps/client-ui/|^\.github/actions/(discover-backend|generate-frontend-env)/' || true)
 
-        if [[ -n "$FRONTEND_CHANGES" ]]; then
-          echo "✅ Frontend changes detected:"
-          echo "$FRONTEND_CHANGES"
-          echo "has-frontend-changes=true" >> $GITHUB_OUTPUT
-        else
-          echo "ℹ️ No frontend changes detected, skipping frontend deployment"
-          echo "has-frontend-changes=false" >> $GITHUB_OUTPUT
-        fi
-
-  # Discover backend environment for frontend
-  discover-backend-for-frontend:
-    name: Discover Backend for Frontend
-    runs-on: ubuntu-latest
-    needs: [ validate-access, check-backend-changes, check-frontend-changes, deploy-backend-preview ]
-    # Run if frontend has changes, regardless of whether backend was deployed or not
-    if: |
-      always() &&
-      needs.validate-access.outputs.should-deploy == 'true' &&
-      needs.check-frontend-changes.outputs.has-frontend-changes == 'true' &&
-      (needs.deploy-backend-preview.result == 'success' || needs.deploy-backend-preview.result == 'skipped')
-
-    permissions:
-      id-token: write
-      contents: read
-
-    outputs:
-      api-endpoint: ${{ steps.finalize.outputs.api-endpoint }}
-      stack-name: ${{ steps.finalize.outputs.stack-name }}
-      backend-found: ${{ steps.finalize.outputs.backend-found }}
-      resolution-method: ${{ steps.finalize.outputs.resolution-method }}
-      fallback-used: ${{ steps.finalize.outputs.fallback-used }}
-      connectivity-status: ${{ steps.finalize.outputs.connectivity-status }}
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        aws-region: ${{ env.AWS_REGION }}
-
-    - name: Download backend info artifact
-      id: download-artifact
-      continue-on-error: true
-      uses: actions/download-artifact@v4
-      with:
-        name: backend-info-${{ needs.validate-access.outputs.env-name }}
-        path: backend-info
-
-    - name: Parse backend artifact
-      id: artifact-parse
-      run: |
-        FILE="backend-info/backend-info.json"
-        if [[ -f "$FILE" ]]; then
-          API_ENDPOINT=$(jq -r '.api_endpoint // empty' "$FILE")
-          STACK_NAME=$(jq -r '.stack_name // empty' "$FILE")
-          HEALTH=$(jq -r '.health_status // empty' "$FILE")
-          if [[ -n "$API_ENDPOINT" ]]; then
-            echo "found=true" >> $GITHUB_OUTPUT
-            echo "artifact-api-endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
-            echo "artifact-stack-name=$STACK_NAME" >> $GITHUB_OUTPUT
-            echo "artifact-health=$HEALTH" >> $GITHUB_OUTPUT
+          if [[ -n "$FRONTEND_CHANGES" ]]; then
+            echo "✅ Frontend changes detected:"
+            echo "$FRONTEND_CHANGES"
+            echo "has-frontend-changes=true" >> $GITHUB_OUTPUT
           else
-            echo "found=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No frontend changes detected, skipping frontend deployment"
+            echo "has-frontend-changes=false" >> $GITHUB_OUTPUT
           fi
-        else
-          echo "found=false" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Discover backend environment (fallback)
-      id: discover
-      if: steps.artifact-parse.outputs.found != 'true'
-      uses: ./.github/actions/discover-backend
-      with:
-        environment: ${{ needs.validate-access.outputs.env-name }}
-        pr-number: ${{ github.event.pull_request.number }}
-        validate-connectivity: 'true'
-        aws-region: ${{ env.AWS_REGION }}
-        debug: 'false'
-
-    - name: Finalize backend outputs
-      id: finalize
-      run: |
-        if [[ "${{ steps.artifact-parse.outputs.found }}" == "true" ]]; then
-          API_ENDPOINT="${{ steps.artifact-parse.outputs['artifact-api-endpoint'] }}"
-          STACK_NAME="${{ steps.artifact-parse.outputs['artifact-stack-name'] }}"
-          HEALTH="${{ steps.artifact-parse.outputs['artifact-health'] }}"
-          if [[ -z "$HEALTH" || "$HEALTH" == "null" ]]; then HEALTH="unknown"; fi
-          echo "api-endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
-          echo "stack-name=$STACK_NAME" >> $GITHUB_OUTPUT
-          echo "backend-found=true" >> $GITHUB_OUTPUT
-          echo "resolution-method=artifact" >> $GITHUB_OUTPUT
-          echo "fallback-used=false" >> $GITHUB_OUTPUT
-          echo "connectivity-status=$HEALTH" >> $GITHUB_OUTPUT
-        else
-          echo "api-endpoint=${{ steps.discover.outputs.api-endpoint }}" >> $GITHUB_OUTPUT
-          echo "stack-name=${{ steps.discover.outputs.stack-name }}" >> $GITHUB_OUTPUT
-          echo "backend-found=${{ steps.discover.outputs.backend-found }}" >> $GITHUB_OUTPUT
-          echo "resolution-method=${{ steps.discover.outputs.resolution-method }}" >> $GITHUB_OUTPUT
-          echo "fallback-used=${{ steps.discover.outputs.fallback-used }}" >> $GITHUB_OUTPUT
-          echo "connectivity-status=${{ steps.discover.outputs.connectivity-status }}" >> $GITHUB_OUTPUT
-        fi
 
   # Build the React frontend
   build-frontend:
     name: Build React Frontend
     runs-on: ubuntu-latest
-    needs: [ validate-access, check-frontend-changes, discover-backend-for-frontend ]
+    needs: [validate-access, check-frontend-changes]
     if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-frontend-changes.outputs.has-frontend-changes == 'true'
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install pnpm
-      uses: pnpm/action-setup@v3
-      with:
-        version: ${{ env.PNPM_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'pnpm'
-        cache-dependency-path: 'pnpm-lock.yaml'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
 
-    - name: Cache TypeScript build info
-      uses: actions/cache@v4
-      with:
-        path: |
-          **/tsconfig.tsbuildinfo
-          **/dist
-          **/.turbo
-          apps/client-ui/src/api-client
-        key: ${{ runner.os }}-frontend-build-${{ hashFiles('**/tsconfig*.json', '**/pnpm-lock.yaml', 'apps/express-api/src/**/*.ts') }}
-        restore-keys: |
-          ${{ runner.os }}-frontend-build-
+      - name: Cache TypeScript build info
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/tsconfig.tsbuildinfo
+            **/dist
+            **/.turbo
+            apps/client-ui/src/api-client
+          key: ${{ runner.os }}-frontend-build-${{ hashFiles('**/tsconfig*.json', '**/pnpm-lock.yaml', 'apps/express-api/src/**/*.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-frontend-build-
 
-    - name: Install dependencies
-      run: |
-        cd apps/client-ui
-        pnpm install --frozen-lockfile
+      - name: Install dependencies
+        run: |
+          cd apps/client-ui
+          pnpm install --frozen-lockfile
 
-    - name: Generate API client package
-      env:
-        # Minimal environment variables required for swagger generation
-        # These are placeholder values that satisfy schema validation
-        API_KEY: 'placeholder-api-key-for-swagger-generation-32chars'
-        NODE_ENV: 'development'
-        APP_ENV: 'development'
-        SERVER_PORT: '3040'
-        AWS_COGNITO_REGION: 'us-east-1'
-        AWS_COGNITO_USER_POOL_ID: 'us-east-1_placeholder'
-        AWS_COGNITO_USER_POOL_CLIENT_ID: 'placeholder-client-id'
-        AWS_COGNITO_USER_POOL_SECRET_KEY: 'placeholder-secret-key'
-        AWS_COGNITO_ACCESS_KEY: 'placeholder-access-key'
-        AWS_COGNITO_SECRET_KEY: 'placeholder-secret-key'
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30'
-        COOKIE_DOMAIN: 'localhost'
-        COOKIE_ENCRYPTION_KEY: 'placeholder-cookie-encryption-key-32chars'
-        NON_RELATIONAL_DATABASE_URL: 'redis://localhost:6379'
-        RELATIONAL_DATABASE_URL: 'postgresql://localhost:5432/placeholder'
-        OPENAI_API_KEY: 'sk-placeholder-openai-api-key-for-swagger-generation'
-        RATE_LIMIT_WINDOW_MS: '900000'
-        RATE_LIMIT_MAX_REQUESTS: '100'
-        AUTH_RATE_LIMIT_WINDOW_MS: '3600000'
-        AUTH_RATE_LIMIT_MAX_REQUESTS: '10'
-        API_RATE_LIMIT_WINDOW_MS: '60000'
-        API_RATE_LIMIT_MAX_REQUESTS: '60'
-      run: |
-        echo "🔧 Generating API client package from OpenAPI specification"
+      - name: Generate API client package
+        env:
+          # Minimal environment variables required for swagger generation
+          # These are placeholder values that satisfy schema validation
+          API_KEY: 'placeholder-api-key-for-swagger-generation-32chars'
+          NODE_ENV: 'development'
+          APP_ENV: 'development'
+          SERVER_PORT: '3040'
+          AWS_COGNITO_REGION: 'us-east-1'
+          AWS_COGNITO_USER_POOL_ID: 'us-east-1_placeholder'
+          AWS_COGNITO_USER_POOL_CLIENT_ID: 'placeholder-client-id'
+          AWS_COGNITO_USER_POOL_SECRET_KEY: 'placeholder-secret-key'
+          AWS_COGNITO_ACCESS_KEY: 'placeholder-access-key'
+          AWS_COGNITO_SECRET_KEY: 'placeholder-secret-key'
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30'
+          COOKIE_DOMAIN: 'localhost'
+          COOKIE_ENCRYPTION_KEY: 'placeholder-cookie-encryption-key-32chars'
+          NON_RELATIONAL_DATABASE_URL: 'redis://localhost:6379'
+          RELATIONAL_DATABASE_URL: 'postgresql://localhost:5432/placeholder'
+          OPENAI_API_KEY: 'sk-placeholder-openai-api-key-for-swagger-generation'
+          RATE_LIMIT_WINDOW_MS: '900000'
+          RATE_LIMIT_MAX_REQUESTS: '100'
+          AUTH_RATE_LIMIT_WINDOW_MS: '3600000'
+          AUTH_RATE_LIMIT_MAX_REQUESTS: '10'
+          API_RATE_LIMIT_WINDOW_MS: '60000'
+          API_RATE_LIMIT_MAX_REQUESTS: '60'
+        run: |
+          echo "🔧 Generating API client package from OpenAPI specification"
 
-        # Install dependencies for express-api to generate OpenAPI spec
-        cd apps/express-api
-        pnpm install --frozen-lockfile
+          # Install dependencies for express-api to generate OpenAPI spec
+          cd apps/express-api
+          pnpm install --frozen-lockfile
 
-        # Generate OpenAPI specification
-        echo "📋 Generating OpenAPI specification..."
-        pnpm run generate-swagger
+          # Generate OpenAPI specification
+          echo "📋 Generating OpenAPI specification..."
+          pnpm run generate-swagger
 
-        # Build the API client package (compile to dist for Vite)
-        echo "📦 Building API client package..."
-        cd ../../packages/macro-ai-api-client
-        pnpm install --frozen-lockfile
-        pnpm run build
+          # Build the API client package (compile to dist for Vite)
+          echo "📦 Building API client package..."
+          cd ../../packages/macro-ai-api-client
+          pnpm install --frozen-lockfile
+          pnpm run build
 
-        echo "✅ API client package built successfully"
+          echo "✅ API client package built successfully"
 
-    - name: Generate environment configuration
-      id: generate-env
-      uses: ./.github/actions/generate-frontend-env
-      with:
-        environment: ${{ needs.validate-access.outputs.env-name }}
-        pr-number: ${{ github.event.pull_request.number }}
-        build-mode: 'preview'
-        api-endpoint: ${{ needs.discover-backend-for-frontend.outputs.api-endpoint }}
-        api-key: ${{ secrets.API_KEY }}
-        backend-stack-name: ${{ needs.discover-backend-for-frontend.outputs.stack-name }}
-        resolution-method: ${{ needs.discover-backend-for-frontend.outputs.resolution-method }}
-        output-file: '.env.preview'
-        include-build-metadata: 'true'
-        validate-variables: 'true'
-        debug: 'false'
+      - name: Generate environment configuration
+        id: generate-env
+        uses: ./.github/actions/generate-frontend-env
+        with:
+          environment: ${{ needs.validate-access.outputs.env-name }}
+          pr-number: ${{ github.event.pull_request.number }}
+          build-mode: 'preview'
+          api-endpoint: ${{ needs.validate-access.outputs.backend-url }}
+          api-key: ${{ secrets.API_KEY }}
+          backend-stack-name: ${{ needs.validate-access.outputs.backend-stack-name }}
+          resolution-method: 'pre-calculated'
+          output-file: '.env.preview'
+          include-build-metadata: 'true'
+          validate-variables: 'true'
+          debug: 'false'
 
-    - name: Debug .env.preview (sanitized)
-      if: always()
-      run: |
-        echo "### .env.preview (sanitized)" >> "$GITHUB_STEP_SUMMARY"
-        if [ -f apps/client-ui/.env.preview ]; then
-          sed -E 's/^(.*(SECRET|TOKEN|PASSWORD|API_KEY|KEY)=).*/\1<masked>/' apps/client-ui/.env.preview \
-            >> "$GITHUB_STEP_SUMMARY"
-        else
-          echo "(apps/client-ui/.env.preview not found)" >> "$GITHUB_STEP_SUMMARY"
-          echo "Contents of apps/client-ui:" >> "$GITHUB_STEP_SUMMARY"
-          ls -la apps/client-ui >> "$GITHUB_STEP_SUMMARY"
-        fi
+      - name: Debug .env.preview (sanitized)
+        if: always()
+        run: |
+          echo "### .env.preview (sanitized)" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f apps/client-ui/.env.preview ]; then
+            sed -E 's/^(.*(SECRET|TOKEN|PASSWORD|API_KEY|KEY)=).*/\1<masked>/' apps/client-ui/.env.preview \
+              >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "(apps/client-ui/.env.preview not found)" >> "$GITHUB_STEP_SUMMARY"
+            echo "Contents of apps/client-ui:" >> "$GITHUB_STEP_SUMMARY"
+            ls -la apps/client-ui >> "$GITHUB_STEP_SUMMARY"
+          fi
 
-    - name: Generate Amplify configuration
-      run: |
-        cd apps/client-ui
+      - name: Generate Amplify configuration
+        run: |
+          cd apps/client-ui
 
-        ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
+          ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
 
-        # Set environment variables for configuration generation
-        export PR_NUMBER="${{ github.event.pull_request.number }}"
-        export ENVIRONMENT_NAME="${ENV_NAME}"
-        export BUILD_MODE="preview"
-        export GITHUB_SHA="${{ github.sha }}"
-        export GITHUB_REF_NAME="${{ github.ref_name }}"
-        export GITHUB_PR_NUMBER="${{ github.event.pull_request.number }}"
-        export PNPM_VERSION="${{ env.PNPM_VERSION }}"
+          # Set environment variables for configuration generation
+          export PR_NUMBER="${{ github.event.pull_request.number }}"
+          export ENVIRONMENT_NAME="${ENV_NAME}"
+          export BUILD_MODE="preview"
+          export GITHUB_SHA="${{ github.sha }}"
+          export GITHUB_REF_NAME="${{ github.ref_name }}"
+          export GITHUB_PR_NUMBER="${{ github.event.pull_request.number }}"
+          export PNPM_VERSION="${{ env.PNPM_VERSION }}"
 
-        # Load environment variables from .env.preview using temporary file approach
-        TEMP_ENV_FILE=$(mktemp)
-        if grep '^[A-Za-z_][A-Za-z0-9_]*=' .env.preview > "$TEMP_ENV_FILE"; then
-          echo "Found environment variables in .env.preview"
-        else
-          echo "No environment variables found in .env.preview"
-          touch "$TEMP_ENV_FILE"
-        fi
+          # Load environment variables from .env.preview using temporary file approach
+          TEMP_ENV_FILE=$(mktemp)
+          if grep '^[A-Za-z_][A-Za-z0-9_]*=' .env.preview > "$TEMP_ENV_FILE"; then
+            echo "Found environment variables in .env.preview"
+          else
+            echo "No environment variables found in .env.preview"
+            touch "$TEMP_ENV_FILE"
+          fi
 
-        # Export variables safely without sourcing (handles spaces, parentheses)
-        if [[ -s "$TEMP_ENV_FILE" ]]; then
-          while IFS= read -r line; do
-            # Skip empty lines and comments
-            [[ -z "$line" || "${line:0:1}" == "#" ]] && continue
+          # Export variables safely without sourcing (handles spaces, parentheses)
+          if [[ -s "$TEMP_ENV_FILE" ]]; then
+            while IFS= read -r line; do
+              # Skip empty lines and comments
+              [[ -z "$line" || "${line:0:1}" == "#" ]] && continue
 
-            # Only process KEY=VALUE lines starting with a valid var name
-            if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
-              key="${line%%=*}"
-              value="${line#*=}"
+              # Only process KEY=VALUE lines starting with a valid var name
+              if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+                key="${line%%=*}"
+                value="${line#*=}"
 
-              # Trim surrounding quotes if present
-              if [[ "$value" == \"*\" && "$value" == *\" ]]; then
-                value="${value:1:-1}"
-              elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
-                value="${value:1:-1}"
+                # Trim surrounding quotes if present
+                if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+                  value="${value:1:-1}"
+                elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+                  value="${value:1:-1}"
+                fi
+
+                # Assign without eval, then export
+                printf -v "$key" '%s' "$value"
+                export "$key"
               fi
+            done < "$TEMP_ENV_FILE"
+            echo "✅ Loaded $(wc -l < "$TEMP_ENV_FILE") environment variables"
+          else
+            echo "⚠️ No valid environment variables found in .env.preview"
+          fi
 
-              # Assign without eval, then export
-              printf -v "$key" '%s' "$value"
-              export "$key"
-            fi
-          done < "$TEMP_ENV_FILE"
-          echo "✅ Loaded $(wc -l < "$TEMP_ENV_FILE") environment variables"
-        else
-          echo "⚠️ No valid environment variables found in .env.preview"
-        fi
+          # Clean up temporary file
+          rm -f "$TEMP_ENV_FILE"
 
-        # Clean up temporary file
-        rm -f "$TEMP_ENV_FILE"
+          # Generate amplify.yml configuration using printf statements
+          printf 'version: 1\n' > amplify.yml
+          printf 'applications:\n' >> amplify.yml
+          printf '  - appRoot: apps/client-ui\n' >> amplify.yml
+          printf '    frontend:\n' >> amplify.yml
+          printf '      phases:\n' >> amplify.yml
+          printf '        preBuild:\n' >> amplify.yml
+          printf '          commands:\n' >> amplify.yml
+          printf '            - echo "Installing dependencies..."\n' >> amplify.yml
+          printf '            - npm install -g pnpm@%s\n' "${PNPM_VERSION}" >> amplify.yml
+          printf '            - pnpm install --frozen-lockfile\n' >> amplify.yml
+          printf '        build:\n' >> amplify.yml
+          printf '          commands:\n' >> amplify.yml
+          printf '            - echo "Building React application..."\n' >> amplify.yml
+          printf '            - pnpm run build\n' >> amplify.yml
+          printf '      artifacts:\n' >> amplify.yml
+          printf '        baseDirectory: dist\n' >> amplify.yml
+          printf '        files:\n' >> amplify.yml
+          printf '          - '\''**/*'\''\n' >> amplify.yml
+          printf '      cache:\n' >> amplify.yml
+          printf '        paths:\n' >> amplify.yml
+          printf '          - node_modules/**/*\n' >> amplify.yml
+          printf '          - .pnpm-store/**/*\n' >> amplify.yml
 
-        # Generate amplify.yml configuration using printf statements
-        printf 'version: 1\n' > amplify.yml
-        printf 'applications:\n' >> amplify.yml
-        printf '  - appRoot: apps/client-ui\n' >> amplify.yml
-        printf '    frontend:\n' >> amplify.yml
-        printf '      phases:\n' >> amplify.yml
-        printf '        preBuild:\n' >> amplify.yml
-        printf '          commands:\n' >> amplify.yml
-        printf '            - echo "Installing dependencies..."\n' >> amplify.yml
-        printf '            - npm install -g pnpm@%s\n' "${PNPM_VERSION}" >> amplify.yml
-        printf '            - pnpm install --frozen-lockfile\n' >> amplify.yml
-        printf '        build:\n' >> amplify.yml
-        printf '          commands:\n' >> amplify.yml
-        printf '            - echo "Building React application..."\n' >> amplify.yml
-        printf '            - pnpm run build\n' >> amplify.yml
-        printf '      artifacts:\n' >> amplify.yml
-        printf '        baseDirectory: dist\n' >> amplify.yml
-        printf '        files:\n' >> amplify.yml
-        printf '          - '\''**/*'\''\n' >> amplify.yml
-        printf '      cache:\n' >> amplify.yml
-        printf '        paths:\n' >> amplify.yml
-        printf '          - node_modules/**/*\n' >> amplify.yml
-        printf '          - .pnpm-store/**/*\n' >> amplify.yml
+          echo "✅ Generated amplify.yml configuration"
 
-        echo "✅ Generated amplify.yml configuration"
+      - name: Build React application
+        run: |
+          cd apps/client-ui
 
-    - name: Build React application
-      run: |
-        cd apps/client-ui
+          # Load environment variables using temporary file approach
+          TEMP_ENV_FILE=$(mktemp)
+          if grep '^[A-Za-z_][A-Za-z0-9_]*=' .env.preview > "$TEMP_ENV_FILE"; then
+            echo "Found environment variables in .env.preview"
+          else
+            echo "No environment variables found in .env.preview"
+            touch "$TEMP_ENV_FILE"
+          fi
 
-        # Load environment variables using temporary file approach
-        TEMP_ENV_FILE=$(mktemp)
-        if grep '^[A-Za-z_][A-Za-z0-9_]*=' .env.preview > "$TEMP_ENV_FILE"; then
-          echo "Found environment variables in .env.preview"
-        else
-          echo "No environment variables found in .env.preview"
-          touch "$TEMP_ENV_FILE"
-        fi
-
-        if [[ -s "$TEMP_ENV_FILE" ]]; then
-          while IFS= read -r line; do
-            [[ -z "$line" || "${line:0:1}" == "#" ]] && continue
-            if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
-              key="${line%%=*}"
-              value="${line#*=}"
-              if [[ "$value" == \"*\" && "$value" == *\" ]]; then
-                value="${value:1:-1}"
-              elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
-                value="${value:1:-1}"
+          if [[ -s "$TEMP_ENV_FILE" ]]; then
+            while IFS= read -r line; do
+              [[ -z "$line" || "${line:0:1}" == "#" ]] && continue
+              if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+                key="${line%%=*}"
+                value="${line#*=}"
+                if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+                  value="${value:1:-1}"
+                elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+                  value="${value:1:-1}"
+                fi
+                printf -v "$key" '%s' "$value"
+                export "$key"
               fi
-              printf -v "$key" '%s' "$value"
-              export "$key"
-            fi
-          done < "$TEMP_ENV_FILE"
-          echo "✅ Loaded environment variables for build"
-        fi
+            done < "$TEMP_ENV_FILE"
+            echo "✅ Loaded environment variables for build"
+          fi
 
-        # Clean up temporary file
-        rm -f "$TEMP_ENV_FILE"
+          # Clean up temporary file
+          rm -f "$TEMP_ENV_FILE"
 
-        # Build the application
-        echo "🔨 Building React application..."
-        pnpm run build
+          # Build the application
+          echo "🔨 Building React application..."
+          pnpm run build
 
-        echo "✅ Build completed successfully"
+          echo "✅ Build completed successfully"
 
-        # Verify build output
-        if [[ -d "dist" && -f "dist/index.html" ]]; then
-          echo "✅ Build artifacts verified"
-          echo "📊 Build size: $(du -sh dist)"
-        else
-          echo "❌ Build verification failed"
-          exit 1
-        fi
+          # Verify build output
+          if [[ -d "dist" && -f "dist/index.html" ]]; then
+            echo "✅ Build artifacts verified"
+            echo "📊 Build size: $(du -sh dist)"
+          else
+            echo "❌ Build verification failed"
+            exit 1
+          fi
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: frontend-build-${{ needs.validate-access.outputs.env-name }}
-        path: apps/client-ui/dist/
-        retention-days: 7
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build-${{ needs.validate-access.outputs.env-name }}
+          path: apps/client-ui/dist/
+          retention-days: 7
 
   # Deploy to AWS Amplify
   deploy-frontend:
     name: Deploy to AWS Amplify
     runs-on: ubuntu-latest
-    needs: [ validate-access, check-frontend-changes, build-frontend, discover-backend-for-frontend ]
+    needs: [validate-access, check-frontend-changes, build-frontend]
     if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-frontend-changes.outputs.has-frontend-changes == 'true'
 
     outputs:
@@ -773,446 +797,211 @@ jobs:
       issues: write
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: frontend-build-${{ needs.validate-access.outputs.env-name }}
-        path: apps/client-ui/dist/
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build-${{ needs.validate-access.outputs.env-name }}
+          path: apps/client-ui/dist/
 
-    - name: Deploy to Amplify
-      id: deploy
-      run: |
-        cd apps/client-ui
+      - name: Deploy to Amplify
+        id: deploy
+        run: |
+          cd apps/client-ui
 
-        ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
-        AMPLIFY_APP_NAME="macro-ai-frontend-${ENV_NAME}"
+          ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
+          AMPLIFY_APP_NAME="macro-ai-frontend-${ENV_NAME}"
 
-        echo "🚀 Deploying to Amplify app: ${AMPLIFY_APP_NAME}"
+          # Use pre-calculated Amplify App ID from validate-access
+          APP_ID="${{ needs.validate-access.outputs.amplify-app-id }}"
 
-        # Check if Amplify app exists
-        APP_ID=$(aws amplify list-apps --region ${{ env.AWS_REGION }} \
-          --query "apps[?name=='${AMPLIFY_APP_NAME}'].appId" \
-          --output text 2>/dev/null || echo "")
+          echo "🚀 Deploying to Amplify app: ${AMPLIFY_APP_NAME}"
+          echo "📱 Using pre-calculated App ID: ${APP_ID}"
 
-        if [[ -z "$APP_ID" || "$APP_ID" == "None" ]]; then
-          echo "📱 Creating new Amplify app: ${AMPLIFY_APP_NAME}"
+          # Verify the app exists (create if needed)
+          if [[ "$APP_ID" == "<will-be-created-during-deployment>" ]]; then
+            echo "📱 Creating new Amplify app: ${AMPLIFY_APP_NAME}"
 
-          # Create new Amplify app
-          APP_ID=$(aws amplify create-app \
-            --name "${AMPLIFY_APP_NAME}" \
-            --description "Frontend preview for PR #${{ github.event.pull_request.number }}" \
-            --platform WEB \
+            # Create new Amplify app
+            APP_ID=$(aws amplify create-app \
+              --name "${AMPLIFY_APP_NAME}" \
+              --description "Frontend preview for PR #${{ github.event.pull_request.number }}" \
+              --platform WEB \
+              --region ${{ env.AWS_REGION }} \
+              --query 'app.appId' \
+              --output text)
+
+            echo "✅ Created Amplify app with ID: ${APP_ID}"
+          else
+            echo "✅ Using pre-calculated Amplify app with ID: ${APP_ID}"
+          fi
+
+          # Create or update branch
+          BRANCH_NAME="${{ github.head_ref }}"
+          echo "🌿 Setting up branch: ${BRANCH_NAME}"
+
+          # Check if branch exists
+          BRANCH_EXISTS=$(aws amplify list-branches \
+            --app-id "$APP_ID" \
             --region ${{ env.AWS_REGION }} \
-            --query 'app.appId' \
-            --output text)
+            --query "branches[?branchName=='${BRANCH_NAME}'].branchName" \
+            --output text 2>/dev/null || echo "")
 
-          echo "✅ Created Amplify app with ID: ${APP_ID}"
-        else
-          echo "✅ Using existing Amplify app with ID: ${APP_ID}"
-        fi
+          if [[ -z "$BRANCH_EXISTS" || "$BRANCH_EXISTS" == "None" ]]; then
+            echo "🌱 Creating new branch: ${BRANCH_NAME}"
+            aws amplify create-branch \
+              --app-id "$APP_ID" \
+              --branch-name "${BRANCH_NAME}" \
+              --description "Preview branch for PR #${{ github.event.pull_request.number }}" \
+              --region ${{ env.AWS_REGION }}
+          else
+            echo "✅ Branch already exists: ${BRANCH_NAME}"
+          fi
 
-        # Create or update branch
-        BRANCH_NAME="${{ github.head_ref }}"
-        echo "🌿 Setting up branch: ${BRANCH_NAME}"
+          # Manual deployment flow (no repo connection required)
+          echo "🚀 Starting manual deployment via create-deployment..."
 
-        # Check if branch exists
-        BRANCH_EXISTS=$(aws amplify list-branches \
-          --app-id "$APP_ID" \
-          --region ${{ env.AWS_REGION }} \
-          --query "branches[?branchName=='${BRANCH_NAME}'].branchName" \
-          --output text 2>/dev/null || echo "")
+          # Ensure build artifacts exist and zip them
+          if [[ -d "dist" ]]; then
+            (cd dist && zip -qr ../build.zip .)
+          else
+            echo "❌ Build artifacts not found in apps/client-ui/dist"
+            exit 1
+          fi
 
-        if [[ -z "$BRANCH_EXISTS" || "$BRANCH_EXISTS" == "None" ]]; then
-          echo "🌱 Creating new branch: ${BRANCH_NAME}"
-          aws amplify create-branch \
+          # Request a deployment to obtain jobId and pre-signed upload URL
+          DEPLOY_JSON=$(aws amplify create-deployment \
             --app-id "$APP_ID" \
             --branch-name "${BRANCH_NAME}" \
-            --description "Preview branch for PR #${{ github.event.pull_request.number }}" \
+            --region ${{ env.AWS_REGION }})
+          JOB_ID=$(echo "$DEPLOY_JSON" | jq -r '.jobId')
+          UPLOAD_URL=$(echo "$DEPLOY_JSON" | jq -r '.zipUploadUrl')
+
+          if [[ -z "$JOB_ID" || -z "$UPLOAD_URL" || "$JOB_ID" == "null" || "$UPLOAD_URL" == "null" ]]; then
+            echo "❌ Failed to create deployment or retrieve upload URL"
+            exit 1
+          fi
+
+          echo "📋 Deployment job ID: ${JOB_ID}"
+          echo "⬆️ Uploading build.zip to pre-signed URL"
+          curl -sS -X PUT -H "Content-Type: application/zip" --upload-file build.zip "$UPLOAD_URL"
+
+          # Start the deployment
+          aws amplify start-deployment \
+            --app-id "$APP_ID" \
+            --branch-name "${BRANCH_NAME}" \
+            --job-id "$JOB_ID" \
             --region ${{ env.AWS_REGION }}
-        else
-          echo "✅ Branch already exists: ${BRANCH_NAME}"
-        fi
 
-        # Manual deployment flow (no repo connection required)
-        echo "🚀 Starting manual deployment via create-deployment..."
+          # Wait for deployment to complete (polling get-job since Amplify has no waiters)
+          echo "⏳ Waiting for deployment to complete..."
+          MAX_ATTEMPTS=90; SLEEP=10
+          for ((i=1;i<=MAX_ATTEMPTS;i++)); do
+            STATUS=$(aws amplify get-job \
+              --app-id "$APP_ID" \
+              --branch-name "${BRANCH_NAME}" \
+              --job-id "$JOB_ID" \
+              --region ${{ env.AWS_REGION }} \
+              --query 'job.summary.status' \
+              --output text)
+            echo "🔎 Attempt $i/$MAX_ATTEMPTS: status=${STATUS}"
+            if [[ "$STATUS" == "SUCCEED" || "$STATUS" == "FAILED" || "$STATUS" == "CANCELLED" ]]; then
+              break
+            fi
+            sleep $SLEEP
+          done
 
-        # Ensure build artifacts exist and zip them
-        if [[ -d "dist" ]]; then
-          (cd dist && zip -qr ../build.zip .)
-        else
-          echo "❌ Build artifacts not found in apps/client-ui/dist"
-          exit 1
-        fi
-
-        # Request a deployment to obtain jobId and pre-signed upload URL
-        DEPLOY_JSON=$(aws amplify create-deployment \
-          --app-id "$APP_ID" \
-          --branch-name "${BRANCH_NAME}" \
-          --region ${{ env.AWS_REGION }})
-        JOB_ID=$(echo "$DEPLOY_JSON" | jq -r '.jobId')
-        UPLOAD_URL=$(echo "$DEPLOY_JSON" | jq -r '.zipUploadUrl')
-
-        if [[ -z "$JOB_ID" || -z "$UPLOAD_URL" || "$JOB_ID" == "null" || "$UPLOAD_URL" == "null" ]]; then
-          echo "❌ Failed to create deployment or retrieve upload URL"
-          exit 1
-        fi
-
-        echo "📋 Deployment job ID: ${JOB_ID}"
-        echo "⬆️ Uploading build.zip to pre-signed URL"
-        curl -sS -X PUT -H "Content-Type: application/zip" --upload-file build.zip "$UPLOAD_URL"
-
-        # Start the deployment
-        aws amplify start-deployment \
-          --app-id "$APP_ID" \
-          --branch-name "${BRANCH_NAME}" \
-          --job-id "$JOB_ID" \
-          --region ${{ env.AWS_REGION }}
-
-        # Wait for deployment to complete (polling get-job since Amplify has no waiters)
-        echo "⏳ Waiting for deployment to complete..."
-        MAX_ATTEMPTS=90; SLEEP=10
-        for ((i=1;i<=MAX_ATTEMPTS;i++)); do
-          STATUS=$(aws amplify get-job \
+          # Get deployment status
+          JOB_STATUS=$(aws amplify get-job \
             --app-id "$APP_ID" \
             --branch-name "${BRANCH_NAME}" \
             --job-id "$JOB_ID" \
             --region ${{ env.AWS_REGION }} \
             --query 'job.summary.status' \
             --output text)
-          echo "🔎 Attempt $i/$MAX_ATTEMPTS: status=${STATUS}"
-          if [[ "$STATUS" == "SUCCEED" || "$STATUS" == "FAILED" || "$STATUS" == "CANCELLED" ]]; then
-            break
+
+          if [[ "$JOB_STATUS" == "SUCCEED" ]]; then
+            # Sanitize branch for Amplify subdomain: replace '/' with '-'
+            SANITIZED_BRANCH="${BRANCH_NAME//\//-}"
+            APP_URL="https://${SANITIZED_BRANCH}.${APP_ID}.amplifyapp.com/"
+            echo "✅ Deployment successful!"
+            echo "🌐 Frontend URL: ${APP_URL}"
+
+            echo "app-id=${APP_ID}" >> $GITHUB_OUTPUT
+            echo "app-url=${APP_URL}" >> $GITHUB_OUTPUT
+            echo "job-id=${JOB_ID}" >> $GITHUB_OUTPUT
+            echo "deployment-status=success" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Deployment failed with status: ${JOB_STATUS}"
+            echo "deployment-status=failed" >> $GITHUB_OUTPUT
+            exit 1
           fi
-          sleep $SLEEP
-        done
 
-        # Get deployment status
-        JOB_STATUS=$(aws amplify get-job \
-          --app-id "$APP_ID" \
-          --branch-name "${BRANCH_NAME}" \
-          --job-id "$JOB_ID" \
-          --region ${{ env.AWS_REGION }} \
-          --query 'job.summary.status' \
-          --output text)
-
-        if [[ "$JOB_STATUS" == "SUCCEED" ]]; then
-          # Sanitize branch for Amplify subdomain: replace '/' with '-'
-          SANITIZED_BRANCH="${BRANCH_NAME//\//-}"
-          APP_URL="https://${SANITIZED_BRANCH}.${APP_ID}.amplifyapp.com/"
-          echo "✅ Deployment successful!"
-          echo "🌐 Frontend URL: ${APP_URL}"
-
-          echo "app-id=${APP_ID}" >> $GITHUB_OUTPUT
-          echo "app-url=${APP_URL}" >> $GITHUB_OUTPUT
-          echo "job-id=${JOB_ID}" >> $GITHUB_OUTPUT
-          echo "deployment-status=success" >> $GITHUB_OUTPUT
-        else
-          echo "❌ Deployment failed with status: ${JOB_STATUS}"
-          echo "deployment-status=failed" >> $GITHUB_OUTPUT
-          exit 1
-        fi
-
-    - name: Comment on PR with deployment details
-      if: steps.deploy.outputs.deployment-status == 'success'
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const appUrl = '${{ steps.deploy.outputs.app-url }}';
-          const appId = '${{ steps.deploy.outputs.app-id }}';
-          const jobId = '${{ steps.deploy.outputs.job-id }}';
-          const envName = '${{ needs.validate-access.outputs.env-name }}';
-
-          // Use finalized backend details (artifact-first)
-          const backendUrl = '${{ needs.discover-backend-for-frontend.outputs.api-endpoint }}';
-          const backendStack = '${{ needs.discover-backend-for-frontend.outputs.stack-name }}';
-
-          const comment = `## 🚀 Preview Environment Deployed Successfully!
-
-          ### 🌐 Preview URLs
-          - **Frontend**: [${appUrl}](${appUrl})
-          - **Backend API**: ${backendUrl}
-
-          ### 📋 Deployment Details
-          - **Environment**: \`${envName}\`
-          - **Amplify App ID**: \`${appId}\`
-          - **Job ID**: \`${jobId}\`
-          - **Branch**: \`${{ github.head_ref }}\`
-
-          ### 🔗 Quick Links
-          - [AWS Amplify Console](https://console.aws.amazon.com/amplify/home?region=${{ env.AWS_REGION }}#/${appId})
-          - [Backend Stack](https://console.aws.amazon.com/cloudformation/home?region=${{ env.AWS_REGION }}#/stacks/stackinfo?stackId=${backendStack})
-
-          ---
-          *This preview environment will be automatically cleaned up when the PR is closed/merged.*`;
-
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: comment
-          });
-
-  # Update backend CORS to allow Amplify preview origin
-  update-backend-cors:
-    name: Update Backend CORS for Preview Frontend
-    runs-on: ubuntu-latest
-    needs: [ validate-access, deploy-frontend, discover-backend-for-frontend ]
-    if: |
-      needs.validate-access.outputs.should-deploy == 'true' &&
-      needs.discover-backend-for-frontend.outputs.backend-found == 'true' &&
-      needs.deploy-frontend.result == 'success'
-
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install pnpm
-      uses: pnpm/action-setup@v3
-      with:
-        version: ${{ env.PNPM_VERSION }}
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'pnpm'
-        cache-dependency-path: 'pnpm-lock.yaml'
-
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        aws-region: ${{ env.AWS_REGION }}
-
-    - name: Install AWS CDK CLI globally
-      run: pnpm add -g aws-cdk@2
-
-    - name: Build and deploy with CORS origins
-      run: |
-        APP_URL="${{ needs.deploy-frontend.outputs.app-url }}"
-        API_URL="${{ needs.discover-backend-for-frontend.outputs.api-endpoint }}"
-        ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
-
-        # For preview PR environments, restrict to the exact Amplify preview origin to ensure API Gateway
-        # preflight returns an ACAO that matches the requesting origin. Localhost is not needed for preview.
-        ORIGINS="${APP_URL%/}"
-
-        echo "🔧 CORS Configuration Update:"
-        echo "  Environment: $ENV_NAME"
-        echo "  Amplify URL: $APP_URL"
-        echo "  Setting CORS_ALLOWED_ORIGINS to: $ORIGINS"
-        echo ""
-
-        # Verify environment variable is set before deployment
-        export CORS_ALLOWED_ORIGINS="$ORIGINS"
-        echo "✅ Environment variable set: CORS_ALLOWED_ORIGINS=$CORS_ALLOWED_ORIGINS"
-
-        cd infrastructure
-        pnpm install --frozen-lockfile
-        pnpm build
-        chmod +x scripts/deploy.sh
-
-        echo "🚀 Starting CDK deployment with CORS origins..."
-        CDK_DEPLOY_ENV="$ENV_NAME" CDK_DEPLOY_SCALE='hobby' \
-          AWS_REGION='${{ env.AWS_REGION }}' AWS_ACCOUNT_ID='${{ secrets.AWS_ACCOUNT_ID }}' \
-          NODE_ENV='production' ./scripts/deploy.sh
-
-    - name: Output summary
-      shell: bash
-      run: |
-        APP_URL="${{ needs.deploy-frontend.outputs.app-url }}"
-        API_URL="${{ needs.discover-backend-for-frontend.outputs.api-endpoint }}"
-        ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
-        ENV_CAP=$(echo "$ENV_NAME" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')
-        STACK_NAME="MacroAi${ENV_CAP}Stack"
-
-        # Pull CloudFormation outputs for visibility in summary
-        CFN_CORS=$(aws cloudformation describe-stacks \
-          --stack-name "$STACK_NAME" \
-          --region "${{ env.AWS_REGION }}" \
-          --query "Stacks[0].Outputs[?OutputKey=='CorsAllowedOrigins'].OutputValue" \
-          --output text || true)
-        CFN_API=$(aws cloudformation describe-stacks \
-          --stack-name "$STACK_NAME" \
-          --region "${{ env.AWS_REGION }}" \
-          --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
-          --output text || true)
-
-        echo "## 🔁 Backend CORS Update" >> "$GITHUB_STEP_SUMMARY"
-        echo "- Environment: $ENV_NAME" >> "$GITHUB_STEP_SUMMARY"
-        echo "- Amplify URL: $APP_URL" >> "$GITHUB_STEP_SUMMARY"
-        echo "- API Endpoint (discovered): $API_URL" >> "$GITHUB_STEP_SUMMARY"
-        if [ -n "$CFN_API" ]; then echo "- API Endpoint (CloudFormation): $CFN_API" >> "$GITHUB_STEP_SUMMARY"; fi
-        echo "- CloudFormation CorsAllowedOrigins: ${CFN_CORS:-<empty>}" >> "$GITHUB_STEP_SUMMARY"
-
-        # Verify CloudFormation CORS configuration
-        echo ""
-        echo "🔍 Verifying CloudFormation CORS configuration:"
-        echo "Expected CORS origins: ${APP_URL%/}"
-        echo "CloudFormation CORS origins: ${CFN_CORS:-<empty>}"
-
-        if [ -n "$CFN_CORS" ] && echo "$CFN_CORS" | grep -q "${APP_URL%/}"; then
-          echo "✅ CloudFormation CORS configuration contains Amplify URL"
-        elif [ -n "$CFN_CORS" ] && echo "$CFN_CORS" | grep -qi "localhost"; then
-          echo "❌ CloudFormation CORS configuration still contains localhost"
-          echo "This indicates CORS_ALLOWED_ORIGINS environment variable didn't reach CDK deployment"
-          echo "CloudFormation output: $CFN_CORS"
-        elif [ -z "$CFN_CORS" ]; then
-          echo "⚠️ CloudFormation CORS output is empty - this may indicate a deployment issue"
-        else
-          echo "⚠️ CloudFormation CORS configuration doesn't match expected Amplify URL"
-          echo "Expected: ${APP_URL%/}"
-          echo "Got: $CFN_CORS"
-        fi
-
-    - name: Verify CORS preflight and GET
-      shell: bash
-      run: "APP_URL=\"${{ needs.deploy-frontend.outputs.app-url }}\"
-
-        API_URL=\"${{ needs.discover-backend-for-frontend.outputs.api-endpoint }}\"
-
-
-        # Test both health endpoint (permissive CORS) and auth endpoint (strict CORS)
-
-        HEALTH_URL=\"${API_URL%/}/health\"
-
-        AUTH_URL=\"${API_URL%/}/api/auth/user\"
-
-
-        echo \"🔍 Testing API Gateway preflight CORS configuration...\"
-
-        echo \"Frontend Origin: ${APP_URL%/}\"
-
-        echo \"API Endpoint: $API_URL\"
-
-        echo \"\"
-
-
-        # Test 1: Health endpoint (permissive CORS with origin: true)
-
-        echo \"📋 Test 1: Health endpoint preflight (permissive CORS)\"
-
-        PRE_HEALTH=$(curl -s -i -X OPTIONS \"$HEALTH_URL\" \\
-
-        \  -H \"Origin: ${APP_URL%/}\" \\
-
-        \  -H \"Access-Control-Request-Method: GET\")
-
-        echo \"--- HEALTH PREFLIGHT RESPONSE ---\"
-
-        echo \"$PRE_HEALTH\"
-
-        echo \"\"
-
-
-        # Test 2: Auth endpoint preflight (strict CORS with explicit origins)
-
-        echo \"📋 Test 2: Auth endpoint preflight (strict CORS)\"
-
-        PRE_AUTH=$(curl -s -i -X OPTIONS \"$AUTH_URL\" \\
-
-        \  -H \"Origin: ${APP_URL%/}\" \\
-
-        \  -H \"Access-Control-Request-Method: GET\" \\
-
-        \  -H \"Access-Control-Request-Headers: Authorization\")
-
-        echo \"--- AUTH PREFLIGHT RESPONSE ---\"
-
-        echo \"$PRE_AUTH\"
-
-        echo \"\"
-
-
-        # Validate API Gateway preflight ACAO header (should match Amplify URL for strict CORS)
-
-        AUTH_ACAO=$(echo \"$PRE_AUTH\" | tr -d '\\r' | grep -i '^Access-Control-Allow-Origin:' | awk -F': ' '{print $2}' | tr -d '\\r')
-
-        if [ -z \"$AUTH_ACAO\" ]; then
-
-        \  echo \"❌ ACAO missing in auth preflight response\"
-
-        \  exit 1
-
-        fi
-
-
-        echo \"🔍 Auth preflight ACAO: '$AUTH_ACAO'\"
-
-        echo \"🔍 Expected origin: '${APP_URL%/}'\"
-
-
-        if [ \"$AUTH_ACAO\" = \"${APP_URL%/}\" ]; then
-
-        \  echo \"✅ API Gateway preflight ACAO matches Amplify origin exactly\"
-
-        elif echo \"$AUTH_ACAO\" | grep -qi \"localhost\"; then
-
-        \  echo \"❌ API Gateway preflight still returning localhost - CORS_ALLOWED_ORIGINS not properly set\"
-
-        \  echo \"This indicates the environment variable didn't reach the CDK deployment process\"
-
-        \  exit 1
-
-        else
-
-        \  echo \"⚠️ API Gateway preflight ACAO doesn't match exactly but isn't localhost\"
-
-        \  echo \"Proceeding with Express application test...\"
-
-        fi
-
-
-        # Test 3: Express application response (should use CORS_ALLOWED_ORIGINS env var)
-
-        echo \"\udccb Test 3: Express application GET response\"
-
-        GET_HEALTH=$(curl -s -i \"$HEALTH_URL\" -H \"Origin: ${APP_URL%/}\")
-
-        echo \"--- HEALTH GET RESPONSE ---\"
-
-        echo \"$GET_HEALTH\"
-
-
-        # Health endpoint uses origin: true, so should reflect the request origin
-
-        HEALTH_GET_ACAO=$(echo \"$GET_HEALTH\" | tr -d '\\r' | grep -i '^Access-Control-Allow-Origin:' | awk -F': ' '{print $2}' | tr -d '\\r')
-
-        if [ \"$HEALTH_GET_ACAO\" = \"${APP_URL%/}\" ]; then
-
-        \  echo \"✅ Express health endpoint ACAO reflects request origin correctly\"
-
-        else
-
-        \  echo \"❌ Express health endpoint ACAO mismatch: got '$HEALTH_GET_ACAO', expected '${APP_URL%/}'\"
-
-        \  exit 1
-
-        fi\n"
+      - name: Comment on PR with deployment details
+        if: steps.deploy.outputs.deployment-status == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const appUrl = '${{ steps.deploy.outputs.app-url }}';
+            const appId = '${{ steps.deploy.outputs.app-id }}';
+            const jobId = '${{ steps.deploy.outputs.job-id }}';
+            const envName = '${{ needs.validate-access.outputs.env-name }}';
+
+            // Use pre-calculated backend details from validate-access
+            const backendUrl = '${{ needs.validate-access.outputs.backend-url }}';
+            const backendStack = '${{ needs.validate-access.outputs.backend-stack-name }}';
+
+            const comment = `## 🚀 Preview Environment Deployed Successfully!
+
+            ### 🌐 Preview URLs
+            - **Frontend**: [${appUrl}](${appUrl})
+            - **Backend API**: ${backendUrl}
+
+            ### 📋 Deployment Details
+            - **Environment**: \`${envName}\`
+            - **Amplify App ID**: \`${appId}\`
+            - **Job ID**: \`${jobId}\`
+            - **Branch**: \`${{ github.head_ref }}\`
+
+            ### 🔗 Quick Links
+            - [AWS Amplify Console](https://console.aws.amazon.com/amplify/home?region=${{ env.AWS_REGION }}#/${appId})
+            - [Backend Stack](https://console.aws.amazon.com/cloudformation/home?region=${{ env.AWS_REGION }}#/stacks/stackinfo?stackId=${backendStack})
+
+            ---
+            *This preview environment will be automatically cleaned up when the PR is closed/merged.*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
 
   # Summary job to show what was deployed
   deployment-summary:
     name: Deployment Summary
     runs-on: ubuntu-latest
-    needs: [ validate-access, check-backend-changes, check-frontend-changes, deploy-backend-preview, deploy-frontend, update-backend-cors ]
+    needs:
+      [
+        validate-access,
+        check-backend-changes,
+        check-frontend-changes,
+        deploy-backend-preview,
+        deploy-frontend,
+      ]
     if: needs.validate-access.outputs.should-deploy == 'true'
 
     steps:
-    - name: Generate deployment summary
-      run: |
-        echo "🚀 Preview deployment completed successfully!"
-        echo "Backend: ${{ needs.check-backend-changes.outputs.has-backend-changes == 'true' && 'Deployed' || 'Skipped' }}"
-        echo "Frontend: ${{ needs.check-frontend-changes.outputs.has-frontend-changes == 'true' && 'Deployed' || 'Skipped' }}"
+      - name: Generate deployment summary
+        run: |
+          echo "🚀 Preview deployment completed successfully!"
+          echo "Backend: ${{ needs.check-backend-changes.outputs.has-backend-changes == 'true' && 'Deployed' || 'Skipped' }}"
+          echo "Frontend: ${{ needs.check-frontend-changes.outputs.has-frontend-changes == 'true' && 'Deployed' || 'Skipped' }}"
