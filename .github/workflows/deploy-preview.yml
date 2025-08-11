@@ -34,6 +34,13 @@ jobs:
   validate-access:
     name: Validate PR Access
     runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+      issues: write
+
     outputs:
       is-owner: ${{ steps.codeowner-check.outputs.is-owner }}
       target-user: ${{ steps.codeowner-check.outputs.target-user }}
@@ -100,6 +107,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-PreviewDeploy-URLPrecalc-${{ github.run_id }}
 
       - name: Pre-calculate deployment URLs
         id: url-precalc
@@ -287,6 +295,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-PreviewDeploy-Backend-${{ github.run_id }}
 
       - name: Download Lambda package
         uses: actions/download-artifact@v4
@@ -805,6 +814,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-PreviewDeploy-Frontend-${{ github.run_id }}
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
