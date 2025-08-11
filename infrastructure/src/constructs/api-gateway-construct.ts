@@ -98,6 +98,8 @@ export class ApiGatewayConstruct extends Construct {
 			.split(',')
 			.map((o) => o.trim())
 			.filter((o) => o.length > 0)
+			// Normalize: strip any trailing slashes
+			.map((o) => (o.endsWith('/') ? o.replace(/\/+$/, '') : o))
 
 		// Debug logging for CORS configuration
 		const originsDisplay = parsedEnvOrigins.map((o) => `"${o}"`).join(', ')

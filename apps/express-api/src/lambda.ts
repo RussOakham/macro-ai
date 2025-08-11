@@ -50,9 +50,25 @@ const initializeExpressApp = (): Express => {
 		// Create the Express server using the existing createServer function
 		const expressApp = createServer()
 
+		// Log effective CORS configuration perceived by the app
+		const rawEnv = process.env.CORS_ALLOWED_ORIGINS ?? ''
+		const appEnv = process.env.APP_ENV ?? ''
+		const isPreview = appEnv.startsWith('pr-')
+		const parsed = rawEnv
+			.split(',')
+			.map((o) => o.trim())
+			.filter((o) => o.length > 0)
+			.map((o) => (o.endsWith('/') ? o.replace(/\/+$/, '') : o))
 		logger.info('Express app initialized successfully for Lambda', {
 			operation: 'expressAppInit',
 			coldStart: !isInitialized,
+			cors: {
+				rawEnv,
+				appEnv,
+				isPreview,
+				parsed,
+				primary: parsed[0] ?? 'http://localhost:3000',
+			},
 		})
 
 		return expressApp

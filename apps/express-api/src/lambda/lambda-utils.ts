@@ -16,11 +16,34 @@ import type {
  * Get allowed CORS origins based on environment
  */
 const getAllowedOrigins = (): string[] => {
-	// Parse CORS_ALLOWED_ORIGINS if provided; fall back to localhost defaults
-	const parsedCorsOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? '')
+	const rawEnv = process.env.CORS_ALLOWED_ORIGINS ?? ''
+	const appEnv = process.env.APP_ENV ?? ''
+	const isPreview = appEnv.startsWith('pr-')
+
+	// Parse and normalize: trim whitespace and strip any trailing '/'
+	const parsedCorsOrigins = rawEnv
 		.split(',')
 		.map((o) => o.trim())
 		.filter((o) => o.length > 0)
+		.map((o) => (o.endsWith('/') ? o.replace(/\/+$/, '') : o))
+
+	// Log detailed diagnostics for observability
+	console.log('[lambda-utils] CORS configuration diagnostics:')
+	console.log(`  APP_ENV: "${appEnv}" (isPreview=${String(isPreview)})`)
+	console.log(`  CORS_ALLOWED_ORIGINS (raw): "${rawEnv}"`)
+	console.log(
+		`  CORS_ALLOWED_ORIGINS (parsed/normalized): [${parsedCorsOrigins
+			.map((o) => `"${o}"`)
+			.join(', ')}]`,
+	)
+
+	// Safeguard: In preview environments, do NOT silently fall back to localhost
+	if (isPreview && parsedCorsOrigins.length === 0) {
+		console.error(
+			'[lambda-utils] Preview environment detected (pr-*), but CORS_ALLOWED_ORIGINS is empty/invalid. Refusing to fall back to localhost origins. Ensure CI passes the exact Amplify preview origin.',
+		)
+		return []
+	}
 
 	const effectiveOrigins =
 		parsedCorsOrigins.length > 0
@@ -35,7 +58,13 @@ const getAllowedOrigins = (): string[] => {
  */
 const getPrimaryAllowedOrigin = (): string => {
 	const origins = getAllowedOrigins()
-	return origins[0] ?? '*'
+	const primary = origins[0] ?? '*'
+	console.log(
+		`[lambda-utils] Selected primary CORS origin: "${primary}" (all=[${origins
+			.map((o) => `"${o}"`)
+			.join(', ')}])`,
+	)
+	return primary
 }
 
 export const createLambdaResponse = (

@@ -51,14 +51,36 @@ const createServer = (): Express => {
 
 	// Default CORS for application routes (credentialed dev/preview origins)
 	// Parse CORS_ALLOWED_ORIGINS if provided; fall back to localhost defaults
-	const parsedCorsOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? '')
+	const rawEnv = process.env.CORS_ALLOWED_ORIGINS ?? ''
+	const appEnv = process.env.APP_ENV ?? ''
+	const isPreview = appEnv.startsWith('pr-')
+	const parsedCorsOrigins = rawEnv
 		.split(',')
 		.map((o) => o.trim())
 		.filter((o) => o.length > 0)
+		.map((o) => (o.endsWith('/') ? o.replace(/\/+$/, '') : o))
 	const effectiveOrigins =
 		parsedCorsOrigins.length > 0
 			? parsedCorsOrigins
 			: ['http://localhost:3000', 'http://localhost:3040']
+
+	// Log effective CORS configuration at startup
+	// Note: In preview envs with empty origins, Express will still use localhost here,
+	// but Lambda utilities will refuse to fall back for preflight handling and responses.
+	console.log('[server] CORS configuration diagnostics:')
+	console.log(`  APP_ENV: "${appEnv}" (isPreview=${String(isPreview)})`)
+	console.log(`  CORS_ALLOWED_ORIGINS (raw): "${rawEnv}"`)
+	console.log(
+		`  CORS_ALLOWED_ORIGINS (parsed/normalized): [${parsedCorsOrigins
+			.map((o) => `"${o}"`)
+			.join(', ')}]`,
+	)
+	console.log(
+		`  Express CORS origin setting: [${effectiveOrigins
+			.map((o) => `"${o}"`)
+			.join(', ')}]`,
+	)
+
 	app.use(
 		cors({
 			origin: effectiveOrigins,

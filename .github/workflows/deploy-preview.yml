@@ -327,6 +327,8 @@ jobs:
             echo "  Setting CORS_ALLOWED_ORIGINS to: $CORS_ORIGINS"
           fi
 
+          echo "📣 Observability: exporting CORS_ALLOWED_ORIGINS to CDK as -> '$CORS_ORIGINS'"
+
           # Make deploy script executable and run it
           chmod +x scripts/deploy.sh
           ./scripts/deploy.sh
@@ -336,6 +338,7 @@ jobs:
           AWS_REGION: ${{ env.AWS_REGION }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
           NODE_ENV: 'production'
+          # Important: pass the normalized CORS origins with trailing slash stripped
           CORS_ALLOWED_ORIGINS: ${{ needs.validate-access.outputs.frontend-url != '<will-be-generated-during-deployment>' && format('{0}', needs.validate-access.outputs.frontend-url) || 'http://localhost:5173,http://localhost:3000' }}
 
       - name: Get deployment outputs
