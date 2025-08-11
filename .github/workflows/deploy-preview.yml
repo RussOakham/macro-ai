@@ -607,7 +607,16 @@ jobs:
         deploy-backend-preview,
         create-fallback-urls,
       ]
-    if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-frontend-changes.outputs.has-frontend-changes == 'true' && (needs.deploy-backend-preview.result == 'success' || needs.deploy-backend-preview.result == 'skipped') && (needs.create-fallback-urls.result == 'success' || needs.create-fallback-urls.result == 'skipped')
+    # Run if frontend changes detected and either:
+    # 1. Backend deployment succeeded (backend changes detected)
+    # 2. Fallback URLs job succeeded (no backend changes detected)
+    if: |
+      needs.validate-access.outputs.should-deploy == 'true' &&
+      needs.check-frontend-changes.outputs.has-frontend-changes == 'true' &&
+      always() && (
+        (needs.check-backend-changes.outputs.has-backend-changes == 'true' && needs.deploy-backend-preview.result == 'success') ||
+        (needs.check-backend-changes.outputs.has-backend-changes == 'false' && needs.create-fallback-urls.result == 'success')
+      )
 
     permissions:
       contents: read
