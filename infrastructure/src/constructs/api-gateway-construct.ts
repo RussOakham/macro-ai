@@ -104,12 +104,12 @@ export class ApiGatewayConstruct extends Construct {
 		console.log(`   Environment: ${environmentName}`)
 		console.log(`   CORS_ALLOWED_ORIGINS env var: "${corsEnvVar}"`)
 		console.log(`   Parsed origins: [${originsDisplay}]`)
-		console.log(`   Parsed origins count: ${parsedEnvOrigins.length}`)
+		console.log(`   Parsed origins count: ${String(parsedEnvOrigins.length)}`)
 
 		// If explicit origins are provided via env for non-prod, prefer them
 		// This allows CI to inject the exact Amplify preview origin per PR.
 		const isPreview = environmentName.startsWith('pr-')
-		console.log(`   Is preview environment: ${isPreview}`)
+		console.log(`   Is preview environment: ${String(isPreview)}`)
 
 		let selectedOrigins: string[]
 
@@ -305,7 +305,7 @@ export class ApiGatewayConstruct extends Construct {
 		// Validate throttling configuration
 		if (throttling.rateLimit <= 0 || throttling.burstLimit <= 0) {
 			throw new Error(
-				`Invalid throttling configuration: rateLimit=${String(throttling.rateLimit)}, burstLimit=${String(throttling.burstLimit)}. ` +
+				`Invalid throttling configuration: rateLimit=${throttling.rateLimit.toString()}, burstLimit=${throttling.burstLimit.toString()}. ` +
 					'Both values must be positive numbers.',
 			)
 		}
