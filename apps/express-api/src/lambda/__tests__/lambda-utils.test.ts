@@ -106,7 +106,7 @@ describe('Lambda Utils', () => {
 			const response = createLambdaResponse(200, { message: 'success' })
 
 			// Assert
-			expect(response.headers['Access-Control-Allow-Origin']).toBe(
+			expect(response.headers?.['Access-Control-Allow-Origin']).toBe(
 				'https://example.com',
 			)
 
@@ -307,7 +307,7 @@ describe('Lambda Utils', () => {
 			// Assert
 			expect(response).not.toBeNull()
 			expect(response!.statusCode).toBe(200)
-			expect(response!.headers['Access-Control-Allow-Origin']).toBe(
+			expect(response!.headers?.['Access-Control-Allow-Origin']).toBe(
 				'https://example.com',
 			)
 
@@ -329,7 +329,7 @@ describe('Lambda Utils', () => {
 
 			expect(response).not.toBeNull()
 			expect(response!.statusCode).toBe(200)
-			expect(response!.headers['Access-Control-Allow-Origin']).toBe(
+			expect(response!.headers?.['Access-Control-Allow-Origin']).toBe(
 				'http://localhost:3000',
 			) // Falls back to primary origin
 		})
