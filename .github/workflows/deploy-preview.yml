@@ -879,6 +879,9 @@ jobs:
           path: apps/client-ui/dist/
           retention-days: 7
 
+    outputs:
+      env-name: ${{ needs.validate-access.outputs.env-name }}
+
   # Deploy to AWS Amplify
   deploy-frontend:
     name: Deploy to AWS Amplify
@@ -910,7 +913,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: frontend-build-${{ needs.validate-access.outputs.env-name }}
+          name: frontend-build-${{ needs.build-frontend.outputs.env-name }}
           path: apps/client-ui/dist/
 
       - name: Deploy to Amplify
