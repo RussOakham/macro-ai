@@ -541,12 +541,23 @@ jobs:
   build-frontend:
     name: Build React Frontend
     runs-on: ubuntu-latest
-    needs: [validate-access, check-frontend-changes]
+    needs: [validate-access, check-frontend-changes, check-backend-changes]
     if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-frontend-changes.outputs.has-frontend-changes == 'true'
+
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-PreviewDeploy-FrontendBuild-${{ github.run_id }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3
@@ -622,6 +633,73 @@ jobs:
 
           echo "✅ API client package built successfully"
 
+      - name: Resolve backend API endpoint
+        id: resolve-backend
+        run: |
+          BACKEND_URL="${{ needs.validate-access.outputs.backend-url }}"
+          BACKEND_STACK_NAME="${{ needs.validate-access.outputs.backend-stack-name }}"
+          HAS_BACKEND_CHANGES="${{ needs.check-backend-changes.outputs.has-backend-changes }}"
+
+          echo "🔍 Resolving backend API endpoint..."
+          echo "Pre-calculated URL: $BACKEND_URL"
+          echo "Backend changes detected: $HAS_BACKEND_CHANGES"
+
+          # If backend changes are detected and URL is placeholder, wait and fetch from deployed stack
+          if [[ "$HAS_BACKEND_CHANGES" == "true" && "$BACKEND_URL" == "<will-be-generated-during-deployment>" ]]; then
+            echo "⏳ Backend changes detected with placeholder URL - waiting for backend deployment..."
+
+            # Wait for backend stack to be deployed (with timeout)
+            TIMEOUT=300  # 5 minutes
+            ELAPSED=0
+            INTERVAL=10
+
+            while [[ $ELAPSED -lt $TIMEOUT ]]; do
+              echo "🔍 Checking if backend stack is deployed... (${ELAPSED}s elapsed)"
+
+              STACK_STATUS=$(aws cloudformation describe-stacks \
+                --stack-name "$BACKEND_STACK_NAME" \
+                --query "Stacks[0].StackStatus" \
+                --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+
+              if [[ "$STACK_STATUS" == "CREATE_COMPLETE" || "$STACK_STATUS" == "UPDATE_COMPLETE" ]]; then
+                echo "✅ Backend stack is ready, fetching API endpoint..."
+
+                DEPLOYED_URL=$(aws cloudformation describe-stacks \
+                  --stack-name "$BACKEND_STACK_NAME" \
+                  --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
+                  --output text 2>/dev/null || echo "")
+
+                if [[ -n "$DEPLOYED_URL" ]]; then
+                  # Normalize to ensure single /api suffix
+                  DEPLOYED_URL="${DEPLOYED_URL%/}"
+                  if [[ "$DEPLOYED_URL" != */api ]]; then
+                    DEPLOYED_URL="${DEPLOYED_URL}/api"
+                  fi
+                  BACKEND_URL="$DEPLOYED_URL"
+                  echo "🌐 Retrieved backend URL from deployed stack: $BACKEND_URL"
+                  break
+                else
+                  echo "⚠️ Stack exists but no ApiEndpoint output found"
+                fi
+              elif [[ "$STACK_STATUS" == "CREATE_IN_PROGRESS" || "$STACK_STATUS" == "UPDATE_IN_PROGRESS" ]]; then
+                echo "⏳ Stack deployment in progress (status: $STACK_STATUS)..."
+              else
+                echo "⚠️ Unexpected stack status: $STACK_STATUS"
+              fi
+
+              sleep $INTERVAL
+              ELAPSED=$((ELAPSED + INTERVAL))
+            done
+
+            if [[ $ELAPSED -ge $TIMEOUT ]]; then
+              echo "⚠️ Timeout waiting for backend deployment - using placeholder URL"
+              echo "This may cause frontend build to fail, but deployment will continue"
+            fi
+          fi
+
+          echo "final-backend-url=$BACKEND_URL" >> $GITHUB_OUTPUT
+          echo "🎯 Final backend URL for frontend build: $BACKEND_URL"
+
       - name: Generate environment configuration
         id: generate-env
         uses: ./.github/actions/generate-frontend-env
@@ -629,10 +707,10 @@ jobs:
           environment: ${{ needs.validate-access.outputs.env-name }}
           pr-number: ${{ github.event.pull_request.number }}
           build-mode: 'preview'
-          api-endpoint: ${{ needs.validate-access.outputs.backend-url }}
+          api-endpoint: ${{ steps.resolve-backend.outputs.final-backend-url }}
           api-key: ${{ secrets.API_KEY }}
           backend-stack-name: ${{ needs.validate-access.outputs.backend-stack-name }}
-          resolution-method: 'pre-calculated'
+          resolution-method: 'dynamic-resolution'
           output-file: '.env.preview'
           include-build-metadata: 'true'
           validate-variables: 'true'
