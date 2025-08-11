@@ -55,12 +55,38 @@ runs:
         echo "target-user=${TARGET_USER}" >> $GITHUB_OUTPUT
         echo "::notice::Validating code ownership for user: ${TARGET_USER}"
 
-        # Read and parse CODEOWNERS file
+        # Read and parse CODEOWNERS file, with fallback to develop/main if missing on base-ref
         CODEOWNERS_FILE="codeowner-check-repo/.github/CODEOWNERS"
+        USED_REF="${{ inputs.base-ref }}"
 
         if [[ ! -f "${CODEOWNERS_FILE}" ]]; then
-          echo "::error::CODEOWNERS file not found at ${CODEOWNERS_FILE}"
-          exit 1
+          echo "::notice::CODEOWNERS not found on '${USED_REF}'. Attempting fallback branches..."
+          pushd codeowner-check-repo >/dev/null
+          git fetch origin develop main --depth=1 || true
+          # Try develop first
+          if git show-ref --verify --quiet refs/remotes/origin/develop; then
+            git checkout -f -B develop refs/remotes/origin/develop || true
+            if [[ -f ".github/CODEOWNERS" ]]; then
+              USED_REF="develop"
+            fi
+          fi
+          # If still not found, try main
+          if [[ ! -f ".github/CODEOWNERS" ]]; then
+            if git show-ref --verify --quiet refs/remotes/origin/main; then
+              git checkout -f -B main refs/remotes/origin/main || true
+              if [[ -f ".github/CODEOWNERS" ]]; then
+                USED_REF="main"
+              fi
+            fi
+          fi
+          popd >/dev/null
+
+          if [[ ! -f "${CODEOWNERS_FILE}" ]]; then
+            echo "::error::CODEOWNERS file not found on '${{ inputs.base-ref }}', 'develop', or 'main'"
+            exit 1
+          else
+            echo "::notice::Using CODEOWNERS from '${USED_REF}'"
+          fi
         fi
 
         # Extract owners from CODEOWNERS (ignore comments and empty lines)
