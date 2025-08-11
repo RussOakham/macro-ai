@@ -985,8 +985,9 @@ jobs:
         check-frontend-changes,
         deploy-backend-preview,
         deploy-frontend,
+        update-backend-cors,
       ]
-    if: always() && needs.validate-access.outputs.should-deploy == 'true'
+    if: needs.validate-access.outputs.should-deploy == 'true'
 
     steps:
       - name: Generate deployment summary

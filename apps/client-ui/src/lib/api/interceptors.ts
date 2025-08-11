@@ -80,6 +80,25 @@ export const applyTokenRefreshInterceptors = (client: {
 
 			// Handle 401 Unauthorized
 			if (error.response?.status === 401 && !originalRequest._retry) {
+				// If the 401 came from the refresh endpoint itself, do NOT try to refresh again.
+				// This prevents an infinite interceptor loop and ensures the auth flow resolves.
+				const requestUrl =
+					typeof originalRequest.url === 'string' ? originalRequest.url : ''
+				const isRefreshRequest = requestUrl.includes('/auth/refresh')
+				if (isRefreshRequest) {
+					const err = standardizeError(error)
+					logger.warn(`Refresh endpoint returned 401: ${err.message}`)
+					// Reject any queued requests and clear refreshing state
+					processQueue(err, null)
+					isRefreshing = false
+					clearSharedRefreshPromise()
+					// Redirect to login page so users are not stuck on a loading screen
+					await router.navigate({
+						to: '/auth/login',
+						search: { redirect: router.state.location.pathname },
+					})
+					return Promise.reject(err)
+				}
 				if (isRefreshing) {
 					return new Promise((resolve, reject) => {
 						failedQueue.push({ resolve, reject })
