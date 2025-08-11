@@ -991,7 +991,10 @@ jobs:
 
     steps:
       - name: Generate deployment summary
-        run: ''
+        run: |
+          echo "🚀 Preview deployment completed successfully!"
+          echo "Backend: ${{ needs.check-backend-changes.outputs.has-backend-changes == 'true' && 'Deployed' || 'Skipped' }}"
+          echo "Frontend: ${{ needs.check-frontend-changes.outputs.has-frontend-changes == 'true' && 'Deployed' || 'Skipped' }}"
   # Update backend CORS to allow Amplify preview origin
   update-backend-cors:
     name: Update Backend CORS for Preview Frontend
