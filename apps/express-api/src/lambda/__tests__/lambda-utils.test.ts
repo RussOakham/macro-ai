@@ -89,6 +89,7 @@ describe('Lambda Utils', () => {
 					'Content-Type': 'application/json',
 					'Access-Control-Allow-Origin': 'http://localhost:3000', // Now uses first allowed origin
 					'Access-Control-Allow-Credentials': 'true',
+					Vary: 'Origin',
 					'Access-Control-Allow-Headers':
 						'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
 					'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
@@ -216,6 +217,60 @@ describe('Lambda Utils', () => {
 				process.env.CORS_ALLOWED_ORIGINS = originalEnv
 			} else {
 				delete process.env.CORS_ALLOWED_ORIGINS
+			}
+		})
+
+		it('should prevent localhost fallback in preview environments when CORS_ALLOWED_ORIGINS is empty', () => {
+			// Arrange - save original env vars
+			const originalCorsEnv = process.env.CORS_ALLOWED_ORIGINS
+			const originalAppEnv = process.env.APP_ENV
+
+			// Clear CORS_ALLOWED_ORIGINS and set preview environment
+			delete process.env.CORS_ALLOWED_ORIGINS
+			process.env.APP_ENV = 'pr-123'
+
+			const optionsEvent = {
+				...mockEvent,
+				httpMethod: 'OPTIONS',
+				headers: {
+					...mockEvent.headers,
+					origin: 'https://arbitrary-origin.com',
+				},
+			}
+
+			// Act
+			const response = handleCorsPreflightRequest(optionsEvent, mockContext)
+
+			// Assert - should not set CORS headers due to preview safeguard
+			expect(response).not.toBeNull()
+			if (response) {
+				expect(response.statusCode).toBe(200)
+				// Should NOT have Access-Control-Allow-Origin header (preview safeguard active)
+				expect(
+					response.headers?.['Access-Control-Allow-Origin'],
+				).toBeUndefined()
+				// Should NOT have Access-Control-Allow-Credentials header
+				expect(
+					response.headers?.['Access-Control-Allow-Credentials'],
+				).toBeUndefined()
+				// Should have Vary: Origin header for proper caching
+				expect(response.headers?.Vary).toBe('Origin')
+				// Should still have other CORS headers for preflight
+				expect(response.headers?.['Access-Control-Allow-Methods']).toBeDefined()
+				expect(response.headers?.['Access-Control-Allow-Headers']).toBeDefined()
+			}
+
+			// Cleanup - restore original env vars
+			if (originalCorsEnv !== undefined) {
+				process.env.CORS_ALLOWED_ORIGINS = originalCorsEnv
+			} else {
+				delete process.env.CORS_ALLOWED_ORIGINS
+			}
+
+			if (originalAppEnv !== undefined) {
+				process.env.APP_ENV = originalAppEnv
+			} else {
+				delete process.env.APP_ENV
 			}
 		})
 	})

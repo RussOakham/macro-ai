@@ -91,8 +91,20 @@ export const getAllowedOrigins = (): string[] => {
  * Get the primary allowed CORS origin (first in the list)
  */
 export const getPrimaryAllowedOrigin = (): string => {
+	const appEnv = process.env.APP_ENV ?? ''
+	const isPreview = appEnv.startsWith('pr-')
 	const origins = getAllowedOrigins()
-	const primary = origins[0] ?? 'http://localhost:3000'
+	let primary = origins[0]
+	if (!primary) {
+		if (isPreview) {
+			console.error(
+				'[lambda-utils] Preview environment detected (pr-*), no valid CORS origins configured. Withholding localhost fallback.',
+			)
+			primary = '' // explicit: no fallback in preview
+		} else {
+			primary = 'http://localhost:3000'
+		}
+	}
 	console.log(
 		`[lambda-utils] Selected primary CORS origin: "${primary}" (all=[${origins
 			.map((o) => `"${o}"`)
@@ -109,10 +121,16 @@ export const createLambdaResponse = (
 	context?: Context,
 ): APIGatewayProxyResult => {
 	const __origin = getPrimaryAllowedOrigin()
+	const corsHeaders = __origin
+		? {
+				'Access-Control-Allow-Origin': __origin,
+				'Access-Control-Allow-Credentials': __origin === '*' ? 'false' : 'true',
+				Vary: 'Origin',
+			}
+		: {}
 	const defaultHeaders: Record<string, string> = {
 		'Content-Type': 'application/json',
-		'Access-Control-Allow-Origin': __origin,
-		'Access-Control-Allow-Credentials': __origin === '*' ? 'false' : 'true',
+		...corsHeaders,
 		'Access-Control-Allow-Headers':
 			'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
 		'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
@@ -252,14 +270,20 @@ export const handleCorsPreflightRequest = (
 			responseOrigin = getPrimaryAllowedOrigin()
 		}
 
-		const allowCreds = responseOrigin !== '*'
+		const hasOrigin = Boolean(responseOrigin)
+		const allowCreds = hasOrigin && responseOrigin !== '*'
 
 		return createLambdaResponse(
 			200,
 			'',
 			{
-				'Access-Control-Allow-Origin': responseOrigin,
-				'Access-Control-Allow-Credentials': allowCreds ? 'true' : 'false',
+				...(hasOrigin
+					? {
+							'Access-Control-Allow-Origin': responseOrigin,
+							'Access-Control-Allow-Credentials': allowCreds ? 'true' : 'false',
+						}
+					: {}),
+				Vary: 'Origin',
 				'Access-Control-Allow-Headers':
 					'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
 				'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',

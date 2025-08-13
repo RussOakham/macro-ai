@@ -69,7 +69,8 @@ VITE_SHOW_BUILD_INFO: 'true'
 ```yaml
 X-Frame-Options: SAMEORIGIN
 Content-Security-Policy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'..."
-Access-Control-Allow-Origin: '*'
+# CORS managed by backend via CORS_ALLOWED_ORIGINS environment variable
+# Example: "http://localhost:3000,https://pr-123.d1a2b3c4d5e6f.amplifyapp.com"
 ```
 
 ### Staging Template (`amplify.staging.yml`)
@@ -207,12 +208,16 @@ Each environment has tailored security configurations:
 
 ### Security Headers Comparison
 
-| Header                        | Preview      | Staging | Production        |
-| ----------------------------- | ------------ | ------- | ----------------- |
-| `Strict-Transport-Security`   | Not set      | 1 year  | 2 years + preload |
-| `X-Frame-Options`             | `SAMEORIGIN` | `DENY`  | `DENY`            |
-| `Content-Security-Policy`     | Relaxed      | Strict  | Strictest         |
-| `Access-Control-Allow-Origin` | `*`          | Not set | Not set           |
+| Header                        | Preview                                    | Staging | Production        |
+| ----------------------------- | ------------------------------------------ | ------- | ----------------- |
+| `Strict-Transport-Security`   | Not set                                    | 1 year  | 2 years + preload |
+| `X-Frame-Options`             | `SAMEORIGIN`                               | `DENY`  | `DENY`            |
+| `Content-Security-Policy`     | Relaxed                                    | Strict  | Strictest         |
+| `Access-Control-Allow-Origin` | CI-managed: localhost + exact preview URL¹ | Not set | Not set           |
+
+¹ **Preview CORS Configuration**: Backend CORS is managed via the `CORS_ALLOWED_ORIGINS` environment variable set by CI.
+Typical format: `"http://localhost:3000,https://pr-123.d1a2b3c4d5e6f.amplifyapp.com"` where the preview URL matches
+the exact Amplify-generated domain for the PR branch.
 
 ## 📊 Build Optimization
 

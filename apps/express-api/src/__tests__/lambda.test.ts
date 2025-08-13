@@ -244,6 +244,7 @@ describe('Lambda Handler', () => {
 				'Access-Control-Allow-Headers':
 					'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
 				'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
+				Vary: 'Origin',
 				'x-lambda-request-id': 'test-aws-request-id',
 				'x-lambda-function-name': 'test-function',
 			})
