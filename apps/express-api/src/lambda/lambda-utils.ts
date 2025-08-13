@@ -58,7 +58,7 @@ const getAllowedOrigins = (): string[] => {
  */
 const getPrimaryAllowedOrigin = (): string => {
 	const origins = getAllowedOrigins()
-	const primary = origins[0] ?? '*'
+	const primary = origins[0] ?? 'http://localhost:3000'
 	console.log(
 		`[lambda-utils] Selected primary CORS origin: "${primary}" (all=[${origins
 			.map((o) => `"${o}"`)
@@ -74,10 +74,11 @@ export const createLambdaResponse = (
 	headers: Record<string, string> = {},
 	context?: Context,
 ): APIGatewayProxyResult => {
+	const __origin = getPrimaryAllowedOrigin()
 	const defaultHeaders: Record<string, string> = {
 		'Content-Type': 'application/json',
-		'Access-Control-Allow-Origin': getPrimaryAllowedOrigin(),
-		'Access-Control-Allow-Credentials': 'true',
+		'Access-Control-Allow-Origin': __origin,
+		'Access-Control-Allow-Credentials': __origin === '*' ? 'false' : 'true',
 		'Access-Control-Allow-Headers':
 			'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
 		'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
@@ -214,12 +215,14 @@ export const handleCorsPreflightRequest = (
 			? (requestOrigin ?? getPrimaryAllowedOrigin())
 			: getPrimaryAllowedOrigin()
 
+		const allowCreds = responseOrigin !== '*'
+
 		return createLambdaResponse(
 			200,
 			'',
 			{
 				'Access-Control-Allow-Origin': responseOrigin,
-				'Access-Control-Allow-Credentials': 'true',
+				'Access-Control-Allow-Credentials': allowCreds ? 'true' : 'false',
 				'Access-Control-Allow-Headers':
 					'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
 				'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
