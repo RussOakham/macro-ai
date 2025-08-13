@@ -161,7 +161,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v3
         with:
           version: ${{ env.PNPM_VERSION }}
 
@@ -188,6 +188,9 @@ jobs:
 
       - name: Destroy infrastructure
         id: destroy
+        env:
+          CDK_DESTROY_MODE: 'true'
+          ALLOW_INLINE_CODE_FOR_DESTROY: 'true'
         run: |
           cd infrastructure
 

@@ -64,6 +64,8 @@ const envSchema = z.object({
 	API_RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60000), // 1 minute
 	API_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(60),
 	REDIS_URL: z.string().optional(),
+	// CORS
+	CORS_ALLOWED_ORIGINS: z.string().optional(),
 })
 
 type TEnv = z.infer<typeof envSchema>

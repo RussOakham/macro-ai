@@ -49,12 +49,56 @@ const createServer = (): Express => {
 	app.use('/api-docs', cors({ origin: true, credentials: false }))
 	app.use('/swagger.json', cors({ origin: true, credentials: false }))
 
-	// Default CORS for application routes (credentialed dev origins)
+	// Default CORS for application routes (credentialed dev/preview origins)
+	// Parse CORS_ALLOWED_ORIGINS if provided; fall back to localhost defaults
+	const rawEnv = process.env.CORS_ALLOWED_ORIGINS ?? ''
+	const appEnv = process.env.APP_ENV ?? ''
+	const isPreview = appEnv.startsWith('pr-')
+	const parsedCorsOrigins = rawEnv
+		.split(',')
+		.map((o) => o.trim())
+		.filter((o) => o.length > 0)
+		.map((o) => (o.endsWith('/') ? o.replace(/\/+$/, '') : o))
+	const effectiveOrigins =
+		parsedCorsOrigins.length > 0
+			? parsedCorsOrigins
+			: ['http://localhost:3000', 'http://localhost:3040']
+
+	// Log effective CORS configuration at startup
+	// Note: In preview envs with empty origins, Express will still use localhost here,
+	// but Lambda utilities will refuse to fall back for preflight handling and responses.
+	console.log('[server] CORS configuration diagnostics:')
+	console.log(`  APP_ENV: "${appEnv}" (isPreview=${String(isPreview)})`)
+	console.log(`  CORS_ALLOWED_ORIGINS (raw): "${rawEnv}"`)
+	console.log(
+		`  CORS_ALLOWED_ORIGINS (parsed/normalized): [${parsedCorsOrigins
+			.map((o) => `"${o}"`)
+			.join(', ')}]`,
+	)
+	console.log(
+		`  Express CORS origin setting: [${effectiveOrigins
+			.map((o) => `"${o}"`)
+			.join(', ')}]`,
+	)
+
 	app.use(
 		cors({
-			origin: ['http://localhost:3000', 'http://localhost:3040'],
+			origin: (origin, callback) => {
+				// Allow REST tools or same-origin (no Origin header)
+				if (!origin) {
+					callback(null, true)
+					return
+				}
+				// Normalize by stripping trailing slashes
+				const normalized = origin.replace(/\/+$/, '')
+				const allowedSet = new Set(
+					effectiveOrigins.map((o) => o.replace(/\/+$/, '')),
+				)
+				const isAllowed = allowedSet.has(normalized)
+				callback(null, isAllowed)
+			},
 			credentials: true,
-			exposedHeaders: ['cache-control'], // 'set-cookie' cannot be exposed via CORS
+			exposedHeaders: ['cache-control'],
 			methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 			allowedHeaders: [
 				'Origin',
@@ -65,7 +109,7 @@ const createServer = (): Express => {
 				'X-API-KEY',
 				'Cache-Control',
 			],
-			maxAge: 86400, // 24 hours
+			maxAge: 86400,
 		}),
 	)
 	// Conditional compression - disable for streaming endpoints

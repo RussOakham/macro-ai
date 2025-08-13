@@ -1,7 +1,52 @@
 #!/bin/bash
 
 # Update API Gateway CORS Settings for Amplify Frontend
-# This script updates the API Gateway CORS configuration to allow the deployed Amplify frontend
+# Preferred: CI-driven update via CORS_ALLOWED_ORIGINS in deploy-preview.yml (see update-backend-cors job).
+# This script is a fallback/manual helper for local ops.
+
+# Environment guard: Prevent execution in preview/PR environments
+check_environment_guard() {
+    # Check for override flag
+    if [[ "${CORS_UPDATE_OVERRIDE:-}" == "true" ]]; then
+        echo "⚠️ Environment guard bypassed via CORS_UPDATE_OVERRIDE=true"
+        return 0
+    fi
+
+    # Detect preview/PR environment patterns
+    local env_indicators=(
+        "${GITHUB_REF:-}"
+        "${GITHUB_HEAD_REF:-}"
+        "${BRANCH:-}"
+        "${DEPLOYMENT_ENV:-}"
+        "${CDK_DEPLOY_ENV:-}"
+        "${APP_ENV:-}"
+        "${NODE_ENV:-}"
+    )
+
+    for indicator in "${env_indicators[@]}"; do
+        if [[ -n "$indicator" ]]; then
+            # Check for preview/PR patterns
+            if [[ "$indicator" =~ ^(refs/heads/)?pr-[0-9]+$ ]] || \
+               [[ "$indicator" =~ preview ]] || \
+               [[ "$indicator" =~ ^pr-[0-9]+$ ]]; then
+                echo "🚫 ERROR: This script cannot run in preview/PR environments"
+                echo "   Detected environment: $indicator"
+                echo "   This script is intended for local development or production deployments only."
+                echo ""
+                echo "   If you need to override this check, set: CORS_UPDATE_OVERRIDE=true"
+                echo "   Example: CORS_UPDATE_OVERRIDE=true ./scripts/update-api-cors.sh"
+                echo ""
+                echo "   For preview environments, CORS is automatically configured via:"
+                echo "   - deploy-preview.yml workflow"
+                echo "   - CORS_ALLOWED_ORIGINS environment variable"
+                exit 1
+            fi
+        fi
+    done
+}
+
+# Run environment guard check
+check_environment_guard
 
 set -Eeuo pipefail
 IFS=$'\n\t'

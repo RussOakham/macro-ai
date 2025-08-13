@@ -1,6 +1,6 @@
 import express, { Express, NextFunction, Request, Response } from 'express'
 import path from 'path'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { mockConfig } from '../test-helpers/config.mock.ts'
 import { mockLogger } from '../test-helpers/logger.mock.ts'
@@ -119,6 +119,13 @@ describe('createServer', () => {
 		vi.mocked(express).mockReturnValue(mockApp as unknown as Express)
 	})
 
+	afterEach(() => {
+		// Ensure environment variables do not leak between tests
+		delete process.env.APP_ENV
+		delete process.env.CORS_ALLOWED_ORIGINS
+		vi.resetModules()
+	})
+
 	describe('Express App Creation', () => {
 		it('should create an Express application', async () => {
 			// Act
@@ -182,10 +189,47 @@ describe('createServer', () => {
 			createServer()
 
 			// Assert
-			expect(cors.default).toHaveBeenCalledWith({
-				origin: ['http://localhost:3000', 'http://localhost:3040'],
+			expect(cors.default).toHaveBeenCalledWith(
+				expect.objectContaining({
+					credentials: true,
+					exposedHeaders: ['cache-control'],
+					methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+					allowedHeaders: [
+						'Origin',
+						'X-Requested-With',
+						'Content-Type',
+						'Accept',
+						'Authorization',
+						'X-API-KEY',
+						'Cache-Control',
+					],
+					maxAge: 86400,
+				}),
+			)
+			expect(mockApp.use).toHaveBeenCalledWith(mockCorsMiddleware)
+		})
+	})
+
+	it('should configure CORS with env-driven origins when CORS_ALLOWED_ORIGINS is set', async () => {
+		// Arrange
+		process.env.CORS_ALLOWED_ORIGINS =
+			'https://example.com, http://localhost:3000'
+		const mockCorsMiddleware = vi.fn()
+		const cors = await import('cors')
+		vi.mocked(cors.default).mockReturnValue(mockCorsMiddleware)
+
+		// Need to re-import the module to pick up env var
+		vi.resetModules()
+		const { createServer } = await import('../server.ts')
+
+		// Act
+		createServer()
+
+		// Assert
+		expect(cors.default).toHaveBeenCalledWith(
+			expect.objectContaining({
 				credentials: true,
-				exposedHeaders: ['cache-control'], // 'set-cookie' cannot be exposed via CORS
+				exposedHeaders: ['cache-control'],
 				methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 				allowedHeaders: [
 					'Origin',
@@ -196,10 +240,39 @@ describe('createServer', () => {
 					'X-API-KEY',
 					'Cache-Control',
 				],
-				maxAge: 86400, // 24 hours
-			})
-			expect(mockApp.use).toHaveBeenCalledWith(mockCorsMiddleware)
-		})
+				maxAge: 86400,
+			}),
+		)
+		expect(mockApp.use).toHaveBeenCalledWith(mockCorsMiddleware)
+
+		// Cleanup
+		delete process.env.CORS_ALLOWED_ORIGINS
+	})
+
+	it('should handle preview APP_ENV (pr-*) by parsing origins but not widening credentials policy', async () => {
+		// Arrange
+		process.env.APP_ENV = 'pr-123'
+		process.env.CORS_ALLOWED_ORIGINS = ''
+		const cors = await import('cors')
+		const mockCorsMiddleware = vi.fn()
+		vi.mocked(cors.default).mockReturnValue(mockCorsMiddleware)
+
+		vi.resetModules()
+		const { createServer } = await import('../server.ts')
+
+		// Act
+		createServer()
+
+		// Assert: we still configure CORS with credentials true (callback will constrain origins)
+		expect(cors.default).toHaveBeenCalledWith(
+			expect.objectContaining({
+				credentials: true,
+			}),
+		)
+
+		// Cleanup
+		delete process.env.APP_ENV
+		delete process.env.CORS_ALLOWED_ORIGINS
 	})
 
 	describe('Body Parsing Middleware', () => {

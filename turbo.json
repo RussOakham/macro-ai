@@ -47,6 +47,7 @@
 				"AWS_LAMBDA_INITIALIZATION_TYPE",
 				"ENVIRONMENT",
 				"CORS_ALLOWED_ORIGIN",
+				"CORS_ALLOWED_ORIGINS",
 				"TEST_API_ENDPOINT",
 				"TEST_API_KEY",
 				"OPENAI_API_KEY",
@@ -79,7 +80,8 @@
 				"CIRCLECI",
 				"JENKINS_URL",
 				"BUILDKITE",
-				"PREVIEW"
+				"PREVIEW",
+				"CORS_ALLOWED_ORIGINS"
 			]
 		},
 		"lint:md": {

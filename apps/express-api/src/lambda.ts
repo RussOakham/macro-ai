@@ -12,6 +12,10 @@ import type {
 import type { Express, Response } from 'express'
 import serverless from 'serverless-http'
 
+import {
+	createErrorResponse,
+	handleCorsPreflightRequest,
+} from './lambda/lambda-utils.ts'
 import { enhancedConfigService } from './services/enhanced-config.service.ts'
 import { createServer } from './utils/server.ts'
 
@@ -205,6 +209,12 @@ export const handler = async (
 			})
 		}
 
+		// Handle OPTIONS preflight quickly without invoking Express
+		const preflight = handleCorsPreflightRequest(event, context)
+		if (preflight) {
+			return preflight
+		}
+
 		// Process the request through serverless-http
 		const response = (await serverlessHandler(
 			event,
@@ -228,22 +238,14 @@ export const handler = async (
 			requestId: context.awsRequestId,
 		})
 
-		// Return a proper API Gateway error response
-		return {
-			statusCode: 500,
-			headers: {
-				'Content-Type': 'application/json',
-				'Access-Control-Allow-Origin': '*',
-				'Access-Control-Allow-Headers':
-					'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-				'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-			},
-			body: JSON.stringify({
-				error: 'Internal Server Error',
-				message: 'An unexpected error occurred',
-				requestId: context.awsRequestId,
-			}),
-		}
+		// Return a proper API Gateway error response using the utility function
+		return createErrorResponse(
+			500,
+			'An unexpected error occurred',
+			error,
+			context,
+			process.env.NODE_ENV,
+		)
 	}
 }
 

@@ -134,17 +134,25 @@ The API Gateway is configured with CORS for:
 - `http://localhost:3000` (development)
 - `https://localhost:3000` (development SSL)
 
-### Adding Amplify Domain
+### CI-managed CORS for Amplify previews
 
-Update `infrastructure/src/constructs/api-gateway-construct.ts`:
+We do not manually edit allowOrigins for previews.
+The CI workflow updates backend CORS automatically using the CORS_ALLOWED_ORIGINS environment
+variable after the Amplify preview URL is known.
 
-```typescript
-allowOrigins: [
-  'http://localhost:3000',
-  'https://localhost:3000',
-  'https://main.d1234567890.amplifyapp.com', // Your Amplify URL
-],
-```
+Reference: .github/workflows/deploy-preview.yml (update-backend-cors job)
+
+### Preview deployments (CI-managed CORS)
+
+During preview deployments, CI updates backend CORS automatically using the CORS_ALLOWED_ORIGINS environment variable.
+The update-backend-cors job in .github/workflows/deploy-preview.yml sets these origins:
+
+- <http://localhost:3000>
+- <https://localhost:3000>
+- The exact Amplify preview URL (for example, <https://feature-branch.exampleid.amplifyapp.com>)
+
+We prefer this CI-driven approach for traceability and least privilege.
+If CI is unavailable, a fallback script exists at apps/client-ui/scripts/update-api-cors.sh.
 
 ## 🧪 Testing Integration
 

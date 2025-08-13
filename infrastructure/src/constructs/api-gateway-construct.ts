@@ -1,3 +1,4 @@
+// Testing workflow trigger after fixing empty run command issue
 import * as cdk from 'aws-cdk-lib'
 import { Token } from 'aws-cdk-lib'
 import * as apigateway from 'aws-cdk-lib/aws-apigateway'
@@ -91,42 +92,69 @@ export class ApiGatewayConstruct extends Construct {
 	 * Get allowed CORS origins based on environment
 	 */
 	private getAllowedOrigins(environmentName: string): string[] {
-		// Get allowed origins from environment variable or use defaults
-		const customOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',').map(
-			(origin) => origin.trim(),
-		)
+		// Helper: parse comma-separated env var safely
+		const corsEnvVar = process.env.CORS_ALLOWED_ORIGINS ?? ''
+		const parsedEnvOrigins = corsEnvVar
+			.split(',')
+			.map((o) => o.trim())
+			.filter((o) => o.length > 0)
+			// Normalize: strip any trailing slashes
+			.map((o) => (o.endsWith('/') ? o.replace(/\/+$/, '') : o))
 
-		// Production environment - restrict to specific domains
+		// Debug logging for CORS configuration
+		const originsDisplay = parsedEnvOrigins.map((o) => `"${o}"`).join(', ')
+		console.log(`🔧 [ApiGatewayConstruct] CORS Configuration Debug:`)
+		console.log(`   Environment: ${environmentName}`)
+		console.log(`   CORS_ALLOWED_ORIGINS env var: "${corsEnvVar}"`)
+		console.log(`   Parsed origins: [${originsDisplay}]`)
+		console.log(`   Parsed origins count: ${String(parsedEnvOrigins.length)}`)
+
+		// If explicit origins are provided via env for non-prod, prefer them
+		// This allows CI to inject the exact Amplify preview origin per PR.
+		const isPreview = environmentName.startsWith('pr-')
+		console.log(`   Is preview environment: ${String(isPreview)}`)
+
+		let selectedOrigins: string[]
+
+		// Define default localhost origins to avoid duplication
+		const defaultLocalOrigins = [
+			'http://localhost:3000',
+			'https://localhost:3000',
+			'http://127.0.0.1:3000',
+			'https://127.0.0.1:3000',
+		]
+
+		// Production environment - restrict to specific domains unless explicitly overridden
 		if (environmentName === 'production') {
-			return (
-				customOrigins ?? [
-					'https://app.macro-ai.com',
-					'https://www.macro-ai.com',
-				]
-			)
+			selectedOrigins =
+				parsedEnvOrigins.length > 0
+					? parsedEnvOrigins
+					: ['https://app.macro-ai.com', 'https://www.macro-ai.com']
+		}
+		// Staging environment - allow staging domains unless explicitly overridden
+		else if (environmentName === 'staging') {
+			selectedOrigins =
+				parsedEnvOrigins.length > 0
+					? parsedEnvOrigins
+					: [
+							'https://staging.macro-ai.com',
+							'https://dev.macro-ai.com',
+							...defaultLocalOrigins,
+						]
+		}
+		// Preview (pr-*) and development/hobby environments - both use same logic
+		else {
+			selectedOrigins =
+				parsedEnvOrigins.length > 0 ? parsedEnvOrigins : defaultLocalOrigins
 		}
 
-		// Staging environment - allow staging domains
-		if (environmentName === 'staging') {
-			return (
-				customOrigins ?? [
-					'https://staging.macro-ai.com',
-					'https://dev.macro-ai.com',
-					'http://localhost:3000',
-					'https://localhost:3000',
-				]
-			)
-		}
+		const selectedDisplay = selectedOrigins.map((o) => `"${o}"`).join(', ')
+		const sourceType =
+			parsedEnvOrigins.length > 0 ? 'environment variable' : 'fallback defaults'
+		console.log(`   Selected origins: [${selectedDisplay}]`)
+		console.log(`   Using ${sourceType}`)
 
-		// Development/hobby environment - allow local development
-		return (
-			customOrigins ?? [
-				'http://localhost:3000',
-				'https://localhost:3000',
-				'http://127.0.0.1:3000',
-				'https://127.0.0.1:3000',
-			]
-		)
+		return selectedOrigins
 	}
 
 	constructor(scope: Construct, id: string, props: ApiGatewayConstructProps) {
@@ -280,7 +308,7 @@ export class ApiGatewayConstruct extends Construct {
 		// Validate throttling configuration
 		if (throttling.rateLimit <= 0 || throttling.burstLimit <= 0) {
 			throw new Error(
-				`Invalid throttling configuration: rateLimit=${String(throttling.rateLimit)}, burstLimit=${String(throttling.burstLimit)}. ` +
+				`Invalid throttling configuration: rateLimit=${throttling.rateLimit.toString()}, burstLimit=${throttling.burstLimit.toString()}. ` +
 					'Both values must be positive numbers.',
 			)
 		}

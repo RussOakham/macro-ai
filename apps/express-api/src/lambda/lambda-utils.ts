@@ -13,25 +13,104 @@ import type {
  * Create a standardized Lambda response
  */
 /**
- * Get allowed CORS origin based on environment
+ * Get allowed CORS origins based on environment
  */
-const getAllowedOrigin = (): string => {
-	const environment =
-		process.env.NODE_ENV ?? process.env.ENVIRONMENT ?? 'development'
-	const trustedOrigin = process.env.CORS_ALLOWED_ORIGIN
+export const getAllowedOrigins = (): string[] => {
+	const rawEnv = process.env.CORS_ALLOWED_ORIGINS ?? ''
+	const appEnv = process.env.APP_ENV ?? ''
+	const isPreview = appEnv.startsWith('pr-')
 
-	// In production, use specific trusted origin if configured, otherwise restrict to known domains
-	if (environment === 'production') {
-		return trustedOrigin ?? 'https://your-production-domain.com'
+	// Parse, validate, and normalize origins
+	const candidates = rawEnv
+		.split(',')
+		.map((o) => o.trim())
+		.filter((o) => o.length > 0)
+
+	const normalized: string[] = []
+	const invalid: string[] = []
+
+	for (const o of candidates) {
+		if (o === '*') {
+			// Allow explicit wildcard
+			normalized.push('*')
+			continue
+		}
+		try {
+			const u = new URL(o)
+			if (u.protocol === 'http:' || u.protocol === 'https:') {
+				// URL.origin gives scheme://host[:port]
+				normalized.push(u.origin)
+			} else {
+				invalid.push(o)
+			}
+		} catch {
+			// Fallback: accept http(s) with trailing slash stripped if it looks close
+			if (/^https?:\/\//i.test(o)) {
+				normalized.push(o.replace(/\/+$/, ''))
+			} else {
+				invalid.push(o)
+			}
+		}
 	}
 
-	// In staging, use staging-specific origin if configured
-	if (environment === 'staging') {
-		return trustedOrigin ?? 'https://your-staging-domain.com'
+	// De-duplicate while preserving order
+	const uniq = Array.from(new Set(normalized))
+
+	// Log detailed diagnostics for observability
+	console.log('[lambda-utils] CORS configuration diagnostics:')
+	console.log(`  APP_ENV: "${appEnv}" (isPreview=${String(isPreview)})`)
+	console.log(`  CORS_ALLOWED_ORIGINS (raw): "${rawEnv}"`)
+	console.log(
+		`  CORS_ALLOWED_ORIGINS (parsed/normalized): [${uniq
+			.map((o) => `"${o}"`)
+			.join(', ')}]`,
+	)
+	if (invalid.length > 0) {
+		console.warn(
+			`[lambda-utils] Skipped invalid CORS origins: [${invalid
+				.map((o) => `"${o}"`)
+				.join(', ')}]`,
+		)
 	}
 
-	// In development/testing, allow all origins for easier development
-	return '*'
+	// Safeguard: In preview environments, do NOT silently fall back to localhost
+	if (isPreview && uniq.length === 0) {
+		console.error(
+			'[lambda-utils] Preview environment detected (pr-*), but CORS_ALLOWED_ORIGINS is empty/invalid. Refusing to fall back to localhost origins. Ensure CI passes the exact Amplify preview origin.',
+		)
+		return []
+	}
+
+	const effectiveOrigins =
+		uniq.length > 0 ? uniq : ['http://localhost:3000', 'http://localhost:3040']
+
+	return effectiveOrigins
+}
+
+/**
+ * Get the primary allowed CORS origin (first in the list)
+ */
+export const getPrimaryAllowedOrigin = (): string => {
+	const appEnv = process.env.APP_ENV ?? ''
+	const isPreview = appEnv.startsWith('pr-')
+	const origins = getAllowedOrigins()
+	let primary = origins[0]
+	if (!primary) {
+		if (isPreview) {
+			console.error(
+				'[lambda-utils] Preview environment detected (pr-*), no valid CORS origins configured. Withholding localhost fallback.',
+			)
+			primary = '' // explicit: no fallback in preview
+		} else {
+			primary = 'http://localhost:3000'
+		}
+	}
+	console.log(
+		`[lambda-utils] Selected primary CORS origin: "${primary}" (all=[${origins
+			.map((o) => `"${o}"`)
+			.join(', ')}])`,
+	)
+	return primary
 }
 
 export const createLambdaResponse = (
@@ -41,13 +120,22 @@ export const createLambdaResponse = (
 	headers: Record<string, string> = {},
 	context?: Context,
 ): APIGatewayProxyResult => {
-	const defaultHeaders: Record<string, string> = {
+	const __origin = getPrimaryAllowedOrigin()
+
+	// eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style
+	const defaultHeaders: { [key: string]: string } = {
 		'Content-Type': 'application/json',
-		'Access-Control-Allow-Origin': getAllowedOrigin(),
-		'Access-Control-Allow-Credentials': 'true',
 		'Access-Control-Allow-Headers':
 			'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
 		'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
+	}
+
+	// Add CORS headers if origin is available
+	if (__origin) {
+		defaultHeaders['Access-Control-Allow-Origin'] = __origin
+		defaultHeaders['Access-Control-Allow-Credentials'] =
+			__origin === '*' ? 'false' : 'true'
+		defaultHeaders.Vary = 'Origin'
 	}
 
 	// Add Lambda context headers if available
@@ -169,11 +257,35 @@ export const handleCorsPreflightRequest = (
 	context: Context,
 ): APIGatewayProxyResult | null => {
 	if (event.httpMethod === 'OPTIONS') {
+		// Get the request origin
+		const requestOrigin = event.headers.origin ?? event.headers.Origin
+		const allowedOrigins = getAllowedOrigins()
+
+		// Determine response origin and whether credentials are allowed
+		let responseOrigin: string
+		if (allowedOrigins.includes('*')) {
+			// When wildcard is configured, respond with '*' and disable credentials
+			responseOrigin = '*'
+		} else if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+			responseOrigin = requestOrigin
+		} else {
+			responseOrigin = getPrimaryAllowedOrigin()
+		}
+
+		const hasOrigin = Boolean(responseOrigin)
+		const allowCreds = hasOrigin && responseOrigin !== '*'
+
 		return createLambdaResponse(
 			200,
 			'',
 			{
-				'Access-Control-Allow-Origin': '*',
+				...(hasOrigin
+					? {
+							'Access-Control-Allow-Origin': responseOrigin,
+							'Access-Control-Allow-Credentials': allowCreds ? 'true' : 'false',
+						}
+					: {}),
+				Vary: 'Origin',
 				'Access-Control-Allow-Headers':
 					'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
 				'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',

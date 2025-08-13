@@ -239,22 +239,26 @@ describe('Lambda Handler', () => {
 			expect(result.statusCode).toBe(500)
 			expect(result.headers).toEqual({
 				'Content-Type': 'application/json',
-				'Access-Control-Allow-Origin': '*',
+				'Access-Control-Allow-Origin': 'http://localhost:3000', // Now uses proper CORS logic
+				'Access-Control-Allow-Credentials': 'true',
 				'Access-Control-Allow-Headers':
 					'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-				'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+				'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
+				Vary: 'Origin',
+				'x-lambda-request-id': 'test-aws-request-id',
+				'x-lambda-function-name': 'test-function',
 			})
 
-			const body = JSON.parse(result.body) as {
-				error: string
-				message: string
-				requestId: string
-			}
-			expect(body).toEqual({
-				error: 'Internal Server Error',
-				message: 'An unexpected error occurred',
-				requestId: mockContext.awsRequestId,
-			})
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+			const body = JSON.parse(result.body)
+			expect(body).toEqual(
+				expect.objectContaining({
+					error: 'An unexpected error occurred',
+					message: 'An unexpected error occurred',
+					requestId: mockContext.awsRequestId,
+					timestamp: expect.any(String) as string,
+				}),
+			)
 
 			expect(mockPowertoolsLogger.error).toHaveBeenCalledWith(
 				'Lambda invocation failed',

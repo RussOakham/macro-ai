@@ -34,12 +34,24 @@ jobs:
   validate-access:
     name: Validate PR Access
     runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+      issues: write
+
     outputs:
       is-owner: ${{ steps.codeowner-check.outputs.is-owner }}
       target-user: ${{ steps.codeowner-check.outputs.target-user }}
       is-same-repo: ${{ steps.repo-check.outputs.is-same-repo }}
       should-deploy: ${{ steps.decision.outputs.should-deploy }}
       env-name: ${{ steps.env-name.outputs.env-name }}
+      # Pre-calculated URLs for parallel deployment
+      amplify-app-id: ${{ steps.url-precalc.outputs.amplify-app-id }}
+      frontend-url: ${{ steps.url-precalc.outputs.frontend-url }}
+      backend-url: ${{ steps.url-precalc.outputs.backend-url }}
+      backend-stack-name: ${{ steps.url-precalc.outputs.backend-stack-name }}
 
     steps:
       - name: Checkout repository
@@ -89,6 +101,112 @@ jobs:
             echo "  - User: ${{ steps.codeowner-check.outputs.target-user }}"
           fi
 
+      - name: Configure AWS credentials for URL pre-calculation
+        if: steps.decision.outputs.should-deploy == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-PreviewDeploy-URLPrecalc-${{ github.run_id }}
+
+      - name: Pre-calculate deployment URLs
+        id: url-precalc
+        if: steps.decision.outputs.should-deploy == 'true'
+        run: |
+          ENV_NAME="${{ steps.env-name.outputs.env-name }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          BRANCH_NAME="${{ github.head_ref }}"
+
+          echo "🔍 Pre-calculating deployment URLs..."
+          echo "Environment: $ENV_NAME"
+          echo "PR Number: $PR_NUMBER"
+          echo "Branch: $BRANCH_NAME"
+          echo ""
+
+          # 1. Pre-calculate Amplify App ID
+          AMPLIFY_APP_NAME="macro-ai-frontend-${ENV_NAME}"
+          echo "🔍 Checking for existing Amplify app: $AMPLIFY_APP_NAME"
+
+          APP_ID=$(aws amplify list-apps --region ${{ env.AWS_REGION }} \
+            --query "apps[?name=='${AMPLIFY_APP_NAME}'].appId" \
+            --output text 2>/dev/null || echo "")
+
+          if [[ -z "$APP_ID" || "$APP_ID" == "None" ]]; then
+            echo "📱 Amplify app does not exist yet - will be created during deployment"
+            echo "🎯 Predicted App Name: $AMPLIFY_APP_NAME"
+            APP_ID="<will-be-created>"
+          else
+            echo "✅ Found existing Amplify app with ID: $APP_ID"
+          fi
+
+          # 2. Pre-calculate Frontend URL
+          # Sanitize branch for Amplify subdomain: replace '/' with '-'
+          SANITIZED_BRANCH="${BRANCH_NAME//\//-}"
+
+          if [[ "$APP_ID" == "<will-be-created>" ]]; then
+            # Generate a predictable URL pattern for new apps
+            # Amplify app IDs are typically 13-character alphanumeric strings
+            # We'll create a deterministic placeholder that can be used for CORS
+            # The actual URL will be updated after deployment, but this provides a non-localhost fallback
+            PREDICTED_APP_ID="d$(echo "${ENV_NAME}-${PR_NUMBER}" | sha256sum | cut -c1-12)"
+            FRONTEND_URL="https://${SANITIZED_BRANCH}.${PREDICTED_APP_ID}.amplifyapp.com"
+            echo "🌐 Predicted Frontend URL (app will be created): $FRONTEND_URL"
+            echo "📝 Note: Actual URL will be determined during Amplify deployment"
+            echo "⚠️ This predicted URL is for CORS configuration only - the real URL will be different"
+          else
+            FRONTEND_URL="https://${SANITIZED_BRANCH}.${APP_ID}.amplifyapp.com"
+            echo "🌐 Pre-calculated Frontend URL: $FRONTEND_URL"
+          fi
+
+          # 3. Pre-calculate Backend Stack Name and URL
+          BACKEND_STACK_NAME="MacroAiPr${PR_NUMBER}Stack"
+          echo "📦 Backend Stack Name: $BACKEND_STACK_NAME"
+
+          # Check if backend stack exists to pre-calculate URL
+          BACKEND_URL=""
+          echo "🔍 Checking if backend stack exists..."
+
+          STACK_EXISTS=$(aws cloudformation describe-stacks \
+            --stack-name "$BACKEND_STACK_NAME" \
+            --query "Stacks[0].StackStatus" \
+            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+
+          if [[ "$STACK_EXISTS" != "DOES_NOT_EXIST" ]]; then
+            echo "✅ Backend stack exists, extracting API endpoint..."
+            BACKEND_URL=$(aws cloudformation describe-stacks \
+              --stack-name "$BACKEND_STACK_NAME" \
+              --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
+              --output text 2>/dev/null || echo "")
+
+            if [[ -n "$BACKEND_URL" ]]; then
+              # Normalize to ensure single /api suffix
+              BACKEND_URL="${BACKEND_URL%/}"
+              if [[ "$BACKEND_URL" != */api ]]; then
+                BACKEND_URL="${BACKEND_URL}/api"
+              fi
+              echo "🌐 Pre-calculated Backend URL: $BACKEND_URL"
+            else
+              echo "⚠️ Backend stack exists but no ApiEndpoint output found"
+              BACKEND_URL="<will-be-generated-during-deployment>"
+            fi
+          else
+            echo "📦 Backend stack does not exist yet - will be created during deployment"
+            BACKEND_URL="<will-be-generated-during-deployment>"
+          fi
+
+          # Output all pre-calculated values
+          echo "amplify-app-id=$APP_ID" >> $GITHUB_OUTPUT
+          echo "frontend-url=$FRONTEND_URL" >> $GITHUB_OUTPUT
+          echo "backend-url=$BACKEND_URL" >> $GITHUB_OUTPUT
+          echo "backend-stack-name=$BACKEND_STACK_NAME" >> $GITHUB_OUTPUT
+
+          echo ""
+          echo "📋 URL Pre-calculation Summary:"
+          echo "  Amplify App ID: $APP_ID"
+          echo "  Frontend URL: $FRONTEND_URL"
+          echo "  Backend URL: $BACKEND_URL"
+          echo "  Backend Stack: $BACKEND_STACK_NAME"
+
   # Build Lambda package for deployment
   build-lambda:
     name: Build Lambda Package
@@ -115,17 +233,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
           cache-dependency-path: 'pnpm-lock.yaml'
-
-      - name: Cache TypeScript build info
-        uses: actions/cache@v4
-        with:
-          path: |
-            **/tsconfig.tsbuildinfo
-            **/dist
-            **/.turbo
-          key: ${{ runner.os }}-typescript-${{ hashFiles('**/tsconfig*.json', '**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-typescript-
 
       - name: Build Lambda package
         run: |
@@ -184,6 +291,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-PreviewDeploy-Backend-${{ github.run_id }}
 
       - name: Download Lambda package
         uses: actions/download-artifact@v4
@@ -200,7 +308,7 @@ jobs:
           echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
           echo "Stack name: ${STACK_NAME}"
 
-      - name: Deploy infrastructure
+      - name: Deploy infrastructure with CORS configuration
         run: |
           cd infrastructure
           pnpm install --frozen-lockfile
@@ -209,6 +317,25 @@ jobs:
           echo "🚀 Deploying ephemeral environment: ${{ needs.validate-access.outputs.env-name }}"
           echo "📦 Stack: ${{ steps.stack-info.outputs.stack-name }}"
           echo "👤 Requested by: ${{ needs.validate-access.outputs.target-user }}"
+
+          # Configure CORS origins using pre-calculated frontend URL
+          FRONTEND_URL="${{ needs.validate-access.outputs.frontend-url }}"
+          if [[ "$FRONTEND_URL" != "<will-be-generated-during-deployment>" ]]; then
+            # Use pre-calculated or predicted frontend URL for CORS
+            CORS_ORIGINS="${FRONTEND_URL%/}"
+            echo "🔧 CORS Configuration:"
+            echo "  Frontend URL: $FRONTEND_URL"
+            echo "  Setting CORS_ALLOWED_ORIGINS to: $CORS_ORIGINS"
+          else
+            # This should rarely happen now that we generate predicted URLs
+            # Fallback to localhost for development
+            CORS_ORIGINS="http://localhost:5173,http://localhost:3000"
+            echo "🔧 CORS Configuration (fallback):"
+            echo "  Frontend URL not yet available, using localhost origins"
+            echo "  Setting CORS_ALLOWED_ORIGINS to: $CORS_ORIGINS"
+          fi
+
+          echo "📣 Observability: exporting CORS_ALLOWED_ORIGINS to CDK as -> '$CORS_ORIGINS'"
 
           # Make deploy script executable and run it
           chmod +x scripts/deploy.sh
@@ -219,6 +346,8 @@ jobs:
           AWS_REGION: ${{ env.AWS_REGION }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
           NODE_ENV: 'production'
+          # Important: pass the normalized CORS origins with trailing slash stripped
+          CORS_ALLOWED_ORIGINS: ${{ needs.validate-access.outputs.frontend-url != '<will-be-generated-during-deployment>' && needs.validate-access.outputs.frontend-url || 'http://localhost:5173,http://localhost:3000' }}
 
       - name: Get deployment outputs
         id: outputs
@@ -275,26 +404,84 @@ jobs:
             echo "⚠️ Cannot perform health check - no API endpoint"
           fi
 
-      - name: Save backend info artifact
+      - name: Create deployment URLs artifact
         if: always()
         run: |
-          mkdir -p backend-info
-          jq -n \
-            --arg env "${{ needs.validate-access.outputs.env-name }}" \
-            --arg stack "${{ steps.stack-info.outputs.stack-name }}" \
-            --arg api "${{ steps.outputs.outputs.api-endpoint }}" \
-            --arg health "${{ steps.health-check.outputs.health-status }}" \
-            '{environment:$env, stack_name:$stack, api_endpoint:$api, health_status:$health}' \
-            > backend-info/backend-info.json
+          echo "📦 Creating deployment URLs artifact..."
+          mkdir -p deployment-urls
 
-      - name: Upload backend info artifact
+          # Create deployment URLs file with actual deployed values
+          jq -n \
+            --arg backend_url "${{ steps.outputs.outputs.api-endpoint }}" \
+            --arg frontend_url "${{ needs.validate-access.outputs.frontend-url }}" \
+            --arg backend_stack_name "${{ steps.stack-info.outputs.stack-name }}" \
+            --arg environment "${{ needs.validate-access.outputs.env-name }}" \
+            --arg deployment_type "backend_deployed" \
+            --arg health_status "${{ steps.health-check.outputs.health-status }}" \
+            --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{
+              backend_url: $backend_url,
+              frontend_url: $frontend_url,
+              backend_stack_name: $backend_stack_name,
+              environment: $environment,
+              deployment_type: $deployment_type,
+              health_status: $health_status,
+              timestamp: $timestamp
+            }' > deployment-urls/urls.json
+
+          echo "✅ Deployment URLs artifact created:"
+          cat deployment-urls/urls.json
+
+      - name: Upload deployment URLs artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: backend-info-${{ needs.validate-access.outputs.env-name }}
-          path: backend-info/backend-info.json
-          retention-days: 7
+          name: deployment-urls-${{ needs.validate-access.outputs.env-name }}
+          path: deployment-urls/
+          retention-days: 1
           if-no-files-found: ignore
+
+  # Create deployment URLs artifact when backend deployment is skipped
+  create-fallback-urls:
+    name: Create Fallback URLs Artifact
+    runs-on: ubuntu-latest
+    needs: [validate-access, check-backend-changes]
+    if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-backend-changes.outputs.has-backend-changes == 'false'
+
+    steps:
+      - name: Create deployment URLs artifact with pre-calculated values
+        run: |
+          echo "📦 Creating deployment URLs artifact (backend deployment skipped)..."
+          mkdir -p deployment-urls
+
+          # Create deployment URLs file with pre-calculated values
+          jq -n \
+            --arg backend_url "${{ needs.validate-access.outputs.backend-url }}" \
+            --arg frontend_url "${{ needs.validate-access.outputs.frontend-url }}" \
+            --arg backend_stack_name "${{ needs.validate-access.outputs.backend-stack-name }}" \
+            --arg environment "${{ needs.validate-access.outputs.env-name }}" \
+            --arg deployment_type "backend_skipped" \
+            --arg health_status "not_applicable" \
+            --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{
+              backend_url: $backend_url,
+              frontend_url: $frontend_url,
+              backend_stack_name: $backend_stack_name,
+              environment: $environment,
+              deployment_type: $deployment_type,
+              health_status: $health_status,
+              timestamp: $timestamp
+            }' > deployment-urls/urls.json
+
+          echo "✅ Deployment URLs artifact created (using pre-calculated values):"
+          cat deployment-urls/urls.json
+
+      - name: Upload deployment URLs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-urls-${{ needs.validate-access.outputs.env-name }}
+          path: deployment-urls/
+          retention-days: 1
 
   # Handle blocked deployments (forked PRs or non-code-owners)
   explain-blocked:
@@ -408,115 +595,31 @@ jobs:
             echo "has-frontend-changes=false" >> $GITHUB_OUTPUT
           fi
 
-  # Discover backend environment for frontend
-  discover-backend-for-frontend:
-    name: Discover Backend for Frontend
-    runs-on: ubuntu-latest
-    needs:
-      [
-        validate-access,
-        check-backend-changes,
-        check-frontend-changes,
-        deploy-backend-preview,
-      ]
-    # Run if frontend has changes, regardless of whether backend was deployed or not
-    if: |
-      always() &&
-      needs.validate-access.outputs.should-deploy == 'true' &&
-      needs.check-frontend-changes.outputs.has-frontend-changes == 'true' &&
-      (needs.deploy-backend-preview.result == 'success' || needs.deploy-backend-preview.result == 'skipped')
-
-    permissions:
-      id-token: write
-      contents: read
-
-    outputs:
-      api-endpoint: ${{ steps.finalize.outputs.api-endpoint }}
-      stack-name: ${{ steps.finalize.outputs.stack-name }}
-      backend-found: ${{ steps.finalize.outputs.backend-found }}
-      resolution-method: ${{ steps.finalize.outputs.resolution-method }}
-      fallback-used: ${{ steps.finalize.outputs.fallback-used }}
-      connectivity-status: ${{ steps.finalize.outputs.connectivity-status }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Download backend info artifact
-        id: download-artifact
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-info-${{ needs.validate-access.outputs.env-name }}
-          path: backend-info
-
-      - name: Parse backend artifact
-        id: artifact-parse
-        run: |
-          FILE="backend-info/backend-info.json"
-          if [[ -f "$FILE" ]]; then
-            API_ENDPOINT=$(jq -r '.api_endpoint // empty' "$FILE")
-            STACK_NAME=$(jq -r '.stack_name // empty' "$FILE")
-            HEALTH=$(jq -r '.health_status // empty' "$FILE")
-            if [[ -n "$API_ENDPOINT" ]]; then
-              echo "found=true" >> $GITHUB_OUTPUT
-              echo "artifact-api-endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
-              echo "artifact-stack-name=$STACK_NAME" >> $GITHUB_OUTPUT
-              echo "artifact-health=$HEALTH" >> $GITHUB_OUTPUT
-            else
-              echo "found=false" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "found=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Discover backend environment (fallback)
-        id: discover
-        if: steps.artifact-parse.outputs.found != 'true'
-        uses: ./.github/actions/discover-backend
-        with:
-          environment: ${{ needs.validate-access.outputs.env-name }}
-          pr-number: ${{ github.event.pull_request.number }}
-          validate-connectivity: 'true'
-          aws-region: ${{ env.AWS_REGION }}
-          debug: 'false'
-
-      - name: Finalize backend outputs
-        id: finalize
-        run: |
-          if [[ "${{ steps.artifact-parse.outputs.found }}" == "true" ]]; then
-            API_ENDPOINT="${{ steps.artifact-parse.outputs['artifact-api-endpoint'] }}"
-            STACK_NAME="${{ steps.artifact-parse.outputs['artifact-stack-name'] }}"
-            HEALTH="${{ steps.artifact-parse.outputs['artifact-health'] }}"
-            if [[ -z "$HEALTH" || "$HEALTH" == "null" ]]; then HEALTH="unknown"; fi
-            echo "api-endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
-            echo "stack-name=$STACK_NAME" >> $GITHUB_OUTPUT
-            echo "backend-found=true" >> $GITHUB_OUTPUT
-            echo "resolution-method=artifact" >> $GITHUB_OUTPUT
-            echo "fallback-used=false" >> $GITHUB_OUTPUT
-            echo "connectivity-status=$HEALTH" >> $GITHUB_OUTPUT
-          else
-            echo "api-endpoint=${{ steps.discover.outputs.api-endpoint }}" >> $GITHUB_OUTPUT
-            echo "stack-name=${{ steps.discover.outputs.stack-name }}" >> $GITHUB_OUTPUT
-            echo "backend-found=${{ steps.discover.outputs.backend-found }}" >> $GITHUB_OUTPUT
-            echo "resolution-method=${{ steps.discover.outputs.resolution-method }}" >> $GITHUB_OUTPUT
-            echo "fallback-used=${{ steps.discover.outputs.fallback-used }}" >> $GITHUB_OUTPUT
-            echo "connectivity-status=${{ steps.discover.outputs.connectivity-status }}" >> $GITHUB_OUTPUT
-          fi
-
   # Build the React frontend
   build-frontend:
     name: Build React Frontend
     runs-on: ubuntu-latest
     needs:
-      [validate-access, check-frontend-changes, discover-backend-for-frontend]
-    if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-frontend-changes.outputs.has-frontend-changes == 'true'
+      [
+        validate-access,
+        check-frontend-changes,
+        check-backend-changes,
+        deploy-backend-preview,
+        create-fallback-urls,
+      ]
+    # Run if frontend changes detected and either:
+    # 1. Backend deployment succeeded (backend changes detected)
+    # 2. Fallback URLs job succeeded (no backend changes detected)
+    if: |
+      needs.validate-access.outputs.should-deploy == 'true' &&
+      needs.check-frontend-changes.outputs.has-frontend-changes == 'true' &&
+      always() && (
+        (needs.check-backend-changes.outputs.has-backend-changes == 'true' && needs.deploy-backend-preview.result == 'success') ||
+        (needs.check-backend-changes.outputs.has-backend-changes == 'false' && needs.create-fallback-urls.result == 'success')
+      )
+
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
@@ -533,18 +636,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
           cache-dependency-path: 'pnpm-lock.yaml'
-
-      - name: Cache TypeScript build info
-        uses: actions/cache@v4
-        with:
-          path: |
-            **/tsconfig.tsbuildinfo
-            **/dist
-            **/.turbo
-            apps/client-ui/src/api-client
-          key: ${{ runner.os }}-frontend-build-${{ hashFiles('**/tsconfig*.json', '**/pnpm-lock.yaml', 'apps/express-api/src/**/*.ts') }}
-          restore-keys: |
-            ${{ runner.os }}-frontend-build-
 
       - name: Install dependencies
         run: |
@@ -596,6 +687,43 @@ jobs:
 
           echo "✅ API client package built successfully"
 
+      - name: Download deployment URLs artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-urls-${{ needs.validate-access.outputs.env-name }}
+          path: deployment-urls/
+
+      - name: Read deployment URLs from artifact
+        id: resolve-backend
+        run: |
+          echo "📦 Reading deployment URLs from artifact..."
+
+          if [[ -f "deployment-urls/urls.json" ]]; then
+            echo "✅ Deployment URLs artifact found"
+            cat deployment-urls/urls.json
+
+            # Extract backend URL from artifact
+            BACKEND_URL=$(jq -r '.backend_url // empty' deployment-urls/urls.json)
+            DEPLOYMENT_TYPE=$(jq -r '.deployment_type // empty' deployment-urls/urls.json)
+            HEALTH_STATUS=$(jq -r '.health_status // empty' deployment-urls/urls.json)
+
+            if [[ -n "$BACKEND_URL" && "$BACKEND_URL" != "null" ]]; then
+              echo "🌐 Backend URL from artifact: $BACKEND_URL"
+              echo "📋 Deployment type: $DEPLOYMENT_TYPE"
+              echo "🏥 Health status: $HEALTH_STATUS"
+              echo "final-backend-url=$BACKEND_URL" >> $GITHUB_OUTPUT
+            else
+              echo "❌ No valid backend URL found in artifact"
+              exit 1
+            fi
+          else
+            echo "❌ Deployment URLs artifact not found"
+            echo "Expected file: deployment-urls/urls.json"
+            echo "Available files:"
+            find deployment-urls/ -type f 2>/dev/null || echo "No deployment-urls directory found"
+            exit 1
+          fi
+
       - name: Generate environment configuration
         id: generate-env
         uses: ./.github/actions/generate-frontend-env
@@ -603,10 +731,10 @@ jobs:
           environment: ${{ needs.validate-access.outputs.env-name }}
           pr-number: ${{ github.event.pull_request.number }}
           build-mode: 'preview'
-          api-endpoint: ${{ needs.discover-backend-for-frontend.outputs.api-endpoint }}
+          api-endpoint: ${{ steps.resolve-backend.outputs.final-backend-url }}
           api-key: ${{ secrets.API_KEY }}
-          backend-stack-name: ${{ needs.discover-backend-for-frontend.outputs.stack-name }}
-          resolution-method: ${{ needs.discover-backend-for-frontend.outputs.resolution-method }}
+          backend-stack-name: ${{ needs.validate-access.outputs.backend-stack-name }}
+          resolution-method: 'artifact-based'
           output-file: '.env.preview'
           include-build-metadata: 'true'
           validate-variables: 'true'
@@ -625,6 +753,20 @@ jobs:
             ls -la apps/client-ui >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: Verify no unauthorized .env files present
+        run: |
+          echo "🔍 Checking for unexpected .env files in apps/client-ui"
+          cd apps/client-ui
+          FOUND=$(ls -1a .env* 2>/dev/null | grep -v '^.env.preview$' || true)
+          if [[ -n "$FOUND" ]]; then
+            echo "❌ Unauthorized .env files found in apps/client-ui:"
+            echo "$FOUND"
+            echo "Only .env.preview generated by CI is allowed."
+            exit 1
+          else
+            echo "✅ No unauthorized .env files detected"
+          fi
+
       - name: Generate Amplify configuration
         run: |
           cd apps/client-ui
@@ -638,6 +780,9 @@ jobs:
           export GITHUB_SHA="${{ github.sha }}"
           export GITHUB_REF_NAME="${{ github.ref_name }}"
           export GITHUB_PR_NUMBER="${{ github.event.pull_request.number }}"
+
+
+
           export PNPM_VERSION="${{ env.PNPM_VERSION }}"
 
           # Load environment variables from .env.preview using temporary file approach
@@ -762,18 +907,24 @@ jobs:
           path: apps/client-ui/dist/
           retention-days: 7
 
+    outputs:
+      env-name: ${{ needs.validate-access.outputs.env-name }}
+      amplify-app-id: ${{ needs.validate-access.outputs.amplify-app-id }}
+      backend-url: ${{ needs.validate-access.outputs.backend-url }}
+      backend-stack-name: ${{ needs.validate-access.outputs.backend-stack-name }}
+      frontend-url: ${{ needs.validate-access.outputs.frontend-url }}
+      target-user: ${{ needs.validate-access.outputs.target-user }}
+
   # Deploy to AWS Amplify
   deploy-frontend:
     name: Deploy to AWS Amplify
     runs-on: ubuntu-latest
-    needs:
-      [
-        validate-access,
-        check-frontend-changes,
-        build-frontend,
-        discover-backend-for-frontend,
-      ]
-    if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-frontend-changes.outputs.has-frontend-changes == 'true'
+    needs: [build-frontend]
+    if: always() && needs.build-frontend.result == 'success'
+
+    outputs:
+      app-url: ${{ steps.deploy.outputs.app-url }}
+      app-id: ${{ steps.deploy.outputs.app-id }}
 
     permissions:
       id-token: write
@@ -790,11 +941,12 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-PreviewDeploy-Frontend-${{ github.run_id }}
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: frontend-build-${{ needs.validate-access.outputs.env-name }}
+          name: frontend-build-${{ needs.build-frontend.outputs.env-name }}
           path: apps/client-ui/dist/
 
       - name: Deploy to Amplify
@@ -802,17 +954,17 @@ jobs:
         run: |
           cd apps/client-ui
 
-          ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
+          ENV_NAME="${{ needs.build-frontend.outputs.env-name }}"
           AMPLIFY_APP_NAME="macro-ai-frontend-${ENV_NAME}"
 
+          # Use pre-calculated Amplify App ID from build-frontend
+          APP_ID="${{ needs.build-frontend.outputs.amplify-app-id }}"
+
           echo "🚀 Deploying to Amplify app: ${AMPLIFY_APP_NAME}"
+          echo "📱 Using pre-calculated App ID: ${APP_ID}"
 
-          # Check if Amplify app exists
-          APP_ID=$(aws amplify list-apps --region ${{ env.AWS_REGION }} \
-            --query "apps[?name=='${AMPLIFY_APP_NAME}'].appId" \
-            --output text 2>/dev/null || echo "")
-
-          if [[ -z "$APP_ID" || "$APP_ID" == "None" ]]; then
+          # Verify the app exists (create if needed)
+          if [[ "$APP_ID" == "<will-be-created>" ]]; then
             echo "📱 Creating new Amplify app: ${AMPLIFY_APP_NAME}"
 
             # Create new Amplify app
@@ -826,11 +978,13 @@ jobs:
 
             echo "✅ Created Amplify app with ID: ${APP_ID}"
           else
-            echo "✅ Using existing Amplify app with ID: ${APP_ID}"
+            echo "✅ Using pre-calculated Amplify app with ID: ${APP_ID}"
           fi
 
           # Create or update branch
+          # Sanitize branch for safe use; keep original for Amplify API calls
           BRANCH_NAME="${{ github.head_ref }}"
+          SANITIZED_BRANCH="${BRANCH_NAME//\//-}"
           echo "🌿 Setting up branch: ${BRANCH_NAME}"
 
           # Check if branch exists
@@ -865,8 +1019,8 @@ jobs:
           # Request a deployment to obtain jobId and pre-signed upload URL
           DEPLOY_JSON=$(aws amplify create-deployment \
             --app-id "$APP_ID" \
-            --branch-name "${BRANCH_NAME}" \
-            --region ${{ env.AWS_REGION }})
+              --branch-name "${BRANCH_NAME}" \
+            --region "${{ env.AWS_REGION }}")
           JOB_ID=$(echo "$DEPLOY_JSON" | jq -r '.jobId')
           UPLOAD_URL=$(echo "$DEPLOY_JSON" | jq -r '.zipUploadUrl')
 
@@ -920,45 +1074,81 @@ jobs:
             echo "✅ Deployment successful!"
             echo "🌐 Frontend URL: ${APP_URL}"
 
-            echo "app-id=${APP_ID}" >> $GITHUB_OUTPUT
-            echo "app-url=${APP_URL}" >> $GITHUB_OUTPUT
-            echo "job-id=${JOB_ID}" >> $GITHUB_OUTPUT
-            echo "deployment-status=success" >> $GITHUB_OUTPUT
+            {
+              echo "app-id=${APP_ID}"
+              echo "app-url=${APP_URL}"
+              echo "job-id=${JOB_ID}"
+              echo "deployment-status=success"
+            } >> "$GITHUB_OUTPUT"
           else
             echo "❌ Deployment failed with status: ${JOB_STATUS}"
             echo "deployment-status=failed" >> $GITHUB_OUTPUT
             exit 1
           fi
 
+  # Summary job to show what was deployed
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [validate-access, deploy-backend-preview, deploy-frontend]
+    if: always() && (needs.deploy-backend-preview.result == 'success' || needs.deploy-frontend.result == 'success')
+
+    permissions:
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Generate deployment summary
+        run: |
+          echo "🚀 Preview deployment completed successfully!"
+          echo "Backend: ${{ needs.deploy-backend-preview.result == 'success' && 'Deployed' || 'Skipped' }}"
+          echo "Frontend: ${{ needs.deploy-frontend.result == 'success' && 'Deployed' || 'Skipped' }}"
+          echo ""
+          echo "📋 Deployment Results:"
+          echo "- Backend deployment: ${{ needs.deploy-backend-preview.result }}"
+          echo "- Frontend deployment: ${{ needs.deploy-frontend.result }}"
+
       - name: Comment on PR with deployment details
-        if: steps.deploy.outputs.deployment-status == 'success'
+        if: needs.deploy-frontend.result == 'success'
         uses: actions/github-script@v7
         with:
           script: |
-            const appUrl = '${{ steps.deploy.outputs.app-url }}';
-            const appId = '${{ steps.deploy.outputs.app-id }}';
-            const jobId = '${{ steps.deploy.outputs.job-id }}';
+            const frontendDeployed = '${{ needs.deploy-frontend.result }}' === 'success';
+            const backendDeployed = '${{ needs.deploy-backend-preview.result }}' === 'success';
+
+            // Get frontend details
+            const appUrl = '${{ needs.deploy-frontend.outputs.app-url }}';
+            const appId = '${{ needs.deploy-frontend.outputs.app-id }}';
             const envName = '${{ needs.validate-access.outputs.env-name }}';
 
-            // Use finalized backend details (artifact-first)
-            const backendUrl = '${{ needs.discover-backend-for-frontend.outputs.api-endpoint }}';
-            const backendStack = '${{ needs.discover-backend-for-frontend.outputs.stack-name }}';
+            // Get backend URL - use actual deployed URL if backend was deployed, otherwise use pre-calculated URL
+            let backendUrl;
+            let backendStack;
+
+            if (backendDeployed) {
+              backendUrl = '${{ needs.deploy-backend-preview.outputs.api-endpoint }}';
+              backendStack = '${{ needs.deploy-backend-preview.outputs.stack-name }}';
+            } else {
+              backendUrl = '${{ needs.build-frontend.outputs.backend-url }}';
+              backendStack = '${{ needs.build-frontend.outputs.backend-stack-name }}';
+            }
 
             const comment = `## 🚀 Preview Environment Deployed Successfully!
 
             ### 🌐 Preview URLs
             - **Frontend**: [${appUrl}](${appUrl})
-            - **Backend API**: ${backendUrl}
+            - **Backend API**: ${backendUrl || 'Not deployed'}
 
             ### 📋 Deployment Details
             - **Environment**: \`${envName}\`
             - **Amplify App ID**: \`${appId}\`
-            - **Job ID**: \`${jobId}\`
             - **Branch**: \`${{ github.head_ref }}\`
+            - **Backend Status**: ${backendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
+            - **Frontend Status**: ${frontendDeployed ? '✅ Deployed' : '❌ Failed'}
 
             ### 🔗 Quick Links
             - [AWS Amplify Console](https://console.aws.amazon.com/amplify/home?region=${{ env.AWS_REGION }}#/${appId})
-            - [Backend Stack](https://console.aws.amazon.com/cloudformation/home?region=${{ env.AWS_REGION }}#/stacks/stackinfo?stackId=${backendStack})
+            ${backendStack ? `- [Backend Stack](https://console.aws.amazon.com/cloudformation/home?region=${{ env.AWS_REGION }}#/stacks/stackinfo?stackId=${backendStack})` : ''}
 
             ---
             *This preview environment will be automatically cleaned up when the PR is closed/merged.*`;
@@ -969,77 +1159,3 @@ jobs:
               repo: context.repo.repo,
               body: comment
             });
-
-  # Summary job to show what was deployed
-  deployment-summary:
-    name: Deployment Summary
-    runs-on: ubuntu-latest
-    needs:
-      [
-        validate-access,
-        check-backend-changes,
-        check-frontend-changes,
-        deploy-backend-preview,
-        deploy-frontend,
-      ]
-    if: always() && needs.validate-access.outputs.should-deploy == 'true'
-
-    steps:
-      - name: Generate deployment summary
-        run: |
-          echo "## 📋 Deployment Summary for PR #${{ github.event.pull_request.number }}"
-          echo ""
-
-          # Backend deployment status
-          BACKEND_CHANGES="${{ needs.check-backend-changes.outputs.has-backend-changes }}"
-          BACKEND_RESULT="${{ needs.deploy-backend-preview.result }}"
-
-          echo "### 🔧 Backend Deployment"
-          if [[ "$BACKEND_CHANGES" == "true" ]]; then
-            if [[ "$BACKEND_RESULT" == "success" ]]; then
-              echo "✅ **Backend deployed successfully** - Changes detected and deployed"
-            elif [[ "$BACKEND_RESULT" == "failure" ]]; then
-              echo "❌ **Backend deployment failed** - Check logs for details"
-            else
-              echo "⏳ **Backend deployment in progress** - Status: $BACKEND_RESULT"
-            fi
-          else
-            echo "⏭️ **Backend deployment skipped** - No backend changes detected"
-            echo "ℹ️ Using existing backend environment from previous deployment"
-          fi
-          echo ""
-
-          # Frontend deployment status
-          FRONTEND_CHANGES="${{ needs.check-frontend-changes.outputs.has-frontend-changes }}"
-          FRONTEND_RESULT="${{ needs.deploy-frontend.result }}"
-
-          echo "### 🎨 Frontend Deployment"
-          if [[ "$FRONTEND_CHANGES" == "true" ]]; then
-            if [[ "$FRONTEND_RESULT" == "success" ]]; then
-              echo "✅ **Frontend deployed successfully** - Changes detected and deployed"
-            elif [[ "$FRONTEND_RESULT" == "failure" ]]; then
-              echo "❌ **Frontend deployment failed** - Check logs for details"
-            else
-              echo "⏳ **Frontend deployment in progress** - Status: $FRONTEND_RESULT"
-            fi
-          else
-            echo "⏭️ **Frontend deployment skipped** - No frontend changes detected"
-            echo "ℹ️ Existing frontend deployment remains active"
-          fi
-          echo ""
-
-          # Optimization summary
-          echo "### ⚡ Optimization Summary"
-          if [[ "$BACKEND_CHANGES" == "true" && "$FRONTEND_CHANGES" == "true" ]]; then
-            echo "🔄 **Full deployment** - Both backend and frontend changes detected"
-          elif [[ "$BACKEND_CHANGES" == "true" && "$FRONTEND_CHANGES" == "false" ]]; then
-            echo "🔧 **Backend-only deployment** - Optimized to skip frontend"
-          elif [[ "$BACKEND_CHANGES" == "false" && "$FRONTEND_CHANGES" == "true" ]]; then
-            echo "🎨 **Frontend-only deployment** - Optimized to skip backend rebuild"
-          else
-            echo "⏭️ **No deployments needed** - No changes detected in either component"
-          fi
-
-          echo ""
-          echo "---"
-          echo "*This summary shows the optimized deployment strategy based on detected changes.*"
