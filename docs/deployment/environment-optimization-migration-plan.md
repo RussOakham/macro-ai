@@ -75,8 +75,9 @@ graph LR
 
 #### 1.3 Create Optimized Workflow
 
-- ✅ **COMPLETED**: Created `.github/workflows/deploy-optimized.yml`
-- **Features**:
+- ⚠️ **REMOVED**: `.github/workflows/deploy-optimized.yml` has been removed as part of
+  the Lambda-to-EC2 migration
+- **Legacy Features** (now being migrated to EC2):
   - 2-environment strategy (staging/production)
   - Preview environments for PRs
   - Infrastructure scaling support
@@ -148,10 +149,10 @@ git push origin main
 
 #### 4.1 Remove Old Workflows
 
-- Archive `deploy-infrastructure.yml`
-- Archive `deploy-staging.yml`
-- Archive `deploy-full-stack.yml`
-- Rename `deploy-optimized.yml` to `deploy.yml`
+- ✅ Removed `deploy-infrastructure.yml`
+- ✅ Removed `deploy-staging.yml`
+- ✅ Removed `deploy-full-stack.yml`
+- ✅ Removed `deploy-optimized.yml`
 
 #### 4.2 Update References
 
@@ -247,12 +248,12 @@ export CDK_DEPLOY_SCALE=enterprise
 git checkout HEAD~1 infrastructure/src/app.ts
 git checkout HEAD~1 infrastructure/scripts/deploy.sh
 
-# Disable new workflow
-mv .github/workflows/deploy-optimized.yml .github/workflows/deploy-optimized.yml.disabled
-
-# Re-enable old workflows
-git checkout HEAD~1 .github/workflows/deploy-infrastructure.yml
-git checkout HEAD~1 .github/workflows/deploy-staging.yml
+# Note: Legacy workflows have been permanently removed during Lambda-to-EC2 migration
+# Rollback would require restoring from git history:
+# git checkout HEAD~1 .github/workflows/deploy-infrastructure.yml
+# git checkout HEAD~1 .github/workflows/deploy-staging.yml
+# git checkout HEAD~1 .github/workflows/deploy-full-stack.yml
+# git checkout HEAD~1 .github/workflows/deploy-optimized.yml
 ```
 
 ## 📅 Timeline Summary

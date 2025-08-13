@@ -390,15 +390,11 @@ graph TB
 
 **Environments**: hobby (default), staging, production
 
-### Full-Stack Deployment (`deploy-full-stack.yml`)
+### Full-Stack Deployment (Legacy - Removed)
 
-**Purpose**: Complete application deployment (backend + frontend)
-
-**Triggers**:
-
-- Push to `develop` branch (deploy to staging) and `main` branch (deploy to production)
-- Manual dispatch with full configuration options
-- Workflow call from other workflows
+> **⚠️ REMOVED**: The `deploy-full-stack.yml` workflow has been removed as part of
+> the Lambda-to-EC2 migration. Full-stack deployments will be handled by new
+> EC2-based workflows once the migration is complete.
 
 **Comprehensive Job Architecture**:
 
@@ -432,11 +428,10 @@ graph TB
 - `deploy_frontend`: Enable/disable frontend deployment
 - `run_tests`: Enable/disable integration tests
 
-### Staging Deployment (`deploy-staging.yml`)
+### Staging Deployment (Legacy - Removed)
 
-**Purpose**: Automated staging environment deployment and testing
-
-**Triggers**:
+> **⚠️ REMOVED**: The `deploy-staging.yml` workflow has been removed as part of
+> the Lambda-to-EC2 migration.
 
 - Push to `develop` branch
 - Manual dispatch with force deployment option
@@ -511,17 +506,17 @@ graph TB
 
 ### Reusable Workflow Pattern
 
-The `deploy-full-stack.yml` workflow serves as a reusable component:
+Legacy workflow integration (removed):
 
 ```yaml
-# Called by deploy-staging.yml
-uses: ./.github/workflows/deploy-full-stack.yml
-with:
-  environment: staging
-  deploy_backend: true
-  deploy_frontend: true
-  run_tests: true
-secrets: inherit
+# Previously called by deploy-staging.yml (now removed)
+# uses: ./.github/workflows/deploy-full-stack.yml
+# with:
+#   environment: staging
+#   deploy_backend: true
+#   deploy_frontend: true
+#   run_tests: true
+# secrets: inherit
 ```
 
 ### Environment-Specific Deployment Flow

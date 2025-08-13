@@ -291,10 +291,10 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### 🔄 Recovery Steps" >> $GITHUB_STEP_SUMMARY
             echo "To restore staging environment:" >> $GITHUB_STEP_SUMMARY
-            echo "1. Push to \`develop\` branch to trigger automatic staging deployment" >> $GITHUB_STEP_SUMMARY
-            echo "2. Or use \`deploy-full-stack.yml\` workflow with environment: staging" >> $GITHUB_STEP_SUMMARY
+            echo "1. ⚠️ Legacy deployment workflows have been removed during Lambda-to-EC2 migration" >> $GITHUB_STEP_SUMMARY
+            echo "2. Use new EC2-based deployment workflows once migration is complete" >> $GITHUB_STEP_SUMMARY
             echo "3. Update Parameter Store values if needed" >> $GITHUB_STEP_SUMMARY
-            echo "4. Redeploy frontend to staging" >> $GITHUB_STEP_SUMMARY
+            echo "4. Redeploy frontend to staging environment" >> $GITHUB_STEP_SUMMARY
           else
             echo "### ❌ STAGING TEARDOWN FAILED" >> $GITHUB_STEP_SUMMARY
             echo "The staging teardown encountered errors. Manual intervention required." >> $GITHUB_STEP_SUMMARY
