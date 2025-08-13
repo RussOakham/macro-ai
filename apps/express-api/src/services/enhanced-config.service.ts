@@ -108,11 +108,14 @@ export class EnhancedConfigService {
 		this.parameterStore = parameterStore ?? new ParameterStoreService()
 		this.isLambdaEnvironment = Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME)
 
-		logger.info('EnhancedConfigService initialized', {
-			operation: 'enhancedConfigInit',
-			isLambdaEnvironment: this.isLambdaEnvironment,
-			parameterMappings: EnhancedConfigService.PARAMETER_MAPPINGS.length,
-		})
+		logger.info(
+			{
+				operation: 'enhancedConfigInit',
+				isLambdaEnvironment: this.isLambdaEnvironment,
+				parameterMappings: EnhancedConfigService.PARAMETER_MAPPINGS.length,
+			},
+			'EnhancedConfigService initialized',
+		)
 	}
 
 	/**
@@ -142,11 +145,14 @@ export class EnhancedConfigService {
 			useParameterStore &&
 			mapping?.parameterName
 		) {
-			logger.debug('Attempting Parameter Store retrieval', {
-				operation: 'getConfigFromParameterStore',
-				envVar,
-				parameterName: mapping.parameterName,
-			})
+			logger.debug(
+				{
+					operation: 'getConfigFromParameterStore',
+					envVar,
+					parameterName: mapping.parameterName,
+				},
+				'Attempting Parameter Store retrieval',
+			)
 
 			const [parameterValue, parameterError] =
 				await this.parameterStore.getParameter(mapping.parameterName)
@@ -164,13 +170,13 @@ export class EnhancedConfigService {
 
 			// Log Parameter Store failure but continue to fallback
 			logger.warn(
-				'Parameter Store retrieval failed, falling back to environment',
 				{
 					operation: 'parameterStoreFallback',
 					envVar,
 					parameterName: mapping.parameterName,
 					error: parameterError?.message,
 				},
+				'Parameter Store retrieval failed, falling back to environment',
 			)
 		}
 
@@ -244,11 +250,14 @@ export class EnhancedConfigService {
 				(m) => m.parameterName,
 			)
 
-			logger.info('Preloading parameters from Parameter Store', {
-				operation: 'preloadParameters',
-				parameterCount: parameterNames.length,
-				parameters: parameterNames,
-			})
+			logger.info(
+				{
+					operation: 'preloadParameters',
+					parameterCount: parameterNames.length,
+					parameters: parameterNames,
+				},
+				'Preloading parameters from Parameter Store',
+			)
 
 			const [parameters, parameterError] =
 				await this.parameterStore.getParameters(parameterNames)
@@ -279,10 +288,13 @@ export class EnhancedConfigService {
 			return [null, error]
 		}
 
-		logger.info('Parameters preloaded successfully', {
-			operation: 'preloadParametersSuccess',
-			loadedCount: Object.keys(results).length,
-		})
+		logger.info(
+			{
+				operation: 'preloadParametersSuccess',
+				loadedCount: Object.keys(results).length,
+			},
+			'Parameters preloaded successfully',
+		)
 
 		return [results, null]
 	}
@@ -327,10 +339,13 @@ export class EnhancedConfigService {
 	 */
 	public clearCache = (parameterName?: string): void => {
 		this.parameterStore.clearCache(parameterName)
-		logger.debug('Configuration cache cleared', {
-			operation: 'clearConfigCache',
-			parameterName: parameterName ?? 'all',
-		})
+		logger.debug(
+			{
+				operation: 'clearConfigCache',
+				parameterName: parameterName ?? 'all',
+			},
+			'Configuration cache cleared',
+		)
 	}
 
 	/**

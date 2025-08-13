@@ -14,6 +14,6 @@ try {
 		)
 	})
 } catch (error) {
-	logger.error('[server]: Failed to start server:', error)
+	logger.error({ error }, '[server]: Failed to start server')
 	process.exit(1)
 }

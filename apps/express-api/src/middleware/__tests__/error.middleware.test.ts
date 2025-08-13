@@ -213,7 +213,6 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: User not found',
 				expect.objectContaining({
 					path: '/api/users/123',
 					method: 'GET',
@@ -223,6 +222,7 @@ describe('errorHandler Middleware', () => {
 					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 					stack: expect.any(String), // Stack trace is included in non-production
 				}),
+				'[ErrorHandler]: User not found',
 			)
 		})
 
@@ -245,11 +245,11 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Database connection failed',
 				expect.objectContaining({
 					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 					stack: expect.any(String),
 				}),
+				'[ErrorHandler]: Database connection failed',
 			)
 		})
 
@@ -272,10 +272,10 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Database connection failed',
 				expect.objectContaining({
 					stack: undefined,
 				}),
+				'[ErrorHandler]: Database connection failed',
 			)
 		})
 	})
@@ -474,10 +474,10 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Token expired',
 				expect.objectContaining({
 					service: 'auth middleware',
 				}),
+				'[ErrorHandler]: Token expired',
 			)
 		})
 
@@ -499,10 +499,10 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Unknown service error',
 				expect.objectContaining({
 					service: 'unknown',
 				}),
+				'[ErrorHandler]: Unknown service error',
 			)
 		})
 
@@ -525,10 +525,10 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Invalid email format',
 				expect.objectContaining({
 					type: 'ValidationError',
 				}),
+				'[ErrorHandler]: Invalid email format',
 			)
 		})
 	})
@@ -549,11 +549,11 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Endpoint not found',
 				expect.objectContaining({
 					path: '/api/nonexistent',
 					method: 'POST',
 				}),
+				'[ErrorHandler]: Endpoint not found',
 			)
 		})
 
@@ -572,11 +572,11 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Server error',
 				expect.objectContaining({
 					path: undefined,
 					method: 'GET',
 				}),
+				'[ErrorHandler]: Server error',
 			)
 		})
 
@@ -595,11 +595,11 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Server error',
 				expect.objectContaining({
 					path: '/api/test',
 					method: undefined,
 				}),
+				'[ErrorHandler]: Server error',
 			)
 		})
 	})
@@ -854,10 +854,10 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Internal error',
 				expect.objectContaining({
 					stack: undefined,
 				}),
+				'[ErrorHandler]: Internal error',
 			)
 		})
 
@@ -984,10 +984,10 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Generic error',
 				expect.objectContaining({
 					service: 'globalErrorHandler',
 				}),
+				'[ErrorHandler]: Generic error',
 			)
 		})
 	})

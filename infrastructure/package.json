@@ -3,6 +3,10 @@
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
+	"engines": {
+		"node": ">=20.0.0",
+		"pnpm": ">=9.0.0"
+	},
 	"description": "AWS CDK infrastructure for Macro AI hobby deployment",
 	"scripts": {
 		"build": "tsc",
@@ -36,8 +40,5 @@
 		"tsx": "catalog:",
 		"typescript": "catalog:",
 		"typescript-eslint": "^8.39.0"
-	},
-	"engines": {
-		"node": ">=18.0.0"
 	}
 }

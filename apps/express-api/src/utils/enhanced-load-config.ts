@@ -41,11 +41,14 @@ const loadEnhancedConfig = async (): Promise<Result<EnhancedConfig>> => {
 
 	// Only log during normal runtime, not during static analysis
 
-	logger.info('Loading enhanced configuration', {
-		operation: 'loadEnhancedConfig',
-		isLambdaEnvironment,
-		envPath,
-	})
+	logger.info(
+		{
+			operation: 'loadEnhancedConfig',
+			isLambdaEnvironment,
+			envPath,
+		},
+		'Loading enhanced configuration',
+	)
 
 	// Load environment variables from .env file (if not in Lambda)
 	if (!isLambdaEnvironment) {
@@ -79,9 +82,12 @@ const loadEnhancedConfig = async (): Promise<Result<EnhancedConfig>> => {
 
 	// In Lambda environment, try to load sensitive values from Parameter Store
 	if (isLambdaEnvironment) {
-		logger.info('Lambda environment detected, loading from Parameter Store', {
-			operation: 'loadFromParameterStore',
-		})
+		logger.info(
+			{
+				operation: 'loadFromParameterStore',
+			},
+			'Lambda environment detected, loading from Parameter Store',
+		)
 
 		try {
 			// Get all mapped configuration from Parameter Store with fallbacks
@@ -89,31 +95,37 @@ const loadEnhancedConfig = async (): Promise<Result<EnhancedConfig>> => {
 				await enhancedConfigService.getAllMappedConfig()
 
 			if (configError) {
-				logger.warn('Failed to load some configuration from Parameter Store', {
-					operation: 'parameterStorePartialFailure',
-					error: configError.message,
-				})
+				logger.warn(
+					{
+						operation: 'parameterStorePartialFailure',
+						error: configError.message,
+					},
+					'Failed to load some configuration from Parameter Store',
+				)
 			} else {
 				// Update environment with Parameter Store values
 				for (const [envVar, configValue] of Object.entries(configValues)) {
 					enhancedEnv[envVar] = configValue.value
 					sources[envVar] = configValue.source
 
-					logger.debug('Configuration loaded', {
-						operation: 'configLoaded',
-						envVar,
-						source: configValue.source,
-						cached: configValue.cached,
-					})
+					logger.debug(
+						{
+							operation: 'configLoaded',
+							envVar,
+							source: configValue.source,
+							cached: configValue.cached,
+						},
+						'Configuration loaded',
+					)
 				}
 			}
 		} catch (error) {
 			logger.warn(
-				'Parameter Store integration failed, using environment fallbacks',
 				{
 					operation: 'parameterStoreFallback',
 					error: error instanceof Error ? error.message : 'Unknown error',
 				},
+				'Parameter Store integration failed, using environment fallbacks',
 			)
 		}
 	}
@@ -191,10 +203,13 @@ const getConfigWithSource = async (
  */
 const clearConfigCache = (parameterName?: string): void => {
 	enhancedConfigService.clearCache(parameterName)
-	logger.info('Configuration cache cleared', {
-		operation: 'clearConfigCache',
-		parameterName: parameterName ?? 'all',
-	})
+	logger.info(
+		{
+			operation: 'clearConfigCache',
+			parameterName: parameterName ?? 'all',
+		},
+		'Configuration cache cleared',
+	)
 }
 
 /**

@@ -30,14 +30,17 @@ const errorHandler: ErrorRequestHandler = (
 			: AppError.from(error, 'globalErrorHandler')
 
 	// Log the error with context
-	logger.error(`[ErrorHandler]: ${err.message}`, {
-		path: req.path,
-		method: req.method,
-		status: err.status,
-		type: err.type,
-		service: err.service,
-		stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
-	})
+	logger.error(
+		{
+			path: req.path,
+			method: req.method,
+			status: err.status,
+			type: err.type,
+			service: err.service,
+			stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
+		},
+		`[ErrorHandler]: ${err.message}`,
+	)
 
 	// Determine appropriate response
 	const responseBody = {
