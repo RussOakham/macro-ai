@@ -87,6 +87,10 @@ export const applyTokenRefreshInterceptors = (client: {
 				const isRefreshRequest = requestUrl.includes('/auth/refresh')
 				if (isRefreshRequest) {
 					const err = standardizeError(error)
+					// Mark this error as already handled by the refresh endpoint to prevent duplicate work
+					;(
+						err as IStandardizedError & { __refreshHandled?: boolean }
+					).__refreshHandled = true
 					logger.warn(`Refresh endpoint returned 401: ${err.message}`)
 					// Reject any queued requests and clear refreshing state
 					processQueue(err, null)
@@ -142,6 +146,15 @@ export const applyTokenRefreshInterceptors = (client: {
 					await refreshPromise
 					return await client.axios(originalRequest)
 				} catch (err: unknown) {
+					// Check if this error was already handled by the refresh endpoint 401 handler
+					// to avoid duplicate processQueue calls and navigation
+					const standardizedErr = err as IStandardizedError & {
+						__refreshHandled?: boolean
+					}
+					if (standardizedErr.__refreshHandled) {
+						// Error was already processed by the refresh endpoint handler, just reject
+						return Promise.reject(standardizedErr)
+					}
 					return Promise.reject(err as IStandardizedError)
 				}
 			}
