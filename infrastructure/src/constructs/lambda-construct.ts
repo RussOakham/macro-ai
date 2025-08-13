@@ -3,6 +3,7 @@ import * as iam from 'aws-cdk-lib/aws-iam'
 import * as lambda from 'aws-cdk-lib/aws-lambda'
 import * as logs from 'aws-cdk-lib/aws-logs'
 import { Construct } from 'constructs'
+import { existsSync } from 'node:fs'
 
 import type { ParameterStoreConstruct } from './parameter-store-construct.js'
 
@@ -157,14 +158,29 @@ export class LambdaConstruct extends Construct {
 			deploymentPackagePath,
 		} = config
 
-		// Use the actual built Lambda package
-		// Check if the deployment package path is a zip file or directory
-		const code = deploymentPackagePath.endsWith('.zip')
-			? lambda.Code.fromAsset(deploymentPackagePath)
-			: lambda.Code.fromAsset(deploymentPackagePath, {
-					// Exclude source maps from deployment to reduce package size
-					exclude: ['*.map'],
-				})
+		// Determine Lambda code source.
+		// For normal deploys we load the built asset from disk. For destroy operations (or when the asset
+		// is intentionally not present) we fall back to a tiny inline handler so the stack can be synthesized
+		// without staging any assets.
+		const destroyMode = process.env.CDK_DESTROY_MODE === 'true' || process.env.ALLOW_INLINE_CODE_FOR_DESTROY === 'true'
+		const assetExists = existsSync(deploymentPackagePath)
+		let code: lambda.Code
+		if (!assetExists && destroyMode) {
+			cdk.Annotations.of(this).addWarning(
+				'Lambda asset not found; using inline placeholder code for destroy. This is expected during teardown and will not be deployed.',
+			)
+			code = lambda.Code.fromInline(
+				"exports.handler = async () => ({ statusCode: 200, body: 'teardown' });",
+			)
+		} else {
+			// Use the actual built Lambda package; support both zip file and directory inputs
+			code = deploymentPackagePath.endsWith('.zip')
+				? lambda.Code.fromAsset(deploymentPackagePath)
+				: lambda.Code.fromAsset(deploymentPackagePath, {
+						// Exclude source maps from deployment to reduce package size
+						exclude: ['*.map'],
+					})
+		}
 
 		return new lambda.Function(this, 'Function', {
 			functionName: `macro-ai-${environmentName}-api`,

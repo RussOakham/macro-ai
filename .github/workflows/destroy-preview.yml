@@ -188,6 +188,9 @@ jobs:
 
       - name: Destroy infrastructure
         id: destroy
+        env:
+          CDK_DESTROY_MODE: 'true'
+          ALLOW_INLINE_CODE_FOR_DESTROY: 'true'
         run: |
           cd infrastructure
 
