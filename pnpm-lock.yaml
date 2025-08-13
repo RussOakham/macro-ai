@@ -349,9 +349,7 @@ importers:
       '@asteasolutions/zod-to-openapi':
         specifier: ^7.3.4
         version: 7.3.4(zod@3.25.76)
-      '@aws-lambda-powertools/logger':
-        specifier: ^2.24.1
-        version: 2.24.1
+
       '@aws-sdk/client-cognito-identity':
         specifier: ^3.859.0
         version: 3.859.0
@@ -430,9 +428,7 @@ importers:
       redis:
         specifier: ^4.7.1
         version: 4.7.1
-      serverless-http:
-        specifier: ^3.2.0
-        version: 3.2.0
+
       swagger-jsdoc:
         specifier: ^6.2.8
         version: 6.2.8(openapi-types@12.1.3)
@@ -452,9 +448,7 @@ importers:
       '@repo/config-typescript':
         specifier: workspace:*
         version: link:../../packages/config-typescript
-      '@types/aws-lambda':
-        specifier: ^8.10.152
-        version: 8.10.152
+
       '@types/body-parser':
         specifier: ^1.19.6
         version: 1.19.6
@@ -915,20 +909,6 @@ packages:
       {
         integrity: sha512-/CnngAi5HeWPWshGPyfctR/Cbmx1jVPa5mwutfmM2Z1sE8hRkJ4tsdpzXyub8RiwptU8QD7XfyhJts+0whjwkg==,
       }
-
-  '@aws-lambda-powertools/logger@2.24.1':
-    resolution:
-      {
-        integrity: sha512-rIM3Nprv8bxPGYn5uf0bvG64m/TISCjf89E/CWMCAKDlC7cAJbM5O0EmPI0woduMeJk8LuUOqFbADd4JUiLGmw==,
-      }
-    peerDependencies:
-      '@aws-lambda-powertools/jmespath': 2.24.1
-      '@middy/core': 4.x || 5.x || 6.x
-    peerDependenciesMeta:
-      '@aws-lambda-powertools/jmespath':
-        optional: true
-      '@middy/core':
-        optional: true
 
   '@aws-sdk/client-cognito-identity-provider@3.859.0':
     resolution:
@@ -4439,12 +4419,6 @@ packages:
     resolution:
       {
         integrity: sha512-rfT93uj5s0PRL7EzccGMs3brplhcrghnDoV26NqKhCAS1hVo+WdNsPvE/yb6ilfr5hi2MEk6d5EWJTKdxg8jVw==,
-      }
-
-  '@types/aws-lambda@8.10.152':
-    resolution:
-      {
-        integrity: sha512-soT/c2gYBnT5ygwiHPmd9a1bftj462NWVk2tKCc1PYHSIacB2UwbTS2zYG4jzag1mRDuzg/OjtxQjQ2NKRB6Rw==,
       }
 
   '@types/babel__core@7.20.5':
@@ -11264,13 +11238,6 @@ packages:
       }
     engines: { node: '>= 0.8.0' }
 
-  serverless-http@3.2.0:
-    resolution:
-      {
-        integrity: sha512-QvSyZXljRLIGqwcJ4xsKJXwkZnAVkse1OajepxfjkBXV0BMvRS5R546Z4kCBI8IygDzkQY0foNPC/rnipaE9pQ==,
-      }
-    engines: { node: '>=12.0' }
-
   set-function-length@1.2.2:
     resolution:
       {
@@ -13145,11 +13112,6 @@ snapshots:
       tslib: 2.8.1
 
   '@aws-lambda-powertools/commons@2.24.1': {}
-
-  '@aws-lambda-powertools/logger@2.24.1':
-    dependencies:
-      '@aws-lambda-powertools/commons': 2.24.1
-      lodash.merge: 4.6.2
 
   '@aws-sdk/client-cognito-identity-provider@3.859.0':
     dependencies:
@@ -15659,8 +15621,6 @@ snapshots:
     optional: true
 
   '@types/aria-query@5.0.4': {}
-
-  '@types/aws-lambda@8.10.152': {}
 
   '@types/babel__core@7.20.5':
     dependencies:
@@ -20403,8 +20363,6 @@ snapshots:
       send: 0.19.0
     transitivePeerDependencies:
       - supports-color
-
-  serverless-http@3.2.0: {}
 
   set-function-length@1.2.2:
     dependencies:
