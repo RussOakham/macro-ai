@@ -939,7 +939,7 @@ jobs:
           echo "📱 Using pre-calculated App ID: ${APP_ID}"
 
           # Verify the app exists (create if needed)
-          if [[ "$APP_ID" == "<will-be-created-during-deployment>" ]]; then
+          if [[ "$APP_ID" == "<will-be-created>" ]]; then
             echo "📱 Creating new Amplify app: ${AMPLIFY_APP_NAME}"
 
             # Create new Amplify app
@@ -1061,7 +1061,7 @@ jobs:
   deployment-summary:
     name: Deployment Summary
     runs-on: ubuntu-latest
-    needs: [deploy-backend-preview, deploy-frontend]
+    needs: [validate-access, deploy-backend-preview, deploy-frontend]
     if: always() && (needs.deploy-backend-preview.result == 'success' || needs.deploy-frontend.result == 'success')
 
     permissions:
@@ -1090,7 +1090,7 @@ jobs:
             // Get frontend details
             const appUrl = '${{ needs.deploy-frontend.outputs.app-url }}';
             const appId = '${{ needs.deploy-frontend.outputs.app-id }}';
-            const envName = '${{ needs.build-frontend.outputs.env-name }}';
+            const envName = '${{ needs.validate-access.outputs.env-name }}';
 
             // Get backend URL - use actual deployed URL if backend was deployed, otherwise use pre-calculated URL
             let backendUrl;
