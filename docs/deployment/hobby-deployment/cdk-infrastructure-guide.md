@@ -244,15 +244,11 @@ aws cloudwatch get-metric-statistics \
 
 ## 🚀 CI/CD Integration
 
-### GitHub Actions Workflow
+### GitHub Actions Workflow (Legacy - Removed)
 
-The repository includes a GitHub Actions workflow (`.github/workflows/deploy-infrastructure.yml`) that:
-
-1. **Validates** infrastructure code on pull requests
-2. **Builds** Lambda package from Express API
-3. **Deploys** infrastructure on main branch pushes
-4. **Tests** deployment with health check
-5. **Comments** on PRs with deployment preview information
+> **⚠️ REMOVED**: The `.github/workflows/deploy-infrastructure.yml` workflow has been
+> removed as part of the Lambda-to-EC2 migration. Infrastructure deployment will be
+> handled by new EC2-based workflows once the migration is complete.
 
 ### Workflow Configuration
 

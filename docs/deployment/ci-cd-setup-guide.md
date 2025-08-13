@@ -28,9 +28,12 @@ The CI/CD pipeline provides:
 
 #### Persistent Environment Workflows
 
-1. **`deploy-infrastructure.yml`** - Backend infrastructure deployment
-2. **`deploy-full-stack.yml`** - Main deployment workflow
-3. **`deploy-staging.yml`** - Staging environment deployment
+> **Note**: Legacy Lambda-based deployment workflows have been removed as part of the
+> migration to EC2-based deployments. These workflows are no longer available:
+>
+> - `deploy-infrastructure.yml` (removed)
+> - `deploy-full-stack.yml` (removed)
+> - `deploy-staging.yml` (removed)
 
 #### Manual Teardown Workflows
 
@@ -361,29 +364,11 @@ Each environment should have:
 git push origin main  # Deploys to production environment
 ```
 
-### Staging Deployment (`deploy-staging.yml`)
+### Staging Deployment (Legacy - Removed)
 
-**Triggers:**
-
-- Push to `develop` branch
-- Manual dispatch with force option
-
-**Features:**
-
-- Automatic staging deployment
-- Staging-specific tests
-- Performance validation
-- CORS testing
-
-**Usage:**
-
-```bash
-# Automatic staging deployment
-git push origin develop  # Deploys to staging environment
-
-# Manual staging deployment
-# Go to Actions tab → Deploy to Staging → Run workflow
-```
+> **⚠️ REMOVED**: The `deploy-staging.yml` workflow has been removed as part of the
+> Lambda-to-EC2 migration. Staging deployments will be handled by the new EC2-based
+> deployment workflows once the migration is complete.
 
 ### Emergency Rollback (`rollback.yml`)
 
@@ -468,20 +453,20 @@ cd apps/client-ui
    # Create PR to develop
    ```
 
-2. **Staging Deployment**
+2. **Staging Deployment** (Legacy - Removed)
 
    ```bash
    git checkout develop
    git merge feature/new-feature
-   git push origin develop  # Triggers staging deployment
+   git push origin develop  # Previously triggered staging deployment (now removed)
    ```
 
-3. **Production Deployment**
+3. **Production Deployment** (Legacy - Removed)
 
    ```bash
    git checkout main
    git merge develop
-   git push origin main  # Triggers production deployment
+   git push origin main  # Previously triggered production deployment (now removed)
    ```
 
 ### Hotfix Flow
@@ -627,10 +612,11 @@ All deployment workflows use the `.github/actions/check-codeowner` composite act
 
 After staging teardown, to restore:
 
-1. **Push to develop branch** (triggers automatic staging deployment)
-2. **Or use manual deployment**:
-   - Run "Deploy Full-Stack" workflow
-   - Select environment: staging
+> **⚠️ Note**: Legacy deployment workflows have been removed. Staging recovery
+> will require new EC2-based deployment workflows once the migration is complete.
+
+1. **Push to develop branch** (previously triggered automatic staging deployment)
+2. **Manual deployment**: Legacy "Deploy Full-Stack" workflow has been removed
 3. **Update Parameter Store** values if needed
 4. **Redeploy frontend** to staging environment
 
