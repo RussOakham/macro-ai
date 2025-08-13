@@ -83,7 +83,7 @@ const createServer = (): Express => {
 
 	app.use(
 		cors({
-			origin: effectiveOrigins,
+			origin: 'https://test-cors-preview-validation.d32ideiu9aodqi.amplifyapp.com/',
 			credentials: true,
 			exposedHeaders: ['cache-control'], // 'set-cookie' cannot be exposed via CORS
 			methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
