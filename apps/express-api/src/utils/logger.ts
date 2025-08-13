@@ -2,13 +2,12 @@ import { HttpLogger, Options, pinoHttp } from 'pino-http'
 
 /**
  * Check if running in Lambda environment
+ * Note: This function is kept for backward compatibility but will always return false
+ * since Lambda deployment has been removed in favor of EC2 deployment.
  */
 const isLambdaEnvironment = (): boolean => {
-	return !!(
-		process.env.AWS_LAMBDA_FUNCTION_NAME ??
-		process.env.AWS_LAMBDA_RUNTIME_API ??
-		process.env.LAMBDA_RUNTIME_DIR
-	)
+	// Always return false since Lambda deployment has been removed
+	return false
 }
 
 const createLogger = (nodeEnv: string): HttpLogger => {

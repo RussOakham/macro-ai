@@ -1,6 +1,10 @@
-# Lambda Function Deployment Guide
+# Legacy Lambda Deployment Guide (DEPRECATED)
 
-This guide covers the complete process for deploying the Macro AI Lambda function to AWS with proper environment variables,
+> **⚠️ DEPRECATED**: This guide is for the legacy Lambda deployment which has been removed
+> as part of the migration to EC2-based deployment. This documentation is kept for
+> historical reference only.
+
+This guide covered the complete process for deploying the Macro AI Lambda function to AWS with proper environment variables,
 IAM roles, and Parameter Store permissions.
 
 ## 🚀 Quick Start

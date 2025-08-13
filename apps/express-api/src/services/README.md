@@ -77,10 +77,10 @@ The service supports two parameter tiers:
 The service is integrated into the Lambda cold start process for optimal performance:
 
 ```typescript
-// In lambda.ts
+// In application startup (e.g., index.ts)
 import { enhancedConfigService } from './services/enhanced-config.service.ts'
 
-// During cold start
+// During application initialization
 const [preloadResult, preloadError] =
 	await enhancedConfigService.preloadParameters()
 if (preloadError) {

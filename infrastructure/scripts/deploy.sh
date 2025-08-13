@@ -90,8 +90,8 @@ echo -e "${BLUE}📦 Installing infrastructure dependencies...${NC}"
 pnpm install --frozen-lockfile
 print_status "Infrastructure dependencies installed"
 
-# Build Express API Lambda package
-echo -e "${BLUE}🔨 Building Lambda package...${NC}"
+# Note: Lambda build steps have been removed as part of EC2 migration
+echo -e "${BLUE}⚠️  Lambda build steps removed - migrating to EC2 deployment${NC}"
 cd "$EXPRESS_API_DIR"
 
 # Install dependencies if needed
@@ -100,16 +100,10 @@ if [ ! -d "node_modules" ]; then
     pnpm install --frozen-lockfile
 fi
 
-# Build the Lambda package
-pnpm build:lambda
-pnpm bundle:lambda
-pnpm package:lambda
+# Build the Express API (standard build, not Lambda)
+pnpm build
 
-# Check if the Lambda package was created
-if [ ! -f "$LAMBDA_DIST_DIR/lambda.zip" ]; then
-    print_error "Lambda package not found at $LAMBDA_DIST_DIR/lambda.zip"
-    exit 1
-fi
+echo -e "${YELLOW}⚠️  Note: This deployment script needs to be updated for EC2 deployment${NC}"
 
 print_status "Lambda package built successfully"
 

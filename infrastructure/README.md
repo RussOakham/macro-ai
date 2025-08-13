@@ -1,17 +1,22 @@
 # Macro AI Infrastructure
 
-AWS CDK infrastructure code for the Macro AI development deployment. This creates a cost-optimized serverless architecture
-targeting <£10/month operational costs using hobby-scale infrastructure.
+AWS CDK infrastructure code for the Macro AI development deployment.
+
+> **⚠️ Migration in Progress**: This infrastructure is being migrated from Lambda to EC2 deployment.
+> Currently only Parameter Store configuration is active.
 
 ## Architecture Overview
 
-The infrastructure creates:
+The infrastructure currently creates:
 
-- **AWS Lambda Function**: Serverless API backend running the Express application
-- **API Gateway**: REST API for HTTP routing with CORS and throttling
 - **Parameter Store**: Secure configuration management for secrets and settings
-- **IAM Roles & Policies**: Least-privilege access for Lambda to Parameter Store
-- **CloudWatch Logs**: Centralized logging with cost-optimized retention
+- **IAM Roles & Policies**: Least-privilege access for applications to Parameter Store
+
+**Legacy components (removed during EC2 migration):**
+
+- ~~AWS Lambda Function~~ (removed)
+- ~~API Gateway~~ (removed)
+- ~~CloudWatch Logs for Lambda~~ (removed)
 
 ## Prerequisites
 
@@ -150,18 +155,18 @@ pnpm destroy
 
 ## Security
 
-- Lambda execution role follows least-privilege principle
 - Parameter Store access restricted to specific parameter paths
 - KMS encryption for SecureString parameters
-- CORS configured for frontend integration
+- IAM roles follow least-privilege principle
 
 ## Monitoring
 
-Basic monitoring included:
+> **Note**: Monitoring capabilities have been reduced during the Lambda-to-EC2 migration.
+> EC2-specific monitoring will be added in future phases.
 
-- CloudWatch Logs for Lambda execution
-- API Gateway access logs (when detailed monitoring enabled)
-- AWS X-Ray tracing (when detailed monitoring enabled)
+Currently available:
+
+- Parameter Store access logging via CloudTrail
 
 ## Troubleshooting
 
@@ -170,7 +175,6 @@ Basic monitoring included:
 1. **CDK Bootstrap Required**: Run `pnpm bootstrap` first
 2. **Permission Denied**: Ensure AWS credentials have CDK deployment permissions
 3. **Parameter Not Found**: Update placeholder values after deployment
-4. **Lambda Cold Start**: First request may be slower due to cold start
 
 ### Useful Commands
 
@@ -178,9 +182,8 @@ Basic monitoring included:
 # Check stack status
 aws cloudformation describe-stacks --stack-name MacroAiDevelopmentStack
 
-# View Lambda logs
-aws logs tail /aws/lambda/macro-ai-development-api --follow
+# View Parameter Store parameters
+aws ssm get-parameters-by-path --path "/macro-ai/development" --recursive
 
-# Test API endpoint
-curl https://your-api-id.execute-api.region.amazonaws.com/development/api/health
+# Note: Lambda and API Gateway commands removed during EC2 migration
 ```
