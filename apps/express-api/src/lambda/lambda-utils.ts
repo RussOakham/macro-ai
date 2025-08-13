@@ -121,19 +121,21 @@ export const createLambdaResponse = (
 	context?: Context,
 ): APIGatewayProxyResult => {
 	const __origin = getPrimaryAllowedOrigin()
-	const corsHeaders = __origin
-		? {
-				'Access-Control-Allow-Origin': __origin,
-				'Access-Control-Allow-Credentials': __origin === '*' ? 'false' : 'true',
-				Vary: 'Origin',
-			}
-		: {}
-	const defaultHeaders: Record<string, string> = {
+
+	// eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style
+	const defaultHeaders: { [key: string]: string } = {
 		'Content-Type': 'application/json',
-		...corsHeaders,
 		'Access-Control-Allow-Headers':
 			'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
 		'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
+	}
+
+	// Add CORS headers if origin is available
+	if (__origin) {
+		defaultHeaders['Access-Control-Allow-Origin'] = __origin
+		defaultHeaders['Access-Control-Allow-Credentials'] =
+			__origin === '*' ? 'false' : 'true'
+		defaultHeaders.Vary = 'Origin'
 	}
 
 	// Add Lambda context headers if available
