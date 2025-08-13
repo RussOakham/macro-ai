@@ -314,7 +314,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- -b /usr/local/bin
+          BIN_DIR="$HOME/.local/bin"
+          mkdir -p "$BIN_DIR"
+          # Install latest actionlint into a writable bin directory and add to PATH
+          curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- - latest "$BIN_DIR"
+          echo "$BIN_DIR" >> "$GITHUB_PATH"
           actionlint -version
       - name: Validate workflows with actionlint
         shell: bash

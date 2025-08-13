@@ -144,10 +144,17 @@ jobs:
           SANITIZED_BRANCH="${BRANCH_NAME//\//-}"
 
           if [[ "$APP_ID" == "<will-be-created>" ]]; then
-            FRONTEND_URL="<will-be-generated-during-deployment>"
-            echo "🌐 Frontend URL will be generated during Amplify deployment"
+            # Generate a predictable URL pattern for new apps
+            # Amplify app IDs are typically 13-character alphanumeric strings
+            # We'll create a deterministic placeholder that can be used for CORS
+            # The actual URL will be updated after deployment, but this provides a non-localhost fallback
+            PREDICTED_APP_ID="d$(echo "${ENV_NAME}-${PR_NUMBER}" | sha256sum | cut -c1-12)"
+            FRONTEND_URL="https://${SANITIZED_BRANCH}.${PREDICTED_APP_ID}.amplifyapp.com"
+            echo "🌐 Predicted Frontend URL (app will be created): $FRONTEND_URL"
+            echo "📝 Note: Actual URL will be determined during Amplify deployment"
+            echo "⚠️ This predicted URL is for CORS configuration only - the real URL will be different"
           else
-            FRONTEND_URL="https://${SANITIZED_BRANCH}.${APP_ID}.amplifyapp.com/"
+            FRONTEND_URL="https://${SANITIZED_BRANCH}.${APP_ID}.amplifyapp.com"
             echo "🌐 Pre-calculated Frontend URL: $FRONTEND_URL"
           fi
 
@@ -314,13 +321,14 @@ jobs:
           # Configure CORS origins using pre-calculated frontend URL
           FRONTEND_URL="${{ needs.validate-access.outputs.frontend-url }}"
           if [[ "$FRONTEND_URL" != "<will-be-generated-during-deployment>" ]]; then
-            # Use pre-calculated frontend URL for CORS
+            # Use pre-calculated or predicted frontend URL for CORS
             CORS_ORIGINS="${FRONTEND_URL%/}"
             echo "🔧 CORS Configuration:"
-            echo "  Pre-calculated Frontend URL: $FRONTEND_URL"
+            echo "  Frontend URL: $FRONTEND_URL"
             echo "  Setting CORS_ALLOWED_ORIGINS to: $CORS_ORIGINS"
           else
-            # Fallback to localhost for development (should rarely happen in PR previews)
+            # This should rarely happen now that we generate predicted URLs
+            # Fallback to localhost for development
             CORS_ORIGINS="http://localhost:5173,http://localhost:3000"
             echo "🔧 CORS Configuration (fallback):"
             echo "  Frontend URL not yet available, using localhost origins"
@@ -339,7 +347,7 @@ jobs:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
           NODE_ENV: 'production'
           # Important: pass the normalized CORS origins with trailing slash stripped
-          CORS_ALLOWED_ORIGINS: ${{ needs.validate-access.outputs.frontend-url != '<will-be-generated-during-deployment>' && format('{0}', needs.validate-access.outputs.frontend-url) || 'http://localhost:5173,http://localhost:3000' }}
+          CORS_ALLOWED_ORIGINS: ${{ needs.validate-access.outputs.frontend-url != '<will-be-generated-during-deployment>' && needs.validate-access.outputs.frontend-url || 'http://localhost:5173,http://localhost:3000' }}
 
       - name: Get deployment outputs
         id: outputs
