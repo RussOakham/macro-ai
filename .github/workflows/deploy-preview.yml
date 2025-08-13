@@ -957,7 +957,9 @@ jobs:
           fi
 
           # Create or update branch
+          # Sanitize branch for safe use; keep original for Amplify API calls
           BRANCH_NAME="${{ github.head_ref }}"
+          SANITIZED_BRANCH="${BRANCH_NAME//\//-}"
           echo "🌿 Setting up branch: ${BRANCH_NAME}"
 
           # Check if branch exists
@@ -992,8 +994,8 @@ jobs:
           # Request a deployment to obtain jobId and pre-signed upload URL
           DEPLOY_JSON=$(aws amplify create-deployment \
             --app-id "$APP_ID" \
-            --branch-name "${BRANCH_NAME}" \
-            --region ${{ env.AWS_REGION }})
+              --branch-name "${BRANCH_NAME}" \
+            --region "${{ env.AWS_REGION }}")
           JOB_ID=$(echo "$DEPLOY_JSON" | jq -r '.jobId')
           UPLOAD_URL=$(echo "$DEPLOY_JSON" | jq -r '.zipUploadUrl')
 
@@ -1047,10 +1049,12 @@ jobs:
             echo "✅ Deployment successful!"
             echo "🌐 Frontend URL: ${APP_URL}"
 
-            echo "app-id=${APP_ID}" >> $GITHUB_OUTPUT
-            echo "app-url=${APP_URL}" >> $GITHUB_OUTPUT
-            echo "job-id=${JOB_ID}" >> $GITHUB_OUTPUT
-            echo "deployment-status=success" >> $GITHUB_OUTPUT
+            {
+              echo "app-id=${APP_ID}"
+              echo "app-url=${APP_URL}"
+              echo "job-id=${JOB_ID}"
+              echo "deployment-status=success"
+            } >> "$GITHUB_OUTPUT"
           else
             echo "❌ Deployment failed with status: ${JOB_STATUS}"
             echo "deployment-status=failed" >> $GITHUB_OUTPUT

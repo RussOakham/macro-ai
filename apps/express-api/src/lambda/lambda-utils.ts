@@ -15,7 +15,7 @@ import type {
 /**
  * Get allowed CORS origins based on environment
  */
-const getAllowedOrigins = (): string[] => {
+export const getAllowedOrigins = (): string[] => {
 	const rawEnv = process.env.CORS_ALLOWED_ORIGINS ?? ''
 	const appEnv = process.env.APP_ENV ?? ''
 	const isPreview = appEnv.startsWith('pr-')
@@ -56,7 +56,7 @@ const getAllowedOrigins = (): string[] => {
 /**
  * Get the primary allowed CORS origin (first in the list)
  */
-const getPrimaryAllowedOrigin = (): string => {
+export const getPrimaryAllowedOrigin = (): string => {
 	const origins = getAllowedOrigins()
 	const primary = origins[0] ?? 'http://localhost:3000'
 	console.log(

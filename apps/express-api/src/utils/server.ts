@@ -83,10 +83,22 @@ const createServer = (): Express => {
 
 	app.use(
 		cors({
-			origin:
-				'https://test-cors-preview-validation.d32ideiu9aodqi.amplifyapp.com/',
+			origin: (origin, callback) => {
+				// Allow REST tools or same-origin (no Origin header)
+				if (!origin) {
+					callback(null, true)
+					return
+				}
+				// Normalize by stripping trailing slashes
+				const normalized = origin.replace(/\/+$/, '')
+				const allowedSet = new Set(
+					effectiveOrigins.map((o) => o.replace(/\/+$/, '')),
+				)
+				const isAllowed = allowedSet.has(normalized)
+				callback(null, isAllowed)
+			},
 			credentials: true,
-			exposedHeaders: ['cache-control'], // 'set-cookie' cannot be exposed via CORS
+			exposedHeaders: ['cache-control'],
 			methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 			allowedHeaders: [
 				'Origin',
@@ -97,7 +109,7 @@ const createServer = (): Express => {
 				'X-API-KEY',
 				'Cache-Control',
 			],
-			maxAge: 86400, // 24 hours
+			maxAge: 86400,
 		}),
 	)
 	// Conditional compression - disable for streaming endpoints

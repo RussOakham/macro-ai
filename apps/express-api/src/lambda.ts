@@ -12,7 +12,10 @@ import type {
 import type { Express, Response } from 'express'
 import serverless from 'serverless-http'
 
-import { createErrorResponse } from './lambda/lambda-utils.ts'
+import {
+	createErrorResponse,
+	handleCorsPreflightRequest,
+} from './lambda/lambda-utils.ts'
 import { enhancedConfigService } from './services/enhanced-config.service.ts'
 import { createServer } from './utils/server.ts'
 
@@ -50,25 +53,9 @@ const initializeExpressApp = (): Express => {
 		// Create the Express server using the existing createServer function
 		const expressApp = createServer()
 
-		// Log effective CORS configuration perceived by the app
-		const rawEnv = process.env.CORS_ALLOWED_ORIGINS ?? ''
-		const appEnv = process.env.APP_ENV ?? ''
-		const isPreview = appEnv.startsWith('pr-')
-		const parsed = rawEnv
-			.split(',')
-			.map((o) => o.trim())
-			.filter((o) => o.length > 0)
-			.map((o) => (o.endsWith('/') ? o.replace(/\/+$/, '') : o))
 		logger.info('Express app initialized successfully for Lambda', {
 			operation: 'expressAppInit',
 			coldStart: !isInitialized,
-			cors: {
-				rawEnv,
-				appEnv,
-				isPreview,
-				parsed,
-				primary: parsed[0] ?? 'http://localhost:3000',
-			},
 		})
 
 		return expressApp
@@ -220,6 +207,12 @@ export const handler = async (
 				operation: 'warmStart',
 				requestId: context.awsRequestId,
 			})
+		}
+
+		// Handle OPTIONS preflight quickly without invoking Express
+		const preflight = handleCorsPreflightRequest(event, context)
+		if (preflight) {
+			return preflight
 		}
 
 		// Process the request through serverless-http

@@ -162,7 +162,9 @@ export class LambdaConstruct extends Construct {
 		// For normal deploys we load the built asset from disk. For destroy operations (or when the asset
 		// is intentionally not present) we fall back to a tiny inline handler so the stack can be synthesized
 		// without staging any assets.
-		const destroyMode = process.env.CDK_DESTROY_MODE === 'true' || process.env.ALLOW_INLINE_CODE_FOR_DESTROY === 'true'
+		const destroyMode =
+			process.env.CDK_DESTROY_MODE === 'true' ||
+			process.env.ALLOW_INLINE_CODE_FOR_DESTROY === 'true'
 		const assetExists = existsSync(deploymentPackagePath)
 		let code: lambda.Code
 		if (!assetExists && destroyMode) {
