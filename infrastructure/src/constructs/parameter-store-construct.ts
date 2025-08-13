@@ -19,7 +19,7 @@ export interface ParameterStoreConstructProps {
 /**
  * Construct for managing Parameter Store parameters and IAM policies
  *
- * Creates the parameter hierarchy and IAM policies needed for the Lambda function
+ * Creates the parameter hierarchy and IAM policies needed for applications
  * to securely access configuration values from Parameter Store.
  */
 export class ParameterStoreConstruct extends Construct {
@@ -66,7 +66,7 @@ export class ParameterStoreConstruct extends Construct {
 			)
 		}
 
-		// Create IAM policy for Lambda to read parameters (works for both modes)
+		// Create IAM policy for applications to read parameters (works for both modes)
 		this.readPolicy = this.createReadPolicy()
 
 		// Output the parameter prefix for reference

@@ -119,8 +119,8 @@ describe('Server Bootstrap (index.ts)', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[server]: Failed to start server:',
-				testError,
+				{ error: testError },
+				'[server]: Failed to start server',
 			)
 			expect(mockProcessExit).toHaveBeenCalledWith(1)
 		})
@@ -141,8 +141,8 @@ describe('Server Bootstrap (index.ts)', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[server]: Failed to start server:',
-				testError,
+				{ error: testError },
+				'[server]: Failed to start server',
 			)
 			expect(mockProcessExit).toHaveBeenCalledWith(1)
 		})
@@ -163,8 +163,8 @@ describe('Server Bootstrap (index.ts)', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[server]: Failed to start server:',
-				configError,
+				{ error: configError },
+				'[server]: Failed to start server',
 			)
 			expect(mockProcessExit).toHaveBeenCalledWith(1)
 		})
@@ -185,8 +185,8 @@ describe('Server Bootstrap (index.ts)', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[server]: Failed to start server:',
-				serverError,
+				{ error: serverError },
+				'[server]: Failed to start server',
 			)
 			expect(mockProcessExit).toHaveBeenCalledWith(1)
 		})

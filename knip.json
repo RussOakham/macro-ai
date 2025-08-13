@@ -16,7 +16,6 @@
 		"apps/express-api": {
 			"entry": [
 				"src/index.ts",
-				"src/lambda.ts",
 				"src/**/*.test.ts",
 				"src/**/*.spec.ts",
 				"scripts/**/*.ts"

@@ -58,13 +58,16 @@ export class ParameterStoreService {
 			region: this.config.region,
 		})
 
-		logger.info('ParameterStoreService initialized', {
-			operation: 'parameterStoreInit',
-			region: this.config.region,
-			environment: this.config.environment,
-			cacheEnabled: this.config.cacheEnabled,
-			cacheTtlMs: this.config.cacheTtlMs,
-		})
+		logger.info(
+			{
+				operation: 'parameterStoreInit',
+				region: this.config.region,
+				environment: this.config.environment,
+				cacheEnabled: this.config.cacheEnabled,
+				cacheTtlMs: this.config.cacheTtlMs,
+			},
+			'ParameterStoreService initialized',
+		)
 	}
 
 	/**
@@ -83,11 +86,14 @@ export class ParameterStoreService {
 		if (useCache && this.config.cacheEnabled) {
 			const cached = this.cache.get(parameterName)
 			if (cached && Date.now() < cached.expires) {
-				logger.debug('Parameter retrieved from cache', {
-					operation: 'getParameterFromCache',
-					parameter: parameterName,
-					category: metadata.category,
-				})
+				logger.debug(
+					{
+						operation: 'getParameterFromCache',
+						parameter: parameterName,
+						category: metadata.category,
+					},
+					'Parameter retrieved from cache',
+				)
 				return [cached.value, null]
 			}
 		}
@@ -99,12 +105,15 @@ export class ParameterStoreService {
 				WithDecryption: true,
 			})
 
-			logger.debug('Retrieving parameter from Parameter Store', {
-				operation: 'getParameterFromStore',
-				parameter: parameterName,
-				fullPath: metadata.fullPath,
-				category: metadata.category,
-			})
+			logger.debug(
+				{
+					operation: 'getParameterFromStore',
+					parameter: parameterName,
+					fullPath: metadata.fullPath,
+					category: metadata.category,
+				},
+				'Retrieving parameter from Parameter Store',
+			)
 
 			const response = await this.ssmClient.send(command)
 			const parameterValue = response.Parameter?.Value
@@ -127,15 +136,18 @@ export class ParameterStoreService {
 
 		if (error) {
 			// Log detailed error information for debugging
-			logger.error('Parameter Store error details', {
-				operation: 'getParameterError',
-				parameter: parameterName,
-				fullPath: metadata.fullPath,
-				errorName: error.name,
-				errorMessage: error.message,
-				errorType: error.type,
-				errorStack: error.stack,
-			})
+			logger.error(
+				{
+					operation: 'getParameterError',
+					parameter: parameterName,
+					fullPath: metadata.fullPath,
+					errorName: error.name,
+					errorMessage: error.message,
+					errorType: error.type,
+					errorStack: error.stack,
+				},
+				'Parameter Store error details',
+			)
 
 			// Handle specific AWS errors using error codes/names
 			if (error.name === 'ParameterNotFound') {
@@ -162,13 +174,16 @@ export class ParameterStoreService {
 		}
 
 		// Log access for audit trail
-		logger.info('Parameter retrieved successfully', {
-			operation: 'getParameterSuccess',
-			parameter: parameterName,
-			category: metadata.category,
-			cached: false,
-			timestamp: new Date().toISOString(),
-		})
+		logger.info(
+			{
+				operation: 'getParameterSuccess',
+				parameter: parameterName,
+				category: metadata.category,
+				cached: false,
+				timestamp: new Date().toISOString(),
+			},
+			'Parameter retrieved successfully',
+		)
 
 		return [value, null]
 	}
@@ -213,15 +228,21 @@ export class ParameterStoreService {
 	public clearCache = (parameterName?: string): void => {
 		if (parameterName) {
 			this.cache.delete(parameterName)
-			logger.debug('Parameter cache cleared', {
-				operation: 'clearParameterCache',
-				parameter: parameterName,
-			})
+			logger.debug(
+				{
+					operation: 'clearParameterCache',
+					parameter: parameterName,
+				},
+				'Parameter cache cleared',
+			)
 		} else {
 			this.cache.clear()
-			logger.debug('All parameter cache cleared', {
-				operation: 'clearAllParameterCache',
-			})
+			logger.debug(
+				{
+					operation: 'clearAllParameterCache',
+				},
+				'All parameter cache cleared',
+			)
 		}
 	}
 

@@ -60,11 +60,11 @@ const loadConfig = (): Result<TEnv> => {
 		// In Lambda environment, don't fail immediately - let Parameter Store populate values first
 		if (isLambdaEnvironment) {
 			logger.warn(
-				'Configuration validation failed in Lambda environment, Parameter Store will populate missing values',
 				{
 					operation: 'configValidationWarning',
 					error: validationError.message,
 				},
+				'Configuration validation failed in Lambda environment, Parameter Store will populate missing values',
 			)
 			// Return a minimal config that won't crash the app
 			return [

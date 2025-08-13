@@ -90,7 +90,7 @@ Rate limit headers are included in responses to help track usage.`,
 		logger.info('Swagger spec generated successfully at public/swagger.json')
 	} catch (error: unknown) {
 		const err = standardizeError(error)
-		logger.error('Failed to generate swagger spec:', err.message)
+		logger.error({ error: err }, 'Failed to generate swagger spec')
 		process.exit(1)
 	}
 }
