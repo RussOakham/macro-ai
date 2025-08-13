@@ -7,8 +7,6 @@
 	"scripts": {
 		"build": "tsc",
 		"watch": "tsc -w",
-		"test": "vitest run --passWithNoTests",
-		"test:coverage": "vitest --coverage --passWithNoTests",
 		"clean": "rm -rf dist lib cdk.out",
 		"cdk": "cdk",
 		"deploy": "cdk deploy --all --require-approval never",
@@ -29,17 +27,15 @@
 	"devDependencies": {
 		"@repo/config-eslint": "workspace:*",
 		"@repo/config-typescript": "workspace:*",
-		"@types/node": "^22.5.4",
-		"@vitest/coverage-v8": "^2.0.5",
+		"@types/node": "catalog:",
 		"aws-cdk": "^2.161.1",
 		"eslint": "catalog:",
 		"eslint-config-prettier": "catalog:",
 		"eslint-config-turbo": "^2.5.5",
 		"eslint-plugin-simple-import-sort": "^12.1.1",
-		"tsx": "^4.0.0",
-		"typescript": "^5.6.2",
-		"typescript-eslint": "^8.39.0",
-		"vitest": "^2.0.5"
+		"tsx": "catalog:",
+		"typescript": "catalog:",
+		"typescript-eslint": "^8.39.0"
 	},
 	"engines": {
 		"node": ">=18.0.0"
