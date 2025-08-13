@@ -207,13 +207,16 @@ export const handleCorsPreflightRequest = (
 		const requestOrigin = event.headers.origin ?? event.headers.Origin
 		const allowedOrigins = getAllowedOrigins()
 
-		// Check if the request origin is allowed
-		const isAllowedOrigin =
-			allowedOrigins.includes(requestOrigin ?? '') ||
-			allowedOrigins.includes('*')
-		const responseOrigin = isAllowedOrigin
-			? (requestOrigin ?? getPrimaryAllowedOrigin())
-			: getPrimaryAllowedOrigin()
+		// Determine response origin and whether credentials are allowed
+		let responseOrigin: string
+		if (allowedOrigins.includes('*')) {
+			// When wildcard is configured, respond with '*' and disable credentials
+			responseOrigin = '*'
+		} else if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+			responseOrigin = requestOrigin
+		} else {
+			responseOrigin = getPrimaryAllowedOrigin()
+		}
 
 		const allowCreds = responseOrigin !== '*'
 
