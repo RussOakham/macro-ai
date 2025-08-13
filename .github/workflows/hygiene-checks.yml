@@ -302,3 +302,38 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Lint markdown files
         run: pnpm lint:md
+
+  actionlint:
+    name: Validate GitHub Actions Workflows (actionlint)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- -b /usr/local/bin
+          actionlint -version
+      - name: Validate workflows with actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Validate only changed workflow files on PRs; full scan on push
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "🔎 Validating changed workflow files..."
+            git fetch --no-tags --depth=2 origin ${GITHUB_BASE_REF:-main}
+            CHANGED=$(git diff --name-only "origin/${GITHUB_BASE_REF:-main}" | grep '^\.github/workflows/' || true)
+            if [[ -z "$CHANGED" ]]; then
+              echo "No changed workflow files; running full validation as a fallback"
+              actionlint -color
+            else
+              echo "Changed workflows:"; echo "$CHANGED"
+              # actionlint accepts file paths directly
+              actionlint -color $CHANGED
+            fi
+          else
+            echo "🔎 Validating all workflow files..."
+            actionlint -color
+          fi

@@ -119,13 +119,12 @@ describe('createServer', () => {
 		vi.mocked(express).mockReturnValue(mockApp as unknown as Express)
 	})
 
-		afterEach(() => {
-			// Ensure environment variables do not leak between tests
-			delete process.env.APP_ENV
-			delete process.env.CORS_ALLOWED_ORIGINS
-			vi.resetModules()
-		})
-
+	afterEach(() => {
+		// Ensure environment variables do not leak between tests
+		delete process.env.APP_ENV
+		delete process.env.CORS_ALLOWED_ORIGINS
+		vi.resetModules()
+	})
 
 	describe('Express App Creation', () => {
 		it('should create an Express application', async () => {
@@ -248,35 +247,33 @@ describe('createServer', () => {
 
 		// Cleanup
 		delete process.env.CORS_ALLOWED_ORIGINS
-})
+	})
 
-		it('should handle preview APP_ENV (pr-*) by parsing origins but not widening credentials policy', async () => {
-			// Arrange
-			process.env.APP_ENV = 'pr-123'
-			process.env.CORS_ALLOWED_ORIGINS = ''
-			const cors = await import('cors')
-			const mockCorsMiddleware = vi.fn()
-			vi.mocked(cors.default).mockReturnValue(mockCorsMiddleware)
+	it('should handle preview APP_ENV (pr-*) by parsing origins but not widening credentials policy', async () => {
+		// Arrange
+		process.env.APP_ENV = 'pr-123'
+		process.env.CORS_ALLOWED_ORIGINS = ''
+		const cors = await import('cors')
+		const mockCorsMiddleware = vi.fn()
+		vi.mocked(cors.default).mockReturnValue(mockCorsMiddleware)
 
-			vi.resetModules()
-			const { createServer } = await import('../server.ts')
+		vi.resetModules()
+		const { createServer } = await import('../server.ts')
 
-			// Act
-			createServer()
+		// Act
+		createServer()
 
-			// Assert: we still configure CORS with credentials true (callback will constrain origins)
-			expect(cors.default).toHaveBeenCalledWith(
-				expect.objectContaining({
-					credentials: true,
-				}),
-			)
+		// Assert: we still configure CORS with credentials true (callback will constrain origins)
+		expect(cors.default).toHaveBeenCalledWith(
+			expect.objectContaining({
+				credentials: true,
+			}),
+		)
 
-			// Cleanup
-			delete process.env.APP_ENV
-			delete process.env.CORS_ALLOWED_ORIGINS
-		})
-
-
+		// Cleanup
+		delete process.env.APP_ENV
+		delete process.env.CORS_ALLOWED_ORIGINS
+	})
 
 	describe('Body Parsing Middleware', () => {
 		it('should configure compression middleware with streaming filter', async () => {

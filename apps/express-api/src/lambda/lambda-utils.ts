@@ -20,25 +20,61 @@ export const getAllowedOrigins = (): string[] => {
 	const appEnv = process.env.APP_ENV ?? ''
 	const isPreview = appEnv.startsWith('pr-')
 
-	// Parse and normalize: trim whitespace and strip any trailing '/'
-	const parsedCorsOrigins = rawEnv
+	// Parse, validate, and normalize origins
+	const candidates = rawEnv
 		.split(',')
 		.map((o) => o.trim())
 		.filter((o) => o.length > 0)
-		.map((o) => (o.endsWith('/') ? o.replace(/\/+$/, '') : o))
+
+	const normalized: string[] = []
+	const invalid: string[] = []
+
+	for (const o of candidates) {
+		if (o === '*') {
+			// Allow explicit wildcard
+			normalized.push('*')
+			continue
+		}
+		try {
+			const u = new URL(o)
+			if (u.protocol === 'http:' || u.protocol === 'https:') {
+				// URL.origin gives scheme://host[:port]
+				normalized.push(u.origin)
+			} else {
+				invalid.push(o)
+			}
+		} catch {
+			// Fallback: accept http(s) with trailing slash stripped if it looks close
+			if (/^https?:\/\//i.test(o)) {
+				normalized.push(o.replace(/\/+$/, ''))
+			} else {
+				invalid.push(o)
+			}
+		}
+	}
+
+	// De-duplicate while preserving order
+	const uniq = Array.from(new Set(normalized))
 
 	// Log detailed diagnostics for observability
 	console.log('[lambda-utils] CORS configuration diagnostics:')
 	console.log(`  APP_ENV: "${appEnv}" (isPreview=${String(isPreview)})`)
 	console.log(`  CORS_ALLOWED_ORIGINS (raw): "${rawEnv}"`)
 	console.log(
-		`  CORS_ALLOWED_ORIGINS (parsed/normalized): [${parsedCorsOrigins
+		`  CORS_ALLOWED_ORIGINS (parsed/normalized): [${uniq
 			.map((o) => `"${o}"`)
 			.join(', ')}]`,
 	)
+	if (invalid.length > 0) {
+		console.warn(
+			`[lambda-utils] Skipped invalid CORS origins: [${invalid
+				.map((o) => `"${o}"`)
+				.join(', ')}]`,
+		)
+	}
 
 	// Safeguard: In preview environments, do NOT silently fall back to localhost
-	if (isPreview && parsedCorsOrigins.length === 0) {
+	if (isPreview && uniq.length === 0) {
 		console.error(
 			'[lambda-utils] Preview environment detected (pr-*), but CORS_ALLOWED_ORIGINS is empty/invalid. Refusing to fall back to localhost origins. Ensure CI passes the exact Amplify preview origin.',
 		)
@@ -46,9 +82,7 @@ export const getAllowedOrigins = (): string[] => {
 	}
 
 	const effectiveOrigins =
-		parsedCorsOrigins.length > 0
-			? parsedCorsOrigins
-			: ['http://localhost:3000', 'http://localhost:3040']
+		uniq.length > 0 ? uniq : ['http://localhost:3000', 'http://localhost:3040']
 
 	return effectiveOrigins
 }

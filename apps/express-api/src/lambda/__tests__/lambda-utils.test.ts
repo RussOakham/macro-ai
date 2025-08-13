@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-non-null-assertion */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -190,33 +190,34 @@ describe('Lambda Utils', () => {
 			expect(body.stack).toBeUndefined()
 		})
 
-			it('should set Allow-Credentials=false when wildcard origin is configured (preflight)', () => {
-				// Arrange
-				const originalEnv = process.env.CORS_ALLOWED_ORIGINS
-				process.env.CORS_ALLOWED_ORIGINS = '*'
+		it('should set Allow-Credentials=false when wildcard origin is configured (preflight)', () => {
+			// Arrange
+			const originalEnv = process.env.CORS_ALLOWED_ORIGINS
+			process.env.CORS_ALLOWED_ORIGINS = '*'
 
-				const optionsEvent = {
-					...mockEvent,
-					httpMethod: 'OPTIONS',
-					headers: { ...mockEvent.headers, origin: 'https://any-origin.com' },
-				}
-				const response = handleCorsPreflightRequest(optionsEvent, mockContext)
+			const optionsEvent = {
+				...mockEvent,
+				httpMethod: 'OPTIONS',
+				headers: { ...mockEvent.headers, origin: 'https://any-origin.com' },
+			}
+			const response = handleCorsPreflightRequest(optionsEvent, mockContext)
 
-				expect(response).not.toBeNull()
-				if (response) {
-					expect(response.statusCode).toBe(200)
-					expect(response.headers?.['Access-Control-Allow-Origin']).toBe('*')
-					expect(response.headers?.['Access-Control-Allow-Credentials']).toBe('false')
-				}
+			expect(response).not.toBeNull()
+			if (response) {
+				expect(response.statusCode).toBe(200)
+				expect(response.headers?.['Access-Control-Allow-Origin']).toBe('*')
+				expect(response.headers?.['Access-Control-Allow-Credentials']).toBe(
+					'false',
+				)
+			}
 
-				// Cleanup
-				if (originalEnv !== undefined) {
-					process.env.CORS_ALLOWED_ORIGINS = originalEnv
-				} else {
-					delete process.env.CORS_ALLOWED_ORIGINS
-				}
-			})
-
+			// Cleanup
+			if (originalEnv !== undefined) {
+				process.env.CORS_ALLOWED_ORIGINS = originalEnv
+			} else {
+				delete process.env.CORS_ALLOWED_ORIGINS
+			}
+		})
 	})
 
 	describe('extractRequestInfo', () => {
@@ -311,14 +312,13 @@ describe('Lambda Utils', () => {
 				expect(response.statusCode).toBe(200)
 				expect(response.headers).toEqual(
 					expect.objectContaining({
-					'Access-Control-Allow-Origin': 'http://localhost:3000',
-					'Access-Control-Allow-Credentials': 'true',
-					'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
-					'Access-Control-Max-Age': '86400',
-				}),
-			)
+						'Access-Control-Allow-Origin': 'http://localhost:3000',
+						'Access-Control-Allow-Credentials': 'true',
+						'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
+						'Access-Control-Max-Age': '86400',
+					}),
+				)
 			}
-
 		})
 
 		it('should handle OPTIONS request with custom CORS origins', () => {
