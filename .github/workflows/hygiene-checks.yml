@@ -316,7 +316,7 @@ jobs:
           set -euo pipefail
           # Pin to a specific actionlint release and verify the installer before running
           ACTIONLINT_VERSION="1.7.7"
-          curl -sSL "https://raw.githubusercontent.com/rhysd/actionlint/v${ACTIONLINT_VERSION}/scripts/download-actionlint.bash" -o /tmp/download-actionlint.bash
+          curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- latest "$BIN_DIR"
           # TODO: verify /tmp/download-actionlint.bash (checksum or GPG/commit) before executing
           bash /tmp/download-actionlint.bash -b /usr/local/bin "${ACTIONLINT_VERSION}"
           actionlint -version
