@@ -1,10 +1,10 @@
 /**
  * Deployment Status Tracking Integration Example
- * 
+ *
  * This example demonstrates how to integrate the Deployment Status Tracking system
  * with the existing Phase 4 deployment pipeline to provide comprehensive deployment
  * monitoring, real-time dashboards, detailed logging, and enhanced CLI reporting.
- * 
+ *
  * Features demonstrated:
  * - Real-time deployment status tracking with DynamoDB
  * - Comprehensive deployment event logging
@@ -74,7 +74,7 @@ export interface DeploymentStatusIntegrationStackProps extends cdk.StackProps {
 
 /**
  * Deployment Status Tracking Integration Stack
- * 
+ *
  * This stack demonstrates the complete integration of deployment status tracking
  * with the existing Phase 4 deployment pipeline, providing comprehensive monitoring,
  * real-time dashboards, and enhanced CLI reporting capabilities.
@@ -91,7 +91,11 @@ export class DeploymentStatusIntegrationStack extends cdk.Stack {
 	public readonly deploymentStatus: DeploymentStatusConstruct
 	public readonly deploymentDashboard: DeploymentDashboardConstruct
 
-	constructor(scope: Construct, id: string, props: DeploymentStatusIntegrationStackProps) {
+	constructor(
+		scope: Construct,
+		id: string,
+		props: DeploymentStatusIntegrationStackProps,
+	) {
 		super(scope, id, props)
 
 		const { environmentName, applicationName, notificationEmails } = props
@@ -117,114 +121,149 @@ export class DeploymentStatusIntegrationStack extends cdk.Stack {
 			enableDetailedMonitoring: environmentName === 'production',
 		})
 
-		this.autoScalingConstruct = new AutoScalingConstruct(this, 'AutoScalingConstruct', {
-			vpc: this.vpcConstruct.vpc,
-			launchTemplate: this.ec2Construct.launchTemplate,
-			environmentName,
-			applicationName,
-			targetGroups: [this.albConstruct.defaultTargetGroup],
-			autoScaling: this.getAutoScalingConfigForEnvironment(environmentName),
-			enableDetailedMonitoring: true,
-		})
+		this.autoScalingConstruct = new AutoScalingConstruct(
+			this,
+			'AutoScalingConstruct',
+			{
+				vpc: this.vpcConstruct.vpc,
+				launchTemplate: this.ec2Construct.launchTemplate,
+				environmentName,
+				applicationName,
+				targetGroups: [this.albConstruct.defaultTargetGroup],
+				autoScaling: this.getAutoScalingConfigForEnvironment(environmentName),
+				enableDetailedMonitoring: true,
+			},
+		)
 
-		this.monitoringIntegration = new MonitoringIntegration(this, 'MonitoringIntegration', {
-			environmentName,
-			applicationName,
-			ec2Construct: this.ec2Construct,
-			albConstruct: this.albConstruct,
-			autoScalingConstruct: this.autoScalingConstruct,
-			criticalAlertEmails: notificationEmails,
-			warningAlertEmails: notificationEmails,
-			enableCostMonitoring: true,
-		})
+		this.monitoringIntegration = new MonitoringIntegration(
+			this,
+			'MonitoringIntegration',
+			{
+				environmentName,
+				applicationName,
+				ec2Construct: this.ec2Construct,
+				albConstruct: this.albConstruct,
+				autoScalingConstruct: this.autoScalingConstruct,
+				criticalAlertEmails: notificationEmails,
+				warningAlertEmails: notificationEmails,
+				enableCostMonitoring: true,
+			},
+		)
 
 		// 2. Create SNS topics for deployment notifications
 		const notificationTopics = this.createNotificationTopics(notificationEmails)
 
 		// 3. Create Advanced Health Check System
-		this.advancedHealthCheck = new AdvancedHealthCheckConstruct(this, 'AdvancedHealthCheck', {
-			environmentName,
-			applicationName,
-			vpc: this.vpcConstruct.vpc,
-			targetGroups: [this.albConstruct.defaultTargetGroup],
-			healthCheckConfig: this.getHealthCheckConfigForEnvironment(environmentName),
-			notificationTopics: {
-				healthDegraded: notificationTopics.healthDegraded,
-				healthRestored: notificationTopics.healthRestored,
-				criticalFailure: notificationTopics.criticalFailure,
+		this.advancedHealthCheck = new AdvancedHealthCheckConstruct(
+			this,
+			'AdvancedHealthCheck',
+			{
+				environmentName,
+				applicationName,
+				vpc: this.vpcConstruct.vpc,
+				targetGroups: [this.albConstruct.defaultTargetGroup],
+				healthCheckConfig:
+					this.getHealthCheckConfigForEnvironment(environmentName),
+				notificationTopics: {
+					healthDegraded: notificationTopics.healthDegraded,
+					healthRestored: notificationTopics.healthRestored,
+					criticalFailure: notificationTopics.criticalFailure,
+				},
 			},
-		})
+		)
 
 		// 4. Create Enhanced Rollback System
-		this.enhancedRollback = new EnhancedRollbackConstruct(this, 'EnhancedRollback', {
-			environmentName,
-			applicationName,
-			autoScalingGroup: this.autoScalingConstruct.autoScalingGroup,
-			rollbackConfig: this.getRollbackConfigForEnvironment(environmentName),
-			notificationTopics: {
-				rollbackStarted: notificationTopics.rollbackStarted,
-				rollbackCompleted: notificationTopics.rollbackCompleted,
-				rollbackFailed: notificationTopics.rollbackFailed,
-				rollbackValidated: notificationTopics.rollbackValidated,
+		this.enhancedRollback = new EnhancedRollbackConstruct(
+			this,
+			'EnhancedRollback',
+			{
+				environmentName,
+				applicationName,
+				autoScalingGroup: this.autoScalingConstruct.autoScalingGroup,
+				rollbackConfig: this.getRollbackConfigForEnvironment(environmentName),
+				notificationTopics: {
+					rollbackStarted: notificationTopics.rollbackStarted,
+					rollbackCompleted: notificationTopics.rollbackCompleted,
+					rollbackFailed: notificationTopics.rollbackFailed,
+					rollbackValidated: notificationTopics.rollbackValidated,
+				},
 			},
-		})
+		)
 
 		// 5. Create Deployment Status Tracking System
-		this.deploymentStatus = new DeploymentStatusConstruct(this, 'DeploymentStatus', {
-			environmentName,
-			applicationName,
-			deploymentStatusConfig: {
-				historyRetentionDays: props.deploymentStatusConfig?.historyRetentionDays ?? 90,
-				enableDetailedLogging: props.deploymentStatusConfig?.enableDetailedLogging ?? true,
-				logRetentionDays: this.getLogRetentionForEnvironment(environmentName),
-				enableNotifications: props.deploymentStatusConfig?.enableNotifications ?? true,
+		this.deploymentStatus = new DeploymentStatusConstruct(
+			this,
+			'DeploymentStatus',
+			{
+				environmentName,
+				applicationName,
+				deploymentStatusConfig: {
+					historyRetentionDays:
+						props.deploymentStatusConfig?.historyRetentionDays ?? 90,
+					enableDetailedLogging:
+						props.deploymentStatusConfig?.enableDetailedLogging ?? true,
+					logRetentionDays: this.getLogRetentionForEnvironment(environmentName),
+					enableNotifications:
+						props.deploymentStatusConfig?.enableNotifications ?? true,
+				},
+				notificationTopics: {
+					deploymentStarted: notificationTopics.deploymentStarted,
+					deploymentCompleted: notificationTopics.deploymentCompleted,
+					deploymentFailed: notificationTopics.deploymentFailed,
+					deploymentRolledBack: notificationTopics.deploymentRolledBack,
+				},
 			},
-			notificationTopics: {
-				deploymentStarted: notificationTopics.deploymentStarted,
-				deploymentCompleted: notificationTopics.deploymentCompleted,
-				deploymentFailed: notificationTopics.deploymentFailed,
-				deploymentRolledBack: notificationTopics.deploymentRolledBack,
-			},
-		})
+		)
 
 		// 6. Create Deployment Dashboard
-		this.deploymentDashboard = new DeploymentDashboardConstruct(this, 'DeploymentDashboard', {
-			environmentName,
-			applicationName,
-			deploymentHistoryTable: this.deploymentStatus.deploymentHistoryTable,
-			deploymentStatusFunctions: {
-				eventProcessor: this.deploymentStatus.deploymentEventProcessor,
-				statusQuery: this.deploymentStatus.deploymentStatusQuery,
+		this.deploymentDashboard = new DeploymentDashboardConstruct(
+			this,
+			'DeploymentDashboard',
+			{
+				environmentName,
+				applicationName,
+				deploymentHistoryTable: this.deploymentStatus.deploymentHistoryTable,
+				deploymentStatusFunctions: {
+					eventProcessor: this.deploymentStatus.deploymentEventProcessor,
+					statusQuery: this.deploymentStatus.deploymentStatusQuery,
+				},
+				dashboardConfig: {
+					refreshInterval:
+						props.deploymentStatusConfig?.dashboardRefreshInterval ??
+						cdk.Duration.minutes(5),
+					enableDetailedMetrics: environmentName === 'production',
+					timeRange: cdk.Duration.hours(24),
+				},
 			},
-			dashboardConfig: {
-				refreshInterval: props.deploymentStatusConfig?.dashboardRefreshInterval ?? cdk.Duration.minutes(5),
-				enableDetailedMetrics: environmentName === 'production',
-				timeRange: cdk.Duration.hours(24),
-			},
-		})
+		)
 
 		// 7. Create Enhanced Deployment Pipeline with status tracking integration
-		this.deploymentPipeline = new DeploymentPipelineConstruct(this, 'DeploymentPipeline', {
-			environmentName,
-			applicationName,
-			autoScalingConstruct: this.autoScalingConstruct,
-			monitoringConstruct: this.monitoringIntegration.monitoring,
-			targetGroups: [this.albConstruct.defaultTargetGroup],
-			vpc: this.vpcConstruct.vpc,
-			deploymentConfig: this.getDeploymentConfigForEnvironment(environmentName),
-			notificationTopics: {
-				deploymentStart: notificationTopics.deploymentStart,
-				deploymentSuccess: notificationTopics.deploymentSuccess,
-				deploymentFailure: notificationTopics.deploymentFailure,
-				rollbackTriggered: notificationTopics.rollbackTriggered,
+		this.deploymentPipeline = new DeploymentPipelineConstruct(
+			this,
+			'DeploymentPipeline',
+			{
+				environmentName,
+				applicationName,
+				autoScalingConstruct: this.autoScalingConstruct,
+				monitoringConstruct: this.monitoringIntegration.monitoring,
+				targetGroups: [this.albConstruct.defaultTargetGroup],
+				vpc: this.vpcConstruct.vpc,
+				deploymentConfig:
+					this.getDeploymentConfigForEnvironment(environmentName),
+				notificationTopics: {
+					deploymentStart: notificationTopics.deploymentStart,
+					deploymentSuccess: notificationTopics.deploymentSuccess,
+					deploymentFailure: notificationTopics.deploymentFailure,
+					rollbackTriggered: notificationTopics.rollbackTriggered,
+				},
+				// Integration with deployment status tracking
+				deploymentStatusIntegration: {
+					eventProcessor: this.deploymentStatus.deploymentEventProcessor,
+					statusQuery: this.deploymentStatus.deploymentStatusQuery,
+					historyTable: this.deploymentStatus.deploymentHistoryTable,
+				},
 			},
-			// Integration with deployment status tracking
-			deploymentStatusIntegration: {
-				eventProcessor: this.deploymentStatus.deploymentEventProcessor,
-				statusQuery: this.deploymentStatus.deploymentStatusQuery,
-				historyTable: this.deploymentStatus.deploymentHistoryTable,
-			},
-		})
+		)
 
 		// 8. Create stack outputs
 		this.createOutputs()
@@ -291,9 +330,21 @@ export class DeploymentStatusIntegrationStack extends cdk.Stack {
 	private getHealthCheckConfigForEnvironment(environmentName: string) {
 		return {
 			applicationEndpoints: [
-				{ path: '/api/health', expectedStatusCode: 200, timeout: cdk.Duration.seconds(5) },
-				{ path: '/api/health/ready', expectedStatusCode: 200, timeout: cdk.Duration.seconds(5) },
-				{ path: '/api/health/detailed', expectedStatusCode: 200, timeout: cdk.Duration.seconds(10) },
+				{
+					path: '/api/health',
+					expectedStatusCode: 200,
+					timeout: cdk.Duration.seconds(5),
+				},
+				{
+					path: '/api/health/ready',
+					expectedStatusCode: 200,
+					timeout: cdk.Duration.seconds(5),
+				},
+				{
+					path: '/api/health/detailed',
+					expectedStatusCode: 200,
+					timeout: cdk.Duration.seconds(10),
+				},
 			],
 			externalDependencies: [
 				{
@@ -308,7 +359,10 @@ export class DeploymentStatusIntegrationStack extends cdk.Stack {
 				},
 			],
 			performanceThresholds: {
-				maxResponseTime: environmentName === 'production' ? cdk.Duration.seconds(1) : cdk.Duration.seconds(2),
+				maxResponseTime:
+					environmentName === 'production'
+						? cdk.Duration.seconds(1)
+						: cdk.Duration.seconds(2),
 				minThroughput: environmentName === 'production' ? 10 : 5,
 				maxErrorRate: environmentName === 'production' ? 1 : 5,
 			},
@@ -413,3 +467,4 @@ export class DeploymentStatusIntegrationStack extends cdk.Stack {
 				return cdk.aws_logs.RetentionDays.ONE_MONTH
 		}
 	}
+}
