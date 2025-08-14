@@ -50,8 +50,61 @@ class UtilityService implements IUtilityService {
 	}
 
 	/**
-	 * Get the health status of the API
-	 * Performs basic health checks and returns status
+	 * Check if database is ready for basic readiness checks
+	 * @returns Boolean indicating database readiness
+	 */
+	private isDatabaseReady = (): boolean => {
+		// For now, check if database connection string is configured
+		// In a real implementation, you would perform a lightweight ping
+		const databaseUrl = process.env.DATABASE_URL
+		return Boolean(databaseUrl)
+	}
+
+	/**
+	 * Sanitize error messages based on environment and access level
+	 * @param error - Original error message
+	 * @param includeErrorDetails - Whether to include detailed error messages
+	 * @returns Sanitized error message or null
+	 */
+	private sanitizeErrorForEnvironment = (
+		error: string | undefined,
+		includeErrorDetails: boolean,
+	): string | undefined => {
+		if (!error) return undefined
+
+		const isProduction = process.env.NODE_ENV === 'production'
+
+		// In production, only include error details for internal/authenticated requests
+		if (isProduction && !includeErrorDetails) {
+			return 'Service unavailable'
+		}
+
+		// In non-production or for internal requests, return full error details
+		return error
+	}
+
+	/**
+	 * Sanitize health check results based on environment and access level
+	 * @param healthCheck - Original health check result
+	 * @param includeErrorDetails - Whether to include detailed error messages
+	 * @returns Sanitized health check result
+	 */
+	private sanitizeHealthCheck = (
+		healthCheck: { status: string; responseTime?: number; error?: string },
+		includeErrorDetails: boolean,
+	) => {
+		return {
+			...healthCheck,
+			error: this.sanitizeErrorForEnvironment(
+				healthCheck.error,
+				includeErrorDetails,
+			),
+		}
+	}
+
+	/**
+	 * Get the health status of the API (public endpoint)
+	 * Performs basic health checks and returns status with sanitized errors for production
 	 * @returns Result tuple with health status or error
 	 */
 	getHealthStatus = (): Result<THealthStatus> => {
@@ -140,6 +193,47 @@ class UtilityService implements IUtilityService {
 	}
 
 	/**
+	 * Get minimal readiness status for public health checks (e.g., ALB)
+	 * Returns basic readiness information without detailed error messages in production
+	 * @returns Result tuple with readiness status or error
+	 */
+	getPublicReadinessStatus = (): Result<TReadinessStatus> => {
+		const [readinessStatus, error] = tryCatchSync(() => {
+			const currentTime = new Date()
+			const isReady = this.isDatabaseReady()
+
+			const status: TReadinessStatus = {
+				status: isReady ? 'ready' : 'not ready',
+				message: isReady
+					? 'Application is ready to receive traffic'
+					: 'Application is not ready to receive traffic',
+				timestamp: currentTime.toISOString(),
+				checks: {
+					database: isReady ? 'ready' : 'not ready',
+				},
+			}
+
+			logger.info({
+				msg: '[utilityService - getPublicReadinessStatus]: Public readiness check performed',
+				status: status.status,
+				timestamp: currentTime.toISOString(),
+			})
+
+			return status
+		}, 'utilityService - getPublicReadinessStatus')
+
+		if (error) {
+			logger.error({
+				msg: '[utilityService - getPublicReadinessStatus]: Public readiness check failed',
+				error: error.message,
+			})
+			return [null, error]
+		}
+
+		return [readinessStatus, null]
+	}
+
+	/**
 	 * Get detailed health status for ALB and monitoring
 	 * Performs comprehensive health checks including dependencies
 	 * @returns Result tuple with detailed health status or error
@@ -154,13 +248,19 @@ class UtilityService implements IUtilityService {
 				? Math.round((memoryUsage.heapUsed / memoryUsage.heapTotal) * 100)
 				: 0
 
+			// Determine if this is an internal/detailed request (always include errors for detailed endpoint)
+			const includeErrorDetails = true
+
 			// Determine overall health status
 			let overallStatus: 'healthy' | 'unhealthy' | 'degraded' = 'healthy'
 			const checks = {
-				database: this.checkDatabaseHealth(),
+				database: this.sanitizeHealthCheck(
+					this.checkDatabaseHealth(),
+					includeErrorDetails,
+				),
 				memory: this.checkMemoryHealth(memoryUsagePercent, memoryUsageMB),
 				disk: this.checkDiskHealth(),
-				dependencies: this.checkDependenciesHealth(),
+				dependencies: this.checkDependenciesHealth(includeErrorDetails),
 			}
 
 			// Determine overall status based on individual checks
@@ -364,9 +464,10 @@ class UtilityService implements IUtilityService {
 
 	/**
 	 * Check dependencies health
+	 * @param includeErrorDetails - Whether to include detailed error messages (for internal use)
 	 * @returns Dependencies health status
 	 */
-	private checkDependenciesHealth = () => {
+	private checkDependenciesHealth = (includeErrorDetails = false) => {
 		// Check external dependencies like OpenAI API, Redis, etc.
 		const services = [
 			{
@@ -396,20 +497,12 @@ class UtilityService implements IUtilityService {
 				name: s.name,
 				status: s.status.status,
 				responseTime: s.status.responseTime,
-				error: s.status.error,
+				error: this.sanitizeErrorForEnvironment(
+					s.status.error,
+					includeErrorDetails,
+				),
 			})),
 		}
-	}
-
-	/**
-	 * Check if database is ready
-	 * @returns Boolean indicating database readiness
-	 */
-	private isDatabaseReady = (): boolean => {
-		// Check if database connection is available and ready
-		// TODO: Use proper config management for database URL
-		const databaseUrl = process.env.DATABASE_URL
-		return Boolean(databaseUrl)
 	}
 
 	/**

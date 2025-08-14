@@ -154,6 +154,42 @@ registry.registerPath({
 	},
 })
 
+// Register the public readiness endpoint with OpenAPI
+registry.registerPath({
+	method: 'get',
+	path: '/health/ready/public',
+	tags: ['Utility'],
+	summary: 'Public readiness probe endpoint',
+	description:
+		'Returns minimal readiness information without detailed error messages in production. Suitable for public ALB health checks. No rate limiting applied.',
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'Application is ready',
+			content: {
+				'application/json': {
+					schema: readinessResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.SERVICE_UNAVAILABLE]: {
+			description: 'Application is not ready',
+			content: {
+				'application/json': {
+					schema: readinessResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Readiness check failed - internal server error',
+			content: {
+				'application/json': {
+					schema: InternalServerErrorSchema,
+				},
+			},
+		},
+	},
+})
+
 // Register the liveness endpoint with OpenAPI
 registry.registerPath({
 	method: 'get',
@@ -205,6 +241,10 @@ const utilityRouter = (router: Router) => {
 	// Readiness probe endpoint (Kubernetes-style)
 	// NOTE: No rate limiting on health endpoints to prevent ALB health check failures
 	router.get('/health/ready', utilityController.getReadinessStatus)
+
+	// Public readiness probe endpoint (minimal info, production-safe)
+	// NOTE: No rate limiting on health endpoints to prevent ALB health check failures
+	router.get('/health/ready/public', utilityController.getPublicReadinessStatus)
 
 	// Liveness probe endpoint (Kubernetes-style)
 	// NOTE: No rate limiting on health endpoints to prevent ALB health check failures

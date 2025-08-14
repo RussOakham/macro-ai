@@ -149,6 +149,41 @@ class UtilityController implements IUtilityController {
 	}
 
 	/**
+	 * Public readiness probe endpoint
+	 * Returns minimal readiness information without detailed error messages in production
+	 */
+	public getPublicReadinessStatus = (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): void => {
+		const [readinessStatus, error] =
+			this.utilityService.getPublicReadinessStatus()
+
+		if (error) {
+			logger.error({
+				msg: '[utilityController - getPublicReadinessStatus]: Error checking public readiness status',
+				error: error.message,
+				stack: error.stack,
+				service: error.service,
+				type: error.type,
+			})
+			next(error)
+			return
+		}
+
+		// TypeScript knows readinessStatus is defined here due to Result tuple pattern
+
+		// Return 503 if not ready, 200 if ready
+		const statusCode =
+			readinessStatus.status === 'ready'
+				? StatusCodes.OK
+				: StatusCodes.SERVICE_UNAVAILABLE
+
+		res.status(statusCode).json(readinessStatus)
+	}
+
+	/**
 	 * Liveness probe endpoint
 	 * Returns whether the application is alive and should not be restarted
 	 */

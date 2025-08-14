@@ -11,6 +11,7 @@ interface IUtilityController {
 	getSystemInfo: express.Handler
 	getDetailedHealthStatus: express.Handler
 	getReadinessStatus: express.Handler
+	getPublicReadinessStatus: express.Handler
 	getLivenessStatus: express.Handler
 }
 
@@ -20,6 +21,7 @@ interface IUtilityService {
 	getSystemInfo: () => Result<TSystemInfo>
 	getDetailedHealthStatus: () => Result<TDetailedHealthStatus>
 	getReadinessStatus: () => Result<TReadinessStatus>
+	getPublicReadinessStatus: () => Result<TReadinessStatus>
 	getLivenessStatus: () => Result<TLivenessStatus>
 }
 
@@ -86,13 +88,11 @@ interface TDetailedHealthStatus {
 
 // Readiness probe for Kubernetes-style health checks
 interface TReadinessStatus {
-	ready: boolean
+	status: 'ready' | 'not ready'
 	message: string
 	timestamp: string
 	checks: {
-		database: boolean
-		dependencies: boolean
-		configuration: boolean
+		database: 'ready' | 'not ready'
 	}
 }
 
