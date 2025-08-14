@@ -2,6 +2,8 @@ import * as cdk from 'aws-cdk-lib'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import { Construct } from 'constructs'
 
+import { TAG_VALUES, TaggingStrategy } from '../utils/tagging-strategy.js'
+
 export interface SecurityGroupsConstructProps {
 	/**
 	 * VPC where security groups will be created
@@ -229,17 +231,12 @@ export class SecurityGroupsConstruct extends Construct {
 	 * Apply tags to the shared security groups
 	 */
 	private applyTags(environmentName: string): void {
-		const tags = {
-			Project: 'MacroAI',
-			Environment: environmentName,
-			Component: 'Security',
-			Purpose: 'SharedInfrastructure',
-			CostCenter: 'Development',
-			ManagedBy: 'CDK',
-		}
-
-		Object.entries(tags).forEach(([key, value]) => {
-			cdk.Tags.of(this.albSecurityGroup).add(key, value)
+		TaggingStrategy.applyBaseTags(this, {
+			environment: environmentName,
+			component: 'Security-Groups',
+			purpose: TAG_VALUES.PURPOSES.SHARED_INFRASTRUCTURE,
+			createdBy: 'SecurityGroupsConstruct',
+			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.BASIC,
 		})
 	}
 
@@ -250,30 +247,16 @@ export class SecurityGroupsConstruct extends Construct {
 		securityGroup: ec2.SecurityGroup,
 		prNumber: number,
 	): void {
-		const tags = {
-			Project: 'MacroAI',
-			Environment: `pr-${prNumber.toString()}`,
-			PRNumber: prNumber.toString(),
-			Component: 'Security',
-			Purpose: 'PreviewEnvironment',
-			CostCenter: 'Development',
-			ManagedBy: 'CDK',
-			ExpiryDate: this.calculateExpiryDate(7), // 7 days from creation
-		}
-
-		Object.entries(tags).forEach(([key, value]) => {
-			cdk.Tags.of(securityGroup).add(key, value)
+		TaggingStrategy.applyPrTags(securityGroup, {
+			prNumber,
+			component: 'Security-Group',
+			purpose: TAG_VALUES.PURPOSES.PREVIEW_ENVIRONMENT,
+			createdBy: 'SecurityGroupsConstruct',
+			expiryDays: 7,
+			autoShutdown: false, // Security groups don't need auto-shutdown
+			backupRequired: false, // Security groups don't need backups
+			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.BASIC,
 		})
-	}
-
-	/**
-	 * Calculate expiry date for resource cleanup
-	 */
-	private calculateExpiryDate(days: number): string {
-		const expiry = new Date()
-		expiry.setDate(expiry.getDate() + days)
-		const datePart = expiry.toISOString().split('T')[0]
-		return datePart ?? expiry.toISOString().substring(0, 10) // YYYY-MM-DD format
 	}
 
 	/**

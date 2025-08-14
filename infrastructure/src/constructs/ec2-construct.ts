@@ -3,6 +3,8 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import * as iam from 'aws-cdk-lib/aws-iam'
 import { Construct } from 'constructs'
 
+import { TAG_VALUES, TaggingStrategy } from '../utils/tagging-strategy.js'
+
 export interface Ec2ConstructProps {
 	/**
 	 * VPC where EC2 instances will be deployed
@@ -356,18 +358,12 @@ export class Ec2Construct extends Construct {
 	 * Apply comprehensive tagging for cost tracking and resource management
 	 */
 	private applyTags(environmentName: string): void {
-		const tags = {
-			Project: 'MacroAI',
-			Environment: environmentName,
-			Component: 'EC2',
-			Purpose: 'PreviewEnvironment',
-			CostCenter: 'Development',
-			ManagedBy: 'CDK',
-			CreatedBy: 'Ec2Construct',
-		}
-
-		Object.entries(tags).forEach(([key, value]) => {
-			cdk.Tags.of(this).add(key, value)
+		TaggingStrategy.applyBaseTags(this, {
+			environment: environmentName,
+			component: 'EC2',
+			purpose: TAG_VALUES.PURPOSES.PREVIEW_ENVIRONMENT,
+			createdBy: 'Ec2Construct',
+			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.STANDARD,
 		})
 	}
 
@@ -375,30 +371,16 @@ export class Ec2Construct extends Construct {
 	 * Apply PR-specific tags to EC2 instances
 	 */
 	private applyPrTags(instance: ec2.Instance, prNumber: number): void {
-		const tags = {
-			Project: 'MacroAI',
-			Environment: `pr-${prNumber.toString()}`,
-			PRNumber: prNumber.toString(),
-			Component: 'EC2',
-			Purpose: 'PreviewEnvironment',
-			CostCenter: 'Development',
-			ManagedBy: 'CDK',
-			ExpiryDate: this.calculateExpiryDate(7), // 7 days from creation
-		}
-
-		Object.entries(tags).forEach(([key, value]) => {
-			cdk.Tags.of(instance).add(key, value)
+		TaggingStrategy.applyPrTags(instance, {
+			prNumber,
+			component: 'EC2-Instance',
+			purpose: TAG_VALUES.PURPOSES.PREVIEW_ENVIRONMENT,
+			createdBy: 'Ec2Construct',
+			expiryDays: 7,
+			autoShutdown: true, // Enable automatic shutdown for cost optimization
+			backupRequired: false, // Preview environments don't need backups
+			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.STANDARD,
 		})
-	}
-
-	/**
-	 * Calculate expiry date for resource cleanup
-	 */
-	private calculateExpiryDate(days: number): string {
-		const expiry = new Date()
-		expiry.setDate(expiry.getDate() + days)
-		const datePart = expiry.toISOString().split('T')[0]
-		return datePart ?? expiry.toISOString().substring(0, 10) // YYYY-MM-DD format
 	}
 
 	/**

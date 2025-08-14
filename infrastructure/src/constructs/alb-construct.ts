@@ -6,6 +6,8 @@ import * as route53 from 'aws-cdk-lib/aws-route53'
 import * as route53targets from 'aws-cdk-lib/aws-route53-targets'
 import { Construct } from 'constructs'
 
+import { TAG_VALUES, TaggingStrategy } from '../utils/tagging-strategy.js'
+
 export interface AlbConstructProps {
 	/**
 	 * VPC where ALB will be deployed
@@ -428,18 +430,12 @@ export class AlbConstruct extends Construct {
 	 * Apply comprehensive tagging for cost tracking and resource management
 	 */
 	private applyTags(environmentName: string): void {
-		const tags = {
-			Project: 'MacroAI',
-			Environment: environmentName,
-			Component: 'ALB',
-			Purpose: 'PreviewEnvironment',
-			CostCenter: 'Development',
-			ManagedBy: 'CDK',
-			CreatedBy: 'AlbConstruct',
-		}
-
-		Object.entries(tags).forEach(([key, value]) => {
-			cdk.Tags.of(this).add(key, value)
+		TaggingStrategy.applyBaseTags(this, {
+			environment: environmentName,
+			component: 'ALB',
+			purpose: TAG_VALUES.PURPOSES.SHARED_INFRASTRUCTURE,
+			createdBy: 'AlbConstruct',
+			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.STANDARD,
 		})
 	}
 
@@ -450,30 +446,16 @@ export class AlbConstruct extends Construct {
 		targetGroup: elbv2.ApplicationTargetGroup,
 		prNumber: number,
 	): void {
-		const tags = {
-			Project: 'MacroAI',
-			Environment: `pr-${prNumber.toString()}`,
-			PRNumber: prNumber.toString(),
-			Component: 'ALB-TargetGroup',
-			Purpose: 'PreviewEnvironment',
-			CostCenter: 'Development',
-			ManagedBy: 'CDK',
-			ExpiryDate: this.calculateExpiryDate(7), // 7 days from creation
-		}
-
-		Object.entries(tags).forEach(([key, value]) => {
-			cdk.Tags.of(targetGroup).add(key, value)
+		TaggingStrategy.applyPrTags(targetGroup, {
+			prNumber,
+			component: 'ALB-TargetGroup',
+			purpose: TAG_VALUES.PURPOSES.PREVIEW_ENVIRONMENT,
+			createdBy: 'AlbConstruct',
+			expiryDays: 7,
+			autoShutdown: false, // Target groups don't need auto-shutdown
+			backupRequired: false, // Target groups don't need backups
+			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.BASIC,
 		})
-	}
-
-	/**
-	 * Calculate expiry date for resource cleanup
-	 */
-	private calculateExpiryDate(days: number): string {
-		const expiry = new Date()
-		expiry.setDate(expiry.getDate() + days)
-		const datePart = expiry.toISOString().split('T')[0]
-		return datePart ?? expiry.toISOString().substring(0, 10) // YYYY-MM-DD format
 	}
 
 	/**

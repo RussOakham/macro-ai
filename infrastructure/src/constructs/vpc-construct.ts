@@ -2,6 +2,8 @@ import * as cdk from 'aws-cdk-lib'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import { Construct } from 'constructs'
 
+import { TAG_VALUES, TaggingStrategy } from '../utils/tagging-strategy.js'
+
 export interface VpcConstructProps {
 	/**
 	 * Environment name for resource naming and tagging
@@ -215,18 +217,12 @@ export class VpcConstruct extends Construct {
 	 * Apply comprehensive tagging for cost tracking and resource management
 	 */
 	private applyTags(environmentName: string): void {
-		const tags = {
-			Project: 'MacroAI',
-			Environment: environmentName,
-			Component: 'Networking',
-			Purpose: 'SharedInfrastructure',
-			CostCenter: 'Development',
-			ManagedBy: 'CDK',
-		}
-
-		// Apply tags to VPC and all child resources
-		Object.entries(tags).forEach(([key, value]) => {
-			cdk.Tags.of(this).add(key, value)
+		TaggingStrategy.applyBaseTags(this, {
+			environment: environmentName,
+			component: 'VPC-Networking',
+			purpose: TAG_VALUES.PURPOSES.SHARED_INFRASTRUCTURE,
+			createdBy: 'VpcConstruct',
+			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.BASIC,
 		})
 	}
 
