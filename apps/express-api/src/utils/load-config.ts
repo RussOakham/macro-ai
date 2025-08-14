@@ -114,7 +114,7 @@ const loadConfig = (): Result<TEnv> => {
 		const validationError = fromError(env.error)
 		const envPath = resolve(process.cwd(), '.env')
 		const appError = AppError.validation(
-			`Invalid environment configuration: ${validationError.message}`,
+			`Invalid environment configuration: ${validationError.message}. Environment file: ${envPath}`,
 			{ envPath, errors: validationError.details },
 			'configLoader',
 		)
