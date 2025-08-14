@@ -108,13 +108,19 @@ export class Ec2Construct extends Construct {
 			vpc,
 			securityGroup,
 			environmentName = 'development',
-			instanceType = ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
+			instanceType = ec2.InstanceType.of(
+				ec2.InstanceClass.T3,
+				ec2.InstanceSize.MICRO,
+			),
 			parameterStorePrefix,
 			enableDetailedMonitoring = false,
 		} = props
 
 		// Create IAM role for EC2 instances
-		this.instanceRole = this.createInstanceRole(parameterStorePrefix, environmentName)
+		this.instanceRole = this.createInstanceRole(
+			parameterStorePrefix,
+			environmentName,
+		)
 
 		// Create launch template for consistent instance configuration
 		this.launchTemplate = this.createLaunchTemplate(
@@ -141,26 +147,33 @@ export class Ec2Construct extends Construct {
 			securityGroup,
 			parameterStorePrefix,
 			environmentName = 'development',
-			instanceType = ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
+			instanceType = ec2.InstanceType.of(
+				ec2.InstanceClass.T3,
+				ec2.InstanceSize.MICRO,
+			),
 		} = props
 
 		// Create PR-specific instance
-		const instance = new ec2.Instance(this, `Pr${prNumber.toString()}Instance`, {
-			vpc,
-			instanceType,
-			machineImage: ec2.MachineImage.latestAmazonLinux2023({
-				cpuType: ec2.AmazonLinuxCpuType.X86_64,
-			}),
-			securityGroup,
-			role: this.instanceRole,
-			userData: this.createUserData(parameterStorePrefix, prNumber),
-			vpcSubnets: {
-				subnetType: ec2.SubnetType.PUBLIC, // Cost optimization: no NAT Gateway needed
+		const instance = new ec2.Instance(
+			this,
+			`Pr${prNumber.toString()}Instance`,
+			{
+				vpc,
+				instanceType,
+				machineImage: ec2.MachineImage.latestAmazonLinux2023({
+					cpuType: ec2.AmazonLinuxCpuType.X86_64,
+				}),
+				securityGroup,
+				role: this.instanceRole,
+				userData: this.createUserData(parameterStorePrefix, prNumber),
+				vpcSubnets: {
+					subnetType: ec2.SubnetType.PUBLIC, // Cost optimization: no NAT Gateway needed
+				},
+				instanceName: `macro-ai-${environmentName}-pr-${prNumber.toString()}`,
+				// Enable detailed monitoring if specified
+				detailedMonitoring: false, // Cost optimization for development
 			},
-			instanceName: `macro-ai-${environmentName}-pr-${prNumber.toString()}`,
-			// Enable detailed monitoring if specified
-			detailedMonitoring: false, // Cost optimization for development
-		})
+		)
 
 		// Apply PR-specific tags
 		this.applyPrTags(instance, prNumber)
@@ -171,16 +184,22 @@ export class Ec2Construct extends Construct {
 	/**
 	 * Create IAM role for EC2 instances with least-privilege access
 	 */
-	private createInstanceRole(parameterStorePrefix: string, environmentName: string): iam.Role {
+	private createInstanceRole(
+		parameterStorePrefix: string,
+		environmentName: string,
+	): iam.Role {
 		const role = new iam.Role(this, 'Ec2InstanceRole', {
 			assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
 			roleName: `macro-ai-${environmentName}-ec2-role`,
-			description: 'IAM role for Macro AI EC2 instances with least-privilege access',
+			description:
+				'IAM role for Macro AI EC2 instances with least-privilege access',
 		})
 
 		// AWS Systems Manager Session Manager (replaces SSH)
 		role.addManagedPolicy(
-			iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMManagedInstanceCore'),
+			iam.ManagedPolicy.fromAwsManagedPolicyName(
+				'AmazonSSMManagedInstanceCore',
+			),
 		)
 
 		// Parameter Store access (scoped to our parameters only)
@@ -192,9 +211,7 @@ export class Ec2Construct extends Construct {
 					'ssm:GetParameters',
 					'ssm:GetParametersByPath',
 				],
-				resources: [
-					`arn:aws:ssm:*:*:parameter${parameterStorePrefix}/*`,
-				],
+				resources: [`arn:aws:ssm:*:*:parameter${parameterStorePrefix}/*`],
 			}),
 		)
 
@@ -218,9 +235,7 @@ export class Ec2Construct extends Construct {
 		role.addToPolicy(
 			new iam.PolicyStatement({
 				effect: iam.Effect.ALLOW,
-				actions: [
-					'cloudwatch:PutMetricData',
-				],
+				actions: ['cloudwatch:PutMetricData'],
 				resources: ['*'],
 				conditions: {
 					StringEquals: {
@@ -264,7 +279,10 @@ export class Ec2Construct extends Construct {
 	/**
 	 * Create user data script for automated application deployment
 	 */
-	private createUserData(parameterStorePrefix: string, prNumber?: number): ec2.UserData {
+	private createUserData(
+		parameterStorePrefix: string,
+		prNumber?: number,
+	): ec2.UserData {
 		const userData = ec2.UserData.forLinux()
 
 		userData.addCommands(
@@ -298,7 +316,9 @@ export class Ec2Construct extends Construct {
 			`echo "PARAMETER_STORE_PREFIX=${parameterStorePrefix}" >> /etc/environment`,
 			`echo "NODE_ENV=production" >> /etc/environment`,
 			`echo "PORT=3030" >> /etc/environment`,
-			prNumber ? `echo "PR_NUMBER=${prNumber.toString()}" >> /etc/environment` : '',
+			prNumber
+				? `echo "PR_NUMBER=${prNumber.toString()}" >> /etc/environment`
+				: '',
 			'',
 			'# Create systemd service for the application',
 			'cat > /etc/systemd/system/macro-ai.service << EOF',

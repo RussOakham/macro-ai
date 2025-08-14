@@ -1,7 +1,10 @@
 import * as cdk from 'aws-cdk-lib'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2'
+import * as elbv2targets from 'aws-cdk-lib/aws-elasticloadbalancingv2-targets'
 import { Construct } from 'constructs'
 
+import { AlbConstruct } from './alb-construct.js'
 import { Ec2Construct } from './ec2-construct.js'
 import { SecurityGroupsConstruct } from './security-groups-construct.js'
 import { VpcConstruct } from './vpc-construct.js'
@@ -36,6 +39,21 @@ export interface NetworkingConstructProps {
 	 * Required for EC2 construct integration
 	 */
 	readonly parameterStorePrefix?: string
+
+	/**
+	 * Enable ALB (Application Load Balancer) integration
+	 * @default true (required for EC2-based preview environments)
+	 */
+	readonly enableAlb?: boolean
+
+	/**
+	 * Custom domain configuration for ALB
+	 */
+	readonly customDomain?: {
+		readonly domainName: string
+		readonly hostedZoneId: string
+		readonly certificateArn?: string
+	}
 }
 
 /**
@@ -57,6 +75,7 @@ export class NetworkingConstruct extends Construct {
 	public readonly vpc: ec2.Vpc
 	public readonly securityGroups: SecurityGroupsConstruct
 	public readonly ec2Construct?: Ec2Construct
+	public readonly albConstruct?: AlbConstruct
 	public readonly publicSubnets: ec2.ISubnet[]
 	public readonly privateSubnets: ec2.ISubnet[]
 	public readonly databaseSubnets: ec2.ISubnet[]
@@ -79,6 +98,8 @@ export class NetworkingConstruct extends Construct {
 			maxAzs = 2,
 			enableDetailedMonitoring = false,
 			parameterStorePrefix,
+			enableAlb = true,
+			customDomain,
 		} = props
 
 		// Create VPC infrastructure
@@ -107,6 +128,17 @@ export class NetworkingConstruct extends Construct {
 				environmentName,
 				parameterStorePrefix,
 				enableDetailedMonitoring,
+			})
+		}
+
+		// Create ALB construct if enabled
+		if (enableAlb) {
+			this.albConstruct = new AlbConstruct(this, 'Alb', {
+				vpc: this.vpc,
+				securityGroup: this.securityGroups.albSecurityGroup,
+				environmentName,
+				enableDetailedMonitoring,
+				customDomain,
 			})
 		}
 
@@ -144,9 +176,14 @@ export class NetworkingConstruct extends Construct {
 	 * Factory method to create PR-specific EC2 instance
 	 * Creates both security group and EC2 instance for the PR
 	 */
-	public createPrInstance(prNumber: number, parameterStorePrefix: string): ec2.Instance | undefined {
+	public createPrInstance(
+		prNumber: number,
+		parameterStorePrefix: string,
+	): ec2.Instance | undefined {
 		if (!this.ec2Construct) {
-			throw new Error('EC2 construct not initialized. Provide parameterStorePrefix in NetworkingConstructProps.')
+			throw new Error(
+				'EC2 construct not initialized. Provide parameterStorePrefix in NetworkingConstructProps.',
+			)
 		}
 
 		// Create PR-specific security group
@@ -160,6 +197,60 @@ export class NetworkingConstruct extends Construct {
 			parameterStorePrefix,
 			environmentName: this.getEnvironmentName(),
 		})
+	}
+
+	/**
+	 * Factory method to create complete PR environment
+	 * Creates EC2 instance, target group, and ALB listener rule
+	 */
+	public createPrEnvironment(
+		prNumber: number,
+		parameterStorePrefix: string,
+		hostHeader?: string,
+		pathPrefix?: string,
+	):
+		| {
+				instance: ec2.Instance
+				targetGroup: elbv2.ApplicationTargetGroup
+				listenerRule: elbv2.ApplicationListenerRule
+		  }
+		| undefined {
+		if (!this.ec2Construct || !this.albConstruct) {
+			throw new Error(
+				'Both EC2 and ALB constructs must be initialized. ' +
+					'Provide parameterStorePrefix and ensure enableAlb is true.',
+			)
+		}
+
+		// Create PR-specific EC2 instance
+		const instance = this.createPrInstance(prNumber, parameterStorePrefix)
+		if (!instance) {
+			throw new Error('Failed to create PR instance')
+		}
+
+		// Create PR-specific target group
+		const targetGroup = this.albConstruct.createPrTargetGroup({
+			prNumber,
+			vpc: this.vpc,
+			environmentName: this.getEnvironmentName(),
+		})
+
+		// Register EC2 instance with target group
+		targetGroup.addTarget(new elbv2targets.InstanceTarget(instance))
+
+		// Create listener rule for routing
+		const listenerRule = this.albConstruct.addPrListenerRule(
+			prNumber,
+			targetGroup,
+			hostHeader,
+			pathPrefix,
+		)
+
+		return {
+			instance,
+			targetGroup,
+			listenerRule,
+		}
 	}
 
 	/**
