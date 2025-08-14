@@ -376,6 +376,9 @@ importers:
       '@asteasolutions/zod-to-openapi':
         specifier: ^7.3.4
         version: 7.3.4(zod@3.25.76)
+      '@aws-sdk/client-cloudwatch':
+        specifier: 'catalog:'
+        version: 3.864.0
       '@aws-sdk/client-cognito-identity':
         specifier: ^3.859.0
         version: 3.864.0
