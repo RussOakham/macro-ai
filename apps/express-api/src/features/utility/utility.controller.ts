@@ -175,10 +175,9 @@ class UtilityController implements IUtilityController {
 		// TypeScript knows readinessStatus is defined here due to Result tuple pattern
 
 		// Return 503 if not ready, 200 if ready
-		const statusCode =
-			readinessStatus.status === 'ready'
-				? StatusCodes.OK
-				: StatusCodes.SERVICE_UNAVAILABLE
+		const statusCode = readinessStatus.ready
+			? StatusCodes.OK
+			: StatusCodes.SERVICE_UNAVAILABLE
 
 		res.status(statusCode).json(readinessStatus)
 	}

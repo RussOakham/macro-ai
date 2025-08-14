@@ -88,11 +88,13 @@ interface TDetailedHealthStatus {
 
 // Readiness probe for Kubernetes-style health checks
 interface TReadinessStatus {
-	status: 'ready' | 'not ready'
+	ready: boolean
 	message: string
 	timestamp: string
 	checks: {
-		database: 'ready' | 'not ready'
+		database: boolean
+		dependencies: boolean
+		configuration: boolean
 	}
 }
 

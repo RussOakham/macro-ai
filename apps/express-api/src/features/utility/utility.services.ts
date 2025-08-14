@@ -90,9 +90,9 @@ class UtilityService implements IUtilityService {
 	 * @returns Sanitized health check result
 	 */
 	private sanitizeHealthCheck = (
-		healthCheck: { status: string; responseTime?: number; error?: string },
+		healthCheck: { status: 'healthy' | 'unhealthy' | 'unknown'; responseTime?: number; error?: string },
 		includeErrorDetails: boolean,
-	) => {
+	): { status: 'healthy' | 'unhealthy' | 'unknown'; responseTime?: number; error?: string } => {
 		return {
 			...healthCheck,
 			error: this.sanitizeErrorForEnvironment(
@@ -203,19 +203,21 @@ class UtilityService implements IUtilityService {
 			const isReady = this.isDatabaseReady()
 
 			const status: TReadinessStatus = {
-				status: isReady ? 'ready' : 'not ready',
+				ready: isReady,
 				message: isReady
 					? 'Application is ready to receive traffic'
 					: 'Application is not ready to receive traffic',
 				timestamp: currentTime.toISOString(),
 				checks: {
-					database: isReady ? 'ready' : 'not ready',
+					database: isReady,
+					dependencies: isReady, // For public endpoint, use same status for all checks
+					configuration: isReady,
 				},
 			}
 
 			logger.info({
 				msg: '[utilityService - getPublicReadinessStatus]: Public readiness check performed',
-				status: status.status,
+				ready: status.ready,
 				timestamp: currentTime.toISOString(),
 			})
 
