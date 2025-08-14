@@ -1,4 +1,21 @@
-import * as aws from 'aws-sdk'
+import {
+	DescribeInstancesCommandInput,
+	DescribeInstanceStatusCommandInput,
+	EC2,
+	RunInstancesCommandInput,
+	Tag,
+	TerminateInstancesCommandInput,
+	waitUntilInstanceRunning,
+} from '@aws-sdk/client-ec2'
+import {
+	DescribeLoadBalancersCommandInput,
+	DescribeTargetGroupsCommandInput,
+	DescribeTargetHealthCommandInput,
+	ElasticLoadBalancingV2,
+	RegisterTargetsCommandInput,
+} from '@aws-sdk/client-elastic-load-balancing-v2'
+import { S3 } from '@aws-sdk/client-s3'
+import { SSM } from '@aws-sdk/client-ssm'
 
 import { TAG_VALUES, TaggingStrategy } from './tagging-strategy.js'
 
@@ -90,16 +107,24 @@ export interface DeploymentStatus {
  * - Cost-aware instance management
  */
 export class Ec2DeploymentUtilities {
-	private readonly ec2Client: aws.EC2
-	private readonly elbv2Client: aws.ELBv2
-	private readonly s3Client: aws.S3
-	private readonly ssmClient: aws.SSM
+	private readonly ec2Client: EC2
+	private readonly elbv2Client: ElasticLoadBalancingV2
+	private readonly s3Client: S3
+	private readonly ssmClient: SSM
 
 	constructor(region = 'us-east-1') {
-		this.ec2Client = new aws.EC2({ region })
-		this.elbv2Client = new aws.ELBv2({ region })
-		this.s3Client = new aws.S3({ region })
-		this.ssmClient = new aws.SSM({ region })
+		this.ec2Client = new EC2({
+			region,
+		})
+		this.elbv2Client = new ElasticLoadBalancingV2({
+			region,
+		})
+		this.s3Client = new S3({
+			region,
+		})
+		this.ssmClient = new SSM({
+			region,
+		})
 	}
 
 	/**
@@ -215,7 +240,7 @@ export class Ec2DeploymentUtilities {
 		// Prepare user data with deployment-specific configuration
 		const userData = this.generateUserData(config)
 
-		const params: aws.EC2.RunInstancesRequest = {
+		const params: RunInstancesCommandInput = {
 			LaunchTemplate: {
 				LaunchTemplateId: config.launchTemplateId,
 				Version: '$Latest',
@@ -232,7 +257,7 @@ export class Ec2DeploymentUtilities {
 			],
 		}
 
-		const result = await this.ec2Client.runInstances(params).promise()
+		const result = await this.ec2Client.runInstances(params)
 
 		if (!result.Instances?.[0]?.InstanceId) {
 			throw new Error('Failed to create EC2 instance')
@@ -289,7 +314,7 @@ echo "$(date): Application deployment completed"
 		config: Ec2DeploymentConfig,
 		deploymentId: string,
 		instanceName: string,
-	): aws.EC2.Tag[] {
+	): Tag[] {
 		const tags = TaggingStrategy.createPrTags({
 			prNumber: config.prNumber,
 			component: 'EC2-Instance',
@@ -319,11 +344,17 @@ echo "$(date): Application deployment completed"
 	private async waitForInstancesRunning(instanceIds: string[]): Promise<void> {
 		console.log(`Waiting for ${instanceIds.length} instances to be running...`)
 
-		const params: aws.EC2.DescribeInstancesRequest = {
+		const params: DescribeInstancesCommandInput = {
 			InstanceIds: instanceIds,
 		}
 
-		await this.ec2Client.waitFor('instanceRunning', params).promise()
+		await waitUntilInstanceRunning(
+			{
+				client: this.ec2Client,
+				maxWaitTime: 200,
+			},
+			params,
+		)
 		console.log('All instances are now running')
 	}
 
@@ -381,11 +412,11 @@ echo "$(date): Application deployment completed"
 	 * Check instance status
 	 */
 	private async checkInstanceStatus(instanceId: string): Promise<string> {
-		const params: aws.EC2.DescribeInstanceStatusRequest = {
+		const params: DescribeInstanceStatusCommandInput = {
 			InstanceIds: [instanceId],
 		}
 
-		const result = await this.ec2Client.describeInstanceStatus(params).promise()
+		const result = await this.ec2Client.describeInstanceStatus(params)
 		const status = result.InstanceStatuses?.[0]
 
 		return status?.SystemStatus?.Status ?? 'unknown'
@@ -407,12 +438,12 @@ echo "$(date): Application deployment completed"
 			Port: 3030,
 		}))
 
-		const params: aws.ELBv2.RegisterTargetsInput = {
+		const params: RegisterTargetsCommandInput = {
 			TargetGroupArn: targetGroupArn,
 			Targets: targets,
 		}
 
-		await this.elbv2Client.registerTargets(params).promise()
+		await this.elbv2Client.registerTargets(params)
 		console.log('Instances registered with target group')
 	}
 
@@ -430,13 +461,11 @@ echo "$(date): Application deployment completed"
 		console.log('Waiting for instances to be healthy in target group...')
 
 		while (Date.now() - startTime < maxWaitTime) {
-			const params: aws.ELBv2.DescribeTargetHealthInput = {
+			const params: DescribeTargetHealthCommandInput = {
 				TargetGroupArn: targetGroupArn,
 			}
 
-			const result = await this.elbv2Client
-				.describeTargetHealth(params)
-				.promise()
+			const result = await this.elbv2Client.describeTargetHealth(params)
 			const healthyTargets = result.TargetHealthDescriptions?.filter(
 				(target) =>
 					target.TargetHealth?.State === 'healthy' &&
@@ -463,11 +492,11 @@ echo "$(date): Application deployment completed"
 	 * Get health check URL for the target group
 	 */
 	private async getHealthCheckUrl(targetGroupArn: string): Promise<string> {
-		const params: aws.ELBv2.DescribeTargetGroupsInput = {
+		const params: DescribeTargetGroupsCommandInput = {
 			TargetGroupArns: [targetGroupArn],
 		}
 
-		const result = await this.elbv2Client.describeTargetGroups(params).promise()
+		const result = await this.elbv2Client.describeTargetGroups(params)
 		const targetGroup = result.TargetGroups?.[0]
 
 		if (!targetGroup) {
@@ -475,13 +504,11 @@ echo "$(date): Application deployment completed"
 		}
 
 		// Get the load balancer for this target group
-		const lbParams: aws.ELBv2.DescribeLoadBalancersInput = {
+		const lbParams: DescribeLoadBalancersCommandInput = {
 			LoadBalancerArns: targetGroup.LoadBalancerArns,
 		}
 
-		const lbResult = await this.elbv2Client
-			.describeLoadBalancers(lbParams)
-			.promise()
+		const lbResult = await this.elbv2Client.describeLoadBalancers(lbParams)
 		const loadBalancer = lbResult.LoadBalancers?.[0]
 
 		if (!loadBalancer?.DNSName) {
@@ -497,7 +524,7 @@ echo "$(date): Application deployment completed"
 	private async findExistingPrInstances(
 		prNumber: number,
 	): Promise<Ec2InstanceInfo[]> {
-		const params: aws.EC2.DescribeInstancesRequest = {
+		const params: DescribeInstancesCommandInput = {
 			Filters: [
 				{
 					Name: 'tag:PRNumber',
@@ -510,7 +537,7 @@ echo "$(date): Application deployment completed"
 			],
 		}
 
-		const result = await this.ec2Client.describeInstances(params).promise()
+		const result = await this.ec2Client.describeInstances(params)
 		const instances: Ec2InstanceInfo[] = []
 
 		result.Reservations?.forEach((reservation) => {
@@ -546,11 +573,11 @@ echo "$(date): Application deployment completed"
 
 		console.log(`Terminating ${instanceIds.length} instances...`)
 
-		const params: aws.EC2.TerminateInstancesRequest = {
+		const params: TerminateInstancesCommandInput = {
 			InstanceIds: instanceIds,
 		}
 
-		await this.ec2Client.terminateInstances(params).promise()
+		await this.ec2Client.terminateInstances(params)
 		console.log('Instance termination initiated')
 	}
 

@@ -104,6 +104,11 @@ async function deployCommand(options: {
 
 		const [, artifactBucket, artifactKey] = artifactMatch
 
+		// Ensure we have valid bucket and key
+		if (!artifactBucket || !artifactKey) {
+			throw new Error('Failed to parse artifact bucket and key from URL')
+		}
+
 		const config: Ec2DeploymentConfig = {
 			prNumber: parseInt(options.pr, 10),
 			branch: options.branch,
