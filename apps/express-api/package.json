@@ -10,7 +10,7 @@
 		"pnpm": ">=9.0.0"
 	},
 	"scripts": {
-		"build": "tsc && tsx src/utils/swagger/generate-swagger.ts",
+		"build": "esbuild src/index.ts --bundle --platform=node --target=node20 --outfile=dist/index.js --sourcemap && tsx src/utils/swagger/generate-swagger.ts",
 		"start": "node dist/index.js",
 		"dev:tsc": "tsc --watch -preserveWatchOutput",
 		"dev:node": "node --enable-source-maps --watch dist/index.js",
