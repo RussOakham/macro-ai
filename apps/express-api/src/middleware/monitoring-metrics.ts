@@ -1,16 +1,19 @@
 import {
 	CloudWatchClient,
 	PutMetricDataCommand,
+	type StandardUnit,
 } from '@aws-sdk/client-cloudwatch'
 import type { NextFunction, Request, Response } from 'express'
 
-import { logger } from '../utils/logger.ts'
+import { pino } from '../utils/logger.ts'
+
+const { logger } = pino
 
 /**
  * CloudWatch client for metrics publishing
  */
 const cloudWatchClient = new CloudWatchClient({
-	region: process.env.AWS_REGION || 'us-east-1',
+	region: process.env.AWS_REGION ?? 'us-east-1',
 })
 
 /**
@@ -48,10 +51,18 @@ interface MonitoringMetricsConfig {
  */
 const defaultConfig: Required<MonitoringMetricsConfig> = {
 	namespace: 'MacroAI/API',
-	environment: process.env.NODE_ENV || 'development',
+	environment: process.env.NODE_ENV ?? 'development',
 	applicationName: 'macro-ai-api',
 	enableDetailedLogging: process.env.NODE_ENV === 'development',
 	sampleRate: 1.0,
+}
+
+/**
+ * Safely get route path from request
+ */
+const getRoutePath = (req: Request): string => {
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+	return (req.route?.path as string | undefined) ?? req.path
 }
 
 /**
@@ -60,14 +71,14 @@ const defaultConfig: Required<MonitoringMetricsConfig> = {
 export const publishMetric = async (
 	metricName: string,
 	value: number,
-	unit: string = 'Count',
+	unit: StandardUnit = 'Count',
 	dimensions: Record<string, string> = {},
 	namespace?: string,
 ): Promise<void> => {
 	try {
 		const config = {
 			...defaultConfig,
-			namespace: namespace || defaultConfig.namespace,
+			namespace: namespace ?? defaultConfig.namespace,
 		}
 
 		// Add default dimensions
@@ -120,24 +131,24 @@ export const publishMetric = async (
  * Publish multiple metrics in a single batch
  */
 export const publishMetricsBatch = async (
-	metrics: Array<{
+	metrics: {
 		name: string
 		value: number
-		unit?: string
+		unit?: StandardUnit
 		dimensions?: Record<string, string>
-	}>,
+	}[],
 	namespace?: string,
 ): Promise<void> => {
 	try {
 		const config = {
 			...defaultConfig,
-			namespace: namespace || defaultConfig.namespace,
+			namespace: namespace ?? defaultConfig.namespace,
 		}
 
 		const metricData = metrics.map((metric) => ({
 			MetricName: metric.name,
 			Value: metric.value,
-			Unit: metric.unit || 'Count',
+			Unit: metric.unit ?? 'Count',
 			Timestamp: new Date(),
 			Dimensions: Object.entries({
 				Environment: config.environment,
@@ -201,7 +212,7 @@ export const monitoringMetricsMiddleware = (
 				'Count',
 				{
 					Method: req.method,
-					Route: req.route?.path || req.path,
+					Route: getRoutePath(req),
 				},
 				mergedConfig.namespace,
 			).catch(() => {
@@ -210,21 +221,28 @@ export const monitoringMetricsMiddleware = (
 		}
 
 		// Override res.end to capture response metrics
-		const originalEnd = res.end
-		res.end = function (chunk?: any, encoding?: any, cb?: any) {
+		const originalEnd = res.end.bind(res)
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		res.end = function (this: Response, ...args: any[]) {
 			const duration = Date.now() - startTime
 			const statusCode = res.statusCode
 
 			if (shouldSample) {
 				// Publish metrics batch for better performance
-				const metrics = [
+				const routePath = getRoutePath(req)
+				const metrics: {
+					name: string
+					value: number
+					unit?: StandardUnit
+					dimensions?: Record<string, string>
+				}[] = [
 					{
 						name: 'RequestDuration',
 						value: duration,
-						unit: 'Milliseconds',
+						unit: 'Milliseconds' as StandardUnit,
 						dimensions: {
 							Method: req.method,
-							Route: req.route?.path || req.path,
+							Route: routePath,
 							StatusCode: statusCode.toString(),
 						},
 					},
@@ -235,10 +253,10 @@ export const monitoringMetricsMiddleware = (
 					metrics.push({
 						name: 'ErrorCount',
 						value: 1,
-						unit: 'Count',
+						unit: 'Count' as StandardUnit,
 						dimensions: {
 							Method: req.method,
-							Route: req.route?.path || req.path,
+							Route: routePath,
 							StatusCode: statusCode.toString(),
 							ErrorType: statusCode >= 500 ? 'ServerError' : 'ClientError',
 						},
@@ -250,10 +268,10 @@ export const monitoringMetricsMiddleware = (
 					metrics.push({
 						name: 'SuccessCount',
 						value: 1,
-						unit: 'Count',
+						unit: 'Count' as StandardUnit,
 						dimensions: {
 							Method: req.method,
-							Route: req.route?.path || req.path,
+							Route: routePath,
 							StatusCode: statusCode.toString(),
 						},
 					})
@@ -279,7 +297,8 @@ export const monitoringMetricsMiddleware = (
 			}
 
 			// Call original end method
-			return originalEnd.call(this, chunk, encoding, cb)
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+			return originalEnd(...args)
 		}
 
 		next()
@@ -293,18 +312,18 @@ export const monitoringMetricsMiddleware = (
 export const publishHealthCheckMetric = async (
 	isHealthy: boolean,
 	responseTime: number,
-	checkDetails?: Record<string, any>,
+	checkDetails?: Record<string, unknown>,
 ): Promise<void> => {
 	const metrics = [
 		{
 			name: 'HealthCheckSuccess',
 			value: isHealthy ? 1 : 0,
-			unit: 'Count',
+			unit: 'Count' as StandardUnit,
 		},
 		{
 			name: 'HealthCheckResponseTime',
 			value: responseTime,
-			unit: 'Milliseconds',
+			unit: 'Milliseconds' as StandardUnit,
 		},
 	]
 
@@ -315,7 +334,7 @@ export const publishHealthCheckMetric = async (
 				metrics.push({
 					name: `HealthCheck${key}`,
 					value,
-					unit: 'Count',
+					unit: 'Count' as StandardUnit,
 				})
 			}
 		})
@@ -337,7 +356,7 @@ export const publishDatabaseMetric = async (
 		{
 			name: 'DatabaseQueryDuration',
 			value: duration,
-			unit: 'Milliseconds',
+			unit: 'Milliseconds' as StandardUnit,
 			dimensions: {
 				Operation: operation,
 				Success: success.toString(),
@@ -346,7 +365,7 @@ export const publishDatabaseMetric = async (
 		{
 			name: 'DatabaseQueryCount',
 			value: 1,
-			unit: 'Count',
+			unit: 'Count' as StandardUnit,
 			dimensions: {
 				Operation: operation,
 				Success: success.toString(),
@@ -358,9 +377,10 @@ export const publishDatabaseMetric = async (
 		metrics.push({
 			name: 'DatabaseErrorCount',
 			value: 1,
-			unit: 'Count',
+			unit: 'Count' as StandardUnit,
 			dimensions: {
 				Operation: operation,
+				Success: success.toString(),
 			},
 		})
 	}
@@ -369,9 +389,10 @@ export const publishDatabaseMetric = async (
 		metrics.push({
 			name: 'DatabaseRecordCount',
 			value: recordCount,
-			unit: 'Count',
+			unit: 'Count' as StandardUnit,
 			dimensions: {
 				Operation: operation,
+				Success: success.toString(),
 			},
 		})
 	}

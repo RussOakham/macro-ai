@@ -830,7 +830,7 @@ Cost Optimization:
 	 * Enable Phase 4 comprehensive monitoring integration
 	 * This method provides a convenient way to add monitoring tags to the launch template
 	 */
-	public enableComprehensiveMonitoring(_props: {
+	public enableComprehensiveMonitoring(props: {
 		criticalAlertEmails?: string[]
 		warningAlertEmails?: string[]
 		enableCostMonitoring?: boolean
@@ -838,13 +838,38 @@ Cost Optimization:
 	}): void {
 		// This method would be called by the stack to enable monitoring
 		// The actual MonitoringIntegration would be created at the stack level
-		// to avoid circular dependencies
 
 		// Add monitoring-specific tags to the launch template
 		// These tags will be applied to all instances created from this template
 		cdk.Tags.of(this.launchTemplate).add('MonitoringEnabled', 'true')
 		cdk.Tags.of(this.launchTemplate).add('Phase4Monitoring', 'enabled')
 		cdk.Tags.of(this.launchTemplate).add('MonitoringIntegration', 'ready')
+
+		// Add configuration-specific tags based on props
+		if (props.enableCostMonitoring) {
+			cdk.Tags.of(this.launchTemplate).add('CostMonitoringEnabled', 'true')
+		}
+
+		if (props.customMetricNamespace) {
+			cdk.Tags.of(this.launchTemplate).add(
+				'CustomMetricNamespace',
+				props.customMetricNamespace,
+			)
+		}
+
+		if (props.criticalAlertEmails && props.criticalAlertEmails.length > 0) {
+			cdk.Tags.of(this.launchTemplate).add('CriticalAlertsConfigured', 'true')
+		}
+
+		if (props.warningAlertEmails && props.warningAlertEmails.length > 0) {
+			cdk.Tags.of(this.launchTemplate).add('WarningAlertsConfigured', 'true')
+		}
+
+		// TODO: Implement full monitoring configuration integration
+		// - Create CloudWatch agent configuration
+		// - Set up custom metrics collection
+		// - Configure alert email distribution lists
+		// - Integrate with MonitoringIntegration construct
 
 		// Log monitoring enablement
 		console.log(

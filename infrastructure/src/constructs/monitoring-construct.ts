@@ -319,12 +319,6 @@ export class MonitoringConstruct extends Construct {
 					),
 					width: 12,
 					height: 6,
-					yAxis: {
-						left: {
-							min: 0,
-							max: 100,
-						},
-					},
 				}),
 			)
 
@@ -346,12 +340,6 @@ export class MonitoringConstruct extends Construct {
 					),
 					width: 12,
 					height: 6,
-					yAxis: {
-						left: {
-							min: 0,
-							max: 100,
-						},
-					},
 				}),
 			)
 
@@ -514,7 +502,7 @@ export class MonitoringConstruct extends Construct {
 			// Target Health
 			if (this.props.targetGroups && this.props.targetGroups.length > 0) {
 				const albFullName =
-					this.props.applicationLoadBalancer?.loadBalancerFullName
+					this.props.applicationLoadBalancer.loadBalancerFullName
 				if (albFullName) {
 					widgets.push(
 						new cloudwatch.GraphWidget({

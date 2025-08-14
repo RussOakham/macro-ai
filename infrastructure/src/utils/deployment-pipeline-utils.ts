@@ -15,16 +15,16 @@ import {
 	type GetMetricStatisticsCommandInput,
 } from '@aws-sdk/client-cloudwatch'
 import {
-	ELBv2Client,
 	DescribeTargetHealthCommand,
 	type DescribeTargetHealthCommandInput,
+	ElasticLoadBalancingV2Client,
 } from '@aws-sdk/client-elastic-load-balancing-v2'
 import {
+	DescribeExecutionCommand,
+	type DescribeExecutionCommandInput,
 	SFNClient,
 	StartExecutionCommand,
-	DescribeExecutionCommand,
 	type StartExecutionCommandInput,
-	type DescribeExecutionCommandInput,
 } from '@aws-sdk/client-sfn'
 
 export interface DeploymentConfig {
@@ -120,12 +120,12 @@ export interface DeploymentStatus {
 	/**
 	 * Execution input
 	 */
-	input: any
+	input: unknown
 
 	/**
 	 * Execution output (if completed)
 	 */
-	output?: any
+	output?: unknown
 
 	/**
 	 * Error details (if failed)
@@ -142,14 +142,14 @@ export interface HealthCheckResult {
 	/**
 	 * Individual target group results
 	 */
-	targetGroups: Array<{
+	targetGroups: {
 		arn: string
 		healthyTargets: number
 		totalTargets: number
 		healthyPercentage: number
 		errorCount: number
 		avgResponseTime: number
-	}>
+	}[]
 
 	/**
 	 * Check timestamp
@@ -163,12 +163,12 @@ export interface HealthCheckResult {
 export class DeploymentPipelineUtils {
 	private readonly sfnClient: SFNClient
 	private readonly cloudwatchClient: CloudWatchClient
-	private readonly elbv2Client: ELBv2Client
+	private readonly elbv2Client: ElasticLoadBalancingV2Client
 
 	constructor(region: string) {
 		this.sfnClient = new SFNClient({ region })
 		this.cloudwatchClient = new CloudWatchClient({ region })
-		this.elbv2Client = new ELBv2Client({ region })
+		this.elbv2Client = new ElasticLoadBalancingV2Client({ region })
 	}
 
 	/**
@@ -234,8 +234,10 @@ export class DeploymentPipelineUtils {
 			status: result.status as DeploymentStatus['status'],
 			startDate: result.startDate!,
 			stopDate: result.stopDate,
-			input: JSON.parse(result.input!),
-			output: result.output ? JSON.parse(result.output) : undefined,
+			input: result.input ? (JSON.parse(result.input) as unknown) : undefined,
+			output: result.output
+				? (JSON.parse(result.output) as unknown)
+				: undefined,
 			error: result.error,
 		}
 	}
@@ -355,10 +357,10 @@ export class DeploymentPipelineUtils {
 			)
 
 			const avgResponseTime =
-				responseTimeResult.Datapoints?.reduce(
+				(responseTimeResult.Datapoints?.reduce(
 					(sum, dp) => sum + (dp.Average ?? 0),
 					0,
-				) / (responseTimeResult.Datapoints?.length ?? 1) ?? 0
+				) ?? 0) / (responseTimeResult.Datapoints?.length ?? 1)
 
 			results.push({
 				arn: targetGroupArn,
@@ -408,9 +410,9 @@ ${status.stopDate ? `Stop Time: ${status.stopDate.toISOString()}` : ''}
 Duration: ${duration}${typeof duration === 'number' ? ' seconds' : ''}
 
 Deployment Configuration:
-- Version: ${status.input.version}
-- Strategy: ${status.input.strategy}
-- Artifact: ${status.input.artifactLocation}
+- Version: ${this.getInputProperty(status.input, 'version')}
+- Strategy: ${this.getInputProperty(status.input, 'strategy')}
+- Artifact: ${this.getInputProperty(status.input, 'artifactLocation')}
 `
 
 		if (healthCheck) {
@@ -440,5 +442,21 @@ ${status.error}
 		}
 
 		return summary
+	}
+
+	/**
+	 * Safely get a property from unknown input object
+	 */
+	private getInputProperty(input: unknown, property: string): string {
+		if (input && typeof input === 'object' && property in input) {
+			const value = (input as Record<string, unknown>)[property]
+			if (typeof value === 'string') {
+				return value
+			}
+			if (typeof value === 'number' || typeof value === 'boolean') {
+				return String(value)
+			}
+		}
+		return 'N/A'
 	}
 }

@@ -1,5 +1,4 @@
 import * as cdk from 'aws-cdk-lib'
-import * as autoscaling from 'aws-cdk-lib/aws-autoscaling'
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch'
 import * as cloudwatchActions from 'aws-cdk-lib/aws-cloudwatch-actions'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
@@ -167,7 +166,7 @@ export class DeploymentPipelineConstruct extends Construct {
 		artifactLocation: string
 		version: string
 		strategy?: DeploymentStrategy
-	}): stepfunctions.StateMachineExecution {
+	}): { stateMachineArn: string; executionName: string } {
 		const input = {
 			deploymentId: `${this.resourcePrefix}-${Date.now()}`,
 			strategy: params.strategy ?? DeploymentStrategy.BLUE_GREEN,
@@ -189,10 +188,12 @@ export class DeploymentPipelineConstruct extends Construct {
 			},
 		}
 
-		return this.deploymentStateMachine.startExecution({
-			input: stepfunctions.JsonPath.objectAt('$'),
+		const executionName = `${input.deploymentId}-${Date.now()}`
+
+		return {
 			stateMachineArn: this.deploymentStateMachine.stateMachineArn,
-		})
+			executionName,
+		}
 	}
 
 	/**
@@ -336,6 +337,7 @@ export class DeploymentPipelineConstruct extends Construct {
 						),
 					},
 				},
+				iamResources: ['*'],
 				resultPath: '$.autoScalingUpdateResult',
 			},
 		)
@@ -391,6 +393,7 @@ export class DeploymentPipelineConstruct extends Construct {
 						),
 					},
 				},
+				iamResources: ['*'],
 				resultPath: '$.rollbackResult',
 			},
 		)
@@ -472,7 +475,7 @@ export class DeploymentPipelineConstruct extends Construct {
 				threshold: Math.max(
 					1,
 					Math.floor(
-						(this.props.autoScalingConstruct.autoScalingGroup.minCapacity *
+						(1 * // Default minimum capacity
 							(this.props.deploymentConfig?.minHealthyPercentage ?? 50)) /
 							100,
 					),

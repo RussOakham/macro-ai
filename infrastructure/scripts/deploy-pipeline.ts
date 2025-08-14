@@ -12,9 +12,10 @@
  */
 
 import { program } from 'commander'
+
 import {
-	DeploymentPipelineUtils,
 	type DeploymentConfig,
+	DeploymentPipelineUtils,
 	type DeploymentRequest,
 } from '../src/utils/deployment-pipeline-utils.js'
 
@@ -24,6 +25,34 @@ interface EnvironmentConfig {
 	targetGroupArns: string[]
 	autoScalingGroupName: string
 	launchTemplateId: string
+}
+
+interface DeployOptions {
+	artifact: string
+	version: string
+	strategy: 'BLUE_GREEN' | 'ROLLING_UPDATE' | 'CANARY'
+	templateVersion: string
+	wait: boolean
+	timeout: string
+}
+
+interface StatusOptions {
+	executionArn: string
+	detailed: boolean
+}
+
+interface HealthCheckOptions {
+	minHealthy: string
+	maxErrors: string
+	maxResponseTime: string
+}
+
+interface ListOptions {
+	limit: string
+}
+
+interface RollbackOptions {
+	executionArn: string
 }
 
 /**
@@ -86,7 +115,7 @@ async function main(): Promise<void> {
 		)
 		.option('--wait', 'Wait for deployment to complete', false)
 		.option('--timeout <minutes>', 'Deployment timeout in minutes', '30')
-		.action(async (options) => {
+		.action(async (options: DeployOptions) => {
 			try {
 				const envConfig = loadEnvironmentConfig()
 				const utils = new DeploymentPipelineUtils(envConfig.region)
@@ -167,7 +196,7 @@ async function main(): Promise<void> {
 		.description('Check deployment status')
 		.requiredOption('--execution-arn <arn>', 'Step Functions execution ARN')
 		.option('--detailed', 'Show detailed status information', false)
-		.action(async (options) => {
+		.action(async (options: StatusOptions) => {
 			try {
 				const envConfig = loadEnvironmentConfig()
 				const utils = new DeploymentPipelineUtils(envConfig.region)
@@ -210,7 +239,7 @@ async function main(): Promise<void> {
 		.option('--min-healthy <percentage>', 'Minimum healthy percentage', '80')
 		.option('--max-errors <count>', 'Maximum error count', '10')
 		.option('--max-response-time <ms>', 'Maximum response time in ms', '2000')
-		.action(async (options) => {
+		.action(async (options: HealthCheckOptions) => {
 			try {
 				const envConfig = loadEnvironmentConfig()
 				const utils = new DeploymentPipelineUtils(envConfig.region)
@@ -257,7 +286,7 @@ async function main(): Promise<void> {
 		.command('list')
 		.description('List recent deployments')
 		.option('--limit <count>', 'Number of deployments to show', '10')
-		.action(async (options) => {
+		.action(async (options: ListOptions) => {
 			console.log('📋 Recent deployments:')
 			console.log('(This feature requires additional AWS API integration)')
 			console.log(`Showing last ${options.limit} deployments...`)
@@ -273,7 +302,7 @@ async function main(): Promise<void> {
 			'Execution ARN of deployment to rollback',
 		)
 		.option('--wait', 'Wait for rollback to complete', false)
-		.action(async (options) => {
+		.action(async (options: RollbackOptions) => {
 			console.log('🔄 Triggering rollback...')
 			console.log(`Execution ARN: ${options.executionArn}`)
 			console.log('(This feature requires additional implementation)')
@@ -297,7 +326,7 @@ async function main(): Promise<void> {
 				envConfig.targetGroupArns.forEach((arn, index) => {
 					console.log(`  ${index + 1}. ${arn}`)
 				})
-			} catch (error) {
+			} catch (error: unknown) {
 				console.error('❌ Failed to load configuration:', error)
 				process.exit(1)
 			}
@@ -308,7 +337,7 @@ async function main(): Promise<void> {
 
 // Run the CLI
 if (import.meta.url === `file://${process.argv[1]}`) {
-	main().catch((error) => {
+	main().catch((error: unknown) => {
 		console.error('Unexpected error:', error)
 		process.exit(1)
 	})

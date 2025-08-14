@@ -105,9 +105,9 @@ export interface AutoScalingConstructProps {
 	healthCheckGracePeriod?: cdk.Duration
 
 	/**
-	 * Health check type (EC2 or ELB)
+	 * Health check types (EC2 or ELB)
 	 */
-	healthCheckType?: autoscaling.HealthCheckType
+	healthCheckTypes?: ('EC2' | 'ELB')[]
 }
 
 /**
@@ -132,7 +132,10 @@ export enum ScalingPolicyType {
  */
 export class AutoScalingConstruct extends Construct {
 	public readonly autoScalingGroup: autoscaling.AutoScalingGroup
-	public readonly scalingPolicies: Map<string, autoscaling.ScalingPolicy>
+	public readonly scalingPolicies: Map<
+		string,
+		autoscaling.StepScalingPolicy | autoscaling.TargetTrackingScalingPolicy
+	>
 	public readonly targetTrackingPolicies: Map<
 		string,
 		autoscaling.TargetTrackingScalingPolicy
@@ -174,12 +177,10 @@ export class AutoScalingConstruct extends Construct {
 			desiredCapacity: this.props.autoScaling.desiredCapacity,
 
 			// Health check configuration
-			healthCheck:
-				(this.props.healthCheckType as autoscaling.HealthCheckType) ??
-				autoscaling.HealthCheckType.ELB,
-			healthCheckGracePeriod:
-				this.props.healthCheckGracePeriod ??
-				this.getDefaultHealthCheckGracePeriod(),
+			healthChecks: {
+				types: this.props.healthCheckTypes ?? ['ELB'],
+				gracePeriod: cdk.Duration.minutes(5),
+			},
 
 			// Instance distribution
 			vpcSubnets: {
@@ -204,7 +205,6 @@ export class AutoScalingConstruct extends Construct {
 				),
 				pauseTime: cdk.Duration.minutes(5),
 				waitOnResourceSignals: true,
-				signalTimeout: cdk.Duration.minutes(10),
 			}),
 
 			// Auto scaling group name
@@ -248,12 +248,6 @@ export class AutoScalingConstruct extends Construct {
 				'CpuTargetTracking',
 				{
 					targetUtilizationPercent: this.props.autoScaling.targetCpuUtilization,
-					scaleInCooldown:
-						this.props.autoScaling.scaleInCooldown ??
-						this.getDefaultScaleInCooldown(),
-					scaleOutCooldown:
-						this.props.autoScaling.scaleOutCooldown ??
-						this.getDefaultScaleOutCooldown(),
 				},
 			)
 			this.targetTrackingPolicies.set('cpu', cpuPolicy)
@@ -261,7 +255,7 @@ export class AutoScalingConstruct extends Construct {
 
 		// Memory utilization target tracking (requires CloudWatch Agent)
 		if (this.props.autoScaling.targetMemoryUtilization) {
-			const memoryPolicy = this.autoScalingGroup.scaleOnMetric(
+			const memoryPolicy = this.autoScalingGroup.scaleToTrackMetric(
 				'MemoryTargetTracking',
 				{
 					metric: new cloudwatch.Metric({
@@ -273,12 +267,6 @@ export class AutoScalingConstruct extends Construct {
 						statistic: 'Average',
 					}),
 					targetValue: this.props.autoScaling.targetMemoryUtilization,
-					scaleInCooldown:
-						this.props.autoScaling.scaleInCooldown ??
-						this.getDefaultScaleInCooldown(),
-					scaleOutCooldown:
-						this.props.autoScaling.scaleOutCooldown ??
-						this.getDefaultScaleOutCooldown(),
 				},
 			)
 			this.targetTrackingPolicies.set('memory', memoryPolicy)
@@ -295,13 +283,6 @@ export class AutoScalingConstruct extends Construct {
 				{
 					targetRequestsPerMinute:
 						this.props.autoScaling.targetRequestCountPerInstance * 60, // Convert to per minute
-					targetGroup: this.props.targetGroups[0], // Use first target group
-					scaleInCooldown:
-						this.props.autoScaling.scaleInCooldown ??
-						this.getDefaultScaleInCooldown(),
-					scaleOutCooldown:
-						this.props.autoScaling.scaleOutCooldown ??
-						this.getDefaultScaleOutCooldown(),
 				},
 			)
 			this.targetTrackingPolicies.set('requestCount', requestCountPolicy)
@@ -375,7 +356,8 @@ export class AutoScalingConstruct extends Construct {
 						namespace: 'AWS/ApplicationELB',
 						metricName: 'TargetResponseTime',
 						dimensionsMap: {
-							TargetGroup: this.props.targetGroups[0].targetGroupFullName,
+							TargetGroup:
+								this.props.targetGroups[0]?.targetGroupFullName ?? 'unknown',
 						},
 						statistic: 'Average',
 					}),
@@ -591,7 +573,7 @@ export class AutoScalingConstruct extends Construct {
 		if (this.props.notificationTopics?.warning) {
 			configurations.push({
 				topic: this.props.notificationTopics.warning,
-				scalingEvents: autoscaling.ScalingEvents.LAUNCH_TERMINATE,
+				scalingEvents: autoscaling.ScalingEvents.ALL,
 			})
 		}
 
@@ -711,7 +693,7 @@ export class AutoScalingConstruct extends Construct {
 			cooldown: cooldown ?? this.getDefaultScaleOutCooldown(),
 		})
 
-		this.scalingPolicies.set(id, policy as autoscaling.IScalingPolicy)
+		this.scalingPolicies.set(id, policy)
 		return policy
 	}
 
@@ -722,14 +704,10 @@ export class AutoScalingConstruct extends Construct {
 		id: string,
 		metric: cloudwatch.IMetric,
 		targetValue: number,
-		scaleInCooldown?: cdk.Duration,
-		scaleOutCooldown?: cdk.Duration,
 	): autoscaling.TargetTrackingScalingPolicy {
-		const policy = this.autoScalingGroup.scaleOnMetric(id, {
+		const policy = this.autoScalingGroup.scaleToTrackMetric(id, {
 			metric,
 			targetValue,
-			scaleInCooldown: scaleInCooldown ?? this.getDefaultScaleInCooldown(),
-			scaleOutCooldown: scaleOutCooldown ?? this.getDefaultScaleOutCooldown(),
 		})
 
 		this.targetTrackingPolicies.set(id, policy)
@@ -760,7 +738,7 @@ Capacity Configuration:
 Scaling Policies:
 - Target Tracking Policies: ${targetTrackingCount}
 - Step Scaling Policies: ${stepScalingCount}
-- Health Check Type: ${this.props.healthCheckType ?? 'ELB'}
+- Health Check Types: ${this.props.healthCheckTypes?.join(', ') ?? 'ELB'}
 - Health Check Grace Period: ${this.props.healthCheckGracePeriod?.toMinutes() ?? this.getDefaultHealthCheckGracePeriod().toMinutes()} minutes
 
 Target Tracking Metrics:

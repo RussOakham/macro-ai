@@ -30,9 +30,11 @@
 		"deploy-ec2:github": "scripts/github-actions-deploy.sh"
 	},
 	"dependencies": {
+		"@aws-sdk/client-cloudwatch": "catalog:",
 		"@aws-sdk/client-ec2": "catalog:",
 		"@aws-sdk/client-elastic-load-balancing-v2": "catalog:",
 		"@aws-sdk/client-s3": "catalog:",
+		"@aws-sdk/client-sfn": "catalog:",
 		"@aws-sdk/client-ssm": "catalog:",
 		"aws-cdk-lib": "^2.161.1",
 		"commander": "^12.1.0",
