@@ -11,8 +11,8 @@
   },
   "servers": [
     {
-      "url": "http://localhost:3040/api",
-      "description": "Development server"
+      "url": "https://api.macro-ai.com/api",
+      "description": "Production server"
     }
   ],
   "components": {
