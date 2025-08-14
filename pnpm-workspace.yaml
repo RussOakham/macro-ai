@@ -26,6 +26,7 @@ catalog:
   eslint-plugin-react: ^7.37.5
   eslint-plugin-react-hooks: ^4.6.2
   eslint-plugin-unused-imports: ^3.2.0
+  express: ^4.21.2
   globals: ^15.15.0
   lucide-react: ^0.474.0
   markdownlint-cli2: ^0.18.1
