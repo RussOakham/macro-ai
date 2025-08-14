@@ -207,9 +207,9 @@ jobs:
           echo "  Backend URL: $BACKEND_URL"
           echo "  Backend Stack: $BACKEND_STACK_NAME"
 
-  # Build Lambda package for deployment
-  build-lambda:
-    name: Build Lambda Package
+  # Build Express API for EC2 deployment
+  build-express-api:
+    name: Build Express API for EC2
     runs-on: ubuntu-latest
     needs: [validate-access, check-backend-changes]
     if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-backend-changes.outputs.has-backend-changes == 'true'
@@ -217,6 +217,9 @@ jobs:
     permissions:
       contents: read
       actions: write # For uploading artifacts
+
+    outputs:
+      build-artifact-name: ${{ steps.artifact-info.outputs.artifact-name }}
 
     steps:
       - name: Checkout code
@@ -234,26 +237,74 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: 'pnpm-lock.yaml'
 
-      - name: Build Lambda package
+      - name: Build Express API for EC2
         run: |
-          cd apps/express-api
-          pnpm install --frozen-lockfile
-          pnpm build:lambda
-          pnpm bundle:lambda
-          pnpm package:lambda
+          echo "🔨 Building Express API for EC2 deployment..."
 
-      - name: Upload Lambda package
+          # Install dependencies for the entire monorepo
+          pnpm install --frozen-lockfile
+
+          # Build the Express API (standard build, not Lambda)
+          cd apps/express-api
+          echo "📦 Building Express API..."
+          pnpm run build
+
+          # Verify build output
+          if [[ -d "dist" && -f "dist/index.js" ]]; then
+            echo "✅ Express API build completed successfully"
+            echo "📊 Build size: $(du -sh dist)"
+          else
+            echo "❌ Express API build verification failed"
+            exit 1
+          fi
+
+      - name: Create deployment package
+        run: |
+          echo "📦 Creating deployment package for EC2..."
+          cd apps/express-api
+
+          # Create deployment directory structure
+          mkdir -p deployment-package
+
+          # Copy built application
+          cp -r dist deployment-package/
+
+          # Copy package.json and package-lock for production dependencies
+          cp package.json deployment-package/
+          cp pnpm-lock.yaml deployment-package/
+
+          # Copy any additional runtime files
+          if [[ -f ".env.example" ]]; then
+            cp .env.example deployment-package/
+          fi
+
+          # Create deployment archive
+          cd deployment-package
+          tar -czf ../express-api-deployment.tar.gz .
+          cd ..
+
+          echo "✅ Deployment package created: express-api-deployment.tar.gz"
+          echo "📊 Package size: $(du -sh express-api-deployment.tar.gz)"
+
+      - name: Set artifact information
+        id: artifact-info
+        run: |
+          ARTIFACT_NAME="express-api-deployment-${{ needs.validate-access.outputs.env-name }}"
+          echo "artifact-name=${ARTIFACT_NAME}" >> $GITHUB_OUTPUT
+          echo "📋 Artifact name: ${ARTIFACT_NAME}"
+
+      - name: Upload Express API deployment package
         uses: actions/upload-artifact@v4
         with:
-          name: lambda-package-${{ needs.validate-access.outputs.env-name }}
-          path: apps/express-api/dist/lambda.zip
+          name: ${{ steps.artifact-info.outputs.artifact-name }}
+          path: apps/express-api/express-api-deployment.tar.gz
           retention-days: 7
 
-  # Deploy Backend Preview Environment (Backend stack and API Gateway)
+  # Deploy Backend Preview Environment (EC2-based infrastructure)
   deploy-backend-preview:
     name: Deploy Backend Preview
     runs-on: ubuntu-latest
-    needs: [validate-access, build-lambda, check-backend-changes]
+    needs: [validate-access, build-express-api, check-backend-changes]
     if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-backend-changes.outputs.has-backend-changes == 'true'
     environment: development
 
@@ -266,6 +317,8 @@ jobs:
     outputs:
       api-endpoint: ${{ steps.outputs.outputs.api-endpoint }}
       stack-name: ${{ steps.stack-info.outputs.stack-name }}
+      ec2-instance-id: ${{ steps.outputs.outputs.ec2-instance-id }}
+      load-balancer-dns: ${{ steps.outputs.outputs.load-balancer-dns }}
 
     steps:
       - name: Checkout code
@@ -293,11 +346,11 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: GitHubActions-PreviewDeploy-Backend-${{ github.run_id }}
 
-      - name: Download Lambda package
+      - name: Download Express API deployment package
         uses: actions/download-artifact@v4
         with:
-          name: lambda-package-${{ needs.validate-access.outputs.env-name }}
-          path: apps/express-api/dist/
+          name: ${{ needs.build-express-api.outputs.build-artifact-name }}
+          path: deployment-artifacts/
 
       - name: Generate stack information
         id: stack-info
@@ -308,13 +361,13 @@ jobs:
           echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
           echo "Stack name: ${STACK_NAME}"
 
-      - name: Deploy infrastructure with CORS configuration
+      - name: Deploy EC2 infrastructure with CORS configuration
         run: |
           cd infrastructure
           pnpm install --frozen-lockfile
           pnpm build
 
-          echo "🚀 Deploying ephemeral environment: ${{ needs.validate-access.outputs.env-name }}"
+          echo "🚀 Deploying EC2-based preview environment: ${{ needs.validate-access.outputs.env-name }}"
           echo "📦 Stack: ${{ steps.stack-info.outputs.stack-name }}"
           echo "👤 Requested by: ${{ needs.validate-access.outputs.target-user }}"
 
@@ -337,27 +390,63 @@ jobs:
 
           echo "📣 Observability: exporting CORS_ALLOWED_ORIGINS to CDK as -> '$CORS_ORIGINS'"
 
-          # Make deploy script executable and run it
-          chmod +x scripts/deploy.sh
-          ./scripts/deploy.sh
+          # Extract deployment package for EC2 deployment
+          echo "📦 Preparing Express API deployment package..."
+          cd ../deployment-artifacts
+          if [[ -f "express-api-deployment.tar.gz" ]]; then
+            tar -xzf express-api-deployment.tar.gz -C .
+            echo "✅ Deployment package extracted"
+          else
+            echo "❌ Express API deployment package not found"
+            exit 1
+          fi
+          cd ../infrastructure
+
+          # Deploy EC2-based infrastructure using Phase 4 constructs
+          echo "🏗️ Deploying EC2 infrastructure with Phase 4 constructs..."
+          chmod +x scripts/deploy-ec2-preview.sh
+          ./scripts/deploy-ec2-preview.sh
         env:
           CDK_DEPLOY_ENV: ${{ needs.validate-access.outputs.env-name }}
-          CDK_DEPLOY_SCALE: 'hobby'
+          CDK_DEPLOY_SCALE: 'preview'
+          CDK_DEPLOY_TYPE: 'ec2-preview'
           AWS_REGION: ${{ env.AWS_REGION }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
           NODE_ENV: 'production'
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BRANCH_NAME: ${{ github.head_ref }}
           # Important: pass the normalized CORS origins with trailing slash stripped
           CORS_ALLOWED_ORIGINS: ${{ needs.validate-access.outputs.frontend-url != '<will-be-generated-during-deployment>' && needs.validate-access.outputs.frontend-url || 'http://localhost:5173,http://localhost:3000' }}
 
-      - name: Get deployment outputs
+      - name: Get EC2 deployment outputs
         id: outputs
         run: |
           STACK_NAME="${{ steps.stack-info.outputs.stack-name }}"
 
-          # Get API endpoint from CloudFormation outputs
+          echo "📋 Extracting EC2 deployment outputs from stack: ${STACK_NAME}"
+
+          # Get API endpoint from CloudFormation outputs (Load Balancer DNS)
           API_ENDPOINT=$(aws cloudformation describe-stacks \
             --stack-name "${STACK_NAME}" \
             --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
+            --output text 2>/dev/null || echo "")
+
+          # Get Load Balancer DNS name
+          LOAD_BALANCER_DNS=$(aws cloudformation describe-stacks \
+            --stack-name "${STACK_NAME}" \
+            --query "Stacks[0].Outputs[?OutputKey=='LoadBalancerDNS'].OutputValue" \
+            --output text 2>/dev/null || echo "")
+
+          # Get EC2 Instance ID
+          EC2_INSTANCE_ID=$(aws cloudformation describe-stacks \
+            --stack-name "${STACK_NAME}" \
+            --query "Stacks[0].Outputs[?OutputKey=='EC2InstanceId'].OutputValue" \
+            --output text 2>/dev/null || echo "")
+
+          # Get Auto Scaling Group Name
+          ASG_NAME=$(aws cloudformation describe-stacks \
+            --stack-name "${STACK_NAME}" \
+            --query "Stacks[0].Outputs[?OutputKey=='AutoScalingGroupName'].OutputValue" \
             --output text 2>/dev/null || echo "")
 
           if [[ -n "${API_ENDPOINT}" ]]; then
@@ -370,6 +459,27 @@ jobs:
             echo "✅ API endpoint: ${API_BASE}"
           else
             echo "⚠️ Could not retrieve API endpoint"
+          fi
+
+          if [[ -n "${LOAD_BALANCER_DNS}" ]]; then
+            echo "load-balancer-dns=${LOAD_BALANCER_DNS}" >> $GITHUB_OUTPUT
+            echo "✅ Load Balancer DNS: ${LOAD_BALANCER_DNS}"
+          else
+            echo "⚠️ Could not retrieve Load Balancer DNS"
+          fi
+
+          if [[ -n "${EC2_INSTANCE_ID}" ]]; then
+            echo "ec2-instance-id=${EC2_INSTANCE_ID}" >> $GITHUB_OUTPUT
+            echo "✅ EC2 Instance ID: ${EC2_INSTANCE_ID}"
+          else
+            echo "⚠️ Could not retrieve EC2 Instance ID"
+          fi
+
+          if [[ -n "${ASG_NAME}" ]]; then
+            echo "auto-scaling-group=${ASG_NAME}" >> $GITHUB_OUTPUT
+            echo "✅ Auto Scaling Group: ${ASG_NAME}"
+          else
+            echo "⚠️ Could not retrieve Auto Scaling Group name"
           fi
 
       - name: Health check
