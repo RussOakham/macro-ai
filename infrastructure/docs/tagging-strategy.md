@@ -2,7 +2,8 @@
 
 ## Overview
 
-This document outlines the comprehensive tagging strategy for Macro AI's AWS infrastructure. The strategy is designed to enable cost tracking, environment identification, automated cleanup, security compliance, and operational monitoring.
+This document outlines the comprehensive tagging strategy for Macro AI's AWS infrastructure. The strategy is designed to
+enable cost tracking, environment identification, automated cleanup, security compliance, and operational monitoring.
 
 ## Key Benefits
 

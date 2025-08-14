@@ -2,7 +2,8 @@
 
 ## Overview
 
-This document describes the comprehensive EC2 deployment utilities for the Macro AI infrastructure. These utilities provide automated deployment, management, and monitoring capabilities for EC2-based preview environments.
+This document describes the comprehensive EC2 deployment utilities for the Macro AI infrastructure. These utilities provide
+automated deployment, management, and monitoring capabilities for EC2-based preview environments.
 
 ## Components
 
@@ -365,4 +366,5 @@ jobs:
 - Implement comprehensive logging
 - Regular health check validation
 
-This comprehensive deployment utility system provides a robust foundation for automated EC2-based application deployment with production-ready features including security, monitoring, cost optimization, and error handling.
+This comprehensive deployment utility system provides a robust foundation for automated EC2-based application deployment
+with production-ready features including security, monitoring, cost optimization, and error handling.

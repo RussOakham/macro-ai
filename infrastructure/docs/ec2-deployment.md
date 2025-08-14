@@ -2,7 +2,8 @@
 
 ## Overview
 
-This document describes the comprehensive EC2 deployment system for the Macro AI Express API. The system includes automated instance initialization, application deployment, monitoring, and lifecycle management.
+This document describes the comprehensive EC2 deployment system for the Macro AI Express API. The system includes automated
+instance initialization, application deployment, monitoring, and lifecycle management.
 
 ## Architecture Components
 
@@ -35,7 +36,7 @@ A production-ready deployment script (`infrastructure/scripts/deploy-app.sh`) th
 
 ## Directory Structure
 
-```
+```text
 /opt/macro-ai/
 ├── current/              # Symlink to current release
 ├── releases/             # All deployed releases
@@ -308,4 +309,5 @@ The deployment script is designed to integrate with GitHub Actions:
 - **Service Down**: Application health check failures
 - **Error Rate**: High error rate in application logs
 
-This comprehensive deployment system ensures reliable, secure, and maintainable EC2-based hosting for the Macro AI Express API.
+This comprehensive deployment system ensures reliable, secure, and maintainable EC2-based hosting for the Macro AI
+Express API.
