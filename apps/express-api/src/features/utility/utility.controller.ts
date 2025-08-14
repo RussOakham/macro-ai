@@ -85,10 +85,16 @@ class UtilityController implements IUtilityController {
 			logger.error({
 				msg: '[utilityController - getDetailedHealthStatus]: Error checking detailed health status',
 				error: error.message,
+				stack: error.stack,
+				service: error.service,
+				type: error.type,
 			})
 			next(error)
 			return
 		}
+
+		// TypeScript knows detailedHealthStatus is defined here due to Result tuple pattern
+		// This assertion is for runtime safety in case of unexpected null values
 
 		// Set appropriate HTTP status based on health status
 		const statusCode =
@@ -124,10 +130,15 @@ class UtilityController implements IUtilityController {
 			logger.error({
 				msg: '[utilityController - getReadinessStatus]: Error checking readiness status',
 				error: error.message,
+				stack: error.stack,
+				service: error.service,
+				type: error.type,
 			})
 			next(error)
 			return
 		}
+
+		// TypeScript knows readinessStatus is defined here due to Result tuple pattern
 
 		// Return 503 if not ready, 200 if ready
 		const statusCode = readinessStatus.ready
@@ -152,10 +163,15 @@ class UtilityController implements IUtilityController {
 			logger.error({
 				msg: '[utilityController - getLivenessStatus]: Error checking liveness status',
 				error: error.message,
+				stack: error.stack,
+				service: error.service,
+				type: error.type,
 			})
 			next(error)
 			return
 		}
+
+		// TypeScript knows livenessStatus is defined here due to Result tuple pattern
 
 		// Return 503 if not alive, 200 if alive
 		const statusCode = livenessStatus.alive

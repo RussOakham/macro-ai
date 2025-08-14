@@ -23,21 +23,14 @@ registry.registerPath({
 	path: '/health',
 	tags: ['Utility'],
 	summary: 'Health check endpoint',
-	description: 'Returns the current health status of the API service',
+	description:
+		'Returns the current health status of the API service. No rate limiting applied to ensure ALB health checks work reliably.',
 	responses: {
 		[StatusCodes.OK]: {
 			description: 'Health check successful',
 			content: {
 				'application/json': {
 					schema: healthResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.TOO_MANY_REQUESTS]: {
-			description: 'Too many requests - rate limit exceeded',
-			content: {
-				'application/json': {
-					schema: RateLimitErrorSchema,
 				},
 			},
 		},
@@ -96,7 +89,7 @@ registry.registerPath({
 	tags: ['Utility'],
 	summary: 'Detailed health check endpoint for ALB and monitoring',
 	description:
-		'Returns comprehensive health status including database, memory, disk, and dependencies checks',
+		'Returns comprehensive health status including database, memory, disk, and dependencies checks. No rate limiting applied to ensure ALB health checks work reliably.',
 	responses: {
 		[StatusCodes.OK]: {
 			description: 'Detailed health check successful',
@@ -111,14 +104,6 @@ registry.registerPath({
 			content: {
 				'application/json': {
 					schema: detailedHealthResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.TOO_MANY_REQUESTS]: {
-			description: 'Too many requests - rate limit exceeded',
-			content: {
-				'application/json': {
-					schema: RateLimitErrorSchema,
 				},
 			},
 		},
@@ -140,7 +125,7 @@ registry.registerPath({
 	tags: ['Utility'],
 	summary: 'Readiness probe endpoint',
 	description:
-		'Returns whether the application is ready to receive traffic (Kubernetes-style readiness probe)',
+		'Returns whether the application is ready to receive traffic (Kubernetes-style readiness probe). No rate limiting applied to ensure ALB health checks work reliably.',
 	responses: {
 		[StatusCodes.OK]: {
 			description: 'Application is ready',
@@ -155,14 +140,6 @@ registry.registerPath({
 			content: {
 				'application/json': {
 					schema: readinessResponseSchema,
-				},
-			},
-		},
-		[StatusCodes.TOO_MANY_REQUESTS]: {
-			description: 'Too many requests - rate limit exceeded',
-			content: {
-				'application/json': {
-					schema: RateLimitErrorSchema,
 				},
 			},
 		},
@@ -184,7 +161,7 @@ registry.registerPath({
 	tags: ['Utility'],
 	summary: 'Liveness probe endpoint',
 	description:
-		'Returns whether the application is alive and should not be restarted (Kubernetes-style liveness probe)',
+		'Returns whether the application is alive and should not be restarted (Kubernetes-style liveness probe). No rate limiting applied to ensure ALB health checks work reliably.',
 	responses: {
 		[StatusCodes.OK]: {
 			description: 'Application is alive',
@@ -202,14 +179,6 @@ registry.registerPath({
 				},
 			},
 		},
-		[StatusCodes.TOO_MANY_REQUESTS]: {
-			description: 'Too many requests - rate limit exceeded',
-			content: {
-				'application/json': {
-					schema: RateLimitErrorSchema,
-				},
-			},
-		},
 		[StatusCodes.INTERNAL_SERVER_ERROR]: {
 			description: 'Liveness check failed - internal server error',
 			content: {
@@ -223,31 +192,23 @@ registry.registerPath({
 
 const utilityRouter = (router: Router) => {
 	// Health check endpoint using Go-style error handling
-	router.get('/health', apiRateLimiter, utilityController.getHealthStatus)
+	// NOTE: No rate limiting on health endpoints to prevent ALB health check failures
+	router.get('/health', utilityController.getHealthStatus)
 
 	// System info endpoint using Go-style error handling
 	router.get('/system-info', apiRateLimiter, utilityController.getSystemInfo)
 
 	// Detailed health check endpoint for ALB and monitoring
-	router.get(
-		'/health/detailed',
-		apiRateLimiter,
-		utilityController.getDetailedHealthStatus,
-	)
+	// NOTE: No rate limiting on health endpoints to prevent ALB health check failures
+	router.get('/health/detailed', utilityController.getDetailedHealthStatus)
 
 	// Readiness probe endpoint (Kubernetes-style)
-	router.get(
-		'/health/ready',
-		apiRateLimiter,
-		utilityController.getReadinessStatus,
-	)
+	// NOTE: No rate limiting on health endpoints to prevent ALB health check failures
+	router.get('/health/ready', utilityController.getReadinessStatus)
 
 	// Liveness probe endpoint (Kubernetes-style)
-	router.get(
-		'/health/live',
-		apiRateLimiter,
-		utilityController.getLivenessStatus,
-	)
+	// NOTE: No rate limiting on health endpoints to prevent ALB health check failures
+	router.get('/health/live', utilityController.getLivenessStatus)
 }
 
 export { utilityRouter }

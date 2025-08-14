@@ -16,10 +16,11 @@
 		"clean": "rm -rf dist && find src -type f \\( -name '*.ts' -o -name '*.js' \\) ! -name 'index.ts' -delete",
 		"type-check": "tsc --noEmit",
 		"generate": "cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && tsx --tsconfig scripts/tsconfig.json scripts/generate-modular.ts",
-		"format": "prettier --check .",
-		"format:fix": "prettier --write .",
+		"format": "prettier --check --cache .",
+		"format:fix": "prettier --write --cache .",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
+		"lint:ci": "eslint . --max-warnings 0",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage"

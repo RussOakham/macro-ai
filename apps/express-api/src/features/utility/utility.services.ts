@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs'
+import { join } from 'path'
+
 import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import { InternalError, Result } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
@@ -18,6 +21,34 @@ const { logger } = pino
  * Handles business logic for utility operations like health checks
  */
 class UtilityService implements IUtilityService {
+	/**
+	 * Get application version from package.json or environment variable
+	 * @returns Application version string
+	 */
+	private getApplicationVersion(): string {
+		// Try environment variable first (useful for CI/CD)
+		const envVersion =
+			process.env.APP_VERSION ?? process.env.npm_package_version
+		if (envVersion) {
+			return envVersion
+		}
+
+		// Fallback to reading package.json
+		try {
+			const packageJsonPath = join(process.cwd(), 'package.json')
+			const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
+				version?: string
+			}
+			return packageJson.version ?? '0.0.0'
+		} catch (error) {
+			logger.warn({
+				msg: '[utilityService - getApplicationVersion]: Failed to read version from package.json',
+				error: error instanceof Error ? error.message : 'Unknown error',
+			})
+			return '0.0.0'
+		}
+	}
+
 	/**
 	 * Get the health status of the API
 	 * Performs basic health checks and returns status
@@ -152,7 +183,7 @@ class UtilityService implements IUtilityService {
 				message: `API Health Status: ${overallStatus.toUpperCase()}`,
 				timestamp: currentTime.toISOString(),
 				uptime: Math.floor(uptime),
-				version: '1.0.0', // TODO: Get from package.json or build process
+				version: this.getApplicationVersion(),
 				environment: process.env.NODE_ENV ?? 'development',
 				checks,
 			}
@@ -323,11 +354,11 @@ class UtilityService implements IUtilityService {
 		status: 'healthy' | 'unhealthy'
 		usagePercent?: number
 	} => {
-		// Basic disk health check - in a real implementation,
-		// you would check disk space usage
+		// TODO: Implement actual disk space monitoring using fs.statSync or similar
+		// For now, return healthy status without usage percentage to avoid misleading data
 		return {
 			status: 'healthy',
-			usagePercent: 0, // Would be actual disk usage
+			usagePercent: undefined, // Explicitly undefined until real implementation
 		}
 	}
 
