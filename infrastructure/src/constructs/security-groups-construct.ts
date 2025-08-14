@@ -108,14 +108,14 @@ export class SecurityGroupsConstruct extends Construct {
 		// ALB to EC2 instances on Express API port
 		albSg.addEgressRule(
 			ec2.Peer.ipv4(vpc.vpcCidrBlock),
-			ec2.Port.tcp(3030),
+			ec2.Port.tcp(3040),
 			'ALB to EC2 instances (Express API)',
 		)
 
 		// Health check traffic (same port, but explicit for clarity)
 		albSg.addEgressRule(
 			ec2.Peer.ipv4(vpc.vpcCidrBlock),
-			ec2.Port.tcp(3030),
+			ec2.Port.tcp(3040),
 			'ALB health checks to EC2 instances',
 		)
 
@@ -150,7 +150,7 @@ export class SecurityGroupsConstruct extends Construct {
 		// Rule 1: ALB → EC2 instance (HTTP only, internal)
 		prSg.addIngressRule(
 			ec2.Peer.securityGroupId(albSecurityGroup.securityGroupId),
-			ec2.Port.tcp(3030),
+			ec2.Port.tcp(3040),
 			`ALB to PR #${prNumber.toString()} Express API`,
 		)
 
@@ -300,7 +300,7 @@ export const generateSecurityGroupRulesSummary: (
 	sg: ec2.ISecurityGroup,
 ) => string = (sg: ec2.ISecurityGroup) => {
 	return `Security Group: ${sg.securityGroupId}
-- Ingress: ALB → EC2 (port 3030), Session Manager (port 443)
+- Ingress: ALB → EC2 (port 3040), Session Manager (port 443)
 - Egress: HTTPS (port 443), HTTP (port 80), DNS (port 53), NTP (port 123)
 - Isolation: Network-level isolation from other PR environments`
 }

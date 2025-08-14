@@ -4143,7 +4143,7 @@
 			"get": {
 				"tags": ["Utility"],
 				"summary": "Health check endpoint",
-				"description": "Returns the current health status of the API service",
+				"description": "Returns the current health status of the API service. No rate limiting applied to ensure ALB health checks work reliably.",
 				"responses": {
 					"200": {
 						"description": "Health check successful",
@@ -4159,29 +4159,6 @@
 										}
 									},
 									"required": ["message"]
-								}
-							}
-						}
-					},
-					"429": {
-						"description": "Too many requests - rate limit exceeded",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"status": {
-											"type": "number",
-											"description": "HTTP status code",
-											"example": 429
-										},
-										"message": {
-											"type": "string",
-											"description": "Rate limit error message",
-											"example": "Too many requests, please try again later."
-										}
-									},
-									"required": ["status", "message"]
 								}
 							}
 						}
@@ -4351,7 +4328,7 @@
 			"get": {
 				"tags": ["Utility"],
 				"summary": "Detailed health check endpoint for ALB and monitoring",
-				"description": "Returns comprehensive health status including database, memory, disk, and dependencies checks",
+				"description": "Returns comprehensive health status including database, memory, disk, and dependencies checks. No rate limiting applied to ensure ALB health checks work reliably.",
 				"responses": {
 					"200": {
 						"description": "Detailed health check successful",
@@ -4497,29 +4474,6 @@
 										"environment",
 										"checks"
 									]
-								}
-							}
-						}
-					},
-					"429": {
-						"description": "Too many requests - rate limit exceeded",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"status": {
-											"type": "number",
-											"description": "HTTP status code",
-											"example": 429
-										},
-										"message": {
-											"type": "string",
-											"description": "Rate limit error message",
-											"example": "Too many requests, please try again later."
-										}
-									},
-									"required": ["status", "message"]
 								}
 							}
 						}
@@ -4697,7 +4651,7 @@
 			"get": {
 				"tags": ["Utility"],
 				"summary": "Readiness probe endpoint",
-				"description": "Returns whether the application is ready to receive traffic (Kubernetes-style readiness probe)",
+				"description": "Returns whether the application is ready to receive traffic (Kubernetes-style readiness probe). No rate limiting applied to ensure ALB health checks work reliably.",
 				"responses": {
 					"200": {
 						"description": "Application is ready",
@@ -4741,29 +4695,6 @@
 										}
 									},
 									"required": ["ready", "message", "timestamp", "checks"]
-								}
-							}
-						}
-					},
-					"429": {
-						"description": "Too many requests - rate limit exceeded",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"status": {
-											"type": "number",
-											"description": "HTTP status code",
-											"example": 429
-										},
-										"message": {
-											"type": "string",
-											"description": "Rate limit error message",
-											"example": "Too many requests, please try again later."
-										}
-									},
-									"required": ["status", "message"]
 								}
 							}
 						}
@@ -4839,7 +4770,7 @@
 			"get": {
 				"tags": ["Utility"],
 				"summary": "Liveness probe endpoint",
-				"description": "Returns whether the application is alive and should not be restarted (Kubernetes-style liveness probe)",
+				"description": "Returns whether the application is alive and should not be restarted (Kubernetes-style liveness probe). No rate limiting applied to ensure ALB health checks work reliably.",
 				"responses": {
 					"200": {
 						"description": "Application is alive",
@@ -4870,29 +4801,6 @@
 										}
 									},
 									"required": ["alive", "message", "timestamp", "uptime"]
-								}
-							}
-						}
-					},
-					"429": {
-						"description": "Too many requests - rate limit exceeded",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"status": {
-											"type": "number",
-											"description": "HTTP status code",
-											"example": 429
-										},
-										"message": {
-											"type": "string",
-											"description": "Rate limit error message",
-											"example": "Too many requests, please try again later."
-										}
-									},
-									"required": ["status", "message"]
 								}
 							}
 						}

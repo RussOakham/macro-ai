@@ -435,7 +435,7 @@ echo "$(date): Application deployment completed"
 
 		const targets = instanceIds.map((instanceId) => ({
 			Id: instanceId,
-			Port: 3030,
+			Port: 3040,
 		}))
 
 		const params: RegisterTargetsCommandInput = {

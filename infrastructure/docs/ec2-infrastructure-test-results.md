@@ -104,7 +104,7 @@ Lambda-to-EC2 migration. All tests were successfully completed, validating the i
 - **Description**: Application Load Balancer configuration is optimal for health checks
 - **Configuration Validated**:
   - Health check path: `/api/health`
-  - Target port: 3030
+  - Target port: 3040 (matches Express app SERVER_PORT)
   - Health check interval: 30 seconds
   - Healthy threshold: 2 consecutive checks
   - Unhealthy threshold: 3 consecutive checks

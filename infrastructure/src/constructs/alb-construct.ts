@@ -180,7 +180,7 @@ export class AlbConstruct extends Construct {
 			`Pr${prNumber.toString()}TargetGroup`,
 			{
 				targetGroupName: `macro-ai-${environmentName}-pr-${prNumber.toString()}-tg`,
-				port: 3030,
+				port: 3040,
 				protocol: elbv2.ApplicationProtocol.HTTP,
 				vpc,
 				targetType: elbv2.TargetType.INSTANCE,
@@ -188,7 +188,7 @@ export class AlbConstruct extends Construct {
 					enabled: true,
 					path: healthCheck.path,
 					protocol: elbv2.Protocol.HTTP,
-					port: '3030',
+					port: '3040',
 					healthyHttpCodes: '200',
 					interval: healthCheck.interval,
 					timeout: healthCheck.timeout,
@@ -287,7 +287,7 @@ export class AlbConstruct extends Construct {
 	): elbv2.ApplicationTargetGroup {
 		return new elbv2.ApplicationTargetGroup(this, 'DefaultTargetGroup', {
 			targetGroupName: `macro-ai-${environmentName}-default-tg`,
-			port: 3030,
+			port: 3040,
 			protocol: elbv2.ApplicationProtocol.HTTP,
 			vpc,
 			targetType: elbv2.TargetType.INSTANCE,
@@ -295,7 +295,7 @@ export class AlbConstruct extends Construct {
 				enabled: true,
 				path: healthCheck.path,
 				protocol: elbv2.Protocol.HTTP,
-				port: '3030',
+				port: '3040',
 				healthyHttpCodes: '200',
 				interval: healthCheck.interval,
 				timeout: healthCheck.timeout,
@@ -530,7 +530,7 @@ Target Groups:
 - Default Target Group: Health checks and fallback routing
 - PR-specific Target Groups: Isolated routing per PR environment
 - Health Check Path: /api/health
-- Health Check Protocol: HTTP on port 3030
+- Health Check Protocol: HTTP on port 3040
 
 Security:
 - Security Groups: Shared ALB security group with explicit rules
