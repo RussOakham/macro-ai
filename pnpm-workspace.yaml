@@ -8,9 +8,10 @@ catalog:
   '@aws-sdk/client-cognito-identity-provider': ^3.859.0
   '@aws-sdk/client-ec2': ^3.859.0
   '@aws-sdk/client-elastic-load-balancing-v2': ^3.859.0
+  '@aws-sdk/client-lambda': ^3.859.0
   '@aws-sdk/client-s3': ^3.859.0
   '@aws-sdk/client-sfn': ^3.859.0
-  '@aws-sdk/client-ssm': 3.859.0
+  '@aws-sdk/client-ssm': ^3.859.0
   '@types/eslint': ^8
   '@types/express': ^5.0.3
   '@types/node': ^20.19.9

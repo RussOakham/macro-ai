@@ -11,15 +11,15 @@
  * - Enhanced error reporting and diagnostics
  */
 
-import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda'
 import {
 	CloudWatchClient,
 	GetMetricStatisticsCommand,
 } from '@aws-sdk/client-cloudwatch'
-import { program } from 'commander'
+import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda'
 import chalk from 'chalk'
-import ora from 'ora'
 import Table from 'cli-table3'
+import { program } from 'commander'
+import ora from 'ora'
 
 interface DeploymentStatusConfig {
 	region: string
@@ -28,26 +28,46 @@ interface DeploymentStatusConfig {
 	statusQueryFunctionName: string
 }
 
-interface DeploymentEvent {
-	deploymentId: string
-	timestamp: string
-	status: string
-	stage: string
+interface LambdaResponse {
+	statusCode: number
+	body: {
+		deployments?: DeploymentSummary[]
+		activeDeployments?: DeploymentSummary[]
+		environment?: string
+		error?: string
+		[key: string]: unknown
+	}
+}
+
+interface LambdaPayload {
+	deploymentId?: string
+	environment?: string
+	limit?: number
+	hours?: number
+	interval?: string
+	[key: string]: unknown
+}
+
+interface MetricDatapoint {
+	Sum?: number
+	Average?: number
+	Maximum?: number
+	Timestamp?: Date
+}
+
+interface DeploymentMetrics {
+	successRate: MetricDatapoint[]
+	duration: MetricDatapoint[]
+	timeRange: number
+}
+
+interface CommandOptions {
+	region: string
 	environment: string
-	version: string
-	triggeredBy: string
-	metadata?: Record<string, string>
-	metrics?: {
-		duration?: number
-		healthScore?: number
-		errorCount?: number
-		instanceCount?: number
-		successRate?: number
-	}
-	error?: {
-		message: string
-		code: string
-	}
+	application: string
+	limit?: string
+	hours?: string
+	interval?: string
 }
 
 interface DeploymentSummary {
@@ -61,20 +81,20 @@ interface DeploymentSummary {
 	triggeredBy: string
 	successRate: number
 	healthScore: number
-	stageHistory: Array<{
+	stageHistory: {
 		stage: string
-		events: Array<{
+		events: {
 			status: string
 			timestamp: string
 			duration?: number
-		}>
-	}>
+		}[]
+	}[]
 }
 
 class DeploymentStatusCLI {
-	private lambda: LambdaClient
-	private cloudwatch: CloudWatchClient
-	private config: DeploymentStatusConfig
+	private readonly lambda: LambdaClient
+	private readonly cloudwatch: CloudWatchClient
+	private readonly config: DeploymentStatusConfig
 
 	constructor(config: DeploymentStatusConfig) {
 		this.config = config
@@ -99,7 +119,7 @@ class DeploymentStatusCLI {
 			if (result.statusCode !== 200) {
 				spinner.fail(
 					chalk.red(
-						`Failed to get deployment status: ${result.body.error || 'Unknown error'}`,
+						`Failed to get deployment status: ${result.body.error ?? 'Unknown error'}`,
 					),
 				)
 				return
@@ -107,7 +127,7 @@ class DeploymentStatusCLI {
 
 			spinner.succeed(chalk.green('Deployment status retrieved'))
 
-			const deployment = result.body as DeploymentSummary
+			const deployment = result.body as unknown as DeploymentSummary
 			this.displayDeploymentStatus(deployment)
 		} catch (error) {
 			spinner.fail(
@@ -121,7 +141,7 @@ class DeploymentStatusCLI {
 	/**
 	 * Get deployment history
 	 */
-	async getDeploymentHistory(limit: number = 20): Promise<void> {
+	async getDeploymentHistory(limit = 20): Promise<void> {
 		const spinner = ora('Fetching deployment history...').start()
 
 		try {
@@ -133,7 +153,7 @@ class DeploymentStatusCLI {
 			if (result.statusCode !== 200) {
 				spinner.fail(
 					chalk.red(
-						`Failed to get deployment history: ${result.body.error || 'Unknown error'}`,
+						`Failed to get deployment history: ${result.body.error ?? 'Unknown error'}`,
 					),
 				)
 				return
@@ -166,7 +186,7 @@ class DeploymentStatusCLI {
 			if (result.statusCode !== 200) {
 				spinner.fail(
 					chalk.red(
-						`Failed to get active deployments: ${result.body.error || 'Unknown error'}`,
+						`Failed to get active deployments: ${result.body.error ?? 'Unknown error'}`,
 					),
 				)
 				return
@@ -191,10 +211,7 @@ class DeploymentStatusCLI {
 	/**
 	 * Watch deployment status in real-time
 	 */
-	async watchDeployment(
-		deploymentId: string,
-		interval: number = 30,
-	): Promise<void> {
+	async watchDeployment(deploymentId: string, interval = 30): Promise<void> {
 		console.log(
 			chalk.blue(
 				`Watching deployment ${deploymentId} (refresh every ${interval}s)`,
@@ -207,7 +224,7 @@ class DeploymentStatusCLI {
 				const result = await this.invokeLambda('getStatus', { deploymentId })
 
 				if (result.statusCode === 200) {
-					const deployment = result.body as DeploymentSummary
+					const deployment = result.body as unknown as DeploymentSummary
 
 					// Clear screen and show updated status
 					console.clear()
@@ -232,7 +249,7 @@ class DeploymentStatusCLI {
 				} else {
 					console.log(
 						chalk.red(
-							`Failed to get deployment status: ${result.body.error || 'Unknown error'}`,
+							`Failed to get deployment status: ${result.body.error ?? 'Unknown error'}`,
 						),
 					)
 				}
@@ -245,7 +262,9 @@ class DeploymentStatusCLI {
 			}
 
 			// Schedule next update
-			setTimeout(watch, interval * 1000)
+			setTimeout(() => {
+				void watch()
+			}, interval * 1000)
 		}
 
 		await watch()
@@ -254,7 +273,7 @@ class DeploymentStatusCLI {
 	/**
 	 * Get deployment metrics
 	 */
-	async getDeploymentMetrics(hours: number = 24): Promise<void> {
+	async getDeploymentMetrics(hours = 24): Promise<void> {
 		const spinner = ora('Fetching deployment metrics...').start()
 
 		try {
@@ -296,8 +315,8 @@ class DeploymentStatusCLI {
 			spinner.succeed(chalk.green('Deployment metrics retrieved'))
 
 			this.displayDeploymentMetrics({
-				successRate: successRateMetrics.Datapoints || [],
-				duration: durationMetrics.Datapoints || [],
+				successRate: successRateMetrics.Datapoints ?? [],
+				duration: durationMetrics.Datapoints ?? [],
 				timeRange: hours,
 			})
 		} catch (error) {
@@ -312,18 +331,24 @@ class DeploymentStatusCLI {
 	/**
 	 * Invoke Lambda function
 	 */
-	private async invokeLambda(operation: string, payload: any): Promise<any> {
+	private async invokeLambda(
+		operation: string,
+		payload: LambdaPayload,
+	): Promise<LambdaResponse> {
 		const command = new InvokeCommand({
 			FunctionName: this.config.statusQueryFunctionName,
 			Payload: JSON.stringify({ operation, ...payload }),
 		})
 
 		const response = await this.lambda.send(command)
-		const result = JSON.parse(new TextDecoder().decode(response.Payload))
+		const result = JSON.parse(
+			new TextDecoder().decode(response.Payload),
+		) as LambdaResponse
 
 		if (response.FunctionError) {
+			const errorResult = result as { errorMessage?: string }
 			throw new Error(
-				`Lambda function error: ${result.errorMessage || 'Unknown error'}`,
+				`Lambda function error: ${errorResult.errorMessage ?? 'Unknown error'}`,
 			)
 		}
 
@@ -362,7 +387,7 @@ class DeploymentStatusCLI {
 		console.log(infoTable.toString())
 
 		// Stage history
-		if (deployment.stageHistory && deployment.stageHistory.length > 0) {
+		if (deployment.stageHistory.length > 0) {
 			console.log(chalk.bold.blue('\n📋 Stage History\n'))
 
 			const stageTable = new Table({
@@ -392,12 +417,16 @@ class DeploymentStatusCLI {
 	 * Display deployment history
 	 */
 	private displayDeploymentHistory(
-		deployments: any[],
-		environment: string,
+		deployments: DeploymentSummary[] | undefined,
+		environment: string | undefined,
 	): void {
-		console.log(chalk.bold.blue(`\n📚 Deployment History (${environment})\n`))
+		console.log(
+			chalk.bold.blue(
+				`\n📚 Deployment History (${environment ?? 'Unknown'})\n`,
+			),
+		)
 
-		if (deployments.length === 0) {
+		if (!deployments || deployments.length === 0) {
 			console.log(chalk.yellow('No deployments found'))
 			return
 		}
@@ -419,7 +448,7 @@ class DeploymentStatusCLI {
 				deployment.deploymentId.substring(0, 20) + '...',
 				deployment.version,
 				this.colorizeStatus(deployment.status),
-				new Date(deployment.timestamp).toLocaleDateString(),
+				new Date(deployment.startTime).toLocaleDateString(),
 				deployment.duration
 					? `${Math.round(deployment.duration / 60)}m`
 					: 'N/A',
@@ -434,12 +463,16 @@ class DeploymentStatusCLI {
 	 * Display active deployments
 	 */
 	private displayActiveDeployments(
-		deployments: any[],
-		environment: string,
+		deployments: DeploymentSummary[] | undefined,
+		environment: string | undefined,
 	): void {
-		console.log(chalk.bold.blue(`\n🚀 Active Deployments (${environment})\n`))
+		console.log(
+			chalk.bold.blue(
+				`\n🚀 Active Deployments (${environment ?? 'Unknown'})\n`,
+			),
+		)
 
-		if (deployments.length === 0) {
+		if (!deployments || deployments.length === 0) {
 			console.log(chalk.green('No active deployments'))
 			return
 		}
@@ -450,7 +483,7 @@ class DeploymentStatusCLI {
 		})
 
 		deployments.forEach((deployment) => {
-			const startTime = new Date(deployment.timestamp)
+			const startTime = new Date(deployment.startTime)
 			const duration = Math.round(
 				(Date.now() - startTime.getTime()) / 1000 / 60,
 			)
@@ -458,7 +491,7 @@ class DeploymentStatusCLI {
 			activeTable.push([
 				deployment.deploymentId.substring(0, 20) + '...',
 				deployment.version,
-				deployment.stage,
+				deployment.status, // Use status instead of stage
 				startTime.toLocaleString(),
 				`${duration}m`,
 			])
@@ -470,7 +503,7 @@ class DeploymentStatusCLI {
 	/**
 	 * Display deployment metrics
 	 */
-	private displayDeploymentMetrics(metrics: any): void {
+	private displayDeploymentMetrics(metrics: DeploymentMetrics): void {
 		console.log(
 			chalk.bold.blue(
 				`\n📈 Deployment Metrics (Last ${metrics.timeRange} hours)\n`,
@@ -479,19 +512,21 @@ class DeploymentStatusCLI {
 
 		// Calculate summary statistics
 		const totalDeployments = metrics.successRate.reduce(
-			(sum: number, dp: any) => sum + (dp.Sum || 0),
+			(sum: number, dp: MetricDatapoint) => sum + (dp.Sum ?? 0),
 			0,
 		)
 		const avgDuration =
 			metrics.duration.length > 0
 				? metrics.duration.reduce(
-						(sum: number, dp: any) => sum + (dp.Average || 0),
+						(sum: number, dp: MetricDatapoint) => sum + (dp.Average ?? 0),
 						0,
 					) / metrics.duration.length
 				: 0
 		const maxDuration =
 			metrics.duration.length > 0
-				? Math.max(...metrics.duration.map((dp: any) => dp.Maximum || 0))
+				? Math.max(
+						...metrics.duration.map((dp: MetricDatapoint) => dp.Maximum ?? 0),
+					)
 				: 0
 
 		const metricsTable = new Table({
@@ -556,7 +591,7 @@ program
 	.option('-r, --region <region>', 'AWS region', 'us-east-1')
 	.option('-e, --environment <env>', 'Environment name', 'development')
 	.option('-a, --application <app>', 'Application name', 'macro-ai')
-	.action(async (deploymentId, options) => {
+	.action(async (deploymentId: string, options: CommandOptions) => {
 		const config: DeploymentStatusConfig = {
 			region: options.region,
 			environment: options.environment,
@@ -575,7 +610,7 @@ program
 	.option('-e, --environment <env>', 'Environment name', 'development')
 	.option('-a, --application <app>', 'Application name', 'macro-ai')
 	.option('-l, --limit <limit>', 'Number of deployments to show', '20')
-	.action(async (options) => {
+	.action(async (options: CommandOptions) => {
 		const config: DeploymentStatusConfig = {
 			region: options.region,
 			environment: options.environment,
@@ -584,7 +619,7 @@ program
 		}
 
 		const cli = new DeploymentStatusCLI(config)
-		await cli.getDeploymentHistory(parseInt(options.limit))
+		await cli.getDeploymentHistory(parseInt(options.limit ?? '20'))
 	})
 
 program
@@ -593,7 +628,7 @@ program
 	.option('-r, --region <region>', 'AWS region', 'us-east-1')
 	.option('-e, --environment <env>', 'Environment name', 'development')
 	.option('-a, --application <app>', 'Application name', 'macro-ai')
-	.action(async (options) => {
+	.action(async (options: CommandOptions) => {
 		const config: DeploymentStatusConfig = {
 			region: options.region,
 			environment: options.environment,
@@ -613,7 +648,7 @@ program
 	.option('-e, --environment <env>', 'Environment name', 'development')
 	.option('-a, --application <app>', 'Application name', 'macro-ai')
 	.option('-i, --interval <seconds>', 'Refresh interval in seconds', '30')
-	.action(async (deploymentId, options) => {
+	.action(async (deploymentId: string, options: CommandOptions) => {
 		const config: DeploymentStatusConfig = {
 			region: options.region,
 			environment: options.environment,
@@ -622,7 +657,7 @@ program
 		}
 
 		const cli = new DeploymentStatusCLI(config)
-		await cli.watchDeployment(deploymentId, parseInt(options.interval))
+		await cli.watchDeployment(deploymentId, parseInt(options.interval ?? '30'))
 	})
 
 program
@@ -632,7 +667,7 @@ program
 	.option('-e, --environment <env>', 'Environment name', 'development')
 	.option('-a, --application <app>', 'Application name', 'macro-ai')
 	.option('-h, --hours <hours>', 'Time range in hours', '24')
-	.action(async (options) => {
+	.action(async (options: CommandOptions) => {
 		const config: DeploymentStatusConfig = {
 			region: options.region,
 			environment: options.environment,
@@ -641,10 +676,11 @@ program
 		}
 
 		const cli = new DeploymentStatusCLI(config)
-		await cli.getDeploymentMetrics(parseInt(options.hours))
+		await cli.getDeploymentMetrics(parseInt(options.hours ?? '24'))
 	})
 
 // Parse command line arguments
 program.parse()
 
-export { DeploymentStatusCLI, DeploymentStatusConfig }
+export { DeploymentStatusCLI }
+export type { DeploymentStatusConfig }

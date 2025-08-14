@@ -1,5 +1,4 @@
 import * as cdk from 'aws-cdk-lib'
-import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch'
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb'
 import * as iam from 'aws-cdk-lib/aws-iam'
 import * as lambda from 'aws-cdk-lib/aws-lambda'
@@ -125,12 +124,12 @@ export interface DeploymentSummary {
 	readonly triggeredBy: string
 	readonly successRate: number
 	readonly healthScore: number
-	readonly stageHistory: Array<{
+	readonly stageHistory: {
 		stage: DeploymentStage
 		status: DeploymentStatus
 		timestamp: string
 		duration?: number
-	}>
+	}[]
 }
 
 /**
@@ -208,7 +207,7 @@ export class DeploymentStatusConstruct extends Construct {
 	 * Create DynamoDB table for deployment history
 	 */
 	private createDeploymentHistoryTable(): dynamodb.Table {
-		return new dynamodb.Table(this, 'DeploymentHistoryTable', {
+		const table = new dynamodb.Table(this, 'DeploymentHistoryTable', {
 			tableName: `${this.resourcePrefix}-deployment-history`,
 			partitionKey: {
 				name: 'deploymentId',
@@ -222,32 +221,35 @@ export class DeploymentStatusConstruct extends Construct {
 			pointInTimeRecovery: true,
 			removalPolicy: cdk.RemovalPolicy.RETAIN,
 			timeToLiveAttribute: 'ttl',
-			// Add GSI for querying by environment and status
-			globalSecondaryIndexes: [
-				{
-					indexName: 'EnvironmentStatusIndex',
-					partitionKey: {
-						name: 'environment',
-						type: dynamodb.AttributeType.STRING,
-					},
-					sortKey: {
-						name: 'status',
-						type: dynamodb.AttributeType.STRING,
-					},
-				},
-				{
-					indexName: 'TimestampIndex',
-					partitionKey: {
-						name: 'environment',
-						type: dynamodb.AttributeType.STRING,
-					},
-					sortKey: {
-						name: 'timestamp',
-						type: dynamodb.AttributeType.STRING,
-					},
-				},
-			],
 		})
+
+		// Add GSI for querying by environment and status
+		table.addGlobalSecondaryIndex({
+			indexName: 'EnvironmentStatusIndex',
+			partitionKey: {
+				name: 'environment',
+				type: dynamodb.AttributeType.STRING,
+			},
+			sortKey: {
+				name: 'status',
+				type: dynamodb.AttributeType.STRING,
+			},
+		})
+
+		// Add GSI for querying by timestamp
+		table.addGlobalSecondaryIndex({
+			indexName: 'TimestampIndex',
+			partitionKey: {
+				name: 'environment',
+				type: dynamodb.AttributeType.STRING,
+			},
+			sortKey: {
+				name: 'timestamp',
+				type: dynamodb.AttributeType.STRING,
+			},
+		})
+
+		return table
 	}
 
 	/**
