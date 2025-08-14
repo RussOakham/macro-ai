@@ -510,9 +510,9 @@ class UtilityService implements IUtilityService {
 	 * @returns Boolean indicating dependencies readiness
 	 */
 	private areDependenciesReady = (): boolean => {
-		// Check if critical dependencies are available
-		const openAIKey = process.env.OPENAI_API_KEY
-		return Boolean(openAIKey)
+		// Use comprehensive dependency health check to determine readiness
+		// This includes OpenAI API, Redis, and other external dependencies
+		return this.checkDependenciesHealth().status === 'healthy'
 	}
 
 	/**
