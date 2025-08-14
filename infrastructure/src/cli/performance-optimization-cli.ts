@@ -1,24 +1,23 @@
 #!/usr/bin/env node
 
-import { Command } from 'commander'
+import {
+	AutoScalingClient,
+	DescribeAutoScalingGroupsCommand,
+} from '@aws-sdk/client-auto-scaling'
 import {
 	CloudWatchClient,
-	GetMetricStatisticsCommand,
 	DescribeAlarmsCommand,
+	GetMetricStatisticsCommand,
 } from '@aws-sdk/client-cloudwatch'
 import {
 	DynamoDBClient,
 	QueryCommand,
 	ScanCommand,
-	GetItemCommand,
 } from '@aws-sdk/client-dynamodb'
-import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda'
-import {
-	AutoScalingClient,
-	DescribeAutoScalingGroupsCommand,
-} from '@aws-sdk/client-auto-scaling'
+import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda'
 import chalk from 'chalk'
 import Table from 'cli-table3'
+import { Command } from 'commander'
 
 /**
  * Performance Optimization CLI Tool
@@ -26,6 +25,80 @@ import Table from 'cli-table3'
  * Provides command-line interface for monitoring performance metrics,
  * analyzing optimization opportunities, and managing performance configurations.
  */
+
+interface PerformanceOptions {
+	application: string
+	environment: string
+	period: string
+	type?: string
+	priority?: string
+	limit?: string
+}
+
+interface OptimizationRecommendation {
+	id: string
+	timestamp: string
+	type: string
+	priority: string
+	description: string
+	status: string
+	expectedImpact: Record<string, unknown>
+}
+
+interface AutoScalingGroupInfo {
+	name: string
+	desiredCapacity: number
+	minSize: number
+	maxSize: number
+	instances: number
+	healthyInstances: number
+	availabilityZones: string[]
+	createdTime: Date
+}
+
+interface PerformanceMetrics {
+	cpuAverage: number
+	cpuMaximum: number
+	performanceScore: number
+	efficiencyRating: number
+	period: string
+}
+
+interface AnalysisRecommendation {
+	priority: string
+	description: string
+	expectedImpact: number
+}
+
+interface AnalysisDetail {
+	type: string
+	severity: string
+	confidence: number
+	description: string
+}
+
+interface LambdaPerformanceResponse {
+	statusCode: number
+	body: {
+		performanceScore?: number
+		efficiency?: number
+		recommendations?: AnalysisRecommendation[]
+		analysis?: AnalysisDetail[]
+		currentMonthlyCost?: number
+		potentialSavings?: number
+		error?: string
+		[key: string]: unknown
+	}
+}
+
+interface DynamoDBAttributeValue {
+	S?: string
+	N?: string
+	BOOL?: boolean
+	M?: Record<string, DynamoDBAttributeValue>
+}
+
+type DynamoDBItem = Record<string, DynamoDBAttributeValue>
 
 const program = new Command()
 const cloudwatch = new CloudWatchClient()
@@ -51,7 +124,7 @@ program
 	.option('-e, --environment <env>', 'Environment name', DEFAULT_ENVIRONMENT)
 	.option('-a, --application <app>', 'Application name', DEFAULT_APPLICATION)
 	.option('--period <hours>', 'Time period in hours', '24')
-	.action(async (options) => {
+	.action(async (options: PerformanceOptions) => {
 		try {
 			console.log(chalk.blue('📊 Fetching performance metrics...'))
 			const metrics = await getPerformanceMetrics(options)
@@ -59,7 +132,7 @@ program
 		} catch (error) {
 			console.error(
 				chalk.red('❌ Failed to fetch performance metrics:'),
-				error.message,
+				error instanceof Error ? error.message : String(error),
 			)
 			process.exit(1)
 		}
@@ -76,7 +149,7 @@ program
 	.option('-t, --type <type>', 'Filter by recommendation type')
 	.option('-p, --priority <priority>', 'Filter by priority level')
 	.option('-l, --limit <number>', 'Limit number of results', '20')
-	.action(async (options) => {
+	.action(async (options: PerformanceOptions) => {
 		try {
 			console.log(chalk.blue('💡 Fetching optimization recommendations...'))
 			const recommendations = await getOptimizationRecommendations(options)
@@ -84,7 +157,7 @@ program
 		} catch (error) {
 			console.error(
 				chalk.red('❌ Failed to fetch optimization recommendations:'),
-				error.message,
+				error instanceof Error ? error.message : String(error),
 			)
 			process.exit(1)
 		}
@@ -98,7 +171,7 @@ program
 	.description('Run performance analysis and get insights')
 	.option('-e, --environment <env>', 'Environment name', DEFAULT_ENVIRONMENT)
 	.option('-a, --application <app>', 'Application name', DEFAULT_APPLICATION)
-	.action(async (options) => {
+	.action(async (options: PerformanceOptions) => {
 		try {
 			console.log(chalk.blue('🔬 Running performance analysis...'))
 			const analysis = await runPerformanceAnalysis(options)
@@ -106,7 +179,7 @@ program
 		} catch (error) {
 			console.error(
 				chalk.red('❌ Failed to run performance analysis:'),
-				error.message,
+				error instanceof Error ? error.message : String(error),
 			)
 			process.exit(1)
 		}
@@ -120,7 +193,7 @@ program
 	.description('Analyze cost optimization opportunities')
 	.option('-e, --environment <env>', 'Environment name', DEFAULT_ENVIRONMENT)
 	.option('-a, --application <app>', 'Application name', DEFAULT_APPLICATION)
-	.action(async (options) => {
+	.action(async (options: PerformanceOptions) => {
 		try {
 			console.log(chalk.blue('💰 Analyzing cost optimization...'))
 			const costAnalysis = await runCostOptimization(options)
@@ -128,7 +201,7 @@ program
 		} catch (error) {
 			console.error(
 				chalk.red('❌ Failed to analyze cost optimization:'),
-				error.message,
+				error instanceof Error ? error.message : String(error),
 			)
 			process.exit(1)
 		}
@@ -142,7 +215,7 @@ program
 	.description('View Auto Scaling Group status and metrics')
 	.option('-e, --environment <env>', 'Environment name', DEFAULT_ENVIRONMENT)
 	.option('-a, --application <app>', 'Application name', DEFAULT_APPLICATION)
-	.action(async (options) => {
+	.action(async (options: PerformanceOptions) => {
 		try {
 			console.log(chalk.blue('⚖️ Fetching Auto Scaling status...'))
 			const scalingStatus = await getAutoScalingStatus(options)
@@ -150,7 +223,7 @@ program
 		} catch (error) {
 			console.error(
 				chalk.red('❌ Failed to fetch Auto Scaling status:'),
-				error.message,
+				error instanceof Error ? error.message : String(error),
 			)
 			process.exit(1)
 		}
@@ -164,7 +237,7 @@ program
 	.description('Display performance optimization dashboard')
 	.option('-e, --environment <env>', 'Environment name', DEFAULT_ENVIRONMENT)
 	.option('-a, --application <app>', 'Application name', DEFAULT_APPLICATION)
-	.action(async (options) => {
+	.action(async (options: PerformanceOptions) => {
 		try {
 			console.log(chalk.blue('📈 Loading performance dashboard...'))
 			const dashboard = await getPerformanceDashboard(options)
@@ -172,7 +245,7 @@ program
 		} catch (error) {
 			console.error(
 				chalk.red('❌ Failed to load performance dashboard:'),
-				error.message,
+				error instanceof Error ? error.message : String(error),
 			)
 			process.exit(1)
 		}
@@ -181,7 +254,9 @@ program
 /**
  * Get performance metrics from CloudWatch
  */
-async function getPerformanceMetrics(options: any) {
+async function getPerformanceMetrics(
+	options: PerformanceOptions,
+): Promise<PerformanceMetrics> {
 	const endTime = new Date()
 	const startTime = new Date(
 		endTime.getTime() - parseInt(options.period) * 60 * 60 * 1000,
@@ -237,17 +312,17 @@ async function getPerformanceMetrics(options: any) {
 
 	return {
 		cpuAverage:
-			metrics[0].Datapoints?.reduce((sum, dp) => sum + (dp.Average || 0), 0) /
-				(metrics[0].Datapoints?.length || 1) || 0,
+			(metrics[0].Datapoints?.reduce((sum, dp) => sum + (dp.Average ?? 0), 0) ??
+				0) / (metrics[0].Datapoints?.length ?? 1),
 		cpuMaximum: Math.max(
-			...(metrics[0].Datapoints?.map((dp) => dp.Maximum || 0) || [0]),
+			...(metrics[0].Datapoints?.map((dp) => dp.Maximum ?? 0) ?? [0]),
 		),
 		performanceScore:
-			metrics[1].Datapoints?.reduce((sum, dp) => sum + (dp.Average || 0), 0) /
-				(metrics[1].Datapoints?.length || 1) || 0,
+			(metrics[1].Datapoints?.reduce((sum, dp) => sum + (dp.Average ?? 0), 0) ??
+				0) / (metrics[1].Datapoints?.length ?? 1),
 		efficiencyRating:
-			metrics[2].Datapoints?.reduce((sum, dp) => sum + (dp.Average || 0), 0) /
-				(metrics[2].Datapoints?.length || 1) || 0,
+			(metrics[2].Datapoints?.reduce((sum, dp) => sum + (dp.Average ?? 0), 0) ??
+				0) / (metrics[2].Datapoints?.length ?? 1),
 		period: options.period,
 	}
 }
@@ -255,41 +330,52 @@ async function getPerformanceMetrics(options: any) {
 /**
  * Get optimization recommendations from DynamoDB
  */
-async function getOptimizationRecommendations(options: any) {
+async function getOptimizationRecommendations(
+	options: PerformanceOptions,
+): Promise<OptimizationRecommendation[]> {
 	const tableName = `${options.application}-${options.environment}-optimization-recommendations`
 
 	let command
 	if (options.type || options.priority) {
 		const indexName = options.type ? 'TypeIndex' : 'PriorityIndex'
 		const keyCondition = options.type ? 'type = :type' : 'priority = :priority'
-		const attributeValues = options.type
-			? { ':type': { S: options.type } }
-			: { ':priority': { S: options.priority } }
+		const attributeValues: Record<string, { S: string }> = {}
+
+		if (options.type) {
+			attributeValues[':type'] = { S: options.type }
+		}
+		if (options.priority) {
+			attributeValues[':priority'] = { S: options.priority }
+		}
 
 		command = new QueryCommand({
 			TableName: tableName,
 			IndexName: indexName,
 			KeyConditionExpression: keyCondition,
 			ExpressionAttributeValues: attributeValues,
-			Limit: parseInt(options.limit),
+			Limit: parseInt(options.limit ?? '20'),
 		})
 	} else {
 		command = new ScanCommand({
 			TableName: tableName,
-			Limit: parseInt(options.limit),
+			Limit: parseInt(options.limit ?? '20'),
 		})
 	}
 
 	const result = await dynamodb.send(command)
 	return (
-		result.Items?.map(parseOptimizationRecommendation).filter(Boolean) || []
+		result.Items?.map(parseOptimizationRecommendation).filter(
+			(item): item is OptimizationRecommendation => item !== null,
+		) ?? []
 	)
 }
 
 /**
  * Run performance analysis
  */
-async function runPerformanceAnalysis(options: any) {
+async function runPerformanceAnalysis(
+	options: PerformanceOptions,
+): Promise<LambdaPerformanceResponse> {
 	const functionName = `${options.application}-${options.environment}-performance-analyzer`
 
 	const result = await lambda.send(
@@ -302,14 +388,18 @@ async function runPerformanceAnalysis(options: any) {
 		}),
 	)
 
-	const payload = JSON.parse(new TextDecoder().decode(result.Payload))
-	return payload.body || payload
+	const payload = JSON.parse(
+		new TextDecoder().decode(result.Payload),
+	) as unknown
+	return payload as LambdaPerformanceResponse
 }
 
 /**
  * Run cost optimization analysis
  */
-async function runCostOptimization(options: any) {
+async function runCostOptimization(
+	options: PerformanceOptions,
+): Promise<LambdaPerformanceResponse> {
 	const functionName = `${options.application}-${options.environment}-cost-optimizer`
 
 	const result = await lambda.send(
@@ -322,14 +412,18 @@ async function runCostOptimization(options: any) {
 		}),
 	)
 
-	const payload = JSON.parse(new TextDecoder().decode(result.Payload))
-	return payload.body || payload
+	const payload = JSON.parse(
+		new TextDecoder().decode(result.Payload),
+	) as unknown
+	return payload as LambdaPerformanceResponse
 }
 
 /**
  * Get Auto Scaling Group status
  */
-async function getAutoScalingStatus(options: any) {
+async function getAutoScalingStatus(
+	options: PerformanceOptions,
+): Promise<AutoScalingGroupInfo> {
 	const asgName = `${options.application}-${options.environment}-asg`
 
 	const result = await autoscaling.send(
@@ -344,22 +438,27 @@ async function getAutoScalingStatus(options: any) {
 	}
 
 	return {
-		name: asg.AutoScalingGroupName,
-		desiredCapacity: asg.DesiredCapacity,
-		minSize: asg.MinSize,
-		maxSize: asg.MaxSize,
-		instances: asg.Instances?.length || 0,
+		name: asg.AutoScalingGroupName ?? 'Unknown',
+		desiredCapacity: asg.DesiredCapacity ?? 0,
+		minSize: asg.MinSize ?? 0,
+		maxSize: asg.MaxSize ?? 0,
+		instances: asg.Instances?.length ?? 0,
 		healthyInstances:
-			asg.Instances?.filter((i) => i.HealthStatus === 'Healthy').length || 0,
-		availabilityZones: asg.AvailabilityZones,
-		createdTime: asg.CreatedTime,
+			asg.Instances?.filter((i) => i.HealthStatus === 'Healthy').length ?? 0,
+		availabilityZones: asg.AvailabilityZones ?? [],
+		createdTime: asg.CreatedTime ?? new Date(),
 	}
 }
 
 /**
  * Get performance dashboard data
  */
-async function getPerformanceDashboard(options: any) {
+async function getPerformanceDashboard(options: PerformanceOptions): Promise<{
+	metrics: PerformanceMetrics
+	recommendations: OptimizationRecommendation[]
+	scalingStatus: AutoScalingGroupInfo
+	alarms: unknown[]
+}> {
 	const [metrics, recommendations, scalingStatus, alarms] = await Promise.all([
 		getPerformanceMetrics({ ...options, period: '24' }),
 		getOptimizationRecommendations({ ...options, limit: '5' }),
@@ -373,7 +472,9 @@ async function getPerformanceDashboard(options: any) {
 /**
  * Get performance alarms
  */
-async function getPerformanceAlarms(options: any) {
+async function getPerformanceAlarms(
+	options: PerformanceOptions,
+): Promise<unknown[]> {
 	const result = await cloudwatch.send(
 		new DescribeAlarmsCommand({
 			AlarmNamePrefix: `${options.application}-${options.environment}`,
@@ -384,32 +485,32 @@ async function getPerformanceAlarms(options: any) {
 	return (
 		result.MetricAlarms?.filter(
 			(alarm) =>
-				alarm.AlarmName?.includes('performance') ||
-				alarm.AlarmName?.includes('cpu'),
-		) || []
+				(alarm.AlarmName?.includes('performance') ?? false) ||
+				(alarm.AlarmName?.includes('cpu') ?? false),
+		) ?? []
 	)
 }
 
 /**
  * Parse optimization recommendation from DynamoDB item
  */
-function parseOptimizationRecommendation(item: any) {
-	if (!item) return null
-
+function parseOptimizationRecommendation(
+	item: DynamoDBItem,
+): OptimizationRecommendation | null {
 	try {
 		return {
-			id: item.id?.S,
-			timestamp: item.timestamp?.S,
-			type: item.type?.S,
-			priority: item.priority?.S,
-			description: item.description?.S,
-			status: item.status?.S || 'PENDING',
+			id: item.id?.S ?? '',
+			timestamp: item.timestamp?.S ?? '',
+			type: item.type?.S ?? '',
+			priority: item.priority?.S ?? '',
+			description: item.description?.S ?? '',
+			status: item.status?.S ?? 'PENDING',
 			expectedImpact: item.expectedImpact?.M
 				? Object.fromEntries(
 						Object.entries(item.expectedImpact.M).map(
-							([key, value]: [string, any]) => [
+							([key, value]: [string, DynamoDBAttributeValue]) => [
 								key,
-								value.N ? parseFloat(value.N) : value.S,
+								value.N ? parseFloat(value.N) : (value.S ?? ''),
 							],
 						),
 					)
@@ -424,7 +525,7 @@ function parseOptimizationRecommendation(item: any) {
 /**
  * Display performance metrics
  */
-function displayPerformanceMetrics(metrics: any) {
+function displayPerformanceMetrics(metrics: PerformanceMetrics): void {
 	console.log(chalk.bold('\n📊 Performance Metrics Summary'))
 	console.log(chalk.gray('─'.repeat(50)))
 
@@ -481,7 +582,9 @@ function displayPerformanceMetrics(metrics: any) {
 /**
  * Display optimization recommendations
  */
-function displayOptimizationRecommendations(recommendations: any[]) {
+function displayOptimizationRecommendations(
+	recommendations: OptimizationRecommendation[],
+): void {
 	if (recommendations.length === 0) {
 		console.log(chalk.green('✅ No optimization recommendations found'))
 		return
@@ -495,14 +598,14 @@ function displayOptimizationRecommendations(recommendations: any[]) {
 		colWidths: [15, 20, 12, 35, 12],
 	})
 
-	recommendations.forEach((rec) => {
+	recommendations.forEach((rec: OptimizationRecommendation) => {
 		const priorityColor = getPriorityColor(rec.priority)
 		const statusColor = getStatusColor(rec.status)
 		table.push([
-			rec.id?.substring(0, 12) + '...',
+			rec.id.substring(0, 12) + '...',
 			rec.type,
 			priorityColor(rec.priority),
-			rec.description?.substring(0, 30) + '...',
+			rec.description.substring(0, 30) + '...',
 			statusColor(rec.status),
 		])
 	})
@@ -510,10 +613,13 @@ function displayOptimizationRecommendations(recommendations: any[]) {
 	console.log(table.toString())
 
 	// Summary by priority
-	const prioritySummary = recommendations.reduce((acc: any, rec) => {
-		acc[rec.priority] = (acc[rec.priority] || 0) + 1
-		return acc
-	}, {})
+	const prioritySummary = recommendations.reduce(
+		(acc: Record<string, number>, rec: OptimizationRecommendation) => {
+			acc[rec.priority] = (acc[rec.priority] ?? 0) + 1
+			return acc
+		},
+		{},
+	)
 
 	console.log(chalk.bold('\n📋 Summary by Priority:'))
 	Object.entries(prioritySummary).forEach(([priority, count]) => {
@@ -525,78 +631,85 @@ function displayOptimizationRecommendations(recommendations: any[]) {
 /**
  * Display performance analysis results
  */
-function displayPerformanceAnalysis(analysis: any) {
+function displayPerformanceAnalysis(analysis: LambdaPerformanceResponse): void {
 	console.log(chalk.bold('\n🔬 Performance Analysis Results'))
 	console.log(chalk.gray('─'.repeat(50)))
 
-	if (analysis.error) {
-		console.log(chalk.red(`❌ Analysis failed: ${analysis.error}`))
+	if (analysis.body.error) {
+		console.log(chalk.red(`❌ Analysis failed: ${analysis.body.error}`))
 		return
 	}
 
 	console.log(
-		`📈 Performance Score: ${chalk.yellow(analysis.performanceScore || 'N/A')}`,
+		`📈 Performance Score: ${chalk.yellow(analysis.body.performanceScore ?? 'N/A')}`,
 	)
+	const efficiencyText = analysis.body.efficiency
+		? `${analysis.body.efficiency}%`
+		: 'N/A'
+	console.log(`⚡ Efficiency Rating: ${chalk.cyan(efficiencyText)}`)
 	console.log(
-		`⚡ Efficiency Rating: ${chalk.cyan(analysis.efficiency?.toFixed(1) + '%' || 'N/A')}`,
+		`💡 Recommendations: ${analysis.body.recommendations?.length ?? 0}`,
 	)
-	console.log(`💡 Recommendations: ${analysis.recommendations || 0}`)
 
-	if (analysis.analysis?.bottlenecks?.length > 0) {
-		console.log(chalk.bold('\n🚫 Performance Bottlenecks:'))
-		analysis.analysis.bottlenecks.forEach(
-			(bottleneck: string, index: number) => {
-				console.log(`  ${index + 1}. ${chalk.red(bottleneck)}`)
-			},
-		)
-	}
-
-	if (analysis.analysis?.opportunities?.length > 0) {
-		console.log(chalk.bold('\n🎯 Optimization Opportunities:'))
-		analysis.analysis.opportunities.forEach(
-			(opportunity: string, index: number) => {
-				console.log(`  ${index + 1}. ${chalk.green(opportunity)}`)
-			},
-		)
+	if (
+		analysis.body.analysis &&
+		Array.isArray(analysis.body.analysis) &&
+		analysis.body.analysis.length > 0
+	) {
+		console.log(chalk.bold('\n🎯 Analysis Details:'))
+		analysis.body.analysis.forEach((detail: AnalysisDetail, index: number) => {
+			console.log(`  ${index + 1}. ${chalk.green(detail.description)}`)
+		})
 	}
 }
 
 /**
  * Display cost optimization analysis
  */
-function displayCostOptimization(costAnalysis: any) {
+function displayCostOptimization(
+	costAnalysis: LambdaPerformanceResponse,
+): void {
 	console.log(chalk.bold('\n💰 Cost Optimization Analysis'))
 	console.log(chalk.gray('─'.repeat(50)))
 
-	if (costAnalysis.error) {
-		console.log(chalk.red(`❌ Cost analysis failed: ${costAnalysis.error}`))
+	if (costAnalysis.body.error) {
+		console.log(
+			chalk.red(`❌ Cost analysis failed: ${costAnalysis.body.error}`),
+		)
 		return
 	}
 
-	console.log(
-		`💵 Current Monthly Cost: $${costAnalysis.currentMonthlyCost?.toFixed(2) || 'N/A'}`,
-	)
-	console.log(
-		`💾 Potential Savings: ${costAnalysis.potentialSavings?.toFixed(1) + '%' || 'N/A'}`,
-	)
-	console.log(`📊 Recommendations: ${costAnalysis.recommendations || 0}`)
+	const currentCost = costAnalysis.body.currentMonthlyCost?.toFixed(2) ?? 'N/A'
+	const potentialSavings =
+		costAnalysis.body.potentialSavings?.toFixed(1) ?? 'N/A'
 
-	if (costAnalysis.analysis?.recommendations?.length > 0) {
+	console.log(`💵 Current Monthly Cost: $${currentCost}`)
+	console.log(`💾 Potential Savings: ${potentialSavings}%`)
+	console.log(
+		`📊 Recommendations: ${costAnalysis.body.recommendations?.length ?? 0}`,
+	)
+
+	if (
+		costAnalysis.body.recommendations &&
+		costAnalysis.body.recommendations.length > 0
+	) {
 		console.log(chalk.bold('\n💡 Cost Optimization Recommendations:'))
-		costAnalysis.analysis.recommendations.forEach((rec: any, index: number) => {
-			const priorityColor = getPriorityColor(rec.priority)
-			const savings = rec.expectedImpact?.costSavings
-			console.log(
-				`  ${index + 1}. ${priorityColor(rec.priority)}: ${rec.description} ${savings ? `(${savings.toFixed(1)}% savings)` : ''}`,
-			)
-		})
+		costAnalysis.body.recommendations.forEach(
+			(rec: AnalysisRecommendation, index: number) => {
+				const priorityColor = getPriorityColor(rec.priority)
+				const savings = rec.expectedImpact.toFixed(1)
+				console.log(
+					`  ${index + 1}. ${priorityColor(rec.priority)}: ${rec.description} (${savings}% savings)`,
+				)
+			},
+		)
 	}
 }
 
 /**
  * Display Auto Scaling status
  */
-function displayAutoScalingStatus(scalingStatus: any) {
+function displayAutoScalingStatus(scalingStatus: AutoScalingGroupInfo): void {
 	console.log(chalk.bold('\n⚖️ Auto Scaling Group Status'))
 	console.log(chalk.gray('─'.repeat(50)))
 
@@ -615,10 +728,7 @@ function displayAutoScalingStatus(scalingStatus: any) {
 			'Healthy Instances',
 			`${scalingStatus.healthyInstances}/${scalingStatus.instances}`,
 		],
-		[
-			'Availability Zones',
-			scalingStatus.availabilityZones?.join(', ') || 'N/A',
-		],
+		['Availability Zones', scalingStatus.availabilityZones.join(', ') || 'N/A'],
 		['Created', new Date(scalingStatus.createdTime).toLocaleString()],
 	)
 
@@ -640,40 +750,43 @@ function displayAutoScalingStatus(scalingStatus: any) {
 /**
  * Display performance dashboard
  */
-function displayPerformanceDashboard(dashboard: any) {
+function displayPerformanceDashboard(dashboard: {
+	metrics: PerformanceMetrics
+	recommendations: OptimizationRecommendation[]
+	scalingStatus: AutoScalingGroupInfo
+	alarms: unknown[]
+}): void {
 	console.log(chalk.bold('\n📈 Performance Optimization Dashboard'))
 	console.log(chalk.gray('═'.repeat(70)))
 
 	// Performance metrics summary
 	console.log(chalk.bold('\n📊 Performance Metrics (Last 24h)'))
+	console.log(`  CPU Average: ${dashboard.metrics.cpuAverage.toFixed(1)}%`)
 	console.log(
-		`  CPU Average: ${dashboard.metrics?.cpuAverage?.toFixed(1) || 'N/A'}%`,
+		`  Performance Score: ${dashboard.metrics.performanceScore.toFixed(1)}`,
 	)
 	console.log(
-		`  Performance Score: ${dashboard.metrics?.performanceScore?.toFixed(1) || 'N/A'}`,
-	)
-	console.log(
-		`  Efficiency Rating: ${dashboard.metrics?.efficiencyRating?.toFixed(1) || 'N/A'}%`,
+		`  Efficiency Rating: ${dashboard.metrics.efficiencyRating.toFixed(1)}%`,
 	)
 
 	// Auto Scaling status
 	console.log(chalk.bold('\n⚖️ Auto Scaling Status'))
+	console.log(`  Desired Capacity: ${dashboard.scalingStatus.desiredCapacity}`)
 	console.log(
-		`  Desired Capacity: ${dashboard.scalingStatus?.desiredCapacity || 'N/A'}`,
-	)
-	console.log(
-		`  Healthy Instances: ${dashboard.scalingStatus?.healthyInstances || 'N/A'}/${dashboard.scalingStatus?.instances || 'N/A'}`,
+		`  Healthy Instances: ${dashboard.scalingStatus.healthyInstances}/${dashboard.scalingStatus.instances}`,
 	)
 
 	// Recent recommendations
 	console.log(chalk.bold('\n💡 Recent Recommendations'))
-	if (dashboard.recommendations?.length > 0) {
-		dashboard.recommendations.slice(0, 3).forEach((rec: any, index: number) => {
-			const priorityColor = getPriorityColor(rec.priority)
-			console.log(
-				`  ${index + 1}. ${priorityColor(rec.priority)}: ${rec.description?.substring(0, 50) + '...'}`,
-			)
-		})
+	if (dashboard.recommendations.length > 0) {
+		dashboard.recommendations
+			.slice(0, 3)
+			.forEach((rec: OptimizationRecommendation, index: number) => {
+				const priorityColor = getPriorityColor(rec.priority)
+				console.log(
+					`  ${index + 1}. ${priorityColor(rec.priority)}: ${rec.description.substring(0, 50) + '...'}`,
+				)
+			})
 		if (dashboard.recommendations.length > 3) {
 			console.log(
 				chalk.gray(`  ... and ${dashboard.recommendations.length - 3} more`),
@@ -685,10 +798,11 @@ function displayPerformanceDashboard(dashboard: any) {
 
 	// Active alarms
 	console.log(chalk.bold('\n🚨 Active Performance Alarms'))
-	if (dashboard.alarms?.length > 0) {
-		dashboard.alarms.forEach((alarm: any) => {
+	if (dashboard.alarms.length > 0) {
+		dashboard.alarms.forEach((alarm: unknown) => {
+			const alarmData = alarm as { AlarmName?: string; StateReason?: string }
 			console.log(
-				`  ${chalk.red('🔴')} ${alarm.AlarmName}: ${alarm.StateReason}`,
+				`  ${chalk.red('🔴')} ${alarmData.AlarmName ?? 'Unknown'}: ${alarmData.StateReason ?? 'No reason'}`,
 			)
 		})
 	} else {
@@ -701,7 +815,10 @@ function displayPerformanceDashboard(dashboard: any) {
 /**
  * Get CPU status assessment
  */
-function getCpuStatus(cpuUtilization: number) {
+function getCpuStatus(cpuUtilization: number): {
+	status: string
+	color: (text: string) => string
+} {
 	if (cpuUtilization >= 90) {
 		return { status: 'CRITICAL', color: chalk.red.bold }
 	} else if (cpuUtilization >= 80) {
@@ -718,7 +835,10 @@ function getCpuStatus(cpuUtilization: number) {
 /**
  * Get performance status assessment
  */
-function getPerformanceStatus(score: number) {
+function getPerformanceStatus(score: number): {
+	status: string
+	color: (text: string) => string
+} {
 	if (score >= 90) {
 		return { status: 'EXCELLENT', color: chalk.green.bold }
 	} else if (score >= 80) {
@@ -735,7 +855,10 @@ function getPerformanceStatus(score: number) {
 /**
  * Get efficiency status assessment
  */
-function getEfficiencyStatus(efficiency: number) {
+function getEfficiencyStatus(efficiency: number): {
+	status: string
+	color: (text: string) => string
+} {
 	if (efficiency >= 90) {
 		return { status: 'EXCELLENT', color: chalk.green.bold }
 	} else if (efficiency >= 80) {
@@ -750,7 +873,10 @@ function getEfficiencyStatus(efficiency: number) {
 /**
  * Get overall performance status
  */
-function getOverallPerformanceStatus(metrics: any) {
+function getOverallPerformanceStatus(metrics: PerformanceMetrics): {
+	status: string
+	color: (text: string) => string
+} {
 	const avgScore = (metrics.performanceScore + metrics.efficiencyRating) / 2
 	return getPerformanceStatus(avgScore)
 }
@@ -785,7 +911,7 @@ function getCapacityStatus(capacityRatio: number) {
  * Get color for priority level
  */
 function getPriorityColor(priority: string) {
-	switch (priority?.toUpperCase()) {
+	switch (priority.toUpperCase()) {
 		case 'CRITICAL':
 			return chalk.red.bold
 		case 'HIGH':
@@ -803,7 +929,7 @@ function getPriorityColor(priority: string) {
  * Get color for status
  */
 function getStatusColor(status: string) {
-	switch (status?.toUpperCase()) {
+	switch (status.toUpperCase()) {
 		case 'COMPLETED':
 			return chalk.green
 		case 'IN_PROGRESS':

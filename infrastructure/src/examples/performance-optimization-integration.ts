@@ -2,9 +2,10 @@ import * as cdk from 'aws-cdk-lib'
 import * as autoscaling from 'aws-cdk-lib/aws-autoscaling'
 import * as sns from 'aws-cdk-lib/aws-sns'
 import { Construct } from 'constructs'
-import { PerformanceOptimizationConstruct } from '../constructs/performance-optimization-construct'
+
 import { AutoScalingConstruct } from '../constructs/auto-scaling-construct'
 import { MonitoringConstruct } from '../constructs/monitoring-construct'
+import { PerformanceOptimizationConstruct } from '../constructs/performance-optimization-construct'
 
 /**
  * Example integration of Performance Optimization with existing infrastructure

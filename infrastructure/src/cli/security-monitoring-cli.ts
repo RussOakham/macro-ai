@@ -1,20 +1,19 @@
 #!/usr/bin/env node
 
-import { Command } from 'commander'
 import {
 	CloudWatchClient,
-	GetMetricStatisticsCommand,
 	DescribeAlarmsCommand,
+	GetMetricStatisticsCommand,
 } from '@aws-sdk/client-cloudwatch'
 import {
 	DynamoDBClient,
 	QueryCommand,
 	ScanCommand,
-	GetItemCommand,
 } from '@aws-sdk/client-dynamodb'
-import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda'
+import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda'
 import chalk from 'chalk'
 import Table from 'cli-table3'
+import { Command } from 'commander'
 
 /**
  * Security Monitoring CLI Tool
@@ -22,6 +21,72 @@ import Table from 'cli-table3'
  * Provides command-line interface for monitoring security events,
  * analyzing security metrics, and managing security configurations.
  */
+
+interface SecurityOptions {
+	application: string
+	environment: string
+	since?: string
+	type?: string
+	severity?: string
+	limit?: string
+	period?: string
+}
+
+interface SecurityEvent {
+	eventId: string
+	timestamp: string
+	eventType: string
+	severity: string
+	source: string
+	description: string
+	metadata: Record<string, unknown>
+}
+
+interface SecurityMetrics {
+	totalEvents: number
+	criticalEvents: number
+	riskScore: number
+	period: string
+}
+
+interface ThreatDetail {
+	type: string
+	severity: string
+	confidence: number
+	description: string
+}
+
+interface ComplianceDetail {
+	ruleName: string
+	resourceType: string
+	resourceId: string
+	complianceType: string
+}
+
+interface LambdaSecurityResponse {
+	statusCode: number
+	body: {
+		riskScore?: number
+		threatsDetected?: number
+		eventsAnalyzed?: number
+		analysis?: ThreatDetail[]
+		rulesChecked?: number
+		violations?: number
+		complianceRate?: number
+		results?: ComplianceDetail[]
+		error?: string
+		[key: string]: unknown
+	}
+}
+
+interface DynamoDBAttributeValue {
+	S?: string
+	N?: string
+	BOOL?: boolean
+	M?: Record<string, DynamoDBAttributeValue>
+}
+
+type DynamoDBItem = Record<string, DynamoDBAttributeValue>
 
 const program = new Command()
 const cloudwatch = new CloudWatchClient()
@@ -49,7 +114,7 @@ program
 	.option('-s, --severity <severity>', 'Filter by severity level')
 	.option('-l, --limit <number>', 'Limit number of results', '50')
 	.option('--since <hours>', 'Show events from last N hours', '24')
-	.action(async (options) => {
+	.action(async (options: SecurityOptions) => {
 		try {
 			console.log(chalk.blue('🔍 Fetching security events...'))
 			const events = await getSecurityEvents(options)
@@ -57,7 +122,7 @@ program
 		} catch (error) {
 			console.error(
 				chalk.red('❌ Failed to fetch security events:'),
-				error.message,
+				error instanceof Error ? error.message : String(error),
 			)
 			process.exit(1)
 		}
@@ -72,7 +137,7 @@ program
 	.option('-e, --environment <env>', 'Environment name', DEFAULT_ENVIRONMENT)
 	.option('-a, --application <app>', 'Application name', DEFAULT_APPLICATION)
 	.option('--period <hours>', 'Time period in hours', '24')
-	.action(async (options) => {
+	.action(async (options: SecurityOptions) => {
 		try {
 			console.log(chalk.blue('📊 Fetching security metrics...'))
 			const metrics = await getSecurityMetrics(options)
@@ -80,7 +145,7 @@ program
 		} catch (error) {
 			console.error(
 				chalk.red('❌ Failed to fetch security metrics:'),
-				error.message,
+				error instanceof Error ? error.message : String(error),
 			)
 			process.exit(1)
 		}
@@ -94,7 +159,7 @@ program
 	.description('Run security analysis and get recommendations')
 	.option('-e, --environment <env>', 'Environment name', DEFAULT_ENVIRONMENT)
 	.option('-a, --application <app>', 'Application name', DEFAULT_APPLICATION)
-	.action(async (options) => {
+	.action(async (options: SecurityOptions) => {
 		try {
 			console.log(chalk.blue('🔬 Running security analysis...'))
 			const analysis = await runSecurityAnalysis(options)
@@ -102,7 +167,7 @@ program
 		} catch (error) {
 			console.error(
 				chalk.red('❌ Failed to run security analysis:'),
-				error.message,
+				error instanceof Error ? error.message : String(error),
 			)
 			process.exit(1)
 		}
@@ -116,13 +181,16 @@ program
 	.description('Check compliance status and violations')
 	.option('-e, --environment <env>', 'Environment name', DEFAULT_ENVIRONMENT)
 	.option('-a, --application <app>', 'Application name', DEFAULT_APPLICATION)
-	.action(async (options) => {
+	.action(async (options: SecurityOptions) => {
 		try {
 			console.log(chalk.blue('✅ Checking compliance status...'))
 			const compliance = await checkCompliance(options)
 			displayComplianceStatus(compliance)
 		} catch (error) {
-			console.error(chalk.red('❌ Failed to check compliance:'), error.message)
+			console.error(
+				chalk.red('❌ Failed to check compliance:'),
+				error instanceof Error ? error.message : String(error),
+			)
 			process.exit(1)
 		}
 	})
@@ -135,7 +203,7 @@ program
 	.description('Display security dashboard summary')
 	.option('-e, --environment <env>', 'Environment name', DEFAULT_ENVIRONMENT)
 	.option('-a, --application <app>', 'Application name', DEFAULT_APPLICATION)
-	.action(async (options) => {
+	.action(async (options: SecurityOptions) => {
 		try {
 			console.log(chalk.blue('📈 Loading security dashboard...'))
 			const dashboard = await getSecurityDashboard(options)
@@ -143,7 +211,7 @@ program
 		} catch (error) {
 			console.error(
 				chalk.red('❌ Failed to load security dashboard:'),
-				error.message,
+				error instanceof Error ? error.message : String(error),
 			)
 			process.exit(1)
 		}
@@ -152,10 +220,12 @@ program
 /**
  * Get security events from DynamoDB
  */
-async function getSecurityEvents(options: any) {
+async function getSecurityEvents(
+	options: SecurityOptions,
+): Promise<SecurityEvent[]> {
 	const tableName = `${options.application}-${options.environment}-security-events`
 	const sinceTime = new Date(
-		Date.now() - parseInt(options.since) * 60 * 60 * 1000,
+		Date.now() - parseInt(options.since ?? '24') * 60 * 60 * 1000,
 	)
 
 	let command
@@ -165,16 +235,21 @@ async function getSecurityEvents(options: any) {
 		const keyCondition = options.type
 			? 'eventType = :eventType'
 			: 'severity = :severity'
-		const attributeValues = options.type
-			? { ':eventType': { S: options.type } }
-			: { ':severity': { S: options.severity } }
+		const attributeValues: Record<string, { S: string }> = {}
+
+		if (options.type) {
+			attributeValues[':eventType'] = { S: options.type }
+		}
+		if (options.severity) {
+			attributeValues[':severity'] = { S: options.severity }
+		}
 
 		command = new QueryCommand({
 			TableName: tableName,
 			IndexName: indexName,
 			KeyConditionExpression: keyCondition,
 			ExpressionAttributeValues: attributeValues,
-			Limit: parseInt(options.limit),
+			Limit: parseInt(options.limit ?? '50'),
 		})
 	} else {
 		// Scan for all events
@@ -187,21 +262,27 @@ async function getSecurityEvents(options: any) {
 			ExpressionAttributeValues: {
 				':sinceTime': { S: sinceTime.toISOString() },
 			},
-			Limit: parseInt(options.limit),
+			Limit: parseInt(options.limit ?? '50'),
 		})
 	}
 
 	const result = await dynamodb.send(command)
-	return result.Items?.map(parseSecurityEvent).filter(Boolean) || []
+	return (
+		result.Items?.map(parseSecurityEvent).filter(
+			(item): item is SecurityEvent => item !== null,
+		) ?? []
+	)
 }
 
 /**
  * Get security metrics from CloudWatch
  */
-async function getSecurityMetrics(options: any) {
+async function getSecurityMetrics(
+	options: SecurityOptions,
+): Promise<SecurityMetrics> {
 	const endTime = new Date()
 	const startTime = new Date(
-		endTime.getTime() - parseInt(options.period) * 60 * 60 * 1000,
+		endTime.getTime() - parseInt(options.period ?? '24') * 60 * 60 * 1000,
 	)
 
 	const metrics = await Promise.all([
@@ -257,20 +338,22 @@ async function getSecurityMetrics(options: any) {
 
 	return {
 		totalEvents:
-			metrics[0].Datapoints?.reduce((sum, dp) => sum + (dp.Sum || 0), 0) || 0,
+			metrics[0].Datapoints?.reduce((sum, dp) => sum + (dp.Sum ?? 0), 0) ?? 0,
 		criticalEvents:
-			metrics[1].Datapoints?.reduce((sum, dp) => sum + (dp.Sum || 0), 0) || 0,
+			metrics[1].Datapoints?.reduce((sum, dp) => sum + (dp.Sum ?? 0), 0) ?? 0,
 		riskScore:
-			metrics[2].Datapoints?.reduce((sum, dp) => sum + (dp.Average || 0), 0) /
-				(metrics[2].Datapoints?.length || 1) || 0,
-		period: options.period,
+			(metrics[2].Datapoints?.reduce((sum, dp) => sum + (dp.Average ?? 0), 0) ??
+				0) / (metrics[2].Datapoints?.length ?? 1),
+		period: options.period ?? '24',
 	}
 }
 
 /**
  * Run security analysis
  */
-async function runSecurityAnalysis(options: any) {
+async function runSecurityAnalysis(
+	options: SecurityOptions,
+): Promise<LambdaSecurityResponse> {
 	const functionName = `${options.application}-${options.environment}-security-analyzer`
 
 	const result = await lambda.send(
@@ -283,14 +366,18 @@ async function runSecurityAnalysis(options: any) {
 		}),
 	)
 
-	const payload = JSON.parse(new TextDecoder().decode(result.Payload))
-	return payload.body || payload
+	const payload = JSON.parse(
+		new TextDecoder().decode(result.Payload),
+	) as unknown
+	return payload as LambdaSecurityResponse
 }
 
 /**
  * Check compliance status
  */
-async function checkCompliance(options: any) {
+async function checkCompliance(
+	options: SecurityOptions,
+): Promise<LambdaSecurityResponse> {
 	const functionName = `${options.application}-${options.environment}-compliance-checker`
 
 	const result = await lambda.send(
@@ -303,14 +390,20 @@ async function checkCompliance(options: any) {
 		}),
 	)
 
-	const payload = JSON.parse(new TextDecoder().decode(result.Payload))
-	return payload.body || payload
+	const payload = JSON.parse(
+		new TextDecoder().decode(result.Payload),
+	) as unknown
+	return payload as LambdaSecurityResponse
 }
 
 /**
  * Get security dashboard data
  */
-async function getSecurityDashboard(options: any) {
+async function getSecurityDashboard(options: SecurityOptions): Promise<{
+	events: SecurityEvent[]
+	metrics: SecurityMetrics
+	alarms: unknown[]
+}> {
 	const [events, metrics, alarms] = await Promise.all([
 		getSecurityEvents({ ...options, limit: '10', since: '24' }),
 		getSecurityMetrics({ ...options, period: '24' }),
@@ -323,7 +416,7 @@ async function getSecurityDashboard(options: any) {
 /**
  * Get security alarms
  */
-async function getSecurityAlarms(options: any) {
+async function getSecurityAlarms(options: SecurityOptions): Promise<unknown[]> {
 	const result = await cloudwatch.send(
 		new DescribeAlarmsCommand({
 			AlarmNamePrefix: `${options.application}-${options.environment}`,
@@ -331,31 +424,27 @@ async function getSecurityAlarms(options: any) {
 		}),
 	)
 
-	return result.MetricAlarms || []
+	return result.MetricAlarms ?? []
 }
 
 /**
  * Parse security event from DynamoDB item
  */
-function parseSecurityEvent(item: any) {
-	if (!item) return null
-
+function parseSecurityEvent(item: DynamoDBItem): SecurityEvent | null {
 	try {
 		return {
-			eventId: item.eventId?.S,
-			timestamp: item.timestamp?.S,
-			eventType: item.eventType?.S,
-			severity: item.severity?.S,
-			source: item.source?.S,
-			description: item.description?.S,
+			eventId: item.eventId?.S ?? '',
+			timestamp: item.timestamp?.S ?? '',
+			eventType: item.eventType?.S ?? '',
+			severity: item.severity?.S ?? '',
+			source: item.source?.S ?? '',
+			description: item.description?.S ?? '',
 			metadata: item.metadata?.M
 				? Object.fromEntries(
-						Object.entries(item.metadata.M).map(
-							([key, value]: [string, any]) => [
-								key,
-								value.S || value.N || value.BOOL,
-							],
-						),
+						Object.entries(item.metadata.M).map(([key, value]) => [
+							key,
+							value.S ?? value.N ?? value.BOOL ?? '',
+						]),
 					)
 				: {},
 		}
@@ -368,7 +457,7 @@ function parseSecurityEvent(item: any) {
 /**
  * Display security events in a table
  */
-function displaySecurityEvents(events: any[]) {
+function displaySecurityEvents(events: SecurityEvent[]): void {
 	if (events.length === 0) {
 		console.log(chalk.yellow('ℹ️  No security events found'))
 		return
@@ -389,12 +478,12 @@ function displaySecurityEvents(events: any[]) {
 	events.forEach((event) => {
 		const severityColor = getSeverityColor(event.severity)
 		table.push([
-			event.eventId?.substring(0, 18) + '...',
+			event.eventId.substring(0, 18) + '...',
 			new Date(event.timestamp).toLocaleString(),
 			event.eventType,
 			severityColor(event.severity),
 			event.source,
-			event.description?.substring(0, 35) + '...',
+			event.description.substring(0, 35) + '...',
 		])
 	})
 
@@ -405,7 +494,7 @@ function displaySecurityEvents(events: any[]) {
 /**
  * Display security metrics
  */
-function displaySecurityMetrics(metrics: any) {
+function displaySecurityMetrics(metrics: SecurityMetrics): void {
 	console.log(chalk.bold('\n📊 Security Metrics Summary'))
 	console.log(chalk.gray('─'.repeat(50)))
 
@@ -438,47 +527,57 @@ function displaySecurityMetrics(metrics: any) {
 /**
  * Display security analysis results
  */
-function displaySecurityAnalysis(analysis: any) {
+function displaySecurityAnalysis(analysis: LambdaSecurityResponse): void {
 	console.log(chalk.bold('\n🔬 Security Analysis Results'))
 	console.log(chalk.gray('─'.repeat(50)))
 
-	if (analysis.error) {
-		console.log(chalk.red(`❌ Analysis failed: ${analysis.error}`))
+	if (analysis.body.error) {
+		console.log(chalk.red(`❌ Analysis failed: ${analysis.body.error}`))
 		return
 	}
 
-	console.log(`📈 Risk Score: ${chalk.yellow(analysis.riskScore || 'N/A')}`)
 	console.log(
-		`🔍 Threats Detected: ${chalk.red(analysis.threatsDetected || 0)}`,
+		`📈 Risk Score: ${chalk.yellow(analysis.body.riskScore ?? 'N/A')}`,
 	)
-	console.log(`📊 Events Analyzed: ${analysis.eventsAnalyzed || 0}`)
+	console.log(
+		`🔍 Threats Detected: ${chalk.red(analysis.body.threatsDetected ?? 0)}`,
+	)
+	console.log(`📊 Events Analyzed: ${analysis.body.eventsAnalyzed ?? 0}`)
 
-	if (analysis.analysis?.threats?.length > 0) {
+	if (
+		analysis.body.analysis &&
+		Array.isArray(analysis.body.analysis) &&
+		analysis.body.analysis.length > 0
+	) {
 		console.log(chalk.bold('\n🚨 Detected Threats:'))
 		const threatTable = new Table({
 			head: ['Type', 'Severity', 'Confidence', 'Description'],
 			colWidths: [20, 12, 12, 40],
 		})
 
-		analysis.analysis.threats.forEach((threat: any) => {
+		analysis.body.analysis.forEach((threat: ThreatDetail) => {
 			const severityColor = getSeverityColor(threat.severity)
 			threatTable.push([
 				threat.type,
 				severityColor(threat.severity),
 				`${(threat.confidence * 100).toFixed(0)}%`,
-				threat.description?.substring(0, 35) + '...',
+				threat.description.substring(0, 35) + '...',
 			])
 		})
 
 		console.log(threatTable.toString())
 	}
 
-	if (analysis.analysis?.recommendations?.length > 0) {
-		console.log(chalk.bold('\n💡 Recommendations:'))
-		analysis.analysis.recommendations.forEach((rec: any, index: number) => {
-			const priorityColor = getPriorityColor(rec.priority)
+	if (
+		analysis.body.analysis &&
+		Array.isArray(analysis.body.analysis) &&
+		analysis.body.analysis.length > 0
+	) {
+		console.log(chalk.bold('\n💡 Analysis Details:'))
+		analysis.body.analysis.forEach((detail: ThreatDetail, index: number) => {
+			const priorityColor = getPriorityColor(detail.severity)
 			console.log(
-				`${index + 1}. ${priorityColor(rec.priority)}: ${rec.action} - ${rec.description}`,
+				`${index + 1}. ${priorityColor(detail.severity)}: ${detail.description}`,
 			)
 		})
 	}
@@ -487,28 +586,30 @@ function displaySecurityAnalysis(analysis: any) {
 /**
  * Display compliance status
  */
-function displayComplianceStatus(compliance: any) {
+function displayComplianceStatus(compliance: LambdaSecurityResponse): void {
 	console.log(chalk.bold('\n✅ Compliance Status'))
 	console.log(chalk.gray('─'.repeat(50)))
 
-	if (compliance.error) {
-		console.log(chalk.red(`❌ Compliance check failed: ${compliance.error}`))
+	if (compliance.body.error) {
+		console.log(
+			chalk.red(`❌ Compliance check failed: ${compliance.body.error}`),
+		)
 		return
 	}
 
-	console.log(`📋 Rules Checked: ${compliance.rulesChecked || 0}`)
-	console.log(`❌ Violations: ${chalk.red(compliance.violations || 0)}`)
+	console.log(`📋 Rules Checked: ${compliance.body.rulesChecked ?? 0}`)
+	console.log(`❌ Violations: ${chalk.red(compliance.body.violations ?? 0)}`)
 
-	if (compliance.complianceRate !== undefined) {
-		const rate = compliance.complianceRate
+	if (compliance.body.complianceRate !== undefined) {
+		const rate = compliance.body.complianceRate
 		const rateColor =
 			rate >= 95 ? chalk.green : rate >= 80 ? chalk.yellow : chalk.red
 		console.log(`📊 Compliance Rate: ${rateColor(rate.toFixed(1) + '%')}`)
 	}
 
-	if (compliance.results?.length > 0) {
-		const violations = compliance.results.filter(
-			(r: any) => r.complianceType === 'NON_COMPLIANT',
+	if (compliance.body.results && compliance.body.results.length > 0) {
+		const violations = compliance.body.results.filter(
+			(r: ComplianceDetail) => r.complianceType === 'NON_COMPLIANT',
 		)
 
 		if (violations.length > 0) {
@@ -518,11 +619,11 @@ function displayComplianceStatus(compliance: any) {
 				colWidths: [25, 20, 25, 15],
 			})
 
-			violations.slice(0, 10).forEach((violation: any) => {
+			violations.slice(0, 10).forEach((violation: ComplianceDetail) => {
 				violationTable.push([
-					violation.ruleName?.substring(0, 22) + '...',
-					violation.resourceType || 'N/A',
-					violation.resourceId?.substring(0, 22) + '...' || 'N/A',
+					violation.ruleName.substring(0, 22) + '...',
+					violation.resourceType,
+					violation.resourceId.substring(0, 22) + '...',
 					chalk.red('NON_COMPLIANT'),
 				])
 			})
@@ -541,17 +642,24 @@ function displayComplianceStatus(compliance: any) {
 /**
  * Display security dashboard
  */
-function displaySecurityDashboard(dashboard: any) {
+function displaySecurityDashboard(dashboard: {
+	events: SecurityEvent[]
+	metrics: SecurityMetrics
+	alarms: unknown[]
+}): void {
 	console.log(chalk.bold('\n📈 Security Dashboard'))
 	console.log(chalk.gray('═'.repeat(60)))
 
 	// Recent events summary
 	console.log(chalk.bold('\n🔍 Recent Security Events (Last 24h)'))
-	if (dashboard.events?.length > 0) {
-		const eventSummary = dashboard.events.reduce((acc: any, event: any) => {
-			acc[event.severity] = (acc[event.severity] || 0) + 1
-			return acc
-		}, {})
+	if (dashboard.events.length > 0) {
+		const eventSummary = dashboard.events.reduce(
+			(acc: Record<string, number>, event: SecurityEvent) => {
+				acc[event.severity] = (acc[event.severity] ?? 0) + 1
+				return acc
+			},
+			{},
+		)
 
 		Object.entries(eventSummary).forEach(([severity, count]) => {
 			const severityColor = getSeverityColor(severity)
@@ -563,20 +671,19 @@ function displaySecurityDashboard(dashboard: any) {
 
 	// Metrics summary
 	console.log(chalk.bold('\n📊 Security Metrics'))
-	console.log(`  Total Events: ${dashboard.metrics?.totalEvents || 0}`)
+	console.log(`  Total Events: ${dashboard.metrics.totalEvents}`)
 	console.log(
-		`  Critical Events: ${chalk.red(dashboard.metrics?.criticalEvents || 0)}`,
+		`  Critical Events: ${chalk.red(dashboard.metrics.criticalEvents)}`,
 	)
-	console.log(
-		`  Risk Score: ${dashboard.metrics?.riskScore?.toFixed(1) || 'N/A'}`,
-	)
+	console.log(`  Risk Score: ${dashboard.metrics.riskScore.toFixed(1)}`)
 
 	// Active alarms
 	console.log(chalk.bold('\n🚨 Active Security Alarms'))
-	if (dashboard.alarms?.length > 0) {
-		dashboard.alarms.forEach((alarm: any) => {
+	if (dashboard.alarms.length > 0) {
+		dashboard.alarms.forEach((alarm: unknown) => {
+			const alarmData = alarm as { AlarmName?: string; StateReason?: string }
 			console.log(
-				`  ${chalk.red('🔴')} ${alarm.AlarmName}: ${alarm.StateReason}`,
+				`  ${chalk.red('🔴')} ${alarmData.AlarmName ?? 'Unknown'}: ${alarmData.StateReason ?? 'No reason'}`,
 			)
 		})
 	} else {
@@ -589,8 +696,8 @@ function displaySecurityDashboard(dashboard: any) {
 /**
  * Get color for severity level
  */
-function getSeverityColor(severity: string) {
-	switch (severity?.toUpperCase()) {
+function getSeverityColor(severity: string): (text: string) => string {
+	switch (severity.toUpperCase()) {
 		case 'CRITICAL':
 			return chalk.red.bold
 		case 'HIGH':
@@ -609,8 +716,8 @@ function getSeverityColor(severity: string) {
 /**
  * Get color for priority level
  */
-function getPriorityColor(priority: string) {
-	switch (priority?.toUpperCase()) {
+function getPriorityColor(priority: string): (text: string) => string {
+	switch (priority.toUpperCase()) {
 		case 'CRITICAL':
 			return chalk.red.bold
 		case 'HIGH':
@@ -627,7 +734,10 @@ function getPriorityColor(priority: string) {
 /**
  * Get risk level assessment
  */
-function getRiskLevel(score: number) {
+function getRiskLevel(score: number): {
+	level: string
+	color: (text: string) => string
+} {
 	if (score >= 80) {
 		return { level: 'CRITICAL', color: chalk.red.bold }
 	} else if (score >= 60) {

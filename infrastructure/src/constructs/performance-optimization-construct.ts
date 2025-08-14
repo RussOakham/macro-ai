@@ -99,8 +99,8 @@ export interface OptimizationRecommendation {
 	readonly type: OptimizationType
 	readonly priority: 'HIGH' | 'MEDIUM' | 'LOW'
 	readonly description: string
-	readonly currentState: Record<string, any>
-	readonly recommendedState: Record<string, any>
+	readonly currentState: Record<string, unknown>
+	readonly recommendedState: Record<string, unknown>
 	readonly expectedImpact: {
 		performanceImprovement?: number
 		costSavings?: number
@@ -172,7 +172,7 @@ export class PerformanceOptimizationConstruct extends Construct {
 	 * Create DynamoDB table for optimization recommendations
 	 */
 	private createOptimizationTable(): dynamodb.Table {
-		return new dynamodb.Table(this, 'OptimizationTable', {
+		const table = new dynamodb.Table(this, 'OptimizationTable', {
 			tableName: `${this.resourcePrefix}-optimization-recommendations`,
 			partitionKey: {
 				name: 'id',
@@ -186,32 +186,34 @@ export class PerformanceOptimizationConstruct extends Construct {
 			pointInTimeRecovery: true,
 			removalPolicy: cdk.RemovalPolicy.RETAIN,
 			timeToLiveAttribute: 'ttl',
-			// Add GSI for querying by type and priority
-			globalSecondaryIndexes: [
-				{
-					indexName: 'TypeIndex',
-					partitionKey: {
-						name: 'type',
-						type: dynamodb.AttributeType.STRING,
-					},
-					sortKey: {
-						name: 'timestamp',
-						type: dynamodb.AttributeType.STRING,
-					},
-				},
-				{
-					indexName: 'PriorityIndex',
-					partitionKey: {
-						name: 'priority',
-						type: dynamodb.AttributeType.STRING,
-					},
-					sortKey: {
-						name: 'timestamp',
-						type: dynamodb.AttributeType.STRING,
-					},
-				},
-			],
 		})
+
+		// Add GSI for querying by type and priority
+		table.addGlobalSecondaryIndex({
+			indexName: 'TypeIndex',
+			partitionKey: {
+				name: 'type',
+				type: dynamodb.AttributeType.STRING,
+			},
+			sortKey: {
+				name: 'timestamp',
+				type: dynamodb.AttributeType.STRING,
+			},
+		})
+
+		table.addGlobalSecondaryIndex({
+			indexName: 'PriorityIndex',
+			partitionKey: {
+				name: 'priority',
+				type: dynamodb.AttributeType.STRING,
+			},
+			sortKey: {
+				name: 'timestamp',
+				type: dynamodb.AttributeType.STRING,
+			},
+		})
+
+		return table
 	}
 
 	/**
@@ -455,15 +457,6 @@ export class PerformanceOptimizationConstruct extends Construct {
 						label: 'Current CPU',
 					}),
 				],
-				annotations: [
-					{
-						value:
-							this.props.optimizationConfig?.performanceThresholds
-								?.cpuUtilizationTarget ?? 70,
-						label: 'Target CPU',
-						color: '#ff0000',
-					},
-				],
 				width: 12,
 				height: 6,
 			}),
@@ -480,15 +473,6 @@ export class PerformanceOptimizationConstruct extends Construct {
 						statistic: 'Average',
 						label: 'Current Memory',
 					}),
-				],
-				annotations: [
-					{
-						value:
-							this.props.optimizationConfig?.performanceThresholds
-								?.memoryUtilizationTarget ?? 80,
-						label: 'Target Memory',
-						color: '#ff0000',
-					},
 				],
 				width: 12,
 				height: 6,

@@ -113,7 +113,7 @@ export interface SecurityEvent {
 	readonly severity: SecuritySeverity
 	readonly source: string
 	readonly description: string
-	readonly metadata?: Record<string, any>
+	readonly metadata?: Record<string, unknown>
 	readonly remediation?: {
 		readonly automated: boolean
 		readonly actions: string[]
@@ -230,7 +230,7 @@ export class AdvancedSecurityMonitoringConstruct extends Construct {
 	 * Create DynamoDB table for security events
 	 */
 	private createSecurityEventTable(): dynamodb.Table {
-		return new dynamodb.Table(this, 'SecurityEventTable', {
+		const table = new dynamodb.Table(this, 'SecurityEventTable', {
 			tableName: `${this.resourcePrefix}-security-events`,
 			partitionKey: {
 				name: 'eventId',
@@ -244,32 +244,34 @@ export class AdvancedSecurityMonitoringConstruct extends Construct {
 			pointInTimeRecovery: true,
 			removalPolicy: cdk.RemovalPolicy.RETAIN,
 			timeToLiveAttribute: 'ttl',
-			// Add GSI for querying by event type and severity
-			globalSecondaryIndexes: [
-				{
-					indexName: 'EventTypeIndex',
-					partitionKey: {
-						name: 'eventType',
-						type: dynamodb.AttributeType.STRING,
-					},
-					sortKey: {
-						name: 'timestamp',
-						type: dynamodb.AttributeType.STRING,
-					},
-				},
-				{
-					indexName: 'SeverityIndex',
-					partitionKey: {
-						name: 'severity',
-						type: dynamodb.AttributeType.STRING,
-					},
-					sortKey: {
-						name: 'timestamp',
-						type: dynamodb.AttributeType.STRING,
-					},
-				},
-			],
 		})
+
+		// Add GSI for querying by event type and severity
+		table.addGlobalSecondaryIndex({
+			indexName: 'EventTypeIndex',
+			partitionKey: {
+				name: 'eventType',
+				type: dynamodb.AttributeType.STRING,
+			},
+			sortKey: {
+				name: 'timestamp',
+				type: dynamodb.AttributeType.STRING,
+			},
+		})
+
+		table.addGlobalSecondaryIndex({
+			indexName: 'SeverityIndex',
+			partitionKey: {
+				name: 'severity',
+				type: dynamodb.AttributeType.STRING,
+			},
+			sortKey: {
+				name: 'timestamp',
+				type: dynamodb.AttributeType.STRING,
+			},
+		})
+
+		return table
 	}
 
 	/**
@@ -300,7 +302,6 @@ export class AdvancedSecurityMonitoringConstruct extends Construct {
 			sendToCloudWatchLogs: true,
 			cloudWatchLogGroup: this.securityLogGroup,
 			managementEvents: cloudtrail.ReadWriteType.ALL,
-			s3BucketEvents: cloudtrail.ReadWriteType.ALL,
 		})
 	}
 

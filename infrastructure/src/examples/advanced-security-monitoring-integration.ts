@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib'
 import * as sns from 'aws-cdk-lib/aws-sns'
 import { Construct } from 'constructs'
+
 import { AdvancedSecurityMonitoringConstruct } from '../constructs/advanced-security-monitoring-construct'
 import { MonitoringConstruct } from '../constructs/monitoring-construct'
 
@@ -114,6 +115,7 @@ export class AdvancedSecurityMonitoringIntegrationExample extends Construct {
 /**
  * Environment-specific security monitoring configurations
  */
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class SecurityMonitoringConfigurations {
 	/**
 	 * Production environment configuration
@@ -217,10 +219,7 @@ export class SecurityMonitoringIntegration extends Construct {
 		)
 
 		// Add security-specific alarms to existing monitoring
-		this.addSecurityAlarmsToMonitoring(
-			securityMonitoring,
-			props.existingMonitoring,
-		)
+		this.addSecurityAlarmsToMonitoring()
 	}
 
 	private getEnvironmentConfig(environmentName: string) {
@@ -259,12 +258,10 @@ export class SecurityMonitoringIntegration extends Construct {
 		)
 	}
 
-	private addSecurityAlarmsToMonitoring(
-		securityMonitoring: AdvancedSecurityMonitoringConstruct,
-		existingMonitoring: MonitoringConstruct,
-	): void {
+	private addSecurityAlarmsToMonitoring(): void {
 		// Security alarms are already created in the security monitoring construct
 		// This method could be used to add additional integrations if needed
+		// Parameters removed as they were unused
 	}
 }
 
@@ -272,14 +269,20 @@ export class SecurityMonitoringIntegration extends Construct {
  * Complete security monitoring stack example
  */
 export class SecurityMonitoringStack extends cdk.Stack {
+	public readonly securityIntegration: AdvancedSecurityMonitoringIntegrationExample
+
 	constructor(scope: Construct, id: string, props?: cdk.StackProps) {
 		super(scope, id, props)
 
 		// Create the security monitoring integration
-		new AdvancedSecurityMonitoringIntegrationExample(
-			this,
-			'SecurityMonitoringIntegration',
-		)
+		const securityIntegration =
+			new AdvancedSecurityMonitoringIntegrationExample(
+				this,
+				'SecurityMonitoringIntegration',
+			)
+
+		// Store reference for potential future use
+		this.securityIntegration = securityIntegration
 
 		// Add stack-level tags
 		cdk.Tags.of(this).add('Component', 'SecurityMonitoring')
