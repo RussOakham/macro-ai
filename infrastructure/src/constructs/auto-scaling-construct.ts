@@ -175,7 +175,8 @@ export class AutoScalingConstruct extends Construct {
 
 			// Health check configuration
 			healthCheck:
-				this.props.healthCheckType ?? autoscaling.HealthCheckType.ELB,
+				(this.props.healthCheckType as autoscaling.HealthCheckType) ??
+				autoscaling.HealthCheckType.ELB,
 			healthCheckGracePeriod:
 				this.props.healthCheckGracePeriod ??
 				this.getDefaultHealthCheckGracePeriod(),
@@ -710,7 +711,7 @@ export class AutoScalingConstruct extends Construct {
 			cooldown: cooldown ?? this.getDefaultScaleOutCooldown(),
 		})
 
-		this.scalingPolicies.set(id, policy)
+		this.scalingPolicies.set(id, policy as autoscaling.IScalingPolicy)
 		return policy
 	}
 
@@ -772,7 +773,7 @@ Cooldown Periods:
 - Scale In: ${this.props.autoScaling.scaleInCooldown?.toMinutes() ?? this.getDefaultScaleInCooldown().toMinutes()} minutes
 
 Integration:
-- ALB Target Groups: ${hasTargetGroups ? this.props.targetGroups?.length ?? 0 : 0}
+- ALB Target Groups: ${hasTargetGroups ? (this.props.targetGroups?.length ?? 0) : 0}
 - Notification Topics: ${Object.keys(this.props.notificationTopics ?? {}).length}
 - Detailed Monitoring: ${this.props.enableDetailedMonitoring ? 'Enabled' : 'Disabled'}
 

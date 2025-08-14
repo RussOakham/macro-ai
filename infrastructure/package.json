@@ -26,6 +26,7 @@
 		"lint:ci": "eslint . --ext .ts,.tsx --max-warnings 0",
 		"type-check": "tsc --noEmit",
 		"deploy-ec2": "tsx scripts/deploy-ec2.ts",
+		"deploy-pipeline": "tsx scripts/deploy-pipeline.ts",
 		"deploy-ec2:github": "scripts/github-actions-deploy.sh"
 	},
 	"dependencies": {
