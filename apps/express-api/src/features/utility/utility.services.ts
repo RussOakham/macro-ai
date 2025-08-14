@@ -90,9 +90,17 @@ class UtilityService implements IUtilityService {
 	 * @returns Sanitized health check result
 	 */
 	private sanitizeHealthCheck = (
-		healthCheck: { status: 'healthy' | 'unhealthy' | 'unknown'; responseTime?: number; error?: string },
+		healthCheck: {
+			status: 'healthy' | 'unhealthy' | 'unknown'
+			responseTime?: number
+			error?: string
+		},
 		includeErrorDetails: boolean,
-	): { status: 'healthy' | 'unhealthy' | 'unknown'; responseTime?: number; error?: string } => {
+	): {
+		status: 'healthy' | 'unhealthy' | 'unknown'
+		responseTime?: number
+		error?: string
+	} => {
 		return {
 			...healthCheck,
 			error: this.sanitizeErrorForEnvironment(
