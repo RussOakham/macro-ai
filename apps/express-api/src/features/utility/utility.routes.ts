@@ -10,7 +10,10 @@ import {
 
 import { utilityController } from './utility.controller.ts'
 import {
+	detailedHealthResponseSchema,
 	healthResponseSchema,
+	livenessResponseSchema,
+	readinessResponseSchema,
 	systemInfoResponseSchema,
 } from './utility.schemas.ts'
 
@@ -86,12 +89,165 @@ registry.registerPath({
 	},
 })
 
+// Register the detailed health endpoint with OpenAPI
+registry.registerPath({
+	method: 'get',
+	path: '/health/detailed',
+	tags: ['Utility'],
+	summary: 'Detailed health check endpoint for ALB and monitoring',
+	description:
+		'Returns comprehensive health status including database, memory, disk, and dependencies checks',
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'Detailed health check successful',
+			content: {
+				'application/json': {
+					schema: detailedHealthResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.SERVICE_UNAVAILABLE]: {
+			description: 'Service is unhealthy',
+			content: {
+				'application/json': {
+					schema: detailedHealthResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Too many requests - rate limit exceeded',
+			content: {
+				'application/json': {
+					schema: RateLimitErrorSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Health check failed - internal server error',
+			content: {
+				'application/json': {
+					schema: InternalServerErrorSchema,
+				},
+			},
+		},
+	},
+})
+
+// Register the readiness endpoint with OpenAPI
+registry.registerPath({
+	method: 'get',
+	path: '/health/ready',
+	tags: ['Utility'],
+	summary: 'Readiness probe endpoint',
+	description:
+		'Returns whether the application is ready to receive traffic (Kubernetes-style readiness probe)',
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'Application is ready',
+			content: {
+				'application/json': {
+					schema: readinessResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.SERVICE_UNAVAILABLE]: {
+			description: 'Application is not ready',
+			content: {
+				'application/json': {
+					schema: readinessResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Too many requests - rate limit exceeded',
+			content: {
+				'application/json': {
+					schema: RateLimitErrorSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Readiness check failed - internal server error',
+			content: {
+				'application/json': {
+					schema: InternalServerErrorSchema,
+				},
+			},
+		},
+	},
+})
+
+// Register the liveness endpoint with OpenAPI
+registry.registerPath({
+	method: 'get',
+	path: '/health/live',
+	tags: ['Utility'],
+	summary: 'Liveness probe endpoint',
+	description:
+		'Returns whether the application is alive and should not be restarted (Kubernetes-style liveness probe)',
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'Application is alive',
+			content: {
+				'application/json': {
+					schema: livenessResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.SERVICE_UNAVAILABLE]: {
+			description: 'Application is not alive',
+			content: {
+				'application/json': {
+					schema: livenessResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Too many requests - rate limit exceeded',
+			content: {
+				'application/json': {
+					schema: RateLimitErrorSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Liveness check failed - internal server error',
+			content: {
+				'application/json': {
+					schema: InternalServerErrorSchema,
+				},
+			},
+		},
+	},
+})
+
 const utilityRouter = (router: Router) => {
 	// Health check endpoint using Go-style error handling
 	router.get('/health', apiRateLimiter, utilityController.getHealthStatus)
 
 	// System info endpoint using Go-style error handling
 	router.get('/system-info', apiRateLimiter, utilityController.getSystemInfo)
+
+	// Detailed health check endpoint for ALB and monitoring
+	router.get(
+		'/health/detailed',
+		apiRateLimiter,
+		utilityController.getDetailedHealthStatus,
+	)
+
+	// Readiness probe endpoint (Kubernetes-style)
+	router.get(
+		'/health/ready',
+		apiRateLimiter,
+		utilityController.getReadinessStatus,
+	)
+
+	// Liveness probe endpoint (Kubernetes-style)
+	router.get(
+		'/health/live',
+		apiRateLimiter,
+		utilityController.getLivenessStatus,
+	)
 }
 
 export { utilityRouter }

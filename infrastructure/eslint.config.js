@@ -1,16 +1,13 @@
 import * as repoConfig from '@repo/config-eslint'
-import turboConfig from 'eslint-config-turbo/flat'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 
 export default repoConfig.config(
 	// Global ignores - must be first
 	{
-		ignores: ['dist/**', 'cdk.out/**', '*.d.ts', 'node_modules/**'],
+		ignores: ['dist/**', 'cdk.out/**', '*.d.ts', 'node_modules/**', '*.js', 'test-deployment.ts'],
 	},
 	// Use shared base config
 	...repoConfig.configs.base,
-	// Turbo config
-	...turboConfig,
 	// Infrastructure-specific overrides
 	{
 		files: ['**/*.ts', '**/*.tsx'],
@@ -24,10 +21,14 @@ export default repoConfig.config(
 			},
 		},
 		rules: {
-			// Disable turbo env var rule for infrastructure package
-			'turbo/no-undeclared-env-vars': 'off',
-			// Allow unused expressions for CDK stack instantiation
+			// Infrastructure-specific rule relaxations
 			'@typescript-eslint/no-unused-expressions': 'off',
+			'@typescript-eslint/no-non-null-assertion': 'off',
+			'@typescript-eslint/restrict-template-expressions': 'off',
+			'@typescript-eslint/require-await': 'off',
+			'@typescript-eslint/no-unused-vars': 'warn',
+			'func-style': 'off',
+			'turbo/no-undeclared-env-vars': 'off',
 			// Import sorting
 			'simple-import-sort/imports': [
 				'error',

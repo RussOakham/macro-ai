@@ -23,11 +23,16 @@
 		"format:fix": "prettier --write .",
 		"lint": "eslint . --ext .ts,.tsx",
 		"lint:fix": "eslint . --ext .ts,.tsx --fix",
-		"type-check": "tsc --noEmit"
+		"type-check": "tsc --noEmit",
+		"deploy-ec2": "tsx scripts/deploy-ec2.ts",
+		"deploy-ec2:github": "scripts/github-actions-deploy.sh"
 	},
 	"dependencies": {
 		"aws-cdk-lib": "^2.161.1",
+		"aws-sdk": "^2.1691.0",
+		"commander": "^12.1.0",
 		"constructs": "^10.3.0",
+		"dotenv": "^16.4.5",
 		"source-map-support": "^0.5.21"
 	},
 	"devDependencies": {

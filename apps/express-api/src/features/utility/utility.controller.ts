@@ -68,6 +68,102 @@ class UtilityController implements IUtilityController {
 
 		res.status(StatusCodes.OK).json(systemInfo)
 	}
+
+	/**
+	 * Detailed health check endpoint for ALB and monitoring
+	 * Returns comprehensive health status including dependencies
+	 */
+	public getDetailedHealthStatus = (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): void => {
+		const [detailedHealthStatus, error] =
+			this.utilityService.getDetailedHealthStatus()
+
+		if (error) {
+			logger.error({
+				msg: '[utilityController - getDetailedHealthStatus]: Error checking detailed health status',
+				error: error.message,
+			})
+			next(error)
+			return
+		}
+
+		// Set appropriate HTTP status based on health status
+		const statusCode =
+			detailedHealthStatus.status === 'healthy'
+				? StatusCodes.OK
+				: detailedHealthStatus.status === 'degraded'
+					? StatusCodes.OK // Still return 200 for degraded but log warning
+					: StatusCodes.SERVICE_UNAVAILABLE
+
+		if (detailedHealthStatus.status === 'degraded') {
+			logger.warn({
+				msg: '[utilityController - getDetailedHealthStatus]: Service is in degraded state',
+				status: detailedHealthStatus.status,
+				checks: detailedHealthStatus.checks,
+			})
+		}
+
+		res.status(statusCode).json(detailedHealthStatus)
+	}
+
+	/**
+	 * Readiness probe endpoint
+	 * Returns whether the application is ready to receive traffic
+	 */
+	public getReadinessStatus = (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): void => {
+		const [readinessStatus, error] = this.utilityService.getReadinessStatus()
+
+		if (error) {
+			logger.error({
+				msg: '[utilityController - getReadinessStatus]: Error checking readiness status',
+				error: error.message,
+			})
+			next(error)
+			return
+		}
+
+		// Return 503 if not ready, 200 if ready
+		const statusCode = readinessStatus.ready
+			? StatusCodes.OK
+			: StatusCodes.SERVICE_UNAVAILABLE
+
+		res.status(statusCode).json(readinessStatus)
+	}
+
+	/**
+	 * Liveness probe endpoint
+	 * Returns whether the application is alive and should not be restarted
+	 */
+	public getLivenessStatus = (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): void => {
+		const [livenessStatus, error] = this.utilityService.getLivenessStatus()
+
+		if (error) {
+			logger.error({
+				msg: '[utilityController - getLivenessStatus]: Error checking liveness status',
+				error: error.message,
+			})
+			next(error)
+			return
+		}
+
+		// Return 503 if not alive, 200 if alive
+		const statusCode = livenessStatus.alive
+			? StatusCodes.OK
+			: StatusCodes.SERVICE_UNAVAILABLE
+
+		res.status(statusCode).json(livenessStatus)
+	}
 }
 
 // Create an instance of the UtilityController

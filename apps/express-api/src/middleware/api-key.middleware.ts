@@ -12,10 +12,10 @@ const API_KEY_HEADER = 'X-API-KEY'
  * Uses Go-style error handling with centralized error middleware
  * Checks for API key in the X-API-KEY header
  */
-const apiKeyAuth = (req: Request, res: Response, next: NextFunction) => {
+const apiKeyAuth = (req: Request, res: Response, next: NextFunction): void => {
 	// Skip API key check for health endpoints and Swagger documentation
 	const isSwagger = req.path.startsWith('/api-docs')
-	const isHealth = req.path === '/api/health' || req.path === '/health'
+	const isHealth = req.path.startsWith('/api/health') || req.path === '/health'
 	if (isSwagger || isHealth) {
 		next()
 		return

@@ -9,12 +9,18 @@ import { healthErrorSchema, healthResponseSchema } from './utility.schemas.ts'
 interface IUtilityController {
 	getHealthStatus: express.Handler
 	getSystemInfo: express.Handler
+	getDetailedHealthStatus: express.Handler
+	getReadinessStatus: express.Handler
+	getLivenessStatus: express.Handler
 }
 
 // Service interface
 interface IUtilityService {
 	getHealthStatus: () => Result<THealthStatus>
 	getSystemInfo: () => Result<TSystemInfo>
+	getDetailedHealthStatus: () => Result<TDetailedHealthStatus>
+	getReadinessStatus: () => Result<TReadinessStatus>
+	getLivenessStatus: () => Result<TLivenessStatus>
 }
 
 // Health status type (internal service type)
@@ -43,6 +49,61 @@ interface TSystemInfo {
 	timestamp: string
 }
 
+// Enhanced health status for ALB and monitoring
+interface TDetailedHealthStatus {
+	status: 'healthy' | 'unhealthy' | 'degraded'
+	message: string
+	timestamp: string
+	uptime: number
+	version: string
+	environment: string
+	checks: {
+		database: {
+			status: 'healthy' | 'unhealthy' | 'unknown'
+			responseTime?: number
+			error?: string
+		}
+		memory: {
+			status: 'healthy' | 'unhealthy'
+			usagePercent: number
+			usageMB: number
+		}
+		disk: {
+			status: 'healthy' | 'unhealthy'
+			usagePercent?: number
+		}
+		dependencies: {
+			status: 'healthy' | 'unhealthy' | 'degraded'
+			services: {
+				name: string
+				status: 'healthy' | 'unhealthy'
+				responseTime?: number
+				error?: string
+			}[]
+		}
+	}
+}
+
+// Readiness probe for Kubernetes-style health checks
+interface TReadinessStatus {
+	ready: boolean
+	message: string
+	timestamp: string
+	checks: {
+		database: boolean
+		dependencies: boolean
+		configuration: boolean
+	}
+}
+
+// Liveness probe for Kubernetes-style health checks
+interface TLivenessStatus {
+	alive: boolean
+	message: string
+	timestamp: string
+	uptime: number
+}
+
 // API response types (from schemas)
 type THealthResponse = z.infer<typeof healthResponseSchema>
 type THealthErrorResponse = z.infer<typeof healthErrorSchema>
@@ -50,8 +111,11 @@ type THealthErrorResponse = z.infer<typeof healthErrorSchema>
 export type {
 	IUtilityController,
 	IUtilityService,
+	TDetailedHealthStatus,
 	THealthErrorResponse,
 	THealthResponse,
 	THealthStatus,
+	TLivenessStatus,
+	TReadinessStatus,
 	TSystemInfo,
 }

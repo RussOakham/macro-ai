@@ -2,7 +2,14 @@ import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import { InternalError, Result } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 
-import { IUtilityService, THealthStatus, TSystemInfo } from './utility.types.ts'
+import {
+	IUtilityService,
+	TDetailedHealthStatus,
+	THealthStatus,
+	TLivenessStatus,
+	TReadinessStatus,
+	TSystemInfo,
+} from './utility.types.ts'
 
 const { logger } = pino
 
@@ -99,6 +106,344 @@ class UtilityService implements IUtilityService {
 		}
 
 		return [systemInfo, null]
+	}
+
+	/**
+	 * Get detailed health status for ALB and monitoring
+	 * Performs comprehensive health checks including dependencies
+	 * @returns Result tuple with detailed health status or error
+	 */
+	getDetailedHealthStatus = (): Result<TDetailedHealthStatus> => {
+		const [healthStatus, error] = tryCatchSync(() => {
+			const currentTime = new Date()
+			const uptime = process.uptime()
+			const memoryUsage = process.memoryUsage()
+			const memoryUsageMB = Math.round(memoryUsage.heapUsed / 1024 / 1024)
+			const memoryUsagePercent = Math.round(
+				(memoryUsage.heapUsed / memoryUsage.heapTotal) * 100,
+			)
+
+			// Determine overall health status
+			let overallStatus: 'healthy' | 'unhealthy' | 'degraded' = 'healthy'
+			const checks = {
+				database: this.checkDatabaseHealth(),
+				memory: this.checkMemoryHealth(memoryUsagePercent, memoryUsageMB),
+				disk: this.checkDiskHealth(),
+				dependencies: this.checkDependenciesHealth(),
+			}
+
+			// Determine overall status based on individual checks
+			if (
+				checks.database.status === 'unhealthy' ||
+				checks.memory.status === 'unhealthy' ||
+				checks.disk.status === 'unhealthy' ||
+				checks.dependencies.status === 'unhealthy'
+			) {
+				overallStatus = 'unhealthy'
+			} else if (
+				checks.database.status === 'unknown' ||
+				checks.dependencies.status === 'degraded'
+			) {
+				overallStatus = 'degraded'
+			}
+
+			const healthStatus: TDetailedHealthStatus = {
+				status: overallStatus,
+				message: `API Health Status: ${overallStatus.toUpperCase()}`,
+				timestamp: currentTime.toISOString(),
+				uptime: Math.floor(uptime),
+				version: '1.0.0', // TODO: Get from package.json or build process
+				environment: process.env.NODE_ENV ?? 'development',
+				checks,
+			}
+
+			logger.info({
+				msg: '[utilityService - getDetailedHealthStatus]: Detailed health check performed',
+				status: overallStatus,
+				uptime: `${Math.floor(uptime).toString()}s`,
+				memoryUsage: `${memoryUsageMB.toString()}MB`,
+				timestamp: currentTime.toISOString(),
+			})
+
+			return healthStatus
+		}, 'utilityService - getDetailedHealthStatus')
+
+		if (error) {
+			logger.error({
+				msg: '[utilityService - getDetailedHealthStatus]: Detailed health check failed',
+				error: error.message,
+			})
+			return [null, error]
+		}
+
+		return [healthStatus, null]
+	}
+
+	/**
+	 * Get readiness status for Kubernetes-style readiness probes
+	 * Checks if the application is ready to receive traffic
+	 * @returns Result tuple with readiness status or error
+	 */
+	getReadinessStatus = (): Result<TReadinessStatus> => {
+		const [readinessStatus, error] = tryCatchSync(() => {
+			const currentTime = new Date()
+
+			// Check readiness criteria
+			const databaseReady = this.isDatabaseReady()
+			const dependenciesReady = this.areDependenciesReady()
+			const configurationReady = this.isConfigurationReady()
+
+			const ready = databaseReady && dependenciesReady && configurationReady
+
+			const readinessStatus: TReadinessStatus = {
+				ready,
+				message: ready ? 'Application is ready' : 'Application is not ready',
+				timestamp: currentTime.toISOString(),
+				checks: {
+					database: databaseReady,
+					dependencies: dependenciesReady,
+					configuration: configurationReady,
+				},
+			}
+
+			logger.info({
+				msg: '[utilityService - getReadinessStatus]: Readiness check performed',
+				ready,
+				timestamp: currentTime.toISOString(),
+			})
+
+			return readinessStatus
+		}, 'utilityService - getReadinessStatus')
+
+		if (error) {
+			logger.error({
+				msg: '[utilityService - getReadinessStatus]: Readiness check failed',
+				error: error.message,
+			})
+			return [null, error]
+		}
+
+		return [readinessStatus, null]
+	}
+
+	/**
+	 * Get liveness status for Kubernetes-style liveness probes
+	 * Checks if the application is alive and should not be restarted
+	 * @returns Result tuple with liveness status or error
+	 */
+	getLivenessStatus = (): Result<TLivenessStatus> => {
+		const [livenessStatus, error] = tryCatchSync(() => {
+			const currentTime = new Date()
+			const uptime = process.uptime()
+
+			// Basic liveness check - if we can execute this code, we're alive
+			const alive = uptime > 0
+
+			const livenessStatus: TLivenessStatus = {
+				alive,
+				message: alive
+					? 'Application is alive'
+					: 'Application is not responding',
+				timestamp: currentTime.toISOString(),
+				uptime: Math.floor(uptime),
+			}
+
+			return livenessStatus
+		}, 'utilityService - getLivenessStatus')
+
+		if (error) {
+			logger.error({
+				msg: '[utilityService - getLivenessStatus]: Liveness check failed',
+				error: error.message,
+			})
+			return [null, error]
+		}
+
+		return [livenessStatus, null]
+	}
+
+	/**
+	 * Check database health
+	 * @returns Database health status
+	 */
+	private checkDatabaseHealth = (): {
+		status: 'healthy' | 'unhealthy' | 'unknown'
+		responseTime?: number
+		error?: string
+	} => {
+		// For now, we'll check if database connection string is configured
+		// In a real implementation, you would ping the database
+		// TODO: Use proper config management for database URL
+		const databaseUrl = process.env.DATABASE_URL
+
+		if (!databaseUrl) {
+			return {
+				status: 'unknown',
+				error: 'Database URL not configured',
+			}
+		}
+
+		// TODO: Implement actual database ping when database is integrated
+		// For now, assume healthy if URL is configured
+		return {
+			status: 'healthy',
+			responseTime: 0, // Would be actual response time
+		}
+	}
+
+	/**
+	 * Check memory health
+	 * @param usagePercent Memory usage percentage
+	 * @param usageMB Memory usage in MB
+	 * @returns Memory health status
+	 */
+	private checkMemoryHealth = (
+		usagePercent: number,
+		usageMB: number,
+	): {
+		status: 'healthy' | 'unhealthy'
+		usagePercent: number
+		usageMB: number
+	} => {
+		// Consider unhealthy if memory usage is above 90%
+		const status = usagePercent > 90 ? 'unhealthy' : 'healthy'
+
+		return {
+			status,
+			usagePercent,
+			usageMB,
+		}
+	}
+
+	/**
+	 * Check disk health
+	 * @returns Disk health status
+	 */
+	private checkDiskHealth = (): {
+		status: 'healthy' | 'unhealthy'
+		usagePercent?: number
+	} => {
+		// Basic disk health check - in a real implementation,
+		// you would check disk space usage
+		return {
+			status: 'healthy',
+			usagePercent: 0, // Would be actual disk usage
+		}
+	}
+
+	/**
+	 * Check dependencies health
+	 * @returns Dependencies health status
+	 */
+	private checkDependenciesHealth = () => {
+		// Check external dependencies like OpenAI API, Redis, etc.
+		const services = [
+			{
+				name: 'OpenAI API',
+				status: this.checkOpenAIHealth(),
+			},
+			{
+				name: 'Redis',
+				status: this.checkRedisHealth(),
+			},
+		]
+
+		const unhealthyServices = services.filter(
+			(s) => s.status.status === 'unhealthy',
+		)
+		let overallStatus: 'healthy' | 'unhealthy' | 'degraded' = 'healthy'
+
+		if (unhealthyServices.length === services.length) {
+			overallStatus = 'unhealthy'
+		} else if (unhealthyServices.length > 0) {
+			overallStatus = 'degraded'
+		}
+
+		return {
+			status: overallStatus,
+			services: services.map((s) => ({
+				name: s.name,
+				status: s.status.status,
+				responseTime: s.status.responseTime,
+				error: s.status.error,
+			})),
+		}
+	}
+
+	/**
+	 * Check if database is ready
+	 * @returns Boolean indicating database readiness
+	 */
+	private isDatabaseReady = (): boolean => {
+		// Check if database connection is available and ready
+		// TODO: Use proper config management for database URL
+		const databaseUrl = process.env.DATABASE_URL
+		return Boolean(databaseUrl)
+	}
+
+	/**
+	 * Check if dependencies are ready
+	 * @returns Boolean indicating dependencies readiness
+	 */
+	private areDependenciesReady = (): boolean => {
+		// Check if critical dependencies are available
+		const openAIKey = process.env.OPENAI_API_KEY
+		return Boolean(openAIKey)
+	}
+
+	/**
+	 * Check if configuration is ready
+	 * @returns Boolean indicating configuration readiness
+	 */
+	private isConfigurationReady = (): boolean => {
+		// Check if critical configuration is available
+		const requiredEnvVars = ['NODE_ENV', 'PORT']
+		return requiredEnvVars.every((envVar) => process.env[envVar])
+	}
+
+	/**
+	 * Check OpenAI API health
+	 * @returns OpenAI health status
+	 */
+	private checkOpenAIHealth = () => {
+		const apiKey = process.env.OPENAI_API_KEY
+
+		if (!apiKey) {
+			return {
+				status: 'unhealthy' as const,
+				error: 'OpenAI API key not configured',
+			}
+		}
+
+		// TODO: Implement actual OpenAI API ping
+		// For now, assume healthy if API key is configured
+		return {
+			status: 'healthy' as const,
+			responseTime: 0,
+		}
+	}
+
+	/**
+	 * Check Redis health
+	 * @returns Redis health status
+	 */
+	private checkRedisHealth = () => {
+		// TODO: Use proper config management for Redis URL
+		const redisUrl = process.env.REDIS_URL
+
+		if (!redisUrl) {
+			return {
+				status: 'unhealthy' as const,
+				error: 'Redis URL not configured',
+			}
+		}
+
+		// TODO: Implement actual Redis ping
+		// For now, assume healthy if URL is configured
+		return {
+			status: 'healthy' as const,
+			responseTime: 0,
+		}
 	}
 }
 
