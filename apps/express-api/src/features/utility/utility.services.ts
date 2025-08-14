@@ -150,9 +150,9 @@ class UtilityService implements IUtilityService {
 			const uptime = process.uptime()
 			const memoryUsage = process.memoryUsage()
 			const memoryUsageMB = Math.round(memoryUsage.heapUsed / 1024 / 1024)
-			const memoryUsagePercent = Math.round(
-				(memoryUsage.heapUsed / memoryUsage.heapTotal) * 100,
-			)
+			const memoryUsagePercent = memoryUsage.heapTotal
+				? Math.round((memoryUsage.heapUsed / memoryUsage.heapTotal) * 100)
+				: 0
 
 			// Determine overall health status
 			let overallStatus: 'healthy' | 'unhealthy' | 'degraded' = 'healthy'
