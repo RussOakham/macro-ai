@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import { Construct } from 'constructs'
 
+import { Ec2Construct } from './ec2-construct.js'
 import { SecurityGroupsConstruct } from './security-groups-construct.js'
 import { VpcConstruct } from './vpc-construct.js'
 
@@ -29,6 +30,12 @@ export interface NetworkingConstructProps {
 	 * @default false (cost optimization)
 	 */
 	readonly enableDetailedMonitoring?: boolean
+
+	/**
+	 * Parameter Store prefix for EC2 configuration
+	 * Required for EC2 construct integration
+	 */
+	readonly parameterStorePrefix?: string
 }
 
 /**
@@ -49,6 +56,7 @@ export interface NetworkingConstructProps {
 export class NetworkingConstruct extends Construct {
 	public readonly vpc: ec2.Vpc
 	public readonly securityGroups: SecurityGroupsConstruct
+	public readonly ec2Construct?: Ec2Construct
 	public readonly publicSubnets: ec2.ISubnet[]
 	public readonly privateSubnets: ec2.ISubnet[]
 	public readonly databaseSubnets: ec2.ISubnet[]
@@ -70,6 +78,7 @@ export class NetworkingConstruct extends Construct {
 			enableFlowLogs = false,
 			maxAzs = 2,
 			enableDetailedMonitoring = false,
+			parameterStorePrefix,
 		} = props
 
 		// Create VPC infrastructure
@@ -89,6 +98,17 @@ export class NetworkingConstruct extends Construct {
 			vpc: this.vpc,
 			environmentName,
 		})
+
+		// Create EC2 construct if parameter store prefix is provided
+		if (parameterStorePrefix) {
+			this.ec2Construct = new Ec2Construct(this, 'Ec2', {
+				vpc: this.vpc,
+				securityGroup: this.securityGroups.albSecurityGroup, // Default to ALB security group
+				environmentName,
+				parameterStorePrefix,
+				enableDetailedMonitoring,
+			})
+		}
 
 		// Convenience properties
 		this.albSecurityGroup = this.securityGroups.albSecurityGroup
@@ -116,6 +136,28 @@ export class NetworkingConstruct extends Construct {
 			prNumber,
 			vpc: this.vpc,
 			albSecurityGroup: this.albSecurityGroup,
+			environmentName: this.getEnvironmentName(),
+		})
+	}
+
+	/**
+	 * Factory method to create PR-specific EC2 instance
+	 * Creates both security group and EC2 instance for the PR
+	 */
+	public createPrInstance(prNumber: number, parameterStorePrefix: string): ec2.Instance | undefined {
+		if (!this.ec2Construct) {
+			throw new Error('EC2 construct not initialized. Provide parameterStorePrefix in NetworkingConstructProps.')
+		}
+
+		// Create PR-specific security group
+		const prSecurityGroup = this.createPrSecurityGroup(prNumber)
+
+		// Create PR-specific EC2 instance
+		return this.ec2Construct.createPrInstance({
+			prNumber,
+			vpc: this.vpc,
+			securityGroup: prSecurityGroup,
+			parameterStorePrefix,
 			environmentName: this.getEnvironmentName(),
 		})
 	}

@@ -36,6 +36,11 @@ export class MacroAiHobbyStack extends cdk.Stack {
 
 		const environmentName = props.environmentName ?? 'hobby'
 
+		// Create Parameter Store construct first (needed for EC2 configuration)
+		this.parameterStore = new ParameterStoreConstruct(this, 'ParameterStore', {
+			environmentName,
+		})
+
 		// Create networking infrastructure for EC2-based preview environments
 		// This provides the foundation for ALB, EC2 instances, and security groups
 		this.networking = new NetworkingConstruct(this, 'Networking', {
@@ -43,15 +48,11 @@ export class MacroAiHobbyStack extends cdk.Stack {
 			enableFlowLogs: false, // Cost optimization for development
 			maxAzs: 2, // Minimum for ALB, cost-optimized
 			enableDetailedMonitoring: false, // Cost optimization
+			parameterStorePrefix: this.parameterStore.parameterPrefix, // Enable EC2 construct
 		})
 
 		// Validate networking requirements for ALB deployment
 		this.networking.validateAlbRequirements()
-
-		// Create Parameter Store construct for secure configuration management
-		this.parameterStore = new ParameterStoreConstruct(this, 'ParameterStore', {
-			environmentName,
-		})
 
 		// Output important values
 		new cdk.CfnOutput(this, 'ParameterStorePrefix', {
@@ -72,5 +73,20 @@ export class MacroAiHobbyStack extends cdk.Stack {
 			description: 'Shared ALB security group ID',
 			exportName: `${this.stackName}-AlbSecurityGroupId`,
 		})
+
+		// Output EC2-related information if EC2 construct is available
+		if (this.networking.ec2Construct) {
+			new cdk.CfnOutput(this, 'Ec2InstanceRoleArn', {
+				value: this.networking.ec2Construct.instanceRole.roleArn,
+				description: 'IAM role ARN for EC2 instances',
+				exportName: `${this.stackName}-Ec2InstanceRoleArn`,
+			})
+
+			new cdk.CfnOutput(this, 'Ec2LaunchTemplateId', {
+				value: this.networking.ec2Construct.launchTemplate.launchTemplateId ?? 'undefined',
+				description: 'Launch template ID for EC2 instances',
+				exportName: `${this.stackName}-Ec2LaunchTemplateId`,
+			})
+		}
 	}
 }
