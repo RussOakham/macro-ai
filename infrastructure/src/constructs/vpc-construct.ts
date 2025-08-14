@@ -105,9 +105,8 @@ export class VpcConstruct extends Construct {
 		this.databaseSubnets = this.vpc.isolatedSubnets
 
 		// Get reference to the Internet Gateway for tagging
-		this.internetGateway = this.vpc.node
-			.findChild('IGW')
-			.node.defaultChild as ec2.CfnInternetGateway
+		this.internetGateway = this.vpc.node.findChild('IGW').node
+			.defaultChild as ec2.CfnInternetGateway
 
 		// Create VPC endpoints for AWS services (cost optimization)
 		this.createVpcEndpoints()
@@ -173,7 +172,9 @@ export class VpcConstruct extends Construct {
 
 		// Create IAM role for VPC Flow Logs
 		const flowLogRole = new cdk.aws_iam.Role(this, 'VpcFlowLogRole', {
-			assumedBy: new cdk.aws_iam.ServicePrincipal('vpc-flow-logs.amazonaws.com'),
+			assumedBy: new cdk.aws_iam.ServicePrincipal(
+				'vpc-flow-logs.amazonaws.com',
+			),
 			inlinePolicies: {
 				FlowLogDeliveryRolePolicy: new cdk.aws_iam.PolicyDocument({
 					statements: [

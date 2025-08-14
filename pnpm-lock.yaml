@@ -582,6 +582,9 @@ importers:
       eslint-plugin-simple-import-sort:
         specifier: ^12.1.1
         version: 12.1.1(eslint@9.33.0(jiti@2.5.1))
+      prettier:
+        specifier: ^3.6.2
+        version: 3.6.2
       tsx:
         specifier: 'catalog:'
         version: 4.20.4

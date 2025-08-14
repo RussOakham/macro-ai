@@ -19,6 +19,8 @@
 		"diff": "cdk diff",
 		"synth": "cdk synth",
 		"bootstrap": "cdk bootstrap",
+		"format": "prettier --check .",
+		"format:fix": "prettier --write .",
 		"lint": "eslint . --ext .ts,.tsx",
 		"lint:fix": "eslint . --ext .ts,.tsx --fix",
 		"type-check": "tsc --noEmit"
@@ -37,6 +39,7 @@
 		"eslint-config-prettier": "catalog:",
 		"eslint-config-turbo": "^2.5.5",
 		"eslint-plugin-simple-import-sort": "^12.1.1",
+		"prettier": "^3.6.2",
 		"tsx": "catalog:",
 		"typescript": "catalog:",
 		"typescript-eslint": "^8.39.0"

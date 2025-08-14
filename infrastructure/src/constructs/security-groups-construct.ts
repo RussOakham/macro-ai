@@ -313,7 +313,9 @@ export const validatePrIsolation: () => boolean = () => {
 /**
  * Generate security group rules summary for documentation
  */
-export const generateSecurityGroupRulesSummary: (sg: ec2.ISecurityGroup) => string = (sg: ec2.ISecurityGroup) => {
+export const generateSecurityGroupRulesSummary: (
+	sg: ec2.ISecurityGroup,
+) => string = (sg: ec2.ISecurityGroup) => {
 	return `Security Group: ${sg.securityGroupId}
 - Ingress: ALB → EC2 (port 3030), Session Manager (port 443)
 - Egress: HTTPS (port 443), HTTP (port 80), DNS (port 53), NTP (port 123)
