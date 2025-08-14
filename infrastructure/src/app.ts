@@ -67,8 +67,11 @@ const tags = isPreviewEnvironment
 if (isEC2Preview && isPreviewEnvironment) {
 	// Extract PR number and branch name for preview environments
 	const prNumber = parseInt(deploymentEnv.replace('pr-', ''), 10)
-	const branchName = process.env.BRANCH_NAME ?? process.env.GITHUB_HEAD_REF ?? 'unknown'
-	const corsAllowedOrigins = process.env.CORS_ALLOWED_ORIGINS ?? 'http://localhost:3000,http://localhost:5173'
+	const branchName =
+		process.env.BRANCH_NAME ?? process.env.GITHUB_HEAD_REF ?? 'unknown'
+	const corsAllowedOrigins =
+		process.env.CORS_ALLOWED_ORIGINS ??
+		'http://localhost:3000,http://localhost:5173'
 
 	if (isNaN(prNumber)) {
 		throw new Error(`Invalid PR number in environment name: ${deploymentEnv}`)

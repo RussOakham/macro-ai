@@ -2,7 +2,9 @@
 
 ## Overview
 
-The Advanced Security Monitoring implementation provides comprehensive security monitoring, compliance tracking, and security-focused alarms for the MacroAI infrastructure. This LOW PRIORITY Phase 4 task enhances operational security by implementing real-time security event detection, automated threat analysis, and compliance monitoring.
+The Advanced Security Monitoring implementation provides comprehensive security monitoring, compliance tracking, and
+security-focused alarms for the MacroAI infrastructure. This LOW PRIORITY Phase 4 task enhances operational security by
+implementing real-time security event detection, automated threat analysis, and compliance monitoring.
 
 ## Architecture
 
@@ -264,7 +266,7 @@ chmod +x infrastructure/src/cli/security-monitoring-cli.ts
 
 **Example Output**:
 
-```
+```text
 🔍 Fetching security events...
 ┌──────────────────────┬────────────────────┬──────────────────────┬────────────┬───────────────┬────────────────────────────────────────┐
 │ Event ID             │ Timestamp          │ Type                 │ Severity   │ Source        │ Description                            │
@@ -408,4 +410,5 @@ aws dynamodb scan --table-name macro-ai-production-security-events --limit 10
 aws cloudwatch get-metric-statistics --namespace "MacroAI/Security" --metric-name "SecurityEvent"
 ```
 
-This implementation provides comprehensive security monitoring capabilities that enhance the operational security posture of the MacroAI infrastructure while maintaining cost-effectiveness and operational efficiency.
+This implementation provides comprehensive security monitoring capabilities that enhance the operational security
+posture of the MacroAI infrastructure while maintaining cost-effectiveness and operational efficiency.

@@ -34,6 +34,13 @@ dist-ssr
 server/dist
 public/dist
 
+# Deployment Artifacts
+*.tar.gz
+*.tar
+**/deployment-package/
+**/express-api-deployment.tar.gz
+deployment-artifacts/
+
 
 # Debug
 npm-debug.log*

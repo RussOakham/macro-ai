@@ -3,10 +3,10 @@ import * as autoscaling from 'aws-cdk-lib/aws-autoscaling'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import type { Construct } from 'constructs'
 
+import { DeploymentStatusConstruct } from '../constructs/deployment-status-construct.js'
+import { MonitoringConstruct } from '../constructs/monitoring-construct.js'
 import { NetworkingConstruct } from '../constructs/networking.js'
 import { ParameterStoreConstruct } from '../constructs/parameter-store-construct.js'
-import { MonitoringConstruct } from '../constructs/monitoring-construct.js'
-import { DeploymentStatusConstruct } from '../constructs/deployment-status-construct.js'
 import { TaggingStrategy } from '../utils/tagging-strategy.js'
 
 export interface MacroAiPreviewStackProps extends cdk.StackProps {
@@ -56,14 +56,16 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	public readonly monitoring: MonitoringConstruct
 	public readonly deploymentStatus: DeploymentStatusConstruct
 
-	constructor(
-		scope: Construct,
-		id: string,
-		props: MacroAiPreviewStackProps,
-	) {
+	constructor(scope: Construct, id: string, props: MacroAiPreviewStackProps) {
 		super(scope, id, props)
 
-		const { environmentName, prNumber, branchName, corsAllowedOrigins, scale = 'preview' } = props
+		const {
+			environmentName,
+			prNumber,
+			branchName,
+			corsAllowedOrigins,
+			scale = 'preview',
+		} = props
 
 		// Apply consistent tagging strategy for preview environments
 		TaggingStrategy.applyPrTags(this, {
@@ -116,10 +118,14 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		this.autoScaling = this.createPreviewAutoScalingGroup(previewLaunchTemplate)
 
 		// Create deployment status tracking
-		this.deploymentStatus = new DeploymentStatusConstruct(this, 'DeploymentStatus', {
-			environmentName,
-			applicationName: 'macro-ai',
-		})
+		this.deploymentStatus = new DeploymentStatusConstruct(
+			this,
+			'DeploymentStatus',
+			{
+				environmentName,
+				applicationName: 'macro-ai',
+			},
+		)
 
 		// Stack outputs for GitHub Actions workflow
 		new cdk.CfnOutput(this, 'ApiEndpoint', {
@@ -129,7 +135,9 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		})
 
 		new cdk.CfnOutput(this, 'LoadBalancerDNS', {
-			value: this.networking.albConstruct!.applicationLoadBalancer.loadBalancerDnsName,
+			value:
+				this.networking.albConstruct!.applicationLoadBalancer
+					.loadBalancerDnsName,
 			description: 'Load Balancer DNS name',
 			exportName: `${this.stackName}-LoadBalancerDNS`,
 		})
@@ -195,7 +203,9 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	): ec2.LaunchTemplate {
 		// Get the base EC2 construct for IAM role and security configuration
 		if (!this.networking.ec2Construct) {
-			throw new Error('EC2 construct not available in NetworkingConstruct. Ensure parameterStorePrefix is provided.')
+			throw new Error(
+				'EC2 construct not available in NetworkingConstruct. Ensure parameterStorePrefix is provided.',
+			)
 		}
 
 		// Create user data with CORS configuration
@@ -209,7 +219,10 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		// Create launch template with preview-specific configuration
 		return new ec2.LaunchTemplate(this, 'PreviewLaunchTemplate', {
 			launchTemplateName: `macro-ai-${environmentName}-preview-launch-template`,
-			instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO), // Cost-optimized for preview
+			instanceType: ec2.InstanceType.of(
+				ec2.InstanceClass.T3,
+				ec2.InstanceSize.MICRO,
+			), // Cost-optimized for preview
 			machineImage: ec2.MachineImage.latestAmazonLinux2023({
 				cpuType: ec2.AmazonLinuxCpuType.X86_64,
 			}),
@@ -314,38 +327,46 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	 * Create a simplified Auto Scaling Group for preview environments
 	 * Avoids complex step scaling policies that require multiple intervals
 	 */
-	private createPreviewAutoScalingGroup(launchTemplate: ec2.LaunchTemplate): autoscaling.AutoScalingGroup {
-		const asg = new autoscaling.AutoScalingGroup(this, 'PreviewAutoScalingGroup', {
-			vpc: this.networking.vpc,
-			launchTemplate,
-			minCapacity: 1,
-			maxCapacity: 2,
-			desiredCapacity: 1,
+	private createPreviewAutoScalingGroup(
+		launchTemplate: ec2.LaunchTemplate,
+	): autoscaling.AutoScalingGroup {
+		const asg = new autoscaling.AutoScalingGroup(
+			this,
+			'PreviewAutoScalingGroup',
+			{
+				vpc: this.networking.vpc,
+				launchTemplate,
+				minCapacity: 1,
+				maxCapacity: 2,
+				desiredCapacity: 1,
 
-			// Health check configuration
-			healthChecks: {
-				types: ['ELB'],
-				gracePeriod: cdk.Duration.minutes(5),
+				// Health check configuration
+				healthChecks: {
+					types: ['ELB'],
+					gracePeriod: cdk.Duration.minutes(5),
+				},
+
+				// Instance distribution - use public subnets for cost optimization
+				vpcSubnets: {
+					subnetType: ec2.SubnetType.PUBLIC,
+				},
+
+				// Termination policies
+				terminationPolicies: [
+					autoscaling.TerminationPolicy.OLDEST_INSTANCE,
+					autoscaling.TerminationPolicy.DEFAULT,
+				],
+
+				// Auto scaling group name
+				autoScalingGroupName: `macro-ai-preview-asg`,
 			},
-
-			// Instance distribution - use public subnets for cost optimization
-			vpcSubnets: {
-				subnetType: ec2.SubnetType.PUBLIC,
-			},
-
-			// Termination policies
-			terminationPolicies: [
-				autoscaling.TerminationPolicy.OLDEST_INSTANCE,
-				autoscaling.TerminationPolicy.DEFAULT,
-			],
-
-			// Auto scaling group name
-			autoScalingGroupName: `macro-ai-preview-asg`,
-		})
+		)
 
 		// Register with ALB target group if available
 		if (this.networking.albConstruct) {
-			asg.attachToApplicationTargetGroup(this.networking.albConstruct.defaultTargetGroup)
+			asg.attachToApplicationTargetGroup(
+				this.networking.albConstruct.defaultTargetGroup,
+			)
 		}
 
 		// Add simple target tracking scaling policy (CPU-based)
