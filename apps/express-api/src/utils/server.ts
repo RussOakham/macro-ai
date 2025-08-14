@@ -46,6 +46,10 @@ const createServer = (): Express => {
 			maxAge: 86400,
 		}),
 	)
+	// Enhanced health endpoints for ALB and monitoring
+	app.use('/api/health/detailed', cors({ origin: true, credentials: false }))
+	app.use('/api/health/ready', cors({ origin: true, credentials: false }))
+	app.use('/api/health/live', cors({ origin: true, credentials: false }))
 	app.use('/api-docs', cors({ origin: true, credentials: false }))
 	app.use('/swagger.json', cors({ origin: true, credentials: false }))
 

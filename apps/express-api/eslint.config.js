@@ -26,5 +26,9 @@ export default repoConfig.config(
 		plugins: {
 			drizzle: drizzlePlugin,
 		},
+		rules: {
+			// Disable turbo env var rule for Express API
+			'turbo/no-undeclared-env-vars': 'off',
+		},
 	},
 )

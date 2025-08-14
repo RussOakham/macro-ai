@@ -16,8 +16,11 @@
 		"test:staging": "TEST_ENVIRONMENT=staging ./run-integration-tests.sh",
 		"test:production": "TEST_ENVIRONMENT=hobby ./run-integration-tests.sh",
 		"clean": "rm -rf results coverage node_modules",
+		"format": "prettier --check --cache .",
+		"format:fix": "prettier --write --cache .",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
+		"lint:ci": "eslint . --max-warnings 0",
 		"type-check": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -28,6 +31,7 @@
 		"@repo/config-typescript": "workspace:*",
 		"@types/node": "catalog:",
 		"eslint": "catalog:",
+		"prettier": "catalog:",
 		"typescript": "catalog:"
 	},
 	"engines": {
