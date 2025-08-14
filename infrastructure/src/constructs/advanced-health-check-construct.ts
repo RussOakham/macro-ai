@@ -36,22 +36,22 @@ export interface AdvancedHealthCheckConstructProps {
 		/**
 		 * Application health check endpoints
 		 */
-		readonly applicationEndpoints?: Array<{
+		readonly applicationEndpoints?: {
 			path: string
 			expectedStatusCode?: number
 			timeout?: cdk.Duration
 			expectedResponsePattern?: string
-		}>
+		}[]
 
 		/**
 		 * External service dependencies to validate
 		 */
-		readonly externalDependencies?: Array<{
+		readonly externalDependencies?: {
 			name: string
 			endpoint: string
 			timeout?: cdk.Duration
 			critical?: boolean
-		}>
+		}[]
 
 		/**
 		 * Performance thresholds
@@ -111,24 +111,24 @@ export interface HealthCheckResult {
 
 export interface ApplicationHealthResult {
 	readonly status: 'healthy' | 'degraded' | 'unhealthy'
-	readonly endpoints: Array<{
+	readonly endpoints: {
 		path: string
 		status: 'healthy' | 'unhealthy'
 		responseTime: number
 		statusCode?: number
 		error?: string
-	}>
+	}[]
 }
 
 export interface DependencyHealthResult {
 	readonly status: 'healthy' | 'degraded' | 'unhealthy'
-	readonly services: Array<{
+	readonly services: {
 		name: string
 		status: 'healthy' | 'unhealthy'
 		responseTime: number
 		critical: boolean
 		error?: string
-	}>
+	}[]
 }
 
 export interface PerformanceHealthResult {
@@ -148,12 +148,12 @@ export interface PerformanceHealthResult {
 
 export interface InfrastructureHealthResult {
 	readonly status: 'healthy' | 'degraded' | 'unhealthy'
-	readonly targetGroups: Array<{
+	readonly targetGroups: {
 		arn: string
 		healthyTargets: number
 		totalTargets: number
 		healthyPercentage: number
-	}>
+	}[]
 	readonly loadBalancer: {
 		status: 'healthy' | 'unhealthy'
 		activeConnections: number
