@@ -645,14 +645,14 @@ export class AutoScalingConstruct extends Construct {
 
 	/**
 	 * Apply comprehensive tags to auto scaling resources
+	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
 	private applyTags(): void {
 		const tags = {
-			Environment: this.props.environmentName,
-			Application: this.props.applicationName,
-			Component: 'AutoScaling',
+			SubComponent: 'AutoScaling',
 			Phase: 'Phase4-AutoScaling',
-			ManagedBy: 'CDK',
+			ConstructManagedBy: 'AutoScalingConstruct',
+			ScalingType: 'EC2-AutoScaling',
 		}
 
 		// Apply tags to Auto Scaling Group
@@ -672,6 +672,7 @@ export class AutoScalingConstruct extends Construct {
 				cdk.Tags.of(policy).add(key, value)
 			})
 		})
+		// Note: Environment, Application, Component are inherited from stack level
 	}
 
 	/**

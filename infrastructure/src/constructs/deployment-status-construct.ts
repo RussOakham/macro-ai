@@ -376,13 +376,14 @@ export class DeploymentStatusConstruct extends Construct {
 
 	/**
 	 * Apply comprehensive tagging
+	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
 	private applyTags(): void {
-		cdk.Tags.of(this).add('Environment', this.props.environmentName)
-		cdk.Tags.of(this).add('Application', this.props.applicationName)
-		cdk.Tags.of(this).add('Component', 'DeploymentStatus')
-		cdk.Tags.of(this).add('Purpose', 'DeploymentTracking')
-		cdk.Tags.of(this).add('ManagedBy', 'DeploymentStatusConstruct')
+		// Use SubComponent instead of Component to avoid conflicts with stack-level Component tag
+		cdk.Tags.of(this).add('SubComponent', 'DeploymentStatus')
+		cdk.Tags.of(this).add('SubPurpose', 'DeploymentTracking')
+		cdk.Tags.of(this).add('ConstructManagedBy', 'DeploymentStatusConstruct')
+		// Note: Environment and Application tags may be inherited from stack level
 	}
 
 	/**

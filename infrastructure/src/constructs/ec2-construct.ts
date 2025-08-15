@@ -722,15 +722,15 @@ export class Ec2Construct extends Construct {
 
 	/**
 	 * Apply comprehensive tagging for cost tracking and resource management
+	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
 	private applyTags(environmentName: string): void {
-		TaggingStrategy.applyBaseTags(this, {
-			environment: environmentName,
-			component: 'EC2',
-			purpose: TAG_VALUES.PURPOSES.PREVIEW_ENVIRONMENT,
-			createdBy: 'Ec2Construct',
-			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.STANDARD,
-		})
+		// Apply construct-specific tags that don't conflict with stack-level tags
+		cdk.Tags.of(this).add('SubComponent', 'EC2')
+		cdk.Tags.of(this).add('SubPurpose', 'ComputeInfrastructure')
+		cdk.Tags.of(this).add('ConstructManagedBy', 'Ec2Construct')
+		cdk.Tags.of(this).add('InstanceType', 'EC2-Instance')
+		// Note: Other tags like Environment, Project, Component, Purpose are inherited from stack level
 	}
 
 	/**

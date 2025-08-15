@@ -229,15 +229,15 @@ export class SecurityGroupsConstruct extends Construct {
 
 	/**
 	 * Apply tags to the shared security groups
+	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
 	private applyTags(environmentName: string): void {
-		TaggingStrategy.applyBaseTags(this, {
-			environment: environmentName,
-			component: 'Security-Groups',
-			purpose: TAG_VALUES.PURPOSES.SHARED_INFRASTRUCTURE,
-			createdBy: 'SecurityGroupsConstruct',
-			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.BASIC,
-		})
+		// Apply construct-specific tags that don't conflict with stack-level tags
+		cdk.Tags.of(this).add('SubComponent', 'Security-Groups')
+		cdk.Tags.of(this).add('SubPurpose', 'NetworkSecurity')
+		cdk.Tags.of(this).add('ConstructManagedBy', 'SecurityGroupsConstruct')
+		cdk.Tags.of(this).add('SecurityType', 'VPC-SecurityGroups')
+		// Note: Environment, Component, Purpose, CreatedBy are inherited from stack level
 	}
 
 	/**

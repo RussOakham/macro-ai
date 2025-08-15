@@ -356,22 +356,21 @@ export class NetworkingConstruct extends Construct {
 
 	/**
 	 * Apply comprehensive tagging for cost tracking and resource management
+	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
 	private applyTags(environmentName: string): void {
 		const tags = {
-			Project: 'MacroAI',
-			Environment: environmentName,
-			Component: 'Networking',
-			Purpose: 'SharedInfrastructure',
-			CostCenter: 'Development',
-			ManagedBy: 'CDK',
-			CreatedBy: 'NetworkingConstruct',
+			SubComponent: 'Networking',
+			SubPurpose: 'SharedInfrastructure',
+			ConstructManagedBy: 'NetworkingConstruct',
+			NetworkType: 'VPC-Infrastructure',
 		}
 
 		// Apply tags to the entire construct and all child resources
 		Object.entries(tags).forEach(([key, value]) => {
 			cdk.Tags.of(this).add(key, value)
 		})
+		// Note: Project, Environment, Component, Purpose, CostCenter are inherited from stack level
 	}
 
 	/**

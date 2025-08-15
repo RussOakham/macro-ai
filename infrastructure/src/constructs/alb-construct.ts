@@ -428,15 +428,15 @@ export class AlbConstruct extends Construct {
 
 	/**
 	 * Apply comprehensive tagging for cost tracking and resource management
+	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
 	private applyTags(environmentName: string): void {
-		TaggingStrategy.applyBaseTags(this, {
-			environment: environmentName,
-			component: 'ALB',
-			purpose: TAG_VALUES.PURPOSES.SHARED_INFRASTRUCTURE,
-			createdBy: 'AlbConstruct',
-			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.STANDARD,
-		})
+		// Apply construct-specific tags that don't conflict with stack-level tags
+		cdk.Tags.of(this).add('SubComponent', 'ALB')
+		cdk.Tags.of(this).add('SubPurpose', 'LoadBalancing')
+		cdk.Tags.of(this).add('ConstructManagedBy', 'AlbConstruct')
+		cdk.Tags.of(this).add('LoadBalancerType', 'ApplicationLoadBalancer')
+		// Note: Environment, Component, Purpose, CreatedBy are inherited from stack level
 	}
 
 	/**
