@@ -106,7 +106,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 
 		// Create simplified Auto Scaling for preview environments
 		// Use a basic Auto Scaling Group without complex step scaling policies
-		this.autoScaling = this.createPreviewAutoScalingGroup(previewLaunchTemplate)
+		this.autoScaling = this.createPreviewAutoScalingGroup(previewLaunchTemplate, prNumber)
 
 		// Create deployment status tracking
 		this.deploymentStatus = new DeploymentStatusConstruct(
@@ -265,8 +265,10 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			'echo "$(date): Updating system packages..."',
 			'dnf update -y || error_exit "Failed to update system packages"',
 			'',
-			'echo "$(date): Installing Node.js 20 LTS..."',
-			'dnf install -y nodejs npm || error_exit "Failed to install Node.js"',
+			'echo "$(date): Installing Node.js 20 LTS from NodeSource..."',
+			'# Add NodeSource repository for Node.js 20 LTS',
+			'curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - || error_exit "Failed to add NodeSource repository"',
+			'dnf install -y nodejs || error_exit "Failed to install Node.js"',
 			'',
 			'# Verify Node.js installation',
 			'node --version || error_exit "Node.js installation verification failed"',
@@ -382,6 +384,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	 */
 	private createPreviewAutoScalingGroup(
 		launchTemplate: ec2.LaunchTemplate,
+		prNumber: number,
 	): autoscaling.AutoScalingGroup {
 		const asg = new autoscaling.AutoScalingGroup(
 			this,
@@ -415,11 +418,15 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			},
 		)
 
-		// Register with ALB target group if available
+		// Create and register with PR-specific target group for proper isolation
 		if (this.networking.albConstruct) {
-			asg.attachToApplicationTargetGroup(
-				this.networking.albConstruct.defaultTargetGroup,
-			)
+			const prTargetGroup = this.networking.albConstruct.createPrTargetGroup({
+				prNumber,
+				vpc: this.networking.vpc,
+				environmentName: 'development',
+			})
+
+			asg.attachToApplicationTargetGroup(prTargetGroup)
 		}
 
 		// Add simple target tracking scaling policy (CPU-based)
