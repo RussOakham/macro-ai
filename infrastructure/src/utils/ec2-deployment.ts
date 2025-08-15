@@ -519,7 +519,7 @@ echo "$(date): Application deployment completed"
 	}
 
 	/**
-	 * Find existing instances for a PR
+	 * Find existing instances for a PR (works with both manual and CloudFormation-managed instances)
 	 */
 	private async findExistingPrInstances(
 		prNumber: number,
@@ -562,6 +562,9 @@ echo "$(date): Application deployment completed"
 			})
 		})
 
+		console.log(`Found ${instances.length} instances for PR ${prNumber}:`,
+			instances.map(i => `${i.instanceId} (${i.state})`).join(', '))
+
 		return instances
 	}
 
@@ -590,7 +593,7 @@ echo "$(date): Application deployment completed"
 	}
 
 	/**
-	 * Get deployment status
+	 * Get deployment status (works with CloudFormation-managed instances)
 	 */
 	public async getDeploymentStatus(
 		prNumber: number,
@@ -598,32 +601,51 @@ echo "$(date): Application deployment completed"
 		const instances = await this.findExistingPrInstances(prNumber)
 
 		if (instances.length === 0) {
+			console.log(`No instances found for PR ${prNumber}`)
 			return null
 		}
 
 		// Determine overall status based on instance states
 		const runningInstances = instances.filter((i) => i.state === 'running')
-		const healthyInstances = runningInstances.length // Simplified for now
+		const pendingInstances = instances.filter((i) => i.state === 'pending')
+		const terminatingInstances = instances.filter((i) =>
+			['stopping', 'stopped', 'shutting-down', 'terminated'].includes(i.state)
+		)
 
-		let status: DeploymentStatus['status'] = 'SUCCESS'
-		if (instances.some((i) => i.state === 'pending')) {
+		console.log(`PR ${prNumber} instance states: running=${runningInstances.length}, pending=${pendingInstances.length}, terminating=${terminatingInstances.length}`)
+
+		// Determine status based on instance states
+		let status: DeploymentStatus['status']
+
+		if (pendingInstances.length > 0) {
+			// Still launching instances
 			status = 'IN_PROGRESS'
 		} else if (runningInstances.length === 0) {
+			// No running instances
 			status = 'FAILED'
+		} else {
+			// At least some instances are running - consider it successful
+			// In a production system, we'd also check ALB target health here
+			status = 'SUCCESS'
 		}
 
-		const deploymentId = instances[0]?.tags.DeploymentId ?? 'unknown'
+		const deploymentId = instances[0]?.tags.DeploymentId ??
+			instances[0]?.tags.Environment ??
+			`pr-${prNumber}-${Date.now()}`
+
 		const startTime = instances.reduce(
 			(earliest, instance) =>
 				instance.launchTime < earliest ? instance.launchTime : earliest,
 			instances[0]?.launchTime ?? new Date(),
 		)
 
+		console.log(`PR ${prNumber} deployment status: ${status} (${runningInstances.length}/${instances.length} running)`)
+
 		return {
 			deploymentId,
 			status,
 			instances,
-			healthyInstances,
+			healthyInstances: runningInstances.length,
 			totalInstances: instances.length,
 			startTime,
 		}
