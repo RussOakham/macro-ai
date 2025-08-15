@@ -67,22 +67,9 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			scale = 'preview',
 		} = props
 
-		// Apply stack-level tags for preview environments (avoid conflicts with construct-level tags)
-		cdk.Tags.of(this).add('Project', 'MacroAI')
-		cdk.Tags.of(this).add('Environment', `pr-${prNumber}`)
-		cdk.Tags.of(this).add('EnvironmentType', 'ephemeral')
-		cdk.Tags.of(this).add('Component', 'preview-environment')
-		cdk.Tags.of(this).add('Purpose', 'PreviewEnvironment')
-		cdk.Tags.of(this).add('CreatedBy', 'cdk-deploy-preview')
-		cdk.Tags.of(this).add('ManagedBy', 'CDK')
-		cdk.Tags.of(this).add('PRNumber', prNumber.toString())
-		cdk.Tags.of(this).add('ExpiryDays', '7')
-		cdk.Tags.of(this).add('AutoShutdown', 'true')
-		cdk.Tags.of(this).add('Scale', scale)
-		if (branchName) {
-			cdk.Tags.of(this).add('Branch', branchName)
-		}
-		// Note: Constructs use SubComponent, SubPurpose, ConstructManagedBy to avoid conflicts
+		// Note: Base-level tags (Project, Environment, EnvironmentType, Component, Purpose, CreatedBy, ManagedBy, PRNumber, Branch, ExpiryDate, Scale, AutoShutdown)
+		// are applied centrally via StackProps.tags in app.ts using TaggingStrategy.
+		// Constructs should use only Sub* prefixed tags to avoid conflicts.
 
 		// Create Parameter Store construct for configuration
 		this.parameterStore = new ParameterStoreConstruct(this, 'ParameterStore', {

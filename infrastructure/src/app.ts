@@ -5,6 +5,7 @@ import 'source-map-support/register.js'
 
 import { MacroAiHobbyStack } from './stacks/macro-ai-hobby-stack.js'
 import { MacroAiPreviewStack } from './stacks/macro-ai-preview-stack.js'
+import { TAG_VALUES, TaggingStrategy } from './utils/tagging-strategy.js'
 
 const app = new cdk.App()
 
@@ -41,27 +42,32 @@ if (isEC2Preview) {
 	stackDescription = `Macro AI ${deploymentEnv} Environment - ${deploymentScale} scale serverless architecture${ephemeralSuffix}`
 }
 
-// Build comprehensive tags for resource management and cost allocation
-const baseTags = {
-	Project: 'MacroAI',
-	Environment: deploymentEnv,
-	EnvironmentType: environmentType,
-	Scale: deploymentScale,
-	CostCenter: deploymentEnv === 'production' ? 'production' : 'development',
-	Owner: `${deploymentEnv}-deployment`,
-	CreatedBy: 'github-actions',
-}
-
-// Add preview-specific tags for ephemeral environments
+// Centralized tag generation using TaggingStrategy
 const tags = isPreviewEnvironment
-	? {
-			...baseTags,
-			PrNumber: deploymentEnv.replace('pr-', ''),
-			Branch: process.env.GITHUB_HEAD_REF ?? 'unknown',
-			// Optional: Add TTL for governance (could be used by cleanup automation)
-			ExpiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
-		}
-	: baseTags
+	? TaggingStrategy.createPrTags({
+			prNumber: parseInt(deploymentEnv.replace('pr-', ''), 10),
+			branch: process.env.GITHUB_HEAD_REF ?? 'unknown',
+			component: 'preview-environment',
+			purpose: TAG_VALUES.PURPOSES.PREVIEW_ENVIRONMENT,
+			createdBy: 'github-actions',
+			scale: deploymentScale,
+			project: 'MacroAI',
+			owner: `${deploymentEnv}-deployment`,
+			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.STANDARD,
+			autoShutdown: true,
+			expiryDays: 7,
+			// Note: environment is derived from prNumber by createPrTags
+		})
+	: TaggingStrategy.createBaseTags({
+			environment: deploymentEnv,
+			environmentType: environmentType,
+			component: 'shared-infrastructure',
+			purpose: 'SharedInfrastructure',
+			createdBy: 'github-actions',
+			scale: deploymentScale,
+			project: 'MacroAI',
+			owner: `${deploymentEnv}-deployment`,
+		})
 
 // Create the appropriate stack based on deployment type
 if (isEC2Preview && isPreviewEnvironment) {
