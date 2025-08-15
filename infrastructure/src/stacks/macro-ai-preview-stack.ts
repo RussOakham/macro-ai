@@ -7,7 +7,7 @@ import { DeploymentStatusConstruct } from '../constructs/deployment-status-const
 import { MonitoringConstruct } from '../constructs/monitoring-construct.js'
 import { NetworkingConstruct } from '../constructs/networking.js'
 import { ParameterStoreConstruct } from '../constructs/parameter-store-construct.js'
-import { TaggingStrategy } from '../utils/tagging-strategy.js'
+// Note: TaggingStrategy imports removed to avoid tag conflicts with constructs
 
 export interface MacroAiPreviewStackProps extends cdk.StackProps {
 	/**
@@ -67,18 +67,22 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			scale = 'preview',
 		} = props
 
-		// Apply consistent tagging strategy for preview environments
-		TaggingStrategy.applyPrTags(this, {
-			project: 'macro-ai',
-			component: 'preview-environment',
-			purpose: 'PreviewEnvironment',
-			createdBy: 'cdk-deploy-preview',
-			prNumber,
-			branch: branchName,
-			scale,
-			autoShutdown: true,
-			expiryDays: 7,
-		})
+		// Apply stack-level tags for preview environments (avoid conflicts with construct-level tags)
+		cdk.Tags.of(this).add('Project', 'MacroAI')
+		cdk.Tags.of(this).add('Environment', `pr-${prNumber}`)
+		cdk.Tags.of(this).add('EnvironmentType', 'ephemeral')
+		cdk.Tags.of(this).add('Component', 'preview-environment')
+		cdk.Tags.of(this).add('Purpose', 'PreviewEnvironment')
+		cdk.Tags.of(this).add('CreatedBy', 'cdk-deploy-preview')
+		cdk.Tags.of(this).add('ManagedBy', 'CDK')
+		cdk.Tags.of(this).add('PRNumber', prNumber.toString())
+		cdk.Tags.of(this).add('ExpiryDays', '7')
+		cdk.Tags.of(this).add('AutoShutdown', 'true')
+		cdk.Tags.of(this).add('Scale', scale)
+		if (branchName) {
+			cdk.Tags.of(this).add('Branch', branchName)
+		}
+		// Note: Constructs use SubComponent, SubPurpose, ConstructManagedBy to avoid conflicts
 
 		// Create Parameter Store construct for configuration
 		this.parameterStore = new ParameterStoreConstruct(this, 'ParameterStore', {
@@ -374,10 +378,11 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			targetUtilizationPercent: 70,
 		})
 
-		// Add tags for preview environment
-		cdk.Tags.of(asg).add('Environment', 'preview')
-		cdk.Tags.of(asg).add('Component', 'AutoScaling')
+		// Add tags for preview environment (avoid conflicts with stack-level tags)
+		cdk.Tags.of(asg).add('SubComponent', 'AutoScaling')
 		cdk.Tags.of(asg).add('DeploymentType', 'ec2-preview')
+		cdk.Tags.of(asg).add('ScalingType', 'target-tracking')
+		// Note: Environment, Component, Purpose are inherited from stack-level TaggingStrategy
 
 		return asg
 	}
