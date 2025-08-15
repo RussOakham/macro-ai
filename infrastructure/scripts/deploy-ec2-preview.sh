@@ -61,6 +61,108 @@ validate_environment() {
     log_success "Environment validation completed"
 }
 
+# Clean up historic tag conflicts using comprehensive cleanup script
+cleanup_historic_tag_conflicts() {
+    local stack_name="$1"
+
+    log_info "🏷️  Running comprehensive tag conflict cleanup..."
+
+    # Extract PR number from stack name (e.g., MacroAiPr-35Stack -> 35)
+    local pr_number
+    pr_number=$(echo "${stack_name}" | sed -n 's/.*Pr-\([0-9]\+\)Stack.*/\1/p')
+
+    if [[ -z "${pr_number}" ]]; then
+        log_info "Could not extract PR number from stack name, running general cleanup"
+        pr_number=""
+    else
+        log_info "Targeting tag cleanup for PR ${pr_number}"
+    fi
+
+    # Path to the comprehensive cleanup script
+    local cleanup_script="infrastructure/scripts/cleanup-tag-conflicts.sh"
+
+    if [[ -f "${cleanup_script}" ]]; then
+        log_info "Running comprehensive tag conflict cleanup script..."
+
+        # Prepare cleanup arguments
+        local cleanup_args="--execute --region ${AWS_REGION} --force"
+        if [[ -n "${pr_number}" ]]; then
+            cleanup_args+=" --pr-number ${pr_number}"
+        fi
+
+        # Create backup file for this cleanup
+        local backup_file="tag-backup-pr-${pr_number:-all}-$(date +%Y%m%d-%H%M%S).json"
+        cleanup_args+=" --backup-file ${backup_file}"
+
+        # Run the cleanup script
+        if "${cleanup_script}" ${cleanup_args}; then
+            log_success "Comprehensive tag conflict cleanup completed successfully"
+            log_info "Original tags backed up to: ${backup_file}"
+        else
+            log_warning "Tag conflict cleanup encountered issues, but continuing with deployment"
+            log_info "Manual tag cleanup may be required if deployment fails"
+        fi
+    else
+        log_warning "Comprehensive cleanup script not found, falling back to basic cleanup"
+
+        # Fallback to basic cleanup for critical conflicts
+        basic_tag_conflict_cleanup "${pr_number}"
+    fi
+}
+
+# Basic tag conflict cleanup (fallback)
+basic_tag_conflict_cleanup() {
+    local pr_number="$1"
+
+    log_info "Running basic tag conflict cleanup..."
+
+    if [[ -z "${pr_number}" ]]; then
+        log_info "No PR number available, skipping basic cleanup"
+        return 0
+    fi
+
+    # List IAM roles that might have conflicting tags from previous deployments
+    local conflicting_tag_patterns=(
+        "PrNumber=${pr_number}"      # Old format
+        "PRNumber=${pr_number}"      # New format
+        "pr-number=${pr_number}"     # Alternative format
+    )
+
+    # Find and clean IAM roles with potentially conflicting tags
+    for tag_pattern in "${conflicting_tag_patterns[@]}"; do
+        local tag_key="${tag_pattern%=*}"
+        local tag_value="${tag_pattern#*=}"
+
+        log_debug "Checking for IAM roles with tag ${tag_key}=${tag_value}..."
+
+        # Get IAM roles with this tag (if any exist)
+        local roles_with_tag
+        roles_with_tag=$(aws iam list-roles \
+            --query "Roles[?contains(Tags[?Key=='${tag_key}' && Value=='${tag_value}'].Key, '${tag_key}')].RoleName" \
+            --output text 2>/dev/null || echo "")
+
+        if [[ -n "${roles_with_tag}" && "${roles_with_tag}" != "None" ]]; then
+            log_info "Found IAM roles with potentially conflicting tag ${tag_key}: ${roles_with_tag}"
+
+            # For each role, remove potentially conflicting tags
+            for role_name in ${roles_with_tag}; do
+                log_info "Cleaning conflicting tags from IAM role: ${role_name}"
+
+                # Remove common conflicting tag keys (case variations)
+                local tags_to_remove=("PrNumber" "PRNumber" "pr-number" "project" "Project" "environment" "Environment")
+
+                for tag_to_remove in "${tags_to_remove[@]}"; do
+                    if aws iam untag-role --role-name "${role_name}" --tag-keys "${tag_to_remove}" 2>/dev/null; then
+                        log_info "Removed tag '${tag_to_remove}' from role '${role_name}'"
+                    fi
+                done
+            done
+        fi
+    done
+
+    log_success "Basic tag conflict cleanup completed"
+}
+
 # Generate stack name for preview environment
 generate_stack_name() {
     local env_name="$1"
@@ -95,6 +197,9 @@ handle_failed_stack() {
             log_warning "Stack is in failed state: ${stack_status}"
             log_info "This typically happens when a previous deployment failed"
             log_info "For PR preview environments, we need to delete and recreate the stack"
+
+            # Clean up historic tag conflicts before deleting the stack
+            cleanup_historic_tag_conflicts "${stack_name}"
 
             log_info "Deleting failed stack: ${stack_name}"
             if aws cloudformation delete-stack --stack-name "${stack_name}"; then
@@ -171,7 +276,10 @@ handle_failed_stack() {
                 current_status=$(check_stack_status "${stack_name}")
 
                 if [[ "${current_status}" == "ROLLBACK_COMPLETE" ]]; then
-                    log_success "Rollback completed, now deleting failed stack for redeployment"
+                    log_success "Rollback completed, now cleaning up historic tag conflicts"
+                    # Clean up any historic tag conflicts before deleting the stack
+                    cleanup_historic_tag_conflicts "${stack_name}"
+                    log_success "Now deleting failed stack for redeployment"
                     # Recursively call handle_failed_stack with the new status
                     handle_failed_stack "${stack_name}" "${current_status}"
                     return 0
@@ -408,16 +516,55 @@ verify_deployment() {
     done
 }
 
+# Verify deployment success and tag cleanup
+verify_deployment_success() {
+    local stack_name="$1"
+
+    log_info "🔍 Running post-deployment verification..."
+
+    # Extract PR number from stack name
+    local pr_number
+    pr_number=$(echo "${stack_name}" | sed -n 's/.*Pr-\([0-9]\+\)Stack.*/\1/p')
+
+    # Path to the verification script
+    local verify_script="infrastructure/scripts/verify-tag-cleanup.sh"
+
+    if [[ -f "${verify_script}" ]]; then
+        log_info "Running tag cleanup verification..."
+
+        # Prepare verification arguments
+        local verify_args="--region ${AWS_REGION}"
+        if [[ -n "${pr_number}" ]]; then
+            verify_args+=" --pr-number ${pr_number}"
+        fi
+
+        # Run verification (non-blocking - log results but don't fail deployment)
+        if "${verify_script}" ${verify_args}; then
+            log_success "✅ Post-deployment verification passed"
+        else
+            log_warning "⚠️  Post-deployment verification found issues (deployment still successful)"
+            log_info "Consider running manual tag cleanup if future deployments fail"
+        fi
+    else
+        log_info "Verification script not found, skipping post-deployment checks"
+    fi
+}
+
 # Main execution
 main() {
     log_info "Starting EC2 Preview Deployment"
     log_info "================================"
-    
+
     validate_environment
     deploy_infrastructure
     deploy_application
     verify_deployment
-    
+
+    # Run post-deployment verification
+    local stack_name
+    stack_name=$(generate_stack_name "${ENVIRONMENT_NAME}")
+    verify_deployment_success "${stack_name}"
+
     log_success "EC2 Preview Deployment completed successfully!"
 }
 
