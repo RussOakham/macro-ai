@@ -47,6 +47,13 @@ export interface Ec2ConstructProps {
 		readonly maxCapacity: number
 		readonly targetCpuUtilization: number
 	}
+
+	/**
+	 * Deployment ID to force instance replacement on every deployment
+	 * This ensures fresh instances with latest application code
+	 * @default current timestamp
+	 */
+	readonly deploymentId?: string
 }
 
 export interface PrInstanceProps {
@@ -81,6 +88,12 @@ export interface PrInstanceProps {
 	 * @default t3.micro
 	 */
 	readonly instanceType?: ec2.InstanceType
+
+	/**
+	 * Deployment ID to force instance replacement on every deployment
+	 * @default current timestamp
+	 */
+	readonly deploymentId?: string
 }
 
 /**
@@ -116,6 +129,7 @@ export class Ec2Construct extends Construct {
 			),
 			parameterStorePrefix,
 			enableDetailedMonitoring = false,
+			deploymentId = new Date().toISOString(),
 		} = props
 
 		// Create IAM role for EC2 instances
@@ -132,6 +146,7 @@ export class Ec2Construct extends Construct {
 			parameterStorePrefix,
 			environmentName,
 			enableDetailedMonitoring,
+			deploymentId,
 		)
 
 		// Apply tags to the construct
@@ -153,6 +168,7 @@ export class Ec2Construct extends Construct {
 				ec2.InstanceClass.T3,
 				ec2.InstanceSize.MICRO,
 			),
+			deploymentId = new Date().toISOString(),
 		} = props
 
 		// Create PR-specific instance
@@ -167,7 +183,7 @@ export class Ec2Construct extends Construct {
 				}),
 				securityGroup,
 				role: this.instanceRole,
-				userData: this.createUserData(parameterStorePrefix, prNumber),
+				userData: this.createUserData(parameterStorePrefix, prNumber, deploymentId),
 				vpcSubnets: {
 					subnetType: ec2.SubnetType.PUBLIC, // Cost optimization: no NAT Gateway needed
 				},
@@ -260,6 +276,7 @@ export class Ec2Construct extends Construct {
 		parameterStorePrefix: string,
 		environmentName: string,
 		enableDetailedMonitoring: boolean,
+		deploymentId: string,
 	): ec2.LaunchTemplate {
 		return new ec2.LaunchTemplate(this, 'Ec2LaunchTemplate', {
 			launchTemplateName: `macro-ai-${environmentName}-launch-template`,
@@ -269,7 +286,7 @@ export class Ec2Construct extends Construct {
 			}),
 			securityGroup,
 			role: this.instanceRole,
-			userData: this.createUserData(parameterStorePrefix),
+			userData: this.createUserData(parameterStorePrefix, undefined, deploymentId),
 			detailedMonitoring: enableDetailedMonitoring,
 			// EBS optimization for better performance
 			ebsOptimized: true,
@@ -284,17 +301,24 @@ export class Ec2Construct extends Construct {
 	private createUserData(
 		parameterStorePrefix: string,
 		prNumber?: number,
+		deploymentId?: string,
 	): ec2.UserData {
 		const userData = ec2.UserData.forLinux()
+
+		// Add deployment timestamp to force instance replacement
+		const timestamp = deploymentId || new Date().toISOString()
 
 		// Add comprehensive deployment script
 		userData.addCommands(
 			'#!/bin/bash',
 			'set -e',
 			'',
+			`# Deployment ID: ${timestamp}`,
+			'# This timestamp forces new instances on every deployment to ensure fresh application code',
+			'',
 			'# Logging setup',
 			'exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1',
-			'echo "$(date): Starting Macro AI application deployment"',
+			`echo "$(date): Starting Macro AI application deployment (Deployment ID: ${timestamp})"`,
 			'',
 			'# Error handling function',
 			'error_exit() {',

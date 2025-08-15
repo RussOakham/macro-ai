@@ -54,6 +54,13 @@ export interface NetworkingConstructProps {
 		readonly hostedZoneId: string
 		readonly certificateArn?: string
 	}
+
+	/**
+	 * Deployment ID to force instance replacement on every deployment
+	 * This ensures fresh instances with latest application code
+	 * @default current timestamp
+	 */
+	readonly deploymentId?: string
 }
 
 /**
@@ -100,6 +107,7 @@ export class NetworkingConstruct extends Construct {
 			parameterStorePrefix,
 			enableAlb = true,
 			customDomain,
+			deploymentId = new Date().toISOString(),
 		} = props
 
 		// Create VPC infrastructure
@@ -128,6 +136,7 @@ export class NetworkingConstruct extends Construct {
 				environmentName,
 				parameterStorePrefix,
 				enableDetailedMonitoring,
+				deploymentId,
 			})
 		}
 

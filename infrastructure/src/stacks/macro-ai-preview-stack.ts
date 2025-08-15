@@ -76,6 +76,10 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			environmentName,
 		})
 
+		// Create deployment ID to force instance replacement on every deployment
+		// This ensures fresh instances with latest application code, resolving CI timeout issues
+		const deploymentId = `${prNumber}-${Date.now()}`
+
 		// Create networking infrastructure optimized for preview environments
 		this.networking = new NetworkingConstruct(this, 'Networking', {
 			environmentName,
@@ -83,6 +87,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			maxAzs: 2, // Minimum for ALB
 			enableDetailedMonitoring: false, // Cost optimization
 			parameterStorePrefix: this.parameterStore.parameterPrefix,
+			deploymentId,
 		})
 
 		// Validate networking requirements
