@@ -119,9 +119,11 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		)
 
 		// Stack outputs for GitHub Actions workflow
+		// Note: Preview environments use HTTP only (no custom domain/SSL certificate)
+		// Production environments should use HTTPS with proper SSL certificates
 		new cdk.CfnOutput(this, 'ApiEndpoint', {
-			value: `https://${this.networking.albConstruct!.applicationLoadBalancer.loadBalancerDnsName}/api`,
-			description: 'API endpoint URL for the preview environment',
+			value: `http://${this.networking.albConstruct!.applicationLoadBalancer.loadBalancerDnsName}/api`,
+			description: 'API endpoint URL for the preview environment (HTTP only)',
 			exportName: `${this.stackName}-ApiEndpoint`,
 		})
 
