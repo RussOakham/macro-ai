@@ -281,7 +281,8 @@ jobs:
 
           # Copy package.json and package-lock for production dependencies
           cp package.json deployment-package/
-          cp pnpm-lock.yaml deployment-package/
+          # Copy pnpm-lock.yaml from monorepo root (not from app directory)
+          cp ../../pnpm-lock.yaml deployment-package/
 
           # Copy any additional runtime files
           if [[ -f ".env.example" ]]; then
