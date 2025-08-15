@@ -157,6 +157,43 @@ handle_failed_stack() {
             log_error "Timeout waiting for stack deletion"
             exit 1
             ;;
+        "ROLLBACK_IN_PROGRESS")
+            log_warning "Stack is currently rolling back from a failed deployment: ${stack_status}"
+            log_info "Waiting for rollback to complete before proceeding..."
+
+            # Wait for rollback to complete
+            local max_wait=600  # 10 minutes for rollback
+            local wait_time=0
+            local check_interval=30
+
+            while [[ ${wait_time} -lt ${max_wait} ]]; do
+                local current_status
+                current_status=$(check_stack_status "${stack_name}")
+
+                if [[ "${current_status}" == "ROLLBACK_COMPLETE" ]]; then
+                    log_success "Rollback completed, now deleting failed stack for redeployment"
+                    # Recursively call handle_failed_stack with the new status
+                    handle_failed_stack "${stack_name}" "${current_status}"
+                    return 0
+                elif [[ "${current_status}" == "ROLLBACK_FAILED" ]]; then
+                    log_error "Stack rollback failed. Manual intervention required."
+                    log_error "Check AWS Console for resources that couldn't be rolled back."
+                    exit 1
+                elif [[ "${current_status}" == "DOES_NOT_EXIST" ]]; then
+                    log_success "Stack was deleted during rollback, ready for new deployment"
+                    return 0
+                fi
+
+                log_info "Waiting for rollback to complete... (${wait_time}s/${max_wait}s) - Current status: ${current_status}"
+                sleep ${check_interval}
+                wait_time=$((wait_time + check_interval))
+            done
+
+            log_error "Timeout waiting for rollback to complete"
+            log_error "Stack is still in ROLLBACK_IN_PROGRESS state after ${max_wait} seconds"
+            log_error "Manual intervention may be required via AWS Console"
+            exit 1
+            ;;
         "CREATE_IN_PROGRESS"|"UPDATE_IN_PROGRESS")
             log_warning "Stack is currently being modified: ${stack_status}"
             log_error "Cannot deploy while stack is in transitional state"
