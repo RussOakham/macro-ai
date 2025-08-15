@@ -306,7 +306,7 @@ health_check() {
     local attempt=1
 
     while [[ $attempt -le $max_attempts ]]; do
-        if curl -f -s http://localhost:3030/api/health > /dev/null; then
+        if curl -f -s http://localhost:3040/api/health > /dev/null; then
             log_success "Health check passed"
             return 0
         fi
@@ -364,7 +364,7 @@ cmd_status() {
     echo "  Service status: $(systemctl is-active macro-ai.service 2>/dev/null || echo 'inactive')"
 
     if systemctl is-active --quiet macro-ai.service; then
-        echo "  Health check: $(curl -f -s http://localhost:3030/api/health > /dev/null && echo 'healthy' || echo 'unhealthy')"
+        echo "  Health check: $(curl -f -s http://localhost:3040/api/health > /dev/null && echo 'healthy' || echo 'unhealthy')"
     fi
 
     echo "  Available releases:"
