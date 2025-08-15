@@ -64,8 +64,8 @@ validate_environment() {
 # Generate stack name for preview environment
 generate_stack_name() {
     local env_name="$1"
-    # Convert pr-123 to Pr123Stack format
-    local stack_name="MacroAi$(echo "${env_name}" | sed 's/^pr-/Pr/' | sed 's/-//')Stack"
+    # Convert pr-35 to Pr-35Stack format (same as workflow)
+    local stack_name="MacroAi$(echo "${env_name}" | sed 's/^./\U&/')Stack"
     echo "${stack_name}"
 }
 
