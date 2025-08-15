@@ -208,58 +208,80 @@ cleanup_orphaned_resources() {
     # Clean up CloudWatch Log Groups
     log_info "Cleaning up CloudWatch Log Groups..."
 
-    local log_groups=(
+    # Multiple patterns to handle case variations and naming inconsistencies
+    local log_group_patterns=(
         "/aws/deployment/macro-ai-${env_name}"
-        "/aws/ec2/macro-ai-PR${pr_number}/errors"
-        "/aws/ec2/macro-ai-PR${pr_number}/application"
-        "/aws/ec2/macro-ai-PR${pr_number}/system"
-        "/aws/ec2/macro-ai-PR${pr_number}/performance"
+        "/aws/ec2/macro-ai-PR${pr_number}"
+        "/aws/ec2/macro-ai-pr-${pr_number}"
+        "/aws/lambda/macro-ai-${env_name}"
     )
 
-    for log_group in "${log_groups[@]}"; do
-        if aws logs describe-log-groups --log-group-name-prefix "${log_group}" --query 'logGroups[0].logGroupName' --output text 2>/dev/null | grep -q "${log_group}"; then
-            log_info "Deleting log group: ${log_group}"
-            if aws logs delete-log-group --log-group-name "${log_group}" 2>/dev/null; then
-                log_success "Deleted log group: ${log_group}"
-            else
-                log_warning "Failed to delete log group: ${log_group}"
-            fi
+    for pattern in "${log_group_patterns[@]}"; do
+        log_info "Checking log groups with pattern: ${pattern}*"
+
+        # Get all log groups matching the pattern
+        local matching_groups
+        matching_groups=$(aws logs describe-log-groups --log-group-name-prefix "${pattern}" --query 'logGroups[].logGroupName' --output text 2>/dev/null || echo "")
+
+        if [[ -n "${matching_groups}" && "${matching_groups}" != "None" ]]; then
+            # Convert tab-separated values to array
+            IFS=$'\t' read -ra log_group_array <<< "${matching_groups}"
+
+            for log_group in "${log_group_array[@]}"; do
+                if [[ -n "${log_group}" ]]; then
+                    log_info "Deleting log group: ${log_group}"
+                    if aws logs delete-log-group --log-group-name "${log_group}" 2>/dev/null; then
+                        log_success "Deleted log group: ${log_group}"
+                    else
+                        log_warning "Failed to delete log group: ${log_group}"
+                    fi
+                    sleep 1  # Rate limiting
+                fi
+            done
         else
-            log_info "Log group does not exist: ${log_group}"
+            log_info "No log groups found with pattern: ${pattern}*"
         fi
     done
 
-    # Clean up DynamoDB Table
-    log_info "Cleaning up DynamoDB Table..."
-    local table_name="macro-ai-${env_name}-deployment-history"
+    # Clean up DynamoDB Tables
+    log_info "Cleaning up DynamoDB Tables..."
 
-    if aws dynamodb describe-table --table-name "${table_name}" &>/dev/null; then
-        log_info "Deleting DynamoDB table: ${table_name}"
-        if aws dynamodb delete-table --table-name "${table_name}" &>/dev/null; then
-            log_success "Deleted DynamoDB table: ${table_name}"
+    # Multiple table name patterns to handle case variations
+    local table_patterns=(
+        "macro-ai-${env_name}-deployment-history"
+        "macro-ai-pr-${pr_number}-deployment-history"
+        "macro-ai-PR${pr_number}-deployment-history"
+    )
 
-            # Wait for table deletion to complete
-            log_info "Waiting for table deletion to complete..."
-            local max_wait=120  # 2 minutes
-            local wait_time=0
-            local check_interval=10
+    for table_name in "${table_patterns[@]}"; do
+        if aws dynamodb describe-table --table-name "${table_name}" &>/dev/null; then
+            log_info "Deleting DynamoDB table: ${table_name}"
+            if aws dynamodb delete-table --table-name "${table_name}" &>/dev/null; then
+                log_success "Deleted DynamoDB table: ${table_name}"
 
-            while [[ ${wait_time} -lt ${max_wait} ]]; do
-                if ! aws dynamodb describe-table --table-name "${table_name}" &>/dev/null; then
-                    log_success "DynamoDB table deletion completed"
-                    break
-                fi
+                # Wait for table deletion to complete
+                log_info "Waiting for table deletion to complete..."
+                local max_wait=120  # 2 minutes
+                local wait_time=0
+                local check_interval=10
 
-                log_info "Waiting for table deletion... (${wait_time}s/${max_wait}s)"
-                sleep ${check_interval}
-                wait_time=$((wait_time + check_interval))
-            done
+                while [[ ${wait_time} -lt ${max_wait} ]]; do
+                    if ! aws dynamodb describe-table --table-name "${table_name}" &>/dev/null; then
+                        log_success "DynamoDB table deletion completed"
+                        break
+                    fi
+
+                    log_info "Waiting for table deletion... (${wait_time}s/${max_wait}s)"
+                    sleep ${check_interval}
+                    wait_time=$((wait_time + check_interval))
+                done
+            else
+                log_warning "Failed to delete DynamoDB table: ${table_name}"
+            fi
         else
-            log_warning "Failed to delete DynamoDB table: ${table_name}"
+            log_info "DynamoDB table does not exist: ${table_name}"
         fi
-    else
-        log_info "DynamoDB table does not exist: ${table_name}"
-    fi
+    done
 
     # Clean up any orphaned SNS topics
     log_info "Cleaning up SNS Topics..."
