@@ -106,7 +106,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 
 		// Create simplified Auto Scaling for preview environments
 		// Use a basic Auto Scaling Group without complex step scaling policies
-		this.autoScaling = this.createPreviewAutoScalingGroup(previewLaunchTemplate, prNumber)
+		this.autoScaling = this.createPreviewAutoScalingGroup(previewLaunchTemplate)
 
 		// Create deployment status tracking
 		this.deploymentStatus = new DeploymentStatusConstruct(
@@ -384,7 +384,6 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	 */
 	private createPreviewAutoScalingGroup(
 		launchTemplate: ec2.LaunchTemplate,
-		prNumber: number,
 	): autoscaling.AutoScalingGroup {
 		const asg = new autoscaling.AutoScalingGroup(
 			this,
@@ -418,15 +417,12 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			},
 		)
 
-		// Create and register with PR-specific target group for proper isolation
+		// Register with ALB target group if available
+		// For PR previews, each PR gets its own ALB, so using default target group is fine
 		if (this.networking.albConstruct) {
-			const prTargetGroup = this.networking.albConstruct.createPrTargetGroup({
-				prNumber,
-				vpc: this.networking.vpc,
-				environmentName: 'development',
-			})
-
-			asg.attachToApplicationTargetGroup(prTargetGroup)
+			asg.attachToApplicationTargetGroup(
+				this.networking.albConstruct.defaultTargetGroup,
+			)
 		}
 
 		// Add simple target tracking scaling policy (CPU-based)
