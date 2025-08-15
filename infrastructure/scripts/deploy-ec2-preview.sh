@@ -207,6 +207,7 @@ deploy_infrastructure() {
         "--context" "branchName=${BRANCH_NAME}"
         "--context" "scale=${CDK_DEPLOY_SCALE}"
         "--context" "corsAllowedOrigins=${CORS_ALLOWED_ORIGINS}"
+        "--context" "reuseExistingResources=true"
     )
 
     # Deploy the stack using CDK

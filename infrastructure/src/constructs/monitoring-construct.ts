@@ -192,12 +192,43 @@ export class MonitoringConstruct extends Construct {
 		})
 		logGroups.push(systemLogGroup)
 
-		// Error log group
-		const errorLogGroup = new logs.LogGroup(this, 'ErrorLogGroup', {
-			logGroupName: `/aws/ec2/${this.resourcePrefix}/errors`,
-			retention: logs.RetentionDays.SIX_MONTHS, // Keep errors longer
-			removalPolicy: cdk.RemovalPolicy.RETAIN, // Always retain error logs
-		})
+		// Error log group - attempt to reference existing first, create new if needed
+		const errorLogGroupName = `/aws/ec2/${this.resourcePrefix}/errors`
+		const contextValue: unknown = this.node.tryGetContext('reuseExistingResources')
+		const shouldReuseExisting: boolean =
+			contextValue !== undefined ? (contextValue as boolean) : true
+
+		let errorLogGroup: logs.LogGroup
+		if (shouldReuseExisting) {
+			try {
+				// Try to reference existing error log group
+				console.log(
+					`Attempting to reference existing error log group: ${errorLogGroupName}`,
+				)
+				errorLogGroup = logs.LogGroup.fromLogGroupName(
+					this,
+					'ExistingErrorLogGroup',
+					errorLogGroupName,
+				)
+			} catch (error: unknown) {
+				console.log(
+					`Could not reference existing error log group, will create new one: ${String(error)}`,
+				)
+				errorLogGroup = new logs.LogGroup(this, 'ErrorLogGroup', {
+					logGroupName: errorLogGroupName,
+					retention: logs.RetentionDays.SIX_MONTHS, // Keep errors longer
+					removalPolicy: cdk.RemovalPolicy.RETAIN, // Always retain error logs
+				})
+			}
+		} else {
+			// Create new error log group
+			console.log(`Creating new error log group: ${errorLogGroupName}`)
+			errorLogGroup = new logs.LogGroup(this, 'ErrorLogGroup', {
+				logGroupName: errorLogGroupName,
+				retention: logs.RetentionDays.SIX_MONTHS, // Keep errors longer
+				removalPolicy: cdk.RemovalPolicy.RETAIN, // Always retain error logs
+			})
+		}
 		logGroups.push(errorLogGroup)
 
 		// Performance log group

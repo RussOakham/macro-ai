@@ -204,11 +204,40 @@ export class DeploymentStatusConstruct extends Construct {
 	}
 
 	/**
-	 * Create DynamoDB table for deployment history
+	 * Create or reference existing DynamoDB table for deployment history
+	 * Attempts to reference existing table first, creates new one if needed
 	 */
 	private createDeploymentHistoryTable(): dynamodb.Table {
+		const tableName = `${this.resourcePrefix}-deployment-history`
+
+		// Check if we should try to reference an existing table
+		// This can be controlled via context or environment variable
+		const contextValue: unknown = this.node.tryGetContext('reuseExistingResources')
+		const shouldReuseExisting: boolean =
+			contextValue !== undefined ? (contextValue as boolean) : true
+
+		if (shouldReuseExisting) {
+			try {
+				// Try to reference existing table
+				console.log(
+					`Attempting to reference existing DynamoDB table: ${tableName}`,
+				)
+				return dynamodb.Table.fromTableName(
+					this,
+					'ExistingDeploymentHistoryTable',
+					tableName,
+				)
+			} catch (error: unknown) {
+				console.log(
+					`Could not reference existing table, will create new one: ${String(error)}`,
+				)
+			}
+		}
+
+		// Create new table if existing one not found or not reusing
+		console.log(`Creating new DynamoDB table: ${tableName}`)
 		const table = new dynamodb.Table(this, 'DeploymentHistoryTable', {
-			tableName: `${this.resourcePrefix}-deployment-history`,
+			tableName,
 			partitionKey: {
 				name: 'deploymentId',
 				type: dynamodb.AttributeType.STRING,
@@ -219,7 +248,7 @@ export class DeploymentStatusConstruct extends Construct {
 			},
 			billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
 			pointInTimeRecovery: true,
-			removalPolicy: cdk.RemovalPolicy.RETAIN,
+			removalPolicy: cdk.RemovalPolicy.RETAIN, // Always retain deployment history
 			timeToLiveAttribute: 'ttl',
 		})
 
@@ -253,15 +282,43 @@ export class DeploymentStatusConstruct extends Construct {
 	}
 
 	/**
-	 * Create CloudWatch log group for deployment logging
+	 * Create or reference existing CloudWatch log group for deployment logging
+	 * Attempts to reference existing log group first, creates new one if needed
 	 */
 	private createDeploymentLogGroup(): logs.LogGroup {
+		const logGroupName = `/aws/deployment/${this.resourcePrefix}`
+
+		// Check if we should try to reference an existing log group
+		const contextValue: unknown = this.node.tryGetContext('reuseExistingResources')
+		const shouldReuseExisting: boolean =
+			contextValue !== undefined ? (contextValue as boolean) : true
+
+		if (shouldReuseExisting) {
+			try {
+				// Try to reference existing log group
+				console.log(
+					`Attempting to reference existing CloudWatch log group: ${logGroupName}`,
+				)
+				return logs.LogGroup.fromLogGroupName(
+					this,
+					'ExistingDeploymentLogGroup',
+					logGroupName,
+				)
+			} catch (error: unknown) {
+				console.log(
+					`Could not reference existing log group, will create new one: ${String(error)}`,
+				)
+			}
+		}
+
+		// Create new log group if existing one not found or not reusing
+		console.log(`Creating new CloudWatch log group: ${logGroupName}`)
 		return new logs.LogGroup(this, 'DeploymentLogGroup', {
-			logGroupName: `/aws/deployment/${this.resourcePrefix}`,
+			logGroupName,
 			retention:
 				this.props.deploymentStatusConfig?.logRetentionDays ??
 				logs.RetentionDays.ONE_MONTH,
-			removalPolicy: cdk.RemovalPolicy.RETAIN,
+			removalPolicy: cdk.RemovalPolicy.RETAIN, // Always retain deployment logs
 		})
 	}
 
