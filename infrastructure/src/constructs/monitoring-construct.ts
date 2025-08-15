@@ -92,7 +92,7 @@ export class MonitoringConstruct extends Construct {
 	public readonly criticalAlertsTopic: sns.Topic
 	public readonly warningAlertsTopic: sns.Topic
 	public readonly infoAlertsTopic: sns.Topic
-	public readonly logGroups: logs.LogGroup[]
+	public readonly logGroups: logs.ILogGroup[]
 
 	private readonly props: MonitoringConstructProps
 	private readonly resourcePrefix: string
@@ -173,8 +173,8 @@ export class MonitoringConstruct extends Construct {
 	/**
 	 * Create log groups for application and infrastructure logging
 	 */
-	private createLogGroups(): logs.LogGroup[] {
-		const logGroups: logs.LogGroup[] = []
+	private createLogGroups(): logs.ILogGroup[] {
+		const logGroups: logs.ILogGroup[] = []
 
 		// Application log group
 		const applicationLogGroup = new logs.LogGroup(this, 'ApplicationLogGroup', {
@@ -194,11 +194,13 @@ export class MonitoringConstruct extends Construct {
 
 		// Error log group - attempt to reference existing first, create new if needed
 		const errorLogGroupName = `/aws/ec2/${this.resourcePrefix}/errors`
-		const contextValue: unknown = this.node.tryGetContext('reuseExistingResources')
+		const contextValue: unknown = this.node.tryGetContext(
+			'reuseExistingResources',
+		)
 		const shouldReuseExisting: boolean =
 			contextValue !== undefined ? (contextValue as boolean) : true
 
-		let errorLogGroup: logs.LogGroup
+		let errorLogGroup: logs.ILogGroup
 		if (shouldReuseExisting) {
 			try {
 				// Try to reference existing error log group

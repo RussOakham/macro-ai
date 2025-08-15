@@ -144,10 +144,10 @@ export interface DeploymentSummary {
  * - Integration with existing deployment pipeline
  */
 export class DeploymentStatusConstruct extends Construct {
-	public readonly deploymentHistoryTable: dynamodb.Table
+	public readonly deploymentHistoryTable: dynamodb.ITable
 	public readonly deploymentEventProcessor: lambda.Function
 	public readonly deploymentStatusQuery: lambda.Function
-	public readonly deploymentLogGroup: logs.LogGroup
+	public readonly deploymentLogGroup: logs.ILogGroup
 	public readonly deploymentRole: iam.Role
 
 	private readonly props: DeploymentStatusConstructProps
@@ -207,12 +207,14 @@ export class DeploymentStatusConstruct extends Construct {
 	 * Create or reference existing DynamoDB table for deployment history
 	 * Attempts to reference existing table first, creates new one if needed
 	 */
-	private createDeploymentHistoryTable(): dynamodb.Table {
+	private createDeploymentHistoryTable(): dynamodb.ITable {
 		const tableName = `${this.resourcePrefix}-deployment-history`
 
 		// Check if we should try to reference an existing table
 		// This can be controlled via context or environment variable
-		const contextValue: unknown = this.node.tryGetContext('reuseExistingResources')
+		const contextValue: unknown = this.node.tryGetContext(
+			'reuseExistingResources',
+		)
 		const shouldReuseExisting: boolean =
 			contextValue !== undefined ? (contextValue as boolean) : true
 
@@ -285,11 +287,13 @@ export class DeploymentStatusConstruct extends Construct {
 	 * Create or reference existing CloudWatch log group for deployment logging
 	 * Attempts to reference existing log group first, creates new one if needed
 	 */
-	private createDeploymentLogGroup(): logs.LogGroup {
+	private createDeploymentLogGroup(): logs.ILogGroup {
 		const logGroupName = `/aws/deployment/${this.resourcePrefix}`
 
 		// Check if we should try to reference an existing log group
-		const contextValue: unknown = this.node.tryGetContext('reuseExistingResources')
+		const contextValue: unknown = this.node.tryGetContext(
+			'reuseExistingResources',
+		)
 		const shouldReuseExisting: boolean =
 			contextValue !== undefined ? (contextValue as boolean) : true
 
