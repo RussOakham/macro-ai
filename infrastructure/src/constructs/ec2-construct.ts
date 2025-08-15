@@ -3,7 +3,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import * as iam from 'aws-cdk-lib/aws-iam'
 import { Construct } from 'constructs'
 
-import { TAG_VALUES, TaggingStrategy } from '../utils/tagging-strategy.js'
+// Note: TaggingStrategy imports removed as we now use direct cdk.Tags.of() calls to avoid conflicts
 
 export interface Ec2ConstructProps {
 	/**
@@ -735,18 +735,20 @@ export class Ec2Construct extends Construct {
 
 	/**
 	 * Apply PR-specific tags to EC2 instances
+	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
 	private applyPrTags(instance: ec2.Instance, prNumber: number): void {
-		TaggingStrategy.applyPrTags(instance, {
-			prNumber,
-			component: 'EC2-Instance',
-			purpose: TAG_VALUES.PURPOSES.PREVIEW_ENVIRONMENT,
-			createdBy: 'Ec2Construct',
-			expiryDays: 7,
-			autoShutdown: true, // Enable automatic shutdown for cost optimization
-			backupRequired: false, // Preview environments don't need backups
-			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.STANDARD,
-		})
+		// Apply PR-specific tags that don't conflict with stack-level tags
+		cdk.Tags.of(instance).add('PRNumber', prNumber.toString())
+		cdk.Tags.of(instance).add('SubComponent', 'EC2-Instance')
+		cdk.Tags.of(instance).add('SubPurpose', 'PreviewEnvironment')
+		cdk.Tags.of(instance).add('InstanceManagedBy', 'Ec2Construct')
+		cdk.Tags.of(instance).add('ExpiryDays', '7')
+		cdk.Tags.of(instance).add('InstanceType', 'PR-Preview')
+		cdk.Tags.of(instance).add('AutoShutdown', 'true')
+		cdk.Tags.of(instance).add('BackupRequired', 'false')
+		cdk.Tags.of(instance).add('SubMonitoringLevel', 'Standard')
+		// Note: Environment, Component, Purpose, CreatedBy are inherited from stack level
 	}
 
 	/**

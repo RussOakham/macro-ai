@@ -69,21 +69,136 @@ generate_stack_name() {
     echo "${stack_name}"
 }
 
+# Check CloudFormation stack status
+check_stack_status() {
+    local stack_name="$1"
+
+    log_info "Checking stack status: ${stack_name}"
+
+    local stack_status
+    stack_status=$(aws cloudformation describe-stacks \
+        --stack-name "${stack_name}" \
+        --query 'Stacks[0].StackStatus' \
+        --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+
+    log_info "Current stack status: ${stack_status}"
+    echo "${stack_status}"
+}
+
+# Handle failed stack states (ROLLBACK_COMPLETE, etc.)
+handle_failed_stack() {
+    local stack_name="$1"
+    local stack_status="$2"
+
+    case "${stack_status}" in
+        "ROLLBACK_COMPLETE"|"CREATE_FAILED"|"UPDATE_ROLLBACK_COMPLETE")
+            log_warning "Stack is in failed state: ${stack_status}"
+            log_info "This typically happens when a previous deployment failed"
+            log_info "For PR preview environments, we need to delete and recreate the stack"
+
+            log_info "Deleting failed stack: ${stack_name}"
+            if aws cloudformation delete-stack --stack-name "${stack_name}"; then
+                log_info "Stack deletion initiated, waiting for completion..."
+
+                # Wait for stack deletion to complete
+                local max_wait=300  # 5 minutes
+                local wait_time=0
+                local check_interval=15
+
+                while [[ ${wait_time} -lt ${max_wait} ]]; do
+                    local current_status
+                    current_status=$(aws cloudformation describe-stacks \
+                        --stack-name "${stack_name}" \
+                        --query 'Stacks[0].StackStatus' \
+                        --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+
+                    if [[ "${current_status}" == "DOES_NOT_EXIST" ]]; then
+                        log_success "Stack deletion completed successfully"
+                        return 0
+                    elif [[ "${current_status}" == "DELETE_FAILED" ]]; then
+                        log_error "Stack deletion failed. Manual intervention may be required."
+                        log_error "Check AWS Console for resources that couldn't be deleted."
+                        exit 1
+                    fi
+
+                    log_info "Waiting for stack deletion... (${wait_time}s/${max_wait}s)"
+                    sleep ${check_interval}
+                    wait_time=$((wait_time + check_interval))
+                done
+
+                log_error "Timeout waiting for stack deletion"
+                exit 1
+            else
+                log_error "Failed to initiate stack deletion"
+                exit 1
+            fi
+            ;;
+        "DELETE_IN_PROGRESS")
+            log_info "Stack is currently being deleted, waiting for completion..."
+            # Wait for deletion to complete before proceeding
+            local max_wait=300
+            local wait_time=0
+            local check_interval=15
+
+            while [[ ${wait_time} -lt ${max_wait} ]]; do
+                local current_status
+                current_status=$(check_stack_status "${stack_name}")
+
+                if [[ "${current_status}" == "DOES_NOT_EXIST" ]]; then
+                    log_success "Stack deletion completed"
+                    return 0
+                fi
+
+                log_info "Waiting for stack deletion... (${wait_time}s/${max_wait}s)"
+                sleep ${check_interval}
+                wait_time=$((wait_time + check_interval))
+            done
+
+            log_error "Timeout waiting for stack deletion"
+            exit 1
+            ;;
+        "CREATE_IN_PROGRESS"|"UPDATE_IN_PROGRESS")
+            log_warning "Stack is currently being modified: ${stack_status}"
+            log_error "Cannot deploy while stack is in transitional state"
+            log_error "Please wait for current operation to complete or cancel it manually"
+            exit 1
+            ;;
+        "CREATE_COMPLETE"|"UPDATE_COMPLETE")
+            log_info "Stack exists and is in good state, will update existing stack"
+            return 0
+            ;;
+        "DOES_NOT_EXIST")
+            log_info "Stack does not exist, will create new stack"
+            return 0
+            ;;
+        *)
+            log_warning "Stack is in unexpected state: ${stack_status}"
+            log_warning "Proceeding with deployment attempt..."
+            return 0
+            ;;
+    esac
+}
+
 # Deploy EC2 preview infrastructure
 deploy_infrastructure() {
     log_info "Starting EC2 preview infrastructure deployment..."
-    
+
     local env_name="${CDK_DEPLOY_ENV}"
     local stack_name
     stack_name=$(generate_stack_name "${env_name}")
-    
+
     log_info "Environment: ${env_name}"
     log_info "Stack Name: ${stack_name}"
     log_info "Scale: ${CDK_DEPLOY_SCALE}"
     log_info "Type: ${CDK_DEPLOY_TYPE}"
     log_info "PR Number: ${PR_NUMBER}"
     log_info "Branch: ${BRANCH_NAME}"
-    
+
+    # Check and handle stack state before deployment
+    local stack_status
+    stack_status=$(check_stack_status "${stack_name}")
+    handle_failed_stack "${stack_name}" "${stack_status}"
+
     # Set CDK context for preview deployment
     local cdk_context=(
         "--context" "deploymentType=preview"
@@ -93,21 +208,32 @@ deploy_infrastructure() {
         "--context" "scale=${CDK_DEPLOY_SCALE}"
         "--context" "corsAllowedOrigins=${CORS_ALLOWED_ORIGINS}"
     )
-    
+
     # Deploy the stack using CDK
     log_info "Deploying CDK stack: ${stack_name}"
-    
+
     if ! cdk deploy "${stack_name}" \
         --require-approval never \
         --outputs-file "cdk-outputs.json" \
         "${cdk_context[@]}" \
         --verbose; then
         log_error "CDK deployment failed"
+
+        # Check if stack is now in failed state and provide helpful information
+        local post_failure_status
+        post_failure_status=$(check_stack_status "${stack_name}")
+        log_error "Stack status after failure: ${post_failure_status}"
+
+        if [[ "${post_failure_status}" == "ROLLBACK_COMPLETE" ]]; then
+            log_error "Stack rolled back due to deployment failure"
+            log_error "On next deployment attempt, the failed stack will be automatically deleted and recreated"
+        fi
+
         exit 1
     fi
-    
+
     log_success "CDK deployment completed successfully"
-    
+
     # Verify outputs file was created
     if [[ -f "cdk-outputs.json" ]]; then
         log_info "CDK outputs:"
