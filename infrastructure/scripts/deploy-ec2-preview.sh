@@ -355,6 +355,19 @@ deploy_infrastructure() {
         "--context" "reuseExistingResources=true"
     )
 
+    # Debug tag generation before deployment
+    log_info "Debugging tag generation for deployment..."
+    if [[ -f "infrastructure/scripts/debug-tag-generation.sh" ]]; then
+        log_info "Running tag conflict check..."
+        if ./infrastructure/scripts/debug-tag-generation.sh --pr-number "${pr_number}" --branch "${branch_name}" --environment "pr-${pr_number}" 2>/dev/null; then
+            log_success "Tag conflict check passed"
+        else
+            log_warning "Tag conflict check had issues, but continuing deployment..."
+        fi
+    else
+        log_info "Tag debug script not found, skipping tag conflict check"
+    fi
+
     # Deploy the stack using CDK
     log_info "Deploying CDK stack: ${stack_name}"
 
