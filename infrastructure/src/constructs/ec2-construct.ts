@@ -177,8 +177,8 @@ export class Ec2Construct extends Construct {
 			},
 		)
 
-		// Apply PR-specific tags
-		this.applyPrTags(instance, prNumber)
+		// Note: PR-specific tags are inherited from stack-level tags
+		// No need to apply duplicate tags here as they're already applied at stack level
 
 		return instance
 	}
@@ -731,24 +731,6 @@ export class Ec2Construct extends Construct {
 		cdk.Tags.of(this).add('ConstructManagedBy', 'Ec2Construct')
 		cdk.Tags.of(this).add('InstanceType', 'EC2-Instance')
 		// Note: Other tags like Environment, Project, Component, Purpose are inherited from stack level
-	}
-
-	/**
-	 * Apply PR-specific tags to EC2 instances
-	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
-	 */
-	private applyPrTags(instance: ec2.Instance, prNumber: number): void {
-		// Apply PR-specific tags that don't conflict with stack-level tags
-		cdk.Tags.of(instance).add('PRNumber', prNumber.toString())
-		cdk.Tags.of(instance).add('SubComponent', 'EC2-Instance')
-		cdk.Tags.of(instance).add('SubPurpose', 'PreviewEnvironment')
-		cdk.Tags.of(instance).add('InstanceManagedBy', 'Ec2Construct')
-		cdk.Tags.of(instance).add('ExpiryDays', '7')
-		cdk.Tags.of(instance).add('InstanceType', 'PR-Preview')
-		cdk.Tags.of(instance).add('AutoShutdown', 'true')
-		cdk.Tags.of(instance).add('BackupRequired', 'false')
-		cdk.Tags.of(instance).add('SubMonitoringLevel', 'Standard')
-		// Note: Environment, Component, Purpose, CreatedBy are inherited from stack level
 	}
 
 	/**

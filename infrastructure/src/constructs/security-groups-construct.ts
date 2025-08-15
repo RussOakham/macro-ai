@@ -2,8 +2,6 @@ import * as cdk from 'aws-cdk-lib'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import { Construct } from 'constructs'
 
-import { TAG_VALUES, TaggingStrategy } from '../utils/tagging-strategy.js'
-
 export interface SecurityGroupsConstructProps {
 	/**
 	 * VPC where security groups will be created
@@ -192,8 +190,8 @@ export class SecurityGroupsConstruct extends Construct {
 			`NTP time sync (PR #${prNumber.toString()})`,
 		)
 
-		// Apply PR-specific tags
-		this.applyPrTags(prSg, prNumber)
+		// Note: PR-specific tags are inherited from stack-level tags
+		// No need to apply duplicate tags here as they're already applied at stack level
 
 		return prSg
 	}
@@ -238,25 +236,6 @@ export class SecurityGroupsConstruct extends Construct {
 		cdk.Tags.of(this).add('ConstructManagedBy', 'SecurityGroupsConstruct')
 		cdk.Tags.of(this).add('SecurityType', 'VPC-SecurityGroups')
 		// Note: Environment, Component, Purpose, CreatedBy are inherited from stack level
-	}
-
-	/**
-	 * Apply PR-specific tags to security groups
-	 */
-	private applyPrTags(
-		securityGroup: ec2.SecurityGroup,
-		prNumber: number,
-	): void {
-		TaggingStrategy.applyPrTags(securityGroup, {
-			prNumber,
-			component: 'Security-Group',
-			purpose: TAG_VALUES.PURPOSES.PREVIEW_ENVIRONMENT,
-			createdBy: 'SecurityGroupsConstruct',
-			expiryDays: 7,
-			autoShutdown: false, // Security groups don't need auto-shutdown
-			backupRequired: false, // Security groups don't need backups
-			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.BASIC,
-		})
 	}
 
 	/**
