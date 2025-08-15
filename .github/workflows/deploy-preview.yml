@@ -159,7 +159,9 @@ jobs:
           fi
 
           # 3. Pre-calculate Backend Stack Name and URL
-          BACKEND_STACK_NAME="MacroAiPr${PR_NUMBER}Stack"
+          # Use same naming convention as CDK app.ts: capitalize first letter of full env name
+          ENV_NAME="pr-${PR_NUMBER}"
+          BACKEND_STACK_NAME="MacroAi$(echo "${ENV_NAME}" | sed 's/^./\U&/')Stack"
           echo "📦 Backend Stack Name: $BACKEND_STACK_NAME"
 
           # Check if backend stack exists to pre-calculate URL

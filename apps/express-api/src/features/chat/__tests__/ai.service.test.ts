@@ -99,7 +99,9 @@ describe('AIService', () => {
 			// Note: Due to class property initialization timing, the actual env value is used
 			// In CI builds, this may be 'build-time-not-required' since OpenAI isn't needed during build
 			expect(mockCreateOpenAI).toHaveBeenCalledWith({
-				apiKey: expect.stringMatching(/^(sk-|build-time-not-required)/) as string,
+				apiKey: expect.stringMatching(
+					/^(sk-|build-time-not-required)/,
+				) as string,
 			})
 			expect(mockOpenAIInstance).toHaveBeenCalledWith('gpt-3.5-turbo')
 			expect(mockOpenAIInstance.embedding).toHaveBeenCalledWith(
