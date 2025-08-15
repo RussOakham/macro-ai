@@ -299,11 +299,11 @@ export class AmplifyPermissionsConstruct extends cdk.NestedStack {
 		role.addManagedPolicy(this.amplifyPolicy)
 		role.addManagedPolicy(this.cloudFormationDiscoveryPolicy)
 
-		// Add tags for resource management
-		cdk.Tags.of(role).add('Project', 'MacroAI')
-		cdk.Tags.of(role).add('Environment', environmentName)
-		cdk.Tags.of(role).add('Purpose', 'GitHubActions')
+		// Add tags for resource management (avoid conflicts with stack-level tags)
+		cdk.Tags.of(role).add('SubPurpose', 'GitHubActions')
 		cdk.Tags.of(role).add('Service', 'Amplify')
+		cdk.Tags.of(role).add('RoleType', 'OIDC-GitHubActions')
+		// Note: Project, Environment, Purpose are inherited from stack level
 
 		return role
 	}

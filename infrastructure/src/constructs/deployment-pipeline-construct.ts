@@ -500,13 +500,15 @@ export class DeploymentPipelineConstruct extends Construct {
 
 	/**
 	 * Apply comprehensive tagging for cost tracking and resource management
+	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
 	private applyTags(): void {
-		cdk.Tags.of(this).add('Environment', this.props.environmentName)
-		cdk.Tags.of(this).add('Application', this.props.applicationName)
-		cdk.Tags.of(this).add('Component', 'DeploymentPipeline')
-		cdk.Tags.of(this).add('Purpose', 'BlueGreenDeployment')
-		cdk.Tags.of(this).add('ManagedBy', 'DeploymentPipelineConstruct')
+		// Use SubComponent instead of Component to avoid conflicts with stack-level Component tag
+		cdk.Tags.of(this).add('SubComponent', 'DeploymentPipeline')
+		cdk.Tags.of(this).add('SubPurpose', 'BlueGreenDeployment')
+		cdk.Tags.of(this).add('ConstructManagedBy', 'DeploymentPipelineConstruct')
+		cdk.Tags.of(this).add('PipelineType', 'BlueGreen')
+		// Note: Environment, Application, Component, Purpose, ManagedBy are inherited from stack level
 	}
 
 	/**
