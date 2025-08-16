@@ -492,17 +492,50 @@ wait_for_healthy_deployment() {
 
     log_info "✅ Found target group: $target_group_arn"
 
-    # Verify Auto Scaling Group exists before starting health checks
+    # Verify Auto Scaling Group exists with retry mechanism
+    # There can be a delay between CloudFormation completion and AWS resource availability
     log_info "🔍 Verifying Auto Scaling Group exists: $asg_name"
-    if ! aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names "$asg_name" --query "AutoScalingGroups[0].AutoScalingGroupName" --output text >/dev/null 2>&1; then
-        log_error "❌ Auto Scaling Group '$asg_name' does not exist or is not accessible"
-        log_error "🔍 This could indicate:"
-        log_error "   - The ASG hasn't been created yet by the CDK deployment"
-        log_error "   - Missing autoscaling:DescribeAutoScalingGroups permission"
-        log_error "   - Incorrect ASG name in CloudFormation outputs"
-        return 1
-    fi
-    log_info "✅ Auto Scaling Group verified: $asg_name"
+
+    local max_verification_attempts=10
+    local verification_attempt=1
+    local verification_delay=15  # Start with 15 seconds
+
+    while [[ $verification_attempt -le $max_verification_attempts ]]; do
+        log_info "🔍 ASG verification attempt $verification_attempt/$max_verification_attempts..."
+
+        if aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names "$asg_name" --query "AutoScalingGroups[0].AutoScalingGroupName" --output text >/dev/null 2>&1; then
+            log_info "✅ Auto Scaling Group verified: $asg_name"
+            break
+        fi
+
+        if [[ $verification_attempt -eq $max_verification_attempts ]]; then
+            log_error "❌ Auto Scaling Group '$asg_name' does not exist or is not accessible after $max_verification_attempts attempts"
+            log_error "🔍 This could indicate:"
+            log_error "   - The ASG creation is taking longer than expected"
+            log_error "   - Missing autoscaling:DescribeAutoScalingGroups permission"
+            log_error "   - Incorrect ASG name in CloudFormation outputs"
+
+            # Test basic permissions as final diagnostic
+            log_info "🔍 Testing basic autoscaling permissions..."
+            if aws autoscaling describe-auto-scaling-groups --max-items 1 --output text >/dev/null 2>&1; then
+                log_error "❌ Basic ASG permissions work, but specific ASG '$asg_name' not accessible"
+            else
+                log_error "❌ No autoscaling:DescribeAutoScalingGroups permission"
+            fi
+            return 1
+        fi
+
+        log_info "⏳ ASG not yet accessible, waiting ${verification_delay}s before retry..."
+        sleep $verification_delay
+
+        # Exponential backoff with cap at 60 seconds
+        verification_delay=$((verification_delay * 2))
+        if [[ $verification_delay -gt 60 ]]; then
+            verification_delay=60
+        fi
+
+        ((verification_attempt++))
+    done
 
     # Phase 1: Wait for instances to be running (5 minutes)
     if ! wait_for_instances_running "$asg_name"; then

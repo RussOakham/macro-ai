@@ -219,6 +219,10 @@ deploy_to_ec2() {
         --instances "$INSTANCE_COUNT"
 
     log_success "EC2 deployment completed"
+
+    # Allow time for AWS resources to become available after CDK deployment
+    log_info "⏳ Allowing 30 seconds for AWS resources to become available..."
+    sleep 30
 }
 
 # Wait for deployment to be healthy using direct AWS API queries
