@@ -140,6 +140,12 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			exportName: `${this.stackName}-AutoScalingGroupName`,
 		})
 
+		new cdk.CfnOutput(this, 'DefaultTargetGroupArn', {
+			value: this.networking.albConstruct!.defaultTargetGroup.targetGroupArn,
+			description: 'Default target group ARN for ALB health checks',
+			exportName: `${this.stackName}-DefaultTargetGroupArn`,
+		})
+
 		new cdk.CfnOutput(this, 'EC2InstanceId', {
 			value: 'dynamic', // Will be populated by instances
 			description: 'EC2 Instance ID (dynamic)',
