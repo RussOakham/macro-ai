@@ -600,7 +600,9 @@ echo "$(date): Application deployment completed"
 			],
 		}
 
-		console.log(`🔍 Searching for instances with tag Environment=pr-${prNumber}`)
+		console.log(
+			`🔍 Searching for instances with tag Environment=pr-${prNumber}`,
+		)
 		const envResult = await this.ec2Client.describeInstances(envParams)
 		const instances: Ec2InstanceInfo[] = []
 
@@ -674,18 +676,27 @@ echo "$(date): Application deployment completed"
 
 		// If no instances found with PRNumber tag, try Environment tag
 		if (instances.length === 0) {
-			console.log(`❌ No instances found for PR ${prNumber} with tag PRNumber=${prNumber}`)
-			console.log(`💡 Expected to find instances with tags like: PRNumber=${prNumber}, Environment=pr-${prNumber}`)
+			console.log(
+				`❌ No instances found for PR ${prNumber} with tag PRNumber=${prNumber}`,
+			)
+			console.log(
+				`💡 Expected to find instances with tags like: PRNumber=${prNumber}, Environment=pr-${prNumber}`,
+			)
 
 			// Try alternative tag searches
-			console.log(`🔄 Trying alternative tag search with Environment=pr-${prNumber}...`)
+			console.log(
+				`🔄 Trying alternative tag search with Environment=pr-${prNumber}...`,
+			)
 
-			const alternativeInstances = await this.searchInstancesByEnvironmentTag(prNumber)
+			const alternativeInstances =
+				await this.searchInstancesByEnvironmentTag(prNumber)
 			instances.push(...alternativeInstances)
 		}
 
 		if (instances.length === 0) {
-			console.log(`❌ No instances found with either PRNumber=${prNumber} or Environment=pr-${prNumber}`)
+			console.log(
+				`❌ No instances found with either PRNumber=${prNumber} or Environment=pr-${prNumber}`,
+			)
 			return null
 		}
 

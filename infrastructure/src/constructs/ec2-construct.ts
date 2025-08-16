@@ -150,7 +150,7 @@ export class Ec2Construct extends Construct {
 		)
 
 		// Apply tags to the construct
-		this.applyTags(environmentName)
+		this.applyTags()
 	}
 
 	/**
@@ -183,7 +183,11 @@ export class Ec2Construct extends Construct {
 				}),
 				securityGroup,
 				role: this.instanceRole,
-				userData: this.createUserData(parameterStorePrefix, prNumber, deploymentId),
+				userData: this.createUserData(
+					parameterStorePrefix,
+					prNumber,
+					deploymentId,
+				),
 				vpcSubnets: {
 					subnetType: ec2.SubnetType.PUBLIC, // Cost optimization: no NAT Gateway needed
 				},
@@ -286,7 +290,11 @@ export class Ec2Construct extends Construct {
 			}),
 			securityGroup,
 			role: this.instanceRole,
-			userData: this.createUserData(parameterStorePrefix, undefined, deploymentId),
+			userData: this.createUserData(
+				parameterStorePrefix,
+				undefined,
+				deploymentId,
+			),
 			detailedMonitoring: enableDetailedMonitoring,
 			// EBS optimization for better performance
 			ebsOptimized: true,
@@ -306,7 +314,7 @@ export class Ec2Construct extends Construct {
 		const userData = ec2.UserData.forLinux()
 
 		// Add deployment timestamp to force instance replacement
-		const timestamp = deploymentId || new Date().toISOString()
+		const timestamp = deploymentId ?? new Date().toISOString()
 
 		// Add comprehensive deployment script
 		userData.addCommands(
@@ -748,7 +756,7 @@ export class Ec2Construct extends Construct {
 	 * Apply comprehensive tagging for cost tracking and resource management
 	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
-	private applyTags(environmentName: string): void {
+	private applyTags(): void {
 		// Apply construct-specific tags that don't conflict with stack-level tags
 		cdk.Tags.of(this).add('SubComponent', 'EC2')
 		cdk.Tags.of(this).add('SubPurpose', 'ComputeInfrastructure')

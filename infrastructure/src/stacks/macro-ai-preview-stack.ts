@@ -59,13 +59,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	constructor(scope: Construct, id: string, props: MacroAiPreviewStackProps) {
 		super(scope, id, props)
 
-		const {
-			environmentName,
-			prNumber,
-			branchName,
-			corsAllowedOrigins,
-			scale = 'preview',
-		} = props
+		const { environmentName, prNumber, branchName, corsAllowedOrigins } = props
 
 		// Note: Base-level tags (Project, Environment, EnvironmentType, Component, Purpose, CreatedBy, ManagedBy, PRNumber, Branch, ExpiryDate, Scale, AutoShutdown)
 		// are applied centrally via StackProps.tags in app.ts using TaggingStrategy.

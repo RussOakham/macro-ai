@@ -165,7 +165,7 @@ export class NetworkingConstruct extends Construct {
 		this.createOutputs()
 
 		// Apply networking-level tags
-		this.applyTags(environmentName)
+		this.applyTags()
 	}
 
 	/**
@@ -367,7 +367,7 @@ export class NetworkingConstruct extends Construct {
 	 * Apply comprehensive tagging for cost tracking and resource management
 	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
-	private applyTags(environmentName: string): void {
+	private applyTags(): void {
 		const tags = {
 			SubComponent: 'Networking',
 			SubPurpose: 'SharedInfrastructure',

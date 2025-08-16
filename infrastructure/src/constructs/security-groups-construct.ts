@@ -67,7 +67,7 @@ export class SecurityGroupsConstruct extends Construct {
 		this.albSecurityGroup = this.createAlbSecurityGroup(vpc, environmentName)
 
 		// Apply tags
-		this.applyTags(environmentName)
+		this.applyTags()
 	}
 
 	/**
@@ -229,7 +229,7 @@ export class SecurityGroupsConstruct extends Construct {
 	 * Apply tags to the shared security groups
 	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
-	private applyTags(environmentName: string): void {
+	private applyTags(): void {
 		// Apply construct-specific tags that don't conflict with stack-level tags
 		cdk.Tags.of(this).add('SubComponent', 'Security-Groups')
 		cdk.Tags.of(this).add('SubPurpose', 'NetworkSecurity')

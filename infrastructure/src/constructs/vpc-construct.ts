@@ -48,11 +48,7 @@ export class VpcConstruct extends Construct {
 	constructor(scope: Construct, id: string, props: VpcConstructProps = {}) {
 		super(scope, id)
 
-		const {
-			environmentName = 'development',
-			enableFlowLogs = false,
-			maxAzs = 2,
-		} = props
+		const { enableFlowLogs = false, maxAzs = 2 } = props
 
 		// Create the main VPC with cost-optimized configuration
 		this.vpc = new ec2.Vpc(this, 'MacroAiDevelopmentVpc', {
@@ -119,7 +115,7 @@ export class VpcConstruct extends Construct {
 		}
 
 		// Apply comprehensive tagging
-		this.applyTags(environmentName)
+		this.applyTags()
 
 		// Output VPC information for reference
 		this.createOutputs()
@@ -217,7 +213,7 @@ export class VpcConstruct extends Construct {
 	 * Apply comprehensive tagging for cost tracking and resource management
 	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
-	private applyTags(environmentName: string): void {
+	private applyTags(): void {
 		// Apply construct-specific tags that don't conflict with stack-level tags
 		cdk.Tags.of(this).add('SubComponent', 'VPC-Networking')
 		cdk.Tags.of(this).add('SubPurpose', 'NetworkInfrastructure')

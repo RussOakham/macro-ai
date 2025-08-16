@@ -150,7 +150,7 @@ export class AlbConstruct extends Construct {
 		}
 
 		// Apply tags to the construct
-		this.applyTags(environmentName)
+		this.applyTags()
 	}
 
 	/**
@@ -428,7 +428,7 @@ export class AlbConstruct extends Construct {
 	 * Apply comprehensive tagging for cost tracking and resource management
 	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
-	private applyTags(environmentName: string): void {
+	private applyTags(): void {
 		// Apply construct-specific tags that don't conflict with stack-level tags
 		cdk.Tags.of(this).add('SubComponent', 'ALB')
 		cdk.Tags.of(this).add('SubPurpose', 'LoadBalancing')

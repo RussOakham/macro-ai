@@ -2,13 +2,14 @@
 
 ## Overview
 
-This system provides comprehensive tools to identify, resolve, and prevent AWS tag conflicts that cause CloudFormation deployment failures. The system addresses both template-level duplicate tags and historic conflicts from previous deployments.
+This system provides comprehensive tools to identify, resolve, and prevent AWS tag conflicts that cause CloudFormation
+deployment failures. The system addresses both template-level duplicate tags and historic conflicts from previous deployments.
 
 ## Problem Statement
 
 AWS CloudFormation deployments were failing with the error:
 
-```
+```text
 Duplicate tag keys found. Please note that Tag keys are case insensitive.
 ```
 
@@ -219,6 +220,7 @@ The tag conflict resolution is automatically integrated into the CI/CD pipeline:
    ```
 
 4. **Backup file issues**
+
    ```bash
    # Ensure directory exists and is writable
    mkdir -p backups/
