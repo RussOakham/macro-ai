@@ -503,9 +503,18 @@ wait_for_healthy_deployment() {
     while [[ $verification_attempt -le $max_verification_attempts ]]; do
         log_info "🔍 ASG verification attempt $verification_attempt/$max_verification_attempts..."
 
-        if aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names "$asg_name" --query "AutoScalingGroups[0].AutoScalingGroupName" --output text >/dev/null 2>&1; then
-            log_info "✅ Auto Scaling Group verified: $asg_name"
-            break
+        # Check if ASG exists and get its name
+        local asg_result
+        if asg_result=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names "$asg_name" --query "AutoScalingGroups[0].AutoScalingGroupName" --output text 2>&1); then
+            # Check if we got a valid ASG name (not "None" or empty)
+            if [[ "$asg_result" != "None" && "$asg_result" != "null" && -n "$asg_result" && "$asg_result" == "$asg_name" ]]; then
+                log_info "✅ Auto Scaling Group verified: $asg_name"
+                break
+            else
+                log_info "🔍 ASG query returned: '$asg_result' (expected: '$asg_name')"
+            fi
+        else
+            log_info "🔍 AWS CLI error: $asg_result"
         fi
 
         if [[ $verification_attempt -eq $max_verification_attempts ]]; then
@@ -517,10 +526,21 @@ wait_for_healthy_deployment() {
 
             # Test basic permissions as final diagnostic
             log_info "🔍 Testing basic autoscaling permissions..."
-            if aws autoscaling describe-auto-scaling-groups --max-items 1 --output text >/dev/null 2>&1; then
+            local basic_test_result
+            if basic_test_result=$(aws autoscaling describe-auto-scaling-groups --max-items 1 --output text 2>&1); then
                 log_error "❌ Basic ASG permissions work, but specific ASG '$asg_name' not accessible"
+                log_error "🔍 Basic test returned: ${basic_test_result:0:200}..."
+
+                # Try to list all ASGs to see what's available
+                log_info "🔍 Listing all available ASGs..."
+                if available_asgs=$(aws autoscaling describe-auto-scaling-groups --query "AutoScalingGroups[*].AutoScalingGroupName" --output text 2>&1); then
+                    log_error "🔍 Available ASGs: $available_asgs"
+                else
+                    log_error "🔍 Failed to list ASGs: $available_asgs"
+                fi
             else
                 log_error "❌ No autoscaling:DescribeAutoScalingGroups permission"
+                log_error "🔍 Permission test error: $basic_test_result"
             fi
             return 1
         fi
