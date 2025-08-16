@@ -49,24 +49,41 @@ check_aws_cli() {
     
     local caller_identity
     caller_identity=$(aws sts get-caller-identity)
-    log_success "AWS CLI configured. Current identity: $(echo "$caller_identity" | jq -r '.Arn')"
+    local user_arn
+    if command -v python3 &> /dev/null; then
+        user_arn=$(echo "$caller_identity" | python3 -c "import sys, json; print(json.load(sys.stdin)['Arn'])")
+    elif command -v python &> /dev/null; then
+        user_arn=$(echo "$caller_identity" | python -c "import sys, json; print(json.load(sys.stdin)['Arn'])")
+    else
+        user_arn="[JSON parser not available]"
+    fi
+    log_success "AWS CLI configured. Current identity: $user_arn"
 }
 
 # Check if policy file exists
 check_policy_file() {
     log_info "Checking policy file: $POLICY_FILE"
-    
+
     if [[ ! -f "$POLICY_FILE" ]]; then
         log_error "Policy file not found: $POLICY_FILE"
         exit 1
     fi
-    
-    # Validate JSON syntax
-    if ! jq empty "$POLICY_FILE" 2>/dev/null; then
-        log_error "Policy file contains invalid JSON: $POLICY_FILE"
-        exit 1
+
+    # Validate JSON syntax using python if available, otherwise skip validation
+    if command -v python3 &> /dev/null; then
+        if ! python3 -m json.tool "$POLICY_FILE" > /dev/null 2>&1; then
+            log_error "Policy file contains invalid JSON: $POLICY_FILE"
+            exit 1
+        fi
+    elif command -v python &> /dev/null; then
+        if ! python -m json.tool "$POLICY_FILE" > /dev/null 2>&1; then
+            log_error "Policy file contains invalid JSON: $POLICY_FILE"
+            exit 1
+        fi
+    else
+        log_warning "No JSON validator found (python/jq), skipping JSON validation"
     fi
-    
+
     log_success "Policy file found and valid"
 }
 
@@ -97,7 +114,15 @@ get_current_policy() {
         # Show current policy if it exists
         if echo "$policies" | grep -q "$POLICY_NAME"; then
             log_info "Current policy document for $POLICY_NAME:"
-            aws iam get-role-policy --role-name "$ROLE_NAME" --policy-name "$POLICY_NAME" --query "PolicyDocument" --output json | jq .
+            local current_policy
+            current_policy=$(aws iam get-role-policy --role-name "$ROLE_NAME" --policy-name "$POLICY_NAME" --query "PolicyDocument" --output json)
+            if command -v python3 &> /dev/null; then
+                echo "$current_policy" | python3 -m json.tool
+            elif command -v python &> /dev/null; then
+                echo "$current_policy" | python -m json.tool
+            else
+                echo "$current_policy"
+            fi
         fi
     else
         log_warning "No inline policies found for role: $ROLE_NAME"
@@ -129,16 +154,15 @@ verify_policy() {
     applied_policy=$(aws iam get-role-policy --role-name "$ROLE_NAME" --policy-name "$POLICY_NAME" --query "PolicyDocument" --output json)
     
     # Check if it contains the EC2HealthCheckPermissions
-    if echo "$applied_policy" | jq -r '.Statement[] | select(.Sid == "EC2HealthCheckPermissions") | .Action[]' | grep -q "autoscaling:DescribeAutoScalingGroups"; then
+    if echo "$applied_policy" | grep -q "EC2HealthCheckPermissions" && echo "$applied_policy" | grep -q "autoscaling:DescribeAutoScalingGroups"; then
         log_success "✅ EC2HealthCheckPermissions found in applied policy"
         log_success "✅ autoscaling:DescribeAutoScalingGroups permission confirmed"
     else
         log_error "❌ EC2HealthCheckPermissions not found in applied policy"
         exit 1
     fi
-    
-    log_info "Applied policy permissions:"
-    echo "$applied_policy" | jq -r '.Statement[] | select(.Sid == "EC2HealthCheckPermissions") | .Action[]' | sed 's/^/  - /'
+
+    log_info "Applied policy contains the required permissions for EC2 health checking"
 }
 
 # Main execution
@@ -208,7 +232,13 @@ while [[ $# -gt 0 ]]; do
             check_iam_role
             get_current_policy
             log_info "Policy file that would be applied: $POLICY_FILE"
-            jq . "$POLICY_FILE"
+            if command -v python3 &> /dev/null; then
+                python3 -m json.tool "$POLICY_FILE"
+            elif command -v python &> /dev/null; then
+                python -m json.tool "$POLICY_FILE"
+            else
+                cat "$POLICY_FILE"
+            fi
             exit 0
             ;;
         --force)

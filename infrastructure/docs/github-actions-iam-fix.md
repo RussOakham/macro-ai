@@ -4,15 +4,16 @@
 
 The CI/CD pipeline is failing during Phase 1 ASG verification with the following error:
 
-```
-An error occurred (AccessDenied) when calling the DescribeAutoScalingGroups operation: 
-User: arn:aws:sts::***:assumed-role/GitHubActionsDeploymentRole/GitHubActions-PreviewDeploy-Backend-17012472682 
+```text
+An error occurred (AccessDenied) when calling the DescribeAutoScalingGroups operation:
+User: arn:aws:sts::***:assumed-role/GitHubActionsDeploymentRole/GitHubActions-PreviewDeploy-Backend-17012472682
 is not authorized to perform: autoscaling:DescribeAutoScalingGroups because no identity-based policy allows the autoscaling:DescribeAutoScalingGroups action
 ```
 
 ## Root Cause
 
-The enhanced IAM policy file (`infrastructure/iam-policies/enhanced-github-actions-policy.json`) contains the required permissions, but these permissions have not been applied to the actual AWS IAM role `GitHubActionsDeploymentRole`.
+The enhanced IAM policy file (`infrastructure/iam-policies/enhanced-github-actions-policy.json`) contains the required
+permissions, but these permissions have not been applied to the actual AWS IAM role `GitHubActionsDeploymentRole`.
 
 ## Required Permissions
 
@@ -20,16 +21,16 @@ The missing permissions are defined in the `EC2HealthCheckPermissions` section:
 
 ```json
 {
-    "Sid": "EC2HealthCheckPermissions",
-    "Effect": "Allow",
-    "Action": [
-        "ec2:DescribeInstances",
-        "ec2:DescribeInstanceStatus",
-        "autoscaling:DescribeAutoScalingGroups",
-        "elasticloadbalancing:DescribeTargetHealth",
-        "elasticloadbalancing:DescribeTargetGroups"
-    ],
-    "Resource": "*"
+	"Sid": "EC2HealthCheckPermissions",
+	"Effect": "Allow",
+	"Action": [
+		"ec2:DescribeInstances",
+		"ec2:DescribeInstanceStatus",
+		"autoscaling:DescribeAutoScalingGroups",
+		"elasticloadbalancing:DescribeTargetHealth",
+		"elasticloadbalancing:DescribeTargetGroups"
+	],
+	"Resource": "*"
 }
 ```
 
@@ -45,6 +46,7 @@ Use the provided script to apply the permissions:
 ```
 
 **Script Features:**
+
 - ✅ Validates AWS CLI configuration
 - ✅ Checks policy file syntax
 - ✅ Verifies IAM role exists
@@ -53,6 +55,7 @@ Use the provided script to apply the permissions:
 - ✅ Verifies permissions were applied correctly
 
 **Script Options:**
+
 ```bash
 # Dry run (show what would be done)
 ./infrastructure/scripts/update-github-actions-iam-policy.sh --dry-run
@@ -103,6 +106,7 @@ aws iam get-role-policy \
 After applying the permissions, verify they work:
 
 1. **Check Policy Contains Required Permissions:**
+
    ```bash
    aws iam get-role-policy \
        --role-name GitHubActionsDeploymentRole \
@@ -112,6 +116,7 @@ After applying the permissions, verify they work:
    ```
 
 2. **Test ASG Access:**
+
    ```bash
    # This should work without AccessDenied errors
    aws autoscaling describe-auto-scaling-groups --max-items 1
@@ -125,7 +130,7 @@ After applying the permissions, verify they work:
 
 After applying the IAM permissions, the CI logs should show:
 
-```
+```text
 [INFO] 🔍 ASG verification attempt 1/10...
 [INFO] ✅ Auto Scaling Group verified: macro-ai-preview-asg
 [INFO] 🔄 Phase 1: Waiting for instances to reach running state (timeout: 300s)...
@@ -136,18 +141,22 @@ Instead of the previous AccessDenied error.
 ## Troubleshooting
 
 ### Permission Propagation Delay
+
 - IAM changes typically take effect immediately
 - If issues persist, wait 1-2 minutes and retry
 
 ### Wrong Role Name
+
 - Verify the exact role name in the error message
 - Update the script if the role name differs
 
 ### Policy Conflicts
+
 - Check for conflicting deny statements in other policies
 - Ensure the role has the necessary trust relationships
 
 ### AWS CLI Configuration
+
 - Ensure AWS CLI is configured with appropriate permissions
 - The user applying the policy needs `iam:PutRolePolicy` permission
 

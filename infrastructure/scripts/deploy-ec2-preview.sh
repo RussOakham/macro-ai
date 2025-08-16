@@ -886,7 +886,7 @@ main() {
 
     # Run post-deployment verification
     local stack_name
-    stack_name=$(generate_stack_name "${ENVIRONMENT_NAME}")
+    stack_name=$(generate_stack_name "${CDK_DEPLOY_ENV}")
     verify_deployment_success "${stack_name}"
 
     log_success "EC2 Preview Deployment completed successfully!"
