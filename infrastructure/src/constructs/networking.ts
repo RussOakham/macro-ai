@@ -54,6 +54,13 @@ export interface NetworkingConstructProps {
 		readonly hostedZoneId: string
 		readonly certificateArn?: string
 	}
+
+	/**
+	 * Deployment ID to force instance replacement on every deployment
+	 * This ensures fresh instances with latest application code
+	 * @default current timestamp
+	 */
+	readonly deploymentId?: string
 }
 
 /**
@@ -100,6 +107,7 @@ export class NetworkingConstruct extends Construct {
 			parameterStorePrefix,
 			enableAlb = true,
 			customDomain,
+			deploymentId = new Date().toISOString(),
 		} = props
 
 		// Create VPC infrastructure
@@ -128,6 +136,7 @@ export class NetworkingConstruct extends Construct {
 				environmentName,
 				parameterStorePrefix,
 				enableDetailedMonitoring,
+				deploymentId,
 			})
 		}
 
@@ -156,7 +165,7 @@ export class NetworkingConstruct extends Construct {
 		this.createOutputs()
 
 		// Apply networking-level tags
-		this.applyTags(environmentName)
+		this.applyTags()
 	}
 
 	/**
@@ -356,22 +365,21 @@ export class NetworkingConstruct extends Construct {
 
 	/**
 	 * Apply comprehensive tagging for cost tracking and resource management
+	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
-	private applyTags(environmentName: string): void {
+	private applyTags(): void {
 		const tags = {
-			Project: 'MacroAI',
-			Environment: environmentName,
-			Component: 'Networking',
-			Purpose: 'SharedInfrastructure',
-			CostCenter: 'Development',
-			ManagedBy: 'CDK',
-			CreatedBy: 'NetworkingConstruct',
+			SubComponent: 'Networking',
+			SubPurpose: 'SharedInfrastructure',
+			ConstructManagedBy: 'NetworkingConstruct',
+			NetworkType: 'VPC-Infrastructure',
 		}
 
 		// Apply tags to the entire construct and all child resources
 		Object.entries(tags).forEach(([key, value]) => {
 			cdk.Tags.of(this).add(key, value)
 		})
+		// Note: Project, Environment, Component, Purpose, CostCenter are inherited from stack level
 	}
 
 	/**

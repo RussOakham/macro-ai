@@ -26,17 +26,26 @@
 		"lint:ci": "eslint . --ext .ts,.tsx --max-warnings 0",
 		"type-check": "tsc --noEmit",
 		"deploy-ec2": "tsx scripts/deploy-ec2.ts",
+		"deploy-pipeline": "tsx scripts/deploy-pipeline.ts",
 		"deploy-ec2:github": "scripts/github-actions-deploy.sh"
 	},
 	"dependencies": {
+		"@aws-sdk/client-auto-scaling": "catalog:",
+		"@aws-sdk/client-cloudwatch": "catalog:",
+		"@aws-sdk/client-dynamodb": "catalog:",
 		"@aws-sdk/client-ec2": "catalog:",
 		"@aws-sdk/client-elastic-load-balancing-v2": "catalog:",
+		"@aws-sdk/client-lambda": "catalog:",
 		"@aws-sdk/client-s3": "catalog:",
+		"@aws-sdk/client-sfn": "catalog:",
 		"@aws-sdk/client-ssm": "catalog:",
 		"aws-cdk-lib": "^2.161.1",
+		"chalk": "^5.5.0",
+		"cli-table3": "^0.6.5",
 		"commander": "^12.1.0",
 		"constructs": "^10.3.0",
 		"dotenv": "^16.4.5",
+		"ora": "^8.2.0",
 		"source-map-support": "^0.5.21"
 	},
 	"devDependencies": {

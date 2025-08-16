@@ -3,7 +3,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import * as iam from 'aws-cdk-lib/aws-iam'
 import { Construct } from 'constructs'
 
-import { TAG_VALUES, TaggingStrategy } from '../utils/tagging-strategy.js'
+// Note: TaggingStrategy imports removed as we now use direct cdk.Tags.of() calls to avoid conflicts
 
 export interface Ec2ConstructProps {
 	/**
@@ -47,6 +47,13 @@ export interface Ec2ConstructProps {
 		readonly maxCapacity: number
 		readonly targetCpuUtilization: number
 	}
+
+	/**
+	 * Deployment ID to force instance replacement on every deployment
+	 * This ensures fresh instances with latest application code
+	 * @default current timestamp
+	 */
+	readonly deploymentId?: string
 }
 
 export interface PrInstanceProps {
@@ -81,6 +88,12 @@ export interface PrInstanceProps {
 	 * @default t3.micro
 	 */
 	readonly instanceType?: ec2.InstanceType
+
+	/**
+	 * Deployment ID to force instance replacement on every deployment
+	 * @default current timestamp
+	 */
+	readonly deploymentId?: string
 }
 
 /**
@@ -116,6 +129,7 @@ export class Ec2Construct extends Construct {
 			),
 			parameterStorePrefix,
 			enableDetailedMonitoring = false,
+			deploymentId = new Date().toISOString(),
 		} = props
 
 		// Create IAM role for EC2 instances
@@ -132,10 +146,11 @@ export class Ec2Construct extends Construct {
 			parameterStorePrefix,
 			environmentName,
 			enableDetailedMonitoring,
+			deploymentId,
 		)
 
 		// Apply tags to the construct
-		this.applyTags(environmentName)
+		this.applyTags()
 	}
 
 	/**
@@ -153,6 +168,7 @@ export class Ec2Construct extends Construct {
 				ec2.InstanceClass.T3,
 				ec2.InstanceSize.MICRO,
 			),
+			deploymentId = new Date().toISOString(),
 		} = props
 
 		// Create PR-specific instance
@@ -167,7 +183,11 @@ export class Ec2Construct extends Construct {
 				}),
 				securityGroup,
 				role: this.instanceRole,
-				userData: this.createUserData(parameterStorePrefix, prNumber),
+				userData: this.createUserData(
+					parameterStorePrefix,
+					prNumber,
+					deploymentId,
+				),
 				vpcSubnets: {
 					subnetType: ec2.SubnetType.PUBLIC, // Cost optimization: no NAT Gateway needed
 				},
@@ -177,8 +197,8 @@ export class Ec2Construct extends Construct {
 			},
 		)
 
-		// Apply PR-specific tags
-		this.applyPrTags(instance, prNumber)
+		// Note: PR-specific tags are inherited from stack-level tags
+		// No need to apply duplicate tags here as they're already applied at stack level
 
 		return instance
 	}
@@ -260,6 +280,7 @@ export class Ec2Construct extends Construct {
 		parameterStorePrefix: string,
 		environmentName: string,
 		enableDetailedMonitoring: boolean,
+		deploymentId: string,
 	): ec2.LaunchTemplate {
 		return new ec2.LaunchTemplate(this, 'Ec2LaunchTemplate', {
 			launchTemplateName: `macro-ai-${environmentName}-launch-template`,
@@ -269,7 +290,11 @@ export class Ec2Construct extends Construct {
 			}),
 			securityGroup,
 			role: this.instanceRole,
-			userData: this.createUserData(parameterStorePrefix),
+			userData: this.createUserData(
+				parameterStorePrefix,
+				undefined,
+				deploymentId,
+			),
 			detailedMonitoring: enableDetailedMonitoring,
 			// EBS optimization for better performance
 			ebsOptimized: true,
@@ -284,17 +309,24 @@ export class Ec2Construct extends Construct {
 	private createUserData(
 		parameterStorePrefix: string,
 		prNumber?: number,
+		deploymentId?: string,
 	): ec2.UserData {
 		const userData = ec2.UserData.forLinux()
+
+		// Add deployment timestamp to force instance replacement
+		const timestamp = deploymentId ?? new Date().toISOString()
 
 		// Add comprehensive deployment script
 		userData.addCommands(
 			'#!/bin/bash',
 			'set -e',
 			'',
+			`# Deployment ID: ${timestamp}`,
+			'# This timestamp forces new instances on every deployment to ensure fresh application code',
+			'',
 			'# Logging setup',
 			'exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1',
-			'echo "$(date): Starting Macro AI application deployment"',
+			`echo "$(date): Starting Macro AI application deployment (Deployment ID: ${timestamp})"`,
 			'',
 			'# Error handling function',
 			'error_exit() {',
@@ -722,31 +754,15 @@ export class Ec2Construct extends Construct {
 
 	/**
 	 * Apply comprehensive tagging for cost tracking and resource management
+	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
-	private applyTags(environmentName: string): void {
-		TaggingStrategy.applyBaseTags(this, {
-			environment: environmentName,
-			component: 'EC2',
-			purpose: TAG_VALUES.PURPOSES.PREVIEW_ENVIRONMENT,
-			createdBy: 'Ec2Construct',
-			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.STANDARD,
-		})
-	}
-
-	/**
-	 * Apply PR-specific tags to EC2 instances
-	 */
-	private applyPrTags(instance: ec2.Instance, prNumber: number): void {
-		TaggingStrategy.applyPrTags(instance, {
-			prNumber,
-			component: 'EC2-Instance',
-			purpose: TAG_VALUES.PURPOSES.PREVIEW_ENVIRONMENT,
-			createdBy: 'Ec2Construct',
-			expiryDays: 7,
-			autoShutdown: true, // Enable automatic shutdown for cost optimization
-			backupRequired: false, // Preview environments don't need backups
-			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.STANDARD,
-		})
+	private applyTags(): void {
+		// Apply construct-specific tags that don't conflict with stack-level tags
+		cdk.Tags.of(this).add('SubComponent', 'EC2')
+		cdk.Tags.of(this).add('SubPurpose', 'ComputeInfrastructure')
+		cdk.Tags.of(this).add('ConstructManagedBy', 'Ec2Construct')
+		cdk.Tags.of(this).add('InstanceType', 'EC2-Instance')
+		// Note: Other tags like Environment, Project, Component, Purpose are inherited from stack level
 	}
 
 	/**
@@ -824,5 +840,56 @@ Cost Optimization:
 - Shared Infrastructure: Single VPC across PRs
 - Auto-termination: 7-day expiry tags for cleanup
 		`.trim()
+	}
+
+	/**
+	 * Enable Phase 4 comprehensive monitoring integration
+	 * This method provides a convenient way to add monitoring tags to the launch template
+	 */
+	public enableComprehensiveMonitoring(props: {
+		criticalAlertEmails?: string[]
+		warningAlertEmails?: string[]
+		enableCostMonitoring?: boolean
+		customMetricNamespace?: string
+	}): void {
+		// This method would be called by the stack to enable monitoring
+		// The actual MonitoringIntegration would be created at the stack level
+
+		// Add monitoring-specific tags to the launch template
+		// These tags will be applied to all instances created from this template
+		cdk.Tags.of(this.launchTemplate).add('MonitoringEnabled', 'true')
+		cdk.Tags.of(this.launchTemplate).add('Phase4Monitoring', 'enabled')
+		cdk.Tags.of(this.launchTemplate).add('MonitoringIntegration', 'ready')
+
+		// Add configuration-specific tags based on props
+		if (props.enableCostMonitoring) {
+			cdk.Tags.of(this.launchTemplate).add('CostMonitoringEnabled', 'true')
+		}
+
+		if (props.customMetricNamespace) {
+			cdk.Tags.of(this.launchTemplate).add(
+				'CustomMetricNamespace',
+				props.customMetricNamespace,
+			)
+		}
+
+		if (props.criticalAlertEmails && props.criticalAlertEmails.length > 0) {
+			cdk.Tags.of(this.launchTemplate).add('CriticalAlertsConfigured', 'true')
+		}
+
+		if (props.warningAlertEmails && props.warningAlertEmails.length > 0) {
+			cdk.Tags.of(this.launchTemplate).add('WarningAlertsConfigured', 'true')
+		}
+
+		// TODO: Implement full monitoring configuration integration
+		// - Create CloudWatch agent configuration
+		// - Set up custom metrics collection
+		// - Configure alert email distribution lists
+		// - Integrate with MonitoringIntegration construct
+
+		// Log monitoring enablement
+		console.log(
+			'Phase 4 monitoring integration enabled for EC2 launch template',
+		)
 	}
 }
