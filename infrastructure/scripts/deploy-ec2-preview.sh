@@ -492,6 +492,18 @@ wait_for_healthy_deployment() {
 
     log_info "✅ Found target group: $target_group_arn"
 
+    # Verify Auto Scaling Group exists before starting health checks
+    log_info "🔍 Verifying Auto Scaling Group exists: $asg_name"
+    if ! aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names "$asg_name" --query "AutoScalingGroups[0].AutoScalingGroupName" --output text >/dev/null 2>&1; then
+        log_error "❌ Auto Scaling Group '$asg_name' does not exist or is not accessible"
+        log_error "🔍 This could indicate:"
+        log_error "   - The ASG hasn't been created yet by the CDK deployment"
+        log_error "   - Missing autoscaling:DescribeAutoScalingGroups permission"
+        log_error "   - Incorrect ASG name in CloudFormation outputs"
+        return 1
+    fi
+    log_info "✅ Auto Scaling Group verified: $asg_name"
+
     # Phase 1: Wait for instances to be running (5 minutes)
     if ! wait_for_instances_running "$asg_name"; then
         log_error "❌ Phase 1 failed: Instances did not reach running state"
@@ -529,11 +541,26 @@ wait_for_instances_running() {
 
         # Get instances from Auto Scaling Group
         local instance_info
+        local aws_error
+        log_info "🔍 Querying Auto Scaling Group: $asg_name"
+
+        # Capture both stdout and stderr for better debugging
         if ! instance_info=$(aws autoscaling describe-auto-scaling-groups \
             --auto-scaling-group-names "$asg_name" \
             --query "AutoScalingGroups[0].Instances[*].[InstanceId,LifecycleState]" \
-            --output text 2>/dev/null); then
+            --output text 2>&1); then
             log_error "❌ Failed to get Auto Scaling Group instances"
+            log_error "🔍 AWS CLI Error: $instance_info"
+            log_error "🔍 ASG Name: $asg_name"
+            log_error "🔍 AWS Region: ${AWS_REGION:-not-set}"
+
+            # Try a simpler query to test basic permissions
+            log_info "🔍 Testing basic ASG permissions..."
+            if aws autoscaling describe-auto-scaling-groups --max-items 1 --output text >/dev/null 2>&1; then
+                log_error "❌ Basic ASG permissions work, but specific ASG '$asg_name' not found or accessible"
+            else
+                log_error "❌ No autoscaling:DescribeAutoScalingGroups permission - IAM policy may not be applied yet"
+            fi
             return 1
         fi
 
@@ -601,11 +628,14 @@ wait_for_user_data_completion() {
 
         # Get instance IDs from Auto Scaling Group
         local instance_ids
+        log_info "🔍 Querying Auto Scaling Group for InService instances: $asg_name"
+
         if ! instance_ids=$(aws autoscaling describe-auto-scaling-groups \
             --auto-scaling-group-names "$asg_name" \
             --query "AutoScalingGroups[0].Instances[?LifecycleState=='InService'].InstanceId" \
-            --output text 2>/dev/null); then
+            --output text 2>&1); then
             log_error "❌ Failed to get instance IDs from Auto Scaling Group"
+            log_error "🔍 AWS CLI Error: $instance_ids"
             return 1
         fi
 
