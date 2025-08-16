@@ -55,7 +55,7 @@ ARTIFACT_BUCKET="${ARTIFACT_BUCKET:-}"
 
 # Deployment options
 INSTANCE_COUNT="${INSTANCE_COUNT:-1}"
-TIMEOUT_MINUTES="${TIMEOUT_MINUTES:-15}"
+TIMEOUT_MINUTES="${TIMEOUT_MINUTES:-25}"
 HEALTH_CHECK_RETRIES="${HEALTH_CHECK_RETRIES:-10}"
 
 # Validate required environment variables
@@ -225,15 +225,77 @@ deploy_to_ec2() {
 wait_for_healthy_deployment() {
     log_info "Waiting for deployment to be healthy..."
 
+    # Extract required environment variables from CloudFormation stack
+    local stack_name="MacroAiPr-${PR_NUMBER}Stack"
+    log_info "Extracting deployment configuration from stack: $stack_name"
+
+    # Get stack outputs
+    local stack_outputs
+    if ! stack_outputs=$(aws cloudformation describe-stacks --stack-name "$stack_name" --query "Stacks[0].Outputs" --output json 2>/dev/null); then
+        log_error "Failed to get CloudFormation stack outputs for $stack_name"
+        return 1
+    fi
+
+    # Extract required values from stack outputs
+    local vpc_id subnet_ids target_group_arn parameter_store_prefix
+    vpc_id=$(echo "$stack_outputs" | jq -r '.[] | select(.OutputKey=="VpcId") | .OutputValue')
+    subnet_ids=$(echo "$stack_outputs" | jq -r '.[] | select(.OutputKey=="NetworkingVpcPublicSubnetIds74D5A249") | .OutputValue')
+    parameter_store_prefix=$(echo "$stack_outputs" | jq -r '.[] | select(.OutputKey=="ParameterStoreParameterPrefix94CA2C89") | .OutputValue')
+
+    # Get target group ARN for this PR
+    local target_group_arn
+    if ! target_group_arn=$(aws elbv2 describe-target-groups --query "TargetGroups[?contains(TargetGroupName, 'pr-${PR_NUMBER}')].TargetGroupArn" --output text 2>/dev/null); then
+        log_error "Failed to get target group ARN for PR $PR_NUMBER"
+        return 1
+    fi
+
+    # Get launch template ID for this PR
+    local launch_template_id
+    if ! launch_template_id=$(aws ec2 describe-launch-templates --query "LaunchTemplates[?contains(LaunchTemplateName, 'pr-${PR_NUMBER}')].LaunchTemplateId" --output text 2>/dev/null | head -1); then
+        log_error "Failed to get launch template ID for PR $PR_NUMBER"
+        return 1
+    fi
+
+    # Get security group ID from stack outputs
+    local security_group_id
+    security_group_id=$(echo "$stack_outputs" | jq -r '.[] | select(.OutputKey=="NetworkingNetworkingAlbSecurityGroupAAD90652") | .OutputValue')
+
+    # Validate required values
+    if [[ -z "$vpc_id" || -z "$subnet_ids" || -z "$target_group_arn" || -z "$parameter_store_prefix" || -z "$launch_template_id" || -z "$security_group_id" ]]; then
+        log_error "Failed to extract required deployment configuration:"
+        log_error "  VPC ID: $vpc_id"
+        log_error "  Subnet IDs: $subnet_ids"
+        log_error "  Target Group ARN: $target_group_arn"
+        log_error "  Parameter Store Prefix: $parameter_store_prefix"
+        log_error "  Launch Template ID: $launch_template_id"
+        log_error "  Security Group ID: $security_group_id"
+        return 1
+    fi
+
+    log_info "Successfully extracted deployment configuration"
+
     local max_attempts=$((TIMEOUT_MINUTES * 2)) # Check every 30 seconds
     local attempt=1
 
     while [[ $attempt -le $max_attempts ]]; do
         log_info "Health check attempt $attempt/$max_attempts..."
 
-        # Check deployment status
+        # Check deployment status with required environment variables
         local status_output
-        if status_output=$(pnpm tsx scripts/deploy-ec2.ts status --pr "$PR_NUMBER" 2>&1); then
+        if status_output=$(AWS_REGION="$AWS_REGION" \
+                          VPC_ID="$vpc_id" \
+                          SUBNET_IDS="$subnet_ids" \
+                          SECURITY_GROUP_ID="$security_group_id" \
+                          LAUNCH_TEMPLATE_ID="$launch_template_id" \
+                          TARGET_GROUP_ARN="$target_group_arn" \
+                          PARAMETER_STORE_PREFIX="$parameter_store_prefix" \
+                          ARTIFACT_BUCKET="$ARTIFACT_BUCKET" \
+                          ENVIRONMENT="pr-$PR_NUMBER" \
+                          pnpm tsx scripts/deploy-ec2.ts status --pr "$PR_NUMBER" 2>&1); then
+
+            # Log the status output for debugging
+            log_info "Status check output: $status_output"
+
             if echo "$status_output" | grep -q "Status: SUCCESS"; then
                 log_success "Deployment is healthy!"
                 return 0
@@ -241,7 +303,11 @@ wait_for_healthy_deployment() {
                 log_error "Deployment failed!"
                 echo "$status_output"
                 return 1
+            else
+                log_info "Deployment status not yet final, continuing to wait..."
             fi
+        else
+            log_info "Status check command failed, output: $status_output"
         fi
 
         log_info "Deployment still in progress, waiting 30 seconds..."
