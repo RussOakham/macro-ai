@@ -424,44 +424,10 @@ deploy_application() {
     
     log_info "Auto Scaling Group: ${asg_name}"
     
-    # Get current EC2 instances in the Auto Scaling Group
-    local instance_ids
-    instance_ids=$(aws autoscaling describe-auto-scaling-groups \
-        --auto-scaling-group-names "${asg_name}" \
-        --query "AutoScalingGroups[0].Instances[?LifecycleState=='InService'].InstanceId" \
-        --output text 2>/dev/null || echo "")
-    
-    if [[ -z "${instance_ids}" || "${instance_ids}" == "None" ]]; then
-        log_warning "No running instances found in Auto Scaling Group"
-        log_info "Waiting for instances to become available..."
-        
-        # Wait for instances to be ready (up to 10 minutes)
-        local max_attempts=60
-        local attempt=1
-        
-        while [[ ${attempt} -le ${max_attempts} ]]; do
-            instance_ids=$(aws autoscaling describe-auto-scaling-groups \
-                --auto-scaling-group-names "${asg_name}" \
-                --query "AutoScalingGroups[0].Instances[?LifecycleState=='InService'].InstanceId" \
-                --output text 2>/dev/null || echo "")
-            
-            if [[ -n "${instance_ids}" && "${instance_ids}" != "None" ]]; then
-                log_success "Instances are now available"
-                break
-            fi
-            
-            log_info "Attempt ${attempt}/${max_attempts}: Waiting for instances..."
-            sleep 10
-            ((attempt++))
-        done
-        
-        if [[ -z "${instance_ids}" || "${instance_ids}" == "None" ]]; then
-            log_error "Timeout waiting for EC2 instances to become available"
-            exit 1
-        fi
-    fi
-    
-    log_info "Found instances: ${instance_ids}"
+    # Note: Instance health checking is now handled by the robust 3-phase validation
+    # in verify_deployment() -> wait_for_healthy_deployment()
+    log_info "Auto Scaling Group configured: ${asg_name}"
+    log_info "Instance health validation will be performed in the verification phase"
     
     # Deploy application using Systems Manager (if available) or user data will handle it
     log_info "Application deployment will be handled by EC2 user data script"
