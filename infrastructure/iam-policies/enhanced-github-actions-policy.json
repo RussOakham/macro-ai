@@ -209,7 +209,7 @@
 			"Action": ["kms:Decrypt", "kms:DescribeKey", "kms:GenerateDataKey"],
 			"Resource": "*",
 			"Condition": {
-				"StringEquals": {
+				"StringLike": {
 					"kms:ViaService": ["ssm.*.amazonaws.com", "s3.*.amazonaws.com"]
 				}
 			}

@@ -452,13 +452,11 @@ export class DeploymentStatusConstruct extends Construct {
 	 */
 	private getDeploymentEventProcessorCode(): string {
 		return `
-const { DynamoDBClient, PutItemCommand, UpdateItemCommand, QueryCommand } = require('@aws-sdk/client-dynamodb');
-const { CloudWatchLogsClient, PutLogEventsCommand, CreateLogStreamCommand } = require('@aws-sdk/client-cloudwatch-logs');
-const { CloudWatchClient, PutMetricDataCommand } = require('@aws-sdk/client-cloudwatch');
+const AWS = require('aws-sdk');
 
-const dynamodb = new DynamoDBClient();
-const cloudwatchLogs = new CloudWatchLogsClient();
-const cloudwatch = new CloudWatchClient();
+const dynamodb = new AWS.DynamoDB();
+const cloudwatchLogs = new AWS.CloudWatchLogs();
+const cloudwatch = new AWS.CloudWatch();
 
 exports.handler = async (event) => {
     console.log('Deployment event processor:', JSON.stringify(event, null, 2));
@@ -556,10 +554,10 @@ async function recordDeploymentEvent(deploymentEvent) {
         });
     }
 
-    await dynamodb.send(new PutItemCommand({
+    await dynamodb.putItem({
         TableName: process.env.DEPLOYMENT_HISTORY_TABLE,
         Item: item
-    }));
+    }).promise();
 }
 
 async function logDeploymentEvent(deploymentEvent) {
@@ -580,10 +578,10 @@ async function logDeploymentEvent(deploymentEvent) {
 
         // Create log stream if it doesn't exist
         try {
-            await cloudwatchLogs.send(new CreateLogStreamCommand({
+            await cloudwatchLogs.createLogStream({
                 logGroupName: process.env.DEPLOYMENT_LOG_GROUP,
                 logStreamName: logStreamName
-            }));
+            }).promise();
         } catch (error) {
             // Log stream might already exist, ignore error
             if (!error.message.includes('already exists')) {
@@ -592,14 +590,14 @@ async function logDeploymentEvent(deploymentEvent) {
         }
 
         // Put log event
-        await cloudwatchLogs.send(new PutLogEventsCommand({
+        await cloudwatchLogs.putLogEvents({
             logGroupName: process.env.DEPLOYMENT_LOG_GROUP,
             logStreamName: logStreamName,
             logEvents: [{
                 timestamp: Date.now(),
                 message: JSON.stringify(logMessage)
             }]
-        }));
+        }).promise();
 
     } catch (error) {
         console.error('Failed to log deployment event:', error);
@@ -649,10 +647,10 @@ async function publishDeploymentMetrics(deploymentEvent) {
             });
         }
 
-        await cloudwatch.send(new PutMetricDataCommand({
+        await cloudwatch.putMetricData({
             Namespace: 'MacroAI/Deployment',
             MetricData: metrics
-        }));
+        }).promise();
 
     } catch (error) {
         console.error('Failed to publish deployment metrics:', error);
@@ -682,7 +680,7 @@ async function updateDeploymentSummary(deploymentEvent) {
             expressionAttributeValues[':endTime'] = { S: new Date().toISOString() };
         }
 
-        await dynamodb.send(new UpdateItemCommand({
+        await dynamodb.updateItem({
             TableName: process.env.DEPLOYMENT_HISTORY_TABLE,
             Key: {
                 deploymentId: { S: deploymentEvent.deploymentId },
@@ -691,7 +689,7 @@ async function updateDeploymentSummary(deploymentEvent) {
             UpdateExpression: \`SET \${updateExpression.join(', ')}\`,
             ExpressionAttributeNames: expressionAttributeNames,
             ExpressionAttributeValues: expressionAttributeValues
-        }));
+        }).promise();
 
     } catch (error) {
         console.error('Failed to update deployment summary:', error);
@@ -705,9 +703,9 @@ async function updateDeploymentSummary(deploymentEvent) {
 	 */
 	private getDeploymentStatusQueryCode(): string {
 		return `
-const { DynamoDBClient, QueryCommand, GetItemCommand } = require('@aws-sdk/client-dynamodb');
+const AWS = require('aws-sdk');
 
-const dynamodb = new DynamoDBClient();
+const dynamodb = new AWS.DynamoDB();
 
 exports.handler = async (event) => {
     console.log('Deployment status query:', JSON.stringify(event, null, 2));
@@ -754,7 +752,7 @@ exports.handler = async (event) => {
 async function getDeploymentStatus(deploymentId) {
     try {
         // Get all events for this deployment
-        const result = await dynamodb.send(new QueryCommand({
+        const result = await dynamodb.query({
             TableName: process.env.DEPLOYMENT_HISTORY_TABLE,
             KeyConditionExpression: 'deploymentId = :deploymentId',
             ExpressionAttributeValues: {
@@ -762,7 +760,7 @@ async function getDeploymentStatus(deploymentId) {
             },
             ScanIndexForward: false, // Get latest events first
             Limit: 100
-        }));
+        }).promise();
 
         if (!result.Items || result.Items.length === 0) {
             return {
@@ -832,7 +830,7 @@ async function getDeploymentHistory(environment, limit) {
             Limit: parseInt(limit)
         };
 
-        const result = await dynamodb.send(new QueryCommand(queryParams));
+        const result = await dynamodb.query(queryParams).promise();
 
         const deployments = result.Items?.map(parseDeploymentEvent).filter(Boolean) || [];
 
@@ -874,7 +872,7 @@ async function getDeploymentHistory(environment, limit) {
 
 async function getActiveDeployments(environment) {
     try {
-        const result = await dynamodb.send(new QueryCommand({
+        const result = await dynamodb.query({
             TableName: process.env.DEPLOYMENT_HISTORY_TABLE,
             IndexName: 'EnvironmentStatusIndex',
             KeyConditionExpression: 'environment = :environment AND #status = :status',
@@ -886,7 +884,7 @@ async function getActiveDeployments(environment) {
                 ':status': { S: 'IN_PROGRESS' }
             },
             ScanIndexForward: false
-        }));
+        }).promise();
 
         const activeDeployments = result.Items?.map(parseDeploymentEvent).filter(Boolean) || [];
 
@@ -908,13 +906,13 @@ async function getActiveDeployments(environment) {
 async function getDeploymentSummary(deploymentId) {
     try {
         // Get deployment summary record
-        const result = await dynamodb.send(new GetItemCommand({
+        const result = await dynamodb.getItem({
             TableName: process.env.DEPLOYMENT_HISTORY_TABLE,
             Key: {
                 deploymentId: { S: deploymentId },
                 timestamp: { S: 'SUMMARY' }
             }
-        }));
+        }).promise();
 
         if (!result.Item) {
             return {

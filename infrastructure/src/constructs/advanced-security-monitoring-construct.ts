@@ -790,13 +790,11 @@ export class AdvancedSecurityMonitoringConstruct extends Construct {
 	 */
 	private getSecurityEventProcessorCode(): string {
 		return `
-const { DynamoDBClient, PutItemCommand } = require('@aws-sdk/client-dynamodb');
-const { CloudWatchLogsClient, PutLogEventsCommand, CreateLogStreamCommand } = require('@aws-sdk/client-cloudwatch-logs');
-const { CloudWatchClient, PutMetricDataCommand } = require('@aws-sdk/client-cloudwatch');
+const AWS = require('aws-sdk');
 
-const dynamodb = new DynamoDBClient();
-const cloudwatchLogs = new CloudWatchLogsClient();
-const cloudwatch = new CloudWatchClient();
+const dynamodb = new AWS.DynamoDB();
+const cloudwatchLogs = new AWS.CloudWatchLogs();
+const cloudwatch = new AWS.CloudWatch();
 
 exports.handler = async (event) => {
     console.log('Security event processor:', JSON.stringify(event, null, 2));
@@ -1117,11 +1115,10 @@ async function publishSecurityMetrics(securityEvent) {
 	 */
 	private getSecurityAnalyzerCode(): string {
 		return `
-const { DynamoDBClient, QueryCommand, ScanCommand } = require('@aws-sdk/client-dynamodb');
-const { CloudWatchClient, PutMetricDataCommand } = require('@aws-sdk/client-cloudwatch');
+const AWS = require('aws-sdk');
 
-const dynamodb = new DynamoDBClient();
-const cloudwatch = new CloudWatchClient();
+const dynamodb = new AWS.DynamoDB();
+const cloudwatch = new AWS.CloudWatch();
 
 exports.handler = async (event) => {
     console.log('Security analyzer event:', JSON.stringify(event, null, 2));
