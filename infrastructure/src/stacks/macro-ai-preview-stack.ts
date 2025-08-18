@@ -3,6 +3,7 @@ import * as autoscaling from 'aws-cdk-lib/aws-autoscaling'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import type { Construct } from 'constructs'
 
+import { CostMonitoringConstruct } from '../constructs/cost-monitoring-construct.js'
 import { DeploymentStatusConstruct } from '../constructs/deployment-status-construct.js'
 import { MonitoringConstruct } from '../constructs/monitoring-construct.js'
 import { NetworkingConstruct } from '../constructs/networking.js'
@@ -55,6 +56,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	public readonly autoScaling: autoscaling.AutoScalingGroup
 	public readonly monitoring: MonitoringConstruct
 	public readonly deploymentStatus: DeploymentStatusConstruct
+	public readonly costMonitoring: CostMonitoringConstruct
 
 	constructor(scope: Construct, id: string, props: MacroAiPreviewStackProps) {
 		super(scope, id, props)
@@ -95,6 +97,19 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			applicationName: 'macro-ai',
 			enableCostMonitoring: true,
 			prNumber,
+		})
+
+		// Priority 2: Create cost monitoring construct for budget tracking and alerts
+		this.costMonitoring = new CostMonitoringConstruct(this, 'CostMonitoring', {
+			environmentName,
+			monthlyBudgetLimit: 3.5, // ~£3 target in USD
+			alertEmails: ['rjoakham@gmail.com'], // TODO: Make configurable
+			alertThresholds: [50, 80, 100], // Alert at 50%, 80%, and 100% of budget
+			costFilters: {
+				Environment: [environmentName],
+				Project: ['MacroAI'],
+				PRNumber: [prNumber.toString()],
+			},
 		})
 
 		// Create custom launch template with CORS configuration for preview environments
@@ -193,6 +208,19 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			description: 'DynamoDB table name for deployment status tracking',
 			exportName: `${this.stackName}-DeploymentStatusTableName`,
 		})
+
+		// Priority 2: Cost monitoring outputs
+		new cdk.CfnOutput(this, 'CostMonitoringBudgetName', {
+			value: `macro-ai-${environmentName}-monthly-budget`,
+			description: 'AWS Budget name for cost monitoring',
+			exportName: `${this.stackName}-CostMonitoringBudgetName`,
+		})
+
+		new cdk.CfnOutput(this, 'CostAlertTopicArn', {
+			value: this.costMonitoring.alertTopic.topicArn,
+			description: 'SNS topic ARN for cost alerts',
+			exportName: `${this.stackName}-CostAlertTopicArn`,
+		})
 	}
 
 	/**
@@ -224,8 +252,8 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			launchTemplateName: `macro-ai-${environmentName}-preview-launch-template`,
 			instanceType: ec2.InstanceType.of(
 				ec2.InstanceClass.T3,
-				ec2.InstanceSize.MICRO,
-			), // Cost-optimized for preview
+				ec2.InstanceSize.NANO,
+			), // Priority 2: Further cost-optimized for preview (50% cost reduction)
 			machineImage: ec2.MachineImage.latestAmazonLinux2023({
 				cpuType: ec2.AmazonLinuxCpuType.X86_64,
 			}),
@@ -236,6 +264,19 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			detailedMonitoring: false, // Cost optimization for preview
 			ebsOptimized: true,
 			requireImdsv2: true, // Security best practice
+			// Priority 2: Cost-optimized storage configuration
+			blockDevices: [
+				{
+					deviceName: '/dev/xvda',
+					volume: ec2.BlockDeviceVolume.ebs(8, {
+						volumeType: ec2.EbsDeviceVolumeType.GP3,
+						iops: 3000, // Baseline for gp3
+						throughput: 125, // Baseline for gp3 (MB/s)
+						deleteOnTermination: true,
+						encrypted: true, // Security best practice
+					}),
+				},
+			],
 		})
 	}
 
@@ -428,9 +469,10 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			{
 				vpc: this.networking.vpc,
 				launchTemplate,
-				minCapacity: 1,
-				maxCapacity: 2,
-				desiredCapacity: 1,
+				// Priority 2: Resource consolidation - minimal capacity for preview environments
+				minCapacity: 1, // Single instance minimum for cost optimization
+				maxCapacity: 2, // Limited scaling to control costs
+				desiredCapacity: 1, // Start with single instance
 
 				// Health check configuration
 				healthChecks: {

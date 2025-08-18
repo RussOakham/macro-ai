@@ -24,7 +24,7 @@ export interface Ec2ConstructProps {
 
 	/**
 	 * Instance type for EC2 instances
-	 * @default t3.micro (cost-optimized for development)
+	 * @default t3.micro (cost-optimized for development), t3.nano for preview environments
 	 */
 	readonly instanceType?: ec2.InstanceType
 
