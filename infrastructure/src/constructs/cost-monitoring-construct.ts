@@ -105,7 +105,7 @@ export class CostMonitoringConstruct extends Construct {
 		environmentName: string,
 		budgetLimit: number,
 		thresholds: number[],
-		costFilters: Record<string, string[]>,
+		costFilters?: Record<string, string[]>,
 	): budgets.CfnBudget {
 		// Create budget notifications for each threshold
 		const notifications = thresholds.map((threshold) => ({
@@ -123,13 +123,26 @@ export class CostMonitoringConstruct extends Construct {
 			],
 		}))
 
-		// Build cost filters
-		const filters = {
-			Tags: {
-				Environment: [environmentName],
-				Project: ['MacroAI'],
-				...costFilters,
-			},
+		// Build cost filters in AWS Budgets format
+		// AWS Budgets uses TagKeyValue format: "user:TagKey$TagValue"
+		const tagFilters: string[] = [
+			`user:Environment$${environmentName}`,
+			'user:Project$MacroAI',
+		]
+
+		// Add any additional cost filters
+		if (costFilters) {
+			Object.entries(costFilters).forEach(([key, values]) => {
+				if (Array.isArray(values)) {
+					values.forEach(value => {
+						tagFilters.push(`user:${key}$${value}`)
+					})
+				}
+			})
+		}
+
+		const filters: Record<string, string[]> = {
+			TagKeyValue: tagFilters,
 		}
 
 		return new budgets.CfnBudget(this, 'PreviewEnvironmentBudget', {
@@ -205,13 +218,6 @@ Cost Monitoring Configuration:
 - Budget Limit: $${budgetLimit}/month
 - Alert Topic: ${this.alertTopic.topicName}
 - Cost Alarms: ${this.costAlarms.length}
-- Environment: ${environmentName}
-
-Priority 2 Cost Optimizations:
-- Instance Type: t3.nano (50% cost reduction)
-- Enhanced Auto-Scaling: Aggressive scale-in policies
-- Storage: gp3 volumes with optimized IOPS
-- Monitoring: Real-time cost tracking and alerts
-		`.trim()
+- Environment: ${environmentName}`.trim()
 	}
 }

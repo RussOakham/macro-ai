@@ -611,7 +611,7 @@ export class AutoScalingConstruct extends Construct {
 			case 'staging':
 				return cdk.Duration.minutes(2)
 			default:
-				// Priority 2: Faster scaling for preview environments (cost optimization)
+				// Faster scaling for preview environments (cost optimization)
 				return this.isPreviewEnvironment()
 					? cdk.Duration.seconds(30)
 					: cdk.Duration.minutes(1)
@@ -628,7 +628,7 @@ export class AutoScalingConstruct extends Construct {
 			case 'staging':
 				return cdk.Duration.minutes(5)
 			default:
-				// Priority 2: Much faster scale-in for preview environments (aggressive cost optimization)
+				// Much faster scale-in for preview environments (aggressive cost optimization)
 				return this.isPreviewEnvironment()
 					? cdk.Duration.minutes(1)
 					: cdk.Duration.minutes(3)
@@ -645,7 +645,7 @@ export class AutoScalingConstruct extends Construct {
 			case 'staging':
 				return 75
 			default:
-				// Priority 2: More aggressive for preview environments (cost optimization)
+				// More aggressive for preview environments (cost optimization)
 				return this.isPreviewEnvironment() ? 85 : 80
 		}
 	}

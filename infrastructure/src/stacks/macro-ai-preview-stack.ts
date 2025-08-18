@@ -99,7 +99,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			prNumber,
 		})
 
-		// Priority 2: Create cost monitoring construct for budget tracking and alerts
+		// Create cost monitoring construct for budget tracking and alerts
 		this.costMonitoring = new CostMonitoringConstruct(this, 'CostMonitoring', {
 			environmentName,
 			monthlyBudgetLimit: 3.5, // ~£3 target in USD
@@ -209,7 +209,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			exportName: `${this.stackName}-DeploymentStatusTableName`,
 		})
 
-		// Priority 2: Cost monitoring outputs
+		// Cost monitoring outputs
 		new cdk.CfnOutput(this, 'CostMonitoringBudgetName', {
 			value: `macro-ai-${environmentName}-monthly-budget`,
 			description: 'AWS Budget name for cost monitoring',
@@ -253,7 +253,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			instanceType: ec2.InstanceType.of(
 				ec2.InstanceClass.T3,
 				ec2.InstanceSize.NANO,
-			), // Priority 2: Further cost-optimized for preview (50% cost reduction)
+			), // Further cost-optimized for preview (50% cost reduction)
 			machineImage: ec2.MachineImage.latestAmazonLinux2023({
 				cpuType: ec2.AmazonLinuxCpuType.X86_64,
 			}),
@@ -264,7 +264,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			detailedMonitoring: false, // Cost optimization for preview
 			ebsOptimized: true,
 			requireImdsv2: true, // Security best practice
-			// Priority 2: Cost-optimized storage configuration
+			// Cost-optimized storage configuration
 			blockDevices: [
 				{
 					deviceName: '/dev/xvda',
@@ -469,7 +469,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			{
 				vpc: this.networking.vpc,
 				launchTemplate,
-				// Priority 2: Resource consolidation - minimal capacity for preview environments
+				// Resource consolidation - minimal capacity for preview environments
 				minCapacity: 1, // Single instance minimum for cost optimization
 				maxCapacity: 2, // Limited scaling to control costs
 				desiredCapacity: 1, // Start with single instance
