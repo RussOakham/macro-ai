@@ -274,7 +274,10 @@ export class TaggingStrategy {
 		cleanupDays = 7,
 		environment?: string,
 	): Record<string, string> {
-		const isPreviewEnv = environment?.startsWith('pr-') ?? environment?.includes('preview') ?? false
+		const isPreviewEnv =
+			environment?.startsWith('pr-') ??
+			environment?.includes('preview') ??
+			false
 
 		return {
 			[TAG_KEYS.AUTO_CLEANUP]: isPreviewEnv ? 'true' : 'false',

@@ -287,7 +287,7 @@ export class Ec2Construct extends Construct {
 			? {
 					requestType: ec2.SpotRequestType.ONE_TIME,
 					maxPrice: 0.005, // Maximum price for t3.nano spot instances ($0.005/hour)
-			  }
+				}
 			: undefined
 
 		return new ec2.LaunchTemplate(this, 'Ec2LaunchTemplate', {
@@ -319,8 +319,7 @@ export class Ec2Construct extends Construct {
 	 */
 	private isPreviewEnvironment(environmentName: string): boolean {
 		return (
-			environmentName.startsWith('pr-') ||
-			environmentName.includes('preview')
+			environmentName.startsWith('pr-') || environmentName.includes('preview')
 		)
 	}
 
@@ -788,7 +787,9 @@ export class Ec2Construct extends Construct {
 		if (this.isPreviewEnvironment(environmentName)) {
 			const cleanupDate = new Date()
 			cleanupDate.setDate(cleanupDate.getDate() + 7) // 7-day expiry
-			const cleanupDateStr = cleanupDate.toISOString().split('T')[0] ?? cleanupDate.toISOString().substring(0, 10)
+			const cleanupDateStr =
+				cleanupDate.toISOString().split('T')[0] ??
+				cleanupDate.toISOString().substring(0, 10)
 
 			cdk.Tags.of(this).add('AutoCleanup', 'true')
 			cdk.Tags.of(this).add('CleanupDate', cleanupDateStr)
