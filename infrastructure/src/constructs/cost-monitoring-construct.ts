@@ -134,7 +134,7 @@ export class CostMonitoringConstruct extends Construct {
 		if (costFilters) {
 			Object.entries(costFilters).forEach(([key, values]) => {
 				if (Array.isArray(values)) {
-					values.forEach(value => {
+					values.forEach((value) => {
 						tagFilters.push(`user:${key}$${value}`)
 					})
 				}
