@@ -40,6 +40,7 @@ DRY_RUN=true
 # Test results tracking
 TESTS_PASSED=0
 TESTS_FAILED=0
+TESTS_SKIPPED=0
 TEST_RESULTS=()
 
 # Colors for output
@@ -81,6 +82,12 @@ record_test_result() {
     if [[ "$result" == "PASS" ]]; then
         ((TESTS_PASSED++))
         log_success "TEST PASSED: $test_name"
+    elif [[ "$result" == "SKIP" ]]; then
+        ((TESTS_SKIPPED++))
+        log_warning "TEST SKIPPED: $test_name"
+        if [[ -n "$details" ]]; then
+            log_warning "  Reason: $details"
+        fi
     else
         ((TESTS_FAILED++))
         log_error "TEST FAILED: $test_name"
@@ -442,7 +449,8 @@ generate_test_report() {
     echo "=============================================="
     echo "Tests Passed: $TESTS_PASSED"
     echo "Tests Failed: $TESTS_FAILED"
-    echo "Total Tests:  $((TESTS_PASSED + TESTS_FAILED))"
+    echo "Tests Skipped: $TESTS_SKIPPED"
+    echo "Total Tests:  $((TESTS_PASSED + TESTS_FAILED + TESTS_SKIPPED))"
     echo ""
     
     if [[ $TESTS_FAILED -eq 0 ]]; then

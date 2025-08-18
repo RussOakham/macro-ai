@@ -268,9 +268,13 @@ process_stacks() {
         local last_updated_time
         last_updated_time=$(echo "$stack_data" | jq -r '.LastUpdatedTime // .CreationTime')
         
-        # Extract PR number from stack name
+        # Extract PR number from stack name safely (MacroAiPr123Stack -> 123)
         local pr_number
-        pr_number=$(echo "$stack_name" | sed 's/MacroAiPr\([0-9]*\)Stack/\1/')
+        pr_number=$(echo "$stack_name" | grep -oE 'MacroAiPr[0-9]+Stack' | sed -E 's/MacroAiPr([0-9]+)Stack/\1/')
+        if [[ -z "$pr_number" ]]; then
+            log_warning "Could not extract PR number from stack name: $stack_name"
+            pr_number="0"
+        fi
         
         local env_name="pr-$pr_number"
         

@@ -23,6 +23,7 @@ on:
         default: false
 
 permissions:
+  id-token: write
   contents: read
   actions: read
 
@@ -61,7 +62,13 @@ jobs:
           echo "🔍 Discovering active preview environments..."
 
           # Configuration
-          DRY_RUN="${{ inputs.dry_run || 'true' }}"
+          # For scheduled runs: default to false (live mode)
+          # For manual dispatch: use input value (defaults to true in UI)
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            DRY_RUN="false"
+          else
+            DRY_RUN="${{ inputs.dry_run || 'true' }}"
+          fi
           MAX_AGE_HOURS="${{ inputs.max_age_hours || '24' }}"
           FORCE_CLEANUP="${{ inputs.force_cleanup || 'false' }}"
           CURRENT_TIME=$(date +%s)
@@ -218,7 +225,13 @@ jobs:
           ENV_NAME="${{ matrix.environment.env_name }}"
           PR_NUMBER="${{ matrix.environment.pr_number }}"
           AGE_HOURS="${{ matrix.environment.age_hours }}"
-          DRY_RUN="${{ inputs.dry_run || 'true' }}"
+
+          # Use same DRY_RUN logic as discovery step
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            DRY_RUN="false"
+          else
+            DRY_RUN="${{ inputs.dry_run || 'true' }}"
+          fi
 
           echo "🗑️ Scheduled cleanup for environment: $ENV_NAME"
           echo "📦 Stack: $STACK_NAME"
@@ -315,7 +328,13 @@ jobs:
           cd infrastructure
 
           CLEANUP_COUNT="${{ needs.discover-environments.outputs.cleanup-count }}"
-          DRY_RUN="${{ inputs.dry_run || 'true' }}"
+
+          # Use same DRY_RUN logic as discovery step
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            DRY_RUN="false"
+          else
+            DRY_RUN="${{ inputs.dry_run || 'true' }}"
+          fi
 
           if [[ "$DRY_RUN" == "false" && "$CLEANUP_COUNT" -gt 0 ]]; then
             echo "📊 Recording cost optimization data..."
@@ -378,7 +397,7 @@ jobs:
           echo "✅ Scheduled cleanup completed successfully"
 
       - name: Send cost optimization notifications
-        if: inputs.dry_run != 'true' && needs.discover-environments.outputs.cleanup-count > 0
+        if: ((github.event_name == 'schedule') || (github.event_name == 'workflow_dispatch' && inputs.dry_run != true)) && needs.discover-environments.outputs.cleanup-count > 0
         run: |
           cd infrastructure
 
