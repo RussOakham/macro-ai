@@ -177,11 +177,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			exportName: `${this.stackName}-EC2InstanceId`,
 		})
 
-		new cdk.CfnOutput(this, 'VpcId', {
-			value: this.networking.vpcId,
-			description: 'VPC ID for the preview environment',
-			exportName: `${this.stackName}-VpcId`,
-		})
+		// VPC exports are handled by VpcConstruct to avoid duplication
 
 		new cdk.CfnOutput(this, 'EnvironmentName', {
 			value: environmentName,

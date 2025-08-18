@@ -275,7 +275,8 @@ export class TaggingStrategy {
 		environment?: string,
 	): Record<string, string> {
 		const isPreviewEnv = Boolean(
-			environment && (environment.startsWith('pr-') || environment.includes('preview'))
+			environment &&
+				(environment.startsWith('pr-') || environment.includes('preview')),
 		)
 
 		return {

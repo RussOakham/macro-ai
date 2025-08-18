@@ -62,11 +62,7 @@ export class MacroAiHobbyStack extends cdk.Stack {
 		})
 
 		// Output networking information for future constructs
-		new cdk.CfnOutput(this, 'VpcId', {
-			value: this.networking.vpcId,
-			description: 'VPC ID for EC2-based preview environments',
-			exportName: `${this.stackName}-VpcId`,
-		})
+		// VPC exports are handled by VpcConstruct to avoid duplication
 
 		new cdk.CfnOutput(this, 'AlbSecurityGroupId', {
 			value: this.networking.albSecurityGroup.securityGroupId,

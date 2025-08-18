@@ -424,45 +424,17 @@ export class NetworkingConstruct extends Construct {
 
 	/**
 	 * Create comprehensive CloudFormation outputs
+	 * Note: VPC-related exports are handled by VpcConstruct to avoid duplication
 	 */
 	private createOutputs(): void {
-		// VPC outputs
-		new cdk.CfnOutput(this, 'NetworkingVpcId', {
-			value: this.vpcId,
-			description: 'VPC ID for Macro AI networking infrastructure',
-			exportName: `${this.exportPrefix}-Networking-VpcId`,
+		// Security Group outputs (networking-specific, not covered by VpcConstruct)
+		new cdk.CfnOutput(this, 'AlbSecurityGroupId', {
+			value: this.securityGroups.albSecurityGroup.securityGroupId,
+			description: 'ALB Security Group ID',
+			exportName: `${this.exportPrefix}-Networking-AlbSecurityGroupId`,
 		})
 
-		new cdk.CfnOutput(this, 'NetworkingVpcCidr', {
-			value: this.vpcCidrBlock,
-			description: 'VPC CIDR block',
-			exportName: `${this.exportPrefix}-Networking-VpcCidr`,
-		})
-
-		// Subnet outputs
-		new cdk.CfnOutput(this, 'NetworkingPublicSubnets', {
-			value: this.publicSubnets.map((subnet) => subnet.subnetId).join(','),
-			description: 'Public subnet IDs for ALB and EC2 instances',
-			exportName: `${this.exportPrefix}-Networking-PublicSubnets`,
-		})
-
-		// Only export private subnets if NAT Gateway is enabled (private subnets exist)
-		if (this.enableNatGateway && this.privateSubnets.length > 0) {
-			new cdk.CfnOutput(this, 'NetworkingPrivateSubnets', {
-				value: this.privateSubnets.map((subnet) => subnet.subnetId).join(','),
-				description: 'Private subnet IDs for future database resources',
-				exportName: `${this.exportPrefix}-Networking-PrivateSubnets`,
-			})
-		}
-
-		// Security group outputs
-		new cdk.CfnOutput(this, 'NetworkingAlbSecurityGroup', {
-			value: this.albSecurityGroup.securityGroupId,
-			description: 'Shared ALB security group ID',
-			exportName: `${this.exportPrefix}-Networking-AlbSecurityGroup`,
-		})
-
-		// Availability zone outputs
+		// Availability zone outputs (networking-specific information)
 		new cdk.CfnOutput(this, 'NetworkingAvailabilityZones', {
 			value: this.getAvailabilityZones().join(','),
 			description: 'Availability zones used by the VPC',
