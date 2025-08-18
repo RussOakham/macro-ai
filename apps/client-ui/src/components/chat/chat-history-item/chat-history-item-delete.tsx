@@ -39,9 +39,12 @@ const ChatHistoryItemDelete = ({
 			try {
 				await deleteChatMutation({ chatId })
 
-				logger.info('[ChatSidebar]: Chat deleted successfully', {
-					chatId,
-				})
+				logger.info(
+					{
+						chatId,
+					},
+					'[ChatSidebar]: Chat deleted successfully',
+				)
 
 				toast.success('Chat deleted successfully!')
 
@@ -50,10 +53,13 @@ const ChatHistoryItemDelete = ({
 					void navigate({ to: '/chat' })
 				}
 			} catch (error: unknown) {
-				logger.error('[ChatSidebar]: Error deleting chat', {
-					chatId,
-					error: error instanceof Error ? error.message : 'Unknown error',
-				})
+				logger.error(
+					{
+						chatId,
+						error: error instanceof Error ? error.message : 'Unknown error',
+					},
+					'[ChatSidebar]: Error deleting chat',
+				)
 
 				toast.error('Failed to delete chat. Please try again.')
 			}

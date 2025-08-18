@@ -38,9 +38,12 @@ const useCreateChatMutation = () => {
 		onError: (error) => {
 			// Error handling is managed by the component using this hook
 			// Following the pattern from existing auth mutations
-			logger.error('[useCreateChatMutation]: unable to create chat', {
-				error,
-			})
+			logger.error(
+				{
+					error,
+				},
+				'[useCreateChatMutation]: unable to create chat',
+			)
 		},
 	})
 }

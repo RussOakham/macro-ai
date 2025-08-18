@@ -1565,7 +1565,7 @@ Total:                          ~$363-963/month
 ```yaml
 # Scale down non-production environments
 Development: Scale to 0 tasks 6 PM - 8 AM weekdays, weekends
-Staging: Scale to 1 task 10 PM - 6 AM weekdays
+Staging: Scale to 1 task 10 PM - 6 AM weekdays, weekends
 ```
 
 ## 🔒 Security Comparison: Secrets Manager vs Parameter Store

@@ -702,12 +702,15 @@ describe('AuthController', () => {
 
 			mockRequest.body = loginRequest
 
-			const mockSignInResponse: InitiateAuthCommandOutput = {
+			const mockSignInResponse: InitiateAuthCommandOutput & {
+				Username: string
+			} = {
 				AuthenticationResult: {
 					AccessToken: 'access-token',
 					RefreshToken: 'refresh-token',
 					ExpiresIn: 3600,
 				},
+				Username: 'test-user-id',
 				$metadata: {
 					httpStatusCode: 200,
 					requestId: 'test-request-id',
@@ -716,7 +719,7 @@ describe('AuthController', () => {
 				},
 			}
 
-			vi.mocked(validateData).mockReturnValue({ success: true })
+			vi.mocked(validateData).mockReturnValue({ valid: true })
 			vi.mocked(cognitoService.signInUser).mockResolvedValue([
 				mockSignInResponse,
 				null,

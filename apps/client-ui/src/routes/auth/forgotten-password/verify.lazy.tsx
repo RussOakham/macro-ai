@@ -56,7 +56,7 @@ const RouteComponent = () => {
 				confirmPassword,
 			})
 
-			logger.info('Forgot password verify success', response)
+			logger.info(response, 'Forgot password verify success')
 			toast.success('Password reset successfully! Please login.')
 			await navigate({ to: '/auth/login' })
 		} catch (error: unknown) {

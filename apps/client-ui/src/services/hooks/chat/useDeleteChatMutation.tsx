@@ -74,9 +74,12 @@ const useDeleteChatMutation = () => {
 
 			// Error handling is managed by the component using this hook
 			// Following the pattern from existing auth mutations
-			logger.error('[useDeleteChatMutation]: unable to delete chat', {
-				error,
-			})
+			logger.error(
+				{
+					error,
+				},
+				'[useDeleteChatMutation]: unable to delete chat',
+			)
 		},
 		onSettled: async () => {
 			// Always refetch after error or success to ensure we have the latest data

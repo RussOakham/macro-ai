@@ -55,17 +55,23 @@ const useChatInterface = ({
 	} = useEnhancedChat({
 		chatId: chatId ?? '',
 		onMessageSent: (messageId) => {
-			logger.info('[ChatInterface]: Message sent', {
-				messageId,
-				chatId,
-			})
+			logger.info(
+				{
+					messageId,
+					chatId,
+				},
+				'[ChatInterface]: Message sent',
+			)
 		},
 		onStreamingComplete: (messageId, content) => {
-			logger.info('[ChatInterface]: Streaming complete', {
-				messageId,
-				chatId,
-				contentLength: content.length,
-			})
+			logger.info(
+				{
+					messageId,
+					chatId,
+					contentLength: content.length,
+				},
+				'[ChatInterface]: Streaming complete',
+			)
 		},
 	})
 

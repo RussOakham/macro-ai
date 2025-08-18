@@ -44,7 +44,7 @@ const RouteComponent = () => {
 		try {
 			const response = await postForgotPassword({ email })
 
-			logger.info('Forgot password success', response)
+			logger.info(response, 'Forgot password success')
 			toast.success('Verification code sent! Please check your email.')
 			await navigate({ to: '/auth/forgotten-password/verify' })
 		} catch (error: unknown) {

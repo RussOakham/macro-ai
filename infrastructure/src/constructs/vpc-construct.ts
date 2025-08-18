@@ -22,6 +22,18 @@ export interface VpcConstructProps {
 	 * @default 2 (minimum for ALB, cost-optimized)
 	 */
 	readonly maxAzs?: number
+
+	/**
+	 * Enable NAT Gateway for private subnet internet access
+	 * @default true - set to false for preview environments to eliminate NAT Gateway costs (~$2.76/month)
+	 */
+	readonly enableNatGateway?: boolean
+
+	/**
+	 * Enable VPC endpoints for AWS services
+	 * @default true - set to false for preview environments to reduce costs and complexity
+	 */
+	readonly enableVpcEndpoints?: boolean
 }
 
 /**
@@ -45,25 +57,36 @@ export class VpcConstruct extends Construct {
 	public readonly databaseSubnets: ec2.ISubnet[]
 	public readonly internetGateway: ec2.CfnInternetGateway
 
+	// Configuration properties
+	private readonly enableNatGateway: boolean
+
 	constructor(scope: Construct, id: string, props: VpcConstructProps = {}) {
 		super(scope, id)
 
-		const { enableFlowLogs = false, maxAzs = 2 } = props
+		const {
+			enableFlowLogs = false,
+			maxAzs = 2,
+			enableNatGateway = true,
+			enableVpcEndpoints = true,
+		} = props
 
-		// Create the main VPC with cost-optimized configuration
-		this.vpc = new ec2.Vpc(this, 'MacroAiDevelopmentVpc', {
-			// Network configuration
-			maxAzs, // Multi-AZ for ALB requirement, cost-optimized
-			ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/16'), // 65,536 IP addresses for growth
+		// Store configuration for later use
+		this.enableNatGateway = enableNatGateway
 
-			subnetConfiguration: [
-				{
-					name: 'Public',
-					subnetType: ec2.SubnetType.PUBLIC,
-					cidrMask: 20, // 4,096 IPs per AZ (8,192 total)
-					// EC2 instances placed here for direct internet access
-					// Avoids NAT Gateway costs ($45/month per AZ)
-				},
+		// Create subnet configuration based on NAT Gateway setting
+		const subnetConfiguration = [
+			{
+				name: 'Public',
+				subnetType: ec2.SubnetType.PUBLIC,
+				cidrMask: 20, // 4,096 IPs per AZ (8,192 total)
+				// EC2 instances placed here for direct internet access
+				// Avoids NAT Gateway costs ($45/month per AZ)
+			},
+		]
+
+		// Only add private subnets if NAT Gateway is enabled
+		if (enableNatGateway) {
+			subnetConfiguration.push(
 				{
 					name: 'Private',
 					subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
@@ -76,15 +99,23 @@ export class VpcConstruct extends Construct {
 					cidrMask: 24, // 256 IPs per AZ (512 total)
 					// Isolated subnets for sensitive data stores
 				},
-			],
+			)
+		}
+
+		// Create the main VPC with cost-optimized configuration
+		this.vpc = new ec2.Vpc(this, 'MacroAiDevelopmentVpc', {
+			// Network configuration
+			maxAzs, // Multi-AZ for ALB requirement, cost-optimized
+			ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/16'), // 65,536 IP addresses for growth
+
+			subnetConfiguration,
 
 			// DNS configuration for ALB and Parameter Store
 			enableDnsHostnames: true,
 			enableDnsSupport: true,
 
-			// Cost optimization: Single NAT Gateway
-			// This saves ~$45/month compared to per-AZ NAT Gateways
-			natGateways: 1,
+			// NAT Gateway configuration - 0 for preview environments to eliminate costs
+			natGateways: enableNatGateway ? 1 : 0,
 
 			// Gateway endpoints for cost optimization (free)
 			gatewayEndpoints: {
@@ -99,15 +130,18 @@ export class VpcConstruct extends Construct {
 
 		// Store subnet references for easy access
 		this.publicSubnets = this.vpc.publicSubnets
-		this.privateSubnets = this.vpc.privateSubnets
-		this.databaseSubnets = this.vpc.isolatedSubnets
+		this.privateSubnets = enableNatGateway ? this.vpc.privateSubnets : []
+		this.databaseSubnets = enableNatGateway ? this.vpc.isolatedSubnets : []
 
 		// Get reference to the Internet Gateway for tagging
 		this.internetGateway = this.vpc.node.findChild('IGW').node
 			.defaultChild as ec2.CfnInternetGateway
 
 		// Create VPC endpoints for AWS services (cost optimization)
-		this.createVpcEndpoints()
+		// Only create if enabled and NAT Gateway exists (endpoints need private subnets)
+		if (enableVpcEndpoints && enableNatGateway) {
+			this.createVpcEndpoints()
+		}
 
 		// Configure VPC Flow Logs if enabled
 		if (enableFlowLogs) {
@@ -244,11 +278,14 @@ export class VpcConstruct extends Construct {
 			exportName: 'MacroAI-Development-PublicSubnetIds',
 		})
 
-		new cdk.CfnOutput(this, 'PrivateSubnetIds', {
-			value: this.privateSubnets.map((subnet) => subnet.subnetId).join(','),
-			description: 'Private subnet IDs (for future database resources)',
-			exportName: 'MacroAI-Development-PrivateSubnetIds',
-		})
+		// Only export private subnet IDs if NAT Gateway is enabled (private subnets exist)
+		if (this.enableNatGateway && this.privateSubnets.length > 0) {
+			new cdk.CfnOutput(this, 'PrivateSubnetIds', {
+				value: this.privateSubnets.map((subnet) => subnet.subnetId).join(','),
+				description: 'Private subnet IDs (for future database resources)',
+				exportName: 'MacroAI-Development-PrivateSubnetIds',
+			})
+		}
 	}
 
 	/**

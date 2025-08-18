@@ -94,7 +94,7 @@ export const Route = createFileRoute('/chat/$chatId')({
 		try {
 			chatParamsSchema.parse(params)
 		} catch (error) {
-			logger.error('Invalid chat ID parameter', { params, error })
+			logger.error({ params, error }, 'Invalid chat ID parameter')
 			// eslint-disable-next-line @typescript-eslint/only-throw-error
 			throw redirect({
 				to: '/chat',

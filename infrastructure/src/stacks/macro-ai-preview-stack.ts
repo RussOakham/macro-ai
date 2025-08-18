@@ -82,6 +82,8 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			enableDetailedMonitoring: false, // Cost optimization
 			parameterStorePrefix: this.parameterStore.parameterPrefix,
 			deploymentId,
+			enableNatGateway: false, // Cost optimization: eliminate NAT Gateway (~$2.76/month savings)
+			enableVpcEndpoints: false, // Cost optimization: remove VPC endpoints for preview environments
 		})
 
 		// Validate networking requirements
@@ -106,6 +108,9 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		// Create simplified Auto Scaling for preview environments
 		// Use a basic Auto Scaling Group without complex step scaling policies
 		this.autoScaling = this.createPreviewAutoScalingGroup(previewLaunchTemplate)
+
+		// Add scheduled scaling for cost optimization (off-hours shutdown)
+		this.addScheduledScaling()
 
 		// Create deployment status tracking
 		this.deploymentStatus = new DeploymentStatusConstruct(
@@ -469,5 +474,49 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		// Note: Environment, Component, Purpose are inherited from stack-level TaggingStrategy
 
 		return asg
+	}
+
+	/**
+	 * Add scheduled scaling for cost optimization
+	 * Scale down to 0 instances at 6 PM UTC (off-hours)
+	 * Scale up to 1 instance at 8 AM UTC (business hours)
+	 *
+	 * This provides ~$1.45/month savings by reducing uptime by 50%
+	 */
+	private addScheduledScaling(): void {
+		// Scale down to 0 instances at 6 PM UTC (18:00) every day
+		// This shuts down preview environments during off-hours
+		new autoscaling.ScheduledAction(this, 'ScaleDownSchedule', {
+			autoScalingGroup: this.autoScaling,
+			schedule: autoscaling.Schedule.cron({
+				minute: '0',
+				hour: '18', // 6 PM UTC
+				day: '*', // Every day
+				month: '*', // Every month
+			}),
+			minCapacity: 0,
+			maxCapacity: 0,
+			desiredCapacity: 0,
+		})
+
+		// Scale up to 1 instance at 8 AM UTC (08:00) every day
+		// This starts preview environments for business hours
+		new autoscaling.ScheduledAction(this, 'ScaleUpSchedule', {
+			autoScalingGroup: this.autoScaling,
+			schedule: autoscaling.Schedule.cron({
+				minute: '0',
+				hour: '8', // 8 AM UTC
+				day: '*', // Every day
+				month: '*', // Every month
+			}),
+			minCapacity: 1,
+			maxCapacity: 1,
+			desiredCapacity: 1,
+		})
+
+		// Add tags to identify scheduled scaling
+		cdk.Tags.of(this.autoScaling).add('ScheduledScaling', 'enabled')
+		cdk.Tags.of(this.autoScaling).add('OffHoursShutdown', '18:00-08:00 UTC')
+		cdk.Tags.of(this.autoScaling).add('CostOptimization', 'scheduled-scaling')
 	}
 }

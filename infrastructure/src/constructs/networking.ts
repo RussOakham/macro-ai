@@ -41,6 +41,18 @@ export interface NetworkingConstructProps {
 	readonly parameterStorePrefix?: string
 
 	/**
+	 * Enable NAT Gateway for private subnet internet access
+	 * @default true - set to false for preview environments to eliminate NAT Gateway costs (~$2.76/month)
+	 */
+	readonly enableNatGateway?: boolean
+
+	/**
+	 * Enable VPC endpoints for AWS services
+	 * @default true - set to false for preview environments to reduce costs and complexity
+	 */
+	readonly enableVpcEndpoints?: boolean
+
+	/**
 	 * Enable ALB (Application Load Balancer) integration
 	 * @default true (required for EC2-based preview environments)
 	 */
@@ -92,6 +104,9 @@ export class NetworkingConstruct extends Construct {
 	public readonly vpcId: string
 	public readonly vpcCidrBlock: string
 
+	// Configuration properties
+	private readonly enableNatGateway: boolean
+
 	constructor(
 		scope: Construct,
 		id: string,
@@ -108,13 +123,20 @@ export class NetworkingConstruct extends Construct {
 			enableAlb = true,
 			customDomain,
 			deploymentId = new Date().toISOString(),
+			enableNatGateway = true,
+			enableVpcEndpoints = true,
 		} = props
+
+		// Store configuration for later use
+		this.enableNatGateway = enableNatGateway
 
 		// Create VPC infrastructure
 		const vpcConstruct = new VpcConstruct(this, 'Vpc', {
 			environmentName,
 			enableFlowLogs,
 			maxAzs,
+			enableNatGateway,
+			enableVpcEndpoints,
 		})
 
 		this.vpc = vpcConstruct.vpc
@@ -413,11 +435,14 @@ export class NetworkingConstruct extends Construct {
 			exportName: 'MacroAI-Networking-PublicSubnets',
 		})
 
-		new cdk.CfnOutput(this, 'NetworkingPrivateSubnets', {
-			value: this.privateSubnets.map((subnet) => subnet.subnetId).join(','),
-			description: 'Private subnet IDs for future database resources',
-			exportName: 'MacroAI-Networking-PrivateSubnets',
-		})
+		// Only export private subnets if NAT Gateway is enabled (private subnets exist)
+		if (this.enableNatGateway && this.privateSubnets.length > 0) {
+			new cdk.CfnOutput(this, 'NetworkingPrivateSubnets', {
+				value: this.privateSubnets.map((subnet) => subnet.subnetId).join(','),
+				description: 'Private subnet IDs for future database resources',
+				exportName: 'MacroAI-Networking-PrivateSubnets',
+			})
+		}
 
 		// Security group outputs
 		new cdk.CfnOutput(this, 'NetworkingAlbSecurityGroup', {

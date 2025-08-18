@@ -54,10 +54,13 @@ const ChatHistoryItemEdit = ({
 					title: trimmedTitle,
 				})
 
-				logger.info('[ChatSidebar]: Chat updated successfully', {
-					chatId: editingChatId,
-					newTitle: trimmedTitle,
-				})
+				logger.info(
+					{
+						chatId: editingChatId,
+						newTitle: trimmedTitle,
+					},
+					'[ChatSidebar]: Chat updated successfully',
+				)
 
 				toast.success('Chat title updated successfully!')
 
@@ -65,11 +68,14 @@ const ChatHistoryItemEdit = ({
 				setEditingChatId(null)
 				setEditTitle('')
 			} catch (error: unknown) {
-				logger.error('[ChatSidebar]: Error updating chat', {
-					chatId: editingChatId,
-					newTitle: trimmedTitle,
-					error: error instanceof Error ? error.message : 'Unknown error',
-				})
+				logger.error(
+					{
+						chatId: editingChatId,
+						newTitle: trimmedTitle,
+						error: error instanceof Error ? error.message : 'Unknown error',
+					},
+					'[ChatSidebar]: Error updating chat',
+				)
 
 				toast.error('Failed to update chat title. Please try again.')
 				// Keep editing state active on error so user can retry

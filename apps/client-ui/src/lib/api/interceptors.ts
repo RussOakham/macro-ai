@@ -67,7 +67,7 @@ export const applyTokenRefreshInterceptors = (client: {
 
 			// Handle 403 Forbidden
 			if (error.response?.status === 403) {
-				logger.error(`Access forbidden:`, error)
+				logger.error(error, `Access forbidden:`)
 				await router.navigate({
 					to: '/auth/login',
 					search: {
