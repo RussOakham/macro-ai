@@ -332,6 +332,7 @@ jobs:
       stack-name: ${{ steps.stack-info.outputs.stack-name }}
       ec2-instance-id: ${{ steps.outputs.outputs.ec2-instance-id }}
       load-balancer-dns: ${{ steps.outputs.outputs.load-balancer-dns }}
+      cors-origins: ${{ steps.cors-config.outputs.cors-origins }}
 
     steps:
       - name: Checkout code
@@ -375,6 +376,7 @@ jobs:
           echo "Stack name: ${STACK_NAME}"
 
       - name: Deploy EC2 infrastructure with CORS configuration
+        id: cors-config
         run: |
           cd infrastructure
           pnpm install --frozen-lockfile
@@ -400,6 +402,9 @@ jobs:
             echo "  Frontend URL not yet available, using localhost origins"
             echo "  Setting CORS_ALLOWED_ORIGINS to: $CORS_ORIGINS"
           fi
+
+          # Export normalized CORS_ORIGINS for use in subsequent jobs
+          echo "cors-origins=$CORS_ORIGINS" >> $GITHUB_OUTPUT
 
           echo "📣 Observability: exporting CORS_ALLOWED_ORIGINS to CDK as -> '$CORS_ORIGINS'"
 
@@ -429,7 +434,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           BRANCH_NAME: ${{ github.head_ref }}
           # Important: pass the normalized CORS origins with trailing slash stripped
-          CORS_ALLOWED_ORIGINS: ${{ needs.validate-access.outputs.frontend-url != '<will-be-generated-during-deployment>' && needs.validate-access.outputs.frontend-url || 'http://localhost:5173,http://localhost:3000' }}
+          CORS_ALLOWED_ORIGINS: ${{ needs.deploy-backend-preview.outputs.cors-origins }}
 
       - name: Get EC2 deployment outputs
         id: outputs
