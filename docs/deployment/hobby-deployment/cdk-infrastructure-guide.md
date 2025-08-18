@@ -7,25 +7,26 @@
 ## 🎯 Overview
 
 This guide covers the AWS CDK infrastructure implementation for the Macro AI hobby deployment. The infrastructure creates
-a cost-optimized serverless architecture targeting <£10/month operational costs.
+a cost-optimized EC2-based architecture targeting <£15/month operational costs.
 
 ## 🏗️ Architecture Components
 
 ### Core Infrastructure
 
-- **AWS Lambda Function**: Serverless API backend running the Express application
-- **API Gateway**: REST API with CORS, throttling, and optional custom domain
+- **EC2 Instances**: Auto Scaling Group running the Express application
+- **Application Load Balancer**: HTTP/HTTPS endpoint with CORS and health checks
 - **Parameter Store**: Secure configuration management with tiered parameters
-- **IAM Roles & Policies**: Least-privilege access for Lambda to Parameter Store
+- **IAM Roles & Policies**: Least-privilege access for EC2 to Parameter Store
 - **CloudWatch Logs**: Centralized logging with cost-optimized retention
+- **VPC & Networking**: Private subnets with NAT Gateway for secure deployment
 
 ### Cost Optimization Features
 
-- **ARM64 Architecture**: 20% cheaper than x86_64
-- **Conservative Throttling**: Rate limits to prevent unexpected charges
-- **Minimal Monitoring**: Basic CloudWatch logs with 1-week retention
-- **No Provisioned Concurrency**: Pay only for actual usage
-- **Tiered Parameters**: Standard tier for non-critical parameters
+- **t3.micro Instances**: Burstable performance for variable workloads
+- **Auto Scaling**: Scale down to 1 instance during low usage
+- **Spot Instances**: Optional cost savings for non-critical environments
+- **Minimal Monitoring**: Basic CloudWatch logs with managed retention
+- **Shared NAT Gateway**: Single NAT for outbound traffic across AZs
 
 ## 📁 Directory Structure
 
@@ -377,20 +378,21 @@ aws ssm get-parameters-by-path \
 
 For <100 users and <1000 requests/day:
 
-- **Lambda**: £0.00 (within free tier)
-- **API Gateway**: £0.00 (within free tier)
+- **EC2 Instances**: £8.50 (t3.micro, 1 instance average)
+- **Application Load Balancer**: £2.25 (ALB base cost)
+- **NAT Gateway**: £3.20 (single NAT for outbound traffic)
 - **Parameter Store**: £0.05 (Advanced tier parameters)
-- **CloudWatch Logs**: £0.50 (1-week retention)
-- **Data Transfer**: £0.10
-- **Total**: ~£0.65/month
+- **CloudWatch Logs**: £0.50 (managed retention)
+- **Data Transfer**: £0.20 (ALB to EC2 traffic)
+- **Total**: ~£14.70/month
 
 ### Cost Optimization Tips
 
 1. **Monitor Usage**: Set up billing alerts for unexpected charges
-2. **Parameter Tier**: Use Standard tier for non-critical parameters
-3. **Log Retention**: Keep short retention periods for logs
-4. **Throttling**: Maintain conservative rate limits
-5. **Architecture**: Use ARM64 for 20% cost savings
+2. **Auto Scaling**: Configure scale-down policies for low usage periods
+3. **Instance Types**: Use t3.micro for burstable performance
+4. **Spot Instances**: Consider for development environments
+5. **NAT Gateway**: Use single NAT across availability zones
 
 ## 📚 Additional Resources
 

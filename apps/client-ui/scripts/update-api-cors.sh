@@ -186,35 +186,33 @@ echo -e "${BLUE}🔧 Updating CORS configuration...${NC}"
 # Define allowed origins
 ALLOWED_ORIGINS="'http://localhost:3000','https://localhost:3000','$AMPLIFY_URL'"
 
-# Note: This is a simplified approach. In practice, CORS is configured in the CDK construct
+# Note: CORS is now configured in the Express application, not infrastructure
 echo -e "${YELLOW}⚠ CORS Configuration Note:${NC}"
-echo "CORS settings are configured in the CDK ApiGatewayConstruct."
-echo "To update CORS origins, modify the infrastructure code:"
+echo "CORS settings are configured in the Express API application."
+echo "To update CORS origins, modify the environment variables:"
 echo ""
-echo "File: infrastructure/src/constructs/api-gateway-construct.ts"
-echo "Update the allowOrigins array to include the following origins:"
+echo "File: Parameter Store or .env files"
+echo "Update the CORS_ALLOWED_ORIGINS parameter to include:"
 echo "  $ALLOWED_ORIGINS"
 echo ""
-echo "Then redeploy the infrastructure:"
+echo "Then restart the application or redeploy:"
 echo "  cd ../../infrastructure"
-echo "  pnpm deploy"
+echo "  ./scripts/deploy-ec2.sh"
 echo ""
 
-# Create a patch file for easy CORS update
+# Create environment variable update for CORS configuration
 cat > "$PATCH_FILE" << EOF
---- a/infrastructure/src/constructs/api-gateway-construct.ts
-+++ b/infrastructure/src/constructs/api-gateway-construct.ts
-@@ -200,7 +200,9 @@ export class ApiGatewayConstruct extends Construct {
- 				allowCredentials: true,
- 				allowOrigins: [
--					'http://localhost:3000',
--					'https://localhost:3000'
-+					'http://localhost:3000',
-+					'https://localhost:3000',
-+					'$AMPLIFY_URL'
- 				],
- 				allowMethods: apigateway.Cors.ALL_METHODS,
- 				allowHeaders: [
+# CORS Configuration Update for EC2 Deployment
+# Update Parameter Store or environment variables
+
+# For Parameter Store (recommended):
+aws ssm put-parameter \\
+  --name "/macro-ai/development/standard/cors-allowed-origins" \\
+  --value "http://localhost:3000,https://localhost:3000,$AMPLIFY_URL" \\
+  --overwrite
+
+# For local .env file:
+echo "CORS_ALLOWED_ORIGINS=http://localhost:3000,https://localhost:3000,$AMPLIFY_URL" >> .env
 EOF
 
 print_status "Created CORS update patch file: $PATCH_FILE"
@@ -230,19 +228,18 @@ echo "  Infrastructure dir: $INFRASTRUCTURE_DIR"
 echo ""
 
 echo -e "${BLUE}💡 Next Steps:${NC}"
-echo "1. Apply the CORS patch to your infrastructure code:"
-echo "   cd \"$INFRASTRUCTURE_DIR\""
-echo "   git apply \"$PATCH_FILE\""
+echo "1. Update CORS configuration using the generated commands:"
+echo "   bash \"$PATCH_FILE\""
 echo ""
-echo "2. Or manually update the allowOrigins array in:"
-echo "   $INFRASTRUCTURE_DIR/src/constructs/api-gateway-construct.ts"
+echo "2. Or manually update Parameter Store:"
+echo "   aws ssm put-parameter --name \"/macro-ai/development/standard/cors-allowed-origins\" --value \"$ALLOWED_ORIGINS\" --overwrite"
 echo ""
-echo "3. Redeploy the infrastructure:"
+echo "3. Restart the application to pick up new configuration:"
 echo "   cd \"$INFRASTRUCTURE_DIR\""
-echo "   pnpm deploy"
+echo "   ./scripts/deploy-ec2.sh"
 echo ""
 echo "4. Test the frontend-backend connection:"
-echo "   curl -H \"Origin: $AMPLIFY_URL\" -H \"Access-Control-Request-Method: GET\" -X OPTIONS https://your-api-url/api/health"
+echo "   curl -H \"Origin: $AMPLIFY_URL\" -H \"Access-Control-Request-Method: GET\" -X OPTIONS https://your-alb-url/api/health"
 
 echo ""
 echo -e "${GREEN}✅ CORS update preparation completed!${NC}"
