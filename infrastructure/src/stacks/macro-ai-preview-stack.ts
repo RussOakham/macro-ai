@@ -493,7 +493,6 @@ export class MacroAiPreviewStack extends cdk.Stack {
 				hour: '18', // 6 PM UTC
 				day: '*', // Every day
 				month: '*', // Every month
-				weekDay: '*', // Every day of the week
 			}),
 			minCapacity: 0,
 			maxCapacity: 0,
@@ -509,7 +508,6 @@ export class MacroAiPreviewStack extends cdk.Stack {
 				hour: '8', // 8 AM UTC
 				day: '*', // Every day
 				month: '*', // Every month
-				weekDay: '*', // Every day of the week
 			}),
 			minCapacity: 1,
 			maxCapacity: 1,
