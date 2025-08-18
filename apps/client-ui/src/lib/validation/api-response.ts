@@ -33,11 +33,12 @@ import { logger } from '@/lib/logger/logger'
  */
 const toSafeValidationMeta = (error: unknown, data: unknown) => {
 	// Safe error representation
-	const safeError = error instanceof Error
-		? { name: error.name, message: error.message }
-		: typeof error === 'string'
-		? error
-		: 'Unknown error'
+	const safeError =
+		error instanceof Error
+			? { name: error.name, message: error.message }
+			: typeof error === 'string'
+				? error
+				: 'Unknown error'
 
 	// Safe data summary
 	let safeData: string
@@ -63,7 +64,10 @@ export const validateGetChatsResponse = (data: unknown) => {
 	try {
 		return getChats_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error(toSafeValidationMeta(error, data), '[API Validation] Invalid getChats response')
+		logger.error(
+			toSafeValidationMeta(error, data),
+			'[API Validation] Invalid getChats response',
+		)
 		throw new Error('Invalid chat list response format')
 	}
 }
@@ -136,7 +140,10 @@ export const validateLoginResponse = (data: unknown) => {
 	try {
 		return postAuthlogin_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error(toSafeValidationMeta(error, data), '[API Validation] Invalid login response')
+		logger.error(
+			toSafeValidationMeta(error, data),
+			'[API Validation] Invalid login response',
+		)
 		throw new Error('Invalid login response format')
 	}
 }
@@ -145,7 +152,10 @@ export const validateRegisterResponse = (data: unknown) => {
 	try {
 		return postAuthregister_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error(toSafeValidationMeta(error, data), '[API Validation] Invalid register response')
+		logger.error(
+			toSafeValidationMeta(error, data),
+			'[API Validation] Invalid register response',
+		)
 		throw new Error('Invalid register response format')
 	}
 }
@@ -154,7 +164,10 @@ export const validateLogoutResponse = (data: unknown) => {
 	try {
 		return postAuthlogout_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error(toSafeValidationMeta(error, data), '[API Validation] Invalid logout response')
+		logger.error(
+			toSafeValidationMeta(error, data),
+			'[API Validation] Invalid logout response',
+		)
 		throw new Error('Invalid logout response format')
 	}
 }
@@ -256,7 +269,10 @@ export const validateApiResponse = <T>(
 	try {
 		return schema.parse(data)
 	} catch (error: unknown) {
-		logger.error(toSafeValidationMeta(error, data), '[API Validation] Generic validation failed')
+		logger.error(
+			toSafeValidationMeta(error, data),
+			'[API Validation] Generic validation failed',
+		)
 		throw new Error(errorMessage)
 	}
 }
@@ -288,7 +304,10 @@ export const safeValidateApiResponse = <T>(
 				? `Validation failed: ${error.errors.map((e) => e.message).join(', ')}`
 				: 'Unknown validation error'
 
-		logger.error(toSafeValidationMeta(error, data), '[API Validation] Safe validation failed')
+		logger.error(
+			toSafeValidationMeta(error, data),
+			'[API Validation] Safe validation failed',
+		)
 		return { success: false, error: errorMessage }
 	}
 }
