@@ -150,7 +150,7 @@ export class Ec2Construct extends Construct {
 		)
 
 		// Apply tags to the construct
-		this.applyTags()
+		this.applyTags(environmentName)
 	}
 
 	/**
@@ -282,6 +282,14 @@ export class Ec2Construct extends Construct {
 		enableDetailedMonitoring: boolean,
 		deploymentId: string,
 	): ec2.LaunchTemplate {
+		// Priority 3: Configure spot instances for preview environments (cost optimization)
+		const spotOptions = this.isPreviewEnvironment(environmentName)
+			? {
+					requestType: ec2.SpotRequestType.ONE_TIME,
+					maxPrice: 0.005, // Maximum price for t3.nano spot instances ($0.005/hour)
+			  }
+			: undefined
+
 		return new ec2.LaunchTemplate(this, 'Ec2LaunchTemplate', {
 			launchTemplateName: `macro-ai-${environmentName}-launch-template`,
 			instanceType,
@@ -300,7 +308,20 @@ export class Ec2Construct extends Construct {
 			ebsOptimized: true,
 			// Instance metadata service v2 (security best practice)
 			requireImdsv2: true,
+			// Priority 3: Add spot instance configuration for preview environments
+			spotOptions,
 		})
+	}
+
+	/**
+	 * Check if this is a preview environment (PR-based)
+	 * Priority 3: Helper method for cost optimization features
+	 */
+	private isPreviewEnvironment(environmentName: string): boolean {
+		return (
+			environmentName.startsWith('pr-') ||
+			environmentName.includes('preview')
+		)
 	}
 
 	/**
@@ -756,12 +777,24 @@ export class Ec2Construct extends Construct {
 	 * Apply comprehensive tagging for cost tracking and resource management
 	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
-	private applyTags(): void {
+	private applyTags(environmentName: string): void {
 		// Apply construct-specific tags that don't conflict with stack-level tags
 		cdk.Tags.of(this).add('SubComponent', 'EC2')
 		cdk.Tags.of(this).add('SubPurpose', 'ComputeInfrastructure')
 		cdk.Tags.of(this).add('ConstructManagedBy', 'Ec2Construct')
 		cdk.Tags.of(this).add('InstanceType', 'EC2-Instance')
+
+		// Priority 3: Add auto-cleanup tags for preview environments
+		if (this.isPreviewEnvironment(environmentName)) {
+			const cleanupDate = new Date()
+			cleanupDate.setDate(cleanupDate.getDate() + 7) // 7-day expiry
+			const cleanupDateStr = cleanupDate.toISOString().split('T')[0] ?? cleanupDate.toISOString().substring(0, 10)
+
+			cdk.Tags.of(this).add('AutoCleanup', 'true')
+			cdk.Tags.of(this).add('CleanupDate', cleanupDateStr)
+			cdk.Tags.of(this).add('CostCenter', 'development')
+		}
+
 		// Note: Other tags like Environment, Project, Component, Purpose are inherited from stack level
 	}
 

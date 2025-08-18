@@ -211,6 +211,32 @@ export class CostMonitoringConstruct extends Construct {
 
 		alarms.push(dailyCostAlarm)
 
+		// Priority 3: Enhanced cost monitoring with $5/month threshold for early detection
+		const enhancedCostAlarm = new cloudwatch.Alarm(this, 'EnhancedCostAlarm', {
+			alarmName: `macro-ai-${environmentName}-enhanced-cost-alarm`,
+			alarmDescription: `Enhanced cost monitoring: Monthly charges approaching $5 threshold for ${environmentName}`,
+			metric: new cloudwatch.Metric({
+				namespace: 'AWS/Billing',
+				metricName: 'EstimatedCharges',
+				dimensionsMap: {
+					Currency: 'USD',
+				},
+				statistic: 'Maximum',
+				period: cdk.Duration.hours(6), // Check every 6 hours for early detection
+				region: 'us-east-1',
+			}),
+			threshold: 5.0, // $5/month threshold for early cost detection
+			evaluationPeriods: 1,
+			comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+			treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+		})
+
+		enhancedCostAlarm.addAlarmAction(
+			new cloudwatchActions.SnsAction(this.alertTopic),
+		)
+
+		alarms.push(enhancedCostAlarm)
+
 		return alarms
 	}
 

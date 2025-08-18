@@ -32,6 +32,10 @@ export const TAG_KEYS = {
 	BACKUP_REQUIRED: 'BackupRequired',
 	MONITORING_LEVEL: 'MonitoringLevel',
 
+	// Priority 3: Auto-cleanup tags for cost optimization
+	AUTO_CLEANUP: 'AutoCleanup',
+	CLEANUP_DATE: 'CleanupDate',
+
 	// Security tags
 	DATA_CLASSIFICATION: 'DataClassification',
 	COMPLIANCE_SCOPE: 'ComplianceScope',
@@ -259,6 +263,23 @@ export class TaggingStrategy {
 			[TAG_KEYS.AUTO_SHUTDOWN]: autoShutdown.toString(),
 			[TAG_KEYS.BACKUP_REQUIRED]: backupRequired.toString(),
 			[TAG_KEYS.MONITORING_LEVEL]: monitoringLevel,
+		}
+	}
+
+	/**
+	 * Priority 3: Create auto-cleanup tags for preview environments
+	 * Helps prevent orphaned resources and reduces costs
+	 */
+	public static createAutoCleanupTags(
+		cleanupDays = 7,
+		environment?: string,
+	): Record<string, string> {
+		const isPreviewEnv = environment?.startsWith('pr-') ?? environment?.includes('preview') ?? false
+
+		return {
+			[TAG_KEYS.AUTO_CLEANUP]: isPreviewEnv ? 'true' : 'false',
+			[TAG_KEYS.CLEANUP_DATE]: this.calculateExpiryDate(cleanupDays),
+			[TAG_KEYS.COST_CENTER]: TAG_VALUES.COST_CENTERS.DEVELOPMENT,
 		}
 	}
 
