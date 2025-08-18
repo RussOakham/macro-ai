@@ -233,10 +233,10 @@ ExpiryDate: 2024-01-15T10:30:00Z # 7 days from creation
 | Resource Type        | Naming Pattern                         | Example                           |
 | -------------------- | -------------------------------------- | --------------------------------- |
 | CloudFormation Stack | `MacroAiPr-{number}Stack`              | `MacroAiPr-123Stack`              |
-| Lambda Function      | `macro-ai-pr-{number}-api`             | `macro-ai-pr-123-api`             |
-| API Gateway          | `macro-ai-pr-{number}-api`             | `macro-ai-pr-123-api`             |
-| API Stage            | `pr-{number}`                          | `pr-123`                          |
-| Log Group            | `/aws/lambda/macro-ai-pr-{number}-api` | `/aws/lambda/macro-ai-pr-123-api` |
+| EC2 Auto Scaling Group | `macro-ai-pr-{number}-asg`           | `macro-ai-pr-123-asg`             |
+| Application Load Balancer | `macro-ai-pr-{number}-alb`        | `macro-ai-pr-123-alb`             |
+| Target Group         | `macro-ai-pr-{number}-tg`              | `macro-ai-pr-123-tg`              |
+| Log Group            | `/aws/ec2/macro-ai-pr-{number}`        | `/aws/ec2/macro-ai-pr-123`        |
 | Parameter Prefix     | `/macro-ai/development` (shared)       | `/macro-ai/development`           |
 
 ### Troubleshooting Guide

@@ -28,12 +28,10 @@ The CI/CD pipeline provides:
 
 #### Persistent Environment Workflows
 
-> **Note**: Legacy Lambda-based deployment workflows have been removed as part of the
-> migration to EC2-based deployments. These workflows are no longer available:
->
-> - `deploy-infrastructure.yml` (removed)
-> - `deploy-full-stack.yml` (removed)
-> - `deploy-staging.yml` (removed)
+Current EC2-based deployment workflows:
+
+- Infrastructure deployment via CDK
+- Manual environment management workflows
 
 #### Manual Teardown Workflows
 
@@ -363,12 +361,6 @@ Each environment should have:
 # Automatic deployment
 git push origin main  # Deploys to production environment
 ```
-
-### Staging Deployment (Legacy - Removed)
-
-> **⚠️ REMOVED**: The `deploy-staging.yml` workflow has been removed as part of the
-> Lambda-to-EC2 migration. Staging deployments will be handled by the new EC2-based
-> deployment workflows once the migration is complete.
 
 ### Emergency Rollback (`rollback.yml`)
 

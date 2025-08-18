@@ -1,13 +1,12 @@
 # Infrastructure Lambda Functions Documentation
 
 > **Important**: This document explains Lambda functions used for **infrastructure automation**,
-> not application hosting. The application hosting Lambda has been removed and replaced with EC2 deployment.
+> not application hosting. The application is hosted on EC2 instances.
 
 ## Overview
 
-After migrating from Lambda-based application hosting to EC2 deployment, several Lambda functions remain
-in the infrastructure for automation, monitoring, and operational tasks. These functions are essential
-for managing the EC2-based deployment infrastructure.
+The infrastructure includes several Lambda functions for automation, monitoring, and operational tasks.
+These functions are essential for managing the EC2-based deployment infrastructure.
 
 ## Infrastructure Lambda Functions
 
@@ -228,30 +227,22 @@ Several CLI tools interact with these Lambda functions:
 | **Performance**         | optimization-engine          | Optimize Auto Scaling            | Every 6 hours  | 15 min  |
 | **Performance**         | cost-optimizer               | Optimize costs                   | Every 12 hours | 10 min  |
 
-## Migration Impact Assessment
+## Function Categories
 
-### ✅ **Retained Functions** (Infrastructure Automation)
+### ✅ **Infrastructure Automation Functions**
 
-- **12 Lambda functions** remain for infrastructure automation
-- **All functions** are EC2-focused and support the new deployment architecture
-- **No application hosting** Lambda functions remain
+- **12 Lambda functions** for infrastructure automation and monitoring
+- **All functions** are EC2-focused and support the deployment architecture
 - **Clear separation** between infrastructure automation and application hosting
 
-### ❌ **Removed Functions** (Application Hosting)
+### 🎯 **Function Purposes**
 
-- **Express API hosting Lambda** - Replaced with EC2 instances
-- **API Gateway Lambda proxy** - Replaced with Application Load Balancer
-- **Serverless HTTP wrapper** - No longer needed with native Express server
-
-### 🔄 **Updated Functions** (Modified for EC2)
-
-- **Health check functions** now validate EC2 instances instead of Lambda functions
-- **Performance optimization** now targets Auto Scaling Groups and EC2 instances
-- **Deployment pipeline** now orchestrates blue-green deployments to EC2
-- **Security monitoring** now monitors EC2 instances and ALB traffic
+- **Health check functions** validate EC2 instances and application health
+- **Performance optimization** targets Auto Scaling Groups and EC2 instances
+- **Deployment pipeline** orchestrates blue-green deployments to EC2
+- **Security monitoring** monitors EC2 instances and ALB traffic
 
 ---
 
 **Last Updated**: 2025-08-18
-**Migration Status**: Post-Lambda-to-EC2 migration documentation
 **Review Schedule**: Quarterly review recommended
