@@ -6,8 +6,8 @@
 
 ## Executive Summary
 
-Comprehensive analysis of the codebase after Lambda-to-EC2 migration has identified opportunities for cleanup across four
-categories:
+Comprehensive analysis of the codebase after Lambda-to-EC2 migration has identified opportunities for cleanup
+across four categories:
 
 - ✅ **Category 1 & 2**: Safe removals and updates (COMPLETED)
 - ✅ **Category 3**: Infrastructure Lambda documentation (COMPLETED)
@@ -78,16 +78,16 @@ categories:
 
 #### Medium Priority Infrastructure Cleanup
 
-4. **API Gateway Construct** (`infrastructure/src/constructs/api-gateway-construct.ts`)
+1. **API Gateway Construct** (`infrastructure/src/constructs/api-gateway-construct.ts`)
    - Entire construct appears unused (not imported in any stacks)
    - **Action**: Verify not used, then remove
 
-5. **API Gateway Documentation**
+2. **API Gateway Documentation**
    - `docs/operations/api-gateway-deployment-troubleshooting.md`
    - `docs/adr/005-api-gateway-deployment-architecture.md`
    - **Action**: Archive or remove obsolete documentation
 
-6. **Integration Tests** (`tests/integration/api-gateway-integration.test.ts`)
+3. **Integration Tests** (`tests/integration/api-gateway-integration.test.ts`)
    - API Gateway specific integration tests
    - **Action**: Replace with ALB integration tests
 
@@ -138,26 +138,26 @@ categories:
 
 #### 🟡 Medium Priority (Next Sprint)
 
-4. **Review Unused Dev Dependencies**
+1. **Review Unused Dev Dependencies**
    - Audit ESLint plugins and configs
    - Remove React-related linting from API package
    - Verify coverage tools are configured
 
-5. **Update Documentation**
+2. **Update Documentation**
    - Archive API Gateway troubleshooting docs
    - Update deployment guides to reflect EC2 architecture
 
-6. **Review Unused Exports**
+3. **Review Unused Exports**
    - Audit middleware exports for incomplete implementations
    - Clean up type definitions that are truly unused
 
 #### 🟢 Low Priority (Future Maintenance)
 
-7. **Test Helper Cleanup**
+1. **Test Helper Cleanup**
    - Review test helpers for actual usage
    - Consolidate similar mock utilities
 
-8. **Database Schema Review**
+2. **Database Schema Review**
    - Verify all table exports are needed
    - Consider if vector search will be implemented
 
