@@ -63,11 +63,13 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	public readonly monitoring: MonitoringConstruct
 	public readonly deploymentStatus: DeploymentStatusConstruct
 	public readonly costMonitoring: CostMonitoringConstruct
+	public readonly prNumber: number
 
 	constructor(scope: Construct, id: string, props: MacroAiPreviewStackProps) {
 		super(scope, id, props)
 
 		const { environmentName, prNumber, branchName, corsAllowedOrigins } = props
+		this.prNumber = prNumber
 
 		// Note: Base-level tags (Project, Environment, EnvironmentType, Component, Purpose, CreatedBy, ManagedBy, PRNumber, Branch, ExpiryDate, Scale, AutoShutdown)
 		// are applied centrally via StackProps.tags in app.ts using TaggingStrategy.
@@ -506,8 +508,8 @@ export class MacroAiPreviewStack extends cdk.Stack {
 					autoscaling.TerminationPolicy.DEFAULT,
 				],
 
-				// Auto scaling group name
-				autoScalingGroupName: `macro-ai-preview-asg`,
+				// Auto scaling group name - parameterized with PR number to avoid conflicts
+				autoScalingGroupName: `macro-ai-pr-${this.prNumber}-asg`,
 			},
 		)
 
