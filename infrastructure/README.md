@@ -96,9 +96,9 @@ new MacroAiHobbyStack(app, 'MacroAiDevelopmentStack', {
 
 ## Cost Optimization Features
 
-- **t3.micro Instances**: Burstable performance for variable workloads
+- **t4g.micro Instances**: Burstable performance for variable workloads
 - **Auto Scaling**: Scale down to 1 instance during low usage periods
-- **ARM64 Architecture**: 20% cost savings over x86_64 instances
+- **ARM64 Graviton2/Graviton3 Architecture**: 20% cost savings over x86_64 instances
 - **Shared NAT Gateway**: Single NAT for outbound traffic across availability zones
 - **Optimized Monitoring**: CloudWatch logs with managed retention policies
 - **Standard Parameter Tier**: Cost-effective parameter storage for non-critical values
