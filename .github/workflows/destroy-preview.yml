@@ -191,16 +191,28 @@ jobs:
         env:
           CDK_DESTROY_MODE: 'true'
           ALLOW_INLINE_CODE_FOR_DESTROY: 'true'
+          # EC2 preview environment context
+          CDK_DEPLOY_ENV: ${{ needs.validate-access.outputs.env-name }}
+          CDK_DEPLOY_TYPE: 'ec2-preview'
+          CDK_DEPLOY_SCALE: 'preview'
         run: |
           cd infrastructure
 
           STACK_NAME="${{ needs.validate-access.outputs.stack-name }}"
           ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
 
-          echo "🗑️ Destroying ephemeral environment: ${ENV_NAME}"
+          echo "🗑️ Destroying EC2-based ephemeral environment: ${ENV_NAME}"
           echo "📦 Stack: ${STACK_NAME}"
+          echo "🏗️ Deployment Type: ec2-preview"
           echo "👤 PR Author: ${{ needs.validate-access.outputs.target-user }}"
           echo "🔗 PR: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}"
+          echo ""
+          echo "🔍 Expected EC2 resources to be destroyed:"
+          echo "  - Auto Scaling Group: macro-ai-${ENV_NAME}-asg"
+          echo "  - Application Load Balancer: macro-ai-${ENV_NAME}-alb"
+          echo "  - Launch Template: macro-ai-${ENV_NAME}-preview-launch-template"
+          echo "  - EC2 instances managed by Auto Scaling Group"
+          echo ""
 
           # Attempt to destroy the stack with retries
           DESTROY_SUCCESS=false
@@ -228,28 +240,26 @@ jobs:
             exit 1
           fi
 
-      - name: Verify stack deletion
+      - name: Verify EC2 cleanup
         id: verify
         run: |
+          cd infrastructure
+
+          ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
           STACK_NAME="${{ needs.validate-access.outputs.stack-name }}"
 
-          echo "🔍 Verifying stack deletion..."
+          echo "🔍 Using centralized EC2 cleanup verification..."
 
           # Wait a moment for AWS to process the deletion
           sleep 10
 
-          # Check if stack still exists
-          STACK_STATUS=$(aws cloudformation describe-stacks \
-            --stack-name "${STACK_NAME}" \
-            --query 'Stacks[0].StackStatus' \
-            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
-
-          if [[ "${STACK_STATUS}" == "DOES_NOT_EXIST" ]]; then
+          # Use centralized verification script
+          if ./scripts/verify-ec2-cleanup.sh --env-name "${ENV_NAME}" --stack-name "${STACK_NAME}" --verbose; then
             echo "verification-result=success" >> $GITHUB_OUTPUT
-            echo "✅ Stack deletion verified - environment fully cleaned up"
+            echo "✅ EC2 preview environment fully cleaned up"
           else
             echo "verification-result=partial" >> $GITHUB_OUTPUT
-            echo "⚠️ Stack still exists with status: ${STACK_STATUS}"
+            echo "⚠️ Some resources may still be terminating or cleanup verification failed"
             echo "This may be normal if deletion is still in progress"
           fi
 
@@ -291,9 +301,10 @@ jobs:
               comment += `The ephemeral preview environment has been destroyed.\n\n`;
               comment += `**Verification:** ${verifyIcon} ${verificationResult === 'success' ? 'Complete' : 'In Progress'}\n\n`;
               comment += `### 🧹 Resources Cleaned Up\n`;
-              comment += `- AWS Lambda function\n`;
-              comment += `- API Gateway REST API\n`;
-              comment += `- CloudWatch Log Groups\n`;
+              comment += `- EC2 instances and Auto Scaling Group\n`;
+              comment += `- Application Load Balancer and Target Groups\n`;
+              comment += `- VPC networking components (subnets, security groups)\n`;
+              comment += `- CloudWatch Log Groups and monitoring resources\n`;
               comment += `- IAM roles and policies\n`;
               comment += `- CloudFormation stack\n\n`;
             } else {
@@ -302,7 +313,10 @@ jobs:
               comment += `A repository maintainer may need to manually clean up resources.\n\n`;
               comment += `**Manual cleanup options:**\n`;
               comment += `- Use the \`teardown-dev.yml\` workflow with PR number ${{ github.event.pull_request.number }}\n`;
-              comment += `- Check AWS Console for remaining resources\n\n`;
+              comment += `- Check AWS Console for remaining resources:\n`;
+              comment += `  - **EC2**: Auto Scaling Groups, Launch Templates, Instances\n`;
+              comment += `  - **Load Balancing**: Application Load Balancers, Target Groups\n`;
+              comment += `  - **CloudFormation**: Stack \`${stackName}\`\n\n`;
             }
 
             comment += `---\n`;

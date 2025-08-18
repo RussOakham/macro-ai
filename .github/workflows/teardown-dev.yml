@@ -55,6 +55,9 @@ jobs:
           fi
           echo "✅ PR number format valid: ${{ inputs.pr_number }}"
 
+      - name: Checkout repository (required for composite actions)
+        uses: actions/checkout@v4
+
       - name: Check code ownership of workflow actor
         id: codeowner-check
         uses: ./.github/actions/check-codeowner
@@ -192,19 +195,32 @@ jobs:
 
       - name: Destroy infrastructure
         id: destroy
+        env:
+          # EC2 preview environment context
+          CDK_DEPLOY_ENV: ${{ needs.validate-request.outputs.env-name }}
+          CDK_DEPLOY_TYPE: 'ec2-preview'
+          CDK_DEPLOY_SCALE: 'preview'
         run: |
           cd infrastructure
 
           STACK_NAME="${{ needs.validate-request.outputs.stack-name }}"
           ENV_NAME="${{ needs.validate-request.outputs.env-name }}"
 
-          echo "🗑️ MANUAL TEARDOWN: Destroying development environment"
+          echo "🗑️ MANUAL TEARDOWN: Destroying EC2-based development environment"
           echo "📦 Stack: ${STACK_NAME}"
           echo "🌍 Environment: ${ENV_NAME}"
+          echo "🏗️ Deployment Type: ec2-preview"
           echo "👤 Requested by: ${{ needs.validate-request.outputs.target-user }}"
           echo "📅 Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           echo ""
-          echo "⚠️  This action will permanently destroy all resources in this environment"
+          echo "⚠️  This action will permanently destroy all EC2 resources in this environment"
+          echo "🔍 Expected EC2 resources to be destroyed:"
+          echo "  - Auto Scaling Group: macro-ai-${ENV_NAME}-asg"
+          echo "  - Application Load Balancer: macro-ai-${ENV_NAME}-alb"
+          echo "  - Launch Template: macro-ai-${ENV_NAME}-preview-launch-template"
+          echo "  - EC2 instances managed by Auto Scaling Group"
+          echo "  - VPC networking components and security groups"
+          echo ""
 
           # Attempt to destroy the stack with retries
           DESTROY_SUCCESS=false
@@ -232,29 +248,27 @@ jobs:
             exit 1
           fi
 
-      - name: Verify stack deletion
+      - name: Verify EC2 cleanup
         id: verify
         run: |
+          cd infrastructure
+
+          ENV_NAME="${{ needs.validate-request.outputs.env-name }}"
           STACK_NAME="${{ needs.validate-request.outputs.stack-name }}"
 
-          echo "🔍 Verifying stack deletion..."
+          echo "🔍 Using centralized EC2 cleanup verification for manual teardown..."
 
           # Wait a moment for AWS to process the deletion
           sleep 15
 
-          # Check if stack still exists
-          STACK_STATUS=$(aws cloudformation describe-stacks \
-            --stack-name "${STACK_NAME}" \
-            --query 'Stacks[0].StackStatus' \
-            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
-
-          if [[ "${STACK_STATUS}" == "DOES_NOT_EXIST" ]]; then
+          # Use centralized verification script with extended timeout for manual operations
+          if ./scripts/verify-ec2-cleanup.sh --env-name "${ENV_NAME}" --stack-name "${STACK_NAME}" --timeout 600 --verbose; then
             echo "verification-result=success" >> $GITHUB_OUTPUT
-            echo "✅ Stack deletion verified - environment fully cleaned up"
+            echo "✅ Manual teardown verification complete - all EC2 resources cleaned up"
           else
             echo "verification-result=partial" >> $GITHUB_OUTPUT
-            echo "⚠️ Stack still exists with status: ${STACK_STATUS}"
-            echo "This may be normal if deletion is still in progress"
+            echo "⚠️ Some resources may still be terminating or cleanup verification failed"
+            echo "Manual review may be required for remaining resources"
           fi
 
   # Report results
@@ -289,9 +303,10 @@ jobs:
             echo "**Verification:** ${VERIFICATION_RESULT}" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**Resources Cleaned Up:**" >> $GITHUB_STEP_SUMMARY
-            echo "- AWS Lambda function" >> $GITHUB_STEP_SUMMARY
-            echo "- API Gateway REST API" >> $GITHUB_STEP_SUMMARY
-            echo "- CloudWatch Log Groups" >> $GITHUB_STEP_SUMMARY
+            echo "- EC2 instances and Auto Scaling Group" >> $GITHUB_STEP_SUMMARY
+            echo "- Application Load Balancer and Target Groups" >> $GITHUB_STEP_SUMMARY
+            echo "- VPC networking components (subnets, security groups)" >> $GITHUB_STEP_SUMMARY
+            echo "- CloudWatch Log Groups and monitoring resources" >> $GITHUB_STEP_SUMMARY
             echo "- IAM roles and policies" >> $GITHUB_STEP_SUMMARY
             echo "- CloudFormation stack" >> $GITHUB_STEP_SUMMARY
           else
