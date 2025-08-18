@@ -230,14 +230,14 @@ ExpiryDate: 2024-01-15T10:30:00Z # 7 days from creation
 
 ### Environment Naming Conventions
 
-| Resource Type        | Naming Pattern                         | Example                           |
-| -------------------- | -------------------------------------- | --------------------------------- |
-| CloudFormation Stack | `MacroAiPr-{number}Stack`              | `MacroAiPr-123Stack`              |
-| EC2 Auto Scaling Group | `macro-ai-pr-{number}-asg`           | `macro-ai-pr-123-asg`             |
-| Application Load Balancer | `macro-ai-pr-{number}-alb`        | `macro-ai-pr-123-alb`             |
-| Target Group         | `macro-ai-pr-{number}-tg`              | `macro-ai-pr-123-tg`              |
-| Log Group            | `/aws/ec2/macro-ai-pr-{number}`        | `/aws/ec2/macro-ai-pr-123`        |
-| Parameter Prefix     | `/macro-ai/development` (shared)       | `/macro-ai/development`           |
+| Resource Type             | Naming Pattern                   | Example                    |
+| ------------------------- | -------------------------------- | -------------------------- |
+| CloudFormation Stack      | `MacroAiPr-{number}Stack`        | `MacroAiPr-123Stack`       |
+| EC2 Auto Scaling Group    | `macro-ai-pr-{number}-asg`       | `macro-ai-pr-123-asg`      |
+| Application Load Balancer | `macro-ai-pr-{number}-alb`       | `macro-ai-pr-123-alb`      |
+| Target Group              | `macro-ai-pr-{number}-tg`        | `macro-ai-pr-123-tg`       |
+| Log Group                 | `/aws/ec2/macro-ai-pr-{number}`  | `/aws/ec2/macro-ai-pr-123` |
+| Parameter Prefix          | `/macro-ai/development` (shared) | `/macro-ai/development`    |
 
 ### Troubleshooting Guide
 

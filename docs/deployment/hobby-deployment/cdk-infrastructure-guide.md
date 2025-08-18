@@ -156,21 +156,21 @@ The EC2 instance role includes the following managed and custom policies:
 
 ```json
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "ssm:GetParameter",
-        "ssm:GetParameters",
-        "ssm:GetParametersByPath"
-      ],
-      "Resource": [
-        "arn:aws:ssm:*:*:parameter/hobby/*",
-        "arn:aws:ssm:*:*:parameter/macro-ai/*"
-      ]
-    }
-  ]
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"Action": [
+				"ssm:GetParameter",
+				"ssm:GetParameters",
+				"ssm:GetParametersByPath"
+			],
+			"Resource": [
+				"arn:aws:ssm:*:*:parameter/hobby/*",
+				"arn:aws:ssm:*:*:parameter/macro-ai/*"
+			]
+		}
+	]
 }
 ```
 
@@ -178,22 +178,19 @@ The EC2 instance role includes the following managed and custom policies:
 
 ```json
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "kms:Decrypt",
-        "kms:DescribeKey"
-      ],
-      "Resource": "arn:aws:kms:*:*:key/*",
-      "Condition": {
-        "StringEquals": {
-          "kms:ViaService": "ssm.*.amazonaws.com"
-        }
-      }
-    }
-  ]
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"Action": ["kms:Decrypt", "kms:DescribeKey"],
+			"Resource": "arn:aws:kms:*:*:key/*",
+			"Condition": {
+				"StringEquals": {
+					"kms:ViaService": "ssm.*.amazonaws.com"
+				}
+			}
+		}
+	]
 }
 ```
 
@@ -201,19 +198,19 @@ The EC2 instance role includes the following managed and custom policies:
 
 ```json
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents",
-        "logs:DescribeLogStreams"
-      ],
-      "Resource": "arn:aws:logs:*:*:log-group:/aws/ec2/macro-ai*"
-    }
-  ]
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"Action": [
+				"logs:CreateLogGroup",
+				"logs:CreateLogStream",
+				"logs:PutLogEvents",
+				"logs:DescribeLogStreams"
+			],
+			"Resource": "arn:aws:logs:*:*:log-group:/aws/ec2/macro-ai*"
+		}
+	]
 }
 ```
 
