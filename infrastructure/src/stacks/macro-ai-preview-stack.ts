@@ -36,6 +36,12 @@ export interface MacroAiPreviewStackProps extends cdk.StackProps {
 	 * @default 'preview'
 	 */
 	readonly scale?: string
+
+	/**
+	 * Email addresses for cost alert notifications
+	 * Can be overridden via CDK context 'costAlertEmails'
+	 */
+	readonly costAlertEmails?: string[]
 }
 
 /**
@@ -103,11 +109,9 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		this.costMonitoring = new CostMonitoringConstruct(this, 'CostMonitoring', {
 			environmentName,
 			monthlyBudgetLimit: 3.5, // ~£3 target in USD
-			alertEmails: ['rjoakham@gmail.com'], // TODO: Make configurable
+			alertEmails: this.resolveCostAlertEmails(props),
 			alertThresholds: [50, 80, 100], // Alert at 50%, 80%, and 100% of budget
 			costFilters: {
-				Environment: [environmentName],
-				Project: ['MacroAI'],
 				PRNumber: [prNumber.toString()],
 			},
 		})
@@ -314,6 +318,20 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			'',
 			'# Trap errors',
 			'trap \'error_exit "Script failed at line $LINENO"\' ERR',
+			'',
+			'echo "$(date): Creating swap file for memory-constrained t3.nano instance..."',
+			'# Create 1GB swap file to prevent OOM during package installations',
+			'fallocate -l 1G /swapfile || error_exit "Failed to create swap file"',
+			'chmod 600 /swapfile || error_exit "Failed to set swap file permissions"',
+			'mkswap /swapfile || error_exit "Failed to format swap file"',
+			'swapon /swapfile || error_exit "Failed to enable swap file"',
+			'',
+			'# Add swap to fstab for persistence across reboots',
+			'echo "/swapfile none swap sw 0 0" >> /etc/fstab || error_exit "Failed to add swap to fstab"',
+			'',
+			'# Verify swap is active',
+			'free -h | grep -i swap || error_exit "Swap verification failed"',
+			'echo "$(date): Swap file created and activated successfully"',
 			'',
 			'echo "$(date): Updating system packages..."',
 			'dnf update -y || error_exit "Failed to update system packages"',
@@ -560,5 +578,24 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		cdk.Tags.of(this.autoScaling).add('ScheduledScaling', 'enabled')
 		cdk.Tags.of(this.autoScaling).add('OffHoursShutdown', '18:00-08:00 UTC')
 		cdk.Tags.of(this.autoScaling).add('CostOptimization', 'scheduled-scaling')
+	}
+
+	/**
+	 * Resolve cost alert email addresses from props and CDK context
+	 * Supports configuration via props.costAlertEmails or context "costAlertEmails"
+	 */
+	private resolveCostAlertEmails(props: MacroAiPreviewStackProps): string[] {
+		const fromProps = props.costAlertEmails ?? []
+		// Allow overrides via cdk.json context: { "costAlertEmails": ["ops@example.com"] }
+		const fromContext =
+			(this.node.tryGetContext('costAlertEmails') as string[] | undefined) ?? []
+		const emails = [...fromContext, ...fromProps].filter(Boolean)
+		if (emails.length === 0) {
+			// Prefer failing fast instead of silently configuring no alerts
+			throw new Error(
+				'Cost alert emails not configured. Provide via props.costAlertEmails or context "costAlertEmails".',
+			)
+		}
+		return Array.from(new Set(emails))
 	}
 }

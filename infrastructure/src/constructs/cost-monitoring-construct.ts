@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib'
 import * as budgets from 'aws-cdk-lib/aws-budgets'
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch'
 import * as cloudwatchActions from 'aws-cdk-lib/aws-cloudwatch-actions'
+import * as iam from 'aws-cdk-lib/aws-iam'
 import * as sns from 'aws-cdk-lib/aws-sns'
 import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions'
 import { Construct } from 'constructs'
@@ -75,6 +76,22 @@ export class CostMonitoringConstruct extends Construct {
 			topicName: `macro-ai-${environmentName}-cost-alerts`,
 			displayName: `Macro AI ${environmentName} Cost Alerts`,
 		})
+
+		// Allow AWS Budgets to publish to this topic
+		this.alertTopic.addToResourcePolicy(
+			new iam.PolicyStatement({
+				sid: 'AllowBudgetsToPublish',
+				effect: iam.Effect.ALLOW,
+				principals: [new iam.ServicePrincipal('budgets.amazonaws.com')],
+				actions: ['SNS:Publish'],
+				resources: [this.alertTopic.topicArn],
+				conditions: {
+					StringEquals: {
+						'AWS:SourceAccount': cdk.Stack.of(this).account,
+					},
+				},
+			}),
+		)
 
 		// Subscribe email addresses to alerts
 		alertEmails.forEach((email) => {
@@ -169,7 +186,7 @@ export class CostMonitoringConstruct extends Construct {
 	): cloudwatch.Alarm[] {
 		const alarms: cloudwatch.Alarm[] = []
 
-		// Daily cost alarm (20% of monthly budget per day)
+		// Daily cost alarm - AWS/Billing metrics are only available in us-east-1
 		const dailyCostAlarm = new cloudwatch.Alarm(this, 'DailyCostAlarm', {
 			alarmName: `macro-ai-${environmentName}-daily-cost-alarm`,
 			alarmDescription: `Daily cost exceeds expected threshold for ${environmentName}`,
@@ -181,8 +198,9 @@ export class CostMonitoringConstruct extends Construct {
 				},
 				statistic: 'Maximum',
 				period: cdk.Duration.hours(24),
+				region: 'us-east-1', // AWS/Billing metrics are only published in us-east-1
 			}),
-			threshold: budgetLimit * 0.2, // 20% of monthly budget per day
+			threshold: budgetLimit / 30, // True daily budget (monthly budget / 30 days)
 			evaluationPeriods: 1,
 			comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
 		})
