@@ -423,6 +423,11 @@ jobs:
           # Deploy EC2-based infrastructure using Phase 4 constructs
           echo "🏗️ Deploying EC2 infrastructure with Phase 4 constructs..."
           chmod +x scripts/deploy-ec2-preview.sh
+
+          # Set CORS_ALLOWED_ORIGINS environment variable for CDK deployment
+          export CORS_ALLOWED_ORIGINS="$CORS_ORIGINS"
+          echo "🔧 Setting CORS_ALLOWED_ORIGINS environment variable: $CORS_ALLOWED_ORIGINS"
+
           ./scripts/deploy-ec2-preview.sh
         env:
           CDK_DEPLOY_ENV: ${{ needs.validate-access.outputs.env-name }}
@@ -433,8 +438,6 @@ jobs:
           NODE_ENV: 'production'
           PR_NUMBER: ${{ github.event.pull_request.number }}
           BRANCH_NAME: ${{ github.head_ref }}
-          # Important: pass the normalized CORS origins with trailing slash stripped
-          CORS_ALLOWED_ORIGINS: ${{ needs.deploy-backend-preview.outputs.cors-origins }}
 
       - name: Get EC2 deployment outputs
         id: outputs
