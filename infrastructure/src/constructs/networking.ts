@@ -104,6 +104,9 @@ export class NetworkingConstruct extends Construct {
 	public readonly vpcId: string
 	public readonly vpcCidrBlock: string
 
+	// Configuration properties
+	private readonly enableNatGateway: boolean
+
 	constructor(
 		scope: Construct,
 		id: string,
@@ -123,6 +126,9 @@ export class NetworkingConstruct extends Construct {
 			enableNatGateway = true,
 			enableVpcEndpoints = true,
 		} = props
+
+		// Store configuration for later use
+		this.enableNatGateway = enableNatGateway
 
 		// Create VPC infrastructure
 		const vpcConstruct = new VpcConstruct(this, 'Vpc', {
@@ -429,11 +435,14 @@ export class NetworkingConstruct extends Construct {
 			exportName: 'MacroAI-Networking-PublicSubnets',
 		})
 
-		new cdk.CfnOutput(this, 'NetworkingPrivateSubnets', {
-			value: this.privateSubnets.map((subnet) => subnet.subnetId).join(','),
-			description: 'Private subnet IDs for future database resources',
-			exportName: 'MacroAI-Networking-PrivateSubnets',
-		})
+		// Only export private subnets if NAT Gateway is enabled (private subnets exist)
+		if (this.enableNatGateway && this.privateSubnets.length > 0) {
+			new cdk.CfnOutput(this, 'NetworkingPrivateSubnets', {
+				value: this.privateSubnets.map((subnet) => subnet.subnetId).join(','),
+				description: 'Private subnet IDs for future database resources',
+				exportName: 'MacroAI-Networking-PrivateSubnets',
+			})
+		}
 
 		// Security group outputs
 		new cdk.CfnOutput(this, 'NetworkingAlbSecurityGroup', {
