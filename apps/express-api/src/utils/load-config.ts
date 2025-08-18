@@ -30,7 +30,8 @@ const loadConfig = (): Result<TEnv> => {
 		isTruthy(process.env.BUILDKITE)
 
 	// Check if this is a build-time context (CI with build env loaded)
-	const isBuildTime = isCiEnvironment && !process.env.RUNTIME_CONFIG_REQUIRED
+	const isBuildTime =
+		isCiEnvironment && !isTruthy(process.env.RUNTIME_CONFIG_REQUIRED)
 
 	const enableDebug =
 		process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test'
