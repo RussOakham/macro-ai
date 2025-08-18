@@ -206,58 +206,151 @@ initialize_data_storage() {
     fi
 }
 
+# Validate that a value is a non-negative integer
+validate_non_negative_integer() {
+    local value="$1"
+    local name="$2"
+
+    # Check if empty or not provided
+    if [[ -z "$value" ]]; then
+        log_error "$name is required but not provided"
+        return 1
+    fi
+
+    # Check if it's a valid integer (no decimals, no letters, no special chars except leading +)
+    if [[ ! "$value" =~ ^[+]?[0-9]+$ ]]; then
+        log_error "$name must be a non-negative integer, got: '$value'"
+        return 1
+    fi
+
+    # Check if it's non-negative (this should be covered by regex, but extra safety)
+    if [[ "$value" -lt 0 ]]; then
+        log_error "$name must be non-negative, got: $value"
+        return 1
+    fi
+
+    return 0
+}
+
+# Validate that a value is a non-negative number (can have decimals)
+validate_non_negative_number() {
+    local value="$1"
+    local name="$2"
+
+    # Check if empty (this is OK for optional parameters)
+    if [[ -z "$value" ]]; then
+        return 0
+    fi
+
+    # Check if it's a valid number (integers or decimals, no letters, no special chars except leading + and one decimal point)
+    if [[ ! "$value" =~ ^[+]?([0-9]+\.?[0-9]*|\.[0-9]+)$ ]]; then
+        log_warning "$name must be a non-negative number, got: '$value' - ignoring invalid value"
+        return 1
+    fi
+
+    # Check if it's non-negative using bc for decimal comparison
+    if [[ $(echo "$value < 0" | bc -l) -eq 1 ]]; then
+        log_warning "$name must be non-negative, got: $value - ignoring invalid value"
+        return 1
+    fi
+
+    return 0
+}
+
+# Normalize a number to fixed decimal places (default 2)
+normalize_number() {
+    local value="$1"
+    local decimal_places="${2:-2}"
+
+    # Use printf to format to fixed decimal places
+    printf "%.${decimal_places}f" "$value"
+}
+
 # Record a cleanup operation
 record_cleanup_operation() {
     local environments_cleaned="$1"
     local manual_cost_saved="${2:-}"
-    
-    log_info "Recording cleanup operation: $environments_cleaned environments"
-    
-    # Calculate cost savings
-    local estimated_daily_savings
-    estimated_daily_savings=$(echo "$environments_cleaned * $COST_PER_ENVIRONMENT_PER_DAY" | bc -l)
-    
-    local cost_saved="$estimated_daily_savings"
+
+    # Validate environments_cleaned (required non-negative integer)
+    if ! validate_non_negative_integer "$environments_cleaned" "environments_cleaned"; then
+        log_error "Cannot record cleanup operation with invalid environments_cleaned value"
+        return 1
+    fi
+
+    # Validate manual_cost_saved (optional non-negative number)
+    local use_manual_cost=false
     if [[ -n "$manual_cost_saved" ]]; then
+        if validate_non_negative_number "$manual_cost_saved" "manual_cost_saved"; then
+            use_manual_cost=true
+            # Normalize manual cost to 2 decimal places
+            manual_cost_saved=$(normalize_number "$manual_cost_saved" 2)
+        else
+            log_warning "Invalid manual_cost_saved value, falling back to calculated cost"
+            manual_cost_saved=""
+            use_manual_cost=false
+        fi
+    fi
+
+    log_info "Recording cleanup operation: $environments_cleaned environments"
+
+    # Calculate cost savings with proper quoting and normalization
+    local estimated_daily_savings
+    estimated_daily_savings=$(echo "scale=4; $environments_cleaned * $COST_PER_ENVIRONMENT_PER_DAY" | bc -l)
+    estimated_daily_savings=$(normalize_number "$estimated_daily_savings" 2)
+
+    local cost_saved="$estimated_daily_savings"
+    if [[ "$use_manual_cost" == "true" ]]; then
         cost_saved="$manual_cost_saved"
         log_debug "Using manual cost savings: \$${cost_saved}"
     else
         log_debug "Calculated cost savings: \$${cost_saved}"
     fi
     
-    # Create operation record
+    # Create operation record with normalized values
     local timestamp
     timestamp=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
-    
+
+    # Calculate monthly impact with proper normalization
+    local monthly_impact
+    monthly_impact=$(echo "scale=4; $cost_saved * 30" | bc -l)
+    monthly_impact=$(normalize_number "$monthly_impact" 2)
+
     local operation_record
     operation_record=$(jq -n \
         --arg timestamp "$timestamp" \
         --arg environments_cleaned "$environments_cleaned" \
         --arg cost_saved "$cost_saved" \
+        --arg monthly_impact "$monthly_impact" \
         --arg operation_type "scheduled_cleanup" \
         '{
             timestamp: $timestamp,
             environments_cleaned: ($environments_cleaned | tonumber),
             cost_saved: ($cost_saved | tonumber),
             operation_type: $operation_type,
-            estimated_monthly_impact: (($cost_saved | tonumber) * 30)
+            estimated_monthly_impact: ($monthly_impact | tonumber)
         }')
-    
-    # Update data file
+
+    # Update data file with error handling
     local updated_data
-    updated_data=$(jq \
+    if ! updated_data=$(jq \
         --argjson new_operation "$operation_record" \
         --arg last_updated "$timestamp" \
-        '.cleanup_operations += [$new_operation] | 
-         .total_savings += ($new_operation.cost_saved) | 
+        '.cleanup_operations += [$new_operation] |
+         .total_savings += ($new_operation.cost_saved) |
          .last_updated = $last_updated' \
-        "$COST_DATA_FILE")
-    
-    echo "$updated_data" > "$COST_DATA_FILE"
-    
+        "$COST_DATA_FILE" 2>/dev/null); then
+        log_error "Failed to update cost data file with jq"
+        return 1
+    fi
+
+    if ! echo "$updated_data" > "$COST_DATA_FILE"; then
+        log_error "Failed to write updated data to cost data file"
+        return 1
+    fi
+
     log_success "Cleanup operation recorded successfully"
     log_info "Daily cost savings: \$${cost_saved}"
-    log_info "Estimated monthly impact: \$$(echo "$cost_saved * 30" | bc -l)"
+    log_info "Estimated monthly impact: \$${monthly_impact}"
 }
 
 # Generate cost optimization report
