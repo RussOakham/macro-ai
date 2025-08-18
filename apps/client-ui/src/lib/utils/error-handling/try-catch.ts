@@ -38,10 +38,13 @@ const tryCatch = async <T>(
 		const standardizedError = standardizeError(error)
 
 		// Log error with context
-		logger.error(`[${context}]: ${standardizedError.message}`, {
-			error: standardizedError,
-			context,
-		})
+		logger.error(
+			{
+				error: standardizedError,
+				context,
+			},
+			`[${context}]: ${standardizedError.message}`,
+		)
 
 		return [null, standardizedError]
 	}
@@ -76,10 +79,13 @@ const tryCatchSync = <T>(func: () => T, context = 'unknown'): Result<T> => {
 		const standardizedError = standardizeError(error)
 
 		// Log error with context
-		logger.error(`[${context}]: ${standardizedError.message}`, {
-			error: standardizedError,
-			context,
-		})
+		logger.error(
+			{
+				error: standardizedError,
+				context,
+			},
+			`[${context}]: ${standardizedError.message}`,
+		)
 
 		return [null, standardizedError]
 	}

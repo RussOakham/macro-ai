@@ -54,10 +54,13 @@ const CreateChatForm = ({
 			const response = await createChatMutation(values)
 
 			if (response.success) {
-				logger.info('[CreateChatForm]: Chat created successfully', {
-					chatId: response.data.id,
-					title: values.title,
-				})
+				logger.info(
+					{
+						chatId: response.data.id,
+						title: values.title,
+					},
+					'[CreateChatForm]: Chat created successfully',
+				)
 
 				toast.success('Chat created successfully!')
 
@@ -71,10 +74,13 @@ const CreateChatForm = ({
 			}
 		} catch (error: unknown) {
 			const err = standardizeError(error)
-			logger.error('[CreateChatForm]: Error creating chat', {
-				error: err.message,
-				title: values.title,
-			})
+			logger.error(
+				{
+					error: err.message,
+					title: values.title,
+				},
+				'[CreateChatForm]: Error creating chat',
+			)
 
 			toast.error(err.message || 'Failed to create chat')
 		} finally {

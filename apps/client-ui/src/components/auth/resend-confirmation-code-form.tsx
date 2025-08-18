@@ -69,7 +69,7 @@ const ResendConfirmationCodeForm = ({
 		} catch (err: unknown) {
 			// Show error message
 			const error = standardizeError(err)
-			logger.error('Error resending confirmation code', error)
+			logger.error(error, 'Error resending confirmation code')
 			toast.error(error.message)
 		} finally {
 			setIsPending(false)

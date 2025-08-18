@@ -33,7 +33,7 @@ export const validateGetChatsResponse = (data: unknown) => {
 	try {
 		return getChats_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error('[API Validation] Invalid getChats response', { error, data })
+		logger.error({ error, data }, '[API Validation] Invalid getChats response')
 		throw new Error('Invalid chat list response format')
 	}
 }
@@ -42,10 +42,10 @@ export const validateGetChatByIdResponse = (data: unknown) => {
 	try {
 		return getChatsId_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error('[API Validation] Invalid getChatById response', {
-			error,
-			data,
-		})
+		logger.error(
+			{ error, data },
+			'[API Validation] Invalid getChatById response',
+		)
 		throw new Error('Invalid chat response format')
 	}
 }
@@ -54,10 +54,10 @@ export const validateCreateChatResponse = (data: unknown) => {
 	try {
 		return postChats_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error('[API Validation] Invalid createChat response', {
-			error,
-			data,
-		})
+		logger.error(
+			{ error, data },
+			'[API Validation] Invalid createChat response',
+		)
 		throw new Error('Invalid create chat response format')
 	}
 }
@@ -66,10 +66,10 @@ export const validateUpdateChatResponse = (data: unknown) => {
 	try {
 		return putChatsId_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error('[API Validation] Invalid updateChat response', {
-			error,
-			data,
-		})
+		logger.error(
+			{ error, data },
+			'[API Validation] Invalid updateChat response',
+		)
 		throw new Error('Invalid update chat response format')
 	}
 }
@@ -78,10 +78,10 @@ export const validateDeleteChatResponse = (data: unknown) => {
 	try {
 		return deleteChatsId_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error('[API Validation] Invalid deleteChat response', {
-			error,
-			data,
-		})
+		logger.error(
+			{ error, data },
+			'[API Validation] Invalid deleteChat response',
+		)
 		throw new Error('Invalid delete chat response format')
 	}
 }
@@ -94,10 +94,10 @@ export const validateGetAuthUserResponse = (data: unknown) => {
 	try {
 		return getAuthuser_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error('[API Validation] Invalid getAuthUser response', {
-			error,
-			data,
-		})
+		logger.error(
+			{ error, data },
+			'[API Validation] Invalid getAuthUser response',
+		)
 		throw new Error('Invalid auth user response format')
 	}
 }
@@ -106,7 +106,7 @@ export const validateLoginResponse = (data: unknown) => {
 	try {
 		return postAuthlogin_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error('[API Validation] Invalid login response', { error, data })
+		logger.error({ error, data }, '[API Validation] Invalid login response')
 		throw new Error('Invalid login response format')
 	}
 }
@@ -115,7 +115,7 @@ export const validateRegisterResponse = (data: unknown) => {
 	try {
 		return postAuthregister_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error('[API Validation] Invalid register response', { error, data })
+		logger.error({ error, data }, '[API Validation] Invalid register response')
 		throw new Error('Invalid register response format')
 	}
 }
@@ -124,7 +124,7 @@ export const validateLogoutResponse = (data: unknown) => {
 	try {
 		return postAuthlogout_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error('[API Validation] Invalid logout response', { error, data })
+		logger.error({ error, data }, '[API Validation] Invalid logout response')
 		throw new Error('Invalid logout response format')
 	}
 }
@@ -133,10 +133,10 @@ export const validateRefreshTokenResponse = (data: unknown) => {
 	try {
 		return postAuthrefresh_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error('[API Validation] Invalid refresh token response', {
-			error,
-			data,
-		})
+		logger.error(
+			{ error, data },
+			'[API Validation] Invalid refresh token response',
+		)
 		throw new Error('Invalid refresh token response format')
 	}
 }
@@ -145,10 +145,10 @@ export const validateForgotPasswordResponse = (data: unknown) => {
 	try {
 		return postAuthforgotPassword_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error('[API Validation] Invalid forgot password response', {
-			error,
-			data,
-		})
+		logger.error(
+			{ error, data },
+			'[API Validation] Invalid forgot password response',
+		)
 		throw new Error('Invalid forgot password response format')
 	}
 }
@@ -157,10 +157,10 @@ export const validateConfirmForgotPasswordResponse = (data: unknown) => {
 	try {
 		return postAuthconfirmForgotPassword_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error('[API Validation] Invalid confirm forgot password response', {
-			error,
-			data,
-		})
+		logger.error(
+			{ error, data },
+			'[API Validation] Invalid confirm forgot password response',
+		)
 		throw new Error('Invalid confirm forgot password response format')
 	}
 }
@@ -169,10 +169,10 @@ export const validateConfirmRegistrationResponse = (data: unknown) => {
 	try {
 		return postAuthconfirmRegistration_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error('[API Validation] Invalid confirm registration response', {
-			error,
-			data,
-		})
+		logger.error(
+			{ error, data },
+			'[API Validation] Invalid confirm registration response',
+		)
 		throw new Error('Invalid confirm registration response format')
 	}
 }
@@ -181,10 +181,10 @@ export const validateResendConfirmationCodeResponse = (data: unknown) => {
 	try {
 		return postAuthresendConfirmationCode_Response.parse(data)
 	} catch (error: unknown) {
-		logger.error('[API Validation] Invalid resend confirmation code response', {
-			error,
-			data,
-		})
+		logger.error(
+			{ error, data },
+			'[API Validation] Invalid resend confirmation code response',
+		)
 		throw new Error('Invalid resend confirmation code response format')
 	}
 }
@@ -226,7 +226,7 @@ export const validateApiResponse = <T>(
 	try {
 		return schema.parse(data)
 	} catch (error: unknown) {
-		logger.error('[API Validation] Generic validation failed', { error, data })
+		logger.error({ error, data }, '[API Validation] Generic validation failed')
 		throw new Error(errorMessage)
 	}
 }
@@ -258,7 +258,7 @@ export const safeValidateApiResponse = <T>(
 				? `Validation failed: ${error.errors.map((e) => e.message).join(', ')}`
 				: 'Unknown validation error'
 
-		logger.error('[API Validation] Safe validation failed', { error, data })
+		logger.error({ error, data }, '[API Validation] Safe validation failed')
 		return { success: false, error: errorMessage }
 	}
 }

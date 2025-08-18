@@ -74,7 +74,7 @@ const ConfirmRegistrationForm = ({
 		} catch (err: unknown) {
 			// Show error message
 			const error = standardizeError(err)
-			logger.error('Confirm registration error', error)
+			logger.error(error, 'Confirm registration error')
 			toast.error(error.message)
 		} finally {
 			setIsPending(false)

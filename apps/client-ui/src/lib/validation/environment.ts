@@ -13,14 +13,14 @@ export const validateEnvironment = () => {
 
 		if (!result.success) {
 			const error = standardizeError(result.error)
-			logger.error('Environment validation failed:', error.message)
+			logger.error({ error }, 'Environment validation failed:')
 			throw new Error(`Invalid environment configuration: ${error.message}`)
 		}
 
 		return result.data
 	} catch (error) {
 		const err = standardizeError(error)
-		logger.error('Failed to validate environment:', err.message)
+		logger.error({ err }, 'Failed to validate environment:')
 		throw new Error(`Environment validation failed: ${err.message}`)
 	}
 }

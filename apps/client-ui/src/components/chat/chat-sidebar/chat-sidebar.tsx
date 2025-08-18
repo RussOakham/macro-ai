@@ -30,10 +30,10 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 		startTransition(() => {
 			void navigate({ to: `/chat/${chatId}` })
 			logger.info(
-				'[ChatSidebar]: Chat created successfully, navigating to chat',
 				{
 					chatId,
 				},
+				'[ChatSidebar]: Chat created successfully, navigating to chat',
 			)
 		})
 	}

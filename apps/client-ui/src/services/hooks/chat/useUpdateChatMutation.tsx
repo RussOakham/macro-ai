@@ -78,9 +78,12 @@ const useUpdateChatMutation = () => {
 
 			// Error handling is managed by the component using this hook
 			// Following the pattern from existing auth mutations
-			logger.error('[useUpdateChatMutation]: unable to update chat', {
-				error,
-			})
+			logger.error(
+				{
+					error,
+				},
+				'[useUpdateChatMutation]: unable to update chat',
+			)
 		},
 		onSettled: async () => {
 			// Always refetch after error or success to ensure we have the latest data

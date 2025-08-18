@@ -88,26 +88,35 @@ const useEnhancedChat = ({
 		},
 		credentials: 'include',
 		onResponse: (response) => {
-			logger.info('[useEnhancedChat]: Response received', {
-				chatId,
-				status: response.status,
-			})
+			logger.info(
+				{
+					chatId,
+					status: response.status,
+				},
+				'[useEnhancedChat]: Response received',
+			)
 		},
 		onError: (error) => {
 			// Integrate with our error handling patterns
 			const standardizedError = standardizeError(error)
-			logger.error('[useEnhancedChat]: Chat streaming error', {
-				error: standardizedError,
-				chatId,
-			})
+			logger.error(
+				{
+					error: standardizedError,
+					chatId,
+				},
+				'[useEnhancedChat]: Chat streaming error',
+			)
 			toast.error(`Chat error: ${standardizedError.message}`)
 		},
 		onFinish: (message) => {
-			logger.info('[useEnhancedChat]: Message streaming finished', {
-				chatId,
-				messageId: message.id,
-				contentLength: message.content.length,
-			})
+			logger.info(
+				{
+					chatId,
+					messageId: message.id,
+					contentLength: message.content.length,
+				},
+				'[useEnhancedChat]: Message streaming finished',
+			)
 
 			// Invalidate chat cache to ensure consistency (fire and forget)
 			void tryCatch(
@@ -117,11 +126,14 @@ const useEnhancedChat = ({
 				'useEnhancedChat - onFinish',
 			).then(([, error]) => {
 				if (error) {
-					logger.error('[useEnhancedChat]: Failed to invalidate chat cache', {
-						error: error.message,
-						chatId,
-						messageId: message.id,
-					})
+					logger.error(
+						{
+							error: error.message,
+							chatId,
+							messageId: message.id,
+						},
+						'[useEnhancedChat]: Failed to invalidate chat cache',
+					)
 				}
 			})
 
@@ -173,10 +185,13 @@ const useEnhancedChat = ({
 			)
 
 			if (cacheError) {
-				logger.warn('[useEnhancedChat]: Failed to apply optimistic update', {
-					error: cacheError.message,
-					chatId,
-				})
+				logger.warn(
+					{
+						error: cacheError.message,
+						chatId,
+					},
+					'[useEnhancedChat]: Failed to apply optimistic update',
+				)
 			}
 
 			// Call callback for message sent
@@ -187,10 +202,13 @@ const useEnhancedChat = ({
 				chatHook.handleSubmit(e)
 			} catch (submitError) {
 				const standardizedError = standardizeError(submitError)
-				logger.error('[useEnhancedChat]: Failed to submit message', {
-					error: standardizedError.message,
-					chatId,
-				})
+				logger.error(
+					{
+						error: standardizedError.message,
+						chatId,
+					},
+					'[useEnhancedChat]: Failed to submit message',
+				)
 
 				// Rollback optimistic update on error
 				const [, rollbackError] = await tryCatch(
@@ -202,11 +220,11 @@ const useEnhancedChat = ({
 
 				if (rollbackError) {
 					logger.error(
-						'[useEnhancedChat]: Failed to rollback optimistic update',
 						{
 							error: rollbackError.message,
 							chatId,
 						},
+						'[useEnhancedChat]: Failed to rollback optimistic update',
 					)
 				}
 
