@@ -34,6 +34,12 @@ export interface VpcConstructProps {
 	 * @default true - set to false for preview environments to reduce costs and complexity
 	 */
 	readonly enableVpcEndpoints?: boolean
+
+	/**
+	 * Prefix for CloudFormation export names to ensure uniqueness across environments
+	 * @default 'MacroAI-Development' - set to stack-specific prefix for preview environments
+	 */
+	readonly exportPrefix?: string
 }
 
 /**
@@ -59,6 +65,7 @@ export class VpcConstruct extends Construct {
 
 	// Configuration properties
 	private readonly enableNatGateway: boolean
+	private readonly exportPrefix: string
 
 	constructor(scope: Construct, id: string, props: VpcConstructProps = {}) {
 		super(scope, id)
@@ -68,10 +75,12 @@ export class VpcConstruct extends Construct {
 			maxAzs = 2,
 			enableNatGateway = true,
 			enableVpcEndpoints = true,
+			exportPrefix = 'MacroAI-Development',
 		} = props
 
 		// Store configuration for later use
 		this.enableNatGateway = enableNatGateway
+		this.exportPrefix = exportPrefix
 
 		// Create subnet configuration based on NAT Gateway setting
 		const subnetConfiguration = [
@@ -263,19 +272,19 @@ export class VpcConstruct extends Construct {
 		new cdk.CfnOutput(this, 'VpcId', {
 			value: this.vpc.vpcId,
 			description: 'VPC ID for Macro AI development environment',
-			exportName: 'MacroAI-Development-VpcId',
+			exportName: `${this.exportPrefix}-VpcId`,
 		})
 
 		new cdk.CfnOutput(this, 'VpcCidr', {
 			value: this.vpc.vpcCidrBlock,
 			description: 'VPC CIDR block',
-			exportName: 'MacroAI-Development-VpcCidr',
+			exportName: `${this.exportPrefix}-VpcCidr`,
 		})
 
 		new cdk.CfnOutput(this, 'PublicSubnetIds', {
 			value: this.publicSubnets.map((subnet) => subnet.subnetId).join(','),
 			description: 'Public subnet IDs (for EC2 instances)',
-			exportName: 'MacroAI-Development-PublicSubnetIds',
+			exportName: `${this.exportPrefix}-PublicSubnetIds`,
 		})
 
 		// Only export private subnet IDs if NAT Gateway is enabled (private subnets exist)
@@ -283,7 +292,7 @@ export class VpcConstruct extends Construct {
 			new cdk.CfnOutput(this, 'PrivateSubnetIds', {
 				value: this.privateSubnets.map((subnet) => subnet.subnetId).join(','),
 				description: 'Private subnet IDs (for future database resources)',
-				exportName: 'MacroAI-Development-PrivateSubnetIds',
+				exportName: `${this.exportPrefix}-PrivateSubnetIds`,
 			})
 		}
 	}

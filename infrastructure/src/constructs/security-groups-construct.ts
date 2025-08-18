@@ -13,6 +13,12 @@ export interface SecurityGroupsConstructProps {
 	 * @default 'development'
 	 */
 	readonly environmentName?: string
+
+	/**
+	 * Prefix for CloudFormation export names to ensure uniqueness across environments
+	 * @default 'MacroAI-Development' - set to stack-specific prefix for preview environments
+	 */
+	readonly exportPrefix?: string
 }
 
 export interface PrSecurityGroupProps {
@@ -53,6 +59,7 @@ export interface PrSecurityGroupProps {
  */
 export class SecurityGroupsConstruct extends Construct {
 	public readonly albSecurityGroup: ec2.SecurityGroup
+	private readonly exportPrefix: string
 
 	constructor(
 		scope: Construct,
@@ -61,7 +68,12 @@ export class SecurityGroupsConstruct extends Construct {
 	) {
 		super(scope, id)
 
-		const { vpc, environmentName = 'development' } = props
+		const {
+			vpc,
+			environmentName = 'development',
+			exportPrefix = 'MacroAI-Development',
+		} = props
+		this.exportPrefix = exportPrefix
 
 		// Create shared ALB security group
 		this.albSecurityGroup = this.createAlbSecurityGroup(vpc, environmentName)
@@ -245,7 +257,7 @@ export class SecurityGroupsConstruct extends Construct {
 		new cdk.CfnOutput(this, 'AlbSecurityGroupId', {
 			value: this.albSecurityGroup.securityGroupId,
 			description: 'Shared ALB security group ID',
-			exportName: 'MacroAI-Development-AlbSecurityGroupId',
+			exportName: `${this.exportPrefix}-AlbSecurityGroupId`,
 		})
 	}
 

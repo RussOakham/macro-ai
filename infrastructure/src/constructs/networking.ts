@@ -68,6 +68,12 @@ export interface NetworkingConstructProps {
 	}
 
 	/**
+	 * Prefix for CloudFormation export names to ensure uniqueness across environments
+	 * @default 'MacroAI' - set to stack name for preview environments to avoid export conflicts
+	 */
+	readonly exportPrefix?: string
+
+	/**
 	 * Deployment ID to force instance replacement on every deployment
 	 * This ensures fresh instances with latest application code
 	 * @default current timestamp
@@ -106,6 +112,8 @@ export class NetworkingConstruct extends Construct {
 
 	// Configuration properties
 	private readonly enableNatGateway: boolean
+	private readonly exportPrefix: string
+	private readonly environmentName: string
 
 	constructor(
 		scope: Construct,
@@ -125,18 +133,22 @@ export class NetworkingConstruct extends Construct {
 			deploymentId = new Date().toISOString(),
 			enableNatGateway = true,
 			enableVpcEndpoints = true,
+			exportPrefix = 'MacroAI',
 		} = props
 
 		// Store configuration for later use
 		this.enableNatGateway = enableNatGateway
+		this.exportPrefix = exportPrefix
+		this.environmentName = environmentName
 
 		// Create VPC infrastructure
 		const vpcConstruct = new VpcConstruct(this, 'Vpc', {
-			environmentName,
+			environmentName: this.environmentName,
 			enableFlowLogs,
 			maxAzs,
 			enableNatGateway,
 			enableVpcEndpoints,
+			exportPrefix: `${exportPrefix}-Development`,
 		})
 
 		this.vpc = vpcConstruct.vpc
@@ -147,7 +159,8 @@ export class NetworkingConstruct extends Construct {
 		// Create security groups
 		this.securityGroups = new SecurityGroupsConstruct(this, 'SecurityGroups', {
 			vpc: this.vpc,
-			environmentName,
+			environmentName: this.environmentName,
+			exportPrefix,
 		})
 
 		// Create EC2 construct if parameter store prefix is provided
@@ -155,7 +168,7 @@ export class NetworkingConstruct extends Construct {
 			this.ec2Construct = new Ec2Construct(this, 'Ec2', {
 				vpc: this.vpc,
 				securityGroup: this.securityGroups.albSecurityGroup, // Default to ALB security group
-				environmentName,
+				environmentName: this.environmentName,
 				parameterStorePrefix,
 				enableDetailedMonitoring,
 				deploymentId,
@@ -167,7 +180,7 @@ export class NetworkingConstruct extends Construct {
 			this.albConstruct = new AlbConstruct(this, 'Alb', {
 				vpc: this.vpc,
 				securityGroup: this.securityGroups.albSecurityGroup,
-				environmentName,
+				environmentName: this.environmentName,
 				enableDetailedMonitoring,
 				customDomain,
 			})
@@ -408,54 +421,26 @@ export class NetworkingConstruct extends Construct {
 	 * Get environment name from constructor props or default
 	 */
 	private getEnvironmentName(): string {
-		return 'development' // Default for now, could be enhanced to read from props
+		return this.environmentName
 	}
 
 	/**
 	 * Create comprehensive CloudFormation outputs
+	 * Note: VPC-related exports are handled by VpcConstruct to avoid duplication
 	 */
 	private createOutputs(): void {
-		// VPC outputs
-		new cdk.CfnOutput(this, 'NetworkingVpcId', {
-			value: this.vpcId,
-			description: 'VPC ID for Macro AI networking infrastructure',
-			exportName: 'MacroAI-Networking-VpcId',
+		// Security Group outputs (networking-specific, not covered by VpcConstruct)
+		new cdk.CfnOutput(this, 'AlbSecurityGroupId', {
+			value: this.securityGroups.albSecurityGroup.securityGroupId,
+			description: 'ALB Security Group ID',
+			exportName: `${this.exportPrefix}-Networking-AlbSecurityGroupId`,
 		})
 
-		new cdk.CfnOutput(this, 'NetworkingVpcCidr', {
-			value: this.vpcCidrBlock,
-			description: 'VPC CIDR block',
-			exportName: 'MacroAI-Networking-VpcCidr',
-		})
-
-		// Subnet outputs
-		new cdk.CfnOutput(this, 'NetworkingPublicSubnets', {
-			value: this.publicSubnets.map((subnet) => subnet.subnetId).join(','),
-			description: 'Public subnet IDs for ALB and EC2 instances',
-			exportName: 'MacroAI-Networking-PublicSubnets',
-		})
-
-		// Only export private subnets if NAT Gateway is enabled (private subnets exist)
-		if (this.enableNatGateway && this.privateSubnets.length > 0) {
-			new cdk.CfnOutput(this, 'NetworkingPrivateSubnets', {
-				value: this.privateSubnets.map((subnet) => subnet.subnetId).join(','),
-				description: 'Private subnet IDs for future database resources',
-				exportName: 'MacroAI-Networking-PrivateSubnets',
-			})
-		}
-
-		// Security group outputs
-		new cdk.CfnOutput(this, 'NetworkingAlbSecurityGroup', {
-			value: this.albSecurityGroup.securityGroupId,
-			description: 'Shared ALB security group ID',
-			exportName: 'MacroAI-Networking-AlbSecurityGroup',
-		})
-
-		// Availability zone outputs
+		// Availability zone outputs (networking-specific information)
 		new cdk.CfnOutput(this, 'NetworkingAvailabilityZones', {
 			value: this.getAvailabilityZones().join(','),
 			description: 'Availability zones used by the VPC',
-			exportName: 'MacroAI-Networking-AvailabilityZones',
+			exportName: `${this.exportPrefix}-Networking-AvailabilityZones`,
 		})
 	}
 

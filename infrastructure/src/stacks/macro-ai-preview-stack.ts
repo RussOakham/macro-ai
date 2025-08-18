@@ -92,6 +92,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			deploymentId,
 			enableNatGateway: false, // Cost optimization: eliminate NAT Gateway (~$2.76/month savings)
 			enableVpcEndpoints: false, // Cost optimization: remove VPC endpoints for preview environments
+			exportPrefix: this.stackName, // Use stack name to ensure unique exports per PR
 		})
 
 		// Validate networking requirements
@@ -176,11 +177,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			exportName: `${this.stackName}-EC2InstanceId`,
 		})
 
-		new cdk.CfnOutput(this, 'VpcId', {
-			value: this.networking.vpcId,
-			description: 'VPC ID for the preview environment',
-			exportName: `${this.stackName}-VpcId`,
-		})
+		// VPC exports are handled by VpcConstruct to avoid duplication
 
 		new cdk.CfnOutput(this, 'EnvironmentName', {
 			value: environmentName,
