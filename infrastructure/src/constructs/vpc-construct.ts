@@ -2,7 +2,7 @@ import * as cdk from 'aws-cdk-lib'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import { Construct } from 'constructs'
 
-import { TAG_VALUES, TaggingStrategy } from '../utils/tagging-strategy.js'
+// Note: TaggingStrategy imports removed as we now use direct cdk.Tags.of() calls to avoid conflicts
 
 export interface VpcConstructProps {
 	/**
@@ -48,11 +48,7 @@ export class VpcConstruct extends Construct {
 	constructor(scope: Construct, id: string, props: VpcConstructProps = {}) {
 		super(scope, id)
 
-		const {
-			environmentName = 'development',
-			enableFlowLogs = false,
-			maxAzs = 2,
-		} = props
+		const { enableFlowLogs = false, maxAzs = 2 } = props
 
 		// Create the main VPC with cost-optimized configuration
 		this.vpc = new ec2.Vpc(this, 'MacroAiDevelopmentVpc', {
@@ -119,7 +115,7 @@ export class VpcConstruct extends Construct {
 		}
 
 		// Apply comprehensive tagging
-		this.applyTags(environmentName)
+		this.applyTags()
 
 		// Output VPC information for reference
 		this.createOutputs()
@@ -215,15 +211,15 @@ export class VpcConstruct extends Construct {
 
 	/**
 	 * Apply comprehensive tagging for cost tracking and resource management
+	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
-	private applyTags(environmentName: string): void {
-		TaggingStrategy.applyBaseTags(this, {
-			environment: environmentName,
-			component: 'VPC-Networking',
-			purpose: TAG_VALUES.PURPOSES.SHARED_INFRASTRUCTURE,
-			createdBy: 'VpcConstruct',
-			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.BASIC,
-		})
+	private applyTags(): void {
+		// Apply construct-specific tags that don't conflict with stack-level tags
+		cdk.Tags.of(this).add('SubComponent', 'VPC-Networking')
+		cdk.Tags.of(this).add('SubPurpose', 'NetworkInfrastructure')
+		cdk.Tags.of(this).add('ConstructManagedBy', 'VpcConstruct')
+		cdk.Tags.of(this).add('VpcType', 'SharedVPC')
+		// Note: Environment, Component, Purpose, CreatedBy are inherited from stack level
 	}
 
 	/**

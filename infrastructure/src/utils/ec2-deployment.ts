@@ -519,7 +519,7 @@ echo "$(date): Application deployment completed"
 	}
 
 	/**
-	 * Find existing instances for a PR
+	 * Find existing instances for a PR (works with both manual and CloudFormation-managed instances)
 	 */
 	private async findExistingPrInstances(
 		prNumber: number,
@@ -537,6 +537,10 @@ echo "$(date): Application deployment completed"
 			],
 		}
 
+		console.log(
+			`🔍 Searching for instances with tag PRNumber=${prNumber} in states: ${params.Filters?.[1]?.Values?.join(', ')}`,
+		)
+
 		const result = await this.ec2Client.describeInstances(params)
 		const instances: Ec2InstanceInfo[] = []
 
@@ -550,17 +554,89 @@ echo "$(date): Application deployment completed"
 						}
 					})
 
-					instances.push({
+					const instanceInfo = {
 						instanceId: instance.InstanceId,
 						privateIpAddress: instance.PrivateIpAddress ?? '',
 						publicIpAddress: instance.PublicIpAddress,
 						state: instance.State?.Name ?? 'unknown',
 						launchTime: instance.LaunchTime ?? new Date(),
 						tags,
-					})
+					}
+
+					console.log(
+						`📋 Found instance ${instance.InstanceId} (${instanceInfo.state}) with tags:`,
+						JSON.stringify(tags, null, 2),
+					)
+
+					instances.push(instanceInfo)
 				}
 			})
 		})
+
+		console.log(
+			`Found ${instances.length} instances for PR ${prNumber}:`,
+			instances.map((i) => `${i.instanceId} (${i.state})`).join(', '),
+		)
+
+		return instances
+	}
+
+	/**
+	 * Search for instances by Environment tag as fallback
+	 */
+	private async searchInstancesByEnvironmentTag(
+		prNumber: number,
+	): Promise<Ec2InstanceInfo[]> {
+		const envParams: DescribeInstancesCommandInput = {
+			Filters: [
+				{
+					Name: 'tag:Environment',
+					Values: [`pr-${prNumber}`],
+				},
+				{
+					Name: 'instance-state-name',
+					Values: ['pending', 'running', 'stopping', 'stopped'],
+				},
+			],
+		}
+
+		console.log(
+			`🔍 Searching for instances with tag Environment=pr-${prNumber}`,
+		)
+		const envResult = await this.ec2Client.describeInstances(envParams)
+		const instances: Ec2InstanceInfo[] = []
+
+		if (envResult.Reservations && envResult.Reservations.length > 0) {
+			console.log(`✅ Found instances using Environment tag!`)
+			envResult.Reservations.forEach((reservation) => {
+				reservation.Instances?.forEach((instance) => {
+					if (instance.InstanceId) {
+						const tags: Record<string, string> = {}
+						instance.Tags?.forEach((tag) => {
+							if (tag.Key && tag.Value) {
+								tags[tag.Key] = tag.Value
+							}
+						})
+
+						const instanceInfo = {
+							instanceId: instance.InstanceId,
+							privateIpAddress: instance.PrivateIpAddress ?? '',
+							publicIpAddress: instance.PublicIpAddress,
+							state: instance.State?.Name ?? 'unknown',
+							launchTime: instance.LaunchTime ?? new Date(),
+							tags,
+						}
+
+						console.log(
+							`📋 Found instance ${instance.InstanceId} (${instanceInfo.state}) via Environment tag with tags:`,
+							JSON.stringify(tags, null, 2),
+						)
+
+						instances.push(instanceInfo)
+					}
+				})
+			})
+		}
 
 		return instances
 	}
@@ -590,40 +666,86 @@ echo "$(date): Application deployment completed"
 	}
 
 	/**
-	 * Get deployment status
+	 * Get deployment status (works with CloudFormation-managed instances)
 	 */
 	public async getDeploymentStatus(
 		prNumber: number,
 	): Promise<DeploymentStatus | null> {
+		console.log(`🔍 Checking deployment status for PR ${prNumber}...`)
 		const instances = await this.findExistingPrInstances(prNumber)
 
+		// If no instances found with PRNumber tag, try Environment tag
 		if (instances.length === 0) {
+			console.log(
+				`❌ No instances found for PR ${prNumber} with tag PRNumber=${prNumber}`,
+			)
+			console.log(
+				`💡 Expected to find instances with tags like: PRNumber=${prNumber}, Environment=pr-${prNumber}`,
+			)
+
+			// Try alternative tag searches
+			console.log(
+				`🔄 Trying alternative tag search with Environment=pr-${prNumber}...`,
+			)
+
+			const alternativeInstances =
+				await this.searchInstancesByEnvironmentTag(prNumber)
+			instances.push(...alternativeInstances)
+		}
+
+		if (instances.length === 0) {
+			console.log(
+				`❌ No instances found with either PRNumber=${prNumber} or Environment=pr-${prNumber}`,
+			)
 			return null
 		}
 
 		// Determine overall status based on instance states
 		const runningInstances = instances.filter((i) => i.state === 'running')
-		const healthyInstances = runningInstances.length // Simplified for now
+		const pendingInstances = instances.filter((i) => i.state === 'pending')
+		const terminatingInstances = instances.filter((i) =>
+			['stopping', 'stopped', 'shutting-down', 'terminated'].includes(i.state),
+		)
 
-		let status: DeploymentStatus['status'] = 'SUCCESS'
-		if (instances.some((i) => i.state === 'pending')) {
+		console.log(
+			`PR ${prNumber} instance states: running=${runningInstances.length}, pending=${pendingInstances.length}, terminating=${terminatingInstances.length}`,
+		)
+
+		// Determine status based on instance states
+		let status: DeploymentStatus['status']
+
+		if (pendingInstances.length > 0) {
+			// Still launching instances
 			status = 'IN_PROGRESS'
 		} else if (runningInstances.length === 0) {
+			// No running instances
 			status = 'FAILED'
+		} else {
+			// At least some instances are running - consider it successful
+			// In a production system, we'd also check ALB target health here
+			status = 'SUCCESS'
 		}
 
-		const deploymentId = instances[0]?.tags.DeploymentId ?? 'unknown'
+		const deploymentId =
+			instances[0]?.tags.DeploymentId ??
+			instances[0]?.tags.Environment ??
+			`pr-${prNumber}-${Date.now()}`
+
 		const startTime = instances.reduce(
 			(earliest, instance) =>
 				instance.launchTime < earliest ? instance.launchTime : earliest,
 			instances[0]?.launchTime ?? new Date(),
 		)
 
+		console.log(
+			`PR ${prNumber} deployment status: ${status} (${runningInstances.length}/${instances.length} running)`,
+		)
+
 		return {
 			deploymentId,
 			status,
 			instances,
-			healthyInstances,
+			healthyInstances: runningInstances.length,
 			totalInstances: instances.length,
 			startTime,
 		}

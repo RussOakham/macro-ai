@@ -1,5 +1,20 @@
 # Amplify Configuration Template for Preview Environments (PR Deployments)
-# Optimized for fast builds and comprehensive debugging capabilities
+#
+# Purpose: This configuration is specifically designed for ephemeral PR preview deployments
+# that require fast builds, comprehensive debugging capabilities, and relaxed security settings
+# for development and testing purposes.
+#
+# Key Features:
+# - Fast builds with aggressive caching strategies
+# - Comprehensive logging and debugging information
+# - Build metadata generation for deployment tracking
+# - Relaxed CORS and CSP policies for development flexibility
+# - PR-specific environment variable injection
+# - Automated testing integration with early issue detection
+#
+# Usage: This template is automatically applied to Amplify apps during PR preview deployments
+# via the GitHub Actions workflow. Environment variables are injected dynamically based on
+# the PR context and backend stack discovery.
 
 version: 1
 

@@ -2,8 +2,6 @@ import * as cdk from 'aws-cdk-lib'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import { Construct } from 'constructs'
 
-import { TAG_VALUES, TaggingStrategy } from '../utils/tagging-strategy.js'
-
 export interface SecurityGroupsConstructProps {
 	/**
 	 * VPC where security groups will be created
@@ -69,7 +67,7 @@ export class SecurityGroupsConstruct extends Construct {
 		this.albSecurityGroup = this.createAlbSecurityGroup(vpc, environmentName)
 
 		// Apply tags
-		this.applyTags(environmentName)
+		this.applyTags()
 	}
 
 	/**
@@ -192,8 +190,8 @@ export class SecurityGroupsConstruct extends Construct {
 			`NTP time sync (PR #${prNumber.toString()})`,
 		)
 
-		// Apply PR-specific tags
-		this.applyPrTags(prSg, prNumber)
+		// Note: PR-specific tags are inherited from stack-level tags
+		// No need to apply duplicate tags here as they're already applied at stack level
 
 		return prSg
 	}
@@ -229,34 +227,15 @@ export class SecurityGroupsConstruct extends Construct {
 
 	/**
 	 * Apply tags to the shared security groups
+	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
-	private applyTags(environmentName: string): void {
-		TaggingStrategy.applyBaseTags(this, {
-			environment: environmentName,
-			component: 'Security-Groups',
-			purpose: TAG_VALUES.PURPOSES.SHARED_INFRASTRUCTURE,
-			createdBy: 'SecurityGroupsConstruct',
-			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.BASIC,
-		})
-	}
-
-	/**
-	 * Apply PR-specific tags to security groups
-	 */
-	private applyPrTags(
-		securityGroup: ec2.SecurityGroup,
-		prNumber: number,
-	): void {
-		TaggingStrategy.applyPrTags(securityGroup, {
-			prNumber,
-			component: 'Security-Group',
-			purpose: TAG_VALUES.PURPOSES.PREVIEW_ENVIRONMENT,
-			createdBy: 'SecurityGroupsConstruct',
-			expiryDays: 7,
-			autoShutdown: false, // Security groups don't need auto-shutdown
-			backupRequired: false, // Security groups don't need backups
-			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.BASIC,
-		})
+	private applyTags(): void {
+		// Apply construct-specific tags that don't conflict with stack-level tags
+		cdk.Tags.of(this).add('SubComponent', 'Security-Groups')
+		cdk.Tags.of(this).add('SubPurpose', 'NetworkSecurity')
+		cdk.Tags.of(this).add('ConstructManagedBy', 'SecurityGroupsConstruct')
+		cdk.Tags.of(this).add('SecurityType', 'VPC-SecurityGroups')
+		// Note: Environment, Component, Purpose, CreatedBy are inherited from stack level
 	}
 
 	/**

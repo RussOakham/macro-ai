@@ -6,8 +6,6 @@ import * as route53 from 'aws-cdk-lib/aws-route53'
 import * as route53targets from 'aws-cdk-lib/aws-route53-targets'
 import { Construct } from 'constructs'
 
-import { TAG_VALUES, TaggingStrategy } from '../utils/tagging-strategy.js'
-
 export interface AlbConstructProps {
 	/**
 	 * VPC where ALB will be deployed
@@ -152,7 +150,7 @@ export class AlbConstruct extends Construct {
 		}
 
 		// Apply tags to the construct
-		this.applyTags(environmentName)
+		this.applyTags()
 	}
 
 	/**
@@ -200,8 +198,8 @@ export class AlbConstruct extends Construct {
 			},
 		)
 
-		// Apply PR-specific tags
-		this.applyPrTargetGroupTags(targetGroup, prNumber)
+		// Note: PR-specific tags are inherited from stack-level tags
+		// No need to apply duplicate tags here as they're already applied at stack level
 
 		return targetGroup
 	}
@@ -428,34 +426,15 @@ export class AlbConstruct extends Construct {
 
 	/**
 	 * Apply comprehensive tagging for cost tracking and resource management
+	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
 	 */
-	private applyTags(environmentName: string): void {
-		TaggingStrategy.applyBaseTags(this, {
-			environment: environmentName,
-			component: 'ALB',
-			purpose: TAG_VALUES.PURPOSES.SHARED_INFRASTRUCTURE,
-			createdBy: 'AlbConstruct',
-			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.STANDARD,
-		})
-	}
-
-	/**
-	 * Apply PR-specific tags to target groups
-	 */
-	private applyPrTargetGroupTags(
-		targetGroup: elbv2.ApplicationTargetGroup,
-		prNumber: number,
-	): void {
-		TaggingStrategy.applyPrTags(targetGroup, {
-			prNumber,
-			component: 'ALB-TargetGroup',
-			purpose: TAG_VALUES.PURPOSES.PREVIEW_ENVIRONMENT,
-			createdBy: 'AlbConstruct',
-			expiryDays: 7,
-			autoShutdown: false, // Target groups don't need auto-shutdown
-			backupRequired: false, // Target groups don't need backups
-			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.BASIC,
-		})
+	private applyTags(): void {
+		// Apply construct-specific tags that don't conflict with stack-level tags
+		cdk.Tags.of(this).add('SubComponent', 'ALB')
+		cdk.Tags.of(this).add('SubPurpose', 'LoadBalancing')
+		cdk.Tags.of(this).add('ConstructManagedBy', 'AlbConstruct')
+		cdk.Tags.of(this).add('LoadBalancerType', 'ApplicationLoadBalancer')
+		// Note: Environment, Component, Purpose, CreatedBy are inherited from stack level
 	}
 
 	/**

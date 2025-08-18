@@ -55,7 +55,7 @@ ARTIFACT_BUCKET="${ARTIFACT_BUCKET:-}"
 
 # Deployment options
 INSTANCE_COUNT="${INSTANCE_COUNT:-1}"
-TIMEOUT_MINUTES="${TIMEOUT_MINUTES:-15}"
+TIMEOUT_MINUTES="${TIMEOUT_MINUTES:-25}"
 HEALTH_CHECK_RETRIES="${HEALTH_CHECK_RETRIES:-10}"
 
 # Validate required environment variables
@@ -219,37 +219,341 @@ deploy_to_ec2() {
         --instances "$INSTANCE_COUNT"
 
     log_success "EC2 deployment completed"
+
+    # Allow time for AWS resources to become available after CDK deployment
+    log_info "⏳ Allowing 30 seconds for AWS resources to become available..."
+    sleep 30
 }
 
-# Wait for deployment to be healthy
+# Wait for deployment to be healthy using direct AWS API queries
 wait_for_healthy_deployment() {
-    log_info "Waiting for deployment to be healthy..."
+    log_info "🚀 Starting robust deployment health check with progressive timeout stages..."
 
-    local max_attempts=$((TIMEOUT_MINUTES * 2)) # Check every 30 seconds
+    # Extract deployment configuration from CloudFormation stack
+    local stack_name="MacroAiPr-${PR_NUMBER}Stack"
+    log_info "📋 Extracting deployment configuration from stack: $stack_name"
+
+    # Get stack outputs
+    local stack_outputs
+    if ! stack_outputs=$(aws cloudformation describe-stacks --stack-name "$stack_name" --query "Stacks[0].Outputs" --output json 2>/dev/null); then
+        log_error "❌ Failed to get CloudFormation stack outputs for $stack_name"
+        return 1
+    fi
+
+    # Extract Auto Scaling Group name and environment
+    local asg_name environment_name
+    asg_name=$(echo "$stack_outputs" | jq -r '.[] | select(.OutputKey=="AutoScalingGroupName") | .OutputValue')
+    environment_name=$(echo "$stack_outputs" | jq -r '.[] | select(.OutputKey=="EnvironmentName") | .OutputValue')
+
+    if [[ -z "$asg_name" || "$asg_name" == "null" ]]; then
+        log_error "❌ Failed to extract Auto Scaling Group name from stack outputs"
+        return 1
+    fi
+
+    log_info "✅ Found Auto Scaling Group: $asg_name"
+    log_info "✅ Environment: $environment_name"
+
+    # Get target group ARN using naming pattern
+    local target_group_arn
+    if ! target_group_arn=$(aws elbv2 describe-target-groups \
+        --query "TargetGroups[?contains(TargetGroupName, 'pr-${PR_NUMBER}')].TargetGroupArn" \
+        --output text 2>/dev/null | head -1); then
+        log_error "❌ Failed to get target group ARN for PR $PR_NUMBER"
+        return 1
+    fi
+
+    if [[ -z "$target_group_arn" || "$target_group_arn" == "None" ]]; then
+        log_error "❌ No target group found for PR $PR_NUMBER"
+        return 1
+    fi
+
+    log_info "✅ Found target group: $target_group_arn"
+
+    # Phase 1: Wait for instances to be running (5 minutes)
+    if ! wait_for_instances_running "$asg_name"; then
+        log_error "❌ Phase 1 failed: Instances did not reach running state"
+        return 1
+    fi
+
+    # Phase 2: Wait for user data completion (15 minutes)
+    if ! wait_for_user_data_completion "$asg_name"; then
+        log_error "❌ Phase 2 failed: User data scripts did not complete"
+        return 1
+    fi
+
+    # Phase 3: Wait for ALB health checks (10 minutes)
+    if ! wait_for_alb_health "$target_group_arn"; then
+        log_error "❌ Phase 3 failed: ALB health checks did not pass"
+        return 1
+    fi
+
+    log_success "🎉 Deployment is fully healthy! All phases completed successfully."
+    return 0
+}
+
+# Phase 1: Wait for instances to be running (5 minutes timeout)
+wait_for_instances_running() {
+    local asg_name="$1"
+    local phase_timeout=300  # 5 minutes
+    local check_interval=15  # Check every 15 seconds
+    local max_attempts=$((phase_timeout / check_interval))
     local attempt=1
 
-    while [[ $attempt -le $max_attempts ]]; do
-        log_info "Health check attempt $attempt/$max_attempts..."
+    log_info "🔄 Phase 1: Waiting for instances to reach running state (timeout: ${phase_timeout}s)..."
 
-        # Check deployment status
-        local status_output
-        if status_output=$(pnpm tsx scripts/deploy-ec2.ts status --pr "$PR_NUMBER" 2>&1); then
-            if echo "$status_output" | grep -q "Status: SUCCESS"; then
-                log_success "Deployment is healthy!"
-                return 0
-            elif echo "$status_output" | grep -q "Status: FAILED"; then
-                log_error "Deployment failed!"
-                echo "$status_output"
-                return 1
-            fi
+    while [[ $attempt -le $max_attempts ]]; do
+        log_info "📊 Phase 1 - Attempt $attempt/$max_attempts: Checking instance states..."
+
+        # Get instance IDs from Auto Scaling Group
+        local instance_ids
+        if ! instance_ids=$(aws autoscaling describe-auto-scaling-groups \
+            --auto-scaling-group-names "$asg_name" \
+            --query "AutoScalingGroups[0].Instances[*].InstanceId" \
+            --output text 2>/dev/null); then
+            log_error "❌ Failed to get instances from ASG: $asg_name"
+            return 1
         fi
 
-        log_info "Deployment still in progress, waiting 30 seconds..."
-        sleep 30
+        if [[ -z "$instance_ids" || "$instance_ids" == "None" ]]; then
+            log_info "⏳ No instances found in ASG yet, waiting..."
+            sleep $check_interval
+            ((attempt++))
+            continue
+        fi
+
+        # Convert space-separated string to array
+        local instance_array=($instance_ids)
+        local total_instances=${#instance_array[@]}
+        log_info "📋 Found $total_instances instance(s): ${instance_ids}"
+
+        # Check instance states
+        local running_count=0
+        local pending_count=0
+        local other_count=0
+
+        for instance_id in "${instance_array[@]}"; do
+            local state
+            if state=$(aws ec2 describe-instances \
+                --instance-ids "$instance_id" \
+                --query "Reservations[0].Instances[0].State.Name" \
+                --output text 2>/dev/null); then
+
+                case "$state" in
+                    "running")
+                        ((running_count++))
+                        ;;
+                    "pending")
+                        ((pending_count++))
+                        ;;
+                    *)
+                        ((other_count++))
+                        log_info "⚠️  Instance $instance_id in unexpected state: $state"
+                        ;;
+                esac
+            else
+                log_info "⚠️  Failed to get state for instance: $instance_id"
+                ((other_count++))
+            fi
+        done
+
+        log_info "📈 Instance states: $running_count running, $pending_count pending, $other_count other"
+
+        # Check if all instances are running
+        if [[ $running_count -eq $total_instances ]]; then
+            log_success "✅ Phase 1 complete: All $total_instances instance(s) are running!"
+            return 0
+        fi
+
+        # Check for failed instances
+        if [[ $other_count -gt 0 ]]; then
+            log_info "⚠️  Some instances in unexpected states, continuing to monitor..."
+        fi
+
+        log_info "⏳ Phase 1 - $running_count/$total_instances instances running, waiting ${check_interval}s..."
+        sleep $check_interval
         ((attempt++))
     done
 
-    log_error "Timeout waiting for deployment to be healthy"
+    log_error "❌ Phase 1 timeout: Instances did not reach running state within ${phase_timeout}s"
+    return 1
+}
+
+# Phase 2: Wait for user data completion (15 minutes timeout)
+wait_for_user_data_completion() {
+    local asg_name="$1"
+    local phase_timeout=900  # 15 minutes
+    local check_interval=30  # Check every 30 seconds
+    local max_attempts=$((phase_timeout / check_interval))
+    local attempt=1
+
+    log_info "🔄 Phase 2: Waiting for user data scripts to complete (timeout: ${phase_timeout}s)..."
+
+    while [[ $attempt -le $max_attempts ]]; do
+        log_info "📊 Phase 2 - Attempt $attempt/$max_attempts: Checking system status..."
+
+        # Get instance IDs from Auto Scaling Group
+        local instance_ids
+        if ! instance_ids=$(aws autoscaling describe-auto-scaling-groups \
+            --auto-scaling-group-names "$asg_name" \
+            --query "AutoScalingGroups[0].Instances[*].InstanceId" \
+            --output text 2>/dev/null); then
+            log_error "❌ Failed to get instances from ASG: $asg_name"
+            return 1
+        fi
+
+        if [[ -z "$instance_ids" || "$instance_ids" == "None" ]]; then
+            log_error "❌ No instances found in ASG: $asg_name"
+            return 1
+        fi
+
+        # Convert space-separated string to array
+        local instance_array=($instance_ids)
+        local total_instances=${#instance_array[@]}
+
+        # Check instance status (system status indicates user data completion)
+        local ok_count=0
+        local initializing_count=0
+        local other_count=0
+
+        for instance_id in "${instance_array[@]}"; do
+            # Get both instance status and system status
+            local status_info
+            if status_info=$(aws ec2 describe-instance-status \
+                --instance-ids "$instance_id" \
+                --query "InstanceStatuses[0].[InstanceStatus.Status,SystemStatus.Status]" \
+                --output text 2>/dev/null); then
+
+                local instance_status=$(echo "$status_info" | cut -f1)
+                local system_status=$(echo "$status_info" | cut -f2)
+
+                # Both instance and system status should be "ok" for user data completion
+                if [[ "$instance_status" == "ok" && "$system_status" == "ok" ]]; then
+                    ((ok_count++))
+                elif [[ "$instance_status" == "initializing" || "$system_status" == "initializing" ]]; then
+                    ((initializing_count++))
+                else
+                    ((other_count++))
+                    log_info "⚠️  Instance $instance_id status: instance=$instance_status, system=$system_status"
+                fi
+            else
+                # Instance might not have status yet if very recently launched
+                log_info "⏳ Instance $instance_id status not available yet (recently launched)"
+                ((initializing_count++))
+            fi
+        done
+
+        log_info "📈 System status: $ok_count ready, $initializing_count initializing, $other_count other"
+
+        # Check if all instances have completed user data
+        if [[ $ok_count -eq $total_instances ]]; then
+            log_success "✅ Phase 2 complete: All $total_instances instance(s) have completed user data scripts!"
+            return 0
+        fi
+
+        # Provide detailed progress
+        if [[ $initializing_count -gt 0 ]]; then
+            log_info "⏳ Phase 2 - $initializing_count instance(s) still running user data scripts..."
+        fi
+
+        log_info "⏳ Phase 2 - $ok_count/$total_instances instances ready, waiting ${check_interval}s..."
+        sleep $check_interval
+        ((attempt++))
+    done
+
+    log_error "❌ Phase 2 timeout: User data scripts did not complete within ${phase_timeout}s"
+    return 1
+}
+
+# Phase 3: Wait for ALB health checks (10 minutes timeout)
+wait_for_alb_health() {
+    local target_group_arn="$1"
+    local phase_timeout=600  # 10 minutes
+    local check_interval=30  # Check every 30 seconds
+    local max_attempts=$((phase_timeout / check_interval))
+    local attempt=1
+
+    log_info "🔄 Phase 3: Waiting for ALB health checks to pass (timeout: ${phase_timeout}s)..."
+    log_info "🎯 Target Group: $target_group_arn"
+
+    while [[ $attempt -le $max_attempts ]]; do
+        log_info "📊 Phase 3 - Attempt $attempt/$max_attempts: Checking ALB target health..."
+
+        # Get target health status
+        local health_info
+        if ! health_info=$(aws elbv2 describe-target-health \
+            --target-group-arn "$target_group_arn" \
+            --query "TargetHealthDescriptions[*].[Target.Id,TargetHealth.State,TargetHealth.Reason,TargetHealth.Description]" \
+            --output text 2>/dev/null); then
+            log_error "❌ Failed to get target health for target group"
+            return 1
+        fi
+
+        if [[ -z "$health_info" ]]; then
+            log_info "⏳ No targets registered in target group yet, waiting..."
+            sleep $check_interval
+            ((attempt++))
+            continue
+        fi
+
+        # Parse health information
+        local healthy_count=0
+        local unhealthy_count=0
+        local other_count=0
+        local total_targets=0
+
+        while IFS=$'\t' read -r target_id health_state reason description; do
+            ((total_targets++))
+
+            case "$health_state" in
+                "healthy")
+                    ((healthy_count++))
+                    log_info "✅ Target $target_id: healthy"
+                    ;;
+                "unhealthy")
+                    ((unhealthy_count++))
+                    log_info "❌ Target $target_id: unhealthy - $reason ($description)"
+                    ;;
+                "initial"|"draining"|"unavailable")
+                    ((other_count++))
+                    log_info "⏳ Target $target_id: $health_state - $reason"
+                    ;;
+                *)
+                    ((other_count++))
+                    log_info "⚠️  Target $target_id: unknown state '$health_state' - $reason"
+                    ;;
+            esac
+        done <<< "$health_info"
+
+        log_info "📈 Target health: $healthy_count healthy, $unhealthy_count unhealthy, $other_count other (total: $total_targets)"
+
+        # Check if all targets are healthy
+        if [[ $total_targets -gt 0 && $healthy_count -eq $total_targets ]]; then
+            log_success "✅ Phase 3 complete: All $total_targets target(s) are healthy in ALB!"
+            return 0
+        fi
+
+        # Provide guidance on common issues
+        if [[ $unhealthy_count -gt 0 ]]; then
+            log_info "💡 Unhealthy targets detected. Common causes:"
+            log_info "   - Application not yet listening on port 3040"
+            log_info "   - Health check endpoint /api/health not responding"
+            log_info "   - Security group blocking ALB health checks"
+        fi
+
+        log_info "⏳ Phase 3 - $healthy_count/$total_targets targets healthy, waiting ${check_interval}s..."
+        sleep $check_interval
+        ((attempt++))
+    done
+
+    log_error "❌ Phase 3 timeout: ALB health checks did not pass within ${phase_timeout}s"
+
+    # Final health status for debugging
+    log_info "🔍 Final target health status:"
+    aws elbv2 describe-target-health \
+        --target-group-arn "$target_group_arn" \
+        --query "TargetHealthDescriptions[*].[Target.Id,TargetHealth.State,TargetHealth.Reason,TargetHealth.Description]" \
+        --output table 2>/dev/null || log_error "Failed to get final health status"
+
     return 1
 }
 

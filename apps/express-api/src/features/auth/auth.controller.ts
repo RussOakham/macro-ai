@@ -338,21 +338,21 @@ class AuthController implements IAuthController {
 			.cookie('macro-ai-accessToken', loginResponse.tokens.accessToken, {
 				httpOnly: false,
 				secure: nodeEnv === 'production',
-				domain: cookieDomain,
+				domain: cookieDomain !== 'localhost' ? cookieDomain : undefined,
 				sameSite: 'strict',
 				maxAge: (loginResponse.tokens.expiresIn + 300) * 1000, // JWT expiration + 5 minute buffer for refresh
 			})
 			.cookie('macro-ai-refreshToken', loginResponse.tokens.refreshToken, {
 				httpOnly: true,
 				secure: nodeEnv === 'production',
-				domain: cookieDomain,
+				domain: cookieDomain !== 'localhost' ? cookieDomain : undefined,
 				sameSite: 'strict',
 				maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
 			})
 			.cookie('macro-ai-synchronize', encryptedUsername, {
 				httpOnly: true,
 				secure: nodeEnv === 'production',
-				domain: cookieDomain,
+				domain: cookieDomain !== 'localhost' ? cookieDomain : undefined,
 				sameSite: 'strict',
 				maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
 			})
@@ -520,7 +520,7 @@ class AuthController implements IAuthController {
 			.cookie('macro-ai-accessToken', refreshLoginResponse.tokens.accessToken, {
 				httpOnly: false,
 				secure: nodeEnv === 'production',
-				domain: cookieDomain,
+				domain: cookieDomain !== 'localhost' ? cookieDomain : undefined,
 				sameSite: 'strict',
 				maxAge: (refreshLoginResponse.tokens.expiresIn + 300) * 1000, // JWT expiration + 5 minute buffer for refresh
 			})
@@ -530,7 +530,7 @@ class AuthController implements IAuthController {
 				{
 					httpOnly: true,
 					secure: nodeEnv === 'production',
-					domain: cookieDomain,
+					domain: cookieDomain !== 'localhost' ? cookieDomain : undefined,
 					sameSite: 'strict',
 					maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
 				},
@@ -538,7 +538,7 @@ class AuthController implements IAuthController {
 			.cookie('macro-ai-synchronize', encryptedUsername, {
 				httpOnly: true,
 				secure: nodeEnv === 'production',
-				domain: cookieDomain,
+				domain: cookieDomain !== 'localhost' ? cookieDomain : undefined,
 				sameSite: 'strict',
 				maxAge: 1000 * 60 * 60 * 24 * refreshTokenExpiryDays,
 			})

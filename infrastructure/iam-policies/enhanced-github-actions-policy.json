@@ -192,12 +192,24 @@
 			"Resource": "*"
 		},
 		{
+			"Sid": "EC2HealthCheckPermissions",
+			"Effect": "Allow",
+			"Action": [
+				"ec2:DescribeInstances",
+				"ec2:DescribeInstanceStatus",
+				"autoscaling:DescribeAutoScalingGroups",
+				"elasticloadbalancing:DescribeTargetHealth",
+				"elasticloadbalancing:DescribeTargetGroups"
+			],
+			"Resource": "*"
+		},
+		{
 			"Sid": "KMSKeyAccess",
 			"Effect": "Allow",
 			"Action": ["kms:Decrypt", "kms:DescribeKey", "kms:GenerateDataKey"],
 			"Resource": "*",
 			"Condition": {
-				"StringEquals": {
+				"StringLike": {
 					"kms:ViaService": ["ssm.*.amazonaws.com", "s3.*.amazonaws.com"]
 				}
 			}

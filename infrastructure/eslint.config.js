@@ -4,7 +4,14 @@ import simpleImportSort from 'eslint-plugin-simple-import-sort'
 export default repoConfig.config(
 	// Global ignores - must be first
 	{
-		ignores: ['dist/**', 'cdk.out/**', '*.d.ts', 'node_modules/**', '*.js'],
+		ignores: [
+			'dist/**',
+			'cdk.out/**',
+			'*.d.ts',
+			'node_modules/**',
+			'*.js',
+			'examples/**',
+		],
 	},
 	// Use shared base config
 	...repoConfig.configs.base,

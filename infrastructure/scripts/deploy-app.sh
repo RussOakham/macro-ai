@@ -306,7 +306,7 @@ health_check() {
     local attempt=1
 
     while [[ $attempt -le $max_attempts ]]; do
-        if curl -f -s http://localhost:3030/api/health > /dev/null; then
+        if curl -f -s http://localhost:3040/api/health > /dev/null; then
             log_success "Health check passed"
             return 0
         fi
@@ -364,13 +364,167 @@ cmd_status() {
     echo "  Service status: $(systemctl is-active macro-ai.service 2>/dev/null || echo 'inactive')"
 
     if systemctl is-active --quiet macro-ai.service; then
-        echo "  Health check: $(curl -f -s http://localhost:3030/api/health > /dev/null && echo 'healthy' || echo 'unhealthy')"
+        echo "  Health check: $(curl -f -s http://localhost:3040/api/health > /dev/null && echo 'healthy' || echo 'unhealthy')"
     fi
 
     echo "  Available releases:"
     if [[ -d "$RELEASES_DIR" ]]; then
         ls -la "$RELEASES_DIR" | grep "^d" | awk '{print "    " $9}' | grep -v "^\.$\|^\.\.$"
     fi
+}
+
+# Rollback command
+cmd_rollback() {
+    if [[ -z "$ROLLBACK_VERSION" ]]; then
+        error_exit "Rollback version is required. Use -r or --rollback option"
+    fi
+
+    local rollback_dir="$RELEASES_DIR/$ROLLBACK_VERSION"
+
+    if [[ ! -d "$rollback_dir" ]]; then
+        error_exit "Release version $ROLLBACK_VERSION not found in $RELEASES_DIR"
+    fi
+
+    log_info "Rolling back to version: $ROLLBACK_VERSION"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY RUN] Would rollback to version: $ROLLBACK_VERSION"
+        log_info "[DRY RUN] Would update symlink: $CURRENT_DIR -> $rollback_dir"
+        log_info "[DRY RUN] Would restart service: macro-ai.service"
+        return 0
+    fi
+
+    # Update symlink to rollback version
+    create_symlink "$rollback_dir"
+
+    # Restart service
+    restart_service
+
+    # Perform health check
+    health_check
+
+    log_success "Rollback to version $ROLLBACK_VERSION completed successfully"
+}
+
+# Cleanup command
+cmd_cleanup() {
+    local keep_releases=5
+
+    log_info "Cleaning up old releases (keeping last $keep_releases)"
+
+    if [[ ! -d "$RELEASES_DIR" ]]; then
+        log_info "No releases directory found, nothing to cleanup"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY RUN] Would cleanup old releases in: $RELEASES_DIR"
+        local releases_to_remove
+        releases_to_remove=$(ls -1t "$RELEASES_DIR" | tail -n +$((keep_releases + 1)))
+        if [[ -n "$releases_to_remove" ]]; then
+            echo "[DRY RUN] Would remove releases:"
+            echo "$releases_to_remove" | sed 's/^/    /'
+        else
+            log_info "[DRY RUN] No releases to remove"
+        fi
+        return 0
+    fi
+
+    # Get current release to avoid removing it
+    local current_release=""
+    if [[ -L "$CURRENT_DIR" ]]; then
+        current_release=$(basename "$(readlink "$CURRENT_DIR")")
+    fi
+
+    # Get list of releases sorted by modification time (newest first)
+    local releases
+    releases=$(ls -1t "$RELEASES_DIR")
+    local release_count
+    release_count=$(echo "$releases" | wc -l)
+
+    if [[ $release_count -le $keep_releases ]]; then
+        log_info "Only $release_count releases found, no cleanup needed"
+        return 0
+    fi
+
+    # Remove old releases (keep the newest ones)
+    local releases_to_remove
+    releases_to_remove=$(echo "$releases" | tail -n +$((keep_releases + 1)))
+
+    for release in $releases_to_remove; do
+        # Skip if this is the current release
+        if [[ "$release" == "$current_release" ]]; then
+            log_warning "Skipping removal of current release: $release"
+            continue
+        fi
+
+        local release_path="$RELEASES_DIR/$release"
+        log_info "Removing old release: $release"
+        rm -rf "$release_path"
+    done
+
+    log_success "Cleanup completed"
+}
+
+# Health command
+cmd_health() {
+    log_info "Performing comprehensive health check"
+
+    local exit_code=0
+
+    # Check if service is running
+    if systemctl is-active --quiet macro-ai.service; then
+        log_success "Service is active"
+    else
+        log_error "Service is not active"
+        exit_code=1
+    fi
+
+    # Check if current deployment exists
+    if [[ -L "$CURRENT_DIR" ]]; then
+        local current_release
+        current_release=$(readlink "$CURRENT_DIR")
+        local version
+        version=$(basename "$current_release")
+        log_success "Current deployment: $version"
+    else
+        log_error "No current deployment found"
+        exit_code=1
+    fi
+
+    # Perform HTTP health check
+    if curl -f -s http://localhost:3040/api/health > /dev/null; then
+        log_success "HTTP health check passed"
+    else
+        log_error "HTTP health check failed"
+        exit_code=1
+    fi
+
+    # Check disk space
+    local disk_usage
+    disk_usage=$(df "$APP_DIR" | awk 'NR==2 {print $5}' | sed 's/%//')
+    if [[ $disk_usage -lt 90 ]]; then
+        log_success "Disk usage: ${disk_usage}% (healthy)"
+    else
+        log_warning "Disk usage: ${disk_usage}% (high)"
+        exit_code=1
+    fi
+
+    # Check log directory
+    if [[ -d "$LOG_DIR" && -w "$LOG_DIR" ]]; then
+        log_success "Log directory is accessible"
+    else
+        log_error "Log directory is not accessible: $LOG_DIR"
+        exit_code=1
+    fi
+
+    if [[ $exit_code -eq 0 ]]; then
+        log_success "All health checks passed"
+    else
+        log_error "Some health checks failed"
+    fi
+
+    return $exit_code
 }
 
 # Main execution
@@ -386,8 +540,17 @@ main() {
         deploy)
             cmd_deploy
             ;;
+        rollback)
+            cmd_rollback
+            ;;
         status)
             cmd_status
+            ;;
+        cleanup)
+            cmd_cleanup
+            ;;
+        health)
+            cmd_health
             ;;
         *)
             log_error "Unknown command: ${COMMAND:-}"
