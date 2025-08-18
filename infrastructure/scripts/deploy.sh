@@ -24,7 +24,7 @@ AWS_REGION=${AWS_REGION:-us-east-1}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 EXPRESS_API_DIR="$PROJECT_ROOT/apps/express-api"
-LAMBDA_DIST_DIR="$EXPRESS_API_DIR/dist"
+EC2_DIST_DIR="$EXPRESS_API_DIR/dist"
 
 # Generate stack name
 ENV_CAPITALIZED="$(echo "$ENVIRONMENT" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')"
@@ -147,11 +147,11 @@ if ! pnpm cdk deploy "$STACK_NAME" --require-approval never; then
     echo -e "${YELLOW}💡 Troubleshooting tips:${NC}"
     echo "1. Check AWS credentials: aws sts get-caller-identity"
     echo "2. Verify CDK bootstrap: aws cloudformation describe-stacks --stack-name CDKToolkit"
-    echo "3. Check Lambda package: ls -la $LAMBDA_DIST_DIR/lambda.zip"
+    echo "3. Check Express API build: ls -la $EC2_DIST_DIR/index.js"
     echo "4. Review deployment logs above for specific errors"
-    echo "5. API Gateway conflicts: This deployment uses single deployment path (v1.0.0+)"
-    echo "   - No 'already exists in stack' errors should occur"
-    echo "   - If conflicts persist, check for manual RestApi modifications"
+    echo "5. EC2 deployment conflicts: Check for existing Auto Scaling Groups or Load Balancers"
+    echo "   - Verify EC2 instances can be launched in target subnets"
+    echo "   - Check security group configurations and VPC settings"
     exit 1
 fi
 

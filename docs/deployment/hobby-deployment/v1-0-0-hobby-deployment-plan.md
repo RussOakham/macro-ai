@@ -664,22 +664,10 @@ plugins:
   - serverless-offline
 ```
 
-**3. Create Lambda Handler:**
+**3. ⚠️ DEPRECATED - Lambda Handler (Removed):**
 
-```typescript
-// src/lambda.ts
-import serverless from 'serverless-http'
-import app from './app' // Your existing Express app
-
-export const handler = serverless(app, {
-	binary: false,
-	request: (request, event, context) => {
-		// Add Lambda context to request
-		request.context = context
-		request.event = event
-	},
-})
-```
+> **Note**: Lambda handler implementation has been removed as part of the migration to EC2-based deployment.
+> The Express API now runs directly on EC2 instances with PM2 process management.
 
 ### Phase 4: Frontend Deployment (Day 3)
 
@@ -1095,73 +1083,11 @@ export const cache = {
 }
 ```
 
-### Lambda Handler with Error Handling
+### ⚠️ DEPRECATED - Lambda Handler with Error Handling (Removed)
 
-```typescript
-// src/lambda.ts
-import serverless from 'serverless-http'
-import {
-	APIGatewayProxyEvent,
-	APIGatewayProxyResult,
-	Context,
-} from 'aws-lambda'
-import app from './app'
-import { testDatabaseConnection } from './config/database'
-
-// Wrap Express app for Lambda
-const serverlessApp = serverless(app, {
-	binary: false,
-	request: (request: any, event: APIGatewayProxyEvent, context: Context) => {
-		request.context = context
-		request.event = event
-	},
-})
-
-// Main Lambda handler with health checks
-export const handler = async (
-	event: APIGatewayProxyEvent,
-	context: Context,
-): Promise<APIGatewayProxyResult> => {
-	// Set Lambda context timeout
-	context.callbackWaitsForEmptyEventLoop = false
-
-	try {
-		// Health check for database on cold start
-		if (event.path === '/health') {
-			const dbHealthy = await testDatabaseConnection()
-			if (!dbHealthy) {
-				return {
-					statusCode: 503,
-					headers: {
-						'Content-Type': 'application/json',
-						'Access-Control-Allow-Origin': '*',
-					},
-					body: JSON.stringify({
-						status: 'unhealthy',
-						error: 'Database connection failed',
-						timestamp: new Date().toISOString(),
-					}),
-				}
-			}
-		}
-
-		return await serverlessApp(event, context)
-	} catch (error) {
-		console.error('Lambda handler error:', error)
-		return {
-			statusCode: 500,
-			headers: {
-				'Content-Type': 'application/json',
-				'Access-Control-Allow-Origin': '*',
-			},
-			body: JSON.stringify({
-				error: 'Internal server error',
-				timestamp: new Date().toISOString(),
-			}),
-		}
-	}
-}
-```
+> **Note**: Advanced Lambda handler implementation has been removed as part of the migration to EC2-based deployment.
+> Error handling and health checks are now implemented directly in the Express API running on EC2 instances with
+> proper middleware and monitoring.
 
 ### Optimized Package.json Scripts
 

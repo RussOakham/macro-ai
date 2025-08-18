@@ -138,20 +138,10 @@ aws ssm put-parameter \
 # /macro-ai/production/ (hobby or enterprise scale)
 ```
 
-### Lambda Configuration
+### ⚠️ DEPRECATED - Lambda Configuration (Removed)
 
-- **Runtime**: Node.js 20.x on ARM64 (Graviton2)
-- **Memory**: 512 MB (cost-optimized)
-- **Timeout**: 30 seconds
-- **Architecture**: ARM64 (20% cheaper than x86_64)
-- **Logging**: CloudWatch with 1-week retention
-
-### API Gateway Configuration
-
-- **Type**: REST API with Lambda proxy integration
-- **CORS**: Enabled for frontend integration
-- **Throttling**: 100 requests/second, 200 burst limit
-- **Monitoring**: Basic (detailed monitoring disabled for cost)
+> **Note**: Lambda and API Gateway configurations have been removed as part of the migration to EC2-based deployment.
+> The Express API now runs on EC2 instances behind an Application Load Balancer (ALB) with Auto Scaling Groups.
 
 ### Deployment Architecture
 
@@ -203,39 +193,40 @@ The Lambda execution role includes:
 ### Parameter Store Security
 
 - **SecureString Parameters**: Encrypted with AWS managed KMS key
-- **Path-based Access**: Lambda can only access `/macro-ai/development/*` parameters
+- **Path-based Access**: EC2 instances can only access environment-specific parameters
 - **Least Privilege**: No write permissions to Parameter Store
 
 ### Network Security
 
-- **API Gateway**: Public endpoint with CORS restrictions
-- **Lambda**: Runs in AWS managed VPC (no custom VPC for cost optimization)
+- **Application Load Balancer**: Public endpoint with CORS restrictions
+- **EC2 Instances**: Run in private subnets with NAT Gateway for outbound access
 
 ## 📊 Monitoring & Logging
 
 ### CloudWatch Logs
 
-- **Log Group**: `/aws/lambda/macro-ai-development-api`
-- **Retention**: 1 week (cost optimization)
+- **Log Group**: `/var/log/macro-ai/` (on EC2 instances)
+- **Retention**: Managed by log rotation on instances
 - **Log Level**: INFO (configurable via environment variables)
 
-### AWS Powertools Integration
+### EC2 Monitoring Integration
 
 - **Service Name**: macro-ai-api
-- **Metrics Namespace**: MacroAI/Hobby
-- **Tracing**: Disabled by default (can be enabled for debugging)
+- **Metrics Namespace**: MacroAI/EC2
+- **CloudWatch Agent**: Enabled for system and application metrics
 
 ### Monitoring Commands
 
 ```bash
-# View Lambda logs
-aws logs tail /aws/lambda/macro-ai-hobby-api --follow
+# View application logs on EC2
+aws ssm start-session --target i-1234567890abcdef0
+sudo tail -f /var/log/macro-ai/application.log
 
-# Check API Gateway metrics
+# Check ALB metrics
 aws cloudwatch get-metric-statistics \
-  --namespace AWS/ApiGateway \
-  --metric-name Count \
-  --dimensions Name=ApiName,Value=macro-ai-hobby-api \
+  --namespace AWS/ApplicationELB \
+  --metric-name RequestCount \
+  --dimensions Name=LoadBalancer,Value=app/macro-ai-alb/1234567890abcdef \
   --start-time 2025-01-01T00:00:00Z \
   --end-time 2025-01-01T23:59:59Z \
   --period 3600 \
@@ -261,15 +252,13 @@ Required GitHub secrets:
 For manual deployments outside of CI/CD:
 
 ```bash
-# Build Lambda package first
+# Build Express API application
 cd apps/express-api
-npm run build:lambda
-npm run bundle:lambda
-npm run package:lambda
+pnpm build
 
-# Deploy infrastructure
+# Deploy EC2 infrastructure
 cd infrastructure
-./scripts/deploy.sh
+./scripts/deploy-ec2.sh
 ```
 
 ## 🛠️ Development
