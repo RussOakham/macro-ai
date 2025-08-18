@@ -44,8 +44,24 @@ A bash script optimized for GitHub Actions workflows:
 #### Deploy Application
 
 ```bash
-# Deploy to EC2 instances for a specific PR
+# Using pnpm script (recommended)
 pnpm deploy-ec2 deploy \
+  --pr 123 \
+  --artifact s3://my-bucket/artifacts/app-v1.0.0.tar.gz \
+  --version 1.0.0 \
+  --branch feature/new-feature \
+  --instances 2
+
+# Using tsx directly
+tsx infrastructure/src/cli/ec2-deployment-cli.ts deploy \
+  --pr 123 \
+  --artifact s3://my-bucket/artifacts/app-v1.0.0.tar.gz \
+  --version 1.0.0 \
+  --branch feature/new-feature \
+  --instances 2
+
+# Using ts-node
+ts-node infrastructure/src/cli/ec2-deployment-cli.ts deploy \
   --pr 123 \
   --artifact s3://my-bucket/artifacts/app-v1.0.0.tar.gz \
   --version 1.0.0 \
@@ -276,14 +292,19 @@ aws sts get-caller-identity
 ### Troubleshooting Commands
 
 ```bash
-# Get deployment status
+# Get deployment status (using pnpm script)
 pnpm deploy-ec2 status --pr 123
+
+# Using tsx directly
+tsx infrastructure/src/cli/ec2-deployment-cli.ts status --pr 123
 
 # Check infrastructure health
 pnpm deploy-ec2 health
+# OR: tsx infrastructure/src/cli/ec2-deployment-cli.ts health
 
 # Force cleanup if needed
 pnpm deploy-ec2 cleanup --pr 123 --force
+# OR: tsx infrastructure/src/cli/ec2-deployment-cli.ts cleanup --pr 123 --force
 
 # Check AWS resources
 aws ec2 describe-instances --filters "Name=tag:PRNumber,Values=123"

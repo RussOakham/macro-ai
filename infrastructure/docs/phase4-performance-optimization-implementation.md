@@ -269,21 +269,29 @@ const performanceOptimization = new PerformanceOptimizationConstruct(
 # Install dependencies
 pnpm add commander @aws-sdk/client-cloudwatch @aws-sdk/client-dynamodb @aws-sdk/client-lambda @aws-sdk/client-auto-scaling chalk cli-table3
 
-# Make executable
-chmod +x infrastructure/src/cli/performance-optimization-cli.ts
+# Install TypeScript execution tools (if not already available)
+pnpm add -g tsx
+# OR
+pnpm add -g ts-node
 ```
 
 **Commands**:
 
 ```bash
-# View performance metrics
-./performance-optimization-cli.ts metrics --environment production --period 24
+# Using tsx (recommended - faster startup)
+tsx infrastructure/src/cli/performance-optimization-cli.ts metrics --environment production --period 24
+
+# Using ts-node
+ts-node infrastructure/src/cli/performance-optimization-cli.ts metrics --environment production --period 24
+
+# Using compiled JavaScript (after pnpm build)
+node infrastructure/dist/cli/performance-optimization-cli.js metrics --environment production --period 24
 
 # View optimization recommendations
-./performance-optimization-cli.ts recommendations --environment production --priority HIGH
+tsx infrastructure/src/cli/performance-optimization-cli.ts recommendations --environment production --priority HIGH
 
 # Run performance analysis
-./performance-optimization-cli.ts analyze --environment production
+tsx infrastructure/src/cli/performance-optimization-cli.ts analyze --environment production
 
 # Analyze cost optimization
 ./performance-optimization-cli.ts cost --environment production

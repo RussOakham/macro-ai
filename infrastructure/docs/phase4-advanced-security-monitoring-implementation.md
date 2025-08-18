@@ -241,27 +241,35 @@ const securityMonitoring = new AdvancedSecurityMonitoringConstruct(
 # Install dependencies
 pnpm add commander @aws-sdk/client-cloudwatch @aws-sdk/client-dynamodb @aws-sdk/client-lambda chalk cli-table3
 
-# Make executable
-chmod +x infrastructure/src/cli/security-monitoring-cli.ts
+# Install TypeScript execution tools (if not already available)
+pnpm add -g tsx
+# OR
+pnpm add -g ts-node
 ```
 
 **Commands**:
 
 ```bash
-# View recent security events
-./security-monitoring-cli.ts events --environment production --since 24
+# Using tsx (recommended - faster startup)
+tsx infrastructure/src/cli/security-monitoring-cli.ts events --environment production --since 24
+
+# Using ts-node
+ts-node infrastructure/src/cli/security-monitoring-cli.ts events --environment production --since 24
+
+# Using compiled JavaScript (after pnpm build)
+node infrastructure/dist/cli/security-monitoring-cli.js events --environment production --since 24
 
 # View security metrics
-./security-monitoring-cli.ts metrics --environment production --period 24
+tsx infrastructure/src/cli/security-monitoring-cli.ts metrics --environment production --period 24
 
 # Run security analysis
-./security-monitoring-cli.ts analyze --environment production
+tsx infrastructure/src/cli/security-monitoring-cli.ts analyze --environment production
 
 # Check compliance status
-./security-monitoring-cli.ts compliance --environment production
+tsx infrastructure/src/cli/security-monitoring-cli.ts compliance --environment production
 
 # View security dashboard
-./security-monitoring-cli.ts dashboard --environment production
+tsx infrastructure/src/cli/security-monitoring-cli.ts dashboard --environment production
 ```
 
 **Example Output**:

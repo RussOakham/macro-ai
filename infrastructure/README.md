@@ -127,6 +127,28 @@ pnpm lint
 pnpm type-check
 ```
 
+### TypeScript CLI Tools
+
+The infrastructure includes several CLI tools written in TypeScript. You can run them in multiple ways:
+
+```bash
+# Install TypeScript execution tools (if not already available)
+pnpm add -g tsx
+# OR
+pnpm add -g ts-node
+
+# Run CLI tools directly with tsx (recommended - faster startup)
+tsx src/cli/performance-optimization-cli.ts --help
+tsx src/cli/ec2-deployment-cli.ts --help
+tsx src/cli/deployment-status-cli.ts --help
+
+# Run with ts-node
+ts-node src/cli/performance-optimization-cli.ts --help
+
+# Run compiled JavaScript (after pnpm build)
+node dist/cli/performance-optimization-cli.js --help
+```
+
 ### CDK Commands
 
 ```bash
