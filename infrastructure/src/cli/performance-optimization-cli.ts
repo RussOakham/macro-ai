@@ -459,7 +459,7 @@ function validateLambdaResponse(payload: unknown): LambdaPerformanceResponse {
 		throw new Error('Invalid Lambda response: missing or invalid body')
 	}
 
-	return response as LambdaPerformanceResponse
+	return response as unknown as LambdaPerformanceResponse
 }
 
 /**
