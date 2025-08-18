@@ -3,6 +3,7 @@ import * as autoscaling from 'aws-cdk-lib/aws-autoscaling'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import type { Construct } from 'constructs'
 
+import { CostMonitoringConstruct } from '../constructs/cost-monitoring-construct.js'
 import { DeploymentStatusConstruct } from '../constructs/deployment-status-construct.js'
 import { MonitoringConstruct } from '../constructs/monitoring-construct.js'
 import { NetworkingConstruct } from '../constructs/networking.js'
@@ -35,6 +36,12 @@ export interface MacroAiPreviewStackProps extends cdk.StackProps {
 	 * @default 'preview'
 	 */
 	readonly scale?: string
+
+	/**
+	 * Email addresses for cost alert notifications
+	 * Can be overridden via CDK context 'costAlertEmails'
+	 */
+	readonly costAlertEmails?: string[]
 }
 
 /**
@@ -55,6 +62,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	public readonly autoScaling: autoscaling.AutoScalingGroup
 	public readonly monitoring: MonitoringConstruct
 	public readonly deploymentStatus: DeploymentStatusConstruct
+	public readonly costMonitoring: CostMonitoringConstruct
 
 	constructor(scope: Construct, id: string, props: MacroAiPreviewStackProps) {
 		super(scope, id, props)
@@ -95,6 +103,17 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			applicationName: 'macro-ai',
 			enableCostMonitoring: true,
 			prNumber,
+		})
+
+		// Create cost monitoring construct for budget tracking and alerts
+		this.costMonitoring = new CostMonitoringConstruct(this, 'CostMonitoring', {
+			environmentName,
+			monthlyBudgetLimit: 3.5, // ~£3 target in USD
+			alertEmails: this.resolveCostAlertEmails(props),
+			alertThresholds: [50, 80, 100], // Alert at 50%, 80%, and 100% of budget
+			costFilters: {
+				PRNumber: [prNumber.toString()],
+			},
 		})
 
 		// Create custom launch template with CORS configuration for preview environments
@@ -193,6 +212,19 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			description: 'DynamoDB table name for deployment status tracking',
 			exportName: `${this.stackName}-DeploymentStatusTableName`,
 		})
+
+		// Cost monitoring outputs
+		new cdk.CfnOutput(this, 'CostMonitoringBudgetName', {
+			value: `macro-ai-${environmentName}-monthly-budget`,
+			description: 'AWS Budget name for cost monitoring',
+			exportName: `${this.stackName}-CostMonitoringBudgetName`,
+		})
+
+		new cdk.CfnOutput(this, 'CostAlertTopicArn', {
+			value: this.costMonitoring.alertTopic.topicArn,
+			description: 'SNS topic ARN for cost alerts',
+			exportName: `${this.stackName}-CostAlertTopicArn`,
+		})
 	}
 
 	/**
@@ -224,8 +256,8 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			launchTemplateName: `macro-ai-${environmentName}-preview-launch-template`,
 			instanceType: ec2.InstanceType.of(
 				ec2.InstanceClass.T3,
-				ec2.InstanceSize.MICRO,
-			), // Cost-optimized for preview
+				ec2.InstanceSize.NANO,
+			), // Further cost-optimized for preview (50% cost reduction)
 			machineImage: ec2.MachineImage.latestAmazonLinux2023({
 				cpuType: ec2.AmazonLinuxCpuType.X86_64,
 			}),
@@ -236,6 +268,19 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			detailedMonitoring: false, // Cost optimization for preview
 			ebsOptimized: true,
 			requireImdsv2: true, // Security best practice
+			// Cost-optimized storage configuration
+			blockDevices: [
+				{
+					deviceName: '/dev/xvda',
+					volume: ec2.BlockDeviceVolume.ebs(8, {
+						volumeType: ec2.EbsDeviceVolumeType.GP3,
+						iops: 3000, // Baseline for gp3
+						throughput: 125, // Baseline for gp3 (MB/s)
+						deleteOnTermination: true,
+						encrypted: true, // Security best practice
+					}),
+				},
+			],
 		})
 	}
 
@@ -273,6 +318,20 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			'',
 			'# Trap errors',
 			'trap \'error_exit "Script failed at line $LINENO"\' ERR',
+			'',
+			'echo "$(date): Creating swap file for memory-constrained t3.nano instance..."',
+			'# Create 1GB swap file to prevent OOM during package installations',
+			'fallocate -l 1G /swapfile || error_exit "Failed to create swap file"',
+			'chmod 600 /swapfile || error_exit "Failed to set swap file permissions"',
+			'mkswap /swapfile || error_exit "Failed to format swap file"',
+			'swapon /swapfile || error_exit "Failed to enable swap file"',
+			'',
+			'# Add swap to fstab for persistence across reboots',
+			'echo "/swapfile none swap sw 0 0" >> /etc/fstab || error_exit "Failed to add swap to fstab"',
+			'',
+			'# Verify swap is active',
+			'free -h | grep -i swap || error_exit "Swap verification failed"',
+			'echo "$(date): Swap file created and activated successfully"',
 			'',
 			'echo "$(date): Updating system packages..."',
 			'dnf update -y || error_exit "Failed to update system packages"',
@@ -428,9 +487,10 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			{
 				vpc: this.networking.vpc,
 				launchTemplate,
-				minCapacity: 1,
-				maxCapacity: 2,
-				desiredCapacity: 1,
+				// Resource consolidation - minimal capacity for preview environments
+				minCapacity: 1, // Single instance minimum for cost optimization
+				maxCapacity: 2, // Limited scaling to control costs
+				desiredCapacity: 1, // Start with single instance
 
 				// Health check configuration
 				healthChecks: {
@@ -518,5 +578,24 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		cdk.Tags.of(this.autoScaling).add('ScheduledScaling', 'enabled')
 		cdk.Tags.of(this.autoScaling).add('OffHoursShutdown', '18:00-08:00 UTC')
 		cdk.Tags.of(this.autoScaling).add('CostOptimization', 'scheduled-scaling')
+	}
+
+	/**
+	 * Resolve cost alert email addresses from props and CDK context
+	 * Supports configuration via props.costAlertEmails or context "costAlertEmails"
+	 */
+	private resolveCostAlertEmails(props: MacroAiPreviewStackProps): string[] {
+		const fromProps = props.costAlertEmails ?? []
+		// Allow overrides via cdk.json context: { "costAlertEmails": ["ops@example.com"] }
+		const fromContext =
+			(this.node.tryGetContext('costAlertEmails') as string[] | undefined) ?? []
+		const emails = [...fromContext, ...fromProps].filter(Boolean)
+		if (emails.length === 0) {
+			// Prefer failing fast instead of silently configuring no alerts
+			throw new Error(
+				'Cost alert emails not configured. Provide via props.costAlertEmails or context "costAlertEmails".',
+			)
+		}
+		return Array.from(new Set(emails))
 	}
 }
