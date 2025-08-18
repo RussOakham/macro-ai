@@ -141,6 +141,7 @@ export class AdvancedSecurityMonitoringConstruct extends Construct {
 	public readonly securityDashboard: cloudwatch.Dashboard
 	public readonly securityLogGroup: logs.LogGroup
 	public readonly securityEventBucket?: s3.Bucket
+	public readonly vpcFlowLogsLogGroup?: logs.LogGroup
 
 	private readonly props: AdvancedSecurityMonitoringConstructProps
 	private readonly resourcePrefix: string
@@ -317,6 +318,14 @@ export class AdvancedSecurityMonitoringConstruct extends Construct {
 			logGroupName: `/aws/vpc/flowlogs/${this.resourcePrefix}`,
 			retention: logs.RetentionDays.ONE_MONTH,
 			removalPolicy: cdk.RemovalPolicy.RETAIN,
+		})
+
+		// Expose the LogGroup as a public property for downstream access
+		Object.defineProperty(this, 'vpcFlowLogsLogGroup', {
+			value: vpcFlowLogGroup,
+			writable: false,
+			enumerable: true,
+			configurable: false,
 		})
 
 		const vpcFlowLogRole = new iam.Role(this, 'VpcFlowLogRole', {

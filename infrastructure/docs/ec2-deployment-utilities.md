@@ -52,8 +52,16 @@ pnpm deploy-ec2 deploy \
   --branch feature/new-feature \
   --instances 2
 
+# Using pnpm script (recommended)
+pnpm run deploy-ec2 -- deploy \
+  --pr 123 \
+  --artifact s3://my-bucket/artifacts/app-v1.0.0.tar.gz \
+  --version 1.0.0 \
+  --branch feature/new-feature \
+  --instances 2
+
 # Using tsx directly
-tsx infrastructure/src/cli/ec2-deployment-cli.ts deploy \
+tsx infrastructure/scripts/deploy-ec2.ts deploy \
   --pr 123 \
   --artifact s3://my-bucket/artifacts/app-v1.0.0.tar.gz \
   --version 1.0.0 \
@@ -61,7 +69,7 @@ tsx infrastructure/src/cli/ec2-deployment-cli.ts deploy \
   --instances 2
 
 # Using ts-node
-ts-node infrastructure/src/cli/ec2-deployment-cli.ts deploy \
+ts-node infrastructure/scripts/deploy-ec2.ts deploy \
   --pr 123 \
   --artifact s3://my-bucket/artifacts/app-v1.0.0.tar.gz \
   --version 1.0.0 \
@@ -296,15 +304,15 @@ aws sts get-caller-identity
 pnpm deploy-ec2 status --pr 123
 
 # Using tsx directly
-tsx infrastructure/src/cli/ec2-deployment-cli.ts status --pr 123
+tsx infrastructure/scripts/deploy-ec2.ts status --pr 123
 
 # Check infrastructure health
 pnpm deploy-ec2 health
-# OR: tsx infrastructure/src/cli/ec2-deployment-cli.ts health
+# OR: tsx infrastructure/scripts/deploy-ec2.ts health
 
 # Force cleanup if needed
 pnpm deploy-ec2 cleanup --pr 123 --force
-# OR: tsx infrastructure/src/cli/ec2-deployment-cli.ts cleanup --pr 123 --force
+# OR: tsx infrastructure/scripts/deploy-ec2.ts cleanup --pr 123 --force
 
 # Check AWS resources
 aws ec2 describe-instances --filters "Name=tag:PRNumber,Values=123"
