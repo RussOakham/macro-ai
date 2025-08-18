@@ -247,11 +247,11 @@ jobs:
               --stack-name MacroAi$(echo ${{ github.event.inputs.environment }} | sed 's/.*/\u&/')Stack \
               --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
               --output text 2>/dev/null || echo "")
-            
+
             if [[ -n "$API_ENDPOINT" ]]; then
               echo "Testing rolled back API: ${API_ENDPOINT}api/health"
               HEALTH_RESPONSE=$(curl -s -w "%{http_code}" "${API_ENDPOINT}api/health" || echo "000")
-              
+
               if [[ "$HEALTH_RESPONSE" == *"200" ]]; then
                 echo "✅ Backend rollback successful - API responding"
               else

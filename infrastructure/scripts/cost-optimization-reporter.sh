@@ -33,6 +33,10 @@ REPORTS_DIR="$SCRIPT_DIR/../reports"
 COST_DATA_FILE="$REPORTS_DIR/cost-optimization-data.json"
 VERBOSE=false
 
+# Email configuration (configurable via environment variables)
+SES_SOURCE_EMAIL="${SES_SOURCE_EMAIL:-noreply@macro-ai.com}"
+SES_REGION="${SES_REGION:-us-east-1}"
+
 # Cost estimation constants (USD per day)
 COST_PER_ENVIRONMENT_PER_DAY=3.50  # Estimated cost for EC2 preview environment
 COST_PER_ALB_PER_DAY=0.75          # Application Load Balancer
@@ -44,6 +48,77 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+# Dependency checking function
+check_dependencies() {
+    local missing_deps=()
+    local required_tools=("jq" "bc" "curl")
+
+    log_info "Checking required dependencies..."
+
+    for tool in "${required_tools[@]}"; do
+        if ! command -v "$tool" &> /dev/null; then
+            missing_deps+=("$tool")
+        fi
+    done
+
+    if [[ ${#missing_deps[@]} -gt 0 ]]; then
+        log_error "Missing required dependencies: ${missing_deps[*]}"
+        log_error "Please install the missing tools and try again."
+        log_error ""
+        log_error "Installation suggestions:"
+        for dep in "${missing_deps[@]}"; do
+            case "$dep" in
+                "jq")
+                    log_error "  - jq: https://jqlang.github.io/jq/download/"
+                    ;;
+                "bc")
+                    log_error "  - bc: Usually available via system package manager (apt-get install bc, yum install bc, etc.)"
+                    ;;
+                "curl")
+                    log_error "  - curl: Usually pre-installed or available via system package manager"
+                    ;;
+            esac
+        done
+        exit 2
+    fi
+
+    log_success "All required dependencies are available"
+}
+
+# Cross-platform date function
+get_date_ago() {
+    local days_ago="$1"
+    local format="${2:-+%Y-%m-%dT%H:%M:%SZ}"
+
+    # Try GNU date first (Linux)
+    if date -u -d "${days_ago} days ago" "$format" 2>/dev/null; then
+        return 0
+    # Try BSD date (macOS)
+    elif date -u -v-"${days_ago}"d "$format" 2>/dev/null; then
+        return 0
+    else
+        # Fallback - use current date minus rough calculation
+        log_warning "Date calculation may be inaccurate on this platform"
+        date -u "$format"
+    fi
+}
+
+format_date() {
+    local date_string="$1"
+    local format="${2:-+%Y-%m-%d}"
+
+    # Try GNU date first (Linux)
+    if date -d "$date_string" "$format" 2>/dev/null; then
+        return 0
+    # Try BSD date (macOS) - requires different parsing
+    elif date -j -f "%Y-%m-%dT%H:%M:%SZ" "$date_string" "$format" 2>/dev/null; then
+        return 0
+    else
+        # Fallback - just return the original string
+        echo "$date_string"
+    fi
+}
 
 # Logging functions
 log_info() {
@@ -196,13 +271,13 @@ generate_report() {
     local start_date
     case "$period" in
         "daily")
-            start_date=$(date -u -d '1 day ago' '+%Y-%m-%dT%H:%M:%SZ')
+            start_date=$(get_date_ago 1)
             ;;
         "weekly")
-            start_date=$(date -u -d '7 days ago' '+%Y-%m-%dT%H:%M:%SZ')
+            start_date=$(get_date_ago 7)
             ;;
         "monthly")
-            start_date=$(date -u -d '30 days ago' '+%Y-%m-%dT%H:%M:%SZ')
+            start_date=$(get_date_ago 30)
             ;;
         *)
             log_error "Invalid report period: $period"
@@ -280,7 +355,7 @@ generate_report() {
     echo ""
     log_info "📊 $period Cost Optimization Report Summary"
     echo "============================================"
-    echo "📅 Period: $(date -d "$start_date" '+%Y-%m-%d') to $(date -d "$end_date" '+%Y-%m-%d')"
+    echo "📅 Period: $(format_date "$start_date" '+%Y-%m-%d') to $(format_date "$end_date" '+%Y-%m-%d')"
     echo "🔢 Total Operations: $total_operations"
     echo "🗑️ Environments Cleaned: $total_environments_cleaned"
     echo "💰 Total Cost Saved: \$$(printf "%.2f" "$total_cost_saved")"
@@ -394,11 +469,18 @@ send_slack_notification() {
             ]
         }')
     
+    # Check if curl is available before attempting to send
+    if ! command -v curl >/dev/null 2>&1; then
+        log_warning "curl not available - skipping Slack notification"
+        return 0
+    fi
+
     if curl -X POST -H 'Content-type: application/json' --data "$slack_message" "$webhook_url" >/dev/null 2>&1; then
         log_success "Slack notification sent successfully"
     else
-        log_error "Failed to send Slack notification"
-        exit 1
+        log_warning "Failed to send Slack notification (check webhook URL and network connectivity)"
+        # Don't exit with error - notification failure shouldn't stop the script
+        return 1
     fi
 }
 
@@ -457,8 +539,9 @@ EOF
             --arg subject "$email_subject" \
             --arg body "$email_body" \
             --arg recipient "$email_recipient" \
+            --arg source "$SES_SOURCE_EMAIL" \
             '{
-                Source: "noreply@macro-ai.com",
+                Source: $source,
                 Destination: {
                     ToAddresses: [$recipient]
                 },
@@ -474,7 +557,7 @@ EOF
                 }
             }')
 
-        if aws ses send-email --cli-input-json "$email_json" >/dev/null 2>&1; then
+        if aws ses send-email --region "$SES_REGION" --cli-input-json "$email_json" >/dev/null 2>&1; then
             log_success "Email notification sent to: $email_recipient"
         else
             log_warning "Failed to send email notification (AWS SES may not be configured)"
@@ -657,6 +740,10 @@ parse_arguments() {
 
 # Main function
 main() {
+    # Check dependencies first
+    check_dependencies
+    echo ""
+
     log_debug "Starting cost optimization reporter"
 
     # Initialize data storage

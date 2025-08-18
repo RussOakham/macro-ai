@@ -42,6 +42,40 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Dependency checking function
+check_dependencies() {
+    local missing_deps=()
+    local required_tools=("aws" "jq")
+
+    log_info "Checking required dependencies..."
+
+    for tool in "${required_tools[@]}"; do
+        if ! command -v "$tool" &> /dev/null; then
+            missing_deps+=("$tool")
+        fi
+    done
+
+    if [[ ${#missing_deps[@]} -gt 0 ]]; then
+        log_error "Missing required dependencies: ${missing_deps[*]}"
+        log_error "Please install the missing tools and try again."
+        log_error ""
+        log_error "Installation suggestions:"
+        for dep in "${missing_deps[@]}"; do
+            case "$dep" in
+                "aws")
+                    log_error "  - AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
+                    ;;
+                "jq")
+                    log_error "  - jq: https://jqlang.github.io/jq/download/"
+                    ;;
+            esac
+        done
+        exit 2
+    fi
+
+    log_success "All required dependencies are available"
+}
+
 # Logging functions
 log_info() {
     echo -e "${BLUE}ℹ️  $1${NC}"
@@ -431,6 +465,10 @@ run_verification_checks() {
 
 # Main verification function with polling loop
 main() {
+    # Check dependencies first
+    check_dependencies
+    echo ""
+
     log_info "🔍 Starting EC2 cleanup verification"
     log_info "Environment: ${ENV_NAME:-N/A}"
     log_info "Stack: ${STACK_NAME:-N/A}"

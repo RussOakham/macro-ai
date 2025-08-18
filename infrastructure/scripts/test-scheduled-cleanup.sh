@@ -50,6 +50,45 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Dependency checking function
+check_dependencies() {
+    local missing_deps=()
+    local required_tools=("jq")
+    local optional_tools=("python3" "curl")
+
+    log_info "Checking required dependencies..."
+
+    for tool in "${required_tools[@]}"; do
+        if ! command -v "$tool" &> /dev/null; then
+            missing_deps+=("$tool")
+        fi
+    done
+
+    # Check optional tools and warn if missing
+    for tool in "${optional_tools[@]}"; do
+        if ! command -v "$tool" &> /dev/null; then
+            log_warning "$tool not found - some tests may be skipped"
+        fi
+    done
+
+    if [[ ${#missing_deps[@]} -gt 0 ]]; then
+        log_error "Missing required dependencies: ${missing_deps[*]}"
+        log_error "Please install the missing tools and try again."
+        log_error ""
+        log_error "Installation suggestions:"
+        for dep in "${missing_deps[@]}"; do
+            case "$dep" in
+                "jq")
+                    log_error "  - jq: https://jqlang.github.io/jq/download/"
+                    ;;
+            esac
+        done
+        exit 2
+    fi
+
+    log_success "All required dependencies are available"
+}
+
 # Logging functions
 log_info() {
     echo -e "${BLUE}ℹ️  $1${NC}"
@@ -484,6 +523,10 @@ generate_test_report() {
 
 # Main function
 main() {
+    # Check dependencies first
+    check_dependencies
+    echo ""
+
     log_info "🧪 Starting Scheduled Cleanup Workflow Testing"
     log_info "Project Root: $PROJECT_ROOT"
     log_info "Dry Run Mode: $DRY_RUN"

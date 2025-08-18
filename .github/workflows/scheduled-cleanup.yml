@@ -27,6 +27,10 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: scheduled-cleanup
+  cancel-in-progress: false # Don't cancel running cleanup operations
+
 env:
   AWS_REGION: us-east-1
   NODE_VERSION: '20'
@@ -102,26 +106,26 @@ jobs:
           if [[ "$TOTAL_COUNT" -gt 0 ]]; then
             echo ""
             echo "🕐 Evaluating environments for cleanup..."
-            
+
             for stack in $(echo "$STACKS" | jq -r '.[] | @base64'); do
               STACK_DATA=$(echo "$stack" | base64 --decode)
               STACK_NAME=$(echo "$STACK_DATA" | jq -r '.Name')
               CREATION_TIME=$(echo "$STACK_DATA" | jq -r '.CreationTime')
-              
+
               # Convert creation time to epoch
               CREATION_EPOCH=$(date -d "$CREATION_TIME" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "${CREATION_TIME%.*}" +%s 2>/dev/null || echo "0")
               AGE_SECONDS=$((CURRENT_TIME - CREATION_EPOCH))
               AGE_HOURS=$((AGE_SECONDS / 3600))
-              
+
               # Extract PR number from stack name (MacroAiPr123Stack -> 123)
               PR_NUMBER=$(echo "$STACK_NAME" | sed 's/MacroAiPr\([0-9]*\)Stack/\1/')
               ENV_NAME="pr-$PR_NUMBER"
-              
+
               echo "  Stack: $STACK_NAME"
               echo "    PR: $PR_NUMBER"
               echo "    Environment: $ENV_NAME"
               echo "    Age: $AGE_HOURS hours"
-              
+
               # Determine if should be cleaned up
               SHOULD_CLEANUP=false
               if [[ "$FORCE_CLEANUP" == "true" ]]; then
@@ -133,7 +137,7 @@ jobs:
               else
                 echo "    Action: SKIP (age < $MAX_AGE_HOURS hours)"
               fi
-              
+
               if [[ "$SHOULD_CLEANUP" == "true" ]]; then
                 CLEANUP_ENV=$(jq -n \
                   --arg stack_name "$STACK_NAME" \
@@ -148,11 +152,11 @@ jobs:
                     age_hours: ($age_hours | tonumber),
                     creation_time: $creation_time
                   }')
-                
+
                 CLEANUP_ENVIRONMENTS=$(echo "$CLEANUP_ENVIRONMENTS" | jq ". + [$CLEANUP_ENV]")
                 ((CLEANUP_COUNT++))
               fi
-              
+
               echo ""
             done
           fi
@@ -252,21 +256,21 @@ jobs:
             echo "cleanup-result=dry-run-success" >> $GITHUB_OUTPUT
           else
             echo "🔥 LIVE MODE - Destroying preview environment..."
-            
+
             # List stack resources for logging
             echo "📋 Stack resources to be destroyed:"
             aws cloudformation list-stack-resources \
               --stack-name "$STACK_NAME" \
               --query 'StackResourceSummaries[].{Type:ResourceType,LogicalId:LogicalResourceId,Status:ResourceStatus}' \
               --output table || echo "Could not list resources"
-            
+
             echo ""
-            
+
             # Attempt to destroy the stack with retries
             DESTROY_SUCCESS=false
             for attempt in {1..3}; do
               echo "🔄 Destruction attempt ${attempt}/3..."
-              
+
               if pnpm cdk destroy "$STACK_NAME" --force; then
                 DESTROY_SUCCESS=true
                 echo "✅ Stack destroyed successfully"
@@ -279,7 +283,7 @@ jobs:
                 fi
               fi
             done
-            
+
             if [[ "$DESTROY_SUCCESS" == "true" ]]; then
               echo "cleanup-result=success" >> $GITHUB_OUTPUT
             else

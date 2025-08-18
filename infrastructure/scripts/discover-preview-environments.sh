@@ -44,6 +44,51 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Dependency checking function
+check_dependencies() {
+    local missing_deps=()
+    local required_tools=("aws" "jq" "bc" "curl")
+
+    log_info "Checking required dependencies..."
+
+    for tool in "${required_tools[@]}"; do
+        if ! command -v "$tool" &> /dev/null; then
+            missing_deps+=("$tool")
+        fi
+    done
+
+    # Check for Python 3 (optional for YAML validation)
+    if ! command -v python3 &> /dev/null; then
+        log_warning "python3 not found - YAML validation will be skipped"
+    fi
+
+    if [[ ${#missing_deps[@]} -gt 0 ]]; then
+        log_error "Missing required dependencies: ${missing_deps[*]}"
+        log_error "Please install the missing tools and try again."
+        log_error ""
+        log_error "Installation suggestions:"
+        for dep in "${missing_deps[@]}"; do
+            case "$dep" in
+                "aws")
+                    log_error "  - AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
+                    ;;
+                "jq")
+                    log_error "  - jq: https://jqlang.github.io/jq/download/"
+                    ;;
+                "bc")
+                    log_error "  - bc: Usually available via system package manager (apt-get install bc, yum install bc, etc.)"
+                    ;;
+                "curl")
+                    log_error "  - curl: Usually pre-installed or available via system package manager"
+                    ;;
+            esac
+        done
+        exit 2
+    fi
+
+    log_success "All required dependencies are available"
+}
+
 # Logging functions
 log_info() {
     echo -e "${BLUE}ℹ️  $1${NC}"
@@ -456,6 +501,10 @@ output_csv() {
 
 # Main function
 main() {
+    # Check dependencies first
+    check_dependencies
+    echo ""
+
     log_info "🔍 Starting preview environment discovery"
     log_info "Region: $AWS_REGION"
     log_info "Max Age: $MAX_AGE_HOURS hours"
