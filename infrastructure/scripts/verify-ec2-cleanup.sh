@@ -273,6 +273,82 @@ verify_ec2_instances() {
     fi
 }
 
+# Check Launch Templates
+verify_launch_templates() {
+    log_info "Checking Launch Templates for environment: $ENV_NAME"
+    local lt_count
+    lt_count=$(aws ec2 describe-launch-templates \
+        --region "$AWS_REGION" \
+        --query "LaunchTemplates[?contains(LaunchTemplateName, '$ENV_NAME')].LaunchTemplateName" \
+        --output text 2>/dev/null | wc -w || echo "0")
+
+    if [[ "$lt_count" -eq 0 ]]; then
+        log_success "No Launch Templates found"
+        return 0
+    else
+        log_warning "Found $lt_count Launch Templates still remaining"
+        if [[ "$VERBOSE" == "true" ]]; then
+            local lts
+            lts=$(aws ec2 describe-launch-templates \
+                --region "$AWS_REGION" \
+                --query "LaunchTemplates[?contains(LaunchTemplateName, '$ENV_NAME')].LaunchTemplateName" \
+                --output text 2>/dev/null || echo "")
+            log_debug "Remaining Launch Templates: $lts"
+        fi
+        return 1
+    fi
+}
+
+# Check Security Groups
+verify_security_groups() {
+    log_info "Checking Security Groups for environment: $ENV_NAME"
+    # Match by name or Environment tag
+    local sg_ids sg_count
+    sg_ids=$(aws ec2 describe-security-groups \
+        --region "$AWS_REGION" \
+        --filters "Name=group-name,Values=*${ENV_NAME}*" "Name=tag:Environment,Values=${ENV_NAME}" \
+        --query 'SecurityGroups[].GroupId' \
+        --output text 2>/dev/null || echo "")
+    sg_count=$(wc -w <<<"$sg_ids")
+
+    if [[ "$sg_count" -eq 0 ]]; then
+        log_success "No Security Groups found"
+        return 0
+    else
+        log_warning "Found $sg_count Security Groups still remaining"
+        if [[ "$VERBOSE" == "true" ]]; then
+            log_debug "Remaining Security Groups: $sg_ids"
+        fi
+        return 1
+    fi
+}
+
+# Check Target Groups
+verify_target_groups() {
+    log_info "Checking Target Groups for environment: $ENV_NAME"
+    local tg_count
+    tg_count=$(aws elbv2 describe-target-groups \
+        --region "$AWS_REGION" \
+        --query "TargetGroups[?contains(TargetGroupName, '$ENV_NAME')].TargetGroupArn" \
+        --output text 2>/dev/null | wc -w || echo "0")
+
+    if [[ "$tg_count" -eq 0 ]]; then
+        log_success "No Target Groups found"
+        return 0
+    else
+        log_warning "Found $tg_count Target Groups still remaining"
+        if [[ "$VERBOSE" == "true" ]]; then
+            local tgs
+            tgs=$(aws elbv2 describe-target-groups \
+                --region "$AWS_REGION" \
+                --query "TargetGroups[?contains(TargetGroupName, '$ENV_NAME')].[TargetGroupName,TargetGroupArn]" \
+                --output text 2>/dev/null || echo "")
+            log_debug "Remaining Target Groups: $tgs"
+        fi
+        return 1
+    fi
+}
+
 # Validate timeout and interval parameters
 validate_parameters() {
     # Validate timeout is a positive integer
@@ -305,6 +381,18 @@ run_verification_checks() {
     fi
 
     if ! verify_ec2_instances; then
+        all_passed=false
+    fi
+
+    if ! verify_launch_templates; then
+        all_passed=false
+    fi
+
+    if ! verify_security_groups; then
+        all_passed=false
+    fi
+
+    if ! verify_target_groups; then
         all_passed=false
     fi
 
