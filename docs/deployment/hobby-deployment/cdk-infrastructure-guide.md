@@ -37,8 +37,8 @@ infrastructure/
 │   ├── stacks/
 │   │   └── macro-ai-hobby-stack.ts     # Main stack definition
 │   └── constructs/
-│       ├── api-gateway-construct.ts    # API Gateway configuration
-│       ├── lambda-construct.ts         # Lambda function setup
+│       ├── ec2-construct.ts            # EC2 Auto Scaling Group and ALB
+│       ├── vpc-construct.ts            # VPC and networking configuration
 │       └── parameter-store-construct.ts # Parameter Store hierarchy
 ├── scripts/
 │   ├── deploy.sh                       # Deployment automation script
@@ -139,57 +139,83 @@ aws ssm put-parameter \
 # /macro-ai/production/ (hobby or enterprise scale)
 ```
 
-### ⚠️ DEPRECATED - Lambda Configuration (Removed)
-
-> **Note**: Lambda and API Gateway configurations have been removed as part of the migration to EC2-based deployment.
-> The Express API now runs on EC2 instances behind an Application Load Balancer (ALB) with Auto Scaling Groups.
-
-### Deployment Architecture
-
-The API Gateway deployment follows AWS CDK best practices to prevent resource conflicts:
-
-- **Single Deployment Path**: Uses explicit deployment creation only (`deploy: false` on RestApi)
-- **Resource Dependencies**: Proper dependency chain (RestApi → Deployment → Stage → Usage Plan)
-- **Conflict Prevention**: Validation ensures no duplicate deployment resources
-- **Update Management**: Deployment descriptions include timestamps for tracking
-- **Rollback Support**: CloudFormation can safely rollback deployments without conflicts
-
-**Key Implementation Details:**
-
-```typescript
-// RestApi with explicit deployment control
-new apigateway.RestApi(this, 'RestApi', {
-	deploy: false, // Prevents implicit deployment creation
-	// ... other configuration
-})
-
-// Explicit deployment with proper dependencies
-const deployment = new apigateway.Deployment(this, 'Deployment', {
-	api: this.restApi,
-	description: `Deployment for ${environmentName} - ${timestamp}`,
-})
-
-// Stage with explicit deployment reference
-const stage = new apigateway.Stage(this, 'Stage', {
-	deployment,
-	stageName: environmentName,
-})
-
-// Set deployment stage for CDK recognition
-this.restApi.deploymentStage = stage
-```
-
-This approach eliminates the "already exists in stack" errors that can occur with dual deployment creation paths.
-
 ## 🔐 Security
 
 ### IAM Permissions
 
-The Lambda execution role includes:
+The EC2 instance role includes the following managed and custom policies:
 
-- `AWSLambdaBasicExecutionRole` (managed policy)
-- Custom Parameter Store read policy with path restrictions
-- KMS decrypt permissions for SecureString parameters
+**Managed Policies:**
+
+- `CloudWatchAgentServerPolicy` - CloudWatch Agent metrics and logs
+- `AmazonSSMManagedInstanceCore` - Systems Manager core functionality
+
+**Custom Policies:**
+
+**Parameter Store Access:**
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:GetParametersByPath"
+      ],
+      "Resource": [
+        "arn:aws:ssm:*:*:parameter/hobby/*",
+        "arn:aws:ssm:*:*:parameter/macro-ai/*"
+      ]
+    }
+  ]
+}
+```
+
+**KMS Decrypt for SecureString Parameters:**
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ],
+      "Resource": "arn:aws:kms:*:*:key/*",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "ssm.*.amazonaws.com"
+        }
+      }
+    }
+  ]
+}
+```
+
+**CloudWatch Logs:**
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogStreams"
+      ],
+      "Resource": "arn:aws:logs:*:*:log-group:/aws/ec2/macro-ai*"
+    }
+  ]
+}
+```
 
 ### Parameter Store Security
 
