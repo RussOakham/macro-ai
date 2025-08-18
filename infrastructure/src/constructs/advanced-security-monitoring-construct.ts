@@ -791,7 +791,7 @@ export class AdvancedSecurityMonitoringConstruct extends Construct {
 		return `
 const AWS = require('aws-sdk');
 
-const dynamodb = new AWS.DynamoDB();
+const dynamodb = new AWS.DynamoDB.DocumentClient();
 const cloudwatchLogs = new AWS.CloudWatchLogs();
 const cloudwatch = new AWS.CloudWatch();
 
@@ -1011,30 +1011,26 @@ async function recordSecurityEvent(securityEvent) {
     const ttl = Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60); // 1 year TTL
 
     const item = {
-        eventId: { S: securityEvent.eventId },
-        timestamp: { S: securityEvent.timestamp },
-        eventType: { S: securityEvent.eventType },
-        severity: { S: securityEvent.severity },
-        source: { S: securityEvent.source },
-        description: { S: securityEvent.description },
-        ttl: { N: ttl.toString() }
+        eventId: securityEvent.eventId,
+        timestamp: securityEvent.timestamp,
+        eventType: securityEvent.eventType,
+        severity: securityEvent.severity,
+        source: securityEvent.source,
+        description: securityEvent.description,
+        ttl: ttl
     };
 
-    // Add metadata
+    // Add metadata (simplified with DocumentClient)
     if (securityEvent.metadata) {
-        item.metadata = { M: {} };
+        item.metadata = {};
         Object.entries(securityEvent.metadata).forEach(([key, value]) => {
             if (value !== undefined && value !== null) {
-                if (typeof value === 'object') {
-                    item.metadata.M[key] = { S: JSON.stringify(value) };
-                } else {
-                    item.metadata.M[key] = { S: value.toString() };
-                }
+                item.metadata[key] = typeof value === 'object' ? JSON.stringify(value) : value.toString();
             }
         });
     }
 
-    await dynamodb.putItem({
+    await dynamodb.put({
         TableName: process.env.SECURITY_EVENT_TABLE,
         Item: item
     }).promise();
@@ -1124,7 +1120,7 @@ async function publishSecurityMetrics(securityEvent) {
 		return `
 const AWS = require('aws-sdk');
 
-const dynamodb = new AWS.DynamoDB();
+const dynamodb = new AWS.DynamoDB.DocumentClient();
 const cloudwatch = new AWS.CloudWatch();
 
 exports.handler = async (event) => {
@@ -1182,8 +1178,8 @@ async function getSecurityEvents(startTime, endTime) {
                 '#timestamp': 'timestamp'
             },
             ExpressionAttributeValues: {
-                ':startTime': { S: startTime.toISOString() },
-                ':endTime': { S: endTime.toISOString() }
+                ':startTime': startTime.toISOString(),
+                ':endTime': endTime.toISOString()
             }
         }).promise();
 
@@ -1447,22 +1443,24 @@ function parseSecurityEvent(item) {
 
     try {
         const event = {
-            eventId: item.eventId?.S,
-            timestamp: item.timestamp?.S,
-            eventType: item.eventType?.S,
-            severity: item.severity?.S,
-            source: item.source?.S,
-            description: item.description?.S
+            eventId: item.eventId,
+            timestamp: item.timestamp,
+            eventType: item.eventType,
+            severity: item.severity,
+            source: item.source,
+            description: item.description
         };
 
-        // Parse metadata
-        if (item.metadata?.M) {
+        // Parse metadata (simplified with DocumentClient)
+        if (item.metadata) {
             event.metadata = {};
-            Object.entries(item.metadata.M).forEach(([key, value]) => {
+            Object.entries(item.metadata).forEach(([key, value]) => {
                 try {
-                    event.metadata[key] = JSON.parse(value.S);
+                    // Try to parse JSON strings back to objects
+                    event.metadata[key] = typeof value === 'string' ? JSON.parse(value) : value;
                 } catch {
-                    event.metadata[key] = value.S;
+                    // If parsing fails, keep as string
+                    event.metadata[key] = value;
                 }
             });
         }
@@ -1485,7 +1483,7 @@ function parseSecurityEvent(item) {
 const AWS = require('aws-sdk');
 
 const configService = new AWS.ConfigService();
-const dynamodb = new AWS.DynamoDB();
+const dynamodb = new AWS.DynamoDB.DocumentClient();
 const cloudwatch = new AWS.CloudWatch();
 
 exports.handler = async (event) => {
@@ -1597,26 +1595,26 @@ async function recordComplianceViolation(violation) {
     const ttl = Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60); // 1 year TTL
 
     const item = {
-        eventId: { S: securityEvent.eventId },
-        timestamp: { S: securityEvent.timestamp },
-        eventType: { S: securityEvent.eventType },
-        severity: { S: securityEvent.severity },
-        source: { S: securityEvent.source },
-        description: { S: securityEvent.description },
-        ttl: { N: ttl.toString() }
+        eventId: securityEvent.eventId,
+        timestamp: securityEvent.timestamp,
+        eventType: securityEvent.eventType,
+        severity: securityEvent.severity,
+        source: securityEvent.source,
+        description: securityEvent.description,
+        ttl: ttl
     };
 
-    // Add metadata
+    // Add metadata (simplified with DocumentClient)
     if (securityEvent.metadata) {
-        item.metadata = { M: {} };
+        item.metadata = {};
         Object.entries(securityEvent.metadata).forEach(([key, value]) => {
             if (value !== undefined && value !== null) {
-                item.metadata.M[key] = { S: value.toString() };
+                item.metadata[key] = value.toString();
             }
         });
     }
 
-    await dynamodb.putItem({
+    await dynamodb.put({
         TableName: process.env.SECURITY_EVENT_TABLE,
         Item: item
     }).promise();
