@@ -41,6 +41,18 @@ export interface NetworkingConstructProps {
 	readonly parameterStorePrefix?: string
 
 	/**
+	 * Enable NAT Gateway for private subnet internet access
+	 * @default true - set to false for preview environments to eliminate NAT Gateway costs (~$2.76/month)
+	 */
+	readonly enableNatGateway?: boolean
+
+	/**
+	 * Enable VPC endpoints for AWS services
+	 * @default true - set to false for preview environments to reduce costs and complexity
+	 */
+	readonly enableVpcEndpoints?: boolean
+
+	/**
 	 * Enable ALB (Application Load Balancer) integration
 	 * @default true (required for EC2-based preview environments)
 	 */
@@ -108,6 +120,8 @@ export class NetworkingConstruct extends Construct {
 			enableAlb = true,
 			customDomain,
 			deploymentId = new Date().toISOString(),
+			enableNatGateway = true,
+			enableVpcEndpoints = true,
 		} = props
 
 		// Create VPC infrastructure
@@ -115,6 +129,8 @@ export class NetworkingConstruct extends Construct {
 			environmentName,
 			enableFlowLogs,
 			maxAzs,
+			enableNatGateway,
+			enableVpcEndpoints,
 		})
 
 		this.vpc = vpcConstruct.vpc
