@@ -518,7 +518,9 @@ test_process_restart() {
 
     # Get initial process ID
     local initial_pid
-    if initial_pid=$(execute_ssm_command "$instance_id" "sudo -u macroai pm2 show macro-ai-api | grep 'pid' | head -1" "Initial PID"); then
+    if initial_pid=$(execute_ssm_command "$instance_id" \
+        "sudo -u macroai pm2 show macro-ai-api | awk -F: '/pid/{gsub(/\\s/,\"\",\$2); print \$2; exit}'" \
+        "Initial PID"); then
         log_debug "Initial PID: $initial_pid"
     fi
 
@@ -537,8 +539,10 @@ test_process_restart() {
 
                 # Check if PID changed (indicating actual restart)
                 local new_pid
-                if new_pid=$(execute_ssm_command "$instance_id" "sudo -u macroai pm2 show macro-ai-api | grep 'pid' | head -1" "New PID"); then
-                    if [[ "$new_pid" != "$initial_pid" ]]; then
+                if new_pid=$(execute_ssm_command "$instance_id" \
+                    "sudo -u macroai pm2 show macro-ai-api | awk -F: '/pid/{gsub(/\\s/,\"\",\$2); print \$2; exit}'" \
+                    "New PID"); then
+                    if [[ -n "$new_pid" && "$new_pid" != "$initial_pid" ]]; then
                         record_test_result "PM2 Process PID Change" "PASS" "PID changed after restart"
                     else
                         record_test_result "PM2 Process PID Change" "FAIL" "PID did not change"

@@ -238,13 +238,13 @@ make_http_request() {
     
     log_debug "Making $method request to: $url (expecting status: $expected_status)"
     
-    local curl_args=(-s -w "\n%{http_code}\n%{time_total}\n%{response_headers}")
+    local curl_args=(-s -w "\n%{http_code}\n%{time_total}")
     curl_args+=(--max-time "$TIMEOUT")
     curl_args+=(--connect-timeout 10)
     curl_args+=(-X "$method")
     curl_args+=(-H "Accept: application/json")
     curl_args+=(-H "User-Agent: ALB-API-Routing-Validator/1.0")
-    
+
     # Add custom headers if provided
     if [[ -n "$headers" ]]; then
         while IFS= read -r header; do
@@ -253,26 +253,24 @@ make_http_request() {
             fi
         done <<< "$headers"
     fi
-    
+
     # Add body if provided
     if [[ -n "$body" ]]; then
         curl_args+=(-d "$body")
         curl_args+=(-H "Content-Type: application/json")
     fi
-    
+
     local response
-    response=$(curl "${curl_args[@]}" "$url" 2>/dev/null || echo -e "\nERROR\n0\n")
-    
+    response=$(curl "${curl_args[@]}" "$url" 2>/dev/null || echo -e "\nERROR\n0")
+
     # Parse response
     local response_body
     local status_code
     local response_time
-    local response_headers
-    
-    response_body=$(echo "$response" | head -n -3)
-    status_code=$(echo "$response" | tail -n 3 | head -n 1)
-    response_time=$(echo "$response" | tail -n 2 | head -n 1)
-    response_headers=$(echo "$response" | tail -n 1)
+
+    response_body=$(echo "$response" | head -n -2)
+    status_code=$(echo "$response" | tail -n 2 | head -n 1)
+    response_time=$(echo "$response" | tail -n 1)
     
     log_debug "$description - Status: $status_code, Time: ${response_time}s"
     
@@ -389,11 +387,9 @@ Access-Control-Request-Headers: Content-Type,Authorization"
     fi
 
     # Test CORS with allowed origin
-    local allowed_origin_headers="Origin: http://localhost:3000"
-    local response
-    if response=$(make_http_request "${base_url}/api/health" "GET" "200" "$allowed_origin_headers" "" "CORS allowed origin"); then
-        # Check if CORS headers are present in response
-        if echo "$response" | grep -q "Access-Control-Allow-Origin"; then
+    local allowed_headers_output
+    if allowed_headers_output=$(curl -s -I --max-time "$TIMEOUT" -H "Origin: http://localhost:3000" "${base_url}/api/health" 2>/dev/null); then
+        if echo "$allowed_headers_output" | grep -qi "^Access-Control-Allow-Origin:"; then
             record_test_result "CORS Allowed Origin" "PASS"
         else
             record_test_result "CORS Allowed Origin" "FAIL" "CORS headers not present"
@@ -403,10 +399,13 @@ Access-Control-Request-Headers: Content-Type,Authorization"
     fi
 
     # Test CORS with disallowed origin
-    local disallowed_origin_headers="Origin: http://malicious-site.com"
-    if make_http_request "${base_url}/api/health" "GET" "200" "$disallowed_origin_headers" "" "CORS disallowed origin" >/dev/null; then
-        # Should still work but without CORS headers
-        record_test_result "CORS Disallowed Origin Handling" "PASS"
+    local disallowed_headers_output
+    if disallowed_headers_output=$(curl -s -I --max-time "$TIMEOUT" -H "Origin: http://malicious-site.com" "${base_url}/api/health" 2>/dev/null); then
+        if echo "$disallowed_headers_output" | grep -qi "^Access-Control-Allow-Origin:"; then
+            record_test_result "CORS Disallowed Origin Handling" "FAIL" "CORS header present for disallowed origin"
+        else
+            record_test_result "CORS Disallowed Origin Handling" "PASS"
+        fi
     else
         record_test_result "CORS Disallowed Origin Handling" "FAIL" "Request with disallowed origin failed"
     fi
