@@ -127,7 +127,12 @@ program
 	.action(async (options: PerformanceOptions) => {
 		try {
 			console.log(chalk.blue('📊 Fetching performance metrics...'))
-			const metrics = await getPerformanceMetrics(options)
+			// Validate and parse period input
+			const validatedOptions = {
+				...options,
+				period: parseNumericInput(options.period, 24, 'period').toString(),
+			}
+			const metrics = await getPerformanceMetrics(validatedOptions)
 			displayPerformanceMetrics(metrics)
 		} catch (error) {
 			console.error(
@@ -152,7 +157,15 @@ program
 	.action(async (options: PerformanceOptions) => {
 		try {
 			console.log(chalk.blue('💡 Fetching optimization recommendations...'))
-			const recommendations = await getOptimizationRecommendations(options)
+			// Validate and parse limit input
+			const validatedOptions = {
+				...options,
+				limit: options.limit
+					? parseNumericInput(options.limit, 10, 'limit').toString()
+					: undefined,
+			}
+			const recommendations =
+				await getOptimizationRecommendations(validatedOptions)
 			displayOptimizationRecommendations(recommendations)
 		} catch (error) {
 			console.error(
@@ -311,18 +324,10 @@ async function getPerformanceMetrics(
 	])
 
 	return {
-		cpuAverage:
-			(metrics[0].Datapoints?.reduce((sum, dp) => sum + (dp.Average ?? 0), 0) ??
-				0) / (metrics[0].Datapoints?.length ?? 1),
-		cpuMaximum: Math.max(
-			...(metrics[0].Datapoints?.map((dp) => dp.Maximum ?? 0) ?? [0]),
-		),
-		performanceScore:
-			(metrics[1].Datapoints?.reduce((sum, dp) => sum + (dp.Average ?? 0), 0) ??
-				0) / (metrics[1].Datapoints?.length ?? 1),
-		efficiencyRating:
-			(metrics[2].Datapoints?.reduce((sum, dp) => sum + (dp.Average ?? 0), 0) ??
-				0) / (metrics[2].Datapoints?.length ?? 1),
+		cpuAverage: calculateSafeAverage(metrics[0].Datapoints),
+		cpuMaximum: calculateSafeMaximum(metrics[0].Datapoints),
+		performanceScore: calculateSafeAverage(metrics[1].Datapoints),
+		efficiencyRating: calculateSafeAverage(metrics[2].Datapoints),
 		period: options.period,
 	}
 }
@@ -371,6 +376,93 @@ async function getOptimizationRecommendations(
 }
 
 /**
+ * Validate and parse numeric input with fallback
+ */
+function parseNumericInput(
+	value: string,
+	fallback: number,
+	name: string,
+): number {
+	if (!value || typeof value !== 'string') {
+		console.warn(`Invalid ${name} input: using fallback value ${fallback}`)
+		return fallback
+	}
+
+	const parsed = parseInt(value, 10)
+	if (isNaN(parsed) || parsed <= 0) {
+		console.warn(
+			`Invalid ${name} value "${value}": using fallback value ${fallback}`,
+		)
+		return fallback
+	}
+
+	return parsed
+}
+
+/**
+ * Safely calculate average from CloudWatch Datapoints
+ */
+function calculateSafeAverage(
+	datapoints: { Average?: number }[] | undefined,
+): number {
+	if (!datapoints || datapoints.length === 0) {
+		return 0
+	}
+
+	const validDatapoints = datapoints.filter(
+		(dp) => dp.Average !== undefined && !isNaN(dp.Average),
+	)
+	if (validDatapoints.length === 0) {
+		return 0
+	}
+
+	const sum = validDatapoints.reduce((acc, dp) => acc + (dp.Average ?? 0), 0)
+	return sum / validDatapoints.length
+}
+
+/**
+ * Safely calculate maximum from CloudWatch Datapoints
+ */
+function calculateSafeMaximum(
+	datapoints: { Maximum?: number }[] | undefined,
+): number {
+	if (!datapoints || datapoints.length === 0) {
+		return 0
+	}
+
+	const validMaximums = datapoints
+		.map((dp) => dp.Maximum)
+		.filter((max): max is number => max !== undefined && !isNaN(max))
+
+	if (validMaximums.length === 0) {
+		return 0
+	}
+
+	return Math.max(...validMaximums)
+}
+
+/**
+ * Validate Lambda response structure
+ */
+function validateLambdaResponse(payload: unknown): LambdaPerformanceResponse {
+	if (!payload || typeof payload !== 'object') {
+		throw new Error('Invalid Lambda response: payload is not an object')
+	}
+
+	const response = payload as Record<string, unknown>
+
+	if (typeof response.statusCode !== 'number') {
+		throw new Error('Invalid Lambda response: missing or invalid statusCode')
+	}
+
+	if (!response.body || typeof response.body !== 'object') {
+		throw new Error('Invalid Lambda response: missing or invalid body')
+	}
+
+	return response as LambdaPerformanceResponse
+}
+
+/**
  * Run performance analysis
  */
 async function runPerformanceAnalysis(
@@ -388,10 +480,15 @@ async function runPerformanceAnalysis(
 		}),
 	)
 
+	if (!result.Payload) {
+		throw new Error('Lambda function returned no payload')
+	}
+
 	const payload = JSON.parse(
 		new TextDecoder().decode(result.Payload),
 	) as unknown
-	return payload as LambdaPerformanceResponse
+
+	return validateLambdaResponse(payload)
 }
 
 /**
@@ -412,10 +509,15 @@ async function runCostOptimization(
 		}),
 	)
 
+	if (!result.Payload) {
+		throw new Error('Lambda function returned no payload')
+	}
+
 	const payload = JSON.parse(
 		new TextDecoder().decode(result.Payload),
 	) as unknown
-	return payload as LambdaPerformanceResponse
+
+	return validateLambdaResponse(payload)
 }
 
 /**
