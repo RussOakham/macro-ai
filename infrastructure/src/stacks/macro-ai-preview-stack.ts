@@ -92,6 +92,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			deploymentId,
 			enableNatGateway: false, // Cost optimization: eliminate NAT Gateway (~$2.76/month savings)
 			enableVpcEndpoints: false, // Cost optimization: remove VPC endpoints for preview environments
+			exportPrefix: this.stackName, // Use stack name to ensure unique exports per PR
 		})
 
 		// Validate networking requirements

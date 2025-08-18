@@ -68,6 +68,12 @@ export interface NetworkingConstructProps {
 	}
 
 	/**
+	 * Prefix for CloudFormation export names to ensure uniqueness across environments
+	 * @default 'MacroAI' - set to stack name for preview environments to avoid export conflicts
+	 */
+	readonly exportPrefix?: string
+
+	/**
 	 * Deployment ID to force instance replacement on every deployment
 	 * This ensures fresh instances with latest application code
 	 * @default current timestamp
@@ -106,6 +112,7 @@ export class NetworkingConstruct extends Construct {
 
 	// Configuration properties
 	private readonly enableNatGateway: boolean
+	private readonly exportPrefix: string
 
 	constructor(
 		scope: Construct,
@@ -125,10 +132,12 @@ export class NetworkingConstruct extends Construct {
 			deploymentId = new Date().toISOString(),
 			enableNatGateway = true,
 			enableVpcEndpoints = true,
+			exportPrefix = 'MacroAI',
 		} = props
 
 		// Store configuration for later use
 		this.enableNatGateway = enableNatGateway
+		this.exportPrefix = exportPrefix
 
 		// Create VPC infrastructure
 		const vpcConstruct = new VpcConstruct(this, 'Vpc', {
@@ -419,20 +428,20 @@ export class NetworkingConstruct extends Construct {
 		new cdk.CfnOutput(this, 'NetworkingVpcId', {
 			value: this.vpcId,
 			description: 'VPC ID for Macro AI networking infrastructure',
-			exportName: 'MacroAI-Networking-VpcId',
+			exportName: `${this.exportPrefix}-Networking-VpcId`,
 		})
 
 		new cdk.CfnOutput(this, 'NetworkingVpcCidr', {
 			value: this.vpcCidrBlock,
 			description: 'VPC CIDR block',
-			exportName: 'MacroAI-Networking-VpcCidr',
+			exportName: `${this.exportPrefix}-Networking-VpcCidr`,
 		})
 
 		// Subnet outputs
 		new cdk.CfnOutput(this, 'NetworkingPublicSubnets', {
 			value: this.publicSubnets.map((subnet) => subnet.subnetId).join(','),
 			description: 'Public subnet IDs for ALB and EC2 instances',
-			exportName: 'MacroAI-Networking-PublicSubnets',
+			exportName: `${this.exportPrefix}-Networking-PublicSubnets`,
 		})
 
 		// Only export private subnets if NAT Gateway is enabled (private subnets exist)
@@ -440,7 +449,7 @@ export class NetworkingConstruct extends Construct {
 			new cdk.CfnOutput(this, 'NetworkingPrivateSubnets', {
 				value: this.privateSubnets.map((subnet) => subnet.subnetId).join(','),
 				description: 'Private subnet IDs for future database resources',
-				exportName: 'MacroAI-Networking-PrivateSubnets',
+				exportName: `${this.exportPrefix}-Networking-PrivateSubnets`,
 			})
 		}
 
@@ -448,14 +457,14 @@ export class NetworkingConstruct extends Construct {
 		new cdk.CfnOutput(this, 'NetworkingAlbSecurityGroup', {
 			value: this.albSecurityGroup.securityGroupId,
 			description: 'Shared ALB security group ID',
-			exportName: 'MacroAI-Networking-AlbSecurityGroup',
+			exportName: `${this.exportPrefix}-Networking-AlbSecurityGroup`,
 		})
 
 		// Availability zone outputs
 		new cdk.CfnOutput(this, 'NetworkingAvailabilityZones', {
 			value: this.getAvailabilityZones().join(','),
 			description: 'Availability zones used by the VPC',
-			exportName: 'MacroAI-Networking-AvailabilityZones',
+			exportName: `${this.exportPrefix}-Networking-AvailabilityZones`,
 		})
 	}
 
