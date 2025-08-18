@@ -86,7 +86,10 @@ if (isEC2Preview && isPreviewEnvironment) {
 	// Parse cost alert emails from environment variable
 	const costAlertEmailsEnv = process.env.COST_ALERT_EMAILS
 	const costAlertEmails = costAlertEmailsEnv
-		? costAlertEmailsEnv.split(',').map((email) => email.trim()).filter(Boolean)
+		? costAlertEmailsEnv
+				.split(',')
+				.map((email) => email.trim())
+				.filter(Boolean)
 		: undefined
 
 	new MacroAiPreviewStack(app, stackName, {
