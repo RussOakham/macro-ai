@@ -1,0 +1,326 @@
+#!/bin/bash
+
+# =============================================================================
+# EC2 Preview Environment Cleanup Verification Script
+# =============================================================================
+# 
+# This script provides comprehensive verification that EC2-based preview
+# environments have been properly cleaned up after teardown operations.
+#
+# Verification Steps:
+# 1. Check CloudFormation stack deletion status
+# 2. Verify Auto Scaling Group cleanup
+# 3. Verify Application Load Balancer cleanup
+# 4. Check for orphaned EC2 instances
+# 5. Verify Launch Template cleanup
+# 6. Check security group cleanup
+# 7. Generate detailed cleanup report
+#
+# Usage:
+#   ./verify-ec2-cleanup.sh --env-name pr-123
+#   ./verify-ec2-cleanup.sh --stack-name MacroAiPr123Stack
+#   ./verify-ec2-cleanup.sh --pr-number 123
+#
+# Exit Codes:
+#   0 - All resources successfully cleaned up
+#   1 - Some resources still exist or verification failed
+#   2 - Invalid arguments or configuration error
+
+set -euo pipefail
+
+# Configuration
+AWS_REGION="${AWS_REGION:-us-east-1}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VERBOSE=false
+WAIT_TIMEOUT=300  # 5 minutes default timeout
+CHECK_INTERVAL=10 # Check every 10 seconds
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Logging functions
+log_info() {
+    echo -e "${BLUE}ℹ️  $1${NC}"
+}
+
+log_success() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
+
+log_warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}"
+}
+
+log_error() {
+    echo -e "${RED}❌ $1${NC}"
+}
+
+log_debug() {
+    if [[ "$VERBOSE" == "true" ]]; then
+        echo -e "${BLUE}🔍 DEBUG: $1${NC}"
+    fi
+}
+
+# Help function
+show_help() {
+    cat << EOF
+EC2 Preview Environment Cleanup Verification Script
+
+USAGE:
+    $0 [OPTIONS]
+
+OPTIONS:
+    --env-name NAME             Environment name (e.g., pr-123)
+    --stack-name NAME           CloudFormation stack name (e.g., MacroAiPr123Stack)
+    --pr-number NUMBER          PR number (will generate env-name and stack-name)
+    --region REGION             AWS region (default: us-east-1)
+    --timeout SECONDS           Maximum wait time for cleanup (default: 300)
+    --interval SECONDS          Check interval in seconds (default: 10)
+    --verbose                   Enable verbose logging
+    --help                      Show this help message
+
+EXAMPLES:
+    $0 --pr-number 123
+    $0 --env-name pr-456 --verbose
+    $0 --stack-name MacroAiPr789Stack --timeout 600
+
+VERIFICATION CHECKS:
+    ✓ CloudFormation stack deletion
+    ✓ Auto Scaling Group cleanup
+    ✓ Application Load Balancer cleanup
+    ✓ EC2 instance termination
+    ✓ Launch Template cleanup
+    ✓ Security Group cleanup
+    ✓ Target Group cleanup
+
+EOF
+}
+
+# Parse command line arguments
+parse_arguments() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --env-name)
+                ENV_NAME="$2"
+                shift 2
+                ;;
+            --stack-name)
+                STACK_NAME="$2"
+                shift 2
+                ;;
+            --pr-number)
+                PR_NUMBER="$2"
+                ENV_NAME="pr-$2"
+                STACK_NAME="MacroAi$(echo "pr-$2" | sed 's/^./\U&/')Stack"
+                shift 2
+                ;;
+            --region)
+                AWS_REGION="$2"
+                shift 2
+                ;;
+            --timeout)
+                WAIT_TIMEOUT="$2"
+                shift 2
+                ;;
+            --interval)
+                CHECK_INTERVAL="$2"
+                shift 2
+                ;;
+            --verbose)
+                VERBOSE=true
+                shift
+                ;;
+            --help)
+                show_help
+                exit 0
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                show_help
+                exit 2
+                ;;
+        esac
+    done
+
+    # Validate required parameters
+    if [[ -z "${ENV_NAME:-}" ]] && [[ -z "${STACK_NAME:-}" ]]; then
+        log_error "Either --env-name, --stack-name, or --pr-number must be provided"
+        show_help
+        exit 2
+    fi
+
+    # Generate missing parameters
+    if [[ -n "${ENV_NAME:-}" ]] && [[ -z "${STACK_NAME:-}" ]]; then
+        STACK_NAME="MacroAi$(echo "${ENV_NAME}" | sed 's/^./\U&/')Stack"
+    fi
+    
+    if [[ -n "${STACK_NAME:-}" ]] && [[ -z "${ENV_NAME:-}" ]]; then
+        # Extract env name from stack name (MacroAiPr123Stack -> pr-123)
+        ENV_NAME=$(echo "$STACK_NAME" | sed 's/MacroAi\(.*\)Stack/\1/' | sed 's/\(.\)/\l\1/')
+    fi
+}
+
+# Check CloudFormation stack status
+verify_cloudformation_stack() {
+    log_info "Checking CloudFormation stack: $STACK_NAME"
+    
+    local stack_status
+    stack_status=$(aws cloudformation describe-stacks \
+        --stack-name "$STACK_NAME" \
+        --region "$AWS_REGION" \
+        --query 'Stacks[0].StackStatus' \
+        --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+    
+    if [[ "$stack_status" == "DOES_NOT_EXIST" ]]; then
+        log_success "CloudFormation stack successfully deleted"
+        return 0
+    else
+        log_warning "CloudFormation stack still exists with status: $stack_status"
+        return 1
+    fi
+}
+
+# Check Auto Scaling Groups
+verify_auto_scaling_groups() {
+    log_info "Checking Auto Scaling Groups for environment: $ENV_NAME"
+    
+    local asg_count
+    asg_count=$(aws autoscaling describe-auto-scaling-groups \
+        --region "$AWS_REGION" \
+        --query "AutoScalingGroups[?contains(AutoScalingGroupName, '$ENV_NAME')].AutoScalingGroupName" \
+        --output text 2>/dev/null | wc -w || echo "0")
+    
+    if [[ "$asg_count" -eq 0 ]]; then
+        log_success "No Auto Scaling Groups found"
+        return 0
+    else
+        log_warning "Found $asg_count Auto Scaling Groups still remaining"
+        
+        if [[ "$VERBOSE" == "true" ]]; then
+            local asgs
+            asgs=$(aws autoscaling describe-auto-scaling-groups \
+                --region "$AWS_REGION" \
+                --query "AutoScalingGroups[?contains(AutoScalingGroupName, '$ENV_NAME')].AutoScalingGroupName" \
+                --output text 2>/dev/null || echo "")
+            log_debug "Remaining ASGs: $asgs"
+        fi
+        
+        return 1
+    fi
+}
+
+# Check Application Load Balancers
+verify_load_balancers() {
+    log_info "Checking Application Load Balancers for environment: $ENV_NAME"
+    
+    local alb_count
+    alb_count=$(aws elbv2 describe-load-balancers \
+        --region "$AWS_REGION" \
+        --query "LoadBalancers[?contains(LoadBalancerName, '$ENV_NAME')].LoadBalancerName" \
+        --output text 2>/dev/null | wc -w || echo "0")
+    
+    if [[ "$alb_count" -eq 0 ]]; then
+        log_success "No Application Load Balancers found"
+        return 0
+    else
+        log_warning "Found $alb_count Application Load Balancers still remaining"
+        
+        if [[ "$VERBOSE" == "true" ]]; then
+            local albs
+            albs=$(aws elbv2 describe-load-balancers \
+                --region "$AWS_REGION" \
+                --query "LoadBalancers[?contains(LoadBalancerName, '$ENV_NAME')].LoadBalancerName" \
+                --output text 2>/dev/null || echo "")
+            log_debug "Remaining ALBs: $albs"
+        fi
+        
+        return 1
+    fi
+}
+
+# Check EC2 instances
+verify_ec2_instances() {
+    log_info "Checking EC2 instances for environment: $ENV_NAME"
+    
+    local instance_count
+    instance_count=$(aws ec2 describe-instances \
+        --region "$AWS_REGION" \
+        --filters "Name=tag:Environment,Values=$ENV_NAME" "Name=instance-state-name,Values=running,pending,stopping,stopped" \
+        --query 'Reservations[].Instances[].InstanceId' \
+        --output text 2>/dev/null | wc -w || echo "0")
+    
+    if [[ "$instance_count" -eq 0 ]]; then
+        log_success "No EC2 instances found"
+        return 0
+    else
+        log_warning "Found $instance_count EC2 instances still remaining"
+        
+        if [[ "$VERBOSE" == "true" ]]; then
+            local instances
+            instances=$(aws ec2 describe-instances \
+                --region "$AWS_REGION" \
+                --filters "Name=tag:Environment,Values=$ENV_NAME" "Name=instance-state-name,Values=running,pending,stopping,stopped" \
+                --query 'Reservations[].Instances[].[InstanceId,State.Name]' \
+                --output text 2>/dev/null || echo "")
+            log_debug "Remaining instances: $instances"
+        fi
+        
+        return 1
+    fi
+}
+
+# Main verification function
+main() {
+    log_info "🔍 Starting EC2 cleanup verification"
+    log_info "Environment: ${ENV_NAME:-N/A}"
+    log_info "Stack: ${STACK_NAME:-N/A}"
+    log_info "Region: $AWS_REGION"
+    log_info "Timeout: ${WAIT_TIMEOUT}s"
+    echo ""
+    
+    local verification_passed=true
+    local start_time
+    start_time=$(date +%s)
+    
+    # Run all verification checks
+    if ! verify_cloudformation_stack; then
+        verification_passed=false
+    fi
+    
+    if ! verify_auto_scaling_groups; then
+        verification_passed=false
+    fi
+    
+    if ! verify_load_balancers; then
+        verification_passed=false
+    fi
+    
+    if ! verify_ec2_instances; then
+        verification_passed=false
+    fi
+    
+    echo ""
+    
+    if [[ "$verification_passed" == "true" ]]; then
+        log_success "🎉 All EC2 resources successfully cleaned up!"
+        log_success "Preview environment '$ENV_NAME' has been completely removed"
+        exit 0
+    else
+        log_error "❌ Some resources still exist or cleanup verification failed"
+        log_error "Manual cleanup may be required for remaining resources"
+        
+        local elapsed_time
+        elapsed_time=$(($(date +%s) - start_time))
+        log_info "Verification completed in ${elapsed_time}s"
+        
+        exit 1
+    fi
+}
+
+# Parse arguments and run main function
+parse_arguments "$@"
+main

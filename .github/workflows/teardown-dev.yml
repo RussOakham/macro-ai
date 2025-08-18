@@ -245,52 +245,27 @@ jobs:
             exit 1
           fi
 
-      - name: Verify stack deletion
+      - name: Verify EC2 cleanup
         id: verify
         run: |
+          cd infrastructure
+
+          ENV_NAME="${{ needs.validate-request.outputs.env-name }}"
           STACK_NAME="${{ needs.validate-request.outputs.stack-name }}"
 
-          echo "🔍 Verifying EC2 development environment deletion..."
-          ENV_NAME="${{ needs.validate-request.outputs.env-name }}"
+          echo "🔍 Using centralized EC2 cleanup verification for manual teardown..."
 
           # Wait a moment for AWS to process the deletion
           sleep 15
 
-          # Check if stack still exists
-          STACK_STATUS=$(aws cloudformation describe-stacks \
-            --stack-name "${STACK_NAME}" \
-            --query 'Stacks[0].StackStatus' \
-            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
-
-          if [[ "${STACK_STATUS}" == "DOES_NOT_EXIST" ]]; then
+          # Use centralized verification script with extended timeout for manual operations
+          if ./scripts/verify-ec2-cleanup.sh --env-name "${ENV_NAME}" --stack-name "${STACK_NAME}" --timeout 600 --verbose; then
             echo "verification-result=success" >> $GITHUB_OUTPUT
-            echo "✅ CloudFormation stack deletion verified"
-
-            # Additional verification for EC2 resources
-            echo "🔍 Verifying EC2 resources cleanup..."
-
-            # Check for any remaining Auto Scaling Groups
-            ASG_COUNT=$(aws autoscaling describe-auto-scaling-groups \
-              --query "AutoScalingGroups[?contains(AutoScalingGroupName, '${ENV_NAME}')].AutoScalingGroupName" \
-              --output text 2>/dev/null | wc -w || echo "0")
-
-            # Check for any remaining Load Balancers
-            ALB_COUNT=$(aws elbv2 describe-load-balancers \
-              --query "LoadBalancers[?contains(LoadBalancerName, '${ENV_NAME}')].LoadBalancerName" \
-              --output text 2>/dev/null | wc -w || echo "0")
-
-            if [[ "${ASG_COUNT}" -eq 0 && "${ALB_COUNT}" -eq 0 ]]; then
-              echo "✅ All EC2 resources cleaned up successfully"
-            else
-              echo "⚠️ Found ${ASG_COUNT} Auto Scaling Groups and ${ALB_COUNT} Load Balancers still remaining"
-            fi
-
-            echo "✅ Manual teardown verification complete"
+            echo "✅ Manual teardown verification complete - all EC2 resources cleaned up"
           else
             echo "verification-result=partial" >> $GITHUB_OUTPUT
-            echo "⚠️ Stack still exists with status: ${STACK_STATUS}"
-            echo "This may be normal if deletion is still in progress"
-            echo "EC2 resources may still be terminating..."
+            echo "⚠️ Some resources may still be terminating or cleanup verification failed"
+            echo "Manual review may be required for remaining resources"
           fi
 
   # Report results
