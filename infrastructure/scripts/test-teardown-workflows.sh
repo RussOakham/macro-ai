@@ -207,15 +207,16 @@ test_yaml_syntax() {
             continue
         fi
         
-        # Test YAML syntax using Python (if available) or basic validation
-        if command -v python3 >/dev/null 2>&1; then
-            if python3 -c "import yaml; yaml.safe_load(open('$workflow_path'))" 2>/dev/null; then
+        # Test YAML syntax using Python with PyYAML (if available) or basic validation
+        if command -v python3 >/dev/null 2>&1 && python3 -c "import yaml" >/dev/null 2>&1; then
+            # PyYAML is available, use proper YAML validation
+            if python3 -c "import yaml; yaml.safe_load(open('$workflow_path'))" >/dev/null 2>&1; then
                 record_test_result "YAML Syntax: $workflow" "PASS"
             else
                 record_test_result "YAML Syntax: $workflow" "FAIL" "Invalid YAML syntax"
             fi
         else
-            # Basic validation - check for common YAML issues
+            # Fallback to basic validation - check for common YAML issues
             if grep -q "^[[:space:]]*-[[:space:]]*$" "$workflow_path"; then
                 record_test_result "YAML Syntax: $workflow" "FAIL" "Empty list items found"
             elif grep -q "^[[:space:]]*:[[:space:]]*$" "$workflow_path"; then
@@ -319,29 +320,29 @@ simulate_teardown_operations() {
     log_info "Simulating teardown operations (dry-run mode)..."
     
     local test_env_name="pr-$TEST_PR_NUMBER"
-    local test_stack_name="MacroAiPr${TEST_PR_NUMBER}Stack"
-    
+    local test_stack_name="MacroAiPr-${TEST_PR_NUMBER}Stack"
+
     log_info "Test Environment: $test_env_name"
     log_info "Test Stack: $test_stack_name"
-    
+
     # Test verification script with test parameters
     local verify_script="$SCRIPT_DIR/verify-ec2-cleanup.sh"
-    
+
     if [[ -f "$verify_script" ]]; then
-        # This should fail since the test environment doesn't exist
-        if ! "$verify_script" --pr-number "$TEST_PR_NUMBER" --timeout 10 2>/dev/null; then
+        # This should succeed for a non-existent environment
+        if "$verify_script" --pr-number "$TEST_PR_NUMBER" --timeout 10 2>/dev/null; then
             record_test_result "Simulation: verification script with non-existent environment" "PASS"
         else
-            record_test_result "Simulation: verification script with non-existent environment" "FAIL" "Should fail for non-existent environment"
+            record_test_result "Simulation: verification script with non-existent environment" "FAIL" "Verification script failed unexpectedly"
         fi
     else
         record_test_result "Simulation: verification script availability" "FAIL" "Verification script not found"
     fi
-    
+
     # Test stack name generation logic
     local generated_stack_name
-    generated_stack_name="MacroAi$(echo "pr-$TEST_PR_NUMBER" | sed 's/^./\U&/')Stack"
-    
+    generated_stack_name="MacroAi$(echo "pr-$TEST_PR_NUMBER" | sed 's/^./\U&/')-${TEST_PR_NUMBER}Stack"
+
     if [[ "$generated_stack_name" == "$test_stack_name" ]]; then
         record_test_result "Simulation: stack name generation" "PASS"
     else

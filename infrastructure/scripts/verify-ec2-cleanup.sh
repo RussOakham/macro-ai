@@ -273,52 +273,105 @@ verify_ec2_instances() {
     fi
 }
 
-# Main verification function
+# Validate timeout and interval parameters
+validate_parameters() {
+    # Validate timeout is a positive integer
+    if ! [[ "$WAIT_TIMEOUT" =~ ^[1-9][0-9]*$ ]]; then
+        log_error "Invalid timeout value: $WAIT_TIMEOUT. Must be a positive integer."
+        exit 1
+    fi
+
+    # Validate interval is a positive integer
+    if ! [[ "$CHECK_INTERVAL" =~ ^[1-9][0-9]*$ ]]; then
+        log_error "Invalid interval value: $CHECK_INTERVAL. Must be a positive integer."
+        exit 1
+    fi
+}
+
+# Run all verification checks and return true if all pass
+run_verification_checks() {
+    local all_passed=true
+
+    if ! verify_cloudformation_stack; then
+        all_passed=false
+    fi
+
+    if ! verify_auto_scaling_groups; then
+        all_passed=false
+    fi
+
+    if ! verify_load_balancers; then
+        all_passed=false
+    fi
+
+    if ! verify_ec2_instances; then
+        all_passed=false
+    fi
+
+    [[ "$all_passed" == "true" ]]
+}
+
+# Main verification function with polling loop
 main() {
     log_info "🔍 Starting EC2 cleanup verification"
     log_info "Environment: ${ENV_NAME:-N/A}"
     log_info "Stack: ${STACK_NAME:-N/A}"
     log_info "Region: $AWS_REGION"
     log_info "Timeout: ${WAIT_TIMEOUT}s"
+    log_info "Check interval: ${CHECK_INTERVAL}s"
     echo ""
-    
-    local verification_passed=true
+
+    # Validate parameters before starting
+    validate_parameters
+
+    # Capture start time and compute deadline
     local start_time
     start_time=$(date +%s)
-    
-    # Run all verification checks
-    if ! verify_cloudformation_stack; then
-        verification_passed=false
-    fi
-    
-    if ! verify_auto_scaling_groups; then
-        verification_passed=false
-    fi
-    
-    if ! verify_load_balancers; then
-        verification_passed=false
-    fi
-    
-    if ! verify_ec2_instances; then
-        verification_passed=false
-    fi
-    
-    echo ""
-    
-    if [[ "$verification_passed" == "true" ]]; then
-        log_success "🎉 All EC2 resources successfully cleaned up!"
-        log_success "Preview environment '$ENV_NAME' has been completely removed"
-        exit 0
-    else
-        log_error "❌ Some resources still exist or cleanup verification failed"
-        log_error "Manual cleanup may be required for remaining resources"
-        
-        local elapsed_time
-        elapsed_time=$(($(date +%s) - start_time))
-        log_info "Verification completed in ${elapsed_time}s"
-        
-        exit 1
-    fi
+    local deadline=$((start_time + WAIT_TIMEOUT))
+    local attempt=1
+
+    # Polling loop
+    while true; do
+        local current_time
+        current_time=$(date +%s)
+
+        if [[ $VERBOSE == "true" ]]; then
+            local elapsed=$((current_time - start_time))
+            log_info "Attempt $attempt (${elapsed}s elapsed)..."
+        fi
+
+        # Run verification checks
+        if run_verification_checks; then
+            echo ""
+            log_success "🎉 All EC2 resources successfully cleaned up!"
+            log_success "Preview environment '$ENV_NAME' has been completely removed"
+
+            local elapsed_time=$((current_time - start_time))
+            log_info "Verification completed in ${elapsed_time}s after $attempt attempt(s)"
+            exit 0
+        fi
+
+        # Check if timeout has been reached
+        if [[ $current_time -ge $deadline ]]; then
+            echo ""
+            log_error "❌ Timeout reached after ${WAIT_TIMEOUT}s"
+            log_error "Some resources still exist or cleanup verification failed"
+            log_error "Manual cleanup may be required for remaining resources"
+
+            local elapsed_time=$((current_time - start_time))
+            log_info "Verification timed out after ${elapsed_time}s and $attempt attempt(s)"
+            exit 1
+        fi
+
+        # Print progress and sleep before retry
+        if [[ $VERBOSE == "true" ]]; then
+            local remaining=$((deadline - current_time))
+            log_info "Retrying in ${CHECK_INTERVAL}s (${remaining}s remaining)..."
+        fi
+
+        sleep "$CHECK_INTERVAL"
+        attempt=$((attempt + 1))
+    done
 }
 
 # Parse arguments and run main function

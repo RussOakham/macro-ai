@@ -55,6 +55,9 @@ jobs:
           fi
           echo "✅ PR number format valid: ${{ inputs.pr_number }}"
 
+      - name: Checkout repository (required for composite actions)
+        uses: actions/checkout@v4
+
       - name: Check code ownership of workflow actor
         id: codeowner-check
         uses: ./.github/actions/check-codeowner
