@@ -4,6 +4,7 @@ import {
 	type StandardUnit,
 } from '@aws-sdk/client-cloudwatch'
 import type { NextFunction, Request, Response } from 'express'
+import onFinished from 'on-finished'
 
 import { pino } from '../utils/logger.ts'
 
@@ -220,10 +221,8 @@ export const monitoringMetricsMiddleware = (
 			})
 		}
 
-		// Override res.end to capture response metrics
-		const originalEnd = res.end.bind(res)
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		res.end = function (this: Response, ...args: any[]) {
+		// Use on-finished to capture response metrics reliably
+		onFinished(res, (err, res) => {
 			const duration = Date.now() - startTime
 			const statusCode = res.statusCode
 
@@ -295,11 +294,7 @@ export const monitoringMetricsMiddleware = (
 					})
 				}
 			}
-
-			// Call original end method
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-			return originalEnd(...args)
-		}
+		})
 
 		next()
 	}

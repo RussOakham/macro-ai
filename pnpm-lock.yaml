@@ -436,6 +436,9 @@ importers:
       node-fetch:
         specifier: ^3.3.2
         version: 3.3.2
+      on-finished:
+        specifier: ^2.4.1
+        version: 2.4.1
       pg:
         specifier: ^8.16.3
         version: 8.16.3
@@ -500,6 +503,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 20.19.10
+      '@types/on-finished':
+        specifier: ^2.3.5
+        version: 2.3.5
       '@types/pg':
         specifier: ^8.15.5
         version: 8.15.5
@@ -4767,6 +4773,12 @@ packages:
     resolution:
       {
         integrity: sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA==,
+      }
+
+  '@types/on-finished@2.3.5':
+    resolution:
+      {
+        integrity: sha512-XUaCx9tVIC577KsOZxKbnvGlyPt2ogNXQEq/bOQpAfPwH9sH0FbzrRsK1961jpjKlK5V+Owmw55dVjukWhwH0w==,
       }
 
   '@types/pg@8.15.5':
@@ -15652,6 +15664,10 @@ snapshots:
       undici-types: 6.21.0
 
   '@types/normalize-package-data@2.4.4': {}
+
+  '@types/on-finished@2.3.5':
+    dependencies:
+      '@types/node': 20.19.10
 
   '@types/pg@8.15.5':
     dependencies:
