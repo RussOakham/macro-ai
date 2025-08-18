@@ -7,25 +7,26 @@
 ## 🎯 Overview
 
 This guide covers the AWS CDK infrastructure implementation for the Macro AI hobby deployment. The infrastructure creates
-a cost-optimized serverless architecture targeting <£10/month operational costs.
+a cost-optimized EC2-based architecture targeting <£15/month operational costs.
 
 ## 🏗️ Architecture Components
 
 ### Core Infrastructure
 
-- **AWS Lambda Function**: Serverless API backend running the Express application
-- **API Gateway**: REST API with CORS, throttling, and optional custom domain
+- **EC2 Instances**: Auto Scaling Group running the Express application
+- **Application Load Balancer**: HTTP/HTTPS endpoint with CORS and health checks
 - **Parameter Store**: Secure configuration management with tiered parameters
-- **IAM Roles & Policies**: Least-privilege access for Lambda to Parameter Store
+- **IAM Roles & Policies**: Least-privilege access for EC2 to Parameter Store
 - **CloudWatch Logs**: Centralized logging with cost-optimized retention
+- **VPC & Networking**: Private subnets with NAT Gateway for secure deployment
 
 ### Cost Optimization Features
 
-- **ARM64 Architecture**: 20% cheaper than x86_64
-- **Conservative Throttling**: Rate limits to prevent unexpected charges
-- **Minimal Monitoring**: Basic CloudWatch logs with 1-week retention
-- **No Provisioned Concurrency**: Pay only for actual usage
-- **Tiered Parameters**: Standard tier for non-critical parameters
+- **t3.micro Instances**: Burstable performance for variable workloads
+- **Auto Scaling**: Scale down to 1 instance during low usage
+- **Spot Instances**: Optional cost savings for non-critical environments
+- **Minimal Monitoring**: Basic CloudWatch logs with managed retention
+- **Shared NAT Gateway**: Single NAT for outbound traffic across AZs
 
 ## 📁 Directory Structure
 
@@ -36,8 +37,8 @@ infrastructure/
 │   ├── stacks/
 │   │   └── macro-ai-hobby-stack.ts     # Main stack definition
 │   └── constructs/
-│       ├── api-gateway-construct.ts    # API Gateway configuration
-│       ├── lambda-construct.ts         # Lambda function setup
+│       ├── ec2-construct.ts            # EC2 Auto Scaling Group and ALB
+│       ├── vpc-construct.ts            # VPC and networking configuration
 │       └── parameter-store-construct.ts # Parameter Store hierarchy
 ├── scripts/
 │   ├── deploy.sh                       # Deployment automation script
@@ -138,104 +139,121 @@ aws ssm put-parameter \
 # /macro-ai/production/ (hobby or enterprise scale)
 ```
 
-### Lambda Configuration
-
-- **Runtime**: Node.js 20.x on ARM64 (Graviton2)
-- **Memory**: 512 MB (cost-optimized)
-- **Timeout**: 30 seconds
-- **Architecture**: ARM64 (20% cheaper than x86_64)
-- **Logging**: CloudWatch with 1-week retention
-
-### API Gateway Configuration
-
-- **Type**: REST API with Lambda proxy integration
-- **CORS**: Enabled for frontend integration
-- **Throttling**: 100 requests/second, 200 burst limit
-- **Monitoring**: Basic (detailed monitoring disabled for cost)
-
-### Deployment Architecture
-
-The API Gateway deployment follows AWS CDK best practices to prevent resource conflicts:
-
-- **Single Deployment Path**: Uses explicit deployment creation only (`deploy: false` on RestApi)
-- **Resource Dependencies**: Proper dependency chain (RestApi → Deployment → Stage → Usage Plan)
-- **Conflict Prevention**: Validation ensures no duplicate deployment resources
-- **Update Management**: Deployment descriptions include timestamps for tracking
-- **Rollback Support**: CloudFormation can safely rollback deployments without conflicts
-
-**Key Implementation Details:**
-
-```typescript
-// RestApi with explicit deployment control
-new apigateway.RestApi(this, 'RestApi', {
-	deploy: false, // Prevents implicit deployment creation
-	// ... other configuration
-})
-
-// Explicit deployment with proper dependencies
-const deployment = new apigateway.Deployment(this, 'Deployment', {
-	api: this.restApi,
-	description: `Deployment for ${environmentName} - ${timestamp}`,
-})
-
-// Stage with explicit deployment reference
-const stage = new apigateway.Stage(this, 'Stage', {
-	deployment,
-	stageName: environmentName,
-})
-
-// Set deployment stage for CDK recognition
-this.restApi.deploymentStage = stage
-```
-
-This approach eliminates the "already exists in stack" errors that can occur with dual deployment creation paths.
-
 ## 🔐 Security
 
 ### IAM Permissions
 
-The Lambda execution role includes:
+The EC2 instance role includes the following managed and custom policies:
 
-- `AWSLambdaBasicExecutionRole` (managed policy)
-- Custom Parameter Store read policy with path restrictions
-- KMS decrypt permissions for SecureString parameters
+**Managed Policies:**
+
+- `CloudWatchAgentServerPolicy` - CloudWatch Agent metrics and logs
+- `AmazonSSMManagedInstanceCore` - Systems Manager core functionality
+
+**Custom Policies:**
+
+**Parameter Store Access:**
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:GetParametersByPath"
+      ],
+      "Resource": [
+        "arn:aws:ssm:*:*:parameter/hobby/*",
+        "arn:aws:ssm:*:*:parameter/macro-ai/*"
+      ]
+    }
+  ]
+}
+```
+
+**KMS Decrypt for SecureString Parameters:**
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ],
+      "Resource": "arn:aws:kms:*:*:key/*",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "ssm.*.amazonaws.com"
+        }
+      }
+    }
+  ]
+}
+```
+
+**CloudWatch Logs:**
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogStreams"
+      ],
+      "Resource": "arn:aws:logs:*:*:log-group:/aws/ec2/macro-ai*"
+    }
+  ]
+}
+```
 
 ### Parameter Store Security
 
 - **SecureString Parameters**: Encrypted with AWS managed KMS key
-- **Path-based Access**: Lambda can only access `/macro-ai/development/*` parameters
+- **Path-based Access**: EC2 instances can only access environment-specific parameters
 - **Least Privilege**: No write permissions to Parameter Store
 
 ### Network Security
 
-- **API Gateway**: Public endpoint with CORS restrictions
-- **Lambda**: Runs in AWS managed VPC (no custom VPC for cost optimization)
+- **Application Load Balancer**: Public endpoint with CORS restrictions
+- **EC2 Instances**: Run in private subnets with NAT Gateway for outbound access
 
 ## 📊 Monitoring & Logging
 
 ### CloudWatch Logs
 
-- **Log Group**: `/aws/lambda/macro-ai-development-api`
-- **Retention**: 1 week (cost optimization)
+- **Log Group**: `/var/log/macro-ai/` (on EC2 instances)
+- **Retention**: Managed by log rotation on instances
 - **Log Level**: INFO (configurable via environment variables)
 
-### AWS Powertools Integration
+### EC2 Monitoring Integration
 
 - **Service Name**: macro-ai-api
-- **Metrics Namespace**: MacroAI/Hobby
-- **Tracing**: Disabled by default (can be enabled for debugging)
+- **Metrics Namespace**: MacroAI/EC2
+- **CloudWatch Agent**: Enabled for system and application metrics
 
 ### Monitoring Commands
 
 ```bash
-# View Lambda logs
-aws logs tail /aws/lambda/macro-ai-hobby-api --follow
+# View application logs on EC2
+aws ssm start-session --target i-1234567890abcdef0
+sudo tail -f /var/log/macro-ai/application.log
 
-# Check API Gateway metrics
+# Check ALB metrics
 aws cloudwatch get-metric-statistics \
-  --namespace AWS/ApiGateway \
-  --metric-name Count \
-  --dimensions Name=ApiName,Value=macro-ai-hobby-api \
+  --namespace AWS/ApplicationELB \
+  --metric-name RequestCount \
+  --dimensions Name=LoadBalancer,Value=app/macro-ai-alb/1234567890abcdef \
   --start-time 2025-01-01T00:00:00Z \
   --end-time 2025-01-01T23:59:59Z \
   --period 3600 \
@@ -261,15 +279,13 @@ Required GitHub secrets:
 For manual deployments outside of CI/CD:
 
 ```bash
-# Build Lambda package first
+# Build Express API application
 cd apps/express-api
-npm run build:lambda
-npm run bundle:lambda
-npm run package:lambda
+pnpm build
 
-# Deploy infrastructure
+# Deploy EC2 infrastructure
 cd infrastructure
-./scripts/deploy.sh
+./scripts/deploy-ec2.sh
 ```
 
 ## 🛠️ Development
@@ -388,20 +404,21 @@ aws ssm get-parameters-by-path \
 
 For <100 users and <1000 requests/day:
 
-- **Lambda**: £0.00 (within free tier)
-- **API Gateway**: £0.00 (within free tier)
+- **EC2 Instances**: £8.50 (t3.micro, 1 instance average)
+- **Application Load Balancer**: £2.25 (ALB base cost)
+- **NAT Gateway**: £3.20 (single NAT for outbound traffic)
 - **Parameter Store**: £0.05 (Advanced tier parameters)
-- **CloudWatch Logs**: £0.50 (1-week retention)
-- **Data Transfer**: £0.10
-- **Total**: ~£0.65/month
+- **CloudWatch Logs**: £0.50 (managed retention)
+- **Data Transfer**: £0.20 (ALB to EC2 traffic)
+- **Total**: ~£14.70/month
 
 ### Cost Optimization Tips
 
 1. **Monitor Usage**: Set up billing alerts for unexpected charges
-2. **Parameter Tier**: Use Standard tier for non-critical parameters
-3. **Log Retention**: Keep short retention periods for logs
-4. **Throttling**: Maintain conservative rate limits
-5. **Architecture**: Use ARM64 for 20% cost savings
+2. **Auto Scaling**: Configure scale-down policies for low usage periods
+3. **Instance Types**: Use t3.micro for burstable performance
+4. **Spot Instances**: Consider for development environments
+5. **NAT Gateway**: Use single NAT across availability zones
 
 ## 📚 Additional Resources
 

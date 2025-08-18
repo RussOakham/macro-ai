@@ -1,7 +1,6 @@
 # EC2 Teardown Workflows Testing Guide
 
-This guide provides comprehensive testing procedures for validating both automatic and manual EC2 teardown workflows after
-the Lambda-to-EC2 migration.
+This guide provides comprehensive testing procedures for validating both automatic and manual EC2 teardown workflows.
 
 ## Overview
 

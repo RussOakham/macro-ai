@@ -72,17 +72,15 @@ Development → Staging → Production
 5. **Testing**: Integration and smoke tests
 6. **Production**: Manual approval for production deployment
 
-### Manual Deployment Steps (Legacy - Being Migrated)
-
-> **⚠️ Note**: These deployment commands are being migrated from Lambda to EC2.
-> New deployment procedures will be available once the migration is complete.
+### Manual Deployment Steps
 
 ```bash
 # Build production images
 pnpm build
 
-# Deploy to staging (legacy - being migrated to EC2)
-# pnpm deploy:staging
+# Deploy infrastructure
+cd infrastructure
+pnpm deploy
 
 # Run integration tests
 pnpm test:integration

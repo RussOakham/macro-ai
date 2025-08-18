@@ -2,21 +2,17 @@
 
 AWS CDK infrastructure code for the Macro AI development deployment.
 
-> **⚠️ Migration in Progress**: This infrastructure is being migrated from Lambda to EC2 deployment.
-> Currently only Parameter Store configuration is active.
-
 ## Architecture Overview
 
-The infrastructure currently creates:
+The infrastructure creates a comprehensive EC2-based deployment with:
 
+- **EC2 Auto Scaling Group**: Scalable compute instances running the Express API
+- **Application Load Balancer**: HTTP/HTTPS endpoint with health checks and routing
+- **VPC & Networking**: Private subnets with NAT Gateway for secure deployment
 - **Parameter Store**: Secure configuration management for secrets and settings
-- **IAM Roles & Policies**: Least-privilege access for applications to Parameter Store
-
-**Legacy components (removed during EC2 migration):**
-
-- ~~AWS Lambda Function~~ (removed)
-- ~~API Gateway~~ (removed)
-- ~~CloudWatch Logs for Lambda~~ (removed)
+- **IAM Roles & Policies**: Least-privilege access for EC2 instances to AWS services
+- **CloudWatch Monitoring**: Comprehensive logging, metrics, and alerting
+- **Infrastructure Automation**: Lambda functions for deployment, health checks, and optimization
 
 ## Prerequisites
 
@@ -100,11 +96,12 @@ new MacroAiHobbyStack(app, 'MacroAiDevelopmentStack', {
 
 ## Cost Optimization Features
 
-- **ARM64 Architecture**: 20% cheaper than x86_64
-- **Minimal Monitoring**: CloudWatch logs with 1-week retention
-- **Conservative Throttling**: Rate limits to prevent unexpected charges
-- **No Provisioned Concurrency**: Pay only for actual usage
-- **Standard Parameter Tier**: For non-critical parameters
+- **t4g.micro Instances**: Burstable performance for variable workloads
+- **Auto Scaling**: Scale down to 1 instance during low usage periods
+- **ARM64 Graviton2/Graviton3 Architecture**: 20% cost savings over x86_64 instances
+- **Shared NAT Gateway**: Single NAT for outbound traffic across availability zones
+- **Optimized Monitoring**: CloudWatch logs with managed retention policies
+- **Standard Parameter Tier**: Cost-effective parameter storage for non-critical values
 
 ## Development
 

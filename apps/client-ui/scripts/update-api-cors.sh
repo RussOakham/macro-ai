@@ -59,19 +59,22 @@ readonly BLUE='\033[0;34m'
 readonly NC='\033[0m' # No Color
 
 # Configuration
-ENVIRONMENT=${CDK_DEPLOY_ENV:-hobby}
+readonly ENV=${CDK_DEPLOY_ENV:-hobby}
+readonly STAGE=${ENV}  # Alias for compatibility
 readonly AWS_REGION=${AWS_REGION:-us-east-1}
+readonly AWS_PROFILE=${AWS_PROFILE:-default}
 readonly STACK_NAME="MacroAiHobbyStack"
 
 # Determine script and project paths
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 readonly INFRASTRUCTURE_DIR="$PROJECT_ROOT/infrastructure"
-readonly PATCH_FILE="$SCRIPT_DIR/cors-update.patch"
+readonly PATCH_FILE="$SCRIPT_DIR/cors-patch-${ENV}-${AWS_REGION}.json"
 
 echo -e "${BLUE}🔧 API Gateway CORS Update for Amplify Frontend${NC}"
-echo -e "${BLUE}Environment: $ENVIRONMENT${NC}"
+echo -e "${BLUE}Environment: $ENV${NC}"
 echo -e "${BLUE}Region: $AWS_REGION${NC}"
+echo -e "${BLUE}Profile: $AWS_PROFILE${NC}"
 echo -e "${BLUE}Stack: $STACK_NAME${NC}"
 echo ""
 
@@ -154,6 +157,7 @@ echo -e "${BLUE}📋 Getting API Gateway information...${NC}"
 API_ID=$(aws cloudformation describe-stacks \
     --stack-name "$STACK_NAME" \
     --region "$AWS_REGION" \
+    --profile "$AWS_PROFILE" \
     --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayRestApiId`].OutputValue' \
     --output text 2>/dev/null || echo "")
 
@@ -171,6 +175,7 @@ echo -e "${BLUE}🔍 Checking current CORS configuration...${NC}"
 RESOURCES=$(aws apigateway get-resources \
     --rest-api-id "$API_ID" \
     --region "$AWS_REGION" \
+    --profile "$AWS_PROFILE" \
     --query 'items[?pathPart==`{proxy+}`].id' \
     --output text)
 
@@ -186,63 +191,70 @@ echo -e "${BLUE}🔧 Updating CORS configuration...${NC}"
 # Define allowed origins
 ALLOWED_ORIGINS="'http://localhost:3000','https://localhost:3000','$AMPLIFY_URL'"
 
-# Note: This is a simplified approach. In practice, CORS is configured in the CDK construct
+# Note: CORS is now configured in the Express application, not infrastructure
 echo -e "${YELLOW}⚠ CORS Configuration Note:${NC}"
-echo "CORS settings are configured in the CDK ApiGatewayConstruct."
-echo "To update CORS origins, modify the infrastructure code:"
+echo "CORS settings are configured in the Express API application."
+echo "To update CORS origins, modify the environment-specific Parameter Store parameter:"
 echo ""
-echo "File: infrastructure/src/constructs/api-gateway-construct.ts"
-echo "Update the allowOrigins array to include the following origins:"
-echo "  $ALLOWED_ORIGINS"
+echo "Environment: $ENV"
+echo "Region: $AWS_REGION"
+echo "Parameter: /$ENV/CORS_ALLOWED_ORIGINS"
+echo "New Value: $ALLOWED_ORIGINS"
 echo ""
-echo "Then redeploy the infrastructure:"
-echo "  cd ../../infrastructure"
-echo "  pnpm deploy"
+echo "Then restart the application or redeploy using environment-aware commands:"
+echo "  cd $INFRASTRUCTURE_DIR"
+echo "  ./scripts/deploy-ec2.sh --env $ENV --region $AWS_REGION"
 echo ""
 
-# Create a patch file for easy CORS update
+# Create environment-aware JSON patch file for CORS configuration
 cat > "$PATCH_FILE" << EOF
---- a/infrastructure/src/constructs/api-gateway-construct.ts
-+++ b/infrastructure/src/constructs/api-gateway-construct.ts
-@@ -200,7 +200,9 @@ export class ApiGatewayConstruct extends Construct {
- 				allowCredentials: true,
- 				allowOrigins: [
--					'http://localhost:3000',
--					'https://localhost:3000'
-+					'http://localhost:3000',
-+					'https://localhost:3000',
-+					'$AMPLIFY_URL'
- 				],
- 				allowMethods: apigateway.Cors.ALL_METHODS,
- 				allowHeaders: [
+{
+  "environment": "$ENV",
+  "region": "$AWS_REGION",
+  "profile": "$AWS_PROFILE",
+  "parameter_name": "/$ENV/CORS_ALLOWED_ORIGINS",
+  "cors_origins": "http://localhost:3000,https://localhost:3000,$AMPLIFY_URL",
+  "commands": {
+    "update_parameter_store": "aws ssm put-parameter --name '/$ENV/CORS_ALLOWED_ORIGINS' --value 'http://localhost:3000,https://localhost:3000,$AMPLIFY_URL' --overwrite --region $AWS_REGION --profile $AWS_PROFILE",
+    "get_parameter": "aws ssm get-parameter --name '/$ENV/CORS_ALLOWED_ORIGINS' --region $AWS_REGION --profile $AWS_PROFILE --query 'Parameter.Value' --output text",
+    "deploy_infrastructure": "cd $INFRASTRUCTURE_DIR && ./scripts/deploy-ec2.sh --env $ENV --region $AWS_REGION",
+    "restart_application": "cd $INFRASTRUCTURE_DIR && ./scripts/restart-ec2-app.sh --env $ENV --region $AWS_REGION"
+  }
+}
 EOF
 
-print_status "Created CORS update patch file: $PATCH_FILE"
+print_status "Created environment-aware CORS patch file: $PATCH_FILE"
 
 echo ""
 echo -e "${BLUE}📊 CORS Update Summary${NC}"
 echo "=================================="
+echo "  Environment: $ENV"
+echo "  Region: $AWS_REGION"
+echo "  Profile: $AWS_PROFILE"
 echo "  Amplify URL: $AMPLIFY_URL"
 echo "  API Gateway ID: $API_ID"
 echo "  Allowed Origins: $ALLOWED_ORIGINS"
+echo "  Parameter Name: /$ENV/CORS_ALLOWED_ORIGINS"
 echo "  Patch file: $PATCH_FILE"
 echo "  Infrastructure dir: $INFRASTRUCTURE_DIR"
 echo ""
 
 echo -e "${BLUE}💡 Next Steps:${NC}"
-echo "1. Apply the CORS patch to your infrastructure code:"
+echo "1. Review the generated environment-aware patch file:"
+echo "   cat \"$PATCH_FILE\""
+echo ""
+echo "2. Update Parameter Store with environment-specific parameter:"
+echo "   aws ssm put-parameter --name \"/$ENV/CORS_ALLOWED_ORIGINS\" --value \"$ALLOWED_ORIGINS\" --overwrite --region $AWS_REGION --profile $AWS_PROFILE"
+echo ""
+echo "3. Verify the parameter was updated:"
+echo "   aws ssm get-parameter --name \"/$ENV/CORS_ALLOWED_ORIGINS\" --region $AWS_REGION --profile $AWS_PROFILE --query 'Parameter.Value' --output text"
+echo ""
+echo "4. Restart/redeploy the application to pick up new configuration:"
 echo "   cd \"$INFRASTRUCTURE_DIR\""
-echo "   git apply \"$PATCH_FILE\""
+echo "   ./scripts/deploy-ec2.sh --env $ENV --region $AWS_REGION"
 echo ""
-echo "2. Or manually update the allowOrigins array in:"
-echo "   $INFRASTRUCTURE_DIR/src/constructs/api-gateway-construct.ts"
-echo ""
-echo "3. Redeploy the infrastructure:"
-echo "   cd \"$INFRASTRUCTURE_DIR\""
-echo "   pnpm deploy"
-echo ""
-echo "4. Test the frontend-backend connection:"
-echo "   curl -H \"Origin: $AMPLIFY_URL\" -H \"Access-Control-Request-Method: GET\" -X OPTIONS https://your-api-url/api/health"
+echo "5. Test the frontend-backend connection:"
+echo "   curl -H \"Origin: $AMPLIFY_URL\" -H \"Access-Control-Request-Method: GET\" -X OPTIONS https://your-alb-url/api/health"
 
 echo ""
 echo -e "${GREEN}✅ CORS update preparation completed!${NC}"
