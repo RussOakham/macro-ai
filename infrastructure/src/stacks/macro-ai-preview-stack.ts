@@ -484,26 +484,32 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	 * This provides ~$1.45/month savings by reducing uptime by 50%
 	 */
 	private addScheduledScaling(): void {
-		// Scale down to 0 instances at 6 PM UTC (18:00)
+		// Scale down to 0 instances at 6 PM UTC (18:00) every day
 		// This shuts down preview environments during off-hours
 		new autoscaling.ScheduledAction(this, 'ScaleDownSchedule', {
 			autoScalingGroup: this.autoScaling,
 			schedule: autoscaling.Schedule.cron({
-				hour: '18', // 6 PM UTC
 				minute: '0',
+				hour: '18', // 6 PM UTC
+				day: '*', // Every day
+				month: '*', // Every month
+				weekDay: '*', // Every day of the week
 			}),
 			minCapacity: 0,
 			maxCapacity: 0,
 			desiredCapacity: 0,
 		})
 
-		// Scale up to 1 instance at 8 AM UTC (08:00)
+		// Scale up to 1 instance at 8 AM UTC (08:00) every day
 		// This starts preview environments for business hours
 		new autoscaling.ScheduledAction(this, 'ScaleUpSchedule', {
 			autoScalingGroup: this.autoScaling,
 			schedule: autoscaling.Schedule.cron({
-				hour: '8', // 8 AM UTC
 				minute: '0',
+				hour: '8', // 8 AM UTC
+				day: '*', // Every day
+				month: '*', // Every month
+				weekDay: '*', // Every day of the week
 			}),
 			minCapacity: 1,
 			maxCapacity: 1,
