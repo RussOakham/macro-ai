@@ -68,7 +68,11 @@ export class SecurityGroupsConstruct extends Construct {
 	) {
 		super(scope, id)
 
-		const { vpc, environmentName = 'development', exportPrefix = 'MacroAI-Development' } = props
+		const {
+			vpc,
+			environmentName = 'development',
+			exportPrefix = 'MacroAI-Development',
+		} = props
 		this.exportPrefix = exportPrefix
 
 		// Create shared ALB security group
