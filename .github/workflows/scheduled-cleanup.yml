@@ -44,7 +44,7 @@ jobs:
       environments: ${{ steps.discover.outputs.environments }}
       total-count: ${{ steps.discover.outputs.total-count }}
       cleanup-count: ${{ steps.discover.outputs.cleanup-count }}
-      
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -59,21 +59,21 @@ jobs:
         id: discover
         run: |
           echo "🔍 Discovering active preview environments..."
-          
+
           # Configuration
           DRY_RUN="${{ inputs.dry_run || 'true' }}"
           MAX_AGE_HOURS="${{ inputs.max_age_hours || '24' }}"
           FORCE_CLEANUP="${{ inputs.force_cleanup || 'false' }}"
           CURRENT_TIME=$(date +%s)
           MAX_AGE_SECONDS=$((MAX_AGE_HOURS * 3600))
-          
+
           echo "Configuration:"
           echo "  Dry Run: $DRY_RUN"
           echo "  Max Age: $MAX_AGE_HOURS hours"
           echo "  Force Cleanup: $FORCE_CLEANUP"
           echo "  Current Time: $(date -u)"
           echo ""
-          
+
           # Find all CloudFormation stacks matching preview pattern
           echo "🔍 Searching for preview environment stacks..."
           STACKS=$(aws cloudformation list-stacks \
@@ -81,17 +81,17 @@ jobs:
             --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE \
             --query 'StackSummaries[?contains(StackName, `MacroAiPr`) && contains(StackName, `Stack`)].{Name:StackName,CreationTime:CreationTime}' \
             --output json)
-          
+
           echo "Found stacks:"
           echo "$STACKS" | jq -r '.[] | "  - \(.Name) (created: \(.CreationTime))"'
-          
+
           TOTAL_COUNT=$(echo "$STACKS" | jq length)
           echo "total-count=$TOTAL_COUNT" >> $GITHUB_OUTPUT
-          
+
           # Filter stacks for cleanup based on age
           CLEANUP_ENVIRONMENTS="[]"
           CLEANUP_COUNT=0
-          
+
           if [[ "$TOTAL_COUNT" -gt 0 ]]; then
             echo ""
             echo "🕐 Evaluating environments for cleanup..."
@@ -149,14 +149,14 @@ jobs:
               echo ""
             done
           fi
-          
+
           echo "cleanup-count=$CLEANUP_COUNT" >> $GITHUB_OUTPUT
           echo "environments=$(echo "$CLEANUP_ENVIRONMENTS" | jq -c .)" >> $GITHUB_OUTPUT
-          
+
           echo "📊 Discovery Summary:"
           echo "  Total preview environments: $TOTAL_COUNT"
           echo "  Environments for cleanup: $CLEANUP_COUNT"
-          
+
           if [[ "$CLEANUP_COUNT" -gt 0 ]]; then
             echo ""
             echo "🗑️ Environments scheduled for cleanup:"
@@ -169,13 +169,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: discover-environments
     if: needs.discover-environments.outputs.cleanup-count > 0
-    
+
     strategy:
       matrix:
         environment: ${{ fromJson(needs.discover-environments.outputs.environments) }}
       fail-fast: false
       max-parallel: 3
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -213,20 +213,20 @@ jobs:
           CDK_DEPLOY_SCALE: 'preview'
         run: |
           cd infrastructure
-          
+
           STACK_NAME="${{ matrix.environment.stack_name }}"
           ENV_NAME="${{ matrix.environment.env_name }}"
           PR_NUMBER="${{ matrix.environment.pr_number }}"
           AGE_HOURS="${{ matrix.environment.age_hours }}"
           DRY_RUN="${{ inputs.dry_run || 'true' }}"
-          
+
           echo "🗑️ Scheduled cleanup for environment: $ENV_NAME"
           echo "📦 Stack: $STACK_NAME"
           echo "🔗 PR: #$PR_NUMBER"
           echo "🕐 Age: ${AGE_HOURS} hours"
           echo "🧪 Dry Run: $DRY_RUN"
           echo ""
-          
+
           if [[ "$DRY_RUN" == "true" ]]; then
             echo "🧪 DRY RUN MODE - Would destroy the following resources:"
             echo "  - CloudFormation Stack: $STACK_NAME"
@@ -281,12 +281,12 @@ jobs:
         if: steps.cleanup.outputs.cleanup-result != 'dry-run-success'
         run: |
           cd infrastructure
-          
+
           ENV_NAME="${{ matrix.environment.env_name }}"
           STACK_NAME="${{ matrix.environment.stack_name }}"
 
           echo "🔍 Verifying cleanup for environment: $ENV_NAME"
-          
+
           # Wait a moment for AWS to process the deletion
           sleep 10
 
@@ -299,14 +299,37 @@ jobs:
             echo "⚠️ Some resources may still be terminating"
           fi
 
-  # Generate cleanup report and summary
+  # Generate cleanup report and cost optimization tracking
   generate-report:
-    name: Generate Cleanup Report
+    name: Generate Cleanup Report & Cost Tracking
     runs-on: ubuntu-latest
     needs: [discover-environments, cleanup-environments]
     if: always() && needs.discover-environments.outputs.total-count > 0
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Record cost optimization data
+        run: |
+          cd infrastructure
+
+          CLEANUP_COUNT="${{ needs.discover-environments.outputs.cleanup-count }}"
+          DRY_RUN="${{ inputs.dry_run || 'true' }}"
+
+          if [[ "$DRY_RUN" == "false" && "$CLEANUP_COUNT" -gt 0 ]]; then
+            echo "📊 Recording cost optimization data..."
+
+            # Record cleanup operation for cost tracking
+            if ./scripts/cost-optimization-reporter.sh --report-cleanup --environments-cleaned "$CLEANUP_COUNT"; then
+              echo "✅ Cost optimization data recorded successfully"
+            else
+              echo "⚠️ Failed to record cost optimization data (non-critical)"
+            fi
+          else
+            echo "🧪 Dry run mode or no cleanup - skipping cost tracking"
+          fi
+
       - name: Generate cleanup summary
         run: |
           echo "📊 Scheduled Preview Environment Cleanup Report"
@@ -353,6 +376,39 @@ jobs:
           echo "📅 Next Scheduled Run: Tomorrow at 10:00 PM UTC"
           echo ""
           echo "✅ Scheduled cleanup completed successfully"
+
+      - name: Send cost optimization notifications
+        if: inputs.dry_run != 'true' && needs.discover-environments.outputs.cleanup-count > 0
+        run: |
+          cd infrastructure
+
+          echo "📢 Sending cost optimization notifications..."
+
+          # Send Slack notification if webhook is configured
+          if [[ -n "${{ secrets.SLACK_WEBHOOK_URL || '' }}" ]]; then
+            echo "📱 Sending Slack notification..."
+            if ./scripts/cost-optimization-reporter.sh --send-notification slack --webhook-url "${{ secrets.SLACK_WEBHOOK_URL }}"; then
+              echo "✅ Slack notification sent successfully"
+            else
+              echo "⚠️ Failed to send Slack notification (non-critical)"
+            fi
+          else
+            echo "ℹ️ Slack webhook not configured - skipping Slack notification"
+          fi
+
+          # Send email notification if configured
+          if [[ -n "${{ secrets.COST_REPORT_EMAIL || '' }}" ]]; then
+            echo "📧 Sending email notification..."
+            if ./scripts/cost-optimization-reporter.sh --send-notification email --email-recipient "${{ secrets.COST_REPORT_EMAIL }}"; then
+              echo "✅ Email notification sent successfully"
+            else
+              echo "⚠️ Failed to send email notification (non-critical)"
+            fi
+          else
+            echo "ℹ️ Email recipient not configured - skipping email notification"
+          fi
+
+          echo "📢 Notification sending completed"
 
       - name: Create job summary
         run: |
