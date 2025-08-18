@@ -380,19 +380,9 @@ export class AdvancedSecurityMonitoringConstruct extends Construct {
 			}),
 		)
 
-		// Add permissions for CloudWatch logs
-		role.addToPolicy(
-			new iam.PolicyStatement({
-				effect: iam.Effect.ALLOW,
-				actions: [
-					'logs:CreateLogStream',
-					'logs:PutLogEvents',
-					'logs:DescribeLogGroups',
-					'logs:DescribeLogStreams',
-				],
-				resources: [this.securityLogGroup.logGroupArn],
-			}),
-		)
+		// Add permissions for CloudWatch logs using built-in helper
+		// This grants correct permissions for creating log streams and putting log events
+		this.securityLogGroup.grantWrite(role)
 
 		// Add permissions for CloudWatch metrics
 		role.addToPolicy(
