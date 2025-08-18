@@ -211,7 +211,7 @@ verify_auto_scaling_groups() {
     asg_count=$(aws autoscaling describe-auto-scaling-groups \
         --region "$AWS_REGION" \
         --query "AutoScalingGroups[?contains(AutoScalingGroupName, '$ENV_NAME')].AutoScalingGroupName" \
-        --output text 2>/dev/null | wc -w || echo "0")
+        --output text 2>/dev/null | wc -w || true)
     
     if [[ "$asg_count" -eq 0 ]]; then
         log_success "No Auto Scaling Groups found"
@@ -240,7 +240,7 @@ verify_load_balancers() {
     alb_count=$(aws elbv2 describe-load-balancers \
         --region "$AWS_REGION" \
         --query "LoadBalancers[?contains(LoadBalancerName, '$ENV_NAME')].LoadBalancerName" \
-        --output text 2>/dev/null | wc -w || echo "0")
+        --output text 2>/dev/null | wc -w || true)
     
     if [[ "$alb_count" -eq 0 ]]; then
         log_success "No Application Load Balancers found"
@@ -270,7 +270,7 @@ verify_ec2_instances() {
         --region "$AWS_REGION" \
         --filters "Name=tag:Environment,Values=$ENV_NAME" "Name=instance-state-name,Values=running,pending,stopping,stopped" \
         --query 'Reservations[].Instances[].InstanceId' \
-        --output text 2>/dev/null | wc -w || echo "0")
+        --output text 2>/dev/null | wc -w || true)
     
     if [[ "$instance_count" -eq 0 ]]; then
         log_success "No EC2 instances found"
@@ -299,7 +299,7 @@ verify_launch_templates() {
     lt_count=$(aws ec2 describe-launch-templates \
         --region "$AWS_REGION" \
         --query "LaunchTemplates[?contains(LaunchTemplateName, '$ENV_NAME')].LaunchTemplateName" \
-        --output text 2>/dev/null | wc -w || echo "0")
+        --output text 2>/dev/null | wc -w || true)
 
     if [[ "$lt_count" -eq 0 ]]; then
         log_success "No Launch Templates found"
@@ -321,13 +321,24 @@ verify_launch_templates() {
 # Check Security Groups
 verify_security_groups() {
     log_info "Checking Security Groups for environment: $ENV_NAME"
-    # Match by name or Environment tag
-    local sg_ids sg_count
-    sg_ids=$(aws ec2 describe-security-groups \
+    # Match by name OR by Environment tag (union)
+    local sg_by_name sg_by_tag sg_ids sg_count
+    sg_by_name=$(aws ec2 describe-security-groups \
         --region "$AWS_REGION" \
-        --filters "Name=group-name,Values=*${ENV_NAME}*" "Name=tag:Environment,Values=${ENV_NAME}" \
+        --filters "Name=group-name,Values=*${ENV_NAME}*" \
         --query 'SecurityGroups[].GroupId' \
-        --output text 2>/dev/null || echo "")
+        --output text 2>/dev/null || true)
+    sg_by_tag=$(aws ec2 describe-security-groups \
+        --region "$AWS_REGION" \
+        --filters "Name=tag:Environment,Values=${ENV_NAME}" \
+        --query 'SecurityGroups[].GroupId' \
+        --output text 2>/dev/null || true)
+    # Deduplicate and flatten
+    sg_ids=$(printf "%s\n%s\n" "$sg_by_name" "$sg_by_tag" \
+        | tr '\t' '\n' \
+        | awk 'NF' \
+        | sort -u \
+        | tr '\n' ' ')
     sg_count=$(wc -w <<<"$sg_ids")
 
     if [[ "$sg_count" -eq 0 ]]; then
@@ -349,7 +360,7 @@ verify_target_groups() {
     tg_count=$(aws elbv2 describe-target-groups \
         --region "$AWS_REGION" \
         --query "TargetGroups[?contains(TargetGroupName, '$ENV_NAME')].TargetGroupArn" \
-        --output text 2>/dev/null | wc -w || echo "0")
+        --output text 2>/dev/null | wc -w || true)
 
     if [[ "$tg_count" -eq 0 ]]; then
         log_success "No Target Groups found"
