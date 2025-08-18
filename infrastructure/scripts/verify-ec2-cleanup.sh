@@ -114,8 +114,14 @@ parse_arguments() {
                 ;;
             --pr-number)
                 PR_NUMBER="$2"
-                ENV_NAME="pr-$2"
-                STACK_NAME="MacroAi$(echo "pr-$2" | sed 's/^./\U&/')Stack"
+                # Extract digits and format consistently
+                if [[ "$2" =~ ^[0-9]+$ ]]; then
+                    ENV_NAME="pr-$2"
+                    STACK_NAME="MacroAiPr${2}Stack"
+                else
+                    log_error "Invalid PR number format: $2. Must be digits only."
+                    exit 2
+                fi
                 shift 2
                 ;;
             --region)
@@ -153,14 +159,27 @@ parse_arguments() {
         exit 2
     fi
 
-    # Generate missing parameters
+    # Generate missing parameters using consistent regex extraction and formatting
     if [[ -n "${ENV_NAME:-}" ]] && [[ -z "${STACK_NAME:-}" ]]; then
-        STACK_NAME="MacroAi$(echo "${ENV_NAME}" | sed 's/^./\U&/')Stack"
+        # Extract digits from ENV_NAME (pr-123 -> 123) and format STACK_NAME
+        if [[ "$ENV_NAME" =~ ^pr-([0-9]+)$ ]]; then
+            local digits="${BASH_REMATCH[1]}"
+            STACK_NAME="MacroAiPr${digits}Stack"
+        else
+            log_error "Invalid environment name format: $ENV_NAME. Expected format: pr-<digits>"
+            exit 2
+        fi
     fi
-    
+
     if [[ -n "${STACK_NAME:-}" ]] && [[ -z "${ENV_NAME:-}" ]]; then
-        # Extract env name from stack name (MacroAiPr123Stack -> pr-123)
-        ENV_NAME=$(echo "$STACK_NAME" | sed 's/MacroAi\(.*\)Stack/\1/' | sed 's/\(.\)/\l\1/')
+        # Extract digits from STACK_NAME (MacroAiPr123Stack -> 123) and format ENV_NAME
+        if [[ "$STACK_NAME" =~ ^MacroAiPr([0-9]+)Stack$ ]]; then
+            local digits="${BASH_REMATCH[1]}"
+            ENV_NAME="pr-${digits}"
+        else
+            log_error "Invalid stack name format: $STACK_NAME. Expected format: MacroAiPr<digits>Stack"
+            exit 2
+        fi
     fi
 }
 
