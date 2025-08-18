@@ -438,6 +438,7 @@ jobs:
           NODE_ENV: 'production'
           PR_NUMBER: ${{ github.event.pull_request.number }}
           BRANCH_NAME: ${{ github.head_ref }}
+          COST_ALERT_EMAILS: ${{ secrets.COST_ALERT_EMAILS }}
 
       - name: Get EC2 deployment outputs
         id: outputs
