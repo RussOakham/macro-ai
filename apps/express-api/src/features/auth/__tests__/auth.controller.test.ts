@@ -566,12 +566,22 @@ describe('AuthController', () => {
 			expect(mockResponse.cookie).toHaveBeenCalledWith(
 				'macro-ai-accessToken',
 				'access-token',
-				expect.any(Object),
+				expect.objectContaining({
+					httpOnly: false,
+					secure: false, // test environment
+					domain: undefined, // localhost case
+					sameSite: 'strict',
+				}),
 			)
 			expect(mockResponse.cookie).toHaveBeenCalledWith(
 				'macro-ai-refreshToken',
 				'refresh-token',
-				expect.any(Object),
+				expect.objectContaining({
+					httpOnly: true,
+					secure: false, // test environment
+					domain: undefined, // localhost case
+					sameSite: 'strict',
+				}),
 			)
 			expect(mockResponse.cookie).toHaveBeenCalledWith(
 				'macro-ai-synchronize',
@@ -681,6 +691,81 @@ describe('AuthController', () => {
 			expect(mockNext).toHaveBeenCalledWith(userServiceError)
 			expect(mockResponse.status).not.toHaveBeenCalled()
 			expect(mockResponse.json).not.toHaveBeenCalled()
+		})
+
+		it('should set domain field to undefined when cookieDomain is localhost', async () => {
+			// Arrange
+			const loginRequest = {
+				email: 'test@example.com',
+				password: 'password123',
+			}
+
+			mockRequest.body = loginRequest
+
+			const mockSignInResponse: InitiateAuthCommandOutput = {
+				AuthenticationResult: {
+					AccessToken: 'access-token',
+					RefreshToken: 'refresh-token',
+					ExpiresIn: 3600,
+				},
+				$metadata: {
+					httpStatusCode: 200,
+					requestId: 'test-request-id',
+					attempts: 1,
+					totalRetryDelay: 0,
+				},
+			}
+
+			vi.mocked(validateData).mockReturnValue({ success: true })
+			vi.mocked(cognitoService.signInUser).mockResolvedValue([
+				mockSignInResponse,
+				null,
+			])
+			vi.mocked(userService.registerOrLoginUserById).mockResolvedValue([
+				mockUser,
+				null,
+			])
+			vi.mocked(handleServiceError).mockReturnValue({ success: true })
+			vi.mocked(encrypt).mockReturnValue(['encrypted-value', null])
+
+			// Act
+			await authController.login(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert - Verify domain field is undefined for localhost (default test config)
+			expect(mockResponse.cookie).toHaveBeenCalledWith(
+				'macro-ai-accessToken',
+				'access-token',
+				expect.objectContaining({
+					domain: undefined, // Should be undefined for localhost
+					httpOnly: false,
+					secure: false, // test environment
+					sameSite: 'strict',
+				}),
+			)
+			expect(mockResponse.cookie).toHaveBeenCalledWith(
+				'macro-ai-refreshToken',
+				'refresh-token',
+				expect.objectContaining({
+					domain: undefined, // Should be undefined for localhost
+					httpOnly: true,
+					secure: false, // test environment
+					sameSite: 'strict',
+				}),
+			)
+			expect(mockResponse.cookie).toHaveBeenCalledWith(
+				'macro-ai-synchronize',
+				'encrypted-value',
+				expect.objectContaining({
+					domain: undefined, // Should be undefined for localhost
+					httpOnly: true,
+					secure: false, // test environment
+					sameSite: 'strict',
+				}),
+			)
 		})
 	})
 
@@ -1110,17 +1195,32 @@ describe('AuthController', () => {
 			expect(mockResponse.cookie).toHaveBeenCalledWith(
 				'macro-ai-accessToken',
 				'new-access-token',
-				expect.any(Object),
+				expect.objectContaining({
+					httpOnly: false,
+					secure: false, // test environment
+					domain: undefined, // localhost case
+					sameSite: 'strict',
+				}),
 			)
 			expect(mockResponse.cookie).toHaveBeenCalledWith(
 				'macro-ai-refreshToken',
 				'new-refresh-token',
-				expect.any(Object),
+				expect.objectContaining({
+					httpOnly: true,
+					secure: false, // test environment
+					domain: undefined, // localhost case
+					sameSite: 'strict',
+				}),
 			)
 			expect(mockResponse.cookie).toHaveBeenCalledWith(
 				'macro-ai-synchronize',
 				'encrypted-username',
-				expect.any(Object),
+				expect.objectContaining({
+					httpOnly: true,
+					secure: false, // test environment
+					domain: undefined, // localhost case
+					sameSite: 'strict',
+				}),
 			)
 			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
 			expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1132,6 +1232,77 @@ describe('AuthController', () => {
 				},
 			})
 			expect(mockNext).not.toHaveBeenCalled()
+		})
+
+		it('should set domain field to undefined when cookieDomain is localhost during refresh', async () => {
+			// Arrange
+			mockRequest.cookies = {
+				'macro-ai-refreshToken': 'refresh-token',
+				'macro-ai-synchronize': 'encrypted-username',
+			}
+
+			const mockRefreshTokenResponse: InitiateAuthCommandOutput = {
+				AuthenticationResult: {
+					AccessToken: 'new-access-token',
+					RefreshToken: 'new-refresh-token',
+					ExpiresIn: 3600,
+				},
+				$metadata: {
+					httpStatusCode: 200,
+					requestId: 'test-request-id',
+					attempts: 1,
+					totalRetryDelay: 0,
+				},
+			}
+
+			vi.mocked(tryCatchSync)
+				.mockReturnValueOnce(['refresh-token', null]) // getRefreshToken
+				.mockReturnValueOnce(['encrypted-username', null]) // getSynchronizeToken
+			vi.mocked(decrypt).mockReturnValue(['decrypted-username', null])
+			vi.mocked(cognitoService.refreshToken).mockResolvedValue([
+				mockRefreshTokenResponse,
+				null,
+			])
+			vi.mocked(handleServiceError).mockReturnValue({ success: true })
+
+			// Act
+			await authController.refreshToken(
+				mockRequest as Request,
+				mockResponse as Response,
+				mockNext,
+			)
+
+			// Assert - Verify domain field is undefined for localhost (default test config)
+			expect(mockResponse.cookie).toHaveBeenCalledWith(
+				'macro-ai-accessToken',
+				'new-access-token',
+				expect.objectContaining({
+					domain: undefined, // Should be undefined for localhost
+					httpOnly: false,
+					secure: false, // test environment
+					sameSite: 'strict',
+				}),
+			)
+			expect(mockResponse.cookie).toHaveBeenCalledWith(
+				'macro-ai-refreshToken',
+				'new-refresh-token',
+				expect.objectContaining({
+					domain: undefined, // Should be undefined for localhost
+					httpOnly: true,
+					secure: false, // test environment
+					sameSite: 'strict',
+				}),
+			)
+			expect(mockResponse.cookie).toHaveBeenCalledWith(
+				'macro-ai-synchronize',
+				'encrypted-username',
+				expect.objectContaining({
+					domain: undefined, // Should be undefined for localhost
+					httpOnly: true,
+					secure: false, // test environment
+					sameSite: 'strict',
+				}),
+			)
 		})
 
 		it('should handle getRefreshToken error', async () => {
