@@ -1,0 +1,522 @@
+name: Scheduled Preview Environment Cleanup
+
+on:
+  schedule:
+    # Run every night at 10:00 PM UTC (0 22 * * *)
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run mode (preview what would be cleaned up without actually deleting)'
+        required: false
+        type: boolean
+        default: true
+      max_age_hours:
+        description: 'Maximum age in hours for preview environments (default: 24)'
+        required: false
+        type: string
+        default: '24'
+      force_cleanup:
+        description: 'Force cleanup even if environments are younger than max age'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: read
+  actions: read
+
+concurrency:
+  group: scheduled-cleanup
+  cancel-in-progress: false # Don't cancel running cleanup operations
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20'
+  PNPM_VERSION: '10.14.0'
+  # CDK environment variables
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_REGION: us-east-1
+
+jobs:
+  # Discover all active preview environments
+  discover-environments:
+    name: Discover Preview Environments
+    runs-on: ubuntu-latest
+    outputs:
+      environments: ${{ steps.discover.outputs.environments }}
+      total-count: ${{ steps.discover.outputs.total-count }}
+      cleanup-count: ${{ steps.discover.outputs.cleanup-count }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Discover preview environments
+        id: discover
+        run: |
+          echo "🔍 Discovering active preview environments..."
+
+          # Configuration
+          # For scheduled runs: default to false (live mode)
+          # For manual dispatch: use input value (defaults to true in UI)
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            DRY_RUN="false"
+          else
+            DRY_RUN="${{ inputs.dry_run || 'true' }}"
+          fi
+          MAX_AGE_HOURS="${{ inputs.max_age_hours || '24' }}"
+          FORCE_CLEANUP="${{ inputs.force_cleanup || 'false' }}"
+          CURRENT_TIME=$(date +%s)
+          MAX_AGE_SECONDS=$((MAX_AGE_HOURS * 3600))
+
+          echo "Configuration:"
+          echo "  Dry Run: $DRY_RUN"
+          echo "  Max Age: $MAX_AGE_HOURS hours"
+          echo "  Force Cleanup: $FORCE_CLEANUP"
+          echo "  Current Time: $(date -u)"
+          echo ""
+
+          # Find all CloudFormation stacks matching preview pattern
+          echo "🔍 Searching for preview environment stacks..."
+          STACKS=$(aws cloudformation list-stacks \
+            --region "$AWS_REGION" \
+            --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE \
+            --query 'StackSummaries[?contains(StackName, `MacroAiPr`) && contains(StackName, `Stack`)].{Name:StackName,CreationTime:CreationTime}' \
+            --output json)
+
+          echo "Found stacks:"
+          echo "$STACKS" | jq -r '.[] | "  - \(.Name) (created: \(.CreationTime))"'
+
+          TOTAL_COUNT=$(echo "$STACKS" | jq length)
+          echo "total-count=$TOTAL_COUNT" >> $GITHUB_OUTPUT
+
+          # Filter stacks for cleanup based on age
+          CLEANUP_ENVIRONMENTS="[]"
+          CLEANUP_COUNT=0
+
+          if [[ "$TOTAL_COUNT" -gt 0 ]]; then
+            echo ""
+            echo "🕐 Evaluating environments for cleanup..."
+
+            for stack in $(echo "$STACKS" | jq -r '.[] | @base64'); do
+              STACK_DATA=$(echo "$stack" | base64 --decode)
+              STACK_NAME=$(echo "$STACK_DATA" | jq -r '.Name')
+              CREATION_TIME=$(echo "$STACK_DATA" | jq -r '.CreationTime')
+
+              # Convert creation time to epoch
+              CREATION_EPOCH=$(date -d "$CREATION_TIME" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "${CREATION_TIME%.*}" +%s 2>/dev/null || echo "0")
+              AGE_SECONDS=$((CURRENT_TIME - CREATION_EPOCH))
+              AGE_HOURS=$((AGE_SECONDS / 3600))
+
+              # Extract PR number from stack name (MacroAiPr123Stack -> 123)
+              PR_NUMBER=$(echo "$STACK_NAME" | sed 's/MacroAiPr\([0-9]*\)Stack/\1/')
+              ENV_NAME="pr-$PR_NUMBER"
+
+              echo "  Stack: $STACK_NAME"
+              echo "    PR: $PR_NUMBER"
+              echo "    Environment: $ENV_NAME"
+              echo "    Age: $AGE_HOURS hours"
+
+              # Determine if should be cleaned up
+              SHOULD_CLEANUP=false
+              if [[ "$FORCE_CLEANUP" == "true" ]]; then
+                SHOULD_CLEANUP=true
+                echo "    Action: CLEANUP (forced)"
+              elif [[ "$AGE_SECONDS" -gt "$MAX_AGE_SECONDS" ]]; then
+                SHOULD_CLEANUP=true
+                echo "    Action: CLEANUP (age > $MAX_AGE_HOURS hours)"
+              else
+                echo "    Action: SKIP (age < $MAX_AGE_HOURS hours)"
+              fi
+
+              if [[ "$SHOULD_CLEANUP" == "true" ]]; then
+                CLEANUP_ENV=$(jq -n \
+                  --arg stack_name "$STACK_NAME" \
+                  --arg pr_number "$PR_NUMBER" \
+                  --arg env_name "$ENV_NAME" \
+                  --arg age_hours "$AGE_HOURS" \
+                  --arg creation_time "$CREATION_TIME" \
+                  '{
+                    stack_name: $stack_name,
+                    pr_number: $pr_number,
+                    env_name: $env_name,
+                    age_hours: ($age_hours | tonumber),
+                    creation_time: $creation_time
+                  }')
+
+                CLEANUP_ENVIRONMENTS=$(echo "$CLEANUP_ENVIRONMENTS" | jq ". + [$CLEANUP_ENV]")
+                ((CLEANUP_COUNT++))
+              fi
+
+              echo ""
+            done
+          fi
+
+          echo "cleanup-count=$CLEANUP_COUNT" >> $GITHUB_OUTPUT
+          echo "environments=$(echo "$CLEANUP_ENVIRONMENTS" | jq -c .)" >> $GITHUB_OUTPUT
+
+          echo "📊 Discovery Summary:"
+          echo "  Total preview environments: $TOTAL_COUNT"
+          echo "  Environments for cleanup: $CLEANUP_COUNT"
+
+          if [[ "$CLEANUP_COUNT" -gt 0 ]]; then
+            echo ""
+            echo "🗑️ Environments scheduled for cleanup:"
+            echo "$CLEANUP_ENVIRONMENTS" | jq -r '.[] | "  - \(.env_name) (PR #\(.pr_number), age: \(.age_hours)h)"'
+          fi
+
+  # Clean up discovered environments
+  cleanup-environments:
+    name: Cleanup Preview Environments
+    runs-on: ubuntu-latest
+    needs: discover-environments
+    if: needs.discover-environments.outputs.cleanup-count > 0
+
+    strategy:
+      matrix:
+        environment: ${{ fromJson(needs.discover-environments.outputs.environments) }}
+      fail-fast: false
+      max-parallel: 3
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          cd infrastructure
+          pnpm install --frozen-lockfile
+
+      - name: Install CDK CLI
+        run: pnpm add -g aws-cdk
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Cleanup environment
+        id: cleanup
+        env:
+          # EC2 preview environment context
+          CDK_DEPLOY_ENV: ${{ matrix.environment.env_name }}
+          CDK_DEPLOY_TYPE: 'ec2-preview'
+          CDK_DEPLOY_SCALE: 'preview'
+        run: |
+          cd infrastructure
+
+          STACK_NAME="${{ matrix.environment.stack_name }}"
+          ENV_NAME="${{ matrix.environment.env_name }}"
+          PR_NUMBER="${{ matrix.environment.pr_number }}"
+          AGE_HOURS="${{ matrix.environment.age_hours }}"
+
+          # Use same DRY_RUN logic as discovery step
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            DRY_RUN="false"
+          else
+            DRY_RUN="${{ inputs.dry_run || 'true' }}"
+          fi
+
+          echo "🗑️ Scheduled cleanup for environment: $ENV_NAME"
+          echo "📦 Stack: $STACK_NAME"
+          echo "🔗 PR: #$PR_NUMBER"
+          echo "🕐 Age: ${AGE_HOURS} hours"
+          echo "🧪 Dry Run: $DRY_RUN"
+          echo ""
+
+          if [[ "$DRY_RUN" == "true" ]]; then
+            echo "🧪 DRY RUN MODE - Would destroy the following resources:"
+            echo "  - CloudFormation Stack: $STACK_NAME"
+            echo "  - Auto Scaling Group: macro-ai-${ENV_NAME}-asg"
+            echo "  - Application Load Balancer: macro-ai-${ENV_NAME}-alb"
+            echo "  - Launch Template: macro-ai-${ENV_NAME}-preview-launch-template"
+            echo "  - EC2 instances managed by Auto Scaling Group"
+            echo ""
+            echo "✅ Dry run completed - no resources were actually destroyed"
+            echo "cleanup-result=dry-run-success" >> $GITHUB_OUTPUT
+          else
+            echo "🔥 LIVE MODE - Destroying preview environment..."
+
+            # List stack resources for logging
+            echo "📋 Stack resources to be destroyed:"
+            aws cloudformation list-stack-resources \
+              --stack-name "$STACK_NAME" \
+              --query 'StackResourceSummaries[].{Type:ResourceType,LogicalId:LogicalResourceId,Status:ResourceStatus}' \
+              --output table || echo "Could not list resources"
+
+            echo ""
+
+            # Attempt to destroy the stack with retries
+            DESTROY_SUCCESS=false
+            for attempt in {1..3}; do
+              echo "🔄 Destruction attempt ${attempt}/3..."
+
+              if pnpm cdk destroy "$STACK_NAME" --force; then
+                DESTROY_SUCCESS=true
+                echo "✅ Stack destroyed successfully"
+                break
+              else
+                echo "❌ Destruction attempt ${attempt} failed"
+                if [[ ${attempt} -lt 3 ]]; then
+                  echo "⏳ Waiting 30 seconds before retry..."
+                  sleep 30
+                fi
+              fi
+            done
+
+            if [[ "$DESTROY_SUCCESS" == "true" ]]; then
+              echo "cleanup-result=success" >> $GITHUB_OUTPUT
+            else
+              echo "cleanup-result=failed" >> $GITHUB_OUTPUT
+              echo "❌ All destruction attempts failed"
+              exit 1
+            fi
+          fi
+
+      - name: Verify cleanup
+        id: verify
+        if: steps.cleanup.outputs.cleanup-result != 'dry-run-success'
+        run: |
+          cd infrastructure
+
+          ENV_NAME="${{ matrix.environment.env_name }}"
+          STACK_NAME="${{ matrix.environment.stack_name }}"
+
+          echo "🔍 Verifying cleanup for environment: $ENV_NAME"
+
+          # Wait a moment for AWS to process the deletion
+          sleep 10
+
+          # Use centralized verification script
+          if ./scripts/verify-ec2-cleanup.sh --env-name "$ENV_NAME" --stack-name "$STACK_NAME" --timeout 300 --verbose; then
+            echo "verification-result=success" >> $GITHUB_OUTPUT
+            echo "✅ Scheduled cleanup verification complete"
+          else
+            echo "verification-result=partial" >> $GITHUB_OUTPUT
+            echo "⚠️ Some resources may still be terminating"
+          fi
+
+  # Generate cleanup report and cost optimization tracking
+  generate-report:
+    name: Generate Cleanup Report & Cost Tracking
+    runs-on: ubuntu-latest
+    needs: [discover-environments, cleanup-environments]
+    if: always() && needs.discover-environments.outputs.total-count > 0
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Record cost optimization data
+        run: |
+          cd infrastructure
+
+          CLEANUP_COUNT="${{ needs.discover-environments.outputs.cleanup-count }}"
+
+          # Use same DRY_RUN logic as discovery step
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            DRY_RUN="false"
+          else
+            DRY_RUN="${{ inputs.dry_run || 'true' }}"
+          fi
+
+          if [[ "$DRY_RUN" == "false" && "$CLEANUP_COUNT" -gt 0 ]]; then
+            echo "📊 Recording cost optimization data..."
+
+            # Record cleanup operation for cost tracking
+            if ./scripts/cost-optimization-reporter.sh --report-cleanup --environments-cleaned "$CLEANUP_COUNT"; then
+              echo "✅ Cost optimization data recorded successfully"
+            else
+              echo "⚠️ Failed to record cost optimization data (non-critical)"
+            fi
+          else
+            echo "🧪 Dry run mode or no cleanup - skipping cost tracking"
+          fi
+
+      - name: Generate cleanup summary
+        run: |
+          echo "📊 Scheduled Preview Environment Cleanup Report"
+          echo "=============================================="
+          echo "🕐 Execution Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "🔍 Discovery Results:"
+          echo "  - Total preview environments found: ${{ needs.discover-environments.outputs.total-count }}"
+          echo "  - Environments scheduled for cleanup: ${{ needs.discover-environments.outputs.cleanup-count }}"
+          echo ""
+
+          DRY_RUN="${{ inputs.dry_run || 'true' }}"
+          if [[ "$DRY_RUN" == "true" ]]; then
+            echo "🧪 DRY RUN MODE - No resources were actually destroyed"
+            echo "This was a preview of what would be cleaned up in live mode."
+          else
+            echo "🔥 LIVE MODE - Resources were actually destroyed"
+            echo "Cost optimization through automated cleanup completed."
+          fi
+
+          echo ""
+          echo "📈 Cost Optimization Impact:"
+          CLEANUP_COUNT="${{ needs.discover-environments.outputs.cleanup-count }}"
+          if [[ "$CLEANUP_COUNT" -gt 0 ]]; then
+            # Estimate cost savings (rough calculation)
+            # Assume each preview environment costs ~$2-5/day
+            ESTIMATED_DAILY_SAVINGS=$((CLEANUP_COUNT * 3))
+            ESTIMATED_MONTHLY_SAVINGS=$((ESTIMATED_DAILY_SAVINGS * 30))
+
+            echo "  - Environments cleaned up: $CLEANUP_COUNT"
+            echo "  - Estimated daily cost savings: ~\$${ESTIMATED_DAILY_SAVINGS}"
+            echo "  - Estimated monthly cost savings: ~\$${ESTIMATED_MONTHLY_SAVINGS}"
+          else
+            echo "  - No environments required cleanup"
+            echo "  - All preview environments are within age limits"
+          fi
+
+          echo ""
+          echo "🔧 Configuration Used:"
+          echo "  - Max Age: ${{ inputs.max_age_hours || '24' }} hours"
+          echo "  - Force Cleanup: ${{ inputs.force_cleanup || 'false' }}"
+          echo "  - Dry Run: $DRY_RUN"
+
+          echo ""
+          echo "📅 Next Scheduled Run: Tomorrow at 10:00 PM UTC"
+          echo ""
+          echo "✅ Scheduled cleanup completed successfully"
+
+      - name: Send cost optimization notifications
+        if: ((github.event_name == 'schedule') || (github.event_name == 'workflow_dispatch' && inputs.dry_run != true)) && needs.discover-environments.outputs.cleanup-count > 0
+        run: |
+          cd infrastructure
+
+          echo "📢 Sending cost optimization notifications..."
+
+          # Send Slack notification if webhook is configured
+          if [[ -n "${{ secrets.SLACK_WEBHOOK_URL || '' }}" ]]; then
+            echo "📱 Sending Slack notification..."
+            if ./scripts/cost-optimization-reporter.sh --send-notification slack --webhook-url "${{ secrets.SLACK_WEBHOOK_URL }}"; then
+              echo "✅ Slack notification sent successfully"
+            else
+              echo "⚠️ Failed to send Slack notification (non-critical)"
+            fi
+          else
+            echo "ℹ️ Slack webhook not configured - skipping Slack notification"
+          fi
+
+          # Send email notification if configured
+          if [[ -n "${{ secrets.COST_REPORT_EMAIL || '' }}" ]]; then
+            echo "📧 Sending email notification..."
+            if ./scripts/cost-optimization-reporter.sh --send-notification email --email-recipient "${{ secrets.COST_REPORT_EMAIL }}"; then
+              echo "✅ Email notification sent successfully"
+            else
+              echo "⚠️ Failed to send email notification (non-critical)"
+            fi
+          else
+            echo "ℹ️ Email recipient not configured - skipping email notification"
+          fi
+
+          echo "📢 Notification sending completed"
+
+      - name: Create job summary
+        run: |
+          echo "# 🗑️ Scheduled Preview Environment Cleanup" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Execution Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Environments Found | ${{ needs.discover-environments.outputs.total-count }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Environments Cleaned Up | ${{ needs.discover-environments.outputs.cleanup-count }} |" >> $GITHUB_STEP_SUMMARY
+
+          DRY_RUN="${{ inputs.dry_run || 'true' }}"
+          if [[ "$DRY_RUN" == "true" ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "## 🧪 Dry Run Mode" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "This was a **dry run** - no resources were actually destroyed." >> $GITHUB_STEP_SUMMARY
+            echo "The above numbers represent what would be cleaned up in live mode." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "## 🔥 Live Mode" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Resources were **actually destroyed** for cost optimization." >> $GITHUB_STEP_SUMMARY
+
+            CLEANUP_COUNT="${{ needs.discover-environments.outputs.cleanup-count }}"
+            if [[ "$CLEANUP_COUNT" -gt 0 ]]; then
+              ESTIMATED_DAILY_SAVINGS=$((CLEANUP_COUNT * 3))
+              ESTIMATED_MONTHLY_SAVINGS=$((ESTIMATED_DAILY_SAVINGS * 30))
+
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "## 💰 Estimated Cost Savings" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "- **Daily:** ~\$${ESTIMATED_DAILY_SAVINGS}" >> $GITHUB_STEP_SUMMARY
+              echo "- **Monthly:** ~\$${ESTIMATED_MONTHLY_SAVINGS}" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ⚙️ Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Max Age:** ${{ inputs.max_age_hours || '24' }} hours" >> $GITHUB_STEP_SUMMARY
+          echo "- **Force Cleanup:** ${{ inputs.force_cleanup || 'false' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dry Run:** $DRY_RUN" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Next scheduled run: Tomorrow at 10:00 PM UTC*" >> $GITHUB_STEP_SUMMARY
+
+  # Handle case when no environments need cleanup
+  no-cleanup-needed:
+    name: No Cleanup Required
+    runs-on: ubuntu-latest
+    needs: discover-environments
+    if: needs.discover-environments.outputs.cleanup-count == 0
+
+    steps:
+      - name: Report no cleanup needed
+        run: |
+          echo "✅ No preview environments require cleanup"
+          echo ""
+          echo "📊 Discovery Results:"
+          echo "  - Total preview environments: ${{ needs.discover-environments.outputs.total-count }}"
+          echo "  - All environments are within the age limit of ${{ inputs.max_age_hours || '24' }} hours"
+          echo ""
+          echo "💰 Cost optimization is working effectively!"
+          echo "Preview environments are being cleaned up promptly after PR closure."
+          echo ""
+          echo "📅 Next scheduled check: Tomorrow at 10:00 PM UTC"
+
+      - name: Create summary for no cleanup
+        run: |
+          echo "# 🗑️ Scheduled Preview Environment Cleanup" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Execution Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ No Cleanup Required" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All ${{ needs.discover-environments.outputs.total-count }} preview environments are within the age limit." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This indicates that:" >> $GITHUB_STEP_SUMMARY
+          echo "- Preview environments are being cleaned up promptly after PR closure" >> $GITHUB_STEP_SUMMARY
+          echo "- Cost optimization is working effectively" >> $GITHUB_STEP_SUMMARY
+          echo "- No manual intervention required" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Next scheduled run: Tomorrow at 10:00 PM UTC*" >> $GITHUB_STEP_SUMMARY

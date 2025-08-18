@@ -148,7 +148,7 @@ jobs:
             echo "termination-protection=${TERMINATION_PROTECTION}" >> $GITHUB_OUTPUT
             echo "✅ Production stack found with status: ${STACK_STATUS}"
             echo "🛡️ Termination protection: ${TERMINATION_PROTECTION}"
-            
+
             # List critical production resources
             echo ""
             echo "🚨 PRODUCTION RESOURCES TO BE DESTROYED:"
@@ -156,7 +156,7 @@ jobs:
               --stack-name "${{ env.STACK_NAME }}" \
               --query 'StackResourceSummaries[].{Type:ResourceType,LogicalId:LogicalResourceId,Status:ResourceStatus}' \
               --output table || echo "Could not list resources"
-            
+
             # Get production stack outputs
             echo ""
             echo "🚨 PRODUCTION STACK OUTPUTS (WILL BE LOST):"

@@ -124,14 +124,14 @@ jobs:
             echo "stack-exists=true" >> $GITHUB_OUTPUT
             echo "stack-status=${STACK_STATUS}" >> $GITHUB_OUTPUT
             echo "✅ Staging stack found with status: ${STACK_STATUS}"
-            
+
             # List stack resources for logging
             echo "📋 STAGING RESOURCES TO BE DESTROYED:"
             aws cloudformation list-stack-resources \
               --stack-name "${{ env.STACK_NAME }}" \
               --query 'StackResourceSummaries[].{Type:ResourceType,LogicalId:LogicalResourceId,Status:ResourceStatus}' \
               --output table || echo "Could not list resources"
-            
+
             # Get stack outputs for reference
             echo ""
             echo "📋 STAGING STACK OUTPUTS:"
@@ -207,7 +207,7 @@ jobs:
           DESTROY_SUCCESS=false
           for attempt in {1..5}; do
             echo "🔄 STAGING destruction attempt ${attempt}/5..."
-            
+
             if pnpm cdk destroy "${{ env.STACK_NAME }}" --force; then
               DESTROY_SUCCESS=true
               echo "✅ STAGING stack destroyed successfully"

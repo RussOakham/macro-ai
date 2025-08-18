@@ -112,7 +112,7 @@ jobs:
           if [[ "$APP_INFO" != "[]" ]] && [[ -n "$APP_INFO" ]]; then
             APP_ID=$(echo "$APP_INFO" | jq -r '.[0].appId' 2>/dev/null || echo "")
             APP_STATUS=$(echo "$APP_INFO" | jq -r '.[0].status' 2>/dev/null || echo "")
-            
+
             if [[ -n "$APP_ID" && "$APP_ID" != "null" ]]; then
               echo "app-exists=true" >> $GITHUB_OUTPUT
               echo "app-id=${APP_ID}" >> $GITHUB_OUTPUT
@@ -201,7 +201,7 @@ jobs:
           DESTROY_SUCCESS=false
           for attempt in {1..3}; do
             echo "🔄 Destruction attempt ${attempt}/3..."
-            
+
             if ./scripts/destroy-amplify-preview.sh; then
               DESTROY_SUCCESS=true
               echo "✅ Amplify app destroyed successfully"
@@ -220,13 +220,13 @@ jobs:
           else
             echo "destroy-result=failed" >> $GITHUB_OUTPUT
             echo "❌ All destruction attempts failed"
-            
+
             # Try to get error details
             if [[ -f "amplify-destroy-error.txt" ]]; then
               echo "Error details:"
               cat amplify-destroy-error.txt
             fi
-            
+
             exit 1
           fi
 
@@ -321,13 +321,13 @@ jobs:
               comment += `### 📱 Cleanup Details\n`;
               comment += `- **Environment**: \`${envName}\`\n`;
               comment += `- **Amplify App**: \`${amplifyAppName}\`\n`;
-              
+
               if (verificationResult === 'success') {
                 comment += `- **Status**: ✅ Deletion confirmed\n\n`;
               } else {
                 comment += `- **Status**: ⏳ Deletion in progress\n\n`;
               }
-              
+
               comment += `All resources have been cleaned up and no further action is required.\n\n`;
             } else {
               comment += `❌ **Frontend preview cleanup failed**\n\n`;
