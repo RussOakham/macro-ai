@@ -146,7 +146,7 @@ export class NetworkingConstruct extends Construct {
 			maxAzs,
 			enableNatGateway,
 			enableVpcEndpoints,
-			exportPrefix,
+			exportPrefix: `${exportPrefix}-Development`,
 		})
 
 		this.vpc = vpcConstruct.vpc
