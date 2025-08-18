@@ -146,6 +146,7 @@ export class NetworkingConstruct extends Construct {
 			maxAzs,
 			enableNatGateway,
 			enableVpcEndpoints,
+			exportPrefix,
 		})
 
 		this.vpc = vpcConstruct.vpc
@@ -157,6 +158,7 @@ export class NetworkingConstruct extends Construct {
 		this.securityGroups = new SecurityGroupsConstruct(this, 'SecurityGroups', {
 			vpc: this.vpc,
 			environmentName,
+			exportPrefix,
 		})
 
 		// Create EC2 construct if parameter store prefix is provided
