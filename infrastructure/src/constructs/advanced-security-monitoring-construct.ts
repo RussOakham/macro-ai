@@ -1034,10 +1034,10 @@ async function recordSecurityEvent(securityEvent) {
         });
     }
 
-    await dynamodb.send(new PutItemCommand({
+    await dynamodb.putItem({
         TableName: process.env.SECURITY_EVENT_TABLE,
         Item: item
-    }));
+    }).promise();
 }
 
 async function logSecurityEvent(securityEvent) {
@@ -1055,10 +1055,10 @@ async function logSecurityEvent(securityEvent) {
 
         // Create log stream if it doesn't exist
         try {
-            await cloudwatchLogs.send(new CreateLogStreamCommand({
+            await cloudwatchLogs.createLogStream({
                 logGroupName: process.env.SECURITY_LOG_GROUP,
                 logStreamName: logStreamName
-            }));
+            }).promise();
         } catch (error) {
             // Log stream might already exist, ignore error
             if (!error.message.includes('already exists')) {
@@ -1066,15 +1066,23 @@ async function logSecurityEvent(securityEvent) {
             }
         }
 
+        // Determine sequence token (required after first put)
+        const streams = await cloudwatchLogs.describeLogStreams({
+            logGroupName: process.env.SECURITY_LOG_GROUP,
+            logStreamNamePrefix: logStreamName,
+        }).promise();
+        const sequenceToken = streams.logStreams && streams.logStreams[0] && streams.logStreams[0].uploadSequenceToken;
+
         // Put log event
-        await cloudwatchLogs.send(new PutLogEventsCommand({
+        await cloudwatchLogs.putLogEvents({
             logGroupName: process.env.SECURITY_LOG_GROUP,
             logStreamName: logStreamName,
             logEvents: [{
                 timestamp: Date.now(),
                 message: JSON.stringify(logMessage)
-            }]
-        }));
+            }],
+            sequenceToken: sequenceToken
+        }).promise();
 
     } catch (error) {
         console.error('Failed to log security event:', error);
@@ -1097,10 +1105,10 @@ async function publishSecurityMetrics(securityEvent) {
             }
         ];
 
-        await cloudwatch.send(new PutMetricDataCommand({
+        await cloudwatch.putMetricData({
             Namespace: 'MacroAI/Security',
             MetricData: metrics
-        }));
+        }).promise();
 
     } catch (error) {
         console.error('Failed to publish security metrics:', error);
@@ -1167,7 +1175,7 @@ exports.handler = async (event) => {
 
 async function getSecurityEvents(startTime, endTime) {
     try {
-        const result = await dynamodb.send(new ScanCommand({
+        const result = await dynamodb.scan({
             TableName: process.env.SECURITY_EVENT_TABLE,
             FilterExpression: '#timestamp BETWEEN :startTime AND :endTime',
             ExpressionAttributeNames: {
@@ -1177,7 +1185,7 @@ async function getSecurityEvents(startTime, endTime) {
                 ':startTime': { S: startTime.toISOString() },
                 ':endTime': { S: endTime.toISOString() }
             }
-        }));
+        }).promise();
 
         return result.Items?.map(parseSecurityEvent).filter(Boolean) || [];
 
@@ -1424,10 +1432,10 @@ async function publishAnalysisMetrics(analysis) {
             }
         ];
 
-        await cloudwatch.send(new PutMetricDataCommand({
+        await cloudwatch.putMetricData({
             Namespace: 'MacroAI/Security',
             MetricData: metrics
-        }));
+        }).promise();
 
     } catch (error) {
         console.error('Failed to publish analysis metrics:', error);
@@ -1474,13 +1482,11 @@ function parseSecurityEvent(item) {
 	 */
 	private getComplianceCheckerCode(): string {
 		return `
-const { ConfigServiceClient, GetComplianceDetailsByConfigRuleCommand, DescribeConfigRulesCommand } = require('@aws-sdk/client-config-service');
-const { DynamoDBClient, PutItemCommand } = require('@aws-sdk/client-dynamodb');
-const { CloudWatchClient, PutMetricDataCommand } = require('@aws-sdk/client-cloudwatch');
+const AWS = require('aws-sdk');
 
-const configService = new ConfigServiceClient();
-const dynamodb = new DynamoDBClient();
-const cloudwatch = new CloudWatchClient();
+const configService = new AWS.ConfigService();
+const dynamodb = new AWS.DynamoDB();
+const cloudwatch = new AWS.CloudWatch();
 
 exports.handler = async (event) => {
     console.log('Compliance checker event:', JSON.stringify(event, null, 2));
@@ -1534,7 +1540,7 @@ exports.handler = async (event) => {
 
 async function getConfigRules() {
     try {
-        const result = await configService.send(new DescribeConfigRulesCommand({}));
+        const result = await configService.describeConfigRules({}).promise();
         return result.ConfigRules || [];
     } catch (error) {
         console.error('Failed to get Config rules:', error);
@@ -1547,9 +1553,9 @@ async function checkCompliance(configRules) {
 
     for (const rule of configRules) {
         try {
-            const complianceResult = await configService.send(new GetComplianceDetailsByConfigRuleCommand({
+            const complianceResult = await configService.getComplianceDetailsByConfigRule({
                 ConfigRuleName: rule.ConfigRuleName
-            }));
+            }).promise();
 
             if (complianceResult.EvaluationResults) {
                 complianceResult.EvaluationResults.forEach(evaluation => {
@@ -1610,10 +1616,10 @@ async function recordComplianceViolation(violation) {
         });
     }
 
-    await dynamodb.send(new PutItemCommand({
+    await dynamodb.putItem({
         TableName: process.env.SECURITY_EVENT_TABLE,
         Item: item
-    }));
+    }).promise();
 }
 
 function determineViolationSeverity(violation) {
@@ -1673,10 +1679,10 @@ async function publishComplianceMetrics(results) {
             }
         ];
 
-        await cloudwatch.send(new PutMetricDataCommand({
+        await cloudwatch.putMetricData({
             Namespace: 'MacroAI/Security',
             MetricData: metrics
-        }));
+        }).promise();
 
     } catch (error) {
         console.error('Failed to publish compliance metrics:', error);
