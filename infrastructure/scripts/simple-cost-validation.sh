@@ -170,17 +170,17 @@ validate_priority_3_basic() {
     
     local validation_score=0
     
-    # Check spot instances
+    # Check spot instances using instance lifecycle
     log_info "🔍 Checking spot instance configuration..."
-    local spot_count
-    spot_count=$(aws ec2 describe-spot-instance-requests \
+    local spot_instances
+    spot_instances=$(aws ec2 describe-instances \
         --region "$AWS_REGION" \
-        --filters "Name=tag:Environment,Values=$PR_ENVIRONMENT" "Name=state,Values=active,open" \
-        --query 'length(SpotInstanceRequests[])' \
-        --output text 2>/dev/null || echo "0")
-    
-    if [[ "$spot_count" -gt 0 ]]; then
-        log_success "✅ Spot instances configured: $spot_count requests"
+        --filters "Name=tag:Environment,Values=$PR_ENVIRONMENT" "Name=instance-state-name,Values=running,pending" \
+        --query "Reservations[].Instances[?InstanceLifecycle=='spot'].InstanceId" \
+        --output text 2>/dev/null || echo "")
+
+    if [[ -n "$spot_instances" ]]; then
+        log_success "✅ Spot instances detected: $spot_instances"
         ((validation_score += 50))
     else
         log_info "ℹ️ No active spot instances found (may use on-demand for availability)"

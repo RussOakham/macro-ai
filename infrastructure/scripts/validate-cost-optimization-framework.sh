@@ -200,10 +200,10 @@ get_application_endpoint() {
         --output text 2>/dev/null || echo "")
     
     if [[ -n "$alb_dns" ]]; then
-        echo "https://$alb_dns"
+        echo "http://$alb_dns"
     else
         # Fallback to expected pattern
-        echo "https://macro-ai-$environment_name.example.com"
+        echo "http://macro-ai-$environment_name.example.com"
     fi
 }
 
@@ -222,17 +222,24 @@ validate_infrastructure_optimizations() {
     instances=$(aws ec2 describe-instances \
         --region "${AWS_REGION:-us-east-1}" \
         --filters "Name=tag:Environment,Values=$environment_name" "Name=instance-state-name,Values=running" \
-        --query 'Reservations[].Instances[].[InstanceType,SpotInstanceRequestId]' \
+        --query 'Reservations[].Instances[].InstanceType' \
         --output text 2>/dev/null || echo "")
-    
+
     if [[ "$instances" == *"t3.nano"* ]]; then
         log_success "✅ t3.nano instances verified"
         validation_results+=("instance_type:PASS")
         ((infrastructure_score += 25))
-        
-        # Check for spot instances
-        if [[ "$instances" == *"sir-"* ]]; then
-            log_success "✅ Spot instances detected"
+
+        # Check for spot instances using lifecycle
+        local spot_instances
+        spot_instances=$(aws ec2 describe-instances \
+            --region "${AWS_REGION:-us-east-1}" \
+            --filters "Name=tag:Environment,Values=$environment_name" "Name=instance-state-name,Values=running" \
+            --query "Reservations[].Instances[?InstanceLifecycle=='spot'].InstanceId" \
+            --output text 2>/dev/null || echo "")
+
+        if [[ -n "$spot_instances" ]]; then
+            log_success "✅ Spot instances detected: $spot_instances"
             validation_results+=("spot_instances:PASS")
             ((infrastructure_score += 25))
         else
@@ -357,18 +364,27 @@ run_performance_tests() {
     log_info "🔍 Testing resource efficiency on t3.nano instances..."
 
     # Get instance metrics from CloudWatch (if available)
-    local cpu_utilization
-    cpu_utilization=$(aws cloudwatch get-metric-statistics \
-        --namespace AWS/EC2 \
-        --metric-name CPUUtilization \
-        --dimensions Name=Environment,Value="$environment_name" \
-        --start-time "$(date -u -d '5 minutes ago' '+%Y-%m-%dT%H:%M:%S')" \
-        --end-time "$(date -u '+%Y-%m-%dT%H:%M:%S')" \
-        --period 300 \
-        --statistics Average \
+    local instance_id cpu_utilization
+    instance_id=$(aws ec2 describe-instances \
         --region "${AWS_REGION:-us-east-1}" \
-        --query 'Datapoints[0].Average' \
-        --output text 2>/dev/null || echo "")
+        --filters "Name=tag:Environment,Values=$environment_name" "Name=instance-state-name,Values=running" \
+        --query 'Reservations[].Instances[].InstanceId' \
+        --output text 2>/dev/null | awk "{print \$1}")
+    if [[ -n "$instance_id" ]]; then
+        cpu_utilization=$(aws cloudwatch get-metric-statistics \
+            --namespace AWS/EC2 \
+            --metric-name CPUUtilization \
+            --dimensions Name=InstanceId,Value="$instance_id" \
+            --start-time "$(date -u -d '5 minutes ago' '+%Y-%m-%dT%H:%M:%S')" \
+            --end-time "$(date -u '+%Y-%m-%dT%H:%M:%S')" \
+            --period 300 \
+            --statistics Average \
+            --region "${AWS_REGION:-us-east-1}" \
+            --query 'Datapoints[0].Average' \
+            --output text 2>/dev/null || echo "")
+    else
+        cpu_utilization=""
+    fi
 
     if [[ -n "$cpu_utilization" && "$cpu_utilization" != "None" ]]; then
         if [[ $(echo "$cpu_utilization < 80" | bc -l) -eq 1 ]]; then
