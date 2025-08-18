@@ -113,6 +113,7 @@ export class NetworkingConstruct extends Construct {
 	// Configuration properties
 	private readonly enableNatGateway: boolean
 	private readonly exportPrefix: string
+	private readonly environmentName: string
 
 	constructor(
 		scope: Construct,
@@ -138,10 +139,11 @@ export class NetworkingConstruct extends Construct {
 		// Store configuration for later use
 		this.enableNatGateway = enableNatGateway
 		this.exportPrefix = exportPrefix
+		this.environmentName = environmentName
 
 		// Create VPC infrastructure
 		const vpcConstruct = new VpcConstruct(this, 'Vpc', {
-			environmentName,
+			environmentName: this.environmentName,
 			enableFlowLogs,
 			maxAzs,
 			enableNatGateway,
@@ -157,7 +159,7 @@ export class NetworkingConstruct extends Construct {
 		// Create security groups
 		this.securityGroups = new SecurityGroupsConstruct(this, 'SecurityGroups', {
 			vpc: this.vpc,
-			environmentName,
+			environmentName: this.environmentName,
 			exportPrefix,
 		})
 
@@ -166,7 +168,7 @@ export class NetworkingConstruct extends Construct {
 			this.ec2Construct = new Ec2Construct(this, 'Ec2', {
 				vpc: this.vpc,
 				securityGroup: this.securityGroups.albSecurityGroup, // Default to ALB security group
-				environmentName,
+				environmentName: this.environmentName,
 				parameterStorePrefix,
 				enableDetailedMonitoring,
 				deploymentId,
@@ -178,7 +180,7 @@ export class NetworkingConstruct extends Construct {
 			this.albConstruct = new AlbConstruct(this, 'Alb', {
 				vpc: this.vpc,
 				securityGroup: this.securityGroups.albSecurityGroup,
-				environmentName,
+				environmentName: this.environmentName,
 				enableDetailedMonitoring,
 				customDomain,
 			})
@@ -419,7 +421,7 @@ export class NetworkingConstruct extends Construct {
 	 * Get environment name from constructor props or default
 	 */
 	private getEnvironmentName(): string {
-		return 'development' // Default for now, could be enhanced to read from props
+		return this.environmentName
 	}
 
 	/**
