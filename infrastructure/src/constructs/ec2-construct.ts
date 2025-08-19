@@ -493,6 +493,7 @@ export class Ec2Construct extends Construct {
 			'cd "$RELEASE_DIR"',
 			'',
 			'# Build and deploy the real Express API application directly',
+			'# Force rebuild v2 - ensure latest ES module fix is applied',
 			'echo "$(date): Building and deploying real Express API application..."',
 			'',
 			'# Clone the repository and build the Express API',
