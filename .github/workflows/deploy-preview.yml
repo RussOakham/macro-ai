@@ -386,15 +386,24 @@ jobs:
 
           # Configure CORS origins with simplified approach for custom domains
           if [[ -n "${{ vars.CUSTOM_DOMAIN_NAME }}" ]]; then
-            # For custom domains, include both localhost and the custom domain URL
+            # For custom domains, include localhost, custom domain URL, and Amplify fallback URL
             CUSTOM_DOMAIN_URL="https://pr-${{ github.event.number }}.${{ vars.CUSTOM_DOMAIN_NAME }}"
-            CORS_ORIGINS="http://localhost:5173,http://localhost:3000,${CUSTOM_DOMAIN_URL}"
+            AMPLIFY_FALLBACK_URL="${{ needs.validate-access.outputs.frontend-url }}"
+
+            # Include both custom domain and Amplify fallback URL for reliability
+            if [[ "$AMPLIFY_FALLBACK_URL" != "<will-be-generated-during-deployment>" ]]; then
+              CORS_ORIGINS="http://localhost:5173,http://localhost:3000,${CUSTOM_DOMAIN_URL},${AMPLIFY_FALLBACK_URL%/}"
+            else
+              CORS_ORIGINS="http://localhost:5173,http://localhost:3000,${CUSTOM_DOMAIN_URL}"
+            fi
+
             echo "🔧 CORS Configuration (Custom Domain Mode):"
             echo "  Custom domain: ${{ vars.CUSTOM_DOMAIN_NAME }}"
             echo "  Custom domain URL: $CUSTOM_DOMAIN_URL"
+            echo "  Amplify fallback URL: $AMPLIFY_FALLBACK_URL"
             echo "  Pattern-based CORS enabled in server.ts for pr-*.domain.com"
             echo "  Explicit origins: $CORS_ORIGINS"
-            echo "  ✨ Includes both localhost and custom domain URL"
+            echo "  ✨ Includes localhost, custom domain, and Amplify fallback URLs"
           else
             # Fallback to traditional explicit CORS for non-custom-domain deployments
             FRONTEND_URL="${{ needs.validate-access.outputs.frontend-url }}"

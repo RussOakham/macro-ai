@@ -149,6 +149,42 @@ const createServer = (): Express => {
 		})
 	console.log('[server] ===== END ENVIRONMENT VARIABLES =====')
 
+	// Add middleware to log all incoming requests for debugging
+	app.use((req, res, next) => {
+		console.log(`[server] REQUEST: ${req.method} ${req.url}`)
+		console.log(
+			`[server] REQUEST: Origin header: ${req.headers.origin ?? 'null'}`,
+		)
+		if (req.method === 'OPTIONS') {
+			console.log(`[server] REQUEST: ⚠️ PREFLIGHT REQUEST detected`)
+			console.log(
+				`[server] REQUEST: Access-Control-Request-Method: ${req.headers['access-control-request-method'] ?? 'null'}`,
+			)
+			console.log(
+				`[server] REQUEST: Access-Control-Request-Headers: ${req.headers['access-control-request-headers'] ?? 'null'}`,
+			)
+		}
+
+		// EMERGENCY CORS FIX: Add basic CORS headers to all responses
+		res.header('Access-Control-Allow-Origin', req.headers.origin ?? '*')
+		res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+		res.header(
+			'Access-Control-Allow-Headers',
+			'Origin,X-Requested-With,Content-Type,Accept,Authorization,X-API-KEY,Cache-Control',
+		)
+		res.header('Access-Control-Allow-Credentials', 'true')
+
+		// Handle preflight requests immediately
+		if (req.method === 'OPTIONS') {
+			console.log(
+				`[server] EMERGENCY: Handling OPTIONS preflight with manual headers`,
+			)
+			return res.status(200).end()
+		}
+
+		next()
+	})
+
 	app.use(
 		cors({
 			origin: (origin, callback) => {
@@ -217,6 +253,31 @@ const createServer = (): Express => {
 			maxAge: 86400,
 		}),
 	)
+
+	// Add middleware to log CORS response headers
+	app.use((req, res, next) => {
+		const originalSend = res.send
+		res.send = function (body) {
+			if (req.method === 'OPTIONS') {
+				console.log(`[server] RESPONSE: ⚠️ PREFLIGHT RESPONSE`)
+				console.log(
+					`[server] RESPONSE: Access-Control-Allow-Origin: ${res.getHeader('Access-Control-Allow-Origin') as string}`,
+				)
+				console.log(
+					`[server] RESPONSE: Access-Control-Allow-Methods: ${res.getHeader('Access-Control-Allow-Methods') as string}`,
+				)
+				console.log(
+					`[server] RESPONSE: Access-Control-Allow-Headers: ${res.getHeader('Access-Control-Allow-Headers') as string}`,
+				)
+				console.log(
+					`[server] RESPONSE: Access-Control-Allow-Credentials: ${res.getHeader('Access-Control-Allow-Credentials') as string}`,
+				)
+			}
+			return originalSend.call(this, body)
+		}
+		next()
+	})
+
 	// Conditional compression - disable for streaming endpoints
 	app.use(
 		compression({
