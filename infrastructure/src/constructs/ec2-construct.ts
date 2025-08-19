@@ -279,17 +279,14 @@ export class Ec2Construct extends Construct {
 		)
 
 		// S3 access for deployment artifacts (read-only)
+		// S3 access for deployment artifacts (read-only)
 		role.addToPolicy(
 			new iam.PolicyStatement({
 				effect: iam.Effect.ALLOW,
 				actions: ['s3:GetObject', 's3:GetObjectVersion', 's3:ListBucket'],
 				resources: [
-					cdk.Stack.of(this).formatArn({
-						service: 's3',
-						region: '',
-						resource: 'macro-ai-deployment-artifacts-*',
-						resourceName: '*',
-					}),
+					`arn:aws:s3:::macro-ai-deployment-artifacts-${cdk.Stack.of(this).account}`,
+					`arn:aws:s3:::macro-ai-deployment-artifacts-${cdk.Stack.of(this).account}/*`,
 				],
 			}),
 		)
@@ -302,7 +299,6 @@ export class Ec2Construct extends Construct {
 				resources: ['*'],
 			}),
 		)
-
 		return role
 	}
 
