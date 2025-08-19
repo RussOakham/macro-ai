@@ -266,8 +266,12 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		}
 
 		// Get deployment artifact information from CDK context
-		const deploymentBucket = this.node.tryGetContext('deploymentBucket') as string | undefined
-		const deploymentKey = this.node.tryGetContext('deploymentKey') as string | undefined
+		const deploymentBucket = this.node.tryGetContext('deploymentBucket') as
+			| string
+			| undefined
+		const deploymentKey = this.node.tryGetContext('deploymentKey') as
+			| string
+			| undefined
 
 		// Create user data with CORS configuration and deployment artifact info
 		const userData = this.createPreviewUserData(
@@ -447,7 +451,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			'echo "$(date): CORS configuration set to: ${corsAllowedOrigins}"',
 			'echo "$(date): Preview environment setup completed for PR ${prNumber} (${branchName})"',
 			'',
-			'echo "$(date): Deploying Express API from pre-built artifact..."',
+			'echo "$(date): Deploying Express API from pre-built artifact v4..."',
 			'mkdir -p /opt/macro-ai/app || error_exit "Failed to create app directory"',
 			'chown -R macroai:macroai /opt/macro-ai /var/log/macro-ai',
 			'',
