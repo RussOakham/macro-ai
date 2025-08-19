@@ -386,14 +386,15 @@ jobs:
 
           # Configure CORS origins with simplified approach for custom domains
           if [[ -n "${{ vars.CUSTOM_DOMAIN_NAME }}" ]]; then
-            # For custom domains, use pattern-based CORS (handled in server.ts)
-            # Set minimal explicit origins for localhost development
-            CORS_ORIGINS="http://localhost:5173,http://localhost:3000"
+            # For custom domains, include both localhost and the custom domain URL
+            CUSTOM_DOMAIN_URL="https://pr-${{ github.event.number }}.${{ vars.CUSTOM_DOMAIN_NAME }}"
+            CORS_ORIGINS="http://localhost:5173,http://localhost:3000,${CUSTOM_DOMAIN_URL}"
             echo "🔧 CORS Configuration (Custom Domain Mode):"
             echo "  Custom domain: ${{ vars.CUSTOM_DOMAIN_NAME }}"
+            echo "  Custom domain URL: $CUSTOM_DOMAIN_URL"
             echo "  Pattern-based CORS enabled in server.ts for pr-*.domain.com"
             echo "  Explicit origins: $CORS_ORIGINS"
-            echo "  ✨ Simplified workflow - no frontend URL dependency needed"
+            echo "  ✨ Includes both localhost and custom domain URL"
           else
             # Fallback to traditional explicit CORS for non-custom-domain deployments
             FRONTEND_URL="${{ needs.validate-access.outputs.frontend-url }}"
