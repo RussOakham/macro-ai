@@ -36,7 +36,7 @@ graph TB
 
 #### Purchase Domain (One-time setup)
 
-1. Purchase domain from GoDaddy or preferred registrar
+1. Purchase domain from preferred registrar
 2. Note the domain name (e.g., `macro-ai.russoakham.dev`)
 
 #### Create Route 53 Hosted Zone (One-time setup)
@@ -53,7 +53,7 @@ aws route53 create-hosted-zone \
 #### Update Nameservers (One-time setup)
 
 1. Get nameservers from Route 53 hosted zone
-2. Update nameservers in domain registrar (GoDaddy)
+2. Update nameservers in domain registrar
 3. Wait for DNS propagation (up to 48 hours)
 
 ### 2. GitHub Repository Configuration

@@ -1,6 +1,6 @@
 # Custom Domain Implementation Summary
 
-This document provides a comprehensive summary of the custom domain implementation for preview environments.
+This document provides a comprehensive overview of the custom domain implementation for preview environments.
 
 ## Overview
 
@@ -9,57 +9,50 @@ The custom domain feature enables preview environments to use branded subdomains
 - **Frontend**: `https://pr-{number}.macro-ai.russoakham.dev`
 - **Backend**: `https://pr-{number}-api.macro-ai.russoakham.dev`
 
-## Implementation Status
+## Implementation Components
 
-### ✅ Completed Phases
+### DNS Infrastructure Setup
 
-#### Phase 1: DNS Infrastructure Setup
+- **Route 53 Hosted Zone**: Configured hosted zone for domain management
+- **Domain Registration**: Domain registered with external registrar (e.g., GoDaddy)
+- **Nameserver Configuration**: Nameservers pointed to Route 53
+- **DNS Propagation**: DNS records managed automatically by AWS services
 
-- **Route 53 Hosted Zone**: Created and configured (`Z10081873B648ARROPNER`)
-- **Domain Registration**: Purchased `macro-ai.russoakham.dev` via GoDaddy
-- **Nameserver Configuration**: Updated GoDaddy nameservers to Route 53
-- **DNS Propagation**: Verified and completed successfully
-
-#### Phase 2: CDK Infrastructure Updates
+### CDK Infrastructure Updates
 
 - **Custom Domain Props**: Added to MacroAiPreviewStack interface
 - **Environment Variables**: Integrated `CUSTOM_DOMAIN_NAME` and `HOSTED_ZONE_ID`
 - **API Gateway**: Updated to support custom domain configuration
 - **SSL Certificates**: Automatic creation via ACM when custom domain is configured
-- **Configuration Management**: Removed hardcoded values, externalized to environment variables
+- **Configuration Management**: Externalized configuration to environment variables
 
-#### Phase 3: Backend API Configuration
+### Backend API Configuration
 
 - **CORS Configuration**: Updated to include custom domain origins dynamically
 - **Environment Variable Support**: Backend reads `CUSTOM_DOMAIN_NAME` for CORS setup
 - **Fallback Behavior**: Graceful handling when custom domain is not configured
-- **Deployment**: Successfully deployed and tested in development environment
+- **Deployment**: Supports both custom domain and default URL configurations
 
-#### Phase 4: Frontend Amplify Configuration
+### Frontend Amplify Configuration
 
 - **Amplify Templates**: Updated to use environment variables for API URLs and CSP
 - **Custom Domain Script**: Created `configure-amplify-custom-domain.sh` for domain management
 - **SSL Certificate Management**: Automatic certificate creation and validation
 - **Content Security Policy**: Dynamic CSP headers based on custom domain configuration
 
-#### Phase 5: GitHub Actions Integration
+### GitHub Actions Integration
 
 - **Workflow Updates**: Modified deploy-preview.yml to support custom domain URL calculation
 - **Environment Variables**: Added `CUSTOM_DOMAIN_NAME` and `HOSTED_ZONE_ID` to workflow
 - **Custom Domain Configuration**: Integrated domain setup into Amplify deployment process
 - **Fallback Logic**: Graceful fallback to default URLs if custom domain configuration fails
 
-#### Phase 6: Testing & Verification
+### Testing & Verification
 
 - **Testing Guide**: Comprehensive testing procedures and scenarios
 - **Deployment Guide**: Step-by-step deployment and configuration instructions
 - **Troubleshooting**: Common issues and solutions documented
 - **Health Checks**: Verification procedures for DNS, SSL, and application functionality
-
-#### Phase 7: Documentation & Rollback Procedures
-
-- **Implementation Summary**: This document
-- **Rollback Procedures**: Safe rollback strategies documented below
 
 ## Architecture Overview
 

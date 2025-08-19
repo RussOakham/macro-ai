@@ -11,7 +11,7 @@ The custom domain implementation includes multiple rollback strategies depending
 3. **Complete Rollback**: Full removal of custom domain functionality
 4. **Infrastructure Rollback**: CDK and AWS resource cleanup
 
-## Emergency Rollback (Immediate - 2 minutes)
+## Emergency Rollback (Immediate)
 
 Use this procedure for critical issues affecting production or when immediate fallback is required.
 
@@ -73,7 +73,7 @@ echo "✅ All services operational"
 echo "📝 Investigation in progress"
 ```
 
-## Partial Rollback (Selective - 10 minutes)
+## Partial Rollback (Selective)
 
 Use this procedure to rollback specific components while maintaining others.
 
@@ -153,7 +153,7 @@ Use this procedure to rollback specific components while maintaining others.
    # HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
    ```
 
-## Complete Rollback (Full Removal - 30 minutes)
+## Complete Rollback (Full Removal)
 
 Use this procedure to completely remove custom domain functionality.
 
@@ -250,7 +250,7 @@ aws route53 list-resource-record-sets \
    mv docs/deployment/custom-domain-*.md docs/archived/custom-domain-implementation/
    ```
 
-## Infrastructure Rollback (AWS Resources - 15 minutes)
+## Infrastructure Rollback (AWS Resources)
 
 Use this procedure to clean up AWS resources related to custom domains.
 
@@ -351,13 +351,13 @@ aws acm list-certificates --region us-east-1 \
 
 ## Rollback Decision Matrix
 
-| Issue Severity        | Scope              | Recommended Rollback    | Time Required |
-| --------------------- | ------------------ | ----------------------- | ------------- |
-| Critical Production   | All environments   | Emergency Rollback      | 2 minutes     |
-| Major Functionality   | Single component   | Partial Rollback        | 10 minutes    |
-| Performance Issues    | Specific feature   | Partial Rollback        | 10 minutes    |
-| Security Concerns     | All custom domains | Complete Rollback       | 30 minutes    |
-| Infrastructure Issues | AWS resources      | Infrastructure Rollback | 15 minutes    |
+| Issue Severity        | Scope              | Recommended Rollback    | Complexity |
+| --------------------- | ------------------ | ----------------------- | ---------- |
+| Critical Production   | All environments   | Emergency Rollback      | Low        |
+| Major Functionality   | Single component   | Partial Rollback        | Medium     |
+| Performance Issues    | Specific feature   | Partial Rollback        | Medium     |
+| Security Concerns     | All custom domains | Complete Rollback       | High       |
+| Infrastructure Issues | AWS resources      | Infrastructure Rollback | Medium     |
 
 ## Communication Templates
 

@@ -1,45 +1,34 @@
-# Route53 IAM Permissions Fix for Custom Domain Configuration
+# Route53 IAM Permissions for Custom Domain Configuration
 
-## Issue Summary
+## Overview
 
-The custom domain configuration script is failing with "Hosted zone not found" errors during AWS Amplify
-deployment. This occurs because the GitHub Actions IAM role lacks the necessary Route53 permissions to
-validate hosted zones.
+Custom domain configuration requires specific Route53 permissions for the GitHub Actions IAM role to manage DNS
+records and validate hosted zones during deployment.
 
-## Error Details
+## Required Permissions
 
-```text
-Hosted zone validation failed: Z10081873B648ARROPNER
-AWS CLI Error: An error occurred (AccessDenied) when calling the GetHostedZone operation:
-User: arn:aws:sts::***:assumed-role/GitHubActionsDeploymentRole/GitHubActions-PreviewDeploy-Frontend-***
-is not authorized to perform: route53:GetHostedZone because no identity-based policy allows the route53:GetHostedZone action
-```
-
-## Root Cause
-
-The GitHub Actions IAM policies (`amplify-github-actions-policy.json` and
-`enhanced-github-actions-policy.json`) were missing Route53 permissions required for custom domain
-configuration:
+The GitHub Actions IAM policies (`amplify-github-actions-policy.json` and `enhanced-github-actions-policy.json`)
+must include Route53 permissions for custom domain configuration:
 
 - `route53:GetHostedZone` - Required to validate hosted zone exists
-- `route53:ListHostedZones` - Optional, for debugging
+- `route53:ListHostedZones` - Required for hosted zone discovery
 - `route53:GetChange` - Required for DNS change tracking
 - `route53:ListResourceRecordSets` - Required for domain record management
 
-## Solution Applied
+## Configuration
 
-### 1. Enhanced Script Error Handling
+### Script Error Handling
 
-Updated `apps/client-ui/scripts/configure-amplify-custom-domain.sh` to provide detailed error information:
+The `apps/client-ui/scripts/configure-amplify-custom-domain.sh` includes comprehensive error handling:
 
-- Shows actual AWS CLI error messages
+- Shows detailed AWS CLI error messages
 - Detects permission vs. zone existence issues
 - Provides specific guidance for different error types
 - Validates zone name matches root domain
 
-### 2. Added Route53 Permissions
+### Route53 Permissions
 
-Added the following permissions to both IAM policy files:
+Add the following permissions to both IAM policy files:
 
 ```json
 {
@@ -60,9 +49,9 @@ Added the following permissions to both IAM policy files:
 }
 ```
 
-### 3. Added ACM Certificate Permissions
+### ACM Certificate Permissions
 
-Also added AWS Certificate Manager permissions for SSL certificate management:
+AWS Certificate Manager permissions for SSL certificate management:
 
 ```json
 {
@@ -161,13 +150,13 @@ The permissions are scoped to:
 
 ## Expected Results
 
-After applying these changes:
+With proper permissions configured:
 
-1. ✅ **Hosted Zone Validation**: Script will successfully validate hosted zone access
-2. ✅ **Better Error Messages**: Clear guidance when issues occur
-3. ✅ **Domain Association**: AWS Amplify domain configuration will proceed
-4. ✅ **SSL Certificate**: ACM certificate management will work
-5. ✅ **End-to-End Success**: Custom domain functionality will complete successfully
+1. ✅ **Hosted Zone Validation**: Script successfully validates hosted zone access
+2. ✅ **Clear Error Messages**: Detailed guidance when issues occur
+3. ✅ **Domain Association**: AWS Amplify domain configuration proceeds
+4. ✅ **SSL Certificate**: ACM certificate management functions properly
+5. ✅ **End-to-End Success**: Custom domain functionality completes successfully
 
 ## Rollback Procedure
 

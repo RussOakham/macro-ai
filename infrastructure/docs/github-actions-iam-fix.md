@@ -1,19 +1,14 @@
-# GitHub Actions IAM Permissions Fix
+# GitHub Actions IAM Permissions Configuration
 
-## Issue Summary
+## Overview
 
-The CI/CD pipeline is failing during Phase 1 ASG verification with the following error:
+The CI/CD pipeline requires specific IAM permissions for the GitHub Actions deployment role to access AWS resources
+during deployment and health check operations.
 
-```text
-An error occurred (AccessDenied) when calling the DescribeAutoScalingGroups operation:
-User: arn:aws:sts::***:assumed-role/GitHubActionsDeploymentRole/GitHubActions-PreviewDeploy-Backend-17012472682
-is not authorized to perform: autoscaling:DescribeAutoScalingGroups because no identity-based policy allows the autoscaling:DescribeAutoScalingGroups action
-```
+## Configuration Requirements
 
-## Root Cause
-
-The enhanced IAM policy file (`infrastructure/iam-policies/enhanced-github-actions-policy.json`) contains the required
-permissions, but these permissions have not been applied to the actual AWS IAM role `GitHubActionsDeploymentRole`.
+The enhanced IAM policy file (`infrastructure/iam-policies/enhanced-github-actions-policy.json`) must be applied
+to the AWS IAM role `GitHubActionsDeploymentRole` to ensure proper functionality.
 
 ## Required Permissions
 

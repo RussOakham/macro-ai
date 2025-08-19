@@ -20,7 +20,7 @@ HOSTED_ZONE_ID=Z10081873B648ARROPNER
 
 ### DNS Configuration
 
-1. **Domain purchased and configured** in GoDaddy
+1. **Domain purchased and configured** with domain registrar
 2. **Route 53 hosted zone** created and nameservers updated
 3. **DNS propagation** completed (verify with `dig` or `nslookup`)
 
@@ -196,7 +196,7 @@ curl -vI https://pr-123.macro-ai.russoakham.dev 2>&1 | grep -E "(SSL|TLS|certifi
 **Solutions:**
 
 1. Verify Route 53 hosted zone configuration
-2. Check nameserver propagation in GoDaddy
+2. Check nameserver propagation with domain registrar
 3. Wait for DNS propagation (up to 48 hours)
 4. Verify `HOSTED_ZONE_ID` is correct
 
