@@ -1225,13 +1225,46 @@ jobs:
           if [[ "$JOB_STATUS" == "SUCCEED" ]]; then
             # Sanitize branch for Amplify subdomain: replace '/' with '-'
             SANITIZED_BRANCH="${BRANCH_NAME//\//-}"
-            APP_URL="https://${SANITIZED_BRANCH}.${APP_ID}.amplifyapp.com/"
+            DEFAULT_APP_URL="https://${SANITIZED_BRANCH}.${APP_ID}.amplifyapp.com/"
             echo "✅ Deployment successful!"
-            echo "🌐 Frontend URL: ${APP_URL}"
+            echo "🌐 Default Frontend URL: ${DEFAULT_APP_URL}"
+
+            # Configure custom domain if available
+            CUSTOM_DOMAIN_NAME="${{ env.CUSTOM_DOMAIN_NAME }}"
+            HOSTED_ZONE_ID="${{ env.HOSTED_ZONE_ID }}"
+            FINAL_APP_URL="$DEFAULT_APP_URL"
+
+            if [[ -n "$CUSTOM_DOMAIN_NAME" && -n "$HOSTED_ZONE_ID" ]]; then
+              echo "🌐 Configuring custom domain: $CUSTOM_DOMAIN_NAME"
+
+              # Use the custom domain configuration script
+              chmod +x apps/client-ui/scripts/configure-amplify-custom-domain.sh
+
+              CUSTOM_SUBDOMAIN="pr-${{ github.event.pull_request.number }}.${CUSTOM_DOMAIN_NAME}"
+
+              if apps/client-ui/scripts/configure-amplify-custom-domain.sh \
+                --app-id "$APP_ID" \
+                --domain "$CUSTOM_SUBDOMAIN" \
+                --hosted-zone-id "$HOSTED_ZONE_ID" \
+                --environment "preview" \
+                --branch "$BRANCH_NAME" \
+                --no-wait; then
+
+                FINAL_APP_URL="https://${CUSTOM_SUBDOMAIN}/"
+                echo "✅ Custom domain configured successfully!"
+                echo "🌐 Custom Frontend URL: ${FINAL_APP_URL}"
+                echo "📝 Note: SSL certificate verification may take a few minutes"
+              else
+                echo "⚠️ Custom domain configuration failed, using default URL"
+                echo "🌐 Fallback Frontend URL: ${DEFAULT_APP_URL}"
+              fi
+            else
+              echo "📝 No custom domain configured, using default Amplify URL"
+            fi
 
             {
               echo "app-id=${APP_ID}"
-              echo "app-url=${APP_URL}"
+              echo "app-url=${FINAL_APP_URL}"
               echo "job-id=${JOB_ID}"
               echo "deployment-status=success"
             } >> "$GITHUB_OUTPUT"
