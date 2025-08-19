@@ -17,7 +17,18 @@ export interface Ec2ConstructProps {
 	readonly securityGroup: ec2.ISecurityGroup
 
 	/**
-	 * Environment name for resource naming and tagging
+	 * Environment name for resource n'# S3 deployment artifact configuration',
+'AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)',
+'ENVIRONMENT_NAME=$(curl -s http://169.254.169.254/latest/meta-data/tags/instance/Environment || echo "development")',
+'DEPLOYMENT_BUCKET="macro-ai-deployment-artifacts-${AWS_ACCOUNT_ID}"',
+'DEPLOYMENT_KEY="express-api/${ENVIRONMENT_NAME}/express-api-deployment.tar.gz"',
+'ARTIFACT_PATH="/tmp/express-api-deployment.tar.gz"',
+'',
+'echo "$(date): Using deployment configuration:"',
+'echo "  AWS Account: ${AWS_ACCOUNT_ID}"',
+'echo "  Environment: ${ENVIRONMENT_NAME}"',
+'echo "  S3 Bucket: ${DEPLOYMENT_BUCKET}"',
+'echo "  S3 Key: ${DEPLOYMENT_KEY}"',g and tagging
 	 * @default 'development'
 	 */
 	readonly environmentName?: string
@@ -273,11 +284,22 @@ export class Ec2Construct extends Construct {
 				effect: iam.Effect.ALLOW,
 				actions: ['s3:GetObject', 's3:GetObjectVersion', 's3:ListBucket'],
 				resources: [
-					'arn:aws:s3:::${AWS::AccountId}-macro-ai-deployment-*',
-					'arn:aws:s3:::${AWS::AccountId}-macro-ai-deployment-*/*',
-					'arn:aws:s3:::macro-ai-deployment-*',
-					'arn:aws:s3:::macro-ai-deployment-*/*',
+					cdk.Stack.of(this).formatArn({
+						service: 's3',
+						region: '',
+						resource: 'macro-ai-deployment-artifacts-*',
+						resourceName: '*',
+					}),
 				],
+			}),
+		)
+
+		// Allow STS get-caller-identity for S3 bucket resolution
+		role.addToPolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: ['sts:GetCallerIdentity'],
+				resources: ['*'],
 			}),
 		)
 
@@ -510,14 +532,20 @@ export class Ec2Construct extends Construct {
 			'# This ensures we use the exact build with ES module fix from CI/CD',
 			'echo "$(date): Downloading and deploying pre-built Express API application..."',
 			'',
+			'# Get AWS Account ID dynamically',
+			'AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)',
+			'',
 			'# S3 deployment artifact configuration',
 			'DEPLOYMENT_BUCKET="macro-ai-deployment-artifacts-${AWS_ACCOUNT_ID}"',
-			'DEPLOYMENT_KEY="express-api/${ENVIRONMENT_NAME}/express-api-deployment.tar.gz"',
+			'DEPLOYMENT_KEY="express-api/pr-${PR_NUMBER}/express-api-deployment.tar.gz"',
 			'ARTIFACT_PATH="/tmp/express-api-deployment.tar.gz"',
 			'',
 			'echo "$(date): Downloading deployment artifact..."',
+			'echo "  AWS Account: $AWS_ACCOUNT_ID"',
+			'echo "  PR Number: $PR_NUMBER"',
 			'echo "  S3 Bucket: $DEPLOYMENT_BUCKET"',
 			'echo "  S3 Key: $DEPLOYMENT_KEY"',
+			'echo "  Full S3 Path: s3://${DEPLOYMENT_BUCKET}/${DEPLOYMENT_KEY}"',
 			'echo "  Local path: $ARTIFACT_PATH"',
 			'',
 			'# Download the pre-built deployment package from S3',
