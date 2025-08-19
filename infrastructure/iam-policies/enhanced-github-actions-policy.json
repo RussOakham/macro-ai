@@ -129,7 +129,9 @@
 				"arn:aws:s3:::cdk-*",
 				"arn:aws:s3:::cdk-*/*",
 				"arn:aws:s3:::amplify-*",
-				"arn:aws:s3:::amplify-*/*"
+				"arn:aws:s3:::amplify-*/*",
+				"arn:aws:s3:::macro-ai-deployment-artifacts-*",
+				"arn:aws:s3:::macro-ai-deployment-artifacts-*/*"
 			]
 		},
 		{

@@ -144,6 +144,8 @@ class UtilityService implements IUtilityService {
 				timestamp: currentTime.toISOString(),
 				uptime: Math.floor(uptime),
 				memoryUsageMB: Math.round(memoryUsageMB),
+				version: 'artifact-deployment-v5',
+				esModuleFix: true,
 			}
 		}, 'utilityService - getHealthStatus')
 
