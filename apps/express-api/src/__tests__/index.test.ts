@@ -78,7 +78,7 @@ describe('Server Bootstrap (index.ts)', () => {
 
 			// Assert
 			expect(pino.logger.info).toHaveBeenCalledWith(
-				`[server]: Server is running on port: ${config.port.toString()}`,
+				`[server]: Server is running on port: ${config.port.toString()} with ES module fix`,
 			)
 		})
 
