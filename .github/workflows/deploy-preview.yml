@@ -424,7 +424,6 @@ jobs:
           # Note: EC2 deployment will build the Express API directly from source
           echo "📦 EC2 deployment will build Express API directly from source"
           echo "🚀 No artifact upload needed - simplified direct build approach"
-          cd infrastructure
 
           # Deploy EC2-based infrastructure using Phase 4 constructs
           echo "🏗️ Deploying EC2 infrastructure with Phase 4 constructs..."
