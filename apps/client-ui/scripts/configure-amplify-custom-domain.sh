@@ -157,8 +157,8 @@ validate_inputs() {
 
     # Parse domain to extract root domain and subdomain prefix for AWS Amplify
     # AWS Amplify expects: --domain-name "root.domain.tld" --sub-domain-settings "prefix=subdomain"
-    local ROOT_DOMAIN=""
-    local SUBDOMAIN_PREFIX=""
+    ROOT_DOMAIN=""
+    SUBDOMAIN_PREFIX=""
 
     # Count dots to determine if this is a subdomain
     local dot_count=$(echo "$CUSTOM_DOMAIN_NAME" | tr -cd '.' | wc -c)
@@ -219,9 +219,15 @@ validate_inputs() {
         zone_name=${zone_name%.}
         print_info "✅ Hosted zone validated: $zone_name (ID: $HOSTED_ZONE_ID)"
 
-        # Verify the zone name matches our root domain
-        if [[ "$zone_name" != "$ROOT_DOMAIN" ]]; then
-            print_warning "⚠️  Zone name ($zone_name) doesn't match root domain ($ROOT_DOMAIN)"
+        # Verify the zone name is compatible with our root domain
+        # The root domain should either match the zone exactly or be a subdomain of the zone
+        if [[ "$zone_name" == "$ROOT_DOMAIN" ]]; then
+            print_info "✅ Zone name matches root domain exactly"
+        elif [[ "$ROOT_DOMAIN" == *".$zone_name" ]]; then
+            print_info "✅ Root domain ($ROOT_DOMAIN) is a valid subdomain of zone ($zone_name)"
+        else
+            print_warning "⚠️  Zone name ($zone_name) may not be compatible with root domain ($ROOT_DOMAIN)"
+            print_warning "Expected: $ROOT_DOMAIN should end with .$zone_name"
             print_warning "This may cause domain association issues."
         fi
     else
