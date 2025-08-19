@@ -28,6 +28,9 @@ env:
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
   CDK_DEFAULT_REGION: us-east-1
+  # Custom domain configuration (optional)
+  CUSTOM_DOMAIN_NAME: ${{ vars.CUSTOM_DOMAIN_NAME }}
+  HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
 
 jobs:
   # Check if PR author is a code owner and from same repo
@@ -139,61 +142,81 @@ jobs:
             echo "✅ Found existing Amplify app with ID: $APP_ID"
           fi
 
-          # 2. Pre-calculate Frontend URL
-          # Sanitize branch for Amplify subdomain: replace '/' with '-'
-          SANITIZED_BRANCH="${BRANCH_NAME//\//-}"
+          # 2. Pre-calculate Frontend URL (with custom domain support)
+          # Check if custom domain is configured
+          CUSTOM_DOMAIN_NAME="${{ vars.CUSTOM_DOMAIN_NAME || '' }}"
 
-          if [[ "$APP_ID" == "<will-be-created>" ]]; then
-            # Generate a predictable URL pattern for new apps
-            # Amplify app IDs are typically 13-character alphanumeric strings
-            # We'll create a deterministic placeholder that can be used for CORS
-            # The actual URL will be updated after deployment, but this provides a non-localhost fallback
-            PREDICTED_APP_ID="d$(echo "${ENV_NAME}-${PR_NUMBER}" | sha256sum | cut -c1-12)"
-            FRONTEND_URL="https://${SANITIZED_BRANCH}.${PREDICTED_APP_ID}.amplifyapp.com"
-            echo "🌐 Predicted Frontend URL (app will be created): $FRONTEND_URL"
-            echo "📝 Note: Actual URL will be determined during Amplify deployment"
-            echo "⚠️ This predicted URL is for CORS configuration only - the real URL will be different"
+          if [[ -n "$CUSTOM_DOMAIN_NAME" ]]; then
+            # Use custom domain pattern: pr-{number}.domain.com
+            FRONTEND_URL="https://pr-${PR_NUMBER}.${CUSTOM_DOMAIN_NAME}"
+            echo "🌐 Custom Domain Frontend URL: $FRONTEND_URL"
+            echo "📝 Using custom domain: $CUSTOM_DOMAIN_NAME"
           else
-            FRONTEND_URL="https://${SANITIZED_BRANCH}.${APP_ID}.amplifyapp.com"
-            echo "🌐 Pre-calculated Frontend URL: $FRONTEND_URL"
+            # Fallback to default Amplify subdomain pattern
+            # Sanitize branch for Amplify subdomain: replace '/' with '-'
+            SANITIZED_BRANCH="${BRANCH_NAME//\//-}"
+
+            if [[ "$APP_ID" == "<will-be-created>" ]]; then
+              # Generate a predictable URL pattern for new apps
+              # Amplify app IDs are typically 13-character alphanumeric strings
+              # We'll create a deterministic placeholder that can be used for CORS
+              # The actual URL will be updated after deployment, but this provides a non-localhost fallback
+              PREDICTED_APP_ID="d$(echo "${ENV_NAME}-${PR_NUMBER}" | sha256sum | cut -c1-12)"
+              FRONTEND_URL="https://${SANITIZED_BRANCH}.${PREDICTED_APP_ID}.amplifyapp.com"
+              echo "🌐 Predicted Frontend URL (app will be created): $FRONTEND_URL"
+              echo "📝 Note: Actual URL will be determined during Amplify deployment"
+              echo "⚠️ This predicted URL is for CORS configuration only - the real URL will be different"
+            else
+              FRONTEND_URL="https://${SANITIZED_BRANCH}.${APP_ID}.amplifyapp.com"
+              echo "🌐 Pre-calculated Frontend URL: $FRONTEND_URL"
+            fi
           fi
 
-          # 3. Pre-calculate Backend Stack Name and URL
+          # 3. Pre-calculate Backend Stack Name and URL (with custom domain support)
           # Use same naming convention as CDK app.ts: capitalize first letter of full env name
           ENV_NAME="pr-${PR_NUMBER}"
           BACKEND_STACK_NAME="MacroAi$(echo "${ENV_NAME}" | sed 's/^./\U&/')Stack"
           echo "📦 Backend Stack Name: $BACKEND_STACK_NAME"
 
-          # Check if backend stack exists to pre-calculate URL
+          # Pre-calculate Backend URL with custom domain support
           BACKEND_URL=""
-          echo "🔍 Checking if backend stack exists..."
 
-          STACK_EXISTS=$(aws cloudformation describe-stacks \
-            --stack-name "$BACKEND_STACK_NAME" \
-            --query "Stacks[0].StackStatus" \
-            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+          if [[ -n "$CUSTOM_DOMAIN_NAME" ]]; then
+            # Use custom domain pattern: pr-{number}-api.domain.com
+            BACKEND_URL="https://pr-${PR_NUMBER}-api.${CUSTOM_DOMAIN_NAME}/api"
+            echo "🌐 Custom Domain Backend URL: $BACKEND_URL"
+            echo "📝 Using custom domain: $CUSTOM_DOMAIN_NAME"
+          else
+            # Fallback to CloudFormation stack output discovery
+            echo "🔍 Checking if backend stack exists..."
 
-          if [[ "$STACK_EXISTS" != "DOES_NOT_EXIST" ]]; then
-            echo "✅ Backend stack exists, extracting API endpoint..."
-            BACKEND_URL=$(aws cloudformation describe-stacks \
+            STACK_EXISTS=$(aws cloudformation describe-stacks \
               --stack-name "$BACKEND_STACK_NAME" \
-              --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
-              --output text 2>/dev/null || echo "")
+              --query "Stacks[0].StackStatus" \
+              --output text 2>/dev/null || echo "DOES_NOT_EXIST")
 
-            if [[ -n "$BACKEND_URL" ]]; then
-              # Normalize to ensure single /api suffix
-              BACKEND_URL="${BACKEND_URL%/}"
-              if [[ "$BACKEND_URL" != */api ]]; then
-                BACKEND_URL="${BACKEND_URL}/api"
+            if [[ "$STACK_EXISTS" != "DOES_NOT_EXIST" ]]; then
+              echo "✅ Backend stack exists, extracting API endpoint..."
+              BACKEND_URL=$(aws cloudformation describe-stacks \
+                --stack-name "$BACKEND_STACK_NAME" \
+                --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
+                --output text 2>/dev/null || echo "")
+
+              if [[ -n "$BACKEND_URL" ]]; then
+                # Normalize to ensure single /api suffix
+                BACKEND_URL="${BACKEND_URL%/}"
+                if [[ "$BACKEND_URL" != */api ]]; then
+                  BACKEND_URL="${BACKEND_URL}/api"
+                fi
+                echo "🌐 Pre-calculated Backend URL: $BACKEND_URL"
+              else
+                echo "⚠️ Backend stack exists but no ApiEndpoint output found"
+                BACKEND_URL="<will-be-generated-during-deployment>"
               fi
-              echo "🌐 Pre-calculated Backend URL: $BACKEND_URL"
             else
-              echo "⚠️ Backend stack exists but no ApiEndpoint output found"
+              echo "📦 Backend stack does not exist yet - will be created during deployment"
               BACKEND_URL="<will-be-generated-during-deployment>"
             fi
-          else
-            echo "📦 Backend stack does not exist yet - will be created during deployment"
-            BACKEND_URL="<will-be-generated-during-deployment>"
           fi
 
           # Output all pre-calculated values
