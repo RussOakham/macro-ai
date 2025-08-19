@@ -64,26 +64,37 @@ const createServer = (): Express => {
 		.filter((o) => o.length > 0)
 		.map((o) => (o.endsWith('/') ? o.replace(/\/+$/, '') : o))
 
-	// Add custom domain origins for preview environments - UPDATED PATTERNS
-	const customDomainOrigins = isPreview && process.env.PR_NUMBER
+	// Get custom domain from environment variables (aligns with CDK configuration)
+	const customDomainName = process.env.CUSTOM_DOMAIN_NAME // e.g., "macro-ai.russoakham.dev"
+
+	// Add custom domain origins for preview environments - CONFIGURABLE PATTERNS
+	const customDomainOrigins =
+		isPreview && process.env.PR_NUMBER && customDomainName
+			? [
+					`https://pr-${process.env.PR_NUMBER}.${customDomainName}`, // Frontend
+					`https://pr-${process.env.PR_NUMBER}-api.${customDomainName}`, // API
+				]
+			: []
+
+	// Add production and staging origins (only if custom domain is configured)
+	const productionOrigins = customDomainName
 		? [
-				`https://pr-${process.env.PR_NUMBER}.macro-ai.russoakham.dev`, // Frontend
-				`https://pr-${process.env.PR_NUMBER}-api.macro-ai.russoakham.dev` // API
+				`https://${customDomainName}`, // Production frontend
+				`https://staging.${customDomainName}`, // Staging frontend
+				`https://api.${customDomainName}`, // Production API
+				`https://staging-api.${customDomainName}`, // Staging API
 			]
 		: []
-
-	// Add production and staging origins
-	const productionOrigins = [
-		'https://macro-ai.russoakham.dev', // Production frontend
-		'https://staging.macro-ai.russoakham.dev', // Staging frontend
-		'https://api.macro-ai.russoakham.dev', // Production API
-		'https://staging-api.macro-ai.russoakham.dev' // Staging API
-	]
 
 	const effectiveOrigins =
 		parsedCorsOrigins.length > 0
 			? [...parsedCorsOrigins, ...customDomainOrigins, ...productionOrigins]
-			: ['http://localhost:3000', 'http://localhost:3040', ...customDomainOrigins, ...productionOrigins]
+			: [
+					'http://localhost:3000',
+					'http://localhost:3040',
+					...customDomainOrigins,
+					...productionOrigins,
+				]
 
 	// Log effective CORS configuration at startup
 	// Note: In preview envs with empty origins, Express will still use localhost here,
