@@ -42,6 +42,8 @@ validate_environment() {
         "PR_NUMBER"
         "BRANCH_NAME"
         "CORS_ALLOWED_ORIGINS"
+        "DEPLOYMENT_BUCKET"
+        "DEPLOYMENT_KEY"
     )
     
     local missing_vars=()
@@ -353,6 +355,8 @@ deploy_infrastructure() {
         "--context" "scale=${CDK_DEPLOY_SCALE}"
         "--context" "corsAllowedOrigins=${CORS_ALLOWED_ORIGINS}"
         "--context" "reuseExistingResources=true"
+        "--context" "deploymentBucket=${DEPLOYMENT_BUCKET}"
+        "--context" "deploymentKey=${DEPLOYMENT_KEY}"
     )
 
     # Debug tag generation before deployment

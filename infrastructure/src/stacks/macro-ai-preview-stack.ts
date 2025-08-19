@@ -265,13 +265,19 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			)
 		}
 
-		// Create user data with CORS configuration
+		// Get deployment artifact information from CDK context
+		const deploymentBucket = this.node.tryGetContext('deploymentBucket') as string | undefined
+		const deploymentKey = this.node.tryGetContext('deploymentKey') as string | undefined
+
+		// Create user data with CORS configuration and deployment artifact info
 		const userData = this.createPreviewUserData(
 			this.parameterStore.parameterPrefix,
 			corsAllowedOrigins,
 			prNumber,
 			branchName,
 			this.customDomain,
+			deploymentBucket,
+			deploymentKey,
 		)
 
 		// Create launch template with preview-specific configuration
@@ -319,6 +325,8 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			readonly domainName: string
 			readonly hostedZoneId: string
 		},
+		deploymentBucket?: string,
+		deploymentKey?: string,
 	): ec2.UserData {
 		const userData = ec2.UserData.forLinux()
 
@@ -403,6 +411,18 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			customDomain
 				? `echo "Setting CUSTOM_DOMAIN_NAME=${customDomain.domainName}" >> /var/log/user-data.log`
 				: 'echo "CUSTOM_DOMAIN_NAME not set (no custom domain)" >> /var/log/user-data.log',
+			deploymentBucket
+				? `echo "DEPLOYMENT_BUCKET=${deploymentBucket}" >> /etc/environment`
+				: '',
+			deploymentBucket
+				? `echo "Setting DEPLOYMENT_BUCKET=${deploymentBucket}" >> /var/log/user-data.log`
+				: 'echo "DEPLOYMENT_BUCKET not set (will build from source)" >> /var/log/user-data.log',
+			deploymentKey
+				? `echo "DEPLOYMENT_KEY=${deploymentKey}" >> /etc/environment`
+				: '',
+			deploymentKey
+				? `echo "Setting DEPLOYMENT_KEY=${deploymentKey}" >> /var/log/user-data.log`
+				: 'echo "DEPLOYMENT_KEY not set (will build from source)" >> /var/log/user-data.log',
 			'',
 			'# Create .env file for the application',
 			'echo "=== CREATING .ENV FILE ===" >> /var/log/user-data.log',
@@ -415,6 +435,8 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			`BRANCH_NAME=${branchName}`,
 			`CORS_ALLOWED_ORIGINS=${corsAllowedOrigins}`,
 			customDomain ? `CUSTOM_DOMAIN_NAME=${customDomain.domainName}` : '',
+			deploymentBucket ? `DEPLOYMENT_BUCKET=${deploymentBucket}` : '',
+			deploymentKey ? `DEPLOYMENT_KEY=${deploymentKey}` : '',
 			'EOF',
 			'echo "=== .ENV FILE CONTENTS ===" >> /var/log/user-data.log',
 			'cat /opt/macro-ai/.env >> /var/log/user-data.log',
@@ -425,12 +447,56 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			'echo "$(date): CORS configuration set to: ${corsAllowedOrigins}"',
 			'echo "$(date): Preview environment setup completed for PR ${prNumber} (${branchName})"',
 			'',
-			'echo "$(date): Deploying minimal preview API service..."',
-			'mkdir -p /opt/macro-ai/app/dist || error_exit "Failed to create app directory"',
+			'echo "$(date): Deploying Express API from pre-built artifact..."',
+			'mkdir -p /opt/macro-ai/app || error_exit "Failed to create app directory"',
 			'chown -R macroai:macroai /opt/macro-ai /var/log/macro-ai',
 			'',
-			'# Create minimal package.json',
-			'cat > /opt/macro-ai/app/package.json << EOF',
+			'# Download and deploy pre-built Express API if artifact info is available',
+			'if [[ -n "$DEPLOYMENT_BUCKET" && -n "$DEPLOYMENT_KEY" ]]; then',
+			'    echo "$(date): Downloading pre-built Express API from S3..."',
+			'    echo "  S3 Bucket: $DEPLOYMENT_BUCKET"',
+			'    echo "  S3 Key: $DEPLOYMENT_KEY"',
+			'    ',
+			'    ARTIFACT_PATH="/tmp/express-api-deployment.tar.gz"',
+			'    ',
+			'    if aws s3 cp "s3://${DEPLOYMENT_BUCKET}/${DEPLOYMENT_KEY}" "$ARTIFACT_PATH" 2>/dev/null; then',
+			'        echo "$(date): ✅ Deployment artifact downloaded successfully"',
+			'        ',
+			'        # Extract the deployment package',
+			'        echo "$(date): Extracting deployment package..."',
+			'        cd /opt/macro-ai/app',
+			'        tar -xzf "$ARTIFACT_PATH"',
+			'        ',
+			'        # Verify the extracted contents',
+			'        if [[ -d "dist" && -f "dist/index.js" && -f "package.json" ]]; then',
+			'            echo "$(date): ✅ Deployment package extracted successfully"',
+			'            echo "$(date): 📦 Contents: $(ls -la)"',
+			'            ',
+			'            # Install production dependencies',
+			'            echo "$(date): Installing production dependencies..."',
+			'            npm install --production --frozen-lockfile || npm install --production --no-audit --no-fund',
+			'            ',
+			'            echo "$(date): ✅ Pre-built Express API with ES module fix deployed!"',
+			'        else',
+			'            echo "$(date): ❌ Invalid deployment package structure"',
+			'            echo "$(date): Expected: dist/index.js and package.json"',
+			'            echo "$(date): Found: $(ls -la)"',
+			'            echo "$(date): Falling back to minimal server..."',
+			'            DEPLOYMENT_BUCKET=""  # Force fallback',
+			'        fi',
+			'    else',
+			'        echo "$(date): ⚠️ Failed to download deployment artifact, falling back to minimal server..."',
+			'        DEPLOYMENT_BUCKET=""  # Force fallback',
+			'    fi',
+			'fi',
+			'',
+			'# Fallback: Create minimal Express server if artifact deployment failed',
+			'if [[ -z "$DEPLOYMENT_BUCKET" ]]; then',
+			'    echo "$(date): Creating minimal fallback Express server..."',
+			'    mkdir -p /opt/macro-ai/app/dist',
+			'    ',
+			'    # Create minimal package.json',
+			'    cat > /opt/macro-ai/app/package.json << EOF',
 			'{',
 			'  "name": "macro-ai-preview-api",',
 			'  "version": "1.0.0",',
@@ -442,9 +508,9 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			'  }',
 			'}',
 			'EOF',
-			'',
-			'# Create minimal Express server using CommonJS for reliability',
-			'cat > /opt/macro-ai/app/dist/index.js << EOF',
+			'    ',
+			'    # Create minimal Express server using CommonJS for reliability',
+			'    cat > /opt/macro-ai/app/dist/index.js << EOF',
 			'const express = require("express");',
 			'const app = express();',
 			'const port = process.env.SERVER_PORT || 3040;',
@@ -452,27 +518,29 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			'// Health check endpoint',
 			'app.get("/api/health", (req, res) => {',
 			'  res.json({ ',
-			'    status: "healthy", ',
+			'    status: "healthy - fallback server", ',
 			'    timestamp: new Date().toISOString(),',
 			'    port: port,',
-			'    env: process.env.NODE_ENV || "development"',
+			'    env: process.env.NODE_ENV || "development",',
+			'    message: "Pre-built artifact not available, using fallback server"',
 			'  });',
 			'});',
 			'',
 			'// Root endpoint for basic connectivity test',
 			'app.get("/", (req, res) => {',
-			'  res.json({ message: "Macro AI Preview API", status: "running" });',
+			'  res.json({ message: "Macro AI Preview API (Fallback)", status: "running" });',
 			'});',
 			'',
 			'app.listen(port, "0.0.0.0", () => {',
-			'  console.log(`Preview API listening on port ${port}`);',
+			'  console.log(`Fallback Preview API listening on port ${port}`);',
 			'  console.log(`Health check available at http://localhost:${port}/api/health`);',
 			'});',
 			'EOF',
-			'',
-			'# Install runtime dependencies',
-			'cd /opt/macro-ai/app',
-			'npm install --production --no-audit --no-fund || error_exit "Failed to install runtime dependencies"',
+			'    ',
+			'    # Install runtime dependencies for fallback server',
+			'    cd /opt/macro-ai/app',
+			'    npm install --production --no-audit --no-fund || error_exit "Failed to install runtime dependencies"',
+			'fi',
 			'',
 			'# Create systemd service',
 			'cat > /etc/systemd/system/macro-ai.service << EOF',
