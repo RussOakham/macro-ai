@@ -655,7 +655,7 @@ export class Ec2Construct extends Construct {
 			'Environment=APP_ENV=production',
 			`Environment=PARAMETER_STORE_PREFIX=${parameterStorePrefix}`,
 			prNumber ? `Environment=PR_NUMBER=${prNumber.toString()}` : '',
-			`Environment=AWS_REGION=${this.region}`,
+			`Environment=AWS_REGION=${cdk.Stack.of(this).region}`,
 			'',
 			'# Security settings',
 			'NoNewPrivileges=true',
