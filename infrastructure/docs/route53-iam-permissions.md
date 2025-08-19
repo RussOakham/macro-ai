@@ -1,4 +1,4 @@
-# Route53 IAM Permissions for Custom Domain Configuration
+# Route53 IAM Permissions
 
 ## Overview
 
@@ -146,7 +146,7 @@ The permissions are scoped to:
 1. `infrastructure/iam-policies/enhanced-github-actions-policy.json` - Added Route53 and ACM permissions
 2. `infrastructure/iam-policies/amplify-github-actions-policy.json` - Added Route53 and ACM permissions
 3. `apps/client-ui/scripts/configure-amplify-custom-domain.sh` - Enhanced error handling and validation
-4. `infrastructure/docs/route53-iam-permissions-fix.md` - This documentation
+4. `infrastructure/docs/route53-iam-permissions.md` - This documentation
 
 ## Expected Results
 

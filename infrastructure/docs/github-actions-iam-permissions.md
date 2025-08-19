@@ -1,4 +1,4 @@
-# GitHub Actions IAM Permissions Configuration
+# GitHub Actions IAM Permissions
 
 ## Overview
 
