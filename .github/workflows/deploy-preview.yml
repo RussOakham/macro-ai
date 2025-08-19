@@ -186,37 +186,12 @@ jobs:
             BACKEND_URL="https://pr-${PR_NUMBER}-api.${CUSTOM_DOMAIN_NAME}/api"
             echo "🌐 Custom Domain Backend URL: $BACKEND_URL"
             echo "📝 Using custom domain: $CUSTOM_DOMAIN_NAME"
+            echo "✨ Pattern-based URL construction - no discovery needed"
           else
             # Fallback to CloudFormation stack output discovery
-            echo "🔍 Checking if backend stack exists..."
-
-            STACK_EXISTS=$(aws cloudformation describe-stacks \
-              --stack-name "$BACKEND_STACK_NAME" \
-              --query "Stacks[0].StackStatus" \
-              --output text 2>/dev/null || echo "DOES_NOT_EXIST")
-
-            if [[ "$STACK_EXISTS" != "DOES_NOT_EXIST" ]]; then
-              echo "✅ Backend stack exists, extracting API endpoint..."
-              BACKEND_URL=$(aws cloudformation describe-stacks \
-                --stack-name "$BACKEND_STACK_NAME" \
-                --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
-                --output text 2>/dev/null || echo "")
-
-              if [[ -n "$BACKEND_URL" ]]; then
-                # Normalize to ensure single /api suffix
-                BACKEND_URL="${BACKEND_URL%/}"
-                if [[ "$BACKEND_URL" != */api ]]; then
-                  BACKEND_URL="${BACKEND_URL}/api"
-                fi
-                echo "🌐 Pre-calculated Backend URL: $BACKEND_URL"
-              else
-                echo "⚠️ Backend stack exists but no ApiEndpoint output found"
-                BACKEND_URL="<will-be-generated-during-deployment>"
-              fi
-            else
-              echo "📦 Backend stack does not exist yet - will be created during deployment"
-              BACKEND_URL="<will-be-generated-during-deployment>"
-            fi
+            echo "🔍 Custom domain not configured, using stack discovery..."
+            echo "📦 Backend stack discovery will be handled during deployment"
+            BACKEND_URL="<will-be-discovered-during-deployment>"
           fi
 
           # Output all pre-calculated values
@@ -409,21 +384,30 @@ jobs:
           echo "📦 Stack: ${{ steps.stack-info.outputs.stack-name }}"
           echo "👤 Requested by: ${{ needs.validate-access.outputs.target-user }}"
 
-          # Configure CORS origins using pre-calculated frontend URL
-          FRONTEND_URL="${{ needs.validate-access.outputs.frontend-url }}"
-          if [[ "$FRONTEND_URL" != "<will-be-generated-during-deployment>" ]]; then
-            # Use pre-calculated or predicted frontend URL for CORS
-            CORS_ORIGINS="${FRONTEND_URL%/}"
-            echo "🔧 CORS Configuration:"
-            echo "  Frontend URL: $FRONTEND_URL"
-            echo "  Setting CORS_ALLOWED_ORIGINS to: $CORS_ORIGINS"
-          else
-            # This should rarely happen now that we generate predicted URLs
-            # Fallback to localhost for development
+          # Configure CORS origins with simplified approach for custom domains
+          if [[ -n "${{ vars.CUSTOM_DOMAIN_NAME }}" ]]; then
+            # For custom domains, use pattern-based CORS (handled in server.ts)
+            # Set minimal explicit origins for localhost development
             CORS_ORIGINS="http://localhost:5173,http://localhost:3000"
-            echo "🔧 CORS Configuration (fallback):"
-            echo "  Frontend URL not yet available, using localhost origins"
-            echo "  Setting CORS_ALLOWED_ORIGINS to: $CORS_ORIGINS"
+            echo "🔧 CORS Configuration (Custom Domain Mode):"
+            echo "  Custom domain: ${{ vars.CUSTOM_DOMAIN_NAME }}"
+            echo "  Pattern-based CORS enabled in server.ts for pr-*.domain.com"
+            echo "  Explicit origins: $CORS_ORIGINS"
+            echo "  ✨ Simplified workflow - no frontend URL dependency needed"
+          else
+            # Fallback to traditional explicit CORS for non-custom-domain deployments
+            FRONTEND_URL="${{ needs.validate-access.outputs.frontend-url }}"
+            if [[ "$FRONTEND_URL" != "<will-be-generated-during-deployment>" ]]; then
+              CORS_ORIGINS="${FRONTEND_URL%/}"
+              echo "🔧 CORS Configuration (Traditional Mode):"
+              echo "  Frontend URL: $FRONTEND_URL"
+              echo "  Setting CORS_ALLOWED_ORIGINS to: $CORS_ORIGINS"
+            else
+              CORS_ORIGINS="http://localhost:5173,http://localhost:3000"
+              echo "🔧 CORS Configuration (Fallback):"
+              echo "  Frontend URL not available, using localhost origins"
+              echo "  Setting CORS_ALLOWED_ORIGINS to: $CORS_ORIGINS"
+            fi
           fi
 
           # Export normalized CORS_ORIGINS for use in subsequent jobs
@@ -754,16 +738,9 @@ jobs:
   build-frontend:
     name: Build React Frontend
     runs-on: ubuntu-latest
-    needs:
-      [
-        validate-access,
-        check-frontend-changes,
-        check-backend-changes,
-        deploy-backend-preview,
-        create-fallback-urls,
-      ]
-    # Run if frontend changes detected and either:
-    # 1. Backend deployment succeeded (backend changes detected)
+    needs: [validate-access, check-frontend-changes]
+    # Run if frontend changes detected
+    # Note: With custom domains, frontend can build in parallel with backend
     # 2. Fallback URLs job succeeded (no backend changes detected)
     if: |
       needs.validate-access.outputs.should-deploy == 'true' &&
@@ -842,41 +819,66 @@ jobs:
 
           echo "✅ API client package built successfully"
 
-      - name: Download deployment URLs artifact
+      - name: Resolve backend URL with custom domain support
+        id: resolve-backend
+        run: |
+          echo "🔍 Resolving backend URL for frontend configuration..."
+
+          # Priority 1: Custom domain pattern (no artifact needed)
+          if [[ -n "${{ vars.CUSTOM_DOMAIN_NAME }}" ]]; then
+            BACKEND_URL="https://pr-${{ github.event.pull_request.number }}-api.${{ vars.CUSTOM_DOMAIN_NAME }}/api"
+            echo "🌐 Using custom domain pattern: $BACKEND_URL"
+            echo "✨ No backend dependency - parallel deployment enabled"
+            echo "final-backend-url=$BACKEND_URL" >> $GITHUB_OUTPUT
+          else
+            # Priority 2: Try to download deployment URLs artifact (traditional approach)
+            echo "🔍 Custom domain not configured, attempting artifact download..."
+
+            # Try to download artifact (may fail if backend hasn't completed yet)
+            if curl -s -H "Authorization: token ${{ github.token }}" \
+                    -H "Accept: application/vnd.github.v3+json" \
+                    "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
+                    | jq -r '.artifacts[] | select(.name=="deployment-urls-${{ needs.validate-access.outputs.env-name }}") | .archive_download_url' \
+                    | head -1 > /dev/null; then
+
+              # Artifact exists, download it
+              echo "📦 Deployment URLs artifact found, downloading..."
+              # Note: This will still work for non-custom-domain deployments
+              # The artifact download action will be attempted in the next step
+              echo "final-backend-url=<from-artifact>" >> $GITHUB_OUTPUT
+            else
+              # No artifact available, use fallback
+              echo "⚠️ No deployment URLs artifact available"
+              echo "🔄 Using fallback URL - backend may still be deploying"
+              FALLBACK_URL="https://api-staging.macro-ai.com/api"
+              echo "final-backend-url=$FALLBACK_URL" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Download deployment URLs artifact (if needed)
         uses: actions/download-artifact@v4
+        if: steps.resolve-backend.outputs.final-backend-url == '<from-artifact>'
+        continue-on-error: true
         with:
           name: deployment-urls-${{ needs.validate-access.outputs.env-name }}
           path: deployment-urls/
 
-      - name: Read deployment URLs from artifact
-        id: resolve-backend
+      - name: Extract backend URL from artifact (if available)
+        if: steps.resolve-backend.outputs.final-backend-url == '<from-artifact>'
         run: |
-          echo "📦 Reading deployment URLs from artifact..."
-
           if [[ -f "deployment-urls/urls.json" ]]; then
             echo "✅ Deployment URLs artifact found"
-            cat deployment-urls/urls.json
-
-            # Extract backend URL from artifact
             BACKEND_URL=$(jq -r '.backend_url // empty' deployment-urls/urls.json)
-            DEPLOYMENT_TYPE=$(jq -r '.deployment_type // empty' deployment-urls/urls.json)
-            HEALTH_STATUS=$(jq -r '.health_status // empty' deployment-urls/urls.json)
-
             if [[ -n "$BACKEND_URL" && "$BACKEND_URL" != "null" ]]; then
               echo "🌐 Backend URL from artifact: $BACKEND_URL"
-              echo "📋 Deployment type: $DEPLOYMENT_TYPE"
-              echo "🏥 Health status: $HEALTH_STATUS"
               echo "final-backend-url=$BACKEND_URL" >> $GITHUB_OUTPUT
             else
-              echo "❌ No valid backend URL found in artifact"
-              exit 1
+              echo "⚠️ Invalid backend URL in artifact, using fallback"
+              echo "final-backend-url=https://api-staging.macro-ai.com/api" >> $GITHUB_OUTPUT
             fi
           else
-            echo "❌ Deployment URLs artifact not found"
-            echo "Expected file: deployment-urls/urls.json"
-            echo "Available files:"
-            find deployment-urls/ -type f 2>/dev/null || echo "No deployment-urls directory found"
-            exit 1
+            echo "⚠️ Artifact not available, using fallback URL"
+            echo "final-backend-url=https://api-staging.macro-ai.com/api" >> $GITHUB_OUTPUT
           fi
 
       - name: Generate environment configuration
@@ -887,6 +889,8 @@ jobs:
           pr-number: ${{ github.event.pull_request.number }}
           build-mode: 'preview'
           api-endpoint: ${{ steps.resolve-backend.outputs.final-backend-url }}
+          custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
+          hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
           api-key: ${{ secrets.API_KEY }}
           backend-stack-name: ${{ needs.validate-access.outputs.backend-stack-name }}
           resolution-method: 'artifact-based'

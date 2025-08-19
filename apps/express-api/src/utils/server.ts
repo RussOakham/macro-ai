@@ -67,6 +67,12 @@ const createServer = (): Express => {
 	// Get custom domain from environment variables (aligns with CDK configuration)
 	const customDomainName = process.env.CUSTOM_DOMAIN_NAME // e.g., "macro-ai.russoakham.dev"
 
+	// Pattern-based CORS matching for preview environments with custom domains
+	const isCustomDomainPreview = isPreview && customDomainName
+	const previewDomainPattern = isCustomDomainPreview
+		? new RegExp(`^https://pr-\\d+\\.${customDomainName.replace('.', '\\.')}$`)
+		: null
+
 	// Add custom domain origins for preview environments - CONFIGURABLE PATTERNS
 	const customDomainOrigins =
 		isPreview && process.env.PR_NUMBER && customDomainName
@@ -121,13 +127,32 @@ const createServer = (): Express => {
 					callback(null, true)
 					return
 				}
+
 				// Normalize by stripping trailing slashes
 				const normalized = origin.replace(/\/+$/, '')
+
+				// Check explicit allowed origins first
 				const allowedSet = new Set(
 					effectiveOrigins.map((o) => o.replace(/\/+$/, '')),
 				)
-				const isAllowed = allowedSet.has(normalized)
-				callback(null, isAllowed)
+
+				if (allowedSet.has(normalized)) {
+					callback(null, true)
+					return
+				}
+
+				// For preview environments with custom domains, use pattern matching
+				if (previewDomainPattern?.test(normalized)) {
+					console.log(
+						`[server] CORS: Allowing preview domain via pattern: ${normalized}`,
+					)
+					callback(null, true)
+					return
+				}
+
+				// Deny all other origins
+				console.log(`[server] CORS: Denying origin: ${normalized}`)
+				callback(null, false)
 			},
 			credentials: true,
 			exposedHeaders: ['cache-control'],
