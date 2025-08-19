@@ -79,6 +79,15 @@ if (isEC2Preview && isPreviewEnvironment) {
 		process.env.CORS_ALLOWED_ORIGINS ??
 		'http://localhost:3000,http://localhost:5173'
 
+	// Configure custom domain if environment variables are provided
+	const customDomain =
+		process.env.CUSTOM_DOMAIN_NAME && process.env.HOSTED_ZONE_ID
+			? {
+					domainName: process.env.CUSTOM_DOMAIN_NAME, // Should be "macro-ai.russoakham.dev"
+					hostedZoneId: process.env.HOSTED_ZONE_ID,
+				}
+			: undefined
+
 	if (isNaN(prNumber)) {
 		throw new Error(`Invalid PR number in environment name: ${deploymentEnv}`)
 	}
@@ -104,6 +113,7 @@ if (isEC2Preview && isPreviewEnvironment) {
 		corsAllowedOrigins,
 		scale: deploymentScale,
 		costAlertEmails,
+		customDomain, // Add custom domain configuration
 		tags,
 	})
 } else {

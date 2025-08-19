@@ -42,6 +42,14 @@ export interface MacroAiPreviewStackProps extends cdk.StackProps {
 	 * Can be overridden via CDK context 'costAlertEmails'
 	 */
 	readonly costAlertEmails?: string[]
+
+	/**
+	 * Custom domain configuration for HTTPS endpoints
+	 */
+	readonly customDomain?: {
+		readonly domainName: string
+		readonly hostedZoneId: string
+	}
 }
 
 /**
@@ -68,7 +76,13 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	constructor(scope: Construct, id: string, props: MacroAiPreviewStackProps) {
 		super(scope, id, props)
 
-		const { environmentName, prNumber, branchName, corsAllowedOrigins } = props
+		const {
+			environmentName,
+			prNumber,
+			branchName,
+			corsAllowedOrigins,
+			customDomain,
+		} = props
 		this.prNumber = prNumber
 
 		// Note: Base-level tags (Project, Environment, EnvironmentType, Component, Purpose, CreatedBy, ManagedBy, PRNumber, Branch, ExpiryDate, Scale, AutoShutdown)
@@ -95,6 +109,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			enableNatGateway: false, // Cost optimization: eliminate NAT Gateway (~$2.76/month savings)
 			enableVpcEndpoints: false, // Cost optimization: remove VPC endpoints for preview environments
 			exportPrefix: this.stackName, // Use stack name to ensure unique exports per PR
+			customDomain, // Pass custom domain configuration for HTTPS setup
 		})
 
 		// Validate networking requirements
@@ -145,11 +160,14 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		)
 
 		// Stack outputs for GitHub Actions workflow
-		// Note: Preview environments use HTTP only (no custom domain/SSL certificate)
-		// Production environments should use HTTPS with proper SSL certificates
+		// Use custom domain with HTTPS if provided, otherwise fallback to HTTP ALB DNS
 		new cdk.CfnOutput(this, 'ApiEndpoint', {
-			value: `http://${this.networking.albConstruct!.applicationLoadBalancer.loadBalancerDnsName}/api`,
-			description: 'API endpoint URL for the preview environment (HTTP only)',
+			value: customDomain
+				? `https://pr-${prNumber}-api.${customDomain.domainName}/api`
+				: `http://${this.networking.albConstruct!.applicationLoadBalancer.loadBalancerDnsName}/api`,
+			description: customDomain
+				? 'API endpoint URL with custom domain (HTTPS) - pr-{number}-api.macro-ai.russoakham.dev pattern'
+				: 'API endpoint URL for the preview environment (HTTP only)',
 			exportName: `${this.stackName}-ApiEndpoint`,
 		})
 

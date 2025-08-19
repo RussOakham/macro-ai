@@ -49,6 +49,10 @@
 		"@aws-cdk/core:includePrefixInUniqueNameGeneration": true,
 		"@aws-cdk/aws-efs:denyAnonymousAccess": true,
 		"@aws-cdk/aws-opensearchservice:enableLogging": true,
-		"@aws-cdk/aws-lambda:useLatestRuntimeVersion": true
+		"@aws-cdk/aws-lambda:useLatestRuntimeVersion": true,
+		"customDomain": {
+			"domainName": "macro-ai.russoakham.dev",
+			"hostedZoneId": "Z10081873B648ARROPNER"
+		}
 	}
 }
