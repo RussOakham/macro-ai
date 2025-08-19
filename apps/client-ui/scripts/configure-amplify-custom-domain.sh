@@ -138,9 +138,20 @@ validate_inputs() {
         exit 1
     fi
 
-    # Validate domain format
-    if [[ ! "$CUSTOM_DOMAIN_NAME" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.[a-zA-Z]{2,}$ ]]; then
+    # Debug: Show input parameters
+    print_info "Validating input parameters:"
+    print_info "  App ID: $AMPLIFY_APP_ID"
+    print_info "  Domain: $CUSTOM_DOMAIN_NAME"
+    print_info "  Hosted Zone: $HOSTED_ZONE_ID"
+    print_info "  Environment: $ENVIRONMENT"
+    print_info "  Branch: $BRANCH_NAME"
+
+    # Validate domain format (supports multi-level subdomains)
+    # Pattern: subdomain.domain.tld or subdomain.subdomain.domain.tld etc.
+    # Examples: example.com, sub.example.com, pr-123.macro-ai.russoakham.dev
+    if [[ ! "$CUSTOM_DOMAIN_NAME" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$ ]]; then
         print_error "Invalid domain format: $CUSTOM_DOMAIN_NAME"
+        print_error "Expected format: domain.tld or subdomain.domain.tld (e.g., example.com, pr-123.macro-ai.russoakham.dev)"
         exit 1
     fi
 
