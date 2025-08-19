@@ -72,6 +72,10 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	public readonly deploymentStatus: DeploymentStatusConstruct
 	public readonly costMonitoring: CostMonitoringConstruct
 	public readonly prNumber: number
+	private readonly customDomain?: {
+		readonly domainName: string
+		readonly hostedZoneId: string
+	}
 
 	constructor(scope: Construct, id: string, props: MacroAiPreviewStackProps) {
 		super(scope, id, props)
@@ -84,6 +88,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			customDomain,
 		} = props
 		this.prNumber = prNumber
+		this.customDomain = customDomain
 
 		// Note: Base-level tags (Project, Environment, EnvironmentType, Component, Purpose, CreatedBy, ManagedBy, PRNumber, Branch, ExpiryDate, Scale, AutoShutdown)
 		// are applied centrally via StackProps.tags in app.ts using TaggingStrategy.
@@ -266,6 +271,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			corsAllowedOrigins,
 			prNumber,
 			branchName,
+			this.customDomain,
 		)
 
 		// Create launch template with preview-specific configuration
@@ -309,6 +315,10 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		corsAllowedOrigins: string,
 		prNumber: number,
 		branchName: string,
+		customDomain?: {
+			readonly domainName: string
+			readonly hostedZoneId: string
+		},
 	): ec2.UserData {
 		const userData = ec2.UserData.forLinux()
 
@@ -375,20 +385,24 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			`echo "PARAMETER_STORE_PREFIX=${parameterStorePrefix}" >> /etc/environment`,
 			'echo "NODE_ENV=production" >> /etc/environment',
 			'echo "SERVER_PORT=3040" >> /etc/environment',
-			'echo "APP_ENV=production" >> /etc/environment',
+			`echo "APP_ENV=pr-${prNumber}" >> /etc/environment`,
 			`echo "PR_NUMBER=${prNumber}" >> /etc/environment`,
 			`echo "BRANCH_NAME=${branchName}" >> /etc/environment`,
 			`echo "CORS_ALLOWED_ORIGINS=${corsAllowedOrigins}" >> /etc/environment`,
+			customDomain
+				? `echo "CUSTOM_DOMAIN_NAME=${customDomain.domainName}" >> /etc/environment`
+				: '',
 			'',
 			'# Create .env file for the application',
 			'cat > /opt/macro-ai/.env << EOF',
 			`PARAMETER_STORE_PREFIX=${parameterStorePrefix}`,
 			'NODE_ENV=production',
 			'SERVER_PORT=3040',
-			'APP_ENV=production',
+			`APP_ENV=pr-${prNumber}`,
 			`PR_NUMBER=${prNumber}`,
 			`BRANCH_NAME=${branchName}`,
 			`CORS_ALLOWED_ORIGINS=${corsAllowedOrigins}`,
+			customDomain ? `CUSTOM_DOMAIN_NAME=${customDomain.domainName}` : '',
 			'EOF',
 			'chown macroai:macroai /opt/macro-ai/.env',
 			'chmod 600 /opt/macro-ai/.env',
@@ -461,7 +475,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			'Restart=always',
 			'RestartSec=10',
 			'Environment=NODE_ENV=production',
-			'Environment=APP_ENV=production',
+			`Environment=APP_ENV=pr-${prNumber}`,
 			'Environment=SERVER_PORT=3040',
 			'',
 			'[Install]',
