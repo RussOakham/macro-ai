@@ -187,9 +187,45 @@ validate_inputs() {
     fi
 
     # Validate hosted zone exists
-    if ! aws route53 get-hosted-zone --id "$HOSTED_ZONE_ID" &> /dev/null; then
-        print_error "Hosted zone not found: $HOSTED_ZONE_ID"
+    print_info "Validating hosted zone access..."
+    local zone_validation_result
+    zone_validation_result=$(aws route53 get-hosted-zone --id "$HOSTED_ZONE_ID" 2>&1)
+    local zone_validation_exit_code=$?
+
+    if [[ $zone_validation_exit_code -ne 0 ]]; then
+        print_error "Hosted zone validation failed: $HOSTED_ZONE_ID"
+        print_error "AWS CLI Error: $zone_validation_result"
+
+        # Check if it's a permissions issue
+        if echo "$zone_validation_result" | grep -q "AccessDenied\|UnauthorizedOperation\|Forbidden"; then
+            print_error "This appears to be a permissions issue. Required permissions:"
+            print_error "  - route53:GetHostedZone"
+            print_error "  - route53:ListHostedZones (optional, for debugging)"
+            print_error ""
+            print_error "Please ensure the GitHub Actions IAM role has Route53 permissions."
+        elif echo "$zone_validation_result" | grep -q "NoSuchHostedZone"; then
+            print_error "The hosted zone ID does not exist or is not accessible."
+            print_error "Please verify the hosted zone ID is correct: $HOSTED_ZONE_ID"
+        fi
+
         exit 1
+    fi
+
+    # Extract zone name for verification
+    local zone_name
+    zone_name=$(echo "$zone_validation_result" | jq -r '.HostedZone.Name // empty' 2>/dev/null || echo "")
+    if [[ -n "$zone_name" ]]; then
+        # Remove trailing dot from zone name
+        zone_name=${zone_name%.}
+        print_info "✅ Hosted zone validated: $zone_name (ID: $HOSTED_ZONE_ID)"
+
+        # Verify the zone name matches our root domain
+        if [[ "$zone_name" != "$ROOT_DOMAIN" ]]; then
+            print_warning "⚠️  Zone name ($zone_name) doesn't match root domain ($ROOT_DOMAIN)"
+            print_warning "This may cause domain association issues."
+        fi
+    else
+        print_info "✅ Hosted zone access confirmed (ID: $HOSTED_ZONE_ID)"
     fi
 
     print_status "Inputs validated"

@@ -146,6 +146,38 @@
 					"iam:PassedToService": "amplify.amazonaws.com"
 				}
 			}
+		},
+		{
+			"Sid": "Route53CustomDomainPermissions",
+			"Effect": "Allow",
+			"Action": [
+				"route53:GetHostedZone",
+				"route53:ListHostedZones",
+				"route53:GetChange",
+				"route53:ListResourceRecordSets"
+			],
+			"Resource": "*",
+			"Condition": {
+				"StringLike": {
+					"route53:HostedZoneId": ["Z10081873B648ARROPNER"]
+				}
+			}
+		},
+		{
+			"Sid": "ACMCertificatePermissions",
+			"Effect": "Allow",
+			"Action": [
+				"acm:ListCertificates",
+				"acm:DescribeCertificate",
+				"acm:RequestCertificate",
+				"acm:AddTagsToCertificate"
+			],
+			"Resource": "*",
+			"Condition": {
+				"StringEquals": {
+					"aws:RequestedRegion": ["us-east-1", "us-west-2"]
+				}
+			}
 		}
 	]
 }
