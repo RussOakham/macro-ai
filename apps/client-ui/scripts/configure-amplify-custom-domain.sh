@@ -249,13 +249,28 @@ check_existing_domain() {
             print_warning "Domain already configured but --force specified. Will reconfigure."
             return 0
         else
-            print_error "Domain already configured: $CUSTOM_DOMAIN_NAME"
-            print_info "Use --force to reconfigure existing domain"
-            exit 1
+            # Check if the domain is properly configured for our subdomain
+            print_info "Domain already configured: $CUSTOM_DOMAIN_NAME"
+            print_info "Checking if subdomain configuration is correct..."
+
+            # Get detailed domain association info
+            local domain_status
+            domain_status=$(aws amplify get-domain-association --app-id "$AMPLIFY_APP_ID" --domain-name "$ROOT_DOMAIN" --query 'domainAssociation.domainStatus' --output text 2>/dev/null || echo "UNKNOWN")
+
+            if [[ "$domain_status" == "AVAILABLE" ]]; then
+                print_success "✅ Domain is properly configured and available"
+                print_info "🌐 Custom domain URL: https://${CUSTOM_DOMAIN_NAME}/"
+                return 0  # Success - domain is already properly configured
+            else
+                print_warning "⚠️ Domain exists but status is: $domain_status"
+                print_info "Use --force to reconfigure existing domain"
+                return 1  # Domain exists but not properly configured
+            fi
         fi
     fi
 
     print_status "No existing domain configuration found"
+    return 0  # Continue with domain configuration
 }
 
 # Function to configure custom domain
@@ -681,10 +696,30 @@ done
 # Main execution
 main() {
     print_header "🌐 Amplify Custom Domain Configuration"
-    
+
     validate_prerequisites
     validate_inputs
-    check_existing_domain
+
+    # Check if domain already exists and is properly configured
+    if check_existing_domain; then
+        # Check if we found an existing domain that's properly configured
+        local existing_domains
+        existing_domains=$(aws amplify list-domain-associations --app-id "$AMPLIFY_APP_ID" --query 'domainAssociations[].domainName' --output text 2>/dev/null || echo "")
+
+        if [[ -n "$existing_domains" ]] && echo "$existing_domains" | grep -q "$ROOT_DOMAIN"; then
+            # Domain exists and is properly configured, exit successfully
+            print_success "✅ Custom domain configuration already complete!"
+            print_info "🌐 Custom Domain URL: https://${CUSTOM_DOMAIN_NAME}/"
+            return 0
+        fi
+        # Domain doesn't exist, continue with configuration
+    else
+        # Domain exists but not properly configured
+        print_error "❌ Domain exists but is not properly configured"
+        print_info "Use --force to reconfigure existing domain"
+        exit 1
+    fi
+
     configure_domain
 
     # Wait a moment for domain association to be created before checking status
@@ -701,7 +736,7 @@ main() {
 
     wait_for_verification
     display_results
-    
+
     print_status "Custom domain configuration completed!"
 }
 

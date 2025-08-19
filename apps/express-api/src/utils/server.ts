@@ -105,53 +105,81 @@ const createServer = (): Express => {
 	// Log effective CORS configuration at startup
 	// Note: In preview envs with empty origins, Express will still use localhost here,
 	// but Lambda utilities will refuse to fall back for preflight handling and responses.
-	console.log('[server] CORS configuration diagnostics:')
+	console.log('[server] ===== COMPREHENSIVE CORS DIAGNOSTICS =====')
+	console.log('[server] Environment Variables:')
+	console.log(`  NODE_ENV: "${process.env.NODE_ENV ?? 'undefined'}"`)
 	console.log(`  APP_ENV: "${appEnv}" (isPreview=${String(isPreview)})`)
+	console.log(`  PR_NUMBER: "${process.env.PR_NUMBER ?? 'undefined'}"`)
+	console.log(`  CUSTOM_DOMAIN_NAME: "${customDomainName ?? 'undefined'}"`)
 	console.log(`  CORS_ALLOWED_ORIGINS (raw): "${rawEnv}"`)
-	console.log(
-		`  CORS_ALLOWED_ORIGINS (parsed/normalized): [${parsedCorsOrigins
-			.map((o) => `"${o}"`)
-			.join(', ')}]`,
-	)
-	console.log(
-		`  Express CORS origin setting: [${effectiveOrigins
-			.map((o) => `"${o}"`)
-			.join(', ')}]`,
-	)
+	console.log('[server] CORS Processing:')
+
+	const parsedOriginsStr = parsedCorsOrigins.map((o) => `"${o}"`).join(', ')
+	console.log(`  CORS_ALLOWED_ORIGINS (parsed/normalized): [${parsedOriginsStr}]`)
+	console.log(`  isCustomDomainPreview: ${String(isCustomDomainPreview)}`)
+	console.log(`  previewDomainPattern: ${previewDomainPattern?.toString() ?? 'null'}`)
+
+	const customOriginsStr = customDomainOrigins.map((o) => `"${o}"`).join(', ')
+	console.log(`  customDomainOrigins: [${customOriginsStr}]`)
+
+	const productionOriginsStr = productionOrigins.map((o) => `"${o}"`).join(', ')
+	console.log(`  productionOrigins: [${productionOriginsStr}]`)
+
+	const effectiveOriginsStr = effectiveOrigins.map((o) => `"${o}"`).join(', ')
+	console.log(`  Express CORS origin setting: [${effectiveOriginsStr}]`)
+	console.log('[server] ===== END CORS DIAGNOSTICS =====')
+
+	// Also log all environment variables for debugging
+	console.log('[server] ===== ALL ENVIRONMENT VARIABLES =====')
+	Object.keys(process.env)
+		.filter(key => key.includes('CORS') || key.includes('DOMAIN') || key.includes('APP_ENV') || key.includes('PR_'))
+		.sort((a, b) => a.localeCompare(b))
+		.forEach(key => {
+			console.log(`  ${key}: "${process.env[key] ?? 'undefined'}"`)
+		})
+	console.log('[server] ===== END ENVIRONMENT VARIABLES =====')
 
 	app.use(
 		cors({
 			origin: (origin, callback) => {
+				console.log(`[server] CORS: Testing origin: ${origin ?? 'null'}`)
+
 				// Allow REST tools or same-origin (no Origin header)
 				if (!origin) {
+					console.log('[server] CORS: Allowing null origin (REST tools/same-origin)')
 					callback(null, true)
 					return
 				}
 
 				// Normalize by stripping trailing slashes
 				const normalized = origin.replace(/\/+$/, '')
+				console.log(`[server] CORS: Normalized origin: ${normalized}`)
 
 				// Check explicit allowed origins first
 				const allowedSet = new Set(
 					effectiveOrigins.map((o) => o.replace(/\/+$/, '')),
 				)
+				console.log(`[server] CORS: Allowed origins set: [${Array.from(allowedSet).join(', ')}]`)
 
 				if (allowedSet.has(normalized)) {
+					console.log(`[server] CORS: ✅ Allowing origin via explicit list: ${normalized}`)
 					callback(null, true)
 					return
 				}
 
 				// For preview environments with custom domains, use pattern matching
+				console.log(`[server] CORS: Pattern matching - previewDomainPattern: ${previewDomainPattern?.toString() ?? 'null'}`)
 				if (previewDomainPattern?.test(normalized)) {
 					console.log(
-						`[server] CORS: Allowing preview domain via pattern: ${normalized}`,
+						`[server] CORS: ✅ Allowing preview domain via pattern: ${normalized}`,
 					)
 					callback(null, true)
 					return
 				}
 
 				// Deny all other origins
-				console.log(`[server] CORS: Denying origin: ${normalized}`)
+				console.log(`[server] CORS: ❌ Denying origin: ${normalized}`)
+				console.log(`[server] CORS: Reason - not in allowed list and doesn't match pattern`)
 				callback(null, false)
 			},
 			credentials: true,
