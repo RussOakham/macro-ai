@@ -271,14 +271,12 @@ export class Ec2Construct extends Construct {
 		role.addToPolicy(
 			new iam.PolicyStatement({
 				effect: iam.Effect.ALLOW,
-				actions: [
-					's3:GetObject',
-					's3:GetObjectVersion',
-					's3:ListBucket',
-				],
+				actions: ['s3:GetObject', 's3:GetObjectVersion', 's3:ListBucket'],
 				resources: [
-					'arn:aws:s3:::macro-ai-deployment-artifacts-*',
-					'arn:aws:s3:::macro-ai-deployment-artifacts-*/*',
+					'arn:aws:s3:::${AWS::AccountId}-macro-ai-deployment-*',
+					'arn:aws:s3:::${AWS::AccountId}-macro-ai-deployment-*/*',
+					'arn:aws:s3:::macro-ai-deployment-*',
+					'arn:aws:s3:::macro-ai-deployment-*/*',
 				],
 			}),
 		)
