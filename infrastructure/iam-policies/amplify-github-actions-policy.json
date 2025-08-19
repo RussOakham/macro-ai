@@ -148,11 +148,16 @@
 			}
 		},
 		{
+			"Sid": "Route53ListHostedZones",
+			"Effect": "Allow",
+			"Action": ["route53:ListHostedZones"],
+			"Resource": "*"
+		},
+		{
 			"Sid": "Route53CustomDomainPermissions",
 			"Effect": "Allow",
 			"Action": [
 				"route53:GetHostedZone",
-				"route53:ListHostedZones",
 				"route53:GetChange",
 				"route53:ListResourceRecordSets"
 			],

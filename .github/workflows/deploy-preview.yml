@@ -1213,13 +1213,27 @@ jobs:
 
               CUSTOM_SUBDOMAIN="pr-${{ github.event.pull_request.number }}.${CUSTOM_DOMAIN_NAME}"
 
+              # Check if this is likely a first-time domain setup by looking for existing validation records
+              EXISTING_VALIDATION_RECORDS=$(aws route53 list-resource-record-sets \
+                --hosted-zone-id "$HOSTED_ZONE_ID" \
+                --query "ResourceRecordSets[?contains(Name, '_') && contains(Name, '${CUSTOM_DOMAIN_NAME}') && Type=='CNAME'].Name" \
+                --output text 2>/dev/null || echo "")
+
+              if [[ -n "$EXISTING_VALIDATION_RECORDS" ]]; then
+                echo "✅ Found existing validation records - using fast deployment"
+                WAIT_FLAG="--no-wait"
+              else
+                echo "🔄 First-time domain setup detected - will wait for verification"
+                WAIT_FLAG=""
+              fi
+
               if scripts/configure-amplify-custom-domain.sh \
                 --app-id "$APP_ID" \
                 --domain "$CUSTOM_SUBDOMAIN" \
                 --hosted-zone-id "$HOSTED_ZONE_ID" \
                 --environment "preview" \
                 --branch "$BRANCH_NAME" \
-                --no-wait; then
+                $WAIT_FLAG; then
 
                 FINAL_APP_URL="https://${CUSTOM_SUBDOMAIN}/"
                 echo "✅ Custom domain configured successfully!"

@@ -300,8 +300,250 @@ configure_domain() {
     cert_verification_record=$(echo "$domain_result" | jq -r '.domainAssociation.certificateVerificationDNSRecord // empty')
 
     if [[ -n "$cert_verification_record" ]]; then
-        print_info "SSL certificate verification record:"
-        echo "$cert_verification_record" | jq '.'
+        print_info "SSL certificate verification record required:"
+        print_info "$cert_verification_record"
+
+        # Parse the DNS record components
+        local record_name record_value
+        record_name=$(echo "$cert_verification_record" | awk '{print $1}')
+        record_value=$(echo "$cert_verification_record" | awk '{print $3}')
+
+        if [[ -n "$record_name" && -n "$record_value" ]]; then
+            print_info "Creating DNS validation record in Route53..."
+
+            if [[ "$DRY_RUN" == "true" ]]; then
+                print_info "[DRY RUN] Would create DNS record:"
+                print_info "  Name: $record_name"
+                print_info "  Type: CNAME"
+                print_info "  Value: $record_value"
+                print_info "  Hosted Zone: $HOSTED_ZONE_ID"
+            else
+                # Create the DNS validation record
+                local change_result
+                change_result=$(aws route53 change-resource-record-sets \
+                    --hosted-zone-id "$HOSTED_ZONE_ID" \
+                    --change-batch "{
+                        \"Changes\": [
+                            {
+                                \"Action\": \"UPSERT\",
+                                \"ResourceRecordSet\": {
+                                    \"Name\": \"$record_name\",
+                                    \"Type\": \"CNAME\",
+                                    \"TTL\": 300,
+                                    \"ResourceRecords\": [
+                                        {
+                                            \"Value\": \"$record_value\"
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }" 2>&1)
+
+                if [[ $? -eq 0 ]]; then
+                    print_status "✅ DNS validation record created successfully"
+
+                    # Extract change ID for monitoring
+                    local change_id
+                    change_id=$(echo "$change_result" | jq -r '.ChangeInfo.Id // empty')
+
+                    if [[ -n "$change_id" ]]; then
+                        print_info "DNS change ID: $change_id"
+                        print_info "Waiting for DNS propagation..."
+
+                        # Wait for DNS change to propagate
+                        local dns_wait_attempts=0
+                        local max_dns_wait=30
+
+                        while [[ $dns_wait_attempts -lt $max_dns_wait ]]; do
+                            local change_status
+                            change_status=$(aws route53 get-change --id "$change_id" --query 'ChangeInfo.Status' --output text 2>/dev/null)
+
+                            if [[ "$change_status" == "INSYNC" ]]; then
+                                print_status "✅ DNS change propagated successfully"
+                                break
+                            fi
+
+                            ((dns_wait_attempts++))
+                            print_info "DNS propagation in progress... (attempt $dns_wait_attempts/$max_dns_wait)"
+                            sleep 2
+                        done
+
+                        if [[ $dns_wait_attempts -ge $max_dns_wait ]]; then
+                            print_warning "DNS propagation taking longer than expected, but continuing..."
+                        fi
+                    fi
+                else
+                    print_warning "Failed to create DNS validation record:"
+                    print_warning "$change_result"
+                    print_warning "Domain verification may require manual DNS record creation"
+                fi
+            fi
+        else
+            print_warning "Could not parse DNS validation record format"
+            print_warning "Raw record: $cert_verification_record"
+        fi
+    fi
+
+    return 0
+}
+
+# Function to create subdomain CNAME record
+create_subdomain_cname() {
+    local app_id="$1"
+    local domain_name="$2"
+
+    print_info "Checking for required subdomain CNAME record..."
+
+    # Get the current domain association to check subdomain DNS record
+    local domain_result
+    domain_result=$(aws amplify get-domain-association \
+        --app-id "$app_id" \
+        --domain-name "$domain_name" 2>&1)
+
+    if [[ $? -ne 0 ]]; then
+        print_warning "Could not retrieve domain association for CNAME check"
+        return 0
+    fi
+
+    # Extract subdomain DNS record
+    local subdomain_dns_record
+    subdomain_dns_record=$(echo "$domain_result" | jq -r '.domainAssociation.subDomains[0].dnsRecord // empty')
+
+    if [[ -n "$subdomain_dns_record" && "$subdomain_dns_record" != "null" && "$subdomain_dns_record" != *"<pending>"* ]]; then
+        print_info "Subdomain DNS record required: $subdomain_dns_record"
+
+        # Parse the DNS record components (format: "prefix CNAME target")
+        local subdomain_name cname_target
+        subdomain_name=$(echo "$subdomain_dns_record" | awk '{print $1}')
+        cname_target=$(echo "$subdomain_dns_record" | awk '{print $3}')
+
+        if [[ -n "$subdomain_name" && -n "$cname_target" ]]; then
+            local full_subdomain_name="${subdomain_name}.${domain_name}"
+
+            if [[ "$DRY_RUN" == "true" ]]; then
+                print_info "[DRY RUN] Would create subdomain CNAME record:"
+                print_info "  Name: $full_subdomain_name"
+                print_info "  Type: CNAME"
+                print_info "  Value: $cname_target"
+                print_info "  Hosted Zone: $HOSTED_ZONE_ID"
+            else
+                print_info "Creating subdomain CNAME record: $full_subdomain_name -> $cname_target"
+
+                local change_result
+                change_result=$(aws route53 change-resource-record-sets \
+                    --hosted-zone-id "$HOSTED_ZONE_ID" \
+                    --change-batch "{
+                        \"Changes\": [
+                            {
+                                \"Action\": \"UPSERT\",
+                                \"ResourceRecordSet\": {
+                                    \"Name\": \"$full_subdomain_name\",
+                                    \"Type\": \"CNAME\",
+                                    \"TTL\": 300,
+                                    \"ResourceRecords\": [
+                                        {
+                                            \"Value\": \"$cname_target\"
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }" 2>&1)
+
+                if [[ $? -eq 0 ]]; then
+                    print_status "✅ Subdomain CNAME record created successfully"
+
+                    # Wait for DNS propagation
+                    local change_id
+                    change_id=$(echo "$change_result" | jq -r '.ChangeInfo.Id // empty')
+
+                    if [[ -n "$change_id" ]]; then
+                        print_info "Waiting for subdomain DNS propagation..."
+                        local dns_wait_attempts=0
+                        local max_dns_wait=30
+
+                        while [[ $dns_wait_attempts -lt $max_dns_wait ]]; do
+                            local change_status
+                            change_status=$(aws route53 get-change --id "$change_id" --query 'ChangeInfo.Status' --output text 2>/dev/null)
+
+                            if [[ "$change_status" == "INSYNC" ]]; then
+                                print_status "✅ Subdomain DNS propagated successfully"
+                                break
+                            fi
+
+                            ((dns_wait_attempts++))
+                            print_info "Subdomain DNS propagation in progress... (attempt $dns_wait_attempts/$max_dns_wait)"
+                            sleep 2
+                        done
+                    fi
+                else
+                    print_warning "Failed to create subdomain CNAME record:"
+                    print_warning "$change_result"
+                fi
+            fi
+        else
+            print_warning "Could not parse subdomain DNS record format: $subdomain_dns_record"
+        fi
+    else
+        print_info "No subdomain CNAME record needed yet (status: pending or not available)"
+    fi
+}
+
+# Function to handle failed domain associations
+handle_failed_domain_association() {
+    local app_id="$1"
+    local domain_name="$2"
+
+    print_info "Checking domain association status..."
+
+    local domain_result
+    domain_result=$(aws amplify get-domain-association \
+        --app-id "$app_id" \
+        --domain-name "$domain_name" 2>&1)
+
+    if [[ $? -eq 0 ]]; then
+        local domain_status
+        domain_status=$(echo "$domain_result" | jq -r '.domainAssociation.domainStatus // empty')
+
+        if [[ "$domain_status" == "FAILED" ]]; then
+            print_warning "Domain association is in FAILED state. Attempting to recreate..."
+
+            if [[ "$DRY_RUN" == "true" ]]; then
+                print_info "[DRY RUN] Would delete and recreate domain association"
+                return 0
+            fi
+
+            # Delete the failed domain association
+            print_info "Deleting failed domain association..."
+            aws amplify delete-domain-association \
+                --app-id "$app_id" \
+                --domain-name "$domain_name" >/dev/null 2>&1
+
+            # Wait a moment for deletion to complete
+            sleep 5
+
+            # Recreate the domain association
+            print_info "Recreating domain association..."
+            local create_result
+            create_result=$(aws amplify create-domain-association \
+                --app-id "$app_id" \
+                --domain-name "$domain_name" \
+                --enable-auto-sub-domain \
+                --auto-sub-domain-creation-patterns "*" \
+                --sub-domain-settings "prefix=$SUBDOMAIN_PREFIX,branchName=$BRANCH_NAME" 2>&1)
+
+            if [[ $? -eq 0 ]]; then
+                print_status "✅ Domain association recreated successfully"
+                return 0
+            else
+                print_error "Failed to recreate domain association:"
+                print_error "$create_result"
+                return 1
+            fi
+        else
+            print_info "Domain association status: $domain_status"
+        fi
     fi
 
     return 0
@@ -314,7 +556,8 @@ wait_for_verification() {
     fi
 
     print_info "Waiting for SSL certificate verification..."
-    print_info "This may take several minutes..."
+    print_info "This may take several minutes (typically 2-10 minutes for first-time setup)..."
+    print_info "Future deployments will be much faster as they reuse existing validation"
 
     local max_attempts=60
     local attempt=1
@@ -443,6 +686,19 @@ main() {
     validate_inputs
     check_existing_domain
     configure_domain
+
+    # Wait a moment for domain association to be created before checking status
+    if [[ "$DRY_RUN" != "true" ]]; then
+        print_info "Waiting for domain association to initialize..."
+        sleep 10
+    fi
+
+    # Handle any failed domain associations by recreating them
+    handle_failed_domain_association "$APP_ID" "$ROOT_DOMAIN"
+
+    # Create subdomain CNAME record if needed
+    create_subdomain_cname "$APP_ID" "$ROOT_DOMAIN"
+
     wait_for_verification
     display_results
     
