@@ -1195,13 +1195,25 @@ jobs:
 
             if [[ -n "$CUSTOM_DOMAIN_NAME" && -n "$HOSTED_ZONE_ID" ]]; then
               echo "🌐 Configuring custom domain: $CUSTOM_DOMAIN_NAME"
+              echo "📂 Current working directory: $(pwd)"
+              echo "📁 Checking script existence..."
 
-              # Use the custom domain configuration script
-              chmod +x apps/client-ui/scripts/configure-amplify-custom-domain.sh
+              if [[ -f "scripts/configure-amplify-custom-domain.sh" ]]; then
+                echo "✅ Script found: scripts/configure-amplify-custom-domain.sh"
+                ls -la scripts/configure-amplify-custom-domain.sh
+              else
+                echo "❌ Script not found at: scripts/configure-amplify-custom-domain.sh"
+                echo "📁 Available files in scripts directory:"
+                ls -la scripts/ || echo "Scripts directory not found"
+                exit 1
+              fi
+
+              # Use the custom domain configuration script (relative to current directory)
+              chmod +x scripts/configure-amplify-custom-domain.sh
 
               CUSTOM_SUBDOMAIN="pr-${{ github.event.pull_request.number }}.${CUSTOM_DOMAIN_NAME}"
 
-              if apps/client-ui/scripts/configure-amplify-custom-domain.sh \
+              if scripts/configure-amplify-custom-domain.sh \
                 --app-id "$APP_ID" \
                 --domain "$CUSTOM_SUBDOMAIN" \
                 --hosted-zone-id "$HOSTED_ZONE_ID" \
