@@ -580,47 +580,8 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
 
-  # Create deployment URLs artifact when backend deployment is skipped
-  create-fallback-urls:
-    name: Create Fallback URLs Artifact
-    runs-on: ubuntu-latest
-    needs: [validate-access, check-backend-changes]
-    if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-backend-changes.outputs.has-backend-changes == 'false'
-
-    steps:
-      - name: Create deployment URLs artifact with pre-calculated values
-        run: |
-          echo "📦 Creating deployment URLs artifact (backend deployment skipped)..."
-          mkdir -p deployment-urls
-
-          # Create deployment URLs file with pre-calculated values
-          jq -n \
-            --arg backend_url "${{ needs.validate-access.outputs.backend-url }}" \
-            --arg frontend_url "${{ needs.validate-access.outputs.frontend-url }}" \
-            --arg backend_stack_name "${{ needs.validate-access.outputs.backend-stack-name }}" \
-            --arg environment "${{ needs.validate-access.outputs.env-name }}" \
-            --arg deployment_type "backend_skipped" \
-            --arg health_status "not_applicable" \
-            --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            '{
-              backend_url: $backend_url,
-              frontend_url: $frontend_url,
-              backend_stack_name: $backend_stack_name,
-              environment: $environment,
-              deployment_type: $deployment_type,
-              health_status: $health_status,
-              timestamp: $timestamp
-            }' > deployment-urls/urls.json
-
-          echo "✅ Deployment URLs artifact created (using pre-calculated values):"
-          cat deployment-urls/urls.json
-
-      - name: Upload deployment URLs artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: deployment-urls-${{ needs.validate-access.outputs.env-name }}
-          path: deployment-urls/
-          retention-days: 1
+  # Note: create-fallback-urls job removed - obsolete with pattern-based URL generation
+  # Custom domain patterns eliminate the need for complex URL artifact passing
 
   # Handle blocked deployments (forked PRs or non-code-owners)
   explain-blocked:
@@ -739,16 +700,10 @@ jobs:
     name: Build React Frontend
     runs-on: ubuntu-latest
     needs: [validate-access, check-frontend-changes]
-    # Run if frontend changes detected
-    # Note: With custom domains, frontend can build in parallel with backend
-    # 2. Fallback URLs job succeeded (no backend changes detected)
+    # Run if frontend changes detected - simplified condition for custom domain optimization
     if: |
       needs.validate-access.outputs.should-deploy == 'true' &&
-      needs.check-frontend-changes.outputs.has-frontend-changes == 'true' &&
-      always() && (
-        (needs.check-backend-changes.outputs.has-backend-changes == 'true' && needs.deploy-backend-preview.result == 'success') ||
-        (needs.check-backend-changes.outputs.has-backend-changes == 'false' && needs.create-fallback-urls.result == 'success')
-      )
+      needs.check-frontend-changes.outputs.has-frontend-changes == 'true'
 
     permissions:
       contents: read
@@ -1321,8 +1276,9 @@ jobs:
               backendUrl = '${{ needs.deploy-backend-preview.outputs.api-endpoint }}';
               backendStack = '${{ needs.deploy-backend-preview.outputs.stack-name }}';
             } else {
-              backendUrl = '${{ needs.build-frontend.outputs.backend-url }}';
-              backendStack = '${{ needs.build-frontend.outputs.backend-stack-name }}';
+              // Use pre-calculated URLs from validate-access (pattern-based or fallback)
+              backendUrl = '${{ needs.validate-access.outputs.backend-url }}';
+              backendStack = '${{ needs.validate-access.outputs.backend-stack-name }}';
             }
 
             const comment = `## 🚀 Preview Environment Deployed Successfully!
