@@ -315,7 +315,7 @@ jobs:
   deploy-backend-preview:
     name: Deploy Backend Preview
     runs-on: ubuntu-latest
-    needs: [validate-access, build-express-api, check-backend-changes]
+    needs: [validate-access, check-backend-changes]
     if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-backend-changes.outputs.has-backend-changes == 'true'
     environment: development
 
@@ -358,11 +358,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: GitHubActions-PreviewDeploy-Backend-${{ github.run_id }}
 
-      - name: Download Express API deployment package
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ needs.build-express-api.outputs.build-artifact-name }}
-          path: deployment-artifacts/
+      # Note: No need to download artifacts - EC2 will build directly from source
 
       - name: Generate stack information
         id: stack-info
@@ -425,17 +421,10 @@ jobs:
 
           echo "📣 Observability: exporting CORS_ALLOWED_ORIGINS to CDK as -> '$CORS_ORIGINS'"
 
-          # Extract deployment package for EC2 deployment
-          echo "📦 Preparing Express API deployment package..."
-          cd ../deployment-artifacts
-          if [[ -f "express-api-deployment.tar.gz" ]]; then
-            tar -xzf express-api-deployment.tar.gz -C .
-            echo "✅ Deployment package extracted"
-          else
-            echo "❌ Express API deployment package not found"
-            exit 1
-          fi
-          cd ../infrastructure
+          # Note: EC2 deployment will build the Express API directly from source
+          echo "📦 EC2 deployment will build Express API directly from source"
+          echo "🚀 No artifact upload needed - simplified direct build approach"
+          cd infrastructure
 
           # Deploy EC2-based infrastructure using Phase 4 constructs
           echo "🏗️ Deploying EC2 infrastructure with Phase 4 constructs..."

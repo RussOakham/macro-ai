@@ -174,6 +174,10 @@ const createServer = (): Express => {
 		)
 		res.header('Access-Control-Allow-Credentials', 'true')
 
+		console.log(
+			`[server] EMERGENCY CORS: Applied headers for ${req.method} ${req.url}`,
+		)
+
 		// Handle preflight requests immediately
 		if (req.method === 'OPTIONS') {
 			console.log(
