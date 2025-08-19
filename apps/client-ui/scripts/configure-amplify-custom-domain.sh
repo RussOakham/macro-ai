@@ -155,6 +155,31 @@ validate_inputs() {
         exit 1
     fi
 
+    # Parse domain to extract root domain and subdomain prefix for AWS Amplify
+    # AWS Amplify expects: --domain-name "root.domain.tld" --sub-domain-settings "prefix=subdomain"
+    local ROOT_DOMAIN=""
+    local SUBDOMAIN_PREFIX=""
+
+    # Count dots to determine if this is a subdomain
+    local dot_count=$(echo "$CUSTOM_DOMAIN_NAME" | tr -cd '.' | wc -c)
+
+    if [[ $dot_count -ge 2 ]]; then
+        # Extract subdomain prefix (everything before the first dot)
+        SUBDOMAIN_PREFIX=$(echo "$CUSTOM_DOMAIN_NAME" | cut -d'.' -f1)
+        # Extract root domain (everything after the first dot)
+        ROOT_DOMAIN=$(echo "$CUSTOM_DOMAIN_NAME" | cut -d'.' -f2-)
+
+        print_info "Parsed domain components:"
+        print_info "  Root domain: $ROOT_DOMAIN"
+        print_info "  Subdomain prefix: $SUBDOMAIN_PREFIX"
+    else
+        # This is already a root domain
+        ROOT_DOMAIN="$CUSTOM_DOMAIN_NAME"
+        SUBDOMAIN_PREFIX=""
+
+        print_info "Using root domain without subdomain: $ROOT_DOMAIN"
+    fi
+
     # Validate Amplify app exists
     if ! aws amplify get-app --app-id "$AMPLIFY_APP_ID" &> /dev/null; then
         print_error "Amplify app not found: $AMPLIFY_APP_ID"
@@ -177,7 +202,7 @@ check_existing_domain() {
     local existing_domains
     existing_domains=$(aws amplify list-domain-associations --app-id "$AMPLIFY_APP_ID" --query 'domainAssociations[].domainName' --output text 2>/dev/null || echo "")
 
-    if [[ -n "$existing_domains" ]] && echo "$existing_domains" | grep -q "$CUSTOM_DOMAIN_NAME"; then
+    if [[ -n "$existing_domains" ]] && echo "$existing_domains" | grep -q "$ROOT_DOMAIN"; then
         if [[ "$FORCE" == "true" ]]; then
             print_warning "Domain already configured but --force specified. Will reconfigure."
             return 0
@@ -208,11 +233,15 @@ configure_domain() {
 
     # Create domain association
     print_info "Creating domain association..."
+    print_info "  Using root domain: $ROOT_DOMAIN"
+    print_info "  Using subdomain prefix: $SUBDOMAIN_PREFIX"
+    print_info "  Branch: $BRANCH_NAME"
+
     local domain_result
     domain_result=$(aws amplify create-domain-association \
         --app-id "$AMPLIFY_APP_ID" \
-        --domain-name "$CUSTOM_DOMAIN_NAME" \
-        --sub-domain-settings "prefix=,branchName=$BRANCH_NAME" \
+        --domain-name "$ROOT_DOMAIN" \
+        --sub-domain-settings "prefix=$SUBDOMAIN_PREFIX,branchName=$BRANCH_NAME" \
         --auto-sub-domain-creation-patterns "*" \
         --enable-auto-sub-domain \
         --output json 2>/dev/null || echo "")
@@ -252,7 +281,7 @@ wait_for_verification() {
         local domain_status
         domain_status=$(aws amplify get-domain-association \
             --app-id "$AMPLIFY_APP_ID" \
-            --domain-name "$CUSTOM_DOMAIN_NAME" \
+            --domain-name "$ROOT_DOMAIN" \
             --query 'domainAssociation.domainStatus' \
             --output text 2>/dev/null || echo "UNKNOWN")
 
@@ -295,7 +324,7 @@ display_results() {
     local domain_info
     domain_info=$(aws amplify get-domain-association \
         --app-id "$AMPLIFY_APP_ID" \
-        --domain-name "$CUSTOM_DOMAIN_NAME" \
+        --domain-name "$ROOT_DOMAIN" \
         --output json 2>/dev/null || echo "{}")
 
     if [[ "$domain_info" != "{}" ]]; then
