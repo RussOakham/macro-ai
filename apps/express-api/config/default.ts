@@ -12,6 +12,7 @@ import { configureLogger } from '../src/utils/logger.ts'
  */
 export const loadAppConfig = async () => {
 	// Determine if we're in a runtime environment that needs Parameter Store
+	console.log('loadAppConfig Called')
 	const isRuntimeEnvironment =
 		Boolean(process.env.PARAMETER_STORE_PREFIX) ||
 		Boolean(process.env.APP_ENV?.startsWith('pr-'))
