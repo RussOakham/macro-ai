@@ -268,6 +268,15 @@ export class Ec2Construct extends Construct {
 			}),
 		)
 
+		// Parameter Store describe access (required for parameter discovery)
+		role.addToPolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: ['ssm:DescribeParameters'],
+				resources: ['*'], // DescribeParameters requires wildcard resource
+			}),
+		)
+
 		// KMS permissions for Parameter Store SecureString decryption
 		role.addToPolicy(
 			new iam.PolicyStatement({

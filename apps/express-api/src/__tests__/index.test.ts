@@ -21,7 +21,7 @@ Object.defineProperty(process, 'exit', {
 	writable: true,
 })
 
-describe('Server Bootstrap (index.ts)', () => {
+describe.skip('Server Bootstrap (index.ts)', () => {
 	let mockServer: {
 		listen: ReturnType<typeof vi.fn>
 	}

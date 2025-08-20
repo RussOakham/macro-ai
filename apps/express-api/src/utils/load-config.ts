@@ -604,5 +604,6 @@ export {
 	getConfigWithSource,
 	loadConfig,
 	loadEnhancedConfig,
+	loadRuntimeConfig,
 }
 export type { EnhancedConfig }
