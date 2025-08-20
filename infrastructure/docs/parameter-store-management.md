@@ -219,14 +219,14 @@ aws ssm put-parameter \
 ```bash
 # List all parameters for an environment
 aws ssm get-parameters-by-path \
-  --path "/macro-ai/development" \
+  --path "/macro-ai/development/" \
   --recursive \
   --query "Parameters[*].[Name,Type,LastModifiedDate]" \
   --output table
 
 # List parameter names only
 aws ssm get-parameters-by-path \
-  --path "/macro-ai/development" \
+  --path "/macro-ai/development/" \
   --recursive \
   --query "Parameters[*].Name" \
   --output text

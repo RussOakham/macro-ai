@@ -115,7 +115,7 @@ env:
   SECURITY_GROUP_ID: sg-xxxxxxxxx
   LAUNCH_TEMPLATE_ID: lt-xxxxxxxxx
   TARGET_GROUP_ARN: arn:aws:elasticloadbalancing:...
-  PARAMETER_STORE_PREFIX: /macro-ai/development
+  PARAMETER_STORE_PREFIX: /macro-ai/development/
   ARTIFACT_BUCKET: my-deployment-bucket
 
   # Optional

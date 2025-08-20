@@ -58,8 +58,8 @@ chown -R macroai:macroai /opt/macro-ai /var/log/macro-ai || error_exit "Failed t
 
 # Set environment variables including CORS configuration
 echo "=== SETTING ENVIRONMENT VARIABLES ===" >> /var/log/user-data.log
-echo "PARAMETER_STORE_PREFIX=/macro-ai/development" >> /etc/environment
-echo "Setting PARAMETER_STORE_PREFIX=/macro-ai/development" >> /var/log/user-data.log
+echo "PARAMETER_STORE_PREFIX=/macro-ai/development/" >> /etc/environment
+echo "Setting PARAMETER_STORE_PREFIX=/macro-ai/development/" >> /var/log/user-data.log
 echo "NODE_ENV=production" >> /etc/environment
 echo "Setting NODE_ENV=production" >> /var/log/user-data.log
 echo "SERVER_PORT=3040" >> /etc/environment
@@ -86,7 +86,7 @@ echo "=== END DEPLOYMENT ARTIFACT CONFIGURATION ===" >> /var/log/user-data.log
 # Create .env file for the application
 echo "=== CREATING .ENV FILE ===" >> /var/log/user-data.log
 cat > /opt/macro-ai/.env << EOF
-PARAMETER_STORE_PREFIX=/macro-ai/development
+PARAMETER_STORE_PREFIX=/macro-ai/development/
 NODE_ENV=production
 SERVER_PORT=3040
 APP_ENV=pr-51
