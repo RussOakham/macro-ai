@@ -554,7 +554,9 @@ export class Ec2Construct extends Construct {
 			// Optional environment variables
 			...(prNumber ? [`Environment=PR_NUMBER=${prNumber.toString()}`] : []),
 			...(branchName ? [`Environment=BRANCH_NAME=${branchName}`] : []),
-			...(customDomainName ? [`Environment=CUSTOM_DOMAIN_NAME=${customDomainName}`] : []),
+			...(customDomainName
+				? [`Environment=CUSTOM_DOMAIN_NAME=${customDomainName}`]
+				: []),
 			'',
 			'# Logging',
 			'StandardOutput=journal',
