@@ -262,7 +262,23 @@ export class Ec2Construct extends Construct {
 					'ssm:GetParameters',
 					'ssm:GetParametersByPath',
 				],
-				resources: [`arn:aws:ssm:*:*:parameter${parameterStorePrefix}/*`],
+				resources: [
+					`arn:aws:ssm:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:parameter${parameterStorePrefix}/*`,
+				],
+			}),
+		)
+
+		// KMS permissions for Parameter Store SecureString decryption
+		role.addToPolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: ['kms:Decrypt'],
+				resources: ['*'],
+				conditions: {
+					StringEquals: {
+						'kms:ViaService': `ssm.${cdk.Stack.of(this).region}.amazonaws.com`,
+					},
+				},
 			}),
 		)
 

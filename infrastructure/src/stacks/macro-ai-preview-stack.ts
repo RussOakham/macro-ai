@@ -562,10 +562,10 @@ export class MacroAiPreviewStack extends cdk.Stack {
 				maxCapacity: 2, // Limited scaling to control costs
 				desiredCapacity: 1, // Start with single instance
 
-				// Health check configuration
+				// Health check configuration - extended grace period for debugging
 				healthChecks: {
 					types: ['ELB'],
-					gracePeriod: cdk.Duration.minutes(5),
+					gracePeriod: cdk.Duration.minutes(15), // Extended from 5 to 15 minutes for startup debugging
 				},
 
 				// Instance distribution - use public subnets for cost optimization
