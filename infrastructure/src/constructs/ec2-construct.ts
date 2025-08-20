@@ -263,7 +263,10 @@ export class Ec2Construct extends Construct {
 					'ssm:GetParametersByPath',
 				],
 				resources: [
-					`arn:aws:ssm:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:parameter${parameterStorePrefix}/*`,
+					// Individual parameters under the path
+					`arn:aws:ssm:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:parameter${parameterStorePrefix}*`,
+					// Path itself for GetParametersByPath operations
+					`arn:aws:ssm:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:parameter${parameterStorePrefix.replace(/\/$/, '')}`,
 				],
 			}),
 		)
