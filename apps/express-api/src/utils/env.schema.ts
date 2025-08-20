@@ -11,7 +11,15 @@ const envSchema = z.object({
 		.enum(['development', 'production', 'test'])
 		.default('development'),
 	APP_ENV: z
-		.enum(['development', 'staging', 'production', 'test'])
+		.union([
+			z.enum(['development', 'staging', 'production', 'test']),
+			z
+				.string()
+				.regex(
+					/^pr-\d+$/,
+					'Preview environment must match pr-{number} pattern',
+				),
+		])
 		.default('development'),
 	SERVER_PORT: z.coerce.number().default(3040),
 

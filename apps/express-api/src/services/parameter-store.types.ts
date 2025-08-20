@@ -28,6 +28,7 @@ export interface ParameterStoreConfig {
 export interface ParameterMetadata {
 	name: string
 	fullPath: string
+	fallbackPath?: string
 	isCritical: boolean
 	category: 'critical' | 'standard'
 }

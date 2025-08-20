@@ -9,6 +9,12 @@ import { config } from 'dotenv'
 import { resolve } from 'path'
 import { fromError } from 'zod-validation-error'
 
+import {
+	ConfigurationStage,
+	monitorConfigurationLoading,
+	publishConfigurationHealthMetric,
+	publishParameterLoadingStats,
+} from '../middleware/configuration-monitoring.ts'
 import { enhancedConfigService } from '../services/enhanced-config.service.ts'
 
 import { envSchema, TEnv } from './env.schema.ts'
@@ -21,6 +27,23 @@ const { logger } = pino
  * Configuration source types
  */
 type ConfigSource = 'environment' | 'parameter-store' | 'fallback'
+
+/**
+ * Determines the correct Parameter Store prefix based on APP_ENV
+ * Maps preview environments (pr-*) to development prefix for parameter sharing
+ *
+ * @param appEnv - The APP_ENV value (development, staging, production, test, or pr-*)
+ * @returns Parameter Store prefix path
+ */
+const getParameterStorePrefix = (appEnv: string): string => {
+	// Map preview environments to development parameters
+	if (appEnv.startsWith('pr-')) {
+		return '/macro-ai/development/'
+	}
+
+	// Use environment-specific prefixes for standard environments
+	return `/macro-ai/${appEnv}/`
+}
 
 /**
  * Enhanced configuration with source metadata
@@ -104,22 +127,57 @@ const loadBuildTimeConfig = (): Result<TEnv> => {
  * Used for runtime environments (local development and EC2)
  */
 const loadRuntimeConfig = async (): Promise<Result<EnhancedConfig>> => {
-	const envPath = resolve(process.cwd(), '.env')
-	const isEc2Environment = Boolean(process.env.PARAMETER_STORE_PREFIX)
-	const isRuntimeEnvironment = isEc2Environment
+	return await monitorConfigurationLoading(
+		ConfigurationStage.INITIALIZATION,
+		async () => {
+			const envPath = resolve(process.cwd(), '.env')
+			const isEc2Environment = Boolean(process.env.PARAMETER_STORE_PREFIX)
+			const isRuntimeEnvironment = isEc2Environment
 
-	const enableDebug =
-		process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test'
+			// Determine Parameter Store prefix dynamically based on APP_ENV
+			const appEnv = process.env.APP_ENV ?? 'development'
+			const dynamicParameterStorePrefix = getParameterStorePrefix(appEnv)
+			const parameterStorePrefix =
+				process.env.PARAMETER_STORE_PREFIX ?? dynamicParameterStorePrefix
 
-	logger.info(
-		{
-			operation: 'loadRuntimeConfig',
-			isEc2Environment,
-			parameterStorePrefix: process.env.PARAMETER_STORE_PREFIX,
-			envPath,
+			const enableDebug =
+				process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test'
+
+			logger.info(
+				{
+					operation: 'loadRuntimeConfig',
+					isEc2Environment,
+					appEnv,
+					parameterStorePrefix,
+					dynamicParameterStorePrefix,
+					envPath,
+				},
+				'Loading runtime configuration with Parameter Store integration',
+			)
+
+			return await loadConfigurationSteps(
+				envPath,
+				isRuntimeEnvironment,
+				enableDebug,
+				appEnv,
+				parameterStorePrefix,
+			)
 		},
-		'Loading runtime configuration with Parameter Store integration',
+		{
+			appEnv: process.env.APP_ENV,
+			parameterStorePrefix: process.env.PARAMETER_STORE_PREFIX,
+		},
 	)
+}
+
+const loadConfigurationSteps = async (
+	envPath: string,
+	isRuntimeEnvironment: boolean,
+	enableDebug: boolean,
+	appEnv: string,
+	parameterStorePrefix: string,
+): Promise<Result<EnhancedConfig>> => {
+	const isEc2Environment = Boolean(process.env.PARAMETER_STORE_PREFIX)
 
 	// Load environment variables from .env file (if not in runtime environment)
 	if (!isRuntimeEnvironment) {
@@ -165,8 +223,11 @@ const loadRuntimeConfig = async (): Promise<Result<EnhancedConfig>> => {
 
 		try {
 			// Get all mapped configuration from Parameter Store with fallbacks
-			const [configValues, configError] =
-				await enhancedConfigService.getAllMappedConfig()
+			const [configValues, configError] = await monitorConfigurationLoading(
+				ConfigurationStage.PARAMETER_RETRIEVAL,
+				async () => await enhancedConfigService.getAllMappedConfig(),
+				{ appEnv, parameterStorePrefix },
+			)
 
 			if (configError) {
 				logger.warn(
@@ -216,6 +277,13 @@ const loadRuntimeConfig = async (): Promise<Result<EnhancedConfig>> => {
 					},
 					'Parameter Store configuration loading completed',
 				)
+
+				// Publish parameter loading statistics
+				await publishParameterLoadingStats(
+					parameterStoreVariables + environmentVariables + fallbackVariables,
+					0,
+					appEnv,
+				)
 			}
 		} catch (error) {
 			const errorMessage =
@@ -256,7 +324,12 @@ const loadRuntimeConfig = async (): Promise<Result<EnhancedConfig>> => {
 		parameterStoreVariables + environmentVariables + fallbackVariables
 
 	// Validate the enhanced environment against schema with comprehensive error reporting
-	const env = envSchema.safeParse(enhancedEnv)
+	const env = await monitorConfigurationLoading(
+		ConfigurationStage.SCHEMA_VALIDATION,
+		// eslint-disable-next-line @typescript-eslint/require-await
+		async () => envSchema.safeParse(enhancedEnv),
+		{ appEnv, parameterStorePrefix },
+	)
 
 	if (!env.success) {
 		const validationError = fromError(env.error)
@@ -345,6 +418,13 @@ const loadRuntimeConfig = async (): Promise<Result<EnhancedConfig>> => {
 			},
 		},
 	}
+
+	// Publish configuration health metric
+	await publishConfigurationHealthMetric(
+		true, // Configuration is healthy
+		0, // Configuration age (0 for newly loaded)
+		appEnv,
+	)
 
 	return [enhancedConfig, null]
 }

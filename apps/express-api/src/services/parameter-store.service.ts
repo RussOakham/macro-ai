@@ -98,29 +98,61 @@ export class ParameterStoreService {
 			}
 		}
 
-		// Retrieve from Parameter Store
+		// Retrieve from Parameter Store with fallback support
 		const retrieveParameter = async (): Promise<string> => {
-			const command = new GetParameterCommand({
-				Name: metadata.fullPath,
-				WithDecryption: true,
-			})
+			// Try primary path first (flat structure)
+			const tryPath = async (
+				path: string,
+				pathType: string,
+			): Promise<string | null> => {
+				try {
+					const command = new GetParameterCommand({
+						Name: path,
+						WithDecryption: true,
+					})
 
-			logger.debug(
-				{
-					operation: 'getParameterFromStore',
-					parameter: parameterName,
-					fullPath: metadata.fullPath,
-					category: metadata.category,
-				},
-				'Retrieving parameter from Parameter Store',
-			)
+					logger.debug(
+						{
+							operation: 'getParameterFromStore',
+							parameter: parameterName,
+							fullPath: path,
+							pathType,
+							category: metadata.category,
+						},
+						`Retrieving parameter from Parameter Store (${pathType})`,
+					)
 
-			const response = await this.ssmClient.send(command)
-			const parameterValue = response.Parameter?.Value
+					const response = await this.ssmClient.send(command)
+					return response.Parameter?.Value ?? null
+				} catch (error) {
+					logger.debug(
+						{
+							operation: 'getParameterFailed',
+							parameter: parameterName,
+							fullPath: path,
+							pathType,
+							error: error instanceof Error ? error.message : 'Unknown error',
+						},
+						`Parameter not found at ${pathType} path`,
+					)
+					return null
+				}
+			}
+
+			// Try flat structure first
+			let parameterValue = await tryPath(metadata.fullPath, 'flat')
+
+			// If not found and fallback path exists, try hierarchical structure
+			if (!parameterValue && metadata.fallbackPath) {
+				parameterValue = await tryPath(metadata.fallbackPath, 'hierarchical')
+			}
 
 			if (!parameterValue) {
+				const paths = metadata.fallbackPath
+					? `${metadata.fullPath}, ${metadata.fallbackPath}`
+					: metadata.fullPath
 				const notFoundError = new NotFoundError(
-					`Parameter ${parameterName} not found in Parameter Store`,
+					`Parameter ${parameterName} not found in Parameter Store at paths: ${paths}`,
 					'parameterStoreService',
 				)
 				throw notFoundError
@@ -276,13 +308,23 @@ export class ParameterStoreService {
 			parameterName as (typeof ParameterStoreService.CRITICAL_SECRETS)[number],
 		)
 		const category = isCritical ? 'critical' : 'standard'
-		const fullPath = isCritical
-			? `/macro-ai/${this.config.environment}/critical/${parameterName}`
-			: `/macro-ai/${this.config.environment}/standard/${parameterName}`
+
+		// Support both flat and hierarchical parameter structures
+		// For preview environments (pr-*), use development prefix with flat structure
+		const environment = this.config.environment.startsWith('pr-')
+			? 'development'
+			: this.config.environment
+
+		// Try flat structure first (new approach), then hierarchical (legacy)
+		const flatPath = `/macro-ai/${environment}/${parameterName.toUpperCase().replace(/-/g, '_')}`
+		const hierarchicalPath = isCritical
+			? `/macro-ai/${environment}/critical/${parameterName}`
+			: `/macro-ai/${environment}/standard/${parameterName}`
 
 		return {
 			name: parameterName,
-			fullPath,
+			fullPath: flatPath, // Use flat structure as primary
+			fallbackPath: hierarchicalPath, // Keep hierarchical as fallback
 			isCritical,
 			category,
 		}

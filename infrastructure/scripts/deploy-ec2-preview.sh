@@ -61,9 +61,80 @@ validate_environment() {
     fi
     
     log_success "Environment validation completed"
+
+    # Validate Parameter Store configuration
+    validate_parameter_store
 }
 
+# Validate Parameter Store parameters exist before deployment
+validate_parameter_store() {
+    log_info "Validating Parameter Store configuration..."
 
+    # For preview environments, use development parameter prefix
+    local param_prefix="/macro-ai/development/"
+    log_info "Using Parameter Store prefix: $param_prefix"
+
+    # Test AWS credentials and Parameter Store access
+    log_info "Testing AWS credentials and Parameter Store access..."
+    if ! aws sts get-caller-identity > /dev/null 2>&1; then
+        log_error "AWS credentials not available or invalid"
+        exit 1
+    fi
+
+    # Define required parameters for the application
+    local required_params=(
+        "API_KEY"
+        "AWS_COGNITO_REGION"
+        "AWS_COGNITO_USER_POOL_ID"
+        "AWS_COGNITO_USER_POOL_CLIENT_ID"
+        "AWS_COGNITO_USER_POOL_SECRET_KEY"
+        "AWS_COGNITO_ACCESS_KEY"
+        "AWS_COGNITO_SECRET_KEY"
+        "COOKIE_ENCRYPTION_KEY"
+        "OPENAI_API_KEY"
+        "RELATIONAL_DATABASE_URL"
+        "NON_RELATIONAL_DATABASE_URL"
+    )
+
+    local missing_params=()
+    local found_params=()
+
+    log_info "Checking required Parameter Store parameters..."
+    for param in "${required_params[@]}"; do
+        local param_path="${param_prefix}${param}"
+
+        if aws ssm get-parameter --name "$param_path" --query "Parameter.Value" --output text > /dev/null 2>&1; then
+            log_info "✅ Parameter found: $param"
+            found_params+=("$param")
+        else
+            log_warning "❌ Parameter missing: $param_path"
+            missing_params+=("$param")
+        fi
+    done
+
+    # Report results
+    log_info "Parameter Store validation results:"
+    log_info "  Found: ${#found_params[@]} parameters"
+    log_info "  Missing: ${#missing_params[@]} parameters"
+
+    if [[ ${#missing_params[@]} -gt 0 ]]; then
+        log_error "Missing required Parameter Store parameters:"
+        for param in "${missing_params[@]}"; do
+            log_error "  - ${param_prefix}${param}"
+        done
+        log_error ""
+        log_error "Please ensure all required parameters exist in Parameter Store before deployment."
+        log_error "You can create missing parameters using the AWS CLI:"
+        log_error ""
+        for param in "${missing_params[@]}"; do
+            log_error "  aws ssm put-parameter --name '${param_prefix}${param}' --value 'YOUR_VALUE' --type 'SecureString'"
+        done
+        exit 1
+    fi
+
+    log_success "All required Parameter Store parameters found"
+    log_success "Parameter Store validation completed"
+}
 
 # Generate stack name for preview environment
 generate_stack_name() {
