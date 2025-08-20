@@ -136,15 +136,24 @@ describe('Enhanced Configuration Loader', () => {
 			// Assert
 			expect(error).toBeNull()
 			expect(result).toBeDefined()
-			expect(result?._metadata.isLambdaEnvironment).toBe(false)
+			expect(result?._metadata.isEc2Environment).toBe(false)
 			expect(result?._metadata.parameterStoreEnabled).toBe(false)
 			expect(result?.API_KEY).toBe('test-api-key-32-characters-long')
 			expect(result?._metadata.sources.API_KEY).toBe('environment')
+			expect(
+				result?._metadata.validationResults.totalVariables,
+			).toBeGreaterThan(0)
+			expect(
+				result?._metadata.validationResults.environmentVariables,
+			).toBeGreaterThan(0)
+			expect(result?._metadata.validationResults.parameterStoreVariables).toBe(
+				0,
+			)
 		})
 
-		it('should load configuration in Lambda environment with Parameter Store', async () => {
+		it('should load configuration in EC2 environment with Parameter Store', async () => {
 			// Arrange
-			process.env.AWS_LAMBDA_FUNCTION_NAME = 'test-function'
+			process.env.PARAMETER_STORE_PREFIX = '/macro-ai/test'
 			process.env.NODE_ENV = 'production'
 
 			const validEnv = {
@@ -207,17 +216,26 @@ describe('Enhanced Configuration Loader', () => {
 			// Assert
 			expect(error).toBeNull()
 			expect(result).toBeDefined()
-			expect(result?._metadata.isLambdaEnvironment).toBe(true)
+			expect(result?._metadata.isEc2Environment).toBe(true)
 			expect(result?._metadata.parameterStoreEnabled).toBe(true)
 			expect(result?.OPENAI_API_KEY).toBe('sk-parameter-store-key')
 			expect(result?._metadata.sources.OPENAI_API_KEY).toBe('parameter-store')
 			expect(result?.API_KEY).toBe('test-api-key-32-characters-long')
 			expect(result?._metadata.sources.API_KEY).toBe('environment')
+			expect(result?._metadata.validationResults.parameterStoreVariables).toBe(
+				5,
+			) // OPENAI_API_KEY + 4 others from mock
+			expect(
+				result?._metadata.validationResults.environmentVariables,
+			).toBeGreaterThan(0)
+			expect(
+				result?._metadata.validationResults.totalVariables,
+			).toBeGreaterThan(5)
 		})
 
-		it('should handle Parameter Store failure gracefully', async () => {
+		it('should handle Parameter Store failure in EC2 environment', async () => {
 			// Arrange
-			process.env.AWS_LAMBDA_FUNCTION_NAME = 'test-function'
+			process.env.PARAMETER_STORE_PREFIX = '/macro-ai/test'
 			process.env.NODE_ENV = 'production'
 
 			const validEnv = {
@@ -241,25 +259,29 @@ describe('Enhanced Configuration Loader', () => {
 
 			process.env = { ...process.env, ...validEnv }
 
-			vi.mocked(enhancedConfigService.getAllMappedConfig).mockResolvedValue([
-				null,
-				new AppError({ message: 'Parameter Store error' }),
-			])
+			vi.mocked(enhancedConfigService.getAllMappedConfig).mockRejectedValue(
+				new Error('Parameter Store connection failed'),
+			)
 
 			// Act
 			const [result, error] = await loadEnhancedConfig()
 
-			// Assert
-			expect(error).toBeNull()
-			expect(result).toBeDefined()
-			expect(result?._metadata.isLambdaEnvironment).toBe(true)
-			expect(result?.OPENAI_API_KEY).toBe('sk-test-openai-key') // Falls back to env
-			expect(result?._metadata.sources.OPENAI_API_KEY).toBe('environment')
+			// Assert - In EC2 environment, Parameter Store failure should be critical
+			expect(result).toBeNull()
+			expect(error).toBeDefined()
+			expect(error?.message).toContain(
+				'Parameter Store integration failed in EC2 environment',
+			)
+			expect(error?.message).toContain('Parameter Store connection failed')
+			expect(error?.details).toMatchObject({
+				environment: 'ec2',
+				parameterStorePrefix: '/macro-ai/test',
+			})
 		})
 
 		it('should return validation error for invalid environment', async () => {
 			// Arrange
-			delete process.env.AWS_LAMBDA_FUNCTION_NAME
+			delete process.env.PARAMETER_STORE_PREFIX
 			process.env.NODE_ENV = 'development'
 
 			const invalidEnv = {
@@ -285,7 +307,7 @@ describe('Enhanced Configuration Loader', () => {
 			// Assert
 			expect(result).toBeNull()
 			expect(error).toBeInstanceOf(AppError)
-			expect(error?.message).toContain('Invalid environment configuration')
+			expect(error?.message).toContain('Invalid enhanced configuration')
 		})
 
 		it('should handle dotenv parsing error', async () => {

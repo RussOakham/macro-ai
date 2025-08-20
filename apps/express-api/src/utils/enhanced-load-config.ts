@@ -1,7 +1,7 @@
 /**
- * Enhanced Configuration Loader
+ * Enhanced Configuration Loader for EC2 Environments
  * Integrates Parameter Store with traditional environment variable loading
- * Provides seamless fallback from Parameter Store to environment variables
+ * Provides comprehensive validation for EC2 runtime environments
  */
 
 import { config } from 'dotenv'
@@ -17,26 +17,37 @@ import { pino } from './logger.ts'
 const { logger } = pino
 
 /**
- * Enhanced configuration with source metadata
+ * Configuration source types
+ */
+type ConfigSource = 'environment' | 'parameter-store' | 'fallback'
+
+/**
+ * Enhanced configuration with source metadata for EC2 environments
  */
 interface EnhancedConfig extends TEnv {
 	_metadata: {
-		sources: Record<string, 'environment' | 'parameter-store' | 'fallback'>
-		isLambdaEnvironment: boolean
+		sources: Record<string, ConfigSource>
+		isEc2Environment: boolean
 		parameterStoreEnabled: boolean
+		validationResults: {
+			totalVariables: number
+			parameterStoreVariables: number
+			environmentVariables: number
+			fallbackVariables: number
+		}
 	}
 }
 
 /**
- * Load configuration with Parameter Store integration
- * In Lambda environments, attempts to load sensitive values from Parameter Store first
+ * Load configuration with Parameter Store integration for EC2 environments
+ * Attempts to load sensitive values from Parameter Store first
  * Falls back to environment variables for all values
+ * Provides comprehensive validation with detailed error reporting
  */
 const loadEnhancedConfig = async (): Promise<Result<EnhancedConfig>> => {
 	const envPath = resolve(process.cwd(), '.env')
-	const isLambdaEnvironment = Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME)
 	const isEc2Environment = Boolean(process.env.PARAMETER_STORE_PREFIX)
-	const isRuntimeEnvironment = isLambdaEnvironment || isEc2Environment
+	const isRuntimeEnvironment = isEc2Environment
 
 	const enableDebug =
 		process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test'
@@ -46,10 +57,11 @@ const loadEnhancedConfig = async (): Promise<Result<EnhancedConfig>> => {
 	logger.info(
 		{
 			operation: 'loadEnhancedConfig',
-			isLambdaEnvironment,
+			isEc2Environment,
+			parameterStorePrefix: process.env.PARAMETER_STORE_PREFIX,
 			envPath,
 		},
-		'Loading enhanced configuration',
+		'Loading enhanced configuration for EC2 environment',
 	)
 
 	// Load environment variables from .env file (if not in runtime environment)
@@ -77,18 +89,21 @@ const loadEnhancedConfig = async (): Promise<Result<EnhancedConfig>> => {
 			enhancedEnv[key] = value
 		}
 	}
-	const sources: Record<
-		string,
-		'environment' | 'parameter-store' | 'fallback'
-	> = {}
+	const sources: Record<string, ConfigSource> = {}
 
-	// In runtime environment, try to load sensitive values from Parameter Store
+	// Initialize validation counters
+	let parameterStoreVariables = 0
+	let environmentVariables = 0
+	let fallbackVariables = 0
+
+	// In EC2 runtime environment, load values from Parameter Store
 	if (isRuntimeEnvironment) {
 		logger.info(
 			{
 				operation: 'loadFromParameterStore',
+				parameterStorePrefix: process.env.PARAMETER_STORE_PREFIX,
 			},
-			'Runtime environment detected, loading from Parameter Store',
+			'EC2 runtime environment detected, loading from Parameter Store',
 		)
 
 		try {
@@ -101,6 +116,7 @@ const loadEnhancedConfig = async (): Promise<Result<EnhancedConfig>> => {
 					{
 						operation: 'parameterStorePartialFailure',
 						error: configError.message,
+						parameterStorePrefix: process.env.PARAMETER_STORE_PREFIX,
 					},
 					'Failed to load some configuration from Parameter Store',
 				)
@@ -110,6 +126,15 @@ const loadEnhancedConfig = async (): Promise<Result<EnhancedConfig>> => {
 					enhancedEnv[envVar] = configValue.value
 					sources[envVar] = configValue.source
 
+					// Count source types for validation reporting
+					if (configValue.source === 'parameter-store') {
+						parameterStoreVariables++
+					} else if (configValue.source === 'environment') {
+						environmentVariables++
+					} else {
+						fallbackVariables++
+					}
+
 					logger.debug(
 						{
 							operation: 'configLoaded',
@@ -117,46 +142,148 @@ const loadEnhancedConfig = async (): Promise<Result<EnhancedConfig>> => {
 							source: configValue.source,
 							cached: configValue.cached,
 						},
-						'Configuration loaded',
+						'Configuration variable loaded',
 					)
 				}
+
+				logger.info(
+					{
+						operation: 'parameterStoreLoadComplete',
+						parameterStoreVariables,
+						environmentVariables,
+						fallbackVariables,
+						totalVariables:
+							parameterStoreVariables +
+							environmentVariables +
+							fallbackVariables,
+					},
+					'Parameter Store configuration loading completed',
+				)
 			}
 		} catch (error) {
-			logger.warn(
+			const errorMessage =
+				error instanceof Error ? error.message : 'Unknown error'
+			logger.error(
 				{
-					operation: 'parameterStoreFallback',
-					error: error instanceof Error ? error.message : 'Unknown error',
+					operation: 'parameterStoreFailed',
+					error: errorMessage,
+					parameterStorePrefix: process.env.PARAMETER_STORE_PREFIX,
 				},
-				'Parameter Store integration failed, using environment fallbacks',
+				'Parameter Store integration failed completely',
 			)
+
+			// In EC2 environment, Parameter Store failure is critical
+			const appError = AppError.validation(
+				`Parameter Store integration failed in EC2 environment: ${errorMessage}. ` +
+					`Check AWS credentials and Parameter Store prefix: ${process.env.PARAMETER_STORE_PREFIX ?? 'undefined'}`,
+				{
+					error: errorMessage,
+					parameterStorePrefix: process.env.PARAMETER_STORE_PREFIX,
+					environment: 'ec2',
+				},
+				'enhancedConfigLoader',
+			)
+			return [null, appError]
 		}
 	}
 
-	// Mark remaining values as environment sourced
+	// Mark remaining values as environment sourced and count them
 	for (const key of Object.keys(enhancedEnv)) {
-		sources[key] ??= 'environment'
+		if (!sources[key]) {
+			sources[key] = 'environment'
+			environmentVariables++
+		}
 	}
 
-	// Validate the enhanced environment against schema
+	const totalVariables =
+		parameterStoreVariables + environmentVariables + fallbackVariables
+
+	// Validate the enhanced environment against schema with comprehensive error reporting
 	const env = envSchema.safeParse(enhancedEnv)
 
 	if (!env.success) {
 		const validationError = fromError(env.error)
+
+		// Enhanced error reporting for EC2 environments
+		if (isEc2Environment) {
+			logger.error(
+				{
+					operation: 'ec2ConfigValidationFailed',
+					error: validationError.message,
+					details: validationError.details,
+					parameterStorePrefix: process.env.PARAMETER_STORE_PREFIX,
+					validationStats: {
+						totalVariables,
+						parameterStoreVariables,
+						environmentVariables,
+						fallbackVariables,
+					},
+					sources,
+				},
+				'Enhanced configuration validation failed in EC2 environment',
+			)
+
+			const appError = AppError.validation(
+				`EC2 enhanced configuration validation failed: ${validationError.message}. ` +
+					`Loaded ${String(parameterStoreVariables)} from Parameter Store, ${String(environmentVariables)} from environment, ${String(fallbackVariables)} fallbacks. ` +
+					`Check Parameter Store prefix: ${process.env.PARAMETER_STORE_PREFIX ?? 'undefined'}`,
+				{
+					envPath,
+					errors: validationError.details,
+					sources,
+					parameterStorePrefix: process.env.PARAMETER_STORE_PREFIX,
+					validationStats: {
+						totalVariables,
+						parameterStoreVariables,
+						environmentVariables,
+						fallbackVariables,
+					},
+					environment: 'ec2',
+				},
+				'enhancedConfigLoader',
+			)
+			return [null, appError]
+		}
+
+		// Standard validation error for non-EC2 environments
 		const appError = AppError.validation(
-			`Invalid environment configuration: ${validationError.message}`,
+			`Invalid enhanced configuration: ${validationError.message}`,
 			{ envPath, errors: validationError.details, sources },
 			'enhancedConfigLoader',
 		)
 		return [null, appError]
 	}
 
-	// Create enhanced config with metadata
+	// Log successful validation
+	if (isEc2Environment) {
+		logger.info(
+			{
+				operation: 'ec2ConfigValidationSuccess',
+				validationStats: {
+					totalVariables,
+					parameterStoreVariables,
+					environmentVariables,
+					fallbackVariables,
+				},
+				parameterStorePrefix: process.env.PARAMETER_STORE_PREFIX,
+			},
+			'EC2 enhanced configuration validation completed successfully',
+		)
+	}
+
+	// Create enhanced config with comprehensive metadata
 	const enhancedConfig: EnhancedConfig = {
 		...env.data,
 		_metadata: {
 			sources,
-			isLambdaEnvironment,
+			isEc2Environment,
 			parameterStoreEnabled: isRuntimeEnvironment,
+			validationResults: {
+				totalVariables,
+				parameterStoreVariables,
+				environmentVariables,
+				fallbackVariables,
+			},
 		},
 	}
 

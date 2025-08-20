@@ -12,17 +12,12 @@ const { logger } = pino
  * Load configuration based on environment context:
  * - Local development: Load from .env file with full validation
  * - CI build-time: Use pre-loaded build env vars, skip validation for missing runtime secrets
- * - Runtime (Lambda/EC2): Use environment variables from Parameter Store with full validation
+ * - EC2 Runtime: Use environment variables from Parameter Store with full validation
  */
 const loadConfig = (): Result<TEnv> => {
 	const isTruthy = (v?: string) => /^(?:1|true|yes)$/i.test(v ?? '')
-	const isLambdaEnvironment = Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME)
-	const isServerlessEnv =
-		Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
-		Boolean(process.env.AWS_EXECUTION_ENV) ||
-		Boolean(process.env.LAMBDA_TASK_ROOT)
 	const isEc2Environment = Boolean(process.env.PARAMETER_STORE_PREFIX)
-	const isRuntimeEnvironment = isServerlessEnv || isEc2Environment
+	const isRuntimeEnvironment = isEc2Environment
 	const isCiEnvironment =
 		isTruthy(process.env.CI) ||
 		isTruthy(process.env.GITHUB_ACTIONS) ||
@@ -38,7 +33,7 @@ const loadConfig = (): Result<TEnv> => {
 	const enableDebug =
 		process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test'
 
-	// Load environment file for local development only (not EC2, Lambda, or CI)
+	// Load environment file for local development only (not EC2 or CI)
 	if (!isRuntimeEnvironment && !isCiEnvironment) {
 		const envPath = resolve(process.cwd(), '.env')
 		const result = config({
@@ -110,82 +105,57 @@ const loadConfig = (): Result<TEnv> => {
 		return [buildConfig, null]
 	}
 
-	// For runtime contexts (local dev, Lambda, EC2), validate all environment variables
+	// For runtime contexts (local dev, EC2), validate all environment variables
 	const env = envSchema.safeParse(process.env)
 
 	if (!env.success) {
 		const validationError = fromError(env.error)
 		const envPath = resolve(process.cwd(), '.env')
+
+		// In EC2 environment, provide detailed validation error with Parameter Store context
+		if (isEc2Environment) {
+			logger.error(
+				{
+					operation: 'ec2ConfigValidationFailed',
+					error: validationError.message,
+					details: validationError.details,
+					parameterStorePrefix: process.env.PARAMETER_STORE_PREFIX,
+				},
+				'Configuration validation failed in EC2 environment. Ensure all required environment variables are loaded from Parameter Store.',
+			)
+
+			const appError = AppError.validation(
+				`EC2 environment configuration validation failed: ${validationError.message}. ` +
+					`Check that Parameter Store contains all required values with prefix: ${process.env.PARAMETER_STORE_PREFIX ?? 'undefined'}`,
+				{
+					envPath,
+					errors: validationError.details,
+					parameterStorePrefix: process.env.PARAMETER_STORE_PREFIX,
+					environment: 'ec2',
+				},
+				'configLoader',
+			)
+			return [null, appError]
+		}
+
+		// For local development environments
 		const appError = AppError.validation(
 			`Invalid environment configuration: ${validationError.message}. Environment file: ${envPath}`,
 			{ envPath, errors: validationError.details },
 			'configLoader',
 		)
-
-		// In Lambda environment, don't fail immediately - let Parameter Store populate values first
-		if (isLambdaEnvironment) {
-			logger.warn(
-				{
-					operation: 'configValidationWarning',
-					error: validationError.message,
-				},
-				'Configuration validation failed in Lambda environment, Parameter Store will populate missing values',
-			)
-			// Return a minimal config that won't crash the app
-			return [
-				{
-					API_KEY: process.env.API_KEY ?? '',
-					NODE_ENV: (process.env.NODE_ENV ?? 'production') as
-						| 'production'
-						| 'development'
-						| 'test',
-					APP_ENV: (process.env.APP_ENV ?? 'development') as
-						| 'production'
-						| 'staging'
-						| 'development'
-						| 'test',
-					SERVER_PORT: Number(process.env.SERVER_PORT) || 3040,
-					AWS_COGNITO_REGION: process.env.AWS_COGNITO_REGION ?? 'us-east-1',
-					AWS_COGNITO_USER_POOL_ID: process.env.AWS_COGNITO_USER_POOL_ID ?? '',
-					AWS_COGNITO_USER_POOL_CLIENT_ID:
-						process.env.AWS_COGNITO_USER_POOL_CLIENT_ID ?? '',
-					AWS_COGNITO_USER_POOL_SECRET_KEY:
-						process.env.AWS_COGNITO_USER_POOL_SECRET_KEY ?? '',
-					AWS_COGNITO_ACCESS_KEY: process.env.AWS_COGNITO_ACCESS_KEY ?? '',
-					AWS_COGNITO_SECRET_KEY: process.env.AWS_COGNITO_SECRET_KEY ?? '',
-					AWS_COGNITO_REFRESH_TOKEN_EXPIRY:
-						Number(process.env.AWS_COGNITO_REFRESH_TOKEN_EXPIRY) || 30,
-					COOKIE_DOMAIN: process.env.COOKIE_DOMAIN ?? 'localhost',
-					COOKIE_ENCRYPTION_KEY: process.env.COOKIE_ENCRYPTION_KEY ?? '',
-					NON_RELATIONAL_DATABASE_URL:
-						process.env.NON_RELATIONAL_DATABASE_URL ?? '',
-					RELATIONAL_DATABASE_URL: process.env.RELATIONAL_DATABASE_URL ?? '',
-					OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? '',
-					RATE_LIMIT_WINDOW_MS:
-						Number(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
-					RATE_LIMIT_MAX_REQUESTS:
-						Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-					AUTH_RATE_LIMIT_WINDOW_MS:
-						Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS) || 3600000,
-					AUTH_RATE_LIMIT_MAX_REQUESTS:
-						Number(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS) || 10,
-					API_RATE_LIMIT_WINDOW_MS:
-						Number(process.env.API_RATE_LIMIT_WINDOW_MS) || 60000,
-					API_RATE_LIMIT_MAX_REQUESTS:
-						Number(process.env.API_RATE_LIMIT_MAX_REQUESTS) || 60,
-					REDIS_URL: process.env.REDIS_URL,
-				},
-				null,
-			]
-		}
-
 		return [null, appError]
 	}
 
-	if (isServerlessEnv) {
-		logger.info('Loaded configuration from serverless environment variables')
-	} else if (isEc2Environment) {
-		logger.info('Loaded configuration from EC2 environment variables')
+	if (isEc2Environment) {
+		logger.info(
+			{
+				operation: 'configLoaded',
+				environment: 'ec2',
+				parameterStorePrefix: process.env.PARAMETER_STORE_PREFIX,
+			},
+			'Successfully loaded and validated configuration from EC2 environment variables',
+		)
 	} else if (isCiEnvironment) {
 		logger.info('Loaded configuration from CI environment variables')
 	} else {
