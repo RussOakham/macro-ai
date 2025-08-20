@@ -6,13 +6,13 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { AppError } from '../errors.ts'
 import {
 	clearConfigCache,
 	getConfigCacheStats,
 	getConfigWithSource,
 	loadEnhancedConfig,
-} from '../enhanced-load-config.ts'
-import { AppError } from '../errors.ts'
+} from '../load-config.ts'
 
 // Mock dotenv
 vi.mock('dotenv', () => ({
@@ -307,7 +307,7 @@ describe('Enhanced Configuration Loader', () => {
 			// Assert
 			expect(result).toBeNull()
 			expect(error).toBeInstanceOf(AppError)
-			expect(error?.message).toContain('Invalid enhanced configuration')
+			expect(error?.message).toContain('Invalid runtime configuration')
 		})
 
 		it('should handle dotenv parsing error', async () => {
