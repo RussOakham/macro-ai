@@ -104,108 +104,39 @@ jobs:
             echo "  - User: ${{ steps.codeowner-check.outputs.target-user }}"
           fi
 
-      - name: Configure AWS credentials for URL pre-calculation
-        if: steps.decision.outputs.should-deploy == 'true'
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-          role-session-name: GitHubActions-PreviewDeploy-URLPrecalc-${{ github.run_id }}
-
-      - name: Pre-calculate deployment URLs
+      - name: Calculate deployment names
         id: url-precalc
         if: steps.decision.outputs.should-deploy == 'true'
         run: |
           ENV_NAME="${{ steps.env-name.outputs.env-name }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
-          BRANCH_NAME="${{ github.head_ref }}"
 
-          echo "🔍 Pre-calculating deployment URLs..."
+          echo "🔍 Calculating deployment names..."
           echo "Environment: $ENV_NAME"
           echo "PR Number: $PR_NUMBER"
-          echo "Branch: $BRANCH_NAME"
-          echo ""
 
-          # 1. Pre-calculate Amplify App ID
-          AMPLIFY_APP_NAME="macro-ai-frontend-${ENV_NAME}"
-          echo "🔍 Checking for existing Amplify app: $AMPLIFY_APP_NAME"
-
-          APP_ID=$(aws amplify list-apps --region ${{ env.AWS_REGION }} \
-            --query "apps[?name=='${AMPLIFY_APP_NAME}'].appId" \
-            --output text 2>/dev/null || echo "")
-
-          if [[ -z "$APP_ID" || "$APP_ID" == "None" ]]; then
-            echo "📱 Amplify app does not exist yet - will be created during deployment"
-            echo "🎯 Predicted App Name: $AMPLIFY_APP_NAME"
-            APP_ID="<will-be-created>"
-          else
-            echo "✅ Found existing Amplify app with ID: $APP_ID"
-          fi
-
-          # 2. Pre-calculate Frontend URL (with custom domain support)
-          # Check if custom domain is configured
-          CUSTOM_DOMAIN_NAME="${{ vars.CUSTOM_DOMAIN_NAME || '' }}"
-
-          if [[ -n "$CUSTOM_DOMAIN_NAME" ]]; then
-            # Use custom domain pattern: pr-{number}.domain.com
-            FRONTEND_URL="https://pr-${PR_NUMBER}.${CUSTOM_DOMAIN_NAME}"
-            echo "🌐 Custom Domain Frontend URL: $FRONTEND_URL"
-            echo "📝 Using custom domain: $CUSTOM_DOMAIN_NAME"
-          else
-            # Fallback to default Amplify subdomain pattern
-            # Sanitize branch for Amplify subdomain: replace '/' with '-'
-            SANITIZED_BRANCH="${BRANCH_NAME//\//-}"
-
-            if [[ "$APP_ID" == "<will-be-created>" ]]; then
-              # Generate a predictable URL pattern for new apps
-              # Amplify app IDs are typically 13-character alphanumeric strings
-              # We'll create a deterministic placeholder that can be used for CORS
-              # The actual URL will be updated after deployment, but this provides a non-localhost fallback
-              PREDICTED_APP_ID="d$(echo "${ENV_NAME}-${PR_NUMBER}" | sha256sum | cut -c1-12)"
-              FRONTEND_URL="https://${SANITIZED_BRANCH}.${PREDICTED_APP_ID}.amplifyapp.com"
-              echo "🌐 Predicted Frontend URL (app will be created): $FRONTEND_URL"
-              echo "📝 Note: Actual URL will be determined during Amplify deployment"
-              echo "⚠️ This predicted URL is for CORS configuration only - the real URL will be different"
-            else
-              FRONTEND_URL="https://${SANITIZED_BRANCH}.${APP_ID}.amplifyapp.com"
-              echo "🌐 Pre-calculated Frontend URL: $FRONTEND_URL"
-            fi
-          fi
-
-          # 3. Pre-calculate Backend Stack Name and URL (with custom domain support)
-          # Use same naming convention as CDK app.ts: capitalize first letter of full env name
-          ENV_NAME="pr-${PR_NUMBER}"
-          BACKEND_STACK_NAME="MacroAi$(echo "${ENV_NAME}" | sed 's/^./\U&/')Stack"
+          # Calculate stack name using same convention as CDK
+          BACKEND_STACK_NAME="MacroAiPr-${PR_NUMBER}Stack"
           echo "📦 Backend Stack Name: $BACKEND_STACK_NAME"
 
-          # Pre-calculate Backend URL with custom domain support
-          BACKEND_URL=""
-
+          # Calculate URLs if custom domain is configured
+          CUSTOM_DOMAIN_NAME="${{ vars.CUSTOM_DOMAIN_NAME || '' }}"
           if [[ -n "$CUSTOM_DOMAIN_NAME" ]]; then
-            # Use custom domain pattern: pr-{number}-api.domain.com
+            FRONTEND_URL="https://pr-${PR_NUMBER}.${CUSTOM_DOMAIN_NAME}"
             BACKEND_URL="https://pr-${PR_NUMBER}-api.${CUSTOM_DOMAIN_NAME}/api"
-            echo "🌐 Custom Domain Backend URL: $BACKEND_URL"
-            echo "📝 Using custom domain: $CUSTOM_DOMAIN_NAME"
-            echo "✨ Pattern-based URL construction - no discovery needed"
+            echo "🌐 Custom Domain URLs:"
+            echo "  Frontend: $FRONTEND_URL"
+            echo "  Backend: $BACKEND_URL"
           else
-            # Fallback to CloudFormation stack output discovery
-            echo "🔍 Custom domain not configured, using stack discovery..."
-            echo "📦 Backend stack discovery will be handled during deployment"
-            BACKEND_URL="<will-be-discovered-during-deployment>"
+            FRONTEND_URL="<will-be-generated-during-deployment>"
+            BACKEND_URL="<will-be-generated-during-deployment>"
+            echo "🌐 URLs will be generated during deployment"
           fi
 
-          # Output all pre-calculated values
-          echo "amplify-app-id=$APP_ID" >> $GITHUB_OUTPUT
+          # Output values
           echo "frontend-url=$FRONTEND_URL" >> $GITHUB_OUTPUT
           echo "backend-url=$BACKEND_URL" >> $GITHUB_OUTPUT
           echo "backend-stack-name=$BACKEND_STACK_NAME" >> $GITHUB_OUTPUT
-
-          echo ""
-          echo "📋 URL Pre-calculation Summary:"
-          echo "  Amplify App ID: $APP_ID"
-          echo "  Frontend URL: $FRONTEND_URL"
-          echo "  Backend URL: $BACKEND_URL"
-          echo "  Backend Stack: $BACKEND_STACK_NAME"
 
   # Build Express API for EC2 deployment
   build-express-api:
@@ -413,46 +344,20 @@ jobs:
           echo "📦 Stack: ${{ steps.stack-info.outputs.stack-name }}"
           echo "👤 Requested by: ${{ needs.validate-access.outputs.target-user }}"
 
-          # Configure CORS origins with simplified approach for custom domains
+          # Configure CORS origins
           if [[ -n "${{ vars.CUSTOM_DOMAIN_NAME }}" ]]; then
-            # For custom domains, include localhost, custom domain URL, and Amplify fallback URL
+            # Use custom domain URL
             CUSTOM_DOMAIN_URL="https://pr-${{ github.event.number }}.${{ vars.CUSTOM_DOMAIN_NAME }}"
-            AMPLIFY_FALLBACK_URL="${{ needs.validate-access.outputs.frontend-url }}"
-
-            # Include both custom domain and Amplify fallback URL for reliability
-            if [[ "$AMPLIFY_FALLBACK_URL" != "<will-be-generated-during-deployment>" ]]; then
-              CORS_ORIGINS="http://localhost:5173,http://localhost:3000,${CUSTOM_DOMAIN_URL},${AMPLIFY_FALLBACK_URL%/}"
-            else
-              CORS_ORIGINS="http://localhost:5173,http://localhost:3000,${CUSTOM_DOMAIN_URL}"
-            fi
-
-            echo "🔧 CORS Configuration (Custom Domain Mode):"
-            echo "  Custom domain: ${{ vars.CUSTOM_DOMAIN_NAME }}"
-            echo "  Custom domain URL: $CUSTOM_DOMAIN_URL"
-            echo "  Amplify fallback URL: $AMPLIFY_FALLBACK_URL"
-            echo "  Pattern-based CORS enabled in server.ts for pr-*.domain.com"
-            echo "  Explicit origins: $CORS_ORIGINS"
-            echo "  ✨ Includes localhost, custom domain, and Amplify fallback URLs"
+            CORS_ORIGINS="http://localhost:5173,http://localhost:3000,${CUSTOM_DOMAIN_URL}"
+            echo "🔧 CORS Configuration: Custom domain + localhost"
           else
-            # Fallback to traditional explicit CORS for non-custom-domain deployments
-            FRONTEND_URL="${{ needs.validate-access.outputs.frontend-url }}"
-            if [[ "$FRONTEND_URL" != "<will-be-generated-during-deployment>" ]]; then
-              CORS_ORIGINS="${FRONTEND_URL%/}"
-              echo "🔧 CORS Configuration (Traditional Mode):"
-              echo "  Frontend URL: $FRONTEND_URL"
-              echo "  Setting CORS_ALLOWED_ORIGINS to: $CORS_ORIGINS"
-            else
-              CORS_ORIGINS="http://localhost:5173,http://localhost:3000"
-              echo "🔧 CORS Configuration (Fallback):"
-              echo "  Frontend URL not available, using localhost origins"
-              echo "  Setting CORS_ALLOWED_ORIGINS to: $CORS_ORIGINS"
-            fi
+            # Use localhost only - frontend URL will be determined during deployment
+            CORS_ORIGINS="http://localhost:5173,http://localhost:3000"
+            echo "🔧 CORS Configuration: Localhost only"
           fi
 
-          # Export normalized CORS_ORIGINS for use in subsequent jobs
           echo "cors-origins=$CORS_ORIGINS" >> $GITHUB_OUTPUT
-
-          echo "📣 Observability: exporting CORS_ALLOWED_ORIGINS to CDK as -> '$CORS_ORIGINS'"
+          echo "📣 CORS_ALLOWED_ORIGINS: $CORS_ORIGINS"
 
           # Note: EC2 deployment will use pre-built artifact from S3
           echo "📦 EC2 deployment will use pre-built artifact with ES module fix"
@@ -613,8 +518,7 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
 
-  # Note: create-fallback-urls job removed - obsolete with pattern-based URL generation
-  # Custom domain patterns eliminate the need for complex URL artifact passing
+
 
   # Handle blocked deployments (forked PRs or non-code-owners)
   explain-blocked:
@@ -807,67 +711,22 @@ jobs:
 
           echo "✅ API client package built successfully"
 
-      - name: Resolve backend URL with custom domain support
+      - name: Resolve backend URL
         id: resolve-backend
         run: |
           echo "🔍 Resolving backend URL for frontend configuration..."
 
-          # Priority 1: Custom domain pattern (no artifact needed)
           if [[ -n "${{ vars.CUSTOM_DOMAIN_NAME }}" ]]; then
+            # Use custom domain pattern
             BACKEND_URL="https://pr-${{ github.event.pull_request.number }}-api.${{ vars.CUSTOM_DOMAIN_NAME }}/api"
-            echo "🌐 Using custom domain pattern: $BACKEND_URL"
-            echo "✨ No backend dependency - parallel deployment enabled"
-            echo "final-backend-url=$BACKEND_URL" >> $GITHUB_OUTPUT
+            echo "🌐 Using custom domain: $BACKEND_URL"
           else
-            # Priority 2: Try to download deployment URLs artifact (traditional approach)
-            echo "🔍 Custom domain not configured, attempting artifact download..."
-
-            # Try to download artifact (may fail if backend hasn't completed yet)
-            if curl -s -H "Authorization: token ${{ github.token }}" \
-                    -H "Accept: application/vnd.github.v3+json" \
-                    "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
-                    | jq -r '.artifacts[] | select(.name=="deployment-urls-${{ needs.validate-access.outputs.env-name }}") | .archive_download_url' \
-                    | head -1 > /dev/null; then
-
-              # Artifact exists, download it
-              echo "📦 Deployment URLs artifact found, downloading..."
-              # Note: This will still work for non-custom-domain deployments
-              # The artifact download action will be attempted in the next step
-              echo "final-backend-url=<from-artifact>" >> $GITHUB_OUTPUT
-            else
-              # No artifact available, use fallback
-              echo "⚠️ No deployment URLs artifact available"
-              echo "🔄 Using fallback URL - backend may still be deploying"
-              FALLBACK_URL="https://api-staging.macro-ai.com/api"
-              echo "final-backend-url=$FALLBACK_URL" >> $GITHUB_OUTPUT
-            fi
+            # Use pre-calculated URL from validation step
+            BACKEND_URL="${{ needs.validate-access.outputs.backend-url }}"
+            echo "🌐 Using pre-calculated URL: $BACKEND_URL"
           fi
 
-      - name: Download deployment URLs artifact (if needed)
-        uses: actions/download-artifact@v4
-        if: steps.resolve-backend.outputs.final-backend-url == '<from-artifact>'
-        continue-on-error: true
-        with:
-          name: deployment-urls-${{ needs.validate-access.outputs.env-name }}
-          path: deployment-urls/
-
-      - name: Extract backend URL from artifact (if available)
-        if: steps.resolve-backend.outputs.final-backend-url == '<from-artifact>'
-        run: |
-          if [[ -f "deployment-urls/urls.json" ]]; then
-            echo "✅ Deployment URLs artifact found"
-            BACKEND_URL=$(jq -r '.backend_url // empty' deployment-urls/urls.json)
-            if [[ -n "$BACKEND_URL" && "$BACKEND_URL" != "null" ]]; then
-              echo "🌐 Backend URL from artifact: $BACKEND_URL"
-              echo "final-backend-url=$BACKEND_URL" >> $GITHUB_OUTPUT
-            else
-              echo "⚠️ Invalid backend URL in artifact, using fallback"
-              echo "final-backend-url=https://api-staging.macro-ai.com/api" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "⚠️ Artifact not available, using fallback URL"
-            echo "final-backend-url=https://api-staging.macro-ai.com/api" >> $GITHUB_OUTPUT
-          fi
+          echo "final-backend-url=$BACKEND_URL" >> $GITHUB_OUTPUT
 
       - name: Generate environment configuration
         id: generate-env

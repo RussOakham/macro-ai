@@ -4,7 +4,6 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import type { Construct } from 'constructs'
 
 import { CostMonitoringConstruct } from '../constructs/cost-monitoring-construct.js'
-import { DeploymentStatusConstruct } from '../constructs/deployment-status-construct.js'
 import { MonitoringConstruct } from '../constructs/monitoring-construct.js'
 import { NetworkingConstruct } from '../constructs/networking.js'
 import { ParameterStoreConstruct } from '../constructs/parameter-store-construct.js'
@@ -69,7 +68,6 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	public readonly parameterStore: ParameterStoreConstruct
 	public readonly autoScaling: autoscaling.AutoScalingGroup
 	public readonly monitoring: MonitoringConstruct
-	public readonly deploymentStatus: DeploymentStatusConstruct
 	public readonly costMonitoring: CostMonitoringConstruct
 	public readonly prNumber: number
 	private readonly customDomain?: {
@@ -154,16 +152,6 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		// Add scheduled scaling for cost optimization (off-hours shutdown)
 		this.addScheduledScaling()
 
-		// Create deployment status tracking
-		this.deploymentStatus = new DeploymentStatusConstruct(
-			this,
-			'DeploymentStatus',
-			{
-				environmentName,
-				applicationName: 'macro-ai',
-			},
-		)
-
 		// Stack outputs for GitHub Actions workflow
 		// Use custom domain with HTTPS if provided, otherwise fallback to HTTP ALB DNS
 		new cdk.CfnOutput(this, 'ApiEndpoint', {
@@ -227,12 +215,6 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			value: `https://console.aws.amazon.com/cloudwatch/home?region=${this.region}#dashboards:name=${this.monitoring.dashboard.dashboardName}`,
 			description: 'CloudWatch dashboard URL for monitoring',
 			exportName: `${this.stackName}-MonitoringDashboardUrl`,
-		})
-
-		new cdk.CfnOutput(this, 'DeploymentStatusTableName', {
-			value: this.deploymentStatus.deploymentHistoryTable.tableName,
-			description: 'DynamoDB table name for deployment status tracking',
-			exportName: `${this.stackName}-DeploymentStatusTableName`,
 		})
 
 		// Cost monitoring outputs

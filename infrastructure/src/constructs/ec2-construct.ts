@@ -314,14 +314,6 @@ export class Ec2Construct extends Construct {
 		enableDetailedMonitoring: boolean,
 		deploymentId: string,
 	): ec2.LaunchTemplate {
-		// Priority 3: Configure spot instances for preview environments (cost optimization)
-		const spotOptions = this.isPreviewEnvironment(environmentName)
-			? {
-					requestType: ec2.SpotRequestType.ONE_TIME,
-					maxPrice: 0.005, // Maximum price for t3.nano spot instances ($0.005/hour)
-				}
-			: undefined
-
 		return new ec2.LaunchTemplate(this, 'Ec2LaunchTemplate', {
 			launchTemplateName: `macro-ai-${environmentName}-launch-template`,
 			instanceType,
@@ -340,23 +332,11 @@ export class Ec2Construct extends Construct {
 			ebsOptimized: true,
 			// Instance metadata service v2 (security best practice)
 			requireImdsv2: true,
-			// Priority 3: Add spot instance configuration for preview environments
-			spotOptions,
 		})
 	}
 
 	/**
-	 * Check if this is a preview environment (PR-based)
-	 * Priority 3: Helper method for cost optimization features
-	 */
-	private isPreviewEnvironment(environmentName: string): boolean {
-		return (
-			environmentName.startsWith('pr-') || environmentName.includes('preview')
-		)
-	}
-
-	/**
-	 * Create comprehensive user data script for automated application deployment
+	 * Create simplified user data script for automated application deployment
 	 */
 	private createUserData(
 		parameterStorePrefix: string,
@@ -368,7 +348,7 @@ export class Ec2Construct extends Construct {
 		// Add deployment timestamp to force instance replacement
 		const timestamp = deploymentId ?? new Date().toISOString()
 
-		// Add comprehensive deployment script
+		// Create simplified deployment script
 		userData.addCommands(
 			'#!/bin/bash',
 			'set -e',
@@ -376,107 +356,29 @@ export class Ec2Construct extends Construct {
 			`# Deployment ID: ${timestamp}`,
 			'# This timestamp forces new instances on every deployment to ensure fresh application code',
 			'',
-			'# Logging setup',
-			'exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1',
+			'# Basic logging setup',
+			'exec > >(tee /var/log/user-data.log) 2>&1',
 			`echo "$(date): Starting Macro AI application deployment (Deployment ID: ${timestamp})"`,
 			'',
-			'# Error handling function',
-			'error_exit() {',
-			'  echo "$(date): ERROR: $1" >&2',
-			'  # Only send CloudFormation signal if running in CloudFormation context',
-			'  if [[ -n "${AWS::StackName:-}" && -n "${AWS::LogicalResourceId:-}" && -n "${AWS::Region:-}" ]]; then',
-			'    /opt/aws/bin/cfn-signal -e 1 --stack ${AWS::StackName} --resource ${AWS::LogicalResourceId} --region ${AWS::Region}',
-			'  else',
-			'    echo "$(date): Not running in CloudFormation context, skipping cfn-signal"',
-			'  fi',
-			'  exit 1',
-			'}',
-			'',
-			'# Success signal function',
-			'success_exit() {',
-			'  echo "$(date): SUCCESS: Deployment completed successfully"',
-			'  # Only send CloudFormation signal if running in CloudFormation context',
-			'  if [[ -n "${AWS::StackName:-}" && -n "${AWS::LogicalResourceId:-}" && -n "${AWS::Region:-}" ]]; then',
-			'    /opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource ${AWS::LogicalResourceId} --region ${AWS::Region}',
-			'  else',
-			'    echo "$(date): Not running in CloudFormation context, skipping cfn-signal"',
-			'  fi',
-			'}',
-			'',
-			'# Trap errors',
-			'trap \'error_exit "Script failed at line $LINENO"\' ERR',
-		)
-
-		// Continue with system setup
-		userData.addCommands(
-			'',
+			'# Update system and install Node.js 20 LTS',
 			'echo "$(date): Updating system packages..."',
-			'dnf update -y || error_exit "Failed to update system packages"',
+			'dnf update -y',
 			'',
 			'echo "$(date): Installing Node.js 20 LTS..."',
-			'# Install Node.js 20 from NodeSource repository for latest version',
-			'curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - || error_exit "Failed to setup NodeSource repository"',
-			'dnf install -y nodejs || error_exit "Failed to install Node.js"',
+			'curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -',
+			'dnf install -y nodejs',
 			'',
 			'# Verify Node.js installation',
 			'node_version=$(node --version)',
-			'npm_version=$(npm --version)',
 			'echo "$(date): Node.js version: $node_version"',
-			'echo "$(date): npm version: $npm_version"',
 			'',
-			'echo "$(date): Installing global dependencies..."',
-			'npm install -g pm2 pnpm || error_exit "Failed to install global dependencies"',
-			'',
-			'echo "$(date): Installing additional system packages..."',
-			'dnf install -y git unzip wget curl amazon-cloudwatch-agent || error_exit "Failed to install system packages"',
-		)
-
-		// Add user and directory setup
-		this.addUserSetup(userData, parameterStorePrefix, prNumber)
-
-		// Add application deployment
-		this.addApplicationDeployment(userData)
-
-		// Add service configuration
-		this.addServiceConfiguration(userData, parameterStorePrefix, prNumber)
-
-		// Add monitoring and cleanup
-		this.addMonitoringSetup(userData)
-
-		// Final success signal
-		userData.addCommands(
-			'',
-			'echo "$(date): All deployment steps completed successfully"',
-			'success_exit',
-		)
-
-		return userData
-	}
-
-	/**
-	 * Add user and directory setup to user data script
-	 */
-	private addUserSetup(
-		userData: ec2.UserData,
-		parameterStorePrefix: string,
-		prNumber?: number,
-	): void {
-		userData.addCommands(
-			'',
+			'# Create application user and directories',
 			'echo "$(date): Setting up application user and directories..."',
-			'',
-			'# Create application user',
-			'useradd -m -s /bin/bash macroai || error_exit "Failed to create macroai user"',
-			'',
-			'# Create application directories',
-			'mkdir -p /opt/macro-ai || error_exit "Failed to create application directory"',
-			'mkdir -p /var/log/macro-ai || error_exit "Failed to create log directory"',
-			'mkdir -p /opt/macro-ai/releases || error_exit "Failed to create releases directory"',
-			'mkdir -p /opt/macro-ai/shared || error_exit "Failed to create shared directory"',
-			'',
-			'# Set ownership',
-			'chown -R macroai:macroai /opt/macro-ai || error_exit "Failed to set ownership on application directory"',
-			'chown -R macroai:macroai /var/log/macro-ai || error_exit "Failed to set ownership on log directory"',
+			'useradd -m -s /bin/bash macroai',
+			'mkdir -p /opt/macro-ai',
+			'mkdir -p /var/log/macro-ai',
+			'chown -R macroai:macroai /opt/macro-ai',
+			'chown -R macroai:macroai /var/log/macro-ai',
 			'',
 			'# Set environment variables',
 			`echo "PARAMETER_STORE_PREFIX=${parameterStorePrefix}" >> /etc/environment`,
@@ -487,203 +389,58 @@ export class Ec2Construct extends Construct {
 				? `echo "PR_NUMBER=${prNumber.toString()}" >> /etc/environment`
 				: '',
 			'',
-			'# Create environment file for the application',
-			'cat > /opt/macro-ai/.env << EOF',
-			`PARAMETER_STORE_PREFIX=${parameterStorePrefix}`,
-			'NODE_ENV=production',
-			'SERVER_PORT=3040',
-			'APP_ENV=production',
-			prNumber ? `PR_NUMBER=${prNumber.toString()}` : '',
-			'EOF',
-			'',
-			'chown macroai:macroai /opt/macro-ai/.env',
-			'chmod 600 /opt/macro-ai/.env',
-		)
-	}
-
-	/**
-	 * Add application deployment logic to user data script
-	 */
-	private addApplicationDeployment(userData: ec2.UserData): void {
-		userData.addCommands(
-			'',
-			'echo "$(date): Setting up application deployment..."',
-			'',
-			'# Create deployment script',
-			"cat > /opt/macro-ai/deploy.sh << 'DEPLOY_SCRIPT'",
-			'#!/bin/bash',
-			'set -e',
-			'',
-			'RELEASE_DIR="/opt/macro-ai/releases/$(date +%Y%m%d_%H%M%S)"',
-			'CURRENT_DIR="/opt/macro-ai/current"',
-			'APP_DIR="/opt/macro-ai"',
-			'',
-			'echo "$(date): Starting application deployment to $RELEASE_DIR"',
-			'',
-			'# Create release directory',
-			'mkdir -p "$RELEASE_DIR"',
-			'cd "$RELEASE_DIR"',
-			'',
-			'# Download and deploy the pre-built Express API application',
-			'# This ensures we use the exact build with ES module fix from CI/CD',
-			'echo "$(date): Downloading and deploying pre-built Express API application..."',
-			'',
-			'# Get AWS Account ID dynamically',
+			'# Download and extract S3 artifact',
+			'echo "$(date): Downloading deployment artifact..."',
 			'AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)',
-			'',
-			'# S3 deployment artifact configuration',
 			'DEPLOYMENT_BUCKET="macro-ai-deployment-artifacts-${AWS_ACCOUNT_ID}"',
-			'DEPLOYMENT_KEY="express-api/pr-${PR_NUMBER}/express-api-deployment.tar.gz"',
+			prNumber
+				? `DEPLOYMENT_KEY="express-api/pr-${prNumber.toString()}/express-api-deployment.tar.gz"`
+				: 'DEPLOYMENT_KEY="express-api/development/express-api-deployment.tar.gz"',
 			'ARTIFACT_PATH="/tmp/express-api-deployment.tar.gz"',
 			'',
-			'echo "$(date): Downloading deployment artifact..."',
-			'echo "  AWS Account: $AWS_ACCOUNT_ID"',
-			'echo "  PR Number: $PR_NUMBER"',
-			'echo "  S3 Bucket: $DEPLOYMENT_BUCKET"',
-			'echo "  S3 Key: $DEPLOYMENT_KEY"',
-			'echo "  Full S3 Path: s3://${DEPLOYMENT_BUCKET}/${DEPLOYMENT_KEY}"',
-			'echo "  Local path: $ARTIFACT_PATH"',
-			'',
-			'# Download the pre-built deployment package from S3',
-			'if aws s3 cp "s3://${DEPLOYMENT_BUCKET}/${DEPLOYMENT_KEY}" "$ARTIFACT_PATH" 2>/dev/null; then',
+			'# Download the deployment package from S3',
+			'if aws s3 cp "s3://${DEPLOYMENT_BUCKET}/${DEPLOYMENT_KEY}" "$ARTIFACT_PATH"; then',
 			'    echo "$(date): ✅ Deployment artifact downloaded successfully"',
 			'    ',
-			'    # Extract the deployment package',
-			'    echo "$(date): Extracting deployment package..."',
-			'    cd "$RELEASE_DIR"',
+			'    # Extract to application directory',
+			'    cd /opt/macro-ai',
 			'    tar -xzf "$ARTIFACT_PATH"',
 			'    ',
-			'    # Verify the extracted contents',
+			'    # Verify extracted contents',
 			'    if [[ -d "dist" && -f "dist/index.js" && -f "package.json" ]]; then',
 			'        echo "$(date): ✅ Deployment package extracted successfully"',
-			'        echo "$(date): 📦 Contents: $(ls -la)"',
 			'        ',
 			'        # Install production dependencies',
 			'        echo "$(date): Installing production dependencies..."',
 			'        npm install --production --frozen-lockfile || npm install --production --no-audit --no-fund',
 			'        ',
-			'        echo "$(date): ✅ Pre-built Express API application deployed!"',
-			'        echo "$(date): 🎉 Full Express API with ES module fix is now active!"',
+			'        echo "$(date): ✅ Express API application deployed!"',
 			'    else',
 			'        echo "$(date): ❌ Invalid deployment package structure"',
 			'        echo "$(date): Expected: dist/index.js and package.json"',
-			'        echo "$(date): Found: $(ls -la)"',
 			'        exit 1',
 			'    fi',
 			'else',
-			'    echo "$(date): ⚠️ Failed to download deployment artifact, creating minimal health check server..."',
-			'    echo "$(date): This means either:"',
-			'    echo "  1. S3 connectivity issues"',
-			'    echo "  2. Deployment artifact not yet uploaded"',
-			'    echo "  3. S3 permissions issues"',
-			'    echo "  4. Build job may have failed"',
-			'    mkdir -p dist',
-			'    ',
-			'    # Create minimal package.json for health check only',
-			'    cat > package.json << EOF',
-			'{',
-			'  "name": "macro-ai-express-api",',
-			'  "version": "1.0.0",',
-			'  "type": "module",',
-			'  "main": "dist/index.js",',
-			'  "scripts": {',
-			'    "start": "node dist/index.js"',
-			'  },',
-			'  "engines": {',
-			'    "node": ">=20.0.0"',
-			'  },',
-			'  "dependencies": {',
-			'    "express": "^4.21.2"',
-			'  }',
-			'}',
-			'EOF',
-			'    ',
-			'    # Install minimal dependencies',
-			'    npm install --production --no-audit --no-fund',
-			'    ',
-			'    # Create minimal health check server (will be replaced by real deployment)',
-			'    cat > dist/index.js << EOF',
-			'import express from "express";',
-			'',
-			'const app = express();',
-			'const port = process.env.SERVER_PORT || 3040;',
-			'',
-			'// Minimal health check endpoint',
-			'app.get("/api/health", (req, res) => {',
-			'  res.json({',
-			'    status: "healthy - minimal server",',
-			'    timestamp: new Date().toISOString(),',
-			'    message: "Waiting for real application deployment from CI/CD",',
-			'    note: "This is a placeholder server. Real Express API will be deployed when GitHub Actions completes."',
-			'  });',
-			'});',
-			'',
-			'// Catch-all for missing routes with helpful message',
-			'app.use("*", (req, res) => {',
-			'  res.status(404).json({',
-			'    error: "Route not found - minimal server active",',
-			'    message: "Real Express API not yet deployed. This is a placeholder server.",',
-			'    path: req.originalUrl,',
-			'    note: "Routes like /api/auth/refresh will be available after GitHub Actions deployment completes."',
-			'  });',
-			'});',
-			'',
-			'app.listen(port, () => {',
-			'  console.log("🏥 Minimal health check server running on port " + port);',
-			'  console.log("⏳ Waiting for real Express API deployment from CI/CD...");',
-			'  console.log("📍 Expected S3 location: s3://" + process.env.S3_BUCKET + "/" + process.env.S3_KEY);',
-			'});',
-			'EOF',
-			'    echo "$(date): 🏥 Minimal health check server created"',
+			'    echo "$(date): ❌ Failed to download deployment artifact"',
+			'    echo "$(date): Expected S3 location: s3://${DEPLOYMENT_BUCKET}/${DEPLOYMENT_KEY}"',
+			'    exit 1',
 			'fi',
 			'',
-			'# Install dependencies if package.json exists',
-			'if [[ -f "package.json" ]]; then',
-			'    echo "$(date): Installing application dependencies..."',
-			'    npm install --production --frozen-lockfile || npm install --production --no-audit --no-fund',
-			'    echo "$(date): Dependencies installed"',
-			'fi',
-			'DEPLOY_SCRIPT',
-		)
-	}
-
-	/**
-	 * Add service configuration to user data script
-	 */
-	private addServiceConfiguration(
-		userData: ec2.UserData,
-		parameterStorePrefix: string,
-		prNumber?: number,
-	): void {
-		userData.addCommands(
-			'',
-			'# Make deployment script executable',
-			'chmod +x /opt/macro-ai/deploy.sh',
-			'chown macroai:macroai /opt/macro-ai/deploy.sh',
-			'',
-			'echo "$(date): Running initial deployment..."',
-			'sudo -u macroai /opt/macro-ai/deploy.sh || error_exit "Failed to run initial deployment"',
-			'',
+			'# Create systemd service',
 			'echo "$(date): Creating systemd service..."',
-			'',
-			'# Create systemd service file',
 			'cat > /etc/systemd/system/macro-ai.service << EOF',
 			'[Unit]',
 			'Description=Macro AI Express API',
 			'After=network.target',
-			'Wants=network-online.target',
 			'',
 			'[Service]',
 			'Type=simple',
 			'User=macroai',
 			'Group=macroai',
-			'WorkingDirectory=/opt/macro-ai/current',
+			'WorkingDirectory=/opt/macro-ai',
 			'ExecStart=/usr/bin/node dist/index.js',
-			'ExecReload=/bin/kill -HUP $MAINPID',
 			'Restart=always',
 			'RestartSec=10',
-			'StartLimitInterval=60s',
-			'StartLimitBurst=3',
 			'',
 			'# Environment variables',
 			'Environment=NODE_ENV=production',
@@ -693,165 +450,36 @@ export class Ec2Construct extends Construct {
 			prNumber ? `Environment=PR_NUMBER=${prNumber.toString()}` : '',
 			`Environment=AWS_REGION=${cdk.Stack.of(this).region}`,
 			'',
-			'# Security settings',
-			'NoNewPrivileges=true',
-			'PrivateTmp=true',
-			'ProtectSystem=strict',
-			'ProtectHome=true',
-			'ReadWritePaths=/opt/macro-ai /var/log/macro-ai',
-			'',
 			'# Logging',
 			'StandardOutput=journal',
 			'StandardError=journal',
-			'SyslogIdentifier=macro-ai',
 			'',
 			'[Install]',
 			'WantedBy=multi-user.target',
 			'EOF',
 			'',
-			'# Create PM2 ecosystem file for advanced process management',
-			'cat > /opt/macro-ai/ecosystem.config.js << EOF',
-			'module.exports = {',
-			'  apps: [{',
-			'    name: "macro-ai-api",',
-			'    script: "dist/index.js",',
-			'    cwd: "/opt/macro-ai/current",',
-			'    instances: 1,',
-			'    exec_mode: "fork",',
-			'    env: {',
-			'      NODE_ENV: "production",',
-			'      SERVER_PORT: 3040,',
-			'      APP_ENV: "production",',
-			`      PARAMETER_STORE_PREFIX: "${parameterStorePrefix}",`,
-			prNumber ? `      PR_NUMBER: "${prNumber.toString()}",` : '',
-			'    },',
-			'    error_file: "/var/log/macro-ai/error.log",',
-			'    out_file: "/var/log/macro-ai/out.log",',
-			'    log_file: "/var/log/macro-ai/combined.log",',
-			'    time: true,',
-			'    max_restarts: 10,',
-			'    min_uptime: "10s",',
-			'    max_memory_restart: "500M"',
-			'  }]',
-			'};',
-			'EOF',
-			'',
-			'chown macroai:macroai /opt/macro-ai/ecosystem.config.js',
+			'# Set ownership and permissions',
+			'chown -R macroai:macroai /opt/macro-ai',
 			'',
 			'# Enable and start the service',
-			'systemctl daemon-reload || error_exit "Failed to reload systemd"',
-			'systemctl enable macro-ai.service || error_exit "Failed to enable macro-ai service"',
-			'systemctl start macro-ai.service || error_exit "Failed to start macro-ai service"',
+			'systemctl daemon-reload',
+			'systemctl enable macro-ai.service',
+			'systemctl start macro-ai.service',
 			'',
 			'# Wait for service to start and verify',
 			'sleep 10',
-			'systemctl is-active --quiet macro-ai.service || error_exit "Macro AI service is not running"',
-			'echo "$(date): Macro AI service started successfully"',
+			'if systemctl is-active --quiet macro-ai.service; then',
+			'    echo "$(date): ✅ Macro AI service started successfully"',
+			'else',
+			'    echo "$(date): ❌ Macro AI service failed to start"',
+			'    systemctl status macro-ai.service',
+			'    exit 1',
+			'fi',
+			'',
+			'echo "$(date): ✅ Deployment completed successfully!"',
 		)
-	}
 
-	/**
-	 * Add monitoring and logging setup to user data script
-	 */
-	private addMonitoringSetup(userData: ec2.UserData): void {
-		userData.addCommands(
-			'',
-			'echo "$(date): Setting up monitoring and logging..."',
-			'',
-			'# Configure CloudWatch agent',
-			'cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json << EOF',
-			'{',
-			'  "agent": {',
-			'    "metrics_collection_interval": 60,',
-			'    "run_as_user": "cwagent"',
-			'  },',
-			'  "logs": {',
-			'    "logs_collected": {',
-			'      "files": {',
-			'        "collect_list": [',
-			'          {',
-			'            "file_path": "/var/log/macro-ai/combined.log",',
-			'            "log_group_name": "/aws/ec2/macro-ai/application",',
-			'            "log_stream_name": "{instance_id}/application.log",',
-			'            "timezone": "UTC"',
-			'          },',
-			'          {',
-			'            "file_path": "/var/log/user-data.log",',
-			'            "log_group_name": "/aws/ec2/macro-ai/user-data",',
-			'            "log_stream_name": "{instance_id}/user-data.log",',
-			'            "timezone": "UTC"',
-			'          },',
-			'          {',
-			'            "file_path": "/var/log/messages",',
-			'            "log_group_name": "/aws/ec2/macro-ai/system",',
-			'            "log_stream_name": "{instance_id}/messages.log",',
-			'            "timezone": "UTC"',
-			'          }',
-			'        ]',
-			'      }',
-			'    }',
-			'  },',
-			'  "metrics": {',
-			'    "namespace": "MacroAI/EC2",',
-			'    "metrics_collected": {',
-			'      "cpu": {',
-			'        "measurement": ["cpu_usage_idle", "cpu_usage_iowait", "cpu_usage_user", "cpu_usage_system"],',
-			'        "metrics_collection_interval": 60',
-			'      },',
-			'      "disk": {',
-			'        "measurement": ["used_percent"],',
-			'        "metrics_collection_interval": 60,',
-			'        "resources": ["*"]',
-			'      },',
-			'      "diskio": {',
-			'        "measurement": ["io_time"],',
-			'        "metrics_collection_interval": 60,',
-			'        "resources": ["*"]',
-			'      },',
-			'      "mem": {',
-			'        "measurement": ["mem_used_percent"],',
-			'        "metrics_collection_interval": 60',
-			'      },',
-			'      "netstat": {',
-			'        "measurement": ["tcp_established", "tcp_time_wait"],',
-			'        "metrics_collection_interval": 60',
-			'      },',
-			'      "swap": {',
-			'        "measurement": ["swap_used_percent"],',
-			'        "metrics_collection_interval": 60',
-			'      }',
-			'    }',
-			'  }',
-			'}',
-			'EOF',
-			'',
-			'# Start CloudWatch agent',
-			'/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \\',
-			'  -a fetch-config \\',
-			'  -m ec2 \\',
-			'  -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \\',
-			'  -s || error_exit "Failed to start CloudWatch agent"',
-			'',
-			'echo "$(date): CloudWatch agent configured and started"',
-			'',
-			'# Create log rotation configuration',
-			'cat > /etc/logrotate.d/macro-ai << EOF',
-			'/var/log/macro-ai/*.log {',
-			'    daily',
-			'    missingok',
-			'    rotate 7',
-			'    compress',
-			'    delaycompress',
-			'    notifempty',
-			'    create 644 macroai macroai',
-			'    postrotate',
-			'        systemctl reload macro-ai.service > /dev/null 2>&1 || true',
-			'    endscript',
-			'}',
-			'EOF',
-			'',
-			'echo "$(date): Log rotation configured"',
-		)
+		return userData
 	}
 
 	/**
@@ -865,8 +493,11 @@ export class Ec2Construct extends Construct {
 		cdk.Tags.of(this).add('ConstructManagedBy', 'Ec2Construct')
 		cdk.Tags.of(this).add('InstanceType', 'EC2-Instance')
 
-		// Priority 3: Add auto-cleanup tags for preview environments
-		if (this.isPreviewEnvironment(environmentName)) {
+		// Add auto-cleanup tags for PR environments
+		if (
+			environmentName.startsWith('pr-') ||
+			environmentName.includes('preview')
+		) {
 			const cleanupDate = new Date()
 			cleanupDate.setDate(cleanupDate.getDate() + 7) // 7-day expiry
 			const cleanupDateStr =
@@ -939,9 +570,8 @@ Security:
 
 Application Deployment:
 - Runtime: Node.js 20 LTS
-- Process Manager: PM2
-- Service: systemd service (macro-ai.service)
-- Port: 3030 (internal)
+- Process Manager: systemd service (macro-ai.service)
+- Port: 3040 (internal)
 - User: macroai (non-root)
 
 Monitoring:
@@ -956,56 +586,5 @@ Cost Optimization:
 - Shared Infrastructure: Single VPC across PRs
 - Auto-termination: 7-day expiry tags for cleanup
 		`.trim()
-	}
-
-	/**
-	 * Enable Phase 4 comprehensive monitoring integration
-	 * This method provides a convenient way to add monitoring tags to the launch template
-	 */
-	public enableComprehensiveMonitoring(props: {
-		criticalAlertEmails?: string[]
-		warningAlertEmails?: string[]
-		enableCostMonitoring?: boolean
-		customMetricNamespace?: string
-	}): void {
-		// This method would be called by the stack to enable monitoring
-		// The actual MonitoringIntegration would be created at the stack level
-
-		// Add monitoring-specific tags to the launch template
-		// These tags will be applied to all instances created from this template
-		cdk.Tags.of(this.launchTemplate).add('MonitoringEnabled', 'true')
-		cdk.Tags.of(this.launchTemplate).add('Phase4Monitoring', 'enabled')
-		cdk.Tags.of(this.launchTemplate).add('MonitoringIntegration', 'ready')
-
-		// Add configuration-specific tags based on props
-		if (props.enableCostMonitoring) {
-			cdk.Tags.of(this.launchTemplate).add('CostMonitoringEnabled', 'true')
-		}
-
-		if (props.customMetricNamespace) {
-			cdk.Tags.of(this.launchTemplate).add(
-				'CustomMetricNamespace',
-				props.customMetricNamespace,
-			)
-		}
-
-		if (props.criticalAlertEmails && props.criticalAlertEmails.length > 0) {
-			cdk.Tags.of(this.launchTemplate).add('CriticalAlertsConfigured', 'true')
-		}
-
-		if (props.warningAlertEmails && props.warningAlertEmails.length > 0) {
-			cdk.Tags.of(this.launchTemplate).add('WarningAlertsConfigured', 'true')
-		}
-
-		// TODO: Implement full monitoring configuration integration
-		// - Create CloudWatch agent configuration
-		// - Set up custom metrics collection
-		// - Configure alert email distribution lists
-		// - Integrate with MonitoringIntegration construct
-
-		// Log monitoring enablement
-		console.log(
-			'Phase 4 monitoring integration enabled for EC2 launch template',
-		)
 	}
 }
