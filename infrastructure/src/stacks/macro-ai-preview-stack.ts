@@ -113,6 +113,8 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			enableVpcEndpoints: false, // Cost optimization: remove VPC endpoints for preview environments
 			exportPrefix: this.stackName, // Use stack name to ensure unique exports per PR
 			customDomain, // Pass custom domain configuration for HTTPS setup
+			branchName,
+			customDomainName: customDomain?.domainName,
 		})
 
 		// Validate networking requirements

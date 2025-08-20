@@ -133,10 +133,29 @@ jobs:
             echo "🌐 URLs will be generated during deployment"
           fi
 
+          # Calculate Amplify app name and check if it exists
+          AMPLIFY_APP_NAME="macro-ai-frontend-${ENV_NAME}"
+          echo "📱 Checking for existing Amplify app: $AMPLIFY_APP_NAME"
+
+          # Check if Amplify app already exists
+          EXISTING_APP_ID=$(aws amplify list-apps \
+            --region ${{ env.AWS_REGION }} \
+            --query "apps[?name=='${AMPLIFY_APP_NAME}'].appId" \
+            --output text 2>/dev/null || echo "")
+
+          if [[ -n "$EXISTING_APP_ID" && "$EXISTING_APP_ID" != "None" ]]; then
+            AMPLIFY_APP_ID="$EXISTING_APP_ID"
+            echo "✅ Found existing Amplify app with ID: $AMPLIFY_APP_ID"
+          else
+            AMPLIFY_APP_ID="<will-be-created>"
+            echo "📱 Amplify app will be created during deployment"
+          fi
+
           # Output values
           echo "frontend-url=$FRONTEND_URL" >> $GITHUB_OUTPUT
           echo "backend-url=$BACKEND_URL" >> $GITHUB_OUTPUT
           echo "backend-stack-name=$BACKEND_STACK_NAME" >> $GITHUB_OUTPUT
+          echo "amplify-app-id=$AMPLIFY_APP_ID" >> $GITHUB_OUTPUT
 
   # Build Express API for EC2 deployment
   build-express-api:
@@ -517,8 +536,6 @@ jobs:
           path: deployment-urls/
           retention-days: 1
           if-no-files-found: ignore
-
-
 
   # Handle blocked deployments (forked PRs or non-code-owners)
   explain-blocked:

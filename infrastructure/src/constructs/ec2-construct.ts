@@ -17,21 +17,20 @@ export interface Ec2ConstructProps {
 	readonly securityGroup: ec2.ISecurityGroup
 
 	/**
-	 * Environment name for resource n'# S3 deployment artifact configuration',
-'AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)',
-'ENVIRONMENT_NAME=$(curl -s http://169.254.169.254/latest/meta-data/tags/instance/Environment || echo "development")',
-'DEPLOYMENT_BUCKET="macro-ai-deployment-artifacts-${AWS_ACCOUNT_ID}"',
-'DEPLOYMENT_KEY="express-api/${ENVIRONMENT_NAME}/express-api-deployment.tar.gz"',
-'ARTIFACT_PATH="/tmp/express-api-deployment.tar.gz"',
-'',
-'echo "$(date): Using deployment configuration:"',
-'echo "  AWS Account: ${AWS_ACCOUNT_ID}"',
-'echo "  Environment: ${ENVIRONMENT_NAME}"',
-'echo "  S3 Bucket: ${DEPLOYMENT_BUCKET}"',
-'echo "  S3 Key: ${DEPLOYMENT_KEY}"',g and tagging
+	 * Environment name for resource naming and tagging
 	 * @default 'development'
 	 */
 	readonly environmentName?: string
+
+	/**
+	 * Branch name for deployment tracking
+	 */
+	readonly branchName?: string
+
+	/**
+	 * Custom domain name for CORS configuration
+	 */
+	readonly customDomainName?: string
 
 	/**
 	 * Instance type for EC2 instances
@@ -105,6 +104,16 @@ export interface PrInstanceProps {
 	 * @default current timestamp
 	 */
 	readonly deploymentId?: string
+
+	/**
+	 * Branch name for deployment tracking
+	 */
+	readonly branchName?: string
+
+	/**
+	 * Custom domain name for CORS configuration
+	 */
+	readonly customDomainName?: string
 }
 
 /**
@@ -180,6 +189,8 @@ export class Ec2Construct extends Construct {
 				ec2.InstanceSize.MICRO,
 			),
 			deploymentId = new Date().toISOString(),
+			branchName, // Used in user data script template literals
+			customDomainName, // Used in user data script template literals
 		} = props
 
 		// Create PR-specific instance
@@ -198,6 +209,8 @@ export class Ec2Construct extends Construct {
 					parameterStorePrefix,
 					prNumber,
 					deploymentId,
+					branchName,
+					customDomainName,
 				),
 				vpcSubnets: {
 					subnetType: ec2.SubnetType.PUBLIC, // Cost optimization: no NAT Gateway needed
@@ -342,6 +355,8 @@ export class Ec2Construct extends Construct {
 		parameterStorePrefix: string,
 		prNumber?: number,
 		deploymentId?: string,
+		branchName?: string,
+		customDomainName?: string,
 	): ec2.UserData {
 		const userData = ec2.UserData.forLinux()
 
@@ -380,54 +395,131 @@ export class Ec2Construct extends Construct {
 			'chown -R macroai:macroai /opt/macro-ai',
 			'chown -R macroai:macroai /var/log/macro-ai',
 			'',
-			'# Set environment variables',
+			'# Set environment variables with comprehensive logging',
+			'echo "$(date): === SETTING ENVIRONMENT VARIABLES ==="',
 			`echo "PARAMETER_STORE_PREFIX=${parameterStorePrefix}" >> /etc/environment`,
+			`echo "$(date): Set PARAMETER_STORE_PREFIX=${parameterStorePrefix}"`,
 			'echo "NODE_ENV=production" >> /etc/environment',
+			'echo "$(date): Set NODE_ENV=production"',
 			'echo "SERVER_PORT=3040" >> /etc/environment',
-			'echo "APP_ENV=production" >> /etc/environment',
+			'echo "$(date): Set SERVER_PORT=3040"',
+			prNumber
+				? `echo "APP_ENV=pr-${prNumber.toString()}" >> /etc/environment`
+				: 'echo "APP_ENV=production" >> /etc/environment',
+			prNumber
+				? `echo "$(date): Set APP_ENV=pr-${prNumber.toString()}"`
+				: 'echo "$(date): Set APP_ENV=production"',
 			prNumber
 				? `echo "PR_NUMBER=${prNumber.toString()}" >> /etc/environment`
 				: '',
+			prNumber ? `echo "$(date): Set PR_NUMBER=${prNumber.toString()}"` : '',
+			prNumber
+				? `echo "BRANCH_NAME=${branchName ?? 'main'}" >> /etc/environment`
+				: '',
+			prNumber ? `echo "$(date): Set BRANCH_NAME=${branchName ?? 'main'}"` : '',
+			prNumber
+				? `echo "CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000,https://pr-${prNumber.toString()}.${customDomainName ?? 'localhost'}" >> /etc/environment`
+				: 'echo "CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000" >> /etc/environment',
+			prNumber
+				? `echo "$(date): Set CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000,https://pr-${prNumber.toString()}.${customDomainName ?? 'localhost'}"`
+				: 'echo "$(date): Set CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000"',
+			customDomainName
+				? `echo "CUSTOM_DOMAIN_NAME=${customDomainName}" >> /etc/environment`
+				: '',
+			customDomainName
+				? `echo "$(date): Set CUSTOM_DOMAIN_NAME=${customDomainName}"`
+				: 'echo "$(date): No custom domain name provided"',
+			'echo "$(date): === ENVIRONMENT VARIABLES SET COMPLETE ==="',
 			'',
-			'# Download and extract S3 artifact',
-			'echo "$(date): Downloading deployment artifact..."',
+			'# Download and extract S3 artifact with comprehensive logging',
+			'echo "$(date): === DEPLOYMENT ARTIFACT CONFIGURATION ==="',
+			'echo "$(date): Getting AWS account ID..."',
 			'AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)',
+			'echo "$(date): AWS Account ID: ${AWS_ACCOUNT_ID}"',
+			'',
+			'# Set deployment artifact variables',
 			'DEPLOYMENT_BUCKET="macro-ai-deployment-artifacts-${AWS_ACCOUNT_ID}"',
+			'echo "$(date): Set DEPLOYMENT_BUCKET=${DEPLOYMENT_BUCKET}"',
 			prNumber
 				? `DEPLOYMENT_KEY="express-api/pr-${prNumber.toString()}/express-api-deployment.tar.gz"`
 				: 'DEPLOYMENT_KEY="express-api/development/express-api-deployment.tar.gz"',
+			prNumber
+				? `echo "$(date): Set DEPLOYMENT_KEY=express-api/pr-${prNumber.toString()}/express-api-deployment.tar.gz"`
+				: 'echo "$(date): Set DEPLOYMENT_KEY=express-api/development/express-api-deployment.tar.gz"',
 			'ARTIFACT_PATH="/tmp/express-api-deployment.tar.gz"',
+			'echo "$(date): Set ARTIFACT_PATH=${ARTIFACT_PATH}"',
 			'',
-			'# Download the deployment package from S3',
-			'if aws s3 cp "s3://${DEPLOYMENT_BUCKET}/${DEPLOYMENT_KEY}" "$ARTIFACT_PATH"; then',
+			'# Verify all deployment variables are set',
+			'echo "$(date): === DEPLOYMENT VARIABLE VERIFICATION ==="',
+			'echo "$(date): DEPLOYMENT_BUCKET=${DEPLOYMENT_BUCKET}"',
+			'echo "$(date): DEPLOYMENT_KEY=${DEPLOYMENT_KEY}"',
+			'echo "$(date): ARTIFACT_PATH=${ARTIFACT_PATH}"',
+			'echo "$(date): Full S3 path: s3://${DEPLOYMENT_BUCKET}/${DEPLOYMENT_KEY}"',
+			'echo "$(date): === END DEPLOYMENT CONFIGURATION ==="',
+			'',
+			'# Download the deployment package from S3 with detailed logging',
+			'echo "$(date): === S3 DOWNLOAD PROCESS ==="',
+			'echo "$(date): Checking IAM permissions..."',
+			'aws sts get-caller-identity || { echo "$(date): ❌ Failed to get IAM identity"; exit 1; }',
+			'echo "$(date): Checking S3 bucket access..."',
+			'aws s3 ls "s3://${DEPLOYMENT_BUCKET}/" || { echo "$(date): ❌ Cannot access S3 bucket"; exit 1; }',
+			'echo "$(date): Attempting to download: s3://${DEPLOYMENT_BUCKET}/${DEPLOYMENT_KEY}"',
+			'',
+			'if aws s3 cp "s3://${DEPLOYMENT_BUCKET}/${DEPLOYMENT_KEY}" "$ARTIFACT_PATH" --debug; then',
 			'    echo "$(date): ✅ Deployment artifact downloaded successfully"',
+			'    echo "$(date): Artifact size: $(ls -lh $ARTIFACT_PATH | awk \'{print $5}\')"',
 			'    ',
-			'    # Extract to application directory',
-			'    cd /opt/macro-ai',
-			'    tar -xzf "$ARTIFACT_PATH"',
+			'    # Extract to application directory with logging',
+			'    echo "$(date): === EXTRACTION PROCESS ==="',
+			'    echo "$(date): Changing to application directory: /opt/macro-ai"',
+			'    cd /opt/macro-ai || { echo "$(date): ❌ Failed to change to /opt/macro-ai"; exit 1; }',
+			'    echo "$(date): Extracting deployment package..."',
+			'    tar -xzf "$ARTIFACT_PATH" || { echo "$(date): ❌ Failed to extract deployment package"; exit 1; }',
+			'    echo "$(date): ✅ Deployment package extracted"',
 			'    ',
-			'    # Verify extracted contents',
+			'    # Verify extracted contents with detailed logging',
+			'    echo "$(date): === CONTENT VERIFICATION ==="',
+			'    echo "$(date): Listing extracted contents:"',
+			'    ls -la',
+			'    echo "$(date): Checking for required files..."',
 			'    if [[ -d "dist" && -f "dist/index.js" && -f "package.json" ]]; then',
-			'        echo "$(date): ✅ Deployment package extracted successfully"',
+			'        echo "$(date): ✅ All required files found"',
+			'        echo "$(date): - dist/index.js: $(ls -lh dist/index.js)"',
+			'        echo "$(date): - package.json: $(ls -lh package.json)"',
 			'        ',
-			'        # Install production dependencies',
+			'        # Install production dependencies with logging',
+			'        echo "$(date): === DEPENDENCY INSTALLATION ==="',
 			'        echo "$(date): Installing production dependencies..."',
-			'        npm install --production --frozen-lockfile || npm install --production --no-audit --no-fund',
+			'        if npm install --production --frozen-lockfile; then',
+			'            echo "$(date): ✅ Dependencies installed with frozen lockfile"',
+			'        elif npm install --production --no-audit --no-fund; then',
+			'            echo "$(date): ✅ Dependencies installed without lockfile"',
+			'        else',
+			'            echo "$(date): ❌ Failed to install dependencies"',
+			'            exit 1',
+			'        fi',
 			'        ',
-			'        echo "$(date): ✅ Express API application deployed!"',
+			'        echo "$(date): ✅ Express API application deployed successfully!"',
 			'    else',
 			'        echo "$(date): ❌ Invalid deployment package structure"',
 			'        echo "$(date): Expected: dist/index.js and package.json"',
+			'        echo "$(date): Found files:"',
+			'        find . -type f -name "*.js" -o -name "*.json" | head -10',
 			'        exit 1',
 			'    fi',
 			'else',
 			'    echo "$(date): ❌ Failed to download deployment artifact"',
 			'    echo "$(date): Expected S3 location: s3://${DEPLOYMENT_BUCKET}/${DEPLOYMENT_KEY}"',
+			'    echo "$(date): Checking if artifact exists in S3..."',
+			'    aws s3 ls "s3://${DEPLOYMENT_BUCKET}/${DEPLOYMENT_KEY}" || echo "$(date): Artifact not found in S3"',
+			'    echo "$(date): Available artifacts in bucket:"',
+			'    aws s3 ls "s3://${DEPLOYMENT_BUCKET}/" --recursive | grep express-api || echo "$(date): No express-api artifacts found"',
 			'    exit 1',
 			'fi',
 			'',
-			'# Create systemd service',
-			'echo "$(date): Creating systemd service..."',
+			'# Create systemd service with comprehensive logging',
+			'echo "$(date): === SYSTEMD SERVICE CREATION ==="',
+			'echo "$(date): Creating macro-ai.service file..."',
 			'cat > /etc/systemd/system/macro-ai.service << EOF',
 			'[Unit]',
 			'Description=Macro AI Express API',
@@ -458,25 +550,62 @@ export class Ec2Construct extends Construct {
 			'WantedBy=multi-user.target',
 			'EOF',
 			'',
-			'# Set ownership and permissions',
-			'chown -R macroai:macroai /opt/macro-ai',
+			'# Set ownership and permissions with logging',
+			'echo "$(date): Setting file ownership and permissions..."',
+			'chown -R macroai:macroai /opt/macro-ai || { echo "$(date): ❌ Failed to set ownership"; exit 1; }',
+			'echo "$(date): ✅ File ownership set successfully"',
 			'',
-			'# Enable and start the service',
-			'systemctl daemon-reload',
-			'systemctl enable macro-ai.service',
-			'systemctl start macro-ai.service',
+			'# Enable and start the service with comprehensive logging',
+			'echo "$(date): === SYSTEMD SERVICE STARTUP ==="',
+			'echo "$(date): Reloading systemd daemon..."',
+			'systemctl daemon-reload || { echo "$(date): ❌ Failed to reload systemd"; exit 1; }',
+			'echo "$(date): ✅ Systemd daemon reloaded"',
 			'',
-			'# Wait for service to start and verify',
+			'echo "$(date): Enabling macro-ai.service..."',
+			'systemctl enable macro-ai.service || { echo "$(date): ❌ Failed to enable service"; exit 1; }',
+			'echo "$(date): ✅ Service enabled"',
+			'',
+			'echo "$(date): Starting macro-ai.service..."',
+			'systemctl start macro-ai.service || { echo "$(date): ❌ Failed to start service"; exit 1; }',
+			'echo "$(date): ✅ Service start command executed"',
+			'',
+			'# Wait for service to start and verify with detailed logging',
+			'echo "$(date): === SERVICE VERIFICATION ==="',
+			'echo "$(date): Waiting 10 seconds for service to initialize..."',
 			'sleep 10',
+			'',
+			'echo "$(date): Checking service status..."',
+			'systemctl status macro-ai.service --no-pager',
+			'',
 			'if systemctl is-active --quiet macro-ai.service; then',
-			'    echo "$(date): ✅ Macro AI service started successfully"',
+			'    echo "$(date): ✅ Macro AI service is running"',
+			'    echo "$(date): Service logs (last 20 lines):"',
+			'    journalctl -u macro-ai.service --no-pager -n 20',
+			'    ',
+			'    # Test health endpoint',
+			'    echo "$(date): Testing health endpoint..."',
+			'    if curl -f http://localhost:3040/api/health; then',
+			'        echo "$(date): ✅ Health endpoint responding"',
+			'    else',
+			'        echo "$(date): ⚠️ Health endpoint not responding (may still be starting)"',
+			'    fi',
 			'else',
 			'    echo "$(date): ❌ Macro AI service failed to start"',
-			'    systemctl status macro-ai.service',
+			'    echo "$(date): Service status:"',
+			'    systemctl status macro-ai.service --no-pager',
+			'    echo "$(date): Service logs:"',
+			'    journalctl -u macro-ai.service --no-pager -n 50',
+			'    echo "$(date): Environment variables:"',
+			'    cat /etc/environment',
 			'    exit 1',
 			'fi',
 			'',
+			'echo "$(date): === DEPLOYMENT SUMMARY ==="',
 			'echo "$(date): ✅ Deployment completed successfully!"',
+			'echo "$(date): Service: macro-ai.service"',
+			'echo "$(date): Working Directory: /opt/macro-ai"',
+			'echo "$(date): Port: 3040"',
+			'echo "$(date): Health Endpoint: http://localhost:3040/api/health"',
 		)
 
 		return userData

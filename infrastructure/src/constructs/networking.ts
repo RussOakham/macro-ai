@@ -79,6 +79,16 @@ export interface NetworkingConstructProps {
 	 * @default current timestamp
 	 */
 	readonly deploymentId?: string
+
+	/**
+	 * Branch name for deployment tracking
+	 */
+	readonly branchName?: string
+
+	/**
+	 * Custom domain name for CORS configuration
+	 */
+	readonly customDomainName?: string
 }
 
 /**
@@ -134,6 +144,8 @@ export class NetworkingConstruct extends Construct {
 			enableNatGateway = true,
 			enableVpcEndpoints = true,
 			exportPrefix = 'MacroAI',
+			branchName,
+			customDomainName,
 		} = props
 
 		// Store configuration for later use
@@ -172,6 +184,8 @@ export class NetworkingConstruct extends Construct {
 				parameterStorePrefix,
 				enableDetailedMonitoring,
 				deploymentId,
+				branchName,
+				customDomainName,
 			})
 		}
 
