@@ -21,6 +21,8 @@ const loadConfig = (): Result<TEnv> => {
 		Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
 		Boolean(process.env.AWS_EXECUTION_ENV) ||
 		Boolean(process.env.LAMBDA_TASK_ROOT)
+	const isEc2Environment = Boolean(process.env.PARAMETER_STORE_PREFIX)
+	const isRuntimeEnvironment = isServerlessEnv || isEc2Environment
 	const isCiEnvironment =
 		isTruthy(process.env.CI) ||
 		isTruthy(process.env.GITHUB_ACTIONS) ||
@@ -36,8 +38,8 @@ const loadConfig = (): Result<TEnv> => {
 	const enableDebug =
 		process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test'
 
-	// Load environment file for local development only
-	if (!isServerlessEnv && !isCiEnvironment) {
+	// Load environment file for local development only (not EC2, Lambda, or CI)
+	if (!isRuntimeEnvironment && !isCiEnvironment) {
 		const envPath = resolve(process.cwd(), '.env')
 		const result = config({
 			path: envPath,
@@ -182,6 +184,8 @@ const loadConfig = (): Result<TEnv> => {
 
 	if (isServerlessEnv) {
 		logger.info('Loaded configuration from serverless environment variables')
+	} else if (isEc2Environment) {
+		logger.info('Loaded configuration from EC2 environment variables')
 	} else if (isCiEnvironment) {
 		logger.info('Loaded configuration from CI environment variables')
 	} else {

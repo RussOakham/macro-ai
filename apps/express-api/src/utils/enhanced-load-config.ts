@@ -35,6 +35,8 @@ interface EnhancedConfig extends TEnv {
 const loadEnhancedConfig = async (): Promise<Result<EnhancedConfig>> => {
 	const envPath = resolve(process.cwd(), '.env')
 	const isLambdaEnvironment = Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME)
+	const isEc2Environment = Boolean(process.env.PARAMETER_STORE_PREFIX)
+	const isRuntimeEnvironment = isLambdaEnvironment || isEc2Environment
 
 	const enableDebug =
 		process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test'
@@ -50,8 +52,8 @@ const loadEnhancedConfig = async (): Promise<Result<EnhancedConfig>> => {
 		'Loading enhanced configuration',
 	)
 
-	// Load environment variables from .env file (if not in Lambda)
-	if (!isLambdaEnvironment) {
+	// Load environment variables from .env file (if not in runtime environment)
+	if (!isRuntimeEnvironment) {
 		const result = config({
 			path: envPath,
 			encoding: 'UTF-8',
@@ -80,13 +82,13 @@ const loadEnhancedConfig = async (): Promise<Result<EnhancedConfig>> => {
 		'environment' | 'parameter-store' | 'fallback'
 	> = {}
 
-	// In Lambda environment, try to load sensitive values from Parameter Store
-	if (isLambdaEnvironment) {
+	// In runtime environment, try to load sensitive values from Parameter Store
+	if (isRuntimeEnvironment) {
 		logger.info(
 			{
 				operation: 'loadFromParameterStore',
 			},
-			'Lambda environment detected, loading from Parameter Store',
+			'Runtime environment detected, loading from Parameter Store',
 		)
 
 		try {
@@ -154,7 +156,7 @@ const loadEnhancedConfig = async (): Promise<Result<EnhancedConfig>> => {
 		_metadata: {
 			sources,
 			isLambdaEnvironment,
-			parameterStoreEnabled: isLambdaEnvironment,
+			parameterStoreEnabled: isRuntimeEnvironment,
 		},
 	}
 
