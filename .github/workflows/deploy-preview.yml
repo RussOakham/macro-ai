@@ -229,8 +229,13 @@ jobs:
           # Copy built application
           cp -r dist deployment-package/
 
-          # Copy package.json and package-lock for production dependencies
-          cp package.json deployment-package/
+          # ✨ NEW: Resolve catalog references in package.json
+          echo "🔍 Resolving pnpm catalog references..."
+          npx tsx ../../scripts/resolve-catalog-references.ts \
+            ../../pnpm-workspace.yaml \
+            package.json \
+            deployment-package/package.json
+
           # Copy pnpm-lock.yaml from monorepo root (not from app directory)
           cp ../../pnpm-lock.yaml deployment-package/
 
