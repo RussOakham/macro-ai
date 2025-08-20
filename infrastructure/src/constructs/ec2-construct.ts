@@ -150,6 +150,8 @@ export class Ec2Construct extends Construct {
 			parameterStorePrefix,
 			enableDetailedMonitoring = false,
 			deploymentId = new Date().toISOString(),
+			branchName,
+			customDomainName,
 		} = props
 
 		// Create IAM role for EC2 instances
@@ -167,6 +169,8 @@ export class Ec2Construct extends Construct {
 			environmentName,
 			enableDetailedMonitoring,
 			deploymentId,
+			branchName,
+			customDomainName,
 		)
 
 		// Apply tags to the construct
@@ -211,6 +215,7 @@ export class Ec2Construct extends Construct {
 					deploymentId,
 					branchName,
 					customDomainName,
+					environmentName,
 				),
 				vpcSubnets: {
 					subnetType: ec2.SubnetType.PUBLIC, // Cost optimization: no NAT Gateway needed
@@ -326,6 +331,8 @@ export class Ec2Construct extends Construct {
 		environmentName: string,
 		enableDetailedMonitoring: boolean,
 		deploymentId: string,
+		branchName?: string,
+		customDomainName?: string,
 	): ec2.LaunchTemplate {
 		return new ec2.LaunchTemplate(this, 'Ec2LaunchTemplate', {
 			launchTemplateName: `macro-ai-${environmentName}-launch-template`,
@@ -339,6 +346,9 @@ export class Ec2Construct extends Construct {
 				parameterStorePrefix,
 				undefined,
 				deploymentId,
+				branchName,
+				customDomainName,
+				environmentName,
 			),
 			detailedMonitoring: enableDetailedMonitoring,
 			// EBS optimization for better performance
@@ -357,6 +367,7 @@ export class Ec2Construct extends Construct {
 		deploymentId?: string,
 		branchName?: string,
 		customDomainName?: string,
+		environmentName?: string,
 	): ec2.UserData {
 		const userData = ec2.UserData.forLinux()
 
@@ -529,18 +540,21 @@ export class Ec2Construct extends Construct {
 			'Type=simple',
 			'User=macroai',
 			'Group=macroai',
-			'WorkingDirectory=/opt/macro-ai',
+			'WorkingDirectory=/opt/macro-ai/app',
 			'ExecStart=/usr/bin/node dist/index.js',
 			'Restart=always',
 			'RestartSec=10',
 			'',
-			'# Environment variables',
+			'# Environment variables - all required for Express API',
 			'Environment=NODE_ENV=production',
 			'Environment=SERVER_PORT=3040',
-			'Environment=APP_ENV=production',
+			`Environment=APP_ENV=${environmentName}`,
 			`Environment=PARAMETER_STORE_PREFIX=${parameterStorePrefix}`,
-			prNumber ? `Environment=PR_NUMBER=${prNumber.toString()}` : '',
 			`Environment=AWS_REGION=${cdk.Stack.of(this).region}`,
+			// Optional environment variables
+			...(prNumber ? [`Environment=PR_NUMBER=${prNumber.toString()}`] : []),
+			...(branchName ? [`Environment=BRANCH_NAME=${branchName}`] : []),
+			...(customDomainName ? [`Environment=CUSTOM_DOMAIN_NAME=${customDomainName}`] : []),
 			'',
 			'# Logging',
 			'StandardOutput=journal',

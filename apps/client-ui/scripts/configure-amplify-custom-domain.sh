@@ -729,10 +729,10 @@ main() {
     fi
 
     # Handle any failed domain associations by recreating them
-    handle_failed_domain_association "$APP_ID" "$ROOT_DOMAIN"
+    handle_failed_domain_association "$AMPLIFY_APP_ID" "$ROOT_DOMAIN"
 
     # Create subdomain CNAME record if needed
-    create_subdomain_cname "$APP_ID" "$ROOT_DOMAIN"
+    create_subdomain_cname "$AMPLIFY_APP_ID" "$ROOT_DOMAIN"
 
     wait_for_verification
     display_results
