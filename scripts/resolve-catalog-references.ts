@@ -1,7 +1,6 @@
 #!/usr/bin/env tsx
 
 import { readFileSync, writeFileSync } from 'fs'
-import { resolve } from 'path'
 import yaml from 'yaml'
 
 interface PackageJson {
@@ -51,25 +50,6 @@ class CatalogResolver {
 		} catch (error) {
 			throw new Error(`Failed to load workspace config: ${error}`)
 		}
-	}
-
-	private resolveCatalogReference(reference: string): string {
-		// Parse catalog reference: "catalog:" or "catalog:name"
-		const match = reference.match(/^catalog:(.*)$/)
-		if (!match) {
-			return reference // Not a catalog reference
-		}
-
-		const catalogName = match[1] || 'default'
-		const catalog = this.catalogs.get(catalogName)
-
-		if (!catalog) {
-			throw new Error(
-				`Catalog "${catalogName}" not found. Available catalogs: ${Array.from(this.catalogs.keys()).join(', ')}`,
-			)
-		}
-
-		return catalog
 	}
 
 	private resolveDependencySection(

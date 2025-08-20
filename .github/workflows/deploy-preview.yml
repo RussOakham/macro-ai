@@ -326,7 +326,20 @@ jobs:
 
           # Create S3 bucket name for deployment artifacts
           BUCKET_NAME="macro-ai-deployment-artifacts-${{ env.AWS_ACCOUNT_ID }}"
-          ARTIFACT_KEY="express-api/${{ needs.validate-access.outputs.env-name }}/express-api-deployment.tar.gz"
+
+          # 🔧 FIX: Use versioned artifact key to prevent race conditions
+          # Include commit SHA and timestamp to ensure unique artifacts per deployment
+          COMMIT_SHORT="${{ github.sha }}"
+          COMMIT_SHORT="${COMMIT_SHORT:0:8}"
+          TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
+          ARTIFACT_KEY="express-api/${{ needs.validate-access.outputs.env-name }}/${COMMIT_SHORT}-${TIMESTAMP}/express-api-deployment.tar.gz"
+
+          echo "🔍 Artifact versioning details:"
+          echo "  Environment: ${{ needs.validate-access.outputs.env-name }}"
+          echo "  Commit SHA: ${{ github.sha }}"
+          echo "  Short SHA: ${COMMIT_SHORT}"
+          echo "  Timestamp: ${TIMESTAMP}"
+          echo "  Versioned Key: ${ARTIFACT_KEY}"
 
           # Create bucket if it doesn't exist (with error handling)
           if ! aws s3 ls "s3://${BUCKET_NAME}" 2>/dev/null; then
@@ -339,14 +352,53 @@ jobs:
               --versioning-configuration Status=Enabled
           fi
 
-          # Upload the deployment package
+          # 🔧 FIX: Upload with enhanced metadata for better tracking
+          echo "⬆️ Uploading deployment package with enhanced metadata..."
           aws s3 cp ./express-api-artifact/express-api-deployment.tar.gz \
             "s3://${BUCKET_NAME}/${ARTIFACT_KEY}" \
-            --metadata "commit-sha=${{ github.sha }},branch=${{ github.ref_name }},build-time=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            --metadata "commit-sha=${{ github.sha }},branch=${{ github.ref_name }},build-time=${TIMESTAMP},workflow-run-id=${{ github.run_id }},pr-number=${{ github.event.pull_request.number }}"
+
+          # 🔧 FIX: Verify upload completion before proceeding
+          echo "✅ Verifying upload completion..."
+          if aws s3 ls "s3://${BUCKET_NAME}/${ARTIFACT_KEY}" >/dev/null 2>&1; then
+            UPLOADED_SIZE=$(aws s3 ls "s3://${BUCKET_NAME}/${ARTIFACT_KEY}" --human-readable | awk '{print $3 " " $4}')
+            echo "✅ Upload verified - Size: ${UPLOADED_SIZE}"
+          else
+            echo "❌ Upload verification failed"
+            exit 1
+          fi
 
           echo "✅ Deployment package uploaded to: s3://${BUCKET_NAME}/${ARTIFACT_KEY}"
           echo "deployment-bucket=${BUCKET_NAME}" >> $GITHUB_OUTPUT
           echo "deployment-key=${ARTIFACT_KEY}" >> $GITHUB_OUTPUT
+          echo "deployment-commit-sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "deployment-timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
+
+      - name: Cleanup old deployment artifacts
+        run: |
+          echo "🧹 Cleaning up old deployment artifacts..."
+
+          # Run cleanup for this specific PR to keep only last 3 versions
+          # This prevents S3 bucket bloat from versioned artifacts
+          chmod +x infrastructure/scripts/cleanup-deployment-artifacts.sh
+
+          BUCKET_NAME="${{ steps.s3-upload.outputs.deployment-bucket }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+
+          echo "📋 Cleanup configuration:"
+          echo "  Bucket: ${BUCKET_NAME}"
+          echo "  PR: ${PR_NUMBER}"
+          echo "  Keep: 3 most recent artifacts"
+
+          # Run cleanup (keep last 3 artifacts for this PR)
+          if infrastructure/scripts/cleanup-deployment-artifacts.sh \
+            --bucket "${BUCKET_NAME}" \
+            --pr "${PR_NUMBER}" \
+            --keep 3; then
+            echo "✅ Artifact cleanup completed successfully"
+          else
+            echo "⚠️ Artifact cleanup failed, but deployment will continue"
+          fi
 
       - name: Generate stack information
         id: stack-info
@@ -368,6 +420,30 @@ jobs:
           echo "📦 Stack: ${{ steps.stack-info.outputs.stack-name }}"
           echo "👤 Requested by: ${{ needs.validate-access.outputs.target-user }}"
 
+          # 🔧 FIX: Verify S3 artifact availability before CDK deployment
+          echo "🔍 Verifying S3 artifact availability before infrastructure deployment..."
+          DEPLOYMENT_BUCKET="${{ steps.s3-upload.outputs.deployment-bucket }}"
+          DEPLOYMENT_KEY="${{ steps.s3-upload.outputs.deployment-key }}"
+
+          echo "📋 Artifact details:"
+          echo "  Bucket: ${DEPLOYMENT_BUCKET}"
+          echo "  Key: ${DEPLOYMENT_KEY}"
+          echo "  Commit SHA: ${{ steps.s3-upload.outputs.deployment-commit-sha }}"
+          echo "  Timestamp: ${{ steps.s3-upload.outputs.deployment-timestamp }}"
+
+          # Verify artifact exists and get metadata
+          if aws s3api head-object --bucket "${DEPLOYMENT_BUCKET}" --key "${DEPLOYMENT_KEY}" >/dev/null 2>&1; then
+            ARTIFACT_SIZE=$(aws s3api head-object --bucket "${DEPLOYMENT_BUCKET}" --key "${DEPLOYMENT_KEY}" --query 'ContentLength' --output text)
+            ARTIFACT_MODIFIED=$(aws s3api head-object --bucket "${DEPLOYMENT_BUCKET}" --key "${DEPLOYMENT_KEY}" --query 'LastModified' --output text)
+            echo "✅ S3 artifact verified:"
+            echo "  Size: ${ARTIFACT_SIZE} bytes"
+            echo "  Last Modified: ${ARTIFACT_MODIFIED}"
+          else
+            echo "❌ S3 artifact not found or not accessible"
+            echo "Expected location: s3://${DEPLOYMENT_BUCKET}/${DEPLOYMENT_KEY}"
+            exit 1
+          fi
+
           # Configure CORS origins
           if [[ -n "${{ vars.CUSTOM_DOMAIN_NAME }}" ]]; then
             # Use custom domain URL
@@ -384,7 +460,7 @@ jobs:
           echo "📣 CORS_ALLOWED_ORIGINS: $CORS_ORIGINS"
 
           # Note: EC2 deployment will use pre-built artifact from S3
-          echo "📦 EC2 deployment will use pre-built artifact with ES module fix"
+          echo "📦 EC2 deployment will use versioned artifact with catalog resolution fix"
           echo "🚀 Artifact-based deployment ensures consistency and reliability"
 
           # Deploy EC2-based infrastructure using Phase 4 constructs

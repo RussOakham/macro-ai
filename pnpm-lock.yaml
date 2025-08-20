@@ -560,15 +560,6 @@ importers:
       eslint-plugin-import:
         specifier: 'catalog:'
         version: 2.32.0(@typescript-eslint/parser@8.39.1(eslint@9.33.0(jiti@2.5.1))(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1)(eslint@9.33.0(jiti@2.5.1))
-      eslint-plugin-jsx-a11y:
-        specifier: 'catalog:'
-        version: 6.10.2(eslint@9.33.0(jiti@2.5.1))
-      eslint-plugin-react:
-        specifier: 'catalog:'
-        version: 7.37.5(eslint@9.33.0(jiti@2.5.1))
-      eslint-plugin-react-hooks:
-        specifier: 'catalog:'
-        version: 4.6.2(eslint@9.33.0(jiti@2.5.1))
       eslint-plugin-unused-imports:
         specifier: 'catalog:'
         version: 3.2.0(@typescript-eslint/eslint-plugin@8.39.1(@typescript-eslint/parser@8.39.1(eslint@9.33.0(jiti@2.5.1))(typescript@5.9.2))(eslint@9.33.0(jiti@2.5.1))(typescript@5.9.2))(eslint@9.33.0(jiti@2.5.1))
