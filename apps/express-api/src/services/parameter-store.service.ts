@@ -316,7 +316,8 @@ export class ParameterStoreService {
 			: this.config.environment
 
 		// Try flat structure first (new approach), then hierarchical (legacy)
-		const flatPath = `/macro-ai/${environment}/${parameterName.toUpperCase().replace(/-/g, '_')}`
+		// For flat structure, use parameter name as-is (already in correct format)
+		const flatPath = `/macro-ai/${environment}/${parameterName}`
 		const hierarchicalPath = isCritical
 			? `/macro-ai/${environment}/critical/${parameterName}`
 			: `/macro-ai/${environment}/standard/${parameterName}`

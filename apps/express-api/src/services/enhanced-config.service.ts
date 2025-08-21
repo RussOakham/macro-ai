@@ -44,62 +44,69 @@ export class EnhancedConfigService {
 	private readonly isLambdaEnvironment: boolean
 
 	// Parameter mappings for sensitive configuration
+	// Note: parameterName should match the actual Parameter Store parameter names
+	// which are stored in UPPER_CASE format (e.g., API_KEY, AWS_COGNITO_REGION)
 	private static readonly PARAMETER_MAPPINGS: ParameterMapping[] = [
 		// Critical parameters (SecureString)
 		{
 			envVar: 'API_KEY',
-			parameterName: 'api-key',
+			parameterName: 'API_KEY',
 			required: true,
 		},
 		{
 			envVar: 'COOKIE_ENCRYPTION_KEY',
-			parameterName: 'cookie-encryption-key',
+			parameterName: 'COOKIE_ENCRYPTION_KEY',
 			required: true,
 		},
 		{
 			envVar: 'AWS_COGNITO_USER_POOL_SECRET_KEY',
-			parameterName: 'cognito-user-pool-secret-key',
+			parameterName: 'AWS_COGNITO_USER_POOL_SECRET_KEY',
 			required: true,
 		},
 		{
 			envVar: 'AWS_COGNITO_ACCESS_KEY',
-			parameterName: 'cognito-access-key',
+			parameterName: 'AWS_COGNITO_ACCESS_KEY',
 			required: true,
 		},
 		{
 			envVar: 'AWS_COGNITO_SECRET_KEY',
-			parameterName: 'cognito-secret-key',
+			parameterName: 'AWS_COGNITO_SECRET_KEY',
 			required: true,
 		},
 		{
 			envVar: 'OPENAI_API_KEY',
-			parameterName: 'openai-api-key',
+			parameterName: 'OPENAI_API_KEY',
 			required: true,
 		},
 		{
 			envVar: 'RELATIONAL_DATABASE_URL',
-			parameterName: 'neon-database-url',
+			parameterName: 'RELATIONAL_DATABASE_URL',
 			required: true,
 		},
 		// Standard parameters (String)
 		{
 			envVar: 'NON_RELATIONAL_DATABASE_URL',
-			parameterName: 'upstash-redis-url',
+			parameterName: 'NON_RELATIONAL_DATABASE_URL',
 			required: true,
 		},
 		{
 			envVar: 'REDIS_URL',
-			parameterName: 'upstash-redis-url',
+			parameterName: 'NON_RELATIONAL_DATABASE_URL', // Same as NON_RELATIONAL_DATABASE_URL
 			required: false,
 		},
 		{
 			envVar: 'AWS_COGNITO_USER_POOL_ID',
-			parameterName: 'cognito-user-pool-id',
+			parameterName: 'AWS_COGNITO_USER_POOL_ID',
 			required: true,
 		},
 		{
 			envVar: 'AWS_COGNITO_USER_POOL_CLIENT_ID',
-			parameterName: 'cognito-user-pool-client-id',
+			parameterName: 'AWS_COGNITO_USER_POOL_CLIENT_ID',
+			required: true,
+		},
+		{
+			envVar: 'AWS_COGNITO_REGION',
+			parameterName: 'AWS_COGNITO_REGION',
 			required: true,
 		},
 	]
