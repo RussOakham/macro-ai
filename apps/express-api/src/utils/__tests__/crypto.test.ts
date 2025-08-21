@@ -17,6 +17,10 @@ vi.mock('../../../config/default.ts', () => ({
 		cookieEncryptionKey:
 			'0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef', // 64 hex chars = 32 bytes
 	},
+	assertConfig: vi.fn(() => ({
+		cookieEncryptionKey:
+			'0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef', // 64 hex chars = 32 bytes
+	})),
 }))
 
 // Mock crypto module
@@ -91,11 +95,14 @@ describe('crypto.ts', () => {
 				const plaintext = 'test-data'
 				encrypt(plaintext)
 
-				expect(mockCrypto.createCipheriv).toHaveBeenCalledWith(
-					'aes-256-gcm',
-					Buffer.from(config.cookieEncryptionKey, 'hex'),
-					mockIv,
-				)
+				expect(config).toBeDefined()
+				if (config) {
+					expect(mockCrypto.createCipheriv).toHaveBeenCalledWith(
+						'aes-256-gcm',
+						Buffer.from(config.cookieEncryptionKey, 'hex'),
+						mockIv,
+					)
+				}
 			})
 
 			it('should update cipher with plaintext', () => {
@@ -219,11 +226,14 @@ describe('crypto.ts', () => {
 			it('should create decipher with correct parameters', () => {
 				decrypt(validEncryptedText)
 
-				expect(mockCrypto.createDecipheriv).toHaveBeenCalledWith(
-					'aes-256-gcm',
-					Buffer.from(config.cookieEncryptionKey, 'hex'),
-					Buffer.from(mockIv, 'hex'),
-				)
+				expect(config).toBeDefined()
+				if (config) {
+					expect(mockCrypto.createDecipheriv).toHaveBeenCalledWith(
+						'aes-256-gcm',
+						Buffer.from(config.cookieEncryptionKey, 'hex'),
+						Buffer.from(mockIv, 'hex'),
+					)
+				}
 			})
 
 			it('should set auth tag and process decryption', () => {

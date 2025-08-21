@@ -1,10 +1,11 @@
 import crypto from 'crypto'
 
-import { config } from '../../config/default.ts'
+import { assertConfig } from '../../config/default.ts'
 
 import { tryCatchSync } from './error-handling/try-catch.ts'
 
 // Use a secure encryption key from environment variables
+const config = assertConfig()
 const encryptionKey = config.cookieEncryptionKey
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 12 // For GCM, recommended IV length is 12 bytes

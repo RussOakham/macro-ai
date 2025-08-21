@@ -7,7 +7,7 @@ import {
 	streamText,
 } from 'ai'
 
-import { config } from '../../../config/default.ts'
+import { assertConfig } from '../../config/simple-config.js'
 import { tryCatch, tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import { AppError, type Result, ValidationError } from '../../utils/errors.ts'
 
@@ -22,13 +22,18 @@ interface ChatMessage {
  * Provides Go-style error handling for all AI operations
  */
 class AIService {
-	private readonly openai = createOpenAI({
-		apiKey: config.openaiApiKey,
-	})
-	private readonly chatModel = this.openai('gpt-3.5-turbo')
-	private readonly embeddingModel = this.openai.embedding(
-		'text-embedding-3-small',
-	)
+	private readonly openai: ReturnType<typeof createOpenAI>
+	private readonly chatModel: LanguageModelV1
+	private readonly embeddingModel: EmbeddingModel<string>
+
+	constructor() {
+		const config = assertConfig()
+		this.openai = createOpenAI({
+			apiKey: config.openaiApiKey,
+		})
+		this.chatModel = this.openai('gpt-3.5-turbo')
+		this.embeddingModel = this.openai.embedding('text-embedding-3-small')
+	}
 
 	/**
 	 * Generate streaming response from OpenAI with Go-style error handling

@@ -16,6 +16,7 @@ import { config } from '../../../../config/default.ts'
 // Example service that uses configuration
 class ExampleConfigService {
 	getApiConfig() {
+		if (!config) throw new Error('Config not available')
 		return {
 			apiKey: config.apiKey,
 			port: config.port,
@@ -24,6 +25,7 @@ class ExampleConfigService {
 	}
 
 	getCognitoConfig() {
+		if (!config) throw new Error('Config not available')
 		return {
 			region: config.awsCognitoRegion,
 			userPoolId: config.awsCognitoUserPoolId,
@@ -33,6 +35,7 @@ class ExampleConfigService {
 	}
 
 	getDatabaseConfig() {
+		if (!config) throw new Error('Config not available')
 		return {
 			relational: config.relationalDatabaseUrl,
 			nonRelational: config.nonRelationalDatabaseUrl,
@@ -40,6 +43,7 @@ class ExampleConfigService {
 	}
 
 	getRateLimitConfig() {
+		if (!config) throw new Error('Config not available')
 		return {
 			windowMs: config.rateLimitWindowMs,
 			maxRequests: config.rateLimitMaxRequests,
@@ -49,14 +53,17 @@ class ExampleConfigService {
 	}
 
 	isProduction() {
+		if (!config) throw new Error('Config not available')
 		return config.nodeEnv === 'production'
 	}
 
 	isDevelopment() {
+		if (!config) throw new Error('Config not available')
 		return config.nodeEnv === 'development'
 	}
 
 	isTest() {
+		if (!config) throw new Error('Config not available')
 		return config.nodeEnv === 'test'
 	}
 }

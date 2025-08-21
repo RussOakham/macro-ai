@@ -1,111 +1,121 @@
+/**
+ * Simplified Configuration Export
+ * Replaces complex Parameter Store integration with simple environment variable loading
+ *
+ * This file maintains backward compatibility while using the new simplified configuration system.
+ * All configuration now comes from process.env with optional .env file loading for development.
+ */
+
 import type { TEnv } from '../src/utils/env.schema.ts'
-import type { AppError } from '../src/utils/errors.ts'
 import {
-	type EnhancedConfig,
-	loadConfig,
-	loadRuntimeConfig,
-} from '../src/utils/load-config.ts'
-import { configureLogger } from '../src/utils/logger.ts'
+	loadAppConfig as loadAppConfigNew,
+	loadAppConfigSync as loadAppConfigSyncNew,
+	getAppConfig as getAppConfigNew,
+	getModuleConfig,
+	getModuleConfigError,
+	isModuleConfigAvailable,
+	type AppConfig,
+} from '../src/config/config.ts'
 
 /**
- * Async configuration loader that handles both runtime and build-time environments
+ * Async configuration loader (maintains backward compatibility)
  */
-export const loadAppConfig = async () => {
-	// Determine if we're in a runtime environment that needs Parameter Store
-	console.log('loadAppConfig Called')
-	const isRuntimeEnvironment =
-		Boolean(process.env.PARAMETER_STORE_PREFIX) ||
-		Boolean(process.env.APP_ENV?.startsWith('pr-'))
+export const loadAppConfig = loadAppConfigNew
 
-	let env: TEnv | EnhancedConfig | null
-	let configError: AppError | null
+/**
+ * Synchronous configuration loader (maintains backward compatibility)
+ */
+export const loadAppConfigSync = loadAppConfigSyncNew
 
-	if (isRuntimeEnvironment) {
-		// Use async configuration loading for runtime environments (EC2, preview)
-		const [runtimeEnv, runtimeError] = await loadRuntimeConfig()
-		env = runtimeEnv
-		configError = runtimeError
-	} else {
-		// Use synchronous configuration loading for build-time environments
-		const [syncEnv, syncError] = loadConfig()
-		env = syncEnv
-		configError = syncError
-	}
+/**
+ * Get configuration for immediate use (maintains backward compatibility)
+ */
+export const getAppConfig = getAppConfigNew
 
-	if (configError || !env) {
-		console.error(
-			'Failed to load configuration:',
-			configError?.message ?? 'Unknown error',
-		)
+/**
+ * Get the module-level configuration
+ * This replaces the complex build-time vs runtime detection with simple module-level loading
+ */
+const moduleConfig = getModuleConfig()
+const moduleConfigError = getModuleConfigError()
+
+// Handle configuration loading errors at module level
+if (moduleConfigError && !moduleConfig) {
+	console.error('Failed to load configuration:', moduleConfigError.message)
+	// Don't exit in test environments to allow test mocking
+	if (process.env.NODE_ENV !== 'test') {
 		process.exit(1)
 	}
+}
 
-	// Configure logger with actual environment
-	configureLogger(env.NODE_ENV)
+/**
+ * Configuration object for backward compatibility
+ * Maps TEnv properties to the expected config structure
+ */
+export const config = moduleConfig
+	? {
+			apiKey: moduleConfig.API_KEY,
+			nodeEnv: moduleConfig.NODE_ENV,
+			appEnv: moduleConfig.APP_ENV,
+			port: moduleConfig.SERVER_PORT,
+			awsCognitoRegion: moduleConfig.AWS_COGNITO_REGION,
+			awsCognitoUserPoolId: moduleConfig.AWS_COGNITO_USER_POOL_ID,
+			awsCognitoUserPoolClientId: moduleConfig.AWS_COGNITO_USER_POOL_CLIENT_ID,
+			awsCognitoUserPoolSecretKey:
+				moduleConfig.AWS_COGNITO_USER_POOL_SECRET_KEY,
+			awsCognitoAccessKey: moduleConfig.AWS_COGNITO_ACCESS_KEY,
+			awsCognitoSecretKey: moduleConfig.AWS_COGNITO_SECRET_KEY,
+			awsCognitoRefreshTokenExpiry:
+				moduleConfig.AWS_COGNITO_REFRESH_TOKEN_EXPIRY,
+			cookieDomain: moduleConfig.COOKIE_DOMAIN,
+			cookieEncryptionKey: moduleConfig.COOKIE_ENCRYPTION_KEY,
+			nonRelationalDatabaseUrl: moduleConfig.NON_RELATIONAL_DATABASE_URL,
+			relationalDatabaseUrl: moduleConfig.RELATIONAL_DATABASE_URL,
+			openaiApiKey: moduleConfig.OPENAI_API_KEY,
+			rateLimitWindowMs: moduleConfig.RATE_LIMIT_WINDOW_MS,
+			rateLimitMaxRequests: moduleConfig.RATE_LIMIT_MAX_REQUESTS,
+			authRateLimitWindowMs: moduleConfig.AUTH_RATE_LIMIT_WINDOW_MS,
+			authRateLimitMaxRequests: moduleConfig.AUTH_RATE_LIMIT_MAX_REQUESTS,
+			apiRateLimitWindowMs: moduleConfig.API_RATE_LIMIT_WINDOW_MS,
+			apiRateLimitMaxRequests: moduleConfig.API_RATE_LIMIT_MAX_REQUESTS,
+			redisUrl: moduleConfig.REDIS_URL,
+		}
+	: null
 
-	return {
-		apiKey: env.API_KEY,
-		nodeEnv: env.NODE_ENV,
-		appEnv: env.APP_ENV,
-		port: env.SERVER_PORT,
-		awsCognitoRegion: env.AWS_COGNITO_REGION,
-		awsCognitoUserPoolId: env.AWS_COGNITO_USER_POOL_ID,
-		awsCognitoUserPoolClientId: env.AWS_COGNITO_USER_POOL_CLIENT_ID,
-		awsCognitoUserPoolSecretKey: env.AWS_COGNITO_USER_POOL_SECRET_KEY,
-		awsCognitoAccessKey: env.AWS_COGNITO_ACCESS_KEY,
-		awsCognitoSecretKey: env.AWS_COGNITO_SECRET_KEY,
-		awsCognitoRefreshTokenExpiry: env.AWS_COGNITO_REFRESH_TOKEN_EXPIRY,
-		cookieDomain: env.COOKIE_DOMAIN,
-		cookieEncryptionKey: env.COOKIE_ENCRYPTION_KEY,
-		nonRelationalDatabaseUrl: env.NON_RELATIONAL_DATABASE_URL,
-		relationalDatabaseUrl: env.RELATIONAL_DATABASE_URL,
-		openaiApiKey: env.OPENAI_API_KEY,
-		rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
-		rateLimitMaxRequests: env.RATE_LIMIT_MAX_REQUESTS,
-		authRateLimitWindowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
-		authRateLimitMaxRequests: env.AUTH_RATE_LIMIT_MAX_REQUESTS,
-		apiRateLimitWindowMs: env.API_RATE_LIMIT_WINDOW_MS,
-		apiRateLimitMaxRequests: env.API_RATE_LIMIT_MAX_REQUESTS,
-		redisUrl: env.REDIS_URL,
+/**
+ * Type guard to check if config is available
+ */
+export const isConfigAvailable = (
+	configToCheck: typeof config,
+): configToCheck is NonNullable<typeof config> => {
+	return configToCheck !== null
+}
+
+/**
+ * Get config with runtime assertion
+ * Throws an error if config is not available
+ */
+export const getConfig = () => {
+	if (!isConfigAvailable(config)) {
+		throw new Error(
+			'Configuration not available. Check environment variables and .env file.',
+		)
 	}
+	return config
 }
 
-// For backward compatibility with synchronous imports (build-time only)
-// This will only be used for build processes, not runtime
-const [buildEnv, buildConfigError] = loadConfig()
-
-if (buildConfigError) {
-	console.error('Failed to load build configuration:', buildConfigError.message)
-	process.exit(1)
+/**
+ * Assert that config is available and return it
+ * This is a convenience function for files that need guaranteed config access
+ */
+export const assertConfig = () => {
+	if (!config) {
+		throw new Error(
+			'Configuration not available. Check environment variables and .env file.',
+		)
+	}
+	return config
 }
 
-// Configure logger with actual environment
-configureLogger(buildEnv.NODE_ENV)
-
-const config = {
-	apiKey: buildEnv.API_KEY,
-	nodeEnv: buildEnv.NODE_ENV,
-	appEnv: buildEnv.APP_ENV,
-	port: buildEnv.SERVER_PORT,
-	awsCognitoRegion: buildEnv.AWS_COGNITO_REGION,
-	awsCognitoUserPoolId: buildEnv.AWS_COGNITO_USER_POOL_ID,
-	awsCognitoUserPoolClientId: buildEnv.AWS_COGNITO_USER_POOL_CLIENT_ID,
-	awsCognitoUserPoolSecretKey: buildEnv.AWS_COGNITO_USER_POOL_SECRET_KEY,
-	awsCognitoAccessKey: buildEnv.AWS_COGNITO_ACCESS_KEY,
-	awsCognitoSecretKey: buildEnv.AWS_COGNITO_SECRET_KEY,
-	awsCognitoRefreshTokenExpiry: buildEnv.AWS_COGNITO_REFRESH_TOKEN_EXPIRY,
-	cookieDomain: buildEnv.COOKIE_DOMAIN,
-	cookieEncryptionKey: buildEnv.COOKIE_ENCRYPTION_KEY,
-	nonRelationalDatabaseUrl: buildEnv.NON_RELATIONAL_DATABASE_URL,
-	relationalDatabaseUrl: buildEnv.RELATIONAL_DATABASE_URL,
-	openaiApiKey: buildEnv.OPENAI_API_KEY,
-	rateLimitWindowMs: buildEnv.RATE_LIMIT_WINDOW_MS,
-	rateLimitMaxRequests: buildEnv.RATE_LIMIT_MAX_REQUESTS,
-	authRateLimitWindowMs: buildEnv.AUTH_RATE_LIMIT_WINDOW_MS,
-	authRateLimitMaxRequests: buildEnv.AUTH_RATE_LIMIT_MAX_REQUESTS,
-	apiRateLimitWindowMs: buildEnv.API_RATE_LIMIT_WINDOW_MS,
-	apiRateLimitMaxRequests: buildEnv.API_RATE_LIMIT_MAX_REQUESTS,
-	redisUrl: buildEnv.REDIS_URL,
-}
-
-export { config }
+// Re-export types for backward compatibility
+export type { AppConfig, TEnv }

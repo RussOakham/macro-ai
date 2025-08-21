@@ -57,7 +57,7 @@ describe.skip('Server Bootstrap (index.ts)', () => {
 			// Assert
 			expect(createServer).toHaveBeenCalledTimes(1)
 			expect(mockServer.listen).toHaveBeenCalledWith(
-				config.port,
+				config?.port,
 				expect.any(Function),
 			)
 		})
@@ -77,9 +77,12 @@ describe.skip('Server Bootstrap (index.ts)', () => {
 			await import('../index.ts')
 
 			// Assert
-			expect(pino.logger.info).toHaveBeenCalledWith(
-				`[server]: Server is running on port: ${config.port.toString()} with ES module fix v2`,
-			)
+			expect(config).toBeDefined()
+			if (config) {
+				expect(pino.logger.info).toHaveBeenCalledWith(
+					`[server]: Server is running on port: ${config.port.toString()} with ES module fix v2`,
+				)
+			}
 		})
 
 		it('should use the correct port from configuration', async () => {
@@ -96,10 +99,13 @@ describe.skip('Server Bootstrap (index.ts)', () => {
 			await import('../index.ts')
 
 			// Assert
-			expect(mockServer.listen).toHaveBeenCalledWith(
-				config.port,
-				expect.any(Function),
-			)
+			expect(config).toBeDefined()
+			if (config) {
+				expect(mockServer.listen).toHaveBeenCalledWith(
+					config.port,
+					expect.any(Function),
+				)
+			}
 		})
 	})
 

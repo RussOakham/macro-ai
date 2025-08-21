@@ -8,7 +8,7 @@ import '../../features/chat/chat.routes.ts'
 import '../../features/user/user.routes.ts'
 import '../../features/utility/utility.routes.ts'
 
-import { config } from '../../../config/default.ts'
+import { assertConfig } from '../../../config/default.ts'
 import { standardizeError } from '../errors.ts'
 import { pino } from '../logger.ts'
 
@@ -18,6 +18,7 @@ const { logger } = pino
 
 const generateSwaggerSpec = async () => {
 	try {
+		const config = assertConfig()
 		const outputDir = path.resolve(process.cwd(), 'public')
 
 		// Generate OpenAPI document from registry

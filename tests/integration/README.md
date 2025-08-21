@@ -10,6 +10,7 @@ The integration test suite provides:
 - **API Gateway Testing**: Endpoint validation, CORS, and performance testing
 - **Authentication Testing**: JWT validation, protected routes, and rate limiting
 - **Database Integration**: Connection testing and Parameter Store validation
+- **Configuration System Testing**: Bootstrap script, config loading, and Parameter Store integration
 - **End-to-End Testing**: Complete frontend-backend integration flows
 - **Performance Testing**: Response times and concurrent request handling
 - **Error Handling**: Comprehensive error scenario validation
@@ -43,6 +44,9 @@ pnpm test:database
 
 # End-to-end tests only
 pnpm test -- end-to-end.test.ts
+
+# Configuration system tests only
+./run-config-system-tests.sh
 ```
 
 ## 🔧 Configuration

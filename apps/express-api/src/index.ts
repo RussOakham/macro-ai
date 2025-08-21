@@ -5,33 +5,19 @@
 
 import { createServer as createHttpServer } from 'http'
 
-import { loadAppConfig } from './config/index.ts'
+import { assertConfig } from './config/simple-config.js'
 import { pino } from './utils/logger.ts'
 import { createServer } from './utils/server.ts'
 
 const { logger } = pino
 
 /**
- * Start the Express server with the new configuration system
+ * Start the Express server with the simplified configuration system
  */
-const startServer = async () => {
+const startServer = () => {
 	try {
-		// Load configuration using the new system
-		// Automatically detects environment and uses appropriate loader
-		const [config, configError] = await loadAppConfig({
-			enableMonitoring: true,
-			enableCaching: true,
-			validateSchema: true,
-			includeMetadata: false,
-		})
-
-		if (configError) {
-			logger.error(
-				{ error: configError.message },
-				'Failed to load application configuration',
-			)
-			process.exit(1)
-		}
+		// Load configuration using the simplified system
+		const config = assertConfig()
 
 		logger.info(
 			{
@@ -86,7 +72,9 @@ const startServer = async () => {
 }
 
 // Start the server
-startServer().catch((error: unknown) => {
+try {
+	startServer()
+} catch (error: unknown) {
 	console.error('Unhandled error during server startup:', error)
 	process.exit(1)
-})
+}

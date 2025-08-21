@@ -23,26 +23,32 @@ import {
 } from '@aws-sdk/client-cognito-identity-provider'
 import crypto from 'crypto'
 
-import { config } from '../../../config/default.ts'
+import { assertConfig } from '../../config/simple-config.js'
 import { tryCatch, tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import { NotFoundError, Result, ValidationError } from '../../utils/errors.ts'
 
 import { ICognitoService, TRegisterUserRequest } from './auth.types.ts'
 
 class CognitoService implements ICognitoService {
-	private readonly config: CognitoIdentityProviderClientConfig = {
-		region: config.awsCognitoRegion,
-		credentials: {
-			accessKeyId: config.awsCognitoAccessKey,
-			secretAccessKey: config.awsCognitoSecretKey,
-		},
-	}
-	private readonly secretHash = config.awsCognitoUserPoolSecretKey
-	private readonly clientId = config.awsCognitoUserPoolClientId
-	private readonly userPoolId = config.awsCognitoUserPoolId
+	private readonly config: CognitoIdentityProviderClientConfig
+	private readonly secretHash: string
+	private readonly clientId: string
+	private readonly userPoolId: string
 	private readonly client: CognitoIdentityProviderClient
 
 	constructor() {
+		const appConfig = assertConfig()
+
+		this.config = {
+			region: appConfig.awsCognitoRegion,
+			credentials: {
+				accessKeyId: appConfig.awsCognitoAccessKey,
+				secretAccessKey: appConfig.awsCognitoSecretKey,
+			},
+		}
+		this.secretHash = appConfig.awsCognitoUserPoolSecretKey
+		this.clientId = appConfig.awsCognitoUserPoolClientId
+		this.userPoolId = appConfig.awsCognitoUserPoolId
 		this.client = new CognitoIdentityProviderClient(this.config)
 	}
 

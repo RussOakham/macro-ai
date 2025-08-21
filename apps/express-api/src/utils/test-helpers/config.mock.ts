@@ -18,8 +18,9 @@ import { config } from '../../../config/default.ts'
 /**
  * Infer the actual config type from the implementation
  * This ensures our mock types match the real config structure
+ * We use NonNullable to get the actual config type, not the nullable version
  */
-type ConfigType = typeof config
+type ConfigType = NonNullable<typeof config>
 
 /**
  * Default test configuration values

@@ -4,7 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 import { RedisStore } from 'rate-limit-redis'
 import { createClient } from 'redis'
 
-import { config } from '../../config/default.ts'
+import { assertConfig } from '../../config/default.ts'
 import { standardizeError } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
 
@@ -16,6 +16,7 @@ let defaultStore = undefined
 let authStore = undefined
 let apiStore = undefined
 
+const config = assertConfig()
 if (config.nodeEnv === 'production' && config.redisUrl) {
 	const redisClient = createClient({
 		url: config.redisUrl,
