@@ -102,93 +102,6 @@ const createServer = (): Express => {
 					...productionOrigins,
 				]
 
-	// Log effective CORS configuration at startup
-	// Note: In preview envs with empty origins, Express will still use localhost here,
-	// but Lambda utilities will refuse to fall back for preflight handling and responses.
-	console.log('[server] ===== COMPREHENSIVE CORS DIAGNOSTICS =====')
-	console.log('[server] Environment Variables:')
-	console.log(`  NODE_ENV: "${process.env.NODE_ENV ?? 'undefined'}"`)
-	console.log(`  APP_ENV: "${appEnv}" (isPreview=${String(isPreview)})`)
-	console.log(`  PR_NUMBER: "${process.env.PR_NUMBER ?? 'undefined'}"`)
-	console.log(`  CUSTOM_DOMAIN_NAME: "${customDomainName ?? 'undefined'}"`)
-	console.log(`  CORS_ALLOWED_ORIGINS (raw): "${rawEnv}"`)
-	console.log('[server] CORS Processing:')
-
-	const parsedOriginsStr = parsedCorsOrigins.map((o) => `"${o}"`).join(', ')
-	console.log(
-		`  CORS_ALLOWED_ORIGINS (parsed/normalized): [${parsedOriginsStr}]`,
-	)
-	console.log(`  isCustomDomainPreview: ${String(isCustomDomainPreview)}`)
-	console.log(
-		`  previewDomainPattern: ${previewDomainPattern?.toString() ?? 'null'}`,
-	)
-
-	const customOriginsStr = customDomainOrigins.map((o) => `"${o}"`).join(', ')
-	console.log(`  customDomainOrigins: [${customOriginsStr}]`)
-
-	const productionOriginsStr = productionOrigins.map((o) => `"${o}"`).join(', ')
-	console.log(`  productionOrigins: [${productionOriginsStr}]`)
-
-	const effectiveOriginsStr = effectiveOrigins.map((o) => `"${o}"`).join(', ')
-	console.log(`  Express CORS origin setting: [${effectiveOriginsStr}]`)
-	console.log('[server] ===== END CORS DIAGNOSTICS =====')
-
-	// Also log all environment variables for debugging
-	console.log('[server] ===== ALL ENVIRONMENT VARIABLES =====')
-	Object.keys(process.env)
-		.filter(
-			(key) =>
-				key.includes('CORS') ||
-				key.includes('DOMAIN') ||
-				key.includes('APP_ENV') ||
-				key.includes('PR_'),
-		)
-		.sort((a, b) => a.localeCompare(b))
-		.forEach((key) => {
-			console.log(`  ${key}: "${process.env[key] ?? 'undefined'}"`)
-		})
-	console.log('[server] ===== END ENVIRONMENT VARIABLES =====')
-
-	// Add middleware to log all incoming requests for debugging
-	app.use((req, res, next) => {
-		console.log(`[server] REQUEST: ${req.method} ${req.url}`)
-		console.log(
-			`[server] REQUEST: Origin header: ${req.headers.origin ?? 'null'}`,
-		)
-		if (req.method === 'OPTIONS') {
-			console.log(`[server] REQUEST: ⚠️ PREFLIGHT REQUEST detected`)
-			console.log(
-				`[server] REQUEST: Access-Control-Request-Method: ${req.headers['access-control-request-method'] ?? 'null'}`,
-			)
-			console.log(
-				`[server] REQUEST: Access-Control-Request-Headers: ${req.headers['access-control-request-headers'] ?? 'null'}`,
-			)
-		}
-
-		// EMERGENCY CORS FIX: Add basic CORS headers to all responses
-		res.header('Access-Control-Allow-Origin', req.headers.origin ?? '*')
-		res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
-		res.header(
-			'Access-Control-Allow-Headers',
-			'Origin,X-Requested-With,Content-Type,Accept,Authorization,X-API-KEY,Cache-Control',
-		)
-		res.header('Access-Control-Allow-Credentials', 'true')
-
-		console.log(
-			`[server] EMERGENCY CORS: Applied headers for ${req.method} ${req.url}`,
-		)
-
-		// Handle preflight requests immediately
-		if (req.method === 'OPTIONS') {
-			console.log(
-				`[server] EMERGENCY: Handling OPTIONS preflight with manual headers`,
-			)
-			return res.status(200).end()
-		}
-
-		next()
-	})
-
 	app.use(
 		cors({
 			origin: (origin, callback) => {
@@ -257,30 +170,6 @@ const createServer = (): Express => {
 			maxAge: 86400,
 		}),
 	)
-
-	// Add middleware to log CORS response headers
-	app.use((req, res, next) => {
-		const originalSend = res.send
-		res.send = function (body) {
-			if (req.method === 'OPTIONS') {
-				console.log(`[server] RESPONSE: ⚠️ PREFLIGHT RESPONSE`)
-				console.log(
-					`[server] RESPONSE: Access-Control-Allow-Origin: ${res.getHeader('Access-Control-Allow-Origin') as string}`,
-				)
-				console.log(
-					`[server] RESPONSE: Access-Control-Allow-Methods: ${res.getHeader('Access-Control-Allow-Methods') as string}`,
-				)
-				console.log(
-					`[server] RESPONSE: Access-Control-Allow-Headers: ${res.getHeader('Access-Control-Allow-Headers') as string}`,
-				)
-				console.log(
-					`[server] RESPONSE: Access-Control-Allow-Credentials: ${res.getHeader('Access-Control-Allow-Credentials') as string}`,
-				)
-			}
-			return originalSend.call(this, body)
-		}
-		next()
-	})
 
 	// Conditional compression - disable for streaming endpoints
 	app.use(

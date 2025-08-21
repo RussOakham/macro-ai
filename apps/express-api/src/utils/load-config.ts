@@ -455,7 +455,6 @@ const loadConfig = (): Result<TEnv> => {
 	// For runtime contexts, we need to handle the async nature
 	// Since this function must be synchronous for backward compatibility,
 	// we'll use the basic validation approach for now
-	// TODO: Migrate callers to use loadRuntimeConfig() directly for enhanced features
 	const isEc2Environment = Boolean(process.env.PARAMETER_STORE_PREFIX)
 	const isRuntimeEnvironment = isEc2Environment
 
