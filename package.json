@@ -28,6 +28,7 @@
 		"test:coverage": "turbo run test:coverage",
 		"test:integration": "cd tests/integration && pnpm test",
 		"test:integration:full": "cd tests/integration && ./run-integration-tests.sh",
+		"test:integration:parameter-store": "./tests/integration/run-parameter-store-integration.sh",
 		"test:integration:staging": "cd tests/integration && TEST_ENVIRONMENT=staging ./run-integration-tests.sh",
 		"test:integration:production": "cd tests/integration && TEST_ENVIRONMENT=hobby ./run-integration-tests.sh",
 		"type-check": "turbo run type-check",

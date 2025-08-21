@@ -161,7 +161,7 @@ export const getAvailableLoaders = (): {
 			environment: 'ec2-runtime' as ConfigEnvironment,
 			loaderClass: 'Ec2Loader',
 			description:
-				'Asynchronous loader for EC2/Lambda environments using Parameter Store',
+				'Asynchronous loader for EC2 environments using Parameter Store',
 			isAsync: true,
 		},
 	]

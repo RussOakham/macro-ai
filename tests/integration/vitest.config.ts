@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
 	test: {
 		name: 'integration-tests',
+		setupFiles: ['./vitest.setup.ts'],
 		environment: 'node',
 		globals: true,
 		include: ['**/*.test.ts'],
@@ -24,7 +25,7 @@ export default defineConfig({
 		// Retry failed tests once (network issues, etc.)
 		retry: 1,
 		// Reporter configuration
-		reporters: ['verbose', 'json'],
+		reporters: ['default', 'json'],
 		outputFile: {
 			json: './results/integration-test-results.json',
 		},
@@ -36,5 +37,6 @@ export default defineConfig({
 			NODE_ENV: 'test',
 			VITEST_INTEGRATION: 'true',
 		},
+		silent: 'passed-only', // Only show errors and failed tests
 	},
 })

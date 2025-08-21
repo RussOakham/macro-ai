@@ -28,12 +28,11 @@ const isBuildTimeEnvironment = (): boolean => {
 }
 
 /**
- * Detect if we're in an EC2/Lambda runtime environment
+ * Detect if we're in an EC2 runtime environment
  */
 const isEc2Environment = (): boolean => {
 	return Boolean(
 		process.env.PARAMETER_STORE_PREFIX ??
-			process.env.AWS_LAMBDA_FUNCTION_NAME ??
 			process.env.APP_ENV?.startsWith('pr-'),
 	)
 }
@@ -82,7 +81,6 @@ export const detectEnvironment = (): ConfigEnvironment => {
 				CI: process.env.CI,
 				GITHUB_ACTIONS: process.env.GITHUB_ACTIONS,
 				PARAMETER_STORE_PREFIX: process.env.PARAMETER_STORE_PREFIX,
-				AWS_LAMBDA_FUNCTION_NAME: process.env.AWS_LAMBDA_FUNCTION_NAME,
 				APP_ENV: process.env.APP_ENV,
 				NODE_ENV: process.env.NODE_ENV,
 				RUNTIME_CONFIG_REQUIRED: process.env.RUNTIME_CONFIG_REQUIRED,
@@ -112,7 +110,6 @@ export const getEnvironmentMetadata = () => {
 			CI: process.env.CI,
 			GITHUB_ACTIONS: process.env.GITHUB_ACTIONS,
 			PARAMETER_STORE_PREFIX: process.env.PARAMETER_STORE_PREFIX,
-			AWS_LAMBDA_FUNCTION_NAME: process.env.AWS_LAMBDA_FUNCTION_NAME,
 			APP_ENV: process.env.APP_ENV,
 			NODE_ENV: process.env.NODE_ENV,
 			RUNTIME_CONFIG_REQUIRED: process.env.RUNTIME_CONFIG_REQUIRED,
@@ -139,12 +136,9 @@ export const validateEnvironmentDetection = (): {
 
 	// Check for missing required environment variables
 	if (environment === ConfigEnvironment.EC2_RUNTIME) {
-		if (
-			!process.env.PARAMETER_STORE_PREFIX &&
-			!process.env.AWS_LAMBDA_FUNCTION_NAME
-		) {
+		if (!process.env.PARAMETER_STORE_PREFIX) {
 			warnings.push(
-				'EC2 environment detected but no Parameter Store prefix or Lambda function name found',
+				'EC2 environment detected but no Parameter Store prefix found',
 			)
 		}
 	}

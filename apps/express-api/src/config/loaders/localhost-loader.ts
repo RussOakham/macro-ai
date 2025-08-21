@@ -292,16 +292,12 @@ export class LocalhostLoader implements ConfigLoader {
 			})
 		}
 
-		// Should not be in EC2/Lambda environment
-		const isEc2Environment = Boolean(
-			process.env.PARAMETER_STORE_PREFIX ??
-				process.env.AWS_LAMBDA_FUNCTION_NAME,
-		)
+		// Should not be in EC2 environment
+		const isEc2Environment = Boolean(process.env.PARAMETER_STORE_PREFIX)
 
 		if (isEc2Environment) {
 			throw new AppError({
-				message:
-					'LocalhostLoader should not be used in EC2/Lambda environments',
+				message: 'LocalhostLoader should not be used in EC2 environments',
 				service: 'LocalhostLoader',
 			})
 		}

@@ -1,6 +1,6 @@
 /**
  * EC2 Configuration Loader
- * Asynchronous loader for EC2/Lambda environments using AWS Parameter Store
+ * Asynchronous loader for EC2 environments using AWS Parameter Store
  */
 
 import { enhancedConfigService } from '../../services/enhanced-config.service.ts'
@@ -303,18 +303,17 @@ export class Ec2Loader implements ConfigLoader {
 	}
 
 	/**
-	 * Validate that we're in an EC2/Lambda environment
+	 * Validate that we're in an EC2 environment
 	 */
 	public static validateEc2Environment(): void {
 		const isEc2Environment = Boolean(
 			process.env.PARAMETER_STORE_PREFIX ??
-				process.env.AWS_LAMBDA_FUNCTION_NAME ??
 				process.env.APP_ENV?.startsWith('pr-'),
 		)
 
 		if (!isEc2Environment) {
 			throw new AppError({
-				message: 'Ec2Loader should only be used in EC2/Lambda environments',
+				message: 'Ec2Loader should only be used in EC2 environments',
 				service: 'Ec2Loader',
 			})
 		}

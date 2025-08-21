@@ -72,9 +72,9 @@ describe('EnhancedConfigService', () => {
 	})
 
 	describe('constructor', () => {
-		it('should initialize with Lambda environment detection', () => {
+		it('should initialize with EC2 environment detection', () => {
 			// Arrange
-			process.env.AWS_LAMBDA_FUNCTION_NAME = 'test-function'
+			process.env.PARAMETER_STORE_PREFIX = '/macro-ai/test/'
 
 			// Act
 			const service = new EnhancedConfigService(
@@ -82,27 +82,14 @@ describe('EnhancedConfigService', () => {
 			)
 
 			// Assert
-			expect(service.isLambda()).toBe(true)
-		})
-
-		it('should initialize without Lambda environment', () => {
-			// Arrange
-			delete process.env.AWS_LAMBDA_FUNCTION_NAME
-
-			// Act
-			const service = new EnhancedConfigService(
-				mockParameterStoreService as any,
-			)
-
-			// Assert
-			expect(service.isLambda()).toBe(false)
+			expect(service.shouldUseParameterStore).toBe(true)
 		})
 	})
 
 	describe('getConfig', () => {
-		it('should return Parameter Store value in Lambda environment', async () => {
+		it('should return Parameter Store value in EC2 environment', async () => {
 			// Arrange
-			process.env.AWS_LAMBDA_FUNCTION_NAME = 'test-function'
+			process.env.PARAMETER_STORE_PREFIX = '/macro-ai/test/'
 			const service = new EnhancedConfigService(
 				mockParameterStoreService as any,
 			)
@@ -130,7 +117,7 @@ describe('EnhancedConfigService', () => {
 
 		it('should fallback to environment variable when Parameter Store fails', async () => {
 			// Arrange
-			process.env.AWS_LAMBDA_FUNCTION_NAME = 'test-function'
+			process.env.PARAMETER_STORE_PREFIX = '/macro-ai/test/'
 			process.env.OPENAI_API_KEY = 'sk-env-openai-key'
 			const service = new EnhancedConfigService(
 				mockParameterStoreService as any,
@@ -153,9 +140,9 @@ describe('EnhancedConfigService', () => {
 			expect(result?.cached).toBe(false)
 		})
 
-		it('should use environment variable directly in non-Lambda environment', async () => {
+		it('should use environment variable directly in non-EC2 environment', async () => {
 			// Arrange
-			delete process.env.AWS_LAMBDA_FUNCTION_NAME
+			delete process.env.PARAMETER_STORE_PREFIX
 			process.env.OPENAI_API_KEY = 'sk-env-openai-key'
 			const service = new EnhancedConfigService(
 				mockParameterStoreService as any,
@@ -239,7 +226,7 @@ describe('EnhancedConfigService', () => {
 
 		it('should skip Parameter Store when useParameterStore is false', async () => {
 			// Arrange
-			process.env.AWS_LAMBDA_FUNCTION_NAME = 'test-function'
+			process.env.PARAMETER_STORE_PREFIX = '/macro-ai/test/'
 			process.env.OPENAI_API_KEY = 'sk-env-openai-key'
 			const service = new EnhancedConfigService(
 				mockParameterStoreService as any,

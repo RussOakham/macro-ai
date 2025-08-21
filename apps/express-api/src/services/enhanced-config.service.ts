@@ -3,6 +3,8 @@
  * Integrates Parameter Store with environment variables for flexible configuration loading
  */
 
+import { ConfigEnvironment } from '../config/core/config-types.ts'
+import { detectEnvironment } from '../config/core/environment-detector.ts'
 import { tryCatch } from '../utils/error-handling/try-catch.ts'
 import { AppError, InternalError, Result } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
@@ -41,7 +43,7 @@ interface ParameterMapping {
  */
 export class EnhancedConfigService {
 	private readonly parameterStore: ParameterStoreService
-	private readonly isLambdaEnvironment: boolean
+	private readonly shouldUseParameterStore: boolean
 
 	// Parameter mappings for sensitive configuration
 	// Note: parameterName should match the actual Parameter Store parameter names
@@ -113,12 +115,18 @@ export class EnhancedConfigService {
 
 	constructor(parameterStore?: ParameterStoreService) {
 		this.parameterStore = parameterStore ?? new ParameterStoreService()
-		this.isLambdaEnvironment = Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME)
+
+		// Determine if we should use Parameter Store based on environment detection
+		const detectedEnvironment = detectEnvironment()
+		this.shouldUseParameterStore =
+			detectedEnvironment === ConfigEnvironment.EC2_RUNTIME ||
+			Boolean(process.env.PARAMETER_STORE_PREFIX) // Explicit Parameter Store usage flag
 
 		logger.info(
 			{
 				operation: 'enhancedConfigInit',
-				isLambdaEnvironment: this.isLambdaEnvironment,
+				detectedEnvironment,
+				shouldUseParameterStore: this.shouldUseParameterStore,
 				parameterMappings: EnhancedConfigService.PARAMETER_MAPPINGS.length,
 			},
 			'EnhancedConfigService initialized',
@@ -146,9 +154,9 @@ export class EnhancedConfigService {
 			(m) => m.envVar === envVar,
 		)
 
-		// In Lambda environment, prefer Parameter Store for mapped parameters
+		// In EC2 environment, prefer Parameter Store for mapped parameters
 		if (
-			this.isLambdaEnvironment &&
+			this.shouldUseParameterStore &&
 			useParameterStore &&
 			mapping?.parameterName
 		) {
@@ -246,7 +254,7 @@ export class EnhancedConfigService {
 
 	/**
 	 * Load all mapped parameters from Parameter Store
-	 * Useful for warming up the cache during Lambda cold starts
+	 * Useful for warming up the cache during application startup
 	 * @returns Result tuple with loaded parameters or error
 	 */
 	public preloadParameters = async (): Promise<
@@ -364,9 +372,17 @@ export class EnhancedConfigService {
 
 	/**
 	 * Check if running in Lambda environment
+	 * @deprecated Lambda deployment has been removed. Always returns false.
 	 */
 	public isLambda = (): boolean => {
-		return this.isLambdaEnvironment
+		return false
+	}
+
+	/**
+	 * Check if Parameter Store should be used for configuration
+	 */
+	public shouldUseParameterStoreForConfig = (): boolean => {
+		return this.shouldUseParameterStore
 	}
 
 	/**

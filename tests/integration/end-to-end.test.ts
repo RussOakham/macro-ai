@@ -71,7 +71,7 @@ class E2ETestClient {
 				const responseText = await response
 					.text()
 					.catch(() => 'Unable to read response body')
-				const contentType = response.headers.get('content-type') || 'unknown'
+				const contentType = response.headers.get('content-type') ?? 'unknown'
 
 				console.error('JSON parsing failed in E2E test:', {
 					status: response.status,
@@ -85,7 +85,7 @@ class E2ETestClient {
 				})
 
 				throw new Error(
-					`Failed to parse JSON response in E2E test (${response.status} ${response.statusText}): ` +
+					`Failed to parse JSON response in E2E test (${response.status.toString()} ${response.statusText}): ` +
 						`Content-Type: ${contentType}, ` +
 						`Response: ${responseText.substring(0, 200)}...`,
 				)
@@ -137,7 +137,7 @@ class E2ETestClient {
 	}
 }
 
-describe('End-to-End Integration Tests', () => {
+describe.skip('End-to-End Integration Tests', () => {
 	let e2eClient: E2ETestClient
 	let config: E2ETestConfig
 

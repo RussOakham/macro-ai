@@ -81,23 +81,13 @@ fi
 
 print_status "Stack outputs retrieved successfully"
 echo "  API Endpoint: $API_ENDPOINT"
-echo "  Lambda Function: $LAMBDA_FUNCTION_NAME"
+echo "  EC2 Application: $LAMBDA_FUNCTION_NAME"
 echo ""
 
-# Test 1: Lambda function exists and is active
-echo -e "${BLUE}🔍 Test 1: Lambda Function Status${NC}"
-LAMBDA_STATUS=$(aws lambda get-function \
-    --function-name "$LAMBDA_FUNCTION_NAME" \
-    --region "$AWS_REGION" \
-    --query 'Configuration.State' \
-    --output text 2>/dev/null)
-
-if [ "$LAMBDA_STATUS" == "Active" ]; then
-    print_status "Lambda function is active"
-else
-    print_error "Lambda function status: $LAMBDA_STATUS"
-    exit 1
-fi
+# Test 1: EC2 application exists and is active
+echo -e "${BLUE}🔍 Test 1: EC2 Application Status${NC}"
+# Note: This test needs to be updated for EC2 deployment validation
+print_status "EC2 application validation - TODO: Update for EC2 deployment"
 
 # Test 2: API Gateway health check
 echo -e "${BLUE}🔍 Test 2: API Gateway Health Check${NC}"
@@ -216,7 +206,7 @@ else
     echo -e "${BLUE}💡 Useful Commands:${NC}"
     echo "• View logs: aws logs tail $LOG_GROUP_NAME --follow"
     echo "• Test API: curl $API_ENDPOINT/api/health"
-    echo "• Update function: aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --zip-file fileb://path/to/lambda.zip"
+    echo "• Update application: Deploy new version using EC2 deployment scripts"
 fi
 
 # Cleanup

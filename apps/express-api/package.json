@@ -24,7 +24,7 @@
 		"lint:fix": "eslint ./src --fix",
 		"lint:ci": "eslint ./src --max-warnings 0",
 		"type-check": "tsc --noEmit",
-		"test": "vitest run",
+		"test": "vitest run --silent --config vitest.config.ts",
 		"test:ui": "vitest",
 		"test:coverage": "vitest run --coverage",
 		"test:coverage:ui": "vitest --coverage --ui"

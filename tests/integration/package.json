@@ -12,6 +12,7 @@
 		"test:api": "vitest run --config vitest.config.ts api-gateway-integration.test.ts",
 		"test:auth": "vitest run --config vitest.config.ts auth-integration.test.ts",
 		"test:database": "vitest run --config vitest.config.ts database-integration.test.ts",
+		"test:parameter-store": "vitest run --config vitest.config.ts parameter-store-config-integration.test.ts",
 		"test:full": "./run-integration-tests.sh",
 		"test:staging": "TEST_ENVIRONMENT=staging ./run-integration-tests.sh",
 		"test:production": "TEST_ENVIRONMENT=hobby ./run-integration-tests.sh",
@@ -24,7 +25,8 @@
 		"type-check": "tsc --noEmit"
 	},
 	"dependencies": {
-		"vitest": "catalog:"
+		"vitest": "catalog:",
+		"@aws-sdk/client-ssm": "catalog:"
 	},
 	"devDependencies": {
 		"@repo/config-eslint": "workspace:*",
