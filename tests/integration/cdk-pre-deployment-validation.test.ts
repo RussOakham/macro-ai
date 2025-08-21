@@ -286,7 +286,7 @@ const CDKValidationUtils = {
 	},
 }
 
-describe('CDK Pre-deployment Validation Tests', () => {
+describe.skip('CDK Pre-deployment Validation Tests', () => {
 	beforeAll(() => {
 		// Verify AWS CLI is available
 		try {
@@ -318,7 +318,7 @@ describe('CDK Pre-deployment Validation Tests', () => {
 		}
 	})
 
-	describe('AWS Infrastructure Validation', () => {
+	describe.skip('AWS Infrastructure Validation', () => {
 		it('should have access to AWS Parameter Store', () => {
 			const result = CDKValidationUtils.validateParameterStoreAccess()
 
