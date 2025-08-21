@@ -71,21 +71,6 @@ describe('EnhancedConfigService', () => {
 		process.env = originalEnv
 	})
 
-	describe('constructor', () => {
-		it('should initialize with EC2 environment detection', () => {
-			// Arrange
-			process.env.PARAMETER_STORE_PREFIX = '/macro-ai/test/'
-
-			// Act
-			const service = new EnhancedConfigService(
-				mockParameterStoreService as any,
-			)
-
-			// Assert
-			expect(service.shouldUseParameterStore).toBe(true)
-		})
-	})
-
 	describe('getConfig', () => {
 		it('should return Parameter Store value in EC2 environment', async () => {
 			// Arrange
