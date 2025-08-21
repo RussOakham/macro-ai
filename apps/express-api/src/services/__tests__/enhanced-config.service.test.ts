@@ -124,7 +124,7 @@ describe('EnhancedConfigService', () => {
 			expect(result?.source).toBe('parameter-store')
 			expect(result?.cached).toBe(true)
 			expect(mockParameterStoreService.getParameter).toHaveBeenCalledWith(
-				'openai-api-key',
+				'OPENAI_API_KEY',
 			)
 		})
 
@@ -321,6 +321,7 @@ describe('EnhancedConfigService', () => {
 			process.env.NON_RELATIONAL_DATABASE_URL = 'mongodb://localhost:27017/test'
 			process.env.AWS_COGNITO_USER_POOL_ID = 'us-east-1_env'
 			process.env.AWS_COGNITO_USER_POOL_CLIENT_ID = 'env-client-id'
+			process.env.AWS_COGNITO_REGION = 'us-east-1'
 			process.env.REDIS_URL = 'redis://localhost:6379'
 
 			// Act
@@ -330,7 +331,7 @@ describe('EnhancedConfigService', () => {
 			expect(error).toBeNull()
 			expect(result).toBeDefined()
 			if (result) {
-				expect(Object.keys(result)).toHaveLength(11) // All mapped parameters
+				expect(Object.keys(result)).toHaveLength(12) // All mapped parameters
 				expect(result.OPENAI_API_KEY?.value).toBe('sk-env-openai-key')
 				expect(result.OPENAI_API_KEY?.source).toBe('environment')
 			}
