@@ -188,6 +188,31 @@ jobs:
           cache-dependency-path: 'pnpm-lock.yaml'
 
       - name: Build Express API for EC2
+        env:
+          # Set all required environment variables from secrets
+          NODE_ENV: 'development'
+          APP_ENV: 'development'
+          SERVER_PORT: '3040'
+          API_KEY: ${{ secrets.API_KEY }}
+          AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION }}
+          AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID }}
+          AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID }}
+          AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY }}
+          AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY }}
+          AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY }}
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY }}
+          COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN }}
+          COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY }}
+          NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL }}
+          RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
         run: |
           echo "🔨 Building Express API for EC2 deployment..."
 
@@ -197,14 +222,8 @@ jobs:
           # Build the Express API (standard build, not Lambda)
           cd apps/express-api
 
-          # Load build-time environment variables for preview environment
-          echo "📋 Loading build-time environment variables..."
-          if [ -f ".env.build.preview" ]; then
-            export $(cat .env.build.preview | grep -v '^#' | xargs)
-            echo "✅ Loaded build environment variables from .env.build.preview"
-          else
-            echo "⚠️ Warning: .env.build.preview not found, using defaults"
-          fi
+          # Environment variables are now set via GitHub Actions env section
+          echo "📋 Environment variables loaded from GitHub Actions secrets"
 
           # Validate environment variables before build
           echo "🔍 Validating environment variables..."
