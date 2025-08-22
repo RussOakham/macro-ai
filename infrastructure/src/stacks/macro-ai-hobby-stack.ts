@@ -62,7 +62,7 @@ export class MacroAiHobbyStack extends cdk.Stack {
 		})
 
 		// Output networking information for future constructs
-		// VPC exports are handled by VpcConstruct to avoid duplication
+		// VPC exports are handled by NetworkingConstruct
 
 		new cdk.CfnOutput(this, 'AlbSecurityGroupId', {
 			value: this.networking.albSecurityGroup.securityGroupId,
@@ -88,29 +88,7 @@ export class MacroAiHobbyStack extends cdk.Stack {
 		}
 
 		// Output ALB-related information if ALB construct is available
-		if (this.networking.albConstruct) {
-			new cdk.CfnOutput(this, 'AlbDnsName', {
-				value:
-					this.networking.albConstruct.applicationLoadBalancer
-						.loadBalancerDnsName,
-				description: 'ALB DNS name for accessing preview environments',
-				exportName: `${this.stackName}-AlbDnsName`,
-			})
-
-			new cdk.CfnOutput(this, 'AlbArn', {
-				value:
-					this.networking.albConstruct.applicationLoadBalancer.loadBalancerArn,
-				description: 'ALB ARN for reference in other stacks',
-				exportName: `${this.stackName}-AlbArn`,
-			})
-
-			new cdk.CfnOutput(this, 'AlbHostedZoneId', {
-				value:
-					this.networking.albConstruct.applicationLoadBalancer
-						.loadBalancerCanonicalHostedZoneId,
-				description: 'ALB hosted zone ID for Route 53 alias records',
-				exportName: `${this.stackName}-AlbHostedZoneId`,
-			})
-		}
+		// Note: ALB is not configured in the simplified networking construct
+		// ALB outputs will be added when ALB functionality is restored
 	}
 }

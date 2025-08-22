@@ -171,18 +171,16 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		new cdk.CfnOutput(this, 'ApiEndpoint', {
 			value: customDomain
 				? `https://pr-${prNumber}-api.${customDomain.domainName}/api`
-				: `http://${this.networking.albConstruct!.applicationLoadBalancer.loadBalancerDnsName}/api`,
+				: `http://localhost:3040/api`, // Fallback to localhost since ALB is not configured
 			description: customDomain
 				? 'API endpoint URL with custom domain (HTTPS) - pr-{number}-api.macro-ai.russoakham.dev pattern'
-				: 'API endpoint URL for the preview environment (HTTP only)',
+				: 'API endpoint URL for the preview environment (direct EC2 access)',
 			exportName: `${this.stackName}-ApiEndpoint`,
 		})
 
 		new cdk.CfnOutput(this, 'LoadBalancerDNS', {
-			value:
-				this.networking.albConstruct!.applicationLoadBalancer
-					.loadBalancerDnsName,
-			description: 'Load Balancer DNS name',
+			value: 'Not configured - using direct EC2 access',
+			description: 'Load Balancer DNS name (not configured)',
 			exportName: `${this.stackName}-LoadBalancerDNS`,
 		})
 
@@ -193,8 +191,8 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		})
 
 		new cdk.CfnOutput(this, 'DefaultTargetGroupArn', {
-			value: this.networking.albConstruct!.defaultTargetGroup.targetGroupArn,
-			description: 'Default target group ARN for ALB health checks',
+			value: 'Not configured - using direct EC2 access',
+			description: 'Default target group ARN (not configured)',
 			exportName: `${this.stackName}-DefaultTargetGroupArn`,
 		})
 
@@ -204,7 +202,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			exportName: `${this.stackName}-EC2InstanceId`,
 		})
 
-		// VPC exports are handled by VpcConstruct to avoid duplication
+		// VPC exports are handled by NetworkingConstruct
 
 		new cdk.CfnOutput(this, 'EnvironmentName', {
 			value: environmentName,
@@ -302,7 +300,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 				cpuType: ec2.AmazonLinuxCpuType.X86_64,
 			}),
 			// Use a PR-specific instance security group to allow ALB -> instance traffic on 3040
-			securityGroup: this.networking.createPrSecurityGroup(prNumber),
+			securityGroup: this.networking.albSecurityGroup, // Use the basic ALB security group
 			role: this.networking.ec2Construct.instanceRole,
 			userData,
 			detailedMonitoring: false, // Cost optimization for preview
@@ -615,11 +613,8 @@ export class MacroAiPreviewStack extends cdk.Stack {
 
 		// Register with ALB target group if available
 		// For PR previews, each PR gets its own ALB, so using default target group is fine
-		if (this.networking.albConstruct) {
-			asg.attachToApplicationTargetGroup(
-				this.networking.albConstruct.defaultTargetGroup,
-			)
-		}
+		// Note: ALB is not configured in the simplified networking construct
+		// Target group attachment will be handled when ALB is added back
 
 		// Add simple target tracking scaling policy (CPU-based)
 		asg.scaleOnCpuUtilization('CpuScaling', {
