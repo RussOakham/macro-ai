@@ -187,32 +187,20 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: 'pnpm-lock.yaml'
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-build-express-api
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Build Express API for EC2
         env:
-          # Set all required environment variables from secrets
+          # CI/CD specific variables only
           NODE_ENV: 'development'
           APP_ENV: 'development'
           SERVER_PORT: '3040'
           API_KEY: ${{ secrets.API_KEY }}
-          AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION }}
-          AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID }}
-          AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID }}
-          AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY }}
-          AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY }}
-          AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY }}
-          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY }}
-          COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN }}
-          COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY }}
-          NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL }}
-          RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS }}
-          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS }}
-          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS }}
-          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS }}
-          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS }}
-          REDIS_URL: ${{ secrets.REDIS_URL }}
         run: |
           echo "🔨 Building Express API for EC2 deployment..."
 
@@ -222,8 +210,97 @@ jobs:
           # Build the Express API (standard build, not Lambda)
           cd apps/express-api
 
-          # Environment variables are now set via GitHub Actions env section
-          echo "📋 Environment variables loaded from GitHub Actions secrets"
+          # Fetch runtime environment variables from AWS Parameter Store
+          echo "🔍 Fetching environment variables from AWS Parameter Store..."
+
+          # Determine parameter store path based on environment
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # PR environment - use development parameters
+            PARAM_PATH="/macro-ai/development"
+            echo "🌱 Using development environment parameters: ${PARAM_PATH}"
+          else
+            # Direct push - determine branch
+            if [[ "${{ github.ref_name }}" == "develop" ]]; then
+              PARAM_PATH="/macro-ai/staging"
+              echo "🚀 Using staging environment parameters: ${PARAM_PATH}"
+            elif [[ "${{ github.ref_name }}" == "main" ]]; then
+              PARAM_PATH="/macro-ai/production"
+              echo "🏭 Using production environment parameters: ${PARAM_PATH}"
+            else
+              PARAM_PATH="/macro-ai/development"
+              echo "🌱 Using development environment parameters: ${PARAM_PATH}"
+            fi
+          fi
+
+          # Fetch all runtime configuration from Parameter Store using environment-specific path
+          echo "🔍 Fetching parameters from: ${PARAM_PATH}"
+
+          # Function to fetch parameter with error handling
+          fetch_param() {
+            local param_name="$1"
+            local param_path="${PARAM_PATH}/${param_name}"
+            local value
+            
+            echo "  📥 Fetching: ${param_path}"
+            value=$(aws ssm get-parameter --name "${param_path}" --query "Parameter.Value" --output text 2>&1)
+            
+            if [ $? -eq 0 ]; then
+              echo "    ✅ ${param_name}: OK"
+              echo "$value"
+            else
+              echo "    ❌ ${param_name}: FAILED - $value"
+              return 1
+            fi
+          }
+
+          # Fetch all parameters with error handling
+          export AWS_COGNITO_REGION=$(fetch_param "aws-cognito-region")
+          export AWS_COGNITO_USER_POOL_ID=$(fetch_param "aws-cognito-user-pool-id")
+          export AWS_COGNITO_USER_POOL_CLIENT_ID=$(fetch_param "aws-cognito-user-pool-client-id")
+          export AWS_COGNITO_USER_POOL_SECRET_KEY=$(fetch_param "aws-cognito-user-pool-secret-key")
+          export AWS_COGNITO_ACCESS_KEY=$(fetch_param "aws-cognito-access-key")
+          export AWS_COGNITO_SECRET_KEY=$(fetch_param "aws-cognito-secret-key")
+          export AWS_COGNITO_REFRESH_TOKEN_EXPIRY=$(fetch_param "aws-cognito-refresh-token-expiry")
+
+          export COOKIE_DOMAIN=$(fetch_param "cookie-domain")
+          export COOKIE_ENCRYPTION_KEY=$(fetch_param "cookie-encryption-key")
+
+          export NON_RELATIONAL_DATABASE_URL=$(fetch_param "non-relational-database-url")
+          export RELATIONAL_DATABASE_URL=$(fetch_param "relational-database-url")
+
+          export OPENAI_API_KEY=$(fetch_param "openai-api-key")
+
+          export RATE_LIMIT_WINDOW_MS=$(fetch_param "rate-limit-window-ms")
+          export RATE_LIMIT_MAX_REQUESTS=$(fetch_param "rate-limit-max-requests")
+          export AUTH_RATE_LIMIT_WINDOW_MS=$(fetch_param "auth-rate-limit-window-ms")
+          export AUTH_RATE_LIMIT_MAX_REQUESTS=$(fetch_param "auth-rate-limit-max-requests")
+          export API_RATE_LIMIT_WINDOW_MS=$(fetch_param "api-rate-limit-window-ms")
+          export API_RATE_LIMIT_MAX_REQUESTS=$(fetch_param "api-rate-limit-max-requests")
+          export REDIS_URL=$(fetch_param "redis-url")
+
+          # Verify all required parameters were fetched
+          echo "🔍 Verifying all required parameters were fetched..."
+          required_params=(
+            "AWS_COGNITO_REGION" "AWS_COGNITO_USER_POOL_ID" "AWS_COGNITO_USER_POOL_CLIENT_ID"
+            "AWS_COGNITO_USER_POOL_SECRET_KEY" "AWS_COGNITO_ACCESS_KEY" "AWS_COGNITO_SECRET_KEY"
+            "COOKIE_ENCRYPTION_KEY" "RELATIONAL_DATABASE_URL" "NON_RELATIONAL_DATABASE_URL"
+            "OPENAI_API_KEY"
+          )
+
+          missing_params=()
+          for param in "${required_params[@]}"; do
+            if [[ -z "${!param}" ]]; then
+              missing_params+=("$param")
+            fi
+          done
+
+          if [[ ${#missing_params[@]} -gt 0 ]]; then
+            echo "❌ Missing required parameters: ${missing_params[*]}"
+            exit 1
+          fi
+
+          echo "✅ All required parameters fetched successfully"
+          echo "✅ Environment variables loaded from AWS Parameter Store"
 
           # Validate environment variables before build
           echo "🔍 Validating environment variables..."

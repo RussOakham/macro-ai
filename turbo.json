@@ -73,6 +73,7 @@
 		"test": {
 			"cache": false,
 			"dependsOn": ["^build"],
+			"outputs": [],
 			"env": [
 				"AWS_REGION",
 				"LOG_LEVEL",
@@ -92,6 +93,7 @@
 			"dependsOn": ["^build"]
 		},
 		"test:coverage": {
+			"cache": false,
 			"dependsOn": ["^build"],
 			"outputs": ["coverage/**"]
 		},

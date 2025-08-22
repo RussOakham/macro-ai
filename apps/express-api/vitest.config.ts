@@ -7,6 +7,11 @@ export default defineConfig({
 		environment: 'node',
 		globals: true,
 		include: ['src/**/*.test.ts', 'src/**/*.spec.ts'],
+		// Timeout configurations to prevent CI failures
+		testTimeout: 30000, // 30 seconds for individual tests
+		hookTimeout: 30000, // 30 seconds for hooks (beforeEach, afterEach, etc.)
+		teardownTimeout: 30000, // 30 seconds for teardown
+		// Coverage configuration
 		coverage: {
 			provider: 'v8',
 			reporter: ['text', 'json', 'html'],

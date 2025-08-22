@@ -57,6 +57,9 @@ describe('Security Headers Middleware', () => {
 			await import('../security-headers.middleware.ts')
 
 			// Assert - Verify helmet was called with correct configuration
+			// Note: crossOriginEmbedderPolicy is set to !isDevelopment
+			// In test environment, NODE_ENV is typically not 'development', so isDevelopment = false
+			// Therefore crossOriginEmbedderPolicy = !false = true
 			expect(vi.mocked(helmet)).toHaveBeenCalledWith({
 				contentSecurityPolicy: {
 					directives: {
@@ -71,7 +74,7 @@ describe('Security Headers Middleware', () => {
 						frameSrc: ["'none'"],
 					},
 				},
-				crossOriginEmbedderPolicy: true, // test environment defaults to true
+				crossOriginEmbedderPolicy: true, // !isDevelopment = !false = true in test environment
 				crossOriginOpenerPolicy: { policy: 'same-origin' },
 				crossOriginResourcePolicy: { policy: 'same-site' },
 				dnsPrefetchControl: { allow: false },
@@ -134,6 +137,30 @@ describe('Security Headers Middleware', () => {
 			// Assert - Verify middleware exports exist
 			expect(middleware.helmetMiddleware).toBeDefined()
 			expect(middleware.securityHeadersMiddleware).toBeDefined()
+		})
+
+		it('should set crossOriginEmbedderPolicy based on environment', async () => {
+			// This test verifies that crossOriginEmbedderPolicy is set correctly based on NODE_ENV
+			// The middleware uses config.nodeEnv === 'development' to determine isDevelopment
+			// In test environment, NODE_ENV is typically not 'development', so isDevelopment = false
+			// Therefore crossOriginEmbedderPolicy = !false = true
+
+			// Reset modules to ensure fresh import
+			vi.resetModules()
+
+			// Set NODE_ENV to test
+			process.env.NODE_ENV = 'test'
+
+			// Import the middleware
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			const middleware = await import('../security-headers.middleware.ts')
+
+			// Verify helmet was called with crossOriginEmbedderPolicy: true (since NODE_ENV !== 'development')
+			expect(vi.mocked(helmet)).toHaveBeenCalledWith(
+				expect.objectContaining({
+					crossOriginEmbedderPolicy: true,
+				}),
+			)
 		})
 	})
 

@@ -31,9 +31,107 @@ jobs:
       express_env: ${{ steps.create_express_env.outputs.env_content }}
       client_env: ${{ steps.create_client_env.outputs.env_content }}
     steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-hygiene-checks
+          aws-region: us-east-1
+
       - name: Create Express API .env content
         id: create_express_env
         run: |
+          echo "🔍 Fetching environment variables from AWS Parameter Store..."
+
+          # Determine parameter store path based on environment
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # PR environment - use development parameters
+            PARAM_PATH="/macro-ai/development"
+            echo "🌱 Using development environment parameters: ${PARAM_PATH}"
+          else
+            # Direct push - determine branch
+            if [[ "${{ github.ref_name }}" == "develop" ]]; then
+              PARAM_PATH="/macro-ai/staging"
+              echo "🚀 Using staging environment parameters: ${PARAM_PATH}"
+            elif [[ "${{ github.ref_name }}" == "main" ]]; then
+              PARAM_PATH="/macro-ai/production"
+              echo "🏭 Using production environment parameters: ${PARAM_PATH}"
+            else
+              PARAM_PATH="/macro-ai/development"
+              echo "🌱 Using development environment parameters: ${PARAM_PATH}"
+            fi
+          fi
+
+          # Fetch all runtime configuration from Parameter Store using environment-specific path
+          echo "🔍 Fetching parameters from: ${PARAM_PATH}"
+
+          # Function to fetch parameter with error handling
+          fetch_param() {
+            local param_name="$1"
+            local param_path="${PARAM_PATH}/${param_name}"
+            local value
+            
+            echo "  📥 Fetching: ${param_path}"
+            value=$(aws ssm get-parameter --name "${param_path}" --query "Parameter.Value" --output text 2>&1)
+            
+            if [ $? -eq 0 ]; then
+              echo "    ✅ ${param_name}: OK"
+              echo "$value"
+            else
+              echo "    ❌ ${param_name}: FAILED - $value"
+              return 1
+            fi
+          }
+
+          # Fetch all parameters with error handling
+          AWS_COGNITO_REGION=$(fetch_param "aws-cognito-region")
+          AWS_COGNITO_USER_POOL_ID=$(fetch_param "aws-cognito-user-pool-id")
+          AWS_COGNITO_USER_POOL_CLIENT_ID=$(fetch_param "aws-cognito-user-pool-client-id")
+          AWS_COGNITO_USER_POOL_SECRET_KEY=$(fetch_param "aws-cognito-user-pool-secret-key")
+          AWS_COGNITO_ACCESS_KEY=$(fetch_param "aws-cognito-access-key")
+          AWS_COGNITO_SECRET_KEY=$(fetch_param "aws-cognito-secret-key")
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=$(fetch_param "aws-cognito-refresh-token-expiry")
+
+          COOKIE_DOMAIN=$(fetch_param "cookie-domain")
+          COOKIE_ENCRYPTION_KEY=$(fetch_param "cookie-encryption-key")
+
+          NON_RELATIONAL_DATABASE_URL=$(fetch_param "non-relational-database-url")
+          RELATIONAL_DATABASE_URL=$(fetch_param "relational-database-url")
+
+          OPENAI_API_KEY=$(fetch_param "openai-api-key")
+
+          RATE_LIMIT_WINDOW_MS=$(fetch_param "rate-limit-window-ms")
+          RATE_LIMIT_MAX_REQUESTS=$(fetch_param "rate-limit-max-requests")
+          AUTH_RATE_LIMIT_WINDOW_MS=$(fetch_param "auth-rate-limit-window-ms")
+          AUTH_RATE_LIMIT_MAX_REQUESTS=$(fetch_param "auth-rate-limit-max-requests")
+          API_RATE_LIMIT_WINDOW_MS=$(fetch_param "api-rate-limit-window-ms")
+          API_RATE_LIMIT_MAX_REQUESTS=$(fetch_param "api-rate-limit-max-requests")
+          REDIS_URL=$(fetch_param "redis-url")
+
+          # Verify all required parameters were fetched
+          echo "🔍 Verifying all required parameters were fetched..."
+          required_params=(
+            "AWS_COGNITO_REGION" "AWS_COGNITO_USER_POOL_ID" "AWS_COGNITO_USER_POOL_CLIENT_ID"
+            "AWS_COGNITO_USER_POOL_SECRET_KEY" "AWS_COGNITO_ACCESS_KEY" "AWS_COGNITO_SECRET_KEY"
+            "COOKIE_ENCRYPTION_KEY" "RELATIONAL_DATABASE_URL" "NON_RELATIONAL_DATABASE_URL"
+            "OPENAI_API_KEY"
+          )
+
+          missing_params=()
+          for param in "${required_params[@]}"; do
+            if [[ -z "${!param}" ]]; then
+              missing_params+=("$param")
+            fi
+          done
+
+          if [[ ${#missing_params[@]} -gt 0 ]]; then
+            echo "❌ Missing required parameters: ${missing_params[*]}"
+            exit 1
+          fi
+
+          echo "✅ All required parameters fetched successfully"
+          echo "✅ Environment variables loaded from AWS Parameter Store"
+
           ENV_CONTENT=$(cat << EOF
           # API Configuration
           API_KEY=${{ secrets.API_KEY }}
@@ -42,33 +140,33 @@ jobs:
           APP_ENV=development
 
           # AWS Cognito Configuration
-          AWS_COGNITO_REGION=${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-          AWS_COGNITO_USER_POOL_ID=${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-          AWS_COGNITO_USER_POOL_CLIENT_ID=${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-          AWS_COGNITO_USER_POOL_SECRET_KEY=${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-          AWS_COGNITO_ACCESS_KEY=${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
-          AWS_COGNITO_SECRET_KEY=${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
-          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
+          AWS_COGNITO_REGION=${AWS_COGNITO_REGION}
+          AWS_COGNITO_USER_POOL_ID=${AWS_COGNITO_USER_POOL_ID}
+          AWS_COGNITO_USER_POOL_CLIENT_ID=${AWS_COGNITO_USER_POOL_CLIENT_ID}
+          AWS_COGNITO_USER_POOL_SECRET_KEY=${AWS_COGNITO_USER_POOL_SECRET_KEY}
+          AWS_COGNITO_ACCESS_KEY=${AWS_COGNITO_ACCESS_KEY}
+          AWS_COGNITO_SECRET_KEY=${AWS_COGNITO_SECRET_KEY}
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=${AWS_COGNITO_REFRESH_TOKEN_EXPIRY}
 
           # Cookie Configuration
-          COOKIE_DOMAIN=${{ secrets.COOKIE_DOMAIN || 'localhost' }}
-          COOKIE_ENCRYPTION_KEY=${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+          COOKIE_DOMAIN=${COOKIE_DOMAIN}
+          COOKIE_ENCRYPTION_KEY=${COOKIE_ENCRYPTION_KEY}
 
           # Databases
-          NON_RELATIONAL_DATABASE_URL=${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
-          RELATIONAL_DATABASE_URL=${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          NON_RELATIONAL_DATABASE_URL=${NON_RELATIONAL_DATABASE_URL}
+          RELATIONAL_DATABASE_URL=${RELATIONAL_DATABASE_URL}
 
           # OpenAI
-          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+          OPENAI_API_KEY=${OPENAI_API_KEY}
 
           # Rate Limiting
-          RATE_LIMIT_WINDOW_MS=${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-          RATE_LIMIT_MAX_REQUESTS=${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-          AUTH_RATE_LIMIT_WINDOW_MS=${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS=${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-          API_RATE_LIMIT_WINDOW_MS=${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-          API_RATE_LIMIT_MAX_REQUESTS=${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
-          REDIS_URL=${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
+          RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS}
+          RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS}
+          AUTH_RATE_LIMIT_WINDOW_MS=${AUTH_RATE_LIMIT_WINDOW_MS}
+          AUTH_RATE_LIMIT_MAX_REQUESTS=${AUTH_RATE_LIMIT_MAX_REQUESTS}
+          API_RATE_LIMIT_WINDOW_MS=${API_RATE_LIMIT_WINDOW_MS}
+          API_RATE_LIMIT_MAX_REQUESTS=${API_RATE_LIMIT_MAX_REQUESTS}
+          REDIS_URL=${REDIS_URL}
           EOF
           )
           echo "env_content<<EOF" >> $GITHUB_OUTPUT
@@ -133,7 +231,7 @@ jobs:
           APP_ENV: development
           SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
           API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-          
+
           # AWS Cognito Configuration
           AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
           AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
@@ -142,18 +240,18 @@ jobs:
           AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
           AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
           AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
-          
+
           # Cookie Configuration
           COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
           COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
-          
+
           # Databases
           NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
-          
+
           # OpenAI
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
-          
+
           # Rate Limiting
           RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
           RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
@@ -206,7 +304,7 @@ jobs:
           APP_ENV: development
           SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
           API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-          
+
           # AWS Cognito Configuration
           AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
           AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
@@ -215,18 +313,18 @@ jobs:
           AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
           AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
           AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
-          
+
           # Cookie Configuration
           COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
           COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
-          
+
           # Databases
           NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
-          
+
           # OpenAI
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
-          
+
           # Rate Limiting
           RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
           RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
@@ -281,7 +379,7 @@ jobs:
           APP_ENV: development
           SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
           API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-          
+
           # AWS Cognito Configuration
           AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
           AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
@@ -290,18 +388,18 @@ jobs:
           AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
           AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
           AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
-          
+
           # Cookie Configuration
           COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
           COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
-          
+
           # Databases
           NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
-          
+
           # OpenAI
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
-          
+
           # Rate Limiting
           RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
           RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
