@@ -1,32 +1,31 @@
 /**
- * Simplified Configuration System
- * Reads configuration from process.env with conditional dotenv loading and Zod validation
+ * Simplified Configuration System (Enhanced)
  *
- * This replaces the complex Parameter Store integration with a simple approach:
- * - Local dev: Uses .env files (dotenv loads only in non-production)
- * - EC2: Environment variables are pre-populated by infrastructure scripts
- * - All environments: Robust Zod validation of process.env
+ * This module now uses the enhanced env-config system for better environment management:
+ * - Environment-specific configuration files (.env.local, .env.development, etc.)
+ * - Proper configuration precedence rules
+ * - Enhanced validation and error reporting
+ * - Better support for different deployment environments
  */
 
-import { config as dotenvConfig } from 'dotenv'
-import { resolve } from 'path'
-import { fromError } from 'zod-validation-error'
-
-import { envSchema, type TEnv } from '../utils/env.schema.ts'
-import { AppError, type Result } from '../utils/errors.ts'
+import { type TEnv } from '../utils/env.schema.ts'
+import { type Result } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
+
+import {
+	type EnvConfigOptions,
+	getConfigPrecedence,
+	getEnvInfo,
+	loadEnvConfig,
+} from './env-config.ts'
 
 const { logger } = pino
 
 /**
- * Configuration loading options
+ * Configuration loading options (backward compatibility)
  */
-interface ConfigOptions {
-	/** Whether to validate the schema (default: true) */
-	validateSchema?: boolean
-	/** Whether to log configuration details (default: true) */
-	enableLogging?: boolean
-	/** Custom .env file path (default: .env in project root) */
+interface ConfigOptions extends EnvConfigOptions {
+	/** Custom .env file path (deprecated - use baseDir instead) */
 	envFilePath?: string
 }
 
@@ -37,105 +36,28 @@ interface ConfigOptions {
  * @returns Result tuple with configuration or error
  */
 export const loadConfig = (options: ConfigOptions = {}): Result<TEnv> => {
-	const {
-		validateSchema = true,
-		enableLogging = true,
-		envFilePath = resolve(process.cwd(), '.env'),
-	} = options
-
-	try {
-		// Only load .env file in non-production environments
-		// In production (EC2), environment variables are set by infrastructure
-		if (process.env.NODE_ENV !== 'production') {
-			const dotenvResult = dotenvConfig({
-				path: envFilePath,
-				encoding: 'UTF-8',
-			})
-
-			if (dotenvResult.error) {
-				// .env file not found is OK in some environments
-				if (enableLogging) {
-					logger.debug(
-						{
-							operation: 'loadConfig',
-							envFilePath,
-							error: dotenvResult.error.message,
-						},
-						'.env file not found or could not be parsed (this may be expected)',
-					)
-				}
-			} else if (enableLogging) {
-				logger.info(
-					{
-						operation: 'loadConfig',
-						envFilePath,
-						loadedVars: Object.keys(dotenvResult.parsed ?? {}).length,
-					},
-					'Loaded configuration from .env file',
-				)
-			}
-		} else if (enableLogging) {
-			logger.info(
-				{
-					operation: 'loadConfig',
-					nodeEnv: process.env.NODE_ENV,
-				},
-				'Production environment detected - using pre-set environment variables',
-			)
-		}
-
-		// Validate environment variables using Zod schema
-		if (validateSchema) {
-			const validationResult = envSchema.safeParse(process.env)
-
-			if (!validationResult.success) {
-				const validationError = fromError(validationResult.error)
-				const appError = AppError.validation(
-					`Invalid environment configuration: ${validationError.message}`,
-					{
-						zodError: validationResult.error,
-						validationDetails: validationError.details,
-					},
-				)
-				return [null, appError]
-			}
-
-			if (enableLogging) {
-				logger.info(
-					{
-						operation: 'loadConfig',
-						nodeEnv: validationResult.data.NODE_ENV,
-						appEnv: validationResult.data.APP_ENV,
-						port: validationResult.data.SERVER_PORT,
-						validatedFields: Object.keys(validationResult.data).length,
-					},
-					'Configuration validation successful',
-				)
-			}
-
-			return [validationResult.data, null]
-		}
-
-		// If validation is disabled, cast process.env to TEnv
-		// This is not recommended but may be useful for testing
-		if (enableLogging) {
-			logger.warn(
-				{
-					operation: 'loadConfig',
-					validateSchema: false,
-				},
-				'Schema validation disabled - configuration may be invalid',
-			)
-		}
-
-		return [process.env as unknown as TEnv, null]
-	} catch (error) {
-		const appError = AppError.internal(
-			`Failed to load configuration: ${error instanceof Error ? error.message : 'Unknown error'}`,
-			'config',
-		)
-		return [null, appError]
+	// Convert legacy envFilePath option to baseDir
+	const enhancedOptions: EnvConfigOptions = {
+		...options,
 	}
+
+	// Handle legacy envFilePath option
+	if (options.envFilePath && !options.baseDir) {
+		// Extract directory from file path manually to avoid require() style import
+		const lastSlashIndex = options.envFilePath.lastIndexOf('/')
+		const lastBackslashIndex = options.envFilePath.lastIndexOf('\\')
+		const lastSeparatorIndex = Math.max(lastSlashIndex, lastBackslashIndex)
+
+		if (lastSeparatorIndex > 0) {
+			enhancedOptions.baseDir = options.envFilePath.substring(
+				0,
+				lastSeparatorIndex,
+			)
+		}
+	}
+
+	// Use the enhanced configuration loader
+	return loadEnvConfig(enhancedOptions)
 }
 
 /**
@@ -302,4 +224,18 @@ export const getEnvironmentInfo = () => {
 		isPreview: isPreviewEnvironment(),
 		hasParameterStorePrefix: Boolean(process.env.PARAMETER_STORE_PREFIX),
 	}
+}
+
+/**
+ * Get enhanced environment information using the new env-config system
+ */
+export const getEnhancedEnvironmentInfo = () => {
+	return getEnvInfo()
+}
+
+/**
+ * Get configuration precedence information for debugging
+ */
+export const getConfigurationPrecedence = (): string[] => {
+	return getConfigPrecedence()
 }

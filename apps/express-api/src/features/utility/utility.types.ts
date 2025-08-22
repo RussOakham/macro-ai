@@ -13,6 +13,7 @@ interface IUtilityController {
 	getReadinessStatus: express.Handler
 	getPublicReadinessStatus: express.Handler
 	getLivenessStatus: express.Handler
+	getConfigurationStatus: express.Handler
 }
 
 // Service interface
@@ -23,6 +24,7 @@ interface IUtilityService {
 	getReadinessStatus: () => Result<TReadinessStatus>
 	getPublicReadinessStatus: () => Result<TReadinessStatus>
 	getLivenessStatus: () => Result<TLivenessStatus>
+	getConfigurationStatus: () => Result<TConfigurationStatus>
 }
 
 // Health status type (internal service type)
@@ -106,6 +108,27 @@ interface TLivenessStatus {
 	uptime: number
 }
 
+// Configuration validation status for debugging deployment issues
+interface TConfigurationStatus {
+	status: 'healthy' | 'unhealthy' | 'degraded'
+	message: string
+	timestamp: string
+	checks: {
+		critical: {
+			ready: boolean
+			missing: string[]
+		}
+		important: {
+			ready: boolean
+			missing: string[]
+		}
+		optional: {
+			ready: boolean
+			missing: string[]
+		}
+	}
+}
+
 // API response types (from schemas)
 type THealthResponse = z.infer<typeof healthResponseSchema>
 type THealthErrorResponse = z.infer<typeof healthErrorSchema>
@@ -113,6 +136,7 @@ type THealthErrorResponse = z.infer<typeof healthErrorSchema>
 export type {
 	IUtilityController,
 	IUtilityService,
+	TConfigurationStatus,
 	TDetailedHealthStatus,
 	THealthErrorResponse,
 	THealthResponse,

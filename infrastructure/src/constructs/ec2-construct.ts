@@ -253,46 +253,10 @@ export class Ec2Construct extends Construct {
 			),
 		)
 
-		// Parameter Store access (scoped to our parameters only)
-		role.addToPolicy(
-			new iam.PolicyStatement({
-				effect: iam.Effect.ALLOW,
-				actions: [
-					'ssm:GetParameter',
-					'ssm:GetParameters',
-					'ssm:GetParametersByPath',
-				],
-				resources: [
-					// Individual parameters under the path
-					`arn:aws:ssm:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:parameter${parameterStorePrefix}*`,
-					// Path itself for GetParametersByPath operations
-					`arn:aws:ssm:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:parameter${parameterStorePrefix.replace(/\/$/, '')}`,
-				],
-			}),
-		)
-
-		// Parameter Store describe access (required for parameter discovery)
-		role.addToPolicy(
-			new iam.PolicyStatement({
-				effect: iam.Effect.ALLOW,
-				actions: ['ssm:DescribeParameters'],
-				resources: ['*'], // DescribeParameters requires wildcard resource
-			}),
-		)
-
-		// KMS permissions for Parameter Store SecureString decryption
-		role.addToPolicy(
-			new iam.PolicyStatement({
-				effect: iam.Effect.ALLOW,
-				actions: ['kms:Decrypt'],
-				resources: ['*'],
-				conditions: {
-					StringEquals: {
-						'kms:ViaService': `ssm.${cdk.Stack.of(this).region}.amazonaws.com`,
-					},
-				},
-			}),
-		)
+		// Parameter Store access removed - CDK synthesis time approach
+		// EC2 instances receive all configuration at deployment time via user data script
+		// This eliminates the need for runtime Parameter Store permissions, improving security
+		// and reducing the attack surface of EC2 instances
 
 		// CloudWatch Logs (for application logging)
 		role.addToPolicy(

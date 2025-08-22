@@ -41,7 +41,7 @@ export class ParameterStoreConstruct extends Construct {
 
 		if (isPreviewEnvironment) {
 			// Use shared development parameter prefix for all preview environments
-			this.parameterPrefix = '/macro-ai/development/'
+			this.parameterPrefix = 'macro-ai-development-'
 
 			// Skip parameter creation for preview environments (use existing shared parameters)
 			this.parameters = {}
@@ -256,7 +256,14 @@ export class ParameterStoreConstruct extends Construct {
 		key: string,
 		tier: 'critical' | 'standard' = 'standard',
 	): string {
-		return `${this.parameterPrefix}/${tier}/${key}`
+		// Handle both naming conventions for backward compatibility
+		if (this.parameterPrefix.includes('/')) {
+			// Legacy format: /macro-ai/development/critical/api-key
+			return `${this.parameterPrefix}/${tier}/${key}`
+		} else {
+			// New format: macro-ai-development-critical-api-key
+			return `${this.parameterPrefix}${tier}-${key}`
+		}
 	}
 
 	/**

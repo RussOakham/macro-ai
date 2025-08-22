@@ -214,6 +214,33 @@ class UtilityController implements IUtilityController {
 
 		res.status(statusCode).json(livenessStatus)
 	}
+
+	/**
+	 * Configuration validation endpoint
+	 * Returns detailed configuration validation status for debugging
+	 */
+	public getConfigurationStatus = (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): void => {
+		const [configStatus, error] = this.utilityService.getConfigurationStatus()
+
+		if (error) {
+			logger.error({
+				msg: '[utilityController - getConfigurationStatus]: Error checking configuration status',
+				error: error.message,
+				stack: error.stack,
+				service: error.service,
+				type: error.type,
+			})
+			next(error)
+			return
+		}
+
+		// Return 200 for configuration status (always returns data, even if unhealthy)
+		res.status(StatusCodes.OK).json(configStatus)
+	}
 }
 
 // Create an instance of the UtilityController

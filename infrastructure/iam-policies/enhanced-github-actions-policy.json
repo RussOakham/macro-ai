@@ -88,7 +88,10 @@
 				"ssm:AddTagsToResource",
 				"ssm:RemoveTagsFromResource"
 			],
-			"Resource": ["arn:aws:ssm:*:*:parameter/macro-ai/*"]
+			"Resource": [
+				"arn:aws:ssm:*:*:parameter/macro-ai/*",
+				"arn:aws:ssm:*:*:parameter/macro-ai-*"
+			]
 		},
 		{
 			"Sid": "CloudWatchLogsManagement",
@@ -202,6 +205,36 @@
 				"autoscaling:DescribeAutoScalingGroups",
 				"elasticloadbalancing:DescribeTargetHealth",
 				"elasticloadbalancing:DescribeTargetGroups"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "EC2DeploymentPermissions",
+			"Effect": "Allow",
+			"Action": [
+				"ec2:CreateInstance",
+				"ec2:RunInstances",
+				"ec2:TerminateInstances",
+				"ec2:StartInstances",
+				"ec2:StopInstances",
+				"ec2:RebootInstances",
+				"ec2:ModifyInstanceAttribute",
+				"ec2:ModifyInstanceCreditSpecification",
+				"ec2:DescribeInstances",
+				"ec2:DescribeInstanceStatus",
+				"ec2:DescribeInstanceAttribute",
+				"ec2:DescribeInstanceCreditSpecifications",
+				"ec2:DescribeInstanceTypes",
+				"ec2:DescribeVpcs",
+				"ec2:DescribeSubnets",
+				"ec2:DescribeSecurityGroups",
+				"ec2:DescribeKeyPairs",
+				"ec2:DescribeImages",
+				"ec2:DescribeAvailabilityZones",
+				"ec2:DescribeRegions",
+				"ec2:CreateTags",
+				"ec2:DeleteTags",
+				"ec2:DescribeTags"
 			],
 			"Resource": "*"
 		},

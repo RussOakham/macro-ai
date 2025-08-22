@@ -206,6 +206,15 @@ jobs:
             echo "⚠️ Warning: .env.build.preview not found, using defaults"
           fi
 
+          # Validate environment variables before build
+          echo "🔍 Validating environment variables..."
+          pnpm run validate-env
+          if [ $? -ne 0 ]; then
+            echo "❌ Environment validation failed!"
+            exit 1
+          fi
+          echo "✅ Environment validation passed"
+
           echo "📦 Building Express API..."
           pnpm run build
 

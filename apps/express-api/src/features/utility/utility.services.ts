@@ -7,6 +7,7 @@ import { pino } from '../../utils/logger.ts'
 
 import {
 	IUtilityService,
+	TConfigurationStatus,
 	TDetailedHealthStatus,
 	THealthStatus,
 	TLivenessStatus,
@@ -210,7 +211,13 @@ class UtilityService implements IUtilityService {
 	getPublicReadinessStatus = (): Result<TReadinessStatus> => {
 		const [readinessStatus, error] = tryCatchSync(() => {
 			const currentTime = new Date()
-			const isReady = this.isDatabaseReady()
+
+			// For public endpoint, perform basic checks but don't expose detailed errors
+			const databaseReady = this.isDatabaseReady()
+			const configurationReady = this.isConfigurationReady()
+
+			// Public endpoint uses simplified readiness - only database and basic config
+			const isReady = databaseReady && configurationReady
 
 			const status: TReadinessStatus = {
 				ready: isReady,
@@ -219,9 +226,9 @@ class UtilityService implements IUtilityService {
 					: 'Application is not ready to receive traffic',
 				timestamp: currentTime.toISOString(),
 				checks: {
-					database: isReady,
-					dependencies: isReady, // For public endpoint, use same status for all checks
-					configuration: isReady,
+					database: databaseReady,
+					dependencies: databaseReady, // For public endpoint, use same status for all checks
+					configuration: configurationReady,
 				},
 			}
 
@@ -263,6 +270,9 @@ class UtilityService implements IUtilityService {
 			// Determine if this is an internal/detailed request (always include errors for detailed endpoint)
 			const includeErrorDetails = true
 
+			// Get configuration validation status
+			const configValidation = this.getConfigurationValidationStatus()
+
 			// Determine overall health status
 			let overallStatus: 'healthy' | 'unhealthy' | 'degraded' = 'healthy'
 			const checks = {
@@ -273,6 +283,11 @@ class UtilityService implements IUtilityService {
 				memory: this.checkMemoryHealth(memoryUsagePercent, memoryUsageMB),
 				disk: this.checkDiskHealth(),
 				dependencies: this.checkDependenciesHealth(includeErrorDetails),
+				configuration: {
+					status: configValidation.critical.ready ? 'healthy' : 'unhealthy',
+					details: configValidation,
+					responseTime: 0,
+				},
 			}
 
 			// Determine overall status based on individual checks
@@ -280,12 +295,14 @@ class UtilityService implements IUtilityService {
 				checks.database.status === 'unhealthy' ||
 				checks.memory.status === 'unhealthy' ||
 				checks.disk.status === 'unhealthy' ||
-				checks.dependencies.status === 'unhealthy'
+				checks.dependencies.status === 'unhealthy' ||
+				checks.configuration.status === 'unhealthy'
 			) {
 				overallStatus = 'unhealthy'
 			} else if (
 				checks.database.status === 'unknown' ||
-				checks.dependencies.status === 'degraded'
+				checks.dependencies.status === 'degraded' ||
+				!configValidation.important.ready
 			) {
 				overallStatus = 'degraded'
 			}
@@ -331,16 +348,26 @@ class UtilityService implements IUtilityService {
 		const [readinessStatus, error] = tryCatchSync(() => {
 			const currentTime = new Date()
 
-			// Check readiness criteria
+			// Check readiness criteria with detailed status
 			const databaseReady = this.isDatabaseReady()
 			const dependenciesReady = this.areDependenciesReady()
 			const configurationReady = this.isConfigurationReady()
 
 			const ready = databaseReady && dependenciesReady && configurationReady
 
+			// Generate detailed readiness message
+			let message = 'Application is ready'
+			if (!ready) {
+				const issues = []
+				if (!configurationReady) issues.push('configuration')
+				if (!databaseReady) issues.push('database')
+				if (!dependenciesReady) issues.push('dependencies')
+				message = `Application not ready: ${issues.join(', ')} issues detected`
+			}
+
 			const readinessStatus: TReadinessStatus = {
 				ready,
-				message: ready ? 'Application is ready' : 'Application is not ready',
+				message,
 				timestamp: currentTime.toISOString(),
 				checks: {
 					database: databaseReady,
@@ -533,8 +560,108 @@ class UtilityService implements IUtilityService {
 	 */
 	private isConfigurationReady = (): boolean => {
 		// Check if critical configuration is available
-		const requiredEnvVars = ['NODE_ENV', 'PORT']
-		return requiredEnvVars.every((envVar) => process.env[envVar])
+		// Use minimal required variables that should always be present
+		const criticalEnvVars = ['NODE_ENV']
+
+		// Check if critical variables are present
+		const criticalReady = criticalEnvVars.every((envVar) => process.env[envVar])
+
+		// For health checks, we want to be lenient - only fail if absolutely critical config is missing
+		// This allows health checks to work even with minimal configuration
+		return criticalReady
+	}
+
+	/**
+	 * Get detailed configuration validation status for health checks
+	 * @returns Configuration validation details
+	 */
+	private getConfigurationValidationStatus = () => {
+		const criticalEnvVars = ['NODE_ENV']
+		const importantEnvVars = [
+			'API_KEY',
+			'COOKIE_ENCRYPTION_KEY',
+			'RELATIONAL_DATABASE_URL',
+			'OPENAI_API_KEY',
+		]
+		const optionalEnvVars = [
+			'REDIS_URL',
+			'CORS_ALLOWED_ORIGINS',
+			'COOKIE_DOMAIN',
+		]
+
+		const criticalStatus = criticalEnvVars.every(
+			(envVar) => process.env[envVar],
+		)
+		const importantStatus = importantEnvVars.every(
+			(envVar) => process.env[envVar],
+		)
+		const optionalStatus = optionalEnvVars.some((envVar) => process.env[envVar])
+
+		return {
+			critical: {
+				ready: criticalStatus,
+				missing: criticalEnvVars.filter((envVar) => !process.env[envVar]),
+			},
+			important: {
+				ready: importantStatus,
+				missing: importantEnvVars.filter((envVar) => !process.env[envVar]),
+			},
+			optional: {
+				ready: optionalStatus,
+				missing: optionalEnvVars.filter((envVar) => !process.env[envVar]),
+			},
+		}
+	}
+
+	/**
+	 * Get configuration status for the configuration health endpoint
+	 * @returns Result tuple with configuration status or error
+	 */
+	getConfigurationStatus = (): Result<TConfigurationStatus> => {
+		const [configStatus, error] = tryCatchSync(() => {
+			const currentTime = new Date()
+			const configValidation = this.getConfigurationValidationStatus()
+
+			// Determine overall configuration status
+			let overallStatus: 'healthy' | 'unhealthy' | 'degraded' = 'healthy'
+			let message = 'Configuration is healthy'
+
+			if (!configValidation.critical.ready) {
+				overallStatus = 'unhealthy'
+				message = `Configuration is unhealthy: missing critical variables (${configValidation.critical.missing.join(', ')})`
+			} else if (!configValidation.important.ready) {
+				overallStatus = 'degraded'
+				message = `Configuration is degraded: missing important variables (${configValidation.important.missing.join(', ')})`
+			}
+
+			const configStatus: TConfigurationStatus = {
+				status: overallStatus,
+				message,
+				timestamp: currentTime.toISOString(),
+				checks: configValidation,
+			}
+
+			logger.info({
+				msg: '[utilityService - getConfigurationStatus]: Configuration validation performed',
+				status: overallStatus,
+				criticalMissing: configValidation.critical.missing.length,
+				importantMissing: configValidation.important.missing.length,
+				optionalMissing: configValidation.optional.missing.length,
+				timestamp: currentTime.toISOString(),
+			})
+
+			return configStatus
+		}, 'utilityService - getConfigurationStatus')
+
+		if (error) {
+			logger.error({
+				msg: '[utilityService - getConfigurationStatus]: Configuration validation failed',
+				error: error.message,
+			})
+			return [null, error] as const
+		}
+
+		return [configStatus, null]
 	}
 
 	/**
