@@ -165,6 +165,7 @@ jobs:
     if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-backend-changes.outputs.has-backend-changes == 'true'
 
     permissions:
+      id-token: write
       contents: read
       actions: write # For uploading artifacts
 
