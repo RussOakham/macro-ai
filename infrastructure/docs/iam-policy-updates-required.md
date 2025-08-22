@@ -2,7 +2,8 @@
 
 ## Overview
 
-Due to significant changes in our deployment architecture and Parameter Store naming conventions, several IAM policies need to be updated to ensure proper access control and security.
+Due to significant changes in our deployment architecture and Parameter Store naming conventions, several IAM policies
+need to be updated to ensure proper access control and security.
 
 ## 🔴 **Critical Changes Made**
 
@@ -31,6 +32,7 @@ Due to significant changes in our deployment architecture and Parameter Store na
 #### ✅ **Already Updated**
 
 - **ParameterStoreManagement**: Added support for both naming conventions
+
   ```json
   "Resource": [
     "arn:aws:ssm:*:*:parameter/macro-ai/*",

@@ -185,7 +185,7 @@ const loadEnvFiles = (
 		if (existsSync(envFile.path)) {
 			const result = dotenvConfig({
 				path: envFile.path,
-				override: true, // Allow later files to override earlier ones
+				override: false, // Don't override existing environment variables
 				encoding: 'UTF-8',
 			})
 
@@ -214,12 +214,9 @@ const loadEnvFiles = (
 				}
 			}
 		} else if (envFile.required) {
-			throw new AppError(
-				`Required environment file not found: ${envFile.path}`,
-				'CONFIG_FILE_MISSING',
-				500,
-				{ filePath: envFile.path, description: envFile.description },
-			)
+			throw new AppError({
+				message: `Required environment file not found: ${envFile.path} - Config file missing, ${envFile.description}`,
+			})
 		}
 	}
 
@@ -285,15 +282,10 @@ export const loadEnvConfig = (options: EnvConfigOptions = {}): Result<TEnv> => {
 
 				return [
 					null,
-					new AppError(
-						`Environment validation failed: ${validationError.message}`,
-						'ENV_VALIDATION_ERROR',
-						500,
-						{
-							environmentType: envType,
-							validationErrors: validationResult.error.issues,
-						},
-					),
+					new AppError({
+						message: `Environment validation failed: ${validationError.message}`,
+						details: validationError.details,
+					}),
 				]
 			}
 
@@ -310,19 +302,15 @@ export const loadEnvConfig = (options: EnvConfigOptions = {}): Result<TEnv> => {
 
 			return [validationResult.data, null]
 		}
-
 		// Return unvalidated process.env (cast to TEnv)
-		return [process.env as TEnv, null]
+		return [process.env as unknown as TEnv, null]
 	} catch (error) {
 		const appError =
 			error instanceof AppError
 				? error
-				: new AppError(
-						`Failed to load environment configuration: ${error instanceof Error ? error.message : 'Unknown error'}`,
-						'CONFIG_LOAD_ERROR',
-						500,
-						{ originalError: error },
-					)
+				: new AppError({
+						message: `Failed to load environment configuration: ${error instanceof Error ? error.message : 'Unknown error'} - CONFIG_LOAD_ERROR`,
+					})
 
 		if (enableLogging) {
 			logger.error(
