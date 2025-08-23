@@ -1,0 +1,19 @@
+# Exclude everything by default
+*
+
+# Include only what we need
+!package.json
+!pnpm-lock.yaml
+!apps/express-api/**
+!packages/**
+
+# Exclude problematic directories
+apps/client-ui/
+node_modules/
+.turbo/
+.github/
+infrastructure/
+docs/
+tests/
+scripts/
+.husky/

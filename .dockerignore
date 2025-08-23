@@ -1,0 +1,31 @@
+# Exclude everything by default
+*
+
+# Include only what we need for the express-api
+!package.json
+!pnpm-lock.yaml
+!apps/express-api/**
+!packages/**
+!out/**
+
+# Exclude ALL node_modules directories (including workspace symlinks)
+**/node_modules/
+node_modules/
+
+# Exclude problematic directories
+apps/client-ui/
+.turbo/
+.github/
+infrastructure/
+docs/
+tests/
+scripts/
+.husky/
+.git/
+
+# Exclude build artifacts and cache directories
+**/dist/
+**/build/
+**/.next/
+**/.nuxt/
+**/coverage/

@@ -2,7 +2,7 @@
 
 ## 🎯 **Project Overview**
 
-**Goal**: Migrate from EC2-based deployment to Docker + ECS Fargate for better maintainability, 
+**Goal**: Migrate from EC2-based deployment to Docker + ECS Fargate for better maintainability,
 cost efficiency, and deployment reliability.
 
 **Current State**: EC2 instances with complex user data scripts, Auto Scaling Groups, and manual

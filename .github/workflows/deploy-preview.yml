@@ -842,9 +842,9 @@ jobs:
           # Check if an Amplify app already exists for this branch
           ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
           AMPLIFY_APP_NAME="macro-ai-frontend-${ENV_NAME}"
-          
+
           echo "🔍 Checking for existing Amplify app: ${AMPLIFY_APP_NAME}"
-          
+
           # Check if Amplify app already exists
           EXISTING_APP_ID=$(aws amplify list-apps \
             --region ${{ env.AWS_REGION }} \
@@ -1496,7 +1496,13 @@ jobs:
   deployment-summary:
     name: Deployment Summary
     runs-on: ubuntu-latest
-    needs: [validate-access, deploy-backend-preview, deploy-frontend, handle-existing-frontend]
+    needs:
+      [
+        validate-access,
+        deploy-backend-preview,
+        deploy-frontend,
+        handle-existing-frontend,
+      ]
     if: always() && (needs.deploy-backend-preview.result == 'success' || needs.deploy-frontend.result == 'success' || needs.handle-existing-frontend.result == 'success')
 
     permissions:

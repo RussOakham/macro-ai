@@ -42,9 +42,13 @@ interface MockDecipher {
 
 describe('crypto.ts', () => {
 	const mockTryCatchSync = vi.mocked(tryCatchSync)
-	const mockRandomBytes = vi.mocked(randomBytes)
-	const mockCreateCipheriv = vi.mocked(createCipheriv)
-	const mockCreateDecipheriv = vi.mocked(createDecipheriv)
+	const mockRandomBytes = vi.mocked(randomBytes) as ReturnType<typeof vi.fn>
+	const mockCreateCipheriv = vi.mocked(createCipheriv) as ReturnType<
+		typeof vi.fn
+	>
+	const mockCreateDecipheriv = vi.mocked(createDecipheriv) as ReturnType<
+		typeof vi.fn
+	>
 
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -65,7 +69,9 @@ describe('crypto.ts', () => {
 				final: vi.fn().mockReturnValue('text'),
 				getAuthTag: vi.fn().mockReturnValue(mockAuthTag),
 			}
-			mockCreateCipheriv.mockReturnValue(mockCipher as unknown as ReturnType<typeof createCipheriv>)
+			mockCreateCipheriv.mockReturnValue(
+				mockCipher as unknown as ReturnType<typeof createCipheriv>,
+			)
 
 			// Use the centralized mock helper for tryCatchSync
 			mockTryCatchSync.mockImplementation(
@@ -122,7 +128,9 @@ describe('crypto.ts', () => {
 					final: vi.fn().mockReturnValue('text'),
 					getAuthTag: vi.fn().mockReturnValue(mockAuthTag),
 				}
-				mockCreateCipheriv.mockReturnValue(mockCipher as unknown as ReturnType<typeof createCipheriv>)
+				mockCreateCipheriv.mockReturnValue(
+					mockCipher as unknown as ReturnType<typeof createCipheriv>,
+				)
 
 				encrypt(plaintext)
 
@@ -158,7 +166,9 @@ describe('crypto.ts', () => {
 					final: vi.fn(),
 					getAuthTag: vi.fn(),
 				}
-				mockCreateCipheriv.mockReturnValue(mockCipher as unknown as ReturnType<typeof createCipheriv>)
+				mockCreateCipheriv.mockReturnValue(
+					mockCipher as unknown as ReturnType<typeof createCipheriv>,
+				)
 				// Use real implementation to actually catch the thrown error
 				mockTryCatchSync.mockImplementation(
 					mockErrorHandling.withRealTryCatchSync(),
@@ -215,7 +225,9 @@ describe('crypto.ts', () => {
 				update: vi.fn().mockReturnValue('decrypted'),
 				final: vi.fn().mockReturnValue('text'),
 			}
-			mockCreateDecipheriv.mockReturnValue(mockDecipher as unknown as ReturnType<typeof createDecipheriv>)
+			mockCreateDecipheriv.mockReturnValue(
+				mockDecipher as unknown as ReturnType<typeof createDecipheriv>,
+			)
 
 			// Use the centralized mock helper for tryCatchSync
 			mockTryCatchSync.mockImplementation(
@@ -258,7 +270,9 @@ describe('crypto.ts', () => {
 					update: vi.fn().mockReturnValue('decrypted'),
 					final: vi.fn().mockReturnValue('text'),
 				}
-				mockCreateDecipheriv.mockReturnValue(mockDecipher as unknown as ReturnType<typeof createDecipheriv>)
+				mockCreateDecipheriv.mockReturnValue(
+					mockDecipher as unknown as ReturnType<typeof createDecipheriv>,
+				)
 
 				decrypt(validEncryptedText)
 
@@ -337,7 +351,9 @@ describe('crypto.ts', () => {
 					update: vi.fn(),
 					final: vi.fn(),
 				}
-				mockCreateDecipheriv.mockReturnValue(mockDecipher as unknown as ReturnType<typeof createDecipheriv>)
+				mockCreateDecipheriv.mockReturnValue(
+					mockDecipher as unknown as ReturnType<typeof createDecipheriv>,
+				)
 				// Use real implementation to catch the thrown error
 				mockTryCatchSync.mockImplementation(
 					mockErrorHandling.withRealTryCatchSync(),
@@ -357,7 +373,9 @@ describe('crypto.ts', () => {
 					}),
 					final: vi.fn(),
 				}
-				mockCreateDecipheriv.mockReturnValue(mockDecipher as unknown as ReturnType<typeof createDecipheriv>)
+				mockCreateDecipheriv.mockReturnValue(
+					mockDecipher as unknown as ReturnType<typeof createDecipheriv>,
+				)
 				// Use real implementation to catch the thrown error
 				mockTryCatchSync.mockImplementation(
 					mockErrorHandling.withRealTryCatchSync(),
