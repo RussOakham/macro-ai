@@ -75,9 +75,6 @@ if (isEC2Preview && isPreviewEnvironment) {
 	const prNumber = parseInt(deploymentEnv.replace('pr-', ''), 10)
 	const branchName =
 		process.env.BRANCH_NAME ?? process.env.GITHUB_HEAD_REF ?? 'unknown'
-	const corsAllowedOrigins =
-		process.env.CORS_ALLOWED_ORIGINS ??
-		'http://localhost:3000,http://localhost:5173'
 
 	// Configure custom domain if environment variables are provided
 	const customDomain =
@@ -110,7 +107,6 @@ if (isEC2Preview && isPreviewEnvironment) {
 		environmentName: deploymentEnv,
 		prNumber,
 		branchName,
-		corsAllowedOrigins,
 		scale: deploymentScale,
 		costAlertEmails,
 		customDomain, // Add custom domain configuration

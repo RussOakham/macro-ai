@@ -238,7 +238,7 @@ const loadEnvFiles = (
 export const loadEnvConfig = (options: EnvConfigOptions = {}): Result<TEnv> => {
 	const {
 		validateSchema = true,
-		enableLogging = true,
+		enableLogging = false,
 		forceEnvironment,
 		baseDir = process.cwd(),
 	} = options

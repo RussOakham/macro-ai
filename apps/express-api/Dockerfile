@@ -32,6 +32,39 @@ COPY . .
 # Build the express-api
 RUN cd apps/express-api && pnpm build
 
+# Stage 2.5: Environment Configuration - Generate environment file
+FROM node:20-alpine AS env-config
+WORKDIR /app
+
+# Install required tools for environment file generation
+RUN apk add --no-cache bash curl jq
+
+# Copy environment generation script
+COPY apps/express-api/scripts/generate-env-file.sh ./
+
+# Make script executable
+RUN chmod +x generate-env-file.sh
+
+# Build argument for environment file
+ARG ENV_FILE
+ARG ENVIRONMENT=development
+ARG PARAMETER_PREFIX=/macro-ai/development
+ARG AWS_REGION=us-east-1
+
+# Generate environment file (this will be done at build time)
+# The actual environment file should be generated before building the Docker image
+RUN if [ -f "$ENV_FILE" ]; then \
+        echo "Using provided environment file: $ENV_FILE"; \
+        cp "$ENV_FILE" .env; \
+    else \
+        echo "No environment file provided, creating minimal .env"; \
+        echo "NODE_ENV=$ENVIRONMENT" > .env; \
+        echo "APP_ENV=$ENVIRONMENT" >> .env; \
+        echo "PARAMETER_STORE_PREFIX=$PARAMETER_PREFIX" >> .env; \
+        echo "AWS_REGION=$AWS_REGION" >> .env; \
+        echo "GENERATED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> .env; \
+    fi
+
 # Stage 3: Production - Create minimal production image
 FROM node:20-alpine AS production
 WORKDIR /app
@@ -49,6 +82,9 @@ COPY --from=builder --chown=nodejs:nodejs /app/apps/express-api/package.json ./
 
 # Copy only production dependencies
 COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+
+# Copy environment configuration from env-config stage
+COPY --from=env-config --chown=nodejs:nodejs /app/.env ./.env
 
 # Create necessary directories with proper permissions
 RUN mkdir -p /app/logs /app/temp && \

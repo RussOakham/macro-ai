@@ -233,8 +233,11 @@ export class EcsFargateConstruct extends Construct {
 				NODE_ENV:
 					environmentName === 'production' ? 'production' : 'development',
 				APP_ENV: environmentName,
-				// Other environment variables will be injected via Parameter Store
+				PARAMETER_STORE_PREFIX: parameterStorePrefix,
+				// Other environment variables will be injected via Parameter Store at runtime
 			},
+			// Note: Parameter Store values will be accessed at runtime via the task role
+			// The application should use the AWS SDK to fetch parameters using the PARAMETER_STORE_PREFIX
 			healthCheck: {
 				command: [
 					'CMD-SHELL',

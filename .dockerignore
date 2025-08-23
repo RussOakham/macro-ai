@@ -1,5 +1,6 @@
 # Exclude everything by default
 *
+node_modules
 
 # Include only what we need for the express-api
 !package.json

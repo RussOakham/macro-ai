@@ -4,11 +4,12 @@ This document covers the Docker setup, configuration, and deployment for the Mac
 
 ## 🏗️ Architecture Overview
 
-The Docker setup uses a **multi-stage build approach** with three stages:
+The Docker setup uses a **multi-stage build approach** with four stages:
 
 1. **`deps`** - Install and cache dependencies
 2. **`builder`** - Compile TypeScript and build the application
-3. **`production`** - Create minimal production image
+3. **`env-config`** - Generate environment configuration from Parameter Store
+4. **`production`** - Create minimal production image with embedded configuration
 
 ## 📁 File Structure
 
@@ -19,7 +20,9 @@ apps/express-api/
 ├── docker-compose.yml            # Development environment
 ├── docker-compose.prod.yml       # Production environment
 ├── scripts/
-│   ├── build-docker.sh          # Build and tag images
+│   ├── generate-env-file.sh     # Generate environment files from Parameter Store
+│   ├── build-docker-with-env.sh # Build Docker images with configuration
+│   ├── build-docker.sh          # Legacy build script
 │   ├── setup-docker-dev.sh      # Setup development environment
 │   └── deploy-docker-prod.sh    # Production deployment
 └── DOCKER.md                     # This documentation
@@ -32,6 +35,17 @@ apps/express-api/
 - Docker Desktop installed and running
 - Docker Compose available
 - Git repository cloned
+- AWS CLI configured with Parameter Store access
+- `jq` installed for JSON processing
+
+### Configuration Approach
+
+The application uses **build-time configuration injection**:
+
+- Environment variables are resolved from AWS Parameter Store during Docker build
+- Configuration is baked into the container image
+- No runtime Parameter Store access needed
+- Faster container startup and more reliable operation
 
 ### Development Setup
 
@@ -58,7 +72,22 @@ docker-compose up -d
 
 ## 🔧 Docker Commands
 
-### Building Images
+### Building Images with Configuration
+
+The recommended approach uses build-time configuration injection:
+
+```bash
+# Generate environment file from Parameter Store
+./scripts/generate-env-file.sh -e development
+
+# Build Docker image with configuration
+./scripts/build-docker-with-env.sh -e development
+
+# Build and push to ECR
+./scripts/build-docker-with-env.sh -e production -p -r "ecr-repo-uri"
+```
+
+### Legacy Build Commands
 
 ```bash
 # Development build (includes source code for hot reloading)
