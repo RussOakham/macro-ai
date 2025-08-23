@@ -812,8 +812,13 @@ jobs:
     name: Check Frontend Changes
     runs-on: ubuntu-latest
     needs: [validate-access]
+    permissions:
+      id-token: write
+      contents: read
     outputs:
       has-frontend-changes: ${{ steps.check.outputs.has-frontend-changes }}
+      existing-amplify-app-id: ${{ steps.check.outputs.existing-amplify-app-id }}
+      should-deploy-frontend: ${{ steps.check.outputs.should-deploy-frontend }}
 
     steps:
       - name: Checkout code
@@ -821,20 +826,152 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check for frontend changes
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-check-frontend-changes
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Check for frontend changes and existing app
         id: check
         run: |
           # Check if there are any frontend-related changes in this PR
           FRONTEND_CHANGES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^apps/client-ui/|^\.github/actions/(discover-backend|generate-frontend-env)/' || true)
 
+          # Check if an Amplify app already exists for this branch
+          ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
+          AMPLIFY_APP_NAME="macro-ai-frontend-${ENV_NAME}"
+          
+          echo "🔍 Checking for existing Amplify app: ${AMPLIFY_APP_NAME}"
+          
+          # Check if Amplify app already exists
+          EXISTING_APP_ID=$(aws amplify list-apps \
+            --region ${{ env.AWS_REGION }} \
+            --query "apps[?name=='${AMPLIFY_APP_NAME}'].appId" \
+            --output text 2>/dev/null || echo "")
+
+          if [[ -n "$EXISTING_APP_ID" && "$EXISTING_APP_ID" != "None" ]]; then
+            echo "✅ Found existing Amplify app with ID: $EXISTING_APP_ID"
+            echo "existing-amplify-app-id=$EXISTING_APP_ID" >> $GITHUB_OUTPUT
+            
+            # Check if the app has a branch for this PR
+            BRANCH_NAME="${{ github.head_ref }}"
+            SANITIZED_BRANCH="${BRANCH_NAME//\//-}"
+            
+            BRANCH_EXISTS=$(aws amplify list-branches \
+              --app-id "$EXISTING_APP_ID" \
+              --region ${{ env.AWS_REGION }} \
+              --query "branches[?branchName=='${SANITIZED_BRANCH}'].branchName" \
+              --output text 2>/dev/null || echo "")
+            
+            if [[ -n "$BRANCH_EXISTS" ]]; then
+              echo "✅ Branch ${SANITIZED_BRANCH} already exists in Amplify app"
+              HAS_EXISTING_BRANCH=true
+            else
+              echo "ℹ️ Branch ${SANITIZED_BRANCH} doesn't exist in Amplify app"
+              HAS_EXISTING_BRANCH=false
+            fi
+          else
+            echo "📱 No existing Amplify app found"
+            echo "existing-amplify-app-id=" >> $GITHUB_OUTPUT
+            HAS_EXISTING_BRANCH=false
+          fi
+
+          # Determine if we should deploy frontend
           if [[ -n "$FRONTEND_CHANGES" ]]; then
             echo "✅ Frontend changes detected:"
             echo "$FRONTEND_CHANGES"
             echo "has-frontend-changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "ℹ️ No frontend changes detected, skipping frontend deployment"
+            echo "should-deploy-frontend=true" >> $GITHUB_OUTPUT
+            echo "ℹ️ Frontend deployment required due to changes"
+          elif [[ "$HAS_EXISTING_BRANCH" == "true" ]]; then
+            echo "ℹ️ No frontend changes detected, but existing Amplify app with branch found"
             echo "has-frontend-changes=false" >> $GITHUB_OUTPUT
+            echo "should-deploy-frontend=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Skipping frontend deployment - reusing existing app"
+          else
+            echo "ℹ️ No frontend changes detected, but no existing Amplify app/branch found"
+            echo "has-frontend-changes=false" >> $GITHUB_OUTPUT
+            echo "should-deploy-frontend=true" >> $GITHUB_OUTPUT
+            echo "ℹ️ Frontend deployment required to create new app/branch"
           fi
+
+  # Handle existing frontend app when no deployment needed
+  handle-existing-frontend:
+    name: Handle Existing Frontend App
+    runs-on: ubuntu-latest
+    needs: [validate-access, check-frontend-changes]
+    if: |
+      needs.validate-access.outputs.should-deploy == 'true' &&
+      needs.check-frontend-changes.outputs.should-deploy-frontend == 'false' &&
+      needs.check-frontend-changes.outputs.existing-amplify-app-id != ''
+
+    permissions:
+      id-token: write
+      contents: read
+
+    outputs:
+      env-name: ${{ needs.validate-access.outputs.env-name }}
+      amplify-app-id: ${{ needs.check-frontend-changes.outputs.existing-amplify-app-id }}
+      backend-url: ${{ needs.validate-access.outputs.backend-url }}
+      backend-stack-name: ${{ needs.validate-access.outputs.backend-stack-name }}
+      frontend-url: ${{ steps.resolve-url.outputs.frontend-url }}
+      target-user: ${{ needs.validate-access.outputs.target-user }}
+      app-url: ${{ steps.resolve-url.outputs.frontend-url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-handle-existing-frontend
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Resolve existing frontend URL
+        id: resolve-url
+        run: |
+          ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
+          APP_ID="${{ needs.check-frontend-changes.outputs.existing-amplify-app-id }}"
+          BRANCH_NAME="${{ github.head_ref }}"
+          SANITIZED_BRANCH="${BRANCH_NAME//\//-}"
+
+          echo "🔍 Resolving URL for existing Amplify app: ${APP_ID}"
+          echo "🌿 Branch: ${BRANCH_NAME} (sanitized: ${SANITIZED_BRANCH})"
+
+          # Check if custom domain is configured
+          if [[ -n "${{ vars.CUSTOM_DOMAIN_NAME }}" ]]; then
+            # Use custom domain pattern
+            FRONTEND_URL="https://pr-${{ github.event.pull_request.number }}.${{ vars.CUSTOM_DOMAIN_NAME }}"
+            echo "🌐 Using custom domain: ${FRONTEND_URL}"
+          else
+            # Get the default Amplify URL for the existing app/branch
+            echo "📱 Getting default Amplify URL for existing app..."
+            
+            # Get the branch details to find the URL
+            BRANCH_INFO=$(aws amplify get-branch \
+              --app-id "${APP_ID}" \
+              --branch-name "${SANITIZED_BRANCH}" \
+              --region ${{ env.AWS_REGION }} \
+              --query 'branch.branchArn' \
+              --output text 2>/dev/null || echo "")
+            
+            if [[ -n "$BRANCH_INFO" ]]; then
+              # Extract the URL from the branch ARN
+              # Format: arn:aws:amplify:region:account:apps/appId/branches/branchName
+              FRONTEND_URL="https://${SANITIZED_BRANCH}.${APP_ID}.amplifyapp.com"
+              echo "🌐 Using default Amplify URL: ${FRONTEND_URL}"
+            else
+              echo "⚠️ Could not resolve branch URL, using fallback"
+              FRONTEND_URL="https://${SANITIZED_BRANCH}.${APP_ID}.amplifyapp.com"
+            fi
+          fi
+
+          echo "frontend-url=${FRONTEND_URL}" >> $GITHUB_OUTPUT
+          echo "✅ Resolved frontend URL: ${FRONTEND_URL}"
 
   # Build the React frontend
   build-frontend:
@@ -844,7 +981,7 @@ jobs:
     # Run if frontend changes detected - simplified condition for custom domain optimization
     if: |
       needs.validate-access.outputs.should-deploy == 'true' &&
-      needs.check-frontend-changes.outputs.has-frontend-changes == 'true'
+      needs.check-frontend-changes.outputs.should-deploy-frontend == 'true'
 
     permissions:
       contents: read
@@ -1119,7 +1256,7 @@ jobs:
 
     outputs:
       env-name: ${{ needs.validate-access.outputs.env-name }}
-      amplify-app-id: ${{ needs.validate-access.outputs.amplify-app-id }}
+      amplify-app-id: ${{ needs.check-frontend-changes.outputs.existing-amplify-app-id }}
       backend-url: ${{ needs.validate-access.outputs.backend-url }}
       backend-stack-name: ${{ needs.validate-access.outputs.backend-stack-name }}
       frontend-url: ${{ needs.validate-access.outputs.frontend-url }}
@@ -1359,8 +1496,8 @@ jobs:
   deployment-summary:
     name: Deployment Summary
     runs-on: ubuntu-latest
-    needs: [validate-access, deploy-backend-preview, deploy-frontend]
-    if: always() && (needs.deploy-backend-preview.result == 'success' || needs.deploy-frontend.result == 'success')
+    needs: [validate-access, deploy-backend-preview, deploy-frontend, handle-existing-frontend]
+    if: always() && (needs.deploy-backend-preview.result == 'success' || needs.deploy-frontend.result == 'success' || needs.handle-existing-frontend.result == 'success')
 
     permissions:
       pull-requests: write
@@ -1378,16 +1515,23 @@ jobs:
           echo "- Frontend deployment: ${{ needs.deploy-frontend.result }}"
 
       - name: Comment on PR with deployment details
-        if: needs.deploy-frontend.result == 'success'
+        if: needs.deploy-frontend.result == 'success' || needs.handle-existing-frontend.result == 'success'
         uses: actions/github-script@v7
         with:
           script: |
             const frontendDeployed = '${{ needs.deploy-frontend.result }}' === 'success';
+            const frontendReused = '${{ needs.handle-existing-frontend.result }}' === 'success';
             const backendDeployed = '${{ needs.deploy-backend-preview.result }}' === 'success';
 
-            // Get frontend details
-            const appUrl = '${{ needs.deploy-frontend.outputs.app-url }}';
-            const appId = '${{ needs.deploy-frontend.outputs.app-id }}';
+            // Get frontend details - check both deployment and existing app
+            let appUrl, appId;
+            if (frontendDeployed) {
+              appUrl = '${{ needs.deploy-frontend.outputs.app-url }}';
+              appId = '${{ needs.deploy-frontend.outputs.app-id }}';
+            } else if (frontendReused) {
+              appUrl = '${{ needs.handle-existing-frontend.outputs.app-url }}';
+              appId = '${{ needs.handle-existing-frontend.outputs.amplify-app-id }}';
+            }
             const envName = '${{ needs.validate-access.outputs.env-name }}';
 
             // Get backend URL - use actual deployed URL if backend was deployed, otherwise use pre-calculated URL
@@ -1414,7 +1558,7 @@ jobs:
             - **Amplify App ID**: \`${appId}\`
             - **Branch**: \`${{ github.head_ref }}\`
             - **Backend Status**: ${backendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
-            - **Frontend Status**: ${frontendDeployed ? '✅ Deployed' : '❌ Failed'}
+            - **Frontend Status**: ${frontendDeployed ? '✅ Deployed' : frontendReused ? '🔄 Reused (no changes)' : '❌ Failed'}
 
             ### 🔗 Quick Links
             - [AWS Amplify Console](https://console.aws.amazon.com/amplify/home?region=${{ env.AWS_REGION }}#/${appId})
