@@ -24,6 +24,7 @@ echo "[INFO] Fetching parameters from Parameter Store with prefix: $PARAMETER_ST
 echo "[INFO] Output file: $ENV_FILE"
 
 # Fetch all parameters with the given prefix
+# Priority order: Parameter Store > GitHub Secrets > Defaults
 aws ssm get-parameters-by-path \
     --path "$PARAMETER_STORE_PREFIX" \
     --recursive \
@@ -34,18 +35,10 @@ aws ssm get-parameters-by-path \
     | jq -r '.Parameters[] | "\(.Name | gsub("^'$PARAMETER_STORE_PREFIX'/"; ""))=\(.Value)"' \
     > "$ENV_FILE"
 
-# Add default values for required variables that might not be in Parameter Store
+# Add minimal defaults only for variables that are truly missing and needed for build
+# Note: Most variables come from GitHub repository secrets, not Parameter Store
 echo "NODE_ENV=production" >> "$ENV_FILE"
-echo "APP_ENV=development" >> "$ENV_FILE"
-echo "SERVER_PORT=3000" >> "$ENV_FILE"
-
-# Add default rate limiting values
-echo "RATE_LIMIT_WINDOW_MS=900000" >> "$ENV_FILE"
-echo "RATE_LIMIT_MAX_REQUESTS=100" >> "$ENV_FILE"
-echo "AUTH_RATE_LIMIT_WINDOW_MS=900000" >> "$ENV_FILE"
-echo "AUTH_RATE_LIMIT_MAX_REQUESTS=5" >> "$ENV_FILE"
-echo "API_RATE_LIMIT_WINDOW_MS=900000" >> "$ENV_FILE"
-echo "API_RATE_LIMIT_MAX_REQUESTS=1000" >> "$ENV_FILE"
+echo "SERVER_PORT=3040" >> "$ENV_FILE"
 
 # Validate that we got some parameters
 if [ ! -s "$ENV_FILE" ]; then
