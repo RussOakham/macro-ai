@@ -34,6 +34,19 @@ aws ssm get-parameters-by-path \
     | jq -r '.Parameters[] | "\(.Name | gsub("^'$PARAMETER_STORE_PREFIX'/"; ""))=\(.Value)"' \
     > "$ENV_FILE"
 
+# Add default values for required variables that might not be in Parameter Store
+echo "NODE_ENV=production" >> "$ENV_FILE"
+echo "APP_ENV=development" >> "$ENV_FILE"
+echo "SERVER_PORT=3000" >> "$ENV_FILE"
+
+# Add default rate limiting values
+echo "RATE_LIMIT_WINDOW_MS=900000" >> "$ENV_FILE"
+echo "RATE_LIMIT_MAX_REQUESTS=100" >> "$ENV_FILE"
+echo "AUTH_RATE_LIMIT_WINDOW_MS=900000" >> "$ENV_FILE"
+echo "AUTH_RATE_LIMIT_MAX_REQUESTS=5" >> "$ENV_FILE"
+echo "API_RATE_LIMIT_WINDOW_MS=900000" >> "$ENV_FILE"
+echo "API_RATE_LIMIT_MAX_REQUESTS=1000" >> "$ENV_FILE"
+
 # Validate that we got some parameters
 if [ ! -s "$ENV_FILE" ]; then
     echo "[ERROR] No parameters found with prefix: $PARAMETER_STORE_PREFIX"
@@ -42,3 +55,9 @@ fi
 
 echo "[INFO] Generated environment file with $(wc -l < "$ENV_FILE") variables"
 echo "[INFO] Environment file generated successfully: $ENV_FILE"
+
+# Debug: Show what variables were loaded (without values for security)
+echo "[DEBUG] Variables loaded from Parameter Store:"
+cut -d'=' -f1 "$ENV_FILE" | sort | while read -r var; do
+    echo "[DEBUG]   - $var"
+done
