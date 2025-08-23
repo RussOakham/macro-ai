@@ -242,11 +242,28 @@ jobs:
           echo "🌍 Environment: ${ENV_NAME}"
           echo "📥 Fetching from: ${PARAM_PATH}"
 
-          # Create the environment file using our script
+          # Create the environment file using our script with GitHub secrets
           chmod +x apps/express-api/scripts/generate-env-from-parameter-store.sh
+          
+          # Pass GitHub secrets as environment variables for the script
           PARAMETER_STORE_PREFIX="${PARAM_PATH}" \
           ENV_FILE="${ENV_FILE}" \
           AWS_REGION="${{ env.AWS_REGION }}" \
+          # GitHub repository secrets
+          APP_ENV="${{ secrets.APP_ENV }}" \
+          API_KEY="${{ secrets.API_KEY }}" \
+          OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+          AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}" \
+          AWS_REGION="${{ secrets.AWS_REGION }}" \
+          AWS_ROLE_ARN="${{ secrets.AWS_ROLE_ARN }}" \
+          SERVER_PORT="${{ secrets.SERVER_PORT }}" \
+          RATE_LIMIT_WINDOW_MS="${{ secrets.RATE_LIMIT_WINDOW_MS }}" \
+          RATE_LIMIT_MAX_REQUESTS="${{ secrets.RATE_LIMIT_MAX_REQUESTS }}" \
+          AUTH_RATE_LIMIT_WINDOW_MS="${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS }}" \
+          AUTH_RATE_LIMIT_MAX_REQUESTS="${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS }}" \
+          API_RATE_LIMIT_WINDOW_MS="${{ secrets.API_RATE_LIMIT_WINDOW_MS }}" \
+          API_RATE_LIMIT_MAX_REQUESTS="${{ secrets.API_RATE_LIMIT_MAX_REQUESTS }}" \
+          COST_ALERT_EMAILS="${{ secrets.COST_ALERT_EMAILS }}" \
           ./apps/express-api/scripts/generate-env-from-parameter-store.sh
 
           echo "✅ Environment file generated from ${ENV_NAME} environment"

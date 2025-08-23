@@ -24,7 +24,7 @@ echo "[INFO] Fetching parameters from Parameter Store with prefix: $PARAMETER_ST
 echo "[INFO] Output file: $ENV_FILE"
 
 # Fetch all parameters with the given prefix
-# Priority order: Parameter Store > GitHub Secrets > Defaults
+# Priority order: GitHub Secrets > Parameter Store > Build Defaults
 aws ssm get-parameters-by-path \
     --path "$PARAMETER_STORE_PREFIX" \
     --recursive \
@@ -35,17 +35,26 @@ aws ssm get-parameters-by-path \
     | jq -r '.Parameters[] | "\(.Name | gsub("^'$PARAMETER_STORE_PREFIX'/"; ""))=\(.Value)"' \
     > "$ENV_FILE"
 
-# Add comprehensive defaults for build process
-# Note: These are build-time defaults - runtime values come from GitHub secrets or Parameter Store
-# Priority order for runtime:
-# 1. Parameter Store variables (highest - environment-specific overrides)
-# 2. GitHub repository secrets (medium - secure configuration)
-# 3. Build-time defaults (lowest - only for Docker build validation)
-echo "NODE_ENV=production" >> "$ENV_FILE"
-echo "APP_ENV=development" >> "$ENV_FILE"
-echo "SERVER_PORT=3040" >> "$ENV_FILE"
+# Add GitHub secrets and real values (highest priority)
+# These come from the workflow and override any Parameter Store defaults
+if [ -n "$APP_ENV" ]; then echo "APP_ENV=$APP_ENV" >> "$ENV_FILE"; fi
+if [ -n "$API_KEY" ]; then echo "API_KEY=$API_KEY" >> "$ENV_FILE"; fi
+if [ -n "$OPENAI_API_KEY" ]; then echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> "$ENV_FILE"; fi
+if [ -n "$AWS_ACCOUNT_ID" ]; then echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> "$ENV_FILE"; fi
+if [ -n "$AWS_REGION" ]; then echo "AWS_REGION=$AWS_REGION" >> "$ENV_FILE"; fi
+if [ -n "$AWS_ROLE_ARN" ]; then echo "AWS_ROLE_ARN=$AWS_ROLE_ARN" >> "$ENV_FILE"; fi
+if [ -n "$SERVER_PORT" ]; then echo "SERVER_PORT=$SERVER_PORT" >> "$ENV_FILE"; fi
+if [ -n "$RATE_LIMIT_WINDOW_MS" ]; then echo "RATE_LIMIT_WINDOW_MS=$RATE_LIMIT_WINDOW_MS" >> "$ENV_FILE"; fi
+if [ -n "$RATE_LIMIT_MAX_REQUESTS" ]; then echo "RATE_LIMIT_MAX_REQUESTS=$RATE_LIMIT_MAX_REQUESTS" >> "$ENV_FILE"; fi
+if [ -n "$AUTH_RATE_LIMIT_WINDOW_MS" ]; then echo "AUTH_RATE_LIMIT_WINDOW_MS=$AUTH_RATE_LIMIT_WINDOW_MS" >> "$ENV_FILE"; fi
+if [ -n "$AUTH_RATE_LIMIT_MAX_REQUESTS" ]; then echo "AUTH_RATE_LIMIT_MAX_REQUESTS=$AUTH_RATE_LIMIT_MAX_REQUESTS" >> "$ENV_FILE"; fi
+if [ -n "$API_RATE_LIMIT_WINDOW_MS" ]; then echo "API_RATE_LIMIT_WINDOW_MS=$API_RATE_LIMIT_WINDOW_MS" >> "$ENV_FILE"; fi
+if [ -n "$API_RATE_LIMIT_MAX_REQUESTS" ]; then echo "API_RATE_LIMIT_MAX_REQUESTS=$API_RATE_LIMIT_MAX_REQUESTS" >> "$ENV_FILE"; fi
+if [ -n "$COST_ALERT_EMAILS" ]; then echo "COST_ALERT_EMAILS=$COST_ALERT_EMAILS" >> "$ENV_FILE"; fi
 
-# Add build-time defaults for required variables (these will be overridden at runtime)
+# Add essential build-time defaults only for variables not available from GitHub secrets
+# These ensure the build can complete but will be overridden by real values at runtime
+echo "NODE_ENV=production" >> "$ENV_FILE"
 echo "AWS_COGNITO_REGION=us-east-1" >> "$ENV_FILE"
 echo "AWS_COGNITO_USER_POOL_ID=build-time-default" >> "$ENV_FILE"
 echo "AWS_COGNITO_USER_POOL_CLIENT_ID=build-time-default" >> "$ENV_FILE"
@@ -55,13 +64,6 @@ echo "AWS_COGNITO_SECRET_KEY=build-time-default" >> "$ENV_FILE"
 echo "COOKIE_ENCRYPTION_KEY=build-time-default-key-for-docker-build" >> "$ENV_FILE"
 echo "RELATIONAL_DATABASE_URL=postgresql://build:build@localhost:5432/build" >> "$ENV_FILE"
 echo "NON_RELATIONAL_DATABASE_URL=mongodb://build:build@localhost:27017/build" >> "$ENV_FILE"
-echo "OPENAI_API_KEY=build-time-default" >> "$ENV_FILE"
-echo "RATE_LIMIT_WINDOW_MS=900000" >> "$ENV_FILE"
-echo "RATE_LIMIT_MAX_REQUESTS=100" >> "$ENV_FILE"
-echo "AUTH_RATE_LIMIT_WINDOW_MS=900000" >> "$ENV_FILE"
-echo "AUTH_RATE_LIMIT_MAX_REQUESTS=5" >> "$ENV_FILE"
-echo "API_RATE_LIMIT_WINDOW_MS=900000" >> "$ENV_FILE"
-echo "API_RATE_LIMIT_MAX_REQUESTS=1000" >> "$ENV_FILE"
 
 # Validate that we got some parameters
 if [ ! -s "$ENV_FILE" ]; then
