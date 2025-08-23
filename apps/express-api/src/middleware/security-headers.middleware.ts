@@ -9,6 +9,9 @@ const config = assertConfig()
 const isDevelopment = config.nodeEnv === 'development'
 
 // Basic Helmet middleware with custom configuration
+// Note: crossOriginEmbedderPolicy is set to !isDevelopment
+// - In development: isDevelopment = true, so crossOriginEmbedderPolicy = false
+// - In production/test: isDevelopment = false, so crossOriginEmbedderPolicy = true
 const helmetMiddleware = helmet({
 	contentSecurityPolicy: {
 		directives: {

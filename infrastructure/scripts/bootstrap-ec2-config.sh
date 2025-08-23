@@ -221,13 +221,55 @@ fetch_parameters() {
         .Parameters[] | 
         {
             name: (.Name | split("/") | last),
-            value: .Value
+            value: .Value,
+            type: .Type
         } | 
         "\(.name)=\(.value)"
     ')
 
     if [[ -z "${env_vars}" ]]; then
         log_error "Failed to parse parameters from Parameter Store"
+        exit 1
+    fi
+
+    # Validate that critical parameters were decrypted properly
+    log_info "Validating parameter decryption..."
+    
+    # Check for encrypted values that might indicate decryption failure
+    local encrypted_patterns=("AQICAH" "AQICAI" "AQICAHjWlQ")
+    local has_encrypted_values=false
+    
+    while IFS= read -r line; do
+        if [[ -n "$line" ]]; then
+            local param_name="${line%%=*}"
+            local param_value="${line#*=}"
+            
+            # Check if this looks like an encrypted value
+            for pattern in "${encrypted_patterns[@]}"; do
+                if [[ "$param_value" == *"$pattern"* ]]; then
+                    log_warn "Parameter ${param_name} appears to be encrypted (starts with ${pattern})"
+                    has_encrypted_values=true
+                    break
+                fi
+            done
+            
+            # Special check for OpenAI API key format
+            if [[ "$param_name" == "openai-api-key" ]] && [[ ! "$param_value" =~ ^sk- ]]; then
+                log_error "OpenAI API key does not have expected format (should start with 'sk-')"
+                log_error "Current value starts with: ${param_value:0:10}..."
+                log_error "This may indicate a decryption issue or incorrect parameter value"
+                has_encrypted_values=true
+            fi
+        fi
+    done <<< "$env_vars"
+    
+    if [[ "$has_encrypted_values" == "true" ]]; then
+        log_error "Some parameters appear to be encrypted or have incorrect format"
+        log_error "This may indicate a decryption issue with SecureString parameters"
+        log_error "Please check:"
+        log_error "  1. IAM permissions include ssm:GetParametersByPath with decryption"
+        log_error "  2. Parameters are stored as SecureString in Parameter Store"
+        log_error "  3. KMS key permissions for decryption"
         exit 1
     fi
 
