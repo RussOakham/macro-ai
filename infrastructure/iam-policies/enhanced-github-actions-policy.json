@@ -197,14 +197,18 @@
 			"Resource": "*"
 		},
 		{
-			"Sid": "EC2HealthCheckPermissions",
+			"Sid": "ServiceHealthCheckPermissions",
 			"Effect": "Allow",
 			"Action": [
+				"ecs:DescribeClusters",
+				"ecs:DescribeServices",
+				"ecs:ListTasks",
+				"ecs:DescribeTasks",
+				"elasticloadbalancing:DescribeTargetHealth",
+				"elasticloadbalancing:DescribeTargetGroups",
 				"ec2:DescribeInstances",
 				"ec2:DescribeInstanceStatus",
-				"autoscaling:DescribeAutoScalingGroups",
-				"elasticloadbalancing:DescribeTargetHealth",
-				"elasticloadbalancing:DescribeTargetGroups"
+				"autoscaling:DescribeAutoScalingGroups"
 			],
 			"Resource": "*"
 		},
@@ -302,6 +306,49 @@
 					"aws:RequestedRegion": ["us-east-1", "us-west-2"]
 				}
 			}
+		},
+		{
+			"Sid": "ECRAccess",
+			"Effect": "Allow",
+			"Action": [
+				"ecr:GetAuthorizationToken",
+				"ecr:BatchCheckLayerAvailability",
+				"ecr:GetDownloadUrlForLayer",
+				"ecr:BatchGetImage",
+				"ecr:InitiateLayerUpload",
+				"ecr:UploadLayerPart",
+				"ecr:CompleteLayerUpload",
+				"ecr:PutImage",
+				"ecr:CreateRepository",
+				"ecr:DescribeRepositories",
+				"ecr:ListImages",
+				"ecr:TagResource",
+				"ecr:UntagResource"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "ECSDeploymentPermissions",
+			"Effect": "Allow",
+			"Action": [
+				"ecs:RegisterTaskDefinition",
+				"ecs:DeregisterTaskDefinition",
+				"ecs:DescribeTaskDefinition",
+				"ecs:UpdateService",
+				"ecs:DescribeServices",
+				"ecs:DescribeClusters",
+				"ecs:CreateService",
+				"ecs:DeleteService",
+				"ecs:ListServices",
+				"ecs:ListTaskDefinitions",
+				"ecs:ListTasks",
+				"ecs:DescribeTasks",
+				"application-autoscaling:RegisterScalableTarget",
+				"application-autoscaling:PutScalingPolicy",
+				"application-autoscaling:DescribeScalableTargets",
+				"application-autoscaling:DescribeScalingPolicies"
+			],
+			"Resource": "*"
 		}
 	]
 }

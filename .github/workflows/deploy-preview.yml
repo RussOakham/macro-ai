@@ -43,6 +43,7 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
+      actions: read
 
     outputs:
       is-owner: ${{ steps.codeowner-check.outputs.is-owner }}
@@ -103,6 +104,14 @@ jobs:
             echo "  - Code owner: ${IS_OWNER}"
             echo "  - User: ${{ steps.codeowner-check.outputs.target-user }}"
           fi
+
+      - name: Configure AWS credentials for URL precalculation
+        if: steps.decision.outputs.should-deploy == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-url-precalc
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Calculate deployment names
         id: url-precalc
