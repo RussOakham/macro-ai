@@ -1,107 +1,60 @@
-# Multi-stage Dockerfile for Macro AI Express API
-# Stage 1: Dependencies - Install and cache dependencies
-FROM node:20-alpine AS deps
-WORKDIR /app
+FROM node:20-alpine AS base
+RUN apk update
+RUN apk add --no-cache libc6-compat
+RUN corepack enable
 
-# Install pnpm globally
-RUN npm install -g pnpm@10.14.0
+# The web Dockerfile is copy-pasted into our main docs at /docs/handbook/deploying-with-docker.
+# Make sure you update this Dockerfile, the Dockerfile in the web workspace and copy that over to Dockerfile in the docs.
 
-# Copy package files for dependency installation
-COPY package.json pnpm-lock.yaml ./
-COPY apps/express-api/package.json ./apps/express-api/
-COPY packages/*/package.json ./packages/
+FROM base AS builder
+# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+RUN apk update
+RUN apk add --no-cache libc6-compat
 
-# Install dependencies with frozen lockfile for reproducible builds
+# Set pnpm home and path
+ENV PNPM_HOME="/root/.local/share/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+
+# Set working directory
+WORKDIR /macro-ai
+RUN pnpm add -g turbo
+COPY . .
+RUN turbo prune @repo/express-api --docker
+
+# Add lockfile and package.json's of isolated subworkspace
+FROM base AS installer
+RUN apk update
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /macro-ai
+
+# First install dependencies (as they change less often)
+COPY --from=builder /macro-ai/out/json/ .
 RUN pnpm install --frozen-lockfile
 
-# Stage 2: Build - Compile TypeScript and build the application
-FROM node:20-alpine AS builder
-WORKDIR /app
+# Build the project and its dependencies
+COPY --from=builder /macro-ai/out/full/ .
 
-# Install pnpm globally
-RUN npm install -g pnpm@10.14.0
-
-# Copy dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/express-api/node_modules ./apps/express-api/node_modules
-COPY --from=deps /app/packages/*/node_modules ./packages/*/node_modules
-
-# Copy source code
-COPY . .
-
-# Build the express-api
-RUN cd apps/express-api && pnpm build
-
-# Stage 2.5: Environment Configuration - Generate environment file
-FROM node:20-alpine AS env-config
-WORKDIR /app
-
-# Install required tools for environment file generation
-RUN apk add --no-cache bash curl jq
-
-# Copy environment generation script
-COPY apps/express-api/scripts/generate-env-file.sh ./
-
-# Make script executable
-RUN chmod +x generate-env-file.sh
-
-# Build argument for environment file
+# Copy environment file if provided (for Docker build with dummy env vars)
 ARG ENV_FILE
-ARG ENVIRONMENT=development
-ARG PARAMETER_PREFIX=/macro-ai/development
-ARG AWS_REGION=us-east-1
+RUN if [ "$ENV_FILE" ] && [ -f "$ENV_FILE" ]; then cp "$ENV_FILE" /macro-ai/.env && cp "$ENV_FILE" /macro-ai/apps/express-api/.env; fi
 
-# Generate environment file (this will be done at build time)
-# The actual environment file should be generated before building the Docker image
-RUN if [ -f "$ENV_FILE" ]; then \
-        echo "Using provided environment file: $ENV_FILE"; \
-        cp "$ENV_FILE" .env; \
-    else \
-        echo "No environment file provided, creating minimal .env"; \
-        echo "NODE_ENV=$ENVIRONMENT" > .env; \
-        echo "APP_ENV=$ENVIRONMENT" >> .env; \
-        echo "PARAMETER_STORE_PREFIX=$PARAMETER_PREFIX" >> .env; \
-        echo "AWS_REGION=$AWS_REGION" >> .env; \
-        echo "GENERATED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> .env; \
-    fi
+# Uncomment and use build args to enable remote caching
+# ARG TURBO_TEAM
+# ENV TURBO_TEAM=$TURBO_TEAM
 
-# Stage 3: Production - Create minimal production image
-FROM node:20-alpine AS production
-WORKDIR /app
+# ARG TURBO_TOKEN
+# ENV TURBO_TOKEN=$TURBO_TOKEN
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+RUN pnpm turbo build
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+FROM base AS runner
+WORKDIR /macro-ai
 
-# Copy built application from builder stage
-COPY --from=builder --chown=nodejs:nodejs /app/apps/express-api/dist ./dist
-COPY --from=builder --chown=nodejs:nodejs /app/apps/express-api/package.json ./
+# Don't run production as root
+RUN addgroup --system --gid 1001 expressjs
+RUN adduser --system --uid 1001 expressjs
+USER expressjs
+COPY --from=installer /macro-ai .
 
-# Copy only production dependencies
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
-
-# Copy environment configuration from env-config stage
-COPY --from=env-config --chown=nodejs:nodejs /app/.env ./.env
-
-# Create necessary directories with proper permissions
-RUN mkdir -p /app/logs /app/temp && \
-    chown -R nodejs:nodejs /app/logs /app/temp
-
-# Switch to non-root user
-USER nodejs
-
-# Expose port
-EXPOSE 3000
-
-# Health check endpoint
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
-
-# Use dumb-init for proper signal handling
-ENTRYPOINT ["dumb-init", "--"]
-
-# Start the application
-CMD ["node", "dist/index.js"]
+CMD node apps/express-api/dist/index.js

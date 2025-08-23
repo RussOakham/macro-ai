@@ -3,6 +3,12 @@
 	"private": true,
 	"name": "macro-ai",
 	"type": "module",
+	"workspaces": [
+		"apps/*",
+		"packages/*",
+		"infrastructure",
+		"tests/*"
+	],
 	"scripts": {
 		"commit": "cz",
 		"build": "turbo run build",
