@@ -224,10 +224,22 @@ jobs:
         run: |
           echo "🔍 Fetching environment variables from AWS Parameter Store..."
 
-          # Use development parameters for PR environments
-          PARAM_PATH="/macro-ai/development"
+          # Determine environment based on branch/context
+          # PR/Preview branches use development, future: staging/production
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            ENV_NAME="production"
+          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            ENV_NAME="staging"
+          else
+            # PR branches and feature branches use development
+            ENV_NAME="development"
+          fi
+
+          # Construct Parameter Store path with proper prefix
+          PARAM_PATH="/macro-ai/${ENV_NAME}"
           ENV_FILE="apps/express-api/.env.docker"
 
+          echo "🌍 Environment: ${ENV_NAME}"
           echo "📥 Fetching from: ${PARAM_PATH}"
 
           # Create the environment file using our script
@@ -237,17 +249,27 @@ jobs:
           AWS_REGION="${{ env.AWS_REGION }}" \
           ./apps/express-api/scripts/generate-env-from-parameter-store.sh
 
-          echo "✅ Environment file generated"
+          echo "✅ Environment file generated from ${ENV_NAME} environment"
           echo "env-file=${ENV_FILE}" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         id: build
         run: |
-          ECR_REPOSITORY="macro-ai-development-express-api"
+          # Determine environment for ECR repository naming
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            ENV_NAME="production"
+          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            ENV_NAME="staging"
+          else
+            ENV_NAME="development"
+          fi
+
+          ECR_REPOSITORY="macro-ai-${ENV_NAME}-express-api"
           IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
           IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:${IMAGE_TAG}"
 
           echo "🐳 Building Docker image..."
+          echo "🌍 Environment: ${ENV_NAME}"
           echo "Repository: ${ECR_REPOSITORY}"
           echo "Tag: ${IMAGE_TAG}"
           echo "URI: ${IMAGE_URI}"
