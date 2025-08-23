@@ -156,7 +156,7 @@ jobs:
             AMPLIFY_APP_ID="$EXISTING_APP_ID"
             echo "✅ Found existing Amplify app with ID: $AMPLIFY_APP_ID"
           else
-            AMPLIFY_APP_ID="<will-be-created>"
+            AMPLIFY_APP_ID=""
             echo "📱 Amplify app will be created during deployment"
           fi
 
@@ -232,10 +232,10 @@ jobs:
 
           # Create the environment file using our script
           chmod +x apps/express-api/scripts/generate-env-from-parameter-store.sh
-          ./apps/express-api/scripts/generate-env-from-parameter-store.sh \
-            "${PARAM_PATH}" \
-            "${{ env.AWS_REGION }}" \
-            "${ENV_FILE}"
+          PARAMETER_STORE_PREFIX="${PARAM_PATH}" \
+          ENV_FILE="${ENV_FILE}" \
+          AWS_REGION="${{ env.AWS_REGION }}" \
+          ./apps/express-api/scripts/generate-env-from-parameter-store.sh
 
           echo "✅ Environment file generated"
           echo "env-file=${ENV_FILE}" >> $GITHUB_OUTPUT
@@ -1014,7 +1014,7 @@ jobs:
           echo "📱 Using pre-calculated App ID: ${APP_ID}"
 
           # Verify the app exists (create if needed)
-          if [[ "$APP_ID" == "<will-be-created>" ]]; then
+          if [[ -z "$APP_ID" ]]; then
             echo "📱 Creating new Amplify app: ${AMPLIFY_APP_NAME}"
 
             # Create new Amplify app
