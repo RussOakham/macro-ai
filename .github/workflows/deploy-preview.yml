@@ -244,17 +244,15 @@ jobs:
 
           # Create the environment file using our script with GitHub secrets
           chmod +x apps/express-api/scripts/generate-env-from-parameter-store.sh
-          
+
           # Pass GitHub secrets as environment variables for the script
           PARAMETER_STORE_PREFIX="${PARAM_PATH}" \
           ENV_FILE="${ENV_FILE}" \
           AWS_REGION="${{ env.AWS_REGION }}" \
-          # GitHub repository secrets
           APP_ENV="${{ secrets.APP_ENV }}" \
           API_KEY="${{ secrets.API_KEY }}" \
           OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
           AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}" \
-          AWS_REGION="${{ secrets.AWS_REGION }}" \
           AWS_ROLE_ARN="${{ secrets.AWS_ROLE_ARN }}" \
           SERVER_PORT="${{ secrets.SERVER_PORT }}" \
           RATE_LIMIT_WINDOW_MS="${{ secrets.RATE_LIMIT_WINDOW_MS }}" \

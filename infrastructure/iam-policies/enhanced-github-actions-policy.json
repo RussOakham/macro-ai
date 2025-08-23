@@ -282,7 +282,8 @@
 			"Action": [
 				"route53:GetHostedZone",
 				"route53:GetChange",
-				"route53:ListResourceRecordSets"
+				"route53:ListResourceRecordSets",
+				"route53:ChangeResourceRecordSets"
 			],
 			"Resource": "*",
 			"Condition": {
