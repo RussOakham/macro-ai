@@ -170,7 +170,8 @@ jobs:
       actions: write # For uploading artifacts
 
     outputs:
-      build-artifact-name: ${{ steps.artifact-info.outputs.artifact-name }}
+      image-uri: ${{ steps.build.outputs.image-uri }}
+      image-tag: ${{ steps.build.outputs.image-tag }}
 
     steps:
       - name: Checkout code
@@ -192,189 +193,82 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          role-session-name: github-actions-build-express-api
+          role-session-name: github-actions-build-docker-ecs
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Build Express API for EC2
-        env:
-          # CI/CD specific variables only
-          NODE_ENV: 'development'
-          APP_ENV: 'development'
-          SERVER_PORT: '3040'
-          API_KEY: ${{ secrets.API_KEY }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Generate image tag
+        id: image-tag
         run: |
-          echo "🔨 Building Express API for EC2 deployment..."
+          IMAGE_TAG="pr-${{ github.event.pull_request.number }}-${{ github.sha }}"
+          echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "Generated image tag: ${IMAGE_TAG}"
 
-          # Install dependencies for the entire monorepo
-          pnpm install --frozen-lockfile
-
-          # Build the Express API (standard build, not Lambda)
-          cd apps/express-api
-
-          # Fetch runtime environment variables from AWS Parameter Store
+      - name: Generate environment file from Parameter Store
+        id: generate-env
+        run: |
           echo "🔍 Fetching environment variables from AWS Parameter Store..."
+          
+          # Use development parameters for PR environments
+          PARAM_PATH="/macro-ai/development"
+          ENV_FILE="apps/express-api/.env.docker"
+          
+          echo "📥 Fetching from: ${PARAM_PATH}"
+          
+          # Create the environment file using our script
+          chmod +x apps/express-api/scripts/generate-env-from-parameter-store.sh
+          ./apps/express-api/scripts/generate-env-from-parameter-store.sh \
+            "${PARAM_PATH}" \
+            "${{ env.AWS_REGION }}" \
+            "${ENV_FILE}"
+          
+          echo "✅ Environment file generated"
+          echo "env-file=${ENV_FILE}" >> $GITHUB_OUTPUT
 
-          # Determine parameter store path based on environment
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            # PR environment - use development parameters
-            PARAM_PATH="/macro-ai/development"
-            echo "🌱 Using development environment parameters: ${PARAM_PATH}"
-          else
-            # Direct push - determine branch
-            if [[ "${{ github.ref_name }}" == "develop" ]]; then
-              PARAM_PATH="/macro-ai/staging"
-              echo "🚀 Using staging environment parameters: ${PARAM_PATH}"
-            elif [[ "${{ github.ref_name }}" == "main" ]]; then
-              PARAM_PATH="/macro-ai/production"
-              echo "🏭 Using production environment parameters: ${PARAM_PATH}"
-            else
-              PARAM_PATH="/macro-ai/development"
-              echo "🌱 Using development environment parameters: ${PARAM_PATH}"
-            fi
-          fi
-
-          # Fetch all runtime configuration from Parameter Store using environment-specific path
-          echo "🔍 Fetching parameters from: ${PARAM_PATH}"
-
-          # Function to fetch parameter with error handling
-          fetch_param() {
-            local param_name="$1"
-            local param_path="${PARAM_PATH}/${param_name}"
-            local value
-            
-            echo "  📥 Fetching: ${param_path}" >&2
-            value=$(aws ssm get-parameter --name "${param_path}" --with-decryption --query "Parameter.Value" --output text 2>&1)
-            
-            if [ $? -eq 0 ]; then
-              echo "    ✅ ${param_name}: OK" >&2
-              echo "$value"
-            else
-              echo "    ❌ ${param_name}: FAILED - $value" >&2
-              return 1
-            fi
-          }
-
-          # Fetch all parameters with error handling
-          export AWS_COGNITO_REGION=$(fetch_param "aws-cognito-region")
-          export AWS_COGNITO_USER_POOL_ID=$(fetch_param "aws-cognito-user-pool-id")
-          export AWS_COGNITO_USER_POOL_CLIENT_ID=$(fetch_param "aws-cognito-user-pool-client-id")
-          export AWS_COGNITO_USER_POOL_SECRET_KEY=$(fetch_param "aws-cognito-user-pool-secret-key")
-          export AWS_COGNITO_ACCESS_KEY=$(fetch_param "aws-cognito-access-key")
-          export AWS_COGNITO_SECRET_KEY=$(fetch_param "aws-cognito-secret-key")
-          export AWS_COGNITO_REFRESH_TOKEN_EXPIRY=$(fetch_param "aws-cognito-refresh-token-expiry")
-
-          export COOKIE_DOMAIN=$(fetch_param "cookie-domain")
-          export COOKIE_ENCRYPTION_KEY=$(fetch_param "cookie-encryption-key")
-
-          export NON_RELATIONAL_DATABASE_URL=$(fetch_param "non-relational-database-url")
-          export RELATIONAL_DATABASE_URL=$(fetch_param "relational-database-url")
-
-          export OPENAI_API_KEY=$(fetch_param "openai-api-key")
-
-          export RATE_LIMIT_WINDOW_MS=$(fetch_param "rate-limit-window-ms")
-          export RATE_LIMIT_MAX_REQUESTS=$(fetch_param "rate-limit-max-requests")
-          export AUTH_RATE_LIMIT_WINDOW_MS=$(fetch_param "auth-rate-limit-window-ms")
-          export AUTH_RATE_LIMIT_MAX_REQUESTS=$(fetch_param "auth-rate-limit-max-requests")
-          export API_RATE_LIMIT_WINDOW_MS=$(fetch_param "api-rate-limit-window-ms")
-          export API_RATE_LIMIT_MAX_REQUESTS=$(fetch_param "api-rate-limit-max-requests")
-          export REDIS_URL=$(fetch_param "redis-url")
-
-          # Verify all required parameters were fetched
-          echo "🔍 Verifying all required parameters were fetched..."
-          required_params=(
-            "AWS_COGNITO_REGION" "AWS_COGNITO_USER_POOL_ID" "AWS_COGNITO_USER_POOL_CLIENT_ID"
-            "AWS_COGNITO_USER_POOL_SECRET_KEY" "AWS_COGNITO_ACCESS_KEY" "AWS_COGNITO_SECRET_KEY"
-            "COOKIE_ENCRYPTION_KEY" "RELATIONAL_DATABASE_URL" "NON_RELATIONAL_DATABASE_URL"
-            "OPENAI_API_KEY"
-          )
-
-          missing_params=()
-          for param in "${required_params[@]}"; do
-            if [[ -z "${!param}" ]]; then
-              missing_params+=("$param")
-            fi
-          done
-
-          if [[ ${#missing_params[@]} -gt 0 ]]; then
-            echo "❌ Missing required parameters: ${missing_params[*]}"
-            exit 1
-          fi
-
-          echo "✅ All required parameters fetched successfully"
-          echo "✅ Environment variables loaded from AWS Parameter Store"
-
-          # Validate environment variables before build
-          echo "🔍 Validating environment variables..."
-          pnpm run validate-env
-          if [ $? -ne 0 ]; then
-            echo "❌ Environment validation failed!"
-            exit 1
-          fi
-          echo "✅ Environment validation passed"
-
-          echo "📦 Building Express API..."
-          pnpm run build
-
-          # Verify build output
-          if [[ -d "dist" && -f "dist/index.js" ]]; then
-            echo "✅ Express API build completed successfully"
-            echo "📊 Build size: $(du -sh dist)"
-          else
-            echo "❌ Express API build verification failed"
-            exit 1
-          fi
-
-      - name: Create deployment package
+      - name: Build and push Docker image
+        id: build
         run: |
-          echo "📦 Creating deployment package for EC2..."
-          cd apps/express-api
+          ECR_REPOSITORY="macro-ai-development-express-api"
+          IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
+          IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          
+          echo "🐳 Building Docker image..."
+          echo "Repository: ${ECR_REPOSITORY}"
+          echo "Tag: ${IMAGE_TAG}"
+          echo "URI: ${IMAGE_URI}"
+          
+          # Build with environment file
+          docker build \
+            --file apps/express-api/Dockerfile \
+            --build-arg ENV_FILE="${{ steps.generate-env.outputs.env-file }}" \
+            --tag "${IMAGE_URI}" \
+            .
+          
+          echo "📤 Pushing image to ECR..."
+          docker push "${IMAGE_URI}"
+          
+          echo "✅ Image pushed successfully!"
+          echo "image-uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
+          echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
-          # Create deployment directory structure
-          mkdir -p deployment-package
-
-          # Copy built application
-          cp -r dist deployment-package/
-
-          # ✨ NEW: Resolve catalog references in package.json
-          echo "🔍 Resolving pnpm catalog references..."
-          npx tsx ../../scripts/resolve-catalog-references.ts \
-            ../../pnpm-workspace.yaml \
-            package.json \
-            deployment-package/package.json
-
-          # Copy pnpm-lock.yaml from monorepo root (not from app directory)
-          cp ../../pnpm-lock.yaml deployment-package/
-
-          # Copy any additional runtime files
-          if [[ -f ".env.example" ]]; then
-            cp .env.example deployment-package/
+      - name: Cleanup environment file
+        if: always()
+        run: |
+          ENV_FILE="${{ steps.generate-env.outputs.env-file }}"
+          if [[ -f "${ENV_FILE}" ]]; then
+            rm -f "${ENV_FILE}"
+            echo "🧹 Cleaned up: ${ENV_FILE}"
           fi
 
-          # Create deployment archive
-          cd deployment-package
-          tar -czf ../express-api-deployment.tar.gz .
-          cd ..
-
-          echo "✅ Deployment package created: express-api-deployment.tar.gz"
-          echo "📊 Package size: $(du -sh express-api-deployment.tar.gz)"
-
-      - name: Set artifact information
-        id: artifact-info
-        run: |
-          ARTIFACT_NAME="express-api-deployment-${{ needs.validate-access.outputs.env-name }}"
-          echo "artifact-name=${ARTIFACT_NAME}" >> $GITHUB_OUTPUT
-          echo "📋 Artifact name: ${ARTIFACT_NAME}"
-
-      - name: Upload Express API deployment package
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.artifact-info.outputs.artifact-name }}
-          path: apps/express-api/express-api-deployment.tar.gz
-          retention-days: 7
-
-  # Deploy Backend Preview Environment (EC2-based infrastructure)
+  # Deploy ECS Preview Environment (Docker-based infrastructure)
   deploy-backend-preview:
-    name: Deploy Backend Preview
+    name: Deploy ECS Preview
     runs-on: ubuntu-latest
     needs: [validate-access, check-backend-changes, build-express-api]
     if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-backend-changes.outputs.has-backend-changes == 'true'
@@ -387,11 +281,8 @@ jobs:
       issues: write
 
     outputs:
-      api-endpoint: ${{ steps.outputs.outputs.api-endpoint }}
-      stack-name: ${{ steps.stack-info.outputs.stack-name }}
-      ec2-instance-id: ${{ steps.outputs.outputs.ec2-instance-id }}
-      load-balancer-dns: ${{ steps.outputs.outputs.load-balancer-dns }}
-      cors-origins: ${{ steps.cors-config.outputs.cors-origins }}
+      api-endpoint: ${{ steps.deploy.outputs.api-endpoint }}
+      stack-name: ${{ steps.deploy.outputs.stack-name }}
 
     steps:
       - name: Checkout code
@@ -409,256 +300,59 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: 'pnpm-lock.yaml'
 
-      - name: Install AWS CDK CLI globally
-        run: pnpm add -g aws-cdk@2
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-          role-session-name: GitHubActions-PreviewDeploy-Backend-${{ github.run_id }}
+          role-session-name: GitHubActions-ECS-Preview-Deploy-${{ github.run_id }}
 
-      - name: Download Express API deployment package
-        uses: actions/download-artifact@v4
-        with:
-          name: express-api-deployment-${{ needs.validate-access.outputs.env-name }}
-          path: ./express-api-artifact/
+      - name: Install AWS CDK CLI
+        run: pnpm add -g aws-cdk@2
 
-      - name: Upload deployment package to S3 for EC2 access
-        id: s3-upload
-        run: |
-          echo "📦 Uploading deployment package to S3 for EC2 instances..."
-
-          # Create S3 bucket name for deployment artifacts
-          BUCKET_NAME="macro-ai-deployment-artifacts-${{ env.AWS_ACCOUNT_ID }}"
-
-          # 🔧 FIX: Use versioned artifact key to prevent race conditions
-          # Include commit SHA and timestamp to ensure unique artifacts per deployment
-          COMMIT_SHORT="${{ github.sha }}"
-          COMMIT_SHORT="${COMMIT_SHORT:0:8}"
-          TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
-          ARTIFACT_KEY="express-api/${{ needs.validate-access.outputs.env-name }}/${COMMIT_SHORT}-${TIMESTAMP}/express-api-deployment.tar.gz"
-
-          echo "🔍 Artifact versioning details:"
-          echo "  Environment: ${{ needs.validate-access.outputs.env-name }}"
-          echo "  Commit SHA: ${{ github.sha }}"
-          echo "  Short SHA: ${COMMIT_SHORT}"
-          echo "  Timestamp: ${TIMESTAMP}"
-          echo "  Versioned Key: ${ARTIFACT_KEY}"
-
-          # Create bucket if it doesn't exist (with error handling)
-          if ! aws s3 ls "s3://${BUCKET_NAME}" 2>/dev/null; then
-            echo "Creating S3 bucket: ${BUCKET_NAME}"
-            aws s3 mb "s3://${BUCKET_NAME}" --region ${{ env.AWS_REGION }}
-
-            # Enable versioning for deployment artifacts
-            aws s3api put-bucket-versioning \
-              --bucket "${BUCKET_NAME}" \
-              --versioning-configuration Status=Enabled
-          fi
-
-          # 🔧 FIX: Upload with enhanced metadata for better tracking
-          echo "⬆️ Uploading deployment package with enhanced metadata..."
-          aws s3 cp ./express-api-artifact/express-api-deployment.tar.gz \
-            "s3://${BUCKET_NAME}/${ARTIFACT_KEY}" \
-            --metadata "commit-sha=${{ github.sha }},branch=${{ github.ref_name }},build-time=${TIMESTAMP},workflow-run-id=${{ github.run_id }},pr-number=${{ github.event.pull_request.number }}"
-
-          # 🔧 FIX: Verify upload completion before proceeding
-          echo "✅ Verifying upload completion..."
-          if aws s3 ls "s3://${BUCKET_NAME}/${ARTIFACT_KEY}" >/dev/null 2>&1; then
-            UPLOADED_SIZE=$(aws s3 ls "s3://${BUCKET_NAME}/${ARTIFACT_KEY}" --human-readable | awk '{print $3 " " $4}')
-            echo "✅ Upload verified - Size: ${UPLOADED_SIZE}"
-          else
-            echo "❌ Upload verification failed"
-            exit 1
-          fi
-
-          echo "✅ Deployment package uploaded to: s3://${BUCKET_NAME}/${ARTIFACT_KEY}"
-          echo "deployment-bucket=${BUCKET_NAME}" >> $GITHUB_OUTPUT
-          echo "deployment-key=${ARTIFACT_KEY}" >> $GITHUB_OUTPUT
-          echo "deployment-commit-sha=${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "deployment-timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
-
-      - name: Cleanup old deployment artifacts
-        run: |
-          echo "🧹 Cleaning up old deployment artifacts..."
-
-          # Run cleanup for this specific PR to keep only last 3 versions
-          # This prevents S3 bucket bloat from versioned artifacts
-          chmod +x infrastructure/scripts/cleanup-deployment-artifacts.sh
-
-          BUCKET_NAME="${{ steps.s3-upload.outputs.deployment-bucket }}"
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-
-          echo "📋 Cleanup configuration:"
-          echo "  Bucket: ${BUCKET_NAME}"
-          echo "  PR: ${PR_NUMBER}"
-          echo "  Keep: 3 most recent artifacts"
-
-          # Run cleanup (keep last 3 artifacts for this PR)
-          if infrastructure/scripts/cleanup-deployment-artifacts.sh \
-            --bucket "${BUCKET_NAME}" \
-            --pr "${PR_NUMBER}" \
-            --keep 3; then
-            echo "✅ Artifact cleanup completed successfully"
-          else
-            echo "⚠️ Artifact cleanup failed, but deployment will continue"
-          fi
-
-      - name: Generate stack information
-        id: stack-info
-        run: |
-          ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
-          # Capitalize first letter for stack name (pr-123 -> Pr-123)
-          STACK_NAME="MacroAi$(echo "${ENV_NAME}" | sed 's/^./\U&/')Stack"
-          echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
-          echo "Stack name: ${STACK_NAME}"
-
-      - name: Deploy EC2 infrastructure with CORS configuration
-        id: cors-config
+      - name: Deploy ECS Infrastructure
+        id: deploy
         run: |
           cd infrastructure
           pnpm install --frozen-lockfile
           pnpm build
-
-          echo "🚀 Deploying EC2-based preview environment: ${{ needs.validate-access.outputs.env-name }}"
-          echo "📦 Stack: ${{ steps.stack-info.outputs.stack-name }}"
-          echo "👤 Requested by: ${{ needs.validate-access.outputs.target-user }}"
-
-          # 🔧 FIX: Verify S3 artifact availability before CDK deployment
-          echo "🔍 Verifying S3 artifact availability before infrastructure deployment..."
-          DEPLOYMENT_BUCKET="${{ steps.s3-upload.outputs.deployment-bucket }}"
-          DEPLOYMENT_KEY="${{ steps.s3-upload.outputs.deployment-key }}"
-
-          echo "📋 Artifact details:"
-          echo "  Bucket: ${DEPLOYMENT_BUCKET}"
-          echo "  Key: ${DEPLOYMENT_KEY}"
-          echo "  Commit SHA: ${{ steps.s3-upload.outputs.deployment-commit-sha }}"
-          echo "  Timestamp: ${{ steps.s3-upload.outputs.deployment-timestamp }}"
-
-          # Verify artifact exists and get metadata
-          if aws s3api head-object --bucket "${DEPLOYMENT_BUCKET}" --key "${DEPLOYMENT_KEY}" >/dev/null 2>&1; then
-            ARTIFACT_SIZE=$(aws s3api head-object --bucket "${DEPLOYMENT_BUCKET}" --key "${DEPLOYMENT_KEY}" --query 'ContentLength' --output text)
-            ARTIFACT_MODIFIED=$(aws s3api head-object --bucket "${DEPLOYMENT_BUCKET}" --key "${DEPLOYMENT_KEY}" --query 'LastModified' --output text)
-            echo "✅ S3 artifact verified:"
-            echo "  Size: ${ARTIFACT_SIZE} bytes"
-            echo "  Last Modified: ${ARTIFACT_MODIFIED}"
-          else
-            echo "❌ S3 artifact not found or not accessible"
-            echo "Expected location: s3://${DEPLOYMENT_BUCKET}/${DEPLOYMENT_KEY}"
-            exit 1
-          fi
-
-          # Configure CORS origins
-          if [[ -n "${{ vars.CUSTOM_DOMAIN_NAME }}" ]]; then
-            # Use custom domain URL
-            CUSTOM_DOMAIN_URL="https://pr-${{ github.event.number }}.${{ vars.CUSTOM_DOMAIN_NAME }}"
-            CORS_ORIGINS="http://localhost:5173,http://localhost:3000,${CUSTOM_DOMAIN_URL}"
-            echo "🔧 CORS Configuration: Custom domain + localhost"
-          else
-            # Use localhost only - frontend URL will be determined during deployment
-            CORS_ORIGINS="http://localhost:5173,http://localhost:3000"
-            echo "🔧 CORS Configuration: Localhost only"
-          fi
-
-          echo "cors-origins=$CORS_ORIGINS" >> $GITHUB_OUTPUT
-          echo "📣 CORS_ALLOWED_ORIGINS: $CORS_ORIGINS"
-
-          # Note: EC2 deployment will use pre-built artifact from S3
-          echo "📦 EC2 deployment will use versioned artifact with catalog resolution fix"
-          echo "🚀 Artifact-based deployment ensures consistency and reliability"
-
-          # Deploy EC2-based infrastructure using Phase 4 constructs
-          echo "🏗️ Deploying EC2 infrastructure with Phase 4 constructs..."
-          chmod +x scripts/deploy-ec2-preview.sh
-
-          # Set CORS_ALLOWED_ORIGINS environment variable for CDK deployment
-          export CORS_ALLOWED_ORIGINS="$CORS_ORIGINS"
-          echo "🔧 Setting CORS_ALLOWED_ORIGINS environment variable: $CORS_ALLOWED_ORIGINS"
-
-          ./scripts/deploy-ec2-preview.sh
-        env:
-          CDK_DEPLOY_ENV: ${{ needs.validate-access.outputs.env-name }}
-          CDK_DEPLOY_SCALE: 'preview'
-          CDK_DEPLOY_TYPE: 'ec2-preview'
-          AWS_REGION: ${{ env.AWS_REGION }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-          NODE_ENV: 'production'
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          BRANCH_NAME: ${{ github.head_ref }}
-          COST_ALERT_EMAILS: ${{ secrets.COST_ALERT_EMAILS }}
-          DEPLOYMENT_BUCKET: ${{ steps.s3-upload.outputs.deployment-bucket }}
-          DEPLOYMENT_KEY: ${{ steps.s3-upload.outputs.deployment-key }}
-
-      - name: Get EC2 deployment outputs
-        id: outputs
-        run: |
-          STACK_NAME="${{ steps.stack-info.outputs.stack-name }}"
-
-          echo "📋 Extracting EC2 deployment outputs from stack: ${STACK_NAME}"
-
-          # Get API endpoint from CloudFormation outputs (Load Balancer DNS)
+          
+          ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          IMAGE_URI="${{ needs.build-express-api.outputs.image-uri }}"
+          
+          echo "🚀 Deploying ECS Preview Environment"
+          echo "Environment: ${ENV_NAME}"
+          echo "PR Number: ${PR_NUMBER}"
+          echo "Image URI: ${IMAGE_URI}"
+          
+          # Deploy the ECS stack
+          STACK_NAME="MacroAiPr-${PR_NUMBER}Stack"
+          cdk deploy "${STACK_NAME}" \
+            --context environmentName="${ENV_NAME}" \
+            --context prNumber="${PR_NUMBER}" \
+            --context branchName="${{ github.head_ref }}" \
+            --context imageUri="${IMAGE_URI}" \
+            --require-approval never \
+            --outputs-file cdk-outputs.json
+          
+          echo "✅ ECS deployment completed"
+          
+          # Extract outputs
           API_ENDPOINT=$(aws cloudformation describe-stacks \
             --stack-name "${STACK_NAME}" \
             --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
             --output text 2>/dev/null || echo "")
-
-          # Get Load Balancer DNS name
-          LOAD_BALANCER_DNS=$(aws cloudformation describe-stacks \
-            --stack-name "${STACK_NAME}" \
-            --query "Stacks[0].Outputs[?OutputKey=='LoadBalancerDNS'].OutputValue" \
-            --output text 2>/dev/null || echo "")
-
-          # Get EC2 Instance ID
-          EC2_INSTANCE_ID=$(aws cloudformation describe-stacks \
-            --stack-name "${STACK_NAME}" \
-            --query "Stacks[0].Outputs[?OutputKey=='EC2InstanceId'].OutputValue" \
-            --output text 2>/dev/null || echo "")
-
-          # Get Auto Scaling Group Name
-          ASG_NAME=$(aws cloudformation describe-stacks \
-            --stack-name "${STACK_NAME}" \
-            --query "Stacks[0].Outputs[?OutputKey=='AutoScalingGroupName'].OutputValue" \
-            --output text 2>/dev/null || echo "")
-
-          if [[ -n "${API_ENDPOINT}" ]]; then
-            # Normalize to ensure single /api suffix (no duplication)
-            API_BASE="${API_ENDPOINT%/}"
-            if [[ "$API_BASE" != */api ]]; then
-              API_BASE="${API_BASE}/api"
-            fi
-            echo "api-endpoint=${API_BASE}" >> $GITHUB_OUTPUT
-            echo "✅ API endpoint: ${API_BASE}"
-          else
-            echo "⚠️ Could not retrieve API endpoint"
-          fi
-
-          if [[ -n "${LOAD_BALANCER_DNS}" ]]; then
-            echo "load-balancer-dns=${LOAD_BALANCER_DNS}" >> $GITHUB_OUTPUT
-            echo "✅ Load Balancer DNS: ${LOAD_BALANCER_DNS}"
-          else
-            echo "⚠️ Could not retrieve Load Balancer DNS"
-          fi
-
-          if [[ -n "${EC2_INSTANCE_ID}" ]]; then
-            echo "ec2-instance-id=${EC2_INSTANCE_ID}" >> $GITHUB_OUTPUT
-            echo "✅ EC2 Instance ID: ${EC2_INSTANCE_ID}"
-          else
-            echo "⚠️ Could not retrieve EC2 Instance ID"
-          fi
-
-          if [[ -n "${ASG_NAME}" ]]; then
-            echo "auto-scaling-group=${ASG_NAME}" >> $GITHUB_OUTPUT
-            echo "✅ Auto Scaling Group: ${ASG_NAME}"
-          else
-            echo "⚠️ Could not retrieve Auto Scaling Group name"
-          fi
+          
+          echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
+          echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
+          
+          echo "🌐 API Endpoint: ${API_ENDPOINT}"
 
       - name: Health check
         id: health-check
         run: |
-          API_ENDPOINT="${{ steps.outputs.outputs.api-endpoint }}"
+          API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}"
 
           if [[ -n "${API_ENDPOINT}" ]]; then
             HEALTH_URL="${API_ENDPOINT%/}/health"
