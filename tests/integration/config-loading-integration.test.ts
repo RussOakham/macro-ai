@@ -36,7 +36,8 @@ const TEST_CONFIG = {
 		AWS_COGNITO_SECRET_KEY: 'test-secret-key',
 		AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30',
 		OPENAI_API_KEY: 'sk-test-openai-key-12345678901234567890123456789012',
-		RELATIONAL_DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+		RELATIONAL_DATABASE_URL:
+			'postgresql://testuser:testpass@localhost:5432/testdb',
 		NON_RELATIONAL_DATABASE_URL: 'redis://localhost:6379',
 		COOKIE_ENCRYPTION_KEY: 'test-cookie-encryption-key-32-chars-long-enough',
 		COOKIE_DOMAIN: 'localhost',
@@ -239,7 +240,8 @@ describe.skip('Configuration Loading Integration Tests', () => {
 				AWS_COGNITO_SECRET_KEY: 'test-secret-key',
 				AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30',
 				OPENAI_API_KEY: 'sk-test-openai-key-12345678901234567890123456789012',
-				RELATIONAL_DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+				RELATIONAL_DATABASE_URL:
+					'postgresql://testuser:testpass@localhost:5432/testdb',
 				NON_RELATIONAL_DATABASE_URL: 'redis://localhost:6379',
 				COOKIE_ENCRYPTION_KEY:
 					'test-cookie-encryption-key-32-chars-long-enough',
