@@ -24,11 +24,6 @@ export default defineConfig({
 		},
 		// Retry failed tests once (network issues, etc.)
 		retry: 1,
-		// Reporter configuration
-		reporters: ['default', 'json'],
-		outputFile: {
-			json: './results/integration-test-results.json',
-		},
 		coverage: {
 			enabled: false, // Coverage not applicable for integration tests
 		},
