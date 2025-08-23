@@ -1,11 +1,36 @@
 import type { Express } from 'express'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { mockConfig } from '../utils/test-helpers/config.mock.ts'
 import { mockLogger } from '../utils/test-helpers/logger.mock.ts'
 
 // Mock all external dependencies before importing the index module
-vi.mock('../../config/default.ts', () => mockConfig.createModule())
+vi.mock('../utils/load-config.ts', () => ({
+	config: {
+		NODE_ENV: 'test',
+		APP_ENV: 'test',
+		SERVER_PORT: 3000,
+		API_KEY: 'test-api-key',
+		AWS_COGNITO_REGION: 'us-east-1',
+		AWS_COGNITO_USER_POOL_ID: 'test-pool-id',
+		AWS_COGNITO_USER_POOL_CLIENT_ID: 'test-client-id',
+		AWS_COGNITO_USER_POOL_SECRET_KEY: 'test-secret-key',
+		AWS_COGNITO_ACCESS_KEY: 'test-access-key',
+		AWS_COGNITO_SECRET_KEY: 'test-secret-key',
+		AWS_COGNITO_REFRESH_TOKEN_EXPIRY: 30,
+		COOKIE_DOMAIN: 'localhost',
+		COOKIE_ENCRYPTION_KEY: 'test-encryption-key-at-least-32-chars-long',
+		NON_RELATIONAL_DATABASE_URL: 'test-url',
+		RELATIONAL_DATABASE_URL: 'test-url',
+		OPENAI_API_KEY: 'sk-test-key',
+		RATE_LIMIT_WINDOW_MS: 60000,
+		RATE_LIMIT_MAX_REQUESTS: 100,
+		AUTH_RATE_LIMIT_WINDOW_MS: 60000,
+		AUTH_RATE_LIMIT_MAX_REQUESTS: 5,
+		API_RATE_LIMIT_WINDOW_MS: 60000,
+		API_RATE_LIMIT_MAX_REQUESTS: 1000,
+		REDIS_URL: 'redis://localhost:6379',
+	},
+}))
 
 vi.mock('../utils/logger.ts', () => mockLogger.createModule())
 
@@ -43,7 +68,7 @@ describe.skip('Server Bootstrap (index.ts)', () => {
 		it('should create server and start listening on configured port', async () => {
 			// Arrange
 			const { createServer } = await import('../utils/server.ts')
-			const { config } = await import('../../config/default.ts')
+			const { config } = await import('../utils/load-config.ts')
 			vi.mocked(createServer).mockReturnValue(mockServer as unknown as Express)
 
 			// Mock successful listen
@@ -57,7 +82,7 @@ describe.skip('Server Bootstrap (index.ts)', () => {
 			// Assert
 			expect(createServer).toHaveBeenCalledTimes(1)
 			expect(mockServer.listen).toHaveBeenCalledWith(
-				config?.port,
+				config.SERVER_PORT,
 				expect.any(Function),
 			)
 		})
@@ -65,7 +90,7 @@ describe.skip('Server Bootstrap (index.ts)', () => {
 		it('should log success message when server starts successfully', async () => {
 			// Arrange
 			const { createServer } = await import('../utils/server.ts')
-			const { config } = await import('../../config/default.ts')
+			const { config } = await import('../utils/load-config.ts')
 			const { pino } = await import('../utils/logger.ts')
 
 			vi.mocked(createServer).mockReturnValue(mockServer as unknown as Express)
@@ -78,17 +103,16 @@ describe.skip('Server Bootstrap (index.ts)', () => {
 
 			// Assert
 			expect(config).toBeDefined()
-			if (config) {
-				expect(pino.logger.info).toHaveBeenCalledWith(
-					`[server]: Server is running on port: ${config.port.toString()} with ES module fix v2`,
-				)
-			}
+
+			expect(pino.logger.info).toHaveBeenCalledWith(
+				`[server]: Server is running on port: ${config.SERVER_PORT.toString()} with ES module fix v2`,
+			)
 		})
 
 		it('should use the correct port from configuration', async () => {
 			// Arrange
 			const { createServer } = await import('../utils/server.ts')
-			const { config } = await import('../../config/default.ts')
+			const { config } = await import('../utils/load-config.ts')
 
 			vi.mocked(createServer).mockReturnValue(mockServer as unknown as Express)
 			mockServer.listen.mockImplementation((_port, callback?: () => void) => {
@@ -100,12 +124,11 @@ describe.skip('Server Bootstrap (index.ts)', () => {
 
 			// Assert
 			expect(config).toBeDefined()
-			if (config) {
-				expect(mockServer.listen).toHaveBeenCalledWith(
-					config.port,
-					expect.any(Function),
-				)
-			}
+
+			expect(mockServer.listen).toHaveBeenCalledWith(
+				config.SERVER_PORT,
+				expect.any(Function),
+			)
 		})
 	})
 
@@ -284,7 +307,7 @@ describe.skip('Server Bootstrap (index.ts)', () => {
 			await import('../index.ts')
 
 			// Assert - Verify all modules are imported and used
-			const { config } = await import('../../config/default.ts')
+			const { config } = await import('../utils/load-config.ts')
 			const { pino } = await import('../utils/logger.ts')
 
 			expect(config).toBeDefined()

@@ -69,7 +69,7 @@ vi.mock('../../../utils/response-handlers.ts', () => ({
 }))
 
 // Mock config using the reusable helper
-vi.mock('../../../config/default.ts', () => mockConfig.createModule())
+vi.mock('../../../utils/load-config.ts', () => mockConfig.createModule())
 
 // Mock utility functions
 vi.mock('../../../utils/cookies.ts', () => ({

@@ -15,16 +15,16 @@ vi.mock('../../utils/logger.ts', () => ({
 	configureLogger: vi.fn(),
 }))
 
-vi.mock('../../config/default.ts', () => ({
+vi.mock('../../utils/load-config.ts', () => ({
 	config: {
-		nodeEnv: 'test',
-		rateLimitWindowMs: 900000,
-		rateLimitMaxRequests: 100,
-		authRateLimitWindowMs: 3600000,
-		authRateLimitMaxRequests: 10,
-		apiRateLimitWindowMs: 60000,
-		apiRateLimitMaxRequests: 60,
-		redisUrl: undefined,
+		NODE_ENV: 'test',
+		RATE_LIMIT_WINDOW_MS: 900000,
+		RATE_LIMIT_MAX_REQUESTS: 100,
+		AUTH_RATE_LIMIT_WINDOW_MS: 3600000,
+		AUTH_RATE_LIMIT_MAX_REQUESTS: 10,
+		API_RATE_LIMIT_WINDOW_MS: 60000,
+		API_RATE_LIMIT_MAX_REQUESTS: 60,
+		REDIS_URL: undefined,
 	},
 }))
 

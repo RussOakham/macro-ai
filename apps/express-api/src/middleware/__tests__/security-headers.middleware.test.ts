@@ -17,32 +17,33 @@ vi.mock('../../utils/logger.ts', () => ({
 	configureLogger: vi.fn(),
 }))
 
-vi.mock('../../config/default.ts', () => ({
-	assertConfig: () => ({
-		apiKey: 'test-api-key',
-		nodeEnv: 'test',
-		appEnv: 'test',
-		port: 3000,
-		awsCognitoRegion: 'us-east-1',
-		awsCognitoUserPoolId: 'test-pool-id',
-		awsCognitoUserPoolClientId: 'test-client-id',
-		awsCognitoUserPoolSecretKey: 'test-secret-key',
-		awsCognitoAccessKey: 'test-access-key',
-		awsCognitoSecretKey: 'test-secret-key',
-		awsCognitoRefreshTokenExpiry: 30,
-		cookieDomain: 'localhost',
-		cookieEncryptionKey: 'test-encryption-key-at-least-32-chars-long',
-		nonRelationalDatabaseUrl: 'test-url',
-		relationalDatabaseUrl: 'test-url',
-		openaiApiKey: 'sk-test-key',
-		rateLimitWindowMs: 60000,
-		rateLimitMaxRequests: 100,
-		authRateLimitWindowMs: 60000,
-		authRateLimitMaxRequests: 5,
-		apiRateLimitWindowMs: 60000,
-		apiRateLimitMaxRequests: 1000,
-		redisUrl: 'redis://localhost:6379',
-	}),
+// Mock the simplified load-config.ts
+vi.mock('../../utils/load-config.ts', () => ({
+	config: {
+		NODE_ENV: 'test',
+		APP_ENV: 'test',
+		API_KEY: 'test-api-key',
+		SERVER_PORT: 3000,
+		AWS_COGNITO_REGION: 'us-east-1',
+		AWS_COGNITO_USER_POOL_ID: 'test-pool-id',
+		AWS_COGNITO_USER_POOL_CLIENT_ID: 'test-client-id',
+		AWS_COGNITO_USER_POOL_SECRET_KEY: 'test-secret-key',
+		AWS_COGNITO_ACCESS_KEY: 'test-access-key',
+		AWS_COGNITO_SECRET_KEY: 'test-secret-key',
+		AWS_COGNITO_REFRESH_TOKEN_EXPIRY: 30,
+		COOKIE_DOMAIN: 'localhost',
+		COOKIE_ENCRYPTION_KEY: 'test-encryption-key-at-least-32-chars-long',
+		NON_RELATIONAL_DATABASE_URL: 'test-url',
+		RELATIONAL_DATABASE_URL: 'test-url',
+		OPENAI_API_KEY: 'sk-test-key',
+		RATE_LIMIT_WINDOW_MS: 60000,
+		RATE_LIMIT_MAX_REQUESTS: 100,
+		AUTH_RATE_LIMIT_WINDOW_MS: 60000,
+		AUTH_RATE_LIMIT_MAX_REQUESTS: 5,
+		API_RATE_LIMIT_WINDOW_MS: 60000,
+		API_RATE_LIMIT_MAX_REQUESTS: 1000,
+		REDIS_URL: 'redis://localhost:6379',
+	},
 }))
 
 vi.mock('helmet', () => ({
@@ -79,9 +80,8 @@ describe('Security Headers Middleware', () => {
 			await import('../security-headers.middleware.ts')
 
 			// Assert - Verify helmet was called with correct configuration
-			// Note: crossOriginEmbedderPolicy is set to !isDevelopment
-			// In test environment, NODE_ENV is 'test', so isDevelopment = false
-			// Therefore crossOriginEmbedderPolicy = !false = true
+			// Note: crossOriginEmbedderPolicy is set to config.NODE_ENV !== 'development'
+			// In test environment, NODE_ENV is 'test', so crossOriginEmbedderPolicy = true
 			expect(vi.mocked(helmet)).toHaveBeenCalledWith({
 				contentSecurityPolicy: {
 					directives: {

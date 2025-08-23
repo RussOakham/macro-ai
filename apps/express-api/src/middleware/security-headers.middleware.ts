@@ -1,12 +1,10 @@
 import { NextFunction, Request, Response } from 'express'
 import helmet from 'helmet'
 
-import { assertConfig } from '../../config/default.ts'
+import { config } from '../utils/load-config.ts'
 import { pino } from '../utils/logger.ts'
 
 const { logger } = pino
-const config = assertConfig()
-const isDevelopment = config.nodeEnv === 'development'
 
 // Basic Helmet middleware with custom configuration
 // Note: crossOriginEmbedderPolicy is set to !isDevelopment
@@ -26,7 +24,7 @@ const helmetMiddleware = helmet({
 			frameSrc: ["'none'"],
 		},
 	},
-	crossOriginEmbedderPolicy: !isDevelopment,
+	crossOriginEmbedderPolicy: config.NODE_ENV !== 'development',
 	crossOriginOpenerPolicy: { policy: 'same-origin' },
 	crossOriginResourcePolicy: { policy: 'same-site' },
 	dnsPrefetchControl: { allow: false },
