@@ -167,6 +167,7 @@ export class EcsFargateConstruct extends Construct {
 	public readonly ecrRepository: ecr.IRepository
 	public readonly taskRole: iam.Role
 	public readonly executionRole: iam.Role
+	public readonly scalableTaskCount?: ecs.ScalableTaskCount
 
 	constructor(scope: Construct, id: string, props: EcsFargateConstructProps) {
 		super(scope, id)
@@ -229,7 +230,7 @@ export class EcsFargateConstruct extends Construct {
 		)
 
 		// Determine container image source
-		const containerImage = imageUri 
+		const containerImage = imageUri
 			? ecs.ContainerImage.fromRegistry(imageUri)
 			: ecs.ContainerImage.fromEcrRepository(this.ecrRepository, imageTag)
 
@@ -278,20 +279,20 @@ export class EcsFargateConstruct extends Construct {
 
 		// Configure auto-scaling if specified
 		if (scalingConfig) {
-			const scaling = this.service.autoScaleTaskCount({
+			this.scalableTaskCount = this.service.autoScaleTaskCount({
 				minCapacity: scalingConfig.minCapacity,
 				maxCapacity: scalingConfig.maxCapacity,
 			})
 
 			// Scale up on CPU utilization
-			scaling.scaleOnCpuUtilization('CpuScaling', {
+			this.scalableTaskCount.scaleOnCpuUtilization('CpuScaling', {
 				targetUtilizationPercent: scalingConfig.targetCpuUtilization,
 				scaleInCooldown: cdk.Duration.seconds(60),
 				scaleOutCooldown: cdk.Duration.seconds(60),
 			})
 
 			// Scale up on memory utilization
-			scaling.scaleOnMemoryUtilization('MemoryScaling', {
+			this.scalableTaskCount.scaleOnMemoryUtilization('MemoryScaling', {
 				targetUtilizationPercent: 80,
 				scaleInCooldown: cdk.Duration.seconds(60),
 				scaleOutCooldown: cdk.Duration.seconds(60),

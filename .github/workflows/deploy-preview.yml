@@ -214,20 +214,20 @@ jobs:
         id: generate-env
         run: |
           echo "🔍 Fetching environment variables from AWS Parameter Store..."
-          
+
           # Use development parameters for PR environments
           PARAM_PATH="/macro-ai/development"
           ENV_FILE="apps/express-api/.env.docker"
-          
+
           echo "📥 Fetching from: ${PARAM_PATH}"
-          
+
           # Create the environment file using our script
           chmod +x apps/express-api/scripts/generate-env-from-parameter-store.sh
           ./apps/express-api/scripts/generate-env-from-parameter-store.sh \
             "${PARAM_PATH}" \
             "${{ env.AWS_REGION }}" \
             "${ENV_FILE}"
-          
+
           echo "✅ Environment file generated"
           echo "env-file=${ENV_FILE}" >> $GITHUB_OUTPUT
 
@@ -237,22 +237,22 @@ jobs:
           ECR_REPOSITORY="macro-ai-development-express-api"
           IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
           IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:${IMAGE_TAG}"
-          
+
           echo "🐳 Building Docker image..."
           echo "Repository: ${ECR_REPOSITORY}"
           echo "Tag: ${IMAGE_TAG}"
           echo "URI: ${IMAGE_URI}"
-          
+
           # Build with environment file
           docker build \
             --file apps/express-api/Dockerfile \
             --build-arg ENV_FILE="${{ steps.generate-env.outputs.env-file }}" \
             --tag "${IMAGE_URI}" \
             .
-          
+
           echo "📤 Pushing image to ECR..."
           docker push "${IMAGE_URI}"
-          
+
           echo "✅ Image pushed successfully!"
           echo "image-uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
           echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -316,16 +316,16 @@ jobs:
           cd infrastructure
           pnpm install --frozen-lockfile
           pnpm build
-          
+
           ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
           IMAGE_URI="${{ needs.build-express-api.outputs.image-uri }}"
-          
+
           echo "🚀 Deploying ECS Preview Environment"
           echo "Environment: ${ENV_NAME}"
           echo "PR Number: ${PR_NUMBER}"
           echo "Image URI: ${IMAGE_URI}"
-          
+
           # Deploy the ECS stack
           STACK_NAME="MacroAiPr-${PR_NUMBER}Stack"
           cdk deploy "${STACK_NAME}" \
@@ -335,18 +335,18 @@ jobs:
             --context imageUri="${IMAGE_URI}" \
             --require-approval never \
             --outputs-file cdk-outputs.json
-          
+
           echo "✅ ECS deployment completed"
-          
+
           # Extract outputs
           API_ENDPOINT=$(aws cloudformation describe-stacks \
             --stack-name "${STACK_NAME}" \
             --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
             --output text 2>/dev/null || echo "")
-          
+
           echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
           echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
-          
+
           echo "🌐 API Endpoint: ${API_ENDPOINT}"
 
       - name: Health check

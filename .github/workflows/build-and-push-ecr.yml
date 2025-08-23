@@ -112,7 +112,7 @@ jobs:
         id: generate-env
         run: |
           echo "🔍 Fetching environment variables from AWS Parameter Store..."
-          
+
           # Determine environment based on branch/event
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             # PR environment - use development parameters
@@ -133,20 +133,20 @@ jobs:
             ENV_NAME="development"
             echo "🌱 Feature branch - using: ${PARAM_PATH}"
           fi
-          
+
           echo "env-name=${ENV_NAME}" >> $GITHUB_OUTPUT
           echo "param-path=${PARAM_PATH}" >> $GITHUB_OUTPUT
-          
+
           # Create temporary .env file
           ENV_FILE="apps/express-api/.env.docker"
-          
+
           # Fetch parameters using the script we created
           chmod +x apps/express-api/scripts/generate-env-from-parameter-store.sh
           ./apps/express-api/scripts/generate-env-from-parameter-store.sh \
             "${PARAM_PATH}" \
             "${{ env.AWS_REGION }}" \
             "${ENV_FILE}"
-          
+
           echo "✅ Environment file generated: ${ENV_FILE}"
           echo "env-file=${ENV_FILE}" >> $GITHUB_OUTPUT
 

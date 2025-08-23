@@ -110,6 +110,13 @@ if (isEC2Preview && isPreviewEnvironment) {
 		scale: deploymentScale,
 		costAlertEmails,
 		customDomain, // Add custom domain configuration
+		autoShutdown: {
+			enabled: true, // Enable auto-shutdown for preview environments
+			shutdownSchedule: '0 22 * * *', // 10 PM UTC daily
+			startupSchedule: undefined, // No automatic startup - on-demand only
+			enableWeekendShutdown: true, // Shutdown over weekends (no startup anyway)
+			displayTimeZone: 'UTC', // For documentation purposes
+		},
 		tags,
 	})
 } else {

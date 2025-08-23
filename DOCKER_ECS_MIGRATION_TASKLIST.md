@@ -131,7 +131,7 @@ dependency management
 
 - [x] **Docker/ECS Integration** ✅ **IN PROGRESS**
   - [x] Updated build-and-push-ecr.yml with environment variable injection
-  - [x] Updated ECS Fargate construct to accept Docker image URIs  
+  - [x] Updated ECS Fargate construct to accept Docker image URIs
   - [x] Created test-docker-ecs-preview.yml workflow for testing
   - [x] Modified preview stack to support Docker deployment
   - [ ] Test complete Docker/ECS preview deployment flow

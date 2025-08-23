@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib'
 import type { Construct } from 'constructs'
 
+import { AutoShutdownConstruct } from '../constructs/auto-shutdown-construct.js'
 import { CostMonitoringConstruct } from '../constructs/cost-monitoring-construct.js'
 import { EcsFargateConstruct } from '../constructs/ecs-fargate-construct.js'
 import { EnvironmentConfigConstruct } from '../constructs/environment-config-construct.js'
@@ -44,6 +45,18 @@ export interface MacroAiPreviewStackProps extends cdk.StackProps {
 		readonly domainName: string
 		readonly hostedZoneId: string
 	}
+
+	/**
+	 * Auto-shutdown configuration for cost optimization
+	 * @default enabled with standard business hours
+	 */
+	readonly autoShutdown?: {
+		readonly enabled: boolean
+		readonly shutdownSchedule?: string // UTC cron
+		readonly startupSchedule?: string // UTC cron
+		readonly enableWeekendShutdown?: boolean
+		readonly displayTimeZone?: string
+	}
 }
 
 /**
@@ -65,6 +78,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	public readonly ecsService: EcsFargateConstruct
 	public readonly monitoring: MonitoringConstruct
 	public readonly costMonitoring: CostMonitoringConstruct
+	public readonly autoShutdown?: AutoShutdownConstruct
 	public readonly prNumber: number
 	private readonly customDomain?: {
 		readonly domainName: string
@@ -74,7 +88,13 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	constructor(scope: Construct, id: string, props: MacroAiPreviewStackProps) {
 		super(scope, id, props)
 
-		const { environmentName, prNumber, branchName, customDomain } = props
+		const {
+			environmentName,
+			prNumber,
+			branchName,
+			customDomain,
+			autoShutdown,
+		} = props
 		this.prNumber = prNumber
 		this.customDomain = customDomain
 
@@ -171,13 +191,22 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			alertThresholds: [50, 80, 95], // Alert at 50%, 80%, 95% of budget
 		})
 
-		// Add scheduled scaling for cost optimization
-		// Scale down to 0 instances at 6 PM UTC (off-hours)
-		// Scale up to 1 instance at 8 AM UTC (business hours)
-		this.addScheduledScaling()
+		// Add auto-shutdown for cost optimization
+		if (autoShutdown?.enabled !== false && this.ecsService.scalableTaskCount) {
+			this.autoShutdown = new AutoShutdownConstruct(this, 'AutoShutdown', {
+				scalableTaskCount: this.ecsService.scalableTaskCount,
+				environmentName,
+				shutdownSchedule: autoShutdown?.shutdownSchedule ?? '0 22 * * *', // 10 PM UTC
+				startupSchedule: autoShutdown?.startupSchedule, // Can be undefined for on-demand only
+				startupTaskCount: 1,
+				enableWeekendShutdown: autoShutdown?.enableWeekendShutdown ?? true,
+				displayTimeZone: autoShutdown?.displayTimeZone ?? 'UTC',
+			})
+		}
 
 		// Create comprehensive outputs
 		this.createOutputs()
+		this.addAutoShutdownOutputs()
 	}
 
 	/**
@@ -245,39 +274,27 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	}
 
 	/**
-	 * Add scheduled scaling for cost optimization
-	 * Scale down to 0 instances at 6 PM UTC (off-hours)
-	 * Scale up to 1 instance at 8 AM UTC (business hours)
-	 *
-	 * This provides cost savings by reducing uptime during off-hours
+	 * Add auto-shutdown outputs to stack outputs
 	 */
-	private addScheduledScaling(): void {
-		// Scale down to 0 instances at 6 PM UTC (18:00) every day
-		// This shuts down preview environments during off-hours
-		new cdk.CfnOutput(this, 'ScaleDownSchedule', {
-			value: '0 18 * * *', // Cron expression for 6 PM UTC
-			description: 'Scale down schedule (Cron)',
-			exportName: `${this.stackName}-ScaleDownSchedule`,
-		})
+	private addAutoShutdownOutputs(): void {
+		if (this.autoShutdown) {
+			// Create manual control outputs
+			this.autoShutdown.createManualShutdownOutput()
+			this.autoShutdown.createManualStartupOutput()
 
-		// Scale up to 1 instance at 8 AM UTC (08:00) every day
-		// This starts preview environments for business hours
-		new cdk.CfnOutput(this, 'ScaleUpSchedule', {
-			value: '0 8 * * *', // Cron expression for 8 AM UTC
-			description: 'Scale up schedule (Cron)',
-			exportName: `${this.stackName}-ScaleUpSchedule`,
-		})
-
-		// Add tags to identify scheduled scaling
-		cdk.Tags.of(this.ecsService.service).add('ScheduledScaling', 'enabled')
-		cdk.Tags.of(this.ecsService.service).add(
-			'OffHoursShutdown',
-			'18:00-08:00 UTC',
-		)
-		cdk.Tags.of(this.ecsService.service).add(
-			'CostOptimization',
-			'scheduled-scaling',
-		)
+			// Add informational output about cost savings
+			new cdk.CfnOutput(this, 'AutoShutdownStatus', {
+				value: 'Enabled',
+				description: 'Auto-shutdown status for cost optimization',
+				exportName: `${this.stackName}-AutoShutdownStatus`,
+			})
+		} else {
+			new cdk.CfnOutput(this, 'AutoShutdownStatus', {
+				value: 'Disabled',
+				description: 'Auto-shutdown status for cost optimization',
+				exportName: `${this.stackName}-AutoShutdownStatus`,
+			})
+		}
 	}
 
 	/**
