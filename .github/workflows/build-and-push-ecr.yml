@@ -9,7 +9,7 @@ on:
     paths:
       - 'apps/express-api/**'
       - 'packages/**'
-      - 'Dockerfile.express-api-turbo'
+      - 'apps/express-api/Dockerfile'
       - '.dockerignore'
       - 'turbo.json'
       - 'pnpm-lock.yaml'
@@ -21,7 +21,7 @@ on:
     paths:
       - 'apps/express-api/**'
       - 'packages/**'
-      - 'Dockerfile.express-api-turbo'
+      - 'apps/express-api/Dockerfile'
       - '.dockerignore'
       - 'turbo.json'
       - 'pnpm-lock.yaml'
@@ -108,23 +108,71 @@ jobs:
             type=raw,value=${{ github.event.inputs.image_tag || 'latest' }}
             type=raw,value=${{ github.event.inputs.environment || 'development' }}
 
-      - name: Run turbo prune
+      - name: Generate environment file from Parameter Store
+        id: generate-env
         run: |
-          cd ${{ github.workspace }}
-          turbo prune @repo/express-api --docker
+          echo "🔍 Fetching environment variables from AWS Parameter Store..."
+          
+          # Determine environment based on branch/event
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # PR environment - use development parameters
+            PARAM_PATH="/macro-ai/development"
+            ENV_NAME="development"
+            echo "🌱 PR environment - using: ${PARAM_PATH}"
+          elif [[ "${{ github.ref_name }}" == "develop" ]]; then
+            PARAM_PATH="/macro-ai/staging"
+            ENV_NAME="staging"
+            echo "🚀 Staging environment - using: ${PARAM_PATH}"
+          elif [[ "${{ github.ref_name }}" == "main" ]]; then
+            PARAM_PATH="/macro-ai/production" 
+            ENV_NAME="production"
+            echo "🏭 Production environment - using: ${PARAM_PATH}"
+          else
+            # Feature branches use development
+            PARAM_PATH="/macro-ai/development"
+            ENV_NAME="development"
+            echo "🌱 Feature branch - using: ${PARAM_PATH}"
+          fi
+          
+          echo "env-name=${ENV_NAME}" >> $GITHUB_OUTPUT
+          echo "param-path=${PARAM_PATH}" >> $GITHUB_OUTPUT
+          
+          # Create temporary .env file
+          ENV_FILE="apps/express-api/.env.docker"
+          
+          # Fetch parameters using the script we created
+          chmod +x apps/express-api/scripts/generate-env-from-parameter-store.sh
+          ./apps/express-api/scripts/generate-env-from-parameter-store.sh \
+            "${PARAM_PATH}" \
+            "${{ env.AWS_REGION }}" \
+            "${ENV_FILE}"
+          
+          echo "✅ Environment file generated: ${ENV_FILE}"
+          echo "env-file=${ENV_FILE}" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ${{ github.workspace }}
-          file: ${{ github.workspace }}/Dockerfile.express-api-turbo
+          file: ${{ github.workspace }}/apps/express-api/Dockerfile
           target: runner
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            ENV_FILE=${{ steps.generate-env.outputs.env-file }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
+
+      - name: Cleanup environment file
+        if: always()
+        run: |
+          ENV_FILE="${{ steps.generate-env.outputs.env-file }}"
+          if [[ -f "${ENV_FILE}" ]]; then
+            rm -f "${ENV_FILE}"
+            echo "🧹 Cleaned up temporary environment file: ${ENV_FILE}"
+          fi
 
       - name: Output image details
         run: |

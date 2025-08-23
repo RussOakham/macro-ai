@@ -127,13 +127,15 @@ dependency management
   - [ ] Test authentication flows
   - [ ] Verify API endpoints
 
-### **4.2 Staging Deployment**
+### **4.2 Preview Environment Deployment**
 
-- [ ] **ECS Staging Environment**
-  - [ ] Deploy to staging environment
-  - [ ] Validate all functionality
-  - [ ] Performance testing
-  - [ ] Cost analysis comparison
+- [x] **Docker/ECS Integration** ✅ **IN PROGRESS**
+  - [x] Updated build-and-push-ecr.yml with environment variable injection
+  - [x] Updated ECS Fargate construct to accept Docker image URIs  
+  - [x] Created test-docker-ecs-preview.yml workflow for testing
+  - [x] Modified preview stack to support Docker deployment
+  - [ ] Test complete Docker/ECS preview deployment flow
+  - [ ] Validate container functionality in ECS environment
 
 ---
 

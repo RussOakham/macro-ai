@@ -76,6 +76,13 @@ export interface EcsFargateConstructProps {
 	readonly imageTag?: string
 
 	/**
+	 * Full container image URI to deploy (overrides ecrRepository and imageTag)
+	 * If provided, this will be used instead of constructing the image URI
+	 * from ecrRepository and imageTag
+	 */
+	readonly imageUri?: string
+
+	/**
 	 * Container port for the application
 	 * @default 3000
 	 */
@@ -176,6 +183,7 @@ export class EcsFargateConstruct extends Construct {
 			autoScaling: scalingConfig,
 			ecrRepository: providedEcrRepository,
 			imageTag = 'latest',
+			imageUri,
 			containerPort = 3000,
 			healthCheck = {
 				path: '/health',
@@ -220,9 +228,14 @@ export class EcsFargateConstruct extends Construct {
 			},
 		)
 
+		// Determine container image source
+		const containerImage = imageUri 
+			? ecs.ContainerImage.fromRegistry(imageUri)
+			: ecs.ContainerImage.fromEcrRepository(this.ecrRepository, imageTag)
+
 		// Add container to task definition
 		this.taskDefinition.addContainer('ExpressApiContainer', {
-			image: ecs.ContainerImage.fromEcrRepository(this.ecrRepository, imageTag),
+			image: containerImage,
 			containerName: 'express-api',
 			portMappings: [{ containerPort }],
 			logging: ecs.LogDrivers.awsLogs({

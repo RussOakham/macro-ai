@@ -1,0 +1,272 @@
+name: Test Docker ECS Preview (Phase 4.2)
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to simulate'
+        required: true
+        default: '999'
+        type: string
+      environment_name:
+        description: 'Environment name'
+        required: true
+        default: 'pr-999'
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20'
+  PNPM_VERSION: '10.14.0'
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_REGION: us-east-1
+
+jobs:
+  # Build Docker image and push to ECR
+  build-and-push-docker:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    
+    permissions:
+      id-token: write
+      contents: read
+    
+    outputs:
+      image-uri: ${{ steps.build.outputs.image-uri }}
+      image-tag: ${{ steps.build.outputs.image-tag }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-docker-ecs-test
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        
+      - name: Generate image tag
+        id: image-tag
+        run: |
+          IMAGE_TAG="pr-${{ github.event.inputs.pr_number }}-${{ github.sha }}"
+          echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "Generated image tag: ${IMAGE_TAG}"
+          
+      - name: Generate environment file
+        id: generate-env
+        run: |
+          echo "🔍 Fetching environment variables from Parameter Store..."
+          
+          # Use development parameters for testing
+          PARAM_PATH="/macro-ai/development"
+          ENV_FILE="apps/express-api/.env.test"
+          
+          echo "📥 Fetching from: ${PARAM_PATH}"
+          
+          # Create the environment file using our script
+          chmod +x apps/express-api/scripts/generate-env-from-parameter-store.sh
+          ./apps/express-api/scripts/generate-env-from-parameter-store.sh \
+            "${PARAM_PATH}" \
+            "${{ env.AWS_REGION }}" \
+            "${ENV_FILE}"
+          
+          echo "✅ Environment file generated"
+          echo "env-file=${ENV_FILE}" >> $GITHUB_OUTPUT
+          
+      - name: Build and push Docker image
+        id: build
+        run: |
+          ECR_REPOSITORY="macro-ai-development-express-api"
+          IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
+          IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          
+          echo "🐳 Building Docker image..."
+          echo "Repository: ${ECR_REPOSITORY}"
+          echo "Tag: ${IMAGE_TAG}"
+          echo "URI: ${IMAGE_URI}"
+          
+          # Build with environment file
+          docker build \
+            --file apps/express-api/Dockerfile \
+            --build-arg ENV_FILE="${{ steps.generate-env.outputs.env-file }}" \
+            --tag "${IMAGE_URI}" \
+            .
+          
+          echo "📤 Pushing image to ECR..."
+          docker push "${IMAGE_URI}"
+          
+          echo "✅ Image pushed successfully!"
+          echo "image-uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
+          echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          
+      - name: Cleanup environment file
+        if: always()
+        run: |
+          ENV_FILE="${{ steps.generate-env.outputs.env-file }}"
+          if [[ -f "${ENV_FILE}" ]]; then
+            rm -f "${ENV_FILE}"
+            echo "🧹 Cleaned up: ${ENV_FILE}"
+          fi
+
+  # Deploy ECS Preview Environment
+  deploy-ecs-preview:
+    name: Deploy ECS Preview
+    runs-on: ubuntu-latest
+    needs: [build-and-push-docker]
+    
+    permissions:
+      id-token: write
+      contents: read
+      
+    outputs:
+      api-endpoint: ${{ steps.deploy.outputs.api-endpoint }}
+      stack-name: ${{ steps.deploy.outputs.stack-name }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
+          
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-ECS-Preview-Deploy-${{ github.run_id }}
+          
+      - name: Install AWS CDK CLI
+        run: pnpm add -g aws-cdk@2
+        
+      - name: Deploy ECS Infrastructure
+        id: deploy
+        run: |
+          cd infrastructure
+          pnpm install --frozen-lockfile
+          pnpm build
+          
+          ENV_NAME="${{ github.event.inputs.environment_name }}"
+          PR_NUMBER="${{ github.event.inputs.pr_number }}"
+          IMAGE_URI="${{ needs.build-and-push-docker.outputs.image-uri }}"
+          
+          echo "🚀 Deploying ECS Preview Environment"
+          echo "Environment: ${ENV_NAME}"
+          echo "PR Number: ${PR_NUMBER}"
+          echo "Image URI: ${IMAGE_URI}"
+          
+          # Deploy the ECS stack
+          cdk deploy "MacroAiPr-${PR_NUMBER}Stack" \
+            --context environmentName="${ENV_NAME}" \
+            --context prNumber="${PR_NUMBER}" \
+            --context branchName="test-docker-ecs" \
+            --context imageUri="${IMAGE_URI}" \
+            --require-approval never \
+            --outputs-file cdk-outputs.json
+          
+          echo "✅ ECS deployment completed"
+          
+          # Extract outputs
+          STACK_NAME="MacroAiPr-${PR_NUMBER}Stack"
+          API_ENDPOINT=$(aws cloudformation describe-stacks \
+            --stack-name "${STACK_NAME}" \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
+            --output text 2>/dev/null || echo "")
+          
+          echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
+          echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
+          
+          echo "🌐 API Endpoint: ${API_ENDPOINT}"
+          
+      - name: Test deployment
+        run: |
+          API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}"
+          
+          if [[ -n "${API_ENDPOINT}" ]]; then
+            HEALTH_URL="${API_ENDPOINT}/health"
+            echo "🔍 Testing health endpoint: ${HEALTH_URL}"
+            
+            # Wait for deployment to stabilize
+            sleep 30
+            
+            # Test health endpoint
+            for i in {1..5}; do
+              RESPONSE=$(curl -s -w "%{http_code}" "${HEALTH_URL}" 2>/dev/null || echo "000")
+              if [[ "$RESPONSE" == *"200" ]]; then
+                echo "✅ Health check passed (attempt $i)"
+                break
+              else
+                echo "⚠️ Health check failed (attempt $i): $RESPONSE"
+                if [[ $i -eq 5 ]]; then
+                  echo "❌ All health checks failed"
+                  exit 1
+                fi
+                sleep 10
+              fi
+            done
+          else
+            echo "❌ No API endpoint found"
+            exit 1
+          fi
+
+  # Cleanup (optional)
+  cleanup:
+    name: Cleanup Resources
+    runs-on: ubuntu-latest
+    needs: [deploy-ecs-preview]
+    if: always() && github.event.inputs.environment_name != ''
+    
+    permissions:
+      id-token: write
+      contents: read
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-ECS-Preview-Cleanup-${{ github.run_id }}
+          
+      - name: Install AWS CDK CLI
+        run: npm install -g aws-cdk@2
+        
+      - name: Cleanup ECS Stack
+        run: |
+          PR_NUMBER="${{ github.event.inputs.pr_number }}"
+          STACK_NAME="MacroAiPr-${PR_NUMBER}Stack"
+          
+          echo "🧹 Cleaning up ECS stack: ${STACK_NAME}"
+          
+          if aws cloudformation describe-stacks --stack-name "${STACK_NAME}" >/dev/null 2>&1; then
+            cd infrastructure
+            cdk destroy "${STACK_NAME}" --force
+            echo "✅ Stack destroyed successfully"
+          else
+            echo "ℹ️ Stack ${STACK_NAME} does not exist, nothing to cleanup"
+          fi

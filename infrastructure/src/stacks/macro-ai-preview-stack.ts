@@ -120,6 +120,10 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		// Validate networking requirements
 		this.networking.validateAlbRequirements()
 
+		// Get the image URI from CDK context (passed from CI/CD)
+		const imageUri = this.node.tryGetContext('imageUri') as string | undefined
+		const imageTag = imageUri ? 'context-provided' : 'latest'
+
 		// Create ECS Fargate service for containerized deployment
 		this.ecsService = new EcsFargateConstruct(this, 'EcsService', {
 			vpc: this.networking.vpc,
@@ -138,8 +142,9 @@ export class MacroAiPreviewStack extends cdk.Stack {
 				maxCapacity: 2, // Allow scaling for preview load testing
 				targetCpuUtilization: 70,
 			},
-			imageTag: 'latest', // Will be overridden by CI/CD pipeline
-			containerPort: 3040, // Match the port used in EC2 deployment
+			imageTag, // Will be overridden if imageUri context is provided
+			imageUri, // Pass the full image URI if provided
+			containerPort: 3040, // Match the port used in the application
 			healthCheck: {
 				path: '/health',
 				interval: cdk.Duration.seconds(30),

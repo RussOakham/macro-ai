@@ -157,9 +157,9 @@ jobs:
           echo "backend-stack-name=$BACKEND_STACK_NAME" >> $GITHUB_OUTPUT
           echo "amplify-app-id=$AMPLIFY_APP_ID" >> $GITHUB_OUTPUT
 
-  # Build Express API for EC2 deployment
+  # Build Express API Docker image and push to ECR
   build-express-api:
-    name: Build Express API for EC2
+    name: Build Docker Image for ECS
     runs-on: ubuntu-latest
     needs: [validate-access, check-backend-changes]
     if: needs.validate-access.outputs.should-deploy == 'true' && needs.check-backend-changes.outputs.has-backend-changes == 'true'
