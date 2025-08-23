@@ -301,7 +301,7 @@ function validateEnvironment() {
 	if (invalidVars.length > 0) {
 		logError('Invalid environment variables:')
 		invalidVars.forEach(({ name, error, value }) => {
-			logError(`  ${name}: ${error} (current value: ${value})`)
+			logError(`  ${name}: ${error}`)
 		})
 	}
 

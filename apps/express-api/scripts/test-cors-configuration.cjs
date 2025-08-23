@@ -348,7 +348,7 @@ function runAdditionalValidations() {
 				const domain = 'macro-ai.russoakham.dev'
 				const expectedPattern =
 					'^https://pr-\\d+\\.macro-ai\\.russoakham\\.dev$'
-				const actualPattern = `^https://pr-\\d+\\.${domain.replace(/\./g, '\\.')}$`
+				const actualPattern = `^https://pr-\\d+\\.${domain.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`
 
 				if (actualPattern !== expectedPattern) {
 					throw new Error(
