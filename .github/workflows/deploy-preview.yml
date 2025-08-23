@@ -242,14 +242,14 @@ jobs:
             local param_path="${PARAM_PATH}/${param_name}"
             local value
             
-            echo "  📥 Fetching: ${param_path}"
+            echo "  📥 Fetching: ${param_path}" >&2
             value=$(aws ssm get-parameter --name "${param_path}" --query "Parameter.Value" --output text 2>&1)
             
             if [ $? -eq 0 ]; then
-              echo "    ✅ ${param_name}: OK"
+              echo "    ✅ ${param_name}: OK" >&2
               echo "$value"
             else
-              echo "    ❌ ${param_name}: FAILED - $value"
+              echo "    ❌ ${param_name}: FAILED - $value" >&2
               return 1
             fi
           }

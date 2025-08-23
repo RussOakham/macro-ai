@@ -18,9 +18,31 @@ vi.mock('../../utils/logger.ts', () => ({
 }))
 
 vi.mock('../../config/default.ts', () => ({
-	config: {
+	assertConfig: () => ({
+		apiKey: 'test-api-key',
 		nodeEnv: 'test',
-	},
+		appEnv: 'test',
+		port: 3000,
+		awsCognitoRegion: 'us-east-1',
+		awsCognitoUserPoolId: 'test-pool-id',
+		awsCognitoUserPoolClientId: 'test-client-id',
+		awsCognitoUserPoolSecretKey: 'test-secret-key',
+		awsCognitoAccessKey: 'test-access-key',
+		awsCognitoSecretKey: 'test-secret-key',
+		awsCognitoRefreshTokenExpiry: 30,
+		cookieDomain: 'localhost',
+		cookieEncryptionKey: 'test-encryption-key-at-least-32-chars-long',
+		nonRelationalDatabaseUrl: 'test-url',
+		relationalDatabaseUrl: 'test-url',
+		openaiApiKey: 'sk-test-key',
+		rateLimitWindowMs: 60000,
+		rateLimitMaxRequests: 100,
+		authRateLimitWindowMs: 60000,
+		authRateLimitMaxRequests: 5,
+		apiRateLimitWindowMs: 60000,
+		apiRateLimitMaxRequests: 1000,
+		redisUrl: 'redis://localhost:6379',
+	}),
 }))
 
 vi.mock('helmet', () => ({
@@ -53,7 +75,7 @@ describe('Security Headers Middleware', () => {
 
 	describe('Helmet Middleware Configuration', () => {
 		it('should configure helmet with correct security settings', async () => {
-			// Act - Import the middleware module (fresh import due to resetModules)
+			// Act - Import the middleware module
 			await import('../security-headers.middleware.ts')
 
 			// Assert - Verify helmet was called with correct configuration
@@ -144,12 +166,6 @@ describe('Security Headers Middleware', () => {
 			// The middleware uses config.nodeEnv === 'development' to determine isDevelopment
 			// In test environment, NODE_ENV is typically not 'development', so isDevelopment = false
 			// Therefore crossOriginEmbedderPolicy = !false = true
-
-			// Reset modules to ensure fresh import
-			vi.resetModules()
-
-			// Set NODE_ENV to test
-			process.env.NODE_ENV = 'test'
 
 			// Import the middleware
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
