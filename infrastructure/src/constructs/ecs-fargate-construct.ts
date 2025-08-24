@@ -275,6 +275,7 @@ export class EcsFargateConstruct extends Construct {
 			platformVersion: ecs.FargatePlatformVersion.LATEST,
 			enableExecuteCommand: true, // Enable ECS Exec for debugging
 			circuitBreaker: { rollback: true }, // Auto-rollback on deployment failures
+			healthCheckGracePeriod: cdk.Duration.seconds(60), // Match the task definition's startPeriod
 		})
 
 		// Configure auto-scaling if specified
@@ -381,6 +382,7 @@ export class EcsFargateConstruct extends Construct {
 			platformVersion: ecs.FargatePlatformVersion.LATEST,
 			enableExecuteCommand: true,
 			circuitBreaker: { rollback: true },
+			healthCheckGracePeriod: cdk.Duration.seconds(60), // Match the task definition's startPeriod
 		})
 
 		// Add PR-specific tags
