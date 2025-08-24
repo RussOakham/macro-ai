@@ -457,10 +457,6 @@ jobs:
           CDK_DEPLOY_TYPE: 'ec2-preview'
           CDK_DEPLOY_SCALE: 'preview'
         run: |
-          cd infrastructure
-          pnpm install --frozen-lockfile
-          pnpm build
-
           ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
 
