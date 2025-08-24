@@ -501,6 +501,11 @@ jobs:
           echo "PR Number: ${PR_NUMBER}"
           echo "Image URI: ${IMAGE_URI}"
 
+          # Now change to infrastructure directory for CDK deployment
+          cd infrastructure
+          pnpm install --frozen-lockfile
+          pnpm build
+
           # Deploy the ECS stack
           STACK_NAME="MacroAiPr-${PR_NUMBER}Stack"
 
