@@ -314,6 +314,19 @@ jobs:
           echo "image-uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
           echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
+          # Save image URI to artifact for persistence and debugging
+          echo "${IMAGE_URI}" > image-uri.txt
+          echo "${IMAGE_TAG}" > image-tag.txt
+
+      - name: Upload Docker image artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-info
+          path: |
+            image-uri.txt
+            image-tag.txt
+          retention-days: 30
+
       - name: Cleanup environment file
         if: always()
         run: |
@@ -344,6 +357,29 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Download Docker image artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-info
+          path: ./
+
+      - name: Debug artifacts
+        run: |
+          echo "🔍 Checking downloaded artifacts..."
+          ls -la
+          if [[ -f "image-uri.txt" ]]; then
+            echo "✅ image-uri.txt found:"
+            cat image-uri.txt
+          else
+            echo "❌ image-uri.txt not found"
+          fi
+          if [[ -f "image-tag.txt" ]]; then
+            echo "✅ image-tag.txt found:"
+            cat image-tag.txt
+          else
+            echo "❌ image-tag.txt not found"
+          fi
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3
@@ -380,7 +416,21 @@ jobs:
 
           ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
+
+          # Try to get IMAGE_URI from job output first, fallback to artifact
           IMAGE_URI="${{ needs.build-express-api.outputs.image-uri }}"
+
+          # If IMAGE_URI is empty, try to read from artifact
+          if [[ -z "${IMAGE_URI}" ]]; then
+            echo "⚠️  IMAGE_URI from job output is empty, trying artifact fallback..."
+            if [[ -f "image-uri.txt" ]]; then
+              IMAGE_URI=$(cat image-uri.txt)
+              echo "✅ Retrieved IMAGE_URI from artifact: ${IMAGE_URI}"
+            else
+              echo "❌ No IMAGE_URI found in job output or artifact"
+              exit 1
+            fi
+          fi
 
           echo "🚀 Deploying ECS Preview Environment"
           echo "Environment: ${ENV_NAME}"
