@@ -178,6 +178,13 @@ export class NetworkingConstruct extends Construct {
 			'Allow HTTPS inbound',
 		)
 
+		// Add this new rule for direct ECS access
+		this.albSecurityGroup.addIngressRule(
+			ec2.Peer.anyIpv4(),
+			ec2.Port.tcp(3040),
+			'Allow Express API inbound on port 3040',
+		)
+
 		// Create EC2 construct if parameter store prefix is provided
 		if (parameterStorePrefix) {
 			this.ec2Construct = new Ec2Construct(this, 'Ec2', {
