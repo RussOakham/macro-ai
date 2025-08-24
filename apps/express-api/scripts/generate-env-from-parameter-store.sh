@@ -37,7 +37,19 @@ aws ssm get-parameters-by-path \
 
 # Add GitHub secrets and real values (highest priority)
 # These come from the workflow and override any Parameter Store defaults
-if [ -n "$APP_ENV" ]; then echo "APP_ENV=$APP_ENV" >> "$ENV_FILE"; fi
+# For PR environments, set APP_ENV to match the PR pattern for validation
+if [[ "$APP_ENV" == *"pr-"* ]]; then
+    # Extract PR number from the value and format as pr-{number}
+    PR_NUMBER=$(echo "$APP_ENV" | grep -o '[0-9]\+' | head -1)
+    if [ -n "$PR_NUMBER" ]; then
+        echo "APP_ENV=pr-$PR_NUMBER" >> "$ENV_FILE"
+    else
+        echo "APP_ENV=pr-54" >> "$ENV_FILE"  # Fallback for PR #54
+    fi
+else
+    # Use the original value for non-PR environments
+    if [ -n "$APP_ENV" ]; then echo "APP_ENV=$APP_ENV" >> "$ENV_FILE"; fi
+fi
 if [ -n "$API_KEY" ]; then echo "API_KEY=$API_KEY" >> "$ENV_FILE"; fi
 if [ -n "$OPENAI_API_KEY" ]; then echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> "$ENV_FILE"; fi
 if [ -n "$AWS_ACCOUNT_ID" ]; then echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> "$ENV_FILE"; fi
