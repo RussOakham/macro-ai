@@ -567,18 +567,9 @@ registry.registerPath({
 	},
 })
 
-// Configuration type for route setup
-interface RouteConfig {
-	nodeEnv: string
-	appEnv: string
-	port: number
-	cookieDomain: string
-	awsCognitoRefreshTokenExpiry: number
-}
-
-const authRouter = (router: Router, config: RouteConfig) => {
-	// Create controller instance with configuration
-	const controller = new authController(config)
+const authRouter = (router: Router) => {
+	// Use the existing controller instance
+	const controller = authController
 
 	// Register
 	router.post(

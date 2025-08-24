@@ -155,7 +155,7 @@ const convertToConfigType = (env: TEnv): ConfigType => ({
 	apiRateLimitMaxRequests: env.API_RATE_LIMIT_MAX_REQUESTS,
 })
 
-export const assertConfig = (): ConfigType => {
+export const assertConfig = (shouldLog = false): ConfigType => {
 	const [config, error] = loadConfig()
 
 	if (error) {
@@ -174,12 +174,16 @@ export const assertConfig = (): ConfigType => {
 		throw error
 	}
 
-	logger.info(
-		{
-			operation: 'assertConfig',
-		},
-		'Configuration loaded and validated successfully',
-	)
+	// Only log if explicitly requested
+	if (shouldLog) {
+		logger.info(
+			{
+				operation: 'assertConfig',
+			},
+			'Configuration loaded and validated successfully',
+		)
+	}
+
 	return convertToConfigType(config)
 }
 

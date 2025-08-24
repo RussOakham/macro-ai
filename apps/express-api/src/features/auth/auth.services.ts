@@ -37,7 +37,7 @@ class CognitoService implements ICognitoService {
 	private readonly client: CognitoIdentityProviderClient
 
 	constructor() {
-		const appConfig = assertConfig()
+		const appConfig = assertConfig(false)
 
 		this.config = {
 			region: appConfig.awsCognitoRegion,

@@ -2,7 +2,7 @@ import { defineConfig } from 'drizzle-kit'
 
 import { assertConfig } from './src/config/simple-config.js'
 
-const config = assertConfig()
+const config = assertConfig(false)
 
 export default defineConfig({
 	schema: './src/data-access/schema.ts',

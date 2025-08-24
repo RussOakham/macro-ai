@@ -19,16 +19,7 @@ import { pino } from './logger.ts'
 
 // Export options for use in generate-swagger.ts
 
-// Configuration type for server creation
-interface ServerConfig {
-	nodeEnv: string
-	appEnv: string
-	port: number
-	cookieDomain: string
-	awsCognitoRefreshTokenExpiry: number
-}
-
-const createServer = (config: ServerConfig): Express => {
+const createServer = (): Express => {
 	const app: Express = express()
 
 	// Add static file serving for swagger.json
@@ -181,7 +172,7 @@ const createServer = (config: ServerConfig): Express => {
 	app.use(securityHeadersMiddleware)
 	app.use(defaultRateLimiter)
 
-	app.use('/api', appRouter(config))
+	app.use('/api', appRouter())
 	app.use(
 		'/api-docs',
 		swaggerUi.serve,

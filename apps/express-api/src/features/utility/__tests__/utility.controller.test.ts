@@ -21,7 +21,18 @@ describe('UtilityController', () => {
 	let mockNext: NextFunction
 
 	beforeEach(() => {
-		const mocks = mockExpress.setup()
+		const mocks = mockExpress.setup({
+			headers: {
+				'User-Agent': 'Mozilla/5.0 (Test Browser)',
+				'X-Forwarded-For': '192.168.1.1',
+				'X-Real-IP': '192.168.1.1',
+				Origin: 'http://localhost:3000',
+				Referer: 'http://localhost:3000/health',
+			},
+			method: 'GET',
+			ip: '127.0.0.1',
+			path: '/health',
+		})
 		mockRequest = mocks.req
 		mockResponse = mocks.res
 		mockNext = mocks.next

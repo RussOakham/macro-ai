@@ -17,7 +17,7 @@ const { logger } = pino
 const startServer = () => {
 	try {
 		// Load configuration using the simplified system - ONCE at startup
-		const config = assertConfig()
+		const config = assertConfig(true)
 
 		logger.info(
 			{
@@ -28,8 +28,8 @@ const startServer = () => {
 			'Configuration loaded successfully',
 		)
 
-		// Create and start the server with configuration passed in
-		const app = createServer(config)
+		// Create and start the server
+		const app = createServer()
 		const httpServer = createHttpServer(app)
 
 		httpServer.listen(config.port, () => {

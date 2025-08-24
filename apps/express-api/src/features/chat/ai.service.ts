@@ -27,7 +27,7 @@ class AIService {
 	private readonly embeddingModel: EmbeddingModel<string>
 
 	constructor() {
-		const config = assertConfig()
+		const config = assertConfig(false)
 		this.openai = createOpenAI({
 			apiKey: config.openaiApiKey,
 		})

@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
-import { assertConfig } from '../../config/simple-config.js'
 import {
 	getAccessToken,
 	getRefreshToken,
@@ -40,7 +39,10 @@ import {
 } from './auth.types.ts'
 const { logger } = pino
 
-const config = assertConfig()
+import { assertConfig } from '../../config/simple-config.js'
+
+// Load configuration once at module level (no logging)
+const config = assertConfig(false)
 const nodeEnv = config.nodeEnv
 const cookieDomain = config.cookieDomain
 const refreshTokenExpiryDays = config.awsCognitoRefreshTokenExpiry
