@@ -182,11 +182,16 @@ jobs:
           echo "Image URI: ${IMAGE_URI}"
 
           # Deploy the ECS stack
+
+          # Parse cost alert emails from comma-separated string to array format
+          COST_ALERT_EMAILS_ARRAY=$(echo "${{ secrets.COST_ALERT_EMAILS }}" | jq -R 'split(",") | map(select(length > 0))')
+
           cdk deploy "MacroAiPr-${PR_NUMBER}Stack" \
             --context environmentName="${ENV_NAME}" \
             --context prNumber="${PR_NUMBER}" \
             --context branchName="test-docker-ecs" \
             --context imageUri="${IMAGE_URI}" \
+            --context costAlertEmails="${COST_ALERT_EMAILS_ARRAY}" \
             --require-approval never \
             --outputs-file cdk-outputs.json
 

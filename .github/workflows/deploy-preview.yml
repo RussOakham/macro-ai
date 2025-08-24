@@ -389,11 +389,16 @@ jobs:
 
           # Deploy the ECS stack
           STACK_NAME="MacroAiPr-${PR_NUMBER}Stack"
+
+          # Parse cost alert emails from comma-separated string to array format
+          COST_ALERT_EMAILS_ARRAY=$(echo "${{ secrets.COST_ALERT_EMAILS }}" | jq -R 'split(",") | map(select(length > 0))')
+
           cdk deploy "${STACK_NAME}" \
             --context environmentName="${ENV_NAME}" \
             --context prNumber="${PR_NUMBER}" \
             --context branchName="${{ github.head_ref }}" \
             --context imageUri="${IMAGE_URI}" \
+            --context costAlertEmails="${COST_ALERT_EMAILS_ARRAY}" \
             --require-approval never \
             --outputs-file cdk-outputs.json
 
