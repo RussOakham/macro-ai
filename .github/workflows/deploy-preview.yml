@@ -297,7 +297,7 @@ jobs:
             .
 
           echo "📤 Pushing image to ECR..."
-          
+
           # Create ECR repository if it doesn't exist
           echo "🔧 Ensuring ECR repository exists..."
           aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" >/dev/null 2>&1 || {
@@ -307,7 +307,7 @@ jobs:
               --image-scanning-configuration scanOnPush=true \
               --encryption-configuration encryptionType=AES256
           }
-          
+
           docker push "${IMAGE_URI}"
 
           echo "✅ Image pushed successfully!"
@@ -369,6 +369,10 @@ jobs:
 
       - name: Deploy ECS Infrastructure
         id: deploy
+        env:
+          CDK_DEPLOY_ENV: ${{ needs.validate-access.outputs.env-name }}
+          CDK_DEPLOY_TYPE: 'ec2-preview'
+          CDK_DEPLOY_SCALE: 'preview'
         run: |
           cd infrastructure
           pnpm install --frozen-lockfile

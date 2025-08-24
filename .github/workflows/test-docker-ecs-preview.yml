@@ -163,6 +163,10 @@ jobs:
 
       - name: Deploy ECS Infrastructure
         id: deploy
+        env:
+          CDK_DEPLOY_ENV: ${{ github.event.inputs.environment_name }}
+          CDK_DEPLOY_TYPE: 'ec2-preview'
+          CDK_DEPLOY_SCALE: 'preview'
         run: |
           cd infrastructure
           pnpm install --frozen-lockfile
