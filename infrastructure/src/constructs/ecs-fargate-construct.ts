@@ -187,7 +187,7 @@ export class EcsFargateConstruct extends Construct {
 			imageUri,
 			containerPort = 3000,
 			healthCheck = {
-				path: '/health',
+				path: '/api/health',
 				interval: cdk.Duration.seconds(30),
 				timeout: cdk.Duration.seconds(5),
 				healthyThresholdCount: 2,

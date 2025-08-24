@@ -166,7 +166,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			imageUri, // Pass the full image URI if provided
 			containerPort: 3040, // Match the port used in the application
 			healthCheck: {
-				path: '/health',
+				path: '/api/health',
 				interval: cdk.Duration.seconds(30),
 				timeout: cdk.Duration.seconds(5),
 				healthyThresholdCount: 2,

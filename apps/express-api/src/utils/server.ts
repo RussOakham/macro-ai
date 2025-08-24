@@ -19,7 +19,16 @@ import { pino } from './logger.ts'
 
 // Export options for use in generate-swagger.ts
 
-const createServer = (): Express => {
+// Configuration type for server creation
+interface ServerConfig {
+	nodeEnv: string
+	appEnv: string
+	port: number
+	cookieDomain: string
+	awsCognitoRefreshTokenExpiry: number
+}
+
+const createServer = (config: ServerConfig): Express => {
 	const app: Express = express()
 
 	// Add static file serving for swagger.json
@@ -28,28 +37,6 @@ const createServer = (): Express => {
 	app.use(pino)
 
 	// Public endpoints: allow broad CORS for browser access (no credentials)
-	app.use(
-		'/api/health',
-		cors({
-			origin: true, // reflect request origin
-			credentials: false,
-			methods: ['GET', 'OPTIONS'],
-			allowedHeaders: [
-				'Origin',
-				'X-Requested-With',
-				'Content-Type',
-				'Accept',
-				'Authorization',
-				'X-API-KEY',
-				'Cache-Control',
-			],
-			maxAge: 86400,
-		}),
-	)
-	// Enhanced health endpoints for ALB and monitoring
-	app.use('/api/health/detailed', cors({ origin: true, credentials: false }))
-	app.use('/api/health/ready', cors({ origin: true, credentials: false }))
-	app.use('/api/health/live', cors({ origin: true, credentials: false }))
 	app.use('/api-docs', cors({ origin: true, credentials: false }))
 	app.use('/swagger.json', cors({ origin: true, credentials: false }))
 
@@ -194,7 +181,7 @@ const createServer = (): Express => {
 	app.use(securityHeadersMiddleware)
 	app.use(defaultRateLimiter)
 
-	app.use('/api', appRouter())
+	app.use('/api', appRouter(config))
 	app.use(
 		'/api-docs',
 		swaggerUi.serve,

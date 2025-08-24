@@ -101,7 +101,7 @@ export class MacroAiHobbyStack extends cdk.Stack {
 				imageTag: 'latest', // Will be overridden by CI/CD pipeline
 				containerPort: 3000, // Standard Express API port
 				healthCheck: {
-					path: '/health',
+					path: '/api/health',
 					interval: cdk.Duration.seconds(30),
 					timeout: cdk.Duration.seconds(5),
 					healthyThresholdCount: 2,

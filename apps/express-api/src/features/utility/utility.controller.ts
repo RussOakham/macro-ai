@@ -28,6 +28,26 @@ class UtilityController implements IUtilityController {
 		res: Response,
 		next: NextFunction,
 	): void => {
+		// Log health check request details
+		logger.info(
+			{
+				operation: 'healthCheck',
+				path: req.path,
+				method: req.method,
+				headers: {
+					'user-agent': req.get('User-Agent'),
+					'x-forwarded-for': req.get('X-Forwarded-For'),
+					'x-real-ip': req.get('X-Real-IP'),
+					origin: req.get('Origin'),
+					referer: req.get('Referer'),
+				},
+				ip: req.ip,
+				query: req.query,
+				timestamp: new Date().toISOString(),
+			},
+			'Health check request received',
+		)
+
 		const [healthStatus, error] = this.utilityService.getHealthStatus()
 
 		if (error) {
@@ -78,6 +98,26 @@ class UtilityController implements IUtilityController {
 		res: Response,
 		next: NextFunction,
 	): void => {
+		// Log detailed health check request details
+		logger.info(
+			{
+				operation: 'healthCheckDetailed',
+				path: req.path,
+				method: req.method,
+				headers: {
+					'user-agent': req.get('User-Agent'),
+					'x-forwarded-for': req.get('X-Forwarded-For'),
+					'x-real-ip': req.get('X-Real-IP'),
+					origin: req.get('Origin'),
+					referer: req.get('Referer'),
+				},
+				ip: req.ip,
+				query: req.query,
+				timestamp: new Date().toISOString(),
+			},
+			'Detailed health check request received',
+		)
+
 		const [detailedHealthStatus, error] =
 			this.utilityService.getDetailedHealthStatus()
 
@@ -124,6 +164,26 @@ class UtilityController implements IUtilityController {
 		res: Response,
 		next: NextFunction,
 	): void => {
+		// Log readiness probe request details
+		logger.info(
+			{
+				operation: 'healthCheckReady',
+				path: req.path,
+				method: req.method,
+				headers: {
+					'user-agent': req.get('User-Agent'),
+					'x-forwarded-for': req.get('X-Forwarded-For'),
+					'x-real-ip': req.get('X-Real-IP'),
+					origin: req.get('Origin'),
+					referer: req.get('Referer'),
+				},
+				ip: req.ip,
+				query: req.query,
+				timestamp: new Date().toISOString(),
+			},
+			'Readiness probe request received',
+		)
+
 		const [readinessStatus, error] = this.utilityService.getReadinessStatus()
 
 		if (error) {
@@ -191,6 +251,27 @@ class UtilityController implements IUtilityController {
 		res: Response,
 		next: NextFunction,
 	): void => {
+		// Log liveness probe request details
+		logger.info(
+			{
+				operation: 'healthCheckLive',
+				path: req.path,
+				method: req.method,
+				headers: {
+					'user-agent': req.get('User-Agent'),
+					'x-forwarded-for': req.get('X-Forwarded-For'),
+					'x-real-ip': req.get('X-Real-IP'),
+					origin: req.get('Origin'),
+					referer: req.get('Referer'),
+				},
+				ip: req.ip,
+				query: req.query,
+				uptime: process.uptime(),
+				timestamp: new Date().toISOString(),
+			},
+			'Liveness probe request received',
+		)
+
 		const [livenessStatus, error] = this.utilityService.getLivenessStatus()
 
 		if (error) {
