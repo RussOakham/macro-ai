@@ -37,18 +37,24 @@ aws ssm get-parameters-by-path \
 
 # Add GitHub secrets and real values (highest priority)
 # These come from the workflow and override any Parameter Store defaults
-# For PR environments, set APP_ENV to match the PR pattern for validation
-if [[ "$APP_ENV" == *"pr-"* ]]; then
-    # Extract PR number from the value and format as pr-{number}
-    PR_NUMBER=$(echo "$APP_ENV" | grep -o '[0-9]\+' | head -1)
+# Dynamically set APP_ENV based on branch context
+if [[ "$GITHUB_REF" == "refs/pull/"* ]]; then
+    # PR branch - extract PR number and format as pr-{number}
+    PR_NUMBER=$(echo "$GITHUB_REF" | grep -o '[0-9]\+' | head -1)
     if [ -n "$PR_NUMBER" ]; then
         echo "APP_ENV=pr-$PR_NUMBER" >> "$ENV_FILE"
     else
-        echo "APP_ENV=pr-54" >> "$ENV_FILE"  # Fallback for PR #54
+        echo "APP_ENV=pr-unknown" >> "$ENV_FILE"  # Fallback
     fi
+elif [[ "$GITHUB_REF" == "refs/heads/develop" ]]; then
+    # Develop branch - use staging
+    echo "APP_ENV=staging" >> "$ENV_FILE"
+elif [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
+    # Main branch - use production
+    echo "APP_ENV=production" >> "$ENV_FILE"
 else
-    # Use the original value for non-PR environments
-    if [ -n "$APP_ENV" ]; then echo "APP_ENV=$APP_ENV" >> "$ENV_FILE"; fi
+    # Other branches (feature branches) - use development
+    echo "APP_ENV=development" >> "$ENV_FILE"
 fi
 if [ -n "$API_KEY" ]; then echo "API_KEY=$API_KEY" >> "$ENV_FILE"; fi
 if [ -n "$OPENAI_API_KEY" ]; then echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> "$ENV_FILE"; fi
