@@ -245,18 +245,8 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			exportName: `${this.stackName}-EcrRepositoryUri`,
 		})
 
-		// Networking outputs
-		new cdk.CfnOutput(this, 'VpcId', {
-			value: this.networking.vpcId,
-			description: 'VPC ID for the preview environment',
-			exportName: `${this.stackName}-VpcId`,
-		})
-
-		new cdk.CfnOutput(this, 'AlbSecurityGroupId', {
-			value: this.networking.albSecurityGroup.securityGroupId,
-			description: 'ALB security group ID',
-			exportName: `${this.stackName}-AlbSecurityGroupId`,
-		})
+		// Networking outputs are already provided by the NetworkingConstruct
+		// No need to duplicate VpcId and AlbSecurityGroupId exports
 
 		// Monitoring outputs
 		new cdk.CfnOutput(this, 'MonitoringDashboardName', {
