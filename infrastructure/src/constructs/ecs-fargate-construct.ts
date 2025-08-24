@@ -255,7 +255,7 @@ export class EcsFargateConstruct extends Construct {
 			healthCheck: {
 				command: [
 					'CMD-SHELL',
-					`curl -f http://localhost:${containerPort}${healthCheck.path} || exit 1`,
+					`wget --no-verbose --tries=1 --spider http://localhost:${containerPort}${healthCheck.path} || exit 1`,
 				],
 				interval: healthCheck.interval,
 				timeout: healthCheck.timeout,
