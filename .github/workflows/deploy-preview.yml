@@ -297,6 +297,17 @@ jobs:
             .
 
           echo "📤 Pushing image to ECR..."
+          
+          # Create ECR repository if it doesn't exist
+          echo "🔧 Ensuring ECR repository exists..."
+          aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" >/dev/null 2>&1 || {
+            echo "📦 Creating ECR repository: ${ECR_REPOSITORY}"
+            aws ecr create-repository \
+              --repository-name "${ECR_REPOSITORY}" \
+              --image-scanning-configuration scanOnPush=true \
+              --encryption-configuration encryptionType=AES256
+          }
+          
           docker push "${IMAGE_URI}"
 
           echo "✅ Image pushed successfully!"
