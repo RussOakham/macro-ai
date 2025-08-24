@@ -184,7 +184,8 @@ jobs:
           # Deploy the ECS stack
 
           # Parse cost alert emails from comma-separated string to array format
-          COST_ALERT_EMAILS_ARRAY=$(echo "${{ secrets.COST_ALERT_EMAILS }}" | jq -R 'split(",") | map(select(length > 0))')
+          # Handle both single email and comma-separated emails with whitespace
+          COST_ALERT_EMAILS_ARRAY=$(echo "${{ secrets.COST_ALERT_EMAILS }}" | tr ',' '\n' | awk '{$1=$1};1' | grep -v '^$' | jq -R . | jq -s .)
 
           cdk deploy "MacroAiPr-${PR_NUMBER}Stack" \
             --context environmentName="${ENV_NAME}" \

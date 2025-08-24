@@ -391,7 +391,13 @@ jobs:
           STACK_NAME="MacroAiPr-${PR_NUMBER}Stack"
 
           # Parse cost alert emails from comma-separated string to array format
-          COST_ALERT_EMAILS_ARRAY=$(echo "${{ secrets.COST_ALERT_EMAILS }}" | jq -R 'split(",") | map(select(length > 0))')
+          # Handle both single email and comma-separated emails with whitespace
+          echo "🔍 Parsing cost alert emails from secret..."
+          echo "Raw secret value: ${{ secrets.COST_ALERT_EMAILS }}"
+
+          COST_ALERT_EMAILS_ARRAY=$(echo "${{ secrets.COST_ALERT_EMAILS }}" | tr ',' '\n' | awk '{$1=$1};1' | grep -v '^$' | jq -R . | jq -s .)
+
+          echo "Parsed emails array: ${COST_ALERT_EMAILS_ARRAY}"
 
           cdk deploy "${STACK_NAME}" \
             --context environmentName="${ENV_NAME}" \

@@ -94,9 +94,23 @@ export class CostMonitoringConstruct extends Construct {
 		)
 
 		// Subscribe email addresses to alerts
-		alertEmails.forEach((email) => {
+		console.log(
+			`Cost monitoring: Processing ${alertEmails.length} email addresses:`,
+			alertEmails,
+		)
+
+		const validEmails = alertEmails.filter(
+			(email) => email && email.trim().length > 0 && this.isValidEmail(email),
+		)
+
+		console.log(
+			`Cost monitoring: Found ${validEmails.length} valid email addresses:`,
+			validEmails,
+		)
+
+		validEmails.forEach((email) => {
 			this.alertTopic.addSubscription(
-				new snsSubscriptions.EmailSubscription(email),
+				new snsSubscriptions.EmailSubscription(email.trim()),
 			)
 		})
 
@@ -238,6 +252,15 @@ export class CostMonitoringConstruct extends Construct {
 		alarms.push(enhancedCostAlarm)
 
 		return alarms
+	}
+
+	/**
+	 * Validate email address format
+	 */
+	private isValidEmail(email: string): boolean {
+		// Basic email validation regex
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+		return emailRegex.test(email)
 	}
 
 	/**
