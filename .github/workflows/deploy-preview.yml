@@ -212,6 +212,13 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Debug ECR login outputs
+        run: |
+          echo "🔍 Debugging ECR login outputs..."
+          echo "Registry output: '${{ steps.login-ecr.outputs.registry }}'"
+          echo "All outputs:"
+          echo "${{ toJSON(steps.login-ecr.outputs) }}"
+
       - name: Generate image tag
         id: image-tag
         run: |
@@ -281,13 +288,38 @@ jobs:
 
           ECR_REPOSITORY="macro-ai-${ENV_NAME}-express-api"
           IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
-          IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+
+          # Try to get registry from ECR login output, fallback to account ID
+          ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+          if [[ -z "${ECR_REGISTRY}" ]]; then
+            echo "⚠️  ECR registry output is empty, using fallback from AWS account ID"
+            ECR_REGISTRY="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
+          fi
+
+          IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
 
           echo "🐳 Building Docker image..."
           echo "🌍 Environment: ${ENV_NAME}"
           echo "Repository: ${ECR_REPOSITORY}"
           echo "Tag: ${IMAGE_TAG}"
+          echo "Registry: ${ECR_REGISTRY}"
           echo "URI: ${IMAGE_URI}"
+
+          # Validate that all required variables are set
+          if [[ -z "${IMAGE_TAG}" ]]; then
+            echo "❌ Error: IMAGE_TAG is empty"
+            exit 1
+          fi
+
+          if [[ -z "${ECR_REGISTRY}" ]]; then
+            echo "❌ Error: ECR registry is empty"
+            exit 1
+          fi
+
+          if [[ -z "${IMAGE_URI}" ]]; then
+            echo "❌ Error: IMAGE_URI is empty after construction"
+            exit 1
+          fi
 
           # Build with environment file
           docker build \
@@ -314,6 +346,15 @@ jobs:
           echo "image-uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
           echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
+          # Debug: Check what was written to GITHUB_OUTPUT
+          echo "🔍 Debug: Checking GITHUB_OUTPUT contents..."
+          if [[ -f "$GITHUB_OUTPUT" ]]; then
+            echo "GITHUB_OUTPUT file contents:"
+            cat "$GITHUB_OUTPUT"
+          else
+            echo "GITHUB_OUTPUT file not found"
+          fi
+
           # Save image URI to artifact for persistence and debugging
           echo "${IMAGE_URI}" > image-uri.txt
           echo "${IMAGE_TAG}" > image-tag.txt
@@ -335,6 +376,12 @@ jobs:
             rm -f "${ENV_FILE}"
             echo "🧹 Cleaned up: ${ENV_FILE}"
           fi
+
+      - name: Verify outputs
+        run: |
+          echo "🔍 Verifying build job outputs..."
+          echo "steps.build.outputs.image-uri: '${{ steps.build.outputs.image-uri }}'"
+          echo "steps.build.outputs.image-tag: '${{ steps.build.outputs.image-tag }}'"
 
   # Deploy ECS Preview Environment (Docker-based infrastructure)
   deploy-backend-preview:
@@ -416,6 +463,27 @@ jobs:
 
           ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
+
+          # Debug: Check all available outputs
+          echo "🔍 Debugging job outputs..."
+          echo "needs.build-express-api.outputs:"
+          echo "  image-uri: '${{ needs.build-express-api.outputs.image-uri }}'"
+          echo "  image-tag: '${{ needs.build-express-api.outputs.image-tag }}'"
+          echo "needs.validate-access.outputs:"
+          echo "  env-name: '${{ needs.validate-access.outputs.env-name }}'"
+          echo "  should-deploy: '${{ needs.validate-access.outputs.should-deploy }}'"
+
+          # Debug: Check if the build job completed successfully
+          echo "🔍 Build job status:"
+          echo "  Job name: build-express-api"
+          echo "  Job status: ${{ needs.build-express-api.result }}"
+          echo "  Job outputs available: ${{ contains(needs.build-express-api.outputs, 'image-uri') }}"
+
+          # Check if build job completed successfully
+          if [[ "${{ needs.build-express-api.result }}" != "success" ]]; then
+            echo "❌ Build job did not complete successfully: ${{ needs.build-express-api.result }}"
+            exit 1
+          fi
 
           # Try to get IMAGE_URI from job output first, fallback to artifact
           IMAGE_URI="${{ needs.build-express-api.outputs.image-uri }}"
