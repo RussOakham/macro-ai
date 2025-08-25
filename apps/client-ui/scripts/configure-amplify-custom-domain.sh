@@ -33,6 +33,10 @@ print_status() {
     echo -e "${GREEN}✓${NC} $1"
 }
 
+print_success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
 print_info() {
     echo -e "${BLUE}ℹ${NC} $1"
 }
@@ -258,7 +262,7 @@ check_existing_domain() {
             domain_status=$(aws amplify get-domain-association --app-id "$AMPLIFY_APP_ID" --domain-name "$ROOT_DOMAIN" --query 'domainAssociation.domainStatus' --output text 2>/dev/null || echo "UNKNOWN")
 
             if [[ "$domain_status" == "AVAILABLE" ]]; then
-                print_success "✅ Domain is properly configured and available"
+                print_status "✅ Domain is properly configured and available"
                 print_info "🌐 Custom domain URL: https://${CUSTOM_DOMAIN_NAME}/"
                 return 0  # Success - domain is already properly configured
             else
@@ -708,7 +712,7 @@ main() {
 
         if [[ -n "$existing_domains" ]] && echo "$existing_domains" | grep -q "$ROOT_DOMAIN"; then
             # Domain exists and is properly configured, exit successfully
-            print_success "✅ Custom domain configuration already complete!"
+            print_status "✅ Custom domain configuration already complete!"
             print_info "🌐 Custom Domain URL: https://${CUSTOM_DOMAIN_NAME}/"
             return 0
         fi

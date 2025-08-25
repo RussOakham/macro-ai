@@ -513,7 +513,20 @@ jobs:
           # Handle both single email and comma-separated emails with whitespace
           echo "🔍 Parsing cost alert emails from secret..."
 
-          COST_ALERT_EMAILS_ARRAY=$(echo "${{ secrets.COST_ALERT_EMAILS }}" | tr ',' '\n' | awk '{$1=$1};1' | grep -v '^$' | jq -R . | jq -s .)
+          # Check if the secret contains comma-separated values or single email
+          if [[ "${{ secrets.COST_ALERT_EMAILS }}" == *","* ]]; then
+            # Multiple emails - split by comma
+            COST_ALERT_EMAILS_ARRAY=$(echo "${{ secrets.COST_ALERT_EMAILS }}" | tr ',' '\n' | awk '{$1=$1};1' | grep -v '^$' | jq -R . | jq -s .)
+          else
+            # Single email - wrap in array
+            COST_ALERT_EMAILS_ARRAY=$(echo "${{ secrets.COST_ALERT_EMAILS }}" | jq -R . | jq -s .)
+          fi
+
+          # Validate the JSON array was created correctly
+          if ! echo "${COST_ALERT_EMAILS_ARRAY}" | jq -e . >/dev/null 2>&1; then
+            echo "⚠️ Failed to parse cost alert emails, using empty array"
+            COST_ALERT_EMAILS_ARRAY="[]"
+          fi
 
           # Log only the count of emails for debugging without exposing sensitive data
           EMAIL_COUNT=$(echo "${COST_ALERT_EMAILS_ARRAY}" | jq 'length')
@@ -919,6 +932,7 @@ jobs:
           AUTH_RATE_LIMIT_MAX_REQUESTS: '10'
           API_RATE_LIMIT_WINDOW_MS: '60000'
           API_RATE_LIMIT_MAX_REQUESTS: '60'
+          COST_ALERT_EMAILS: 'placeholder-cost-alert-emails' # Placeholder for testing
         run: |
           echo "🔧 Generating API client package from OpenAPI specification"
 

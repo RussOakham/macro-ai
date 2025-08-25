@@ -271,6 +271,9 @@ export class EcsFargateConstruct extends Construct {
 			serviceName: `macro-ai-${environmentName}-service`,
 			desiredCount: scalingConfig?.minCapacity ?? 1,
 			securityGroups: [securityGroup],
+			vpcSubnets: {
+				subnetType: ec2.SubnetType.PUBLIC, // Ensure service is in public subnets for internet access
+			},
 			assignPublicIp: true, // Cost optimization: no NAT Gateway needed
 			platformVersion: ecs.FargatePlatformVersion.LATEST,
 			enableExecuteCommand: true, // Enable ECS Exec for debugging

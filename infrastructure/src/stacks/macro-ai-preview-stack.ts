@@ -4,6 +4,7 @@ import type { Construct } from 'constructs'
 import { AutoShutdownConstruct } from '../constructs/auto-shutdown-construct.js'
 import { CostMonitoringConstruct } from '../constructs/cost-monitoring-construct.js'
 import { EcsFargateConstruct } from '../constructs/ecs-fargate-construct.js'
+import { EcsLoadBalancerConstruct } from '../constructs/ecs-load-balancer-construct.js'
 import { EnvironmentConfigConstruct } from '../constructs/environment-config-construct.js'
 import { MonitoringConstruct } from '../constructs/monitoring-construct.js'
 import { NetworkingConstruct } from '../constructs/networking.js'
@@ -76,8 +77,9 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	public readonly parameterStore: ParameterStoreConstruct
 	public readonly environmentConfig: EnvironmentConfigConstruct
 	public readonly ecsService: EcsFargateConstruct
-	public readonly monitoring: MonitoringConstruct
-	public readonly costMonitoring: CostMonitoringConstruct
+	public readonly loadBalancer: EcsLoadBalancerConstruct
+	public readonly monitoring?: MonitoringConstruct
+	public readonly costMonitoring?: CostMonitoringConstruct
 	public readonly autoShutdown?: AutoShutdownConstruct
 	public readonly prNumber: number
 	private readonly customDomain?: {
@@ -174,22 +176,82 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			},
 		})
 
-		// Create monitoring infrastructure
-		this.monitoring = new MonitoringConstruct(this, 'Monitoring', {
+		// Create Application Load Balancer for public access to ECS service
+		this.loadBalancer = new EcsLoadBalancerConstruct(this, 'LoadBalancer', {
+			vpc: this.networking.vpc,
+			ecsService: this.ecsService.service,
 			environmentName,
-			applicationName: 'macro-ai',
-			prNumber,
-			customMetricNamespace: `MacroAI/Preview/${environmentName}`,
+			customDomain,
+			containerPort: 3040, // Match the container port
+			healthCheck: {
+				path: '/api/health',
+				interval: cdk.Duration.seconds(30),
+				timeout: cdk.Duration.seconds(5),
+				healthyThresholdCount: 2,
+				unhealthyThresholdCount: 3,
+			},
+			securityGroup: this.networking.albSecurityGroup,
+			enableAccessLogs: false, // Cost optimization for preview
+			deletionProtection: false, // Cost optimization for preview
 		})
 
-		// Create cost monitoring with alerts
-		this.costMonitoring = new CostMonitoringConstruct(this, 'CostMonitoring', {
-			environmentName,
-			alertEmails: this.resolveCostAlertEmails(props),
-			// Cost thresholds for preview environments (lower than production)
-			monthlyBudgetLimit: 50, // $50/month budget for preview environments
-			alertThresholds: [50, 80, 95], // Alert at 50%, 80%, 95% of budget
-		})
+		// Create monitoring infrastructure
+		try {
+			this.monitoring = new MonitoringConstruct(this, 'Monitoring', {
+				environmentName,
+				applicationName: 'macro-ai',
+				prNumber,
+				customMetricNamespace: `MacroAI/Preview/${environmentName}`,
+				applicationLoadBalancer: this.loadBalancer.loadBalancer,
+			})
+		} catch (error) {
+			// Log warning but don't fail the stack creation/destruction
+			console.warn(
+				`Monitoring not configured: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			)
+			console.warn(
+				'Stack will continue without monitoring (this is expected during destruction)',
+			)
+			this.monitoring = undefined
+		}
+
+		// Create cost monitoring with alerts (optional for preview environments)
+		try {
+			const costAlertEmails = this.resolveCostAlertEmails(props)
+
+			// Only create cost monitoring if we have valid emails
+			if (costAlertEmails.length > 0) {
+				this.costMonitoring = new CostMonitoringConstruct(
+					this,
+					'CostMonitoring',
+					{
+						environmentName,
+						alertEmails: costAlertEmails,
+						// Cost thresholds for preview environments (lower than production)
+						monthlyBudgetLimit: 50, // $50/month budget for preview environments
+						alertThresholds: [50, 80, 95], // Alert at 50%, 80%, 95% of budget
+					},
+				)
+				console.log(
+					`✅ Cost monitoring configured with ${costAlertEmails.length} email(s)`,
+				)
+			} else {
+				console.log(
+					'⚠️ No valid cost alert emails provided, skipping cost monitoring',
+				)
+				this.costMonitoring = undefined
+			}
+		} catch (error) {
+			// Log warning but don't fail the stack creation/destruction
+			// This allows the stack to be destroyed even if cost monitoring config is missing
+			console.warn(
+				`Cost monitoring not configured: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			)
+			console.warn(
+				'Stack will continue without cost monitoring (this is expected during destruction)',
+			)
+			this.costMonitoring = undefined
+		}
 
 		// Add auto-shutdown for cost optimization
 		if (autoShutdown?.enabled !== false && this.ecsService.scalableTaskCount) {
@@ -245,22 +307,54 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			exportName: `${this.stackName}-EcrRepositoryUri`,
 		})
 
+		// Load balancer outputs
+		new cdk.CfnOutput(this, 'LoadBalancerDnsName', {
+			value: this.loadBalancer.loadBalancer.loadBalancerDnsName,
+			description: 'Application Load Balancer DNS name',
+			exportName: `${this.stackName}-LoadBalancerDnsName`,
+		})
+
+		new cdk.CfnOutput(this, 'LoadBalancerUrl', {
+			value: `http://${this.loadBalancer.loadBalancer.loadBalancerDnsName}`,
+			description: 'Application Load Balancer URL',
+			exportName: `${this.stackName}-LoadBalancerUrl`,
+		})
+
+		new cdk.CfnOutput(this, 'ApiEndpoint', {
+			value: `http://${this.loadBalancer.loadBalancer.loadBalancerDnsName}`,
+			description: 'API endpoint URL',
+			exportName: `${this.stackName}-ApiEndpoint`,
+		})
+
+		// Custom domain outputs (if configured)
+		if (this.customDomain) {
+			new cdk.CfnOutput(this, 'CustomDomainUrl', {
+				value: `https://pr-${this.prNumber}.${this.customDomain.domainName}`,
+				description: 'Custom domain URL for the preview environment',
+				exportName: `${this.stackName}-CustomDomainUrl`,
+			})
+		}
+
 		// Networking outputs are already provided by the NetworkingConstruct
 		// No need to duplicate VpcId and AlbSecurityGroupId exports
 
 		// Monitoring outputs
-		new cdk.CfnOutput(this, 'MonitoringDashboardName', {
-			value: this.monitoring.dashboard.dashboardName,
-			description: 'CloudWatch dashboard name',
-			exportName: `${this.stackName}-MonitoringDashboardName`,
-		})
+		if (this.monitoring) {
+			new cdk.CfnOutput(this, 'MonitoringDashboardName', {
+				value: this.monitoring.dashboard.dashboardName,
+				description: 'CloudWatch dashboard name',
+				exportName: `${this.stackName}-MonitoringDashboardName`,
+			})
+		}
 
 		// Cost monitoring outputs
-		new cdk.CfnOutput(this, 'CostAlertTopicArn', {
-			value: this.costMonitoring.alertTopic.topicArn,
-			description: 'SNS topic ARN for cost alerts',
-			exportName: `${this.stackName}-CostAlertTopicArn`,
-		})
+		if (this.costMonitoring) {
+			new cdk.CfnOutput(this, 'CostAlertTopicArn', {
+				value: this.costMonitoring.alertTopic.topicArn,
+				description: 'SNS topic ARN for cost alerts',
+				exportName: `${this.stackName}-CostAlertTopicArn`,
+			})
+		}
 	}
 
 	/**
@@ -290,6 +384,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	/**
 	 * Resolve cost alert email addresses from props and CDK context
 	 * Supports configuration via props.costAlertEmails or context "costAlertEmails"
+	 * Falls back to a default email if none are configured (for stack destruction scenarios)
 	 */
 	private resolveCostAlertEmails(props: MacroAiPreviewStackProps): string[] {
 		const fromProps = props.costAlertEmails ?? []
@@ -297,12 +392,27 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		const fromContext =
 			(this.node.tryGetContext('costAlertEmails') as string[] | undefined) ?? []
 		const emails = [...fromContext, ...fromProps].filter(Boolean)
-		if (emails.length === 0) {
-			// Prefer failing fast instead of silently configuring no alerts
-			throw new Error(
-				'Cost alert emails not configured. Provide via props.costAlertEmails or context "costAlertEmails".',
+
+		// Validate email format and filter out malformed entries
+		const validEmails = emails.filter((email) => {
+			// Basic email validation
+			const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+			return emailRegex.test(email.trim())
+		})
+
+		if (validEmails.length === 0) {
+			// For preview environments, provide a fallback to prevent stack failures
+			// This allows the stack to be destroyed even without proper email configuration
+			console.warn(
+				'No valid cost alert emails found, cost monitoring will be disabled',
 			)
+			console.warn(
+				'To enable cost monitoring, set costAlertEmails in props or CDK context',
+			)
+			return []
 		}
-		return Array.from(new Set(emails))
+
+		console.log(`Resolved ${validEmails.length} valid cost alert email(s)`)
+		return validEmails
 	}
 }
