@@ -72,10 +72,23 @@ export class AutoShutdownConstruct extends Construct {
 			enableWeekendShutdown = true,
 		} = props
 
+		// Validate CRON expressions
+		const validateCronExpression = (cron: string): string => {
+			// AWS Application Auto Scaling expects explicit CRON expressions
+			// Ensure we have exactly 5 fields: minute hour day month day-of-week
+			const parts = cron.split(' ')
+			if (parts.length !== 5) {
+				throw new Error(
+					`Invalid CRON expression: ${cron}. Expected 5 fields, got ${parts.length}`,
+				)
+			}
+			return cron
+		}
+
 		// Add shutdown scheduled scaling action
 		scalableTaskCount.scaleOnSchedule('ShutdownSchedule', {
 			schedule: applicationautoscaling.Schedule.expression(
-				`cron(${shutdownSchedule})`,
+				`cron(${validateCronExpression(shutdownSchedule)})`,
 			),
 			minCapacity: 0,
 			maxCapacity: 0,
@@ -90,7 +103,7 @@ export class AutoShutdownConstruct extends Construct {
 
 			scalableTaskCount.scaleOnSchedule('StartupSchedule', {
 				schedule: applicationautoscaling.Schedule.expression(
-					`cron(${startupScheduleExpression})`,
+					`cron(${validateCronExpression(startupScheduleExpression)})`,
 				),
 				minCapacity: startupTaskCount,
 				maxCapacity: Math.max(startupTaskCount, 2),
