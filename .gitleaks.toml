@@ -101,19 +101,7 @@ regexes = [
     ".*/src/test/.*"
 ]
 
-# Allowlist by commit messages
-commits = [
-    "test",
-    "test:",
-    "test(",
-    "test-",
-    "add test",
-    "update test",
-    "fix test",
-    "test fix",
-    "test update",
-    "test addition"
-]
+
 
 # Allowlist by branches
 branches = [
