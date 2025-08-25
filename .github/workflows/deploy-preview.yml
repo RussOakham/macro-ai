@@ -840,7 +840,7 @@ jobs:
             # Get the branch details to find the URL
             BRANCH_INFO=$(aws amplify get-branch \
               --app-id "${APP_ID}" \
-              --branch-name "${SANITIZED_BRANCH}" \
+              --branch-name "${BRANCH_NAME}" \
               --region ${{ env.AWS_REGION }} \
               --query 'branch.branchArn' \
               --output text 2>/dev/null || echo "")
