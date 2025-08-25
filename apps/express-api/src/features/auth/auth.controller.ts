@@ -87,7 +87,7 @@ class AuthController implements IAuthController {
 			return
 		}
 
-		// if getUserError and not NotFoundError, throw error
+		// if there is an error and it's not NotFoundError, propagate it
 		if (getUserError.type !== ErrorType.NotFoundError) {
 			next(getUserError)
 			return
@@ -339,7 +339,7 @@ class AuthController implements IAuthController {
 
 		res
 			.cookie('macro-ai-accessToken', loginResponse.tokens.accessToken, {
-				httpOnly: false,
+				httpOnly: true,
 				secure: nodeEnv === 'production',
 				domain: cookieDomain !== 'localhost' ? cookieDomain : undefined,
 				sameSite: 'strict',
@@ -407,15 +407,15 @@ class AuthController implements IAuthController {
 
 		res
 			.clearCookie('macro-ai-accessToken', {
-				domain: cookieDomain,
+				domain: cookieDomain !== 'localhost' ? cookieDomain : undefined,
 				sameSite: 'strict',
 			})
 			.clearCookie('macro-ai-refreshToken', {
-				domain: cookieDomain,
+				domain: cookieDomain !== 'localhost' ? cookieDomain : undefined,
 				sameSite: 'strict',
 			})
 			.clearCookie('macro-ai-synchronize', {
-				domain: cookieDomain,
+				domain: cookieDomain !== 'localhost' ? cookieDomain : undefined,
 				sameSite: 'strict',
 			})
 			.status(StatusCodes.OK)
