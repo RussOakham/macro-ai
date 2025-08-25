@@ -196,7 +196,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			this.autoShutdown = new AutoShutdownConstruct(this, 'AutoShutdown', {
 				scalableTaskCount: this.ecsService.scalableTaskCount,
 				environmentName,
-				shutdownSchedule: autoShutdown?.shutdownSchedule ?? '0 22 * * 0-6', // 10 PM UTC daily - minute hour day month day-of-week (0-6 = Sunday-Saturday)
+				shutdownSchedule: autoShutdown?.shutdownSchedule ?? '0 22 ? * * *', // 10 PM UTC daily - minute hour day-of-month month day-of-week year (using ? for day-of-month since we specify day-of-week)
 				startupSchedule: autoShutdown?.startupSchedule, // Can be undefined for on-demand only
 				startupTaskCount: 1,
 				enableWeekendShutdown: autoShutdown?.enableWeekendShutdown ?? true,

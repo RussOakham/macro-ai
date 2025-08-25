@@ -66,7 +66,7 @@ export class AutoShutdownConstruct extends Construct {
 		const {
 			scalableTaskCount,
 			environmentName,
-			shutdownSchedule = '0 22 * * 0-6', // 10 PM UTC daily - minute hour day month day-of-week (0-6 = Sunday-Saturday)
+			shutdownSchedule = '0 22 ? * * *', // 10 PM UTC daily - minute hour day-of-month month day-of-week year (using ? for day-of-month since we specify day-of-week)
 			startupSchedule, // No default - can be undefined for on-demand only
 			startupTaskCount = 1,
 			enableWeekendShutdown = true,
@@ -74,12 +74,11 @@ export class AutoShutdownConstruct extends Construct {
 
 		// Validate CRON expressions
 		const validateCronExpression = (cron: string): string => {
-			// AWS Application Auto Scaling expects explicit CRON expressions
-			// Ensure we have exactly 5 fields: minute hour day month day-of-week
+			// AWS Application Auto Scaling expects 6 fields: minute hour day-of-month month day-of-week year
 			const parts = cron.split(' ')
-			if (parts.length !== 5) {
+			if (parts.length !== 6) {
 				throw new Error(
-					`Invalid CRON expression: ${cron}. Expected 5 fields, got ${parts.length}`,
+					`Invalid CRON expression: ${cron}. Expected 6 fields, got ${parts.length}. AWS Application Auto Scaling requires: minute hour day-of-month month day-of-week year`,
 				)
 			}
 
@@ -88,6 +87,14 @@ export class AutoShutdownConstruct extends Construct {
 				`Validating CRON expression: "${cron}" (length: ${cron.length})`,
 			)
 			console.log(`CRON parts: [${parts.join(', ')}]`)
+
+			// Validate day-of-month vs day-of-week conflict rule
+			const [minute, hour, dayOfMonth, month, dayOfWeek, year] = parts
+			if (dayOfMonth === '*' && dayOfWeek === '*') {
+				throw new Error(
+					`Invalid CRON expression: ${cron}. AWS Application Auto Scaling does not allow * in both day-of-month and day-of-week fields. Use ? in one of them.`,
+				)
+			}
 
 			return cron
 		}
@@ -105,6 +112,19 @@ export class AutoShutdownConstruct extends Construct {
 			minCapacity: 0,
 			maxCapacity: 0,
 		})
+
+		// Helper function to safely get startup schedule expression
+		const getStartupScheduleExpression = (): string => {
+			if (!startupSchedule) {
+				return 'Disabled - On-demand startup only'
+			}
+
+			if (enableWeekendShutdown) {
+				return startupSchedule // Monday-Friday startup
+			} else {
+				return startupSchedule.replace('1-5', '*') // Daily startup if weekend shutdown disabled
+			}
+		}
 
 		// Add startup scheduled scaling action only if startupSchedule is provided
 		if (startupSchedule) {
@@ -134,11 +154,7 @@ export class AutoShutdownConstruct extends Construct {
 		})
 
 		new cdk.CfnOutput(this, 'StartupSchedule', {
-			value: startupSchedule
-				? enableWeekendShutdown
-					? startupSchedule
-					: startupSchedule.replace('1-5', '*')
-				: 'Disabled - On-demand startup only',
+			value: getStartupScheduleExpression(),
 			description: `Auto-startup schedule for ${environmentName} (UTC cron)`,
 		})
 
