@@ -103,13 +103,4 @@ regexes = [
 
 
 
-# Allowlist by branches
-branches = [
-    "test/*",
-    "feature/*",
-    "develop",
-    "development",
-    "dev/*",
-    "staging",
-    "preview"
-]
+
