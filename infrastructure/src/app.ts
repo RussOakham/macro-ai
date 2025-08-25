@@ -27,6 +27,7 @@ const deploymentType = process.env.CDK_DEPLOY_TYPE ?? 'standard'
 
 // Detect ephemeral preview environments
 const isPreviewEnvironment = deploymentEnv.startsWith('pr-')
+const isECSPreview = deploymentType === 'ecs-preview'
 const isEC2Preview = deploymentType === 'ec2-preview'
 const environmentType = isPreviewEnvironment ? 'ephemeral' : 'persistent'
 
@@ -37,6 +38,8 @@ const stackName = `MacroAi${deploymentEnv.charAt(0).toUpperCase() + deploymentEn
 let stackDescription: string
 if (isEC2Preview) {
 	stackDescription = `Macro AI ${deploymentEnv} Preview Environment - EC2-based architecture (ephemeral)`
+} else if (isECSPreview) {
+	stackDescription = `Macro AI ${deploymentEnv} Preview Environment - ECS Fargate-based architecture (ephemeral)`
 } else {
 	const ephemeralSuffix = isPreviewEnvironment ? ' (ephemeral)' : ''
 	stackDescription = `Macro AI ${deploymentEnv} Environment - ${deploymentScale} scale serverless architecture${ephemeralSuffix}`
@@ -70,14 +73,20 @@ const tags = isPreviewEnvironment
 		})
 
 // Create the appropriate stack based on deployment type
-if (isEC2Preview && isPreviewEnvironment) {
+if ((isEC2Preview || isECSPreview) && isPreviewEnvironment) {
 	// Extract PR number and branch name for preview environments
 	const prNumber = parseInt(deploymentEnv.replace('pr-', ''), 10)
 	const branchName =
 		process.env.BRANCH_NAME ?? process.env.GITHUB_HEAD_REF ?? 'unknown'
-	const corsAllowedOrigins =
-		process.env.CORS_ALLOWED_ORIGINS ??
-		'http://localhost:3000,http://localhost:5173'
+
+	// Configure custom domain if environment variables are provided
+	const customDomain =
+		process.env.CUSTOM_DOMAIN_NAME && process.env.HOSTED_ZONE_ID
+			? {
+					domainName: process.env.CUSTOM_DOMAIN_NAME, // Should be "macro-ai.russoakham.dev"
+					hostedZoneId: process.env.HOSTED_ZONE_ID,
+				}
+			: undefined
 
 	if (isNaN(prNumber)) {
 		throw new Error(`Invalid PR number in environment name: ${deploymentEnv}`)
@@ -101,9 +110,16 @@ if (isEC2Preview && isPreviewEnvironment) {
 		environmentName: deploymentEnv,
 		prNumber,
 		branchName,
-		corsAllowedOrigins,
 		scale: deploymentScale,
 		costAlertEmails,
+		customDomain, // Add custom domain configuration
+		autoShutdown: {
+			enabled: true, // Enable auto-shutdown for preview environments
+			shutdownSchedule: '0 22 ? * * *', // 10 PM UTC daily - minute hour day-of-month month day-of-week year (using ? for day-of-month since we specify day-of-week)
+			startupSchedule: undefined, // No automatic startup - on-demand only
+			enableWeekendShutdown: true, // Shutdown over weekends (no startup anyway)
+			displayTimeZone: 'UTC', // For documentation purposes
+		},
 		tags,
 	})
 } else {

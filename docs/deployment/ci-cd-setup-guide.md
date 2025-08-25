@@ -574,7 +574,7 @@ All deployment workflows use the `.github/actions/check-codeowner` composite act
 **Preview deployment failed:**
 
 - Check AWS credentials and permissions
-- Verify `/macro-ai/development` Parameter Store values exist
+- Verify `/macro-ai/development/` Parameter Store values exist
 - Check for resource naming conflicts
 - Review CloudFormation events in AWS Console
 

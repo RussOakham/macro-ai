@@ -10,6 +10,7 @@ import {
 
 import { utilityController } from './utility.controller.ts'
 import {
+	configurationResponseSchema,
 	detailedHealthResponseSchema,
 	healthResponseSchema,
 	livenessResponseSchema,
@@ -226,6 +227,34 @@ registry.registerPath({
 	},
 })
 
+// Register the configuration health endpoint with OpenAPI
+registry.registerPath({
+	method: 'get',
+	path: '/health/config',
+	tags: ['Utility'],
+	summary: 'Configuration validation endpoint',
+	description:
+		'Returns detailed configuration validation status for debugging deployment issues. No rate limiting applied to ensure ALB health checks work reliably.',
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'Configuration validation successful',
+			content: {
+				'application/json': {
+					schema: configurationResponseSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Configuration validation failed - internal server error',
+			content: {
+				'application/json': {
+					schema: InternalServerErrorSchema,
+				},
+			},
+		},
+	},
+})
+
 const utilityRouter = (router: Router) => {
 	// Health check endpoint using Go-style error handling
 	// NOTE: No rate limiting on health endpoints to prevent ALB health check failures
@@ -249,6 +278,10 @@ const utilityRouter = (router: Router) => {
 	// Liveness probe endpoint (Kubernetes-style)
 	// NOTE: No rate limiting on health endpoints to prevent ALB health check failures
 	router.get('/health/live', utilityController.getLivenessStatus)
+
+	// Configuration validation endpoint for debugging
+	// NOTE: No rate limiting on health endpoints to prevent ALB health check failures
+	router.get('/health/config', utilityController.getConfigurationStatus)
 }
 
 export { utilityRouter }

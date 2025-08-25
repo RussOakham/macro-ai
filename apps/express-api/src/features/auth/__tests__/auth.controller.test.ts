@@ -69,7 +69,7 @@ vi.mock('../../../utils/response-handlers.ts', () => ({
 }))
 
 // Mock config using the reusable helper
-vi.mock('../../../config/default.ts', () => mockConfig.createModule())
+vi.mock('../../../utils/load-config.ts', () => mockConfig.createModule())
 
 // Mock utility functions
 vi.mock('../../../utils/cookies.ts', () => ({
@@ -567,7 +567,7 @@ describe('AuthController', () => {
 				'macro-ai-accessToken',
 				'access-token',
 				expect.objectContaining({
-					httpOnly: false,
+					httpOnly: true,
 					secure: false, // test environment
 					domain: undefined, // localhost case
 					sameSite: 'strict',
@@ -744,7 +744,7 @@ describe('AuthController', () => {
 				'access-token',
 				expect.objectContaining({
 					domain: undefined, // Should be undefined for localhost
-					httpOnly: false,
+					httpOnly: true,
 					secure: false, // test environment
 					sameSite: 'strict',
 				}),

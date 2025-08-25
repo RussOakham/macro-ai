@@ -1,0 +1,106 @@
+# Gitleaks Configuration for Macro AI Repository
+# This file configures secret scanning to ignore test fixtures and mock data
+# while maintaining security scanning for actual secrets.
+
+# Global configuration
+[global]
+verbose = false
+log-level = "info"
+
+# Main allowlist for test fixtures and mock data
+[allowlist]
+description = "Test fixtures and mock data patterns"
+regexes = [
+    # Test API keys
+    "^test-api-key(-.*)?$",
+    "^test-api-key-32-characters-long-dummy$",
+    "^test-api-key-for-integration-testing$",
+    "^test-api-key-12345678901234567890123456789012$",
+    "^test-api-key-12345678901234567890$",
+    "^test-api-key-fake-value-for-testing-only$",
+    
+    # Test OpenAI keys
+    "^sk-test-key$",
+    "^sk-test-openai-key-12345678901234567890123456789012$",
+    "^sk-test-fake-openai-key-for-testing-only$",
+    "^sk-test-mock-key-for-testing-only$",
+    "^test-openai-key$",
+    "^sk-dummy-openai-key$",
+    
+    # Test encryption keys
+    "^test-encryption-key-at-least-32-chars-long$",
+    "^test-cookie-encryption-key-32-chars-long-enough$",
+    "^test-cookie-encryption-key-32-chars$",
+    "^dummy-encryption-key-at-least-32-chars-long$",
+    
+    # Test AWS Cognito keys
+    "^test-pool-secret-key-32-chars-long$",
+    "^test-access-key$",
+    "^test-secret-key$",
+    "^cognito-test-access-key$",
+    "^cognito-test-secret-key$",
+    "^dummy-pool-secret-key$",
+    "^dummy-access-key$",
+    "^dummy-secret-key$",
+    
+    # Test database URLs
+    "^dummy-url$",
+    
+    # Test pool and client IDs
+    "^dummy-pool-id$",
+    "^dummy-client-id$",
+    
+    # Test rate limit values
+    "^900000$",
+    "^100$",
+    "^3600000$",
+    "^10$",
+    "^60000$",
+    "^60$",
+    "^30$",
+    
+    # Test Redis URL
+    "^redis://localhost:6379$",
+    
+    # Test cookie domain
+    "^localhost$",
+    
+    # Test server port
+    "^3040$",
+    
+    # Test API URL
+    "^http://localhost:3040/api$",
+    
+    # Generic test patterns
+    "^test-.*$",
+    "^mock-.*$",
+    "^fake-.*$",
+    "^dummy-.*$",
+    "^sample-.*$",
+    "^example-.*$",
+    
+    # Test-specific patterns
+    "^integration-test-.*$",
+    "^unit-test-.*$",
+    "^e2e-test-.*$",
+    "^performance-test-.*$",
+    "^reliability-test-.*$",
+    "^validation-test-.*$",
+    
+    # File path patterns (regex equivalents of glob patterns)
+    ".*\\.test\\.ts$",
+    ".*\\.test\\.tsx$",
+    ".*\\.test\\.js$",
+    ".*\\.test\\.jsx$",
+    ".*/__tests__/.*",
+    ".*/test/.*",
+    ".*/tests/.*",
+    ".*/test-helpers/.*",
+    ".*/test-results/.*",
+    ".*/scripts/test-.*\\.sh$",
+    ".*/src/test/.*"
+]
+
+
+
+

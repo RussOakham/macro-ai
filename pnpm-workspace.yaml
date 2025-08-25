@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/*
   - infrastructure
+  - tests/*
 
 catalog:
   '@aws-sdk/client-auto-scaling': ^3.859.0
@@ -29,8 +30,8 @@ catalog:
   eslint-plugin-import: ^2.32.0
   eslint-plugin-jsx-a11y: ^6.10.2
   eslint-plugin-react: ^7.37.5
-  eslint-plugin-react-hooks: ^4.6.2
-  eslint-plugin-unused-imports: ^3.2.0
+  eslint-plugin-react-hooks: ^5.2.0
+  eslint-plugin-unused-imports: ^4.2.0
   express: ^4.21.2
   globals: ^15.15.0
   lucide-react: ^0.474.0

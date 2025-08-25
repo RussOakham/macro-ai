@@ -5,6 +5,7 @@
 name: Hygiene Checks
 
 permissions:
+  id-token: write
   contents: read
   actions: read
 
@@ -30,58 +31,179 @@ jobs:
     outputs:
       express_env: ${{ steps.create_express_env.outputs.env_content }}
       client_env: ${{ steps.create_client_env.outputs.env_content }}
+      NODE_ENV: ${{ env.NODE_ENV }}
+      APP_ENV: ${{ env.APP_ENV }}
     steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-hygiene-checks
+          aws-region: us-east-1
+
       - name: Create Express API .env content
         id: create_express_env
         run: |
-          ENV_CONTENT=$(cat << EOF
+          echo "🔍 Computing environment configuration..."
+
+          # Compute APP_ENV based on event and branch
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            APP_ENV="development"
+            echo "🌱 Pull request detected: using development environment"
+          else
+            # Direct push - determine branch
+            if [[ "${{ github.ref_name }}" == "develop" ]]; then
+              APP_ENV="staging"
+              echo "🚀 Develop branch detected: using staging environment"
+            elif [[ "${{ github.ref_name }}" == "main" ]]; then
+              APP_ENV="production"
+              echo "🏭 Main branch detected: using production environment"
+            else
+              APP_ENV="development"
+              echo "🌱 Other branch detected: using development environment"
+            fi
+          fi
+
+          # Derive NODE_ENV from APP_ENV
+          if [[ "$APP_ENV" == "production" || "$APP_ENV" == "staging" ]]; then
+            NODE_ENV="production"
+          else
+            NODE_ENV="development"
+          fi
+
+          echo "✅ Environment configuration: APP_ENV=${APP_ENV}, NODE_ENV=${NODE_ENV}"
+
+          # Set workflow environment variables for all jobs
+          echo "APP_ENV=${APP_ENV}" >> $GITHUB_ENV
+          echo "NODE_ENV=${NODE_ENV}" >> $GITHUB_ENV
+
+          # Determine parameter store path based on APP_ENV
+          PARAM_PATH="/macro-ai/${APP_ENV}"
+          echo "🔍 Using parameter store path: ${PARAM_PATH}"
+
+          # Fetch all runtime configuration from Parameter Store using environment-specific path
+          echo "🔍 Fetching parameters from: ${PARAM_PATH}"
+
+          # Function to fetch parameter with error handling
+          fetch_param() {
+            local param_name="$1"
+            local param_path="${PARAM_PATH}/${param_name}"
+            local value
+            
+            echo "  📥 Fetching: ${param_path}"
+            value=$(aws ssm get-parameter --name "${param_path}" --with-decryption --query "Parameter.Value" --output text 2>&1)
+            
+            if [ $? -eq 0 ]; then
+              echo "    ✅ ${param_name}: OK"
+              echo "$value"
+            else
+              echo "    ❌ ${param_name}: FAILED - $value"
+              return 1
+            fi
+          }
+
+          # Fetch all parameters with error handling
+          AWS_COGNITO_REGION=$(fetch_param "aws-cognito-region")
+          AWS_COGNITO_USER_POOL_ID=$(fetch_param "aws-cognito-user-pool-id")
+          AWS_COGNITO_USER_POOL_CLIENT_ID=$(fetch_param "aws-cognito-user-pool-client-id")
+          AWS_COGNITO_USER_POOL_SECRET_KEY=$(fetch_param "aws-cognito-user-pool-secret-key")
+          AWS_COGNITO_ACCESS_KEY=$(fetch_param "aws-cognito-access-key")
+          AWS_COGNITO_SECRET_KEY=$(fetch_param "aws-cognito-secret-key")
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=$(fetch_param "aws-cognito-refresh-token-expiry")
+
+          COOKIE_DOMAIN=$(fetch_param "cookie-domain")
+          COOKIE_ENCRYPTION_KEY=$(fetch_param "cookie-encryption-key")
+
+          NON_RELATIONAL_DATABASE_URL=$(fetch_param "non-relational-database-url")
+          RELATIONAL_DATABASE_URL=$(fetch_param "relational-database-url")
+
+          OPENAI_API_KEY=$(fetch_param "openai-api-key")
+
+          RATE_LIMIT_WINDOW_MS=$(fetch_param "rate-limit-window-ms")
+          RATE_LIMIT_MAX_REQUESTS=$(fetch_param "rate-limit-max-requests")
+          AUTH_RATE_LIMIT_WINDOW_MS=$(fetch_param "auth-rate-limit-window-ms")
+          AUTH_RATE_LIMIT_MAX_REQUESTS=$(fetch_param "auth-rate-limit-max-requests")
+          API_RATE_LIMIT_WINDOW_MS=$(fetch_param "api-rate-limit-window-ms")
+          API_RATE_LIMIT_MAX_REQUESTS=$(fetch_param "api-rate-limit-max-requests")
+          REDIS_URL=$(fetch_param "redis-url")
+
+          # Verify all required parameters were fetched
+          echo "🔍 Verifying all required parameters were fetched..."
+          required_params=(
+            "AWS_COGNITO_REGION" "AWS_COGNITO_USER_POOL_ID" "AWS_COGNITO_USER_POOL_CLIENT_ID"
+            "AWS_COGNITO_USER_POOL_SECRET_KEY" "AWS_COGNITO_ACCESS_KEY" "AWS_COGNITO_SECRET_KEY"
+            "COOKIE_ENCRYPTION_KEY" "RELATIONAL_DATABASE_URL" "NON_RELATIONAL_DATABASE_URL"
+            "OPENAI_API_KEY"
+          )
+
+          missing_params=()
+          for param in "${required_params[@]}"; do
+            if [[ -z "${!param}" ]]; then
+              missing_params+=("$param")
+            fi
+          done
+
+          if [[ ${#missing_params[@]} -gt 0 ]]; then
+            echo "❌ Missing required parameters: ${missing_params[*]}"
+            exit 1
+          fi
+
+          echo "✅ All required parameters fetched successfully"
+          echo "✅ Environment variables loaded from AWS Parameter Store"
+
+          # Create .env files using artifacts instead of step outputs to prevent secret exposure
+          mkdir -p /tmp/envs
+
+          # Create Express API .env file
+          cat << EOF > /tmp/envs/express-api.env
           # API Configuration
           API_KEY=${{ secrets.API_KEY }}
           SERVER_PORT=${{ secrets.SERVER_PORT || '3040' }}
-          NODE_ENV=test
+          NODE_ENV=${NODE_ENV}
+          APP_ENV=${APP_ENV}
 
           # AWS Cognito Configuration
-          AWS_COGNITO_REGION=${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-          AWS_COGNITO_USER_POOL_ID=${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-          AWS_COGNITO_USER_POOL_CLIENT_ID=${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-          AWS_COGNITO_USER_POOL_SECRET_KEY=${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-          AWS_COGNITO_ACCESS_KEY=${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
-          AWS_COGNITO_SECRET_KEY=${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
-          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
+          AWS_COGNITO_REGION=${AWS_COGNITO_REGION}
+          AWS_COGNITO_USER_POOL_ID=${AWS_COGNITO_USER_POOL_ID}
+          AWS_COGNITO_USER_POOL_CLIENT_ID=${AWS_COGNITO_USER_POOL_CLIENT_ID}
+          AWS_COGNITO_USER_POOL_SECRET_KEY=${AWS_COGNITO_USER_POOL_SECRET_KEY}
+          AWS_COGNITO_ACCESS_KEY=${AWS_COGNITO_ACCESS_KEY}
+          AWS_COGNITO_SECRET_KEY=${AWS_COGNITO_SECRET_KEY}
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=${AWS_COGNITO_REFRESH_TOKEN_EXPIRY}
 
           # Cookie Configuration
-          COOKIE_DOMAIN=${{ secrets.COOKIE_DOMAIN || 'localhost' }}
-          COOKIE_ENCRYPTION_KEY=${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+          COOKIE_DOMAIN=${COOKIE_DOMAIN}
+          COOKIE_ENCRYPTION_KEY=${COOKIE_ENCRYPTION_KEY}
 
           # Databases
-          NON_RELATIONAL_DATABASE_URL=${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
-          RELATIONAL_DATABASE_URL=${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          NON_RELATIONAL_DATABASE_URL=${NON_RELATIONAL_DATABASE_URL}
+          RELATIONAL_DATABASE_URL=${RELATIONAL_DATABASE_URL}
+
+          # OpenAI
+          OPENAI_API_KEY=${OPENAI_API_KEY}
 
           # Rate Limiting
-          RATE_LIMIT_WINDOW_MS=${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-          RATE_LIMIT_MAX_REQUESTS=${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-          AUTH_RATE_LIMIT_WINDOW_MS=${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS=${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-          API_RATE_LIMIT_WINDOW_MS=${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-          API_RATE_LIMIT_MAX_REQUESTS=${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
-          REDIS_URL=${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
+          RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS}
+          RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS}
+          AUTH_RATE_LIMIT_WINDOW_MS=${AUTH_RATE_LIMIT_WINDOW_MS}
+          AUTH_RATE_LIMIT_MAX_REQUESTS=${AUTH_RATE_LIMIT_MAX_REQUESTS}
+          API_RATE_LIMIT_WINDOW_MS=${API_RATE_LIMIT_WINDOW_MS}
+          API_RATE_LIMIT_MAX_REQUESTS=${API_RATE_LIMIT_MAX_REQUESTS}
+          REDIS_URL=${REDIS_URL}
           EOF
-          )
-          echo "env_content<<EOF" >> $GITHUB_OUTPUT
-          echo "$ENV_CONTENT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Create Client UI .env content
-        id: create_client_env
-        run: |
-          ENV_CONTENT=$(cat << EOF
+          # Create Client UI .env file
+          cat << EOF > /tmp/envs/client-ui.env
           VITE_API_URL=${{ secrets.VITE_API_URL || 'http://localhost:3040/api' }}
           VITE_API_KEY=${{ secrets.VITE_API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
           EOF
-          )
-          echo "env_content<<EOF" >> $GITHUB_OUTPUT
-          echo "$ENV_CONTENT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Upload env artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-env-files
+          path: /tmp/envs/
+          retention-days: 1
 
   build:
     needs: setup
@@ -109,14 +231,22 @@ jobs:
           pnpm install --frozen-lockfile
           echo "✅ Dependencies installed successfully"
 
-      # Create .env files using the output from setup job
+      # Download .env files from artifacts to prevent secret exposure
+      - name: Download env artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-env-files
+          path: /tmp/envs
+
       - name: Create Express API .env file
         run: |
-          echo "${{ needs.setup.outputs.express_env }}" > apps/express-api/.env
+          mkdir -p apps/express-api
+          cp /tmp/envs/express-api.env apps/express-api/.env
 
       - name: Create Client UI .env file
         run: |
-          echo "${{ needs.setup.outputs.client_env }}" > apps/client-ui/.env
+          mkdir -p apps/client-ui
+          cp /tmp/envs/client-ui.env apps/client-ui/.env
 
       - name: Run build
         run: |
@@ -124,17 +254,40 @@ jobs:
           pnpm build
           echo "✅ Build completed successfully"
         env:
+          # Core Configuration
+          NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
+          APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
           API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+
+          # AWS Cognito Configuration
           AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
           AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
           AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
           AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
           AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
           AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
+
+          # Cookie Configuration
+          COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
           COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+
+          # Databases
           NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+
+          # OpenAI
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
 
   lint:
     needs: setup
@@ -162,29 +315,60 @@ jobs:
           pnpm install --frozen-lockfile
           echo "✅ Dependencies installed successfully"
 
-      # Create .env files using the output from setup job
+      # Download .env files from artifacts to prevent secret exposure
+      - name: Download env artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-env-files
+          path: /tmp/envs
+
       - name: Create Express API .env file
         run: |
-          echo "${{ needs.setup.outputs.express_env }}" > apps/express-api/.env
+          mkdir -p apps/express-api
+          cp /tmp/envs/express-api.env apps/express-api/.env
 
       - name: Create Client UI .env file
         run: |
-          echo "${{ needs.setup.outputs.client_env }}" > apps/client-ui/.env
+          mkdir -p apps/client-ui
+          cp /tmp/envs/client-ui.env apps/client-ui/.env
 
       - name: Build types package
         run: pnpm --filter @repo/macro-ai-api-client build
         env:
+          # Core Configuration
+          NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
+          APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
           API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+
+          # AWS Cognito Configuration
           AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
           AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
           AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
           AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
           AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
           AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
+
+          # Cookie Configuration
+          COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
           COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+
+          # Databases
           NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+
+          # OpenAI
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
       - name: Run lint
         run: |
           echo "🔍 Starting lint checks..."
@@ -214,29 +398,60 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Create .env files using the output from setup job
+      # Download .env files from artifacts to prevent secret exposure
+      - name: Download env artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-env-files
+          path: /tmp/envs
+
       - name: Create Express API .env file
         run: |
-          echo "${{ needs.setup.outputs.express_env }}" > apps/express-api/.env
+          mkdir -p apps/express-api
+          cp /tmp/envs/express-api.env apps/express-api/.env
 
       - name: Create Client UI .env file
         run: |
-          echo "${{ needs.setup.outputs.client_env }}" > apps/client-ui/.env
+          mkdir -p apps/client-ui
+          cp /tmp/envs/client-ui.env apps/client-ui/.env
 
       - name: Run test with coverage
         run: pnpm test:coverage
         env:
+          # Core Configuration
+          NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
+          APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
           API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+
+          # AWS Cognito Configuration
           AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
           AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
           AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
           AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
           AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
           AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
+
+          # Cookie Configuration
+          COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
           COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+
+          # Databases
           NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+
+          # OpenAI
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
@@ -363,3 +578,29 @@ jobs:
 
           echo ""
           echo "✅ Actionlint validation completed (warning mode)"
+
+  gitleaks:
+    name: Secret Scanning (Gitleaks)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for gitleaks to scan commit history
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Use our custom configuration file
+          config-path: .gitleaks.toml
+          # Report findings to GitHub Security tab
+          report-format: sarif
+          # Fail on any secrets found (after allowlisting)
+          exit-code: 1
+          # Enable verbose output for debugging
+          verbose: true

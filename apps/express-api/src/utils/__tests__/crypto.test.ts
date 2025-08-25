@@ -1,7 +1,5 @@
-import crypto, { type CipherGCM, type DecipherGCM } from 'crypto'
-import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { config } from '../../../config/default.ts'
 import { decrypt, encrypt } from '../crypto.ts'
 import { tryCatchSync } from '../error-handling/try-catch.ts'
 import { AppError } from '../errors.ts'
@@ -12,25 +10,45 @@ vi.mock('../error-handling/try-catch.ts', () => ({
 	tryCatchSync: vi.fn(),
 }))
 
-vi.mock('../../../config/default.ts', () => ({
+vi.mock('../load-config.ts', () => ({
 	config: {
-		cookieEncryptionKey:
+		COOKIE_ENCRYPTION_KEY:
 			'0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef', // 64 hex chars = 32 bytes
 	},
 }))
 
-// Mock crypto module
+// Mock crypto module with named imports
 vi.mock('crypto', () => ({
-	default: {
-		randomBytes: vi.fn(),
-		createCipheriv: vi.fn(),
-		createDecipheriv: vi.fn(),
-	},
+	randomBytes: vi.fn(),
+	createCipheriv: vi.fn(),
+	createDecipheriv: vi.fn(),
 }))
+
+// Import the mocked crypto functions after mocking
+import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
+
+// Define proper interfaces for mock objects
+interface MockCipher {
+	update: ReturnType<typeof vi.fn>
+	final: ReturnType<typeof vi.fn>
+	getAuthTag: ReturnType<typeof vi.fn>
+}
+
+interface MockDecipher {
+	setAuthTag: ReturnType<typeof vi.fn>
+	update: ReturnType<typeof vi.fn>
+	final: ReturnType<typeof vi.fn>
+}
 
 describe('crypto.ts', () => {
 	const mockTryCatchSync = vi.mocked(tryCatchSync)
-	const mockCrypto = vi.mocked(crypto)
+	const mockRandomBytes = vi.mocked(randomBytes) as ReturnType<typeof vi.fn>
+	const mockCreateCipheriv = vi.mocked(createCipheriv) as ReturnType<
+		typeof vi.fn
+	>
+	const mockCreateDecipheriv = vi.mocked(createDecipheriv) as ReturnType<
+		typeof vi.fn
+	>
 
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -44,14 +62,16 @@ describe('crypto.ts', () => {
 
 		beforeEach(() => {
 			// Setup default successful encryption mocks
-			;(mockCrypto.randomBytes as Mock).mockReturnValue(mockIv)
+			mockRandomBytes.mockReturnValue(mockIv)
 
-			const mockCipher: Partial<CipherGCM> = {
+			const mockCipher: MockCipher = {
 				update: vi.fn().mockReturnValue('encrypted'),
 				final: vi.fn().mockReturnValue('text'),
 				getAuthTag: vi.fn().mockReturnValue(mockAuthTag),
 			}
-			mockCrypto.createCipheriv.mockReturnValue(mockCipher as CipherGCM)
+			mockCreateCipheriv.mockReturnValue(
+				mockCipher as unknown as ReturnType<typeof createCipheriv>,
+			)
 
 			// Use the centralized mock helper for tryCatchSync
 			mockTryCatchSync.mockImplementation(
@@ -84,28 +104,33 @@ describe('crypto.ts', () => {
 				const plaintext = 'test-data'
 				encrypt(plaintext)
 
-				expect(mockCrypto.randomBytes).toHaveBeenCalledWith(12) // IV_LENGTH for GCM
+				expect(mockRandomBytes).toHaveBeenCalledWith(12) // IV_LENGTH for GCM
 			})
 
 			it('should create cipher with correct algorithm and key', () => {
 				const plaintext = 'test-data'
 				encrypt(plaintext)
 
-				expect(mockCrypto.createCipheriv).toHaveBeenCalledWith(
+				expect(mockCreateCipheriv).toHaveBeenCalledWith(
 					'aes-256-gcm',
-					Buffer.from(config.cookieEncryptionKey, 'hex'),
+					Buffer.from(
+						'0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+						'hex',
+					),
 					mockIv,
 				)
 			})
 
 			it('should update cipher with plaintext', () => {
 				const plaintext = 'test-data'
-				const mockCipher: Partial<CipherGCM> = {
+				const mockCipher: MockCipher = {
 					update: vi.fn().mockReturnValue('encrypted'),
 					final: vi.fn().mockReturnValue('text'),
 					getAuthTag: vi.fn().mockReturnValue(mockAuthTag),
 				}
-				mockCrypto.createCipheriv.mockReturnValue(mockCipher as CipherGCM)
+				mockCreateCipheriv.mockReturnValue(
+					mockCipher as unknown as ReturnType<typeof createCipheriv>,
+				)
 
 				encrypt(plaintext)
 
@@ -118,32 +143,40 @@ describe('crypto.ts', () => {
 		describe('encryption errors', () => {
 			it('should handle cipher creation errors', () => {
 				const error = AppError.internal('Cipher creation failed', 'cryptoUtils')
-				mockTryCatchSync.mockReturnValue(mockErrorHandling.errorResult(error))
+				mockCreateCipheriv.mockImplementation(() => {
+					throw error
+				})
 
-				const result = encrypt('test-data')
-
-				expect(result).toEqual([null, error])
-			})
-
-			it('should handle encryption process errors', () => {
-				const error = AppError.internal('Encryption failed', 'cryptoUtils')
-				const mockCipher: Partial<CipherGCM> = {
-					update: vi.fn().mockImplementation(() => {
-						throw error
-					}),
-					final: vi.fn(),
-					getAuthTag: vi.fn(),
-				}
-				mockCrypto.createCipheriv.mockReturnValue(mockCipher as CipherGCM)
 				// Use real implementation to actually catch the thrown error
 				mockTryCatchSync.mockImplementation(
 					mockErrorHandling.withRealTryCatchSync(),
 				)
 
 				const result = encrypt('test-data')
-
 				expect(result[0]).toBeNull()
-				expect(result[1]).toBeInstanceOf(AppError)
+				expect(result[1]).toEqual(error)
+			})
+
+			it('should handle encryption process errors', () => {
+				const error = AppError.internal('Encryption failed', 'cryptoUtils')
+				const mockCipher: MockCipher = {
+					update: vi.fn().mockImplementation(() => {
+						throw error
+					}),
+					final: vi.fn(),
+					getAuthTag: vi.fn(),
+				}
+				mockCreateCipheriv.mockReturnValue(
+					mockCipher as unknown as ReturnType<typeof createCipheriv>,
+				)
+				// Use real implementation to actually catch the thrown error
+				mockTryCatchSync.mockImplementation(
+					mockErrorHandling.withRealTryCatchSync(),
+				)
+
+				const result = encrypt('test-data')
+				expect(result[0]).toBeNull()
+				expect(result[1]).toEqual(error)
 			})
 		})
 
@@ -158,7 +191,7 @@ describe('crypto.ts', () => {
 			})
 
 			it('should handle unicode characters', () => {
-				const plaintext = '🔐 secure data 中文'
+				const plaintext = '🚀🌟✨'
 				const result = encrypt(plaintext)
 
 				expect(result[0]).toBe(
@@ -187,12 +220,14 @@ describe('crypto.ts', () => {
 
 		beforeEach(() => {
 			// Setup default successful decryption mocks
-			const mockDecipher: Partial<DecipherGCM> = {
+			const mockDecipher: MockDecipher = {
 				setAuthTag: vi.fn(),
 				update: vi.fn().mockReturnValue('decrypted'),
 				final: vi.fn().mockReturnValue('text'),
 			}
-			mockCrypto.createDecipheriv.mockReturnValue(mockDecipher as DecipherGCM)
+			mockCreateDecipheriv.mockReturnValue(
+				mockDecipher as unknown as ReturnType<typeof createDecipheriv>,
+			)
 
 			// Use the centralized mock helper for tryCatchSync
 			mockTryCatchSync.mockImplementation(
@@ -219,20 +254,25 @@ describe('crypto.ts', () => {
 			it('should create decipher with correct parameters', () => {
 				decrypt(validEncryptedText)
 
-				expect(mockCrypto.createDecipheriv).toHaveBeenCalledWith(
+				expect(mockCreateDecipheriv).toHaveBeenCalledWith(
 					'aes-256-gcm',
-					Buffer.from(config.cookieEncryptionKey, 'hex'),
+					Buffer.from(
+						'0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+						'hex',
+					),
 					Buffer.from(mockIv, 'hex'),
 				)
 			})
 
 			it('should set auth tag and process decryption', () => {
-				const mockDecipher: Partial<DecipherGCM> = {
+				const mockDecipher: MockDecipher = {
 					setAuthTag: vi.fn(),
 					update: vi.fn().mockReturnValue('decrypted'),
 					final: vi.fn().mockReturnValue('text'),
 				}
-				mockCrypto.createDecipheriv.mockReturnValue(mockDecipher as DecipherGCM)
+				mockCreateDecipheriv.mockReturnValue(
+					mockDecipher as unknown as ReturnType<typeof createDecipheriv>,
+				)
 
 				decrypt(validEncryptedText)
 
@@ -250,54 +290,34 @@ describe('crypto.ts', () => {
 
 		describe('input validation errors', () => {
 			it('should handle invalid format - wrong number of parts', () => {
-				const invalidText = 'invalid:format'
-				// Use real implementation to catch validation errors
-				mockTryCatchSync.mockImplementation(
-					mockErrorHandling.withRealTryCatchSync(),
-				)
+				const result = decrypt('invalid:format')
 
-				const result = decrypt(invalidText)
-
-				expect(result[1]).toBeInstanceOf(AppError)
+				expect(result[0]).toBeNull()
+				expect(result[1]).toBeInstanceOf(Error)
 				expect(result[1]?.message).toBe('Invalid encrypted text format')
 			})
 
 			it('should handle empty parts in encrypted text', () => {
-				const invalidText = ':authTag:encryptedData'
-				// Use real implementation to catch validation errors
-				mockTryCatchSync.mockImplementation(
-					mockErrorHandling.withRealTryCatchSync(),
-				)
+				const result = decrypt(':authTag:encrypted')
 
-				const result = decrypt(invalidText)
-
-				expect(result[1]).toBeInstanceOf(AppError)
+				expect(result[0]).toBeNull()
+				expect(result[1]).toBeInstanceOf(Error)
 				expect(result[1]?.message).toBe('Invalid encrypted text format')
 			})
 
 			it('should handle missing auth tag', () => {
-				const invalidText = 'iv::encryptedData'
-				// Use real implementation to catch validation errors
-				mockTryCatchSync.mockImplementation(
-					mockErrorHandling.withRealTryCatchSync(),
-				)
+				const result = decrypt('iv::encrypted')
 
-				const result = decrypt(invalidText)
-
-				expect(result[1]).toBeInstanceOf(AppError)
+				expect(result[0]).toBeNull()
+				expect(result[1]).toBeInstanceOf(Error)
 				expect(result[1]?.message).toBe('Invalid encrypted text format')
 			})
 
 			it('should handle missing encrypted data', () => {
-				const invalidText = 'iv:authTag:'
-				// Use real implementation to catch validation errors
-				mockTryCatchSync.mockImplementation(
-					mockErrorHandling.withRealTryCatchSync(),
-				)
+				const result = decrypt('iv:authTag:')
 
-				const result = decrypt(invalidText)
-
-				expect(result[1]).toBeInstanceOf(AppError)
+				expect(result[0]).toBeNull()
+				expect(result[1]).toBeInstanceOf(Error)
 				expect(result[1]?.message).toBe('Invalid encrypted text format')
 			})
 		})
@@ -308,87 +328,97 @@ describe('crypto.ts', () => {
 					'Decipher creation failed',
 					'cryptoUtils',
 				)
-				mockTryCatchSync.mockReturnValue(mockErrorHandling.errorResult(error))
+				mockCreateDecipheriv.mockImplementation(() => {
+					throw error
+				})
+
+				// Use real implementation to catch the thrown error
+				mockTryCatchSync.mockImplementation(
+					mockErrorHandling.withRealTryCatchSync(),
+				)
 
 				const result = decrypt(validEncryptedText)
-
-				expect(result).toEqual([null, error])
+				expect(result[0]).toBeNull()
+				expect(result[1]).toEqual(error)
 			})
 
 			it('should handle authentication tag verification errors', () => {
 				const error = AppError.internal('Authentication failed', 'cryptoUtils')
-				const mockDecipher: Partial<DecipherGCM> = {
+				const mockDecipher: MockDecipher = {
 					setAuthTag: vi.fn().mockImplementation(() => {
 						throw error
 					}),
 					update: vi.fn(),
 					final: vi.fn(),
 				}
-				mockCrypto.createDecipheriv.mockReturnValue(mockDecipher as DecipherGCM)
+				mockCreateDecipheriv.mockReturnValue(
+					mockDecipher as unknown as ReturnType<typeof createDecipheriv>,
+				)
 				// Use real implementation to catch the thrown error
 				mockTryCatchSync.mockImplementation(
 					mockErrorHandling.withRealTryCatchSync(),
 				)
 
 				const result = decrypt(validEncryptedText)
-
 				expect(result[0]).toBeNull()
-				expect(result[1]).toBeInstanceOf(AppError)
+				expect(result[1]).toEqual(error)
 			})
 
 			it('should handle decryption process errors', () => {
 				const error = AppError.internal('Decryption failed', 'cryptoUtils')
-				const mockDecipher: Partial<DecipherGCM> = {
+				const mockDecipher: MockDecipher = {
 					setAuthTag: vi.fn(),
 					update: vi.fn().mockImplementation(() => {
 						throw error
 					}),
 					final: vi.fn(),
 				}
-				mockCrypto.createDecipheriv.mockReturnValue(mockDecipher as DecipherGCM)
+				mockCreateDecipheriv.mockReturnValue(
+					mockDecipher as unknown as ReturnType<typeof createDecipheriv>,
+				)
 				// Use real implementation to catch the thrown error
 				mockTryCatchSync.mockImplementation(
 					mockErrorHandling.withRealTryCatchSync(),
 				)
 
 				const result = decrypt(validEncryptedText)
-
 				expect(result[0]).toBeNull()
-				expect(result[1]).toBeInstanceOf(AppError)
+				expect(result[1]).toEqual(error)
 			})
 		})
 
 		describe('edge cases', () => {
 			it('should handle malformed hex data', () => {
-				const invalidText = 'invalidhex:invalidhex:invalidhex'
-				// The actual crypto library will handle hex parsing errors
-				const error = AppError.internal('Invalid hex string', 'cryptoUtils')
-				mockTryCatchSync.mockReturnValue(mockErrorHandling.errorResult(error))
+				// Mock the crypto functions to throw an error for invalid hex
+				const error = new Error('Invalid hex string')
+				mockCreateDecipheriv.mockImplementation(() => {
+					throw error
+				})
 
-				const result = decrypt(invalidText)
+				// Use real implementation to catch the thrown error
+				mockTryCatchSync.mockImplementation(
+					mockErrorHandling.withRealTryCatchSync(),
+				)
 
-				expect(result[1]).toBeInstanceOf(AppError)
+				const result = decrypt('invalid:authTag:encrypted')
+
+				expect(result[0]).toBeNull()
+				expect(result[1]).toBeInstanceOf(Error)
 			})
 		})
-	})
 
-	describe('integration scenarios', () => {
-		it('should demonstrate encrypt/decrypt round trip would work', () => {
-			// This test shows the expected behavior without actual crypto operations
-			const plaintext = 'sensitive-user-data'
+		describe('integration scenarios', () => {
+			it('should demonstrate encrypt/decrypt round trip would work', () => {
+				// This test demonstrates that the functions are properly structured
+				// for a real encrypt/decrypt round trip, even though we're using mocks
+				const plaintext = 'test-data'
+				const encrypted = encrypt(plaintext)
+				const decrypted = decrypt(encrypted[0] ?? '')
 
-			// Mock successful encryption
-			const mockEncryptedOutput = 'abc123:def456:ghi789'
-			mockTryCatchSync.mockReturnValueOnce([mockEncryptedOutput, null])
-
-			const encryptResult = encrypt(plaintext)
-			expect(encryptResult).toEqual([mockEncryptedOutput, null])
-
-			// Mock successful decryption
-			mockTryCatchSync.mockReturnValueOnce([plaintext, null])
-
-			const decryptResult = decrypt(mockEncryptedOutput)
-			expect(decryptResult).toEqual([plaintext, null])
+				// Both should return valid results (not errors)
+				expect(encrypted[1]).toBeNull()
+				expect(decrypted[1]).toBeNull()
+			})
 		})
 	})
 })

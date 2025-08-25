@@ -28,28 +28,6 @@ const createServer = (): Express => {
 	app.use(pino)
 
 	// Public endpoints: allow broad CORS for browser access (no credentials)
-	app.use(
-		'/api/health',
-		cors({
-			origin: true, // reflect request origin
-			credentials: false,
-			methods: ['GET', 'OPTIONS'],
-			allowedHeaders: [
-				'Origin',
-				'X-Requested-With',
-				'Content-Type',
-				'Accept',
-				'Authorization',
-				'X-API-KEY',
-				'Cache-Control',
-			],
-			maxAge: 86400,
-		}),
-	)
-	// Enhanced health endpoints for ALB and monitoring
-	app.use('/api/health/detailed', cors({ origin: true, credentials: false }))
-	app.use('/api/health/ready', cors({ origin: true, credentials: false }))
-	app.use('/api/health/live', cors({ origin: true, credentials: false }))
 	app.use('/api-docs', cors({ origin: true, credentials: false }))
 	app.use('/swagger.json', cors({ origin: true, credentials: false }))
 
@@ -63,43 +41,97 @@ const createServer = (): Express => {
 		.map((o) => o.trim())
 		.filter((o) => o.length > 0)
 		.map((o) => (o.endsWith('/') ? o.replace(/\/+$/, '') : o))
+
+	// Get custom domain from environment variables (aligns with CDK configuration)
+	const customDomainName = process.env.CUSTOM_DOMAIN_NAME // e.g., "macro-ai.russoakham.dev"
+
+	// Pattern-based CORS matching for preview environments with custom domains
+	const isCustomDomainPreview = isPreview && customDomainName
+	const previewDomainPattern = isCustomDomainPreview
+		? new RegExp(`^https://pr-\\d+\\.${customDomainName.replace('.', '\\.')}$`)
+		: null
+
+	// Add custom domain origins for preview environments - CONFIGURABLE PATTERNS
+	const customDomainOrigins =
+		isPreview && process.env.PR_NUMBER && customDomainName
+			? [
+					`https://pr-${process.env.PR_NUMBER}.${customDomainName}`, // Frontend
+					`https://pr-${process.env.PR_NUMBER}-api.${customDomainName}`, // API
+				]
+			: []
+
+	// Add production and staging origins (only if custom domain is configured)
+	const productionOrigins = customDomainName
+		? [
+				`https://${customDomainName}`, // Production frontend
+				`https://staging.${customDomainName}`, // Staging frontend
+				`https://api.${customDomainName}`, // Production API
+				`https://staging-api.${customDomainName}`, // Staging API
+			]
+		: []
+
 	const effectiveOrigins =
 		parsedCorsOrigins.length > 0
-			? parsedCorsOrigins
-			: ['http://localhost:3000', 'http://localhost:3040']
-
-	// Log effective CORS configuration at startup
-	// Note: In preview envs with empty origins, Express will still use localhost here,
-	// but Lambda utilities will refuse to fall back for preflight handling and responses.
-	console.log('[server] CORS configuration diagnostics:')
-	console.log(`  APP_ENV: "${appEnv}" (isPreview=${String(isPreview)})`)
-	console.log(`  CORS_ALLOWED_ORIGINS (raw): "${rawEnv}"`)
-	console.log(
-		`  CORS_ALLOWED_ORIGINS (parsed/normalized): [${parsedCorsOrigins
-			.map((o) => `"${o}"`)
-			.join(', ')}]`,
-	)
-	console.log(
-		`  Express CORS origin setting: [${effectiveOrigins
-			.map((o) => `"${o}"`)
-			.join(', ')}]`,
-	)
+			? [...parsedCorsOrigins, ...customDomainOrigins, ...productionOrigins]
+			: [
+					'http://localhost:3000',
+					'http://localhost:3040',
+					...customDomainOrigins,
+					...productionOrigins,
+				]
 
 	app.use(
 		cors({
 			origin: (origin, callback) => {
+				console.log(`[server] CORS: Testing origin: ${origin ?? 'null'}`)
+
 				// Allow REST tools or same-origin (no Origin header)
 				if (!origin) {
+					console.log(
+						'[server] CORS: Allowing null origin (REST tools/same-origin)',
+					)
 					callback(null, true)
 					return
 				}
+
 				// Normalize by stripping trailing slashes
 				const normalized = origin.replace(/\/+$/, '')
+				console.log(`[server] CORS: Normalized origin: ${normalized}`)
+
+				// Check explicit allowed origins first
 				const allowedSet = new Set(
 					effectiveOrigins.map((o) => o.replace(/\/+$/, '')),
 				)
-				const isAllowed = allowedSet.has(normalized)
-				callback(null, isAllowed)
+				console.log(
+					`[server] CORS: Allowed origins set: [${Array.from(allowedSet).join(', ')}]`,
+				)
+
+				if (allowedSet.has(normalized)) {
+					console.log(
+						`[server] CORS: ✅ Allowing origin via explicit list: ${normalized}`,
+					)
+					callback(null, true)
+					return
+				}
+
+				// For preview environments with custom domains, use pattern matching
+				console.log(
+					`[server] CORS: Pattern matching - previewDomainPattern: ${previewDomainPattern?.toString() ?? 'null'}`,
+				)
+				if (previewDomainPattern?.test(normalized)) {
+					console.log(
+						`[server] CORS: ✅ Allowing preview domain via pattern: ${normalized}`,
+					)
+					callback(null, true)
+					return
+				}
+
+				// Deny all other origins
+				console.log(`[server] CORS: ❌ Denying origin: ${normalized}`)
+				console.log(
+					`[server] CORS: Reason - not in allowed list and doesn't match pattern`,
+				)
+				callback(null, false)
 			},
 			credentials: true,
 			exposedHeaders: ['cache-control'],
@@ -116,6 +148,7 @@ const createServer = (): Express => {
 			maxAge: 86400,
 		}),
 	)
+
 	// Conditional compression - disable for streaming endpoints
 	app.use(
 		compression({

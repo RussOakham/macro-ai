@@ -31,6 +31,7 @@ export default defineConfig({
 		},
 	},
 	test: {
+		name: 'client-ui',
 		globals: true,
 		environment: 'jsdom',
 		setupFiles: ['./src/test/setup.ts'],
