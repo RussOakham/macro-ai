@@ -580,9 +580,9 @@ jobs:
 
           # Create deployment URLs file with actual deployed values
           jq -n \
-            --arg backend_url "${{ steps.outputs.outputs.api-endpoint }}" \
+            --arg backend_url "${{ steps.deploy.outputs.api-endpoint }}" \
             --arg frontend_url "${{ needs.validate-access.outputs.frontend-url }}" \
-            --arg backend_stack_name "${{ steps.stack-info.outputs.stack-name }}" \
+            --arg backend_stack_name "${{ steps.deploy.outputs.stack-name }}" \
             --arg environment "${{ needs.validate-access.outputs.env-name }}" \
             --arg deployment_type "backend_deployed" \
             --arg health_status "${{ steps.health-check.outputs.health-status }}" \
