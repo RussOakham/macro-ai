@@ -182,8 +182,8 @@ export class EcsLoadBalancerConstruct extends Construct {
 			defaultAction: elbv2.ListenerAction.forward([this.targetGroup]),
 		})
 
-		// Create HTTPS listener if custom domain is provided
-		if (customDomain) {
+		// Create HTTPS listener if custom domain is provided AND we have a certificate
+		if (customDomain?.certificateArn) {
 			// Redirect HTTP to HTTPS
 			this.httpListener.addAction('RedirectToHttps', {
 				priority: 1,
@@ -195,15 +195,23 @@ export class EcsLoadBalancerConstruct extends Construct {
 				}),
 			})
 
-			// Create HTTPS listener (port 443)
+			// Create HTTPS listener (port 443) with certificate
 			this.httpsListener = this.loadBalancer.addListener('HttpsListener', {
 				port: 443,
 				protocol: elbv2.ApplicationProtocol.HTTPS,
-				certificates: customDomain.certificateArn
-					? [elbv2.ListenerCertificate.fromArn(customDomain.certificateArn)]
-					: undefined,
+				certificates: [
+					elbv2.ListenerCertificate.fromArn(customDomain.certificateArn),
+				],
 				defaultAction: elbv2.ListenerAction.forward([this.targetGroup]),
 			})
+		} else if (customDomain?.certificateArn === undefined) {
+			// Log warning that HTTPS is not available without certificate
+			console.warn(
+				`Custom domain ${customDomain?.domainName ?? 'undefined'} provided but no certificate ARN. HTTPS listener will not be created.`,
+			)
+			console.warn(
+				'To enable HTTPS, provide certificateArn in customDomain configuration.',
+			)
 		}
 
 		// Add tags for resource identification

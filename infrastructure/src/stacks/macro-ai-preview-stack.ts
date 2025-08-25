@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib'
 import type { Construct } from 'constructs'
 
 import { AutoShutdownConstruct } from '../constructs/auto-shutdown-construct.js'
+import { CertificateConstruct } from '../constructs/certificate-construct.js'
 import { CostMonitoringConstruct } from '../constructs/cost-monitoring-construct.js'
 import { EcsFargateConstruct } from '../constructs/ecs-fargate-construct.js'
 import { EcsLoadBalancerConstruct } from '../constructs/ecs-load-balancer-construct.js'
@@ -77,6 +78,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	public readonly parameterStore: ParameterStoreConstruct
 	public readonly environmentConfig: EnvironmentConfigConstruct
 	public readonly ecsService: EcsFargateConstruct
+	public readonly certificate?: CertificateConstruct
 	public readonly loadBalancer: EcsLoadBalancerConstruct
 	public readonly monitoring?: MonitoringConstruct
 	public readonly costMonitoring?: CostMonitoringConstruct
@@ -176,12 +178,29 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			},
 		})
 
+		// Create certificate for custom domain if provided
+		if (customDomain) {
+			this.certificate = new CertificateConstruct(this, 'Certificate', {
+				customDomain,
+				environmentName,
+				prNumber: prNumber.toString(),
+			})
+			console.log(
+				`✅ Certificate created for domain: pr-${prNumber}.${customDomain.domainName}`,
+			)
+		}
+
 		// Create Application Load Balancer for public access to ECS service
 		this.loadBalancer = new EcsLoadBalancerConstruct(this, 'LoadBalancer', {
 			vpc: this.networking.vpc,
 			ecsService: this.ecsService.service,
 			environmentName,
-			customDomain,
+			customDomain: customDomain
+				? {
+						...customDomain,
+						certificateArn: this.certificate?.certificateArn,
+					}
+				: undefined,
 			containerPort: 3040, // Match the container port
 			healthCheck: {
 				path: '/api/health',
@@ -333,6 +352,15 @@ export class MacroAiPreviewStack extends cdk.Stack {
 				description: 'Custom domain URL for the preview environment',
 				exportName: `${this.stackName}-CustomDomainUrl`,
 			})
+
+			// Certificate output (if created)
+			if (this.certificate) {
+				new cdk.CfnOutput(this, 'CertificateArn', {
+					value: this.certificate.certificateArn,
+					description: 'ACM Certificate ARN for the preview domain',
+					exportName: `${this.stackName}-CertificateArn`,
+				})
+			}
 		}
 
 		// Networking outputs are already provided by the NetworkingConstruct
@@ -388,26 +416,30 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	 */
 	private resolveCostAlertEmails(props: MacroAiPreviewStackProps): string[] {
 		const fromProps = props.costAlertEmails ?? []
-		
+
 		// CDK context can have multiple costAlertEmails values when passed as separate --context flags
 		// We need to collect all of them
 		const fromContext: string[] = []
 		let contextIndex = 0
 		let contextValue: string | undefined
 		do {
-			contextValue = this.node.tryGetContext(`costAlertEmails${contextIndex === 0 ? '' : contextIndex}`) as string | undefined
+			contextValue = this.node.tryGetContext(
+				`costAlertEmails${contextIndex === 0 ? '' : contextIndex}`,
+			) as string | undefined
 			if (contextValue !== undefined) {
 				fromContext.push(contextValue)
 				contextIndex++
 			}
 		} while (contextValue !== undefined)
-		
+
 		// Also check for the legacy single array format
-		const legacyContext = this.node.tryGetContext('costAlertEmails') as string[] | undefined
+		const legacyContext = this.node.tryGetContext('costAlertEmails') as
+			| string[]
+			| undefined
 		if (legacyContext && Array.isArray(legacyContext)) {
 			fromContext.push(...legacyContext)
 		}
-		
+
 		const emails = [...fromContext, ...fromProps].filter(Boolean)
 
 		// Validate email format and filter out malformed entries

@@ -90,7 +90,7 @@ export class AutoShutdownConstruct extends Construct {
 
 			// For 6-field cron, validate day-of-month vs day-of-week conflict rule
 			if (parts.length === 6) {
-				const [minute, hour, dayOfMonth, month, dayOfWeek, year] = parts
+				const [, , dayOfMonth, , dayOfWeek] = parts
 				if (dayOfMonth === '*' && dayOfWeek === '*') {
 					throw new Error(
 						`Invalid CRON expression: ${cron}. AWS Application Auto Scaling does not allow * in both day-of-month and day-of-week fields. Use ? in one of them.`,
