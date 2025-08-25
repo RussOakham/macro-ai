@@ -5,7 +5,7 @@
 
 import { createServer as createHttpServer } from 'http'
 
-import { assertConfig } from './config/simple-config.js'
+import { assertConfig } from './config/simple-config.ts'
 import { pino } from './utils/logger.ts'
 import { createServer } from './utils/server.ts'
 

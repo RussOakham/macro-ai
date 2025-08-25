@@ -34,8 +34,11 @@ export ENV_FILE="$ENV_FILE"
 export PARAMETER_STORE_PREFIX="$PARAMETER_STORE_PREFIX"
 export AWS_REGION="$AWS_REGION"
 
+# Get the script directory for reliable path resolution
+SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+
 # Run the environment generation script
-./scripts/generate-env-from-parameter-store.sh
+"$SCRIPT_DIR/generate-env-from-parameter-store.sh"
 
 # Step 2: Build Docker image with environment file
 echo "[INFO] Step 2: Building Docker image..."

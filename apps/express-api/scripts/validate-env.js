@@ -51,7 +51,6 @@ const requiredEnvVars = [
 	// API
 	'API_KEY',
 	'NODE_ENV',
-	'APP_ENV',
 	'SERVER_PORT',
 
 	// AWS Cognito
@@ -194,7 +193,7 @@ function loadEnvFile() {
 	const allEnvVars = {}
 	let loadedCount = 0
 
-	// Load files in reverse order so earlier files in array override later ones
+	// Load files in reverse order so later files in array override earlier ones
 	for (let i = envFiles.length - 1; i >= 0; i--) {
 		const envFile = envFiles[i]
 		const envPath = resolve(__dirname, '..', envFile.path)
@@ -210,11 +209,9 @@ function loadEnvFile() {
 						const [key, ...valueParts] = trimmed.split('=')
 						if (key && valueParts.length > 0) {
 							const value = valueParts.join('=').replace(/^["']|["']$/g, '')
-							if (!allEnvVars[key]) {
-								// Don't override higher priority values
-								allEnvVars[key] = value
-								fileVars[key] = value
-							}
+							// Allow higher-priority values to replace lower-priority ones
+							allEnvVars[key] = value
+							fileVars[key] = value
 						}
 					}
 				})
@@ -288,6 +285,26 @@ function validateEnvironment() {
 		const value = allEnvVars[varName]
 		if (!value) {
 			warnings.push(`Optional variable ${varName} is not set`)
+		}
+	}
+
+	// Conditional validation: APP_ENV is required for production, staging, and preview environments
+	const nodeEnv = allEnvVars['NODE_ENV']
+	const appEnv = allEnvVars['APP_ENV']
+
+	if (nodeEnv && ['production', 'staging', 'preview'].includes(nodeEnv)) {
+		if (!appEnv) {
+			missingVars.push('APP_ENV')
+			logError(`APP_ENV is required when NODE_ENV is '${nodeEnv}'`)
+		} else if (validationRules['APP_ENV']) {
+			const validationError = validationRules['APP_ENV'](appEnv)
+			if (validationError) {
+				invalidVars.push({
+					name: 'APP_ENV',
+					error: validationError,
+					value: appEnv.substring(0, 10) + '...',
+				})
+			}
 		}
 	}
 

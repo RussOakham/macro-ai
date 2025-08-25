@@ -31,6 +31,8 @@ jobs:
     outputs:
       express_env: ${{ steps.create_express_env.outputs.env_content }}
       client_env: ${{ steps.create_client_env.outputs.env_content }}
+      NODE_ENV: ${{ env.NODE_ENV }}
+      APP_ENV: ${{ env.APP_ENV }}
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -42,26 +44,42 @@ jobs:
       - name: Create Express API .env content
         id: create_express_env
         run: |
-          echo "🔍 Fetching environment variables from AWS Parameter Store..."
+          echo "🔍 Computing environment configuration..."
 
-          # Determine parameter store path based on environment
+          # Compute APP_ENV based on event and branch
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            # PR environment - use development parameters
-            PARAM_PATH="/macro-ai/development"
-            echo "🌱 Using development environment parameters: ${PARAM_PATH}"
+            APP_ENV="development"
+            echo "🌱 Pull request detected: using development environment"
           else
             # Direct push - determine branch
             if [[ "${{ github.ref_name }}" == "develop" ]]; then
-              PARAM_PATH="/macro-ai/staging"
-              echo "🚀 Using staging environment parameters: ${PARAM_PATH}"
+              APP_ENV="staging"
+              echo "🚀 Develop branch detected: using staging environment"
             elif [[ "${{ github.ref_name }}" == "main" ]]; then
-              PARAM_PATH="/macro-ai/production"
-              echo "🏭 Using production environment parameters: ${PARAM_PATH}"
+              APP_ENV="production"
+              echo "🏭 Main branch detected: using production environment"
             else
-              PARAM_PATH="/macro-ai/development"
-              echo "🌱 Using development environment parameters: ${PARAM_PATH}"
+              APP_ENV="development"
+              echo "🌱 Other branch detected: using development environment"
             fi
           fi
+
+          # Derive NODE_ENV from APP_ENV
+          if [[ "$APP_ENV" == "production" || "$APP_ENV" == "staging" ]]; then
+            NODE_ENV="production"
+          else
+            NODE_ENV="development"
+          fi
+
+          echo "✅ Environment configuration: APP_ENV=${APP_ENV}, NODE_ENV=${NODE_ENV}"
+
+          # Set workflow environment variables for all jobs
+          echo "APP_ENV=${APP_ENV}" >> $GITHUB_ENV
+          echo "NODE_ENV=${NODE_ENV}" >> $GITHUB_ENV
+
+          # Determine parameter store path based on APP_ENV
+          PARAM_PATH="/macro-ai/${APP_ENV}"
+          echo "🔍 Using parameter store path: ${PARAM_PATH}"
 
           # Fetch all runtime configuration from Parameter Store using environment-specific path
           echo "🔍 Fetching parameters from: ${PARAM_PATH}"
@@ -135,14 +153,14 @@ jobs:
 
           # Create .env files using artifacts instead of step outputs to prevent secret exposure
           mkdir -p /tmp/envs
-          
+
           # Create Express API .env file
           cat << EOF > /tmp/envs/express-api.env
           # API Configuration
           API_KEY=${{ secrets.API_KEY }}
           SERVER_PORT=${{ secrets.SERVER_PORT || '3040' }}
-          NODE_ENV=development
-          APP_ENV=development
+          NODE_ENV=${NODE_ENV}
+          APP_ENV=${APP_ENV}
 
           # AWS Cognito Configuration
           AWS_COGNITO_REGION=${AWS_COGNITO_REGION}
@@ -183,8 +201,9 @@ jobs:
       - name: Upload env artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: env-files
+          name: ci-env-files
           path: /tmp/envs/
+          retention-days: 1
 
   build:
     needs: setup
@@ -216,7 +235,7 @@ jobs:
       - name: Download env artifacts
         uses: actions/download-artifact@v4
         with:
-          name: env-files
+          name: ci-env-files
           path: /tmp/envs
 
       - name: Create Express API .env file
@@ -236,8 +255,8 @@ jobs:
           echo "✅ Build completed successfully"
         env:
           # Core Configuration
-          NODE_ENV: development
-          APP_ENV: development
+          NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
+          APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
           SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
           API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
 
@@ -300,7 +319,7 @@ jobs:
       - name: Download env artifacts
         uses: actions/download-artifact@v4
         with:
-          name: env-files
+          name: ci-env-files
           path: /tmp/envs
 
       - name: Create Express API .env file
@@ -317,8 +336,8 @@ jobs:
         run: pnpm --filter @repo/macro-ai-api-client build
         env:
           # Core Configuration
-          NODE_ENV: development
-          APP_ENV: development
+          NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
+          APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
           SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
           API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
 
@@ -383,7 +402,7 @@ jobs:
       - name: Download env artifacts
         uses: actions/download-artifact@v4
         with:
-          name: env-files
+          name: ci-env-files
           path: /tmp/envs
 
       - name: Create Express API .env file
@@ -400,8 +419,8 @@ jobs:
         run: pnpm test:coverage
         env:
           # Core Configuration
-          NODE_ENV: development
-          APP_ENV: development
+          NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
+          APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
           SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
           API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
 
@@ -559,3 +578,29 @@ jobs:
 
           echo ""
           echo "✅ Actionlint validation completed (warning mode)"
+
+  gitleaks:
+    name: Secret Scanning (Gitleaks)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for gitleaks to scan commit history
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Use our custom configuration file
+          config-path: .gitleaks.toml
+          # Report findings to GitHub Security tab
+          report-format: sarif
+          # Fail on any secrets found (after allowlisting)
+          exit-code: 1
+          # Enable verbose output for debugging
+          verbose: true

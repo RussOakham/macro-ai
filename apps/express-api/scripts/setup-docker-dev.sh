@@ -23,13 +23,20 @@ fi
 
 echo -e "${GREEN}✅ Docker is running${NC}"
 
-# Check if Docker Compose is available
-if ! command -v docker-compose &> /dev/null; then
+# Detect Docker Compose command (v2 CLI or legacy binary)
+COMPOSE_CMD=""
+if docker compose version >/dev/null 2>&1; then
+    COMPOSE_CMD="docker compose"
+    echo -e "${GREEN}✅ Docker Compose v2 CLI detected${NC}"
+elif command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker-compose"
+    echo -e "${GREEN}✅ Legacy Docker Compose binary detected${NC}"
+else
     echo -e "${RED}❌ Docker Compose is not available. Please install Docker Compose and try again.${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}✅ Docker Compose is available${NC}"
+echo -e "${GREEN}✅ Docker Compose is available (using: $COMPOSE_CMD)${NC}"
 
 # Build the development image
 echo -e "${YELLOW}🔨 Building development Docker image...${NC}"
@@ -80,7 +87,7 @@ echo ""
 
 # Start the development services
 echo -e "${YELLOW}🚀 Starting development services...${NC}"
-docker-compose up -d
+$COMPOSE_CMD up -d
 
 echo ""
 
@@ -95,7 +102,7 @@ if curl -f http://localhost:3001/health >/dev/null 2>&1; then
 else
     echo -e "${RED}❌ Express API health check failed${NC}"
     echo "Checking container logs..."
-    docker-compose logs express-api
+    $COMPOSE_CMD logs express-api
     exit 1
 fi
 
@@ -106,12 +113,12 @@ echo -e "${BLUE}📖 Next Steps:${NC}"
 echo "1. Update .env file with your actual configuration values"
 echo "2. Access the API at: http://localhost:3001"
 echo "3. View API documentation at: http://localhost:3001/api-docs"
-echo "4. Check container logs: docker-compose logs -f express-api"
-echo "5. Stop services: docker-compose down"
+echo "4. Check container logs: $COMPOSE_CMD logs -f express-api"
+echo "5. Stop services: $COMPOSE_CMD down"
 echo ""
 echo -e "${BLUE}🔧 Useful Commands:${NC}"
-echo "Restart services: docker-compose restart"
-echo "Rebuild and restart: docker-compose up --build -d"
-echo "View logs: docker-compose logs -f"
-echo "Access container: docker-compose exec express-api sh"
-echo "Stop all: docker-compose down"
+echo "Restart services: $COMPOSE_CMD restart"
+echo "Rebuild and restart: $COMPOSE_CMD up --build -d"
+echo "View logs: $COMPOSE_CMD logs -f"
+echo "Access container: $COMPOSE_CMD exec express-api sh"
+echo "Stop all: $COMPOSE_CMD down"

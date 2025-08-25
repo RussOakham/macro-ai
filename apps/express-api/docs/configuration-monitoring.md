@@ -223,7 +223,7 @@ NODE_ENV=development npm start
 
 Check CloudWatch logs for detailed error information:
 
-- Log Group: `/aws/ec2/macro-ai-express-api`
+- Log Group: `/ecs/macro-ai-express-api`
 - Filter: `operation: "configurationLoadingFailure"`
 
 ## Deployment Considerations

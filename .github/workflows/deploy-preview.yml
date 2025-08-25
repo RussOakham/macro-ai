@@ -512,11 +512,12 @@ jobs:
           # Parse cost alert emails from comma-separated string to array format
           # Handle both single email and comma-separated emails with whitespace
           echo "🔍 Parsing cost alert emails from secret..."
-          echo "Raw secret value: ${{ secrets.COST_ALERT_EMAILS }}"
 
           COST_ALERT_EMAILS_ARRAY=$(echo "${{ secrets.COST_ALERT_EMAILS }}" | tr ',' '\n' | awk '{$1=$1};1' | grep -v '^$' | jq -R . | jq -s .)
 
-          echo "Parsed emails array: ${COST_ALERT_EMAILS_ARRAY}"
+          # Log only the count of emails for debugging without exposing sensitive data
+          EMAIL_COUNT=$(echo "${COST_ALERT_EMAILS_ARRAY}" | jq 'length')
+          echo "📧 Parsed ${EMAIL_COUNT} cost alert email(s)"
 
           cdk deploy "${STACK_NAME}" \
             --context environmentName="${ENV_NAME}" \
