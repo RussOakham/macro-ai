@@ -567,7 +567,7 @@ describe('AuthController', () => {
 				'macro-ai-accessToken',
 				'access-token',
 				expect.objectContaining({
-					httpOnly: false,
+					httpOnly: true,
 					secure: false, // test environment
 					domain: undefined, // localhost case
 					sameSite: 'strict',
@@ -744,7 +744,7 @@ describe('AuthController', () => {
 				'access-token',
 				expect.objectContaining({
 					domain: undefined, // Should be undefined for localhost
-					httpOnly: false,
+					httpOnly: true,
 					secure: false, // test environment
 					sameSite: 'strict',
 				}),
