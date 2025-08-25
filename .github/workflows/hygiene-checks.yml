@@ -133,7 +133,11 @@ jobs:
           echo "✅ All required parameters fetched successfully"
           echo "✅ Environment variables loaded from AWS Parameter Store"
 
-          ENV_CONTENT=$(cat << EOF
+          # Create .env files using artifacts instead of step outputs to prevent secret exposure
+          mkdir -p /tmp/envs
+          
+          # Create Express API .env file
+          cat << EOF > /tmp/envs/express-api.env
           # API Configuration
           API_KEY=${{ secrets.API_KEY }}
           SERVER_PORT=${{ secrets.SERVER_PORT || '3040' }}
@@ -169,22 +173,18 @@ jobs:
           API_RATE_LIMIT_MAX_REQUESTS=${API_RATE_LIMIT_MAX_REQUESTS}
           REDIS_URL=${REDIS_URL}
           EOF
-          )
-          echo "env_content<<EOF" >> $GITHUB_OUTPUT
-          echo "$ENV_CONTENT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Create Client UI .env content
-        id: create_client_env
-        run: |
-          ENV_CONTENT=$(cat << EOF
+          # Create Client UI .env file
+          cat << EOF > /tmp/envs/client-ui.env
           VITE_API_URL=${{ secrets.VITE_API_URL || 'http://localhost:3040/api' }}
           VITE_API_KEY=${{ secrets.VITE_API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
           EOF
-          )
-          echo "env_content<<EOF" >> $GITHUB_OUTPUT
-          echo "$ENV_CONTENT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Upload env artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: env-files
+          path: /tmp/envs/
 
   build:
     needs: setup
@@ -212,14 +212,22 @@ jobs:
           pnpm install --frozen-lockfile
           echo "✅ Dependencies installed successfully"
 
-      # Create .env files using the output from setup job
+      # Download .env files from artifacts to prevent secret exposure
+      - name: Download env artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: env-files
+          path: /tmp/envs
+
       - name: Create Express API .env file
         run: |
-          echo "${{ needs.setup.outputs.express_env }}" > apps/express-api/.env
+          mkdir -p apps/express-api
+          cp /tmp/envs/express-api.env apps/express-api/.env
 
       - name: Create Client UI .env file
         run: |
-          echo "${{ needs.setup.outputs.client_env }}" > apps/client-ui/.env
+          mkdir -p apps/client-ui
+          cp /tmp/envs/client-ui.env apps/client-ui/.env
 
       - name: Run build
         run: |
@@ -288,14 +296,22 @@ jobs:
           pnpm install --frozen-lockfile
           echo "✅ Dependencies installed successfully"
 
-      # Create .env files using the output from setup job
+      # Download .env files from artifacts to prevent secret exposure
+      - name: Download env artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: env-files
+          path: /tmp/envs
+
       - name: Create Express API .env file
         run: |
-          echo "${{ needs.setup.outputs.express_env }}" > apps/express-api/.env
+          mkdir -p apps/express-api
+          cp /tmp/envs/express-api.env apps/express-api/.env
 
       - name: Create Client UI .env file
         run: |
-          echo "${{ needs.setup.outputs.client_env }}" > apps/client-ui/.env
+          mkdir -p apps/client-ui
+          cp /tmp/envs/client-ui.env apps/client-ui/.env
 
       - name: Build types package
         run: pnpm --filter @repo/macro-ai-api-client build
@@ -363,14 +379,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Create .env files using the output from setup job
+      # Download .env files from artifacts to prevent secret exposure
+      - name: Download env artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: env-files
+          path: /tmp/envs
+
       - name: Create Express API .env file
         run: |
-          echo "${{ needs.setup.outputs.express_env }}" > apps/express-api/.env
+          mkdir -p apps/express-api
+          cp /tmp/envs/express-api.env apps/express-api/.env
 
       - name: Create Client UI .env file
         run: |
-          echo "${{ needs.setup.outputs.client_env }}" > apps/client-ui/.env
+          mkdir -p apps/client-ui
+          cp /tmp/envs/client-ui.env apps/client-ui/.env
 
       - name: Run test with coverage
         run: pnpm test:coverage
