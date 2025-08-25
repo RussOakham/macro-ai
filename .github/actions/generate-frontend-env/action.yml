@@ -15,6 +15,12 @@ inputs:
   api-endpoint:
     description: 'API endpoint URL (overrides discovery)'
     required: false
+  custom-domain-name:
+    description: 'Custom domain name for pattern-based URL construction'
+    required: false
+  hosted-zone-id:
+    description: 'Route 53 hosted zone ID for custom domain'
+    required: false
   api-key:
     description: 'API authentication key'
     required: true
@@ -105,10 +111,17 @@ runs:
           export PR_NUMBER="${{ inputs.pr-number }}"
         fi
 
-        # Set API endpoint if provided (overrides discovery)
+        # Set API endpoint - priority order: explicit input > custom domain pattern > discovery
         if [[ -n "${{ inputs.api-endpoint }}" ]]; then
           export VITE_API_URL="${{ inputs.api-endpoint }}"
           echo "🔗 Using provided API endpoint: ${{ inputs.api-endpoint }}"
+        elif [[ -n "${{ inputs.custom-domain-name }}" && -n "${{ inputs.pr-number }}" ]]; then
+          # Construct API URL using custom domain pattern
+          CUSTOM_API_URL="https://pr-${{ inputs.pr-number }}-api.${{ inputs.custom-domain-name }}/api"
+          export VITE_API_URL="$CUSTOM_API_URL"
+          echo "🌐 Using custom domain pattern API endpoint: $CUSTOM_API_URL"
+          echo "📝 Custom domain: ${{ inputs.custom-domain-name }}"
+          echo "📝 PR number: ${{ inputs.pr-number }}"
         fi
 
         # Set backend metadata if provided

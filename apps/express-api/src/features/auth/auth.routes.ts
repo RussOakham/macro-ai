@@ -568,12 +568,15 @@ registry.registerPath({
 })
 
 const authRouter = (router: Router) => {
+	// Use the existing controller instance
+	const controller = authController
+
 	// Register
 	router.post(
 		'/auth/register',
 		authRateLimiter,
 		validate(registerUserRequestSchema),
-		authController.register,
+		controller.register,
 	)
 
 	// Confirm registration
@@ -581,7 +584,7 @@ const authRouter = (router: Router) => {
 		'/auth/confirm-registration',
 		authRateLimiter,
 		validate(confirmRegistrationRequestSchema),
-		authController.confirmRegistration,
+		controller.confirmRegistration,
 	)
 
 	// Resend confirmation code
@@ -589,7 +592,7 @@ const authRouter = (router: Router) => {
 		'/auth/resend-confirmation-code',
 		authRateLimiter,
 		validate(resendConfirmationCodeRequestSchema),
-		authController.resendConfirmationCode,
+		controller.resendConfirmationCode,
 	)
 
 	// Login
@@ -597,7 +600,7 @@ const authRouter = (router: Router) => {
 		'/auth/login',
 		authRateLimiter,
 		validate(loginRequestSchema),
-		authController.login,
+		controller.login,
 	)
 
 	// Forgot password
@@ -605,7 +608,7 @@ const authRouter = (router: Router) => {
 		'/auth/forgot-password',
 		authRateLimiter,
 		validate(forgotPasswordRequestSchema),
-		authController.forgotPassword,
+		controller.forgotPassword,
 	)
 
 	// Confirm forgot password
@@ -613,20 +616,20 @@ const authRouter = (router: Router) => {
 		'/auth/confirm-forgot-password',
 		authRateLimiter,
 		validate(confirmForgotPasswordRequestSchema),
-		authController.confirmForgotPassword,
+		controller.confirmForgotPassword,
 	)
 
 	// The following routes don't need the strict auth rate limiter
 	// as they're already protected by authentication
 
 	// Logout
-	router.post('/auth/logout', verifyAuth, authController.logout)
+	router.post('/auth/logout', verifyAuth, controller.logout)
 
 	// Refresh token
-	router.post('/auth/refresh', authController.refreshToken)
+	router.post('/auth/refresh', controller.refreshToken)
 
 	// Get authenticated user
-	router.get('/auth/user', verifyAuth, authController.getAuthUser)
+	router.get('/auth/user', verifyAuth, controller.getAuthUser)
 }
 
 export { authRouter }

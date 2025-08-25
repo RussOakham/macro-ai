@@ -213,7 +213,6 @@ cleanup_orphaned_resources() {
         "/aws/deployment/macro-ai-${env_name}"
         "/aws/ec2/macro-ai-PR${pr_number}"
         "/aws/ec2/macro-ai-pr-${pr_number}"
-        "/aws/lambda/macro-ai-${env_name}"
     )
 
     for pattern in "${log_group_patterns[@]}"; do

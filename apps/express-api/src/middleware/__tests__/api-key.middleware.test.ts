@@ -10,7 +10,7 @@ import { mockLogger } from '../../utils/test-helpers/logger.mock.ts'
 vi.mock('../../utils/logger.ts', () => mockLogger.createModule())
 
 // Mock the config using the reusable helper
-vi.mock('../../../config/default.ts', () => mockConfig.createModule())
+vi.mock('../../../utils/load-config.ts', () => mockConfig.createModule())
 
 // Import after mocking
 import { apiKeyAuth } from '../api-key.middleware.ts'

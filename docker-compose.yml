@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  express-api:
+    container_name: macro-ai-express-api
+    build:
+      context: .
+      dockerfile: ./apps/express-api/Dockerfile
+    restart: always
+    ports:
+      - 3040:3040
+    networks:
+      - app_network
+
+# Define a network, which allows containers to communicate
+# with each other, by using their container name as a hostname
+networks:
+  app_network:

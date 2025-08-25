@@ -184,9 +184,9 @@ customHeaders:
       - key: 'X-Build-Timestamp'
         value: '$VITE_BUILD_TIMESTAMP'
 
-      # Content Security Policy (staging-appropriate)
+      # Content Security Policy (staging-appropriate) - use environment variable for custom domain
       - key: 'Content-Security-Policy'
-        value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api-staging.macro-ai.com https://*.execute-api.*.amazonaws.com; frame-src 'none'"
+        value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ${VITE_API_URL} https://*.execute-api.*.amazonaws.com; frame-src 'none'"
 
       # Cache control for static assets
       - key: 'Cache-Control'
@@ -216,7 +216,7 @@ redirects:
     target: '/build-info.json'
     status: '200'
   - source: '/api/<*>'
-    target: 'https://api-staging.macro-ai.com/api/<*>'
+    target: '${VITE_API_URL}/<*>'
     status: '200'
   - source: '/<*>'
     target: '/index.html'

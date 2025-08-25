@@ -53,7 +53,7 @@ const [config, error] = await enhancedConfigService.getConfig(
 	},
 )
 
-// In Lambda: tries Parameter Store first, falls back to environment
+// In EC2: tries Parameter Store first, falls back to environment
 // In local dev: uses environment variables directly
 ```
 
@@ -72,9 +72,9 @@ The service supports two parameter tiers:
 - `cognito-user-pool-id` → `/macro-ai/prod/standard/cognito-user-pool-id`
 - `cognito-user-pool-client-id` → `/macro-ai/prod/standard/cognito-user-pool-client-id`
 
-## Lambda Integration
+## EC2 Integration
 
-The service is integrated into the Lambda cold start process for optimal performance:
+The service is integrated into the EC2 startup process for optimal performance:
 
 ```typescript
 // In application startup (e.g., index.ts)
@@ -146,9 +146,9 @@ pnpm test src/services/__tests__/enhanced-config.service.test.ts
 
 ## Environment Detection
 
-The service automatically detects Lambda environment and adjusts behavior:
+The service automatically detects EC2 environment and adjusts behavior:
 
-- **Lambda environment**: Uses Parameter Store with caching
+- **EC2 environment**: Uses Parameter Store with caching
 - **Local development**: Falls back to environment variables
 - **Testing**: Uses mocked services
 

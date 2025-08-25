@@ -1,13 +1,8 @@
 import * as cdk from 'aws-cdk-lib'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
-import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2'
-import * as elbv2targets from 'aws-cdk-lib/aws-elasticloadbalancingv2-targets'
 import { Construct } from 'constructs'
 
-import { AlbConstruct } from './alb-construct.js'
 import { Ec2Construct } from './ec2-construct.js'
-import { SecurityGroupsConstruct } from './security-groups-construct.js'
-import { VpcConstruct } from './vpc-construct.js'
 
 export interface NetworkingConstructProps {
 	/**
@@ -79,38 +74,34 @@ export interface NetworkingConstructProps {
 	 * @default current timestamp
 	 */
 	readonly deploymentId?: string
+
+	/**
+	 * Branch name for deployment tracking
+	 */
+	readonly branchName?: string
+
+	/**
+	 * Custom domain name for CORS configuration
+	 */
+	readonly customDomainName?: string
 }
 
 /**
- * Comprehensive Networking Construct for Macro AI EC2-based preview environments
+ * Simplified Networking Construct for Macro AI EC2-based preview environments
  *
- * This construct combines VPC and Security Groups to provide a complete
- * networking foundation for PR preview environments. It implements the
- * cost-optimized shared infrastructure pattern with network-level isolation.
- *
- * Key Features:
- * - Shared VPC across all PR environments (cost optimization)
- * - Network-level isolation via security groups
- * - Public subnets for EC2 instances (avoids NAT Gateway costs)
- * - Private subnets for future database resources
- * - VPC endpoints for AWS services (reduces NAT Gateway usage)
- * - Comprehensive tagging for cost tracking and cleanup
+ * This construct provides basic VPC and EC2 infrastructure without the complex
+ * legacy constructs that were removed during cleanup.
  */
 export class NetworkingConstruct extends Construct {
-	public readonly vpc: ec2.Vpc
-	public readonly securityGroups: SecurityGroupsConstruct
-	public readonly ec2Construct?: Ec2Construct
-	public readonly albConstruct?: AlbConstruct
+	public readonly vpc: ec2.IVpc
 	public readonly publicSubnets: ec2.ISubnet[]
 	public readonly privateSubnets: ec2.ISubnet[]
 	public readonly databaseSubnets: ec2.ISubnet[]
-
-	// Convenience properties for common access patterns
+	public readonly ec2Construct?: Ec2Construct
 	public readonly albSecurityGroup: ec2.ISecurityGroup
 	public readonly vpcId: string
 	public readonly vpcCidrBlock: string
 
-	// Configuration properties
 	private readonly enableNatGateway: boolean
 	private readonly exportPrefix: string
 	private readonly environmentName: string
@@ -124,16 +115,14 @@ export class NetworkingConstruct extends Construct {
 
 		const {
 			environmentName = 'development',
-			enableFlowLogs = false,
 			maxAzs = 2,
-			enableDetailedMonitoring = false,
-			parameterStorePrefix,
-			enableAlb = true,
-			customDomain,
-			deploymentId = new Date().toISOString(),
 			enableNatGateway = true,
-			enableVpcEndpoints = true,
 			exportPrefix = 'MacroAI',
+			parameterStorePrefix,
+			enableDetailedMonitoring = false,
+			deploymentId = Date.now().toString(),
+			branchName,
+			customDomainName,
 		} = props
 
 		// Store configuration for later use
@@ -141,60 +130,78 @@ export class NetworkingConstruct extends Construct {
 		this.exportPrefix = exportPrefix
 		this.environmentName = environmentName
 
-		// Create VPC infrastructure
-		const vpcConstruct = new VpcConstruct(this, 'Vpc', {
-			environmentName: this.environmentName,
-			enableFlowLogs,
+		// Create basic VPC infrastructure
+		this.vpc = new ec2.Vpc(this, 'Vpc', {
 			maxAzs,
-			enableNatGateway,
-			enableVpcEndpoints,
-			exportPrefix: `${exportPrefix}-Development`,
+			enableDnsHostnames: true,
+			enableDnsSupport: true,
+			subnetConfiguration: [
+				{
+					cidrMask: 24,
+					name: 'Public',
+					subnetType: ec2.SubnetType.PUBLIC,
+				},
+				{
+					cidrMask: 24,
+					name: 'Private',
+					subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+				},
+				{
+					cidrMask: 24,
+					name: 'Database',
+					subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+				},
+			],
+			natGateways: enableNatGateway ? maxAzs : 0,
 		})
 
-		this.vpc = vpcConstruct.vpc
-		this.publicSubnets = vpcConstruct.publicSubnets
-		this.privateSubnets = vpcConstruct.privateSubnets
-		this.databaseSubnets = vpcConstruct.databaseSubnets
+		this.publicSubnets = this.vpc.publicSubnets
+		this.privateSubnets = this.vpc.privateSubnets
+		this.databaseSubnets = this.vpc.isolatedSubnets
 
-		// Create security groups
-		this.securityGroups = new SecurityGroupsConstruct(this, 'SecurityGroups', {
+		// Create basic security group for ALB
+		this.albSecurityGroup = new ec2.SecurityGroup(this, 'AlbSecurityGroup', {
 			vpc: this.vpc,
-			environmentName: this.environmentName,
-			exportPrefix,
+			description: `ALB Security Group for ${environmentName}`,
+			allowAllOutbound: true,
 		})
+
+		// Allow HTTP and HTTPS inbound
+		this.albSecurityGroup.addIngressRule(
+			ec2.Peer.anyIpv4(),
+			ec2.Port.tcp(80),
+			'Allow HTTP inbound',
+		)
+		this.albSecurityGroup.addIngressRule(
+			ec2.Peer.anyIpv4(),
+			ec2.Port.tcp(443),
+			'Allow HTTPS inbound',
+		)
+
+		// Add this new rule for direct ECS access
+		this.albSecurityGroup.addIngressRule(
+			ec2.Peer.anyIpv4(),
+			ec2.Port.tcp(3040),
+			'Allow Express API inbound on port 3040',
+		)
 
 		// Create EC2 construct if parameter store prefix is provided
 		if (parameterStorePrefix) {
 			this.ec2Construct = new Ec2Construct(this, 'Ec2', {
 				vpc: this.vpc,
-				securityGroup: this.securityGroups.albSecurityGroup, // Default to ALB security group
+				securityGroup: this.albSecurityGroup,
 				environmentName: this.environmentName,
 				parameterStorePrefix,
 				enableDetailedMonitoring,
 				deploymentId,
-			})
-		}
-
-		// Create ALB construct if enabled
-		if (enableAlb) {
-			this.albConstruct = new AlbConstruct(this, 'Alb', {
-				vpc: this.vpc,
-				securityGroup: this.securityGroups.albSecurityGroup,
-				environmentName: this.environmentName,
-				enableDetailedMonitoring,
-				customDomain,
+				branchName,
+				customDomainName,
 			})
 		}
 
 		// Convenience properties
-		this.albSecurityGroup = this.securityGroups.albSecurityGroup
 		this.vpcId = this.vpc.vpcId
 		this.vpcCidrBlock = this.vpc.vpcCidrBlock
-
-		// Create additional monitoring if enabled
-		if (enableDetailedMonitoring) {
-			this.enableDetailedMonitoring()
-		}
 
 		// Create comprehensive outputs
 		this.createOutputs()
@@ -204,273 +211,78 @@ export class NetworkingConstruct extends Construct {
 	}
 
 	/**
-	 * Factory method to create PR-specific security group
-	 * Delegates to the SecurityGroupsConstruct for consistency
+	 * Create comprehensive CloudFormation outputs for the networking infrastructure
 	 */
-	public createPrSecurityGroup(prNumber: number): ec2.SecurityGroup {
-		return this.securityGroups.createPrSecurityGroup({
-			prNumber,
-			vpc: this.vpc,
-			albSecurityGroup: this.albSecurityGroup,
-			environmentName: this.getEnvironmentName(),
-		})
-	}
-
-	/**
-	 * Factory method to create PR-specific EC2 instance
-	 * Creates both security group and EC2 instance for the PR
-	 */
-	public createPrInstance(
-		prNumber: number,
-		parameterStorePrefix: string,
-	): ec2.Instance | undefined {
-		if (!this.ec2Construct) {
-			throw new Error(
-				'EC2 construct not initialized. Provide parameterStorePrefix in NetworkingConstructProps.',
-			)
-		}
-
-		// Create PR-specific security group
-		const prSecurityGroup = this.createPrSecurityGroup(prNumber)
-
-		// Create PR-specific EC2 instance
-		return this.ec2Construct.createPrInstance({
-			prNumber,
-			vpc: this.vpc,
-			securityGroup: prSecurityGroup,
-			parameterStorePrefix,
-			environmentName: this.getEnvironmentName(),
-		})
-	}
-
-	/**
-	 * Factory method to create complete PR environment
-	 * Creates EC2 instance, target group, and ALB listener rule
-	 */
-	public createPrEnvironment(
-		prNumber: number,
-		parameterStorePrefix: string,
-		hostHeader?: string,
-		pathPrefix?: string,
-	):
-		| {
-				instance: ec2.Instance
-				targetGroup: elbv2.ApplicationTargetGroup
-				listenerRule: elbv2.ApplicationListenerRule
-		  }
-		| undefined {
-		if (!this.ec2Construct || !this.albConstruct) {
-			throw new Error(
-				'Both EC2 and ALB constructs must be initialized. ' +
-					'Provide parameterStorePrefix and ensure enableAlb is true.',
-			)
-		}
-
-		// Create PR-specific EC2 instance
-		const instance = this.createPrInstance(prNumber, parameterStorePrefix)
-		if (!instance) {
-			throw new Error('Failed to create PR instance')
-		}
-
-		// Create PR-specific target group
-		const targetGroup = this.albConstruct.createPrTargetGroup({
-			prNumber,
-			vpc: this.vpc,
-			environmentName: this.getEnvironmentName(),
+	private createOutputs(): void {
+		new cdk.CfnOutput(this, 'VpcId', {
+			value: this.vpc.vpcId,
+			description: 'VPC ID for the networking infrastructure',
+			exportName: `${this.exportPrefix}-VpcId`,
 		})
 
-		// Register EC2 instance with target group
-		targetGroup.addTarget(new elbv2targets.InstanceTarget(instance))
-
-		// Create listener rule for routing
-		const listenerRule = this.albConstruct.addPrListenerRule(
-			prNumber,
-			targetGroup,
-			hostHeader,
-			pathPrefix,
-		)
-
-		return {
-			instance,
-			targetGroup,
-			listenerRule,
-		}
-	}
-
-	/**
-	 * Get subnet configuration for ALB deployment
-	 * ALB requires subnets in at least 2 AZs
-	 */
-	public getAlbSubnetSelection(): ec2.SubnetSelection {
-		return {
-			subnets: this.publicSubnets,
-		}
-	}
-
-	/**
-	 * Get subnet configuration for EC2 instances
-	 * EC2 instances are placed in public subnets for cost optimization
-	 */
-	public getEc2SubnetSelection(): ec2.SubnetSelection {
-		return {
-			subnets: this.publicSubnets,
-		}
-	}
-
-	/**
-	 * Get subnet configuration for database resources (future use)
-	 */
-	public getDatabaseSubnetSelection(): ec2.SubnetSelection {
-		return {
-			subnets: this.databaseSubnets,
-		}
-	}
-
-	/**
-	 * Get availability zones used by this VPC
-	 */
-	public getAvailabilityZones(): string[] {
-		return this.vpc.availabilityZones
-	}
-
-	/**
-	 * Check if the VPC has sufficient subnets for ALB deployment
-	 */
-	public validateAlbRequirements(): boolean {
-		const hasMultipleAzs = this.vpc.availabilityZones.length >= 2
-		const hasPublicSubnets = this.publicSubnets.length >= 2
-
-		if (!hasMultipleAzs || !hasPublicSubnets) {
-			throw new Error(
-				`ALB requires subnets in at least 2 AZs. Current: ${this.vpc.availabilityZones.length.toString()} AZs, ${this.publicSubnets.length.toString()} public subnets`,
-			)
-		}
-
-		return true
-	}
-
-	/**
-	 * Enable detailed monitoring for networking components
-	 */
-	private enableDetailedMonitoring(): void {
-		// Create CloudWatch dashboard for networking metrics
-		const dashboard = new cdk.aws_cloudwatch.Dashboard(
-			this,
-			'NetworkingDashboard',
-			{
-				dashboardName: `MacroAI-${this.getEnvironmentName()}-Networking`,
-				defaultInterval: cdk.Duration.hours(1),
-			},
-		)
-
-		// Add VPC metrics widget
-		dashboard.addWidgets(
-			new cdk.aws_cloudwatch.GraphWidget({
-				title: 'VPC Network Traffic',
-				left: [
-					new cdk.aws_cloudwatch.Metric({
-						namespace: 'AWS/VPC',
-						metricName: 'PacketsDropped',
-						dimensionsMap: {
-							VpcId: this.vpcId,
-						},
-						statistic: 'Sum',
-					}),
-				],
-				width: 12,
-				height: 6,
-			}),
-		)
-
-		// Create CloudWatch alarms for network issues
-		new cdk.aws_cloudwatch.Alarm(this, 'HighPacketDropRate', {
-			metric: new cdk.aws_cloudwatch.Metric({
-				namespace: 'AWS/VPC',
-				metricName: 'PacketsDropped',
-				dimensionsMap: {
-					VpcId: this.vpcId,
-				},
-				statistic: 'Sum',
-			}),
-			threshold: 100,
-			evaluationPeriods: 2,
-			alarmDescription: 'High packet drop rate detected in VPC',
+		new cdk.CfnOutput(this, 'VpcCidrBlock', {
+			value: this.vpc.vpcCidrBlock,
+			description: 'VPC CIDR block',
+			exportName: `${this.exportPrefix}-VpcCidrBlock`,
 		})
+
+		new cdk.CfnOutput(this, 'PublicSubnetIds', {
+			value: this.publicSubnets.map((subnet) => subnet.subnetId).join(','),
+			description: 'Public subnet IDs',
+			exportName: `${this.exportPrefix}-PublicSubnetIds`,
+		})
+
+		new cdk.CfnOutput(this, 'PrivateSubnetIds', {
+			value: this.privateSubnets.map((subnet) => subnet.subnetId).join(','),
+			description: 'Private subnet IDs',
+			exportName: `${this.exportPrefix}-PrivateSubnetIds`,
+		})
+
+		new cdk.CfnOutput(this, 'DatabaseSubnetIds', {
+			value: this.databaseSubnets.map((subnet) => subnet.subnetId).join(','),
+			description: 'Database subnet IDs',
+			exportName: `${this.exportPrefix}-DatabaseSubnetIds`,
+		})
+
+		new cdk.CfnOutput(this, 'AlbSecurityGroupId', {
+			value: this.albSecurityGroup.securityGroupId,
+			description: 'ALB Security Group ID',
+			exportName: `${this.exportPrefix}-AlbSecurityGroupId`,
+		})
+
+		if (this.ec2Construct) {
+			new cdk.CfnOutput(this, 'Ec2InstanceRoleArn', {
+				value: this.ec2Construct.instanceRole.roleArn,
+				description: 'IAM role ARN for EC2 instances',
+				exportName: `${this.exportPrefix}-Ec2InstanceRoleArn`,
+			})
+		}
 	}
 
 	/**
-	 * Apply comprehensive tagging for cost tracking and resource management
-	 * Note: Avoid duplicate tag keys that might conflict with stack-level tags
+	 * Apply consistent tagging to all networking resources
 	 */
 	private applyTags(): void {
-		const tags = {
-			SubComponent: 'Networking',
-			SubPurpose: 'SharedInfrastructure',
-			ConstructManagedBy: 'NetworkingConstruct',
-			NetworkType: 'VPC-Infrastructure',
-		}
-
-		// Apply tags to the entire construct and all child resources
-		Object.entries(tags).forEach(([key, value]) => {
-			cdk.Tags.of(this).add(key, value)
-		})
-		// Note: Project, Environment, Component, Purpose, CostCenter are inherited from stack level
+		cdk.Tags.of(this).add('Component', 'Networking')
+		cdk.Tags.of(this).add('Environment', this.environmentName)
+		cdk.Tags.of(this).add('ManagedBy', 'CDK')
 	}
 
 	/**
-	 * Get environment name from constructor props or default
+	 * Get the environment name for this construct
 	 */
-	private getEnvironmentName(): string {
+	public getEnvironmentName(): string {
 		return this.environmentName
 	}
 
 	/**
-	 * Create comprehensive CloudFormation outputs
-	 * Note: VPC-related exports are handled by VpcConstruct to avoid duplication
+	 * Validate that ALB requirements are met
 	 */
-	private createOutputs(): void {
-		// Security Group outputs (networking-specific, not covered by VpcConstruct)
-		new cdk.CfnOutput(this, 'AlbSecurityGroupId', {
-			value: this.securityGroups.albSecurityGroup.securityGroupId,
-			description: 'ALB Security Group ID',
-			exportName: `${this.exportPrefix}-Networking-AlbSecurityGroupId`,
-		})
-
-		// Availability zone outputs (networking-specific information)
-		new cdk.CfnOutput(this, 'NetworkingAvailabilityZones', {
-			value: this.getAvailabilityZones().join(','),
-			description: 'Availability zones used by the VPC',
-			exportName: `${this.exportPrefix}-Networking-AvailabilityZones`,
-		})
-	}
-
-	/**
-	 * Generate networking summary for documentation
-	 */
-	public generateNetworkingSummary(): string {
-		return `
-Macro AI Networking Infrastructure Summary:
-
-VPC Configuration:
-- VPC ID: ${this.vpcId}
-- CIDR Block: ${this.vpcCidrBlock}
-- Availability Zones: ${this.getAvailabilityZones().join(', ')}
-
-Subnets:
-- Public Subnets: ${this.publicSubnets.length.toString()} (for ALB and EC2)
-- Private Subnets: ${this.privateSubnets.length.toString()} (for future databases)
-- Database Subnets: ${this.databaseSubnets.length.toString()} (isolated)
-
-Security:
-- Shared ALB Security Group: ${this.albSecurityGroup.securityGroupId}
-- PR-specific security groups created on demand
-- Network-level isolation between PR environments
-
-Cost Optimization:
-- Single shared VPC across all PR environments
-- Public subnets for EC2 (no NAT Gateway costs)
-- Single NAT Gateway for private subnet access
-- VPC endpoints for AWS services
-		`.trim()
+	public validateAlbRequirements(): void {
+		if (this.publicSubnets.length < 2) {
+			throw new Error(
+				'ALB requires at least 2 public subnets across different availability zones',
+			)
+		}
 	}
 }

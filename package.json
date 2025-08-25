@@ -3,6 +3,12 @@
 	"private": true,
 	"name": "macro-ai",
 	"type": "module",
+	"workspaces": [
+		"apps/*",
+		"packages/*",
+		"infrastructure",
+		"tests/*"
+	],
 	"scripts": {
 		"commit": "cz",
 		"build": "turbo run build",
@@ -28,6 +34,7 @@
 		"test:coverage": "turbo run test:coverage",
 		"test:integration": "cd tests/integration && pnpm test",
 		"test:integration:full": "cd tests/integration && ./run-integration-tests.sh",
+		"test:integration:parameter-store": "./tests/integration/run-parameter-store-integration.sh",
 		"test:integration:staging": "cd tests/integration && TEST_ENVIRONMENT=staging ./run-integration-tests.sh",
 		"test:integration:production": "cd tests/integration && TEST_ENVIRONMENT=hobby ./run-integration-tests.sh",
 		"type-check": "turbo run type-check",
@@ -35,6 +42,7 @@
 	},
 	"devDependencies": {
 		"@types/node": "catalog:",
+		"@types/yaml": "^1.9.7",
 		"@vitest/ui": "^3.2.4",
 		"commitizen": "^4.3.1",
 		"cz-conventional-changelog": "^3.3.0",
@@ -49,9 +57,10 @@
 		"tsx": "^4.20.3",
 		"turbo": "^2.5.5",
 		"unimported": "^1.31.1",
-		"vitest": "^3.2.4"
+		"vitest": "^3.2.4",
+		"yaml": "^2.8.1"
 	},
-	"packageManager": "pnpm@10.14.0",
+	"packageManager": "pnpm@10.15.0",
 	"engines": {
 		"node": ">=20.0.0",
 		"pnpm": ">=9.0.0"

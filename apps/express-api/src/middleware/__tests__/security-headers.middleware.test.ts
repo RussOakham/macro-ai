@@ -17,9 +17,32 @@ vi.mock('../../utils/logger.ts', () => ({
 	configureLogger: vi.fn(),
 }))
 
-vi.mock('../../config/default.ts', () => ({
+// Mock the simplified load-config.ts
+vi.mock('../../utils/load-config.ts', () => ({
 	config: {
-		nodeEnv: 'test',
+		NODE_ENV: 'test',
+		APP_ENV: 'test',
+		API_KEY: 'test-api-key',
+		SERVER_PORT: 3000,
+		AWS_COGNITO_REGION: 'us-east-1',
+		AWS_COGNITO_USER_POOL_ID: 'test-pool-id',
+		AWS_COGNITO_USER_POOL_CLIENT_ID: 'test-client-id',
+		AWS_COGNITO_USER_POOL_SECRET_KEY: 'test-secret-key',
+		AWS_COGNITO_ACCESS_KEY: 'test-access-key',
+		AWS_COGNITO_SECRET_KEY: 'test-secret-key',
+		AWS_COGNITO_REFRESH_TOKEN_EXPIRY: 30,
+		COOKIE_DOMAIN: 'localhost',
+		COOKIE_ENCRYPTION_KEY: 'test-encryption-key-at-least-32-chars-long',
+		NON_RELATIONAL_DATABASE_URL: 'test-url',
+		RELATIONAL_DATABASE_URL: 'test-url',
+		OPENAI_API_KEY: 'sk-test-key',
+		RATE_LIMIT_WINDOW_MS: 60000,
+		RATE_LIMIT_MAX_REQUESTS: 100,
+		AUTH_RATE_LIMIT_WINDOW_MS: 60000,
+		AUTH_RATE_LIMIT_MAX_REQUESTS: 5,
+		API_RATE_LIMIT_WINDOW_MS: 60000,
+		API_RATE_LIMIT_MAX_REQUESTS: 1000,
+		REDIS_URL: 'redis://localhost:6379',
 	},
 }))
 
@@ -53,10 +76,12 @@ describe('Security Headers Middleware', () => {
 
 	describe('Helmet Middleware Configuration', () => {
 		it('should configure helmet with correct security settings', async () => {
-			// Act - Import the middleware module (fresh import due to resetModules)
+			// Act - Import the middleware module
 			await import('../security-headers.middleware.ts')
 
 			// Assert - Verify helmet was called with correct configuration
+			// Note: crossOriginEmbedderPolicy is set to config.NODE_ENV !== 'development'
+			// In test environment, NODE_ENV is 'test', so crossOriginEmbedderPolicy = true
 			expect(vi.mocked(helmet)).toHaveBeenCalledWith({
 				contentSecurityPolicy: {
 					directives: {
@@ -71,7 +96,7 @@ describe('Security Headers Middleware', () => {
 						frameSrc: ["'none'"],
 					},
 				},
-				crossOriginEmbedderPolicy: true, // test environment defaults to true
+				crossOriginEmbedderPolicy: true, // Updated to match test environment
 				crossOriginOpenerPolicy: { policy: 'same-origin' },
 				crossOriginResourcePolicy: { policy: 'same-site' },
 				dnsPrefetchControl: { allow: false },
@@ -134,6 +159,23 @@ describe('Security Headers Middleware', () => {
 			// Assert - Verify middleware exports exist
 			expect(middleware.helmetMiddleware).toBeDefined()
 			expect(middleware.securityHeadersMiddleware).toBeDefined()
+		})
+
+		it('should set crossOriginEmbedderPolicy based on environment', async () => {
+			// This test verifies that crossOriginEmbedderPolicy is set correctly based on NODE_ENV
+			// The middleware uses config.nodeEnv === 'development' to determine isDevelopment
+			// In test environment, NODE_ENV is 'test', so isDevelopment = false
+			// Therefore crossOriginEmbedderPolicy = !false = true
+
+			// Import the middleware module
+			await import('../security-headers.middleware.ts')
+
+			// Verify helmet was called with crossOriginEmbedderPolicy: true (since NODE_ENV === 'test' in test environment)
+			expect(vi.mocked(helmet)).toHaveBeenCalledWith(
+				expect.objectContaining({
+					crossOriginEmbedderPolicy: true, // Updated to match test environment
+				}),
+			)
 		})
 	})
 

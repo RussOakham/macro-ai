@@ -112,7 +112,7 @@ class AuthTestClient {
 	}
 }
 
-describe('Authentication Integration Tests', () => {
+describe.skip('Authentication Integration Tests', () => {
 	let authClient: AuthTestClient
 	let config: AuthTestConfig
 

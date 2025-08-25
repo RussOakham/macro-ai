@@ -16,7 +16,7 @@ import { mockConfig } from '../config.mock.ts'
  */
 
 // Mock the config using the reusable helper
-vi.mock('../../../config/default.ts', () => mockConfig.createModule())
+vi.mock('../../../utils/load-config.ts', () => mockConfig.createModule())
 
 describe('CognitoService Mock Example - AWS SDK Client Mock', () => {
 	let cognitoMock: AwsClientStub<CognitoIdentityProviderClient>

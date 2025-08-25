@@ -1,21 +1,10 @@
 import { HttpLogger, Options, pinoHttp } from 'pino-http'
 
-/**
- * Check if running in Lambda environment
- * Note: This function is kept for backward compatibility but will always return false
- * since Lambda deployment has been removed in favor of EC2 deployment.
- */
-const isLambdaEnvironment = (): boolean => {
-	// Always return false since Lambda deployment has been removed
-	return false
-}
-
 const createLogger = (nodeEnv: string): HttpLogger => {
-	const isLambda = isLambdaEnvironment()
 	const isDevelopment = nodeEnv === 'development'
 
-	// Only use pino-pretty in development and NOT in Lambda
-	const shouldUsePrettyTransport = isDevelopment && !isLambda
+	// Only use pino-pretty in development
+	const shouldUsePrettyTransport = isDevelopment
 
 	let pinoOptions: Options
 
@@ -34,7 +23,7 @@ const createLogger = (nodeEnv: string): HttpLogger => {
 			},
 		}
 	} else {
-		// Lambda/production configuration without pino-pretty
+		// Production configuration without pino-pretty
 		pinoOptions = {
 			...baseOptions,
 			formatters: {

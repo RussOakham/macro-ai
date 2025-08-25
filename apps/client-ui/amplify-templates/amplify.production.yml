@@ -212,9 +212,9 @@ customHeaders:
       - key: 'X-Environment'
         value: 'production'
 
-      # Strict Content Security Policy
+      # Strict Content Security Policy - use environment variable for custom domain
       - key: 'Content-Security-Policy'
-        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.macro-ai.com; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ${VITE_API_URL}; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
 
       # Aggressive caching for static assets
       - key: 'Cache-Control'
@@ -251,9 +251,9 @@ redirects:
     target: '/build-info.json'
     status: '200'
 
-  # API proxy (if needed)
+  # API proxy (if needed) - use environment variable for custom domain
   - source: '/api/<*>'
-    target: 'https://api.macro-ai.com/api/<*>'
+    target: '${VITE_API_URL}/<*>'
     status: '200'
 
   # SPA fallback

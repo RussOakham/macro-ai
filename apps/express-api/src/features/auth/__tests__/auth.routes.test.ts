@@ -50,7 +50,7 @@ vi.mock('../../../middleware/validation.middleware.ts', () => ({
 }))
 
 // Mock config using the reusable helper
-vi.mock('../../../config/default.ts', () => mockConfig.createModule())
+vi.mock('../../../utils/load-config.ts', () => mockConfig.createModule())
 
 describe('Auth Routes', () => {
 	let app: express.Application

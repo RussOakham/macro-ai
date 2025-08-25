@@ -218,6 +218,52 @@ const livenessResponseSchema = registerZodSchema(
 	'Application liveness probe response',
 )
 
+// Configuration validation response schema
+const configurationResponseSchema = registerZodSchema(
+	'ConfigurationResponse',
+	z.object({
+		status: z.enum(['healthy', 'unhealthy', 'degraded']).openapi({
+			description: 'Overall configuration health status',
+			example: 'healthy',
+		}),
+		message: z.string().openapi({
+			description: 'Configuration status message',
+			example: 'Configuration is healthy',
+		}),
+		timestamp: z.string().openapi({
+			description: 'ISO timestamp when the configuration check was performed',
+			example: '2024-01-01T12:00:00.000Z',
+		}),
+		checks: z.object({
+			critical: z.object({
+				ready: z.boolean().openapi({
+					description: 'Critical configuration variables status',
+				}),
+				missing: z.array(z.string()).openapi({
+					description: 'Missing critical configuration variables',
+				}),
+			}),
+			important: z.object({
+				ready: z.boolean().openapi({
+					description: 'Important configuration variables status',
+				}),
+				missing: z.array(z.string()).openapi({
+					description: 'Missing important configuration variables',
+				}),
+			}),
+			optional: z.object({
+				ready: z.boolean().openapi({
+					description: 'Optional configuration variables status',
+				}),
+				missing: z.array(z.string()).openapi({
+					description: 'Missing optional configuration variables',
+				}),
+			}),
+		}),
+	}),
+	'Configuration validation response',
+)
+
 // Error response for health check (keeping for backward compatibility)
 const healthErrorSchema = registerZodSchema(
 	'HealthErrorResponse',
@@ -231,6 +277,7 @@ const healthErrorSchema = registerZodSchema(
 )
 
 export {
+	configurationResponseSchema,
 	detailedHealthResponseSchema,
 	healthErrorSchema,
 	healthResponseSchema,

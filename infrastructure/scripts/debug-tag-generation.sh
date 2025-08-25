@@ -188,21 +188,21 @@ check_existing_resources() {
         fi
     done
     
-    # Check Lambda functions
-    log "INFO" "Checking Lambda functions..."
-    local functions
-    functions=$(aws lambda list-functions --query 'Functions[?contains(FunctionName, `macro-ai`)].FunctionName' --output text 2>/dev/null || echo "")
-    
-    for func in $functions; do
-        if [[ -n "$func" ]]; then
+    # Check EC2 instances (Lambda functions removed)
+    log "INFO" "Checking EC2 instances..."
+    local instances
+    instances=$(aws ec2 describe-instances --filters "Name=tag:Project,Values=macro-ai" --query 'Reservations[].Instances[].InstanceId' --output text 2>/dev/null || echo "")
+
+    for instance in $instances; do
+        if [[ -n "$instance" ]]; then
             local pr_tag old_tag
-            pr_tag=$(aws lambda list-tags --resource "arn:aws:lambda:us-east-1:861909001362:function:$func" --query 'Tags.PRNumber' --output text 2>/dev/null || echo "None")
-            old_tag=$(aws lambda list-tags --resource "arn:aws:lambda:us-east-1:861909001362:function:$func" --query 'Tags.PrNumber' --output text 2>/dev/null || echo "None")
-            
+            pr_tag=$(aws ec2 describe-tags --filters "Name=resource-id,Values=$instance" "Name=key,Values=PRNumber" --query 'Tags[0].Value' --output text 2>/dev/null || echo "None")
+            old_tag=$(aws ec2 describe-tags --filters "Name=resource-id,Values=$instance" "Name=key,Values=PrNumber" --query 'Tags[0].Value' --output text 2>/dev/null || echo "None")
+
             if [[ "$old_tag" != "None" && "$old_tag" != "" ]]; then
-                log "WARN" "Function $func still has old PrNumber tag: $old_tag"
+                log "WARN" "Instance $instance still has old PrNumber tag: $old_tag"
             elif [[ "$pr_tag" != "None" && "$pr_tag" != "" ]]; then
-                log "INFO" "Function $func has correct PRNumber tag: $pr_tag"
+                log "INFO" "Instance $instance has correct PRNumber tag: $pr_tag"
             fi
         fi
     done

@@ -88,7 +88,10 @@
 				"ssm:AddTagsToResource",
 				"ssm:RemoveTagsFromResource"
 			],
-			"Resource": ["arn:aws:ssm:*:*:parameter/macro-ai/*"]
+			"Resource": [
+				"arn:aws:ssm:*:*:parameter/macro-ai/*",
+				"arn:aws:ssm:*:*:parameter/macro-ai-*"
+			]
 		},
 		{
 			"Sid": "CloudWatchLogsManagement",
@@ -129,7 +132,9 @@
 				"arn:aws:s3:::cdk-*",
 				"arn:aws:s3:::cdk-*/*",
 				"arn:aws:s3:::amplify-*",
-				"arn:aws:s3:::amplify-*/*"
+				"arn:aws:s3:::amplify-*/*",
+				"arn:aws:s3:::macro-ai-deployment-artifacts-*",
+				"arn:aws:s3:::macro-ai-deployment-artifacts-*/*"
 			]
 		},
 		{
@@ -192,14 +197,48 @@
 			"Resource": "*"
 		},
 		{
-			"Sid": "EC2HealthCheckPermissions",
+			"Sid": "ServiceHealthCheckPermissions",
 			"Effect": "Allow",
 			"Action": [
+				"ecs:DescribeClusters",
+				"ecs:DescribeServices",
+				"ecs:ListTasks",
+				"ecs:DescribeTasks",
+				"elasticloadbalancing:DescribeTargetHealth",
+				"elasticloadbalancing:DescribeTargetGroups",
 				"ec2:DescribeInstances",
 				"ec2:DescribeInstanceStatus",
-				"autoscaling:DescribeAutoScalingGroups",
-				"elasticloadbalancing:DescribeTargetHealth",
-				"elasticloadbalancing:DescribeTargetGroups"
+				"autoscaling:DescribeAutoScalingGroups"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "EC2DeploymentPermissions",
+			"Effect": "Allow",
+			"Action": [
+				"ec2:CreateInstance",
+				"ec2:RunInstances",
+				"ec2:TerminateInstances",
+				"ec2:StartInstances",
+				"ec2:StopInstances",
+				"ec2:RebootInstances",
+				"ec2:ModifyInstanceAttribute",
+				"ec2:ModifyInstanceCreditSpecification",
+				"ec2:DescribeInstances",
+				"ec2:DescribeInstanceStatus",
+				"ec2:DescribeInstanceAttribute",
+				"ec2:DescribeInstanceCreditSpecifications",
+				"ec2:DescribeInstanceTypes",
+				"ec2:DescribeVpcs",
+				"ec2:DescribeSubnets",
+				"ec2:DescribeSecurityGroups",
+				"ec2:DescribeKeyPairs",
+				"ec2:DescribeImages",
+				"ec2:DescribeAvailabilityZones",
+				"ec2:DescribeRegions",
+				"ec2:CreateTags",
+				"ec2:DeleteTags",
+				"ec2:DescribeTags"
 			],
 			"Resource": "*"
 		},
@@ -230,6 +269,87 @@
 					]
 				}
 			}
+		},
+		{
+			"Sid": "Route53ListHostedZones",
+			"Effect": "Allow",
+			"Action": ["route53:ListHostedZones"],
+			"Resource": "*"
+		},
+		{
+			"Sid": "Route53CustomDomainPermissions",
+			"Effect": "Allow",
+			"Action": [
+				"route53:GetHostedZone",
+				"route53:GetChange",
+				"route53:ListResourceRecordSets",
+				"route53:ChangeResourceRecordSets"
+			],
+			"Resource": "*",
+			"Condition": {
+				"StringLike": {
+					"route53:HostedZoneId": ["Z10081873B648ARROPNER"]
+				}
+			}
+		},
+		{
+			"Sid": "ACMCertificatePermissions",
+			"Effect": "Allow",
+			"Action": [
+				"acm:ListCertificates",
+				"acm:DescribeCertificate",
+				"acm:RequestCertificate",
+				"acm:AddTagsToCertificate"
+			],
+			"Resource": "*",
+			"Condition": {
+				"StringEquals": {
+					"aws:RequestedRegion": ["us-east-1", "us-west-2"]
+				}
+			}
+		},
+		{
+			"Sid": "ECRAccess",
+			"Effect": "Allow",
+			"Action": [
+				"ecr:GetAuthorizationToken",
+				"ecr:BatchCheckLayerAvailability",
+				"ecr:GetDownloadUrlForLayer",
+				"ecr:BatchGetImage",
+				"ecr:InitiateLayerUpload",
+				"ecr:UploadLayerPart",
+				"ecr:CompleteLayerUpload",
+				"ecr:PutImage",
+				"ecr:CreateRepository",
+				"ecr:DescribeRepositories",
+				"ecr:ListImages",
+				"ecr:TagResource",
+				"ecr:UntagResource"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "ECSDeploymentPermissions",
+			"Effect": "Allow",
+			"Action": [
+				"ecs:RegisterTaskDefinition",
+				"ecs:DeregisterTaskDefinition",
+				"ecs:DescribeTaskDefinition",
+				"ecs:UpdateService",
+				"ecs:DescribeServices",
+				"ecs:DescribeClusters",
+				"ecs:CreateService",
+				"ecs:DeleteService",
+				"ecs:ListServices",
+				"ecs:ListTaskDefinitions",
+				"ecs:ListTasks",
+				"ecs:DescribeTasks",
+				"application-autoscaling:RegisterScalableTarget",
+				"application-autoscaling:PutScalingPolicy",
+				"application-autoscaling:DescribeScalableTargets",
+				"application-autoscaling:DescribeScalingPolicies"
+			],
+			"Resource": "*"
 		}
 	]
 }

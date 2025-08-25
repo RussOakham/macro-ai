@@ -6,7 +6,7 @@ import { mockErrorHandling } from '../../../utils/test-helpers/error-handling.mo
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 
 // Mock external dependencies BEFORE any imports
-vi.mock('../../../config/default.ts', () => mockConfig.createModule())
+vi.mock('../../../utils/load-config.ts', () => mockConfig.createModule())
 vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 vi.mock('../../../utils/error-handling/try-catch.ts', () =>
 	mockErrorHandling.createModule(),
@@ -66,7 +66,7 @@ describe('AIService', () => {
 		vi.resetModules() // Clear module cache to ensure mocks are used
 
 		// Re-apply the config mock after module reset
-		vi.doMock('../../../config/default.ts', () => mockConfig.createModule())
+		vi.doMock('../../../utils/load-config.ts', () => mockConfig.createModule())
 
 		// Setup config mock
 		mockConfig.setup()

@@ -126,6 +126,9 @@ export class MonitoringConstruct extends Construct {
 		// Create application alarms
 		this.createApplicationAlarms()
 
+		// Create configuration monitoring alarms
+		this.createConfigurationMonitoringAlarms()
+
 		// Create cost monitoring alarms if enabled
 		if (props.enableCostMonitoring) {
 			this.createCostMonitoringAlarms()
@@ -297,6 +300,9 @@ export class MonitoringConstruct extends Construct {
 
 		// Add application performance widgets
 		this.addApplicationPerformanceWidgets(dashboard)
+
+		// Add configuration monitoring widgets
+		this.addConfigurationMonitoringWidgets(dashboard)
 
 		// Add cost monitoring widgets if enabled
 		if (this.props.enableCostMonitoring) {
@@ -731,6 +737,164 @@ export class MonitoringConstruct extends Construct {
 						metricName: 'ApplicationUptime',
 						statistic: 'Maximum',
 						label: 'Uptime (seconds)',
+					}),
+				],
+				width: 6,
+				height: 6,
+			}),
+		)
+
+		// Add all widgets to dashboard
+		if (widgets.length > 0) {
+			dashboard.addWidgets(...widgets)
+		}
+	}
+
+	/**
+	 * Add configuration monitoring widgets
+	 */
+	private addConfigurationMonitoringWidgets(
+		dashboard: cloudwatch.Dashboard,
+	): void {
+		const widgets: cloudwatch.IWidget[] = []
+		const namespace = 'MacroAI/Configuration'
+
+		// Configuration Loading Success Rate
+		widgets.push(
+			new cloudwatch.GraphWidget({
+				title: 'Configuration Loading Success Rate',
+				left: [
+					new cloudwatch.Metric({
+						namespace,
+						metricName: 'ConfigurationLoadingSuccess',
+						statistic: 'Average',
+						label: 'Success Rate',
+						color: cloudwatch.Color.GREEN,
+					}),
+				],
+				width: 12,
+				height: 6,
+				rightYAxis: {
+					min: 0,
+					max: 1,
+				},
+			}),
+		)
+
+		// Configuration Loading Duration
+		widgets.push(
+			new cloudwatch.GraphWidget({
+				title: 'Configuration Loading Duration',
+				left: [
+					new cloudwatch.Metric({
+						namespace,
+						metricName: 'ConfigurationLoadingDuration',
+						statistic: 'Average',
+						label: 'Average Duration (ms)',
+						color: cloudwatch.Color.BLUE,
+					}),
+					new cloudwatch.Metric({
+						namespace,
+						metricName: 'ConfigurationLoadingDuration',
+						statistic: 'Maximum',
+						label: 'Max Duration (ms)',
+						color: cloudwatch.Color.ORANGE,
+					}),
+				],
+				width: 12,
+				height: 6,
+			}),
+		)
+
+		// Configuration Errors by Category
+		widgets.push(
+			new cloudwatch.GraphWidget({
+				title: 'Configuration Errors by Category',
+				left: [
+					new cloudwatch.Metric({
+						namespace,
+						metricName: 'ConfigurationLoadingErrors',
+						dimensionsMap: { ErrorCategory: 'ParameterStore' },
+						statistic: 'Sum',
+						label: 'Parameter Store',
+						color: cloudwatch.Color.RED,
+					}),
+					new cloudwatch.Metric({
+						namespace,
+						metricName: 'ConfigurationLoadingErrors',
+						dimensionsMap: { ErrorCategory: 'SchemaValidation' },
+						statistic: 'Sum',
+						label: 'Schema Validation',
+						color: cloudwatch.Color.ORANGE,
+					}),
+					new cloudwatch.Metric({
+						namespace,
+						metricName: 'ConfigurationLoadingErrors',
+						dimensionsMap: { ErrorCategory: 'EnvironmentVariables' },
+						statistic: 'Sum',
+						label: 'Environment Variables',
+						color: cloudwatch.Color.PURPLE,
+					}),
+				],
+				width: 12,
+				height: 6,
+			}),
+		)
+
+		// Parameter Loading Statistics
+		widgets.push(
+			new cloudwatch.GraphWidget({
+				title: 'Parameter Loading Statistics',
+				left: [
+					new cloudwatch.Metric({
+						namespace,
+						metricName: 'ParametersLoaded',
+						statistic: 'Sum',
+						label: 'Parameters Loaded',
+						color: cloudwatch.Color.GREEN,
+					}),
+				],
+				right: [
+					new cloudwatch.Metric({
+						namespace,
+						metricName: 'ParametersFailedToLoad',
+						statistic: 'Sum',
+						label: 'Parameters Failed',
+						color: cloudwatch.Color.RED,
+					}),
+				],
+				width: 12,
+				height: 6,
+			}),
+		)
+
+		// Configuration Health Status
+		widgets.push(
+			new cloudwatch.SingleValueWidget({
+				title: 'Current Configuration Health',
+				metrics: [
+					new cloudwatch.Metric({
+						namespace,
+						metricName: 'ConfigurationLoadingSuccess',
+						statistic: 'Average',
+						label: 'Health Status',
+					}),
+				],
+				width: 6,
+				height: 6,
+			}),
+		)
+
+		// Latest Configuration Loading Time
+		widgets.push(
+			new cloudwatch.SingleValueWidget({
+				title: 'Latest Config Load Time',
+				metrics: [
+					new cloudwatch.Metric({
+						namespace,
+						metricName: 'ConfigurationLoadingDuration',
+						statistic: 'Maximum',
+						label: 'Duration (ms)',
 					}),
 				],
 				width: 6,
@@ -1237,6 +1401,106 @@ ${performanceLogGroup ? `**Performance Logs**: [${performanceLogGroup.logGroupNa
 			comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
 			alarmDescription: 'Application health check failures',
 			severity: AlarmSeverity.CRITICAL,
+		})
+	}
+
+	/**
+	 * Create configuration monitoring alarms
+	 */
+	private createConfigurationMonitoringAlarms(): void {
+		const namespace = 'MacroAI/Configuration'
+
+		// Critical: Configuration loading failures
+		this.createAlarm({
+			id: 'ConfigurationLoadingFailureAlarm',
+			alarmName: `${this.resourcePrefix}-config-loading-failure`,
+			metric: new cloudwatch.Metric({
+				namespace,
+				metricName: 'ConfigurationLoadingSuccess',
+				statistic: 'Average',
+				period: cdk.Duration.minutes(5),
+			}),
+			threshold: 0.8, // 80% success rate
+			evaluationPeriods: 2,
+			comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+			alarmDescription: 'Configuration loading failure rate is too high',
+			severity: AlarmSeverity.CRITICAL,
+		})
+
+		// Critical: Parameter Store access failures
+		this.createAlarm({
+			id: 'ParameterStoreFailureAlarm',
+			alarmName: `${this.resourcePrefix}-parameter-store-failure`,
+			metric: new cloudwatch.Metric({
+				namespace,
+				metricName: 'ConfigurationLoadingErrors',
+				dimensionsMap: {
+					ErrorCategory: 'ParameterStore',
+				},
+				statistic: 'Sum',
+				period: cdk.Duration.minutes(5),
+			}),
+			threshold: 3, // More than 3 Parameter Store errors in 5 minutes
+			evaluationPeriods: 1,
+			comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+			alarmDescription: 'High rate of Parameter Store access failures',
+			severity: AlarmSeverity.CRITICAL,
+		})
+
+		// Warning: Schema validation failures
+		this.createAlarm({
+			id: 'SchemaValidationFailureAlarm',
+			alarmName: `${this.resourcePrefix}-schema-validation-failure`,
+			metric: new cloudwatch.Metric({
+				namespace,
+				metricName: 'ConfigurationLoadingErrors',
+				dimensionsMap: {
+					ErrorCategory: 'SchemaValidation',
+				},
+				statistic: 'Sum',
+				period: cdk.Duration.minutes(10),
+			}),
+			threshold: 1, // Any schema validation failure
+			evaluationPeriods: 1,
+			comparisonOperator:
+				cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+			alarmDescription: 'Configuration schema validation failures detected',
+			severity: AlarmSeverity.WARNING,
+		})
+
+		// Warning: Slow configuration loading
+		this.createAlarm({
+			id: 'SlowConfigurationLoadingAlarm',
+			alarmName: `${this.resourcePrefix}-slow-config-loading`,
+			metric: new cloudwatch.Metric({
+				namespace,
+				metricName: 'ConfigurationLoadingDuration',
+				statistic: 'Average',
+				period: cdk.Duration.minutes(5),
+			}),
+			threshold: 5000, // 5 seconds
+			evaluationPeriods: 3,
+			comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+			alarmDescription: 'Configuration loading is taking too long',
+			severity: AlarmSeverity.WARNING,
+		})
+
+		// Info: Parameter loading failures
+		this.createAlarm({
+			id: 'ParameterLoadingFailureAlarm',
+			alarmName: `${this.resourcePrefix}-parameter-loading-failure`,
+			metric: new cloudwatch.Metric({
+				namespace,
+				metricName: 'ParametersFailedToLoad',
+				statistic: 'Sum',
+				period: cdk.Duration.minutes(15),
+			}),
+			threshold: 1, // Any parameter loading failure
+			evaluationPeriods: 1,
+			comparisonOperator:
+				cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+			alarmDescription: 'Some parameters failed to load from Parameter Store',
+			severity: AlarmSeverity.INFO,
 		})
 	}
 

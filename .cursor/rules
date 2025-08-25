@@ -1,0 +1,48 @@
+# MCP Tool Usage Rules for Macro AI Project
+
+## Core Principles
+
+- Always use MCP tools proactively instead of re-implementing functionality
+- Maintain context across conversations through memory management
+- Structure all complex work through Task Orchestrator
+- Reference documentation for best practices before implementation
+- Maintain security-first approach with regular scans
+
+## Memory Management Workflow
+
+- Store context after completing tasks, making architectural decisions, or when context becomes complex
+- Create entities for project decisions, technical approaches, configuration details, and error resolutions
+- Start each new conversation by reading relevant memory to restore project context
+- Search for relevant entities and restore project context automatically
+
+## Task Analysis Workflow
+
+- Use sequential thinking to break down complex requests into structured implementation plans
+- Create features or tasks in Task Orchestrator for any multi-step work
+- Break down into subtasks with clear dependencies and apply appropriate templates
+- Include requirements, technical approach, testing strategies, and implementation workflows
+
+## Documentation Reference Strategy
+
+- Search AWS documentation for service-specific best practices before implementing solutions
+- Use Ref tool to find relevant code patterns and examples
+- Reference official documentation for implementation guidance
+- Validate implementations against AWS service best practices, security guidelines, and performance recommendations
+
+## Security Review Integration
+
+- Run Semgrep scans after significant code changes and review security findings
+- Create security review tasks in Task Orchestrator and document security decisions
+- Scan new code before suggesting it and flag potential security issues proactively
+- Reference security best practices from documentation and maintain security-first approach
+
+## Proactive Usage Triggers
+
+- Complex multi-step requests
+- Technical architecture questions
+- Security-related implementations
+- Long-running projects or conversations
+- When context becomes complex
+- After completing significant work
+- Before starting new major tasks
+- When switching between different project areas

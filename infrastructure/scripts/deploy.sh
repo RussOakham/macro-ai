@@ -105,7 +105,7 @@ pnpm build
 
 echo -e "${YELLOW}⚠️  Note: This deployment script needs to be updated for EC2 deployment${NC}"
 
-print_status "Lambda package built successfully"
+print_status "EC2 application built successfully"
 
 # Return to infrastructure directory
 cd - > /dev/null
@@ -178,6 +178,6 @@ echo "2. Test the API endpoint shown in the outputs above"
 echo "3. Configure your frontend to use the new API endpoint"
 echo ""
 echo -e "${BLUE}💡 Useful Commands:${NC}"
-echo "• View logs: aws logs tail /aws/lambda/macro-ai-$ENVIRONMENT-api --follow"
+echo "• View logs: aws logs tail /aws/ec2/macro-ai-$ENVIRONMENT-api --follow"
 echo "• Update parameters: aws ssm put-parameter --name '/macro-ai/$ENVIRONMENT/critical/openai-api-key' --value 'your-key' --type SecureString --overwrite"
 echo "• Test API: curl \$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs[?OutputKey==\`ApiEndpoint\`].OutputValue' --output text)api/health"

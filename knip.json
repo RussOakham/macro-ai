@@ -36,7 +36,6 @@
 				"src/**/*.d.ts",
 				"dist/**/*",
 				"coverage/**/*",
-				"lambda-deployment.zip",
 				"public/swagger.json",
 				"config/**/*",
 				".env*",

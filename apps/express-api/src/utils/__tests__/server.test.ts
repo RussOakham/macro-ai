@@ -6,7 +6,7 @@ import { mockConfig } from '../test-helpers/config.mock.ts'
 import { mockLogger } from '../test-helpers/logger.mock.ts'
 
 // Mock all external dependencies before importing the server module
-vi.mock('../../config/default.ts', () => mockConfig.createModule())
+vi.mock('../../utils/load-config.ts', () => mockConfig.createModule())
 
 vi.mock('../logger.ts', () => mockLogger.createModule())
 

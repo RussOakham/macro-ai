@@ -1480,6 +1480,86 @@
 				"required": ["alive", "message", "timestamp", "uptime"],
 				"description": "Application liveness probe response"
 			},
+			"ConfigurationResponse": {
+				"type": "object",
+				"properties": {
+					"status": {
+						"type": "string",
+						"enum": ["healthy", "unhealthy", "degraded"],
+						"description": "Overall configuration health status",
+						"example": "healthy"
+					},
+					"message": {
+						"type": "string",
+						"description": "Configuration status message",
+						"example": "Configuration is healthy"
+					},
+					"timestamp": {
+						"type": "string",
+						"description": "ISO timestamp when the configuration check was performed",
+						"example": "2024-01-01T12:00:00.000Z"
+					},
+					"checks": {
+						"type": "object",
+						"properties": {
+							"critical": {
+								"type": "object",
+								"properties": {
+									"ready": {
+										"type": "boolean",
+										"description": "Critical configuration variables status"
+									},
+									"missing": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										},
+										"description": "Missing critical configuration variables"
+									}
+								},
+								"required": ["ready", "missing"]
+							},
+							"important": {
+								"type": "object",
+								"properties": {
+									"ready": {
+										"type": "boolean",
+										"description": "Important configuration variables status"
+									},
+									"missing": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										},
+										"description": "Missing important configuration variables"
+									}
+								},
+								"required": ["ready", "missing"]
+							},
+							"optional": {
+								"type": "object",
+								"properties": {
+									"ready": {
+										"type": "boolean",
+										"description": "Optional configuration variables status"
+									},
+									"missing": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										},
+										"description": "Missing optional configuration variables"
+									}
+								},
+								"required": ["ready", "missing"]
+							}
+						},
+						"required": ["critical", "important", "optional"]
+					}
+				},
+				"required": ["status", "message", "timestamp", "checks"],
+				"description": "Configuration validation response"
+			},
 			"HealthErrorResponse": {
 				"type": "object",
 				"properties": {
@@ -4971,6 +5051,119 @@
 										}
 									},
 									"required": ["alive", "message", "timestamp", "uptime"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/health/config": {
+			"get": {
+				"tags": ["Utility"],
+				"summary": "Configuration validation endpoint",
+				"description": "Returns detailed configuration validation status for debugging deployment issues. No rate limiting applied to ensure ALB health checks work reliably.",
+				"responses": {
+					"200": {
+						"description": "Configuration validation successful",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "string",
+											"enum": ["healthy", "unhealthy", "degraded"],
+											"description": "Overall configuration health status",
+											"example": "healthy"
+										},
+										"message": {
+											"type": "string",
+											"description": "Configuration status message",
+											"example": "Configuration is healthy"
+										},
+										"timestamp": {
+											"type": "string",
+											"description": "ISO timestamp when the configuration check was performed",
+											"example": "2024-01-01T12:00:00.000Z"
+										},
+										"checks": {
+											"type": "object",
+											"properties": {
+												"critical": {
+													"type": "object",
+													"properties": {
+														"ready": {
+															"type": "boolean",
+															"description": "Critical configuration variables status"
+														},
+														"missing": {
+															"type": "array",
+															"items": {
+																"type": "string"
+															},
+															"description": "Missing critical configuration variables"
+														}
+													},
+													"required": ["ready", "missing"]
+												},
+												"important": {
+													"type": "object",
+													"properties": {
+														"ready": {
+															"type": "boolean",
+															"description": "Important configuration variables status"
+														},
+														"missing": {
+															"type": "array",
+															"items": {
+																"type": "string"
+															},
+															"description": "Missing important configuration variables"
+														}
+													},
+													"required": ["ready", "missing"]
+												},
+												"optional": {
+													"type": "object",
+													"properties": {
+														"ready": {
+															"type": "boolean",
+															"description": "Optional configuration variables status"
+														},
+														"missing": {
+															"type": "array",
+															"items": {
+																"type": "string"
+															},
+															"description": "Missing optional configuration variables"
+														}
+													},
+													"required": ["ready", "missing"]
+												}
+											},
+											"required": ["critical", "important", "optional"]
+										}
+									},
+									"required": ["status", "message", "timestamp", "checks"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Configuration validation failed - internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Internal server error message",
+											"example": "Internal server error"
+										}
+									},
+									"required": ["message"]
 								}
 							}
 						}

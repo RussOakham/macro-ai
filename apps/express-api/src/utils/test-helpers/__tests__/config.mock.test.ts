@@ -26,36 +26,36 @@ describe('Config Mock Helper', () => {
 		it('should create config with overrides', () => {
 			// Arrange
 			const overrides: Partial<ConfigType> = {
-				nodeEnv: 'production',
-				port: 8080,
-				apiKey: 'custom-api-key',
+				NODE_ENV: 'production',
+				SERVER_PORT: 8080,
+				API_KEY: 'custom-api-key',
 			}
 
 			// Act
 			const mock = mockConfig.create(overrides)
 
 			// Assert
-			expect(mock.config.nodeEnv).toBe('production')
-			expect(mock.config.port).toBe(8080)
-			expect(mock.config.apiKey).toBe('custom-api-key')
+			expect(mock.config.NODE_ENV).toBe('production')
+			expect(mock.config.SERVER_PORT).toBe(8080)
+			expect(mock.config.API_KEY).toBe('custom-api-key')
 			// Should preserve other defaults
-			expect(mock.config.awsCognitoRegion).toBe(
-				defaultTestConfig.awsCognitoRegion,
+			expect(mock.config.AWS_COGNITO_REGION).toBe(
+				defaultTestConfig.AWS_COGNITO_REGION,
 			)
 		})
 
 		it('should maintain type safety with partial overrides', () => {
 			// Arrange
 			const overrides: Partial<ConfigType> = {
-				awsCognitoRefreshTokenExpiry: 120,
+				AWS_COGNITO_REFRESH_TOKEN_EXPIRY: 120,
 			}
 
 			// Act
 			const mock = mockConfig.create(overrides)
 
 			// Assert
-			expect(mock.config.awsCognitoRefreshTokenExpiry).toBe(120)
-			expect(typeof mock.config.awsCognitoRefreshTokenExpiry).toBe('number')
+			expect(mock.config.AWS_COGNITO_REFRESH_TOKEN_EXPIRY).toBe(120)
+			expect(typeof mock.config.AWS_COGNITO_REFRESH_TOKEN_EXPIRY).toBe('number')
 		})
 	})
 
@@ -72,14 +72,14 @@ describe('Config Mock Helper', () => {
 		it('should create module mock with overrides', () => {
 			// Arrange
 			const overrides: Partial<ConfigType> = {
-				redisUrl: 'redis://test:6379',
+				REDIS_URL: 'redis://test:6379',
 			}
 
 			// Act
 			const mock = mockConfig.createModule(overrides)
 
 			// Assert
-			expect(mock.config.redisUrl).toBe('redis://test:6379')
+			expect(mock.config.REDIS_URL).toBe('redis://test:6379')
 		})
 	})
 
@@ -105,14 +105,14 @@ describe('Config Mock Helper', () => {
 		it('should setup config with overrides', () => {
 			// Arrange
 			const overrides: Partial<ConfigType> = {
-				nodeEnv: 'development',
+				NODE_ENV: 'development',
 			}
 
 			// Act
 			const mock = mockConfig.setup(overrides)
 
 			// Assert
-			expect(mock.config.nodeEnv).toBe('development')
+			expect(mock.config.NODE_ENV).toBe('development')
 		})
 
 		it('should demonstrate beforeEach usage pattern', () => {
@@ -129,20 +129,23 @@ describe('Config Mock Helper', () => {
 				const mock = mockConfig.development()
 
 				// Assert
-				expect(mock.config.nodeEnv).toBe('development')
-				expect(mock.config.port).toBe(3001)
+				expect(mock.config.NODE_ENV).toBe('development')
+				expect(mock.config.SERVER_PORT).toBe(3001)
 				// Should preserve other defaults
-				expect(mock.config.apiKey).toBe(defaultTestConfig.apiKey)
+				expect(mock.config.API_KEY).toBe(defaultTestConfig.API_KEY)
 			})
 
 			it('should be consistent with unified API', () => {
 				// Act
 				const mock1 = mockConfig.development()
-				const mock2 = mockConfig.create({ nodeEnv: 'development', port: 3001 })
+				const mock2 = mockConfig.create({
+					NODE_ENV: 'development',
+					SERVER_PORT: 3001,
+				})
 
 				// Assert
-				expect(mock1.config.nodeEnv).toBe(mock2.config.nodeEnv)
-				expect(mock1.config.port).toBe(mock2.config.port)
+				expect(mock1.config.NODE_ENV).toBe(mock2.config.NODE_ENV)
+				expect(mock1.config.SERVER_PORT).toBe(mock2.config.SERVER_PORT)
 			})
 		})
 
@@ -152,20 +155,23 @@ describe('Config Mock Helper', () => {
 				const mock = mockConfig.production()
 
 				// Assert
-				expect(mock.config.nodeEnv).toBe('production')
-				expect(mock.config.port).toBe(8080)
+				expect(mock.config.NODE_ENV).toBe('production')
+				expect(mock.config.SERVER_PORT).toBe(8080)
 				// Should preserve other defaults
-				expect(mock.config.apiKey).toBe(defaultTestConfig.apiKey)
+				expect(mock.config.API_KEY).toBe(defaultTestConfig.API_KEY)
 			})
 
 			it('should be consistent with unified API', () => {
 				// Act
 				const mock1 = mockConfig.production()
-				const mock2 = mockConfig.create({ nodeEnv: 'production', port: 8080 })
+				const mock2 = mockConfig.create({
+					NODE_ENV: 'production',
+					SERVER_PORT: 8080,
+				})
 
 				// Assert
-				expect(mock1.config.nodeEnv).toBe(mock2.config.nodeEnv)
-				expect(mock1.config.port).toBe(mock2.config.port)
+				expect(mock1.config.NODE_ENV).toBe(mock2.config.NODE_ENV)
+				expect(mock1.config.SERVER_PORT).toBe(mock2.config.SERVER_PORT)
 			})
 		})
 
@@ -175,10 +181,10 @@ describe('Config Mock Helper', () => {
 				const mock = mockConfig.test()
 
 				// Assert
-				expect(mock.config.nodeEnv).toBe('test')
-				expect(mock.config.port).toBe(3000)
+				expect(mock.config.NODE_ENV).toBe('test')
+				expect(mock.config.SERVER_PORT).toBe(3000)
 				// Should preserve other defaults
-				expect(mock.config.apiKey).toBe(defaultTestConfig.apiKey)
+				expect(mock.config.API_KEY).toBe(defaultTestConfig.API_KEY)
 			})
 
 			it('should match default test config', () => {
@@ -186,8 +192,8 @@ describe('Config Mock Helper', () => {
 				const mock = mockConfig.test()
 
 				// Assert
-				expect(mock.config.nodeEnv).toBe(defaultTestConfig.nodeEnv)
-				expect(mock.config.port).toBe(defaultTestConfig.port)
+				expect(mock.config.NODE_ENV).toBe(defaultTestConfig.NODE_ENV)
+				expect(mock.config.SERVER_PORT).toBe(defaultTestConfig.SERVER_PORT)
 			})
 		})
 	})
@@ -199,29 +205,31 @@ describe('Config Mock Helper', () => {
 				const mock = mockConfig.cognito()
 
 				// Assert
-				expect(mock.config.awsCognitoRegion).toBe('us-west-2')
-				expect(mock.config.awsCognitoUserPoolId).toBe('cognito-test-pool-id')
-				expect(mock.config.awsCognitoUserPoolClientId).toBe(
+				expect(mock.config.AWS_COGNITO_REGION).toBe('us-west-2')
+				expect(mock.config.AWS_COGNITO_USER_POOL_ID).toBe(
+					'cognito-test-pool-id',
+				)
+				expect(mock.config.AWS_COGNITO_USER_POOL_CLIENT_ID).toBe(
 					'cognito-test-client-id',
 				)
-				expect(mock.config.awsCognitoRefreshTokenExpiry).toBe(60)
+				expect(mock.config.AWS_COGNITO_REFRESH_TOKEN_EXPIRY).toBe(60)
 				// Should preserve other defaults
-				expect(mock.config.nodeEnv).toBe(defaultTestConfig.nodeEnv)
+				expect(mock.config.NODE_ENV).toBe(defaultTestConfig.NODE_ENV)
 			})
 
 			it('should create Cognito config with overrides', () => {
 				// Arrange
 				const overrides = {
-					awsCognitoRegion: 'eu-west-1' as const,
-					awsCognitoRefreshTokenExpiry: 90,
+					AWS_COGNITO_REGION: 'eu-west-1' as const,
+					AWS_COGNITO_REFRESH_TOKEN_EXPIRY: 90,
 				}
 
 				// Act
 				const mock = mockConfig.cognito(overrides)
 
 				// Assert
-				expect(mock.config.awsCognitoRegion).toBe('eu-west-1')
-				expect(mock.config.awsCognitoRefreshTokenExpiry).toBe(90)
+				expect(mock.config.AWS_COGNITO_REGION).toBe('eu-west-1')
+				expect(mock.config.AWS_COGNITO_REFRESH_TOKEN_EXPIRY).toBe(90)
 			})
 
 			it('should provide Cognito-specific test values', () => {
@@ -229,14 +237,14 @@ describe('Config Mock Helper', () => {
 				const mock = mockConfig.cognito()
 
 				// Assert - Should have different values than defaults for testing
-				expect(mock.config.awsCognitoRegion).not.toBe(
-					defaultTestConfig.awsCognitoRegion,
+				expect(mock.config.AWS_COGNITO_REGION).not.toBe(
+					defaultTestConfig.AWS_COGNITO_REGION,
 				)
-				expect(mock.config.awsCognitoUserPoolId).not.toBe(
-					defaultTestConfig.awsCognitoUserPoolId,
+				expect(mock.config.AWS_COGNITO_USER_POOL_ID).not.toBe(
+					defaultTestConfig.AWS_COGNITO_USER_POOL_ID,
 				)
-				expect(mock.config.awsCognitoRefreshTokenExpiry).not.toBe(
-					defaultTestConfig.awsCognitoRefreshTokenExpiry,
+				expect(mock.config.AWS_COGNITO_REFRESH_TOKEN_EXPIRY).not.toBe(
+					defaultTestConfig.AWS_COGNITO_REFRESH_TOKEN_EXPIRY,
 				)
 			})
 		})
@@ -247,20 +255,20 @@ describe('Config Mock Helper', () => {
 				const mock = mockConfig.database()
 
 				// Assert
-				expect(mock.config.relationalDatabaseUrl).toBe(
+				expect(mock.config.RELATIONAL_DATABASE_URL).toBe(
 					'postgresql://testuser:testpass@localhost:5432/testdb',
 				)
-				expect(mock.config.nonRelationalDatabaseUrl).toBe(
+				expect(mock.config.NON_RELATIONAL_DATABASE_URL).toBe(
 					'mongodb://localhost:27017/testdb',
 				)
 				// Should preserve other defaults
-				expect(mock.config.nodeEnv).toBe(defaultTestConfig.nodeEnv)
+				expect(mock.config.NODE_ENV).toBe(defaultTestConfig.NODE_ENV)
 			})
 
 			it('should create database config with overrides', () => {
 				// Arrange
 				const overrides = {
-					relationalDatabaseUrl:
+					RELATIONAL_DATABASE_URL:
 						'postgresql://custom:pass@localhost:5432/custom',
 				}
 
@@ -268,7 +276,7 @@ describe('Config Mock Helper', () => {
 				const mock = mockConfig.database(overrides)
 
 				// Assert
-				expect(mock.config.relationalDatabaseUrl).toBe(
+				expect(mock.config.RELATIONAL_DATABASE_URL).toBe(
 					'postgresql://custom:pass@localhost:5432/custom',
 				)
 			})
@@ -278,11 +286,11 @@ describe('Config Mock Helper', () => {
 				const mock = mockConfig.database()
 
 				// Assert - Should have different values than defaults for testing
-				expect(mock.config.relationalDatabaseUrl).not.toBe(
-					defaultTestConfig.relationalDatabaseUrl,
+				expect(mock.config.RELATIONAL_DATABASE_URL).not.toBe(
+					defaultTestConfig.RELATIONAL_DATABASE_URL,
 				)
-				expect(mock.config.nonRelationalDatabaseUrl).not.toBe(
-					defaultTestConfig.nonRelationalDatabaseUrl,
+				expect(mock.config.NON_RELATIONAL_DATABASE_URL).not.toBe(
+					defaultTestConfig.NON_RELATIONAL_DATABASE_URL,
 				)
 			})
 		})
@@ -293,29 +301,29 @@ describe('Config Mock Helper', () => {
 				const mock = mockConfig.rateLimit()
 
 				// Assert
-				expect(mock.config.rateLimitWindowMs).toBe(60000) // 1 minute
-				expect(mock.config.rateLimitMaxRequests).toBe(10)
-				expect(mock.config.authRateLimitWindowMs).toBe(300000) // 5 minutes
-				expect(mock.config.authRateLimitMaxRequests).toBe(5)
-				expect(mock.config.apiRateLimitWindowMs).toBe(30000) // 30 seconds
-				expect(mock.config.apiRateLimitMaxRequests).toBe(30)
+				expect(mock.config.RATE_LIMIT_WINDOW_MS).toBe(60000) // 1 minute
+				expect(mock.config.RATE_LIMIT_MAX_REQUESTS).toBe(10)
+				expect(mock.config.AUTH_RATE_LIMIT_WINDOW_MS).toBe(300000) // 5 minutes
+				expect(mock.config.AUTH_RATE_LIMIT_MAX_REQUESTS).toBe(5)
+				expect(mock.config.API_RATE_LIMIT_WINDOW_MS).toBe(30000) // 30 seconds
+				expect(mock.config.API_RATE_LIMIT_MAX_REQUESTS).toBe(30)
 				// Should preserve other defaults
-				expect(mock.config.nodeEnv).toBe(defaultTestConfig.nodeEnv)
+				expect(mock.config.NODE_ENV).toBe(defaultTestConfig.NODE_ENV)
 			})
 
 			it('should create rate limit config with overrides', () => {
 				// Arrange
 				const overrides = {
-					rateLimitMaxRequests: 50,
-					authRateLimitMaxRequests: 20,
+					RATE_LIMIT_MAX_REQUESTS: 50,
+					AUTH_RATE_LIMIT_MAX_REQUESTS: 20,
 				}
 
 				// Act
 				const mock = mockConfig.rateLimit(overrides)
 
 				// Assert
-				expect(mock.config.rateLimitMaxRequests).toBe(50)
-				expect(mock.config.authRateLimitMaxRequests).toBe(20)
+				expect(mock.config.RATE_LIMIT_MAX_REQUESTS).toBe(50)
+				expect(mock.config.AUTH_RATE_LIMIT_MAX_REQUESTS).toBe(20)
 			})
 
 			it('should provide rate limit-specific test values', () => {
@@ -323,14 +331,14 @@ describe('Config Mock Helper', () => {
 				const mock = mockConfig.rateLimit()
 
 				// Assert - Should have different values than defaults for testing
-				expect(mock.config.rateLimitWindowMs).not.toBe(
-					defaultTestConfig.rateLimitWindowMs,
+				expect(mock.config.RATE_LIMIT_WINDOW_MS).not.toBe(
+					defaultTestConfig.RATE_LIMIT_WINDOW_MS,
 				)
-				expect(mock.config.rateLimitMaxRequests).not.toBe(
-					defaultTestConfig.rateLimitMaxRequests,
+				expect(mock.config.RATE_LIMIT_MAX_REQUESTS).not.toBe(
+					defaultTestConfig.RATE_LIMIT_MAX_REQUESTS,
 				)
-				expect(mock.config.authRateLimitWindowMs).not.toBe(
-					defaultTestConfig.authRateLimitWindowMs,
+				expect(mock.config.AUTH_RATE_LIMIT_WINDOW_MS).not.toBe(
+					defaultTestConfig.AUTH_RATE_LIMIT_MAX_REQUESTS,
 				)
 			})
 		})
@@ -339,37 +347,43 @@ describe('Config Mock Helper', () => {
 	describe('defaultTestConfig', () => {
 		it('should contain all required configuration properties', () => {
 			// Assert - Check that all expected properties exist
-			expect(defaultTestConfig).toHaveProperty('apiKey')
-			expect(defaultTestConfig).toHaveProperty('nodeEnv')
-			expect(defaultTestConfig).toHaveProperty('port')
-			expect(defaultTestConfig).toHaveProperty('awsCognitoRegion')
-			expect(defaultTestConfig).toHaveProperty('awsCognitoUserPoolId')
-			expect(defaultTestConfig).toHaveProperty('awsCognitoUserPoolClientId')
-			expect(defaultTestConfig).toHaveProperty('awsCognitoUserPoolSecretKey')
-			expect(defaultTestConfig).toHaveProperty('awsCognitoAccessKey')
-			expect(defaultTestConfig).toHaveProperty('awsCognitoSecretKey')
-			expect(defaultTestConfig).toHaveProperty('awsCognitoRefreshTokenExpiry')
-			expect(defaultTestConfig).toHaveProperty('cookieDomain')
-			expect(defaultTestConfig).toHaveProperty('cookieEncryptionKey')
-			expect(defaultTestConfig).toHaveProperty('relationalDatabaseUrl')
-			expect(defaultTestConfig).toHaveProperty('nonRelationalDatabaseUrl')
-			expect(defaultTestConfig).toHaveProperty('rateLimitWindowMs')
-			expect(defaultTestConfig).toHaveProperty('rateLimitMaxRequests')
-			expect(defaultTestConfig).toHaveProperty('authRateLimitWindowMs')
-			expect(defaultTestConfig).toHaveProperty('authRateLimitMaxRequests')
-			expect(defaultTestConfig).toHaveProperty('apiRateLimitWindowMs')
-			expect(defaultTestConfig).toHaveProperty('apiRateLimitMaxRequests')
-			expect(defaultTestConfig).toHaveProperty('redisUrl')
+			expect(defaultTestConfig).toHaveProperty('API_KEY')
+			expect(defaultTestConfig).toHaveProperty('NODE_ENV')
+			expect(defaultTestConfig).toHaveProperty('SERVER_PORT')
+			expect(defaultTestConfig).toHaveProperty('AWS_COGNITO_REGION')
+			expect(defaultTestConfig).toHaveProperty('AWS_COGNITO_USER_POOL_ID')
+			expect(defaultTestConfig).toHaveProperty(
+				'AWS_COGNITO_USER_POOL_CLIENT_ID',
+			)
+			expect(defaultTestConfig).toHaveProperty(
+				'AWS_COGNITO_USER_POOL_SECRET_KEY',
+			)
+			expect(defaultTestConfig).toHaveProperty('AWS_COGNITO_ACCESS_KEY')
+			expect(defaultTestConfig).toHaveProperty('AWS_COGNITO_SECRET_KEY')
+			expect(defaultTestConfig).toHaveProperty(
+				'AWS_COGNITO_REFRESH_TOKEN_EXPIRY',
+			)
+			expect(defaultTestConfig).toHaveProperty('COOKIE_DOMAIN')
+			expect(defaultTestConfig).toHaveProperty('COOKIE_ENCRYPTION_KEY')
+			expect(defaultTestConfig).toHaveProperty('RELATIONAL_DATABASE_URL')
+			expect(defaultTestConfig).toHaveProperty('NON_RELATIONAL_DATABASE_URL')
+			expect(defaultTestConfig).toHaveProperty('RATE_LIMIT_WINDOW_MS')
+			expect(defaultTestConfig).toHaveProperty('RATE_LIMIT_MAX_REQUESTS')
+			expect(defaultTestConfig).toHaveProperty('AUTH_RATE_LIMIT_WINDOW_MS')
+			expect(defaultTestConfig).toHaveProperty('AUTH_RATE_LIMIT_MAX_REQUESTS')
+			expect(defaultTestConfig).toHaveProperty('API_RATE_LIMIT_WINDOW_MS')
+			expect(defaultTestConfig).toHaveProperty('API_RATE_LIMIT_MAX_REQUESTS')
+			expect(defaultTestConfig).toHaveProperty('REDIS_URL')
 		})
 
 		it('should have sensible test values', () => {
 			// Assert - Check that values are appropriate for testing
-			expect(defaultTestConfig.nodeEnv).toBe('test')
-			expect(defaultTestConfig.apiKey).toMatch(/^test-api-key-/)
-			expect(defaultTestConfig.cookieDomain).toBe('localhost')
-			expect(defaultTestConfig.awsCognitoRegion).toBe('us-east-1')
-			expect(typeof defaultTestConfig.port).toBe('number')
-			expect(typeof defaultTestConfig.awsCognitoRefreshTokenExpiry).toBe(
+			expect(defaultTestConfig.NODE_ENV).toBe('test')
+			expect(defaultTestConfig.API_KEY).toMatch(/^test-api-key-/)
+			expect(defaultTestConfig.COOKIE_DOMAIN).toBe('localhost')
+			expect(defaultTestConfig.AWS_COGNITO_REGION).toBe('us-east-1')
+			expect(typeof defaultTestConfig.SERVER_PORT).toBe('number')
+			expect(typeof defaultTestConfig.AWS_COGNITO_REFRESH_TOKEN_EXPIRY).toBe(
 				'number',
 			)
 		})
@@ -398,7 +412,7 @@ describe('Config Mock Helper', () => {
 
 		it('should demonstrate unified API usage patterns', () => {
 			// Act - Use different methods from unified API
-			const basicMock = mockConfig.create({ port: 4000 })
+			const basicMock = mockConfig.create({ SERVER_PORT: 4000 })
 			const envMock = mockConfig.development()
 			const featureMock = mockConfig.cognito()
 
@@ -408,9 +422,9 @@ describe('Config Mock Helper', () => {
 			expect(featureMock).toHaveProperty('config')
 
 			// Assert - Each should have different configurations
-			expect(basicMock.config.port).toBe(4000)
-			expect(envMock.config.nodeEnv).toBe('development')
-			expect(featureMock.config.awsCognitoRegion).toBe('us-west-2')
+			expect(basicMock.config.SERVER_PORT).toBe(4000)
+			expect(envMock.config.NODE_ENV).toBe('development')
+			expect(featureMock.config.AWS_COGNITO_REGION).toBe('us-west-2')
 		})
 	})
 
@@ -418,43 +432,43 @@ describe('Config Mock Helper', () => {
 		it('should support chaining and composition patterns', () => {
 			// Arrange - Create a complex config by combining features
 			const complexOverrides: Partial<ConfigType> = {
-				nodeEnv: 'production',
-				port: 8080,
-				awsCognitoRegion: 'eu-west-1',
-				rateLimitMaxRequests: 100,
+				NODE_ENV: 'production',
+				SERVER_PORT: 8080,
+				AWS_COGNITO_REGION: 'eu-west-1',
+				RATE_LIMIT_MAX_REQUESTS: 100,
 			}
 
 			// Act
 			const mock = mockConfig.create(complexOverrides)
 
 			// Assert
-			expect(mock.config.nodeEnv).toBe('production')
-			expect(mock.config.port).toBe(8080)
-			expect(mock.config.awsCognitoRegion).toBe('eu-west-1')
-			expect(mock.config.rateLimitMaxRequests).toBe(100)
+			expect(mock.config.NODE_ENV).toBe('production')
+			expect(mock.config.SERVER_PORT).toBe(8080)
+			expect(mock.config.AWS_COGNITO_REGION).toBe('eu-west-1')
+			expect(mock.config.RATE_LIMIT_MAX_REQUESTS).toBe(100)
 			// Should preserve other defaults
-			expect(mock.config.apiKey).toBe(defaultTestConfig.apiKey)
+			expect(mock.config.API_KEY).toBe(defaultTestConfig.API_KEY)
 		})
 
 		it('should demonstrate beforeEach setup with overrides', () => {
 			// Arrange - Override the beforeEach setup for this test
-			const customMock = mockConfig.setup({ nodeEnv: 'development' })
+			const customMock = mockConfig.setup({ NODE_ENV: 'development' })
 
 			// Assert
-			expect(customMock.config.nodeEnv).toBe('development')
+			expect(customMock.config.NODE_ENV).toBe('development')
 			expect(customMock).toHaveProperty('config')
 		})
 
 		it('should support module mocking patterns', () => {
 			// Act - Simulate vi.mock() usage
 			const moduleMock = mockConfig.createModule({
-				redisUrl: 'redis://test-server:6379',
+				REDIS_URL: 'redis://test-server:6379',
 			})
 
 			// Assert
-			expect(moduleMock.config.redisUrl).toBe('redis://test-server:6379')
+			expect(moduleMock.config.REDIS_URL).toBe('redis://test-server:6379')
 			expect(moduleMock).toEqual(
-				mockConfig.create({ redisUrl: 'redis://test-server:6379' }),
+				mockConfig.create({ REDIS_URL: 'redis://test-server:6379' }),
 			)
 		})
 	})

@@ -40,7 +40,7 @@ import { TRegisterUserRequest } from '../auth.types.ts'
 vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 
 // Mock the config using the reusable helper
-vi.mock('../../../config/default.ts', () => mockConfig.createModule())
+vi.mock('../../../utils/load-config.ts', () => mockConfig.createModule())
 
 // Mock the tryCatch utilities
 vi.mock('../../../utils/error-handling/try-catch.ts', () => ({

@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
-import { config } from '../../../config/default.ts'
 import {
 	getAccessToken,
 	getRefreshToken,
@@ -40,6 +39,10 @@ import {
 } from './auth.types.ts'
 const { logger } = pino
 
+import { assertConfig } from '../../config/simple-config.js'
+
+// Load configuration once at module level (no logging)
+const config = assertConfig(false)
 const nodeEnv = config.nodeEnv
 const cookieDomain = config.cookieDomain
 const refreshTokenExpiryDays = config.awsCognitoRefreshTokenExpiry
@@ -84,7 +87,7 @@ class AuthController implements IAuthController {
 			return
 		}
 
-		// if getUserError and not NotFoundError, throw error
+		// if there is an error and it's not NotFoundError, propagate it
 		if (getUserError.type !== ErrorType.NotFoundError) {
 			next(getUserError)
 			return
@@ -336,7 +339,7 @@ class AuthController implements IAuthController {
 
 		res
 			.cookie('macro-ai-accessToken', loginResponse.tokens.accessToken, {
-				httpOnly: false,
+				httpOnly: true,
 				secure: nodeEnv === 'production',
 				domain: cookieDomain !== 'localhost' ? cookieDomain : undefined,
 				sameSite: 'strict',
@@ -404,15 +407,15 @@ class AuthController implements IAuthController {
 
 		res
 			.clearCookie('macro-ai-accessToken', {
-				domain: cookieDomain,
+				domain: cookieDomain !== 'localhost' ? cookieDomain : undefined,
 				sameSite: 'strict',
 			})
 			.clearCookie('macro-ai-refreshToken', {
-				domain: cookieDomain,
+				domain: cookieDomain !== 'localhost' ? cookieDomain : undefined,
 				sameSite: 'strict',
 			})
 			.clearCookie('macro-ai-synchronize', {
-				domain: cookieDomain,
+				domain: cookieDomain !== 'localhost' ? cookieDomain : undefined,
 				sameSite: 'strict',
 			})
 			.status(StatusCodes.OK)

@@ -1,10 +1,10 @@
 import * as cdk from 'aws-cdk-lib'
-import * as autoscaling from 'aws-cdk-lib/aws-autoscaling'
-import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import type { Construct } from 'constructs'
 
+import { AutoShutdownConstruct } from '../constructs/auto-shutdown-construct.js'
 import { CostMonitoringConstruct } from '../constructs/cost-monitoring-construct.js'
-import { DeploymentStatusConstruct } from '../constructs/deployment-status-construct.js'
+import { EcsFargateConstruct } from '../constructs/ecs-fargate-construct.js'
+import { EnvironmentConfigConstruct } from '../constructs/environment-config-construct.js'
 import { MonitoringConstruct } from '../constructs/monitoring-construct.js'
 import { NetworkingConstruct } from '../constructs/networking.js'
 import { ParameterStoreConstruct } from '../constructs/parameter-store-construct.js'
@@ -27,11 +27,6 @@ export interface MacroAiPreviewStackProps extends cdk.StackProps {
 	readonly branchName: string
 
 	/**
-	 * CORS allowed origins for the API
-	 */
-	readonly corsAllowedOrigins: string
-
-	/**
 	 * Deployment scale (preview, staging, production)
 	 * @default 'preview'
 	 */
@@ -42,13 +37,33 @@ export interface MacroAiPreviewStackProps extends cdk.StackProps {
 	 * Can be overridden via CDK context 'costAlertEmails'
 	 */
 	readonly costAlertEmails?: string[]
+
+	/**
+	 * Custom domain configuration for HTTPS endpoints
+	 */
+	readonly customDomain?: {
+		readonly domainName: string
+		readonly hostedZoneId: string
+	}
+
+	/**
+	 * Auto-shutdown configuration for cost optimization
+	 * @default enabled with standard business hours
+	 */
+	readonly autoShutdown?: {
+		readonly enabled: boolean
+		readonly shutdownSchedule?: string // UTC cron
+		readonly startupSchedule?: string // UTC cron
+		readonly enableWeekendShutdown?: boolean
+		readonly displayTimeZone?: string
+	}
 }
 
 /**
- * Preview stack for EC2-based PR environments
+ * Preview stack for ECS Fargate-based PR environments
  *
  * This stack creates isolated preview environments for PRs using:
- * - EC2 instances with Auto Scaling Groups
+ * - ECS Fargate for containerized deployment
  * - Application Load Balancer for traffic routing
  * - CloudWatch monitoring and observability
  * - Deployment status tracking
@@ -59,17 +74,29 @@ export interface MacroAiPreviewStackProps extends cdk.StackProps {
 export class MacroAiPreviewStack extends cdk.Stack {
 	public readonly networking: NetworkingConstruct
 	public readonly parameterStore: ParameterStoreConstruct
-	public readonly autoScaling: autoscaling.AutoScalingGroup
+	public readonly environmentConfig: EnvironmentConfigConstruct
+	public readonly ecsService: EcsFargateConstruct
 	public readonly monitoring: MonitoringConstruct
-	public readonly deploymentStatus: DeploymentStatusConstruct
 	public readonly costMonitoring: CostMonitoringConstruct
+	public readonly autoShutdown?: AutoShutdownConstruct
 	public readonly prNumber: number
+	private readonly customDomain?: {
+		readonly domainName: string
+		readonly hostedZoneId: string
+	}
 
 	constructor(scope: Construct, id: string, props: MacroAiPreviewStackProps) {
 		super(scope, id, props)
 
-		const { environmentName, prNumber, branchName, corsAllowedOrigins } = props
+		const {
+			environmentName,
+			prNumber,
+			branchName,
+			customDomain,
+			autoShutdown,
+		} = props
 		this.prNumber = prNumber
+		this.customDomain = customDomain
 
 		// Note: Base-level tags (Project, Environment, EnvironmentType, Component, Purpose, CreatedBy, ManagedBy, PRNumber, Branch, ExpiryDate, Scale, AutoShutdown)
 		// are applied centrally via StackProps.tags in app.ts using TaggingStrategy.
@@ -80,8 +107,18 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			environmentName,
 		})
 
-		// Create deployment ID to force instance replacement on every deployment
-		// This ensures fresh instances with latest application code, resolving CI timeout issues
+		// Create Environment Config construct that fetches Parameter Store values at synthesis time
+		this.environmentConfig = new EnvironmentConfigConstruct(
+			this,
+			'EnvironmentConfig',
+			{
+				environmentName,
+				isPreviewEnvironment: true,
+			},
+		)
+
+		// Create deployment ID to force task replacement on every deployment
+		// This ensures fresh containers with latest application code, resolving CI timeout issues
 		const deploymentId = `${prNumber}-${Date.now()}`
 
 		// Create networking infrastructure optimized for preview environments
@@ -95,130 +132,130 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			enableNatGateway: false, // Cost optimization: eliminate NAT Gateway (~$2.76/month savings)
 			enableVpcEndpoints: false, // Cost optimization: remove VPC endpoints for preview environments
 			exportPrefix: this.stackName, // Use stack name to ensure unique exports per PR
+			customDomain, // Pass custom domain configuration for HTTPS setup
+			branchName,
+			customDomainName: customDomain?.domainName,
 		})
 
 		// Validate networking requirements
 		this.networking.validateAlbRequirements()
 
-		// Create monitoring construct with preview-optimized settings
+		// Get the image URI from CDK context (passed from CI/CD)
+		const imageUri = this.node.tryGetContext('imageUri') as string | undefined
+		const imageTag = imageUri ? 'context-provided' : 'latest'
+
+		// Create ECS Fargate service for containerized deployment
+		this.ecsService = new EcsFargateConstruct(this, 'EcsService', {
+			vpc: this.networking.vpc,
+			securityGroup: this.networking.albSecurityGroup,
+			environmentName,
+			branchName,
+			customDomainName: customDomain?.domainName,
+			parameterStorePrefix: this.parameterStore.parameterPrefix,
+			enableDetailedMonitoring: false, // Cost optimization for preview
+			taskDefinition: {
+				cpu: 256, // Cost-optimized for preview (t3.nano equivalent)
+				memoryLimitMiB: 512, // Cost-optimized for preview
+			},
+			autoScaling: {
+				minCapacity: 1,
+				maxCapacity: 2, // Allow scaling for preview load testing
+				targetCpuUtilization: 70,
+			},
+			imageTag, // Will be overridden if imageUri context is provided
+			imageUri, // Pass the full image URI if provided
+			containerPort: 3040, // Match the port used in the application
+			healthCheck: {
+				path: '/api/health',
+				interval: cdk.Duration.seconds(30),
+				timeout: cdk.Duration.seconds(5),
+				healthyThresholdCount: 2,
+				unhealthyThresholdCount: 3,
+			},
+		})
+
+		// Create monitoring infrastructure
 		this.monitoring = new MonitoringConstruct(this, 'Monitoring', {
 			environmentName,
 			applicationName: 'macro-ai',
-			enableCostMonitoring: true,
 			prNumber,
+			customMetricNamespace: `MacroAI/Preview/${environmentName}`,
 		})
 
-		// Create cost monitoring construct for budget tracking and alerts
+		// Create cost monitoring with alerts
 		this.costMonitoring = new CostMonitoringConstruct(this, 'CostMonitoring', {
 			environmentName,
-			monthlyBudgetLimit: 3.5, // ~£3 target in USD
 			alertEmails: this.resolveCostAlertEmails(props),
-			alertThresholds: [50, 80, 100], // Alert at 50%, 80%, and 100% of budget
-			costFilters: {
-				PRNumber: [prNumber.toString()],
-			},
+			// Cost thresholds for preview environments (lower than production)
+			monthlyBudgetLimit: 50, // $50/month budget for preview environments
+			alertThresholds: [50, 80, 95], // Alert at 50%, 80%, 95% of budget
 		})
 
-		// Create custom launch template with CORS configuration for preview environments
-		const previewLaunchTemplate = this.createPreviewLaunchTemplate(
-			environmentName,
-			corsAllowedOrigins,
-			prNumber,
-			branchName,
-		)
-
-		// Create simplified Auto Scaling for preview environments
-		// Use a basic Auto Scaling Group without complex step scaling policies
-		this.autoScaling = this.createPreviewAutoScalingGroup(previewLaunchTemplate)
-
-		// Add scheduled scaling for cost optimization (off-hours shutdown)
-		this.addScheduledScaling()
-
-		// Create deployment status tracking
-		this.deploymentStatus = new DeploymentStatusConstruct(
-			this,
-			'DeploymentStatus',
-			{
+		// Add auto-shutdown for cost optimization
+		if (autoShutdown?.enabled !== false && this.ecsService.scalableTaskCount) {
+			this.autoShutdown = new AutoShutdownConstruct(this, 'AutoShutdown', {
+				scalableTaskCount: this.ecsService.scalableTaskCount,
 				environmentName,
-				applicationName: 'macro-ai',
-			},
-		)
+				shutdownSchedule: autoShutdown?.shutdownSchedule ?? '0 22 ? * * *', // 10 PM UTC daily - minute hour day-of-month month day-of-week year (using ? for day-of-month since we specify day-of-week)
+				startupSchedule: autoShutdown?.startupSchedule, // Can be undefined for on-demand only
+				startupTaskCount: 1,
+				enableWeekendShutdown: autoShutdown?.enableWeekendShutdown ?? true,
+				displayTimeZone: autoShutdown?.displayTimeZone ?? 'UTC',
+			})
+		}
 
-		// Stack outputs for GitHub Actions workflow
-		// Note: Preview environments use HTTP only (no custom domain/SSL certificate)
-		// Production environments should use HTTPS with proper SSL certificates
-		new cdk.CfnOutput(this, 'ApiEndpoint', {
-			value: `http://${this.networking.albConstruct!.applicationLoadBalancer.loadBalancerDnsName}/api`,
-			description: 'API endpoint URL for the preview environment (HTTP only)',
-			exportName: `${this.stackName}-ApiEndpoint`,
+		// Create comprehensive outputs
+		this.createOutputs()
+		this.addAutoShutdownOutputs()
+	}
+
+	/**
+	 * Create comprehensive CloudFormation outputs for the preview environment
+	 */
+	private createOutputs(): void {
+		// Parameter Store outputs
+		new cdk.CfnOutput(this, 'ParameterStorePrefix', {
+			value: this.parameterStore.parameterPrefix,
+			description: 'Parameter Store prefix for configuration',
+			exportName: `${this.stackName}-ParameterStorePrefix`,
 		})
 
-		new cdk.CfnOutput(this, 'LoadBalancerDNS', {
-			value:
-				this.networking.albConstruct!.applicationLoadBalancer
-					.loadBalancerDnsName,
-			description: 'Load Balancer DNS name',
-			exportName: `${this.stackName}-LoadBalancerDNS`,
+		// ECS service outputs
+		new cdk.CfnOutput(this, 'EcsClusterName', {
+			value: this.ecsService.cluster.clusterName,
+			description: 'ECS cluster name',
+			exportName: `${this.stackName}-EcsClusterName`,
 		})
 
-		new cdk.CfnOutput(this, 'AutoScalingGroupName', {
-			value: this.autoScaling.autoScalingGroupName,
-			description: 'Auto Scaling Group name for deployment',
-			exportName: `${this.stackName}-AutoScalingGroupName`,
+		new cdk.CfnOutput(this, 'EcsServiceName', {
+			value: this.ecsService.service.serviceName,
+			description: 'ECS service name',
+			exportName: `${this.stackName}-EcsServiceName`,
 		})
 
-		new cdk.CfnOutput(this, 'DefaultTargetGroupArn', {
-			value: this.networking.albConstruct!.defaultTargetGroup.targetGroupArn,
-			description: 'Default target group ARN for ALB health checks',
-			exportName: `${this.stackName}-DefaultTargetGroupArn`,
+		new cdk.CfnOutput(this, 'EcsTaskDefinitionArn', {
+			value: this.ecsService.taskDefinition.taskDefinitionArn,
+			description: 'ECS task definition ARN',
+			exportName: `${this.stackName}-EcsTaskDefinitionArn`,
 		})
 
-		new cdk.CfnOutput(this, 'EC2InstanceId', {
-			value: 'dynamic', // Will be populated by instances
-			description: 'EC2 Instance ID (dynamic)',
-			exportName: `${this.stackName}-EC2InstanceId`,
+		new cdk.CfnOutput(this, 'EcrRepositoryUri', {
+			value: this.ecsService.ecrRepository.repositoryUri,
+			description: 'ECR repository URI',
+			exportName: `${this.stackName}-EcrRepositoryUri`,
 		})
 
-		// VPC exports are handled by VpcConstruct to avoid duplication
+		// Networking outputs are already provided by the NetworkingConstruct
+		// No need to duplicate VpcId and AlbSecurityGroupId exports
 
-		new cdk.CfnOutput(this, 'EnvironmentName', {
-			value: environmentName,
-			description: 'Environment name for the preview deployment',
-			exportName: `${this.stackName}-EnvironmentName`,
-		})
-
-		new cdk.CfnOutput(this, 'PRNumber', {
-			value: prNumber.toString(),
-			description: 'PR number for this preview environment',
-			exportName: `${this.stackName}-PRNumber`,
-		})
-
-		new cdk.CfnOutput(this, 'BranchName', {
-			value: branchName,
-			description: 'Branch name for this preview environment',
-			exportName: `${this.stackName}-BranchName`,
-		})
-
-		// Monitoring and observability outputs
-		new cdk.CfnOutput(this, 'MonitoringDashboardUrl', {
-			value: `https://console.aws.amazon.com/cloudwatch/home?region=${this.region}#dashboards:name=${this.monitoring.dashboard.dashboardName}`,
-			description: 'CloudWatch dashboard URL for monitoring',
-			exportName: `${this.stackName}-MonitoringDashboardUrl`,
-		})
-
-		new cdk.CfnOutput(this, 'DeploymentStatusTableName', {
-			value: this.deploymentStatus.deploymentHistoryTable.tableName,
-			description: 'DynamoDB table name for deployment status tracking',
-			exportName: `${this.stackName}-DeploymentStatusTableName`,
+		// Monitoring outputs
+		new cdk.CfnOutput(this, 'MonitoringDashboardName', {
+			value: this.monitoring.dashboard.dashboardName,
+			description: 'CloudWatch dashboard name',
+			exportName: `${this.stackName}-MonitoringDashboardName`,
 		})
 
 		// Cost monitoring outputs
-		new cdk.CfnOutput(this, 'CostMonitoringBudgetName', {
-			value: `macro-ai-${environmentName}-monthly-budget`,
-			description: 'AWS Budget name for cost monitoring',
-			exportName: `${this.stackName}-CostMonitoringBudgetName`,
-		})
-
 		new cdk.CfnOutput(this, 'CostAlertTopicArn', {
 			value: this.costMonitoring.alertTopic.topicArn,
 			description: 'SNS topic ARN for cost alerts',
@@ -227,356 +264,27 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	}
 
 	/**
-	 * Create a custom launch template for preview environments with CORS configuration
+	 * Add auto-shutdown outputs to stack outputs
 	 */
-	private createPreviewLaunchTemplate(
-		environmentName: string,
-		corsAllowedOrigins: string,
-		prNumber: number,
-		branchName: string,
-	): ec2.LaunchTemplate {
-		// Get the base EC2 construct for IAM role and security configuration
-		if (!this.networking.ec2Construct) {
-			throw new Error(
-				'EC2 construct not available in NetworkingConstruct. Ensure parameterStorePrefix is provided.',
-			)
+	private addAutoShutdownOutputs(): void {
+		if (this.autoShutdown) {
+			// Create manual control outputs
+			this.autoShutdown.createManualShutdownOutput()
+			this.autoShutdown.createManualStartupOutput()
+
+			// Add informational output about cost savings
+			new cdk.CfnOutput(this, 'AutoShutdownStatus', {
+				value: 'Enabled',
+				description: 'Auto-shutdown status for cost optimization',
+				exportName: `${this.stackName}-AutoShutdownStatus`,
+			})
+		} else {
+			new cdk.CfnOutput(this, 'AutoShutdownStatus', {
+				value: 'Disabled',
+				description: 'Auto-shutdown status for cost optimization',
+				exportName: `${this.stackName}-AutoShutdownStatus`,
+			})
 		}
-
-		// Create user data with CORS configuration
-		const userData = this.createPreviewUserData(
-			this.parameterStore.parameterPrefix,
-			corsAllowedOrigins,
-			prNumber,
-			branchName,
-		)
-
-		// Create launch template with preview-specific configuration
-		return new ec2.LaunchTemplate(this, 'PreviewLaunchTemplate', {
-			launchTemplateName: `macro-ai-${environmentName}-preview-launch-template`,
-			instanceType: ec2.InstanceType.of(
-				ec2.InstanceClass.T3,
-				ec2.InstanceSize.NANO,
-			), // Further cost-optimized for preview (50% cost reduction)
-			machineImage: ec2.MachineImage.latestAmazonLinux2023({
-				cpuType: ec2.AmazonLinuxCpuType.X86_64,
-			}),
-			// Use a PR-specific instance security group to allow ALB -> instance traffic on 3040
-			securityGroup: this.networking.createPrSecurityGroup(prNumber),
-			role: this.networking.ec2Construct.instanceRole,
-			userData,
-			detailedMonitoring: false, // Cost optimization for preview
-			ebsOptimized: true,
-			requireImdsv2: true, // Security best practice
-			// Cost-optimized storage configuration
-			blockDevices: [
-				{
-					deviceName: '/dev/xvda',
-					volume: ec2.BlockDeviceVolume.ebs(8, {
-						volumeType: ec2.EbsDeviceVolumeType.GP3,
-						iops: 3000, // Baseline for gp3
-						throughput: 125, // Baseline for gp3 (MB/s)
-						deleteOnTermination: true,
-						encrypted: true, // Security best practice
-					}),
-				},
-			],
-		})
-	}
-
-	/**
-	 * Create user data script with CORS configuration for preview environments
-	 */
-	private createPreviewUserData(
-		parameterStorePrefix: string,
-		corsAllowedOrigins: string,
-		prNumber: number,
-		branchName: string,
-	): ec2.UserData {
-		const userData = ec2.UserData.forLinux()
-
-		// Add comprehensive deployment script with CORS configuration
-		userData.addCommands(
-			'#!/bin/bash',
-			'set -e',
-			'',
-			'# Logging setup',
-			'exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1',
-			'echo "$(date): Starting Macro AI preview deployment"',
-			'',
-			'# Error handling function',
-			'error_exit() {',
-			'  echo "$(date): ERROR: $1" >&2',
-			'  exit 1',
-			'}',
-			'',
-			'# Success function',
-			'success_exit() {',
-			'  echo "$(date): SUCCESS: Macro AI preview deployment completed"',
-			'  exit 0',
-			'}',
-			'',
-			'# Trap errors',
-			'trap \'error_exit "Script failed at line $LINENO"\' ERR',
-			'',
-			'echo "$(date): Creating swap file for memory-constrained t3.nano instance..."',
-			'# Create 1GB swap file to prevent OOM during package installations',
-			'fallocate -l 1G /swapfile || error_exit "Failed to create swap file"',
-			'chmod 600 /swapfile || error_exit "Failed to set swap file permissions"',
-			'mkswap /swapfile || error_exit "Failed to format swap file"',
-			'swapon /swapfile || error_exit "Failed to enable swap file"',
-			'',
-			'# Add swap to fstab for persistence across reboots',
-			'echo "/swapfile none swap sw 0 0" >> /etc/fstab || error_exit "Failed to add swap to fstab"',
-			'',
-			'# Verify swap is active',
-			'free -h | grep -i swap || error_exit "Swap verification failed"',
-			'echo "$(date): Swap file created and activated successfully"',
-			'',
-			'echo "$(date): Updating system packages..."',
-			'dnf update -y || error_exit "Failed to update system packages"',
-			'',
-			'echo "$(date): Installing Node.js 20 LTS from NodeSource..."',
-			'# Add NodeSource repository for Node.js 20 LTS',
-			'curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - || error_exit "Failed to add NodeSource repository"',
-			'dnf install -y nodejs || error_exit "Failed to install Node.js"',
-			'',
-			'# Verify Node.js installation',
-			'node --version || error_exit "Node.js installation verification failed"',
-			'npm --version || error_exit "npm installation verification failed"',
-			'',
-			'echo "$(date): Installing additional system packages..."',
-			'# Install packages, handling curl conflict with curl-minimal (curl-minimal is sufficient)',
-			'dnf install -y git unzip wget amazon-cloudwatch-agent || error_exit "Failed to install system packages"',
-			'',
-			'echo "$(date): Setting up application user and directories..."',
-			'useradd -m -s /bin/bash macroai || error_exit "Failed to create macroai user"',
-			'mkdir -p /opt/macro-ai /var/log/macro-ai || error_exit "Failed to create directories"',
-			'chown -R macroai:macroai /opt/macro-ai /var/log/macro-ai || error_exit "Failed to set ownership"',
-			'',
-			'# Set environment variables including CORS configuration',
-			`echo "PARAMETER_STORE_PREFIX=${parameterStorePrefix}" >> /etc/environment`,
-			'echo "NODE_ENV=production" >> /etc/environment',
-			'echo "SERVER_PORT=3040" >> /etc/environment',
-			'echo "APP_ENV=production" >> /etc/environment',
-			`echo "PR_NUMBER=${prNumber}" >> /etc/environment`,
-			`echo "BRANCH_NAME=${branchName}" >> /etc/environment`,
-			`echo "CORS_ALLOWED_ORIGINS=${corsAllowedOrigins}" >> /etc/environment`,
-			'',
-			'# Create .env file for the application',
-			'cat > /opt/macro-ai/.env << EOF',
-			`PARAMETER_STORE_PREFIX=${parameterStorePrefix}`,
-			'NODE_ENV=production',
-			'SERVER_PORT=3040',
-			'APP_ENV=production',
-			`PR_NUMBER=${prNumber}`,
-			`BRANCH_NAME=${branchName}`,
-			`CORS_ALLOWED_ORIGINS=${corsAllowedOrigins}`,
-			'EOF',
-			'chown macroai:macroai /opt/macro-ai/.env',
-			'chmod 600 /opt/macro-ai/.env',
-			'',
-			'echo "$(date): CORS configuration set to: ${corsAllowedOrigins}"',
-			'echo "$(date): Preview environment setup completed for PR ${prNumber} (${branchName})"',
-			'',
-			'echo "$(date): Deploying minimal preview API service..."',
-			'mkdir -p /opt/macro-ai/app/dist || error_exit "Failed to create app directory"',
-			'chown -R macroai:macroai /opt/macro-ai /var/log/macro-ai',
-			'',
-			'# Create minimal package.json',
-			'cat > /opt/macro-ai/app/package.json << EOF',
-			'{',
-			'  "name": "macro-ai-preview-api",',
-			'  "version": "1.0.0",',
-			'  "main": "dist/index.js",',
-			'  "engines": { "node": ">=20.0.0" },',
-			'  "dependencies": {',
-			'    "express": "^4.21.2",',
-			'    "cors": "^2.8.5"',
-			'  }',
-			'}',
-			'EOF',
-			'',
-			'# Create minimal Express server using CommonJS for reliability',
-			'cat > /opt/macro-ai/app/dist/index.js << EOF',
-			'const express = require("express");',
-			'const app = express();',
-			'const port = process.env.SERVER_PORT || 3040;',
-			'',
-			'// Health check endpoint',
-			'app.get("/api/health", (req, res) => {',
-			'  res.json({ ',
-			'    status: "healthy", ',
-			'    timestamp: new Date().toISOString(),',
-			'    port: port,',
-			'    env: process.env.NODE_ENV || "development"',
-			'  });',
-			'});',
-			'',
-			'// Root endpoint for basic connectivity test',
-			'app.get("/", (req, res) => {',
-			'  res.json({ message: "Macro AI Preview API", status: "running" });',
-			'});',
-			'',
-			'app.listen(port, "0.0.0.0", () => {',
-			'  console.log(`Preview API listening on port ${port}`);',
-			'  console.log(`Health check available at http://localhost:${port}/api/health`);',
-			'});',
-			'EOF',
-			'',
-			'# Install runtime dependencies',
-			'cd /opt/macro-ai/app',
-			'npm install --production --no-audit --no-fund || error_exit "Failed to install runtime dependencies"',
-			'',
-			'# Create systemd service',
-			'cat > /etc/systemd/system/macro-ai.service << EOF',
-			'[Unit]',
-			'Description=Macro AI Preview Express API',
-			'After=network.target',
-			'Wants=network-online.target',
-			'',
-			'[Service]',
-			'Type=simple',
-			'User=macroai',
-			'Group=macroai',
-			'WorkingDirectory=/opt/macro-ai/app',
-			'ExecStart=/usr/bin/node dist/index.js',
-			'Restart=always',
-			'RestartSec=10',
-			'Environment=NODE_ENV=production',
-			'Environment=APP_ENV=production',
-			'Environment=SERVER_PORT=3040',
-			'',
-			'[Install]',
-			'WantedBy=multi-user.target',
-			'EOF',
-			'',
-			'systemctl daemon-reload || error_exit "Failed to reload systemd"',
-			'systemctl enable macro-ai.service || error_exit "Failed to enable macro-ai service"',
-			'',
-			'echo "$(date): Starting macro-ai service..."',
-			'systemctl start macro-ai.service || error_exit "Failed to start macro-ai service"',
-			'',
-			'echo "$(date): Waiting for service to start..."',
-			'sleep 10',
-			'',
-			'echo "$(date): Checking service status..."',
-			'systemctl status macro-ai.service || echo "Service status check failed"',
-			'systemctl is-active --quiet macro-ai.service || error_exit "Macro AI preview service is not running"',
-			'',
-			'echo "$(date): Testing health endpoint..."',
-			'curl -f http://localhost:3040/api/health || echo "Health check failed, but continuing..."',
-			'',
-			'echo "$(date): Preview API service started successfully"',
-			'success_exit',
-		)
-
-		return userData
-	}
-
-	/**
-	 * Create a simplified Auto Scaling Group for preview environments
-	 * Avoids complex step scaling policies that require multiple intervals
-	 */
-	private createPreviewAutoScalingGroup(
-		launchTemplate: ec2.LaunchTemplate,
-	): autoscaling.AutoScalingGroup {
-		const asg = new autoscaling.AutoScalingGroup(
-			this,
-			'PreviewAutoScalingGroup',
-			{
-				vpc: this.networking.vpc,
-				launchTemplate,
-				// Resource consolidation - minimal capacity for preview environments
-				minCapacity: 1, // Single instance minimum for cost optimization
-				maxCapacity: 2, // Limited scaling to control costs
-				desiredCapacity: 1, // Start with single instance
-
-				// Health check configuration
-				healthChecks: {
-					types: ['ELB'],
-					gracePeriod: cdk.Duration.minutes(5),
-				},
-
-				// Instance distribution - use public subnets for cost optimization
-				vpcSubnets: {
-					subnetType: ec2.SubnetType.PUBLIC,
-				},
-
-				// Termination policies
-				terminationPolicies: [
-					autoscaling.TerminationPolicy.OLDEST_INSTANCE,
-					autoscaling.TerminationPolicy.DEFAULT,
-				],
-
-				// Auto scaling group name - parameterized with PR number to avoid conflicts
-				autoScalingGroupName: `macro-ai-pr-${this.prNumber}-asg`,
-			},
-		)
-
-		// Register with ALB target group if available
-		// For PR previews, each PR gets its own ALB, so using default target group is fine
-		if (this.networking.albConstruct) {
-			asg.attachToApplicationTargetGroup(
-				this.networking.albConstruct.defaultTargetGroup,
-			)
-		}
-
-		// Add simple target tracking scaling policy (CPU-based)
-		asg.scaleOnCpuUtilization('CpuScaling', {
-			targetUtilizationPercent: 70,
-		})
-
-		// Add tags for preview environment (avoid conflicts with stack-level tags)
-		cdk.Tags.of(asg).add('SubComponent', 'AutoScaling')
-		cdk.Tags.of(asg).add('DeploymentType', 'ec2-preview')
-		cdk.Tags.of(asg).add('ScalingType', 'target-tracking')
-		// Note: Environment, Component, Purpose are inherited from stack-level TaggingStrategy
-
-		return asg
-	}
-
-	/**
-	 * Add scheduled scaling for cost optimization
-	 * Scale down to 0 instances at 6 PM UTC (off-hours)
-	 * Scale up to 1 instance at 8 AM UTC (business hours)
-	 *
-	 * This provides ~$1.45/month savings by reducing uptime by 50%
-	 */
-	private addScheduledScaling(): void {
-		// Scale down to 0 instances at 6 PM UTC (18:00) every day
-		// This shuts down preview environments during off-hours
-		new autoscaling.ScheduledAction(this, 'ScaleDownSchedule', {
-			autoScalingGroup: this.autoScaling,
-			schedule: autoscaling.Schedule.cron({
-				minute: '0',
-				hour: '18', // 6 PM UTC
-				day: '*', // Every day
-				month: '*', // Every month
-			}),
-			minCapacity: 0,
-			maxCapacity: 0,
-			desiredCapacity: 0,
-		})
-
-		// Scale up to 1 instance at 8 AM UTC (08:00) every day
-		// This starts preview environments for business hours
-		new autoscaling.ScheduledAction(this, 'ScaleUpSchedule', {
-			autoScalingGroup: this.autoScaling,
-			schedule: autoscaling.Schedule.cron({
-				minute: '0',
-				hour: '8', // 8 AM UTC
-				day: '*', // Every day
-				month: '*', // Every month
-			}),
-			minCapacity: 1,
-			maxCapacity: 1,
-			desiredCapacity: 1,
-		})
-
-		// Add tags to identify scheduled scaling
-		cdk.Tags.of(this.autoScaling).add('ScheduledScaling', 'enabled')
-		cdk.Tags.of(this.autoScaling).add('OffHoursShutdown', '18:00-08:00 UTC')
-		cdk.Tags.of(this.autoScaling).add('CostOptimization', 'scheduled-scaling')
 	}
 
 	/**

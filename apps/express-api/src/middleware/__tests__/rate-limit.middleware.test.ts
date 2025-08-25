@@ -15,16 +15,16 @@ vi.mock('../../utils/logger.ts', () => ({
 	configureLogger: vi.fn(),
 }))
 
-vi.mock('../../config/default.ts', () => ({
+vi.mock('../../utils/load-config.ts', () => ({
 	config: {
-		nodeEnv: 'test',
-		rateLimitWindowMs: 900000,
-		rateLimitMaxRequests: 100,
-		authRateLimitWindowMs: 3600000,
-		authRateLimitMaxRequests: 10,
-		apiRateLimitWindowMs: 60000,
-		apiRateLimitMaxRequests: 60,
-		redisUrl: undefined,
+		NODE_ENV: 'test',
+		RATE_LIMIT_WINDOW_MS: 900000,
+		RATE_LIMIT_MAX_REQUESTS: 100,
+		AUTH_RATE_LIMIT_WINDOW_MS: 3600000,
+		AUTH_RATE_LIMIT_MAX_REQUESTS: 10,
+		API_RATE_LIMIT_WINDOW_MS: 60000,
+		API_RATE_LIMIT_MAX_REQUESTS: 60,
+		REDIS_URL: undefined,
 	},
 }))
 
@@ -164,13 +164,15 @@ describe('Rate Limit Middleware', () => {
 
 			// Assert
 			expect(mockRes.status).toHaveBeenCalledWith(429)
-			const statusResult = mockRes.status(429) as {
-				json: ReturnType<typeof vi.fn>
+
+			// Use proper type guard for the status method
+			if (mockRes.status) {
+				const statusResult = mockRes.status(429)
+				expect(statusResult.json).toHaveBeenCalledWith({
+					status: 429,
+					message: 'Too many requests, please try again later.',
+				})
 			}
-			expect(statusResult.json).toHaveBeenCalledWith({
-				status: 429,
-				message: 'Too many requests, please try again later.',
-			})
 			expect(mockNext).not.toHaveBeenCalled()
 		})
 
@@ -228,13 +230,15 @@ describe('Rate Limit Middleware', () => {
 				'[middleware - rateLimit]: Rate limit exceeded for IP: 192.168.1.100',
 			)
 			expect(mockRes.status).toHaveBeenCalledWith(429)
-			const statusResult = mockRes.status(429) as {
-				json: ReturnType<typeof vi.fn>
+
+			// Use proper type guard for the status method
+			if (mockRes.status) {
+				const statusResult = mockRes.status(429)
+				expect(statusResult.json).toHaveBeenCalledWith({
+					status: 429,
+					message: 'Too many requests, please try again later.',
+				})
 			}
-			expect(statusResult.json).toHaveBeenCalledWith({
-				status: 429,
-				message: 'Too many requests, please try again later.',
-			})
 			expect(mockNext).not.toHaveBeenCalled()
 		})
 
@@ -292,13 +296,15 @@ describe('Rate Limit Middleware', () => {
 				'[middleware - rateLimit]: Auth rate limit exceeded for IP: 10.0.0.50',
 			)
 			expect(mockRes.status).toHaveBeenCalledWith(429)
-			const statusResult = mockRes.status(429) as {
-				json: ReturnType<typeof vi.fn>
+
+			// Use proper type guard for the status method
+			if (mockRes.status) {
+				const statusResult = mockRes.status(429)
+				expect(statusResult.json).toHaveBeenCalledWith({
+					status: 429,
+					message: 'Too many authentication attempts, please try again later.',
+				})
 			}
-			expect(statusResult.json).toHaveBeenCalledWith({
-				status: 429,
-				message: 'Too many authentication attempts, please try again later.',
-			})
 			expect(mockNext).not.toHaveBeenCalled()
 		})
 
@@ -356,13 +362,15 @@ describe('Rate Limit Middleware', () => {
 				'[middleware - rateLimit]: API rate limit exceeded for IP: 172.16.0.25',
 			)
 			expect(mockRes.status).toHaveBeenCalledWith(429)
-			const statusResult = mockRes.status(429) as {
-				json: ReturnType<typeof vi.fn>
+
+			// Use proper type guard for the status method
+			if (mockRes.status) {
+				const statusResult = mockRes.status(429)
+				expect(statusResult.json).toHaveBeenCalledWith({
+					status: 429,
+					message: 'API rate limit exceeded, please try again later.',
+				})
 			}
-			expect(statusResult.json).toHaveBeenCalledWith({
-				status: 429,
-				message: 'API rate limit exceeded, please try again later.',
-			})
 			expect(mockNext).not.toHaveBeenCalled()
 		})
 	})
@@ -794,13 +802,15 @@ describe('Rate Limit Middleware', () => {
 			// Third call should be rate limited
 			expect(mockNext3).not.toHaveBeenCalled()
 			expect(mockRes3.status).toHaveBeenCalledWith(429)
-			const statusResult = mockRes3.status(429) as {
-				json: ReturnType<typeof vi.fn>
+
+			// Use proper type guard for the status method
+			if (mockRes3.status) {
+				const statusResult = mockRes3.status(429)
+				expect(statusResult.json).toHaveBeenCalledWith({
+					status: 429,
+					message: 'Too many requests, please try again later.',
+				})
 			}
-			expect(statusResult.json).toHaveBeenCalledWith({
-				status: 429,
-				message: 'Too many requests, please try again later.',
-			})
 		})
 
 		it('should handle different rate limiter configurations', async () => {

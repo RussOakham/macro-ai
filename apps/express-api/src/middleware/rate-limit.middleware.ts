@@ -4,8 +4,8 @@ import { StatusCodes } from 'http-status-codes'
 import { RedisStore } from 'rate-limit-redis'
 import { createClient } from 'redis'
 
-import { config } from '../../config/default.ts'
 import { standardizeError } from '../utils/errors.ts'
+import { config } from '../utils/load-config.ts'
 import { pino } from '../utils/logger.ts'
 
 const { logger } = pino
@@ -16,9 +16,10 @@ let defaultStore = undefined
 let authStore = undefined
 let apiStore = undefined
 
-if (config.nodeEnv === 'production' && config.redisUrl) {
+// Initialize Redis if in production and Redis URL is available
+if (config.NODE_ENV === 'production' && config.REDIS_URL) {
 	const redisClient = createClient({
-		url: config.redisUrl,
+		url: config.REDIS_URL,
 		socket: {
 			connectTimeout: 50000,
 		},
@@ -52,8 +53,8 @@ if (config.nodeEnv === 'production' && config.redisUrl) {
 
 // Default rate limit configuration
 const defaultRateLimiter = rateLimit({
-	windowMs: config.rateLimitWindowMs || 15 * 60 * 1000, // 15 minutes by default
-	limit: config.rateLimitMaxRequests || 100, // 100 requests per windowMs by default
+	windowMs: config.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000, // 15 minutes by default
+	limit: config.RATE_LIMIT_MAX_REQUESTS || 100, // 100 requests per windowMs by default
 	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
 	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 	store: defaultStore, // Use Redis store in production if available
@@ -76,8 +77,8 @@ const defaultRateLimiter = rateLimit({
 
 // Stricter rate limit for authentication endpoints
 const authRateLimiter = rateLimit({
-	windowMs: config.authRateLimitWindowMs || 60 * 60 * 1000, // 1 hour by default
-	limit: config.authRateLimitMaxRequests || 10, // 10 requests per hour by default
+	windowMs: config.AUTH_RATE_LIMIT_WINDOW_MS || 60 * 60 * 1000, // 1 hour by default
+	limit: config.AUTH_RATE_LIMIT_MAX_REQUESTS || 10, // 10 requests per hour by default
 	standardHeaders: true,
 	legacyHeaders: false,
 	store: authStore, // Use Redis store in production if available
@@ -100,8 +101,8 @@ const authRateLimiter = rateLimit({
 
 // API rate limiter for endpoints that require API key
 const apiRateLimiter = rateLimit({
-	windowMs: config.apiRateLimitWindowMs || 60 * 1000, // 1 minute by default
-	limit: config.apiRateLimitMaxRequests || 60, // 60 requests per minute by default
+	windowMs: config.API_RATE_LIMIT_WINDOW_MS || 60 * 1000, // 1 minute by default
+	limit: config.API_RATE_LIMIT_MAX_REQUESTS || 60, // 60 requests per minute by default
 	standardHeaders: true,
 	legacyHeaders: false,
 	store: apiStore, // Use Redis store in production if available

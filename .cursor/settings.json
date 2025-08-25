@@ -1,0 +1,32 @@
+{
+	"mcp": {
+		"enabled": true,
+		"autoMemoryManagement": true,
+		"proactiveToolUsage": true,
+		"securityFirst": true
+	},
+	"workflow": {
+		"useSequentialThinking": true,
+		"useTaskOrchestrator": true,
+		"autoTemplateApplication": true,
+		"documentationReference": true
+	},
+	"memory": {
+		"autoStoreContext": true,
+		"autoRestoreContext": true,
+		"storeAfterTasks": true,
+		"storeAfterDecisions": true
+	},
+	"security": {
+		"autoSemgrepScan": true,
+		"scanAfterChanges": true,
+		"createSecurityTasks": true,
+		"referenceBestPractices": true
+	},
+	"documentation": {
+		"referenceAWS": true,
+		"useRefTool": true,
+		"validateBestPractices": true,
+		"searchBeforeImplementation": true
+	}
+}

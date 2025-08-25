@@ -7,7 +7,7 @@ set -e
 
 # Configuration
 ROLE_NAME="GitHubActionsDeploymentRole"
-POLICY_FILE="infrastructure/iam-policies/enhanced-github-actions-policy.json"
+POLICY_FILE="../iam-policies/enhanced-github-actions-policy.json"
 POLICY_NAME="GitHubActionsDeploymentPolicy"
 
 # Colors for output
@@ -83,11 +83,10 @@ fi
 # Confirm before applying
 log_warning "⚠️  This will update the IAM policy for $ROLE_NAME"
 log_warning "⚠️  The policy will include permissions for:"
-log_warning "    - autoscaling:DescribeAutoScalingGroups"
-log_warning "    - ec2:DescribeInstances"
-log_warning "    - ec2:DescribeInstanceStatus"
-log_warning "    - elasticloadbalancing:DescribeTargetHealth"
-log_warning "    - elasticloadbalancing:DescribeTargetGroups"
+log_warning "    - ECR access (Docker image push/pull)"
+log_warning "    - ECS deployment and management"
+log_warning "    - Service health checking (ECS/EC2)"
+log_warning "    - Amplify deployment and management"
 
 read -p "Do you want to continue? (y/N): " -n 1 -r
 echo
@@ -117,11 +116,11 @@ log_info "Verifying policy was applied correctly..."
 applied_policy=$(aws iam get-role-policy --role-name "$ROLE_NAME" --policy-name "$POLICY_NAME" --query "PolicyDocument" --output json)
 
 # Check if it contains the required permissions
-if echo "$applied_policy" | grep -q "EC2HealthCheckPermissions" && echo "$applied_policy" | grep -q "autoscaling:DescribeAutoScalingGroups"; then
-    log_success "✅ EC2HealthCheckPermissions found in applied policy"
-    log_success "✅ autoscaling:DescribeAutoScalingGroups permission confirmed"
+if echo "$applied_policy" | grep -q "ServiceHealthCheckPermissions" && echo "$applied_policy" | grep -q "ecr:GetAuthorizationToken"; then
+    log_success "✅ ServiceHealthCheckPermissions found in applied policy"
+    log_success "✅ ECR permissions confirmed"
 else
-    log_error "❌ EC2HealthCheckPermissions not found in applied policy"
+    log_error "❌ Required permissions not found in applied policy"
     exit 1
 fi
 

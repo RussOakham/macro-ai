@@ -2,178 +2,53 @@ import type { NextFunction, Request, Response } from 'express'
 import { vi } from 'vitest'
 
 /**
- * Mock interfaces for Express objects with proper typing
+ * Type for the complete set of Express mocks
  */
-
-// Mock Response interface with chainable methods
-interface MockResponse extends Partial<Response> {
-	status: ReturnType<typeof vi.fn>
-	json: ReturnType<typeof vi.fn>
-	send: ReturnType<typeof vi.fn>
-	cookie: ReturnType<typeof vi.fn>
-	clearCookie: ReturnType<typeof vi.fn>
-	redirect: ReturnType<typeof vi.fn>
-	end: ReturnType<typeof vi.fn>
-}
-
-// Mock Request interface with common properties
-interface MockRequest extends Partial<Request> {
-	body?: unknown
-	params?: Record<string, string>
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	query?: Record<string, any>
-	headers?: Record<string, string | string[] | undefined>
-	cookies?: Record<string, string>
-	userId?: string
-	ip?: string
-	path?: string
-}
-
-// Generic Mock Request interface for typed body requests
-interface MockRequestWithBody<T>
-	extends Partial<Request<Record<string, string>, unknown, T>> {
-	body?: T
-	params?: Record<string, string>
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	query?: Record<string, any>
-	headers?: Record<string, string | string[] | undefined>
-	cookies?: Record<string, string>
-	userId?: string
-	ip?: string
-	path?: string
-}
-
-// Interface for the chained result object returned by status()
-interface ChainedResult {
-	json: ReturnType<typeof vi.fn>
-	send: ReturnType<typeof vi.fn>
-	end: ReturnType<typeof vi.fn>
+interface ExpressMocks {
+	req: Partial<Request>
+	res: Partial<Response>
+	next: NextFunction
 }
 
 /**
  * Factory function to create a mock Express Request object
  * @param overrides - Properties to override in the mock request
- * @returns Mock Request object with default properties
+ * @returns Mock Request object with proper Express typing
  */
 export const createMockRequest = (
-	overrides: Partial<MockRequest> = {},
-): MockRequest => ({
-	body: {},
-	params: {},
-	query: {},
-	headers: {},
-	cookies: {},
-	...overrides,
-})
-
-/**
- * Simple mock request factory (similar to your suggested pattern)
- * @param data - Optional request data to override
- * @returns Mock Request object
- */
-export const mockRequest = <T = unknown>(
-	data?: Partial<Request<Record<string, string>, unknown, T>>,
-): Request<Record<string, string>, unknown, T> => {
+	overrides: Partial<Request> = {},
+): Partial<Request> => {
 	return {
-		body: {} as T,
+		body: {},
 		params: {},
 		query: {},
 		headers: {},
 		cookies: {},
-		...data,
-	} as Request<Record<string, string>, unknown, T>
+		method: 'GET',
+		ip: '127.0.0.1',
+		path: '/',
+		url: '/',
+		get: vi.fn(),
+		...overrides,
+	}
 }
 
 /**
- * Simple mock response factory (similar to your suggested pattern)
- * @returns Mock Response object with proper typing for chaining
+ * Factory function to create a mock Express Response object
+ * @returns Mock Response object with proper Express typing
  */
-export const mockResponse = (): Response => {
+export const createMockResponse = (): Partial<Response> => {
 	const json = vi.fn()
 	const send = vi.fn()
 	const end = vi.fn()
-
-	const statusChain = {
-		json,
-		send,
-		end,
-	}
-
-	const res = {
-		status: vi.fn().mockReturnValue(statusChain),
-		json,
-		send,
-		end,
-	}
-	return res as unknown as Response
-}
-
-/**
- * Simple mock next function factory (similar to your suggested pattern)
- * @returns Mock NextFunction
- */
-export const mockNext = (): NextFunction => {
-	return vi.fn()
-}
-
-/**
- * Helper function to create a properly typed status chain result
- * This solves the 'any' type issue when calling mockResponse.status(200)
- *
- * @example
- * ```typescript
- * const mockResponse = createMockResponse()
- *
- * // Instead of this (which gives 'any' type):
- * // const result = mockResponse.status(200)
- *
- * // Use this for proper typing:
- * const result = createStatusChain(mockResponse, 200)
- * result.json({ data: 'test' }) // Now properly typed!
- * ```
- *
- * @param mockResponse - The mock response object
- * @param statusCode - The status code to set
- * @returns Properly typed object with json, send, and end methods
- */
-export const createStatusChain = (
-	mockResponse: MockResponse,
-	statusCode: number,
-) => {
-	const result = mockResponse.status(statusCode) as {
-		json: ReturnType<typeof vi.fn>
-		send: ReturnType<typeof vi.fn>
-		end: ReturnType<typeof vi.fn>
-	}
-	return result
-}
-
-/**
- * Factory function to create a mock Express Response object with chainable methods
- * @returns Mock Response object with properly chained status().json() pattern
- */
-export const createMockResponse = (): MockResponse => {
-	const json = vi.fn()
-	const send = vi.fn()
-	const cookie = vi.fn().mockReturnThis()
-	const clearCookie = vi.fn().mockReturnThis()
-	const redirect = vi.fn()
-	const end = vi.fn()
-
-	// Create status function that returns an object with json and send methods
-	const status = vi.fn().mockReturnValue({
-		json,
-		send,
-		end,
-	})
 
 	return {
-		status,
+		status: vi.fn().mockReturnValue({ json, send, end }),
 		json,
 		send,
-		cookie,
-		clearCookie,
-		redirect,
+		cookie: vi.fn().mockReturnThis(),
+		clearCookie: vi.fn().mockReturnThis(),
+		redirect: vi.fn(),
 		end,
 	}
 }
@@ -190,8 +65,8 @@ export const createMockNext = (): NextFunction => vi.fn()
  * @returns Object containing req, res, and next mocks
  */
 export const createExpressMocks = (
-	requestOverrides: Partial<MockRequest> = {},
-) => ({
+	requestOverrides: Partial<Request> = {},
+): ExpressMocks => ({
 	req: createMockRequest(requestOverrides),
 	res: createMockResponse(),
 	next: createMockNext(),
@@ -202,9 +77,7 @@ export const createExpressMocks = (
  * @param requestOverrides - Properties to override in the mock request
  * @returns Fresh Express mocks with cleared state
  */
-export const setupExpressMocks = (
-	requestOverrides: Partial<MockRequest> = {},
-) => {
+export const setupExpressMocks = (requestOverrides: Partial<Request> = {}) => {
 	vi.clearAllMocks()
 	return createExpressMocks(requestOverrides)
 }
@@ -217,12 +90,10 @@ export const setupExpressMocks = (
  */
 export const createAuthenticatedRequest = (
 	userId: string,
-	overrides: Partial<MockRequest> = {},
-): MockRequest =>
-	createMockRequest({
-		userId,
-		...overrides,
-	})
+	overrides: Partial<Request> = {},
+): Partial<Request> => {
+	return createMockRequest({ ...overrides, userId })
+}
 
 /**
  * Helper function to create a mock request with specific body data
@@ -230,17 +101,12 @@ export const createAuthenticatedRequest = (
  * @param overrides - Additional properties to override
  * @returns Mock request with body set
  */
-export const createRequestWithBody = <T>(
-	body: T,
-	overrides: Partial<MockRequestWithBody<T>> = {},
-): MockRequestWithBody<T> => ({
-	body,
-	params: {},
-	query: {},
-	headers: {},
-	cookies: {},
-	...overrides,
-})
+export const createRequestWithBody = (
+	body: unknown,
+	overrides: Partial<Request> = {},
+): Partial<Request> => {
+	return createMockRequest({ body, ...overrides })
+}
 
 /**
  * Helper function to create a mock request with specific params
@@ -250,12 +116,10 @@ export const createRequestWithBody = <T>(
  */
 export const createRequestWithParams = (
 	params: Record<string, string>,
-	overrides: Partial<MockRequest> = {},
-): MockRequest =>
-	createMockRequest({
-		params,
-		...overrides,
-	})
+	overrides: Partial<Request> = {},
+): Partial<Request> => {
+	return createMockRequest({ params, ...overrides })
+}
 
 /**
  * Helper function to create a mock request with specific headers
@@ -265,12 +129,10 @@ export const createRequestWithParams = (
  */
 export const createRequestWithHeaders = (
 	headers: Record<string, string>,
-	overrides: Partial<MockRequest> = {},
-): MockRequest =>
-	createMockRequest({
-		headers,
-		...overrides,
-	})
+	overrides: Partial<Request> = {},
+): Partial<Request> => {
+	return createMockRequest({ headers, ...overrides })
+}
 
 /**
  * Helper function to create a mock request with cookies
@@ -280,12 +142,35 @@ export const createRequestWithHeaders = (
  */
 export const createRequestWithCookies = (
 	cookies: Record<string, string>,
-	overrides: Partial<MockRequest> = {},
-): MockRequest =>
-	createMockRequest({
-		cookies,
-		...overrides,
-	})
+	overrides: Partial<Request> = {},
+): Partial<Request> => {
+	return createMockRequest({ cookies, ...overrides })
+}
+
+/**
+ * Simple mock request factory
+ * @param data - Optional request data to override
+ * @returns Mock Request object
+ */
+export const mockRequest = (data?: Partial<Request>): Partial<Request> => {
+	return createMockRequest(data)
+}
+
+/**
+ * Simple mock response factory
+ * @returns Mock Response object with proper typing
+ */
+export const mockResponse = (): Partial<Response> => {
+	return createMockResponse()
+}
+
+/**
+ * Simple mock next function factory
+ * @returns Mock NextFunction
+ */
+export const mockNext = (): NextFunction => {
+	return vi.fn()
+}
 
 /**
  * Unified export object with all Express mock utilities
@@ -305,14 +190,11 @@ export const mockExpress = {
 	createRequestWithHeaders,
 	createRequestWithCookies,
 
-	// Utility functions for better typing
-	createStatusChain,
-
-	// Simple mock factories (alternative pattern)
+	// Simple mock factories
 	mockRequest,
 	mockResponse,
 	mockNext,
 }
 
 // Export types for use in test files
-export type { ChainedResult, MockRequest, MockRequestWithBody, MockResponse }
+export type { ExpressMocks }
