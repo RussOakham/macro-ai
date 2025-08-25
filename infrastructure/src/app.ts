@@ -112,7 +112,7 @@ if (isEC2Preview && isPreviewEnvironment) {
 		customDomain, // Add custom domain configuration
 		autoShutdown: {
 			enabled: true, // Enable auto-shutdown for preview environments
-			shutdownSchedule: '0 22 * * *', // 10 PM UTC daily - minute hour day month day-of-week
+			shutdownSchedule: '0 22 * * 0-6', // 10 PM UTC daily - minute hour day month day-of-week (0-6 = Sunday-Saturday)
 			startupSchedule: undefined, // No automatic startup - on-demand only
 			enableWeekendShutdown: true, // Shutdown over weekends (no startup anyway)
 			displayTimeZone: 'UTC', // For documentation purposes

@@ -66,7 +66,7 @@ export class AutoShutdownConstruct extends Construct {
 		const {
 			scalableTaskCount,
 			environmentName,
-			shutdownSchedule = '0 22 * * *', // 10 PM UTC daily
+			shutdownSchedule = '0 22 * * 0-6', // 10 PM UTC daily - minute hour day month day-of-week (0-6 = Sunday-Saturday)
 			startupSchedule, // No default - can be undefined for on-demand only
 			startupTaskCount = 1,
 			enableWeekendShutdown = true,
@@ -82,13 +82,25 @@ export class AutoShutdownConstruct extends Construct {
 					`Invalid CRON expression: ${cron}. Expected 5 fields, got ${parts.length}`,
 				)
 			}
+
+			// Debug: Log the CRON expression being validated
+			console.log(
+				`Validating CRON expression: "${cron}" (length: ${cron.length})`,
+			)
+			console.log(`CRON parts: [${parts.join(', ')}]`)
+
 			return cron
 		}
 
 		// Add shutdown scheduled scaling action
+		const shutdownCronExpression = `cron(${validateCronExpression(shutdownSchedule)})`
+		console.log(
+			`Creating shutdown schedule with expression: "${shutdownCronExpression}"`,
+		)
+
 		scalableTaskCount.scaleOnSchedule('ShutdownSchedule', {
 			schedule: applicationautoscaling.Schedule.expression(
-				`cron(${validateCronExpression(shutdownSchedule)})`,
+				shutdownCronExpression,
 			),
 			minCapacity: 0,
 			maxCapacity: 0,
