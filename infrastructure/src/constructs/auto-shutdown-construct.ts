@@ -66,7 +66,7 @@ export class AutoShutdownConstruct extends Construct {
 		const {
 			scalableTaskCount,
 			environmentName,
-			shutdownSchedule = '0 22 ? * * *', // 10 PM UTC daily - minute hour day-of-month month day-of-week year (using ? for day-of-month since we specify day-of-week)
+			shutdownSchedule = '0 22 * * *', // 10 PM UTC daily - standard 5-field cron
 			startupSchedule, // No default - can be undefined for on-demand only
 			startupTaskCount = 1,
 			enableWeekendShutdown = true,
@@ -74,11 +74,11 @@ export class AutoShutdownConstruct extends Construct {
 
 		// Validate CRON expressions
 		const validateCronExpression = (cron: string): string => {
-			// AWS Application Auto Scaling expects 6 fields: minute hour day-of-month month day-of-week year
+			// AWS Application Auto Scaling supports both 5-field and 6-field cron expressions
 			const parts = cron.split(' ')
-			if (parts.length !== 6) {
+			if (parts.length !== 5 && parts.length !== 6) {
 				throw new Error(
-					`Invalid CRON expression: ${cron}. Expected 6 fields, got ${parts.length}. AWS Application Auto Scaling requires: minute hour day-of-month month day-of-week year`,
+					`Invalid CRON expression: ${cron}. Expected 5 or 6 fields, got ${parts.length}. AWS Application Auto Scaling supports: minute hour day-of-month month day-of-week [year]`,
 				)
 			}
 
@@ -88,12 +88,14 @@ export class AutoShutdownConstruct extends Construct {
 			)
 			console.log(`CRON parts: [${parts.join(', ')}]`)
 
-			// Validate day-of-month vs day-of-week conflict rule
-			const [minute, hour, dayOfMonth, month, dayOfWeek, year] = parts
-			if (dayOfMonth === '*' && dayOfWeek === '*') {
-				throw new Error(
-					`Invalid CRON expression: ${cron}. AWS Application Auto Scaling does not allow * in both day-of-month and day-of-week fields. Use ? in one of them.`,
-				)
+			// For 6-field cron, validate day-of-month vs day-of-week conflict rule
+			if (parts.length === 6) {
+				const [minute, hour, dayOfMonth, month, dayOfWeek, year] = parts
+				if (dayOfMonth === '*' && dayOfWeek === '*') {
+					throw new Error(
+						`Invalid CRON expression: ${cron}. AWS Application Auto Scaling does not allow * in both day-of-month and day-of-week fields. Use ? in one of them.`,
+					)
+				}
 			}
 
 			return cron

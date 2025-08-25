@@ -509,35 +509,43 @@ jobs:
           # Deploy the ECS stack
           STACK_NAME="MacroAiPr-${PR_NUMBER}Stack"
 
-          # Parse cost alert emails from comma-separated string to array format
+          # Parse cost alert emails from comma-separated string to individual context values
           # Handle both single email and comma-separated emails with whitespace
           echo "🔍 Parsing cost alert emails from secret..."
 
           # Check if the secret contains comma-separated values or single email
           if [[ "${{ secrets.COST_ALERT_EMAILS }}" == *","* ]]; then
-            # Multiple emails - split by comma
-            COST_ALERT_EMAILS_ARRAY=$(echo "${{ secrets.COST_ALERT_EMAILS }}" | tr ',' '\n' | awk '{$1=$1};1' | grep -v '^$' | jq -R . | jq -s .)
+            # Multiple emails - split by comma and clean up
+            COST_ALERT_EMAILS_LIST=$(echo "${{ secrets.COST_ALERT_EMAILS }}" | tr ',' '\n' | awk '{$1=$1};1' | grep -v '^$')
           else
-            # Single email - wrap in array
-            COST_ALERT_EMAILS_ARRAY=$(echo "${{ secrets.COST_ALERT_EMAILS }}" | jq -R . | jq -s .)
+            # Single email
+            COST_ALERT_EMAILS_LIST="${{ secrets.COST_ALERT_EMAILS }}"
           fi
 
-          # Validate the JSON array was created correctly
-          if ! echo "${COST_ALERT_EMAILS_ARRAY}" | jq -e . >/dev/null 2>&1; then
-            echo "⚠️ Failed to parse cost alert emails, using empty array"
-            COST_ALERT_EMAILS_ARRAY="[]"
-          fi
+          # Convert to array for CDK context (CDK expects individual context values, not JSON array)
+          COST_ALERT_EMAILS_ARRAY=()
+          while IFS= read -r email; do
+            if [[ -n "$email" ]]; then
+              COST_ALERT_EMAILS_ARRAY+=("$email")
+            fi
+          done <<< "$COST_ALERT_EMAILS_LIST"
 
           # Log only the count of emails for debugging without exposing sensitive data
-          EMAIL_COUNT=$(echo "${COST_ALERT_EMAILS_ARRAY}" | jq 'length')
+          EMAIL_COUNT=${#COST_ALERT_EMAILS_ARRAY[@]}
           echo "📧 Parsed ${EMAIL_COUNT} cost alert email(s)"
+
+          # Build CDK context arguments for cost alert emails
+          CDK_CONTEXT_ARGS=""
+          for email in "${COST_ALERT_EMAILS_ARRAY[@]}"; do
+            CDK_CONTEXT_ARGS="${CDK_CONTEXT_ARGS} --context costAlertEmails=${email}"
+          done
 
           cdk deploy "${STACK_NAME}" \
             --context environmentName="${ENV_NAME}" \
             --context prNumber="${PR_NUMBER}" \
             --context branchName="${{ github.head_ref }}" \
             --context imageUri="${IMAGE_URI}" \
-            --context costAlertEmails="${COST_ALERT_EMAILS_ARRAY}" \
+            ${CDK_CONTEXT_ARGS} \
             --require-approval never \
             --outputs-file cdk-outputs.json
 

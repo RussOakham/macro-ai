@@ -383,14 +383,31 @@ export class MacroAiPreviewStack extends cdk.Stack {
 
 	/**
 	 * Resolve cost alert email addresses from props and CDK context
-	 * Supports configuration via props.costAlertEmails or context "costAlertEmails"
-	 * Falls back to a default email if none are configured (for stack destruction scenarios)
+	 * Supports configuration via props.costAlertEmails or multiple context "costAlertEmails" values
+	 * Falls back to empty array if none are configured (for stack destruction scenarios)
 	 */
 	private resolveCostAlertEmails(props: MacroAiPreviewStackProps): string[] {
 		const fromProps = props.costAlertEmails ?? []
-		// Allow overrides via cdk.json context: { "costAlertEmails": ["ops@example.com"] }
-		const fromContext =
-			(this.node.tryGetContext('costAlertEmails') as string[] | undefined) ?? []
+		
+		// CDK context can have multiple costAlertEmails values when passed as separate --context flags
+		// We need to collect all of them
+		const fromContext: string[] = []
+		let contextIndex = 0
+		let contextValue: string | undefined
+		do {
+			contextValue = this.node.tryGetContext(`costAlertEmails${contextIndex === 0 ? '' : contextIndex}`) as string | undefined
+			if (contextValue !== undefined) {
+				fromContext.push(contextValue)
+				contextIndex++
+			}
+		} while (contextValue !== undefined)
+		
+		// Also check for the legacy single array format
+		const legacyContext = this.node.tryGetContext('costAlertEmails') as string[] | undefined
+		if (legacyContext && Array.isArray(legacyContext)) {
+			fromContext.push(...legacyContext)
+		}
+		
 		const emails = [...fromContext, ...fromProps].filter(Boolean)
 
 		// Validate email format and filter out malformed entries
