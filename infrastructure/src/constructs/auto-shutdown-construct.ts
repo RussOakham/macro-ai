@@ -74,7 +74,9 @@ export class AutoShutdownConstruct extends Construct {
 
 		// Add shutdown scheduled scaling action
 		scalableTaskCount.scaleOnSchedule('ShutdownSchedule', {
-			schedule: applicationautoscaling.Schedule.expression(shutdownSchedule),
+			schedule: applicationautoscaling.Schedule.expression(
+				`cron(${shutdownSchedule})`,
+			),
 			minCapacity: 0,
 			maxCapacity: 0,
 		})
@@ -88,7 +90,7 @@ export class AutoShutdownConstruct extends Construct {
 
 			scalableTaskCount.scaleOnSchedule('StartupSchedule', {
 				schedule: applicationautoscaling.Schedule.expression(
-					startupScheduleExpression,
+					`cron(${startupScheduleExpression})`,
 				),
 				minCapacity: startupTaskCount,
 				maxCapacity: Math.max(startupTaskCount, 2),
