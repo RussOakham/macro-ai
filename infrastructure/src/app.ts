@@ -27,6 +27,7 @@ const deploymentType = process.env.CDK_DEPLOY_TYPE ?? 'standard'
 
 // Detect ephemeral preview environments
 const isPreviewEnvironment = deploymentEnv.startsWith('pr-')
+const isECSPreview = deploymentType === 'ecs-preview'
 const isEC2Preview = deploymentType === 'ec2-preview'
 const environmentType = isPreviewEnvironment ? 'ephemeral' : 'persistent'
 
@@ -37,6 +38,8 @@ const stackName = `MacroAi${deploymentEnv.charAt(0).toUpperCase() + deploymentEn
 let stackDescription: string
 if (isEC2Preview) {
 	stackDescription = `Macro AI ${deploymentEnv} Preview Environment - EC2-based architecture (ephemeral)`
+} else if (isECSPreview) {
+	stackDescription = `Macro AI ${deploymentEnv} Preview Environment - ECS Fargate-based architecture (ephemeral)`
 } else {
 	const ephemeralSuffix = isPreviewEnvironment ? ' (ephemeral)' : ''
 	stackDescription = `Macro AI ${deploymentEnv} Environment - ${deploymentScale} scale serverless architecture${ephemeralSuffix}`
@@ -70,7 +73,7 @@ const tags = isPreviewEnvironment
 		})
 
 // Create the appropriate stack based on deployment type
-if (isEC2Preview && isPreviewEnvironment) {
+if ((isEC2Preview || isECSPreview) && isPreviewEnvironment) {
 	// Extract PR number and branch name for preview environments
 	const prNumber = parseInt(deploymentEnv.replace('pr-', ''), 10)
 	const branchName =

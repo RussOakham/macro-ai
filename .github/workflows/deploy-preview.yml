@@ -454,7 +454,7 @@ jobs:
         id: deploy
         env:
           CDK_DEPLOY_ENV: ${{ needs.validate-access.outputs.env-name }}
-          CDK_DEPLOY_TYPE: 'ec2-preview'
+          CDK_DEPLOY_TYPE: 'ecs-preview'
           CDK_DEPLOY_SCALE: 'preview'
         run: |
           ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
