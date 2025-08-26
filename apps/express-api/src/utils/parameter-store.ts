@@ -93,7 +93,10 @@ export class ParameterStoreService {
 						parameters[paramName] = param.Value
 
 						// Cache individual parameters
-						this.cache.set(`${paramName}:${String(withDecryption)}`, param.Value)
+						this.cache.set(
+							`${paramName}:${String(withDecryption)}`,
+							param.Value,
+						)
 					}
 				}
 			}

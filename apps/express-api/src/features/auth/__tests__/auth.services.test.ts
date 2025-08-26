@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
 	CognitoIdentityProviderClient,
 	ConfirmForgotPasswordCommandOutput,
@@ -33,6 +35,7 @@ import {
 } from '../../../utils/errors.ts'
 import { mockConfig } from '../../../utils/test-helpers/config.mock.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
+import { mockParameterStore } from '../../../utils/test-helpers/parameter-store.mock.ts'
 import { CognitoService } from '../auth.services.ts'
 import { TRegisterUserRequest } from '../auth.types.ts'
 
@@ -41,6 +44,12 @@ vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 
 // Mock the config using the reusable helper
 vi.mock('../../../utils/load-config.ts', () => mockConfig.createModule())
+
+// Mock the Parameter Store service
+vi.mock('../../../utils/parameter-store.ts', () => ({
+	createParameterStoreService: vi.fn(),
+	ParameterStoreService: vi.fn(),
+}))
 
 // Mock the tryCatch utilities
 vi.mock('../../../utils/error-handling/try-catch.ts', () => ({
@@ -77,11 +86,21 @@ const mockTryCatchSyncWithRealImplementation = () => {
 describe('CognitoService', () => {
 	let cognitoService: CognitoService
 
-	beforeEach(() => {
+	beforeEach(async () => {
 		// Use config mock setup for consistent test environment
 		mockConfig.setup()
 		mockLogger.setup()
 		cognitoMock.reset()
+
+		// Mock the Parameter Store service to return default Cognito configuration
+		const mockParamStore = mockParameterStore.setupDefaultCognitoConfig()
+		const { createParameterStoreService } = await import(
+			'../../../utils/parameter-store.ts'
+		)
+		vi.mocked(createParameterStoreService).mockReturnValue(
+			mockParamStore as any,
+		)
+
 		cognitoService = new CognitoService()
 	})
 
