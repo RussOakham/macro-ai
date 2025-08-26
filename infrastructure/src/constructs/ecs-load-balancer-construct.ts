@@ -2,6 +2,8 @@ import * as cdk from 'aws-cdk-lib'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import * as ecs from 'aws-cdk-lib/aws-ecs'
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2'
+import * as route53 from 'aws-cdk-lib/aws-route53'
+import * as targets from 'aws-cdk-lib/aws-route53-targets'
 import { Construct } from 'constructs'
 
 export interface EcsLoadBalancerConstructProps {
@@ -204,6 +206,52 @@ export class EcsLoadBalancerConstruct extends Construct {
 				],
 				defaultAction: elbv2.ListenerAction.forward([this.targetGroup]),
 			})
+
+			// Create DNS records for custom domain if configured
+			if (customDomain.domainName && environmentName.startsWith('pr-')) {
+				// Extract PR number from environment name (e.g., "pr-56" -> "56")
+				const prNumber = environmentName.replace('pr-', '')
+
+				// Import the hosted zone
+				const hostedZone = route53.HostedZone.fromHostedZoneAttributes(
+					this,
+					'CustomDomainHostedZone',
+					{
+						hostedZoneId: customDomain.hostedZoneId,
+						zoneName: customDomain.domainName,
+					},
+				)
+
+				// Create A record for API subdomain pointing to load balancer
+				const apiSubdomain = `pr-${prNumber}-api.${customDomain.domainName}`
+				new route53.ARecord(this, 'ApiSubdomainRecord', {
+					zone: hostedZone,
+					recordName: `pr-${prNumber}-api`,
+					target: route53.RecordTarget.fromAlias(
+						new targets.LoadBalancerTarget(this.loadBalancer),
+					),
+					ttl: cdk.Duration.minutes(5),
+				})
+
+				console.log(
+					`✅ Created DNS record for API subdomain: ${apiSubdomain} -> ${this.loadBalancer.loadBalancerDnsName}`,
+				)
+
+				// Create A record for frontend subdomain pointing to load balancer
+				const frontendSubdomain = `pr-${prNumber}.${customDomain.domainName}`
+				new route53.ARecord(this, 'FrontendSubdomainRecord', {
+					zone: hostedZone,
+					recordName: `pr-${prNumber}`,
+					target: route53.RecordTarget.fromAlias(
+						new targets.LoadBalancerTarget(this.loadBalancer),
+					),
+					ttl: cdk.Duration.minutes(5),
+				})
+
+				console.log(
+					`✅ Created DNS record for frontend subdomain: ${frontendSubdomain} -> ${this.loadBalancer.loadBalancerDnsName}`,
+				)
+			}
 		} else if (customDomain?.certificateArn === undefined) {
 			// Log warning that HTTPS is not available without certificate
 			console.warn(
