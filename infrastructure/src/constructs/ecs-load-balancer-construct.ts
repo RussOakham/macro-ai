@@ -30,6 +30,16 @@ export interface EcsLoadBalancerConstructProps {
 		readonly domainName: string
 		readonly hostedZoneId: string
 		readonly certificateArn?: string
+		/**
+		 * API subdomain to use (e.g., 'pr-56-api')
+		 * @default derived from environmentName
+		 */
+		readonly apiSubdomain?: string
+		/**
+		 * Whether to create frontend subdomain DNS record
+		 * @default true (for backward compatibility)
+		 */
+		readonly createFrontendSubdomain?: boolean
 	}
 
 	/**
@@ -223,10 +233,12 @@ export class EcsLoadBalancerConstruct extends Construct {
 				)
 
 				// Create A record for API subdomain pointing to load balancer
-				const apiSubdomain = `pr-${prNumber}-api.${customDomain.domainName}`
+				const apiSubdomainName =
+					customDomain.apiSubdomain ?? `pr-${prNumber}-api`
+				const apiSubdomain = `${apiSubdomainName}.${customDomain.domainName}`
 				new route53.ARecord(this, 'ApiSubdomainRecord', {
 					zone: hostedZone,
-					recordName: `pr-${prNumber}-api`,
+					recordName: apiSubdomainName,
 					target: route53.RecordTarget.fromAlias(
 						new targets.LoadBalancerTarget(this.loadBalancer),
 					),
@@ -237,20 +249,26 @@ export class EcsLoadBalancerConstruct extends Construct {
 					`✅ Created DNS record for API subdomain: ${apiSubdomain} -> ${this.loadBalancer.loadBalancerDnsName}`,
 				)
 
-				// Create A record for frontend subdomain pointing to load balancer
-				const frontendSubdomain = `pr-${prNumber}.${customDomain.domainName}`
-				new route53.ARecord(this, 'FrontendSubdomainRecord', {
-					zone: hostedZone,
-					recordName: `pr-${prNumber}`,
-					target: route53.RecordTarget.fromAlias(
-						new targets.LoadBalancerTarget(this.loadBalancer),
-					),
-					ttl: cdk.Duration.minutes(5),
-				})
+				// Create A record for frontend subdomain pointing to load balancer (optional)
+				if (customDomain.createFrontendSubdomain !== false) {
+					const frontendSubdomain = `pr-${prNumber}.${customDomain.domainName}`
+					new route53.ARecord(this, 'FrontendSubdomainRecord', {
+						zone: hostedZone,
+						recordName: `pr-${prNumber}`,
+						target: route53.RecordTarget.fromAlias(
+							new targets.LoadBalancerTarget(this.loadBalancer),
+						),
+						ttl: cdk.Duration.minutes(5),
+					})
 
-				console.log(
-					`✅ Created DNS record for frontend subdomain: ${frontendSubdomain} -> ${this.loadBalancer.loadBalancerDnsName}`,
-				)
+					console.log(
+						`✅ Created DNS record for frontend subdomain: ${frontendSubdomain} -> ${this.loadBalancer.loadBalancerDnsName}`,
+					)
+				} else {
+					console.log(
+						`ℹ️ Skipping frontend subdomain creation - leaving pr-${prNumber}.${customDomain.domainName} available for CloudFront`,
+					)
+				}
 			}
 		} else if (customDomain?.certificateArn === undefined) {
 			// Log warning that HTTPS is not available without certificate

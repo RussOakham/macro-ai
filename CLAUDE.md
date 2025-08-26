@@ -63,11 +63,28 @@ It contains multiple packages and apps:
 
 ## Triage Guidelines
 
-When investigating issues, do not rely solely on code inspection. Follow these steps:
+When investigating issues, **prioritise direct evidence from CLI tools first** (they are the source of truth), then use
+MCP servers for supporting context.
 
-1. **Review documentation proactively** — Check reference material available via MCP servers (e.g., `aws`, `ref`).
-2. **Check actual logs** — Use CLI tools (e.g., `gh`, `aws`) to review real outputs and error traces.
-3. **Avoid assumptions** — Do not conclude the issue is code-related without validating against logs and external documentation.
+1. **Check actual logs and runtime state (highest priority)**
+   - Use CLI tools such as:
+     - `aws` (e.g., `aws logs tail`, `aws ecs describe-tasks`) for AWS infrastructure and service logs.
+     - `gh` (e.g., `gh run view`, `gh pr status`) for GitHub workflows and PR information.
+   - Always base conclusions on **real CLI outputs** before looking at code.
+
+2. **Review documentation proactively (secondary)**
+   - Use `aws-documentation` MCP to confirm service behaviour or API parameters.
+   - Use `Ref` MCP to locate and open relevant code or documentation inside the repo.
+
+3. **Static and runtime analysis (as needed)**
+   - Use `semgrep` MCP for static code scans (security/correctness).
+   - Use `puppeteer` MCP for automated frontend checks.
+
+4. **Contextual reasoning (supporting)**
+   - Use `sequentialthinking` MCP to structure multi-step investigations.
+   - Use `memory` MCP to recall prior related issues or context.
+
+5. **Avoid assumptions** — always confirm findings against CLI logs or outputs before proposing a fix.
 
 ---
 
@@ -75,13 +92,74 @@ When investigating issues, do not rely solely on code inspection. Follow these s
 
 When using CLI commands during triage or investigation:
 
-- Always craft queries so they return a **fully formed output**.
+- **Always prefer CLI tools (`aws`, `gh`) over MCP abstractions** when investigating issues.
+- Craft queries so they return a **fully formed output**.
 - Avoid open-ended results that require manual input, such as:
   - Pagers (e.g., results that stop at `MORE` or `END`)
   - Table views or truncated outputs
 - Prefer structured output formats (e.g., `--json`, `--output yaml`) where possible.
 
-This ensures AI-generated commands and results are **complete, reproducible, and parseable**.
+This ensures commands and results are **complete, reproducible, and authoritative**.
+
+---
+
+## Task Management
+
+- Break down large requests into **smaller, concrete tasks**.
+- Clarify before acting:
+  - The **goal** (e.g., “fix failing CI pipeline step”)
+  - The **scope** (which package/app is affected)
+  - The **constraints** (time, dependencies, environment)
+- Use MCP tools to gather context:
+  - `github-chat` and/or `gh` cli for repo activity & issues
+  - `aws-documentation` for service reference
+  - `Ref` for local code/doc lookups
+- Prefer **minimal, working fixes** before suggesting broader refactors.
+
+---
+
+## Context Management (MCP-Aware)
+
+- Combine repo knowledge with external context available via MCP servers.
+- Use MCP tools for:
+  - Documentation lookup (`aws-documentation`, `ref`)
+  - Logs and runtime context (`github-chat`, `task-orchestrator`)
+  - Code scanning (`semgrep`)
+  - Step-by-step reasoning (`sequentialthinking`)
+  - Cross-session continuity (`memory`)
+- Prefer citing **real outputs** over assumptions.
+- If missing context, **ask for it explicitly** rather than guessing.
+
+---
+
+## Testing Requirements
+
+### Frontend (`apps/frontend`)
+
+- **.tsx files:** Only unit test hooks.
+- **.ts files:** Unit test all functionality.
+
+### Backend (`apps/backend`)
+
+- Unit test **everything** (business logic, API routes, services).
+
+### Infrastructure (`packages/config`, IaC code, etc.)
+
+- Unit test **everything** (schemas, utils, IaC helpers).
+
+### General Rules
+
+- Focus on **realistic and valuable cases**, not exhaustive permutations.
+- Avoid contrived edge cases unless explicitly relevant to business logic.
+- Prioritize:
+  1. **Core logic correctness**
+  2. **Critical failure paths**
+  3. **Integration with external systems** (mocked where possible)
+
+Do **not**:
+
+- Generate redundant tests for trivial code (e.g., type-only exports, constants).
+- Over-specify tests for third-party libraries — assume they are tested upstream.
 
 ---
 

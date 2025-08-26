@@ -186,7 +186,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 				prNumber: prNumber.toString(),
 			})
 			console.log(
-				`✅ Certificate created for domain: pr-${prNumber}.${customDomain.domainName}`,
+				`✅ Certificate created for API domain: pr-${prNumber}-api.${customDomain.domainName}`,
 			)
 		}
 
@@ -199,6 +199,10 @@ export class MacroAiPreviewStack extends cdk.Stack {
 				? {
 						...customDomain,
 						certificateArn: this.certificate?.certificateArn,
+						// Use API-specific subdomain to avoid conflicts with frontend
+						apiSubdomain: `pr-${prNumber}-api`,
+						// Don't create frontend subdomain - leave it for CloudFront
+						createFrontendSubdomain: false,
 					}
 				: undefined,
 			containerPort: 3040, // Match the container port
