@@ -507,8 +507,47 @@ export class EcsFargateConstruct extends Construct {
 					'sts:GetCallerIdentity', // For getting current AWS account/region info
 					'iam:GetUser', // For user information
 					'iam:GetRole', // For role information
+					// CloudWatch Logs for application logging
+					'logs:CreateLogGroup',
+					'logs:CreateLogStream',
+					'logs:PutLogEvents',
+					'logs:DescribeLogStreams',
 				],
 				resources: ['*'],
+			}),
+		)
+
+		// CloudWatch Logs specific permissions with proper resource scoping
+		role.addToPolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: [
+					'logs:CreateLogGroup',
+					'logs:CreateLogStream',
+					'logs:PutLogEvents',
+					'logs:DescribeLogStreams',
+				],
+				resources: [
+					`arn:aws:logs:*:*:log-group:/macro-ai/${environmentName}/*`,
+					`arn:aws:logs:*:*:log-group:/macro-ai/${environmentName}:*`,
+				],
+			}),
+		)
+
+		// KMS permissions for decrypting Parameter Store SecureString values
+		role.addToPolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: [
+					'kms:Decrypt',
+					'kms:DescribeKey',
+				],
+				resources: ['*'],
+				conditions: {
+					StringLike: {
+						'kms:ViaService': 'ssm.*.amazonaws.com',
+					},
+				},
 			}),
 		)
 
