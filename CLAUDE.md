@@ -20,6 +20,55 @@ It contains multiple packages and apps:
 
 ---
 
+## CLI Reference
+
+This document lists the main CLI tools used in the project, along with preferred shells to avoid common syntax issues.
+
+<!-- markdownlint-disable MD056 MD013 MD038 -->
+<!-- prettier-ignore-start -->
+| Tool                    | Description                                                    | Preferred Shell | Notes / Syntax Tips                                                                                    |
+|-------------------------|----------------------------------------------------------------|-----------------|--------------------------------------------------------------------------------------------------------|
+| **pnpm**                | Fast, disk-efficient package manager for Node.js projects      | **bash**        | Works in PowerShell too, but some scripts with `&&` or `|` may behave differently.                     |
+| **node**                | JavaScript runtime                                             | Both            | Use `node -v` to check version. `nvm` recommended to switch versions.                                  |
+| **nvm**                 | Node Version Manager                                           | **bash**        | PowerShell support via `nvm-windows` differs; bash avoids subtle path issues.                          |
+| **aws**                 | AWS CLI                                                        | **PowerShell**  | Use `aws configure` to set credentials. Bash can be used, but PowerShell avoids quoting/piping issues. |
+| **session-manager-plugin** | AWS Systems Manager session plugin                          | **PowerShell**  | Required for `aws ssm start-session`. Works in bash, but path quoting is simpler in PowerShell.        |
+| **gh**                  | GitHub CLI                                                     | **PowerShell**  | `gh auth login` and repo commands work cross-shell; PowerShell recommended for scripting.              |
+| **git**                 | Version control                                                | Both            | Bash preferred for common Unix-style commands and scripts.                                             |
+| **docker**              | Container engine                                               | Both            | Bash preferred for multi-command scripts and piping.                                                   |
+| **docker-compose**      | Multi-container orchestration                                  | Both            | Works in PowerShell but beware of YAML quoting. Bash preferred for scripts.                            |
+| **jq**                  | JSON processor                                                 | **bash**        | Syntax with quotes and escape characters can fail in PowerShell; bash avoids this.                     |
+<!-- prettier-ignore-end -->
+<!-- markdownlint-enable MD056 -->
+
+**Shell Recommendations Summary:**
+
+- Use **bash** when running scripts that include pipes (`|`), redirection (`>`), environment variables (`$VAR`), or
+  complex quoting.
+- Use **PowerShell** for AWS-related CLI commands (`aws`, `session-manager-plugin`) and GitHub CLI (`gh`) to avoid common
+  syntax issues.
+- **PowerShell** works for basic commands in other tools, but scripts may require adaptation.
+
+---
+
+## MCP Tools Quick Reference
+
+These MCP servers are available to assist with context.  
+⚠️ **CLI tools (`aws`, `gh`) always take priority** for investigation. MCP tools are **secondary** sources for documentation,
+reasoning, or automation.
+
+| MCP Tool               | Purpose                                                              |
+| ---------------------- | -------------------------------------------------------------------- |
+| **aws-documentation**  | Look up AWS service docs, API references, usage examples.            |
+| **Ref**                | Search/open repo files and docs for direct code reference.           |
+| **semgrep**            | Run static code analysis scans (security, correctness).              |
+| **task-orchestrator**  | Run pre-defined orchestration tasks (automation, diagnostics).       |
+| **puppeteer**          | Automate browser-based/frontend checks.                              |
+| **sequentialthinking** | Help structure multi-step reasoning or plans.                        |
+| **memory**             | Recall prior repo conversations, state, and context across sessions. |
+
+---
+
 ## Language & Tools
 
 - **Language:** TypeScript (strict mode enabled)

@@ -248,6 +248,14 @@ export class EcsFargateConstruct extends Construct {
 					environmentName === 'production' ? 'production' : 'development',
 				APP_ENV: environmentName,
 				PARAMETER_STORE_PREFIX: parameterStorePrefix,
+				// Add PR number for CORS configuration
+				...(environmentName.startsWith('pr-') && {
+					PR_NUMBER: environmentName.replace('pr-', ''),
+				}),
+				// Add custom domain for CORS configuration
+				...(customDomainName && {
+					CUSTOM_DOMAIN_NAME: customDomainName,
+				}),
 				// Other environment variables will be injected via Parameter Store at runtime
 			},
 			// Note: Parameter Store values will be accessed at runtime via the task role

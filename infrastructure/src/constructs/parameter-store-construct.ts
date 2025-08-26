@@ -41,7 +41,7 @@ export class ParameterStoreConstruct extends Construct {
 
 		if (isPreviewEnvironment) {
 			// Use shared development parameter prefix for all preview environments
-			this.parameterPrefix = 'macro-ai-development-'
+			this.parameterPrefix = '/macro-ai/development/'
 
 			// Skip parameter creation for preview environments (use existing shared parameters)
 			this.parameters = {}
