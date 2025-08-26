@@ -567,32 +567,40 @@ jobs:
         run: |
           API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}"
 
-          if [[ -n "${API_ENDPOINT}" ]]; then
+          # Check if we have a custom domain URL from validate-access
+          CUSTOM_BACKEND_URL="${{ needs.validate-access.outputs.backend-url }}"
+
+          # Use custom domain URL if available and it's HTTPS (custom domain), otherwise fall back to ALB
+          if [[ -n "${CUSTOM_BACKEND_URL}" && "${CUSTOM_BACKEND_URL}" == https://* ]]; then
+            HEALTH_URL="${CUSTOM_BACKEND_URL%/}/health"
+            echo "🔍 Testing custom domain health endpoint: ${HEALTH_URL}"
+          elif [[ -n "${API_ENDPOINT}" ]]; then
             HEALTH_URL="${API_ENDPOINT%/}/health"
-            echo "🔍 Testing health endpoint: ${HEALTH_URL}"
-
-            # Wait a moment for deployment to stabilize
-            sleep 10
-
-            # Test health endpoint with retries
-            for i in {1..3}; do
-              HEALTH_RESPONSE=$(curl -s -w "%{http_code}" "${HEALTH_URL}" 2>/dev/null || echo "000")
-              if [[ "$HEALTH_RESPONSE" == *"200" ]]; then
-                echo "health-status=healthy" >> $GITHUB_OUTPUT
-                echo "✅ Health check passed (attempt $i)"
-                break
-              else
-                echo "⚠️ Health check failed (attempt $i): $HEALTH_RESPONSE"
-                if [[ $i -eq 3 ]]; then
-                  echo "health-status=unhealthy" >> $GITHUB_OUTPUT
-                fi
-                sleep 5
-              fi
-            done
+            echo "🔍 Testing ALB health endpoint: ${HEALTH_URL}"
           else
             echo "health-status=unknown" >> $GITHUB_OUTPUT
             echo "⚠️ Cannot perform health check - no API endpoint"
+            exit 0
           fi
+
+          # Wait a moment for deployment to stabilize
+          sleep 10
+
+          # Test health endpoint with retries
+          for i in {1..3}; do
+            HEALTH_RESPONSE=$(curl -s -w "%{http_code}" "${HEALTH_URL}" 2>/dev/null || echo "000")
+            if [[ "$HEALTH_RESPONSE" == *"200" ]]; then
+              echo "health-status=healthy" >> $GITHUB_OUTPUT
+              echo "✅ Health check passed (attempt $i)"
+              break
+            else
+              echo "⚠️ Health check failed (attempt $i): $HEALTH_RESPONSE"
+              if [[ $i -eq 3 ]]; then
+                echo "health-status=unhealthy" >> $GITHUB_OUTPUT
+              fi
+              sleep 5
+            fi
+          done
 
       - name: Create deployment URLs artifact
         if: always()
@@ -1479,7 +1487,9 @@ jobs:
             ${backendStack ? `- [Backend Stack](https://console.aws.amazon.com/cloudformation/home?region=${{ env.AWS_REGION }}#/stacks/stackinfo?stackId=${backendStack})` : ''}
 
             ---
-            *This preview environment will be automatically cleaned up when the PR is closed/merged.*`;
+            *This preview environment will be automatically cleaned up when the PR is closed/merged.*
+
+            > ⚠️ **Note**: If this is the first deployment with custom domains, there may be a delay before the URLs become accessible due to SSL certificate validation and DNS propagation (typically 5-15 minutes).`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
