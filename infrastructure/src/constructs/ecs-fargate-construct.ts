@@ -489,6 +489,11 @@ export class EcsFargateConstruct extends Construct {
 					'cognito-idp:AdminUpdateGroupAttributes',
 					'cognito-idp:AdminGetGroup',
 					'cognito-idp:AdminListUsersInGroup',
+					// Add non-admin Cognito actions that the application actually uses
+					'cognito-idp:ListUsers',
+					'cognito-idp:GetUser',
+					'cognito-idp:DescribeUserPool',
+					'cognito-idp:DescribeUserPoolClient',
 				],
 				resources: ['*'], // Cognito resources are regional, so we need broad access
 			}),
