@@ -48,11 +48,13 @@ export class CertificateConstruct extends Construct {
 			},
 		)
 
-		// Create the certificate for the preview domain
-		const previewDomainName = `pr-${prNumber}.${customDomain.domainName}`
+		// Create the certificate for both frontend and API domains
+		const frontendDomainName = `pr-${prNumber}.${customDomain.domainName}`
+		const apiDomainName = `pr-${prNumber}-api.${customDomain.domainName}`
 
 		this.certificate = new acm.Certificate(this, 'Certificate', {
-			domainName: previewDomainName,
+			domainName: frontendDomainName,
+			subjectAlternativeNames: [apiDomainName],
 			validation: acm.CertificateValidation.fromDns(hostedZone),
 			certificateName: `macro-ai-${environmentName}-cert`,
 		})
@@ -62,7 +64,7 @@ export class CertificateConstruct extends Construct {
 		// Add tags for resource identification
 		cdk.Tags.of(this.certificate).add('Component', 'Certificate')
 		cdk.Tags.of(this.certificate).add('Environment', environmentName)
-		cdk.Tags.of(this.certificate).add('Domain', previewDomainName)
+		cdk.Tags.of(this.certificate).add('Domain', frontendDomainName)
 		cdk.Tags.of(this.certificate).add('PR', prNumber)
 
 		// Output the certificate ARN
@@ -72,6 +74,6 @@ export class CertificateConstruct extends Construct {
 			exportName: `${environmentName}-CertificateArn`,
 		})
 
-		console.log(`✅ Certificate created for domain: ${previewDomainName}`)
+		console.log(`✅ Certificate created for domain: ${frontendDomainName}`)
 	}
 }

@@ -340,8 +340,11 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		})
 
 		new cdk.CfnOutput(this, 'ApiEndpoint', {
-			value: `http://${this.loadBalancer.loadBalancer.loadBalancerDnsName}`,
-			description: 'API endpoint URL',
+			value: this.customDomain
+				? `https://pr-${this.prNumber}-api.${this.customDomain.domainName}/api`
+				: `http://${this.loadBalancer.loadBalancer.loadBalancerDnsName}`,
+			description:
+				'API endpoint URL (custom domain if configured, otherwise ALB URL)',
 			exportName: `${this.stackName}-ApiEndpoint`,
 		})
 
@@ -351,6 +354,13 @@ export class MacroAiPreviewStack extends cdk.Stack {
 				value: `https://pr-${this.prNumber}.${this.customDomain.domainName}`,
 				description: 'Custom domain URL for the preview environment',
 				exportName: `${this.stackName}-CustomDomainUrl`,
+			})
+
+			// Backend API endpoint with custom domain
+			new cdk.CfnOutput(this, 'BackendApiEndpoint', {
+				value: `https://pr-${this.prNumber}-api.${this.customDomain.domainName}/api`,
+				description: 'Backend API endpoint URL with custom domain',
+				exportName: `${this.stackName}-BackendApiEndpoint`,
 			})
 
 			// Certificate output (if created)
