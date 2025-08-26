@@ -71,91 +71,91 @@ export class EnvironmentConfigConstruct extends Construct {
 		// Define the parameter mappings (Parameter Store key -> Environment variable name)
 		const parameterMappings = [
 			// API Configuration
-			{ paramKey: 'API_KEY', envVar: 'API_KEY' },
-			{ paramKey: 'COOKIE_ENCRYPTION_KEY', envVar: 'COOKIE_ENCRYPTION_KEY' },
+			{ paramKey: 'api-key', envVar: 'API_KEY' },
+			{ paramKey: 'cookie-encryption-key', envVar: 'COOKIE_ENCRYPTION_KEY' },
 
 			// AWS Cognito Configuration
 			{
-				paramKey: 'AWS_COGNITO_REGION',
+				paramKey: 'aws-cognito-region',
 				envVar: 'AWS_COGNITO_REGION',
 				defaultValue: 'us-east-1',
 			},
 			{
-				paramKey: 'AWS_COGNITO_USER_POOL_ID',
+				paramKey: 'aws-cognito-user-pool-id',
 				envVar: 'AWS_COGNITO_USER_POOL_ID',
 			},
 			{
-				paramKey: 'AWS_COGNITO_USER_POOL_CLIENT_ID',
+				paramKey: 'aws-cognito-user-pool-client-id',
 				envVar: 'AWS_COGNITO_USER_POOL_CLIENT_ID',
 			},
 			{
-				paramKey: 'AWS_COGNITO_USER_POOL_SECRET_KEY',
+				paramKey: 'aws-cognito-user-pool-secret-key',
 				envVar: 'AWS_COGNITO_USER_POOL_SECRET_KEY',
 			},
-			{ paramKey: 'AWS_COGNITO_ACCESS_KEY', envVar: 'AWS_COGNITO_ACCESS_KEY' },
-			{ paramKey: 'AWS_COGNITO_SECRET_KEY', envVar: 'AWS_COGNITO_SECRET_KEY' },
+			{ paramKey: 'aws-cognito-access-key', envVar: 'AWS_COGNITO_ACCESS_KEY' },
+			{ paramKey: 'aws-cognito-secret-key', envVar: 'AWS_COGNITO_SECRET_KEY' },
 
 			// Database Configuration
 			{
-				paramKey: 'RELATIONAL_DATABASE_URL',
+				paramKey: 'relational-database-url',
 				envVar: 'RELATIONAL_DATABASE_URL',
 			},
 			{
-				paramKey: 'NON_RELATIONAL_DATABASE_URL',
+				paramKey: 'non-relational-database-url',
 				envVar: 'NON_RELATIONAL_DATABASE_URL',
 			},
 
 			// OpenAI Configuration
-			{ paramKey: 'OPENAI_API_KEY', envVar: 'OPENAI_API_KEY' },
+			{ paramKey: 'openai-api-key', envVar: 'OPENAI_API_KEY' },
 
 			// Redis Configuration
-			{ paramKey: 'REDIS_URL', envVar: 'REDIS_URL' },
+			{ paramKey: 'redis-url', envVar: 'REDIS_URL' },
 
 			// Rate Limiting Configuration
 			{
-				paramKey: 'RATE_LIMIT_WINDOW_MS',
+				paramKey: 'rate-limit-window-ms',
 				envVar: 'RATE_LIMIT_WINDOW_MS',
 				defaultValue: '900000',
 			},
 			{
-				paramKey: 'RATE_LIMIT_MAX_REQUESTS',
+				paramKey: 'rate-limit-max-requests',
 				envVar: 'RATE_LIMIT_MAX_REQUESTS',
 				defaultValue: '100',
 			},
 			{
-				paramKey: 'AUTH_RATE_LIMIT_WINDOW_MS',
+				paramKey: 'auth-rate-limit-window-ms',
 				envVar: 'AUTH_RATE_LIMIT_WINDOW_MS',
 				defaultValue: '3600000',
 			},
 			{
-				paramKey: 'AUTH_RATE_LIMIT_MAX_REQUESTS',
+				paramKey: 'auth-rate-limit-max-requests',
 				envVar: 'AUTH_RATE_LIMIT_MAX_REQUESTS',
 				defaultValue: '10',
 			},
 			{
-				paramKey: 'API_RATE_LIMIT_WINDOW_MS',
+				paramKey: 'api-rate-limit-window-ms',
 				envVar: 'API_RATE_LIMIT_WINDOW_MS',
 				defaultValue: '60000',
 			},
 			{
-				paramKey: 'API_RATE_LIMIT_MAX_REQUESTS',
+				paramKey: 'api-rate-limit-max-requests',
 				envVar: 'API_RATE_LIMIT_MAX_REQUESTS',
 				defaultValue: '60',
 			},
 
 			// Optional Configuration
 			{
-				paramKey: 'CORS_ALLOWED_ORIGINS',
+				paramKey: 'cors-allowed-origins',
 				envVar: 'CORS_ALLOWED_ORIGINS',
 				defaultValue: '*',
 			},
 			{
-				paramKey: 'COOKIE_DOMAIN',
+				paramKey: 'cookie-domain',
 				envVar: 'COOKIE_DOMAIN',
 				defaultValue: 'localhost',
 			},
 			{
-				paramKey: 'AWS_COGNITO_REFRESH_TOKEN_EXPIRY',
+				paramKey: 'aws-cognito-refresh-token-expiry',
 				envVar: 'AWS_COGNITO_REFRESH_TOKEN_EXPIRY',
 				defaultValue: '30',
 			},

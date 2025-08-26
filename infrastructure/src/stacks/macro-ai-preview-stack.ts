@@ -76,7 +76,6 @@ export interface MacroAiPreviewStackProps extends cdk.StackProps {
 export class MacroAiPreviewStack extends cdk.Stack {
 	public readonly networking: NetworkingConstruct
 	public readonly parameterStore: ParameterStoreConstruct
-	public readonly environmentConfig: EnvironmentConfigConstruct
 	public readonly ecsService: EcsFargateConstruct
 	public readonly certificate?: CertificateConstruct
 	public readonly loadBalancer: EcsLoadBalancerConstruct
@@ -110,16 +109,6 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		this.parameterStore = new ParameterStoreConstruct(this, 'ParameterStore', {
 			environmentName,
 		})
-
-		// Create Environment Config construct that fetches Parameter Store values at synthesis time
-		this.environmentConfig = new EnvironmentConfigConstruct(
-			this,
-			'EnvironmentConfig',
-			{
-				environmentName,
-				isPreviewEnvironment: true,
-			},
-		)
 
 		// Create deployment ID to force task replacement on every deployment
 		// This ensures fresh containers with latest application code, resolving CI timeout issues

@@ -256,7 +256,8 @@ export class EcsFargateConstruct extends Construct {
 				...(customDomainName && {
 					CUSTOM_DOMAIN_NAME: customDomainName,
 				}),
-				// Other environment variables will be injected via Parameter Store at runtime
+				// Note: Cognito configuration will be accessed via IAM role instead of environment variables
+				// This eliminates the need for SecureString parameters in the task definition
 			},
 			// Note: Parameter Store values will be accessed at runtime via the task role
 			// The application should use the AWS SDK to fetch parameters using the PARAMETER_STORE_PREFIX
@@ -458,6 +459,51 @@ export class EcsFargateConstruct extends Construct {
 						'cloudwatch:namespace': 'MacroAI/ECS',
 					},
 				},
+			}),
+		)
+
+		// AWS Cognito access for authentication
+		role.addToPolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: [
+					'cognito-idp:AdminInitiateAuth',
+					'cognito-idp:AdminRespondToAuthChallenge',
+					'cognito-idp:AdminGetUser',
+					'cognito-idp:AdminSetUserPassword',
+					'cognito-idp:AdminCreateUser',
+					'cognito-idp:AdminDeleteUser',
+					'cognito-idp:AdminUpdateUserAttributes',
+					'cognito-idp:AdminGetUserAttributes',
+					'cognito-idp:AdminConfirmSignUp',
+					'cognito-idp:AdminSetUserMFAPreference',
+					'cognito-idp:AdminGetUserMFAPreference',
+					'cognito-idp:AdminListUserAuthEvents',
+					'cognito-idp:AdminListGroupsForUser',
+					'cognito-idp:AdminAddUserToGroup',
+					'cognito-idp:AdminRemoveUserFromGroup',
+					'cognito-idp:AdminListUsers',
+					'cognito-idp:AdminListGroups',
+					'cognito-idp:AdminCreateGroup',
+					'cognito-idp:AdminDeleteGroup',
+					'cognito-idp:AdminUpdateGroupAttributes',
+					'cognito-idp:AdminGetGroup',
+					'cognito-idp:AdminListUsersInGroup',
+				],
+				resources: ['*'], // Cognito resources are regional, so we need broad access
+			}),
+		)
+
+		// Additional AWS service permissions for application functionality
+		role.addToPolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: [
+					'sts:GetCallerIdentity', // For getting current AWS account/region info
+					'iam:GetUser', // For user information
+					'iam:GetRole', // For role information
+				],
+				resources: ['*'],
 			}),
 		)
 
