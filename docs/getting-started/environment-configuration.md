@@ -67,8 +67,9 @@ AWS_COGNITO_REGION=us-east-1
 AWS_COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
 AWS_COGNITO_USER_POOL_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
 AWS_COGNITO_USER_POOL_SECRET_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-AWS_COGNITO_ACCESS_KEY=AKIAXXXXXXXXXXXXXXXX
-AWS_COGNITO_SECRET_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# AWS credentials are no longer required - using IAM roles instead
+# AWS_COGNITO_ACCESS_KEY=AKIAXXXXXXXXXXXXXXXX
+# AWS_COGNITO_SECRET_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30
 ```
 
@@ -78,9 +79,16 @@ AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30
 - **AWS_COGNITO_USER_POOL_ID**: Unique identifier for your Cognito User Pool
 - **AWS_COGNITO_USER_POOL_CLIENT_ID**: App client ID from your User Pool
 - **AWS_COGNITO_USER_POOL_SECRET_KEY**: App client secret (confidential clients only)
-- **AWS_COGNITO_ACCESS_KEY**: IAM user access key with Cognito permissions
-- **AWS_COGNITO_SECRET_KEY**: IAM user secret key
 - **AWS_COGNITO_REFRESH_TOKEN_EXPIRY**: Token expiry in days (align with AWS settings)
+
+**IAM Role Authentication:**
+
+The application now uses AWS IAM roles instead of hardcoded credentials for enhanced security:
+
+- ECS tasks automatically use the task role for AWS service authentication
+- No need to manage or rotate access keys
+- Follows AWS security best practices
+- Eliminates credential storage in environment variables
 
 #### Cookie Configuration
 

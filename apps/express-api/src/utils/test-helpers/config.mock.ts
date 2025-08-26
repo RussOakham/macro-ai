@@ -31,8 +31,9 @@ export const defaultTestConfig: ConfigType = {
 	AWS_COGNITO_USER_POOL_ID: 'test-pool-id',
 	AWS_COGNITO_USER_POOL_CLIENT_ID: 'test-client-id',
 	AWS_COGNITO_USER_POOL_SECRET_KEY: 'test-pool-secret',
-	AWS_COGNITO_ACCESS_KEY: 'test-access-key',
-	AWS_COGNITO_SECRET_KEY: 'test-secret-key',
+	// AWS credentials are no longer required - using IAM roles instead
+	// AWS_COGNITO_ACCESS_KEY: 'test-access-key',
+	// AWS_COGNITO_SECRET_KEY: 'test-secret-key',
 	AWS_COGNITO_REFRESH_TOKEN_EXPIRY: 30,
 
 	// Cookie Configuration
@@ -153,8 +154,9 @@ export const createCognitoConfig = (
 			| 'AWS_COGNITO_USER_POOL_ID'
 			| 'AWS_COGNITO_USER_POOL_CLIENT_ID'
 			| 'AWS_COGNITO_USER_POOL_SECRET_KEY'
-			| 'AWS_COGNITO_ACCESS_KEY'
-			| 'AWS_COGNITO_SECRET_KEY'
+			// AWS credentials are no longer required - using IAM roles instead
+			// | 'AWS_COGNITO_ACCESS_KEY'
+			// | 'AWS_COGNITO_SECRET_KEY'
 			| 'AWS_COGNITO_REFRESH_TOKEN_EXPIRY'
 		>
 	> = {},
@@ -164,8 +166,9 @@ export const createCognitoConfig = (
 		AWS_COGNITO_USER_POOL_ID: 'cognito-test-pool-id',
 		AWS_COGNITO_USER_POOL_CLIENT_ID: 'cognito-test-client-id',
 		AWS_COGNITO_USER_POOL_SECRET_KEY: 'cognito-test-pool-secret',
-		AWS_COGNITO_ACCESS_KEY: 'cognito-test-access-key',
-		AWS_COGNITO_SECRET_KEY: 'cognito-test-secret-key',
+		// AWS credentials are no longer required - using IAM roles instead
+		// AWS_COGNITO_ACCESS_KEY: 'cognito-test-access-key',
+		// AWS_COGNITO_SECRET_KEY: 'cognito-test-secret-key',
 		AWS_COGNITO_REFRESH_TOKEN_EXPIRY: 60,
 		...overrides,
 	})

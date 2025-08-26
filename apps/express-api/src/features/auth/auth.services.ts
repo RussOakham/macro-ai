@@ -39,12 +39,11 @@ class CognitoService implements ICognitoService {
 	constructor() {
 		const appConfig = assertConfig(false)
 
+		// Use ECS task role instead of hardcoded credentials
+		// The AWS SDK will automatically use the task role when no credentials are specified
 		this.config = {
 			region: appConfig.awsCognitoRegion,
-			credentials: {
-				accessKeyId: appConfig.awsCognitoAccessKey,
-				secretAccessKey: appConfig.awsCognitoSecretKey,
-			},
+			// Remove credentials - AWS SDK will use the ECS task role automatically
 		}
 		this.secretHash = appConfig.awsCognitoUserPoolSecretKey
 		this.clientId = appConfig.awsCognitoUserPoolClientId

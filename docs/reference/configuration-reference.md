@@ -102,9 +102,16 @@ Macro AI uses a **two-variable environment pattern** for enterprise-grade deploy
 | `AWS_COGNITO_USER_POOL_ID`         | string | ✅       | -       | Cognito User Pool ID            |
 | `AWS_COGNITO_USER_POOL_CLIENT_ID`  | string | ✅       | -       | Cognito User Pool Client ID     |
 | `AWS_COGNITO_USER_POOL_SECRET_KEY` | string | ✅       | -       | Cognito User Pool Client Secret |
-| `AWS_COGNITO_ACCESS_KEY`           | string | ✅       | -       | AWS Access Key ID               |
-| `AWS_COGNITO_SECRET_KEY`           | string | ✅       | -       | AWS Secret Access Key           |
 | `AWS_COGNITO_REFRESH_TOKEN_EXPIRY` | number | ❌       | `30`    | Refresh token expiry (days)     |
+
+**IAM Role Authentication:**
+
+The application now uses AWS IAM roles instead of hardcoded credentials:
+
+- ECS tasks automatically use the task role for AWS service authentication
+- No need to manage or rotate access keys
+- Follows AWS security best practices
+- Eliminates credential storage in environment variables
 
 #### Cookie Configuration
 
@@ -183,12 +190,13 @@ const envSchema = z.object({
 	AWS_COGNITO_USER_POOL_SECRET_KEY: z
 		.string()
 		.min(1, 'AWS Cognito user pool secret key is required'),
-	AWS_COGNITO_ACCESS_KEY: z
-		.string()
-		.min(1, 'AWS Cognito access key is required'),
-	AWS_COGNITO_SECRET_KEY: z
-		.string()
-		.min(1, 'AWS Cognito secret key is required'),
+	// AWS credentials are no longer required - using IAM roles instead
+	// AWS_COGNITO_ACCESS_KEY: z
+	// 	.string()
+	// 	.min(1, 'AWS Cognito access key is required'),
+	// AWS_COGNITO_SECRET_KEY: z
+	// 	.string()
+	// 	.min(1, 'AWS Cognito secret key is required'),
 	AWS_COGNITO_REFRESH_TOKEN_EXPIRY: z.coerce.number().default(30),
 
 	// Cookie Settings

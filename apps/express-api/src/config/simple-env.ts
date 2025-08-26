@@ -29,8 +29,9 @@ export const getEnvConfig = () => {
 		awsCognitoUserPoolId: config.AWS_COGNITO_USER_POOL_ID,
 		awsCognitoUserPoolClientId: config.AWS_COGNITO_USER_POOL_CLIENT_ID,
 		awsCognitoUserPoolSecretKey: config.AWS_COGNITO_USER_POOL_SECRET_KEY,
-		awsCognitoAccessKey: config.AWS_COGNITO_ACCESS_KEY,
-		awsCognitoSecretKey: config.AWS_COGNITO_SECRET_KEY,
+		// Remove AWS credentials - now using IAM roles
+		// awsCognitoAccessKey: config.AWS_COGNITO_ACCESS_KEY,
+		// awsCognitoSecretKey: config.AWS_COGNITO_SECRET_KEY,
 		awsCognitoRefreshTokenExpiry:
 			config.AWS_COGNITO_REFRESH_TOKEN_EXPIRY.toString(),
 		cookieDomain: config.COOKIE_DOMAIN,

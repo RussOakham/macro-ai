@@ -358,8 +358,9 @@ describe('Config Mock Helper', () => {
 			expect(defaultTestConfig).toHaveProperty(
 				'AWS_COGNITO_USER_POOL_SECRET_KEY',
 			)
-			expect(defaultTestConfig).toHaveProperty('AWS_COGNITO_ACCESS_KEY')
-			expect(defaultTestConfig).toHaveProperty('AWS_COGNITO_SECRET_KEY')
+			// AWS credentials are no longer required - using IAM roles instead
+			// expect(defaultTestConfig).toHaveProperty('AWS_COGNITO_ACCESS_KEY')
+			// expect(defaultTestConfig).toHaveProperty('AWS_COGNITO_SECRET_KEY')
 			expect(defaultTestConfig).toHaveProperty(
 				'AWS_COGNITO_REFRESH_TOKEN_EXPIRY',
 			)

@@ -107,8 +107,9 @@ jobs:
           AWS_COGNITO_USER_POOL_ID=$(fetch_param "aws-cognito-user-pool-id")
           AWS_COGNITO_USER_POOL_CLIENT_ID=$(fetch_param "aws-cognito-user-pool-client-id")
           AWS_COGNITO_USER_POOL_SECRET_KEY=$(fetch_param "aws-cognito-user-pool-secret-key")
-          AWS_COGNITO_ACCESS_KEY=$(fetch_param "aws-cognito-access-key")
-          AWS_COGNITO_SECRET_KEY=$(fetch_param "aws-cognito-secret-key")
+          # Remove AWS credentials - now using IAM roles
+          # AWS_COGNITO_ACCESS_KEY=$(fetch_param "aws-cognito-access-key")
+          # AWS_COGNITO_SECRET_KEY=$(fetch_param "aws-cognito-secret-key")
           AWS_COGNITO_REFRESH_TOKEN_EXPIRY=$(fetch_param "aws-cognito-refresh-token-expiry")
 
           COOKIE_DOMAIN=$(fetch_param "cookie-domain")
@@ -127,12 +128,11 @@ jobs:
           API_RATE_LIMIT_MAX_REQUESTS=$(fetch_param "api-rate-limit-max-requests")
           REDIS_URL=$(fetch_param "redis-url")
 
-          # Verify all required parameters were fetched
+          # Verify all required parameters were fetched...
           echo "🔍 Verifying all required parameters were fetched..."
           required_params=(
             "AWS_COGNITO_REGION" "AWS_COGNITO_USER_POOL_ID" "AWS_COGNITO_USER_POOL_CLIENT_ID"
-            "AWS_COGNITO_USER_POOL_SECRET_KEY" "AWS_COGNITO_ACCESS_KEY" "AWS_COGNITO_SECRET_KEY"
-            "COOKIE_ENCRYPTION_KEY" "RELATIONAL_DATABASE_URL" "NON_RELATIONAL_DATABASE_URL"
+            "AWS_COGNITO_USER_POOL_SECRET_KEY" "COOKIE_ENCRYPTION_KEY" "RELATIONAL_DATABASE_URL" "NON_RELATIONAL_DATABASE_URL"
             "OPENAI_API_KEY"
           )
 
@@ -167,8 +167,9 @@ jobs:
           AWS_COGNITO_USER_POOL_ID=${AWS_COGNITO_USER_POOL_ID}
           AWS_COGNITO_USER_POOL_CLIENT_ID=${AWS_COGNITO_USER_POOL_CLIENT_ID}
           AWS_COGNITO_USER_POOL_SECRET_KEY=${AWS_COGNITO_USER_POOL_SECRET_KEY}
-          AWS_COGNITO_ACCESS_KEY=${AWS_COGNITO_ACCESS_KEY}
-          AWS_COGNITO_SECRET_KEY=${AWS_COGNITO_SECRET_KEY}
+          # Remove AWS credentials - now using IAM roles
+          # AWS_COGNITO_ACCESS_KEY=${AWS_COGNITO_ACCESS_KEY}
+          # AWS_COGNITO_SECRET_KEY=${AWS_COGNITO_SECRET_KEY}
           AWS_COGNITO_REFRESH_TOKEN_EXPIRY=${AWS_COGNITO_REFRESH_TOKEN_EXPIRY}
 
           # Cookie Configuration

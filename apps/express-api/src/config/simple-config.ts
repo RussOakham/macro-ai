@@ -107,8 +107,9 @@ export interface ConfigType {
 	awsCognitoUserPoolId: string
 	awsCognitoUserPoolClientId: string
 	awsCognitoUserPoolSecretKey: string
-	awsCognitoAccessKey: string
-	awsCognitoSecretKey: string
+	// AWS credentials are no longer required - using IAM roles instead
+	// awsCognitoAccessKey: string
+	// awsCognitoSecretKey: string
 	awsCognitoRefreshTokenExpiry: number
 	openaiApiKey: string
 	relationalDatabaseUrl: string
@@ -137,8 +138,9 @@ const convertToConfigType = (env: TEnv): ConfigType => ({
 	awsCognitoUserPoolId: env.AWS_COGNITO_USER_POOL_ID,
 	awsCognitoUserPoolClientId: env.AWS_COGNITO_USER_POOL_CLIENT_ID,
 	awsCognitoUserPoolSecretKey: env.AWS_COGNITO_USER_POOL_SECRET_KEY,
-	awsCognitoAccessKey: env.AWS_COGNITO_ACCESS_KEY,
-	awsCognitoSecretKey: env.AWS_COGNITO_SECRET_KEY,
+	// AWS credentials are no longer required - using IAM roles instead
+	// awsCognitoAccessKey: env.AWS_COGNITO_ACCESS_KEY,
+	// awsCognitoSecretKey: env.AWS_COGNITO_SECRET_KEY,
 	awsCognitoRefreshTokenExpiry: env.AWS_COGNITO_REFRESH_TOKEN_EXPIRY,
 	openaiApiKey: env.OPENAI_API_KEY,
 	relationalDatabaseUrl: env.RELATIONAL_DATABASE_URL,
