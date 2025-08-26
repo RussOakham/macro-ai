@@ -6,16 +6,15 @@
  * All configuration now comes from process.env with optional .env file loading for development.
  */
 
-import type { TEnv } from '../src/utils/env.schema.ts'
 import {
-	loadAppConfig as loadAppConfigNew,
-	loadAppConfigSync as loadAppConfigSyncNew,
+	type AppConfig,
 	getAppConfig as getAppConfigNew,
 	getModuleConfig,
 	getModuleConfigError,
-	isModuleConfigAvailable,
-	type AppConfig,
+	loadAppConfig as loadAppConfigNew,
+	loadAppConfigSync as loadAppConfigSyncNew,
 } from '../src/config/config.ts'
+import type { TEnv } from '../src/utils/env.schema.ts'
 
 /**
  * Async configuration loader (maintains backward compatibility)

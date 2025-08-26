@@ -23,32 +23,70 @@ import {
 } from '@aws-sdk/client-cognito-identity-provider'
 import crypto from 'crypto'
 
-import { assertConfig } from '../../config/simple-config.js'
 import { tryCatch, tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import { NotFoundError, Result, ValidationError } from '../../utils/errors.ts'
+import { createParameterStoreService } from '../../utils/parameter-store.ts'
 
 import { ICognitoService, TRegisterUserRequest } from './auth.types.ts'
 
 class CognitoService implements ICognitoService {
-	private readonly config: CognitoIdentityProviderClientConfig
-	private readonly secretHash: string
-	private readonly clientId: string
-	private readonly userPoolId: string
-	private readonly client: CognitoIdentityProviderClient
+	private config: CognitoIdentityProviderClientConfig
+	private secretHash: string
+	private clientId: string
+	private userPoolId: string
+	private client: CognitoIdentityProviderClient
 
 	constructor() {
-		const appConfig = assertConfig(false)
-
-		// Use ECS task role instead of hardcoded credentials
-		// The AWS SDK will automatically use the task role when no credentials are specified
-		this.config = {
-			region: appConfig.awsCognitoRegion,
-			// Remove credentials - AWS SDK will use the ECS task role automatically
-		}
-		this.secretHash = appConfig.awsCognitoUserPoolSecretKey
-		this.clientId = appConfig.awsCognitoUserPoolClientId
-		this.userPoolId = appConfig.awsCognitoUserPoolId
+		// Initialize with placeholder values - will be loaded from Parameter Store
+		this.config = { region: 'us-east-1' }
+		this.secretHash = ''
+		this.clientId = ''
+		this.userPoolId = ''
 		this.client = new CognitoIdentityProviderClient(this.config)
+
+		// Load configuration from Parameter Store asynchronously
+		// Note: This is intentionally not awaited in constructor
+		void this.loadConfigFromParameterStore()
+	}
+
+	private async loadConfigFromParameterStore(): Promise<void> {
+		try {
+			const parameterStore = createParameterStoreService()
+			const cognitoConfig = await parameterStore.getCognitoConfig()
+
+			// Update the configuration
+			this.config.region = cognitoConfig.region
+			this.secretHash = cognitoConfig.userPoolSecretKey
+			this.clientId = cognitoConfig.userPoolClientId
+			this.userPoolId = cognitoConfig.userPoolId
+
+			// Update the client with the correct region
+			this.client = new CognitoIdentityProviderClient(this.config)
+
+			console.log(
+				'Cognito configuration loaded from Parameter Store successfully',
+			)
+		} catch (error) {
+			console.error(
+				'Failed to load Cognito configuration from Parameter Store:',
+				error,
+			)
+			// Don't throw here - let the service fail gracefully if needed
+		}
+	}
+
+	private async ensureConfigLoaded(): Promise<void> {
+		// If configuration is not loaded yet, wait for it
+		if (!this.userPoolId || !this.clientId || !this.secretHash) {
+			await this.loadConfigFromParameterStore()
+
+			// If still not loaded, throw an error
+			if (!this.userPoolId || !this.clientId || !this.secretHash) {
+				throw new Error(
+					'Failed to load Cognito configuration from Parameter Store',
+				)
+			}
+		}
 	}
 
 	/**
@@ -72,6 +110,9 @@ class CognitoService implements ICognitoService {
 		password,
 		confirmPassword,
 	}: TRegisterUserRequest): Promise<Result<SignUpCommandOutput>> => {
+		// Ensure configuration is loaded from Parameter Store
+		await this.ensureConfigLoaded()
+
 		// Validate passwords match using tryCatchSync
 		const [, validationError] = tryCatchSync(() => {
 			if (password !== confirmPassword) {
@@ -157,6 +198,9 @@ class CognitoService implements ICognitoService {
 		email: string,
 		code: number,
 	): Promise<Result<ConfirmSignUpCommandOutput>> => {
+		// Ensure configuration is loaded from Parameter Store
+		await this.ensureConfigLoaded()
+
 		// Get user by email
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
@@ -216,6 +260,9 @@ class CognitoService implements ICognitoService {
 	public resendConfirmationCode = async (
 		email: string,
 	): Promise<Result<ResendConfirmationCodeCommandOutput>> => {
+		// Ensure configuration is loaded from Parameter Store
+		await this.ensureConfigLoaded()
+
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
 			UserPoolId: this.userPoolId,
@@ -273,6 +320,9 @@ class CognitoService implements ICognitoService {
 		email: string,
 		password: string,
 	): Promise<Result<InitiateAuthCommandOutput & { Username: string }>> => {
+		// Ensure configuration is loaded from Parameter Store
+		await this.ensureConfigLoaded()
+
 		// First, get the user's UUID using their email
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
@@ -344,6 +394,9 @@ class CognitoService implements ICognitoService {
 	public signOutUser = async (
 		accessToken: string,
 	): Promise<Result<GlobalSignOutCommandOutput>> => {
+		// Ensure configuration is loaded from Parameter Store
+		await this.ensureConfigLoaded()
+
 		const signOutCommand = new GlobalSignOutCommand({
 			AccessToken: accessToken,
 		})
@@ -364,6 +417,9 @@ class CognitoService implements ICognitoService {
 		refreshToken: string,
 		username: string,
 	): Promise<Result<InitiateAuthCommandOutput>> => {
+		// Ensure configuration is loaded from Parameter Store
+		await this.ensureConfigLoaded()
+
 		// Generate hash using tryCatchSync
 		const [secretHash, hashError] = tryCatchSync(
 			() => this.generateHash(username),
@@ -392,6 +448,9 @@ class CognitoService implements ICognitoService {
 	public forgotPassword = async (
 		email: string,
 	): Promise<Result<ForgotPasswordCommandOutput>> => {
+		// Ensure configuration is loaded from Parameter Store
+		await this.ensureConfigLoaded()
+
 		// First, get the user's UUID using their email
 		const getUserCommand = new ListUsersCommand({
 			Filter: `email = "${email}"`,
@@ -447,6 +506,9 @@ class CognitoService implements ICognitoService {
 		newPassword: string,
 		confirmPassword: string,
 	): Promise<Result<ConfirmForgotPasswordCommandOutput>> => {
+		// Ensure configuration is loaded from Parameter Store
+		await this.ensureConfigLoaded()
+
 		// Validate passwords match using tryCatchSync
 		const [, validationError] = tryCatchSync(() => {
 			if (newPassword !== confirmPassword) {
@@ -516,6 +578,9 @@ class CognitoService implements ICognitoService {
 	public getAuthUser = async (
 		accessToken: string,
 	): Promise<Result<GetUserCommandOutput>> => {
+		// Ensure configuration is loaded from Parameter Store
+		await this.ensureConfigLoaded()
+
 		const command = new GetUserCommand({
 			AccessToken: accessToken,
 		})

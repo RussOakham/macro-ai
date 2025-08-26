@@ -538,10 +538,7 @@ export class EcsFargateConstruct extends Construct {
 		role.addToPolicy(
 			new iam.PolicyStatement({
 				effect: iam.Effect.ALLOW,
-				actions: [
-					'kms:Decrypt',
-					'kms:DescribeKey',
-				],
+				actions: ['kms:Decrypt', 'kms:DescribeKey'],
 				resources: ['*'],
 				conditions: {
 					StringLike: {
