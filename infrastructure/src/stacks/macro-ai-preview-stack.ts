@@ -178,6 +178,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 						certificateArn: props.customDomain.certificateArn,
 						apiSubdomain:
 							props.customDomain.apiSubdomain ?? `${environmentName}-api`,
+						createFrontendSubdomain: false, // Disable frontend subdomain creation - Amplify manages this
 					}
 				: undefined,
 		})
