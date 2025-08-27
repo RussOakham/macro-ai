@@ -1,4 +1,5 @@
 import * as cdk from 'aws-cdk-lib'
+import * as acm from 'aws-cdk-lib/aws-certificatemanager'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import * as ecs from 'aws-cdk-lib/aws-ecs'
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2'
@@ -194,8 +195,40 @@ export class EcsLoadBalancerConstruct extends Construct {
 			defaultAction: elbv2.ListenerAction.forward([this.targetGroup]),
 		})
 
-		// Create HTTPS listener if custom domain is provided AND we have a certificate
-		if (customDomain?.certificateArn) {
+		// Create HTTPS listener if custom domain is provided
+		if (customDomain?.domainName) {
+			// Create or use existing certificate
+			let certificate: acm.ICertificate
+
+			if (customDomain.certificateArn) {
+				// Use existing certificate
+				certificate = acm.Certificate.fromCertificateArn(
+					this,
+					'ExistingCertificate',
+					customDomain.certificateArn,
+				)
+			} else {
+				// Create new certificate for the domain and wildcard subdomains
+				certificate = new acm.Certificate(this, 'DomainCertificate', {
+					domainName: customDomain.domainName,
+					subjectAlternativeNames: [`*.${customDomain.domainName}`],
+					validation: acm.CertificateValidation.fromDns(
+						route53.HostedZone.fromHostedZoneAttributes(
+							this,
+							'CertificateHostedZone',
+							{
+								hostedZoneId: customDomain.hostedZoneId,
+								zoneName: customDomain.domainName,
+							},
+						),
+					),
+				})
+
+				console.log(
+					`✅ Created new ACM certificate for ${customDomain.domainName} and *.${customDomain.domainName}`,
+				)
+			}
+
 			// Redirect HTTP to HTTPS
 			this.httpListener.addAction('RedirectToHttps', {
 				priority: 1,
@@ -211,9 +244,7 @@ export class EcsLoadBalancerConstruct extends Construct {
 			this.httpsListener = this.loadBalancer.addListener('HttpsListener', {
 				port: 443,
 				protocol: elbv2.ApplicationProtocol.HTTPS,
-				certificates: [
-					elbv2.ListenerCertificate.fromArn(customDomain.certificateArn),
-				],
+				certificates: [certificate],
 				defaultAction: elbv2.ListenerAction.forward([this.targetGroup]),
 			})
 
@@ -270,13 +301,10 @@ export class EcsLoadBalancerConstruct extends Construct {
 					)
 				}
 			}
-		} else if (customDomain?.certificateArn === undefined) {
-			// Log warning that HTTPS is not available without certificate
-			console.warn(
-				`Custom domain ${customDomain?.domainName ?? 'undefined'} provided but no certificate ARN. HTTPS listener will not be created.`,
-			)
-			console.warn(
-				'To enable HTTPS, provide certificateArn in customDomain configuration.',
+		} else {
+			// No custom domain configured - HTTP only
+			console.log(
+				'ℹ️ No custom domain configured - load balancer will be HTTP only',
 			)
 		}
 

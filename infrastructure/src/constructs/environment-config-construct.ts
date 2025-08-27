@@ -73,123 +73,123 @@ export class EnvironmentConfigConstruct extends Construct {
 	 * Note: Secure parameters are marked with isSecure: true
 	 */
 	private readonly parameterMappings: ParameterMapping[] = [
-			// API Configuration
-			{ paramKey: 'api-key', envVar: 'API_KEY', isSecure: false },
-			{
-				paramKey: 'cookie-encryption-key',
-				envVar: 'COOKIE_ENCRYPTION_KEY',
-				isSecure: true,
-			},
+		// API Configuration
+		{ paramKey: 'api-key', envVar: 'API_KEY', isSecure: false },
+		{
+			paramKey: 'cookie-encryption-key',
+			envVar: 'COOKIE_ENCRYPTION_KEY',
+			isSecure: true,
+		},
 
-			// AWS Cognito Configuration
-			{
-				paramKey: 'aws-cognito-region',
-				envVar: 'AWS_COGNITO_REGION',
-				defaultValue: 'us-east-1',
-				isSecure: false,
-			},
-			{
-				paramKey: 'aws-cognito-user-pool-id',
-				envVar: 'AWS_COGNITO_USER_POOL_ID',
-				isSecure: true,
-			},
-			{
-				paramKey: 'aws-cognito-user-pool-client-id',
-				envVar: 'AWS_COGNITO_USER_POOL_CLIENT_ID',
-				isSecure: true,
-			},
-			{
-				paramKey: 'aws-cognito-user-pool-secret-key',
-				envVar: 'AWS_COGNITO_USER_POOL_SECRET_KEY',
-				isSecure: true,
-			},
-			{
-				paramKey: 'aws-cognito-access-key',
-				envVar: 'AWS_COGNITO_ACCESS_KEY',
-				isSecure: true,
-			},
-			{
-				paramKey: 'aws-cognito-secret-key',
-				envVar: 'AWS_COGNITO_SECRET_KEY',
-				isSecure: true,
-			},
+		// AWS Cognito Configuration
+		{
+			paramKey: 'aws-cognito-region',
+			envVar: 'AWS_COGNITO_REGION',
+			defaultValue: 'us-east-1',
+			isSecure: false,
+		},
+		{
+			paramKey: 'aws-cognito-user-pool-id',
+			envVar: 'AWS_COGNITO_USER_POOL_ID',
+			isSecure: true,
+		},
+		{
+			paramKey: 'aws-cognito-user-pool-client-id',
+			envVar: 'AWS_COGNITO_USER_POOL_CLIENT_ID',
+			isSecure: true,
+		},
+		{
+			paramKey: 'aws-cognito-user-pool-secret-key',
+			envVar: 'AWS_COGNITO_USER_POOL_SECRET_KEY',
+			isSecure: true,
+		},
+		{
+			paramKey: 'aws-cognito-access-key',
+			envVar: 'AWS_COGNITO_ACCESS_KEY',
+			isSecure: true,
+		},
+		{
+			paramKey: 'aws-cognito-secret-key',
+			envVar: 'AWS_COGNITO_SECRET_KEY',
+			isSecure: true,
+		},
 
-			// Database Configuration
-			{
-				paramKey: 'relational-database-url',
-				envVar: 'RELATIONAL_DATABASE_URL',
-				isSecure: true,
-			},
-			{
-				paramKey: 'non-relational-database-url',
-				envVar: 'NON_RELATIONAL_DATABASE_URL',
-				isSecure: true,
-			},
+		// Database Configuration
+		{
+			paramKey: 'relational-database-url',
+			envVar: 'RELATIONAL_DATABASE_URL',
+			isSecure: true,
+		},
+		{
+			paramKey: 'non-relational-database-url',
+			envVar: 'NON_RELATIONAL_DATABASE_URL',
+			isSecure: true,
+		},
 
-			// OpenAI Configuration
-			{ paramKey: 'openai-api-key', envVar: 'OPENAI_API_KEY', isSecure: true },
+		// OpenAI Configuration
+		{ paramKey: 'openai-api-key', envVar: 'OPENAI_API_KEY', isSecure: true },
 
-			// Redis Configuration
-			{ paramKey: 'redis-url', envVar: 'REDIS_URL', isSecure: true },
+		// Redis Configuration
+		{ paramKey: 'redis-url', envVar: 'REDIS_URL', isSecure: true },
 
-			// Rate Limiting Configuration
-			{
-				paramKey: 'rate-limit-window-ms',
-				envVar: 'RATE_LIMIT_WINDOW_MS',
-				defaultValue: '900000',
-				isSecure: false,
-			},
-			{
-				paramKey: 'rate-limit-max-requests',
-				envVar: 'RATE_LIMIT_MAX_REQUESTS',
-				defaultValue: '100',
-				isSecure: false,
-			},
-			{
-				paramKey: 'auth-rate-limit-window-ms',
-				envVar: 'AUTH_RATE_LIMIT_WINDOW_MS',
-				defaultValue: '3600000',
-				isSecure: false,
-			},
-			{
-				paramKey: 'auth-rate-limit-max-requests',
-				envVar: 'AUTH_RATE_LIMIT_MAX_REQUESTS',
-				defaultValue: '10',
-				isSecure: false,
-			},
-			{
-				paramKey: 'api-rate-limit-window-ms',
-				envVar: 'API_RATE_LIMIT_WINDOW_MS',
-				defaultValue: '60000',
-				isSecure: false,
-			},
-			{
-				paramKey: 'api-rate-limit-max-requests',
-				envVar: 'API_RATE_LIMIT_MAX_REQUESTS',
-				defaultValue: '60',
-				isSecure: false,
-			},
+		// Rate Limiting Configuration
+		{
+			paramKey: 'rate-limit-window-ms',
+			envVar: 'RATE_LIMIT_WINDOW_MS',
+			defaultValue: '900000',
+			isSecure: false,
+		},
+		{
+			paramKey: 'rate-limit-max-requests',
+			envVar: 'RATE_LIMIT_MAX_REQUESTS',
+			defaultValue: '100',
+			isSecure: false,
+		},
+		{
+			paramKey: 'auth-rate-limit-window-ms',
+			envVar: 'AUTH_RATE_LIMIT_WINDOW_MS',
+			defaultValue: '3600000',
+			isSecure: false,
+		},
+		{
+			paramKey: 'auth-rate-limit-max-requests',
+			envVar: 'AUTH_RATE_LIMIT_MAX_REQUESTS',
+			defaultValue: '10',
+			isSecure: false,
+		},
+		{
+			paramKey: 'api-rate-limit-window-ms',
+			envVar: 'API_RATE_LIMIT_WINDOW_MS',
+			defaultValue: '60000',
+			isSecure: false,
+		},
+		{
+			paramKey: 'api-rate-limit-max-requests',
+			envVar: 'API_RATE_LIMIT_MAX_REQUESTS',
+			defaultValue: '60',
+			isSecure: false,
+		},
 
-			// Optional Configuration
-			{
-				paramKey: 'cors-allowed-origins',
-				envVar: 'CORS_ALLOWED_ORIGINS',
-				defaultValue: '*',
-				isSecure: false,
-			},
-			{
-				paramKey: 'cookie-domain',
-				envVar: 'COOKIE_DOMAIN',
-				defaultValue: 'localhost',
-				isSecure: false,
-			},
-			{
-				paramKey: 'aws-cognito-refresh-token-expiry',
-				envVar: 'AWS_COGNITO_REFRESH_TOKEN_EXPIRY',
-				defaultValue: '30',
-				isSecure: false,
-			},
-		]
+		// Optional Configuration
+		{
+			paramKey: 'cors-allowed-origins',
+			envVar: 'CORS_ALLOWED_ORIGINS',
+			defaultValue: '*',
+			isSecure: false,
+		},
+		{
+			paramKey: 'cookie-domain',
+			envVar: 'COOKIE_DOMAIN',
+			defaultValue: 'localhost',
+			isSecure: false,
+		},
+		{
+			paramKey: 'aws-cognito-refresh-token-expiry',
+			envVar: 'AWS_COGNITO_REFRESH_TOKEN_EXPIRY',
+			defaultValue: '30',
+			isSecure: false,
+		},
+	]
 
 	/**
 	 * Fetch Parameter Store values during CDK synthesis
@@ -309,7 +309,7 @@ export class EnvironmentConfigConstruct extends Construct {
 	 */
 	public getNonSecureEnvironmentVariables(): Record<string, string> {
 		const nonSecureVars: Record<string, string> = {}
-		
+
 		for (const mapping of this.parameterMappings) {
 			if (!mapping.isSecure) {
 				const envVarName = mapping.envVar
@@ -321,7 +321,8 @@ export class EnvironmentConfigConstruct extends Construct {
 
 		// Add environment-specific configuration (these are always non-secure)
 		nonSecureVars.NODE_ENV = 'production'
-		nonSecureVars.APP_ENV = (this.node.tryGetContext('environmentName') as string) || 'preview'
+		nonSecureVars.APP_ENV =
+			(this.node.tryGetContext('environmentName') as string) || 'preview'
 		nonSecureVars.SERVER_PORT = '3040'
 
 		return nonSecureVars
@@ -332,7 +333,7 @@ export class EnvironmentConfigConstruct extends Construct {
 	 */
 	public getSecureParametersAsSecrets(): Record<string, cdk.aws_ecs.Secret> {
 		const secrets: Record<string, cdk.aws_ecs.Secret> = {}
-		
+
 		for (const mapping of this.parameterMappings) {
 			if (mapping.isSecure) {
 				const paramName = `${this.parameterPrefix}${mapping.paramKey}`
@@ -343,8 +344,8 @@ export class EnvironmentConfigConstruct extends Construct {
 						{
 							parameterName: paramName,
 							version: 1,
-						}
-					)
+						},
+					),
 				)
 			}
 		}

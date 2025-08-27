@@ -69,7 +69,13 @@ if (isPreviewEnvironment) {
 	const branchName =
 		process.env.BRANCH_NAME ?? process.env.GITHUB_HEAD_REF ?? 'unknown'
 
-	// Custom domain configuration removed - focus on core ECS functionality
+	// Custom domain configuration for preview environments
+	const customDomain = {
+		domainName: 'russoakham.dev',
+		hostedZoneId: 'Z10081873B648ARROPNER',
+		apiSubdomain: `${deploymentEnv}-api`, // e.g., 'pr-56-api'
+		// Note: certificateArn is optional - if not provided, the load balancer will create one
+	}
 
 	if (isNaN(prNumber)) {
 		throw new Error(`Invalid PR number in environment name: ${deploymentEnv}`)
@@ -87,6 +93,7 @@ if (isPreviewEnvironment) {
 		prNumber,
 		branchName,
 		scale: 'preview',
+		customDomain,
 		// Complex features removed - focus on core ECS functionality
 		tags,
 	})

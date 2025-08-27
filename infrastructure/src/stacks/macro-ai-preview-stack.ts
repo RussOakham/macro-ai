@@ -30,6 +30,20 @@ export interface MacroAiPreviewStackProps extends cdk.StackProps {
 	 */
 	readonly scale?: string
 
+	/**
+	 * Custom domain configuration for HTTPS endpoints
+	 */
+	readonly customDomain?: {
+		readonly domainName: string
+		readonly hostedZoneId: string
+		readonly certificateArn?: string
+		/**
+		 * API subdomain to use (e.g., 'pr-56-api')
+		 * @default derived from environmentName
+		 */
+		readonly apiSubdomain?: string
+	}
+
 	// Complex features removed - focus on core ECS functionality
 }
 
@@ -52,12 +66,16 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	public readonly ecsService: EcsFargateConstruct
 	public readonly loadBalancer: EcsLoadBalancerConstruct
 	public readonly prNumber: number
+	public readonly environmentName: string
+	public readonly customDomain?: MacroAiPreviewStackProps['customDomain']
 
 	constructor(scope: Construct, id: string, props: MacroAiPreviewStackProps) {
 		super(scope, id, props)
 
-		const { environmentName, prNumber, branchName } = props
+		const { environmentName, prNumber, branchName, customDomain } = props
 		this.prNumber = prNumber
+		this.environmentName = environmentName
+		this.customDomain = customDomain
 
 		// Note: Base-level tags (Project, Environment, EnvironmentType, Component, Purpose, CreatedBy, ManagedBy, PRNumber, Branch, ExpiryDate, Scale, AutoShutdown)
 		// are applied centrally via StackProps.tags in app.ts using TaggingStrategy.
@@ -153,6 +171,15 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			securityGroup: this.networking.albSecurityGroup,
 			enableAccessLogs: false, // Cost optimization for preview
 			deletionProtection: false, // Cost optimization for preview
+			customDomain: props.customDomain
+				? {
+						domainName: props.customDomain.domainName,
+						hostedZoneId: props.customDomain.hostedZoneId,
+						certificateArn: props.customDomain.certificateArn,
+						apiSubdomain:
+							props.customDomain.apiSubdomain ?? `${environmentName}-api`,
+					}
+				: undefined,
 		})
 
 		// Monitoring infrastructure removed - focus on core ECS functionality
@@ -213,6 +240,25 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			description: 'Application Load Balancer URL',
 			exportName: `${this.stackName}-LoadBalancerUrl`,
 		})
+
+		// Custom domain outputs
+		if (this.customDomain) {
+			const apiSubdomain =
+				this.customDomain.apiSubdomain ?? `${this.environmentName}-api`
+			const fullDomain = `${apiSubdomain}.${this.customDomain.domainName}`
+
+			new cdk.CfnOutput(this, 'CustomDomainUrl', {
+				value: `https://${fullDomain}`,
+				description: 'Custom domain URL with HTTPS',
+				exportName: `${this.stackName}-CustomDomainUrl`,
+			})
+
+			new cdk.CfnOutput(this, 'CustomDomainName', {
+				value: fullDomain,
+				description: 'Custom domain name for the API',
+				exportName: `${this.stackName}-CustomDomainName`,
+			})
+		}
 
 		// Custom domain outputs removed - focus on core ECS functionality
 
