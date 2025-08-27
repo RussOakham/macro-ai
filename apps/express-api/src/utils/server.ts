@@ -33,46 +33,18 @@ const createServer = (): Express => {
 
 	// Simplified CORS configuration for ephemeral environments
 	// Parse CORS_ALLOWED_ORIGINS from environment or use smart defaults
-	const corsOrigins = process.env.CORS_ALLOWED_ORIGINS
-		? process.env.CORS_ALLOWED_ORIGINS.split(',')
-				.map((o) => o.trim())
-				.filter((o) => o.length > 0)
-		: [
-				// Local development
-				'http://localhost:3000',
-				'http://localhost:3040',
-				// Preview environments (auto-detected)
-				...(process.env.APP_ENV?.startsWith('pr-') &&
-				process.env.PR_NUMBER &&
-				process.env.CUSTOM_DOMAIN_NAME
-					? [
-							`https://pr-${process.env.PR_NUMBER}.${process.env.CUSTOM_DOMAIN_NAME}`,
-							`https://${process.env.CUSTOM_DOMAIN_NAME}`,
-						]
-					: []),
-				// Production domains (if configured)
-				...(process.env.CUSTOM_DOMAIN_NAME
-					? [
-							`https://${process.env.CUSTOM_DOMAIN_NAME}`,
-							`https://staging.${process.env.CUSTOM_DOMAIN_NAME}`,
-							`https://api.${process.env.CUSTOM_DOMAIN_NAME}`,
-							`https://staging-api.${process.env.CUSTOM_DOMAIN_NAME}`,
-						]
-					: []),
-				// Fallback for preview environments - allow common patterns
-				...(process.env.APP_ENV?.startsWith('pr-') ? [
-					'https://macro-ai.russoakham.dev',
-					'https://*.macro-ai.russoakham.dev',
-				] : []),
-			]
+	// Add * wildcard for preview/staging environments
+	let corsOrigins = 'http://localhost:3000'
 
-	// Enhanced logging for CORS debugging
-	console.log(`[server] CORS: Environment variables:`)
-	console.log(`  - APP_ENV: ${process.env.APP_ENV ?? 'undefined'}`)
-	console.log(`  - PR_NUMBER: ${process.env.PR_NUMBER ?? 'undefined'}`)
-	console.log(`  - CUSTOM_DOMAIN_NAME: ${process.env.CUSTOM_DOMAIN_NAME ?? 'undefined'}`)
-	console.log(`  - CORS_ALLOWED_ORIGINS: ${process.env.CORS_ALLOWED_ORIGINS ?? 'undefined'}`)
-	console.log(`[server] CORS: Configured origins: [${corsOrigins.join(', ')}]`)
+	if (process.env.NODE_ENV !== 'production') {
+		if (process.env.CUSTOM_DOMAIN_NAME) {
+			corsOrigins = `https://${process.env.CUSTOM_DOMAIN_NAME}`
+		} else {
+			corsOrigins = 'https://macro-ai.russoakham.dev'
+		}
+	}
+
+	console.log(`[server] CORS: Configured origins: [${corsOrigins}]`)
 
 	app.use(
 		cors({

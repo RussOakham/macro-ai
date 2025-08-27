@@ -152,7 +152,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			},
 			environmentConfig: this.environmentConfig,
 			// Pass custom domain name for CORS configuration
-			customDomainName: props.customDomain?.apiSubdomain 
+			customDomainName: props.customDomain?.apiSubdomain
 				? `${props.customDomain.apiSubdomain}.${props.customDomain.domainName}`
 				: undefined,
 		})
