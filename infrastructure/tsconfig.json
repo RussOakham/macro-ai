@@ -2,7 +2,7 @@
 	"extends": "@repo/config-typescript/tsconfig-base.json",
 	"compilerOptions": {
 		"outDir": "./dist",
-		"rootDir": "./",
+		"rootDir": "./src",
 		"target": "ES2022",
 		"module": "ES2022",
 		"moduleResolution": "node",
@@ -16,8 +16,10 @@
 		"strict": true,
 		"strictNullChecks": true,
 		"noEmit": false,
-		"allowImportingTsExtensions": false
+		"allowImportingTsExtensions": false,
+		"skipLibCheck": true,
+		"isolatedModules": false
 	},
-	"include": ["src/**/*", "scripts/**/*"],
+	"include": ["src/**/*"],
 	"exclude": ["node_modules", "**/*.d.ts", "dist", "cdk.out"]
 }

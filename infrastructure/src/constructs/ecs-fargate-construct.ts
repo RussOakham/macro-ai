@@ -7,6 +7,8 @@ import * as iam from 'aws-cdk-lib/aws-iam'
 import * as logs from 'aws-cdk-lib/aws-logs'
 import { Construct } from 'constructs'
 
+import { EnvironmentConfigConstruct } from './environment-config-construct.js'
+
 export interface EcsFargateConstructProps {
 	/**
 	 * VPC where ECS services will be deployed
@@ -93,6 +95,12 @@ export interface EcsFargateConstructProps {
 		readonly healthyThresholdCount: number
 		readonly unhealthyThresholdCount: number
 	}
+
+	/**
+	 * Environment configuration construct for Parameter Store integration
+	 * This provides all environment variables from Parameter Store
+	 */
+	readonly environmentConfig: EnvironmentConfigConstruct
 }
 
 export interface PrEcsServiceProps {
@@ -158,9 +166,12 @@ export class EcsFargateConstruct extends Construct {
 	public readonly taskRole: iam.Role
 	public readonly executionRole: iam.Role
 	public readonly scalableTaskCount?: ecs.ScalableTaskCount
+	public readonly environmentConfig: EnvironmentConfigConstruct
 
 	constructor(scope: Construct, id: string, props: EcsFargateConstructProps) {
 		super(scope, id)
+
+		console.log('🔍 ECS Fargate Construct: Starting construction...')
 
 		const {
 			vpc,
@@ -183,7 +194,14 @@ export class EcsFargateConstruct extends Construct {
 				healthyThresholdCount: 2,
 				unhealthyThresholdCount: 3,
 			},
+			environmentConfig,
 		} = props
+
+		// Store environment config for use in task definition
+		this.environmentConfig = environmentConfig
+		console.log(
+			'🔍 ECS Fargate Construct: Environment config stored successfully',
+		)
 
 		// Create or use provided ECR repository
 		this.ecrRepository =
@@ -235,10 +253,12 @@ export class EcsFargateConstruct extends Construct {
 				logRetention: logs.RetentionDays.ONE_WEEK, // Cost optimization
 			}),
 			environment: {
+				// Use all environment variables from Parameter Store via EnvironmentConfigConstruct
+				...this.environmentConfig.getAllEnvironmentVariables(),
+				// Override with container-specific values
 				NODE_ENV:
 					environmentName === 'production' ? 'production' : 'development',
 				APP_ENV: environmentName,
-				// Note: PARAMETER_STORE_PREFIX is no longer needed - the application determines it from APP_ENV
 				// Add PR number for CORS configuration
 				...(environmentName.startsWith('pr-') && {
 					PR_NUMBER: environmentName.replace('pr-', ''),
@@ -247,15 +267,7 @@ export class EcsFargateConstruct extends Construct {
 				...(customDomainName && {
 					CUSTOM_DOMAIN_NAME: customDomainName,
 				}),
-				// Note: Cognito configuration will be accessed via IAM role instead of environment variables
-				// This eliminates the need for SecureString parameters in the task definition
 			},
-			// Note: Parameter Store values will be accessed at runtime via the task role
-			// The application automatically determines the parameter store prefix from APP_ENV:
-			// - pr-* environments → /macro-ai/development/
-			// - development → /macro-ai/development/
-			// - staging → /macro-ai/staging/
-			// - production → /macro-ai/production/
 			healthCheck: {
 				command: [
 					'CMD-SHELL',

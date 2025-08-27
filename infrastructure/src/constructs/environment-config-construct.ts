@@ -24,7 +24,7 @@ export interface EnvironmentConfigConstructProps {
  * Construct for managing environment configuration at CDK synthesis time
  *
  * This construct fetches Parameter Store values during synthesis and creates
- * complete environment configuration that can be injected into EC2 instances.
+ * complete environment configuration that can be injected into ECS Fargate tasks.
  * This approach ensures applications are environment-agnostic and receive
  * all required configuration at deployment time.
  */

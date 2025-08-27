@@ -2,7 +2,7 @@ import * as cdk from 'aws-cdk-lib'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import { Construct } from 'constructs'
 
-import { Ec2Construct } from './ec2-construct.js'
+// EC2 construct removed - ECS Fargate only
 
 export interface NetworkingConstructProps {
 	/**
@@ -43,9 +43,11 @@ export interface NetworkingConstructProps {
 
 	/**
 	 * Enable ALB (Application Load Balancer) integration
-	 * @default true (required for EC2-based preview environments)
+	 * @default true (required for ECS Fargate preview environments)
 	 */
 	readonly enableAlb?: boolean
+
+	// EC2 support removed - ECS Fargate only
 
 	/**
 	 * Custom domain configuration for ALB
@@ -81,17 +83,17 @@ export interface NetworkingConstructProps {
 }
 
 /**
- * Simplified Networking Construct for Macro AI EC2-based preview environments
+ * Simplified Networking Construct for Macro AI ECS Fargate preview environments
  *
- * This construct provides basic VPC and EC2 infrastructure without the complex
- * legacy constructs that were removed during cleanup.
+ * This construct provides basic VPC and networking infrastructure for containerized
+ * deployments without legacy EC2 dependencies.
  */
 export class NetworkingConstruct extends Construct {
 	public readonly vpc: ec2.IVpc
 	public readonly publicSubnets: ec2.ISubnet[]
 	public readonly privateSubnets: ec2.ISubnet[]
 	public readonly databaseSubnets: ec2.ISubnet[]
-	public readonly ec2Construct?: Ec2Construct
+	// EC2 construct property removed - ECS Fargate only
 	public readonly albSecurityGroup: ec2.ISecurityGroup
 	public readonly vpcId: string
 	public readonly vpcCidrBlock: string
@@ -112,10 +114,6 @@ export class NetworkingConstruct extends Construct {
 			maxAzs = 2,
 			enableNatGateway = true,
 			exportPrefix = 'MacroAI',
-			enableDetailedMonitoring = false,
-			deploymentId = Date.now().toString(),
-			branchName,
-			customDomainName,
 		} = props
 
 		// Store configuration for later use
@@ -178,16 +176,7 @@ export class NetworkingConstruct extends Construct {
 			'Allow Express API inbound on port 3040',
 		)
 
-		// Create EC2 construct (EC2 instances need ALB security group for routing)
-		this.ec2Construct = new Ec2Construct(this, 'Ec2', {
-			vpc: this.vpc,
-			securityGroup: this.albSecurityGroup,
-			environmentName: this.environmentName,
-			enableDetailedMonitoring,
-			deploymentId,
-			branchName,
-			customDomainName,
-		})
+		// EC2 construct instantiation removed - ECS Fargate only
 
 		// Convenience properties
 		this.vpcId = this.vpc.vpcId
@@ -240,13 +229,7 @@ export class NetworkingConstruct extends Construct {
 			exportName: `${this.exportPrefix}-AlbSecurityGroupId`,
 		})
 
-		if (this.ec2Construct) {
-			new cdk.CfnOutput(this, 'Ec2InstanceRoleArn', {
-				value: this.ec2Construct.instanceRole.roleArn,
-				description: 'IAM role ARN for EC2 instances',
-				exportName: `${this.exportPrefix}-Ec2InstanceRoleArn`,
-			})
-		}
+		// EC2 outputs removed - ECS Fargate only
 	}
 
 	/**
