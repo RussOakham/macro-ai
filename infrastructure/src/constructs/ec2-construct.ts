@@ -39,11 +39,6 @@ export interface Ec2ConstructProps {
 	readonly instanceType?: ec2.InstanceType
 
 	/**
-	 * Parameter Store prefix for configuration
-	 */
-	readonly parameterStorePrefix: string
-
-	/**
 	 * Enable detailed monitoring and logging
 	 * @default false (cost optimization)
 	 */
@@ -81,11 +76,6 @@ export interface PrInstanceProps {
 	 * Security group for the PR instance
 	 */
 	readonly securityGroup: ec2.ISecurityGroup
-
-	/**
-	 * Parameter Store prefix for configuration
-	 */
-	readonly parameterStorePrefix: string
 
 	/**
 	 * Environment name for resource naming
@@ -147,7 +137,6 @@ export class Ec2Construct extends Construct {
 				ec2.InstanceClass.T3,
 				ec2.InstanceSize.MICRO,
 			),
-			parameterStorePrefix,
 			enableDetailedMonitoring = false,
 			deploymentId = new Date().toISOString(),
 			branchName,
@@ -155,17 +144,13 @@ export class Ec2Construct extends Construct {
 		} = props
 
 		// Create IAM role for EC2 instances
-		this.instanceRole = this.createInstanceRole(
-			parameterStorePrefix,
-			environmentName,
-		)
+		this.instanceRole = this.createInstanceRole(environmentName)
 
 		// Create launch template for consistent instance configuration
 		this.launchTemplate = this.createLaunchTemplate(
 			vpc,
 			securityGroup,
 			instanceType,
-			parameterStorePrefix,
 			environmentName,
 			enableDetailedMonitoring,
 			deploymentId,
@@ -186,7 +171,6 @@ export class Ec2Construct extends Construct {
 			prNumber,
 			vpc,
 			securityGroup,
-			parameterStorePrefix,
 			environmentName = 'development',
 			instanceType = ec2.InstanceType.of(
 				ec2.InstanceClass.T3,
@@ -210,7 +194,6 @@ export class Ec2Construct extends Construct {
 				securityGroup,
 				role: this.instanceRole,
 				userData: this.createUserData(
-					parameterStorePrefix,
 					prNumber,
 					deploymentId,
 					branchName,
@@ -235,10 +218,7 @@ export class Ec2Construct extends Construct {
 	/**
 	 * Create IAM role for EC2 instances with least-privilege access
 	 */
-	private createInstanceRole(
-		parameterStorePrefix: string,
-		environmentName: string,
-	): iam.Role {
+	private createInstanceRole(environmentName: string): iam.Role {
 		const role = new iam.Role(this, 'Ec2InstanceRole', {
 			assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
 			roleName: `macro-ai-${environmentName}-ec2-role`,
@@ -319,7 +299,6 @@ export class Ec2Construct extends Construct {
 		vpc: ec2.IVpc,
 		securityGroup: ec2.ISecurityGroup,
 		instanceType: ec2.InstanceType,
-		parameterStorePrefix: string,
 		environmentName: string,
 		enableDetailedMonitoring: boolean,
 		deploymentId: string,
@@ -335,7 +314,6 @@ export class Ec2Construct extends Construct {
 			securityGroup,
 			role: this.instanceRole,
 			userData: this.createUserData(
-				parameterStorePrefix,
 				undefined,
 				deploymentId,
 				branchName,
@@ -355,7 +333,6 @@ export class Ec2Construct extends Construct {
 	 * Uses the new bootstrap approach with Parameter Store configuration fetching
 	 */
 	private createUserData(
-		parameterStorePrefix: string,
 		prNumber?: number,
 		deploymentId?: string,
 		branchName?: string,

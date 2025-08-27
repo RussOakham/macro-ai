@@ -121,7 +121,6 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			enableFlowLogs: false, // Cost optimization for preview
 			maxAzs: 2, // Minimum for ALB
 			enableDetailedMonitoring: false, // Cost optimization
-			parameterStorePrefix: this.parameterStore.parameterPrefix,
 			deploymentId,
 			enableNatGateway: false, // Cost optimization: eliminate NAT Gateway (~$2.76/month savings)
 			enableVpcEndpoints: false, // Cost optimization: remove VPC endpoints for preview environments
@@ -145,7 +144,6 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			environmentName,
 			branchName,
 			customDomainName: customDomain?.domainName,
-			parameterStorePrefix: this.parameterStore.parameterPrefix,
 			enableDetailedMonitoring: false, // Cost optimization for preview
 			taskDefinition: {
 				cpu: 256, // Cost-optimized for preview (t3.nano equivalent)

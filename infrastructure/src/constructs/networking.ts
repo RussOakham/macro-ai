@@ -30,12 +30,6 @@ export interface NetworkingConstructProps {
 	readonly enableDetailedMonitoring?: boolean
 
 	/**
-	 * Parameter Store prefix for EC2 configuration
-	 * Required for EC2 construct integration
-	 */
-	readonly parameterStorePrefix?: string
-
-	/**
 	 * Enable NAT Gateway for private subnet internet access
 	 * @default true - set to false for preview environments to eliminate NAT Gateway costs (~$2.76/month)
 	 */
@@ -118,7 +112,6 @@ export class NetworkingConstruct extends Construct {
 			maxAzs = 2,
 			enableNatGateway = true,
 			exportPrefix = 'MacroAI',
-			parameterStorePrefix,
 			enableDetailedMonitoring = false,
 			deploymentId = Date.now().toString(),
 			branchName,
@@ -185,19 +178,16 @@ export class NetworkingConstruct extends Construct {
 			'Allow Express API inbound on port 3040',
 		)
 
-		// Create EC2 construct if parameter store prefix is provided
-		if (parameterStorePrefix) {
-			this.ec2Construct = new Ec2Construct(this, 'Ec2', {
-				vpc: this.vpc,
-				securityGroup: this.albSecurityGroup,
-				environmentName: this.environmentName,
-				parameterStorePrefix,
-				enableDetailedMonitoring,
-				deploymentId,
-				branchName,
-				customDomainName,
-			})
-		}
+		// Create EC2 construct (EC2 instances need ALB security group for routing)
+		this.ec2Construct = new Ec2Construct(this, 'Ec2', {
+			vpc: this.vpc,
+			securityGroup: this.albSecurityGroup,
+			environmentName: this.environmentName,
+			enableDetailedMonitoring,
+			deploymentId,
+			branchName,
+			customDomainName,
+		})
 
 		// Convenience properties
 		this.vpcId = this.vpc.vpcId

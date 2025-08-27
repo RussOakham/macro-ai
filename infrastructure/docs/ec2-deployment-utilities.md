@@ -165,19 +165,19 @@ console.log('Deployment result:', result)
 
 ### Required Environment Variables
 
-| Variable                 | Description                     | Example                            |
-| ------------------------ | ------------------------------- | ---------------------------------- |
-| `PR_NUMBER`              | Pull request number             | `123`                              |
-| `ARTIFACT_URL`           | S3 URL for application artifact | `s3://bucket/key`                  |
-| `VERSION`                | Deployment version              | `1.0.0`                            |
-| `AWS_REGION`             | AWS region                      | `us-east-1`                        |
-| `VPC_ID`                 | VPC ID for deployment           | `vpc-xxxxxxxxx`                    |
-| `SUBNET_IDS`             | Comma-separated subnet IDs      | `subnet-xxx,subnet-yyy`            |
-| `SECURITY_GROUP_ID`      | Security group ID               | `sg-xxxxxxxxx`                     |
-| `LAUNCH_TEMPLATE_ID`     | EC2 launch template ID          | `lt-xxxxxxxxx`                     |
-| `TARGET_GROUP_ARN`       | ALB target group ARN            | `arn:aws:elasticloadbalancing:...` |
-| `APP_ENV`                | Application environment         | `development`                      |
-| `ARTIFACT_BUCKET`        | S3 bucket for artifacts         | `my-deployment-bucket`             |
+| Variable             | Description                     | Example                            |
+| -------------------- | ------------------------------- | ---------------------------------- |
+| `PR_NUMBER`          | Pull request number             | `123`                              |
+| `ARTIFACT_URL`       | S3 URL for application artifact | `s3://bucket/key`                  |
+| `VERSION`            | Deployment version              | `1.0.0`                            |
+| `AWS_REGION`         | AWS region                      | `us-east-1`                        |
+| `VPC_ID`             | VPC ID for deployment           | `vpc-xxxxxxxxx`                    |
+| `SUBNET_IDS`         | Comma-separated subnet IDs      | `subnet-xxx,subnet-yyy`            |
+| `SECURITY_GROUP_ID`  | Security group ID               | `sg-xxxxxxxxx`                     |
+| `LAUNCH_TEMPLATE_ID` | EC2 launch template ID          | `lt-xxxxxxxxx`                     |
+| `TARGET_GROUP_ARN`   | ALB target group ARN            | `arn:aws:elasticloadbalancing:...` |
+| `APP_ENV`            | Application environment         | `development`                      |
+| `ARTIFACT_BUCKET`    | S3 bucket for artifacts         | `my-deployment-bucket`             |
 
 ### Optional Environment Variables
 

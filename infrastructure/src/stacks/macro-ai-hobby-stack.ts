@@ -75,7 +75,6 @@ export class MacroAiHobbyStack extends cdk.Stack {
 			enableFlowLogs: false, // Cost optimization for development
 			maxAzs: 2, // Minimum for ALB, cost-optimized
 			enableDetailedMonitoring: false, // Cost optimization
-			parameterStorePrefix: this.parameterStore.parameterPrefix, // Enable EC2 construct
 		})
 
 		// Validate networking requirements for ALB deployment
@@ -87,7 +86,6 @@ export class MacroAiHobbyStack extends cdk.Stack {
 				vpc: this.networking.vpc,
 				securityGroup: this.networking.albSecurityGroup,
 				environmentName,
-				parameterStorePrefix: this.parameterStore.parameterPrefix,
 				enableDetailedMonitoring: false, // Cost optimization for hobby environment
 				taskDefinition: {
 					cpu: ecsConfig.cpu,

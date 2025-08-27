@@ -27,6 +27,8 @@ fi
 ENV_FILE="${ENV_FILE:-/tmp/.env}"
 
 # Determine parameter store prefix based on APP_ENV
+# This matches the logic in the application's getParameterStorePrefix function
+# Note: This is a local variable for build-time parameter fetching, not the old environment variable
 if [[ "$APP_ENV" == pr-* ]]; then
     # Preview environments (pr-123) use development parameters
     PARAMETER_STORE_PREFIX="/macro-ai/development"

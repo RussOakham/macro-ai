@@ -44,12 +44,6 @@ export interface EcsFargateConstructProps {
 	}
 
 	/**
-	 * Parameter Store prefix for configuration
-	 * @deprecated No longer needed - the application determines it from APP_ENV
-	 */
-	readonly parameterStorePrefix?: string
-
-	/**
 	 * Enable detailed monitoring and logging
 	 * @default false (cost optimization)
 	 */
@@ -116,12 +110,6 @@ export interface PrEcsServiceProps {
 	 * Security group for the PR service
 	 */
 	readonly securityGroup: ec2.ISecurityGroup
-
-	/**
-	 * Parameter Store prefix for configuration
-	 * @deprecated No longer needed - the application determines it from APP_ENV
-	 */
-	readonly parameterStorePrefix?: string
 
 	/**
 	 * Environment name for resource naming
