@@ -1005,7 +1005,7 @@ jobs:
           api-endpoint: ${{ steps.resolve-backend.outputs.final-backend-url }}
           custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
           hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
-          parameter-store-path: '/macro-ai/${{ needs.validate-access.outputs.env-name }}/api-key'
+          parameter-store-path: '/macro-ai/development/api-key'
           backend-stack-name: ${{ needs.validate-access.outputs.backend-stack-name }}
           resolution-method: 'artifact-based'
           output-file: '.env.preview'
