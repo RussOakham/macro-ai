@@ -79,7 +79,7 @@ export class EnvironmentConfigConstruct extends Construct {
 		// Note: Secure parameters are marked with isSecure: true
 		const parameterMappings: ParameterMapping[] = [
 			// API Configuration
-			{ paramKey: 'api-key', envVar: 'API_KEY', isSecure: true },
+			{ paramKey: 'api-key', envVar: 'API_KEY', isSecure: false },
 			{
 				paramKey: 'cookie-encryption-key',
 				envVar: 'COOKIE_ENCRYPTION_KEY',
