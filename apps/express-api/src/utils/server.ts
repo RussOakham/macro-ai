@@ -37,10 +37,12 @@ const createServer = (): Express => {
 	let corsOrigins = 'http://localhost:3000'
 
 	if (process.env.NODE_ENV !== 'production') {
-		if (process.env.CUSTOM_DOMAIN_NAME) {
-			corsOrigins = `https://${process.env.CUSTOM_DOMAIN_NAME}`
+		if (process.env.APP_ENV?.startsWith('pr-')) {
+			corsOrigins = `https://${process.env.APP_ENV}.macro-ai.russoakham.dev`
+		} else if (process.env.APP_ENV === 'staging') {
+			corsOrigins = 'https://staging-api.macro-ai.russoakham.dev'
 		} else {
-			corsOrigins = 'https://macro-ai.russoakham.dev'
+			corsOrigins = 'https://api.macro-ai.russoakham.dev'
 		}
 	}
 
