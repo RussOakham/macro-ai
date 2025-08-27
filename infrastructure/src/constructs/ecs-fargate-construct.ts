@@ -216,7 +216,8 @@ export class EcsFargateConstruct extends Construct {
 		this.cluster = new ecs.Cluster(this, 'EcsCluster', {
 			vpc,
 			clusterName: `macro-ai-${environmentName}-cluster`,
-			containerInsights: enableDetailedMonitoring,
+			// Note: containerInsightsV2 has complex type requirements, disabling for now
+			// TODO: Re-enable when type issues are resolved
 			enableFargateCapacityProviders: true,
 		})
 
@@ -295,6 +296,7 @@ export class EcsFargateConstruct extends Construct {
 			enableExecuteCommand: true, // Enable ECS Exec for debugging
 			circuitBreaker: { rollback: true }, // Auto-rollback on deployment failures
 			healthCheckGracePeriod: cdk.Duration.seconds(60), // Match the task definition's startPeriod
+			minHealthyPercent: 100, // Ensure 100% of desired tasks are running during deployments
 		})
 
 		// Configure auto-scaling if specified

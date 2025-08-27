@@ -152,6 +152,39 @@ This ensures commands and results are **complete, reproducible, and authoritativ
 
 ---
 
+## Documentation Guidelines
+
+Documentation within this repo should serve as a **living source of truth**. It is not a historical archive, but a reference for the product and code as it exists **now**.
+
+### Documentation must represent
+
+#### **Product** (the “why”)
+
+- **User discovery**: personas, profiles, journey maps, key use cases
+- **Feature requirements**: functional and non-functional needs
+- **Market context**: competitor analysis, differentiators, positioning
+- **Value proposition**: why the product exists, core problem being solved
+- **Metrics & goals**: success criteria, KPIs, adoption targets
+
+#### **Delivery** (the “when/how”)
+
+- **Roadmaps**: short, medium, long-term priorities
+- **Integration plans**: dependencies between services, sequencing of rollouts
+- **Feature schedules**: timelines, releases, milestones
+- **Resourcing**: roles, responsibilities, ownership mapping
+- **Risks & mitigations**: blockers, external dependencies, contingency planning
+- **Change management**: comms strategy for launches and updates
+
+#### **Development** (the “what now”)
+
+- **Source of truth** for the current implementation of the app
+- Must **not** include deprecated, legacy, or historical notes (e.g. old migrations, abandoned approaches)
+- Keep examples and references aligned with **the active codebase**, not historical artifacts
+- **API & contracts**: definitive specs for APIs, schemas, protocols in use
+- **Infrastructure state**: current infra definitions and IaC source (Terraform/CDK), not past revisions
+
+---
+
 ## Task Management
 
 - Break down large requests into **smaller, concrete tasks**.
