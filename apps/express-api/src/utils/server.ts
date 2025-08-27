@@ -47,6 +47,7 @@ const createServer = (): Express => {
 				process.env.CUSTOM_DOMAIN_NAME
 					? [
 							`https://pr-${process.env.PR_NUMBER}.${process.env.CUSTOM_DOMAIN_NAME}`,
+							`https://${process.env.CUSTOM_DOMAIN_NAME}`,
 						]
 					: []),
 				// Production domains (if configured)
@@ -58,8 +59,19 @@ const createServer = (): Express => {
 							`https://staging-api.${process.env.CUSTOM_DOMAIN_NAME}`,
 						]
 					: []),
+				// Fallback for preview environments - allow common patterns
+				...(process.env.APP_ENV?.startsWith('pr-') ? [
+					'https://macro-ai.russoakham.dev',
+					'https://*.macro-ai.russoakham.dev',
+				] : []),
 			]
 
+	// Enhanced logging for CORS debugging
+	console.log(`[server] CORS: Environment variables:`)
+	console.log(`  - APP_ENV: ${process.env.APP_ENV ?? 'undefined'}`)
+	console.log(`  - PR_NUMBER: ${process.env.PR_NUMBER ?? 'undefined'}`)
+	console.log(`  - CUSTOM_DOMAIN_NAME: ${process.env.CUSTOM_DOMAIN_NAME ?? 'undefined'}`)
+	console.log(`  - CORS_ALLOWED_ORIGINS: ${process.env.CORS_ALLOWED_ORIGINS ?? 'undefined'}`)
 	console.log(`[server] CORS: Configured origins: [${corsOrigins.join(', ')}]`)
 
 	app.use(

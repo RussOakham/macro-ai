@@ -151,6 +151,10 @@ export class MacroAiPreviewStack extends cdk.Stack {
 				unhealthyThresholdCount: 3,
 			},
 			environmentConfig: this.environmentConfig,
+			// Pass custom domain name for CORS configuration
+			customDomainName: props.customDomain?.apiSubdomain 
+				? `${props.customDomain.apiSubdomain}.${props.customDomain.domainName}`
+				: undefined,
 		})
 
 		// Certificate creation removed - focus on core ECS functionality
