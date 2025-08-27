@@ -115,7 +115,7 @@ env:
   SECURITY_GROUP_ID: sg-xxxxxxxxx
   LAUNCH_TEMPLATE_ID: lt-xxxxxxxxx
   TARGET_GROUP_ARN: arn:aws:elasticloadbalancing:...
-  PARAMETER_STORE_PREFIX: /macro-ai/development/
+  APP_ENV: development
   ARTIFACT_BUCKET: my-deployment-bucket
 
   # Optional
@@ -148,7 +148,7 @@ const config = {
 	artifactKey: 'artifacts/app-v1.0.0.tar.gz',
 	version: '1.0.0',
 	environment: 'development',
-	parameterStorePrefix: '/macro-ai/development',
+	appEnv: 'development',
 	vpcId: 'vpc-xxxxxxxxx',
 	subnetIds: ['subnet-xxxxxxxx', 'subnet-yyyyyyyy'],
 	securityGroupId: 'sg-xxxxxxxxx',
@@ -176,7 +176,7 @@ console.log('Deployment result:', result)
 | `SECURITY_GROUP_ID`      | Security group ID               | `sg-xxxxxxxxx`                     |
 | `LAUNCH_TEMPLATE_ID`     | EC2 launch template ID          | `lt-xxxxxxxxx`                     |
 | `TARGET_GROUP_ARN`       | ALB target group ARN            | `arn:aws:elasticloadbalancing:...` |
-| `PARAMETER_STORE_PREFIX` | Parameter Store prefix          | `/macro-ai/development`            |
+| `APP_ENV`                | Application environment         | `development`                      |
 | `ARTIFACT_BUCKET`        | S3 bucket for artifacts         | `my-deployment-bucket`             |
 
 ### Optional Environment Variables

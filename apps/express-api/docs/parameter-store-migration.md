@@ -2,8 +2,8 @@
 
 ## Overview
 
-This document describes the migration from the `PARAMETER_STORE_PREFIX` environment variable to a new 
-programmatic approach that automatically determines the parameter store prefix based on the deployment 
+This document describes the migration from the `PARAMETER_STORE_PREFIX` environment variable to a new
+programmatic approach that automatically determines the parameter store prefix based on the deployment
 environment.
 
 ## What Changed
@@ -86,7 +86,7 @@ APP_ENV=pr-123
 
 ### 3. Update Infrastructure (if applicable)
 
-If you're using the CDK infrastructure, the ECS task roles have been updated to automatically grant 
+If you're using the CDK infrastructure, the ECS task roles have been updated to automatically grant
 the correct permissions for preview environments.
 
 ## Code Changes
