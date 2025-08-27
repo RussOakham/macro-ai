@@ -9,6 +9,7 @@
  */
 
 import { type TEnv } from '../utils/env.schema.ts'
+import { getCurrentParameterStorePrefix } from '../utils/environment-utils.ts'
 import { type Result } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
 
@@ -228,7 +229,8 @@ export const getEnvironmentInfo = () => {
 		isDevelopment: isDevelopment(),
 		isTest: isTest(),
 		isPreview: isPreviewEnvironment(),
-		hasParameterStorePrefix: Boolean(process.env.PARAMETER_STORE_PREFIX),
+		parameterStorePrefix: getCurrentParameterStorePrefix(),
+		hasParameterStorePrefix: true, // Always true now since we determine it programmatically
 	}
 }
 

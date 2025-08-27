@@ -29,7 +29,7 @@ export interface Ec2DeploymentConfig {
 	readonly artifactKey: string
 	readonly version: string
 	readonly environment: string
-	readonly parameterStorePrefix: string
+	readonly appEnv: string
 	readonly vpcId: string
 	readonly subnetIds: string[]
 	readonly securityGroupId: string

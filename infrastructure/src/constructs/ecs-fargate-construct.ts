@@ -45,8 +45,9 @@ export interface EcsFargateConstructProps {
 
 	/**
 	 * Parameter Store prefix for configuration
+	 * @deprecated No longer needed - the application determines it from APP_ENV
 	 */
-	readonly parameterStorePrefix: string
+	readonly parameterStorePrefix?: string
 
 	/**
 	 * Enable detailed monitoring and logging
@@ -118,8 +119,9 @@ export interface PrEcsServiceProps {
 
 	/**
 	 * Parameter Store prefix for configuration
+	 * @deprecated No longer needed - the application determines it from APP_ENV
 	 */
-	readonly parameterStorePrefix: string
+	readonly parameterStorePrefix?: string
 
 	/**
 	 * Environment name for resource naming
@@ -179,7 +181,7 @@ export class EcsFargateConstruct extends Construct {
 			branchName,
 			customDomainName,
 			taskDefinition: taskConfig = { cpu: 256, memoryLimitMiB: 512 },
-			parameterStorePrefix,
+			// Note: parameterStorePrefix is no longer needed - the application determines it from APP_ENV
 			enableDetailedMonitoring = false,
 			autoScaling: scalingConfig,
 			ecrRepository: providedEcrRepository,
@@ -213,7 +215,8 @@ export class EcsFargateConstruct extends Construct {
 		})
 
 		// Create IAM roles for ECS tasks
-		this.taskRole = this.createTaskRole(parameterStorePrefix, environmentName)
+		// Note: parameterStorePrefix is no longer needed for the task role since the application determines it from APP_ENV
+		this.taskRole = this.createTaskRole(environmentName)
 		this.executionRole = this.createExecutionRole(environmentName)
 
 		// Create Fargate task definition
@@ -247,7 +250,7 @@ export class EcsFargateConstruct extends Construct {
 				NODE_ENV:
 					environmentName === 'production' ? 'production' : 'development',
 				APP_ENV: environmentName,
-				PARAMETER_STORE_PREFIX: parameterStorePrefix,
+				// Note: PARAMETER_STORE_PREFIX is no longer needed - the application determines it from APP_ENV
 				// Add PR number for CORS configuration
 				...(environmentName.startsWith('pr-') && {
 					PR_NUMBER: environmentName.replace('pr-', ''),
@@ -260,7 +263,11 @@ export class EcsFargateConstruct extends Construct {
 				// This eliminates the need for SecureString parameters in the task definition
 			},
 			// Note: Parameter Store values will be accessed at runtime via the task role
-			// The application should use the AWS SDK to fetch parameters using the PARAMETER_STORE_PREFIX
+			// The application automatically determines the parameter store prefix from APP_ENV:
+			// - pr-* environments → /macro-ai/development/
+			// - development → /macro-ai/development/
+			// - staging → /macro-ai/staging/
+			// - production → /macro-ai/production/
 			healthCheck: {
 				command: [
 					'CMD-SHELL',
@@ -408,10 +415,7 @@ export class EcsFargateConstruct extends Construct {
 	/**
 	 * Create IAM role for ECS tasks with least-privilege access
 	 */
-	private createTaskRole(
-		parameterStorePrefix: string,
-		environmentName: string,
-	): iam.Role {
+	private createTaskRole(environmentName: string): iam.Role {
 		const role = new iam.Role(this, 'EcsTaskRole', {
 			assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
 			roleName: `macro-ai-${environmentName}-ecs-task-role`,
@@ -420,6 +424,8 @@ export class EcsFargateConstruct extends Construct {
 		})
 
 		// Parameter Store access for runtime configuration
+		// The application automatically determines the parameter store prefix from APP_ENV
+		// Grant access to all parameter store prefixes that might be needed
 		role.addToPolicy(
 			new iam.PolicyStatement({
 				effect: iam.Effect.ALLOW,
@@ -428,7 +434,12 @@ export class EcsFargateConstruct extends Construct {
 					'ssm:GetParameters',
 					'ssm:GetParametersByPath',
 				],
-				resources: [`arn:aws:ssm:*:*:parameter${parameterStorePrefix}/*`],
+				resources: [
+					// Access to all Macro AI parameter store prefixes
+					'arn:aws:ssm:*:*:parameter/macro-ai/development/*',
+					'arn:aws:ssm:*:*:parameter/macro-ai/staging/*',
+					'arn:aws:ssm:*:*:parameter/macro-ai/production/*',
+				],
 			}),
 		)
 

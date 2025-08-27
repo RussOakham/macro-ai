@@ -34,7 +34,7 @@ interface EnvironmentConfig {
 	readonly securityGroupId: string
 	readonly launchTemplateId: string
 	readonly targetGroupArn: string
-	readonly parameterStorePrefix: string
+	readonly appEnv: string
 	readonly artifactBucket: string
 	readonly environment: string
 }
@@ -50,7 +50,7 @@ function loadEnvironmentConfig(): EnvironmentConfig {
 		'SECURITY_GROUP_ID',
 		'LAUNCH_TEMPLATE_ID',
 		'TARGET_GROUP_ARN',
-		'PARAMETER_STORE_PREFIX',
+		'APP_ENV',
 		'ARTIFACT_BUCKET',
 		'ENVIRONMENT',
 	]
@@ -71,7 +71,7 @@ function loadEnvironmentConfig(): EnvironmentConfig {
 		securityGroupId: process.env.SECURITY_GROUP_ID!,
 		launchTemplateId: process.env.LAUNCH_TEMPLATE_ID!,
 		targetGroupArn: process.env.TARGET_GROUP_ARN!,
-		parameterStorePrefix: process.env.PARAMETER_STORE_PREFIX!,
+		appEnv: process.env.APP_ENV!,
 		artifactBucket: process.env.ARTIFACT_BUCKET!,
 		environment: process.env.ENVIRONMENT!,
 	}
@@ -116,13 +116,15 @@ async function deployCommand(options: {
 			artifactKey,
 			version: options.version,
 			environment: envConfig.environment,
-			parameterStorePrefix: envConfig.parameterStorePrefix,
+			appEnv: envConfig.appEnv,
 			vpcId: envConfig.vpcId,
 			subnetIds: envConfig.subnetIds,
 			securityGroupId: envConfig.securityGroupId,
 			launchTemplateId: envConfig.launchTemplateId,
 			targetGroupArn: envConfig.targetGroupArn,
-			desiredInstances: options.instances ? parseInt(options.instances, 10) : 1,
+			desiredInstances: options.instances
+				? parseInt(options.instances, 10) || 1
+				: 1,
 		}
 
 		const result = await deployment.deployPrEnvironment(config)
@@ -138,7 +140,10 @@ async function deployCommand(options: {
 			process.exit(1)
 		}
 	} catch (error) {
-		console.error('❌ Deployment error:', error)
+		console.error(
+			'❌ Deployment error:',
+			error instanceof Error ? error.message : String(error),
+		)
 		process.exit(1)
 	}
 }
@@ -188,7 +193,10 @@ async function statusCommand(options: { pr: string }) {
 			console.log(`     Launch time: ${instance.launchTime.toISOString()}`)
 		})
 	} catch (error) {
-		console.error('❌ Status check error:', error)
+		console.error(
+			'❌ Status check error:',
+			error instanceof Error ? error.message : String(error),
+		)
 		process.exit(1)
 	}
 }
@@ -213,7 +221,10 @@ async function cleanupCommand(options: { pr: string; force?: boolean }) {
 
 		console.log('✅ Cleanup completed successfully!')
 	} catch (error) {
-		console.error('❌ Cleanup error:', error)
+		console.error(
+			'❌ Cleanup error:',
+			error instanceof Error ? error.message : String(error),
+		)
 		process.exit(1)
 	}
 }

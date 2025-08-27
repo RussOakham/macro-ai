@@ -3,6 +3,12 @@
 # GitHub Actions EC2 Deployment Script
 # This script is designed to be used in GitHub Actions workflows
 # for deploying applications to EC2 instances
+# 
+# Note: The application now automatically determines the parameter store prefix from APP_ENV:
+# - pr-* environments → /macro-ai/development/
+# - development → /macro-ai/development/
+# - staging → /macro-ai/staging/
+# - production → /macro-ai/production/
 
 set -e
 
@@ -42,6 +48,7 @@ ARTIFACT_URL="${ARTIFACT_URL:-}"
 VERSION="${VERSION:-}"
 BRANCH_NAME="${BRANCH_NAME:-}"
 ENVIRONMENT="${ENVIRONMENT:-development}"
+APP_ENV="${APP_ENV:-development}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 
 # Infrastructure configuration
@@ -50,7 +57,6 @@ SUBNET_IDS="${SUBNET_IDS:-}"
 SECURITY_GROUP_ID="${SECURITY_GROUP_ID:-}"
 LAUNCH_TEMPLATE_ID="${LAUNCH_TEMPLATE_ID:-}"
 TARGET_GROUP_ARN="${TARGET_GROUP_ARN:-}"
-PARAMETER_STORE_PREFIX="${PARAMETER_STORE_PREFIX:-}"
 ARTIFACT_BUCKET="${ARTIFACT_BUCKET:-}"
 
 # Deployment options
@@ -72,7 +78,6 @@ validate_environment() {
         "SECURITY_GROUP_ID"
         "LAUNCH_TEMPLATE_ID"
         "TARGET_GROUP_ARN"
-        "PARAMETER_STORE_PREFIX"
         "ARTIFACT_BUCKET"
     )
 
@@ -99,12 +104,23 @@ validate_environment() {
 validate_parameter_store() {
     log_info "Validating Parameter Store configuration..."
 
-    # Determine the correct parameter prefix based on environment
-    local param_prefix="${PARAMETER_STORE_PREFIX}"
-    if [[ -z "$param_prefix" ]]; then
-        error_exit "PARAMETER_STORE_PREFIX environment variable is required"
+    # Determine the correct parameter prefix based on APP_ENV
+    local param_prefix
+    if [[ "$APP_ENV" == pr-* ]]; then
+        # Preview environments (pr-123) use development parameters
+        param_prefix="/macro-ai/development"
+    elif [[ "$APP_ENV" == "development" ]]; then
+        param_prefix="/macro-ai/development"
+    elif [[ "$APP_ENV" == "staging" ]]; then
+        param_prefix="/macro-ai/staging"
+    elif [[ "$APP_ENV" == "production" ]]; then
+        param_prefix="/macro-ai/production"
+    else
+        # Default to development for unknown environments
+        param_prefix="/macro-ai/development"
     fi
 
+    log_info "App Environment: $APP_ENV"
     log_info "Using Parameter Store prefix: $param_prefix"
 
     # Test AWS credentials and Parameter Store access
@@ -271,7 +287,6 @@ deploy_to_ec2() {
     export SECURITY_GROUP_ID
     export LAUNCH_TEMPLATE_ID
     export TARGET_GROUP_ARN
-    export PARAMETER_STORE_PREFIX
     export ARTIFACT_BUCKET
     export ENVIRONMENT
 
@@ -708,7 +723,6 @@ Required Environment Variables:
   SECURITY_GROUP_ID      - Security group ID
   LAUNCH_TEMPLATE_ID     - EC2 launch template ID
   TARGET_GROUP_ARN       - ALB target group ARN
-  PARAMETER_STORE_PREFIX - Parameter Store prefix
   ARTIFACT_BUCKET        - S3 bucket for artifacts
 
 Optional Environment Variables:

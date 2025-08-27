@@ -3,6 +3,12 @@
 # Environment File Generation Script
 # This script generates .env files from AWS Parameter Store during the build process
 # This replaces runtime Parameter Store access with build-time configuration injection
+# 
+# Note: The application now automatically determines the parameter store prefix from APP_ENV:
+# - pr-* environments → /macro-ai/development/
+# - development → /macro-ai/development/
+# - staging → /macro-ai/staging/
+# - production → /macro-ai/production/
 
 set -e
 
@@ -198,7 +204,7 @@ EOF
 # Standard environment variables
 NODE_ENV=${ENVIRONMENT}
 APP_ENV=${ENVIRONMENT}
-PARAMETER_STORE_PREFIX=${PARAMETER_PREFIX}
+# Note: PARAMETER_STORE_PREFIX is no longer needed - the application determines it from APP_ENV
 AWS_REGION=${AWS_REGION}
 GENERATED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 EOF

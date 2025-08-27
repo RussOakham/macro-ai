@@ -12,6 +12,12 @@ import {
 	SSMClient,
 } from '@aws-sdk/client-ssm'
 
+import {
+	getCurrentEnvironment,
+	getCurrentParameterStorePrefix,
+	getEnvironmentDisplayName,
+} from './environment-utils.ts'
+
 export interface ParameterStoreConfig {
 	parameterStorePrefix: string
 	region?: string
@@ -158,11 +164,12 @@ export class ParameterStoreService {
  * Create a Parameter Store service instance
  */
 export const createParameterStoreService = (): ParameterStoreService => {
-	const parameterStorePrefix = process.env.PARAMETER_STORE_PREFIX
+	const parameterStorePrefix = getCurrentParameterStorePrefix()
+	const currentEnv = getCurrentEnvironment()
+	const envDisplayName = getEnvironmentDisplayName(currentEnv)
 
-	if (!parameterStorePrefix) {
-		throw new Error('PARAMETER_STORE_PREFIX environment variable is required')
-	}
+	console.log(`🔧 Parameter Store Service initialized for ${envDisplayName}`)
+	console.log(`📋 Using parameter store prefix: ${parameterStorePrefix}`)
 
 	return new ParameterStoreService({
 		parameterStorePrefix,

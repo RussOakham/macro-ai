@@ -252,11 +252,21 @@ jobs:
           # Create the environment file using our script with GitHub secrets
           chmod +x apps/express-api/scripts/generate-env-from-parameter-store.sh
 
+          # Set APP_ENV for the new programmatic approach
+          # For PR deployments, this should be the PR number (e.g., pr-123)
+          # The script will automatically determine the parameter store prefix:
+          # - pr-* environments → /macro-ai/development/
+          # - development → /macro-ai/development/
+          # - staging → /macro-ai/staging/
+          # - production → /macro-ai/production/
+          APP_ENV="pr-${{ github.event.pull_request.number }}"
+
           # Pass GitHub secrets as environment variables for the script
-          PARAMETER_STORE_PREFIX="${PARAM_PATH}" \
+          # Note: PARAMETER_STORE_PREFIX is no longer needed - the script determines it from APP_ENV
+          # The script will automatically use /macro-ai/development/ for preview environments (pr-*)
           ENV_FILE="${ENV_FILE}" \
           AWS_REGION="${{ env.AWS_REGION }}" \
-          APP_ENV="${{ secrets.APP_ENV }}" \
+          APP_ENV="${APP_ENV}" \
           API_KEY="${{ secrets.API_KEY }}" \
           OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
           AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}" \
