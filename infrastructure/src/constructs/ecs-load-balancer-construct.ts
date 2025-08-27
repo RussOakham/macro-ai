@@ -257,14 +257,10 @@ export class EcsLoadBalancerConstruct extends Construct {
 
 			// Add CORS headers using listener attributes
 			// This approach works with CDK 2.212.0 and follows AWS best practices
-			const corsOrigins = [
-				// Use Parameter Store value if available, fallback to dynamic generation
-				...(props.environmentConfig?.environmentVariables.CORS_ALLOWED_ORIGINS?.split(
-					',',
-				) ?? []),
-				// Fallback to dynamic generation if no Parameter Store value
-				`https://pr-${environmentName.replace('pr-', '')}.macro-ai.russoakham.dev`,
-			].join(',')
+			// For CORS, we can only set ONE origin in Access-Control-Allow-Origin
+			// Use the frontend origin since that's what needs to access the API
+			// Don't use Parameter Store value as it may contain multiple origins or wrong format
+			const corsOrigin = `https://pr-${environmentName.replace('pr-', '')}.macro-ai.russoakham.dev`
 
 			// Create CfnListener to add CORS headers as listener attributes
 			const cfnListener = this.httpsListener.node
@@ -272,7 +268,7 @@ export class EcsLoadBalancerConstruct extends Construct {
 			cfnListener.addPropertyOverride('ListenerAttributes', [
 				{
 					Key: 'routing.http.response.access_control_allow_origin.header_value',
-					Value: corsOrigins,
+					Value: corsOrigin,
 				},
 				{
 					Key: 'routing.http.response.access_control_allow_methods.header_value',
