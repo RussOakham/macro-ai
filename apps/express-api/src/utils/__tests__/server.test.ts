@@ -193,17 +193,19 @@ describe('createServer', () => {
 				expect.objectContaining({
 					credentials: true,
 					exposedHeaders: ['cache-control'],
-					methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+					methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
 					allowedHeaders: [
 						'Origin',
 						'X-Requested-With',
 						'Content-Type',
 						'Accept',
 						'Authorization',
-						'X-API-KEY',
+						'X-Api-Key',
 						'Cache-Control',
 					],
 					maxAge: 86400,
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+					origin: expect.any(Function),
 				}),
 			)
 			expect(mockApp.use).toHaveBeenCalledWith(mockCorsMiddleware)
@@ -230,17 +232,19 @@ describe('createServer', () => {
 			expect.objectContaining({
 				credentials: true,
 				exposedHeaders: ['cache-control'],
-				methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+				methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
 				allowedHeaders: [
 					'Origin',
 					'X-Requested-With',
 					'Content-Type',
 					'Accept',
 					'Authorization',
-					'X-API-KEY',
+					'X-Api-Key',
 					'Cache-Control',
 				],
 				maxAge: 86400,
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+				origin: expect.any(Function),
 			}),
 		)
 		expect(mockApp.use).toHaveBeenCalledWith(mockCorsMiddleware)

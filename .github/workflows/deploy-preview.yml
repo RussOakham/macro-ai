@@ -466,6 +466,8 @@ jobs:
           CDK_DEPLOY_ENV: ${{ needs.validate-access.outputs.env-name }}
           CDK_DEPLOY_TYPE: 'ecs-preview'
           CDK_DEPLOY_SCALE: 'preview'
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          CUSTOM_DOMAIN_NAME: ${{ vars.CUSTOM_DOMAIN_NAME }}
         run: |
           ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"

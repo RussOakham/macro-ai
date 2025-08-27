@@ -34,26 +34,30 @@ const createServer = (): Express => {
 	// Simplified CORS configuration for ephemeral environments
 	// Parse CORS_ALLOWED_ORIGINS from environment or use smart defaults
 	const corsOrigins = process.env.CORS_ALLOWED_ORIGINS
-		? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(o => o.length > 0)
+		? process.env.CORS_ALLOWED_ORIGINS.split(',')
+				.map((o) => o.trim())
+				.filter((o) => o.length > 0)
 		: [
 				// Local development
 				'http://localhost:3000',
 				'http://localhost:3040',
 				// Preview environments (auto-detected)
-				...(process.env.APP_ENV?.startsWith('pr-') && process.env.PR_NUMBER && process.env.CUSTOM_DOMAIN_NAME
-					? [`https://pr-${process.env.PR_NUMBER}.${process.env.CUSTOM_DOMAIN_NAME}`]
-					: []
-				),
+				...(process.env.APP_ENV?.startsWith('pr-') &&
+				process.env.PR_NUMBER &&
+				process.env.CUSTOM_DOMAIN_NAME
+					? [
+							`https://pr-${process.env.PR_NUMBER}.${process.env.CUSTOM_DOMAIN_NAME}`,
+						]
+					: []),
 				// Production domains (if configured)
 				...(process.env.CUSTOM_DOMAIN_NAME
 					? [
 							`https://${process.env.CUSTOM_DOMAIN_NAME}`,
 							`https://staging.${process.env.CUSTOM_DOMAIN_NAME}`,
 							`https://api.${process.env.CUSTOM_DOMAIN_NAME}`,
-							`https://staging-api.${process.env.CUSTOM_DOMAIN_NAME}`
+							`https://staging-api.${process.env.CUSTOM_DOMAIN_NAME}`,
 						]
-					: []
-				)
+					: []),
 			]
 
 	console.log(`[server] CORS: Configured origins: [${corsOrigins.join(', ')}]`)
@@ -80,16 +84,16 @@ const createServer = (): Express => {
 			methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
 			allowedHeaders: [
 				'Origin',
-				'X-Requested-With', 
+				'X-Requested-With',
 				'Content-Type',
 				'Accept',
 				'Authorization',
 				'X-Api-Key', // Ensure custom API key header is allowed
-				'Cache-Control'
+				'Cache-Control',
 			],
 			exposedHeaders: ['cache-control'],
-			maxAge: 86400
-		})
+			maxAge: 86400,
+		}),
 	)
 
 	// Conditional compression - disable for streaming endpoints
