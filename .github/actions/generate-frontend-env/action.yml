@@ -107,7 +107,7 @@ runs:
         # Set up environment variables for the injection script
         export ENVIRONMENT_NAME="${{ inputs.environment }}"
         export BUILD_MODE="${{ inputs.build-mode }}"
-        
+
         # Handle API key - priority: Parameter Store > direct input
         if [[ -n "${{ inputs.parameter-store-path }}" ]]; then
           echo "🔐 Fetching API key from Parameter Store: ${{ inputs.parameter-store-path }}"
