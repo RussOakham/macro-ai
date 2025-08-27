@@ -63,10 +63,9 @@ const createServer = (): Express => {
 				]
 			: []),
 		// Fallback for preview environments - allow common patterns
-		...(process.env.APP_ENV?.startsWith('pr-') ? [
-			'https://macro-ai.russoakham.dev',
-			'https://*.macro-ai.russoakham.dev',
-		] : []),
+		...(process.env.APP_ENV?.startsWith('pr-')
+			? ['https://macro-ai.russoakham.dev', 'https://*.macro-ai.russoakham.dev']
+			: []),
 	]
 
 	// Merge base origins with dynamic origins, removing duplicates
@@ -76,8 +75,12 @@ const createServer = (): Express => {
 	console.log(`[server] CORS: Environment variables:`)
 	console.log(`  - APP_ENV: ${process.env.APP_ENV ?? 'undefined'}`)
 	console.log(`  - PR_NUMBER: ${process.env.PR_NUMBER ?? 'undefined'}`)
-	console.log(`  - CUSTOM_DOMAIN_NAME: ${process.env.CUSTOM_DOMAIN_NAME ?? 'undefined'}`)
-	console.log(`  - CORS_ALLOWED_ORIGINS: ${process.env.CORS_ALLOWED_ORIGINS ?? 'undefined'}`)
+	console.log(
+		`  - CUSTOM_DOMAIN_NAME: ${process.env.CUSTOM_DOMAIN_NAME ?? 'undefined'}`,
+	)
+	console.log(
+		`  - CORS_ALLOWED_ORIGINS: ${process.env.CORS_ALLOWED_ORIGINS ?? 'undefined'}`,
+	)
 	console.log(`[server] CORS: Configured origins: [${corsOrigins.join(', ')}]`)
 
 	app.use(
