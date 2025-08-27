@@ -166,11 +166,11 @@ const createServer = (): Express => {
 	app.use(express.urlencoded({ extended: true }))
 	app.use(cookieParser())
 
-	// Add middlewares
-	app.use(apiKeyAuth)
+	// Add middlewares (CORS must come BEFORE authentication for OPTIONS preflight)
 	app.use(helmetMiddleware)
 	app.use(securityHeadersMiddleware)
 	app.use(defaultRateLimiter)
+	app.use(apiKeyAuth) // Move API key auth after CORS to allow OPTIONS preflight
 
 	app.use('/api', appRouter())
 	app.use(
