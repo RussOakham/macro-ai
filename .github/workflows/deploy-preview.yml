@@ -909,11 +909,19 @@ jobs:
       needs.check-frontend-changes.outputs.should-deploy-frontend == 'true'
 
     permissions:
+      id-token: write
       contents: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-BuildFrontend-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3
