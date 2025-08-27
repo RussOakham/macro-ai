@@ -21,36 +21,31 @@ const apiKeyAuth = (req: Request, res: Response, next: NextFunction): void => {
 		return
 	}
 
-	const clientApiKey = req.headers[API_KEY_HEADER.toLowerCase()] as
+	const apiKey = req.headers[API_KEY_HEADER.toLowerCase()] as
 		| string
 		| undefined
 
 	// Read configured key at request time so Parameter Store population is visible
-	const configuredApiKey = process.env.API_KEY ?? ''
+	const configuredApiKey = process.env.API_KEY
+
+	console.log(`[apiKeyAuth] Comparison:`)
+	console.log(`  - Configured API_KEY: ${configuredApiKey}`)
+	console.log(`  - Received API_KEY: ${apiKey}`)
+	console.log(`  - Keys match: ${apiKey === configuredApiKey}`)
 
 	if (!configuredApiKey) {
-		logger.error('[middleware - apiKeyAuth]: API key not configured')
-		const error = new InternalError(
-			'Server configuration error',
-			'apiKeyAuth middleware',
-		)
-		next(error)
-		return
+		logger.error('[apiKeyAuth]: API_KEY environment variable not configured')
+		throw new UnauthorizedError('API key not configured')
 	}
 
-	if (!clientApiKey || clientApiKey !== configuredApiKey) {
+	if (!apiKey || apiKey !== configuredApiKey) {
 		logger.warn(
 			`[apiKeyAuth]: Invalid API key attempt from IP: ${req.ip ?? ''}`,
 		)
-		const error = new UnauthorizedError(
-			'Invalid API key',
-			'apiKeyAuth middleware',
-		)
-		next(error)
-		return
+		throw new UnauthorizedError('Invalid API key')
 	}
 
-	logger.debug('[middleware - apiKeyAuth]: API key validation successful')
+	console.log(`[apiKeyAuth] Authentication successful`)
 	next()
 }
 

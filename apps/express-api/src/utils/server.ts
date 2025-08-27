@@ -157,6 +157,21 @@ const createServer = (): Express => {
 	// Add error handler last
 	app.use(errorHandler)
 
+	// Debug API key loading
+	console.log(`[server] API Key Debug:`)
+	console.log(`  - API_KEY: ${process.env.API_KEY ?? 'undefined'}`)
+	if (process.env.API_KEY) {
+		console.log(`  - API_KEY length: ${process.env.API_KEY.length}`)
+		console.log(
+			`  - API_KEY first 8 chars: ${process.env.API_KEY.substring(0, 8)}...`,
+		)
+		console.log(
+			`  - API_KEY last 8 chars: ...${process.env.API_KEY.substring(process.env.API_KEY.length - 8)}`,
+		)
+	} else {
+		console.log(`  - API_KEY length: 0`)
+	}
+
 	return app
 }
 
