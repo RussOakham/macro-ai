@@ -205,6 +205,21 @@ jobs:
           role-session-name: github-actions-build-docker-ecs
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Debug AWS credentials
+        run: |
+          echo "🔍 Debugging AWS credentials..."
+          echo "AWS_REGION: ${{ env.AWS_REGION }}"
+          echo "AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION"
+          echo "AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}"
+          
+          # Test AWS CLI access
+          echo "Testing AWS CLI access..."
+          aws sts get-caller-identity --no-cli-pager
+          
+          # Test Parameter Store access
+          echo "Testing Parameter Store access..."
+          aws ssm describe-parameters --max-items 1 --no-cli-pager || echo "❌ Parameter Store access failed"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 

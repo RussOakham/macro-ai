@@ -62,7 +62,14 @@ aws ssm get-parameters-by-path \
 # Add GitHub secrets and real values (highest priority)
 # These come from the workflow and override any Parameter Store defaults
 echo "APP_ENV=$APP_ENV" >> "$ENV_FILE"
-if [ -n "$API_KEY" ]; then echo "API_KEY=$API_KEY" >> "$ENV_FILE"; fi
+if [ -n "$API_KEY" ]; then 
+    echo "API_KEY=$API_KEY" >> "$ENV_FILE"
+    echo "[INFO] API_KEY added from GitHub secrets"
+else
+    echo "[ERROR] API_KEY is required but not provided in GitHub secrets"
+    echo "[ERROR] Please add API_KEY to your GitHub repository secrets"
+    exit 1
+fi
 if [ -n "$OPENAI_API_KEY" ]; then echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> "$ENV_FILE"; fi
 if [ -n "$AWS_ACCOUNT_ID" ]; then echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> "$ENV_FILE"; fi
 if [ -n "$AWS_REGION" ]; then echo "AWS_REGION=$AWS_REGION" >> "$ENV_FILE"; fi
