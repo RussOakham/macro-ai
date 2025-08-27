@@ -181,7 +181,6 @@ export class EcsFargateConstruct extends Construct {
 			customDomainName,
 			taskDefinition: taskConfig = { cpu: 256, memoryLimitMiB: 512 },
 			// Note: parameterStorePrefix is no longer needed - the application determines it from APP_ENV
-			enableDetailedMonitoring = false,
 			autoScaling: scalingConfig,
 			ecrRepository: providedEcrRepository,
 			imageTag = 'latest',

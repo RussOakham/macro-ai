@@ -77,7 +77,7 @@ export class EnvironmentConfigConstruct extends Construct {
 
 		// Define the parameter mappings (Parameter Store key -> Environment variable name)
 		// Note: Secure parameters are marked with isSecure: true
-		const parameterMappings = [
+		const parameterMappings: ParameterMapping[] = [
 			// API Configuration
 			{ paramKey: 'api-key', envVar: 'API_KEY', isSecure: true },
 			{
