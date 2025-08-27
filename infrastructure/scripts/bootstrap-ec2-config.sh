@@ -6,6 +6,16 @@
 # This script replaces the complex Parameter Store integration within the Node.js application
 # with a simple infrastructure-level approach that fetches parameters before starting the app.
 #
+# KEY FEATURE: Automatic parameter name conversion from kebab-case to uppercase with underscores
+# This ensures compatibility with the application's expected environment variable names.
+#
+# EXPECTED PARAMETER NAMES IN PARAMETER STORE:
+# - relational-database-url → RELATIONAL_DATABASE_URL
+# - api-key → API_KEY
+# - aws-cognito-region → AWS_COGNITO_REGION
+# - openai-api-key → OPENAI_API_KEY
+# - cookie-encryption-key → COOKIE_ENCRYPTION_KEY
+#
 # Usage:
 #   ./bootstrap-ec2-config.sh [OPTIONS]
 #
@@ -98,6 +108,13 @@ PARAMETER MAPPING:
     - staging     -> /macro-ai/staging/
     - production  -> /macro-ai/production/
     - pr-*        -> /macro-ai/development/ (shared)
+
+PARAMETER NAME CONVERSION:
+    Parameter names are automatically converted from kebab-case to uppercase with underscores:
+    - relational-database-url → RELATIONAL_DATABASE_URL
+    - api-key → API_KEY
+    - aws-cognito-region → AWS_COGNITO_REGION
+    - openai-api-key → OPENAI_API_KEY
 
 EOF
 }
@@ -192,6 +209,39 @@ validate_prerequisites() {
     log_debug "Prerequisites validation passed"
 }
 
+# Test parameter name conversion logic (for debugging)
+test_parameter_conversion() {
+    log_debug "Testing parameter name conversion logic..."
+    
+    # Test the conversion logic with sample data
+    local test_json='{"Parameters":[{"Name":"/macro-ai/development/relational-database-url","Value":"test-value"},{"Name":"/macro-ai/development/api-key","Value":"test-key"}]}'
+    
+    local converted
+    converted=$(echo "${test_json}" | jq -r '
+        .Parameters[] | 
+        {
+            name: (.Name | split("/") | last | gsub("-"; "_") | ascii_upcase),
+            value: .Value
+        } | 
+        "\(.name)=\(.value)"
+    ')
+    
+    log_debug "Parameter conversion test results:"
+    echo "${converted}" | while IFS= read -r line; do
+        if [[ -n "$line" ]]; then
+            log_debug "  ${line}"
+        fi
+    done
+    
+    # Verify expected conversions
+    if echo "${converted}" | grep -q "RELATIONAL_DATABASE_URL=test-value" && \
+       echo "${converted}" | grep -q "API_KEY=test-key"; then
+        log_debug "Parameter conversion test passed ✓"
+    else
+        log_warn "Parameter conversion test may have issues"
+    fi
+}
+
 # Fetch parameters from Parameter Store
 fetch_parameters() {
     local prefix
@@ -216,16 +266,25 @@ fetch_parameters() {
     fi
 
     # Parse parameters and convert to environment variable format
+    # Convert kebab-case parameter names to uppercase with underscores for application compatibility
+    # This ensures compatibility with the application's expected environment variable names
     local env_vars
     env_vars=$(echo "${params_json}" | jq -r '
         .Parameters[] | 
         {
-            name: (.Name | split("/") | last),
+            name: (.Name | split("/") | last | gsub("-"; "_") | ascii_upcase),
             value: .Value,
             type: .Type
         } | 
         "\(.name)=\(.value)"
     ')
+
+    # Log the parameter conversion for debugging
+    log_debug "Parameter name conversion examples:"
+    echo "${params_json}" | jq -r '
+        .Parameters[] | 
+        "  \(.Name | split("/") | last) → \(.Name | split("/") | last | gsub("-"; "_") | ascii_upcase)"
+    ' | head -5
 
     if [[ -z "${env_vars}" ]]; then
         log_error "Failed to parse parameters from Parameter Store"
@@ -253,8 +312,8 @@ fetch_parameters() {
                 fi
             done
             
-            # Special check for OpenAI API key format
-            if [[ "$param_name" == "openai-api-key" ]] && [[ ! "$param_value" =~ ^sk- ]]; then
+            # Special check for OpenAI API key format (check converted name)
+            if [[ "$param_name" == "OPENAI_API_KEY" ]] && [[ ! "$param_value" =~ ^sk- ]]; then
                 log_error "OpenAI API key does not have expected format (should start with 'sk-')"
                 log_error "Current value starts with: ${param_value:0:10}..."
                 log_error "This may indicate a decryption issue or incorrect parameter value"
@@ -272,6 +331,12 @@ fetch_parameters() {
         log_error "  3. KMS key permissions for decryption"
         exit 1
     fi
+
+    # Log summary of parameter conversion
+    local param_count
+    param_count=$(echo "${env_vars}" | wc -l)
+    log_info "Successfully converted ${param_count} parameters from kebab-case to uppercase format"
+    log_debug "Environment variables will be created with names like: RELATIONAL_DATABASE_URL, API_KEY, etc."
 
     echo "${env_vars}"
 }
@@ -342,6 +407,11 @@ main() {
     log_info "  Dry Run: ${DRY_RUN}"
 
     validate_prerequisites
+
+    # Test parameter conversion logic in verbose mode
+    if [[ "${VERBOSE}" == "true" ]]; then
+        test_parameter_conversion
+    fi
 
     local env_vars
     env_vars=$(fetch_parameters)
