@@ -71,7 +71,7 @@ if (isPreviewEnvironment) {
 
 	// Custom domain configuration for preview environments
 	const customDomain = {
-		domainName: 'russoakham.dev',
+		domainName: 'macro-ai.russoakham.dev',
 		hostedZoneId: 'Z10081873B648ARROPNER',
 		apiSubdomain: `${deploymentEnv}-api`, // e.g., 'pr-56-api'
 		// Note: certificateArn is optional - if not provided, the load balancer will create one
