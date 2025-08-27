@@ -74,7 +74,9 @@ const createServer = (): Express => {
 				'Content-Type',
 				'Accept',
 				'Authorization',
-				'X-Api-Key', // Ensure custom API key header is allowed
+				'X-API-KEY', // Exact case for API key middleware
+				'x-api-key', // Lowercase version for browser compatibility
+				'X-Api-Key', // Uppercase version for browser compatibility
 				'Cache-Control',
 			],
 			exposedHeaders: ['cache-control'],
