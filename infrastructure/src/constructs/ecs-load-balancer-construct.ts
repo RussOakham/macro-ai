@@ -255,47 +255,9 @@ export class EcsLoadBalancerConstruct extends Construct {
 				defaultAction: elbv2.ListenerAction.forward([this.targetGroup]),
 			})
 
-			// Add CORS headers using listener attributes
-			// This approach works with CDK 2.212.0 and follows AWS best practices
-			// For CORS, we can only set ONE origin in Access-Control-Allow-Origin
-			// Use the frontend origin since that's what needs to access the API
-			// Don't use Parameter Store value as it may contain multiple origins or wrong format
-			const corsOrigin = `https://pr-${environmentName.replace('pr-', '')}.macro-ai.russoakham.dev`
-
-			// Create CfnListener to add CORS headers as listener attributes
-			const cfnListener = this.httpsListener.node
-				.defaultChild as elbv2.CfnListener
-			cfnListener.addPropertyOverride('ListenerAttributes', [
-				{
-					Key: 'routing.http.response.access_control_allow_origin.header_value',
-					Value: corsOrigin,
-				},
-				{
-					Key: 'routing.http.response.access_control_allow_methods.header_value',
-					Value: 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-				},
-				{
-					Key: 'routing.http.response.access_control_allow_headers.header_value',
-					Value:
-						'Content-Type, Authorization, X-Requested-With, Accept, Origin',
-				},
-				{
-					Key: 'routing.http.response.access_control_allow_credentials.header_value',
-					Value: 'true',
-				},
-				{
-					Key: 'routing.http.response.access_control_expose_headers.header_value',
-					Value:
-						'Content-Length, X-Requested-With, X-Total-Count, X-Page-Count',
-				},
-				{
-					Key: 'routing.http.response.access_control_max_age.header_value',
-					Value: '86400',
-				},
-			])
-
+			// CORS is now handled at the Express API level for better control and flexibility
 			console.log(
-				`✅ Added CORS headers via listener attributes for ${environmentName}`,
+				`ℹ️ CORS handling moved to Express API level for ${environmentName}`,
 			)
 
 			// Create DNS records for custom domain if configured
