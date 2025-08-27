@@ -7,6 +7,8 @@ import * as route53 from 'aws-cdk-lib/aws-route53'
 import * as targets from 'aws-cdk-lib/aws-route53-targets'
 import { Construct } from 'constructs'
 
+import { EnvironmentConfigConstruct } from './environment-config-construct.js'
+
 export interface EcsLoadBalancerConstructProps {
 	/**
 	 * VPC where the load balancer will be deployed
@@ -83,6 +85,11 @@ export interface EcsLoadBalancerConstructProps {
 	 * @default 60 seconds
 	 */
 	readonly idleTimeout?: cdk.Duration
+
+	/**
+	 * Environment configuration for CORS and other settings
+	 */
+	readonly environmentConfig?: EnvironmentConfigConstruct
 }
 
 /**
@@ -247,6 +254,34 @@ export class EcsLoadBalancerConstruct extends Construct {
 				certificates: [certificate],
 				defaultAction: elbv2.ListenerAction.forward([this.targetGroup]),
 			})
+
+			// Add CORS headers using target group attributes
+			// This approach works with CDK 2.212.0 and follows AWS best practices
+			this.targetGroup.setAttribute(
+				'insert_headers',
+				JSON.stringify({
+					'Access-Control-Allow-Origin': [
+						// Use Parameter Store value if available, fallback to dynamic generation
+						...(props.environmentConfig?.environmentVariables.CORS_ALLOWED_ORIGINS?.split(
+							',',
+						) ?? []),
+						// Fallback to dynamic generation if no Parameter Store value
+						`https://pr-${environmentName.replace('pr-', '')}.macro-ai.russoakham.dev`,
+					].join(','),
+					'Access-Control-Allow-Methods':
+						'GET, POST, PUT, DELETE, OPTIONS, PATCH',
+					'Access-Control-Allow-Headers':
+						'Content-Type, Authorization, X-Requested-With, Accept, Origin',
+					'Access-Control-Allow-Credentials': 'true',
+					'Access-Control-Expose-Headers':
+						'Content-Length, X-Requested-With, X-Total-Count, X-Page-Count',
+					'Access-Control-Max-Age': '86400',
+				}),
+			)
+
+			console.log(
+				`✅ Added CORS headers via target group attributes for ${environmentName}`,
+			)
 
 			// Create DNS records for custom domain if configured
 			if (customDomain.domainName && environmentName.startsWith('pr-')) {

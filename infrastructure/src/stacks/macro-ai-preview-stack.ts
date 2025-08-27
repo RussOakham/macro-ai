@@ -160,7 +160,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			vpc: this.networking.vpc,
 			ecsService: this.ecsService.service,
 			environmentName,
-			containerPort: 3040, // Match the container port
+			containerPort: 3040,
 			healthCheck: {
 				path: '/api/health',
 				interval: cdk.Duration.seconds(30),
@@ -169,8 +169,9 @@ export class MacroAiPreviewStack extends cdk.Stack {
 				unhealthyThresholdCount: 3,
 			},
 			securityGroup: this.networking.albSecurityGroup,
-			enableAccessLogs: false, // Cost optimization for preview
-			deletionProtection: false, // Cost optimization for preview
+			enableAccessLogs: false,
+			deletionProtection: false,
+			environmentConfig: this.environmentConfig,
 			customDomain: props.customDomain
 				? {
 						domainName: props.customDomain.domainName,
@@ -178,7 +179,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 						certificateArn: props.customDomain.certificateArn,
 						apiSubdomain:
 							props.customDomain.apiSubdomain ?? `${environmentName}-api`,
-						createFrontendSubdomain: false, // Disable frontend subdomain creation - Amplify manages this
+						createFrontendSubdomain: false,
 					}
 				: undefined,
 		})
