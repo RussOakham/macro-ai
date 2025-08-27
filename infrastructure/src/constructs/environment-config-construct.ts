@@ -69,15 +69,10 @@ export class EnvironmentConfigConstruct extends Construct {
 	}
 
 	/**
-	 * Fetch Parameter Store values during CDK synthesis
-	 * This happens at deployment time, not at runtime
+	 * Parameter mappings (Parameter Store key -> Environment variable name)
+	 * Note: Secure parameters are marked with isSecure: true
 	 */
-	private fetchParameterStoreValues(): Record<string, string> {
-		const envVars: Record<string, string> = {}
-
-		// Define the parameter mappings (Parameter Store key -> Environment variable name)
-		// Note: Secure parameters are marked with isSecure: true
-		const parameterMappings: ParameterMapping[] = [
+	private readonly parameterMappings: ParameterMapping[] = [
 			// API Configuration
 			{ paramKey: 'api-key', envVar: 'API_KEY', isSecure: false },
 			{
@@ -196,8 +191,15 @@ export class EnvironmentConfigConstruct extends Construct {
 			},
 		]
 
+	/**
+	 * Fetch Parameter Store values during CDK synthesis
+	 * This happens at deployment time, not at runtime
+	 */
+	private fetchParameterStoreValues(): Record<string, string> {
+		const envVars: Record<string, string> = {}
+
 		// Fetch each parameter value
-		for (const mapping of parameterMappings) {
+		for (const mapping of this.parameterMappings) {
 			try {
 				// Try to fetch from Parameter Store first
 				const paramName = `${this.parameterPrefix}${mapping.paramKey}`
@@ -300,6 +302,54 @@ export class EnvironmentConfigConstruct extends Construct {
 	 */
 	public getAllEnvironmentVariables(): Record<string, string> {
 		return { ...this.environmentVariables }
+	}
+
+	/**
+	 * Get only non-secure environment variables for ECS task definition
+	 */
+	public getNonSecureEnvironmentVariables(): Record<string, string> {
+		const nonSecureVars: Record<string, string> = {}
+		
+		for (const mapping of this.parameterMappings) {
+			if (!mapping.isSecure) {
+				const envVarName = mapping.envVar
+				if (this.environmentVariables[envVarName]) {
+					nonSecureVars[envVarName] = this.environmentVariables[envVarName]
+				}
+			}
+		}
+
+		// Add environment-specific configuration (these are always non-secure)
+		nonSecureVars.NODE_ENV = 'production'
+		nonSecureVars.APP_ENV = (this.node.tryGetContext('environmentName') as string) || 'preview'
+		nonSecureVars.SERVER_PORT = '3040'
+
+		return nonSecureVars
+	}
+
+	/**
+	 * Get secure parameters as ECS secrets configuration
+	 */
+	public getSecureParametersAsSecrets(): Record<string, cdk.aws_ecs.Secret> {
+		const secrets: Record<string, cdk.aws_ecs.Secret> = {}
+		
+		for (const mapping of this.parameterMappings) {
+			if (mapping.isSecure) {
+				const paramName = `${this.parameterPrefix}${mapping.paramKey}`
+				secrets[mapping.envVar] = cdk.aws_ecs.Secret.fromSsmParameter(
+					ssm.StringParameter.fromSecureStringParameterAttributes(
+						this,
+						`SecureParam-${mapping.paramKey}`,
+						{
+							parameterName: paramName,
+							version: 1,
+						}
+					)
+				)
+			}
+		}
+
+		return secrets
 	}
 
 	/**

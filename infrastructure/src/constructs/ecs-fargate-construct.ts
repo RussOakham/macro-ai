@@ -253,8 +253,8 @@ export class EcsFargateConstruct extends Construct {
 				logRetention: logs.RetentionDays.ONE_WEEK, // Cost optimization
 			}),
 			environment: {
-				// Use all environment variables from Parameter Store via EnvironmentConfigConstruct
-				...this.environmentConfig.getAllEnvironmentVariables(),
+				// Use only non-secure environment variables from Parameter Store
+				...this.environmentConfig.getNonSecureEnvironmentVariables(),
 				// Override with container-specific values
 				NODE_ENV:
 					environmentName === 'production' ? 'production' : 'development',
@@ -267,6 +267,10 @@ export class EcsFargateConstruct extends Construct {
 				...(customDomainName && {
 					CUSTOM_DOMAIN_NAME: customDomainName,
 				}),
+			},
+			secrets: {
+				// Use secure parameters as ECS secrets
+				...this.environmentConfig.getSecureParametersAsSecrets(),
 			},
 			healthCheck: {
 				command: [
