@@ -96,7 +96,7 @@ export class EnvironmentConfigConstruct extends Construct {
 			{
 				paramKey: 'aws-cognito-user-pool-id',
 				envVar: 'AWS_COGNITO_USER_POOL_ID',
-				isSecure: false,
+				isSecure: true,
 			},
 			{
 				paramKey: 'aws-cognito-user-pool-client-id',
