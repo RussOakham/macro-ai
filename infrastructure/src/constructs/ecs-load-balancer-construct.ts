@@ -255,32 +255,51 @@ export class EcsLoadBalancerConstruct extends Construct {
 				defaultAction: elbv2.ListenerAction.forward([this.targetGroup]),
 			})
 
-			// Add CORS headers using target group attributes
+			// Add CORS headers using listener attributes
 			// This approach works with CDK 2.212.0 and follows AWS best practices
-			this.targetGroup.setAttribute(
-				'insert_headers',
-				JSON.stringify({
-					'Access-Control-Allow-Origin': [
-						// Use Parameter Store value if available, fallback to dynamic generation
-						...(props.environmentConfig?.environmentVariables.CORS_ALLOWED_ORIGINS?.split(
-							',',
-						) ?? []),
-						// Fallback to dynamic generation if no Parameter Store value
-						`https://pr-${environmentName.replace('pr-', '')}.macro-ai.russoakham.dev`,
-					].join(','),
-					'Access-Control-Allow-Methods':
-						'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-					'Access-Control-Allow-Headers':
+			const corsOrigins = [
+				// Use Parameter Store value if available, fallback to dynamic generation
+				...(props.environmentConfig?.environmentVariables.CORS_ALLOWED_ORIGINS?.split(
+					',',
+				) ?? []),
+				// Fallback to dynamic generation if no Parameter Store value
+				`https://pr-${environmentName.replace('pr-', '')}.macro-ai.russoakham.dev`,
+			].join(',')
+
+			// Create CfnListener to add CORS headers as listener attributes
+			const cfnListener = this.httpsListener.node
+				.defaultChild as elbv2.CfnListener
+			cfnListener.addPropertyOverride('ListenerAttributes', [
+				{
+					Key: 'routing.http.response.headers.Access-Control-Allow-Origin',
+					Value: corsOrigins,
+				},
+				{
+					Key: 'routing.http.response.headers.Access-Control-Allow-Methods',
+					Value: 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
+				},
+				{
+					Key: 'routing.http.response.headers.Access-Control-Allow-Headers',
+					Value:
 						'Content-Type, Authorization, X-Requested-With, Accept, Origin',
-					'Access-Control-Allow-Credentials': 'true',
-					'Access-Control-Expose-Headers':
+				},
+				{
+					Key: 'routing.http.response.headers.Access-Control-Allow-Credentials',
+					Value: 'true',
+				},
+				{
+					Key: 'routing.http.response.headers.Access-Control-Expose-Headers',
+					Value:
 						'Content-Length, X-Requested-With, X-Total-Count, X-Page-Count',
-					'Access-Control-Max-Age': '86400',
-				}),
-			)
+				},
+				{
+					Key: 'routing.http.response.headers.Access-Control-Max-Age',
+					Value: '86400',
+				},
+			])
 
 			console.log(
-				`✅ Added CORS headers via target group attributes for ${environmentName}`,
+				`✅ Added CORS headers via listener attributes for ${environmentName}`,
 			)
 
 			// Create DNS records for custom domain if configured
