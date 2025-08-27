@@ -271,29 +271,29 @@ export class EcsLoadBalancerConstruct extends Construct {
 				.defaultChild as elbv2.CfnListener
 			cfnListener.addPropertyOverride('ListenerAttributes', [
 				{
-					Key: 'routing.http.response.headers.Access-Control-Allow-Origin',
+					Key: 'routing.http.response.headers.Access_Control_Allow_Origin',
 					Value: corsOrigins,
 				},
 				{
-					Key: 'routing.http.response.headers.Access-Control-Allow-Methods',
+					Key: 'routing.http.response.headers.Access_Control_Allow_Methods',
 					Value: 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
 				},
 				{
-					Key: 'routing.http.response.headers.Access-Control-Allow-Headers',
+					Key: 'routing.http.response.headers.Access_Control_Allow_Headers',
 					Value:
 						'Content-Type, Authorization, X-Requested-With, Accept, Origin',
 				},
 				{
-					Key: 'routing.http.response.headers.Access-Control-Allow-Credentials',
+					Key: 'routing.http.response.headers.Access_Control_Allow_Credentials',
 					Value: 'true',
 				},
 				{
-					Key: 'routing.http.response.headers.Access-Control-Expose-Headers',
+					Key: 'routing.http.response.headers.Access_Control_Expose_Headers',
 					Value:
 						'Content-Length, X-Requested-With, X-Total-Count, X-Page-Count',
 				},
 				{
-					Key: 'routing.http.response.headers.Access-Control-Max-Age',
+					Key: 'routing.http.response.headers.Access_Control_Max_Age',
 					Value: '86400',
 				},
 			])
