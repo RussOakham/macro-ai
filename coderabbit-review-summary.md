@@ -13,11 +13,13 @@
 
 - **ID**: `infrastructure/src/constructs/networking.ts:172-177`
   - **Issue**: Remove port 3040 from ALB security group; open it on the ECS service/task SG instead
-  - **Risk**: ALB should only expose 80/443; 3040 should be allowed on the service SG from the ALB SG, not world-open on the ALB SG
+  - **Risk**: ALB should only expose 80/443; 3040 should be allowed on the service SG from the ALB SG,
+    not world-open on the ALB SG
 
 - **ID**: `infrastructure/src/constructs/ecs-fargate-construct.ts:451-466`
   - **Issue**: Duplicate/broad CloudWatch Logs permissions and mismatch with actual log group
-  - **Risk**: You grant Logs permissions twice (once scoped to `/macro-ai/${environmentName}`, then again with `resources: ['*']`)
+  - **Risk**: You grant Logs permissions twice (once scoped to `/macro-ai/${environmentName}`, then again with
+    `resources: ['*']`)
 
 - **ID**: `infrastructure/src/constructs/ecs-fargate-construct.ts:294-303`
   - **Issue**: Running tasks in public subnets is acceptable for cost, but document SG ingress

@@ -203,7 +203,7 @@ export class EnvironmentConfigConstruct extends Construct {
 		for (const mapping of this.parameterMappings) {
 			try {
 				// Try to fetch from Parameter Store first
-				const paramName = `${this.parameterPrefix}${mapping.paramKey}`
+				const paramName = `${this.parameterPrefix}/${mapping.paramKey}`
 
 				// Use appropriate method based on whether parameter is secure
 				let paramValue: string
@@ -231,10 +231,10 @@ export class EnvironmentConfigConstruct extends Construct {
 				} else {
 					// For required parameters without defaults, this will cause deployment to fail
 					console.error(
-						`❌ Failed to fetch required parameter ${mapping.envVar} from ${this.parameterPrefix}${mapping.paramKey}`,
+						`❌ Failed to fetch required parameter ${mapping.envVar} from ${this.parameterPrefix}/${mapping.paramKey}`,
 					)
 					throw new Error(
-						`Required parameter ${mapping.envVar} not found in Parameter Store. Please ensure ${this.parameterPrefix}${mapping.paramKey} exists.`,
+						`Required parameter ${mapping.envVar} not found in Parameter Store. Please ensure ${this.parameterPrefix}/${mapping.paramKey} exists.`,
 					)
 				}
 			}
