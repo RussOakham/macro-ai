@@ -1,6 +1,9 @@
-import { Request, Response, NextFunction } from 'express'
+import { NextFunction, Request, Response } from 'express'
+
 import { UnauthorizedError } from '../utils/errors.js'
 import { pino } from '../utils/logger.js'
+
+const { logger } = pino
 
 const API_KEY_HEADER = 'X-API-KEY'
 
@@ -9,10 +12,11 @@ const API_KEY_HEADER = 'X-API-KEY'
  * Checks for API key in the X-API-KEY header
  */
 const apiKeyAuth = (req: Request, res: Response, next: NextFunction): void => {
-	// Skip API key check for health endpoints and Swagger documentation
+	// Skip API key check for health endpoints, Swagger documentation, and CORS preflight
 	const isSwagger = req.path.startsWith('/api-docs')
 	const isHealth = req.path.startsWith('/api/health') || req.path === '/health'
-	if (isSwagger || isHealth) {
+	const isOptions = req.method === 'OPTIONS'
+	if (isSwagger || isHealth || isOptions) {
 		next()
 		return
 	}
@@ -22,24 +26,22 @@ const apiKeyAuth = (req: Request, res: Response, next: NextFunction): void => {
 	// Read configured key at request time so Parameter Store population is visible
 	const configuredApiKey = process.env.API_KEY
 
-	console.log(`[apiKeyAuth] Comparison:`)
-	console.log(`  - Configured API_KEY: ${configuredApiKey ?? 'undefined'}`)
-	console.log(`  - Received API_KEY: ${apiKey ?? 'undefined'}`)
-	console.log(`  - Keys match: ${apiKey === configuredApiKey}`)
-
 	if (!configuredApiKey) {
-		console.error('[apiKeyAuth]: API_KEY environment variable not configured')
-		throw new UnauthorizedError('API key not configured')
+		logger.error('[apiKeyAuth]: API_KEY environment variable not configured')
+		next(
+			new UnauthorizedError('API key not configured', 'apiKeyAuth middleware'),
+		)
+		return
 	}
 
 	if (!apiKey || apiKey !== configuredApiKey) {
-		console.warn(
+		logger.warn(
 			`[apiKeyAuth]: Invalid API key attempt from IP: ${req.ip ?? ''}`,
 		)
-		throw new UnauthorizedError('Invalid API key')
+		next(new UnauthorizedError('Invalid API key', 'apiKeyAuth middleware'))
+		return
 	}
 
-	console.log(`[apiKeyAuth] Authentication successful`)
 	next()
 }
 

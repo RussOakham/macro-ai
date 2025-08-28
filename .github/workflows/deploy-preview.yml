@@ -211,11 +211,11 @@ jobs:
           echo "AWS_REGION: ${{ env.AWS_REGION }}"
           echo "AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION"
           echo "AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}"
-          
+
           # Test AWS CLI access
           echo "Testing AWS CLI access..."
           aws sts get-caller-identity --no-cli-pager
-          
+
           # Test Parameter Store access
           echo "Testing Parameter Store access..."
           aws ssm describe-parameters --max-items 1 --no-cli-pager || echo "❌ Parameter Store access failed"
@@ -1031,6 +1031,7 @@ jobs:
           custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
           hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
           parameter-store-path: '/macro-ai/development/api-key'
+          api-key: ${{ secrets.API_KEY }}
           backend-stack-name: ${{ needs.validate-access.outputs.backend-stack-name }}
           resolution-method: 'artifact-based'
           output-file: '.env.preview'
