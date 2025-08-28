@@ -14,7 +14,7 @@ const API_KEY_HEADER = 'X-API-KEY'
 const apiKeyAuth = (req: Request, res: Response, next: NextFunction): void => {
 	// Skip API key check for health endpoints, Swagger documentation, and CORS preflight
 	const isSwagger = req.path.startsWith('/api-docs')
-	const isHealth = req.path.startsWith('/api/health') || req.path === '/health'
+	const isHealth = req.path.startsWith('/api/health')
 	const isOptions = req.method === 'OPTIONS'
 	if (isSwagger || isHealth || isOptions) {
 		next()

@@ -513,7 +513,7 @@ describe('apiKeyAuth Middleware', () => {
 	})
 
 	describe('Health Endpoint Bypass', () => {
-		it('should skip API key check for /health path', () => {
+		it('should require API key authentication for /health path', () => {
 			// Arrange
 			const request = { ...mockRequest, path: '/health' } as Request
 
@@ -521,8 +521,7 @@ describe('apiKeyAuth Middleware', () => {
 			apiKeyAuth(request, mockResponse as Response, mockNext)
 
 			// Assert
-			expect(mockNext).toHaveBeenCalledWith()
-			expect(mockNext).toHaveBeenCalledTimes(1)
+			expect(mockNext).toHaveBeenCalledWith(expect.any(UnauthorizedError))
 		})
 
 		it('should skip API key check for /api/health paths', () => {
