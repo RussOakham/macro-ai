@@ -72,8 +72,7 @@ main() {
         ["AWS_COGNITO_USER_POOL_ID"]="/macro-ai/development/AWS_COGNITO_USER_POOL_ID"
         ["AWS_COGNITO_USER_POOL_CLIENT_ID"]="/macro-ai/development/AWS_COGNITO_USER_POOL_CLIENT_ID"
         ["AWS_COGNITO_USER_POOL_SECRET_KEY"]="/macro-ai/development/AWS_COGNITO_USER_POOL_SECRET_KEY"
-        ["AWS_COGNITO_ACCESS_KEY"]="/macro-ai/development/AWS_COGNITO_ACCESS_KEY"
-        ["AWS_COGNITO_SECRET_KEY"]="/macro-ai/development/AWS_COGNITO_SECRET_KEY"
+        # AWS Cognito credentials removed - using IAM roles instead
         ["COOKIE_ENCRYPTION_KEY"]="/macro-ai/development/COOKIE_ENCRYPTION_KEY"
         ["OPENAI_API_KEY"]="/macro-ai/development/OPENAI_API_KEY"
         ["RELATIONAL_DATABASE_URL"]="/macro-ai/development/RELATIONAL_DATABASE_URL"
@@ -141,8 +140,7 @@ export AWS_COGNITO_REGION
 export AWS_COGNITO_USER_POOL_ID
 export AWS_COGNITO_USER_POOL_CLIENT_ID
 export AWS_COGNITO_USER_POOL_SECRET_KEY
-export AWS_COGNITO_ACCESS_KEY
-export AWS_COGNITO_SECRET_KEY
+# AWS Cognito credentials removed - using IAM roles instead
 export COOKIE_ENCRYPTION_KEY
 export OPENAI_API_KEY
 export RELATIONAL_DATABASE_URL

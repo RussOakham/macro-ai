@@ -969,8 +969,7 @@ jobs:
           AWS_COGNITO_USER_POOL_ID: 'us-east-1_placeholder'
           AWS_COGNITO_USER_POOL_CLIENT_ID: 'placeholder-client-id'
           AWS_COGNITO_USER_POOL_SECRET_KEY: 'placeholder-secret-key'
-          AWS_COGNITO_ACCESS_KEY: 'placeholder-access-key'
-          AWS_COGNITO_SECRET_KEY: 'placeholder-secret-key'
+          # AWS Cognito credentials removed - using IAM roles instead
           AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30'
           COOKIE_DOMAIN: 'localhost'
           COOKIE_ENCRYPTION_KEY: 'placeholder-cookie-encryption-key-32chars'

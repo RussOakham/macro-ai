@@ -107,7 +107,7 @@ jobs:
           AWS_COGNITO_USER_POOL_ID=$(fetch_param "aws-cognito-user-pool-id")
           AWS_COGNITO_USER_POOL_CLIENT_ID=$(fetch_param "aws-cognito-user-pool-client-id")
           AWS_COGNITO_USER_POOL_SECRET_KEY=$(fetch_param "aws-cognito-user-pool-secret-key")
-          # Remove AWS credentials - now using IAM roles
+          # Remove AWS Cognito credentials - using IAM roles instead
           # AWS_COGNITO_ACCESS_KEY=$(fetch_param "aws-cognito-access-key")
           # AWS_COGNITO_SECRET_KEY=$(fetch_param "aws-cognito-secret-key")
           AWS_COGNITO_REFRESH_TOKEN_EXPIRY=$(fetch_param "aws-cognito-refresh-token-expiry")
@@ -266,8 +266,7 @@ jobs:
           AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
           AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
           AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-          AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
-          AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
+          # AWS Cognito credentials removed - using IAM roles instead
           AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
 
           # Cookie Configuration
@@ -347,8 +346,7 @@ jobs:
           AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
           AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
           AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-          AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
-          AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
+          # AWS Cognito credentials removed - using IAM roles instead
           AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
 
           # Cookie Configuration
@@ -430,8 +428,7 @@ jobs:
           AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
           AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
           AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-          AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
-          AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
+          # AWS Cognito credentials removed - using IAM roles instead
           AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
 
           # Cookie Configuration

@@ -14,8 +14,7 @@ vi.mock('../utils/load-config.ts', () => ({
 		AWS_COGNITO_USER_POOL_ID: 'test-pool-id',
 		AWS_COGNITO_USER_POOL_CLIENT_ID: 'test-client-id',
 		AWS_COGNITO_USER_POOL_SECRET_KEY: 'test-secret-key',
-		AWS_COGNITO_ACCESS_KEY: 'test-access-key',
-		AWS_COGNITO_SECRET_KEY: 'test-secret-key',
+		// AWS Cognito credentials removed - using IAM roles instead
 		AWS_COGNITO_REFRESH_TOKEN_EXPIRY: 30,
 		COOKIE_DOMAIN: 'localhost',
 		COOKIE_ENCRYPTION_KEY: 'test-encryption-key-at-least-32-chars-long',

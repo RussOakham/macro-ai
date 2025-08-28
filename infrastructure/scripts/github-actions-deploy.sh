@@ -136,8 +136,7 @@ validate_parameter_store() {
         "AWS_COGNITO_USER_POOL_ID"
         "AWS_COGNITO_USER_POOL_CLIENT_ID"
         "AWS_COGNITO_USER_POOL_SECRET_KEY"
-        "AWS_COGNITO_ACCESS_KEY"
-        "AWS_COGNITO_SECRET_KEY"
+        # AWS Cognito credentials removed - using IAM roles instead
         "COOKIE_ENCRYPTION_KEY"
         "OPENAI_API_KEY"
         "RELATIONAL_DATABASE_URL"

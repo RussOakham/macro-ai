@@ -104,16 +104,7 @@ export class EnvironmentConfigConstruct extends Construct {
 			envVar: 'AWS_COGNITO_USER_POOL_SECRET_KEY',
 			isSecure: true,
 		},
-		{
-			paramKey: 'aws-cognito-access-key',
-			envVar: 'AWS_COGNITO_ACCESS_KEY',
-			isSecure: true,
-		},
-		{
-			paramKey: 'aws-cognito-secret-key',
-			envVar: 'AWS_COGNITO_SECRET_KEY',
-			isSecure: true,
-		},
+		// AWS Cognito credentials removed - using IAM roles instead
 
 		// Database Configuration
 		{

@@ -100,18 +100,9 @@ export class ParameterStoreConstruct extends Construct {
 				isSecure: true,
 				tier: ssm.ParameterTier.ADVANCED,
 			},
-			{
-				name: 'cognito-access-key',
-				description: 'AWS IAM Access Key for Cognito operations',
-				isSecure: true,
-				tier: ssm.ParameterTier.ADVANCED,
-			},
-			{
-				name: 'cognito-secret-key',
-				description: 'AWS IAM Secret Key for Cognito operations',
-				isSecure: true,
-				tier: ssm.ParameterTier.ADVANCED,
-			},
+			// Note: Static IAM credentials removed - use IAM roles instead
+			// cognito-access-key and cognito-secret-key are anti-patterns
+			// that encourage security vulnerabilities
 			{
 				name: 'openai-api-key',
 				description: 'OpenAI API key for AI chat functionality',

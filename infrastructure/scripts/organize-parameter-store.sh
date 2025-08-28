@@ -194,8 +194,7 @@ get_parameter_definitions() {
 # Critical parameters (SecureString, Advanced tier)
 API_KEY:SecureString:Advanced:API key for application authentication
 AWS_COGNITO_USER_POOL_SECRET_KEY:SecureString:Advanced:AWS Cognito User Pool secret key
-AWS_COGNITO_ACCESS_KEY:SecureString:Advanced:AWS Cognito access key
-AWS_COGNITO_SECRET_KEY:SecureString:Advanced:AWS Cognito secret key
+# AWS Cognito credentials removed - using IAM roles instead
 COOKIE_ENCRYPTION_KEY:SecureString:Advanced:Cookie encryption key for session management
 OPENAI_API_KEY:SecureString:Advanced:OpenAI API key for AI functionality
 RELATIONAL_DATABASE_URL:SecureString:Advanced:PostgreSQL database connection string

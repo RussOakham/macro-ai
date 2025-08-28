@@ -32,8 +32,7 @@ const TEST_CONFIG = {
 		AWS_COGNITO_USER_POOL_ID: 'test-pool-id',
 		AWS_COGNITO_USER_POOL_CLIENT_ID: 'test-client-id',
 		AWS_COGNITO_USER_POOL_SECRET_KEY: 'test-pool-secret-key-32-chars-long',
-		AWS_COGNITO_ACCESS_KEY: 'test-access-key',
-		AWS_COGNITO_SECRET_KEY: 'test-secret-key',
+		// AWS Cognito credentials removed - using IAM roles instead
 		AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30',
 		OPENAI_API_KEY: 'sk-test-openai-key-12345678901234567890123456789012',
 		RELATIONAL_DATABASE_URL:
@@ -205,12 +204,7 @@ describe.skip('Configuration Loading Integration Tests', () => {
 			expect(config.awsCognitoUserPoolSecretKey).toBe(
 				TEST_CONFIG.validConfig.AWS_COGNITO_USER_POOL_SECRET_KEY,
 			)
-			expect(config.awsCognitoAccessKey).toBe(
-				TEST_CONFIG.validConfig.AWS_COGNITO_ACCESS_KEY,
-			)
-			expect(config.awsCognitoSecretKey).toBe(
-				TEST_CONFIG.validConfig.AWS_COGNITO_SECRET_KEY,
-			)
+			// AWS Cognito credentials removed - using IAM roles instead
 			expect(config.awsCognitoRefreshTokenExpiry).toBe(30)
 			expect(config.openaiApiKey).toBe(TEST_CONFIG.validConfig.OPENAI_API_KEY)
 			expect(config.relationalDatabaseUrl).toBe(
@@ -236,8 +230,7 @@ describe.skip('Configuration Loading Integration Tests', () => {
 				AWS_COGNITO_USER_POOL_ID: 'test-pool-id',
 				AWS_COGNITO_USER_POOL_CLIENT_ID: 'test-client-id',
 				AWS_COGNITO_USER_POOL_SECRET_KEY: 'test-pool-secret-key-32-chars-long',
-				AWS_COGNITO_ACCESS_KEY: 'test-access-key',
-				AWS_COGNITO_SECRET_KEY: 'test-secret-key',
+				// AWS Cognito credentials removed - using IAM roles instead
 				AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30',
 				OPENAI_API_KEY: 'sk-test-openai-key-12345678901234567890123456789012',
 				RELATIONAL_DATABASE_URL:

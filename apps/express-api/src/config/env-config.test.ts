@@ -24,8 +24,7 @@ describe('Enhanced Environment Configuration System', () => {
 		AWS_COGNITO_USER_POOL_ID: 'test-pool-id',
 		AWS_COGNITO_USER_POOL_CLIENT_ID: 'test-client-id',
 		AWS_COGNITO_USER_POOL_SECRET_KEY: 'test-pool-secret-key-32-chars-long',
-		AWS_COGNITO_ACCESS_KEY: 'test-access-key',
-		AWS_COGNITO_SECRET_KEY: 'test-secret-key',
+		// AWS Cognito credentials removed - using IAM roles instead
 		AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30',
 		OPENAI_API_KEY: 'sk-test-fake-openai-key-for-testing-only',
 		RELATIONAL_DATABASE_URL:
