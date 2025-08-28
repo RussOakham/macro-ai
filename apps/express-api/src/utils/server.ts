@@ -37,17 +37,27 @@ const createServer = (): Express => {
 	// Simplified CORS configuration for ephemeral environments
 	let corsOrigins = 'http://localhost:3000'
 
-	if (config.NODE_ENV === 'production') {
-		if (config.APP_ENV === 'production') {
-			corsOrigins = `https://${process.env.CUSTOM_DOMAIN_NAME ?? ''}`
+	if (config.NODE_ENV === 'test') {
+		corsOrigins = 'http://localhost:3000'
+	}
+
+	if (config.NODE_ENV === 'development') {
+		// Local and test environments
+		corsOrigins = 'http://localhost:3000'
+
+		// Pr environments
+		if (config.APP_ENV.startsWith('pr-')) {
+			corsOrigins = `https://${config.APP_ENV}.macro-ai.russoakham.dev`
 		}
+	}
+
+	if (config.NODE_ENV === 'production') {
+		// Production and staging environments
+		corsOrigins = `https://${process.env.CUSTOM_DOMAIN_NAME ?? ''}`
+
+		// Staging environments
 		if (config.APP_ENV === 'staging') {
 			corsOrigins = `https://staging.${process.env.CUSTOM_DOMAIN_NAME ?? ''}`
-		}
-
-		// Fallback for preview environments - allow common patterns
-		if (config.APP_ENV.startsWith('pr-')) {
-			corsOrigins = `https://${process.env.APP_ENV ?? '*'}.macro-ai.russoakham.dev`
 		}
 	}
 
