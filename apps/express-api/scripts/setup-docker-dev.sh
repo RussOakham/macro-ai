@@ -70,8 +70,7 @@ COOKIE_ENCRYPTION_KEY=your-cookie-encryption-key-here
 AWS_COGNITO_USER_POOL_ID=your-user-pool-id
 AWS_COGNITO_USER_POOL_CLIENT_ID=your-client-id
 AWS_COGNITO_USER_POOL_SECRET_KEY=your-secret-key
-AWS_COGNITO_ACCESS_KEY=your-access-key
-AWS_COGNITO_SECRET_KEY=your-secret-key
+
 
 # OpenAI Configuration (update these with your actual values)
 OPENAI_API_KEY=your-openai-api-key

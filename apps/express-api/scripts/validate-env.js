@@ -57,9 +57,6 @@ const requiredEnvVars = [
 	'AWS_COGNITO_REGION',
 	'AWS_COGNITO_USER_POOL_ID',
 	'AWS_COGNITO_USER_POOL_CLIENT_ID',
-	// AWS Cognito credentials removed - using IAM roles instead
-	// 'AWS_COGNITO_ACCESS_KEY',
-	// 'AWS_COGNITO_SECRET_KEY',
 
 	// Cookie Settings
 	'COOKIE_ENCRYPTION_KEY',

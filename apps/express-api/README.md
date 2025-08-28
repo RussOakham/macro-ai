@@ -115,8 +115,6 @@ AWS_COGNITO_USER_POOL_ID=your-pool-id
 AWS_COGNITO_USER_POOL_CLIENT_ID=your-client-id
 AWS_COGNITO_USER_POOL_SECRET_KEY=your-secret-key
 # AWS credentials are no longer required - using IAM roles instead
-# AWS_COGNITO_ACCESS_KEY=your-access-key
-# AWS_COGNITO_SECRET_KEY=your-secret-key
 
 # OpenAI
 OPENAI_API_KEY=sk-your-openai-api-key

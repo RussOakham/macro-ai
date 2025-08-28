@@ -31,14 +31,7 @@ const envSchema = z.object({
 	AWS_COGNITO_USER_POOL_CLIENT_ID: z
 		.string()
 		.min(1, 'AWS Cognito user pool client ID is required'),
-	// AWS Cognito credentials removed - using IAM roles instead
-	// Remove AWS credentials - now using IAM roles
-	// AWS_COGNITO_ACCESS_KEY: z
-	// 	.string()
-	// 	.min(1, 'AWS Cognito access key is required'),
-	// AWS_COGNITO_SECRET_KEY: z
-	// 	.string()
-	// 	.min(1, 'AWS Cognito secret key is required'),
+
 	AWS_COGNITO_REFRESH_TOKEN_EXPIRY: z.coerce.number().default(30),
 
 	// Cookie Settings

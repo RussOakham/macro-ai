@@ -177,7 +177,7 @@ export const createDatabaseConfig = (
 	createConfigMock({
 		RELATIONAL_DATABASE_URL:
 			'postgresql://testuser:testpass@localhost:5432/testdb',
-		REDIS_URL: 'redis://localhost:6379/testdb',
+		REDIS_URL: 'redis://localhost:6379/1',
 		...overrides,
 	})
 

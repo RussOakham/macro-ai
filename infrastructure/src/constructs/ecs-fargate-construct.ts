@@ -81,7 +81,7 @@ export interface EcsFargateConstructProps {
 
 	/**
 	 * Container port for the application
-	 * @default 3000
+	 * @default 3040
 	 */
 	readonly containerPort?: number
 
@@ -185,7 +185,7 @@ export class EcsFargateConstruct extends Construct {
 			ecrRepository: providedEcrRepository,
 			imageTag = 'latest',
 			imageUri,
-			containerPort = 3000,
+			containerPort = 3040,
 			healthCheck = {
 				path: '/api/health',
 				interval: cdk.Duration.seconds(30),
@@ -374,7 +374,7 @@ export class EcsFargateConstruct extends Construct {
 		taskDefinition.addContainer('ExpressApiContainer', {
 			image: ecs.ContainerImage.fromEcrRepository(ecrRepository, imageTag),
 			containerName: 'express-api',
-			portMappings: [{ containerPort: 3000 }],
+			portMappings: [{ containerPort: 3040 }],
 			logging: ecs.LogDrivers.awsLogs({
 				streamPrefix: `macro-ai-${environmentName}-pr-${prNumber}`,
 				logRetention: logs.RetentionDays.THREE_DAYS, // Shorter retention for PRs
@@ -386,7 +386,7 @@ export class EcsFargateConstruct extends Construct {
 			healthCheck: {
 				command: [
 					'CMD-SHELL',
-					'wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1',
+					'wget --no-verbose --tries=1 --spider http://localhost:3040/api/health || exit 1',
 				],
 				interval: cdk.Duration.seconds(30),
 				timeout: cdk.Duration.seconds(5),
@@ -532,20 +532,6 @@ export class EcsFargateConstruct extends Construct {
 
 		// Note: CloudWatch Logs permissions are defined above with proper resource scoping
 
-		// KMS permissions for decrypting Parameter Store SecureString values
-		role.addToPolicy(
-			new iam.PolicyStatement({
-				effect: iam.Effect.ALLOW,
-				actions: ['kms:Decrypt', 'kms:DescribeKey'],
-				resources: ['*'],
-				conditions: {
-					StringLike: {
-						'kms:ViaService': 'ssm.*.amazonaws.com',
-					},
-				},
-			}),
-		)
-
 		return role
 	}
 
@@ -576,6 +562,20 @@ export class EcsFargateConstruct extends Construct {
 					'ssm:GetParametersByPath',
 				],
 				resources: ['*'], // Needed for task execution
+			}),
+		)
+
+		// KMS permissions for decrypting Parameter Store SecureString values during task execution
+		role.addToPolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: ['kms:Decrypt', 'kms:DescribeKey'],
+				resources: ['*'],
+				conditions: {
+					StringLike: {
+						'kms:ViaService': 'ssm.*.amazonaws.com',
+					},
+				},
 			}),
 		)
 

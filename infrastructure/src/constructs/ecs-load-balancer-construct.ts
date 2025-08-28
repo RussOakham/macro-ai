@@ -47,7 +47,7 @@ export interface EcsLoadBalancerConstructProps {
 
 	/**
 	 * Container port for health checks
-	 * @default 3000
+	 * @default 3040
 	 */
 	readonly containerPort?: number
 
@@ -121,7 +121,7 @@ export class EcsLoadBalancerConstruct extends Construct {
 			ecsService,
 			environmentName = 'development',
 			customDomain,
-			containerPort = 3000,
+			containerPort = 3040,
 			healthCheck = {
 				path: '/api/health',
 				interval: cdk.Duration.seconds(30),
