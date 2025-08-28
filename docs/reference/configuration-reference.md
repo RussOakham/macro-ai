@@ -255,8 +255,7 @@ const config = {
 	awsCognitoUserPoolId: env.AWS_COGNITO_USER_POOL_ID,
 	awsCognitoUserPoolClientId: env.AWS_COGNITO_USER_POOL_CLIENT_ID,
 	awsCognitoUserPoolSecretKey: env.AWS_COGNITO_USER_POOL_SECRET_KEY,
-	awsCognitoAccessKey: env.AWS_COGNITO_ACCESS_KEY,
-	awsCognitoSecretKey: env.AWS_COGNITO_SECRET_KEY,
+	// AWS Cognito credentials removed - using IAM roles instead
 	awsCognitoRefreshTokenExpiry: env.AWS_COGNITO_REFRESH_TOKEN_EXPIRY,
 	cookieDomain: env.COOKIE_DOMAIN,
 	cookieEncryptionKey: env.COOKIE_ENCRYPTION_KEY,
@@ -359,8 +358,7 @@ AWS_COGNITO_REGION=us-east-1
 AWS_COGNITO_USER_POOL_ID=us-east-1_YourPoolId
 AWS_COGNITO_USER_POOL_CLIENT_ID=YourClientId
 AWS_COGNITO_USER_POOL_SECRET_KEY=YourSecretKey
-AWS_COGNITO_ACCESS_KEY=YourAccessKey
-AWS_COGNITO_SECRET_KEY=YourSecretKey
+# AWS Cognito credentials removed - using IAM roles instead
 AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30
 
 # Client UI (.env)

@@ -9,7 +9,7 @@ import { join } from 'path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Import the functions we're testing
-import { assertConfig, getConfig, loadConfig } from './simple-config.js'
+import { assertConfig, getConfig, loadConfig } from './simple-config.ts'
 
 describe.skip('Simple Configuration System', () => {
 	const originalEnv = process.env

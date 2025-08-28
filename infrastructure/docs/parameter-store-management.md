@@ -47,8 +47,6 @@ optimization and consistency.
 
 - `API_KEY` - Application authentication key
 - `AWS_COGNITO_USER_POOL_SECRET_KEY` - Cognito secret key
-- `AWS_COGNITO_ACCESS_KEY` - Cognito access key
-- `AWS_COGNITO_SECRET_KEY` - Cognito secret key
 - `COOKIE_ENCRYPTION_KEY` - Session cookie encryption
 - `OPENAI_API_KEY` - OpenAI API access key
 - `RELATIONAL_DATABASE_URL` - PostgreSQL connection string

@@ -89,11 +89,10 @@ echo "NODE_ENV=production" >> "$ENV_FILE"
 echo "AWS_COGNITO_REGION=us-east-1" >> "$ENV_FILE"
 echo "AWS_COGNITO_USER_POOL_ID=build-time-default" >> "$ENV_FILE"
 echo "AWS_COGNITO_USER_POOL_CLIENT_ID=build-time-default" >> "$ENV_FILE"
-echo "AWS_COGNITO_USER_POOL_SECRET_KEY=build-time-default" >> "$ENV_FILE"
 # AWS Cognito credentials removed - using IAM roles instead
 echo "COOKIE_ENCRYPTION_KEY=build-time-default-key-for-docker-build" >> "$ENV_FILE"
 echo "RELATIONAL_DATABASE_URL=postgresql://build:build@localhost:5432/build" >> "$ENV_FILE"
-echo "NON_RELATIONAL_DATABASE_URL=mongodb://build:build@localhost:27017/build" >> "$ENV_FILE"
+echo "REDIS_URL=redis://build:build@localhost:6379/build" >> "$ENV_FILE"
 
 # Validate that we got some parameters
 if [ ! -s "$ENV_FILE" ]; then

@@ -102,8 +102,8 @@ echo "=== END .ENV FILE ===" >> /var/log/user-data.log
 chown macroai:macroai /opt/macro-ai/.env
 chmod 600 /opt/macro-ai/.env
 
-echo "$(date): CORS configuration set to: ${corsAllowedOrigins}"
-echo "$(date): Preview environment setup completed for PR ${prNumber} (${branchName})"
+echo "$(date): CORS configuration set to: ${CORS_ALLOWED_ORIGINS}"
+echo "$(date): Preview environment setup completed for PR ${PR_NUMBER} (${BRANCH_NAME})"
 
 echo "$(date): Deploying Express API from pre-built artifact..."
 mkdir -p /opt/macro-ai/app || error_exit "Failed to create app directory"

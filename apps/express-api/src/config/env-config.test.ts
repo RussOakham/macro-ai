@@ -8,7 +8,7 @@ import { join } from 'path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Import the functions we're testing
-import { getEnvironmentType, loadEnvConfig } from './env-config.js'
+import { getEnvironmentType, loadEnvConfig } from './env-config.ts'
 
 describe('Enhanced Environment Configuration System', () => {
 	const originalEnv = process.env

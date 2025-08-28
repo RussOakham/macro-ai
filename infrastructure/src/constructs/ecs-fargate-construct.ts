@@ -275,7 +275,7 @@ export class EcsFargateConstruct extends Construct {
 			healthCheck: {
 				command: [
 					'CMD-SHELL',
-					`wget --no-verbose --tries=1 --spider http://localhost:${containerPort}${healthCheck.path} || exit 1`,
+					`curl -fsS http://localhost:${containerPort}${healthCheck.path} || exit 1`,
 				],
 				interval: healthCheck.interval,
 				timeout: healthCheck.timeout,
@@ -386,7 +386,7 @@ export class EcsFargateConstruct extends Construct {
 			healthCheck: {
 				command: [
 					'CMD-SHELL',
-					'curl -f http://localhost:3000/health || exit 1',
+					'curl -f http://localhost:3000/api/health || exit 1',
 				],
 				interval: cdk.Duration.seconds(30),
 				timeout: cdk.Duration.seconds(5),

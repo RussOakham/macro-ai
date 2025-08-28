@@ -374,6 +374,6 @@ export class EcsLoadBalancerConstruct extends Construct {
 	 * Get the health check URL
 	 */
 	public get healthCheckUrl(): string {
-		return `${this.serviceUrl}/health`
+		return `${this.serviceUrl}/api/health`
 	}
 }

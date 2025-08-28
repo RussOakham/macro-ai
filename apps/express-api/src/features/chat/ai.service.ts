@@ -7,7 +7,7 @@ import {
 	streamText,
 } from 'ai'
 
-import { assertConfig } from '../../config/simple-config.js'
+import { assertConfig } from '../../config/simple-config.ts'
 import { tryCatch, tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import { AppError, type Result, ValidationError } from '../../utils/errors.ts'
 

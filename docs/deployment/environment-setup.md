@@ -800,8 +800,7 @@ const productionConfigSchema = z.object({
 	AWS_COGNITO_USER_POOL_ID: z.string().min(1),
 	AWS_COGNITO_USER_POOL_CLIENT_ID: z.string().min(1),
 	AWS_COGNITO_USER_POOL_SECRET_KEY: z.string().min(1),
-	AWS_COGNITO_ACCESS_KEY: z.string().min(1),
-	AWS_COGNITO_SECRET_KEY: z.string().min(1),
+	// AWS Cognito credentials removed - using IAM roles instead
 })
 
 const stagingConfigSchema = productionConfigSchema.extend({

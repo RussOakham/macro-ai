@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express'
 
-import { UnauthorizedError } from '../utils/errors.js'
-import { pino } from '../utils/logger.js'
+import { UnauthorizedError } from '../utils/errors.ts'
+import { pino } from '../utils/logger.ts'
 
 const { logger } = pino
 
