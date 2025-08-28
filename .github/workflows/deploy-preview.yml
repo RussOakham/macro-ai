@@ -968,12 +968,11 @@ jobs:
           AWS_COGNITO_REGION: 'us-east-1'
           AWS_COGNITO_USER_POOL_ID: 'us-east-1_placeholder'
           AWS_COGNITO_USER_POOL_CLIENT_ID: 'placeholder-client-id'
-          AWS_COGNITO_USER_POOL_SECRET_KEY: 'placeholder-secret-key'
           # AWS Cognito credentials removed - using IAM roles instead
           AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30'
           COOKIE_DOMAIN: 'localhost'
           COOKIE_ENCRYPTION_KEY: 'placeholder-cookie-encryption-key-32chars'
-          NON_RELATIONAL_DATABASE_URL: 'redis://localhost:6379'
+          REDIS_URL: 'redis://localhost:6379'
           RELATIONAL_DATABASE_URL: 'postgresql://localhost:5432/placeholder'
           OPENAI_API_KEY: 'sk-placeholder-openai-api-key-for-swagger-generation'
           RATE_LIMIT_WINDOW_MS: '900000'
