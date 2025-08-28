@@ -328,7 +328,7 @@ export class EnvironmentConfigConstruct extends Construct {
 
 		for (const mapping of this.parameterMappings) {
 			if (mapping.isSecure) {
-				const paramName = `${this.parameterPrefix}${mapping.paramKey}`
+				const paramName = `${this.parameterPrefix}/${mapping.paramKey}`
 				secrets[mapping.envVar] = cdk.aws_ecs.Secret.fromSsmParameter(
 					ssm.StringParameter.fromSecureStringParameterAttributes(
 						this,
