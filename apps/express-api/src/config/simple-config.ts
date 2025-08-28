@@ -9,6 +9,7 @@
  */
 
 import { type TEnv } from '../utils/env.schema.ts'
+import { getCurrentParameterStorePrefix } from '../utils/environment-utils.ts'
 import { type Result } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
 
@@ -106,14 +107,11 @@ export interface ConfigType {
 	awsCognitoRegion: string
 	awsCognitoUserPoolId: string
 	awsCognitoUserPoolClientId: string
-	awsCognitoUserPoolSecretKey: string
-	awsCognitoAccessKey: string
-	awsCognitoSecretKey: string
+	// AWS Cognito credentials removed - using IAM roles instead
 	awsCognitoRefreshTokenExpiry: number
 	openaiApiKey: string
 	relationalDatabaseUrl: string
-	nonRelationalDatabaseUrl: string
-	redisUrl?: string
+	redisUrl: string
 	cookieEncryptionKey: string
 	cookieDomain: string
 	corsAllowedOrigins?: string
@@ -136,13 +134,10 @@ const convertToConfigType = (env: TEnv): ConfigType => ({
 	awsCognitoRegion: env.AWS_COGNITO_REGION,
 	awsCognitoUserPoolId: env.AWS_COGNITO_USER_POOL_ID,
 	awsCognitoUserPoolClientId: env.AWS_COGNITO_USER_POOL_CLIENT_ID,
-	awsCognitoUserPoolSecretKey: env.AWS_COGNITO_USER_POOL_SECRET_KEY,
-	awsCognitoAccessKey: env.AWS_COGNITO_ACCESS_KEY,
-	awsCognitoSecretKey: env.AWS_COGNITO_SECRET_KEY,
+	// AWS Cognito credentials removed - using IAM roles instead
 	awsCognitoRefreshTokenExpiry: env.AWS_COGNITO_REFRESH_TOKEN_EXPIRY,
 	openaiApiKey: env.OPENAI_API_KEY,
 	relationalDatabaseUrl: env.RELATIONAL_DATABASE_URL,
-	nonRelationalDatabaseUrl: env.NON_RELATIONAL_DATABASE_URL,
 	redisUrl: env.REDIS_URL,
 	cookieEncryptionKey: env.COOKIE_ENCRYPTION_KEY,
 	cookieDomain: env.COOKIE_DOMAIN,
@@ -226,7 +221,8 @@ export const getEnvironmentInfo = () => {
 		isDevelopment: isDevelopment(),
 		isTest: isTest(),
 		isPreview: isPreviewEnvironment(),
-		hasParameterStorePrefix: Boolean(process.env.PARAMETER_STORE_PREFIX),
+		parameterStorePrefix: getCurrentParameterStorePrefix(),
+		hasParameterStorePrefix: true, // Always true now since we determine it programmatically
 	}
 }
 

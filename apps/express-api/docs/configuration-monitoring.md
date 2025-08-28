@@ -234,7 +234,7 @@ Ensure these environment variables are set:
 
 - `AWS_REGION` - AWS region for CloudWatch metrics
 - `APP_ENV` - Application environment for metric dimensions
-- `PARAMETER_STORE_PREFIX` - Parameter Store prefix for context
+- `APP_ENV` - Application environment (determines parameter store prefix automatically)
 
 ### IAM Permissions
 

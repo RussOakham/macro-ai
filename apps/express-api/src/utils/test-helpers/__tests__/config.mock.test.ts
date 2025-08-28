@@ -258,9 +258,7 @@ describe('Config Mock Helper', () => {
 				expect(mock.config.RELATIONAL_DATABASE_URL).toBe(
 					'postgresql://testuser:testpass@localhost:5432/testdb',
 				)
-				expect(mock.config.NON_RELATIONAL_DATABASE_URL).toBe(
-					'mongodb://localhost:27017/testdb',
-				)
+				expect(mock.config.REDIS_URL).toBe('redis://localhost:6379/1')
 				// Should preserve other defaults
 				expect(mock.config.NODE_ENV).toBe(defaultTestConfig.NODE_ENV)
 			})
@@ -289,9 +287,7 @@ describe('Config Mock Helper', () => {
 				expect(mock.config.RELATIONAL_DATABASE_URL).not.toBe(
 					defaultTestConfig.RELATIONAL_DATABASE_URL,
 				)
-				expect(mock.config.NON_RELATIONAL_DATABASE_URL).not.toBe(
-					defaultTestConfig.NON_RELATIONAL_DATABASE_URL,
-				)
+				expect(mock.config.REDIS_URL).not.toBe(defaultTestConfig.REDIS_URL)
 			})
 		})
 
@@ -355,18 +351,14 @@ describe('Config Mock Helper', () => {
 			expect(defaultTestConfig).toHaveProperty(
 				'AWS_COGNITO_USER_POOL_CLIENT_ID',
 			)
-			expect(defaultTestConfig).toHaveProperty(
-				'AWS_COGNITO_USER_POOL_SECRET_KEY',
-			)
-			expect(defaultTestConfig).toHaveProperty('AWS_COGNITO_ACCESS_KEY')
-			expect(defaultTestConfig).toHaveProperty('AWS_COGNITO_SECRET_KEY')
+			// AWS Cognito credentials removed - using IAM roles instead
 			expect(defaultTestConfig).toHaveProperty(
 				'AWS_COGNITO_REFRESH_TOKEN_EXPIRY',
 			)
 			expect(defaultTestConfig).toHaveProperty('COOKIE_DOMAIN')
 			expect(defaultTestConfig).toHaveProperty('COOKIE_ENCRYPTION_KEY')
 			expect(defaultTestConfig).toHaveProperty('RELATIONAL_DATABASE_URL')
-			expect(defaultTestConfig).toHaveProperty('NON_RELATIONAL_DATABASE_URL')
+			expect(defaultTestConfig).toHaveProperty('REDIS_URL')
 			expect(defaultTestConfig).toHaveProperty('RATE_LIMIT_WINDOW_MS')
 			expect(defaultTestConfig).toHaveProperty('RATE_LIMIT_MAX_REQUESTS')
 			expect(defaultTestConfig).toHaveProperty('AUTH_RATE_LIMIT_WINDOW_MS')

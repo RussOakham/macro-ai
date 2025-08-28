@@ -133,8 +133,7 @@ AWS_COGNITO_REGION=us-east-1
 AWS_COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
 AWS_COGNITO_USER_POOL_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
 AWS_COGNITO_USER_POOL_SECRET_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxx
-AWS_COGNITO_ACCESS_KEY=AKIAXXXXXXXXXXXXXXXX
-AWS_COGNITO_SECRET_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# AWS Cognito credentials removed - using IAM roles instead
 ```
 
 ## 📊 Supported Operations

@@ -103,8 +103,7 @@ AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
 AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
 AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
 AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-AWS_COGNITO_ACCESS_KEY: ${{ secrets.AWS_COGNITO_ACCESS_KEY || 'dummy-access-key' }}
-AWS_COGNITO_SECRET_KEY: ${{ secrets.AWS_COGNITO_SECRET_KEY || 'dummy-secret-key' }}
+# AWS Cognito credentials removed - using IAM roles instead
 AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
 
 # Cookie Configuration
@@ -113,7 +112,7 @@ COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-ke
 
 # Database Configuration
 RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
-NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
+REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
 
 # OpenAI Configuration
 OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
@@ -292,8 +291,7 @@ AWS_COGNITO_REGION               # AWS region (e.g., us-east-1)
 AWS_COGNITO_USER_POOL_ID         # Cognito User Pool ID
 AWS_COGNITO_USER_POOL_CLIENT_ID  # App Client ID
 AWS_COGNITO_USER_POOL_SECRET_KEY # App Client Secret
-AWS_COGNITO_ACCESS_KEY           # IAM Access Key
-AWS_COGNITO_SECRET_KEY           # IAM Secret Key
+# AWS Cognito credentials removed - using IAM roles instead
 AWS_COGNITO_REFRESH_TOKEN_EXPIRY # Token expiry in days (default: 30)
 ```
 
@@ -301,7 +299,7 @@ AWS_COGNITO_REFRESH_TOKEN_EXPIRY # Token expiry in days (default: 30)
 
 ```bash
 RELATIONAL_DATABASE_URL          # PostgreSQL connection string
-NON_RELATIONAL_DATABASE_URL      # MongoDB connection string (optional)
+REDIS_URL                        # Redis connection string
 ```
 
 #### External Service Secrets

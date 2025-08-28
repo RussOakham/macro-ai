@@ -242,7 +242,6 @@ app.use(
 
 - Replace static keys with ECS task roles in production
 - Use AWS CLI credential providers for local development
-- Remove `AWS_COGNITO_ACCESS_KEY` and `AWS_COGNITO_SECRET_KEY` from schema
 
 **Benefits:**
 

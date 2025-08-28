@@ -8,7 +8,7 @@ import { join } from 'path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Import the functions we're testing
-import { getEnvironmentType, loadEnvConfig } from './env-config.js'
+import { getEnvironmentType, loadEnvConfig } from './env-config.ts'
 
 describe('Enhanced Environment Configuration System', () => {
 	const originalEnv = process.env
@@ -24,13 +24,12 @@ describe('Enhanced Environment Configuration System', () => {
 		AWS_COGNITO_USER_POOL_ID: 'test-pool-id',
 		AWS_COGNITO_USER_POOL_CLIENT_ID: 'test-client-id',
 		AWS_COGNITO_USER_POOL_SECRET_KEY: 'test-pool-secret-key-32-chars-long',
-		AWS_COGNITO_ACCESS_KEY: 'test-access-key',
-		AWS_COGNITO_SECRET_KEY: 'test-secret-key',
+		// AWS Cognito credentials removed - using IAM roles instead
 		AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30',
 		OPENAI_API_KEY: 'sk-test-fake-openai-key-for-testing-only',
 		RELATIONAL_DATABASE_URL:
 			'postgresql://testuser:testpass@localhost:5432/testdb',
-		NON_RELATIONAL_DATABASE_URL: 'redis://localhost:6379',
+		REDIS_URL: 'redis://localhost:6379',
 		COOKIE_ENCRYPTION_KEY: 'test-cookie-encryption-key-32-chars-long-enough',
 		COOKIE_DOMAIN: 'localhost',
 		CORS_ALLOWED_ORIGINS: 'http://localhost:3000,http://localhost:5173',
@@ -40,7 +39,6 @@ describe('Enhanced Environment Configuration System', () => {
 		AUTH_RATE_LIMIT_MAX_REQUESTS: '5',
 		API_RATE_LIMIT_WINDOW_MS: '60000',
 		API_RATE_LIMIT_MAX_REQUESTS: '1000',
-		REDIS_URL: 'redis://localhost:6379',
 	}
 
 	beforeEach(() => {

@@ -153,15 +153,13 @@ const envSchema = z.object({
 	RELATIONAL_DATABASE_URL: z
 		.string()
 		.min(1, 'Relational database URL is required'),
-	NON_RELATIONAL_DATABASE_URL: z
-		.string()
-		.min(1, 'Non-relational database URL is required'),
+	REDIS_URL: z.string().min(1, 'Non-relational database URL is required'),
 })
 
 // Configuration object
 const config = {
 	relationalDatabaseUrl: env.RELATIONAL_DATABASE_URL,
-	nonRelationalDatabaseUrl: env.NON_RELATIONAL_DATABASE_URL,
+	redisUrl: env.REDIS_URL,
 }
 ```
 

@@ -2,6 +2,13 @@ import * as cdk from 'aws-cdk-lib'
 import * as ssm from 'aws-cdk-lib/aws-ssm'
 import { Construct } from 'constructs'
 
+interface ParameterMapping {
+	paramKey: string
+	envVar: string
+	isSecure: boolean
+	defaultValue?: string
+}
+
 export interface EnvironmentConfigConstructProps {
 	/**
 	 * Environment name for parameter organization
@@ -24,7 +31,7 @@ export interface EnvironmentConfigConstructProps {
  * Construct for managing environment configuration at CDK synthesis time
  *
  * This construct fetches Parameter Store values during synthesis and creates
- * complete environment configuration that can be injected into EC2 instances.
+ * complete environment configuration that can be injected into ECS Fargate tasks.
  * This approach ensures applications are environment-agnostic and receive
  * all required configuration at deployment time.
  */
@@ -41,7 +48,8 @@ export class EnvironmentConfigConstruct extends Construct {
 		super(scope, id)
 
 		// Use shared development parameters for preview environments
-		this.parameterPrefix = props.parameterPrefix ?? 'macro-ai-development-'
+		// Note: No trailing slash to avoid double slashes when joining with parameter keys
+		this.parameterPrefix = props.parameterPrefix ?? '/macro-ai/development'
 
 		// Fetch Parameter Store values during synthesis
 		this.environmentVariables = this.fetchParameterStoreValues()
@@ -62,119 +70,147 @@ export class EnvironmentConfigConstruct extends Construct {
 	}
 
 	/**
+	 * Parameter mappings (Parameter Store key -> Environment variable name)
+	 * Note: Secure parameters are marked with isSecure: true
+	 */
+	private readonly parameterMappings: ParameterMapping[] = [
+		// API Configuration
+		{ paramKey: 'api-key', envVar: 'API_KEY', isSecure: false },
+		{
+			paramKey: 'cookie-encryption-key',
+			envVar: 'COOKIE_ENCRYPTION_KEY',
+			isSecure: true,
+		},
+
+		// AWS Cognito Configuration
+		{
+			paramKey: 'aws-cognito-region',
+			envVar: 'AWS_COGNITO_REGION',
+			defaultValue: 'us-east-1',
+			isSecure: false,
+		},
+		{
+			paramKey: 'aws-cognito-user-pool-id',
+			envVar: 'AWS_COGNITO_USER_POOL_ID',
+			isSecure: true,
+		},
+		{
+			paramKey: 'aws-cognito-user-pool-client-id',
+			envVar: 'AWS_COGNITO_USER_POOL_CLIENT_ID',
+			isSecure: true,
+		},
+		{
+			paramKey: 'aws-cognito-user-pool-secret-key',
+			envVar: 'AWS_COGNITO_USER_POOL_SECRET_KEY',
+			isSecure: true,
+		},
+		// AWS Cognito credentials removed - using IAM roles instead
+
+		// Database Configuration
+		{
+			paramKey: 'relational-database-url',
+			envVar: 'RELATIONAL_DATABASE_URL',
+			isSecure: true,
+		},
+		{
+			paramKey: 'non-relational-database-url',
+			envVar: 'REDIS_URL',
+			isSecure: true,
+		},
+
+		// OpenAI Configuration
+		{ paramKey: 'openai-api-key', envVar: 'OPENAI_API_KEY', isSecure: true },
+
+		// Redis Configuration
+		{ paramKey: 'redis-url', envVar: 'REDIS_URL', isSecure: true },
+
+		// Rate Limiting Configuration
+		{
+			paramKey: 'rate-limit-window-ms',
+			envVar: 'RATE_LIMIT_WINDOW_MS',
+			defaultValue: '900000',
+			isSecure: false,
+		},
+		{
+			paramKey: 'rate-limit-max-requests',
+			envVar: 'RATE_LIMIT_MAX_REQUESTS',
+			defaultValue: '100',
+			isSecure: false,
+		},
+		{
+			paramKey: 'auth-rate-limit-window-ms',
+			envVar: 'AUTH_RATE_LIMIT_WINDOW_MS',
+			defaultValue: '3600000',
+			isSecure: false,
+		},
+		{
+			paramKey: 'auth-rate-limit-max-requests',
+			envVar: 'AUTH_RATE_LIMIT_MAX_REQUESTS',
+			defaultValue: '10',
+			isSecure: false,
+		},
+		{
+			paramKey: 'api-rate-limit-window-ms',
+			envVar: 'API_RATE_LIMIT_WINDOW_MS',
+			defaultValue: '60000',
+			isSecure: false,
+		},
+		{
+			paramKey: 'api-rate-limit-max-requests',
+			envVar: 'API_RATE_LIMIT_MAX_REQUESTS',
+			defaultValue: '60',
+			isSecure: false,
+		},
+
+		// Optional Configuration
+		{
+			paramKey: 'cors-allowed-origins',
+			envVar: 'CORS_ALLOWED_ORIGINS',
+			defaultValue: '*',
+			isSecure: false,
+		},
+		{
+			paramKey: 'cookie-domain',
+			envVar: 'COOKIE_DOMAIN',
+			defaultValue: 'localhost',
+			isSecure: false,
+		},
+		{
+			paramKey: 'aws-cognito-refresh-token-expiry',
+			envVar: 'AWS_COGNITO_REFRESH_TOKEN_EXPIRY',
+			defaultValue: '30',
+			isSecure: false,
+		},
+	]
+
+	/**
 	 * Fetch Parameter Store values during CDK synthesis
 	 * This happens at deployment time, not at runtime
 	 */
 	private fetchParameterStoreValues(): Record<string, string> {
 		const envVars: Record<string, string> = {}
 
-		// Define the parameter mappings (Parameter Store key -> Environment variable name)
-		const parameterMappings = [
-			// API Configuration
-			{ paramKey: 'API_KEY', envVar: 'API_KEY' },
-			{ paramKey: 'COOKIE_ENCRYPTION_KEY', envVar: 'COOKIE_ENCRYPTION_KEY' },
-
-			// AWS Cognito Configuration
-			{
-				paramKey: 'AWS_COGNITO_REGION',
-				envVar: 'AWS_COGNITO_REGION',
-				defaultValue: 'us-east-1',
-			},
-			{
-				paramKey: 'AWS_COGNITO_USER_POOL_ID',
-				envVar: 'AWS_COGNITO_USER_POOL_ID',
-			},
-			{
-				paramKey: 'AWS_COGNITO_USER_POOL_CLIENT_ID',
-				envVar: 'AWS_COGNITO_USER_POOL_CLIENT_ID',
-			},
-			{
-				paramKey: 'AWS_COGNITO_USER_POOL_SECRET_KEY',
-				envVar: 'AWS_COGNITO_USER_POOL_SECRET_KEY',
-			},
-			{ paramKey: 'AWS_COGNITO_ACCESS_KEY', envVar: 'AWS_COGNITO_ACCESS_KEY' },
-			{ paramKey: 'AWS_COGNITO_SECRET_KEY', envVar: 'AWS_COGNITO_SECRET_KEY' },
-
-			// Database Configuration
-			{
-				paramKey: 'RELATIONAL_DATABASE_URL',
-				envVar: 'RELATIONAL_DATABASE_URL',
-			},
-			{
-				paramKey: 'NON_RELATIONAL_DATABASE_URL',
-				envVar: 'NON_RELATIONAL_DATABASE_URL',
-			},
-
-			// OpenAI Configuration
-			{ paramKey: 'OPENAI_API_KEY', envVar: 'OPENAI_API_KEY' },
-
-			// Redis Configuration
-			{ paramKey: 'REDIS_URL', envVar: 'REDIS_URL' },
-
-			// Rate Limiting Configuration
-			{
-				paramKey: 'RATE_LIMIT_WINDOW_MS',
-				envVar: 'RATE_LIMIT_WINDOW_MS',
-				defaultValue: '900000',
-			},
-			{
-				paramKey: 'RATE_LIMIT_MAX_REQUESTS',
-				envVar: 'RATE_LIMIT_MAX_REQUESTS',
-				defaultValue: '100',
-			},
-			{
-				paramKey: 'AUTH_RATE_LIMIT_WINDOW_MS',
-				envVar: 'AUTH_RATE_LIMIT_WINDOW_MS',
-				defaultValue: '3600000',
-			},
-			{
-				paramKey: 'AUTH_RATE_LIMIT_MAX_REQUESTS',
-				envVar: 'AUTH_RATE_LIMIT_MAX_REQUESTS',
-				defaultValue: '10',
-			},
-			{
-				paramKey: 'API_RATE_LIMIT_WINDOW_MS',
-				envVar: 'API_RATE_LIMIT_WINDOW_MS',
-				defaultValue: '60000',
-			},
-			{
-				paramKey: 'API_RATE_LIMIT_MAX_REQUESTS',
-				envVar: 'API_RATE_LIMIT_MAX_REQUESTS',
-				defaultValue: '60',
-			},
-
-			// Optional Configuration
-			{
-				paramKey: 'CORS_ALLOWED_ORIGINS',
-				envVar: 'CORS_ALLOWED_ORIGINS',
-				defaultValue: '*',
-			},
-			{
-				paramKey: 'COOKIE_DOMAIN',
-				envVar: 'COOKIE_DOMAIN',
-				defaultValue: 'localhost',
-			},
-			{
-				paramKey: 'AWS_COGNITO_REFRESH_TOKEN_EXPIRY',
-				envVar: 'AWS_COGNITO_REFRESH_TOKEN_EXPIRY',
-				defaultValue: '30',
-			},
-		]
-
 		// Fetch each parameter value
-		for (const mapping of parameterMappings) {
+		for (const mapping of this.parameterMappings) {
 			try {
 				// Try to fetch from Parameter Store first
-				const paramName = `${this.parameterPrefix}${mapping.paramKey}`
-				const paramValue = ssm.StringParameter.valueForStringParameter(
-					this,
-					paramName,
-					1, // Version - use latest
-				)
+				const paramName = `${this.parameterPrefix}/${mapping.paramKey}`
+
+				// Use appropriate method based on whether parameter is secure
+				let paramValue: string
+				if (mapping.isSecure) {
+					paramValue = cdk.SecretValue.ssmSecure(paramName).unsafeUnwrap()
+				} else {
+					paramValue = ssm.StringParameter.valueForStringParameter(
+						this,
+						paramName,
+						1, // Version - use latest
+					)
+				}
 
 				envVars[mapping.envVar] = paramValue
 				console.log(
-					`✅ Fetched ${mapping.envVar} from Parameter Store: ${paramName}`,
+					`✅ Fetched ${mapping.envVar} from Parameter Store: ${paramName} (${mapping.isSecure ? 'secure' : 'standard'})`,
 				)
 			} catch {
 				// If Parameter Store fetch fails, use default value or throw error for required params
@@ -186,10 +222,10 @@ export class EnvironmentConfigConstruct extends Construct {
 				} else {
 					// For required parameters without defaults, this will cause deployment to fail
 					console.error(
-						`❌ Failed to fetch required parameter ${mapping.envVar} from ${this.parameterPrefix}${mapping.paramKey}`,
+						`❌ Failed to fetch required parameter ${mapping.envVar} from ${this.parameterPrefix}/${mapping.paramKey}`,
 					)
 					throw new Error(
-						`Required parameter ${mapping.envVar} not found in Parameter Store. Please ensure ${this.parameterPrefix}${mapping.paramKey} exists.`,
+						`Required parameter ${mapping.envVar} not found in Parameter Store. Please ensure ${this.parameterPrefix}/${mapping.paramKey} exists.`,
 					)
 				}
 			}
@@ -258,6 +294,55 @@ export class EnvironmentConfigConstruct extends Construct {
 	 */
 	public getAllEnvironmentVariables(): Record<string, string> {
 		return { ...this.environmentVariables }
+	}
+
+	/**
+	 * Get only non-secure environment variables for ECS task definition
+	 */
+	public getNonSecureEnvironmentVariables(): Record<string, string> {
+		const nonSecureVars: Record<string, string> = {}
+
+		for (const mapping of this.parameterMappings) {
+			if (!mapping.isSecure) {
+				const envVarName = mapping.envVar
+				if (this.environmentVariables[envVarName]) {
+					nonSecureVars[envVarName] = this.environmentVariables[envVarName]
+				}
+			}
+		}
+
+		// Add environment-specific configuration (these are always non-secure)
+		nonSecureVars.NODE_ENV = 'production'
+		nonSecureVars.APP_ENV =
+			(this.node.tryGetContext('environmentName') as string) || 'preview'
+		nonSecureVars.SERVER_PORT = '3040'
+
+		return nonSecureVars
+	}
+
+	/**
+	 * Get secure parameters as ECS secrets configuration
+	 */
+	public getSecureParametersAsSecrets(): Record<string, cdk.aws_ecs.Secret> {
+		const secrets: Record<string, cdk.aws_ecs.Secret> = {}
+
+		for (const mapping of this.parameterMappings) {
+			if (mapping.isSecure) {
+				const paramName = `${this.parameterPrefix}/${mapping.paramKey}`
+				secrets[mapping.envVar] = cdk.aws_ecs.Secret.fromSsmParameter(
+					ssm.StringParameter.fromSecureStringParameterAttributes(
+						this,
+						`SecureParam-${mapping.paramKey}`,
+						{
+							parameterName: paramName,
+							version: 1,
+						},
+					),
+				)
+			}
+		}
+
+		return secrets
 	}
 
 	/**

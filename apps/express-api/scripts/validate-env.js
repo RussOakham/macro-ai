@@ -57,16 +57,13 @@ const requiredEnvVars = [
 	'AWS_COGNITO_REGION',
 	'AWS_COGNITO_USER_POOL_ID',
 	'AWS_COGNITO_USER_POOL_CLIENT_ID',
-	'AWS_COGNITO_USER_POOL_SECRET_KEY',
-	'AWS_COGNITO_ACCESS_KEY',
-	'AWS_COGNITO_SECRET_KEY',
 
 	// Cookie Settings
 	'COOKIE_ENCRYPTION_KEY',
 
 	// Database
 	'RELATIONAL_DATABASE_URL',
-	'NON_RELATIONAL_DATABASE_URL',
+	'REDIS_URL',
 
 	// OpenAI
 	'OPENAI_API_KEY',
@@ -82,7 +79,6 @@ const requiredEnvVars = [
 
 // Optional environment variables
 const optionalEnvVars = [
-	'REDIS_URL',
 	'CORS_ALLOWED_ORIGINS',
 	'COOKIE_DOMAIN',
 	'AWS_COGNITO_REFRESH_TOKEN_EXPIRY',

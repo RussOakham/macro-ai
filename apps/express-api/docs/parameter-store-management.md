@@ -77,19 +77,20 @@ Preview environments (PR deployments) use the development parameter set:
 
 ### Development Environment (`/macro-ai/development/`)
 
-| Parameter Name                     | Description                 | Example Value             | Required |
-| ---------------------------------- | --------------------------- | ------------------------- | -------- |
-| `API_KEY`                          | Application API key         | `dev-api-key-12345`       | ✅       |
-| `AWS_COGNITO_REGION`               | Cognito service region      | `us-east-1`               | ✅       |
-| `AWS_COGNITO_USER_POOL_CLIENT_ID`  | Cognito user pool client ID | `abc123def456`            | ✅       |
-| `AWS_COGNITO_USER_POOL_SECRET_KEY` | Cognito user pool secret    | `secret-key-value`        | ✅       |
-| `AWS_COGNITO_ACCESS_KEY`           | Cognito access key          | `AKIA...`                 | ✅       |
-| `AWS_COGNITO_SECRET_KEY`           | Cognito secret key          | `secret-value`            | ✅       |
-| `COOKIE_ENCRYPTION_KEY`            | Cookie encryption key       | `32-char-encryption-key`  | ✅       |
-| `RELATIONAL_DATABASE_URL`          | Database connection URL     | `postgresql://...`        | ✅       |
-| `OPENAI_API_KEY`                   | OpenAI API key              | `sk-...`                  | ✅       |
-| `CORS_ALLOWED_ORIGINS`             | CORS allowed origins        | `http://localhost:3000`   | ❌       |
-| `CUSTOM_DOMAIN_NAME`               | Custom domain name          | `macro-ai.russoakham.dev` | ❌       |
+| Parameter Name                    | Description                 | Example Value        | Required |
+| --------------------------------- | --------------------------- | -------------------- | -------- |
+| `API_KEY`                         | Application API key         | `dev-api-key-12345`  | ✅       |
+| `AWS_COGNITO_REGION`              | Cognito service region      | `us-east-1`          | ✅       |
+| `AWS_COGNITO_USER_POOL_ID`        | Cognito user pool ID        | `us-east-1_AbCdEfGh` | ✅       |
+| `AWS_COGNITO_USER_POOL_CLIENT_ID` | Cognito user pool client ID | `abc123def456`       | ✅       |
+
+<!-- AWS Cognito credentials removed - using IAM roles instead -->
+
+| `COOKIE_ENCRYPTION_KEY` | Cookie encryption key | `32-char-encryption-key` | ✅ |
+| `RELATIONAL_DATABASE_URL` | Database connection URL | `postgresql://...` | ✅ |
+| `OPENAI_API_KEY` | OpenAI API key | `sk-...` | ✅ |
+| `CORS_ALLOWED_ORIGINS` | CORS allowed origins | `http://localhost:3000` | ❌ |
+| `CUSTOM_DOMAIN_NAME` | Custom domain name | `macro-ai.russoakham.dev` | ❌ |
 
 ### Staging Environment (`/macro-ai/staging/`)
 

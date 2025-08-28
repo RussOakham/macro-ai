@@ -28,14 +28,11 @@ export const getEnvConfig = () => {
 		awsCognitoRegion: config.AWS_COGNITO_REGION,
 		awsCognitoUserPoolId: config.AWS_COGNITO_USER_POOL_ID,
 		awsCognitoUserPoolClientId: config.AWS_COGNITO_USER_POOL_CLIENT_ID,
-		awsCognitoUserPoolSecretKey: config.AWS_COGNITO_USER_POOL_SECRET_KEY,
-		awsCognitoAccessKey: config.AWS_COGNITO_ACCESS_KEY,
-		awsCognitoSecretKey: config.AWS_COGNITO_SECRET_KEY,
+		// AWS Cognito credentials removed - using IAM roles instead
 		awsCognitoRefreshTokenExpiry:
 			config.AWS_COGNITO_REFRESH_TOKEN_EXPIRY.toString(),
 		cookieDomain: config.COOKIE_DOMAIN,
 		cookieEncryptionKey: config.COOKIE_ENCRYPTION_KEY,
-		nonRelationalDatabaseUrl: config.NON_RELATIONAL_DATABASE_URL,
 		relationalDatabaseUrl: config.RELATIONAL_DATABASE_URL,
 		openaiApiKey: config.OPENAI_API_KEY,
 		rateLimitWindowMs: config.RATE_LIMIT_WINDOW_MS.toString(),
@@ -44,7 +41,7 @@ export const getEnvConfig = () => {
 		authRateLimitMaxRequests: config.AUTH_RATE_LIMIT_MAX_REQUESTS.toString(),
 		apiRateLimitWindowMs: config.API_RATE_LIMIT_WINDOW_MS.toString(),
 		apiRateLimitMaxRequests: config.API_RATE_LIMIT_MAX_REQUESTS.toString(),
-		redisUrl: config.REDIS_URL ?? 'redis://localhost:6379',
+		redisUrl: config.REDIS_URL,
 	}
 }
 

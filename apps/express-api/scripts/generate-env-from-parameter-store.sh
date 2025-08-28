@@ -3,12 +3,18 @@ set -e
 
 # Generate environment file from AWS Parameter Store for Docker builds
 # This script is used during the CDK deployment to inject environment variables
+# 
+# Note: The application now automatically determines the parameter store prefix from APP_ENV:
+# - pr-* environments → /macro-ai/development/
+# - development → /macro-ai/development/
+# - staging → /macro-ai/staging/
+# - production → /macro-ai/production/
 
 echo "[INFO] Generating environment file from Parameter Store..."
 
 # Check required environment variables
-if [ -z "$PARAMETER_STORE_PREFIX" ]; then
-    echo "[ERROR] PARAMETER_STORE_PREFIX environment variable is required"
+if [ -z "$APP_ENV" ]; then
+    echo "[ERROR] APP_ENV environment variable is required"
     exit 1
 fi
 
@@ -20,10 +26,28 @@ fi
 # Output file
 ENV_FILE="${ENV_FILE:-/tmp/.env}"
 
-echo "[INFO] Fetching parameters from Parameter Store with prefix: $PARAMETER_STORE_PREFIX"
+# Determine parameter store prefix based on APP_ENV
+# This matches the logic in the application's getParameterStorePrefix function
+# Note: This is a local variable for build-time parameter fetching, not the old environment variable
+if [[ "$APP_ENV" == pr-* ]]; then
+    # Preview environments (pr-123) use development parameters
+    PARAMETER_STORE_PREFIX="/macro-ai/development"
+elif [[ "$APP_ENV" == "development" ]]; then
+    PARAMETER_STORE_PREFIX="/macro-ai/development"
+elif [[ "$APP_ENV" == "staging" ]]; then
+    PARAMETER_STORE_PREFIX="/macro-ai/staging"
+elif [[ "$APP_ENV" == "production" ]]; then
+    PARAMETER_STORE_PREFIX="/macro-ai/production"
+else
+    # Default to development for unknown environments
+    PARAMETER_STORE_PREFIX="/macro-ai/development"
+fi
+
+echo "[INFO] App Environment: $APP_ENV"
+echo "[INFO] Using Parameter Store prefix: $PARAMETER_STORE_PREFIX"
 echo "[INFO] Output file: $ENV_FILE"
 
-# Fetch all parameters with the given prefix
+# Fetch all parameters with the determined prefix
 # Priority order: GitHub Secrets > Parameter Store > Build Defaults
 aws ssm get-parameters-by-path \
     --path "$PARAMETER_STORE_PREFIX" \
@@ -37,26 +61,15 @@ aws ssm get-parameters-by-path \
 
 # Add GitHub secrets and real values (highest priority)
 # These come from the workflow and override any Parameter Store defaults
-# Dynamically set APP_ENV based on branch context
-if [[ "$GITHUB_REF" == "refs/pull/"* ]]; then
-    # PR branch - extract PR number and format as pr-{number}
-    PR_NUMBER=$(echo "$GITHUB_REF" | grep -o '[0-9]\+' | head -1)
-    if [ -n "$PR_NUMBER" ]; then
-        echo "APP_ENV=pr-$PR_NUMBER" >> "$ENV_FILE"
-    else
-        echo "APP_ENV=pr-unknown" >> "$ENV_FILE"  # Fallback
-    fi
-elif [[ "$GITHUB_REF" == "refs/heads/develop" ]]; then
-    # Develop branch - use staging
-    echo "APP_ENV=staging" >> "$ENV_FILE"
-elif [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
-    # Main branch - use production
-    echo "APP_ENV=production" >> "$ENV_FILE"
+echo "APP_ENV=$APP_ENV" >> "$ENV_FILE"
+if [ -n "$API_KEY" ]; then 
+    echo "API_KEY=$API_KEY" >> "$ENV_FILE"
+    echo "[INFO] API_KEY added from GitHub secrets"
 else
-    # Other branches (feature branches) - use development
-    echo "APP_ENV=development" >> "$ENV_FILE"
+    echo "[ERROR] API_KEY is required but not provided in GitHub secrets"
+    echo "[ERROR] Please add API_KEY to your GitHub repository secrets"
+    exit 1
 fi
-if [ -n "$API_KEY" ]; then echo "API_KEY=$API_KEY" >> "$ENV_FILE"; fi
 if [ -n "$OPENAI_API_KEY" ]; then echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> "$ENV_FILE"; fi
 if [ -n "$AWS_ACCOUNT_ID" ]; then echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> "$ENV_FILE"; fi
 if [ -n "$AWS_REGION" ]; then echo "AWS_REGION=$AWS_REGION" >> "$ENV_FILE"; fi
@@ -76,12 +89,10 @@ echo "NODE_ENV=production" >> "$ENV_FILE"
 echo "AWS_COGNITO_REGION=us-east-1" >> "$ENV_FILE"
 echo "AWS_COGNITO_USER_POOL_ID=build-time-default" >> "$ENV_FILE"
 echo "AWS_COGNITO_USER_POOL_CLIENT_ID=build-time-default" >> "$ENV_FILE"
-echo "AWS_COGNITO_USER_POOL_SECRET_KEY=build-time-default" >> "$ENV_FILE"
-echo "AWS_COGNITO_ACCESS_KEY=build-time-default" >> "$ENV_FILE"
-echo "AWS_COGNITO_SECRET_KEY=build-time-default" >> "$ENV_FILE"
+# AWS Cognito credentials removed - using IAM roles instead
 echo "COOKIE_ENCRYPTION_KEY=build-time-default-key-for-docker-build" >> "$ENV_FILE"
 echo "RELATIONAL_DATABASE_URL=postgresql://build:build@localhost:5432/build" >> "$ENV_FILE"
-echo "NON_RELATIONAL_DATABASE_URL=mongodb://build:build@localhost:27017/build" >> "$ENV_FILE"
+echo "REDIS_URL=redis://localhost:6379" >> "$ENV_FILE"
 
 # Validate that we got some parameters
 if [ ! -s "$ENV_FILE" ]; then

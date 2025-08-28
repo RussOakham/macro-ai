@@ -119,10 +119,9 @@ systemctl status macro-ai.service
 
 ### Environment Variables
 
-- `PARAMETER_STORE_PREFIX`: AWS Parameter Store prefix for configuration
+- `APP_ENV`: Application environment (determines parameter store prefix automatically)
 - `NODE_ENV`: Runtime environment (production)
 - `PORT`: Application port (3030)
-- `APP_ENV`: Application environment
 - `PR_NUMBER`: PR number for preview environments (optional)
 
 ### Parameter Store Integration
@@ -238,7 +237,7 @@ tail -f /var/log/user-data.log
 ls -la /opt/macro-ai/
 
 # Check environment variables
-sudo -u macroai env | grep PARAMETER_STORE_PREFIX
+sudo -u macroai env | grep APP_ENV
 ```
 
 ### Log Analysis

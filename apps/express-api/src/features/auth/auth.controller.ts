@@ -39,7 +39,7 @@ import {
 } from './auth.types.ts'
 const { logger } = pino
 
-import { assertConfig } from '../../config/simple-config.js'
+import { assertConfig } from '../../config/simple-config.ts'
 
 // Load configuration once at module level (no logging)
 const config = assertConfig(false)

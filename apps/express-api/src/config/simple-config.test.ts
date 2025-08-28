@@ -9,7 +9,7 @@ import { join } from 'path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Import the functions we're testing
-import { assertConfig, getConfig, loadConfig } from './simple-config.js'
+import { assertConfig, getConfig, loadConfig } from './simple-config.ts'
 
 describe.skip('Simple Configuration System', () => {
 	const originalEnv = process.env
@@ -25,12 +25,11 @@ describe.skip('Simple Configuration System', () => {
 		AWS_COGNITO_USER_POOL_ID: 'test-pool-id',
 		AWS_COGNITO_USER_POOL_CLIENT_ID: 'test-client-id',
 		AWS_COGNITO_USER_POOL_SECRET_KEY: 'test-pool-secret-key-32-chars-long',
-		AWS_COGNITO_ACCESS_KEY: 'test-access-key',
-		AWS_COGNITO_SECRET_KEY: 'test-secret-key',
+		// AWS Cognito credentials removed - using IAM roles instead
 		AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30',
 		OPENAI_API_KEY: 'test-openai-key',
 		RELATIONAL_DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
-		NON_RELATIONAL_DATABASE_URL: 'redis://localhost:6379',
+		REDIS_URL: 'redis://localhost:6379',
 		COOKIE_ENCRYPTION_KEY: 'test-cookie-encryption-key-32-chars',
 		COOKIE_DOMAIN: 'localhost',
 	}

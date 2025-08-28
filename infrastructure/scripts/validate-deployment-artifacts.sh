@@ -454,7 +454,7 @@ test_deployment_environment() {
         "NODE_ENV"
         "SERVER_PORT"
         "APP_ENV"
-        "PARAMETER_STORE_PREFIX"
+        # Note: PARAMETER_STORE_PREFIX is no longer needed - the application determines it from APP_ENV
     )
 
     local vars_found=0
@@ -469,9 +469,9 @@ test_deployment_environment() {
     done
 
     if [[ $vars_found -ge 3 ]]; then
-        record_test_result "Deployment Environment Variables" "PASS" "$vars_found/4 variables found"
+        record_test_result "Deployment Environment Variables" "PASS" "$vars_found/3 variables found"
     else
-        record_test_result "Deployment Environment Variables" "FAIL" "Only $vars_found/4 variables found"
+        record_test_result "Deployment Environment Variables" "FAIL" "Only $vars_found/3 variables found"
     fi
 
     # Check .env file

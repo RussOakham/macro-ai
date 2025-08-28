@@ -1,11 +1,9 @@
 import * as cdk from 'aws-cdk-lib'
 import type { Construct } from 'constructs'
 
-import { AutoShutdownConstruct } from '../constructs/auto-shutdown-construct.js'
-import { CostMonitoringConstruct } from '../constructs/cost-monitoring-construct.js'
 import { EcsFargateConstruct } from '../constructs/ecs-fargate-construct.js'
+import { EcsLoadBalancerConstruct } from '../constructs/ecs-load-balancer-construct.js'
 import { EnvironmentConfigConstruct } from '../constructs/environment-config-construct.js'
-import { MonitoringConstruct } from '../constructs/monitoring-construct.js'
 import { NetworkingConstruct } from '../constructs/networking.js'
 import { ParameterStoreConstruct } from '../constructs/parameter-store-construct.js'
 // Note: TaggingStrategy imports removed to avoid tag conflicts with constructs
@@ -33,30 +31,20 @@ export interface MacroAiPreviewStackProps extends cdk.StackProps {
 	readonly scale?: string
 
 	/**
-	 * Email addresses for cost alert notifications
-	 * Can be overridden via CDK context 'costAlertEmails'
-	 */
-	readonly costAlertEmails?: string[]
-
-	/**
 	 * Custom domain configuration for HTTPS endpoints
 	 */
 	readonly customDomain?: {
 		readonly domainName: string
 		readonly hostedZoneId: string
+		readonly certificateArn?: string
+		/**
+		 * API subdomain to use (e.g., 'pr-56-api')
+		 * @default derived from environmentName
+		 */
+		readonly apiSubdomain?: string
 	}
 
-	/**
-	 * Auto-shutdown configuration for cost optimization
-	 * @default enabled with standard business hours
-	 */
-	readonly autoShutdown?: {
-		readonly enabled: boolean
-		readonly shutdownSchedule?: string // UTC cron
-		readonly startupSchedule?: string // UTC cron
-		readonly enableWeekendShutdown?: boolean
-		readonly displayTimeZone?: string
-	}
+	// Complex features removed - focus on core ECS functionality
 }
 
 /**
@@ -76,26 +64,17 @@ export class MacroAiPreviewStack extends cdk.Stack {
 	public readonly parameterStore: ParameterStoreConstruct
 	public readonly environmentConfig: EnvironmentConfigConstruct
 	public readonly ecsService: EcsFargateConstruct
-	public readonly monitoring: MonitoringConstruct
-	public readonly costMonitoring: CostMonitoringConstruct
-	public readonly autoShutdown?: AutoShutdownConstruct
+	public readonly loadBalancer: EcsLoadBalancerConstruct
 	public readonly prNumber: number
-	private readonly customDomain?: {
-		readonly domainName: string
-		readonly hostedZoneId: string
-	}
+	public readonly environmentName: string
+	public readonly customDomain?: MacroAiPreviewStackProps['customDomain']
 
 	constructor(scope: Construct, id: string, props: MacroAiPreviewStackProps) {
 		super(scope, id, props)
 
-		const {
-			environmentName,
-			prNumber,
-			branchName,
-			customDomain,
-			autoShutdown,
-		} = props
+		const { environmentName, prNumber, branchName, customDomain } = props
 		this.prNumber = prNumber
+		this.environmentName = environmentName
 		this.customDomain = customDomain
 
 		// Note: Base-level tags (Project, Environment, EnvironmentType, Component, Purpose, CreatedBy, ManagedBy, PRNumber, Branch, ExpiryDate, Scale, AutoShutdown)
@@ -107,12 +86,13 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			environmentName,
 		})
 
-		// Create Environment Config construct that fetches Parameter Store values at synthesis time
+		// Create Environment Config construct for Parameter Store integration
 		this.environmentConfig = new EnvironmentConfigConstruct(
 			this,
 			'EnvironmentConfig',
 			{
 				environmentName,
+				parameterPrefix: this.parameterStore.parameterPrefix,
 				isPreviewEnvironment: true,
 			},
 		)
@@ -127,14 +107,12 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			enableFlowLogs: false, // Cost optimization for preview
 			maxAzs: 2, // Minimum for ALB
 			enableDetailedMonitoring: false, // Cost optimization
-			parameterStorePrefix: this.parameterStore.parameterPrefix,
+			// enableEc2 removed - ECS Fargate only
 			deploymentId,
 			enableNatGateway: false, // Cost optimization: eliminate NAT Gateway (~$2.76/month savings)
 			enableVpcEndpoints: false, // Cost optimization: remove VPC endpoints for preview environments
 			exportPrefix: this.stackName, // Use stack name to ensure unique exports per PR
-			customDomain, // Pass custom domain configuration for HTTPS setup
 			branchName,
-			customDomainName: customDomain?.domainName,
 		})
 
 		// Validate networking requirements
@@ -144,14 +122,14 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		const imageUri = this.node.tryGetContext('imageUri') as string | undefined
 		const imageTag = imageUri ? 'context-provided' : 'latest'
 
+		console.log('🔍 Preview Stack: About to create ECS Fargate service...')
+
 		// Create ECS Fargate service for containerized deployment
 		this.ecsService = new EcsFargateConstruct(this, 'EcsService', {
 			vpc: this.networking.vpc,
-			securityGroup: this.networking.albSecurityGroup,
+			securityGroup: this.networking.ecsServiceSecurityGroup,
 			environmentName,
 			branchName,
-			customDomainName: customDomain?.domainName,
-			parameterStorePrefix: this.parameterStore.parameterPrefix,
 			enableDetailedMonitoring: false, // Cost optimization for preview
 			taskDefinition: {
 				cpu: 256, // Cost-optimized for preview (t3.nano equivalent)
@@ -172,41 +150,52 @@ export class MacroAiPreviewStack extends cdk.Stack {
 				healthyThresholdCount: 2,
 				unhealthyThresholdCount: 3,
 			},
+			environmentConfig: this.environmentConfig,
+			// Pass custom domain name for CORS configuration
+			customDomainName: props.customDomain?.apiSubdomain
+				? `${props.customDomain.apiSubdomain}.${props.customDomain.domainName}`
+				: undefined,
 		})
 
-		// Create monitoring infrastructure
-		this.monitoring = new MonitoringConstruct(this, 'Monitoring', {
+		// Certificate creation removed - focus on core ECS functionality
+
+		// Create Application Load Balancer for public access to ECS service
+		this.loadBalancer = new EcsLoadBalancerConstruct(this, 'LoadBalancer', {
+			vpc: this.networking.vpc,
+			ecsService: this.ecsService.service,
 			environmentName,
-			applicationName: 'macro-ai',
-			prNumber,
-			customMetricNamespace: `MacroAI/Preview/${environmentName}`,
+			containerPort: 3040,
+			healthCheck: {
+				path: '/api/health',
+				interval: cdk.Duration.seconds(30),
+				timeout: cdk.Duration.seconds(5),
+				healthyThresholdCount: 2,
+				unhealthyThresholdCount: 3,
+			},
+			securityGroup: this.networking.albSecurityGroup,
+			enableAccessLogs: false,
+			deletionProtection: false,
+			environmentConfig: this.environmentConfig,
+			customDomain: props.customDomain
+				? {
+						domainName: props.customDomain.domainName,
+						hostedZoneId: props.customDomain.hostedZoneId,
+						certificateArn: props.customDomain.certificateArn,
+						apiSubdomain:
+							props.customDomain.apiSubdomain ?? `${environmentName}-api`,
+						createFrontendSubdomain: false,
+					}
+				: undefined,
 		})
 
-		// Create cost monitoring with alerts
-		this.costMonitoring = new CostMonitoringConstruct(this, 'CostMonitoring', {
-			environmentName,
-			alertEmails: this.resolveCostAlertEmails(props),
-			// Cost thresholds for preview environments (lower than production)
-			monthlyBudgetLimit: 50, // $50/month budget for preview environments
-			alertThresholds: [50, 80, 95], // Alert at 50%, 80%, 95% of budget
-		})
+		// Monitoring infrastructure removed - focus on core ECS functionality
 
-		// Add auto-shutdown for cost optimization
-		if (autoShutdown?.enabled !== false && this.ecsService.scalableTaskCount) {
-			this.autoShutdown = new AutoShutdownConstruct(this, 'AutoShutdown', {
-				scalableTaskCount: this.ecsService.scalableTaskCount,
-				environmentName,
-				shutdownSchedule: autoShutdown?.shutdownSchedule ?? '0 22 ? * * *', // 10 PM UTC daily - minute hour day-of-month month day-of-week year (using ? for day-of-month since we specify day-of-week)
-				startupSchedule: autoShutdown?.startupSchedule, // Can be undefined for on-demand only
-				startupTaskCount: 1,
-				enableWeekendShutdown: autoShutdown?.enableWeekendShutdown ?? true,
-				displayTimeZone: autoShutdown?.displayTimeZone ?? 'UTC',
-			})
-		}
+		// Cost monitoring removed - focus on core ECS functionality
+
+		// Auto-shutdown removed - focus on core ECS functionality
 
 		// Create comprehensive outputs
 		this.createOutputs()
-		this.addAutoShutdownOutputs()
 	}
 
 	/**
@@ -245,64 +234,45 @@ export class MacroAiPreviewStack extends cdk.Stack {
 			exportName: `${this.stackName}-EcrRepositoryUri`,
 		})
 
+		// Load balancer outputs
+		new cdk.CfnOutput(this, 'LoadBalancerDnsName', {
+			value: this.loadBalancer.loadBalancer.loadBalancerDnsName,
+			description: 'Application Load Balancer DNS name',
+			exportName: `${this.stackName}-LoadBalancerDnsName`,
+		})
+
+		new cdk.CfnOutput(this, 'LoadBalancerUrl', {
+			value: `http://${this.loadBalancer.loadBalancer.loadBalancerDnsName}`,
+			description: 'Application Load Balancer URL',
+			exportName: `${this.stackName}-LoadBalancerUrl`,
+		})
+
+		// Custom domain outputs
+		if (this.customDomain) {
+			const apiSubdomain =
+				this.customDomain.apiSubdomain ?? `${this.environmentName}-api`
+			const fullDomain = `${apiSubdomain}.${this.customDomain.domainName}`
+
+			new cdk.CfnOutput(this, 'CustomDomainUrl', {
+				value: `https://${fullDomain}`,
+				description: 'Custom domain URL with HTTPS',
+				exportName: `${this.stackName}-CustomDomainUrl`,
+			})
+
+			new cdk.CfnOutput(this, 'CustomDomainName', {
+				value: fullDomain,
+				description: 'Custom domain name for the API',
+				exportName: `${this.stackName}-CustomDomainName`,
+			})
+		}
+
+		// Custom domain outputs removed - focus on core ECS functionality
+
 		// Networking outputs are already provided by the NetworkingConstruct
 		// No need to duplicate VpcId and AlbSecurityGroupId exports
 
-		// Monitoring outputs
-		new cdk.CfnOutput(this, 'MonitoringDashboardName', {
-			value: this.monitoring.dashboard.dashboardName,
-			description: 'CloudWatch dashboard name',
-			exportName: `${this.stackName}-MonitoringDashboardName`,
-		})
-
-		// Cost monitoring outputs
-		new cdk.CfnOutput(this, 'CostAlertTopicArn', {
-			value: this.costMonitoring.alertTopic.topicArn,
-			description: 'SNS topic ARN for cost alerts',
-			exportName: `${this.stackName}-CostAlertTopicArn`,
-		})
+		// Monitoring outputs removed - focus on core ECS functionality
 	}
 
-	/**
-	 * Add auto-shutdown outputs to stack outputs
-	 */
-	private addAutoShutdownOutputs(): void {
-		if (this.autoShutdown) {
-			// Create manual control outputs
-			this.autoShutdown.createManualShutdownOutput()
-			this.autoShutdown.createManualStartupOutput()
-
-			// Add informational output about cost savings
-			new cdk.CfnOutput(this, 'AutoShutdownStatus', {
-				value: 'Enabled',
-				description: 'Auto-shutdown status for cost optimization',
-				exportName: `${this.stackName}-AutoShutdownStatus`,
-			})
-		} else {
-			new cdk.CfnOutput(this, 'AutoShutdownStatus', {
-				value: 'Disabled',
-				description: 'Auto-shutdown status for cost optimization',
-				exportName: `${this.stackName}-AutoShutdownStatus`,
-			})
-		}
-	}
-
-	/**
-	 * Resolve cost alert email addresses from props and CDK context
-	 * Supports configuration via props.costAlertEmails or context "costAlertEmails"
-	 */
-	private resolveCostAlertEmails(props: MacroAiPreviewStackProps): string[] {
-		const fromProps = props.costAlertEmails ?? []
-		// Allow overrides via cdk.json context: { "costAlertEmails": ["ops@example.com"] }
-		const fromContext =
-			(this.node.tryGetContext('costAlertEmails') as string[] | undefined) ?? []
-		const emails = [...fromContext, ...fromProps].filter(Boolean)
-		if (emails.length === 0) {
-			// Prefer failing fast instead of silently configuring no alerts
-			throw new Error(
-				'Cost alert emails not configured. Provide via props.costAlertEmails or context "costAlertEmails".',
-			)
-		}
-		return Array.from(new Set(emails))
-	}
+	// addAutoShutdownOutputs method removed - no longer needed
 }

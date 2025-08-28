@@ -306,9 +306,7 @@ AccessDenied: User is not authorized to perform cognito-idp:AdminCreateUser
 # - cognito-idp:ConfirmForgotPassword
 # - cognito-idp:GlobalSignOut
 
-# Update .env with correct credentials
-AWS_COGNITO_ACCESS_KEY=AKIAXXXXXXXXXXXXXXXX
-AWS_COGNITO_SECRET_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# AWS Cognito credentials removed - using IAM roles instead
 ```
 
 ### OpenAI API Issues

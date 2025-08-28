@@ -205,6 +205,21 @@ jobs:
           role-session-name: github-actions-build-docker-ecs
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Debug AWS credentials
+        run: |
+          echo "🔍 Debugging AWS credentials..."
+          echo "AWS_REGION: ${{ env.AWS_REGION }}"
+          echo "AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION"
+          echo "AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}"
+
+          # Test AWS CLI access
+          echo "Testing AWS CLI access..."
+          aws sts get-caller-identity --no-cli-pager
+
+          # Test Parameter Store access
+          echo "Testing Parameter Store access..."
+          aws ssm describe-parameters --max-items 1 --no-cli-pager || echo "❌ Parameter Store access failed"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -252,11 +267,21 @@ jobs:
           # Create the environment file using our script with GitHub secrets
           chmod +x apps/express-api/scripts/generate-env-from-parameter-store.sh
 
+          # Set APP_ENV for the new programmatic approach
+          # For PR deployments, this should be the PR number (e.g., pr-123)
+          # The script will automatically determine the parameter store prefix:
+          # - pr-* environments → /macro-ai/development/
+          # - development → /macro-ai/development/
+          # - staging → /macro-ai/staging/
+          # - production → /macro-ai/production/
+          APP_ENV="pr-${{ github.event.pull_request.number }}"
+
           # Pass GitHub secrets as environment variables for the script
-          PARAMETER_STORE_PREFIX="${PARAM_PATH}" \
+          # Note: PARAMETER_STORE_PREFIX is no longer needed - the script determines it from APP_ENV
+          # The script will automatically use /macro-ai/development/ for preview environments (pr-*)
           ENV_FILE="${ENV_FILE}" \
           AWS_REGION="${{ env.AWS_REGION }}" \
-          APP_ENV="${{ secrets.APP_ENV }}" \
+          APP_ENV="${APP_ENV}" \
           API_KEY="${{ secrets.API_KEY }}" \
           OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
           AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}" \
@@ -456,6 +481,8 @@ jobs:
           CDK_DEPLOY_ENV: ${{ needs.validate-access.outputs.env-name }}
           CDK_DEPLOY_TYPE: 'ecs-preview'
           CDK_DEPLOY_SCALE: 'preview'
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          CUSTOM_DOMAIN_NAME: ${{ vars.CUSTOM_DOMAIN_NAME }}
         run: |
           ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
@@ -509,22 +536,43 @@ jobs:
           # Deploy the ECS stack
           STACK_NAME="MacroAiPr-${PR_NUMBER}Stack"
 
-          # Parse cost alert emails from comma-separated string to array format
+          # Parse cost alert emails from comma-separated string to individual context values
           # Handle both single email and comma-separated emails with whitespace
           echo "🔍 Parsing cost alert emails from secret..."
 
-          COST_ALERT_EMAILS_ARRAY=$(echo "${{ secrets.COST_ALERT_EMAILS }}" | tr ',' '\n' | awk '{$1=$1};1' | grep -v '^$' | jq -R . | jq -s .)
+          # Check if the secret contains comma-separated values or single email
+          if [[ "${{ secrets.COST_ALERT_EMAILS }}" == *","* ]]; then
+            # Multiple emails - split by comma and clean up
+            COST_ALERT_EMAILS_LIST=$(echo "${{ secrets.COST_ALERT_EMAILS }}" | tr ',' '\n' | awk '{$1=$1};1' | grep -v '^$')
+          else
+            # Single email
+            COST_ALERT_EMAILS_LIST="${{ secrets.COST_ALERT_EMAILS }}"
+          fi
+
+          # Convert to array for CDK context (CDK expects individual context values, not JSON array)
+          COST_ALERT_EMAILS_ARRAY=()
+          while IFS= read -r email; do
+            if [[ -n "$email" ]]; then
+              COST_ALERT_EMAILS_ARRAY+=("$email")
+            fi
+          done <<< "$COST_ALERT_EMAILS_LIST"
 
           # Log only the count of emails for debugging without exposing sensitive data
-          EMAIL_COUNT=$(echo "${COST_ALERT_EMAILS_ARRAY}" | jq 'length')
+          EMAIL_COUNT=${#COST_ALERT_EMAILS_ARRAY[@]}
           echo "📧 Parsed ${EMAIL_COUNT} cost alert email(s)"
+
+          # Build CDK context arguments for cost alert emails
+          CDK_CONTEXT_ARGS=""
+          for email in "${COST_ALERT_EMAILS_ARRAY[@]}"; do
+            CDK_CONTEXT_ARGS="${CDK_CONTEXT_ARGS} --context costAlertEmails=${email}"
+          done
 
           cdk deploy "${STACK_NAME}" \
             --context environmentName="${ENV_NAME}" \
             --context prNumber="${PR_NUMBER}" \
             --context branchName="${{ github.head_ref }}" \
             --context imageUri="${IMAGE_URI}" \
-            --context costAlertEmails="${COST_ALERT_EMAILS_ARRAY}" \
+            ${CDK_CONTEXT_ARGS} \
             --require-approval never \
             --outputs-file cdk-outputs.json
 
@@ -546,32 +594,40 @@ jobs:
         run: |
           API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}"
 
-          if [[ -n "${API_ENDPOINT}" ]]; then
+          # Check if we have a custom domain URL from validate-access
+          CUSTOM_BACKEND_URL="${{ needs.validate-access.outputs.backend-url }}"
+
+          # Use custom domain URL if available and it's HTTPS (custom domain), otherwise fall back to ALB
+          if [[ -n "${CUSTOM_BACKEND_URL}" && "${CUSTOM_BACKEND_URL}" == https://* ]]; then
+            HEALTH_URL="${CUSTOM_BACKEND_URL%/}/health"
+            echo "🔍 Testing custom domain health endpoint: ${HEALTH_URL}"
+          elif [[ -n "${API_ENDPOINT}" ]]; then
             HEALTH_URL="${API_ENDPOINT%/}/health"
-            echo "🔍 Testing health endpoint: ${HEALTH_URL}"
-
-            # Wait a moment for deployment to stabilize
-            sleep 10
-
-            # Test health endpoint with retries
-            for i in {1..3}; do
-              HEALTH_RESPONSE=$(curl -s -w "%{http_code}" "${HEALTH_URL}" 2>/dev/null || echo "000")
-              if [[ "$HEALTH_RESPONSE" == *"200" ]]; then
-                echo "health-status=healthy" >> $GITHUB_OUTPUT
-                echo "✅ Health check passed (attempt $i)"
-                break
-              else
-                echo "⚠️ Health check failed (attempt $i): $HEALTH_RESPONSE"
-                if [[ $i -eq 3 ]]; then
-                  echo "health-status=unhealthy" >> $GITHUB_OUTPUT
-                fi
-                sleep 5
-              fi
-            done
+            echo "🔍 Testing ALB health endpoint: ${HEALTH_URL}"
           else
             echo "health-status=unknown" >> $GITHUB_OUTPUT
             echo "⚠️ Cannot perform health check - no API endpoint"
+            exit 0
           fi
+
+          # Wait a moment for deployment to stabilize
+          sleep 10
+
+          # Test health endpoint with retries
+          for i in {1..3}; do
+            HEALTH_RESPONSE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 --connect-timeout 5 "${HEALTH_URL}" 2>/dev/null || echo "000")
+            if [[ "$HEALTH_RESPONSE" == "200" ]]; then
+              echo "health-status=healthy" >> $GITHUB_OUTPUT
+              echo "✅ Health check passed (attempt $i)"
+              break
+            else
+              echo "⚠️ Health check failed (attempt $i): $HEALTH_RESPONSE"
+              if [[ $i -eq 3 ]]; then
+                echo "health-status=unhealthy" >> $GITHUB_OUTPUT
+              fi
+              sleep 5
+            fi
+          done
 
       - name: Create deployment URLs artifact
         if: always()
@@ -870,11 +926,19 @@ jobs:
       needs.check-frontend-changes.outputs.should-deploy-frontend == 'true'
 
     permissions:
+      id-token: write
       contents: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-BuildFrontend-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3
@@ -904,13 +968,11 @@ jobs:
           AWS_COGNITO_REGION: 'us-east-1'
           AWS_COGNITO_USER_POOL_ID: 'us-east-1_placeholder'
           AWS_COGNITO_USER_POOL_CLIENT_ID: 'placeholder-client-id'
-          AWS_COGNITO_USER_POOL_SECRET_KEY: 'placeholder-secret-key'
-          AWS_COGNITO_ACCESS_KEY: 'placeholder-access-key'
-          AWS_COGNITO_SECRET_KEY: 'placeholder-secret-key'
+          # AWS Cognito credentials removed - using IAM roles instead
           AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30'
           COOKIE_DOMAIN: 'localhost'
           COOKIE_ENCRYPTION_KEY: 'placeholder-cookie-encryption-key-32chars'
-          NON_RELATIONAL_DATABASE_URL: 'redis://localhost:6379'
+          REDIS_URL: 'redis://localhost:6379'
           RELATIONAL_DATABASE_URL: 'postgresql://localhost:5432/placeholder'
           OPENAI_API_KEY: 'sk-placeholder-openai-api-key-for-swagger-generation'
           RATE_LIMIT_WINDOW_MS: '900000'
@@ -919,6 +981,7 @@ jobs:
           AUTH_RATE_LIMIT_MAX_REQUESTS: '10'
           API_RATE_LIMIT_WINDOW_MS: '60000'
           API_RATE_LIMIT_MAX_REQUESTS: '60'
+          COST_ALERT_EMAILS: 'placeholder-cost-alert-emails' # Placeholder for testing
         run: |
           echo "🔧 Generating API client package from OpenAPI specification"
 
@@ -965,6 +1028,7 @@ jobs:
           api-endpoint: ${{ steps.resolve-backend.outputs.final-backend-url }}
           custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
           hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
+          parameter-store-path: '/macro-ai/development/api-key'
           api-key: ${{ secrets.API_KEY }}
           backend-stack-name: ${{ needs.validate-access.outputs.backend-stack-name }}
           resolution-method: 'artifact-based'
@@ -1457,7 +1521,9 @@ jobs:
             ${backendStack ? `- [Backend Stack](https://console.aws.amazon.com/cloudformation/home?region=${{ env.AWS_REGION }}#/stacks/stackinfo?stackId=${backendStack})` : ''}
 
             ---
-            *This preview environment will be automatically cleaned up when the PR is closed/merged.*`;
+            *This preview environment will be automatically cleaned up when the PR is closed/merged.*
+
+            > ⚠️ **Note**: If this is the first deployment with custom domains, there may be a delay before the URLs become accessible due to SSL certificate validation and DNS propagation (typically 5-15 minutes).`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,

@@ -7,6 +7,8 @@ import * as iam from 'aws-cdk-lib/aws-iam'
 import * as logs from 'aws-cdk-lib/aws-logs'
 import { Construct } from 'constructs'
 
+import { EnvironmentConfigConstruct } from './environment-config-construct.js'
+
 export interface EcsFargateConstructProps {
 	/**
 	 * VPC where ECS services will be deployed
@@ -44,11 +46,6 @@ export interface EcsFargateConstructProps {
 	}
 
 	/**
-	 * Parameter Store prefix for configuration
-	 */
-	readonly parameterStorePrefix: string
-
-	/**
 	 * Enable detailed monitoring and logging
 	 * @default false (cost optimization)
 	 */
@@ -84,7 +81,7 @@ export interface EcsFargateConstructProps {
 
 	/**
 	 * Container port for the application
-	 * @default 3000
+	 * @default 3040
 	 */
 	readonly containerPort?: number
 
@@ -98,6 +95,12 @@ export interface EcsFargateConstructProps {
 		readonly healthyThresholdCount: number
 		readonly unhealthyThresholdCount: number
 	}
+
+	/**
+	 * Environment configuration construct for Parameter Store integration
+	 * This provides all environment variables from Parameter Store
+	 */
+	readonly environmentConfig: EnvironmentConfigConstruct
 }
 
 export interface PrEcsServiceProps {
@@ -115,11 +118,6 @@ export interface PrEcsServiceProps {
 	 * Security group for the PR service
 	 */
 	readonly securityGroup: ec2.ISecurityGroup
-
-	/**
-	 * Parameter Store prefix for configuration
-	 */
-	readonly parameterStorePrefix: string
 
 	/**
 	 * Environment name for resource naming
@@ -168,9 +166,12 @@ export class EcsFargateConstruct extends Construct {
 	public readonly taskRole: iam.Role
 	public readonly executionRole: iam.Role
 	public readonly scalableTaskCount?: ecs.ScalableTaskCount
+	public readonly environmentConfig: EnvironmentConfigConstruct
 
 	constructor(scope: Construct, id: string, props: EcsFargateConstructProps) {
 		super(scope, id)
+
+		console.log('🔍 ECS Fargate Construct: Starting construction...')
 
 		const {
 			vpc,
@@ -179,13 +180,12 @@ export class EcsFargateConstruct extends Construct {
 			branchName,
 			customDomainName,
 			taskDefinition: taskConfig = { cpu: 256, memoryLimitMiB: 512 },
-			parameterStorePrefix,
-			enableDetailedMonitoring = false,
+			// Note: parameterStorePrefix is no longer needed - the application determines it from APP_ENV
 			autoScaling: scalingConfig,
 			ecrRepository: providedEcrRepository,
 			imageTag = 'latest',
 			imageUri,
-			containerPort = 3000,
+			containerPort = 3040,
 			healthCheck = {
 				path: '/api/health',
 				interval: cdk.Duration.seconds(30),
@@ -193,7 +193,14 @@ export class EcsFargateConstruct extends Construct {
 				healthyThresholdCount: 2,
 				unhealthyThresholdCount: 3,
 			},
+			environmentConfig,
 		} = props
+
+		// Store environment config for use in task definition
+		this.environmentConfig = environmentConfig
+		console.log(
+			'🔍 ECS Fargate Construct: Environment config stored successfully',
+		)
 
 		// Create or use provided ECR repository
 		this.ecrRepository =
@@ -208,12 +215,14 @@ export class EcsFargateConstruct extends Construct {
 		this.cluster = new ecs.Cluster(this, 'EcsCluster', {
 			vpc,
 			clusterName: `macro-ai-${environmentName}-cluster`,
-			containerInsights: enableDetailedMonitoring,
+			// Note: containerInsightsV2 has complex type requirements, disabling for now
+			// TODO: Re-enable when type issues are resolved
 			enableFargateCapacityProviders: true,
 		})
 
 		// Create IAM roles for ECS tasks
-		this.taskRole = this.createTaskRole(parameterStorePrefix, environmentName)
+		// Note: parameterStorePrefix is no longer needed for the task role since the application determines it from APP_ENV
+		this.taskRole = this.createTaskRole(environmentName)
 		this.executionRole = this.createExecutionRole(environmentName)
 
 		// Create Fargate task definition
@@ -244,14 +253,25 @@ export class EcsFargateConstruct extends Construct {
 				logRetention: logs.RetentionDays.ONE_WEEK, // Cost optimization
 			}),
 			environment: {
+				// Use only non-secure environment variables from Parameter Store
+				...this.environmentConfig.getNonSecureEnvironmentVariables(),
+				// Override with container-specific values
 				NODE_ENV:
 					environmentName === 'production' ? 'production' : 'development',
 				APP_ENV: environmentName,
-				PARAMETER_STORE_PREFIX: parameterStorePrefix,
-				// Other environment variables will be injected via Parameter Store at runtime
+				// Add PR number for CORS configuration
+				...(environmentName.startsWith('pr-') && {
+					PR_NUMBER: environmentName.replace('pr-', ''),
+				}),
+				// Add custom domain for CORS configuration
+				...(customDomainName && {
+					CUSTOM_DOMAIN_NAME: customDomainName,
+				}),
 			},
-			// Note: Parameter Store values will be accessed at runtime via the task role
-			// The application should use the AWS SDK to fetch parameters using the PARAMETER_STORE_PREFIX
+			secrets: {
+				// Use secure parameters as ECS secrets
+				...this.environmentConfig.getSecureParametersAsSecrets(),
+			},
 			healthCheck: {
 				command: [
 					'CMD-SHELL',
@@ -271,11 +291,15 @@ export class EcsFargateConstruct extends Construct {
 			serviceName: `macro-ai-${environmentName}-service`,
 			desiredCount: scalingConfig?.minCapacity ?? 1,
 			securityGroups: [securityGroup],
+			vpcSubnets: {
+				subnetType: ec2.SubnetType.PUBLIC, // Ensure service is in public subnets for internet access
+			},
 			assignPublicIp: true, // Cost optimization: no NAT Gateway needed
 			platformVersion: ecs.FargatePlatformVersion.LATEST,
 			enableExecuteCommand: true, // Enable ECS Exec for debugging
 			circuitBreaker: { rollback: true }, // Auto-rollback on deployment failures
 			healthCheckGracePeriod: cdk.Duration.seconds(60), // Match the task definition's startPeriod
+			minHealthyPercent: 100, // Ensure 100% of desired tasks are running during deployments
 		})
 
 		// Configure auto-scaling if specified
@@ -350,7 +374,7 @@ export class EcsFargateConstruct extends Construct {
 		taskDefinition.addContainer('ExpressApiContainer', {
 			image: ecs.ContainerImage.fromEcrRepository(ecrRepository, imageTag),
 			containerName: 'express-api',
-			portMappings: [{ containerPort: 3000 }],
+			portMappings: [{ containerPort: 3040 }],
 			logging: ecs.LogDrivers.awsLogs({
 				streamPrefix: `macro-ai-${environmentName}-pr-${prNumber}`,
 				logRetention: logs.RetentionDays.THREE_DAYS, // Shorter retention for PRs
@@ -362,7 +386,7 @@ export class EcsFargateConstruct extends Construct {
 			healthCheck: {
 				command: [
 					'CMD-SHELL',
-					'curl -f http://localhost:3000/health || exit 1',
+					'wget --no-verbose --tries=1 --spider http://localhost:3040/api/health || exit 1',
 				],
 				interval: cdk.Duration.seconds(30),
 				timeout: cdk.Duration.seconds(5),
@@ -396,10 +420,7 @@ export class EcsFargateConstruct extends Construct {
 	/**
 	 * Create IAM role for ECS tasks with least-privilege access
 	 */
-	private createTaskRole(
-		parameterStorePrefix: string,
-		environmentName: string,
-	): iam.Role {
+	private createTaskRole(environmentName: string): iam.Role {
 		const role = new iam.Role(this, 'EcsTaskRole', {
 			assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
 			roleName: `macro-ai-${environmentName}-ecs-task-role`,
@@ -408,6 +429,8 @@ export class EcsFargateConstruct extends Construct {
 		})
 
 		// Parameter Store access for runtime configuration
+		// The application automatically determines the parameter store prefix from APP_ENV
+		// Grant access to all parameter store prefixes that might be needed
 		role.addToPolicy(
 			new iam.PolicyStatement({
 				effect: iam.Effect.ALLOW,
@@ -416,7 +439,12 @@ export class EcsFargateConstruct extends Construct {
 					'ssm:GetParameters',
 					'ssm:GetParametersByPath',
 				],
-				resources: [`arn:aws:ssm:*:*:parameter${parameterStorePrefix}/*`],
+				resources: [
+					// Access to all Macro AI parameter store prefixes
+					'arn:aws:ssm:*:*:parameter/macro-ai/development/*',
+					'arn:aws:ssm:*:*:parameter/macro-ai/staging/*',
+					'arn:aws:ssm:*:*:parameter/macro-ai/production/*',
+				],
 			}),
 		)
 
@@ -431,7 +459,9 @@ export class EcsFargateConstruct extends Construct {
 					'logs:DescribeLogStreams',
 				],
 				resources: [
-					`arn:aws:logs:*:*:log-group:/macro-ai/${environmentName}/*`,
+					// Match the actual log group pattern used by ECS: /aws/ecs/macro-ai-${environmentName}
+					`arn:aws:logs:*:*:log-group:/aws/ecs/macro-ai-${environmentName}`,
+					`arn:aws:logs:*:*:log-group:/aws/ecs/macro-ai-${environmentName}:*`,
 				],
 			}),
 		)
@@ -449,6 +479,58 @@ export class EcsFargateConstruct extends Construct {
 				},
 			}),
 		)
+
+		// AWS Cognito access for authentication
+		role.addToPolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: [
+					'cognito-idp:AdminInitiateAuth',
+					'cognito-idp:AdminRespondToAuthChallenge',
+					'cognito-idp:AdminGetUser',
+					'cognito-idp:AdminSetUserPassword',
+					'cognito-idp:AdminCreateUser',
+					'cognito-idp:AdminDeleteUser',
+					'cognito-idp:AdminUpdateUserAttributes',
+					'cognito-idp:AdminGetUserAttributes',
+					'cognito-idp:AdminConfirmSignUp',
+					'cognito-idp:AdminSetUserMFAPreference',
+					'cognito-idp:AdminGetUserMFAPreference',
+					'cognito-idp:AdminListUserAuthEvents',
+					'cognito-idp:AdminListGroupsForUser',
+					'cognito-idp:AdminAddUserToGroup',
+					'cognito-idp:AdminRemoveUserFromGroup',
+					'cognito-idp:AdminListUsers',
+					'cognito-idp:AdminListGroups',
+					'cognito-idp:AdminCreateGroup',
+					'cognito-idp:AdminDeleteGroup',
+					'cognito-idp:AdminUpdateGroupAttributes',
+					'cognito-idp:AdminGetGroup',
+					'cognito-idp:AdminListUsersInGroup',
+					// Add non-admin Cognito actions that the application actually uses
+					'cognito-idp:ListUsers',
+					'cognito-idp:GetUser',
+					'cognito-idp:DescribeUserPool',
+					'cognito-idp:DescribeUserPoolClient',
+				],
+				resources: ['*'], // Cognito resources are regional, so we need broad access
+			}),
+		)
+
+		// Additional AWS service permissions for application functionality
+		role.addToPolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: [
+					'sts:GetCallerIdentity', // For getting current AWS account/region info
+					'iam:GetUser', // For user information
+					'iam:GetRole', // For role information
+				],
+				resources: ['*'],
+			}),
+		)
+
+		// Note: CloudWatch Logs permissions are defined above with proper resource scoping
 
 		return role
 	}
@@ -480,6 +562,20 @@ export class EcsFargateConstruct extends Construct {
 					'ssm:GetParametersByPath',
 				],
 				resources: ['*'], // Needed for task execution
+			}),
+		)
+
+		// KMS permissions for decrypting Parameter Store SecureString values during task execution
+		role.addToPolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: ['kms:Decrypt', 'kms:DescribeKey'],
+				resources: ['*'],
+				conditions: {
+					StringLike: {
+						'kms:ViaService': 'ssm.*.amazonaws.com',
+					},
+				},
 			}),
 		)
 

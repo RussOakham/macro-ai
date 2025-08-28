@@ -41,7 +41,8 @@ export class ParameterStoreConstruct extends Construct {
 
 		if (isPreviewEnvironment) {
 			// Use shared development parameter prefix for all preview environments
-			this.parameterPrefix = 'macro-ai-development-'
+			// Note: No trailing slash to avoid double slashes when joining with tier names
+			this.parameterPrefix = '/macro-ai/development'
 
 			// Skip parameter creation for preview environments (use existing shared parameters)
 			this.parameters = {}
@@ -99,18 +100,9 @@ export class ParameterStoreConstruct extends Construct {
 				isSecure: true,
 				tier: ssm.ParameterTier.ADVANCED,
 			},
-			{
-				name: 'cognito-access-key',
-				description: 'AWS IAM Access Key for Cognito operations',
-				isSecure: true,
-				tier: ssm.ParameterTier.ADVANCED,
-			},
-			{
-				name: 'cognito-secret-key',
-				description: 'AWS IAM Secret Key for Cognito operations',
-				isSecure: true,
-				tier: ssm.ParameterTier.ADVANCED,
-			},
+			// Note: Static IAM credentials removed - use IAM roles instead
+			// cognito-access-key and cognito-secret-key are anti-patterns
+			// that encourage security vulnerabilities
 			{
 				name: 'openai-api-key',
 				description: 'OpenAI API key for AI chat functionality',

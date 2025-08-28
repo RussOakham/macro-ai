@@ -32,13 +32,12 @@ const TEST_CONFIG = {
 		AWS_COGNITO_USER_POOL_ID: 'test-pool-id',
 		AWS_COGNITO_USER_POOL_CLIENT_ID: 'test-client-id',
 		AWS_COGNITO_USER_POOL_SECRET_KEY: 'test-pool-secret-key-32-chars-long',
-		AWS_COGNITO_ACCESS_KEY: 'test-access-key',
-		AWS_COGNITO_SECRET_KEY: 'test-secret-key',
+		// AWS Cognito credentials removed - using IAM roles instead
 		AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30',
 		OPENAI_API_KEY: 'sk-test-openai-key-12345678901234567890123456789012',
 		RELATIONAL_DATABASE_URL:
 			'postgresql://testuser:testpass@localhost:5432/testdb',
-		NON_RELATIONAL_DATABASE_URL: 'redis://localhost:6379',
+		REDIS_URL: 'redis://localhost:6379',
 		COOKIE_ENCRYPTION_KEY: 'test-cookie-encryption-key-32-chars-long-enough',
 		COOKIE_DOMAIN: 'localhost',
 		CORS_ALLOWED_ORIGINS: 'http://localhost:3000,http://localhost:5173',
@@ -202,23 +201,13 @@ describe.skip('Configuration Loading Integration Tests', () => {
 			expect(config.awsCognitoUserPoolClientId).toBe(
 				TEST_CONFIG.validConfig.AWS_COGNITO_USER_POOL_CLIENT_ID,
 			)
-			expect(config.awsCognitoUserPoolSecretKey).toBe(
-				TEST_CONFIG.validConfig.AWS_COGNITO_USER_POOL_SECRET_KEY,
-			)
-			expect(config.awsCognitoAccessKey).toBe(
-				TEST_CONFIG.validConfig.AWS_COGNITO_ACCESS_KEY,
-			)
-			expect(config.awsCognitoSecretKey).toBe(
-				TEST_CONFIG.validConfig.AWS_COGNITO_SECRET_KEY,
-			)
+			// AWS Cognito credentials removed - using IAM roles instead
 			expect(config.awsCognitoRefreshTokenExpiry).toBe(30)
 			expect(config.openaiApiKey).toBe(TEST_CONFIG.validConfig.OPENAI_API_KEY)
 			expect(config.relationalDatabaseUrl).toBe(
 				TEST_CONFIG.validConfig.RELATIONAL_DATABASE_URL,
 			)
-			expect(config.nonRelationalDatabaseUrl).toBe(
-				TEST_CONFIG.validConfig.NON_RELATIONAL_DATABASE_URL,
-			)
+			expect(config.redisUrl).toBe(TEST_CONFIG.validConfig.REDIS_URL)
 			expect(config.cookieEncryptionKey).toBe(
 				TEST_CONFIG.validConfig.COOKIE_ENCRYPTION_KEY,
 			)
@@ -236,13 +225,12 @@ describe.skip('Configuration Loading Integration Tests', () => {
 				AWS_COGNITO_USER_POOL_ID: 'test-pool-id',
 				AWS_COGNITO_USER_POOL_CLIENT_ID: 'test-client-id',
 				AWS_COGNITO_USER_POOL_SECRET_KEY: 'test-pool-secret-key-32-chars-long',
-				AWS_COGNITO_ACCESS_KEY: 'test-access-key',
-				AWS_COGNITO_SECRET_KEY: 'test-secret-key',
+				// AWS Cognito credentials removed - using IAM roles instead
 				AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30',
 				OPENAI_API_KEY: 'sk-test-openai-key-12345678901234567890123456789012',
 				RELATIONAL_DATABASE_URL:
 					'postgresql://testuser:testpass@localhost:5432/testdb',
-				NON_RELATIONAL_DATABASE_URL: 'redis://localhost:6379',
+				REDIS_URL: 'redis://localhost:6379',
 				COOKIE_ENCRYPTION_KEY:
 					'test-cookie-encryption-key-32-chars-long-enough',
 				COOKIE_DOMAIN: 'localhost',

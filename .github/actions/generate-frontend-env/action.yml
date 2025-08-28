@@ -22,8 +22,11 @@ inputs:
     description: 'Route 53 hosted zone ID for custom domain'
     required: false
   api-key:
-    description: 'API authentication key'
-    required: true
+    description: 'API authentication key (can be from Parameter Store or direct input)'
+    required: false
+  parameter-store-path:
+    description: 'Parameter Store path for API key (e.g., /macro-ai/pr-56/api-key)'
+    required: false
   backend-stack-name:
     description: 'Backend CloudFormation stack name'
     required: false
@@ -104,7 +107,36 @@ runs:
         # Set up environment variables for the injection script
         export ENVIRONMENT_NAME="${{ inputs.environment }}"
         export BUILD_MODE="${{ inputs.build-mode }}"
-        export VITE_API_KEY="${{ inputs.api-key }}"
+
+        # Handle API key - priority: Parameter Store > direct input
+        if [[ -n "${{ inputs.parameter-store-path }}" ]]; then
+          echo "🔐 Fetching API key from Parameter Store: ${{ inputs.parameter-store-path }}"
+          if VITE_API_KEY=$(aws ssm get-parameter \
+            --name "${{ inputs.parameter-store-path }}" \
+            --with-decryption \
+            --query 'Parameter.Value' \
+            --output text \
+            --region "${AWS_REGION:-us-east-1}" 2>/dev/null); then
+            export VITE_API_KEY
+            echo "✅ Successfully fetched API key from Parameter Store"
+          else
+            echo "❌ Failed to fetch API key from Parameter Store: ${{ inputs.parameter-store-path }}"
+            echo "⚠️ Falling back to direct input if provided"
+            if [[ -n "${{ inputs.api-key }}" ]]; then
+              export VITE_API_KEY="${{ inputs.api-key }}"
+              echo "✅ Using fallback API key from direct input"
+            else
+              echo "❌ No API key available from Parameter Store or direct input"
+              exit 1
+            fi
+          fi
+        elif [[ -n "${{ inputs.api-key }}" ]]; then
+          export VITE_API_KEY="${{ inputs.api-key }}"
+          echo "🔑 Using API key from direct input"
+        else
+          echo "❌ No API key provided via Parameter Store path or direct input"
+          exit 1
+        fi
 
         # Set PR number if provided
         if [[ -n "${{ inputs.pr-number }}" ]]; then

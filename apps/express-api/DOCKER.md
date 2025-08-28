@@ -194,8 +194,6 @@ COOKIE_ENCRYPTION_KEY=your-encryption-key
 AWS_COGNITO_USER_POOL_ID=your-user-pool-id
 AWS_COGNITO_USER_POOL_CLIENT_ID=your-client-id
 AWS_COGNITO_USER_POOL_SECRET_KEY=your-secret-key
-AWS_COGNITO_ACCESS_KEY=your-access-key
-AWS_COGNITO_SECRET_KEY=your-secret-key
 
 # Database
 RELATIONAL_DATABASE_URL=your-database-url

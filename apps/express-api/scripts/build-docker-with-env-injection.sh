@@ -3,6 +3,12 @@ set -e
 
 # Build Docker image with environment variable injection for ECS deployment
 # This script is designed to be run during CDK deployment
+# 
+# Note: The application now automatically determines the parameter store prefix from APP_ENV:
+# - pr-* environments → /macro-ai/development/
+# - development → /macro-ai/development/
+# - staging → /macro-ai/staging/
+# - production → /macro-ai/production/
 
 echo "[INFO] Building Docker image with environment variable injection..."
 
@@ -10,7 +16,7 @@ echo "[INFO] Building Docker image with environment variable injection..."
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 ECR_REGISTRY="${ECR_REGISTRY}"
 REPOSITORY_NAME="${REPOSITORY_NAME:-macro-ai-express-api}"
-PARAMETER_STORE_PREFIX="${PARAMETER_STORE_PREFIX}"
+APP_ENV="${APP_ENV:-development}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 
 # Validate required environment variables
@@ -19,19 +25,19 @@ if [ -z "$ECR_REGISTRY" ]; then
     exit 1
 fi
 
-if [ -z "$PARAMETER_STORE_PREFIX" ]; then
-    echo "[ERROR] PARAMETER_STORE_PREFIX environment variable is required"
+if [ -z "$APP_ENV" ]; then
+    echo "[ERROR] APP_ENV environment variable is required"
     exit 1
 fi
 
 echo "[INFO] Docker image: $ECR_REGISTRY/$REPOSITORY_NAME:$IMAGE_TAG"
-echo "[INFO] Parameter Store prefix: $PARAMETER_STORE_PREFIX"
+echo "[INFO] App Environment: $APP_ENV (parameter store prefix will be determined automatically)"
 
 # Step 1: Generate environment file from Parameter Store
 echo "[INFO] Step 1: Generating environment file..."
 ENV_FILE="/tmp/.env.docker"
 export ENV_FILE="$ENV_FILE"
-export PARAMETER_STORE_PREFIX="$PARAMETER_STORE_PREFIX"
+export APP_ENV="$APP_ENV"
 export AWS_REGION="$AWS_REGION"
 
 # Get the script directory for reliable path resolution

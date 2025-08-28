@@ -193,7 +193,7 @@ describe('createServer', () => {
 				expect.objectContaining({
 					credentials: true,
 					exposedHeaders: ['cache-control'],
-					methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+					methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
 					allowedHeaders: [
 						'Origin',
 						'X-Requested-With',
@@ -201,9 +201,13 @@ describe('createServer', () => {
 						'Accept',
 						'Authorization',
 						'X-API-KEY',
+						'x-api-key',
+						'X-Api-Key',
 						'Cache-Control',
 					],
 					maxAge: 86400,
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+					origin: expect.any(Function),
 				}),
 			)
 			expect(mockApp.use).toHaveBeenCalledWith(mockCorsMiddleware)
@@ -230,7 +234,7 @@ describe('createServer', () => {
 			expect.objectContaining({
 				credentials: true,
 				exposedHeaders: ['cache-control'],
-				methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+				methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
 				allowedHeaders: [
 					'Origin',
 					'X-Requested-With',
@@ -238,9 +242,13 @@ describe('createServer', () => {
 					'Accept',
 					'Authorization',
 					'X-API-KEY',
+					'x-api-key',
+					'X-Api-Key',
 					'Cache-Control',
 				],
 				maxAge: 86400,
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+				origin: expect.any(Function),
 			}),
 		)
 		expect(mockApp.use).toHaveBeenCalledWith(mockCorsMiddleware)
@@ -577,12 +585,12 @@ describe('createServer', () => {
 				(call) => call[0] === errorHandler,
 			)
 
-			// Verify order: logger -> security middleware -> routes -> error handler
+			// Verify order: logger -> security middleware -> api key auth -> routes -> error handler
 			expect(pinoIndex).toBeGreaterThan(-1)
-			expect(apiKeyIndex).toBeGreaterThan(pinoIndex)
-			expect(helmetIndex).toBeGreaterThan(apiKeyIndex)
+			expect(helmetIndex).toBeGreaterThan(pinoIndex)
 			expect(securityIndex).toBeGreaterThan(helmetIndex)
 			expect(rateLimitIndex).toBeGreaterThan(securityIndex)
+			expect(apiKeyIndex).toBeGreaterThan(rateLimitIndex)
 			expect(apiRouterIndex).toBeGreaterThan(rateLimitIndex)
 			expect(swaggerIndex).toBeGreaterThan(rateLimitIndex)
 			expect(errorHandlerIndex).toBeGreaterThan(

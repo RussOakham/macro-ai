@@ -107,15 +107,14 @@ SERVER_PORT=3040
 
 # Database
 RELATIONAL_DATABASE_URL=postgresql://user:pass@localhost:5432/macro_ai_dev
-NON_RELATIONAL_DATABASE_URL=redis://localhost:6379/0
+REDIS_URL=redis://localhost:6379/0
 
 # AWS Cognito
 AWS_COGNITO_REGION=us-east-1
 AWS_COGNITO_USER_POOL_ID=your-pool-id
 AWS_COGNITO_USER_POOL_CLIENT_ID=your-client-id
 AWS_COGNITO_USER_POOL_SECRET_KEY=your-secret-key
-AWS_COGNITO_ACCESS_KEY=your-access-key
-AWS_COGNITO_SECRET_KEY=your-secret-key
+# AWS credentials are no longer required - using IAM roles instead
 
 # OpenAI
 OPENAI_API_KEY=sk-your-openai-api-key

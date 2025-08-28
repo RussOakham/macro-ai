@@ -1,5 +1,7 @@
 import { HttpLogger, Options, pinoHttp } from 'pino-http'
 
+import { config } from './load-config.ts'
+
 const createLogger = (nodeEnv: string): HttpLogger => {
 	const isDevelopment = nodeEnv === 'development'
 
@@ -26,10 +28,22 @@ const createLogger = (nodeEnv: string): HttpLogger => {
 		// Production configuration without pino-pretty
 		pinoOptions = {
 			...baseOptions,
+			level: config.NODE_ENV === 'development' ? 'debug' : 'info',
 			formatters: {
 				level: (label) => ({ level: label }),
 			},
 			timestamp: true,
+			customLogLevel: (req, res, err) => {
+				if (res.statusCode >= 500 || err) return 'error'
+				if (res.statusCode >= 400) return 'warn'
+				return 'info' // or 'silent' to suppress
+			},
+			customSuccessMessage: function (req, res, time) {
+				return `✅ ${req.method ?? ''} ${req.url ?? ''} → ${res.statusCode.toString()} in ${time.toString()}ms`
+			},
+			customErrorMessage: function (req, res, err) {
+				return `❌ ${req.method ?? ''} ${req.url ?? ''} → ${res.statusCode.toString()} (${err.message})`
+			},
 		}
 	}
 

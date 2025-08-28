@@ -3,7 +3,7 @@ import * as cdk from 'aws-cdk-lib'
 
 import 'source-map-support/register.js'
 
-import { MacroAiHobbyStack } from './stacks/macro-ai-hobby-stack.js'
+// Hobby stack removed - preview environments only
 import { MacroAiPreviewStack } from './stacks/macro-ai-preview-stack.js'
 import { TAG_VALUES, TaggingStrategy } from './utils/tagging-strategy.js'
 
@@ -22,28 +22,18 @@ if (!account) {
 
 // Get deployment configuration
 const deploymentEnv = process.env.CDK_DEPLOY_ENV ?? 'development'
-const deploymentScale = process.env.CDK_DEPLOY_SCALE ?? 'hobby'
-const deploymentType = process.env.CDK_DEPLOY_TYPE ?? 'standard'
 
 // Detect ephemeral preview environments
 const isPreviewEnvironment = deploymentEnv.startsWith('pr-')
-const isECSPreview = deploymentType === 'ecs-preview'
-const isEC2Preview = deploymentType === 'ec2-preview'
 const environmentType = isPreviewEnvironment ? 'ephemeral' : 'persistent'
 
 // Create environment-specific stack
 const stackName = `MacroAi${deploymentEnv.charAt(0).toUpperCase() + deploymentEnv.slice(1)}Stack`
 
-// Create stack description based on deployment type
-let stackDescription: string
-if (isEC2Preview) {
-	stackDescription = `Macro AI ${deploymentEnv} Preview Environment - EC2-based architecture (ephemeral)`
-} else if (isECSPreview) {
-	stackDescription = `Macro AI ${deploymentEnv} Preview Environment - ECS Fargate-based architecture (ephemeral)`
-} else {
-	const ephemeralSuffix = isPreviewEnvironment ? ' (ephemeral)' : ''
-	stackDescription = `Macro AI ${deploymentEnv} Environment - ${deploymentScale} scale serverless architecture${ephemeralSuffix}`
-}
+// Create stack description
+const stackDescription = isPreviewEnvironment
+	? `Macro AI ${deploymentEnv} Preview Environment - ECS Fargate-based architecture (ephemeral)`
+	: `Macro AI ${deploymentEnv} Environment - ECS Fargate-based architecture`
 
 // Centralized tag generation using TaggingStrategy
 const tags = isPreviewEnvironment
@@ -53,7 +43,7 @@ const tags = isPreviewEnvironment
 			component: 'preview-environment',
 			purpose: TAG_VALUES.PURPOSES.PREVIEW_ENVIRONMENT,
 			createdBy: 'github-actions',
-			scale: deploymentScale,
+			scale: 'preview',
 			project: 'MacroAI',
 			owner: `${deploymentEnv}-deployment`,
 			monitoringLevel: TAG_VALUES.MONITORING_LEVELS.STANDARD,
@@ -67,39 +57,31 @@ const tags = isPreviewEnvironment
 			component: 'shared-infrastructure',
 			purpose: 'SharedInfrastructure',
 			createdBy: 'github-actions',
-			scale: deploymentScale,
+			scale: 'standard',
 			project: 'MacroAI',
 			owner: `${deploymentEnv}-deployment`,
 		})
 
-// Create the appropriate stack based on deployment type
-if ((isEC2Preview || isECSPreview) && isPreviewEnvironment) {
+// Create the appropriate stack based on environment type
+if (isPreviewEnvironment) {
 	// Extract PR number and branch name for preview environments
 	const prNumber = parseInt(deploymentEnv.replace('pr-', ''), 10)
 	const branchName =
 		process.env.BRANCH_NAME ?? process.env.GITHUB_HEAD_REF ?? 'unknown'
 
-	// Configure custom domain if environment variables are provided
-	const customDomain =
-		process.env.CUSTOM_DOMAIN_NAME && process.env.HOSTED_ZONE_ID
-			? {
-					domainName: process.env.CUSTOM_DOMAIN_NAME, // Should be "macro-ai.russoakham.dev"
-					hostedZoneId: process.env.HOSTED_ZONE_ID,
-				}
-			: undefined
+	// Custom domain configuration for preview environments
+	const customDomain = {
+		domainName: 'macro-ai.russoakham.dev',
+		hostedZoneId: 'Z10081873B648ARROPNER',
+		apiSubdomain: `${deploymentEnv}-api`, // e.g., 'pr-56-api'
+		// Note: certificateArn is optional - if not provided, the load balancer will create one
+	}
 
 	if (isNaN(prNumber)) {
 		throw new Error(`Invalid PR number in environment name: ${deploymentEnv}`)
 	}
 
-	// Parse cost alert emails from environment variable
-	const costAlertEmailsEnv = process.env.COST_ALERT_EMAILS
-	const costAlertEmails = costAlertEmailsEnv
-		? costAlertEmailsEnv
-				.split(',')
-				.map((email) => email.trim())
-				.filter(Boolean)
-		: undefined
+	// Cost alert emails removed - focus on core ECS functionality
 
 	new MacroAiPreviewStack(app, stackName, {
 		env: {
@@ -110,29 +92,16 @@ if ((isEC2Preview || isECSPreview) && isPreviewEnvironment) {
 		environmentName: deploymentEnv,
 		prNumber,
 		branchName,
-		scale: deploymentScale,
-		costAlertEmails,
-		customDomain, // Add custom domain configuration
-		autoShutdown: {
-			enabled: true, // Enable auto-shutdown for preview environments
-			shutdownSchedule: '0 22 ? * * *', // 10 PM UTC daily - minute hour day-of-month month day-of-week year (using ? for day-of-month since we specify day-of-week)
-			startupSchedule: undefined, // No automatic startup - on-demand only
-			enableWeekendShutdown: true, // Shutdown over weekends (no startup anyway)
-			displayTimeZone: 'UTC', // For documentation purposes
-		},
+		scale: 'preview',
+		customDomain,
+		// Complex features removed - focus on core ECS functionality
 		tags,
 	})
 } else {
-	// Use the standard hobby stack for non-preview environments
-	new MacroAiHobbyStack(app, stackName, {
-		env: {
-			account,
-			region,
-		},
-		description: stackDescription,
-		environmentName: deploymentEnv,
-		tags,
-	})
+	// Only preview environments are supported
+	throw new Error(
+		`Only preview environments (pr-*) are supported. Got: ${deploymentEnv}`,
+	)
 }
 
 app.synth()

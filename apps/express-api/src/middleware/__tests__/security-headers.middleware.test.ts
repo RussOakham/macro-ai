@@ -28,12 +28,10 @@ vi.mock('../../utils/load-config.ts', () => ({
 		AWS_COGNITO_USER_POOL_ID: 'test-pool-id',
 		AWS_COGNITO_USER_POOL_CLIENT_ID: 'test-client-id',
 		AWS_COGNITO_USER_POOL_SECRET_KEY: 'test-secret-key',
-		AWS_COGNITO_ACCESS_KEY: 'test-access-key',
-		AWS_COGNITO_SECRET_KEY: 'test-secret-key',
 		AWS_COGNITO_REFRESH_TOKEN_EXPIRY: 30,
 		COOKIE_DOMAIN: 'localhost',
 		COOKIE_ENCRYPTION_KEY: 'test-encryption-key-at-least-32-chars-long',
-		NON_RELATIONAL_DATABASE_URL: 'test-url',
+		REDIS_URL: 'redis://localhost:6379',
 		RELATIONAL_DATABASE_URL: 'test-url',
 		OPENAI_API_KEY: 'sk-test-key',
 		RATE_LIMIT_WINDOW_MS: 60000,
@@ -42,7 +40,6 @@ vi.mock('../../utils/load-config.ts', () => ({
 		AUTH_RATE_LIMIT_MAX_REQUESTS: 5,
 		API_RATE_LIMIT_WINDOW_MS: 60000,
 		API_RATE_LIMIT_MAX_REQUESTS: 1000,
-		REDIS_URL: 'redis://localhost:6379',
 	},
 }))
 
