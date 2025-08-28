@@ -114,7 +114,7 @@ export class EnvironmentConfigConstruct extends Construct {
 		},
 		{
 			paramKey: 'non-relational-database-url',
-			envVar: 'NON_RELATIONAL_DATABASE_URL',
+			envVar: 'REDIS_URL',
 			isSecure: true,
 		},
 

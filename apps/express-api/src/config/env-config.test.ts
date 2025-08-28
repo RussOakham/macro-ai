@@ -29,7 +29,7 @@ describe('Enhanced Environment Configuration System', () => {
 		OPENAI_API_KEY: 'sk-test-fake-openai-key-for-testing-only',
 		RELATIONAL_DATABASE_URL:
 			'postgresql://testuser:testpass@localhost:5432/testdb',
-		NON_RELATIONAL_DATABASE_URL: 'redis://localhost:6379',
+		REDIS_URL: 'redis://localhost:6379',
 		COOKIE_ENCRYPTION_KEY: 'test-cookie-encryption-key-32-chars-long-enough',
 		COOKIE_DOMAIN: 'localhost',
 		CORS_ALLOWED_ORIGINS: 'http://localhost:3000,http://localhost:5173',
@@ -39,7 +39,6 @@ describe('Enhanced Environment Configuration System', () => {
 		AUTH_RATE_LIMIT_MAX_REQUESTS: '5',
 		API_RATE_LIMIT_WINDOW_MS: '60000',
 		API_RATE_LIMIT_MAX_REQUESTS: '1000',
-		REDIS_URL: 'redis://localhost:6379',
 	}
 
 	beforeEach(() => {

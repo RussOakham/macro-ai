@@ -115,7 +115,7 @@ jobs:
           COOKIE_DOMAIN=$(fetch_param "cookie-domain")
           COOKIE_ENCRYPTION_KEY=$(fetch_param "cookie-encryption-key")
 
-          NON_RELATIONAL_DATABASE_URL=$(fetch_param "non-relational-database-url")
+          REDIS_URL=$(fetch_param "redis-url")
           RELATIONAL_DATABASE_URL=$(fetch_param "relational-database-url")
 
           OPENAI_API_KEY=$(fetch_param "openai-api-key")
@@ -126,13 +126,12 @@ jobs:
           AUTH_RATE_LIMIT_MAX_REQUESTS=$(fetch_param "auth-rate-limit-max-requests")
           API_RATE_LIMIT_WINDOW_MS=$(fetch_param "api-rate-limit-window-ms")
           API_RATE_LIMIT_MAX_REQUESTS=$(fetch_param "api-rate-limit-max-requests")
-          REDIS_URL=$(fetch_param "redis-url")
 
           # Verify all required parameters were fetched...
           echo "🔍 Verifying all required parameters were fetched..."
           required_params=(
             "AWS_COGNITO_REGION" "AWS_COGNITO_USER_POOL_ID" "AWS_COGNITO_USER_POOL_CLIENT_ID"
-            "AWS_COGNITO_USER_POOL_SECRET_KEY" "COOKIE_ENCRYPTION_KEY" "RELATIONAL_DATABASE_URL" "NON_RELATIONAL_DATABASE_URL"
+            		"AWS_COGNITO_USER_POOL_SECRET_KEY" "COOKIE_ENCRYPTION_KEY" "RELATIONAL_DATABASE_URL" "REDIS_URL"
             "OPENAI_API_KEY"
           )
 
@@ -177,7 +176,7 @@ jobs:
           COOKIE_ENCRYPTION_KEY=${COOKIE_ENCRYPTION_KEY}
 
           # Databases
-          NON_RELATIONAL_DATABASE_URL=${NON_RELATIONAL_DATABASE_URL}
+          REDIS_URL=${REDIS_URL}
           RELATIONAL_DATABASE_URL=${RELATIONAL_DATABASE_URL}
 
           # OpenAI
@@ -274,7 +273,7 @@ jobs:
           COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
 
           # Databases
-          NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
 
           # OpenAI
@@ -287,7 +286,6 @@ jobs:
           AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
           API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
           API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
-          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
 
   lint:
     needs: setup
@@ -347,14 +345,14 @@ jobs:
           AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
           AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
           # AWS Cognito credentials removed - using IAM roles instead
-          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_USER_POOL_REFRESH_TOKEN_EXPIRY || '30' }}
 
           # Cookie Configuration
           COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
           COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
 
           # Databases
-          NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
 
           # OpenAI
@@ -367,7 +365,6 @@ jobs:
           AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
           API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
           API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
-          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
       - name: Run lint
         run: |
           echo "🔍 Starting lint checks..."
@@ -436,7 +433,7 @@ jobs:
           COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
 
           # Databases
-          NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
 
           # OpenAI
@@ -449,7 +446,6 @@ jobs:
           AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
           API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
           API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
-          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4

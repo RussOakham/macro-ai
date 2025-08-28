@@ -58,43 +58,75 @@ chown -R macroai:macroai /opt/macro-ai /var/log/macro-ai || error_exit "Failed t
 
 # Set environment variables including CORS configuration
 echo "=== SETTING ENVIRONMENT VARIABLES ===" >> /var/log/user-data.log
-# Note: PARAMETER_STORE_PREFIX is no longer needed - the application determines it from APP_ENV
-echo "NODE_ENV=production" >> /etc/environment
-echo "Setting NODE_ENV=production" >> /var/log/user-data.log
-echo "SERVER_PORT=3040" >> /etc/environment
-echo "Setting SERVER_PORT=3040" >> /var/log/user-data.log
-echo "APP_ENV=pr-51" >> /etc/environment
-echo "Setting APP_ENV=pr-51" >> /var/log/user-data.log
-echo "PR_NUMBER=51" >> /etc/environment
-echo "Setting PR_NUMBER=51" >> /var/log/user-data.log
-echo "BRANCH_NAME=feature/custom-domain-implementation" >> /etc/environment
-echo "Setting BRANCH_NAME=feature/custom-domain-implementation" >> /var/log/user-data.log
-echo "CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000,https://pr-51.macro-ai.russoakham.dev" >> /etc/environment
-echo "Setting CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000,https://pr-51.macro-ai.russoakham.dev" >> /var/log/user-data.log
-echo "CUSTOM_DOMAIN_NAME=macro-ai.russoakham.dev" >> /etc/environment
-echo "Setting CUSTOM_DOMAIN_NAME=macro-ai.russoakham.dev" >> /var/log/user-data.log
+
+# Set variables in current shell first, then write to /etc/environment
+NODE_ENV="production"
+SERVER_PORT="3040"
+APP_ENV="pr-51"
+PR_NUMBER="51"
+BRANCH_NAME="feature/custom-domain-implementation"
+CORS_ALLOWED_ORIGINS="http://localhost:5173,http://localhost:3000,https://pr-51.macro-ai.russoakham.dev"
+CUSTOM_DOMAIN_NAME="macro-ai.russoakham.dev"
+DEPLOYMENT_BUCKET="macro-ai-deployment-artifacts-861909001362"
+DEPLOYMENT_KEY="express-api/pr-51/express-api-deployment.tar.gz"
+DEPLOYMENT_VERSION=$(date +%Y%m%d-%H%M%S)
+
+# Compute parameter store prefix from APP_ENV (matches application logic)
+if [[ "$APP_ENV" == pr-* ]]; then
+    # Preview environments (pr-123) use development parameters
+    PARAMETER_STORE_PREFIX="/macro-ai/development"
+elif [[ "$APP_ENV" == "development" ]]; then
+    PARAMETER_STORE_PREFIX="/macro-ai/development"
+elif [[ "$APP_ENV" == "staging" ]]; then
+    PARAMETER_STORE_PREFIX="/macro-ai/staging"
+elif [[ "$APP_ENV" == "production" ]]; then
+    PARAMETER_STORE_PREFIX="/macro-ai/production"
+else
+    # Default to development for unknown environments
+    PARAMETER_STORE_PREFIX="/macro-ai/development"
+fi
+
+# Write all variables to /etc/environment for persistence
+echo "NODE_ENV=${NODE_ENV}" >> /etc/environment
+echo "Setting NODE_ENV=${NODE_ENV}" >> /var/log/user-data.log
+echo "SERVER_PORT=${SERVER_PORT}" >> /etc/environment
+echo "Setting SERVER_PORT=${SERVER_PORT}" >> /var/log/user-data.log
+echo "APP_ENV=${APP_ENV}" >> /etc/environment
+echo "Setting APP_ENV=${APP_ENV}" >> /var/log/user-data.log
+echo "PR_NUMBER=${PR_NUMBER}" >> /etc/environment
+echo "Setting PR_NUMBER=${PR_NUMBER}" >> /var/log/user-data.log
+echo "BRANCH_NAME=${BRANCH_NAME}" >> /etc/environment
+echo "Setting BRANCH_NAME=${BRANCH_NAME}" >> /var/log/user-data.log
+echo "CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}" >> /etc/environment
+echo "Setting CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}" >> /var/log/user-data.log
+echo "CUSTOM_DOMAIN_NAME=${CUSTOM_DOMAIN_NAME}" >> /etc/environment
+echo "Setting CUSTOM_DOMAIN_NAME=${CUSTOM_DOMAIN_NAME}" >> /var/log/user-data.log
+echo "PARAMETER_STORE_PREFIX=${PARAMETER_STORE_PREFIX}" >> /etc/environment
+echo "Setting PARAMETER_STORE_PREFIX=${PARAMETER_STORE_PREFIX}" >> /var/log/user-data.log
+echo "Computed parameter store prefix: ${PARAMETER_STORE_PREFIX} for APP_ENV: ${APP_ENV}" >> /var/log/user-data.log
 echo "=== DEPLOYMENT ARTIFACT CONFIGURATION ===" >> /var/log/user-data.log
-echo "DEPLOYMENT_BUCKET=macro-ai-deployment-artifacts-861909001362" >> /etc/environment
-echo "Setting DEPLOYMENT_BUCKET=macro-ai-deployment-artifacts-861909001362" >> /var/log/user-data.log
-echo "DEPLOYMENT_KEY=express-api/pr-51/express-api-deployment.tar.gz" >> /etc/environment
-echo "Setting DEPLOYMENT_KEY=express-api/pr-51/express-api-deployment.tar.gz" >> /var/log/user-data.log
-echo "DEPLOYMENT_VERSION=$(date +%Y%m%d-%H%M%S)" >> /etc/environment
-echo "Setting DEPLOYMENT_VERSION=$(date +%Y%m%d-%H%M%S)" >> /var/log/user-data.log
+echo "DEPLOYMENT_BUCKET=${DEPLOYMENT_BUCKET}" >> /etc/environment
+echo "Setting DEPLOYMENT_BUCKET=${DEPLOYMENT_BUCKET}" >> /var/log/user-data.log
+echo "DEPLOYMENT_KEY=${DEPLOYMENT_KEY}" >> /etc/environment
+echo "Setting DEPLOYMENT_KEY=${DEPLOYMENT_KEY}" >> /var/log/user-data.log
+echo "DEPLOYMENT_VERSION=${DEPLOYMENT_VERSION}" >> /etc/environment
+echo "Setting DEPLOYMENT_VERSION=${DEPLOYMENT_VERSION}" >> /var/log/user-data.log
 echo "=== END DEPLOYMENT ARTIFACT CONFIGURATION ===" >> /var/log/user-data.log
 
 # Create .env file for the application
 echo "=== CREATING .ENV FILE ===" >> /var/log/user-data.log
 cat > /opt/macro-ai/.env << EOF
-# Note: PARAMETER_STORE_PREFIX is no longer needed - the application determines it from APP_ENV
-NODE_ENV=production
-SERVER_PORT=3040
-APP_ENV=pr-51
-PR_NUMBER=51
-BRANCH_NAME=feature/custom-domain-implementation
-CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000,https://pr-51.macro-ai.russoakham.dev
-CUSTOM_DOMAIN_NAME=macro-ai.russoakham.dev
-DEPLOYMENT_BUCKET=macro-ai-deployment-artifacts-861909001362
-DEPLOYMENT_KEY=express-api/pr-51/express-api-deployment.tar.gz
+# Parameter store prefix computed from APP_ENV: ${PARAMETER_STORE_PREFIX}
+NODE_ENV=${NODE_ENV}
+SERVER_PORT=${SERVER_PORT}
+APP_ENV=${APP_ENV}
+PR_NUMBER=${PR_NUMBER}
+BRANCH_NAME=${BRANCH_NAME}
+CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+CUSTOM_DOMAIN_NAME=${CUSTOM_DOMAIN_NAME}
+PARAMETER_STORE_PREFIX=${PARAMETER_STORE_PREFIX}
+DEPLOYMENT_BUCKET=${DEPLOYMENT_BUCKET}
+DEPLOYMENT_KEY=${DEPLOYMENT_KEY}
 EOF
 echo "=== .ENV FILE CONTENTS ===" >> /var/log/user-data.log
 cat /opt/macro-ai/.env >> /var/log/user-data.log
@@ -171,9 +203,10 @@ WorkingDirectory=/opt/macro-ai/app
 ExecStart=/usr/bin/node dist/index.js
 Restart=always
 RestartSec=10
-Environment=NODE_ENV=production
-Environment=APP_ENV=pr-51
-Environment=SERVER_PORT=3040
+Environment=NODE_ENV=${NODE_ENV}
+Environment=APP_ENV=${APP_ENV}
+Environment=SERVER_PORT=${SERVER_PORT}
+Environment=PARAMETER_STORE_PREFIX=${PARAMETER_STORE_PREFIX}
 
 [Install]
 WantedBy=multi-user.target

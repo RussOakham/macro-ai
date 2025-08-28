@@ -144,7 +144,7 @@ main() {
         ["macro-ai-development-AWS_COGNITO_USER_POOL_SECRET_KEY"]="REPLACE_WITH_ACTUAL_SECRET_KEY"
         # AWS Cognito credentials removed - using IAM roles instead
         ["macro-ai-development-COOKIE_ENCRYPTION_KEY"]="REPLACE_WITH_ACTUAL_COOKIE_KEY"
-        ["macro-ai-development-NON_RELATIONAL_DATABASE_URL"]="REPLACE_WITH_ACTUAL_NOSQL_URL"
+        ["macro-ai-development-REDIS_URL"]="REPLACE_WITH_ACTUAL_REDIS_URL"
     )
     
     log_info "Copying existing parameters to development namespace..."

@@ -140,7 +140,7 @@ validate_parameter_store() {
         "COOKIE_ENCRYPTION_KEY"
         "OPENAI_API_KEY"
         "RELATIONAL_DATABASE_URL"
-        "NON_RELATIONAL_DATABASE_URL"
+        		"REDIS_URL"
     )
 
     local missing_params=()

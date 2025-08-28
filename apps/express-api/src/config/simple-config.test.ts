@@ -29,7 +29,7 @@ describe.skip('Simple Configuration System', () => {
 		AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30',
 		OPENAI_API_KEY: 'test-openai-key',
 		RELATIONAL_DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
-		NON_RELATIONAL_DATABASE_URL: 'redis://localhost:6379',
+		REDIS_URL: 'redis://localhost:6379',
 		COOKIE_ENCRYPTION_KEY: 'test-cookie-encryption-key-32-chars',
 		COOKIE_DOMAIN: 'localhost',
 	}

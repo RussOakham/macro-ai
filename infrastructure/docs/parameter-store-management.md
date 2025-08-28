@@ -17,7 +17,7 @@ parameters across different deployment environments in the Macro AI application.
 │   ├── AWS_COGNITO_USER_POOL_CLIENT_ID
 │   ├── OPENAI_API_KEY
 │   ├── RELATIONAL_DATABASE_URL
-│   ├── NON_RELATIONAL_DATABASE_URL
+│   ├── REDIS_URL
 │   └── ...
 ├── staging/              # Staging environment parameters
 │   ├── API_KEY
@@ -50,7 +50,7 @@ optimization and consistency.
 - `COOKIE_ENCRYPTION_KEY` - Session cookie encryption
 - `OPENAI_API_KEY` - OpenAI API access key
 - `RELATIONAL_DATABASE_URL` - PostgreSQL connection string
-- `NON_RELATIONAL_DATABASE_URL` - Redis connection string
+- `REDIS_URL` - Redis connection string
 
 ### Standard Parameters (String, Standard Tier)
 
@@ -308,7 +308,7 @@ If you have existing root-level parameters (e.g., `macro-ai-cognito-user-pool-id
 | `macro-ai-cognito-user-pool-id`        | `/macro-ai/development/AWS_COGNITO_USER_POOL_ID`        |
 | `macro-ai-database-url`                | `/macro-ai/development/RELATIONAL_DATABASE_URL`         |
 | `macro-ai-openai-key`                  | `/macro-ai/development/OPENAI_API_KEY`                  |
-| `macro-ai-redis-url`                   | `/macro-ai/development/NON_RELATIONAL_DATABASE_URL`     |
+| `macro-ai-redis-url`                   | `/macro-ai/development/REDIS_URL`                       |
 
 ## Cost Optimization
 

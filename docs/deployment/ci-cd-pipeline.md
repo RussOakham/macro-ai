@@ -112,7 +112,7 @@ COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-ke
 
 # Database Configuration
 RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
-NON_RELATIONAL_DATABASE_URL: ${{ secrets.NON_RELATIONAL_DATABASE_URL || 'dummy-url' }}
+REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
 
 # OpenAI Configuration
 OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
@@ -299,7 +299,7 @@ AWS_COGNITO_REFRESH_TOKEN_EXPIRY # Token expiry in days (default: 30)
 
 ```bash
 RELATIONAL_DATABASE_URL          # PostgreSQL connection string
-NON_RELATIONAL_DATABASE_URL      # MongoDB connection string (optional)
+REDIS_URL                        # Redis connection string
 ```
 
 #### External Service Secrets

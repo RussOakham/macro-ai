@@ -76,8 +76,7 @@ main() {
         ["COOKIE_ENCRYPTION_KEY"]="/macro-ai/development/COOKIE_ENCRYPTION_KEY"
         ["OPENAI_API_KEY"]="/macro-ai/development/OPENAI_API_KEY"
         ["RELATIONAL_DATABASE_URL"]="/macro-ai/development/RELATIONAL_DATABASE_URL"
-        ["NON_RELATIONAL_DATABASE_URL"]="/macro-ai/development/NON_RELATIONAL_DATABASE_URL"
-        ["REDIS_URL"]="/macro-ai/development/REDIS_URL"
+        		["REDIS_URL"]="/macro-ai/development/REDIS_URL"
     )
     
     # Create .env file with actual values
@@ -144,7 +143,6 @@ export AWS_COGNITO_USER_POOL_SECRET_KEY
 export COOKIE_ENCRYPTION_KEY
 export OPENAI_API_KEY
 export RELATIONAL_DATABASE_URL
-export NON_RELATIONAL_DATABASE_URL
 export REDIS_URL
 
 echo "Environment variables exported for CDK deployment"

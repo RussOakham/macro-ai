@@ -77,12 +77,12 @@ Preview environments (PR deployments) use the development parameter set:
 
 ### Development Environment (`/macro-ai/development/`)
 
-| Parameter Name                     | Description                 | Example Value       | Required |
-| ---------------------------------- | --------------------------- | ------------------- | -------- |
-| `API_KEY`                          | Application API key         | `dev-api-key-12345` | ✅       |
-| `AWS_COGNITO_REGION`               | Cognito service region      | `us-east-1`         | ✅       |
-| `AWS_COGNITO_USER_POOL_CLIENT_ID`  | Cognito user pool client ID | `abc123def456`      | ✅       |
-| `AWS_COGNITO_USER_POOL_SECRET_KEY` | Cognito user pool secret    | `secret-key-value`  | ✅       |
+| Parameter Name                    | Description                 | Example Value        | Required |
+| --------------------------------- | --------------------------- | -------------------- | -------- |
+| `API_KEY`                         | Application API key         | `dev-api-key-12345`  | ✅       |
+| `AWS_COGNITO_REGION`              | Cognito service region      | `us-east-1`          | ✅       |
+| `AWS_COGNITO_USER_POOL_ID`        | Cognito user pool ID        | `us-east-1_AbCdEfGh` | ✅       |
+| `AWS_COGNITO_USER_POOL_CLIENT_ID` | Cognito user pool client ID | `abc123def456`       | ✅       |
 
 <!-- AWS Cognito credentials removed - using IAM roles instead -->
 

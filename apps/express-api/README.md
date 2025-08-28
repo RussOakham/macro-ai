@@ -107,7 +107,7 @@ SERVER_PORT=3040
 
 # Database
 RELATIONAL_DATABASE_URL=postgresql://user:pass@localhost:5432/macro_ai_dev
-NON_RELATIONAL_DATABASE_URL=redis://localhost:6379/0
+REDIS_URL=redis://localhost:6379/0
 
 # AWS Cognito
 AWS_COGNITO_REGION=us-east-1

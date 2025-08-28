@@ -109,7 +109,7 @@ COOKIE_ENCRYPTION_KEY=your-32-character-encryption-key-here
 ```bash
 # Database Configuration
 RELATIONAL_DATABASE_URL=postgresql://username:password@localhost:5432/database_name
-NON_RELATIONAL_DATABASE_URL=mongodb://localhost:27017/macro_ai_dev
+REDIS_URL=redis://localhost:6379
 ```
 
 **PostgreSQL URL Format:**
@@ -203,7 +203,7 @@ const envSchema = z.object({
 
 	// Database
 	RELATIONAL_DATABASE_URL: z.string().url(),
-	NON_RELATIONAL_DATABASE_URL: z.string().url().optional(),
+	REDIS_URL: z.string().url().optional(),
 
 	// OpenAI
 	OPENAI_API_KEY: z.string().startsWith('sk-'),
