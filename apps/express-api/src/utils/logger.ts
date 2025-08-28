@@ -1,5 +1,7 @@
 import { HttpLogger, Options, pinoHttp } from 'pino-http'
 
+import { config } from './load-config.ts'
+
 const createLogger = (nodeEnv: string): HttpLogger => {
 	const isDevelopment = nodeEnv === 'development'
 
@@ -26,6 +28,7 @@ const createLogger = (nodeEnv: string): HttpLogger => {
 		// Production configuration without pino-pretty
 		pinoOptions = {
 			...baseOptions,
+			level: config.NODE_ENV === 'development' ? 'debug' : 'info',
 			formatters: {
 				level: (label) => ({ level: label }),
 			},

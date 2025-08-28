@@ -15,6 +15,7 @@ import {
 } from '../middleware/security-headers.middleware.ts'
 import { appRouter } from '../router/index.routes.ts'
 
+import { config } from './load-config.ts'
 import { pino } from './logger.ts'
 
 // Export options for use in generate-swagger.ts
@@ -27,61 +28,30 @@ const createServer = (): Express => {
 
 	app.use(pino)
 
+	const { logger } = pino
+
 	// Public endpoints: allow broad CORS for browser access (no credentials)
 	app.use('/api-docs', cors({ origin: true, credentials: false }))
 	app.use('/swagger.json', cors({ origin: true, credentials: false }))
 
 	// Simplified CORS configuration for ephemeral environments
-	// Parse CORS_ALLOWED_ORIGINS from environment and merge with dynamic origins
-	const baseCorsOrigins = process.env.CORS_ALLOWED_ORIGINS
-		? process.env.CORS_ALLOWED_ORIGINS.split(',')
-				.map((o) => o.trim())
-				.filter((o) => o.length > 0)
-		: []
+	let corsOrigins = 'http://localhost:3000'
 
-	// Dynamic origins for preview environments
-	const dynamicOrigins = [
-		// Local development
-		'http://localhost:3000',
-		'http://localhost:3040',
-		// Preview environments (auto-detected)
-		...(process.env.APP_ENV?.startsWith('pr-') &&
-		process.env.PR_NUMBER &&
-		process.env.CUSTOM_DOMAIN_NAME
-			? [
-					`https://pr-${process.env.PR_NUMBER}.${process.env.CUSTOM_DOMAIN_NAME}`,
-					`https://${process.env.CUSTOM_DOMAIN_NAME}`,
-				]
-			: []),
-		// Production domains (if configured)
-		...(process.env.CUSTOM_DOMAIN_NAME
-			? [
-					`https://${process.env.CUSTOM_DOMAIN_NAME}`,
-					`https://staging.${process.env.CUSTOM_DOMAIN_NAME}`,
-					`https://api.${process.env.CUSTOM_DOMAIN_NAME}`,
-					`https://staging-api.${process.env.CUSTOM_DOMAIN_NAME}`,
-				]
-			: []),
+	if (config.NODE_ENV === 'production') {
+		if (config.APP_ENV === 'production') {
+			corsOrigins = `https://${process.env.CUSTOM_DOMAIN_NAME ?? ''}`
+		}
+		if (config.APP_ENV === 'staging') {
+			corsOrigins = `https://staging.${process.env.CUSTOM_DOMAIN_NAME ?? ''}`
+		}
+
 		// Fallback for preview environments - allow common patterns
-		...(process.env.APP_ENV?.startsWith('pr-')
-			? ['https://macro-ai.russoakham.dev', 'https://*.macro-ai.russoakham.dev']
-			: []),
-	]
+		if (config.APP_ENV.startsWith('pr-')) {
+			corsOrigins = `https://${process.env.APP_ENV ?? '*'}.macro-ai.russoakham.dev`
+		}
+	}
 
-	// Merge base origins with dynamic origins, removing duplicates
-	const corsOrigins = [...new Set([...baseCorsOrigins, ...dynamicOrigins])]
-
-	// Enhanced logging for CORS debugging
-	console.log(`[server] CORS: Environment variables:`)
-	console.log(`  - APP_ENV: ${process.env.APP_ENV ?? 'undefined'}`)
-	console.log(`  - PR_NUMBER: ${process.env.PR_NUMBER ?? 'undefined'}`)
-	console.log(
-		`  - CUSTOM_DOMAIN_NAME: ${process.env.CUSTOM_DOMAIN_NAME ?? 'undefined'}`,
-	)
-	console.log(
-		`  - CORS_ALLOWED_ORIGINS: ${process.env.CORS_ALLOWED_ORIGINS ?? 'undefined'}`,
-	)
-	console.log(`[server] CORS: Configured origins: [${corsOrigins.join(', ')}]`)
+	logger.info(`[server] CORS: Using origins: ${corsOrigins}`)
 
 	app.use(
 		cors({
@@ -156,21 +126,6 @@ const createServer = (): Express => {
 
 	// Add error handler last
 	app.use(errorHandler)
-
-	// Debug API key loading
-	console.log(`[server] API Key Debug:`)
-	console.log(`  - API_KEY: ${process.env.API_KEY ?? 'undefined'}`)
-	if (process.env.API_KEY) {
-		console.log(`  - API_KEY length: ${process.env.API_KEY.length}`)
-		console.log(
-			`  - API_KEY first 8 chars: ${process.env.API_KEY.substring(0, 8)}...`,
-		)
-		console.log(
-			`  - API_KEY last 8 chars: ...${process.env.API_KEY.substring(process.env.API_KEY.length - 8)}`,
-		)
-	} else {
-		console.log(`  - API_KEY length: 0`)
-	}
 
 	return app
 }
