@@ -31,9 +31,7 @@ const envSchema = z.object({
 	AWS_COGNITO_USER_POOL_CLIENT_ID: z
 		.string()
 		.min(1, 'AWS Cognito user pool client ID is required'),
-	AWS_COGNITO_USER_POOL_SECRET_KEY: z
-		.string()
-		.min(1, 'AWS Cognito user pool secret key is required'),
+	// AWS Cognito credentials removed - using IAM roles instead
 	// Remove AWS credentials - now using IAM roles
 	// AWS_COGNITO_ACCESS_KEY: z
 	// 	.string()
@@ -52,9 +50,7 @@ const envSchema = z.object({
 		.min(32, 'Cookie encryption key must be at least 32 characters'),
 
 	// Database
-	NON_RELATIONAL_DATABASE_URL: z
-		.string()
-		.min(1, 'Non-relational database URL is required'),
+	REDIS_URL: z.string().min(1, 'Redis URL is required'),
 	RELATIONAL_DATABASE_URL: z
 		.string()
 		.min(1, 'Relational database URL is required'),
@@ -72,7 +68,6 @@ const envSchema = z.object({
 	AUTH_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(10),
 	API_RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60000), // 1 minute
 	API_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(60),
-	REDIS_URL: z.string().optional(),
 	// CORS
 	CORS_ALLOWED_ORIGINS: z.string().optional(),
 })

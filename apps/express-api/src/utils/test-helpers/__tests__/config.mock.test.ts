@@ -258,8 +258,8 @@ describe('Config Mock Helper', () => {
 				expect(mock.config.RELATIONAL_DATABASE_URL).toBe(
 					'postgresql://testuser:testpass@localhost:5432/testdb',
 				)
-				expect(mock.config.NON_RELATIONAL_DATABASE_URL).toBe(
-					'mongodb://localhost:27017/testdb',
+				expect(mock.config.REDIS_URL).toBe(
+					'redis://localhost:6379/testdb',
 				)
 				// Should preserve other defaults
 				expect(mock.config.NODE_ENV).toBe(defaultTestConfig.NODE_ENV)
@@ -289,8 +289,8 @@ describe('Config Mock Helper', () => {
 				expect(mock.config.RELATIONAL_DATABASE_URL).not.toBe(
 					defaultTestConfig.RELATIONAL_DATABASE_URL,
 				)
-				expect(mock.config.NON_RELATIONAL_DATABASE_URL).not.toBe(
-					defaultTestConfig.NON_RELATIONAL_DATABASE_URL,
+				expect(mock.config.REDIS_URL).not.toBe(
+					defaultTestConfig.REDIS_URL,
 				)
 			})
 		})

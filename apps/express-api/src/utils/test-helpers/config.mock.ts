@@ -30,10 +30,7 @@ export const defaultTestConfig: ConfigType = {
 	AWS_COGNITO_REGION: 'us-east-1',
 	AWS_COGNITO_USER_POOL_ID: 'test-pool-id',
 	AWS_COGNITO_USER_POOL_CLIENT_ID: 'test-client-id',
-	AWS_COGNITO_USER_POOL_SECRET_KEY: 'test-pool-secret',
-	// AWS credentials are no longer required - using IAM roles instead
-	// AWS_COGNITO_ACCESS_KEY: 'test-access-key',
-	// AWS_COGNITO_SECRET_KEY: 'test-secret-key',
+	// AWS Cognito credentials removed - using IAM roles instead
 	AWS_COGNITO_REFRESH_TOKEN_EXPIRY: 30,
 
 	// Cookie Configuration
@@ -41,7 +38,6 @@ export const defaultTestConfig: ConfigType = {
 	COOKIE_ENCRYPTION_KEY: 'test-cookie-encryption-key-32-chars',
 
 	// Database Configuration
-	NON_RELATIONAL_DATABASE_URL: 'mongodb://localhost:27017/test_db',
 	RELATIONAL_DATABASE_URL: 'postgresql://test:test@localhost:5432/test_db',
 
 	// OpenAI Configuration
@@ -153,10 +149,7 @@ export const createCognitoConfig = (
 			| 'AWS_COGNITO_REGION'
 			| 'AWS_COGNITO_USER_POOL_ID'
 			| 'AWS_COGNITO_USER_POOL_CLIENT_ID'
-			| 'AWS_COGNITO_USER_POOL_SECRET_KEY'
-			// AWS credentials are no longer required - using IAM roles instead
-			// | 'AWS_COGNITO_ACCESS_KEY'
-			// | 'AWS_COGNITO_SECRET_KEY'
+			// AWS Cognito credentials removed - using IAM roles instead
 			| 'AWS_COGNITO_REFRESH_TOKEN_EXPIRY'
 		>
 	> = {},
@@ -165,10 +158,7 @@ export const createCognitoConfig = (
 		AWS_COGNITO_REGION: 'us-west-2',
 		AWS_COGNITO_USER_POOL_ID: 'cognito-test-pool-id',
 		AWS_COGNITO_USER_POOL_CLIENT_ID: 'cognito-test-client-id',
-		AWS_COGNITO_USER_POOL_SECRET_KEY: 'cognito-test-pool-secret',
-		// AWS credentials are no longer required - using IAM roles instead
-		// AWS_COGNITO_ACCESS_KEY: 'cognito-test-access-key',
-		// AWS_COGNITO_SECRET_KEY: 'cognito-test-secret-key',
+		// AWS Cognito credentials removed - using IAM roles instead
 		AWS_COGNITO_REFRESH_TOKEN_EXPIRY: 60,
 		...overrides,
 	})
@@ -181,13 +171,13 @@ export const createCognitoConfig = (
  */
 export const createDatabaseConfig = (
 	overrides: Partial<
-		Pick<ConfigType, 'RELATIONAL_DATABASE_URL' | 'NON_RELATIONAL_DATABASE_URL'>
+		Pick<ConfigType, 'RELATIONAL_DATABASE_URL' | 'REDIS_URL'>
 	> = {},
 ) =>
 	createConfigMock({
 		RELATIONAL_DATABASE_URL:
 			'postgresql://testuser:testpass@localhost:5432/testdb',
-		NON_RELATIONAL_DATABASE_URL: 'mongodb://localhost:27017/testdb',
+		REDIS_URL: 'redis://localhost:6379/testdb',
 		...overrides,
 	})
 

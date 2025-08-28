@@ -60,16 +60,11 @@ export const config = moduleConfig
 			awsCognitoRegion: moduleConfig.AWS_COGNITO_REGION,
 			awsCognitoUserPoolId: moduleConfig.AWS_COGNITO_USER_POOL_ID,
 			awsCognitoUserPoolClientId: moduleConfig.AWS_COGNITO_USER_POOL_CLIENT_ID,
-			awsCognitoUserPoolSecretKey:
-				moduleConfig.AWS_COGNITO_USER_POOL_SECRET_KEY,
-			// AWS credentials are no longer required - using IAM roles instead
-			// awsCognitoAccessKey: moduleConfig.AWS_COGNITO_ACCESS_KEY,
-			// awsCognitoSecretKey: moduleConfig.AWS_COGNITO_SECRET_KEY,
+			// AWS Cognito credentials removed - using IAM roles instead
 			awsCognitoRefreshTokenExpiry:
 				moduleConfig.AWS_COGNITO_REFRESH_TOKEN_EXPIRY,
 			cookieDomain: moduleConfig.COOKIE_DOMAIN,
 			cookieEncryptionKey: moduleConfig.COOKIE_ENCRYPTION_KEY,
-			nonRelationalDatabaseUrl: moduleConfig.NON_RELATIONAL_DATABASE_URL,
 			relationalDatabaseUrl: moduleConfig.RELATIONAL_DATABASE_URL,
 			openaiApiKey: moduleConfig.OPENAI_API_KEY,
 			rateLimitWindowMs: moduleConfig.RATE_LIMIT_WINDOW_MS,
