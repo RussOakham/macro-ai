@@ -95,6 +95,7 @@ export class NetworkingConstruct extends Construct {
 	public readonly databaseSubnets: ec2.ISubnet[]
 	// EC2 construct property removed - ECS Fargate only
 	public readonly albSecurityGroup: ec2.ISecurityGroup
+	public readonly ecsServiceSecurityGroup: ec2.ISecurityGroup
 	public readonly vpcId: string
 	public readonly vpcCidrBlock: string
 
@@ -150,10 +151,12 @@ export class NetworkingConstruct extends Construct {
 		this.privateSubnets = this.vpc.privateSubnets
 		this.databaseSubnets = this.vpc.isolatedSubnets
 
-		// Create basic security group for ALB
+		// Create ALB security group
+		// SECURITY: ALB only exposes HTTP/HTTPS ports (80/443) to the internet
+		// Container port 3040 is NOT exposed here - it's only accessible via the ECS service security group
 		this.albSecurityGroup = new ec2.SecurityGroup(this, 'AlbSecurityGroup', {
 			vpc: this.vpc,
-			description: `ALB Security Group for ${environmentName}`,
+			description: `ALB Security Group for ${environmentName} - HTTP/HTTPS only`,
 			allowAllOutbound: true,
 		})
 
@@ -169,11 +172,27 @@ export class NetworkingConstruct extends Construct {
 			'Allow HTTPS inbound',
 		)
 
-		// Add this new rule for direct ECS access
-		this.albSecurityGroup.addIngressRule(
-			ec2.Peer.anyIpv4(),
+		// Create ECS service security group
+		// SECURITY: This security group is tightly scoped to only allow ALB-to-task ingress
+		// Since tasks run in public subnets for cost optimization (no NAT Gateway needed),
+		// we must ensure the security group only allows traffic from the ALB on the container port.
+		// This prevents direct external access to the ECS tasks while maintaining ALB routing.
+		this.ecsServiceSecurityGroup = new ec2.SecurityGroup(
+			this,
+			'EcsServiceSecurityGroup',
+			{
+				vpc: this.vpc,
+				description: `ECS Service Security Group for ${environmentName} - ALB access only`,
+				allowAllOutbound: true,
+			},
+		)
+
+		// Allow ALB to access ECS service on port 3040
+		// This is the ONLY ingress rule - no external access allowed
+		this.ecsServiceSecurityGroup.addIngressRule(
+			this.albSecurityGroup,
 			ec2.Port.tcp(3040),
-			'Allow Express API inbound on port 3040',
+			'Allow ALB to access ECS service on port 3040 - ALB only, no external access',
 		)
 
 		// EC2 construct instantiation removed - ECS Fargate only
@@ -227,6 +246,12 @@ export class NetworkingConstruct extends Construct {
 			value: this.albSecurityGroup.securityGroupId,
 			description: 'ALB Security Group ID',
 			exportName: `${this.exportPrefix}-AlbSecurityGroupId`,
+		})
+
+		new cdk.CfnOutput(this, 'EcsServiceSecurityGroupId', {
+			value: this.ecsServiceSecurityGroup.securityGroupId,
+			description: 'ECS Service Security Group ID',
+			exportName: `${this.exportPrefix}-EcsServiceSecurityGroupId`,
 		})
 
 		// EC2 outputs removed - ECS Fargate only

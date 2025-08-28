@@ -48,7 +48,8 @@ export class EnvironmentConfigConstruct extends Construct {
 		super(scope, id)
 
 		// Use shared development parameters for preview environments
-		this.parameterPrefix = props.parameterPrefix ?? '/macro-ai/development/'
+		// Note: No trailing slash to avoid double slashes when joining with parameter keys
+		this.parameterPrefix = props.parameterPrefix ?? '/macro-ai/development'
 
 		// Fetch Parameter Store values during synthesis
 		this.environmentVariables = this.fetchParameterStoreValues()

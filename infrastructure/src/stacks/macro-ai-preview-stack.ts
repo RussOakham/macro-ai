@@ -127,7 +127,7 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		// Create ECS Fargate service for containerized deployment
 		this.ecsService = new EcsFargateConstruct(this, 'EcsService', {
 			vpc: this.networking.vpc,
-			securityGroup: this.networking.albSecurityGroup,
+			securityGroup: this.networking.ecsServiceSecurityGroup,
 			environmentName,
 			branchName,
 			enableDetailedMonitoring: false, // Cost optimization for preview
