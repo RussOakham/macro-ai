@@ -41,7 +41,6 @@
 		"aws-cdk": "^2.1027.0",
 		"eslint": "catalog:",
 		"eslint-config-prettier": "catalog:",
-		"eslint-config-turbo": "^2.5.5",
 		"eslint-plugin-simple-import-sort": "^12.1.1",
 		"prettier": "^3.6.2",
 		"tsx": "catalog:",
