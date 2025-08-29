@@ -120,6 +120,17 @@ modernization.
 **Recommendation**: These are concrete findings from knip analysis. Prioritize removal based on package usage and
 business impact.
 
+#### Updated Knip Analysis - After Infrastructure Workspace Inclusion
+
+**Status**: Infrastructure workspace now included in knip.json, but 8 infrastructure files still show as unused.
+
+**Key Findings**:
+
+- **Infrastructure files still unused**: 8 files not imported anywhere
+- **CDK entry point issue**: `infrastructure/src/app.ts` not imported
+- **Previous deployment remnants**: Likely Lambda/EC2 code that can be removed
+- **Action required**: Verify if these files are actually used in ECS deployment process
+
 #### Additional Knip Findings
 
 **Unused Exports (32 exports)**:
@@ -330,7 +341,9 @@ business impact.
 - [ ] **Review TODO items** - Prioritize by business impact
 - [ ] **Prioritize infrastructure cleanup** - 8 unused infrastructure files identified
 - [ ] **Review API client exports** - 3 unused files in macro-ai-api-client package
-- [ ] **Fix knip configuration** - Resolve infrastructure files marked as unused
+- [x] **Fix knip configuration** - ✅ **COMPLETED** - Infrastructure workspace now included
+- [ ] **Investigate infrastructure files** - 8 files still marked as unused - may be actual dead code
+- [ ] **Verify ECS deployment usage** - Check if infrastructure files are actually used in deployment
 - [ ] **Identify deprecated infrastructure** - Look for Lambda/EC2 legacy code
 
 ### Week 1 Goals
@@ -368,6 +381,7 @@ business impact.
 ### Infrastructure Files - Deprecated Strategies Identified
 
 **8 infrastructure files identified as unused by knip**:
+
 - `infrastructure/src/app.ts` - **MAIN CDK APP FILE** - ECS Fargate deployment entry point
 - `infrastructure/src/constructs/ecs-fargate-construct.ts` - **CURRENT** ECS Fargate construct
 - `infrastructure/src/constructs/ecs-load-balancer-construct.ts` - **CURRENT** Load balancer construct
@@ -377,21 +391,26 @@ business impact.
 - `infrastructure/src/stacks/macro-ai-preview-stack.ts` - **CURRENT** Preview stack
 - `infrastructure/src/utils/tagging-strategy.ts` - **CURRENT** Tagging utilities
 
-**✅ RESOLVED**: These files are **CURRENTLY ACTIVE** for ECS Fargate deployment. The "unused" status from knip is due to:
-1. **Knip configuration issue** - Infrastructure workspace not properly configured in knip.json
-2. **Entry point patterns** - CDK app entry points not matching knip patterns
-3. **Workspace configuration** - Infrastructure package needs proper knip workspace setup
+**🔍 INVESTIGATION REQUIRED**: These files are still marked as unused even after including infrastructure workspace in 
+knip.json. This suggests they may actually be dead code from previous deployment strategies:
 
-**Action Required**: Fix knip configuration to properly recognize infrastructure files as active.
+1. **No imports found** - These files are not imported anywhere in the codebase
+2. **Previous deployment strategies** - May be remnants from Lambda/EC2 deployments
+3. **CDK entry point** - `infrastructure/src/app.ts` should be the main entry point but isn't imported
+4. **Action required** - Verify if these files are actually used in current ECS deployment
+
+**Immediate Action**: Check if these infrastructure files are actually imported or used in deployment processes.
 
 ### Deprecated Infrastructure Strategies
 
 **Previous deployment strategies that can be cleaned up**:
+
 - **Serverless Lambda**: Deprecated in favor of ECS Fargate
 - **EC2**: Deprecated in favor of ECS Fargate
 - **Amplify**: Legacy deployment method (check if still used)
 
 **Files to investigate for deprecation**:
+
 - Any files marked with `@deprecated` comments
 - Legacy deployment scripts and documentation
 - EC2-specific constructs and configurations
@@ -402,6 +421,7 @@ business impact.
 ### Testing Cleanup - Align with Testing Rules
 
 **Testing Rules from CLAUDE.md**:
+
 - Focus on **realistic and valuable cases**, not exhaustive permutations
 - Avoid contrived edge cases unless explicitly relevant to business logic
 - Prioritize: Core logic correctness, Critical failure paths, Integration with external systems
@@ -409,6 +429,7 @@ business impact.
 #### Skipped Tests Requiring Action (7 test suites)
 
 **Integration Tests**:
+
 - `tests/integration/auth-integration.test.ts:114` - Authentication Integration Tests
 - `tests/integration/config-loading-integration.test.ts:114` - Configuration Loading Integration Tests
 - `tests/integration/cdk-pre-deployment-validation.test.ts:287` - CDK Pre-deployment Validation Tests
@@ -416,6 +437,7 @@ business impact.
 - `tests/integration/database-integration.test.ts:94` - Database Integration Tests
 
 **Unit Tests**:
+
 - `apps/express-api/src/config/simple-config.test.ts:13` - Simple Configuration System
 - `apps/express-api/src/config/simple-config.test.ts:56` - loadConfig function
 - `apps/express-api/src/__tests__/index.test.ts:46` - Server Bootstrap (index.ts)
@@ -425,6 +447,7 @@ business impact.
 #### Tests Potentially Non-Compliant with Rules (15+ test suites)
 
 **Edge Case Tests** - Review for business relevance:
+
 - Response handlers, Crypto, Cookies, Routes, Middleware, Chat services, Auth services
 - **Criteria**: Keep only if edge cases are critical to business logic
 - **Remove**: Contrived scenarios not relevant to actual user workflows
