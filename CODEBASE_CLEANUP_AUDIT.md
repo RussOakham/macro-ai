@@ -117,7 +117,7 @@ modernization.
 
 - Various ESLint plugins and configurations across packages
 
-**Recommendation**: These are concrete findings from knip analysis. Prioritize removal based on package usage and 
+**Recommendation**: These are concrete findings from knip analysis. Prioritize removal based on package usage and
 business impact.
 
 #### Additional Knip Findings
@@ -288,6 +288,13 @@ business impact.
 3. **Testing Infrastructure**: Optimize and deduplicate
 4. **Configuration Management**: Standardize across packages
 
+### Phase 4: Testing Cleanup - Final Phase (Week 4)
+
+1. **Fix Skipped Tests**: Address 7 skipped test suites
+2. **Review Edge Case Tests**: Evaluate 15+ test suites against testing rules
+3. **Remove Non-Compliant Tests**: Eliminate contrived scenarios
+4. **Testing Rules Compliance**: Ensure all tests align with CLAUDE.md guidelines
+
 ---
 
 ## 🛠️ Recommended Tools & Approaches
@@ -323,6 +330,8 @@ business impact.
 - [ ] **Review TODO items** - Prioritize by business impact
 - [ ] **Prioritize infrastructure cleanup** - 8 unused infrastructure files identified
 - [ ] **Review API client exports** - 3 unused files in macro-ai-api-client package
+- [ ] **Fix knip configuration** - Resolve infrastructure files marked as unused
+- [ ] **Identify deprecated infrastructure** - Look for Lambda/EC2 legacy code
 
 ### Week 1 Goals
 
@@ -345,30 +354,82 @@ business impact.
 - [ ] **Testing optimization** - Remove duplication
 - [ ] **Configuration standardization** - Consistent patterns
 
+### Week 4 Goals - Testing Cleanup
+
+- [ ] **Fix skipped tests** - Address 7 skipped test suites
+- [ ] **Review edge case tests** - Evaluate against testing rules
+- [ ] **Remove non-compliant tests** - Eliminate contrived scenarios
+- [ ] **Testing rules compliance** - Ensure alignment with CLAUDE.md guidelines
+
 ---
 
 ## 🚨 Risk Assessment
 
-### Critical Risk - Infrastructure Files
+### Infrastructure Files - Deprecated Strategies Identified
 
 **8 infrastructure files identified as unused by knip**:
+- `infrastructure/src/app.ts` - **MAIN CDK APP FILE** - ECS Fargate deployment entry point
+- `infrastructure/src/constructs/ecs-fargate-construct.ts` - **CURRENT** ECS Fargate construct
+- `infrastructure/src/constructs/ecs-load-balancer-construct.ts` - **CURRENT** Load balancer construct
+- `infrastructure/src/constructs/environment-config-construct.ts` - **CURRENT** Environment config
+- `infrastructure/src/constructs/networking.ts` - **CURRENT** Networking construct
+- `infrastructure/src/constructs/parameter-store-construct.ts` - **CURRENT** Parameter store
+- `infrastructure/src/stacks/macro-ai-preview-stack.ts` - **CURRENT** Preview stack
+- `infrastructure/src/utils/tagging-strategy.ts` - **CURRENT** Tagging utilities
 
-- `infrastructure/src/app.ts` - **MAIN CDK APP FILE** - This is critical!
-- `infrastructure/src/constructs/ecs-fargate-construct.ts` - ECS construct
-- `infrastructure/src/constructs/ecs-load-balancer-construct.ts` - Load balancer construct
-- `infrastructure/src/constructs/environment-config-construct.ts` - Environment config
-- `infrastructure/src/constructs/networking.ts` - Networking construct
-- `infrastructure/src/constructs/parameter-store-construct.ts` - Parameter store
-- `infrastructure/src/stacks/macro-ai-preview-stack.ts` - Preview stack
-- `infrastructure/src/utils/tagging-strategy.ts` - Tagging utilities
+**✅ RESOLVED**: These files are **CURRENTLY ACTIVE** for ECS Fargate deployment. The "unused" status from knip is due to:
+1. **Knip configuration issue** - Infrastructure workspace not properly configured in knip.json
+2. **Entry point patterns** - CDK app entry points not matching knip patterns
+3. **Workspace configuration** - Infrastructure package needs proper knip workspace setup
 
-**⚠️ WARNING**: These files appear to be the core of your infrastructure but are marked as unused. This suggests either:
+**Action Required**: Fix knip configuration to properly recognize infrastructure files as active.
 
-1. **Knip configuration issue** - These files are actually used but not properly configured
-2. **Infrastructure not deployed** - These constructs aren't being used in current deployments
-3. **Entry point missing** - The main CDK app entry point isn't configured correctly
+### Deprecated Infrastructure Strategies
 
-**Immediate Action Required**: Investigate why core infrastructure files are marked as unused before any deletion.
+**Previous deployment strategies that can be cleaned up**:
+- **Serverless Lambda**: Deprecated in favor of ECS Fargate
+- **EC2**: Deprecated in favor of ECS Fargate
+- **Amplify**: Legacy deployment method (check if still used)
+
+**Files to investigate for deprecation**:
+- Any files marked with `@deprecated` comments
+- Legacy deployment scripts and documentation
+- EC2-specific constructs and configurations
+- Lambda function definitions
+
+**Recommendation**: Remove deprecated infrastructure code after confirming it's not referenced by current deployments.
+
+### Testing Cleanup - Align with Testing Rules
+
+**Testing Rules from CLAUDE.md**:
+- Focus on **realistic and valuable cases**, not exhaustive permutations
+- Avoid contrived edge cases unless explicitly relevant to business logic
+- Prioritize: Core logic correctness, Critical failure paths, Integration with external systems
+
+#### Skipped Tests Requiring Action (7 test suites)
+
+**Integration Tests**:
+- `tests/integration/auth-integration.test.ts:114` - Authentication Integration Tests
+- `tests/integration/config-loading-integration.test.ts:114` - Configuration Loading Integration Tests
+- `tests/integration/cdk-pre-deployment-validation.test.ts:287` - CDK Pre-deployment Validation Tests
+- `tests/integration/cdk-pre-deployment-validation.test.ts:319` - AWS Infrastructure Validation
+- `tests/integration/database-integration.test.ts:94` - Database Integration Tests
+
+**Unit Tests**:
+- `apps/express-api/src/config/simple-config.test.ts:13` - Simple Configuration System
+- `apps/express-api/src/config/simple-config.test.ts:56` - loadConfig function
+- `apps/express-api/src/__tests__/index.test.ts:46` - Server Bootstrap (index.ts)
+
+**Action Required**: Fix broken tests or remove if redundant/non-compliant with testing rules.
+
+#### Tests Potentially Non-Compliant with Rules (15+ test suites)
+
+**Edge Case Tests** - Review for business relevance:
+- Response handlers, Crypto, Cookies, Routes, Middleware, Chat services, Auth services
+- **Criteria**: Keep only if edge cases are critical to business logic
+- **Remove**: Contrived scenarios not relevant to actual user workflows
+
+**Recommendation**: Review each "edge case" test suite against business requirements before removal.
 
 ### Low Risk
 
