@@ -100,6 +100,37 @@
 				"autoprefixer"
 			]
 		},
+		"infrastructure": {
+			"entry": [
+				"src/app.ts",
+				"src/**/*.test.ts", 
+				"src/**/*.spec.ts",
+				"src/**/*.stack.ts"
+			],
+			"project": [
+				"src/**/*.ts",
+				"src/**/*.js",
+				"src/**/*.json",
+				"package.json",
+				"tsconfig.json"
+			],
+			"ignore": [
+				"src/**/*.d.ts",
+				"dist/**/*",
+				"coverage/**/*",
+				"src/generated/**/*",
+				"cdk.out/**",
+				"cdk.context.json",
+				"cdk-outputs.json"
+			],
+			"ignoreDependencies": [
+				"@types/node",
+				"vitest",
+				"@vitest/ui",
+				"tsup",
+				"tsx"
+			]
+		},
 		"packages/macro-ai-api-client": {
 			"entry": [
 				"src/index.ts",
@@ -139,6 +170,24 @@
 		"packages/config-typescript": {
 			"entry": ["base.json", "nextjs.json", "react-library.json"],
 			"project": ["*.json", "package.json"]
+		},
+		"tests/integration": {
+			"entry": ["**/*.test.ts", "**/*.spec.ts"],
+			"project": [
+				"**/*.ts",
+				"**/*.js",
+				"**/*.json",
+				"package.json",
+				"tsconfig.json"
+			],
+			"ignore": ["**/*.d.ts", "dist/**/*", "coverage/**/*"],
+			"ignoreDependencies": [
+				"@types/node",
+				"vitest",
+				"@vitest/ui",
+				"tsup",
+				"tsx"
+			]
 		}
 	},
 	"ignore": [
@@ -159,7 +208,10 @@
 		".env.local",
 		".env.development",
 		".env.production",
-		"process.env.*"
+		"process.env.*",
+		"**/cdk.out/**",
+		"**/cdk.context.json",
+		"**/cdk-outputs.json"
 	],
 	"ignoreDependencies": ["husky", "lint-staged", "prettier", "turbo", "knip"],
 	"ignoreExportsUsedInFile": true,
@@ -176,5 +228,7 @@
 		"nsTypes": "error",
 		"enumMembers": "error",
 		"duplicates": "error"
-	}
+	},
+	"ignoreExportsUsedInFile": true,
+	"includeEntryExports": true
 }
