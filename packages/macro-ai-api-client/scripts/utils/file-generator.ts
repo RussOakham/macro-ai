@@ -226,7 +226,7 @@ function generateSchemaBasedTypesFile(domain: string): string {
 /**
  * Creates a filtered OpenAPI spec containing only the specified endpoints
  */
-export function createDomainOpenAPISpec(
+function createDomainOpenAPISpec(
 	originalSpec: OpenAPIObject,
 	endpoints: DomainEndpoint[],
 ): OpenAPIObject {

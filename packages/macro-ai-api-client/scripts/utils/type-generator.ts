@@ -41,7 +41,7 @@ function hasJsonSchema(
 	)
 }
 
-export interface TypeDefinition {
+interface TypeDefinition {
 	name: string
 	definition: string
 	isRequest: boolean
@@ -85,7 +85,8 @@ const typeConversionCache = new Map<string, string>()
 /**
  * Clears the type conversion cache (useful for testing or memory management)
  */
-export function clearTypeConversionCache(): void {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function clearTypeConversionCache(): void {
 	typeConversionCache.clear()
 }
 
@@ -105,7 +106,7 @@ function getTypeScriptType(
 	// Prevent infinite recursion by checking depth
 	if (depth > MAX_RECURSION_DEPTH) {
 		console.warn(
-			`[Type Generator] Maximum recursion depth (${String(MAX_RECURSION_DEPTH)}) exceeded, returning 'unknown'`,
+			`[Type Generator] Maximum recursion depth (${MAX_RECURSION_DEPTH.toString()}) exceeded, returning 'unknown'`,
 		)
 		return 'unknown'
 	}

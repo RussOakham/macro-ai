@@ -49,7 +49,7 @@ export interface DomainEndpoint {
 	domain: string
 }
 
-export interface DomainGroup {
+interface DomainGroup {
 	auth: DomainEndpoint[]
 	chat: DomainEndpoint[]
 	user: DomainEndpoint[]
@@ -59,7 +59,7 @@ export interface DomainGroup {
 /**
  * Determines the domain based on the API path
  */
-export function getDomainFromPath(path: string): string {
+function getDomainFromPath(path: string): string {
 	if (path.startsWith('/auth')) return 'auth'
 	if (path.startsWith('/chats')) return 'chat'
 	if (path.startsWith('/users')) return 'user'
@@ -163,7 +163,8 @@ export function parseEndpointsByDomain(openApiDoc: OpenAPIObject): DomainGroup {
 /**
  * Extracts schema names used by a specific domain's endpoints
  */
-export function getSchemasByDomain(endpoints: DomainEndpoint[]): Set<string> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function getSchemasByDomain(endpoints: DomainEndpoint[]): Set<string> {
 	const schemas = new Set<string>()
 
 	for (const endpoint of endpoints) {
