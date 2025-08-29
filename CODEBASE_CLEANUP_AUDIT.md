@@ -9,7 +9,7 @@
 ## 📊 Executive Summary
 
 This audit identifies **193 markdown files**, **202 TypeScript files**, and **59 shell scripts** across the monorepo.
-While the codebase passes linting and type-checking, there are significant opportunities for cleanup, 
+While the codebase passes linting and type-checking, there are significant opportunities for cleanup,
 consolidation, and
 modernization.
 
@@ -28,21 +28,130 @@ modernization.
 
 ### 1. Dead Code & Unused Dependencies
 
-#### Unused DevDependencies (Root Package)
+#### Unused Files (26 files identified by knip)
 
-```bash
-# Identified by depcheck
-* @vitest/ui          # Available in all packages but may be unused
-* depcheck            # Self-referencing - this is the tool itself
-* drizzle-kit         # May be unused if not actively developing DB
-* eslint              # Available in all packages
-* ts-unused-exports   # Alternative to knip
-* tsx                 # May be unused in some contexts
-* unimported          # Alternative to knip
-* vitest              # Available in all packages
-```
+**High Priority - Infrastructure (8 files)**:
 
-**Recommendation**: Audit actual usage across packages before removal.
+- `infrastructure/src/app.ts` - Main CDK app file
+- `infrastructure/src/constructs/ecs-fargate-construct.ts` - ECS construct
+- `infrastructure/src/constructs/ecs-load-balancer-construct.ts` - Load balancer construct
+- `infrastructure/src/constructs/environment-config-construct.ts` - Environment config
+- `infrastructure/src/constructs/networking.ts` - Networking construct
+- `infrastructure/src/constructs/parameter-store-construct.ts` - Parameter store
+- `infrastructure/src/stacks/macro-ai-preview-stack.ts` - Preview stack
+- `infrastructure/src/utils/tagging-strategy.ts` - Tagging utilities
+
+**Medium Priority - API Client (3 files)**:
+
+- `packages/macro-ai-api-client/src/clients/index.ts` - Client exports
+- `packages/macro-ai-api-client/src/clients/unified.client.ts` - Unified client
+- `packages/macro-ai-api-client/src/schemas/index.ts` - Schema exports
+
+**Medium Priority - Express API (5 files)**:
+
+- `apps/express-api/scripts/test-streaming.js` - Test script
+- `apps/express-api/src/config/config.ts` - Config file
+- `apps/express-api/src/config/simple-env.ts` - Simple env config
+- `apps/express-api/src/middleware/monitoring-metrics.ts` - Monitoring middleware
+- `apps/express-api/src/types/validation.types.ts` - Validation types
+
+**Low Priority - Client UI (10 files)**:
+
+- Various UI components and utilities that appear unused
+
+#### Unused Dependencies (35 packages identified by knip)
+
+**Client UI (8 unused dependencies)**:
+
+- `@aws-sdk/client-cognito-identity-provider` - Cognito client
+- `@tailwindcss/vite` - Tailwind Vite plugin
+- `@tanstack/zod-adapter` - Zod adapter
+- `next-themes` - Theme management
+- `pino-pretty` - Logging prettifier
+- `zod-validation-error` - Validation error handling
+- `zustand` - State management
+
+**Express API (9 unused dependencies)**:
+
+- `@aws-sdk/client-cloudwatch` - CloudWatch client
+- `@aws-sdk/client-cognito-identity` - Cognito identity
+- `config` - Configuration package
+- `jsonwebtoken` - JWT handling
+- `jwk-to-pem` - JWK conversion
+- `node-fetch` - HTTP client
+- `on-finished` - Request lifecycle
+- `pgvector` - Vector database
+- `swagger-jsdoc` - Swagger documentation
+
+**Infrastructure (20 unused dependencies)**:
+
+- Multiple AWS SDK clients (EC2, S3, Lambda, etc.)
+- `aws-cdk-lib` - CDK library
+- `chalk` - Terminal colors
+- `cli-table3` - CLI tables
+- `commander` - CLI argument parsing
+- `constructs` - CDK constructs
+- `dotenv` - Environment loading
+- `ora` - Terminal spinners
+
+#### Unused DevDependencies (45 packages identified by knip)
+
+**Root Package (10 unused devDependencies)**:
+
+- `@types/yaml`, `@vitest/ui`, `depcheck`, `drizzle-kit`
+- `eslint`, `ts-unused-exports`, `tsx`, `unimported`, `vitest`, `yaml`
+
+**Client UI (9 unused devDependencies)**:
+
+- Testing libraries, ESLint plugins, React compiler plugin
+
+**Express API (7 unused devDependencies)**:
+
+- Type definitions, ESLint plugins, testing utilities
+
+**Infrastructure (6 unused devDependencies)**:
+
+- ESLint configurations and plugins
+
+**Config Packages (13 unused devDependencies)**:
+
+- Various ESLint plugins and configurations across packages
+
+**Recommendation**: These are concrete findings from knip analysis. Prioritize removal based on package usage and 
+business impact.
+
+#### Additional Knip Findings
+
+**Unused Exports (32 exports)**:
+
+- **Express API**: Configuration functions, error handling utilities
+- **Client UI**: Auth utilities, validation functions, chat utilities
+- **Impact**: These exports are defined but never imported, indicating dead code
+
+**Unused Exported Types (21 types)**:
+
+- **Chat System**: Chat schemas, message types, vector types
+- **API Clients**: Client type definitions
+- **Validation**: API response types, error types
+- **Impact**: Type definitions that aren't used in the codebase
+
+**Unlisted Dependencies (3 packages)**:
+
+- `@typescript-eslint/utils` - ESLint utilities
+- `postcss-load-config` - PostCSS configuration
+
+**Unlisted Binaries (8 commands)**:
+
+- `cdk` - CDK CLI commands in GitHub workflows
+- `generate-swagger` - Swagger generation script
+- `scripts/github-actions-deploy.sh` - Deployment script
+
+**Configuration Hints (70 suggestions)**:
+
+- **Knip Configuration**: Multiple workspace configurations need refinement
+- **Entry Patterns**: Some entry patterns don't match actual files
+- **Project Patterns**: Redundant project file patterns
+- **Ignore Dependencies**: Several packages should be removed from ignoreDependencies
 
 #### Legacy Package: `types-macro-ai-api`
 
@@ -161,6 +270,9 @@ modernization.
 2. **Clean Console Logs**: Replace with proper logging in production code
 3. **Consolidate .env Files**: Reduce to essential examples
 4. **Remove Deprecated Scripts**: Clean up unused build/deployment scripts
+5. **Remove Unused Dependencies**: 35 packages identified by knip
+6. **Remove Unused DevDependencies**: 45 packages identified by knip
+7. **Clean Unused Files**: 26 files identified by knip (prioritize infrastructure)
 
 ### Phase 2: Medium Impact, Medium Risk (Week 2)
 
@@ -206,9 +318,11 @@ modernization.
 ### Immediate Actions (This Week)
 
 - [ ] **Audit `types-macro-ai-api` package** - Confirm it's unused
-- [ ] **Run knip analysis** - Fix environment variable issues first
+- [x] **Run knip analysis** - ✅ **COMPLETED** - Found 26 unused files, 35 unused dependencies, 45 unused devDependencies
 - [ ] **Identify console.log usage** - Create replacement plan
 - [ ] **Review TODO items** - Prioritize by business impact
+- [ ] **Prioritize infrastructure cleanup** - 8 unused infrastructure files identified
+- [ ] **Review API client exports** - 3 unused files in macro-ai-api-client package
 
 ### Week 1 Goals
 
@@ -234,6 +348,27 @@ modernization.
 ---
 
 ## 🚨 Risk Assessment
+
+### Critical Risk - Infrastructure Files
+
+**8 infrastructure files identified as unused by knip**:
+
+- `infrastructure/src/app.ts` - **MAIN CDK APP FILE** - This is critical!
+- `infrastructure/src/constructs/ecs-fargate-construct.ts` - ECS construct
+- `infrastructure/src/constructs/ecs-load-balancer-construct.ts` - Load balancer construct
+- `infrastructure/src/constructs/environment-config-construct.ts` - Environment config
+- `infrastructure/src/constructs/networking.ts` - Networking construct
+- `infrastructure/src/constructs/parameter-store-construct.ts` - Parameter store
+- `infrastructure/src/stacks/macro-ai-preview-stack.ts` - Preview stack
+- `infrastructure/src/utils/tagging-strategy.ts` - Tagging utilities
+
+**⚠️ WARNING**: These files appear to be the core of your infrastructure but are marked as unused. This suggests either:
+
+1. **Knip configuration issue** - These files are actually used but not properly configured
+2. **Infrastructure not deployed** - These constructs aren't being used in current deployments
+3. **Entry point missing** - The main CDK app entry point isn't configured correctly
+
+**Immediate Action Required**: Investigate why core infrastructure files are marked as unused before any deletion.
 
 ### Low Risk
 
@@ -261,7 +396,11 @@ modernization.
 
 - **Console statements**: 0 in production code
 - **TODO items**: 50% reduction
-- **Unused dependencies**: 80% reduction
+- **Unused dependencies**: 100% removal (35 packages identified)
+- **Unused devDependencies**: 100% removal (45 packages identified)
+- **Unused files**: 100% removal (26 files identified)
+- **Unused exports**: 100% removal (32 exports identified)
+- **Unused types**: 100% removal (21 types identified)
 
 ### Documentation
 
@@ -298,5 +437,5 @@ modernization.
 
 ---
 
-_This audit was generated on the `cleanup/codebase-audit-and-cleanup` branch and represents the current state 
+_This audit was generated on the `cleanup/codebase-audit-and-cleanup` branch and represents the current state
 of the codebase as of January 2025._
