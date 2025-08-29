@@ -9,7 +9,7 @@
 
 ## 🎯 **Phase 1 Overview**
 
-Phase 1 focuses on removing dead code and unused dependencies identified by knip analysis. 
+Phase 1 focuses on removing dead code and unused dependencies identified by knip analysis.
 This phase poses minimal risk to functionality while providing significant cleanup benefits.
 
 **Expected Impact**:
@@ -206,5 +206,5 @@ pnpm knip
 
 ---
 
-_This guide was generated for the Phase 1 cleanup of the macro-ai codebase. Follow the task dependencies 
+_This guide was generated for the Phase 1 cleanup of the macro-ai codebase. Follow the task dependencies
 and run hygiene checks at each stage to ensure successful cleanup._

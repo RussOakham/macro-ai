@@ -103,7 +103,7 @@
 		"infrastructure": {
 			"entry": [
 				"src/app.ts",
-				"src/**/*.test.ts", 
+				"src/**/*.test.ts",
 				"src/**/*.spec.ts",
 				"src/**/*.stack.ts"
 			],
