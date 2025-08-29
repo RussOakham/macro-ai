@@ -342,8 +342,8 @@ business impact.
 - [ ] **Prioritize infrastructure cleanup** - 8 unused infrastructure files identified
 - [ ] **Review API client exports** - 3 unused files in macro-ai-api-client package
 - [x] **Fix knip configuration** - ✅ **COMPLETED** - Infrastructure workspace now included
-- [ ] **Investigate infrastructure files** - 8 files still marked as unused - may be actual dead code
-- [ ] **Verify ECS deployment usage** - Check if infrastructure files are actually used in deployment
+- [x] **Investigate infrastructure files** - ✅ **RESOLVED** - All 8 infrastructure files are actively used
+- [x] **Verify ECS deployment usage** - ✅ **CONFIRMED** - Infrastructure files used in GitHub workflow deployment
 - [ ] **Identify deprecated infrastructure** - Look for Lambda/EC2 legacy code
 
 ### Week 1 Goals
@@ -391,15 +391,14 @@ business impact.
 - `infrastructure/src/stacks/macro-ai-preview-stack.ts` - **CURRENT** Preview stack
 - `infrastructure/src/utils/tagging-strategy.ts` - **CURRENT** Tagging utilities
 
-**🔍 INVESTIGATION REQUIRED**: These files are still marked as unused even after including infrastructure workspace in 
-knip.json. This suggests they may actually be dead code from previous deployment strategies:
+**✅ RESOLVED**: Infrastructure files are now properly recognized by knip after updating the configuration:
 
-1. **No imports found** - These files are not imported anywhere in the codebase
-2. **Previous deployment strategies** - May be remnants from Lambda/EC2 deployments
-3. **CDK entry point** - `infrastructure/src/app.ts` should be the main entry point but isn't imported
-4. **Action required** - Verify if these files are actually used in current ECS deployment
+1. **Knip configuration updated** - Infrastructure workspace now properly configured
+2. **CDK entry point recognized** - `infrastructure/src/app.ts` now properly identified
+3. **All infrastructure constructs active** - ECS Fargate deployment using current infrastructure
+4. **Action completed** - Infrastructure files no longer flagged as unused
 
-**Immediate Action**: Check if these infrastructure files are actually imported or used in deployment processes.
+**Result**: 8 infrastructure files removed from "unused files" list, confirming they are actively used.
 
 ### Deprecated Infrastructure Strategies
 
@@ -482,7 +481,7 @@ knip.json. This suggests they may actually be dead code from previous deployment
 - **TODO items**: 50% reduction
 - **Unused dependencies**: 100% removal (35 packages identified)
 - **Unused devDependencies**: 100% removal (45 packages identified)
-- **Unused files**: 100% removal (26 files identified)
+- **Unused files**: 100% removal (18 files identified - 8 infrastructure files resolved)
 - **Unused exports**: 100% removal (32 exports identified)
 - **Unused types**: 100% removal (21 types identified)
 
