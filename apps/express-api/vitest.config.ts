@@ -1,23 +1,26 @@
+import { commonTestConfig, unitTestTimeouts } from '@repo/config-testing'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
 	test: {
+		...unitTestTimeouts,
 		name: 'express-api',
 		setupFiles: ['./vitest.setup.ts'],
 		environment: 'node',
-		globals: true,
-		include: ['src/**/*.test.ts', 'src/**/*.spec.ts'],
-		// Timeout configurations to prevent CI failures
-		testTimeout: 30000, // 30 seconds for individual tests
-		hookTimeout: 30000, // 30 seconds for hooks (beforeEach, afterEach, etc.)
-		teardownTimeout: 30000, // 30 seconds for teardown
-		// Coverage configuration
+		// Use the shared config but override specific settings
+		globals: commonTestConfig.globals,
+		include: commonTestConfig.include,
+		exclude: commonTestConfig.exclude,
+		silent: commonTestConfig.silent,
 		coverage: {
-			provider: 'v8',
-			reporter: ['text', 'json', 'html'],
+			...commonTestConfig.coverage,
 			include: ['src/**/*.ts'],
-			exclude: ['src/**/*.test.ts', 'src/**/*.spec.ts', 'src/**/*.d.ts'],
+			exclude: [
+				...commonTestConfig.coverage.exclude,
+				'src/**/*.test.ts',
+				'src/**/*.spec.ts',
+				'src/**/*.d.ts',
+			],
 		},
-		silent: 'passed-only', // Only show errors and failed tests
 	},
 })

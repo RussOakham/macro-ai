@@ -1,16 +1,16 @@
+import { commonTestConfig, unitTestTimeouts } from '@repo/config-testing'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
 	test: {
+		...commonTestConfig,
+		...unitTestTimeouts,
 		name: 'macro-ai-api-client',
 		environment: 'node',
-		globals: true,
 		coverage: {
-			provider: 'v8',
-			reporter: ['text', 'json', 'html'],
+			...commonTestConfig.coverage,
 			exclude: [
-				'node_modules/',
-				'dist/',
+				...commonTestConfig.coverage.exclude,
 				'scripts/',
 				'**/*.test.ts',
 				'**/*.config.ts',

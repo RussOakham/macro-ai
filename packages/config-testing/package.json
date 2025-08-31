@@ -1,0 +1,24 @@
+{
+	"$schema": "http://json.schemastore.org/package",
+	"name": "@repo/config-testing",
+	"license": "MIT",
+	"private": "true",
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"clean": "rm -rf dist",
+		"type-check": "tsc --noEmit",
+		"prebuild": "pnpm clean"
+	},
+	"exports": {
+		".": "./dist/src/index.js"
+	},
+	"devDependencies": {
+		"typescript": "catalog:"
+	},
+	"engines": {
+		"node": ">=18.0.0",
+		"pnpm": ">=8.0.0"
+	}
+}

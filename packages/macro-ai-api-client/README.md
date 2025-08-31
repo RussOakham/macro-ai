@@ -2,6 +2,8 @@
 
 Modular TypeScript client for the Macro AI Express API, built with Zodios and Zod for full type safety.
 
+> 📚 **For comprehensive documentation, see [docs/features/api-client/README.md](../../docs/features/api-client/README.md)**
+
 ## Features
 
 - 🔒 **Full Type Safety** - Built with Zod schemas for runtime validation
