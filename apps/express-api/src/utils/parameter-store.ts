@@ -17,6 +17,7 @@ import {
 	getCurrentParameterStorePrefix,
 	getEnvironmentDisplayName,
 } from './environment-utils.ts'
+import { logger } from './logger.ts'
 
 export interface ParameterStoreConfig {
 	parameterStorePrefix: string
@@ -66,7 +67,7 @@ export class ParameterStoreService {
 			this.cache.set(cacheKey, value)
 			return value
 		} catch (error) {
-			console.error(`Failed to fetch parameter ${parameterName}:`, error)
+			            logger.error(error as Error, `Failed to fetch parameter ${parameterName}`)
 			throw error
 		}
 	}

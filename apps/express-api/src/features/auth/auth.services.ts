@@ -25,6 +25,7 @@ import crypto from 'crypto'
 
 import { tryCatch, tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import { NotFoundError, Result, ValidationError } from '../../utils/errors.ts'
+import { logger } from '../../utils/logger.ts'
 import { createParameterStoreService } from '../../utils/parameter-store.ts'
 
 import { ICognitoService, TRegisterUserRequest } from './auth.types.ts'
@@ -63,14 +64,9 @@ class CognitoService implements ICognitoService {
 			// Update the client with the correct region
 			this.client = new CognitoIdentityProviderClient(this.config)
 
-			console.log(
-				'Cognito configuration loaded from Parameter Store successfully',
-			)
+			logger.info('Cognito configuration loaded from Parameter Store successfully')
 		} catch (error) {
-			console.error(
-				'Failed to load Cognito configuration from Parameter Store:',
-				error,
-			)
+			            logger.error(error as Error, 'Failed to load Cognito configuration from Parameter Store')
 			// Don't throw here - let the service fail gracefully if needed
 		}
 	}
