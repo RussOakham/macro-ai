@@ -202,20 +202,124 @@ The codebase is now more maintainable:
 
 ## Future Cleanup Opportunities
 
-### **Phase 2 Considerations**
+### **Phase 2: Console Logs & Environment Cleanup (Week 2) - Medium Impact, Medium Risk**
 
-The remaining 27 exports and 29 types represent **future cleanup opportunities** that may require:
+#### **2A: Console Log Cleanup**
+- **Target**: 50+ console.log statements identified across codebase
+- **Priority**: High - replace with proper logging in production code
+- **Risk Level**: Low - mostly in test files and scripts
+- **Files Affected**:
+  - `tests/integration/` - 15+ console.log statements
+  - `infrastructure/src/` - 20+ console.log statements  
+  - `apps/express-api/` - 10+ console.log statements
+  - `packages/macro-ai-api-client/scripts/` - 5+ console.log statements
+- **Approach**: Replace with structured logging, remove from production code
+- **Expected Impact**: Improved production logging, cleaner test output
 
-- **Deeper dependency analysis** for complex usage patterns
-- **Runtime usage analysis** for dynamically imported code
-- **Cross-package dependency mapping** for monorepo relationships
-- **Performance profiling** to identify low-impact cleanup targets
+#### **2B: Environment File Consolidation**
+- **Target**: Reduce .env files to essential examples
+- **Priority**: Medium - environment configuration cleanup
+- **Risk Level**: Low - configuration file organization
+- **Files Affected**: Various .env.example files across packages
+- **Approach**: Audit current .env files, consolidate duplicates, maintain essential examples
+- **Expected Impact**: Cleaner environment configuration, reduced confusion
 
-### **Risk Assessment for Future Phases**
+#### **2C: Deprecated Scripts Verification**
+- **Target**: Verify status of deprecated build/deployment scripts
+- **Priority**: Medium - script cleanup verification
+- **Risk Level**: Low - script analysis only
+- **Current Status**: Only 2 scripts remain in root scripts/ directory
+- **Approach**: Verify if remaining scripts are still needed
+- **Expected Impact**: Confirmed script cleanup status
 
-- **Low Risk**: File and dependency cleanup (completed)
-- **Medium Risk**: Remaining exports and types (require deeper analysis)
-- **High Risk**: None identified at this time
+### **Phase 3: Documentation & Testing Optimization (Week 3) - High Impact, Medium Risk**
+
+#### **3A: Infrastructure Documentation Updates**
+- **Target**: Update documentation for ECS-only deployment
+- **Priority**: High - deployment accuracy
+- **Risk Level**: Medium - documentation accuracy critical for deployment
+- **Files Affected**: Infrastructure deployment guides, CDK documentation
+- **Approach**: Review and update all infrastructure docs for current ECS deployment
+- **Expected Impact**: Accurate deployment documentation, reduced deployment errors
+
+#### **3B: API Client Documentation Consolidation**
+- **Target**: Consolidate into single source of truth
+- **Priority**: Medium - documentation clarity
+- **Risk Level**: Low - documentation organization
+- **Files Affected**: API client documentation, integration guides
+- **Approach**: Merge duplicate guides, create unified API client documentation
+- **Expected Impact**: Clearer API integration guidance, reduced documentation confusion
+
+#### **3C: Testing Infrastructure Optimization**
+- **Target**: Optimize and deduplicate testing infrastructure
+- **Priority**: Medium - test efficiency
+- **Risk Level**: Medium - test infrastructure changes
+- **Files Affected**: Test configurations, test utilities, test helpers
+- **Approach**: Review test infrastructure, remove duplicates, optimize configurations
+- **Expected Impact**: Faster test execution, cleaner test structure
+
+### **Phase 4: Test Quality & Compliance (Week 4) - High Impact, High Risk**
+
+#### **4A: Skipped Tests Resolution**
+- **Target**: Address skipped test suites
+- **Priority**: High - test coverage quality
+- **Risk Level**: High - test functionality changes
+- **Current Status**: Need to verify current skipped test count
+- **Approach**: Review skipped tests, implement missing functionality, remove unnecessary skips
+- **Expected Impact**: Improved test coverage, better code quality assurance
+
+#### **4B: Test Compliance Review**
+- **Target**: Evaluate test suites against CLAUDE.md testing rules
+- **Priority**: High - test quality standards
+- **Risk Level**: Medium - test evaluation and cleanup
+- **Current Status**: Need to review 15+ test suites for compliance
+- **Approach**: Audit tests against testing rules, identify non-compliant patterns
+- **Expected Impact**: Consistent test quality, aligned with development standards
+
+#### **4C: Non-Compliant Test Removal**
+- **Target**: Eliminate contrived scenarios and non-compliant tests
+- **Priority**: Medium - test quality cleanup
+- **Risk Level**: Medium - test removal requires careful validation
+- **Approach**: Remove tests that don't follow testing rules, maintain essential coverage
+- **Expected Impact**: Cleaner test suite, better test reliability
+
+### **Phase 5: Advanced Cleanup & Optimization (Future Consideration)**
+
+#### **5A: Advanced Export Analysis**
+- **Target**: Remaining 27 unused exports
+- **Priority**: Low - requires deeper analysis
+- **Risk Level**: Medium - complex usage patterns
+- **Approach**: Deep dependency analysis, runtime usage verification
+- **Expected Impact**: Further bundle size reduction
+
+#### **5B: Advanced Type Analysis**
+- **Target**: Remaining 29 unused types
+- **Priority**: Low - requires deeper analysis
+- **Risk Level**: Medium - complex type relationships
+- **Approach**: Cross-package dependency mapping, circular dependency analysis
+- **Expected Impact**: Further type system cleanup
+
+#### **5C: Runtime Dependency Analysis**
+- **Target**: Remaining 2 unused dependencies
+- **Priority**: Low - requires runtime analysis
+- **Risk Level**: High - may have runtime-only usage patterns
+- **Approach**: Runtime usage analysis, dynamic import verification
+- **Expected Impact**: Complete dependency cleanup
+
+### **Updated Cleanup Timeline**
+
+- **Week 1**: ✅ Phase 1 - COMPLETED (High Impact, Low Risk)
+- **Week 2**: Phase 2 - Console Logs & Environment Cleanup (Medium Impact, Medium Risk)
+- **Week 3**: Phase 3 - Documentation & Testing Optimization (High Impact, Medium Risk)
+- **Week 4**: Phase 4 - Test Quality & Compliance (High Impact, High Risk)
+- **Future**: Phase 5 - Advanced Cleanup & Optimization (Low Priority, High Risk)
+
+### **Risk Assessment for Updated Phases**
+
+- **Phase 2**: Low-Medium Risk - mostly cleanup and organization
+- **Phase 3**: Medium Risk - documentation accuracy and test infrastructure
+- **Phase 4**: High Risk - test functionality and compliance changes
+- **Phase 5**: High Risk - complex analysis and potential breaking changes
 
 ---
 
