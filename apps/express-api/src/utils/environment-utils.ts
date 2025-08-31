@@ -1,3 +1,5 @@
+import { logger } from './logger.ts'
+
 /**
  * Environment Utilities
  *
@@ -36,9 +38,7 @@ const getParameterStorePrefix = (appEnv: string): string => {
 			return '/macro-ai/development/'
 		default:
 			// Fallback to development for unknown environments
-			console.warn(
-				`Unknown environment '${appEnv}', falling back to development parameters`,
-			)
+			logger.warn(`Unknown environment '${appEnv}', falling back to development parameters`)
 			return '/macro-ai/development/'
 	}
 }

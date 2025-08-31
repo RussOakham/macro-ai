@@ -67,7 +67,7 @@ export class ParameterStoreService {
 			this.cache.set(cacheKey, value)
 			return value
 		} catch (error) {
-			            logger.error(error as Error, `Failed to fetch parameter ${parameterName}`)
+			logger.error(error as Error, `Failed to fetch parameter ${parameterName}`)
 			throw error
 		}
 	}
@@ -110,7 +110,7 @@ export class ParameterStoreService {
 
 			return parameters
 		} catch (error) {
-			console.error(`Failed to fetch parameters by path ${path}:`, error)
+			logger.error(error as Error, `Failed to fetch parameters by path ${path}`)
 			throw error
 		}
 	}
@@ -148,7 +148,7 @@ export class ParameterStoreService {
 				refreshTokenExpiry: parseInt(refreshTokenExpiry, 10),
 			}
 		} catch (error) {
-			console.error('Failed to fetch Cognito configuration:', error)
+			logger.error(error as Error, 'Failed to fetch Cognito configuration')
 			throw error
 		}
 	}
@@ -169,8 +169,8 @@ export const createParameterStoreService = (): ParameterStoreService => {
 	const currentEnv = getCurrentEnvironment()
 	const envDisplayName = getEnvironmentDisplayName(currentEnv)
 
-	console.log(`🔧 Parameter Store Service initialized for ${envDisplayName}`)
-	console.log(`📋 Using parameter store prefix: ${parameterStorePrefix}`)
+	logger.info(`🔧 Parameter Store Service initialized for ${envDisplayName}`)
+	logger.info(`📋 Using parameter store prefix: ${parameterStorePrefix}`)
 
 	return new ParameterStoreService({
 		parameterStorePrefix,

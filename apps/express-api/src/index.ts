@@ -6,10 +6,8 @@
 import { createServer as createHttpServer } from 'http'
 
 import { assertConfig } from './config/simple-config.ts'
-import { pino } from './utils/logger.ts'
+import { logger } from './utils/logger.ts'
 import { createServer } from './utils/server.ts'
-
-const { logger } = pino
 
 /**
  * Start the Express server with the simplified configuration system
@@ -75,6 +73,6 @@ const startServer = () => {
 try {
 	startServer()
 } catch (error: unknown) {
-	console.error('Unhandled error during server startup:', error)
+			logger.error(error as Error, 'Unhandled error during server startup')
 	process.exit(1)
 }

@@ -64,9 +64,14 @@ class CognitoService implements ICognitoService {
 			// Update the client with the correct region
 			this.client = new CognitoIdentityProviderClient(this.config)
 
-			logger.info('Cognito configuration loaded from Parameter Store successfully')
+			logger.info(
+				'Cognito configuration loaded from Parameter Store successfully',
+			)
 		} catch (error) {
-			            logger.error(error as Error, 'Failed to load Cognito configuration from Parameter Store')
+			logger.error(
+				error as Error,
+				'Failed to load Cognito configuration from Parameter Store',
+			)
 			// Don't throw here - let the service fail gracefully if needed
 		}
 	}
