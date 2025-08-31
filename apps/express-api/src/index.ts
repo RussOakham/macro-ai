@@ -73,6 +73,6 @@ const startServer = () => {
 try {
 	startServer()
 } catch (error: unknown) {
-			logger.error(error as Error, 'Unhandled error during server startup')
+	logger.error(error as Error, 'Unhandled error during server startup')
 	process.exit(1)
 }

@@ -38,7 +38,9 @@ const getParameterStorePrefix = (appEnv: string): string => {
 			return '/macro-ai/development/'
 		default:
 			// Fallback to development for unknown environments
-			logger.warn(`Unknown environment '${appEnv}', falling back to development parameters`)
+			logger.warn(
+				`Unknown environment '${appEnv}', falling back to development parameters`,
+			)
 			return '/macro-ai/development/'
 	}
 }
