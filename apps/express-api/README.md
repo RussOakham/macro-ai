@@ -104,6 +104,7 @@ src/
 For comprehensive environment configuration, see [ENVIRONMENT_TEMPLATE.md](./ENVIRONMENT_TEMPLATE.md).
 
 **Quick Setup:**
+
 ```bash
 # Copy the local development template
 cp env.local.example .env.local
@@ -113,6 +114,7 @@ nano .env.local
 ```
 
 **Key Variables:**
+
 - `API_KEY`: 32-character API key for authentication
 - `SERVER_PORT`: Express server port (default: 3040)
 - `RELATIONAL_DATABASE_URL`: PostgreSQL connection string

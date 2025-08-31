@@ -240,7 +240,7 @@ jobs:
             exit 1
           fi
 
-      - name: Verify EC2 cleanup
+      - name: Verify ECS cleanup
         id: verify
         run: |
           cd infrastructure
@@ -248,19 +248,18 @@ jobs:
           ENV_NAME="${{ needs.validate-access.outputs.env-name }}"
           STACK_NAME="${{ needs.validate-access.outputs.stack-name }}"
 
-          echo "🔍 Using centralized EC2 cleanup verification..."
+          echo "🔍 Verifying ECS Fargate cleanup completion..."
 
           # Wait a moment for AWS to process the deletion
           sleep 10
 
-          # Use centralized verification script
-          if ./scripts/verify-ec2-cleanup.sh --env-name "${ENV_NAME}" --stack-name "${STACK_NAME}" --verbose; then
-            echo "verification-result=success" >> $GITHUB_OUTPUT
-            echo "✅ EC2 preview environment fully cleaned up"
-          else
+          # Verify CloudFormation stack deletion (ECS resources are managed by the stack)
+          if aws cloudformation describe-stacks --stack-name "${STACK_NAME}" --no-cli-pager &> /dev/null; then
             echo "verification-result=partial" >> $GITHUB_OUTPUT
-            echo "⚠️ Some resources may still be terminating or cleanup verification failed"
-            echo "This may be normal if deletion is still in progress"
+            echo "⚠️ Stack still exists - cleanup may still be in progress"
+          else
+            echo "verification-result=success" >> $GITHUB_OUTPUT
+            echo "✅ ECS Fargate preview environment fully cleaned up"
           fi
 
   # Comment on PR with destruction results
@@ -301,7 +300,7 @@ jobs:
               comment += `The ephemeral preview environment has been destroyed.\n\n`;
               comment += `**Verification:** ${verifyIcon} ${verificationResult === 'success' ? 'Complete' : 'In Progress'}\n\n`;
               comment += `### 🧹 Resources Cleaned Up\n`;
-              comment += `- EC2 instances and Auto Scaling Group\n`;
+              comment += `- ECS Fargate services and tasks\n`;
               comment += `- Application Load Balancer and Target Groups\n`;
               comment += `- VPC networking components (subnets, security groups)\n`;
               comment += `- CloudWatch Log Groups and monitoring resources\n`;
@@ -311,12 +310,12 @@ jobs:
               comment += `### ❌ Cleanup Failed\n`;
               comment += `The preview environment cleanup encountered an error. `;
               comment += `A repository maintainer may need to manually clean up resources.\n\n`;
-              comment += `**Manual cleanup options:**\n`;
-              comment += `- Use the \`teardown-dev.yml\` workflow with PR number ${{ github.event.pull_request.number }}\n`;
-              comment += `- Check AWS Console for remaining resources:\n`;
-              comment += `  - **EC2**: Auto Scaling Groups, Launch Templates, Instances\n`;
-              comment += `  - **Load Balancing**: Application Load Balancers, Target Groups\n`;
-              comment += `  - **CloudFormation**: Stack \`${stackName}\`\n\n`;
+                          comment += `**Manual cleanup options:**\n`;
+            comment += `- Use the \`teardown-dev.yml\` workflow with PR number ${{ github.event.pull_request.number }}\n`;
+            comment += `- Check AWS Console for remaining resources:\n`;
+            comment += `  - **ECS**: Services, Task Definitions, Clusters\n`;
+            comment += `  - **Load Balancing**: Application Load Balancers, Target Groups\n`;
+            comment += `  - **CloudFormation**: Stack \`${stackName}\`\n\n`;
             }
 
             comment += `---\n`;

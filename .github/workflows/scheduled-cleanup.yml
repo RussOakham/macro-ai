@@ -302,18 +302,18 @@ jobs:
           ENV_NAME="${{ matrix.environment.env_name }}"
           STACK_NAME="${{ matrix.environment.stack_name }}"
 
-          echo "🔍 Verifying cleanup for environment: $ENV_NAME"
+          echo "🔍 Verifying ECS Fargate cleanup for environment: $ENV_NAME"
 
           # Wait a moment for AWS to process the deletion
           sleep 10
 
-          # Use centralized verification script
-          if ./scripts/verify-ec2-cleanup.sh --env-name "$ENV_NAME" --stack-name "$STACK_NAME" --timeout 300 --verbose; then
-            echo "verification-result=success" >> $GITHUB_OUTPUT
-            echo "✅ Scheduled cleanup verification complete"
-          else
+          # Verify CloudFormation stack deletion (ECS resources are managed by the stack)
+          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" --no-cli-pager &> /dev/null; then
             echo "verification-result=partial" >> $GITHUB_OUTPUT
-            echo "⚠️ Some resources may still be terminating"
+            echo "⚠️ Stack still exists - cleanup may still be in progress"
+          else
+            echo "verification-result=success" >> $GITHUB_OUTPUT
+            echo "✅ ECS Fargate cleanup verification complete"
           fi
 
   # Generate cleanup report and cost optimization tracking
