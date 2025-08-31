@@ -71,16 +71,6 @@ const getCurrentParameterStorePrefix = (): string => {
 }
 
 /**
- * Environment type for type safety
- */
-type Environment =
-	| 'development'
-	| 'staging'
-	| 'production'
-	| 'test'
-	| `pr-${number}`
-
-/**
  * Checks if the current environment is a preview environment
  *
  * @param appEnv - The APP_ENV environment variable value
@@ -112,4 +102,4 @@ export {
 	isPreviewEnvironment,
 }
 
-export type { Environment }
+

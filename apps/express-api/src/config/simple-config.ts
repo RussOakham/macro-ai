@@ -12,10 +12,7 @@ import { type TEnv } from '../utils/env.schema.ts'
 import { type Result } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
 
-import {
-	type EnvConfigOptions,
-	loadEnvConfig,
-} from './env-config.ts'
+import { type EnvConfigOptions, loadEnvConfig } from './env-config.ts'
 
 const { logger } = pino
 
@@ -185,5 +182,3 @@ export const assertConfig = (shouldLog = false): ConfigType => {
 export const isPreviewEnvironment = (): boolean => {
 	return Boolean(process.env.APP_ENV?.startsWith('pr-'))
 }
-
-

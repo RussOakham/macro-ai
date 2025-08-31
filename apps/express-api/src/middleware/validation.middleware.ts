@@ -52,4 +52,3 @@ const validate = <T>(
 }
 
 export { validate }
-export type { ValidationTarget, ValidSchema }
