@@ -5,7 +5,6 @@ import { type Result } from '../../utils/errors.ts'
 
 import {
 	insertUserSchema,
-	messageBaseSchema,
 	selectUserSchema,
 	userResponseSchema,
 } from './user.schemas.ts'
@@ -63,14 +62,12 @@ interface IUserRepository {
 type TInsertUser = z.infer<typeof insertUserSchema>
 type TUser = z.infer<typeof selectUserSchema>
 type TUserResponse = z.infer<typeof userResponseSchema>
-type TMessageBase = z.infer<typeof messageBaseSchema>
 
 export type {
 	IUserController,
 	IUserRepository,
 	IUserService,
 	TInsertUser,
-	TMessageBase,
 	TUser,
 	TUserResponse,
 }

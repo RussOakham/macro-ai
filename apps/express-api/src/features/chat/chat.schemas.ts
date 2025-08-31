@@ -258,11 +258,8 @@ const streamingEventSchema = registerZodSchema(
 
 // Type definitions for pgvector operations
 export type Chat = typeof chatsTable.$inferSelect
-export type NewChat = typeof chatsTable.$inferInsert
 export type ChatMessage = typeof chatMessagesTable.$inferSelect
-export type NewChatMessage = typeof chatMessagesTable.$inferInsert
 export type ChatVector = typeof chatVectorsTable.$inferSelect
-export type NewChatVector = typeof chatVectorsTable.$inferInsert
 
 // Type definitions for API requests and responses
 export type CreateChatRequest = z.infer<typeof createChatRequestSchema>

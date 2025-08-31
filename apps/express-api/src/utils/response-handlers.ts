@@ -76,10 +76,6 @@ export const handleServiceError = (
 	return { success: true }
 }
 
-type TValidationResult =
-	| { valid: true }
-	| { valid: false; error: { message: string; status: number } }
-
 /**
  * Validates required data exists
  * @param condition Condition to check
@@ -93,7 +89,7 @@ export const validateData = (
 	errorMessage: string,
 	logContext: string,
 	status: number = StatusCodes.BAD_REQUEST,
-): TValidationResult => {
+) => {
 	if (!condition) {
 		logger.error(`[${logContext}]: ${errorMessage}`)
 		return {
