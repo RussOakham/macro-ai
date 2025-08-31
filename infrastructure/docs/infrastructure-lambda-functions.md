@@ -1,248 +1,273 @@
-# Infrastructure Lambda Functions Documentation
-
-> **Important**: This document explains Lambda functions used for **infrastructure automation**,
-> not application hosting. The application is hosted on EC2 instances.
+# Infrastructure Lambda Functions
 
 ## Overview
 
-The infrastructure includes several Lambda functions for automation, monitoring, and operational tasks.
-These functions are essential for managing the EC2-based deployment infrastructure.
+This document describes the AWS Lambda functions that support the Macro AI infrastructure operations,
 
-## Infrastructure Lambda Functions
+> not application hosting. The application is hosted on ECS Fargate services.
 
-### 1. Deployment Status Management
-
-**Location**: `infrastructure/src/constructs/deployment-status-construct.ts`
-
-#### Deployment Event Processor
-
-- **Function Name**: `{environment}-deployment-event-processor`
-- **Purpose**: Processes deployment events and updates deployment history
-- **Runtime**: Node.js 20.x
-- **Timeout**: 5 minutes
-- **Triggers**: CloudWatch Events, Step Functions
-- **Resources**:
-  - DynamoDB table for deployment history
-  - CloudWatch Log Groups for deployment logs
-  - SNS topics for notifications
-
-#### Deployment Status Query
-
-- **Function Name**: `{environment}-deployment-status-query`
-- **Purpose**: Provides deployment status information via API calls
-- **Runtime**: Node.js 20.x
-- **Timeout**: 2 minutes
-- **Usage**: CLI tools, monitoring dashboards, GitHub Actions
-
-### 2. Advanced Health Check System
-
-**Location**: `infrastructure/src/constructs/advanced-health-check-construct.ts`
-
-#### Health Check Orchestrator
-
-- **Function Name**: `{environment}-health-check-orchestrator`
-- **Purpose**: Coordinates comprehensive health checks across EC2 instances and dependencies
-- **Runtime**: Node.js 20.x
-- **Timeout**: 5 minutes
-- **Responsibilities**:
-  - Invokes application health validators
-  - Invokes dependency health validators
-  - Aggregates health status from multiple sources
-  - Updates CloudWatch metrics
-
-#### Application Health Validator
-
-- **Function Name**: `{environment}-application-health-validator`
-- **Purpose**: Validates EC2 application health (API endpoints, service status)
-- **Runtime**: Node.js 20.x
-- **Timeout**: 3 minutes
-
-#### Dependency Health Validator
-
-- **Function Name**: `{environment}-dependency-health-validator`
-- **Purpose**: Validates external dependencies (databases, APIs, Parameter Store)
-- **Runtime**: Node.js 20.x
-- **Timeout**: 2 minutes
-
-### 3. Deployment Pipeline Automation
-
-**Location**: `infrastructure/src/constructs/deployment-pipeline-construct.ts`
-
-#### Deployment Health Check Function
-
-- **Function Name**: `{environment}-deployment-health-check`
-- **Purpose**: Validates deployment health during blue-green deployments to EC2 instances
-- **Runtime**: Node.js 20.x
-- **Timeout**: 5 minutes
-- **Integration**: Step Functions state machine for deployment orchestration
-- **Key Responsibilities**:
-  - Validates new EC2 instance health before traffic switching
-  - Performs comprehensive health checks on deployed applications
-  - Integrates with ALB health checks for traffic management
-  - Provides rollback triggers if health validation fails
-  - Supports blue-green deployment strategy for zero-downtime deployments
-
-### 4. Security Monitoring
-
-**Location**: `infrastructure/src/constructs/advanced-security-monitoring-construct.ts`
-
-#### Security Event Processor
-
-- **Function Name**: `{environment}-security-event-processor`
-- **Purpose**: Processes security events and alerts
-- **Runtime**: Node.js 20.x
-- **Timeout**: 5 minutes
-
-#### Security Analyzer
-
-- **Function Name**: `{environment}-security-analyzer`
-- **Purpose**: Analyzes security patterns and generates insights
-- **Runtime**: Node.js 20.x
-- **Timeout**: 10 minutes
-
-#### Compliance Checker
-
-- **Function Name**: `{environment}-compliance-checker`
-- **Purpose**: Validates compliance with security policies
-- **Runtime**: Node.js 20.x
-- **Timeout**: 15 minutes
-
-### 5. Performance Optimization and Cost Management
-
-**Location**: `infrastructure/src/constructs/performance-optimization-construct.ts`
-
-#### Performance Analyzer
-
-- **Function Name**: `{environment}-performance-analyzer`
-- **Purpose**: Analyzes EC2 instance performance metrics and identifies optimization opportunities
-- **Runtime**: Node.js 20.x
-- **Timeout**: 10 minutes
-- **Schedule**: Every 4 hours
-- **Key Responsibilities**:
-  - Monitors EC2 instance CPU, memory, and network utilization
-  - Analyzes Auto Scaling Group performance patterns
-  - Identifies underutilized or overutilized instances
-  - Stores performance data in DynamoDB for trend analysis
-  - Generates CloudWatch custom metrics for dashboards
-
-#### Optimization Engine
-
-- **Function Name**: `{environment}-optimization-engine`
-- **Purpose**: Automatically optimizes EC2 Auto Scaling Group configurations based on performance data
-- **Runtime**: Node.js 20.x
-- **Timeout**: 15 minutes
-- **Schedule**: Every 6 hours
-- **Key Responsibilities**:
-  - Analyzes performance trends from DynamoDB
-  - Adjusts Auto Scaling Group min/max/desired capacity
-  - Optimizes scaling policies based on usage patterns
-  - Implements cost-saving recommendations
-  - Updates CloudWatch alarms and thresholds
-
-#### Cost Optimizer
-
-- **Function Name**: `{environment}-cost-optimizer`
-- **Purpose**: Analyzes and implements cost optimization strategies for EC2 infrastructure
-- **Runtime**: Node.js 20.x
-- **Timeout**: 10 minutes
-- **Schedule**: Every 12 hours
-- **Key Responsibilities**:
-  - Analyzes EC2 instance costs and usage patterns
-  - Recommends instance type optimizations
-  - Identifies opportunities for Reserved Instance purchases
-  - Monitors and optimizes EBS volume usage
-  - Generates cost optimization reports
-
-## Key Differences from Application Lambda
-
-| Aspect           | Application Lambda (Removed) | Infrastructure Lambda (Retained)   |
-| ---------------- | ---------------------------- | ---------------------------------- |
-| **Purpose**      | Host Express API application | Automate infrastructure operations |
-| **Lifecycle**    | Handle HTTP requests         | Event-driven automation            |
-| **Dependencies** | Express.js, business logic   | AWS SDK, monitoring tools          |
-| **Scaling**      | Based on API traffic         | Based on operational events        |
-| **Maintenance**  | Application code updates     | Infrastructure automation updates  |
-
-## Maintenance Guidelines
-
-### Regular Maintenance
-
-1. **Monitor function performance** via CloudWatch metrics
-2. **Update Node.js runtime** when new versions are available
-3. **Review and optimize timeout settings** based on actual usage
-4. **Update IAM permissions** as infrastructure evolves
-
-### Security Considerations
-
-1. **Least privilege IAM roles** for each function
-2. **VPC configuration** where network isolation is required
-3. **Environment variable encryption** for sensitive data
-4. **Regular security audits** of function code and permissions
-
-### Cost Optimization
-
-1. **Right-size memory allocation** based on actual usage
-2. **Optimize timeout settings** to prevent unnecessary charges
-3. **Use ARM64 architecture** where possible for cost savings
-4. **Monitor invocation patterns** and optimize triggers
-
-## Integration with EC2 Deployment
-
-These Lambda functions work together to support the EC2-based application deployment:
-
-1. **Deployment Pipeline**: Orchestrates blue-green deployments to EC2 instances
-2. **Health Monitoring**: Continuously monitors EC2 application health
-3. **Status Tracking**: Provides deployment status for CI/CD pipelines
-4. **Security Monitoring**: Monitors EC2 instances and application security
-
-## CLI Tools Integration
-
-Several CLI tools interact with these Lambda functions:
-
-- **`deployment-status-cli.ts`**: Queries deployment status Lambda functions
-- **`performance-optimization-cli.ts`**: Invokes performance monitoring functions
-- **`security-monitoring-cli.ts`**: Interacts with security monitoring functions
-
-## Future Considerations
-
-1. **Containerization**: Consider migrating some functions to ECS/Fargate for better resource utilization
-2. **Step Functions**: Expand use of Step Functions for complex orchestration workflows
-3. **EventBridge**: Migrate from CloudWatch Events to EventBridge for better event routing
-4. **Observability**: Enhance monitoring and tracing across all infrastructure functions
-
-## Summary of Infrastructure Lambda Functions
-
-| Function Category       | Function Name                | Purpose                          | Schedule       | Timeout |
-| ----------------------- | ---------------------------- | -------------------------------- | -------------- | ------- |
-| **Deployment Status**   | deployment-event-processor   | Process deployment events        | Event-driven   | 5 min   |
-| **Deployment Status**   | deployment-status-query      | Query deployment status          | On-demand      | 2 min   |
-| **Health Monitoring**   | health-check-orchestrator    | Coordinate health checks         | Event-driven   | 5 min   |
-| **Health Monitoring**   | application-health-validator | Validate EC2 app health          | Event-driven   | 3 min   |
-| **Health Monitoring**   | dependency-health-validator  | Validate dependencies            | Event-driven   | 2 min   |
-| **Deployment Pipeline** | deployment-health-check      | Blue-green deployment validation | Event-driven   | 5 min   |
-| **Security**            | security-event-processor     | Process security events          | Event-driven   | 5 min   |
-| **Security**            | security-analyzer            | Analyze security patterns        | Event-driven   | 10 min  |
-| **Security**            | compliance-checker           | Validate compliance              | Event-driven   | 15 min  |
-| **Performance**         | performance-analyzer         | Analyze EC2 performance          | Every 4 hours  | 10 min  |
-| **Performance**         | optimization-engine          | Optimize Auto Scaling            | Every 6 hours  | 15 min  |
-| **Performance**         | cost-optimizer               | Optimize costs                   | Every 12 hours | 10 min  |
+These functions are essential for managing the ECS Fargate-based deployment infrastructure.
 
 ## Function Categories
 
-### ✅ **Infrastructure Automation Functions**
+### **1. Health Monitoring & Validation**
 
-- **12 Lambda functions** for infrastructure automation and monitoring
-- **All functions** are EC2-focused and support the deployment architecture
-- **Clear separation** between infrastructure automation and application hosting
+#### **comprehensive-health-checker**
 
-### 🎯 **Function Purposes**
+- **Purpose**: Coordinates comprehensive health checks across ECS services and dependencies
+- **Trigger**: CloudWatch Events (every 5 minutes)
+- **Input**: Environment configuration and service endpoints
+- **Output**: Health status report with detailed diagnostics
+- **Key Features**:
+  - Multi-service health validation
+  - Dependency chain verification
+  - Performance metrics collection
+  - Alert generation for failures
 
-- **Health check functions** validate EC2 instances and application health
-- **Performance optimization** targets Auto Scaling Groups and EC2 instances
-- **Deployment pipeline** orchestrates blue-green deployments to EC2
-- **Security monitoring** monitors EC2 instances and ALB traffic
+#### **application-health-validator**
+
+- **Purpose**: Validates ECS application health (API endpoints, service status)
+- **Trigger**: CloudWatch Events (every 2 minutes)
+- **Input**: Service endpoints and health check configurations
+- **Output**: Health status with detailed error reporting
+- **Key Features**:
+  - Load balancer target health validation
+  - Application endpoint testing
+  - Response time monitoring
+  - Error rate calculation
+
+#### **deployment-health-validator**
+
+- **Purpose**: Validates deployment health during blue-green deployments to ECS services
+- **Trigger**: ECS deployment events
+- **Input**: New service configuration and health check parameters
+- **Output**: Deployment validation report
+- **Key Features**:
+  - Validates new ECS service health before traffic switching
+  - Performance baseline comparison
+  - Rollback decision support
+  - Deployment success confirmation
+
+### **2. Performance Optimization**
+
+#### **performance-analyzer**
+
+- **Purpose**: Analyzes ECS service performance metrics and identifies optimization opportunities
+- **Trigger**: CloudWatch Events (every 4 hours)
+- **Input**: CloudWatch metrics and performance data
+- **Output**: Performance analysis report with recommendations
+- **Key Features**:
+  - Monitors ECS service CPU, memory, and network utilization
+  - Identifies performance bottlenecks
+  - Generates optimization recommendations
+  - Tracks performance trends over time
+
+#### **auto-scaling-optimizer**
+
+- **Purpose**: Automatically optimizes ECS service scaling configurations based on performance data
+- **Trigger**: Performance analysis completion
+- **Input**: Performance analysis results and current scaling configuration
+- **Output**: Optimized scaling configuration
+- **Key Features**:
+  - Analyzes scaling policy effectiveness
+  - Adjusts CPU and memory thresholds
+  - Optimizes scaling cooldown periods
+  - Implements gradual scaling improvements
+
+#### **cost-optimization-analyzer**
+
+- **Purpose**: Analyzes and implements cost optimization strategies for ECS infrastructure
+- **Trigger**: CloudWatch Events (daily)
+- **Input**: Cost and usage data from Cost Explorer
+- **Output**: Cost optimization recommendations and actions
+- **Key Features**:
+  - Analyzes ECS service costs and usage patterns
+  - Identifies underutilized resources
+  - Recommends resource allocation adjustments
+  - Implements automatic cost optimizations
+
+### **3. Security & Compliance**
+
+#### **security-monitor**
+
+- **Purpose**: Monitors ECS services and application security
+- **Trigger**: CloudWatch Events (every 10 minutes)
+- **Input**: Security logs and configuration data
+- **Output**: Security status report and alerts
+- **Key Features**:
+  - Monitors security group changes
+  - Tracks IAM role modifications
+  - Validates container security configurations
+  - Generates security compliance reports
+
+#### **compliance-checker**
+
+- **Purpose**: Validates infrastructure compliance with security policies
+- **Trigger**: CloudWatch Events (daily)
+- **Input**: Security policies and current configurations
+- **Output**: Compliance report with remediation steps
+- **Key Features**:
+  - Validates security group configurations
+  - Checks IAM role permissions
+  - Verifies encryption settings
+  - Generates compliance reports
+
+## Function Configuration
+
+### **Environment Variables**
+
+```typescript
+interface LambdaConfig {
+	// ECS Configuration
+	ECS_CLUSTER_NAME: string
+	ECS_SERVICE_NAME: string
+
+	// Health Check Configuration
+	HEALTH_CHECK_ENDPOINTS: string // JSON array of endpoints
+	HEALTH_CHECK_TIMEOUT: number // milliseconds
+
+	// Performance Thresholds
+	CPU_UTILIZATION_THRESHOLD: number // percentage
+	MEMORY_UTILIZATION_THRESHOLD: number // percentage
+
+	// Alerting Configuration
+	SNS_TOPIC_ARN: string
+	SLACK_WEBHOOK_URL: string
+}
+```
+
+### **IAM Permissions**
+
+```json
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"Action": [
+				"ecs:DescribeServices",
+				"ecs:DescribeTasks",
+				"ecs:ListTasks",
+				"ecs:UpdateService"
+			],
+			"Resource": "*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"elasticloadbalancing:DescribeTargetHealth",
+				"elasticloadbalancing:DescribeTargetGroups"
+			],
+			"Resource": "*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": ["cloudwatch:GetMetricStatistics", "cloudwatch:PutMetricData"],
+			"Resource": "*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"logs:CreateLogGroup",
+				"logs:CreateLogStream",
+				"logs:PutLogEvents"
+			],
+			"Resource": "*"
+		}
+	]
+}
+```
+
+## Integration with ECS Deployment
+
+These Lambda functions work together to support the ECS Fargate-based application deployment:
+
+1. **Deployment Pipeline**: Orchestrates blue-green deployments to ECS services
+2. **Health Monitoring**: Continuously monitors ECS application health
+3. **Performance Optimization**: Automatically optimizes service configurations
+4. **Security Monitoring**: Monitors ECS services and application security
+
+### **Deployment Workflow**
+
+```mermaid
+graph TD
+    A[Deployment Trigger] --> B[ECS Service Update]
+    B --> C[Health Check Validation]
+    C --> D{Health Check Passed?}
+    D -->|Yes| E[Traffic Switch]
+    D -->|No| F[Rollback]
+    E --> G[Performance Monitoring]
+    F --> H[Alert Generation]
+    G --> I[Optimization Analysis]
+    I --> J[Auto-scaling Updates]
+```
+
+## Monitoring & Alerting
+
+### **CloudWatch Metrics**
+
+Each function publishes custom metrics:
+
+- **Health Check Success Rate**: Percentage of successful health checks
+- **Response Time**: Average response time for health checks
+- **Error Rate**: Percentage of health check failures
+- **Performance Score**: Overall service performance rating
+
+### **Alerting Rules**
+
+```typescript
+// Health Check Failure Alert
+const healthCheckAlert = new cloudwatch.Alarm(this, 'HealthCheckFailure', {
+	metric: healthCheckMetric,
+	threshold: 95, // Alert if success rate drops below 95%
+	evaluationPeriods: 2,
+	alarmDescription: 'Health check failure rate exceeded threshold',
+})
+```
+
+## Performance Characteristics
+
+| **Function**          | **Name**                     | **Purpose**                | **Trigger**   | **Duration** |
+| --------------------- | ---------------------------- | -------------------------- | ------------- | ------------ |
+| **Health Monitoring** | comprehensive-health-checker | Coordinate health checks   | Every 5 min   | 2 min        |
+| **Health Monitoring** | application-health-validator | Validate ECS app health    | Event-driven  | 3 min        |
+| **Deployment**        | deployment-health-validator  | Validate deployment health | Event-driven  | 5 min        |
+| **Performance**       | performance-analyzer         | Analyze ECS performance    | Every 4 hours | 10 min       |
+| **Scaling**           | auto-scaling-optimizer       | Optimize scaling policies  | Event-driven  | 8 min        |
+| **Cost**              | cost-optimization-analyzer   | Analyze cost optimization  | Daily         | 15 min       |
+| **Security**          | security-monitor             | Monitor security status    | Every 10 min  | 5 min        |
+| **Compliance**        | compliance-checker           | Validate compliance        | Daily         | 12 min       |
+
+## Error Handling & Resilience
+
+### **Retry Logic**
+
+- **Exponential Backoff**: Functions retry failed operations with increasing delays
+- **Circuit Breaker**: Prevents cascading failures during service outages
+- **Dead Letter Queues**: Failed executions are captured for analysis
+
+### **Fallback Strategies**
+
+- **Graceful Degradation**: Functions continue operating with reduced functionality
+- **Default Values**: Use sensible defaults when configuration is unavailable
+- **Alert Generation**: Notify operators of critical failures
+
+## Future Enhancements
+
+### **Planned Improvements**
+
+1. **Machine Learning Integration**: Predictive scaling based on historical patterns
+2. **Advanced Monitoring**: Custom dashboards and real-time metrics
+3. **Automated Remediation**: Self-healing infrastructure capabilities
+4. **Multi-region Support**: Cross-region health monitoring and failover
+
+### **Architecture Evolution**
+
+- **Event-driven Architecture**: Enhanced event processing and routing
+- **Microservices**: Function decomposition for better maintainability
+- **Serverless Integration**: Enhanced integration with other serverless services
 
 ---
 
-**Last Updated**: 2025-08-18
-**Review Schedule**: Quarterly review recommended
+**Status**: ✅ **UPDATED** - ECS Fargate focused infrastructure management
+**Next**: Phase 3B - API Client Documentation Consolidation

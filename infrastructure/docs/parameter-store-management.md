@@ -144,7 +144,7 @@ APP_ENV: z.union([
 
 ### Pre-deployment Validation
 
-Both GitHub Actions and EC2 preview deployment scripts validate Parameter Store parameters before launching instances:
+Both GitHub Actions and ECS preview deployment scripts validate Parameter Store parameters before launching services:
 
 1. **AWS Credentials Check** - Validates AWS STS access
 2. **Required Parameters Check** - Tests each critical parameter exists
@@ -152,7 +152,7 @@ Both GitHub Actions and EC2 preview deployment scripts validate Parameter Store 
 
 ### User Data Script Validation
 
-EC2 instances validate configuration during startup:
+ECS services validate configuration during startup:
 
 1. **Parameter Store Access** - Tests AWS credentials and parameter access
 2. **Required Parameters** - Checks all 11 critical parameters exist

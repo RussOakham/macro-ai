@@ -16,13 +16,13 @@ need to be updated to ensure proper access control and security.
 ### 2. **Deployment Architecture Change**
 
 - **Before**: Lambda functions with runtime Parameter Store access
-- **After**: EC2 instances with CDK synthesis time configuration injection
-- **Impact**: EC2 instances no longer need Parameter Store read permissions
+- **After**: ECS services with CDK synthesis time configuration injection
+- **Impact**: ECS services no longer need Parameter Store read permissions
 
 ### 3. **Security Model Improvement**
 
-- **Before**: EC2 instances had broad Parameter Store access for runtime configuration
-- **After**: EC2 instances receive configuration at deployment time, eliminating runtime access needs
+- **Before**: ECS services had broad Parameter Store access for runtime configuration
+- **After**: ECS services receive configuration at deployment time, eliminating runtime access needs
 - **Impact**: Reduced attack surface and improved security posture
 
 ## 📋 **Required IAM Policy Updates**
@@ -42,22 +42,22 @@ need to be updated to ensure proper access control and security.
 
 #### ✅ **New Permissions Added**
 
-- **EC2DeploymentPermissions**: Full EC2 instance management capabilities
+- **ECSDeploymentPermissions**: Full ECS service management capabilities
   - Instance creation, termination, modification
   - VPC, subnet, security group management
   - Instance monitoring and tagging
 
-### **EC2 Instance Role** (`ec2-construct.ts`)
+### **ECS Task Role** (`ecs-construct.ts`)
 
 #### ✅ **Already Updated**
 
 - **Parameter Store permissions removed entirely**
 - **KMS decryption permissions removed**
-- **Security improvement**: EC2 instances no longer have access to sensitive configuration
+- **Security improvement**: ECS services no longer have access to sensitive configuration
 
 #### **Benefits of This Change**
 
-1. **Reduced Attack Surface**: Compromised EC2 instances cannot access Parameter Store
+1. **Reduced Attack Surface**: Compromised ECS services cannot access Parameter Store
 2. **Simplified IAM**: Fewer permissions to manage and audit
 3. **Better Security**: Configuration injected at deployment time, not runtime
 
@@ -98,13 +98,13 @@ aws iam put-role-policy \
   --policy-document file://infrastructure/iam-policies/enhanced-github-actions-policy.json
 ```
 
-### **2. Verify EC2 Instance Roles**
+### **2. Verify ECS Task Roles**
 
-Ensure all EC2 instances are using the updated role without Parameter Store permissions:
+Ensure all ECS services are using the updated role without Parameter Store permissions:
 
 ```bash
-# Check EC2 instance role
-aws ec2 describe-instances --instance-ids i-1234567890abcdef0 \
+# Check ECS task role
+aws ecs describe-services --cluster macro-ai-development-cluster --services macro-ai-development-service \
   --query 'Reservations[0].Instances[0].IamInstanceProfile.Arn'
 ```
 
@@ -128,9 +128,9 @@ aws ssm get-parameters-by-path --path "macro-ai-development" --recursive
 - Runtime configuration loading created potential attack vectors
 - IAM policies were complex with many permissions
 
-### **After (EC2 + CDK Synthesis Time)**
+### **After (ECS + CDK Synthesis Time)**
 
-- EC2 instances have minimal required permissions
+- ECS services have minimal required permissions
 - Configuration injected at deployment time, not runtime
 - Simplified IAM policies with reduced attack surface
 - Better separation of concerns
@@ -139,26 +139,26 @@ aws ssm get-parameters-by-path --path "macro-ai-development" --recursive
 
 | Permission Category       | Before            | After             | Change       |
 | ------------------------- | ----------------- | ----------------- | ------------ |
-| **Parameter Store Read**  | ✅ EC2 instances  | ❌ EC2 instances  | **Removed**  |
+| **Parameter Store Read**  | ✅ ECS services   | ❌ ECS services   | **Removed**  |
 | **Parameter Store Write** | ✅ GitHub Actions | ✅ GitHub Actions | **Enhanced** |
-| **EC2 Management**        | ❌ Limited        | ✅ Full           | **Added**    |
-| **KMS Decrypt**           | ✅ EC2 instances  | ❌ EC2 instances  | **Removed**  |
+| **ECS Management**        | ❌ Limited        | ✅ Full           | **Added**    |
+| **KMS Decrypt**           | ✅ ECS services   | ❌ ECS services   | **Removed**  |
 | **Security Groups**       | ❌ Limited        | ✅ Full           | **Added**    |
 
 ## 🎯 **Next Steps**
 
 1. **Deploy Updated IAM Policies** ✅
 2. **Test GitHub Actions Deployment** 🔄
-3. **Verify EC2 Instance Security** 🔄
+3. **Verify ECS Service Security** 🔄
 4. **Monitor Parameter Store Access** 🔄
 5. **Complete Migration to New Naming** 🔄
 
 ## ⚠️ **Important Notes**
 
 - **Backward Compatibility**: Both naming conventions are supported during transition
-- **Security Improvement**: EC2 instances are now more secure with reduced permissions
+- **Security Improvement**: ECS services are now more secure with reduced permissions
 - **Deployment Impact**: No downtime required for IAM policy updates
-- **Monitoring**: Enhanced logging and monitoring for EC2 deployments
+- **Monitoring**: Enhanced logging and monitoring for ECS deployments
 
 ## 🔍 **Verification Commands**
 
@@ -166,8 +166,8 @@ aws ssm get-parameters-by-path --path "macro-ai-development" --recursive
 # Verify GitHub Actions can access both naming conventions
 aws ssm describe-parameters --parameter-filters "Key=Name,Option=BeginsWith,Values=macro-ai"
 
-# Verify EC2 instances don't have Parameter Store access
-aws iam get-role-policy --role-name macro-ai-development-ec2-role --policy-name inline-policy
+# Verify ECS services don't have Parameter Store access
+aws iam get-role-policy --role-name macro-ai-development-ecs-task-role --policy-name inline-policy
 
 # Test deployment workflow
 gh workflow run deploy-preview.yml --ref feature/iam-policy-updates
@@ -176,6 +176,6 @@ gh workflow run deploy-preview.yml --ref feature/iam-policy-updates
 ## 📚 **Related Documentation**
 
 - [Parameter Store Management Guide](./parameter-store-management.md)
-- [EC2 Deployment Guide](./ec2-deployment.md)
+- [ECS Fargate Deployment Guide](../deployment/ecs-fargate-deployment-guide.md)
 - [Security Best Practices](./security-best-practices.md)
 - [Migration Guide](./migration-guide.md)
