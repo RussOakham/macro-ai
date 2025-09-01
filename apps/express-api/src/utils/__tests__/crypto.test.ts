@@ -51,8 +51,8 @@ describe('crypto.ts', () => {
 	>
 
 	beforeEach(() => {
-		vi.clearAllMocks()
 		vi.resetModules()
+		// Note: vi.clearAllMocks() is handled by test helper setup functions when used
 	})
 
 	describe('encrypt function', () => {

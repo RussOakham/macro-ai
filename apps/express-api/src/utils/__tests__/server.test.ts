@@ -106,7 +106,6 @@ describe('createServer', () => {
 	}
 
 	beforeEach(() => {
-		vi.clearAllMocks()
 		vi.resetModules()
 
 		// Setup mock Express app

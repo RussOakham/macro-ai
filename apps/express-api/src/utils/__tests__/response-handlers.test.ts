@@ -43,10 +43,9 @@ describe('response-handlers.ts', () => {
 	const mockLoggerInstance = vi.mocked(pino.logger)
 
 	beforeEach(() => {
-		vi.clearAllMocks()
 		vi.resetModules()
 
-		// Setup logger mock for consistent test environment
+		// Setup logger mock for consistent test environment (includes vi.clearAllMocks())
 		mockLogger.setup()
 	})
 
@@ -54,6 +53,7 @@ describe('response-handlers.ts', () => {
 		let mockResponse: Partial<Response>
 
 		beforeEach(() => {
+			// Setup Express mocks (includes vi.clearAllMocks())
 			const mocks = mockExpress.setup()
 			mockResponse = mocks.res
 			mockResponse.status = vi.fn().mockReturnValue(mockResponse)

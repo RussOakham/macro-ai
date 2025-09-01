@@ -131,7 +131,7 @@ describe('ChatService (Refactored)', () => {
 	}
 
 	beforeEach(() => {
-		vi.clearAllMocks()
+		// Note: vi.clearAllMocks() is handled by test helper setup functions when used
 		chatService = new ChatService(
 			mockAIService as unknown as AIService,
 			mockVectorService as unknown as VectorService,

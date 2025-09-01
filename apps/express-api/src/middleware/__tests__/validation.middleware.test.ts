@@ -18,10 +18,9 @@ describe('Validation Middleware', () => {
 	let mockTryCatch: ReturnType<typeof vi.fn>
 
 	beforeEach(async () => {
-		vi.clearAllMocks()
 		vi.resetModules()
 
-		// Setup Express mocks
+		// Setup Express mocks (includes vi.clearAllMocks())
 		const expressMocks = mockExpress.setup()
 		mockResponse = expressMocks.res
 		mockNext = expressMocks.next

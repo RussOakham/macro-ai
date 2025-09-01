@@ -62,13 +62,12 @@ describe('AIService', () => {
 	const mockResponseText = 'This is a mock AI response'
 
 	beforeEach(async () => {
-		vi.clearAllMocks()
 		vi.resetModules() // Clear module cache to ensure mocks are used
 
 		// Re-apply the config mock after module reset
 		vi.doMock('../../../utils/load-config.ts', () => mockConfig.createModule())
 
-		// Setup config mock
+		// Setup config mock (includes vi.clearAllMocks())
 		mockConfig.setup()
 
 		// Setup mock OpenAI instance

@@ -82,12 +82,10 @@ describe('Rate Limit Middleware', () => {
 	let mockNext: NextFunction
 
 	beforeEach(() => {
-		vi.clearAllMocks()
-		vi.resetAllMocks()
 		// Reset module cache to ensure fresh imports
 		vi.resetModules()
 
-		// Setup Express mocks
+		// Setup Express mocks (includes vi.clearAllMocks())
 		const expressMocks = mockExpress.setup()
 		mockResponse = expressMocks.res
 		mockNext = expressMocks.next
