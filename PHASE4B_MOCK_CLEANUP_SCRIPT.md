@@ -2,7 +2,8 @@
 
 **Date**: September 1, 2025  
 **Status**: Implementation Ready  
-**Purpose**: Systematically remove redundant manual `vi.clearAllMocks()` calls from test files that already use test helper setup functions
+**Purpose**: Systematically remove redundant manual `vi.clearAllMocks()` calls from test files that already use test helper
+setup functions
 
 ## Files Successfully Updated ✅
 
@@ -69,25 +70,27 @@ These files are part of the test helper system itself:
 For each file in the "High Priority" list:
 
 1. **Identify the pattern**:
+
    ```typescript
    beforeEach(() => {
-       vi.clearAllMocks()  // ← Remove this line
-       vi.resetModules()
-       
-       // Setup test helpers (already includes vi.clearAllMocks())
-       const mocks = mockExpress.setup()
-       // ... rest of setup
+   	vi.clearAllMocks() // ← Remove this line
+   	vi.resetModules()
+
+   	// Setup test helpers (already includes vi.clearAllMocks())
+   	const mocks = mockExpress.setup()
+   	// ... rest of setup
    })
    ```
 
 2. **Update to**:
+
    ```typescript
    beforeEach(() => {
-       vi.resetModules()
-       
-       // Setup test helpers (includes vi.clearAllMocks())
-       const mocks = mockExpress.setup()
-       // ... rest of setup
+   	vi.resetModules()
+
+   	// Setup test helpers (includes vi.clearAllMocks())
+   	const mocks = mockExpress.setup()
+   	// ... rest of setup
    })
    ```
 

@@ -117,7 +117,7 @@ describe('VectorService', () => {
 	}
 
 	beforeEach(() => {
-		// Note: vi.clearAllMocks() is handled by test helper setup functions when used
+		vi.clearAllMocks()
 		mockAIService = aiService as unknown as MockAIService
 		mockVectorRepository = vectorRepository as unknown as MockVectorRepository
 		vectorService = new VectorService(
