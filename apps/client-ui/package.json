@@ -46,7 +46,6 @@
 		"js-cookie": "^3.0.5",
 		"lucide-react": "catalog:",
 		"pino": "catalog:",
-		"pino-pretty": "catalog:",
 		"react": "catalog:",
 		"react-dom": "catalog:",
 		"react-hook-form": "^7.62.0",
