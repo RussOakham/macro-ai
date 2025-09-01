@@ -2,7 +2,7 @@
 
 ## 🎯 **Complete Guide to the Macro AI API Client System**
 
-This is the **definitive guide** for the Macro AI API client system, consolidating all documentation into a single,
+This is the **definitive guide** for the Macro AI API client system, built with Hey API and consolidating all documentation into a single,
 comprehensive resource.
 
 ---
@@ -19,39 +19,34 @@ pnpm install
 ### **Basic Usage**
 
 ```typescript
-import {
-	createAuthClient,
-	createChatClient,
-	createUserClient,
-} from '@repo/macro-ai-api-client'
+import { createApiClient } from '@repo/macro-ai-api-client'
 
-// Create domain-specific clients
-const authClient = createAuthClient('http://localhost:3030/api')
-const chatClient = createChatClient('http://localhost:3030/api')
-const userClient = createUserClient('http://localhost:3030/api')
+// Create a configured client instance
+const apiClient = createApiClient('http://localhost:3030/api')
 
-// Make API calls
-const loginResponse = await authClient.post('/auth/login', {
-	email: 'user@example.com',
-	password: 'password123',
+// Make API calls with full type safety
+const loginResponse = await apiClient.POST('/auth/login', {
+	body: {
+		email: 'user@example.com',
+		password: 'password123',
+	},
 })
 
-const chats = await chatClient.get('/chats')
-const profile = await userClient.get('/users/me')
+const chats = await apiClient.GET('/chats')
+const profile = await apiClient.GET('/users/me')
 ```
 
 ### **With Custom Configuration**
 
 ```typescript
-import { createAuthClient } from '@repo/macro-ai-api-client'
+import { createApiClient } from '@repo/macro-ai-api-client'
 
-const authClient = createAuthClient('http://localhost:3030/api', {
-	axiosConfig: {
-		headers: {
-			'X-API-KEY': 'your-api-key',
-		},
-		withCredentials: true,
+const apiClient = createApiClient('http://localhost:3030/api', {
+	headers: {
+		'X-API-KEY': 'your-api-key',
 	},
+	timeout: 10000,
+	withCredentials: true,
 })
 ```
 
