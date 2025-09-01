@@ -53,7 +53,9 @@ describe('cookies.ts', () => {
 	})
 
 	describe('getCookie function', () => {
-		const createMockRequest = (cookies: Record<string, string> = {}): Request => {
+		const createMockRequest = (
+			cookies: Record<string, string> = {},
+		): Request => {
 			const expressMocks = mockExpress.setup()
 			return {
 				...expressMocks.req,
