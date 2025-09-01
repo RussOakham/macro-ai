@@ -1,24 +1,34 @@
-import { schemas } from '@repo/macro-ai-api-client'
-import { z } from 'zod'
+import {
+	LoginRequestZodType as LoginRequest,
+	postAuthLogin,
+	zLoginRequest,
+	zPostAuthLoginResponse,
+} from '@repo/macro-ai-api-client'
 
-import { authClient } from '@/lib/api/clients'
-import { emailValidation, passwordValidation } from '@/lib/validation/inputs'
+import { apiClient } from '@/lib/api/clients'
+import { safeValidateApiResponse } from '@/lib/validation/api-response'
 
-const loginSchemaClient = schemas.postAuthlogin_Body.extend({
-	email: emailValidation(),
-	password: passwordValidation(),
-})
-
-type TLoginRequest = z.infer<typeof loginSchemaClient>
-
-const postLogin = async ({ email, password }: TLoginRequest) => {
-	// This should now have full type safety and intellisense
-	const response = await authClient.post('/auth/login', {
-		email,
-		password,
+// Type-safe endpoint for consumption using the generated SDK
+const postLogin = async ({ email, password }: LoginRequest) => {
+	const { data, error } = await postAuthLogin({
+		client: apiClient,
+		body: {
+			email,
+			password,
+		},
 	})
 
-	return response
+	if (error) {
+		throw new Error(error.message)
+	}
+
+	const validatedData = safeValidateApiResponse(zPostAuthLoginResponse, data)
+
+	if (!validatedData.success) {
+		throw new Error(validatedData.error)
+	}
+
+	return validatedData.data
 }
 
-export { loginSchemaClient, postLogin, type TLoginRequest }
+export { type LoginRequest, postLogin, zLoginRequest }

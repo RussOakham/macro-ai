@@ -1,25 +1,40 @@
-import { postAuthforgotPassword_Body } from '@repo/macro-ai-api-client'
-import { z } from 'zod'
+import {
+	ForgotPasswordRequest,
+	postAuthForgotPassword,
+	zForgotPasswordRequest,
+	zPostAuthForgotPasswordResponse,
+} from '@repo/macro-ai-api-client'
 
-import { authClient } from '@/lib/api/clients'
-import { emailValidation } from '@/lib/validation/inputs'
+import { apiClient } from '@/lib/api/clients'
+import { safeValidateApiResponse } from '@/lib/validation/api-response'
 
-const forgotPasswordSchemaClient = postAuthforgotPassword_Body.extend({
-	email: emailValidation(),
-})
-
-type TForgotPasswordClient = z.infer<typeof forgotPasswordSchemaClient>
-
-const postForgotPassword = async ({ email }: TForgotPasswordClient) => {
-	const response = await authClient.post('/auth/forgot-password', {
-		email,
+// Type-safe endpoint for consumption using the generated SDK
+const postForgotPassword = async ({ email }: ForgotPasswordRequest) => {
+	const { data, error } = await postAuthForgotPassword({
+		client: apiClient,
+		body: {
+			email,
+		},
 	})
 
-	return response
+	if (error) {
+		throw new Error(error.message)
+	}
+
+	const validatedData = safeValidateApiResponse(
+		zPostAuthForgotPasswordResponse,
+		data,
+	)
+
+	if (!validatedData.success) {
+		throw new Error(validatedData.error)
+	}
+
+	return validatedData.data
 }
 
 export {
-	forgotPasswordSchemaClient,
+	type ForgotPasswordRequest,
 	postForgotPassword,
-	type TForgotPasswordClient,
+	zForgotPasswordRequest,
 }

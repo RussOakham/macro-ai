@@ -1,16 +1,25 @@
-import type { UserGetUsersMeResponse } from '@repo/macro-ai-api-client'
+import { getUsersMe, zGetUsersMeResponse } from '@repo/macro-ai-api-client'
 
-import { userClient } from '@/lib/api/clients'
+import { apiClient } from '@/lib/api/clients'
+import { safeValidateApiResponse } from '@/lib/validation/api-response'
 
-// Use API client response type for better type safety
-type TGetUserResponse = UserGetUsersMeResponse
-
+// Type-safe endpoint for consumption using the generated SDK
 const getUser = async () => {
-	// This should now have full type safety and intellisense
-	const response = await userClient.get('/users/me', {})
+	const { data, error } = await getUsersMe({
+		client: apiClient,
+	})
 
-	return response
+	if (error) {
+		throw new Error(error.message)
+	}
+
+	const validatedData = safeValidateApiResponse(zGetUsersMeResponse, data)
+
+	if (!validatedData.success) {
+		throw new Error(validatedData.error)
+	}
+
+	return validatedData.data
 }
 
 export { getUser }
-export type { TGetUserResponse }

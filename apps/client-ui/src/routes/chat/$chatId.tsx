@@ -12,7 +12,7 @@ import { useGetUser } from '@/services/hooks/user/getUser'
 
 // Route parameter validation schema
 const chatParamsSchema = z.object({
-	chatId: z.string().uuid('Invalid chat ID format'),
+	chatId: z.uuid('Invalid chat ID format'),
 })
 
 const ChatPage = () => {

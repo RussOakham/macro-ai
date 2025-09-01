@@ -2,12 +2,12 @@ import { useMutation } from '@tanstack/react-query'
 
 import {
 	postResendConfirmRegistrationCode,
-	TResendConfirmationCodeClient,
+	ResendConfirmationCode,
 } from '@/services/network/auth/postResendConfirmRegistrationCode'
 
 const usePostResendConfirmRegistrationCodeMutation = () => {
 	return useMutation({
-		mutationFn: async ({ email }: TResendConfirmationCodeClient) => {
+		mutationFn: async ({ email }: ResendConfirmationCode) => {
 			const response = await postResendConfirmRegistrationCode({
 				email,
 			})

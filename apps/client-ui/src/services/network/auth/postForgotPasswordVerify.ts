@@ -1,50 +1,48 @@
-import { schemas } from '@repo/macro-ai-api-client'
-import { z } from 'zod'
+import {
+	ConfirmForgotPasswordRequest,
+	postAuthConfirmForgotPassword,
+	zConfirmForgotPasswordRequest,
+	zPostAuthConfirmForgotPasswordResponse,
+} from '@repo/macro-ai-api-client'
 
-import { authClient } from '@/lib/api/clients'
+import { apiClient } from '@/lib/api/clients'
+import { safeValidateApiResponse } from '@/lib/validation/api-response'
 
-type TConfirmForgotPassword = z.infer<
-	typeof schemas.postAuthconfirmForgotPassword_Body
->
-
+// Type-safe endpoint for consumption using the generated SDK
 const postForgotPasswordVerify = async ({
 	code,
 	email,
 	newPassword,
 	confirmPassword,
-}: TConfirmForgotPassword) => {
-	const parsedData = schemas.postAuthconfirmForgotPassword_Body.safeParse({
-		code,
-		email,
-		newPassword,
-		confirmPassword,
+}: ConfirmForgotPasswordRequest) => {
+	const { data, error } = await postAuthConfirmForgotPassword({
+		client: apiClient,
+		body: {
+			code,
+			email,
+			newPassword,
+			confirmPassword,
+		},
 	})
 
-	if (!parsedData.success) {
-		throw new Error(
-			`[auth/forgot-password/verify]: ${parsedData.error.message}]`,
-		)
+	if (error) {
+		throw new Error(error.message)
 	}
 
-	const {
-		code: parsedCode,
-		email: parsedEmail,
-		newPassword: parsedNewPassword,
-	} = parsedData.data
-
-	const requestBody: TConfirmForgotPassword = {
-		code: parsedCode,
-		email: parsedEmail,
-		newPassword: parsedNewPassword,
-		confirmPassword: confirmPassword,
-	}
-
-	const response = await authClient.post(
-		'/auth/confirm-forgot-password',
-		requestBody,
+	const validatedData = safeValidateApiResponse(
+		zPostAuthConfirmForgotPasswordResponse,
+		data,
 	)
 
-	return response
+	if (!validatedData.success) {
+		throw new Error(validatedData.error)
+	}
+
+	return validatedData.data
 }
 
-export { postForgotPasswordVerify, type TConfirmForgotPassword }
+export {
+	type ConfirmForgotPasswordRequest,
+	postForgotPasswordVerify,
+	zConfirmForgotPasswordRequest,
+}

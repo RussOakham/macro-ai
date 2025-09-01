@@ -23,10 +23,11 @@ export const standardizeError = (error: unknown): IStandardizedError => {
 	} else if (error instanceof ZodError) {
 		standardError.type = 'ZodError'
 		standardError.name = error.name
-		standardError.message = error.errors[0]?.message ?? 'Validation error'
+		// In Zod v4, use .issues instead of .errors
+		standardError.message = error.issues[0]?.message ?? 'Validation error'
 		standardError.status = 400
 		standardError.stack = error.stack ?? ''
-		standardError.details = error.errors
+		standardError.details = error.issues
 	} else if (error instanceof Error) {
 		standardError.type = 'Error'
 		standardError.name = error.name

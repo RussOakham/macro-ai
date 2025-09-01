@@ -105,7 +105,7 @@ class UserService implements IUserService {
 	}): Promise<Result<TUser>> => {
 		// Validate email with Zod and tryCatchSync
 		const [validatedEmail, validationError] = tryCatchSync(() => {
-			const result = z.string().email().safeParse(email)
+			const result = z.email().safeParse(email)
 			if (!result.success) {
 				const validationError = fromError(result.error)
 				throw new ValidationError(

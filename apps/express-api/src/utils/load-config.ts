@@ -23,7 +23,7 @@ export const config = (() => {
 	const result = envSchema.safeParse(process.env)
 
 	if (!result.success) {
-		const errors = result.error.errors
+		const errors = result.error.issues
 			.map((err) => `${err.path.join('.')}: ${err.message}`)
 			.join(', ')
 

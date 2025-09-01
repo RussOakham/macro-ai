@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express'
-import { AnyZodObject, ZodEffects } from 'zod'
+import { z } from 'zod'
 
 import { tryCatch } from '../utils/error-handling/try-catch.ts'
 import { ErrorType, ValidationError } from '../utils/errors.ts'
@@ -8,7 +8,7 @@ import { pino } from '../utils/logger.ts'
 const { logger } = pino
 
 type ValidationTarget = 'body' | 'params' | 'query'
-type ValidSchema<T> = AnyZodObject | ZodEffects<AnyZodObject, T, T>
+type ValidSchema<T> = z.ZodType<T>
 
 const validate = <T>(
 	schema: ValidSchema<T>,
@@ -16,7 +16,7 @@ const validate = <T>(
 ) => {
 	return async (req: Request, res: Response, next: NextFunction) => {
 		const [data, error] = await tryCatch(
-			schema.parseAsync(req[target]) as Promise<T>,
+			() => schema.parseAsync(req[target]),
 			`validation middleware - ${target}`,
 		)
 

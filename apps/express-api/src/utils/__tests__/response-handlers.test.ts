@@ -824,7 +824,7 @@ describe('response-handlers.ts', () => {
 				const schema = z.object({
 					user: z.object({
 						name: z.string(),
-						email: z.string().email(),
+						email: z.email(),
 					}),
 					settings: z.object({
 						theme: z.enum(['light', 'dark']),
@@ -1007,7 +1007,7 @@ describe('response-handlers.ts', () => {
 
 			it('should include validation details in error', () => {
 				const schema = z.object({
-					email: z.string().email(),
+					email: z.email(),
 				})
 				const invalidData = { email: 'invalid-email' }
 
@@ -1036,7 +1036,7 @@ describe('response-handlers.ts', () => {
 				const schema = z.object({
 					user: z.object({
 						name: z.string(),
-						email: z.string().email(),
+						email: z.email(),
 					}),
 					settings: z.object({
 						theme: z.enum(['light', 'dark']),
@@ -1063,7 +1063,7 @@ describe('response-handlers.ts', () => {
 				const schema = z.object({
 					user: z.object({
 						name: z.string(),
-						email: z.string().email(),
+						email: z.email(),
 					}),
 				})
 				const invalidData = {

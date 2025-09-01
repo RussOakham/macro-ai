@@ -28,10 +28,10 @@ import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
 import { usePostResendConfirmRegistrationCodeMutation } from '@/services/hooks/auth/usePostResendConfirmRegistrationCode'
-import { TGetAuthUserResponse } from '@/services/network/auth/getAuthUser'
+import { GetAuthUserResponse } from '@/services/network/auth/getAuthUser'
 import {
-	resendConfirmationCodeSchemaClient,
-	TResendConfirmationCodeClient,
+	ResendConfirmationCode,
+	zResendConfirmationCode,
 } from '@/services/network/auth/postResendConfirmRegistrationCode'
 
 const ResendConfirmationCodeForm = ({
@@ -44,18 +44,18 @@ const ResendConfirmationCodeForm = ({
 	const navigate = useNavigate({ from: '/auth/resend-confirmation-code' })
 	const queryClient = useQueryClient()
 
-	const authUser = queryClient.getQueryData<TGetAuthUserResponse>([
+	const authUser = queryClient.getQueryData<GetAuthUserResponse>([
 		QUERY_KEY.authUser,
 	])
 
-	const form = useForm<TResendConfirmationCodeClient>({
-		resolver: zodResolver(resendConfirmationCodeSchemaClient),
+	const form = useForm<ResendConfirmationCode>({
+		resolver: zodResolver(zResendConfirmationCode),
 		defaultValues: {
 			email: authUser?.email ?? '',
 		},
 	})
 
-	const onSubmit = async ({ email }: TResendConfirmationCodeClient) => {
+	const onSubmit = async ({ email }: ResendConfirmationCode) => {
 		try {
 			setIsPending(true)
 

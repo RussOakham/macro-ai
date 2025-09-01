@@ -1,6 +1,5 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { schemas } from '@repo/macro-ai-api-client'
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
@@ -25,15 +24,18 @@ import { Input } from '@/components/ui/input'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { usePostForgotPasswordVerify } from '@/services/hooks/auth/usePostForgotPasswordVerify'
-import { TConfirmForgotPassword } from '@/services/network/auth/postForgotPasswordVerify'
+import {
+	ConfirmForgotPasswordRequest,
+	zConfirmForgotPasswordRequest,
+} from '@/services/network/auth/postForgotPasswordVerify'
 
 const RouteComponent = () => {
 	const navigate = useNavigate({ from: '/auth/forgotten-password/verify' })
 	const { mutateAsync: postForgotPasswordVerify, isPending } =
 		usePostForgotPasswordVerify()
 
-	const form = useForm<TConfirmForgotPassword>({
-		resolver: zodResolver(schemas.postAuthconfirmForgotPassword_Body),
+	const form = useForm<ConfirmForgotPasswordRequest>({
+		resolver: zodResolver(zConfirmForgotPasswordRequest),
 		defaultValues: {
 			code: '',
 			email: '',
@@ -47,7 +49,7 @@ const RouteComponent = () => {
 		email,
 		newPassword,
 		confirmPassword,
-	}: TConfirmForgotPassword) => {
+	}: ConfirmForgotPasswordRequest) => {
 		try {
 			const response = await postForgotPasswordVerify({
 				code,

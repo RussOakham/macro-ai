@@ -22,10 +22,14 @@ const { logger } = pino
  * return [user, null]
  */
 const tryCatch = async <T>(
-	promise: Promise<T>,
+	promiseOrFunction: Promise<T> | (() => Promise<T>),
 	context = 'unknown',
 ): Promise<Result<T>> => {
 	try {
+		const promise =
+			typeof promiseOrFunction === 'function'
+				? promiseOrFunction()
+				: promiseOrFunction
 		const data = await promise
 		return [data, null]
 	} catch (error: unknown) {

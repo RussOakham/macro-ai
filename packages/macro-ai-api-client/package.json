@@ -7,15 +7,15 @@
 		"node": ">=20.0.0",
 		"pnpm": ">=9.0.0"
 	},
-	"main": "./dist/index.cjs",
+	"main": "./dist/index.js",
 	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
 		"build": "pnpm generate && tsup",
 		"dev": "pnpm generate && tsup --watch",
-		"clean": "rm -rf dist && find src -type f \\( -name '*.ts' -o -name '*.js' \\) ! -name 'index.ts' -delete",
+		"clean": "rm -rf dist && rm -rf src/client",
 		"type-check": "tsc --noEmit",
-		"generate": "cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && tsx --tsconfig scripts/tsconfig.json scripts/generate-modular.ts",
+		"generate": "cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && openapi-ts",
 		"format": "prettier --check --cache .",
 		"format:fix": "prettier --write --cache .",
 		"lint": "eslint .",
@@ -26,7 +26,7 @@
 		"test:coverage": "vitest run --coverage"
 	},
 	"devDependencies": {
-		"@apidevtools/swagger-parser": "^10.1.1",
+		"@hey-api/openapi-ts": "^0.82.3",
 		"@repo/config-eslint": "workspace:*",
 		"@repo/config-testing": "workspace:*",
 		"@repo/config-typescript": "workspace:*",
@@ -40,7 +40,6 @@
 		"eslint-plugin-react-hooks": "catalog:",
 		"eslint-plugin-unused-imports": "catalog:",
 		"globals": "catalog:",
-		"openapi-zod-client": "^1.18.3",
 		"prettier": "catalog:",
 		"tsup": "^8.5.0",
 		"tsx": "catalog:",
@@ -48,14 +47,11 @@
 		"vitest": "catalog:"
 	},
 	"dependencies": {
-		"@zodios/core": "^10.9.6",
-		"openapi3-ts": "^3.2.0",
-		"zod": "catalog:"
+		"axios": "^1.11.0"
 	},
 	"exports": {
 		".": {
-			"import": "./dist/index.js",
-			"require": "./dist/index.cjs"
+			"import": "./dist/index.js"
 		}
 	}
 }

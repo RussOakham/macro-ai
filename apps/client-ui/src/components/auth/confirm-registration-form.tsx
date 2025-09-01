@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
+import z from 'zod'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -34,11 +35,14 @@ import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
 import { usePostConfirmRegisterMutation } from '@/services/hooks/auth/usePostConfirmRegisterMutation'
-import { TGetAuthUserResponse } from '@/services/network/auth/getAuthUser'
-import {
-	confirmRegistrationSchemaClient,
-	TConfirmRegistrationClient,
-} from '@/services/network/auth/postConfirmRegistration'
+import { GetAuthUserResponse } from '@/services/network/auth/getAuthUser'
+
+const confirmRegistrationSchema = z.object({
+	email: z.email(),
+	code: z.string().length(6),
+})
+
+type ConfirmRegistrationFormValues = z.infer<typeof confirmRegistrationSchema>
 
 const ConfirmRegistrationForm = ({
 	className,
@@ -50,23 +54,25 @@ const ConfirmRegistrationForm = ({
 	const navigate = useNavigate({ from: '/auth/confirm-registration' })
 	const queryClient = useQueryClient()
 
-	const authUser = queryClient.getQueryData<TGetAuthUserResponse>([
+	const authUser = queryClient.getQueryData<GetAuthUserResponse>([
 		QUERY_KEY.authUser,
 	])
 
-	const form = useForm<TConfirmRegistrationClient>({
-		resolver: zodResolver(confirmRegistrationSchemaClient),
+	const form = useForm<ConfirmRegistrationFormValues>({
+		resolver: zodResolver(confirmRegistrationSchema),
 		defaultValues: {
-			username: authUser?.email ?? '',
+			email: authUser?.email ?? '',
 			code: '',
 		},
 	})
 
-	const onSubmit = async ({ email, code }: TConfirmRegistrationClient) => {
+	const onSubmit = async ({ email, code }: ConfirmRegistrationFormValues) => {
 		try {
 			setIsPending(true)
 
-			await postConfirmRegistration({ email, code })
+			const codeNumber = Number(code)
+
+			await postConfirmRegistration({ email, code: codeNumber })
 
 			logger.info('Confirm registration success')
 			toast.success('Account confirmed successfully! Please login.')

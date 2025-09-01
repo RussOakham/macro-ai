@@ -395,7 +395,7 @@ registry.registerPath({
 	security: [{ bearerAuth: [] }],
 	request: {
 		params: z.object({
-			id: z.string().uuid().openapi({ description: 'Chat ID' }),
+			id: z.uuid().openapi({ description: 'Chat ID' }),
 		}),
 		body: {
 			description: 'Message to send',

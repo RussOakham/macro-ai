@@ -24,6 +24,7 @@ const useIsAuthenticated = () => {
 	if (isFetching || isError) {
 		return false
 	}
+
 	if (!isSuccess) {
 		return false
 	}

@@ -1,7 +1,7 @@
 import {
-	getChats_Response,
-	getChatsId_Response,
-	postChats_Response,
+	zGetChatsByIdResponse,
+	zGetChatsResponse,
+	zPostChatsResponse,
 } from '@repo/macro-ai-api-client'
 import { z } from 'zod'
 
@@ -49,7 +49,7 @@ const toSafeValidationMeta = (error: unknown, data: unknown) => {
 
 export const validateGetChatsResponse = (data: unknown) => {
 	try {
-		return getChats_Response.parse(data)
+		return zGetChatsResponse.parse(data)
 	} catch (error: unknown) {
 		logger.error(
 			toSafeValidationMeta(error, data),
@@ -61,7 +61,7 @@ export const validateGetChatsResponse = (data: unknown) => {
 
 export const validateGetChatByIdResponse = (data: unknown) => {
 	try {
-		return getChatsId_Response.parse(data)
+		return zGetChatsByIdResponse.parse(data)
 	} catch (error: unknown) {
 		logger.error(
 			toSafeValidationMeta(error, data),
@@ -73,7 +73,7 @@ export const validateGetChatByIdResponse = (data: unknown) => {
 
 export const validateCreateChatResponse = (data: unknown) => {
 	try {
-		return postChats_Response.parse(data)
+		return zPostChatsResponse.parse(data)
 	} catch (error: unknown) {
 		logger.error(
 			toSafeValidationMeta(error, data),
@@ -95,7 +95,7 @@ export const validateCreateChatResponse = (data: unknown) => {
  * @returns Parsed and validated data
  */
 export const validateApiResponse = <T>(
-	schema: z.ZodSchema<T>,
+	schema: z.ZodType<T>,
 	data: unknown,
 	errorMessage = 'Invalid API response format',
 ): T => {
@@ -125,7 +125,7 @@ export type ValidationResult<T> =
  * @returns Result object with success/error status
  */
 export const safeValidateApiResponse = <T>(
-	schema: z.ZodSchema<T>,
+	schema: z.ZodType<T>,
 	data: unknown,
 ): ValidationResult<T> => {
 	try {
@@ -134,7 +134,7 @@ export const safeValidateApiResponse = <T>(
 	} catch (error: unknown) {
 		const errorMessage =
 			error instanceof z.ZodError
-				? `Validation failed: ${error.errors.map((e) => e.message).join(', ')}`
+				? `Validation failed: ${error.issues.map((e) => e.message).join(', ')}`
 				: 'Unknown validation error'
 
 		logger.error(

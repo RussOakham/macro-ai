@@ -200,8 +200,8 @@ const chatWithMessagesResponseSchema = registerZodSchema(
 		success: z.boolean().openapi({ description: 'Request success status' }),
 		data: z
 			.object({
-				id: z.string().uuid().openapi({ description: 'Chat ID' }),
-				userId: z.string().uuid().openapi({ description: 'User ID' }),
+				id: z.uuid().openapi({ description: 'Chat ID' }),
+				userId: z.uuid().openapi({ description: 'User ID' }),
 				title: z.string().openapi({ description: 'Chat title' }),
 				createdAt: z.date().openapi({ description: 'Creation timestamp' }),
 				updatedAt: z.date().openapi({ description: 'Last update timestamp' }),
@@ -234,18 +234,18 @@ const streamingEventSchema = registerZodSchema(
 			type: z
 				.literal('stream_start')
 				.openapi({ description: 'AI response streaming started' }),
-			messageId: z.string().uuid().openapi({ description: 'AI message ID' }),
+			messageId: z.uuid().openapi({ description: 'AI message ID' }),
 		}),
 		z.object({
 			type: z.literal('chunk').openapi({ description: 'AI response chunk' }),
 			content: z.string().openapi({ description: 'Chunk content' }),
-			messageId: z.string().uuid().openapi({ description: 'AI message ID' }),
+			messageId: z.uuid().openapi({ description: 'AI message ID' }),
 		}),
 		z.object({
 			type: z
 				.literal('stream_complete')
 				.openapi({ description: 'AI response streaming completed' }),
-			messageId: z.string().uuid().openapi({ description: 'AI message ID' }),
+			messageId: z.uuid().openapi({ description: 'AI message ID' }),
 			fullContent: z.string().openapi({ description: 'Complete AI response' }),
 		}),
 		z.object({

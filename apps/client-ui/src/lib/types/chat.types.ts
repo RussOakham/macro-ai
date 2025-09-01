@@ -1,47 +1,11 @@
 // ============================================================================
-// Chat Types - Using API Client Types for Type Safety and Consistency
-// ============================================================================
-
-import type {
-	ChatDeleteChatsByIdResponse,
-	ChatGetChatsByIdResponse,
-	ChatGetChatsResponse,
-	ChatPostChatsByIdStreamRequest,
-	ChatPostChatsRequest,
-	ChatPostChatsResponse,
-	ChatPutChatsByIdRequest,
-	ChatPutChatsByIdResponse,
-} from '@repo/macro-ai-api-client'
-
-// ============================================================================
-// Re-export API Client Types for Convenience
-// ============================================================================
-
-// Request types
-export type {
-	ChatPostChatsByIdStreamRequest,
-	ChatPostChatsRequest,
-	ChatPutChatsByIdRequest,
-}
-
-// Response types
-export type {
-	ChatDeleteChatsByIdResponse,
-	ChatGetChatsByIdResponse,
-	ChatGetChatsResponse,
-	ChatPostChatsResponse,
-	ChatPutChatsByIdResponse,
-}
-
-// ============================================================================
 // Derived Types for Frontend Use
 // ============================================================================
 
-// Extract Chat type from API response
-export type Chat = ChatGetChatsResponse['data'][0]
+import { GetChatsResponse } from '@repo/macro-ai-api-client'
 
 // Extract pagination metadata type
-export type PaginationMeta = NonNullable<ChatGetChatsResponse['meta']>
+export type PaginationMeta = NonNullable<GetChatsResponse['meta']>
 
 // Pagination options for requests
 export interface PaginationOptions {
@@ -55,9 +19,6 @@ export interface ApiResponse<T> {
 	data: T
 	meta?: PaginationMeta
 }
-
-// Chat list response (alias for convenience)
-export type ChatListResponse = ChatGetChatsResponse
 
 // ============================================================================
 // Frontend-Specific Types

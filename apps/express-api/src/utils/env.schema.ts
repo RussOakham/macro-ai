@@ -4,7 +4,7 @@ const envSchema = z.object({
 	// API
 	API_KEY: z
 		.string({
-			required_error: 'API key is required',
+			error: 'API key is required',
 		})
 		.min(32, 'API key must be at least 32 characters'),
 	NODE_ENV: z
@@ -38,7 +38,7 @@ const envSchema = z.object({
 	COOKIE_DOMAIN: z.string().default('localhost'),
 	COOKIE_ENCRYPTION_KEY: z
 		.string({
-			required_error: 'Cookie encryption key is required',
+			error: 'Cookie encryption key is required',
 		})
 		.min(32, 'Cookie encryption key must be at least 32 characters'),
 

@@ -1,8 +1,8 @@
+import { commonTestConfig, unitTestTimeouts } from '@repo/config-testing'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import { defineConfig } from 'vitest/config'
-import { commonTestConfig, unitTestTimeouts } from '@repo/config-testing'
 
 const ReactCompilerConfig = {
 	target: '19',

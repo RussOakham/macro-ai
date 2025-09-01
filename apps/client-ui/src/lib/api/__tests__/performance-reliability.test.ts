@@ -1,65 +1,56 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-	authClient,
-	authClientWithoutCredentials,
-	chatClient,
-	userClient,
-} from '../clients'
+import { apiClient, apiClientWithoutCredentials } from '../clients'
 
 describe('Performance and Reliability Tests', () => {
 	describe('Client Stability', () => {
 		it('should maintain stable client instances', () => {
 			// Verify clients are properly instantiated
-			expect(authClient).toBeDefined()
-			expect(authClientWithoutCredentials).toBeDefined()
-			expect(chatClient).toBeDefined()
-			expect(userClient).toBeDefined()
+			expect(apiClient).toBeDefined()
+			expect(apiClientWithoutCredentials).toBeDefined()
 
 			// Verify they have axios instances
-			expect(authClient.axios).toBeDefined()
-			expect(authClientWithoutCredentials.axios).toBeDefined()
-			expect(chatClient.axios).toBeDefined()
-			expect(userClient.axios).toBeDefined()
+			expect(apiClient.instance).toBeDefined()
+			expect(apiClientWithoutCredentials.instance).toBeDefined()
 		})
 
 		it('should have consistent interceptor configuration', () => {
-			const clients = [
-				authClient,
-				authClientWithoutCredentials,
-				chatClient,
-				userClient,
-			]
+			const clients = [apiClient, apiClientWithoutCredentials]
 
 			clients.forEach((client) => {
-				expect(client.axios.interceptors.response).toBeDefined()
-				expect(typeof client.axios.interceptors.response.use).toBe('function')
-				expect(typeof client.axios.interceptors.response.eject).toBe('function')
+				expect(client.instance.interceptors.response).toBeDefined()
+				expect(typeof client.instance.interceptors.response.use).toBe(
+					'function',
+				)
+				expect(typeof client.instance.interceptors.response.eject).toBe(
+					'function',
+				)
 			})
 		})
 
 		it('should have proper base configuration', () => {
-			const clientsWithCredentials = [authClient, chatClient, userClient]
-			const clientsWithoutCredentials = [authClientWithoutCredentials]
+			// Test client with credentials
+			expect(apiClient.instance.defaults.baseURL).toBe('http://localhost:3000')
+			expect(apiClient.instance.defaults.headers['X-API-KEY']).toBe(
+				'test-api-key',
+			)
+			expect(apiClient.instance.defaults.withCredentials).toBe(true)
 
-			// Test clients with credentials
-			clientsWithCredentials.forEach((client) => {
-				expect(client.axios.defaults.baseURL).toBe('http://localhost:3000')
-				expect(client.axios.defaults.headers['X-API-KEY']).toBe('test-api-key')
-				expect(client.axios.defaults.withCredentials).toBe(true)
-			})
-
-			// Test clients without credentials
-			clientsWithoutCredentials.forEach((client) => {
-				expect(client.axios.defaults.baseURL).toBe('http://localhost:3000')
-				expect(client.axios.defaults.headers['X-API-KEY']).toBe('test-api-key')
-				expect(client.axios.defaults.withCredentials).toBe(false)
-			})
+			// Test client without credentials
+			expect(apiClientWithoutCredentials.instance.defaults.baseURL).toBe(
+				'http://localhost:3000',
+			)
+			expect(
+				apiClientWithoutCredentials.instance.defaults.headers['X-API-KEY'],
+			).toBe('test-api-key')
+			expect(
+				apiClientWithoutCredentials.instance.defaults.withCredentials,
+			).toBe(false)
 		})
 
 		it('should support interceptor management', () => {
 			// Test that we can add and remove interceptors
-			const testInterceptorId = authClient.axios.interceptors.response.use(
+			const testInterceptorId = apiClient.instance.interceptors.response.use(
 				(response) => response,
 				(error) => Promise.reject(new Error(String(error))),
 			)
@@ -67,7 +58,7 @@ describe('Performance and Reliability Tests', () => {
 			expect(typeof testInterceptorId).toBe('number')
 
 			// Clean up
-			authClient.axios.interceptors.response.eject(testInterceptorId)
+			apiClient.instance.interceptors.response.eject(testInterceptorId)
 		})
 	})
 })
