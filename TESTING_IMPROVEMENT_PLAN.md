@@ -33,6 +33,7 @@ for both backend and frontend testing.
 ### Dependency Installation Strategy
 
 **Important**: Ensure testing dependencies are installed in correct places:
+
 - **Used in multiple apps/packages?** Install at pnpm-workspace level and install to apps via catalog
 - **Used in single apps/packages?** Install in app/package local package.json
 
@@ -63,6 +64,22 @@ pnpm add -D vitest-mock-extended
 - **Benefits**: Automatic mock generation from types, better assertion helpers
 - **Usage**: Reduces mock setup boilerplate significantly
 - **Impact**: 50-70% reduction in mock configuration code
+
+**node-mocks-http** (High Priority)
+
+```bash
+pnpm add -D node-mocks-http
+```
+
+- **Purpose**: Professional Express Request/Response/Next mocking
+- **Benefits**:
+  - Realistic Express object behavior
+  - Excellent TypeScript support
+  - 1M+ weekly downloads (battle-tested)
+  - Works with Express, Next.js, and Koa
+  - Built-in assertion helpers
+- **Usage**: Replace custom Express mocks with `createRequest()`, `createResponse()`, `createNextFunction()`
+- **Impact**: 80-90% reduction in Express mock boilerplate
 
 #### **3. Parameterized Testing**
 

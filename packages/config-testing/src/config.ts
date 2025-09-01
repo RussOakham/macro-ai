@@ -28,6 +28,21 @@ export const commonTestConfig = {
 }
 
 /**
+ * React-specific vitest configuration for client-ui
+ */
+export const reactTestConfig = {
+	...commonTestConfig,
+	environment: 'jsdom' as const,
+	include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+	// Mock CSS modules and other assets
+	css: {
+		modules: {
+			classNameStrategy: 'non-scoped',
+		},
+	},
+}
+
+/**
  * Common timeout configuration for integration tests
  */
 export const integrationTestTimeouts = {
