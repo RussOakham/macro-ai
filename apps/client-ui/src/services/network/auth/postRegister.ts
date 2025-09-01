@@ -1,34 +1,39 @@
-import { schemas } from '@repo/macro-ai-api-client'
-import { z } from 'zod'
+import type { RegisterRequest } from '@repo/macro-ai-api-client'
+import {
+	postAuthRegister,
+	zPostAuthRegisterResponse,
+	zRegisterRequest,
+} from '@repo/macro-ai-api-client'
 
-import { authClient } from '@/lib/api/clients'
-import { emailValidation, passwordValidation } from '@/lib/validation/inputs'
+import { apiClient } from '@/lib/api/clients'
+import { safeValidateApiResponse } from '@/lib/validation/api-response'
 
-const registerSchemaClient = schemas.postAuthregister_Body
-	.extend({
-		email: emailValidation(),
-		password: passwordValidation(),
-		confirmPassword: passwordValidation(),
-	})
-	.refine((data) => data.password === data.confirmPassword, {
-		message: 'Passwords do not match',
-		path: ['confirmPassword'],
-	})
-
-type TRegister = z.infer<typeof registerSchemaClient>
-
+// Type-safe endpoint for consumption using the generated SDK
 const postRegister = async ({
 	email,
 	password,
 	confirmPassword,
-}: TRegister) => {
-	const response = await authClient.post('/auth/register', {
-		email,
-		password,
-		confirmPassword,
+}: RegisterRequest) => {
+	const { data, error } = await postAuthRegister({
+		client: apiClient,
+		body: {
+			email,
+			password,
+			confirmPassword,
+		},
 	})
 
-	return response
+	if (error) {
+		throw new Error(error.message)
+	}
+
+	const validatedData = safeValidateApiResponse(zPostAuthRegisterResponse, data)
+
+	if (!validatedData.success) {
+		throw new Error(validatedData.error)
+	}
+
+	return validatedData.data
 }
 
-export { postRegister, registerSchemaClient, type TRegister }
+export { postRegister, type RegisterRequest, zRegisterRequest }

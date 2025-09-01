@@ -1,15 +1,29 @@
-import type { AuthGetUserResponse } from '@repo/macro-ai-api-client'
+import {
+	getAuthUser as getAuthUserSdk,
+	GetAuthUserResponse,
+	zGetAuthUserResponse,
+} from '@repo/macro-ai-api-client'
 
-import { authClient } from '@/lib/api/clients'
+import { apiClient } from '@/lib/api/clients'
+import { safeValidateApiResponse } from '@/lib/validation/api-response'
 
-// Use API client response type for better type safety
-type TGetAuthUserResponse = AuthGetUserResponse
-
+// Type-safe endpoint for consumption using the generated SDK
 const getAuthUser = async () => {
-	const response = await authClient.get('/auth/user')
+	const { data, error } = await getAuthUserSdk({
+		client: apiClient,
+	})
 
-	return response
+	if (error) {
+		throw new Error(error.message)
+	}
+
+	const validatedData = safeValidateApiResponse(zGetAuthUserResponse, data)
+
+	if (!validatedData.success) {
+		throw new Error(validatedData.error)
+	}
+
+	return validatedData.data
 }
 
-export { getAuthUser }
-export type { TGetAuthUserResponse }
+export { getAuthUser, type GetAuthUserResponse, zGetAuthUserResponse }

@@ -10,8 +10,8 @@ import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
 import { useCreateChatMutation } from '@/services/hooks/chat/useCreateChatMutation'
 import {
-	createChatSchemaClient,
-	TCreateChatRequest,
+	CreateChatRequest,
+	zCreateChatRequest,
 } from '@/services/network/chat/createChat'
 
 import {
@@ -38,14 +38,14 @@ const CreateChatForm = ({
 	const [isPending, setIsPending] = useState(false)
 	const { mutateAsync: createChatMutation } = useCreateChatMutation()
 
-	const form = useForm<TCreateChatRequest>({
-		resolver: zodResolver(createChatSchemaClient),
+	const form = useForm<CreateChatRequest>({
+		resolver: zodResolver(zCreateChatRequest),
 		defaultValues: {
 			title: '',
 		},
 	})
 
-	const onSubmit = async (values: TCreateChatRequest) => {
+	const onSubmit = async (values: CreateChatRequest) => {
 		if (isPending) return
 
 		setIsPending(true)

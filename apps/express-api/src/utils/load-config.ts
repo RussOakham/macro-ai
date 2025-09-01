@@ -13,9 +13,9 @@ import { config as dotenvConfig } from 'dotenv'
 import { envSchema, type TEnv } from './env.schema.ts'
 
 /**
- * Load and validate environment configuration
+ * Get configuration for immediate use
  */
-export const loadConfig = (): TEnv => {
+export const config = (() => {
 	// Load .env file if it exists (for local development)
 	dotenvConfig()
 
@@ -23,7 +23,7 @@ export const loadConfig = (): TEnv => {
 	const result = envSchema.safeParse(process.env)
 
 	if (!result.success) {
-		const errors = result.error.errors
+		const errors = result.error.issues
 			.map((err) => `${err.path.join('.')}: ${err.message}`)
 			.join(', ')
 
@@ -31,24 +31,7 @@ export const loadConfig = (): TEnv => {
 	}
 
 	return result.data
-}
-
-/**
- * Get configuration with error handling
- */
-export const getConfig = (): TEnv => {
-	try {
-		return loadConfig()
-	} catch (error) {
-		console.error('Failed to load configuration:', error)
-		throw error
-	}
-}
-
-/**
- * Get configuration for immediate use
- */
-export const config = getConfig()
+})()
 
 /**
  * Type-safe configuration access

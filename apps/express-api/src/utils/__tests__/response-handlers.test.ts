@@ -43,10 +43,9 @@ describe('response-handlers.ts', () => {
 	const mockLoggerInstance = vi.mocked(pino.logger)
 
 	beforeEach(() => {
-		vi.clearAllMocks()
 		vi.resetModules()
 
-		// Setup logger mock for consistent test environment
+		// Setup logger mock for consistent test environment (includes vi.clearAllMocks())
 		mockLogger.setup()
 	})
 
@@ -54,6 +53,7 @@ describe('response-handlers.ts', () => {
 		let mockResponse: Partial<Response>
 
 		beforeEach(() => {
+			// Setup Express mocks (includes vi.clearAllMocks())
 			const mocks = mockExpress.setup()
 			mockResponse = mocks.res
 			mockResponse.status = vi.fn().mockReturnValue(mockResponse)
@@ -824,7 +824,7 @@ describe('response-handlers.ts', () => {
 				const schema = z.object({
 					user: z.object({
 						name: z.string(),
-						email: z.string().email(),
+						email: z.email(),
 					}),
 					settings: z.object({
 						theme: z.enum(['light', 'dark']),
@@ -1007,7 +1007,7 @@ describe('response-handlers.ts', () => {
 
 			it('should include validation details in error', () => {
 				const schema = z.object({
-					email: z.string().email(),
+					email: z.email(),
 				})
 				const invalidData = { email: 'invalid-email' }
 
@@ -1036,7 +1036,7 @@ describe('response-handlers.ts', () => {
 				const schema = z.object({
 					user: z.object({
 						name: z.string(),
-						email: z.string().email(),
+						email: z.email(),
 					}),
 					settings: z.object({
 						theme: z.enum(['light', 'dark']),
@@ -1063,7 +1063,7 @@ describe('response-handlers.ts', () => {
 				const schema = z.object({
 					user: z.object({
 						name: z.string(),
-						email: z.string().email(),
+						email: z.email(),
 					}),
 				})
 				const invalidData = {

@@ -1,3 +1,4 @@
+import { commonTestConfig, unitTestTimeouts } from '@repo/config-testing'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
@@ -31,22 +32,16 @@ export default defineConfig({
 		},
 	},
 	test: {
+		...commonTestConfig,
+		...unitTestTimeouts,
 		name: 'client-ui',
-		globals: true,
 		environment: 'jsdom',
 		setupFiles: ['./src/test/setup.ts'],
 		include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-		exclude: [
-			'**/node_modules/**',
-			'**/dist/**',
-			'**/.{idea,git,cache,output,temp}/**',
-			'**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
-		],
 		coverage: {
-			provider: 'v8',
-			reporter: ['text', 'json', 'html'],
+			...commonTestConfig.coverage,
 			exclude: [
-				'node_modules/',
+				...commonTestConfig.coverage.exclude,
 				'src/test/',
 				'**/*.d.ts',
 				'**/*.config.*',

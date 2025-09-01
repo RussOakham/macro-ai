@@ -678,7 +678,7 @@ class AuthController implements IAuthController {
 			'authController',
 			StatusCodes.NOT_FOUND,
 		)
-		if (!usernameValidation.valid) {
+		if (!usernameValidation.valid && usernameValidation.error) {
 			res
 				.status(usernameValidation.error.status)
 				.json({ message: usernameValidation.error.message })
@@ -713,7 +713,7 @@ class AuthController implements IAuthController {
 			'authController',
 			StatusCodes.PARTIAL_CONTENT,
 		)
-		if (!emailValidation.valid) {
+		if (!emailValidation.valid && emailValidation.error) {
 			res
 				.status(emailValidation.error.status)
 				.json({ message: emailValidation.error.message })

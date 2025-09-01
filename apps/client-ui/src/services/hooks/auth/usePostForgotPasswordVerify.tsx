@@ -1,8 +1,8 @@
 import { useMutation } from '@tanstack/react-query'
 
 import {
+	ConfirmForgotPasswordRequest,
 	postForgotPasswordVerify,
-	TConfirmForgotPassword,
 } from '../../network/auth/postForgotPasswordVerify'
 
 const usePostForgotPasswordVerify = () => {
@@ -12,7 +12,7 @@ const usePostForgotPasswordVerify = () => {
 			email,
 			newPassword,
 			confirmPassword,
-		}: TConfirmForgotPassword) => {
+		}: ConfirmForgotPasswordRequest) => {
 			const response = await postForgotPasswordVerify({
 				code,
 				email,

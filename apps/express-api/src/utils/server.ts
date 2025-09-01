@@ -78,7 +78,7 @@ const createServer = (): Express => {
 					return
 				}
 
-				console.log(`[server] CORS: ❌ Denying origin: ${origin}`)
+				logger.warn(`[server] CORS: ❌ Denying origin: ${origin}`)
 				callback(null, false)
 			},
 			credentials: true,

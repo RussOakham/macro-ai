@@ -12,15 +12,15 @@ to the AWS IAM role `GitHubActionsDeploymentRole` to ensure proper functionality
 
 ## Required Permissions
 
-The missing permissions are defined in the `EC2HealthCheckPermissions` section:
+The missing permissions are defined in the `ECSHealthCheckPermissions` section:
 
 ```json
 {
-	"Sid": "EC2HealthCheckPermissions",
+	"Sid": "ECSHealthCheckPermissions",
 	"Effect": "Allow",
 	"Action": [
-		"ec2:DescribeInstances",
-		"ec2:DescribeInstanceStatus",
+		"ecs:DescribeServices",
+		"ecs:DescribeTasks",
 		"autoscaling:DescribeAutoScalingGroups",
 		"elasticloadbalancing:DescribeTargetHealth",
 		"elasticloadbalancing:DescribeTargetGroups"
@@ -76,7 +76,7 @@ Use the provided script to apply the permissions:
 
 3. **Add Missing Permissions**
    - Switch to JSON view
-   - Add the `EC2HealthCheckPermissions` statement from `enhanced-github-actions-policy.json`
+   - Add the `ECSHealthCheckPermissions` statement from `enhanced-github-actions-policy.json`
    - Save the policy
 
 ### Option 3: AWS CLI Manual Commands
@@ -106,7 +106,7 @@ After applying the permissions, verify they work:
    aws iam get-role-policy \
        --role-name GitHubActionsDeploymentRole \
        --policy-name GitHubActionsDeploymentPolicy \
-       --query "PolicyDocument.Statement[?Sid=='EC2HealthCheckPermissions'].Action" \
+       --query "PolicyDocument.Statement[?Sid=='ECSHealthCheckPermissions'].Action" \
        --output json
    ```
 

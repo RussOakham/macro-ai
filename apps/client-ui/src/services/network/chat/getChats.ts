@@ -1,26 +1,41 @@
-import { chatClient } from '@/lib/api/clients'
-import type { ChatGetChatsResponse, PaginationOptions } from '@/lib/types'
-import { validateGetChatsResponse } from '@/lib/validation/api-response'
+import {
+	getChats as getChatsEndpoint,
+	GetChatsData,
+	GetChatsResponse,
+	zGetChatsData,
+	zGetChatsResponse,
+} from '@repo/macro-ai-api-client'
 
-// Use API client response type for better type safety
-type TGetChatsResponse = ChatGetChatsResponse
+import { apiClient } from '@/lib/api/clients'
+import { safeValidateApiResponse } from '@/lib/validation/api-response'
 
-/**
- * Get user's chats with pagination
- * @param options - Pagination options (page, limit)
- * @returns Promise<ChatListResponse>
- */
-const getChats = async (options?: PaginationOptions) => {
-	const response = await chatClient.get('/chats', {
-		queries: {
-			page: options?.page,
-			limit: options?.limit,
-		},
+type GetChatsOptions = NonNullable<GetChatsData['query']>
+
+const getChatsRequestQuerySchema = zGetChatsData.shape.query.unwrap()
+
+// Type-safe endpoint for consumption using the generated SDK
+const getChats = async (options?: GetChatsOptions) => {
+	const { data, error } = await getChatsEndpoint({
+		client: apiClient,
+		query: { page: options?.page, limit: options?.limit },
 	})
 
-	// Validate response at runtime for type safety
-	return validateGetChatsResponse(response)
+	if (error) {
+		throw new Error(error.message)
+	}
+
+	const validatedData = safeValidateApiResponse(zGetChatsResponse, data)
+
+	if (!validatedData.success) {
+		throw new Error(validatedData.error)
+	}
+
+	return validatedData.data
 }
 
-export { getChats }
-export type { TGetChatsResponse }
+export {
+	getChats,
+	type GetChatsOptions,
+	getChatsRequestQuerySchema,
+	type GetChatsResponse,
+}

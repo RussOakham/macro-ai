@@ -3,68 +3,80 @@
 ## Overview
 
 This document describes the comprehensive solution implemented to fix deployment artifact race conditions and ensure consistent
-EC2 deployments across all instances in a preview environment.
+ECS Fargate deployments across all tasks in a preview environment.
 
 ## Problem Statement
 
 ### Original Issue: Deployment Artifact Race Condition
 
-During PR preview deployments, we discovered a critical race condition where EC2 instances could download different versions
+During PR preview deployments, we discovered a critical race condition where ECS tasks could pull different versions
 of the deployment artifact, leading to inconsistent application deployments:
 
 **Symptoms:**
 
-- Different EC2 instances running different versions of the application code
-- Some instances using old artifacts with workspace dependencies (causing npm errors)
-- Other instances using new artifacts with resolved catalog dependencies (working correctly)
+- Different ECS tasks running different versions of the application code
+- Some tasks using old artifacts with workspace dependencies (causing npm errors)
+- Other tasks using new artifacts with resolved catalog dependencies (working correctly)
 
 **Root Cause:**
 
-1. **S3 Path Reuse**: All deployments for the same PR used the same S3 path (`express-api/pr-{number}/express-api-deployment.tar.gz`)
-2. **Race Condition**: EC2 instances could launch and download artifacts before the new S3 upload completed
-3. **No Dependency Verification**: CDK deployment started immediately after S3 upload without verifying completion
+1. **ECR Image Reuse**: All deployments for the same PR used the same ECR image tag (`pr-{number}:latest`)
+2. **Race Condition**: ECS tasks could pull images before the new ECR push completed
+3. **No Dependency Verification**: CDK deployment started immediately after ECR push without verifying completion
 
 ## Solution: Versioned Artifact System
 
 ### 1. Artifact Versioning Strategy
 
-**New S3 Key Pattern:**
+**New ECR Image Tag Pattern:**
 
 ```bash
-express-api/{environment}/{commit-sha}-{timestamp}/express-api-deployment.tar.gz
+{environment}/{commit-sha}-{timestamp}
 ```
 
 **Example:**
 
 ```bash
-express-api/pr-51/622d2103-20250820-124500/express-api-deployment.tar.gz
+pr-51/622d2103-20250820-124500
 ```
 
 **Benefits:**
 
-- **Unique per deployment**: Each GitHub Actions run creates a unique artifact
-- **Immutable**: Once uploaded, artifacts are never overwritten
+- **Unique per deployment**: Each GitHub Actions run creates a unique image tag
+- **Immutable**: Once pushed, images are never overwritten
 - **Traceable**: Commit SHA and timestamp provide clear lineage
 - **Rollback-friendly**: Previous versions remain available
 
-### 2. Enhanced Upload Process
+### 2. Enhanced Build and Push Process
 
 **GitHub Actions Workflow Changes:**
 
 ```yaml
-# Generate versioned artifact key
+# Generate versioned image tag
 COMMIT_SHORT="${{ github.sha }}"
 COMMIT_SHORT="${COMMIT_SHORT:0:8}"
 TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
-ARTIFACT_KEY="express-api/${{ env-name }}/${COMMIT_SHORT}-${TIMESTAMP}/express-api-deployment.tar.gz"
+IMAGE_TAG="${{ env-name }}/${COMMIT_SHORT}-${TIMESTAMP}"
 
-# Upload with enhanced metadata
-aws s3 cp ./express-api-artifact/express-api-deployment.tar.gz \
-  "s3://${BUCKET_NAME}/${ARTIFACT_KEY}" \
-  --metadata "commit-sha=${{ github.sha }},branch=${{ github.ref_name }},build-time=${TIMESTAMP},workflow-run-id=${{ github.run_id }},pr-number=${{ github.event.pull_request.number }}"
+# Build and push with enhanced metadata
+docker build \
+  --build-arg BUILD_TIME=${TIMESTAMP} \
+  --build-arg COMMIT_SHA=${{ github.sha }} \
+  --build-arg BRANCH=${{ github.ref_name }} \
+  --build-arg WORKFLOW_RUN_ID=${{ github.run_id }} \
+  --build-arg PR_NUMBER=${{ github.event.pull_request.number }} \
+  -t ${ECR_REPOSITORY}:${IMAGE_TAG} \
+  -t ${ECR_REPOSITORY}:${{ env-name }}-latest \
+  .
 
-# Verify upload completion
-aws s3 ls "s3://${BUCKET_NAME}/${ARTIFACT_KEY}"
+# Push to ECR with versioned tag
+docker push ${ECR_REPOSITORY}:${IMAGE_TAG}
+docker push ${ECR_REPOSITORY}:${{ env-name }}-latest
+
+# Verify push completion
+aws ecr describe-images \
+  --repository-name macro-ai-express-api \
+  --image-ids imageTag=${IMAGE_TAG}
 ```
 
 ### 3. Deployment Verification
@@ -72,161 +84,226 @@ aws s3 ls "s3://${BUCKET_NAME}/${ARTIFACT_KEY}"
 **Pre-CDK Deployment Checks:**
 
 ```bash
-# Verify artifact exists before starting infrastructure deployment
-if aws s3api head-object --bucket "${DEPLOYMENT_BUCKET}" --key "${DEPLOYMENT_KEY}" >/dev/null 2>&1; then
-  ARTIFACT_SIZE=$(aws s3api head-object --bucket "${DEPLOYMENT_BUCKET}" --key "${DEPLOYMENT_KEY}" --query 'ContentLength' --output text)
-  ARTIFACT_MODIFIED=$(aws s3api head-object --bucket "${DEPLOYMENT_BUCKET}" --key "${DEPLOYMENT_KEY}" --query 'LastModified' --output text)
-  echo "✅ Artifact verified - Size: ${ARTIFACT_SIZE} bytes, Modified: ${ARTIFACT_MODIFIED}"
+# Verify image exists before starting infrastructure deployment
+if aws ecr describe-images \
+  --repository-name macro-ai-express-api \
+  --image-ids imageTag=${IMAGE_TAG} >/dev/null 2>&1; then
+  IMAGE_DIGEST=$(aws ecr describe-images \
+    --repository-name macro-ai-express-api \
+    --image-ids imageTag=${IMAGE_TAG} \
+    --query 'imageDetails[0].imageDigest' \
+    --output text)
+  echo "✅ Image verified - Tag: ${IMAGE_TAG}, Digest: ${IMAGE_DIGEST}"
 else
-  echo "❌ Artifact verification failed - cannot proceed with deployment"
+  echo "❌ Image verification failed - cannot proceed with deployment"
   exit 1
 fi
 ```
 
-### 4. EC2 Instance Configuration
+### 4. ECS Task Configuration
 
-**Enhanced User Data Script:**
+**Enhanced Task Definition:**
 
-```bash
-# Use environment variables from GitHub Actions for versioned artifacts
-if [[ -n "${DEPLOYMENT_BUCKET:-}" && -n "${DEPLOYMENT_KEY:-}" ]]; then
-    echo "✅ Using deployment artifact from environment variables"
-    echo "DEPLOYMENT_BUCKET=${DEPLOYMENT_BUCKET}"
-    echo "DEPLOYMENT_KEY=${DEPLOYMENT_KEY}"
-else
-    echo "⚠️ Environment variables not set, using fallback configuration"
-    # Fallback to legacy pattern for backward compatibility
-    DEPLOYMENT_BUCKET="macro-ai-deployment-artifacts-${AWS_ACCOUNT_ID}"
-    DEPLOYMENT_KEY="express-api/pr-${PR_NUMBER}/express-api-deployment.tar.gz"
-fi
+```typescript
+// Use environment variables from GitHub Actions for versioned images
+const imageTag = process.env.IMAGE_TAG || `${environmentName}-latest`
+const imageUri = `${ecrRepository.repositoryUri}:${imageTag}`
+
+const taskDef = new ecs.FargateTaskDefinition(this, 'ApiTaskDef', {
+	// ... other configuration
+	containerDefinitions: [
+		new ecs.ContainerDefinition(this, 'ApiContainer', {
+			// ... other configuration
+			image: ecs.ContainerImage.fromRegistry(imageUri),
+			environment: [
+				{
+					name: 'IMAGE_TAG',
+					value: imageTag,
+				},
+				{
+					name: 'COMMIT_SHA',
+					value: process.env.COMMIT_SHA || 'unknown',
+				},
+				{
+					name: 'BUILD_TIME',
+					value: process.env.BUILD_TIME || 'unknown',
+				},
+			],
+		}),
+	],
+})
 ```
 
-**Enhanced Artifact Verification:**
+### 5. Docker Build Optimization
 
-```bash
-# Verify artifact exists before download
-if aws s3api head-object --bucket "${DEPLOYMENT_BUCKET}" --key "${DEPLOYMENT_KEY}" >/dev/null 2>&1; then
-    ARTIFACT_SIZE=$(aws s3api head-object --bucket "${DEPLOYMENT_BUCKET}" --key "${DEPLOYMENT_KEY}" --query 'ContentLength' --output text)
-    ARTIFACT_MODIFIED=$(aws s3api head-object --bucket "${DEPLOYMENT_BUCKET}" --key "${DEPLOYMENT_KEY}" --query 'LastModified' --output text)
-    echo "✅ Artifact verified in S3:"
-    echo "  Size: ${ARTIFACT_SIZE} bytes"
-    echo "  Last Modified: ${ARTIFACT_MODIFIED}"
+**Multi-stage Dockerfile with Build Arguments:**
 
-    # Get artifact metadata for verification
-    aws s3api head-object --bucket "${DEPLOYMENT_BUCKET}" --key "${DEPLOYMENT_KEY}" --query 'Metadata' --output table
-else
-    echo "❌ Artifact not found in S3: s3://${DEPLOYMENT_BUCKET}/${DEPLOYMENT_KEY}"
-    echo "Available artifacts in bucket:"
-    aws s3 ls "s3://${DEPLOYMENT_BUCKET}/" --recursive | grep "express-api" | tail -10
-    exit 1
-fi
+```dockerfile
+# Build stage
+FROM node:20-alpine AS builder
+ARG BUILD_TIME
+ARG COMMIT_SHA
+ARG BRANCH
+ARG WORKFLOW_RUN_ID
+ARG PR_NUMBER
+
+# Set build-time environment variables
+ENV BUILD_TIME=${BUILD_TIME}
+ENV COMMIT_SHA=${COMMIT_SHA}
+ENV BRANCH=${BRANCH}
+ENV WORKFLOW_RUN_ID=${WORKFLOW_RUN_ID}
+ENV PR_NUMBER=${PR_NUMBER}
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+RUN npm run build
+
+# Production stage
+FROM node:20-alpine AS production
+WORKDIR /app
+
+# Copy built application
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nodejs -u 1001
+USER nodejs
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+
+EXPOSE 3000
+CMD ["node", "dist/index.js"]
 ```
 
-## Artifact Lifecycle Management
+### 6. ECS Service Update Strategy
 
-### 1. Automatic Cleanup
+**Rolling Update Configuration:**
 
-**Cleanup Script:** `infrastructure/scripts/cleanup-deployment-artifacts.sh`
-
-**Features:**
-
-- Configurable retention policies (default: 7 days)
-- Per-PR artifact count limits (default: keep 5 most recent)
-- Dry-run mode for safe testing
-- Size calculation and reporting
-
-**Usage Examples:**
-
-```bash
-# Clean all artifacts older than 7 days (dry run)
-./cleanup-deployment-artifacts.sh --bucket macro-ai-deployment-artifacts-123456789 --dry-run
-
-# Clean artifacts for PR 51, keeping last 3 versions
-./cleanup-deployment-artifacts.sh --bucket macro-ai-deployment-artifacts-123456789 --pr 51 --keep 3
-
-# Clean all artifacts older than 3 days
-./cleanup-deployment-artifacts.sh --bucket macro-ai-deployment-artifacts-123456789 --days 3
+```typescript
+const service = new ecs.FargateService(this, 'ApiService', {
+	// ... other configuration
+	deploymentController: ecs.DeploymentController.ECS,
+	deploymentCircuitBreaker: {
+		rollback: true,
+	},
+	enableExecuteCommand: true,
+	enableServiceConnect: true,
+	serviceConnectConfiguration: {
+		services: [
+			{
+				portMappingName: 'api',
+				discoveryName: 'api',
+				clientAlias: {
+					port: 3000,
+					dnsName: 'api',
+				},
+			},
+		],
+	},
+})
 ```
 
-### 2. Integrated Cleanup
+## Implementation Benefits
 
-**GitHub Actions Integration:**
+### 1. **Eliminated Race Conditions**
 
-```yaml
-- name: Cleanup old deployment artifacts
-  run: |
-    # Run cleanup for this specific PR to keep only last 3 versions
-    infrastructure/scripts/cleanup-deployment-artifacts.sh \
-      --bucket "${BUCKET_NAME}" \
-      --pr "${PR_NUMBER}" \
-      --keep 3
-```
+- Each deployment uses unique image tags
+- No more conflicts between concurrent deployments
+- Predictable deployment behavior
 
-## Benefits & Impact
+### 2. **Improved Traceability**
 
-### 1. Deployment Consistency
+- Clear lineage from commit to deployment
+- Build metadata embedded in images
+- Easy rollback to previous versions
 
-- **Guaranteed artifact consistency**: All EC2 instances in a deployment use the same artifact version
-- **Eliminated race conditions**: No more timing-dependent deployment failures
-- **Improved reliability**: Deployments are now deterministic and repeatable
+### 3. **Enhanced Reliability**
 
-### 2. Debugging & Traceability
+- Pre-deployment image verification
+- Immutable image tags prevent overwrites
+- Consistent application state across tasks
 
-- **Clear artifact lineage**: Each artifact is tied to a specific commit and timestamp
-- **Enhanced logging**: Comprehensive verification and metadata logging
-- **Rollback capability**: Previous artifacts remain available for emergency rollbacks
+### 4. **Better Debugging**
 
-### 3. Operational Efficiency
+- Image metadata available at runtime
+- Clear correlation between code and deployment
+- Simplified troubleshooting
 
-- **Automatic cleanup**: Prevents S3 bucket bloat while maintaining recent versions
-- **Cost optimization**: Removes old artifacts to minimize storage costs
-- **Monitoring friendly**: Rich metadata enables better monitoring and alerting
+## Monitoring and Validation
 
-## Migration & Backward Compatibility
+### 1. **Deployment Verification**
 
-### 1. Gradual Rollout
+- Image existence verification before CDK deployment
+- ECS service health monitoring
+- Load balancer target health validation
 
-- **Environment variable detection**: EC2 instances automatically detect new vs. legacy deployment patterns
-- **Fallback mechanism**: Legacy artifact paths still work for existing deployments
-- **Zero-downtime migration**: No service interruption during the transition
+### 2. **Runtime Validation**
 
-### 2. Monitoring
+- Environment variables contain build metadata
+- Application can report its version information
+- Health checks validate application state
 
-- **Deployment verification**: Each step includes comprehensive verification and logging
-- **Failure detection**: Clear error messages and diagnostic information
-- **Metrics collection**: Artifact sizes, download times, and success rates are logged
+### 3. **Rollback Procedures**
+
+- Previous image tags remain available
+- Quick rollback to known-good versions
+- Minimal downtime during issues
+
+## Best Practices
+
+### 1. **Image Tagging Strategy**
+
+- Use semantic versioning for production
+- Include commit SHA for traceability
+- Add timestamps for chronological ordering
+
+### 2. **Build Optimization**
+
+- Multi-stage Docker builds
+- Layer caching for faster builds
+- Minimal production images
+
+### 3. **Deployment Strategy**
+
+- Rolling updates for zero downtime
+- Health check validation
+- Automatic rollback on failures
+
+### 4. **Monitoring and Alerting**
+
+- ECS service metrics monitoring
+- Application health monitoring
+- Deployment success/failure alerts
 
 ## Future Enhancements
 
-### 1. Advanced Features
+### 1. **Image Scanning**
 
-- **Artifact signing**: Cryptographic verification of artifact integrity
-- **Multi-region replication**: Cross-region artifact availability for disaster recovery
-- **Compression optimization**: Advanced compression for faster downloads
+- Security vulnerability scanning
+- Dependency analysis
+- Compliance checking
 
-### 2. Monitoring & Alerting
+### 2. **Advanced Rollback**
 
-- **CloudWatch integration**: Artifact download metrics and alerts
-- **Dashboard creation**: Visual monitoring of deployment artifact health
-- **Automated remediation**: Self-healing deployment pipelines
+- Automated rollback triggers
+- Canary deployments
+- Blue-green deployments
 
-## Troubleshooting
+### 3. **Performance Optimization**
 
-### Common Issues
+- Image layer optimization
+- Build cache optimization
+- Parallel build processes
 
-1. **Artifact not found**: Check GitHub Actions logs for S3 upload completion
-2. **Permission errors**: Verify EC2 instance IAM role has S3 access
-3. **Download timeouts**: Check network connectivity and artifact size
+---
 
-### Diagnostic Commands
-
-```bash
-# Check artifact availability
-aws s3 ls s3://macro-ai-deployment-artifacts-{account-id}/express-api/pr-{number}/
-
-# Verify artifact metadata
-aws s3api head-object --bucket macro-ai-deployment-artifacts-{account-id} --key express-api/pr-{number}/{commit}-{timestamp}/express-api-deployment.tar.gz
-
-# Check EC2 instance logs
-sudo tail -f /var/log/user-data.log
-```
+**Status**: ✅ **IMPLEMENTED** - ECS Fargate deployment with versioned artifacts
+**Next**: Phase 3B - API Client Documentation Consolidation

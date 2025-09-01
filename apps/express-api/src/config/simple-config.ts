@@ -9,16 +9,10 @@
  */
 
 import { type TEnv } from '../utils/env.schema.ts'
-import { getCurrentParameterStorePrefix } from '../utils/environment-utils.ts'
 import { type Result } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
 
-import {
-	type EnvConfigOptions,
-	getConfigPrecedence,
-	getEnvInfo,
-	loadEnvConfig,
-} from './env-config.ts'
+import { type EnvConfigOptions, loadEnvConfig } from './env-config.ts'
 
 const { logger } = pino
 
@@ -183,59 +177,8 @@ export const assertConfig = (shouldLog = false): ConfigType => {
 }
 
 /**
- * Check if we're in a production environment
- */
-export const isProduction = (): boolean => {
-	return process.env.NODE_ENV === 'production'
-}
-
-/**
- * Check if we're in a development environment
- */
-export const isDevelopment = (): boolean => {
-	return process.env.NODE_ENV === 'development'
-}
-
-/**
- * Check if we're in a test environment
- */
-export const isTest = (): boolean => {
-	return process.env.NODE_ENV === 'test'
-}
-
-/**
  * Check if we're in a preview environment (pr-*)
  */
 export const isPreviewEnvironment = (): boolean => {
 	return Boolean(process.env.APP_ENV?.startsWith('pr-'))
-}
-
-/**
- * Get environment metadata for debugging
- */
-export const getEnvironmentInfo = () => {
-	return {
-		nodeEnv: process.env.NODE_ENV,
-		appEnv: process.env.APP_ENV,
-		isProduction: isProduction(),
-		isDevelopment: isDevelopment(),
-		isTest: isTest(),
-		isPreview: isPreviewEnvironment(),
-		parameterStorePrefix: getCurrentParameterStorePrefix(),
-		hasParameterStorePrefix: true, // Always true now since we determine it programmatically
-	}
-}
-
-/**
- * Get enhanced environment information using the new env-config system
- */
-export const getEnhancedEnvironmentInfo = () => {
-	return getEnvInfo()
-}
-
-/**
- * Get configuration precedence information for debugging
- */
-export const getConfigurationPrecedence = (): string[] => {
-	return getConfigPrecedence()
 }

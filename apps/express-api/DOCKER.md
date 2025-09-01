@@ -206,15 +206,17 @@ OPENAI_ORGANIZATION=your-org-id
 
 ### Environment File
 
-Create a `.env` file in the `apps/express-api/` directory:
+Create a `.env.local` file in the `apps/express-api/` directory:
 
 ```bash
 # Copy from example
-cp env.local.example .env
+cp env.local.example .env.local
 
 # Edit with your values
-nano .env
+nano .env.local
 ```
+
+**Note**: For comprehensive environment configuration options, see [ENVIRONMENT_TEMPLATE.md](./ENVIRONMENT_TEMPLATE.md).
 
 ## 📊 Performance Optimization
 

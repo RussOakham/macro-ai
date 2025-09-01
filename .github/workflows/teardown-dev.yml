@@ -248,7 +248,7 @@ jobs:
             exit 1
           fi
 
-      - name: Verify EC2 cleanup
+      - name: Verify ECS cleanup
         id: verify
         run: |
           cd infrastructure
@@ -256,19 +256,18 @@ jobs:
           ENV_NAME="${{ needs.validate-request.outputs.env-name }}"
           STACK_NAME="${{ needs.validate-request.outputs.stack-name }}"
 
-          echo "🔍 Using centralized EC2 cleanup verification for manual teardown..."
+          echo "🔍 Verifying ECS Fargate cleanup for manual teardown..."
 
           # Wait a moment for AWS to process the deletion
           sleep 15
 
-          # Use centralized verification script with extended timeout for manual operations
-          if ./scripts/verify-ec2-cleanup.sh --env-name "${ENV_NAME}" --stack-name "${STACK_NAME}" --timeout 600 --verbose; then
-            echo "verification-result=success" >> $GITHUB_OUTPUT
-            echo "✅ Manual teardown verification complete - all EC2 resources cleaned up"
-          else
+          # Verify CloudFormation stack deletion (ECS resources are managed by the stack)
+          if aws cloudformation describe-stacks --stack-name "${STACK_NAME}" --no-cli-pager &> /dev/null; then
             echo "verification-result=partial" >> $GITHUB_OUTPUT
-            echo "⚠️ Some resources may still be terminating or cleanup verification failed"
-            echo "Manual review may be required for remaining resources"
+            echo "⚠️ Stack still exists - cleanup may still be in progress"
+          else
+            echo "verification-result=success" >> $GITHUB_OUTPUT
+            echo "✅ Manual teardown verification complete - all ECS Fargate resources cleaned up"
           fi
 
   # Report results
@@ -303,7 +302,7 @@ jobs:
             echo "**Verification:** ${VERIFICATION_RESULT}" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**Resources Cleaned Up:**" >> $GITHUB_STEP_SUMMARY
-            echo "- EC2 instances and Auto Scaling Group" >> $GITHUB_STEP_SUMMARY
+            echo "- ECS Fargate services and tasks" >> $GITHUB_STEP_SUMMARY
             echo "- Application Load Balancer and Target Groups" >> $GITHUB_STEP_SUMMARY
             echo "- VPC networking components (subnets, security groups)" >> $GITHUB_STEP_SUMMARY
             echo "- CloudWatch Log Groups and monitoring resources" >> $GITHUB_STEP_SUMMARY

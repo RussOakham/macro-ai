@@ -12,6 +12,7 @@ import {
 	type TCookieValue,
 } from '../cookies.ts'
 import { AppError } from '../errors.ts'
+import { mockExpress } from '../test-helpers/express-mocks.ts'
 
 // Mock the errors module
 vi.mock('../errors.ts', () => ({
@@ -28,7 +29,8 @@ vi.mock('../errors.ts', () => ({
 
 describe('cookies.ts', () => {
 	beforeEach(() => {
-		vi.clearAllMocks()
+		// Setup Express mocks (includes vi.clearAllMocks())
+		mockExpress.setup()
 	})
 
 	describe('COOKIE_NAMES constant', () => {
@@ -51,10 +53,15 @@ describe('cookies.ts', () => {
 	})
 
 	describe('getCookie function', () => {
-		const createMockRequest = (cookies: Record<string, string> = {}): Request =>
-			({
+		const createMockRequest = (
+			cookies: Record<string, string> = {},
+		): Request => {
+			const expressMocks = mockExpress.setup()
+			return {
+				...expressMocks.req,
 				cookies,
-			}) as Request
+			} as Request
+		}
 
 		describe('when cookie exists', () => {
 			it('should return cookie value when cookie exists and is required', () => {

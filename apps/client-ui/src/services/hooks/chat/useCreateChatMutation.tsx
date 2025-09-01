@@ -1,9 +1,13 @@
+import { ChatMessage } from '@repo/macro-ai-api-client'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { QUERY_KEY, QUERY_KEY_MODIFIERS } from '@/constants/query-keys'
 import { logger } from '@/lib/logger/logger'
 
-import { createChat, TCreateChatRequest } from '../../network/chat/createChat'
+import {
+	CreateChatRequest,
+	postCreateChat,
+} from '../../network/chat/createChat'
 
 /**
  * TanStack Query mutation hook for creating a new chat
@@ -14,8 +18,8 @@ const useCreateChatMutation = () => {
 	const queryClient = useQueryClient()
 
 	return useMutation({
-		mutationFn: async ({ title }: TCreateChatRequest) => {
-			const response = await createChat({ title })
+		mutationFn: async ({ title }: CreateChatRequest) => {
+			const response = await postCreateChat({ title })
 			return response
 		},
 		onSuccess: async (data) => {
@@ -27,11 +31,14 @@ const useCreateChatMutation = () => {
 			// Optionally set the new chat data in cache for immediate access
 			if (data.success) {
 				// Add empty messages array to the chat data
-				data.data.messages = []
+				const dataWithEmptyMessages = {
+					...data,
+					messages: [] as ChatMessage[],
+				}
 
 				queryClient.setQueryData(
 					[QUERY_KEY.chat, QUERY_KEY_MODIFIERS.detail, data.data.id],
-					data,
+					dataWithEmptyMessages,
 				)
 			}
 		},

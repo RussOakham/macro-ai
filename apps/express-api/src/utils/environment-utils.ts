@@ -1,3 +1,5 @@
+import { logger } from './logger.ts'
+
 /**
  * Environment Utilities
  *
@@ -36,7 +38,7 @@ const getParameterStorePrefix = (appEnv: string): string => {
 			return '/macro-ai/development/'
 		default:
 			// Fallback to development for unknown environments
-			console.warn(
+			logger.warn(
 				`Unknown environment '${appEnv}', falling back to development parameters`,
 			)
 			return '/macro-ai/development/'
@@ -71,16 +73,6 @@ const getCurrentParameterStorePrefix = (): string => {
 }
 
 /**
- * Environment type for type safety
- */
-type Environment =
-	| 'development'
-	| 'staging'
-	| 'production'
-	| 'test'
-	| `pr-${number}`
-
-/**
  * Checks if the current environment is a preview environment
  *
  * @param appEnv - The APP_ENV environment variable value
@@ -111,5 +103,3 @@ export {
 	getParameterStorePrefix,
 	isPreviewEnvironment,
 }
-
-export type { Environment }

@@ -3,8 +3,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { QUERY_KEY, QUERY_KEY_MODIFIERS } from '@/constants/query-keys'
 import { logger } from '@/lib/logger/logger'
 
-import type { TGetChatsResponse } from '../../network/chat/getChats'
-import { TUpdateChatRequest, updateChat } from '../../network/chat/updateChat'
+import type { GetChatsResponse } from '../../network/chat/getChats'
+import {
+	updateChatById,
+	UpdateChatRequestBody,
+	UpdateChatRequestParam,
+} from '../../network/chat/updateChat'
 
 /**
  * TanStack Query mutation hook for updating an existing chat
@@ -18,8 +22,8 @@ const useUpdateChatMutation = () => {
 		mutationFn: async ({
 			chatId,
 			title,
-		}: { chatId: string } & TUpdateChatRequest) => {
-			const response = await updateChat(chatId, { title })
+		}: { chatId: UpdateChatRequestParam } & UpdateChatRequestBody) => {
+			const response = await updateChatById(chatId, { title })
 			return response
 		},
 		onMutate: async (variables) => {
@@ -29,7 +33,7 @@ const useUpdateChatMutation = () => {
 			})
 
 			// Snapshot the previous value
-			const previousChats = queryClient.getQueryData<TGetChatsResponse>([
+			const previousChats = queryClient.getQueryData<GetChatsResponse>([
 				QUERY_KEY.chat,
 				QUERY_KEY_MODIFIERS.list,
 			])
@@ -37,7 +41,7 @@ const useUpdateChatMutation = () => {
 			// Optimistically update the cache
 			queryClient.setQueriesData(
 				{ queryKey: [QUERY_KEY.chat, QUERY_KEY_MODIFIERS.list] },
-				(oldData: TGetChatsResponse | undefined) => {
+				(oldData: GetChatsResponse | undefined) => {
 					if (!oldData) return []
 
 					return {

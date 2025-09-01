@@ -57,11 +57,10 @@ describe('Security Headers Middleware', () => {
 	let mockNext: NextFunction
 
 	beforeEach(() => {
-		vi.clearAllMocks()
 		// Reset module cache to ensure fresh imports
 		vi.resetModules()
 
-		// Setup Express mocks
+		// Setup Express mocks (includes vi.clearAllMocks())
 		const expressMocks = mockExpress.setup()
 		mockRequest = expressMocks.req
 		mockResponse = {

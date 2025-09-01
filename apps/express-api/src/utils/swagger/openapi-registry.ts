@@ -25,7 +25,8 @@ const ErrorResponseSchema = registerZodSchema(
 	z.object({
 		message: z.string().openapi({ description: 'Error message' }),
 		details: z
-			.record(z.any())
+			.record(z.string(), z.any())
+			.nullable()
 			.optional()
 			.openapi({ description: 'Error details' }),
 	}),
@@ -56,7 +57,7 @@ const ValidationErrorSchema = registerZodSchema(
 			example: 'Validation Failed',
 		}),
 		details: z
-			.record(z.any())
+			.record(z.string(), z.any())
 			.optional()
 			.openapi({
 				description: 'Detailed validation error information',

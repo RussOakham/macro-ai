@@ -1,3 +1,4 @@
+import pino from 'pino'
 import { HttpLogger, Options, pinoHttp } from 'pino-http'
 
 import { config } from './load-config.ts'
@@ -51,10 +52,26 @@ const createLogger = (nodeEnv: string): HttpLogger => {
 }
 
 // Initialize with default value, will be reconfigured when config is loaded
-let pino: HttpLogger = createLogger('development')
+let httpLogger: HttpLogger = createLogger('development')
 
 const configureLogger = (nodeEnv: string): void => {
-	pino = createLogger(nodeEnv)
+	httpLogger = createLogger(nodeEnv)
 }
 
-export { configureLogger, pino }
+// General-purpose logger for non-HTTP logging
+export const logger = pino({
+	level: process.env.LOG_LEVEL ?? 'info',
+	transport:
+		process.env.NODE_ENV === 'development'
+			? {
+					target: 'pino-pretty',
+					options: {
+						colorize: true,
+						translateTime: 'SYS:standard',
+						ignore: 'pid,hostname',
+					},
+				}
+			: undefined,
+})
+
+export { configureLogger, httpLogger as pino }

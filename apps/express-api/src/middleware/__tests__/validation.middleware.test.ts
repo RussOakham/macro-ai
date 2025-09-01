@@ -18,10 +18,9 @@ describe('Validation Middleware', () => {
 	let mockTryCatch: ReturnType<typeof vi.fn>
 
 	beforeEach(async () => {
-		vi.clearAllMocks()
 		vi.resetModules()
 
-		// Setup Express mocks
+		// Setup Express mocks (includes vi.clearAllMocks())
 		const expressMocks = mockExpress.setup()
 		mockResponse = expressMocks.res
 		mockNext = expressMocks.next
@@ -52,7 +51,7 @@ describe('Validation Middleware', () => {
 		it('should validate request body successfully with valid data', async () => {
 			// Arrange
 			const testSchema = z.object({
-				email: z.string().email(),
+				email: z.email(),
 				name: z.string().min(1),
 			})
 
@@ -85,7 +84,7 @@ describe('Validation Middleware', () => {
 
 			// Assert
 			expect(mockTryCatch).toHaveBeenCalledWith(
-				expect.any(Promise),
+				expect.any(Function),
 				'validation middleware - body',
 			)
 			expect(mockRequest.body).toEqual(validData)
@@ -96,7 +95,7 @@ describe('Validation Middleware', () => {
 		it('should validate request params successfully', async () => {
 			// Arrange
 			const testSchema = z.object({
-				id: z.string().uuid(),
+				id: z.uuid(),
 			})
 
 			const validParams = {
@@ -127,7 +126,7 @@ describe('Validation Middleware', () => {
 
 			// Assert
 			expect(mockTryCatch).toHaveBeenCalledWith(
-				expect.any(Promise),
+				expect.any(Function),
 				'validation middleware - params',
 			)
 			expect(mockRequest.params).toEqual(validParams)
@@ -170,7 +169,7 @@ describe('Validation Middleware', () => {
 
 			// Assert
 			expect(mockTryCatch).toHaveBeenCalledWith(
-				expect.any(Promise),
+				expect.any(Function),
 				'validation middleware - query',
 			)
 			expect(mockRequest.query).toEqual(transformedQuery)
@@ -209,7 +208,7 @@ describe('Validation Middleware', () => {
 
 			// Assert
 			expect(mockTryCatch).toHaveBeenCalledWith(
-				expect.any(Promise),
+				expect.any(Function),
 				'validation middleware - body',
 			)
 			expect(mockRequest.body).toEqual(validData)
@@ -221,7 +220,7 @@ describe('Validation Middleware', () => {
 		it('should handle ZodError and call next with ValidationError', async () => {
 			// Arrange
 			const testSchema = z.object({
-				email: z.string().email(),
+				email: z.email(),
 				name: z.string().min(1),
 			})
 
@@ -263,7 +262,7 @@ describe('Validation Middleware', () => {
 
 			// Assert
 			expect(mockTryCatch).toHaveBeenCalledWith(
-				expect.any(Promise),
+				expect.any(Function),
 				'validation middleware - body',
 			)
 			expect(mockNext).toHaveBeenCalledTimes(1)
@@ -277,7 +276,7 @@ describe('Validation Middleware', () => {
 		it('should log warning for ZodError validation failures', async () => {
 			// Arrange
 			const testSchema = z.object({
-				email: z.string().email(),
+				email: z.email(),
 			})
 
 			mockRequest = mockExpress.createRequest({
@@ -324,7 +323,7 @@ describe('Validation Middleware', () => {
 		it('should handle ZodError for different validation targets', async () => {
 			// Arrange
 			const testSchema = z.object({
-				id: z.string().uuid(),
+				id: z.uuid(),
 			})
 
 			mockRequest = mockExpress.createRequest({
@@ -362,7 +361,7 @@ describe('Validation Middleware', () => {
 
 			// Assert
 			expect(mockTryCatch).toHaveBeenCalledWith(
-				expect.any(Promise),
+				expect.any(Function),
 				'validation middleware - params',
 			)
 			const calledError = vi.mocked(mockNext).mock.calls[0]?.[0]
@@ -610,7 +609,7 @@ describe('Validation Middleware', () => {
 			// Arrange
 			const asyncSchema = z
 				.object({
-					email: z.string().email(),
+					email: z.email(),
 				})
 				.refine(
 					async (data) => {

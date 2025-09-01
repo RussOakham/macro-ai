@@ -1,30 +1,42 @@
-import { postAuthresendConfirmationCode_Body } from '@repo/macro-ai-api-client'
-import { z } from 'zod'
+import {
+	postAuthResendConfirmationCode,
+	ResendConfirmationCode,
+	zPostAuthResendConfirmationCodeResponse,
+	zResendConfirmationCode,
+} from '@repo/macro-ai-api-client'
 
-import { authClient } from '@/lib/api/clients'
-import { emailValidation } from '@/lib/validation/inputs'
+import { apiClient } from '@/lib/api/clients'
+import { safeValidateApiResponse } from '@/lib/validation/api-response'
 
-const resendConfirmationCodeSchemaClient =
-	postAuthresendConfirmationCode_Body.extend({
-		email: emailValidation(),
-	})
-
-type TResendConfirmationCodeClient = z.infer<
-	typeof resendConfirmationCodeSchemaClient
->
-
+// Type-safe endpoint for consumption using the generated SDK
 const postResendConfirmRegistrationCode = async ({
 	email,
-}: TResendConfirmationCodeClient) => {
-	const response = await authClient.post('/auth/resend-confirmation-code', {
-		email,
+}: ResendConfirmationCode) => {
+	const { data, error } = await postAuthResendConfirmationCode({
+		client: apiClient,
+		body: {
+			email,
+		},
 	})
 
-	return response
+	if (error) {
+		throw new Error(error.message)
+	}
+
+	const validatedData = safeValidateApiResponse(
+		zPostAuthResendConfirmationCodeResponse,
+		data,
+	)
+
+	if (!validatedData.success) {
+		throw new Error(validatedData.error)
+	}
+
+	return validatedData.data
 }
 
 export {
 	postResendConfirmRegistrationCode,
-	resendConfirmationCodeSchemaClient,
-	type TResendConfirmationCodeClient,
+	type ResendConfirmationCode,
+	zResendConfirmationCode,
 }

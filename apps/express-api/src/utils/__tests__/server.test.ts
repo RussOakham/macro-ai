@@ -106,7 +106,10 @@ describe('createServer', () => {
 	}
 
 	beforeEach(() => {
-		vi.clearAllMocks()
+		// Setup test helpers (this includes vi.clearAllMocks())
+		mockConfig.setup()
+		mockLogger.setup()
+
 		vi.resetModules()
 
 		// Setup mock Express app

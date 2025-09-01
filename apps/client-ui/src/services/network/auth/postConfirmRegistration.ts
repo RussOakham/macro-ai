@@ -1,36 +1,44 @@
-import { schemas } from '@repo/macro-ai-api-client'
-import { z } from 'zod'
+import {
+	ConfirmRegistration,
+	postAuthConfirmRegistration,
+	zConfirmRegistration,
+	zPostAuthConfirmRegistrationResponse,
+} from '@repo/macro-ai-api-client'
 
-import { authClient } from '@/lib/api/clients'
-import { emailValidation } from '@/lib/validation/inputs'
+import { apiClient } from '@/lib/api/clients'
+import { safeValidateApiResponse } from '@/lib/validation/api-response'
 
-const confirmRegistrationSchemaClient =
-	schemas.postAuthconfirmRegistration_Body.extend({
-		email: emailValidation(),
-		code: z.string().length(6),
-	})
-
-type TConfirmRegistrationClient = z.infer<
-	typeof confirmRegistrationSchemaClient
->
-
+// Type-safe endpoint for consumption using the generated SDK
 const postConfirmRegistration = async ({
 	email,
 	code,
-}: TConfirmRegistrationClient) => {
-	// fix bug for leading zeros - create custom input OTP for number values?
-	const parsedCode = z.coerce.number().parse(code)
-
-	const response = await authClient.post('/auth/confirm-registration', {
-		email,
-		code: parsedCode,
+}: ConfirmRegistration) => {
+	const { data, error } = await postAuthConfirmRegistration({
+		client: apiClient,
+		body: {
+			email,
+			code,
+		},
 	})
 
-	return response
+	if (error) {
+		throw new Error(error.message)
+	}
+
+	const validatedData = safeValidateApiResponse(
+		zPostAuthConfirmRegistrationResponse,
+		data,
+	)
+
+	if (!validatedData.success) {
+		throw new Error(validatedData.error)
+	}
+
+	return validatedData.data
 }
 
 export {
-	confirmRegistrationSchemaClient,
+	type ConfirmRegistration,
 	postConfirmRegistration,
-	type TConfirmRegistrationClient,
+	zConfirmRegistration,
 }

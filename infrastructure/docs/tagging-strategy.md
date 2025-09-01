@@ -23,7 +23,7 @@ enable cost tracking, environment identification, automated cleanup, security co
 | `Project`         | Project name             | `MacroAI`                                    | ✅       |
 | `Environment`     | Environment name         | `development`, `production`, `pr-123`        | ✅       |
 | `EnvironmentType` | Type of environment      | `persistent`, `ephemeral`, `preview`         | ✅       |
-| `Component`       | Infrastructure component | `VPC`, `EC2`, `ALB`, `Security-Groups`       | ✅       |
+| `Component`       | Infrastructure component | `VPC`, `ECS`, `ALB`, `Security-Groups`       | ✅       |
 | `Purpose`         | Resource purpose         | `SharedInfrastructure`, `PreviewEnvironment` | ✅       |
 
 ### Cost Management Tags
@@ -39,7 +39,7 @@ enable cost tracking, environment identification, automated cleanup, security co
 | Tag Key           | Description             | Example Values                  | Required |
 | ----------------- | ----------------------- | ------------------------------- | -------- |
 | `ManagedBy`       | Management system       | `CDK`                           | ✅       |
-| `CreatedBy`       | Creating construct      | `Ec2Construct`, `AlbConstruct`  | ✅       |
+| `CreatedBy`       | Creating construct      | `EcsConstruct`, `AlbConstruct`  | ✅       |
 | `CreatedDate`     | Creation date           | `2024-01-15`                    | ✅       |
 | `MonitoringLevel` | Monitoring detail level | `basic`, `standard`, `detailed` | ❌       |
 
@@ -84,9 +84,9 @@ TaggingStrategy.applyBaseTags(construct, {
 // Apply PR-specific tags to ephemeral resources
 TaggingStrategy.applyPrTags(construct, {
 	prNumber: 123,
-	component: 'EC2-Instance',
+	component: 'ECS-Service',
 	purpose: TAG_VALUES.PURPOSES.PREVIEW_ENVIRONMENT,
-	createdBy: 'Ec2Construct',
+	createdBy: 'EcsConstruct',
 	expiryDays: 7,
 	autoShutdown: true,
 	backupRequired: false,
@@ -115,9 +115,9 @@ TaggingStrategy.applyPrTags(construct, {
 - **Purpose**: `SharedInfrastructure` (shared), `PreviewEnvironment` (PR-specific)
 - **MonitoringLevel**: `standard`
 
-#### EC2 Instances
+#### ECS Services
 
-- **Component**: `EC2` (shared), `EC2-Instance` (PR-specific)
+- **Component**: `ECS` (shared), `ECS-Service` (PR-specific)
 - **Purpose**: `PreviewEnvironment`
 - **MonitoringLevel**: `standard`
 - **AutoShutdown**: `true` (PR instances)
@@ -139,7 +139,7 @@ TaggingStrategy.applyPrTags(construct, {
 
 ### Auto-Shutdown Configuration
 
-- **EC2 instances**: Enabled for PR environments
+- **ECS services**: Enabled for PR environments
 - **Cost savings**: Automatic shutdown during off-hours
 - **Development workflow**: Preserves resources during active development
 
@@ -148,7 +148,7 @@ TaggingStrategy.applyPrTags(construct, {
 ### Monitoring Levels
 
 - **Basic**: Essential metrics only (VPC, Security Groups)
-- **Standard**: Standard monitoring (ALB, EC2)
+- **Standard**: Standard monitoring (ALB, ECS)
 - **Detailed**: Comprehensive monitoring (Production resources)
 
 ### Cost Tracking Queries

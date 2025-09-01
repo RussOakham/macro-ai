@@ -72,10 +72,7 @@ describe('verifyAuth Middleware', () => {
 	let mockNext: NextFunction
 
 	beforeEach(() => {
-		// Reset all mock functions first
-		vi.clearAllMocks()
-
-		// Setup Express mocks
+		// Setup Express mocks (includes vi.clearAllMocks())
 		const expressMocks = mockExpress.setup()
 		mockRequest = expressMocks.req
 		mockResponse = expressMocks.res

@@ -28,7 +28,7 @@ const passwordValidation = () =>
 		)
 
 const emailValidation = () =>
-	z.string().email({
+	z.email({
 		message: 'Invalid email address',
 	})
 

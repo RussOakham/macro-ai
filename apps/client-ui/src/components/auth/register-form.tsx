@@ -11,8 +11,8 @@ import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
 import { usePostRegisterMutation } from '@/services/hooks/auth/usePostRegisterMutation'
 import {
-	registerSchemaClient,
-	TRegister,
+	RegisterRequest,
+	zRegisterRequest,
 } from '@/services/network/auth/postRegister'
 
 import {
@@ -32,8 +32,8 @@ const RegisterForm = ({
 	const { mutateAsync: postRegisterMutation } = usePostRegisterMutation()
 	const navigate = useNavigate({ from: '/auth/register' })
 
-	const form = useForm<TRegister>({
-		resolver: zodResolver(registerSchemaClient),
+	const form = useForm<RegisterRequest>({
+		resolver: zodResolver(zRegisterRequest),
 		defaultValues: {
 			email: '',
 			password: '',
@@ -41,7 +41,11 @@ const RegisterForm = ({
 		},
 	})
 
-	const onSubmit = async ({ email, password, confirmPassword }: TRegister) => {
+	const onSubmit = async ({
+		email,
+		password,
+		confirmPassword,
+	}: RegisterRequest) => {
 		try {
 			setIsPending(true)
 

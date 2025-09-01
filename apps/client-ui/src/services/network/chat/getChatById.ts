@@ -1,24 +1,41 @@
-import { chatClient } from '@/lib/api/clients'
-import type { ChatGetChatsByIdResponse } from '@/lib/types'
+import {
+	getChatsById,
+	GetChatsByIdData,
+	zGetChatsByIdData,
+	zGetChatsByIdResponse,
+} from '@repo/macro-ai-api-client'
 
-// Use API client response type for better type safety
-type TGetChatByIdResponse = ChatGetChatsByIdResponse
+import { apiClient } from '@/lib/api/clients'
+import { safeValidateApiResponse } from '@/lib/validation/api-response'
 
-/**
- * Get a specific chat with its messages by ID
- * @param chatId - The chat ID to retrieve
- * @returns Promise<ChatWithMessagesResponse>
- */
-const getChatById = async (chatId: string) => {
-	const response = await chatClient.get('/chats/:id', {
-		params: {
-			id: chatId,
+const getChatByIdRequestParamSchema = zGetChatsByIdData.shape.path.shape.id
+
+type GetChatByIdRequestParam = NonNullable<GetChatsByIdData['path']>['id']
+
+// Type-safe endpoint for consumption using the generated SDK
+const getChatById = async (id: GetChatByIdRequestParam) => {
+	const { data, error } = await getChatsById({
+		client: apiClient,
+		path: {
+			id,
 		},
 	})
 
-	// Transform the response to match frontend types
-	return response
+	if (error) {
+		throw new Error(error.message)
+	}
+
+	const validatedData = safeValidateApiResponse(zGetChatsByIdResponse, data)
+
+	if (!validatedData.success) {
+		throw new Error(validatedData.error)
+	}
+
+	return validatedData.data
 }
 
-export { getChatById }
-export type { TGetChatByIdResponse }
+export {
+	getChatById,
+	type GetChatByIdRequestParam,
+	getChatByIdRequestParamSchema,
+}

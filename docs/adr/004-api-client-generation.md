@@ -22,10 +22,10 @@ generation system. Key considerations included:
 We will implement **automated API client generation** using:
 
 1. **OpenAPI 3.0.0 specification** generated from Zod schemas and Express routes
-2. **Zodios client generator** for type-safe TypeScript client generation
-3. **Modular client architecture** with domain-specific clients (auth, chat, user)
+2. **Hey API (openapi-ts)** for type-safe TypeScript client generation
+3. **Unified client architecture** with single client instance for all endpoints
 4. **Automated build integration** with zero-maintenance regeneration
-5. **Backward compatibility layer** for existing code migration
+5. **ESM-only output** for optimal tree-shaking and modern JavaScript support
 
 ## Rationale
 
@@ -63,20 +63,22 @@ We will implement **automated API client generation** using:
 - **Generation Overhead**: Build-time generation adds complexity
 - **Version Management**: Need to manage OpenAPI spec versions
 
-### Why Zodios?
+### Why Hey API (openapi-ts)?
 
 #### ✅ Advantages
 
+- **Modern Tooling**: Built specifically for modern TypeScript development
 - **Type Safety**: Full TypeScript integration with Zod schemas
 - **Runtime Validation**: Validates responses against schemas
 - **Axios Integration**: Built on familiar Axios HTTP client
-- **Error Handling**: Structured error handling with type safety
-- **Lightweight**: Minimal runtime overhead
+- **ESM Support**: Native ES modules support for optimal tree-shaking
+- **Performance**: Optimized for performance and bundle size
+- **Active Development**: Actively maintained with modern features
 
 #### ❌ Disadvantages
 
-- **Ecosystem**: Smaller ecosystem compared to alternatives like OpenAPI Generator
-- **Customization**: Limited customization options for generated code
+- **Newer Tool**: Less mature ecosystem compared to established alternatives
+- **Learning Curve**: Team needs to learn Hey API patterns
 - **Documentation**: Less comprehensive documentation than mature alternatives
 
 ## Implementation Details

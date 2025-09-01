@@ -7,12 +7,6 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import reactCompiler from 'eslint-plugin-react-compiler'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import ts from 'typescript-eslint'
-import { FlatCompat } from '@eslint/eslintrc'
-
-const compat = new FlatCompat({
-	recommendedConfig: js.configs.recommended,
-	allConfig: js.configs.all,
-})
 
 const removeDuplicatePlugins = (...configs) => {
 	let found = []

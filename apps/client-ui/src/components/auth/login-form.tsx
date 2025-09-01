@@ -10,10 +10,7 @@ import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
 import { usePostLoginMutation } from '@/services/hooks/auth/usePostLoginMutation'
-import {
-	loginSchemaClient,
-	TLoginRequest,
-} from '@/services/network/auth/postLogin'
+import { LoginRequest, zLoginRequest } from '@/services/network/auth/postLogin'
 
 import {
 	Form,
@@ -32,15 +29,15 @@ const LoginForm = ({
 	const { mutateAsync: postLoginMutation } = usePostLoginMutation()
 	const navigate = useNavigate({ from: '/auth/login' })
 
-	const form = useForm<TLoginRequest>({
-		resolver: zodResolver(loginSchemaClient),
+	const form = useForm<LoginRequest>({
+		resolver: zodResolver(zLoginRequest),
 		defaultValues: {
 			email: '',
 			password: '',
 		},
 	})
 
-	const onSubmit = async ({ email, password }: TLoginRequest) => {
+	const onSubmit = async ({ email, password }: LoginRequest) => {
 		try {
 			setIsPending(true)
 

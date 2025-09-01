@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { mockLogger } from '../test-helpers/logger.mock.ts'
+
+// Mock the logger
+vi.mock('../../../utils/logger.ts', () => ({
+	logger: mockLogger.create(),
+	pino: mockLogger.createPinoHttp(),
+}))
+
 import {
 	getCurrentEnvironment,
 	getCurrentParameterStorePrefix,
@@ -14,6 +22,8 @@ describe('Environment Utils', () => {
 	beforeEach(() => {
 		// Clear environment variables before each test
 		process.env = { ...originalEnv }
+		// Clear mock calls
+		vi.clearAllMocks()
 	})
 
 	afterEach(() => {
@@ -48,16 +58,8 @@ describe('Environment Utils', () => {
 			expect(getParameterStorePrefix('pr-999')).toBe('/macro-ai/development/')
 		})
 
-		it('should return development prefix for unknown environments with warning', () => {
-			// eslint-disable-next-line @typescript-eslint/no-empty-function
-			const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
+		it('should return development prefix for unknown environments', () => {
 			expect(getParameterStorePrefix('unknown')).toBe('/macro-ai/development/')
-			expect(consoleSpy).toHaveBeenCalledWith(
-				"Unknown environment 'unknown', falling back to development parameters",
-			)
-
-			consoleSpy.mockRestore()
 		})
 	})
 

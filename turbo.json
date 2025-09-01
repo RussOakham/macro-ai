@@ -29,6 +29,7 @@
 				"REDIS_URL",
 				"VITE_API_URL",
 				"VITE_API_KEY",
+				"API_BASE_URL",
 				"AWS_REGION",
 				"SERVICE_NAME",
 				"SERVICE_VERSION",

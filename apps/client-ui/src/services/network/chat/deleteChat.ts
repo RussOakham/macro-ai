@@ -1,23 +1,37 @@
-import { chatClient } from '@/lib/api/clients'
-import type { ChatDeleteChatsByIdResponse } from '@/lib/types'
+import {
+	deleteChatsById,
+	DeleteChatsByIdData,
+	zDeleteChatsByIdData,
+	zDeleteChatsByIdResponse,
+} from '@repo/macro-ai-api-client'
 
-// Use API client response type for better type safety
-type DeleteChatResponse = ChatDeleteChatsByIdResponse
+import { apiClient } from '@/lib/api/clients'
+import { safeValidateApiResponse } from '@/lib/validation/api-response'
 
-/**
- * Delete an existing chat and all its messages for the authenticated user
- * @param chatId - The ID of the chat to delete
- * @returns Promise<DeleteChatResponse>
- */
-const deleteChat = async (chatId: string) => {
-	const response = await chatClient.delete('/chats/:id', undefined, {
-		params: {
-			id: chatId,
+const deleteChatRequestParamSchema = zDeleteChatsByIdData.shape.path.shape.id
+
+type DeleteChatRequestParam = NonNullable<DeleteChatsByIdData['path']>['id']
+
+// Type-safe endpoint for consumption using the generated SDK
+const deleteChat = async (id: DeleteChatRequestParam) => {
+	const { data, error } = await deleteChatsById({
+		client: apiClient,
+		path: {
+			id,
 		},
 	})
 
-	return response
+	if (error) {
+		throw new Error(error.message)
+	}
+
+	const validatedData = safeValidateApiResponse(zDeleteChatsByIdResponse, data)
+
+	if (!validatedData.success) {
+		throw new Error(validatedData.error)
+	}
+
+	return validatedData.data
 }
 
-export { deleteChat }
-export type { DeleteChatResponse }
+export { deleteChat, type DeleteChatRequestParam, deleteChatRequestParamSchema }

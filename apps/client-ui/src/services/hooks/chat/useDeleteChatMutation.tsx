@@ -4,7 +4,7 @@ import { QUERY_KEY, QUERY_KEY_MODIFIERS } from '@/constants/query-keys'
 import { logger } from '@/lib/logger/logger'
 
 import { deleteChat } from '../../network/chat/deleteChat'
-import type { TGetChatsResponse } from '../../network/chat/getChats'
+import type { GetChatsResponse } from '../../network/chat/getChats'
 
 /**
  * TanStack Query mutation hook for deleting an existing chat
@@ -26,7 +26,7 @@ const useDeleteChatMutation = () => {
 			})
 
 			// Snapshot the previous value
-			const previousChats = queryClient.getQueryData<TGetChatsResponse>([
+			const previousChats = queryClient.getQueryData<GetChatsResponse>([
 				QUERY_KEY.chat,
 				QUERY_KEY_MODIFIERS.list,
 			])
@@ -34,7 +34,7 @@ const useDeleteChatMutation = () => {
 			// Optimistically update the cache to remove the deleted chat
 			queryClient.setQueriesData(
 				{ queryKey: [QUERY_KEY.chat, QUERY_KEY_MODIFIERS.list] },
-				(oldData: TGetChatsResponse | undefined) => {
+				(oldData: GetChatsResponse | undefined) => {
 					if (!oldData) return []
 
 					return {

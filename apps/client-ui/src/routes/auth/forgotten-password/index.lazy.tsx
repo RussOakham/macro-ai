@@ -25,22 +25,22 @@ import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { usePostForgotPassword } from '@/services/hooks/auth/usePostForgotPassword'
 import {
-	forgotPasswordSchemaClient,
-	type TForgotPasswordClient,
+	ForgotPasswordRequest,
+	zForgotPasswordRequest,
 } from '@/services/network/auth/postForgotPassword'
 
 const RouteComponent = () => {
 	const navigate = useNavigate({ from: '/auth/forgotten-password' })
 	const { mutateAsync: postForgotPassword, isPending } = usePostForgotPassword()
 
-	const form = useForm<TForgotPasswordClient>({
-		resolver: zodResolver(forgotPasswordSchemaClient),
+	const form = useForm<ForgotPasswordRequest>({
+		resolver: zodResolver(zForgotPasswordRequest),
 		defaultValues: {
 			email: '',
 		},
 	})
 
-	const onSubmit = async ({ email }: TForgotPasswordClient) => {
+	const onSubmit = async ({ email }: ForgotPasswordRequest) => {
 		try {
 			const response = await postForgotPassword({ email })
 
