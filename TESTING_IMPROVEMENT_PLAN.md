@@ -30,6 +30,12 @@ for both backend and frontend testing.
 
 ## Package Recommendations
 
+### Dependency Installation Strategy
+
+**Important**: Ensure testing dependencies are installed in correct places:
+- **Used in multiple apps/packages?** Install at pnpm-workspace level and install to apps via catalog
+- **Used in single apps/packages?** Install in app/package local package.json
+
 ### **Phase 1: Foundation Packages (Week 1)**
 
 #### **1. Test Data Generation & Factories**
