@@ -2,8 +2,8 @@
 
 ## 🎯 **Complete Guide to the Macro AI API Client System**
 
-This is the **definitive guide** for the Macro AI API client system, built with Hey API and consolidating all documentation into a single,
-comprehensive resource.
+This is the **definitive guide** for the Macro AI API client system, built with Hey API and consolidating all documentation
+into a single, comprehensive resource.
 
 ---
 
