@@ -3,12 +3,18 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
 	test: {
-		...commonTestConfig,
-		...unitTestTimeouts,
+		globals: commonTestConfig.globals,
+		environment: commonTestConfig.environment,
+		include: commonTestConfig.include,
+		exclude: commonTestConfig.exclude,
+		silent: commonTestConfig.silent,
+		testTimeout: unitTestTimeouts.testTimeout,
+		hookTimeout: unitTestTimeouts.hookTimeout,
+		teardownTimeout: unitTestTimeouts.teardownTimeout,
 		name: 'macro-ai-api-client',
-		environment: 'node',
 		coverage: {
-			...commonTestConfig.coverage,
+			provider: commonTestConfig.coverage.provider,
+			reporter: commonTestConfig.coverage.reporter,
 			exclude: [
 				...commonTestConfig.coverage.exclude,
 				'scripts/',
