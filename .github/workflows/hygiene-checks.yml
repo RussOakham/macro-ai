@@ -331,7 +331,7 @@ jobs:
           echo "🔨 Building config packages..."
           pnpm --filter @repo/config-testing build
           echo "✅ Config packages built successfully"
-      
+
       - name: Build types package
         run: pnpm --filter @repo/macro-ai-api-client build
         env:
