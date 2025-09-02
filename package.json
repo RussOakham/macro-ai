@@ -51,6 +51,7 @@
 		"husky": "^9.1.7",
 		"knip": "^5.63.0",
 		"markdownlint-cli2": "catalog:",
+		"msw": "^2.11.1",
 		"node-mocks-http": "^1.17.2",
 		"prettier": "catalog:",
 		"tsx": "^4.20.5",
