@@ -2,7 +2,8 @@
 
 ## Overview
 
-This checklist ensures comprehensive and consistent review of test code changes. Use this checklist when reviewing pull requests that include test modifications or additions.
+This checklist ensures comprehensive and consistent review of test code changes.
+Use this checklist when reviewing pull requests that include test modifications or additions.
 
 ## Quick Reference
 
@@ -424,6 +425,9 @@ it('should reject SQL injection attempts', async () => {
 
 ## Conclusion
 
-This checklist ensures that all test code meets our high standards for quality, maintainability, and effectiveness. By following this checklist consistently, we maintain a robust test suite that provides confidence in our code quality and enables safe refactoring and feature development.
+This checklist ensures that all test code meets our high standards for quality, maintainability, and effectiveness. By
+following this checklist consistently, we maintain a robust test suite that provides confidence in our code quality and
+enables safe refactoring and feature development.
 
-Remember: The goal is not just to check boxes, but to ensure that tests provide real value and protect the codebase from regressions while supporting ongoing development.
+Remember: The goal is not just to check boxes, but to ensure that tests provide real value and protect the codebase from
+regressions while supporting ongoing development.

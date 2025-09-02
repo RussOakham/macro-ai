@@ -6,29 +6,113 @@
  * making it easy to use advanced testing capabilities across the application.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-/* eslint-disable @typescript-eslint/no-inferrable-types */
-/* eslint-disable @typescript-eslint/restrict-template-expressions */
-/* eslint-disable @typescript-eslint/no-unnecessary-type-parameters */
+// ============================================================================
+// Type Definitions
+// ============================================================================
+
+/**
+ * Base interface for all mock data objects
+ */
+export interface MockDataBase {
+	id: string
+	createdAt: Date
+	updatedAt: Date
+}
+
+/**
+ * User mock data interface
+ */
+export interface UserMockData extends MockDataBase {
+	email: string
+	firstName: string
+	lastName: string
+}
+
+/**
+ * Chat mock data interface
+ */
+export interface ChatMockData extends MockDataBase {
+	title: string
+	userId: string
+}
+
+/**
+ * Message mock data interface
+ */
+export interface MessageMockData extends MockDataBase {
+	content: string
+	role: 'user' | 'assistant' | 'system'
+	chatId: string
+}
+
+/**
+ * Generic API response interface
+ */
+export interface ApiResponseMock<T = unknown> {
+	success: boolean
+	data: T
+	message?: string
+	timestamp: string
+}
+
+/**
+ * Error response interface
+ */
+export interface ErrorResponseMock {
+	success: false
+	error: {
+		message: string
+		code: string
+		status: number
+		timestamp: string
+	}
+}
+
+/**
+ * Paginated response interface
+ */
+export interface PaginatedResponseMock<T = unknown> {
+	success: boolean
+	data: T[]
+	pagination: {
+		page: number
+		limit: number
+		total: number
+		totalPages: number
+		hasNext: boolean
+		hasPrevious: boolean
+	}
+	timestamp: string
+}
+
+/**
+ * Mock function type for test utilities
+ */
+export type MockFunction<T extends (...args: unknown[]) => unknown> = T
+
+/**
+ * Test condition function type
+ */
+export type TestCondition = () => boolean
+
+/**
+ * Retry function type
+ */
+export type RetryFunction<T> = () => Promise<T>
 
 // ============================================================================
 // Core Testing Utilities
 // ============================================================================
 
 export {
+	ContractTester as AdvancedContractTester,
 	type ContractDefinition,
-	ContractTester,
 	type ErrorSimulationOptions,
 	ErrorSimulator,
 	MockDataFactory,
 	PerformanceTester,
 	type PerformanceTestOptions,
+	type PerformanceTestResult,
 	TimeController,
 	type TimeControlOptions,
 	TransactionTester,
@@ -39,7 +123,6 @@ export {
 	createPerformanceTester,
 	type DatabaseIntegrationTestConfig,
 	type DatabaseTestContext,
-	type PerformanceTestResult,
 	seedDatabaseWithTestData,
 	setupDatabaseIntegration,
 	type TestDataSeeds,
@@ -62,6 +145,24 @@ export {
 export { faker } from '@faker-js/faker'
 export { and, eq, inArray, isNotNull, isNull, not, or } from 'drizzle-orm'
 export { type MockedFunction, vi } from 'vitest'
+
+// Import for internal use
+import { vi } from 'vitest'
+
+import {
+	ContractTester as AdvancedContractTester,
+	ErrorSimulator,
+	MockDataFactory,
+	PerformanceTester,
+	TimeController,
+} from './advanced-mocking.ts'
+import type { DatabaseTestContext } from './database-integration.ts'
+import {
+	ChatContractData,
+	ContractDataGenerator,
+	MessageContractData,
+	UserContractData,
+} from './pact-contract-testing.ts'
 
 // ============================================================================
 // Testing Configuration
@@ -131,9 +232,13 @@ export const createTestSetup = (config: Partial<typeof TEST_CONFIG> = {}) => {
 	return {
 		config: mergedConfig,
 		timeController: new TimeController(mergedConfig.timeControl),
-		errorSimulator: new ErrorSimulator(mergedConfig.errorSimulation),
+		errorSimulator: new ErrorSimulator({
+			probability: mergedConfig.errorSimulation.probability,
+			errorTypes: [...mergedConfig.errorSimulation.errorTypes],
+			logErrors: mergedConfig.errorSimulation.logErrors,
+		}),
 		performanceTester: new PerformanceTester(),
-		contractTester: new ContractTester(),
+		contractTester: new AdvancedContractTester(),
 	}
 }
 
@@ -141,11 +246,14 @@ export const createTestSetup = (config: Partial<typeof TEST_CONFIG> = {}) => {
  * Create mock data for common entities
  */
 export const createMockData = {
-	user: (overrides: Partial<any> = {}) => MockDataFactory.createUser(overrides),
-	chat: (overrides: Partial<any> = {}) => MockDataFactory.createChat(overrides),
-	message: (overrides: Partial<any> = {}) =>
+	user: (overrides: Partial<UserMockData> = {}) =>
+		MockDataFactory.createUser(overrides),
+	chat: (overrides: Partial<ChatMockData> = {}) =>
+		MockDataFactory.createChat(overrides),
+	message: (overrides: Partial<MessageMockData> = {}) =>
 		MockDataFactory.createMessage(overrides),
-	apiResponse: <T>(data: T, overrides: Partial<any> = {}) =>
+
+	apiResponse: <T>(data: T, overrides: Partial<ApiResponseMock<T>> = {}) =>
 		MockDataFactory.createApiResponse(data, overrides),
 	errorResponse: (message: string, code = 'ERROR', status = 500) =>
 		MockDataFactory.createErrorResponse(message, code, status),
@@ -157,24 +265,36 @@ export const createMockData = {
  * Create contract data for testing
  */
 export const createContractData = {
-	user: (overrides: Partial<any> = {}) =>
-		ContractDataGenerator.generateUser(overrides),
-	chat: (overrides: Partial<any> = {}) =>
-		ContractDataGenerator.generateChat(overrides),
-	message: (overrides: Partial<any> = {}) =>
-		ContractDataGenerator.generateMessage(overrides),
+	user: (overrides: Partial<UserContractData> = {}): UserMockData =>
+		ContractDataGenerator.generateUser(overrides) as unknown as UserMockData,
+	chat: (overrides: Partial<ChatContractData> = {}): ChatMockData =>
+		ContractDataGenerator.generateChat(overrides) as unknown as ChatMockData,
+	message: (overrides: Partial<MessageContractData> = {}): MessageMockData =>
+		ContractDataGenerator.generateMessage(
+			overrides,
+		) as unknown as MessageMockData,
 	errorResponse: (
 		message = 'An error occurred',
 		code = 'ERROR',
 		status = 500,
-	) => ContractDataGenerator.generateErrorResponse(message, code, status),
+	): ErrorResponseMock =>
+		ContractDataGenerator.generateErrorResponse(
+			message,
+			code,
+			status,
+		) as unknown as ErrorResponseMock,
 	paginatedResponse: <T>(
 		data: T[],
 		page = 1,
 		limit = 10,
-		total: number = data.length,
-	) =>
-		ContractDataGenerator.generatePaginatedResponse(data, page, limit, total),
+		total = data.length,
+	): PaginatedResponseMock<T> =>
+		ContractDataGenerator.generatePaginatedResponse(
+			data,
+			page,
+			limit,
+			total,
+		) as PaginatedResponseMock<T>,
 }
 
 /**
@@ -189,24 +309,24 @@ export const testUtils = {
 	/**
 	 * Create a promise that resolves after a condition is met
 	 */
-	waitFor: async (condition: () => boolean, timeout = 5000, interval = 100) => {
+	waitFor: async (condition: TestCondition, timeout = 5000, interval = 100) => {
 		const start = Date.now()
 		while (Date.now() - start < timeout) {
 			if (condition()) return
 			await new Promise((resolve) => setTimeout(resolve, interval))
 		}
-		throw new Error(`Condition not met within ${timeout}ms`)
+		throw new Error(`Condition not met within ${String(timeout)}ms`)
 	},
 
 	/**
 	 * Retry a function until it succeeds or max attempts are reached
 	 */
 	retry: async <T>(
-		fn: () => Promise<T>,
+		fn: RetryFunction<T>,
 		maxAttempts = 3,
 		delay = 1000,
 	): Promise<T> => {
-		let lastError: Error
+		let lastError: Error | undefined
 		for (let attempt = 1; attempt <= maxAttempts; attempt++) {
 			try {
 				return await fn()
@@ -217,28 +337,34 @@ export const testUtils = {
 				}
 			}
 		}
-		throw lastError!
+		throw lastError ?? new Error('Retry failed')
 	},
 
 	/**
 	 * Create a mock function with predefined behavior
 	 */
-	createMock: <T extends (...args: any[]) => any>(implementation?: T) => {
+	createMock: <T extends (...args: unknown[]) => unknown>(
+		implementation?: T,
+	) => {
 		return vi.fn(implementation)
 	},
 
 	/**
 	 * Create a spy on an object method
 	 */
-	spyOn: <T extends object, K extends keyof T>(object: T, method: K) => {
-		return vi.spyOn(object, method)
+	spyOn: <T extends object>(object: T, method: keyof T) => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		return vi.spyOn(object, method as any)
 	},
 
 	/**
 	 * Mock a module
 	 */
-	mockModule: (modulePath: string, implementation: any) => {
-		return vi.mock(modulePath, () => implementation)
+	mockModule: (
+		modulePath: string,
+		implementation: () => Record<string, unknown>,
+	) => {
+		vi.mock(modulePath, implementation)
 	},
 }
 
@@ -274,20 +400,23 @@ export const testAssertions = {
 	/**
 	 * Assert that an object has all required properties
 	 */
-	hasRequiredProperties: (obj: any, requiredProps: string[]) => {
+	hasRequiredProperties: (
+		obj: Record<string, unknown>,
+		requiredProps: string[],
+	) => {
 		return requiredProps.every((prop) => obj.hasOwnProperty(prop))
 	},
 
 	/**
 	 * Assert that an array contains only unique values
 	 */
-	hasUniqueValues: (arr: any[]) => {
+	hasUniqueValues: (arr: unknown[]) => {
 		return arr.length === new Set(arr).size
 	},
 }
 
 // ============================================================================
-// Type Definitions
+// Additional Type Definitions
 // ============================================================================
 
 export type TestSetup = ReturnType<typeof createTestSetup>
@@ -302,7 +431,7 @@ export interface TestContext {
 	/** Performance tester for performance testing */
 	performance: PerformanceTester
 	/** Contract tester for contract testing */
-	contracts: ContractTester
+	contracts: AdvancedContractTester
 }
 
 export interface TestConfig {

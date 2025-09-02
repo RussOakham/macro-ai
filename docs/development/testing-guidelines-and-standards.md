@@ -631,7 +631,7 @@ afterEach(async () => {
 })
 ```
 
-## Security Testing Standards
+## Security Testing Requirements
 
 ### Authentication Tests
 

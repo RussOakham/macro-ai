@@ -10,26 +10,85 @@
  * - Performance testing with controlled delays
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-/* eslint-disable @typescript-eslint/prefer-nullish-coalescing */
-/* eslint-disable @typescript-eslint/require-await */
-/* eslint-disable @typescript-eslint/no-inferrable-types */
 /* eslint-disable @typescript-eslint/no-extraneous-class */
-/* eslint-disable @typescript-eslint/restrict-template-expressions */
-/* eslint-disable @typescript-eslint/no-unnecessary-type-parameters */
-/* eslint-disable @typescript-eslint/array-type */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { faker } from '@faker-js/faker'
-import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type { Pool, PoolClient } from 'pg'
 import { vi } from 'vitest'
+
+// ============================================================================
+// Type Definitions
+// ============================================================================
+
+export interface UserData {
+	id: string
+	email: string
+	firstName: string
+	lastName: string
+	createdAt: Date
+	updatedAt: Date
+}
+
+export interface ChatData {
+	id: string
+	title: string
+	userId: string
+	createdAt: Date
+	updatedAt: Date
+}
+
+export interface MessageData {
+	id: string
+	content: string
+	role: 'user' | 'assistant' | 'system'
+	chatId: string
+	createdAt: Date
+	updatedAt: Date
+}
+
+export interface ApiResponse<T = unknown> {
+	success: boolean
+	data: T
+	timestamp: string
+}
+
+export interface ErrorResponse {
+	success: false
+	error: {
+		message: string
+		code: string
+		status: number
+	}
+	timestamp: string
+}
+
+export interface JsonSchema {
+	type: string
+	properties?: Record<string, JsonSchema>
+	required?: string[]
+	items?: JsonSchema
+	enum?: unknown[]
+	format?: string
+	minimum?: number
+	maximum?: number
+	minLength?: number
+	maxLength?: number
+	pattern?: string
+}
+
+export interface HttpRequest {
+	method: string
+	path: string
+	headers?: Record<string, string>
+	query?: Record<string, string>
+	body?: unknown
+}
+
+export interface HttpResponse {
+	status: number
+	headers?: Record<string, string>
+	body?: unknown
+}
 
 // ============================================================================
 // Time-Based Testing Utilities
@@ -164,7 +223,7 @@ export class TimeController {
 		if (this.autoAdvanceTimer) return
 
 		this.autoAdvanceTimer = setInterval(() => {
-			this.advance(this.options.advanceInterval!)
+			this.advance(this.options.advanceInterval ?? 1000)
 		}, this.options.advanceInterval)
 	}
 
@@ -189,9 +248,9 @@ export interface TransactionTestOptions {
 	timeout?: number
 }
 
-export class TransactionTester {
+export class TransactionTester<T = unknown> {
 	constructor(
-		private db: DrizzleD1Database,
+		private db: T,
 		private pool: Pool,
 		private options: TransactionTestOptions = {},
 	) {
@@ -221,7 +280,9 @@ export class TransactionTester {
 
 			// Set transaction timeout
 			if (this.options.timeout) {
-				await client.query(`SET statement_timeout = ${this.options.timeout}`)
+				await client.query(
+					`SET statement_timeout = ${this.options.timeout.toString()}`,
+				)
 			}
 
 			const result = await testFn(client)
@@ -308,8 +369,13 @@ export interface ErrorSimulationOptions {
 	logErrors?: boolean
 }
 
+interface ErrorWithCode extends Error {
+	code: string
+	status: number
+}
+
 export class ErrorSimulator {
-	private originalMethods = new Map<string, any>()
+	private originalMethods = new Map<string, (() => unknown) | null>()
 	private isActive = false
 
 	constructor(public options: ErrorSimulationOptions = {}) {
@@ -353,7 +419,7 @@ export class ErrorSimulator {
 	 */
 	simulateError(type: string, message?: string): void {
 		if (this.options.logErrors) {
-			console.log(`🔴 Simulating ${type} error: ${message || 'Default error'}`)
+			console.log(`🔴 Simulating ${type} error: ${message ?? 'Default error'}`)
 		}
 
 		const error = this.createError(type, message)
@@ -364,13 +430,13 @@ export class ErrorSimulator {
 	 * Check if error should be simulated based on probability
 	 */
 	shouldSimulateError(): boolean {
-		return Math.random() < this.options.probability!
+		return Math.random() < (this.options.probability ?? 0.1)
 	}
 
 	/**
 	 * Wrap function with error simulation
 	 */
-	wrapWithErrorSimulation<T extends (...args: any[]) => any>(
+	wrapWithErrorSimulation<T extends (...args: unknown[]) => unknown>(
 		fn: T,
 		errorType = 'generic',
 	): T {
@@ -429,14 +495,16 @@ export class ErrorSimulator {
 		})
 	}
 
-	private getOriginalMethod(methodPath: string): any {
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	private getOriginalMethod(_methodPath: string): (() => unknown) | null {
 		// Implementation would depend on specific methods being mocked
 		// This is a placeholder for the actual method retrieval logic
 		return null
 	}
 
 	private restoreOriginalMethods(): void {
-		this.originalMethods.forEach((originalMethod, methodPath) => {
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		this.originalMethods.forEach((_originalMethod, _methodPath) => {
 			// Restore original methods
 			// Implementation would depend on specific methods being mocked
 		})
@@ -454,9 +522,10 @@ export class ErrorSimulator {
 		}
 
 		const errorMessage =
-			message ||
-			this.options.customMessages?.[type] ||
-			defaultMessages[type as keyof typeof defaultMessages] ||
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+			message ??
+			this.options.customMessages?.[type] ??
+			defaultMessages[type as keyof typeof defaultMessages] ??
 			'Unknown error'
 
 		const error = new Error(errorMessage)
@@ -465,24 +534,24 @@ export class ErrorSimulator {
 		// Add additional properties based on error type
 		switch (type) {
 			case 'network':
-				;(error as any).code = 'NETWORK_ERROR'
-				;(error as any).status = 503
+				;(error as ErrorWithCode).code = 'NETWORK_ERROR'
+				;(error as ErrorWithCode).status = 503
 				break
 			case 'database':
-				;(error as any).code = 'DB_ERROR'
-				;(error as any).status = 500
+				;(error as ErrorWithCode).code = 'DB_ERROR'
+				;(error as ErrorWithCode).status = 500
 				break
 			case 'validation':
-				;(error as any).code = 'VALIDATION_ERROR'
-				;(error as any).status = 400
+				;(error as ErrorWithCode).code = 'VALIDATION_ERROR'
+				;(error as ErrorWithCode).status = 400
 				break
 			case 'timeout':
-				;(error as any).code = 'TIMEOUT_ERROR'
-				;(error as any).status = 408
+				;(error as ErrorWithCode).code = 'TIMEOUT_ERROR'
+				;(error as ErrorWithCode).status = 408
 				break
 			case 'permission':
-				;(error as any).code = 'PERMISSION_ERROR'
-				;(error as any).status = 403
+				;(error as ErrorWithCode).code = 'PERMISSION_ERROR'
+				;(error as ErrorWithCode).status = 403
 				break
 		}
 
@@ -498,15 +567,15 @@ export interface ContractDefinition {
 	/** Contract name/identifier */
 	name: string
 	/** Request schema validation */
-	requestSchema?: any
+	requestSchema?: JsonSchema
 	/** Response schema validation */
-	responseSchema?: any
+	responseSchema?: JsonSchema
 	/** Expected status codes */
 	expectedStatusCodes?: number[]
 	/** Required headers */
 	requiredHeaders?: string[]
 	/** Custom validation function */
-	customValidation?: (request: any, response: any) => boolean
+	customValidation?: (request: HttpRequest, response: HttpResponse) => boolean
 }
 
 export class ContractTester {
@@ -522,7 +591,7 @@ export class ContractTester {
 	/**
 	 * Validate request against contract
 	 */
-	validateRequest(contractName: string, request: any): boolean {
+	validateRequest(contractName: string, request: HttpRequest): boolean {
 		const contract = this.contracts.get(contractName)
 		if (!contract) {
 			throw new Error(`Contract '${contractName}' not found`)
@@ -530,7 +599,7 @@ export class ContractTester {
 
 		// Validate request schema if provided
 		if (contract.requestSchema) {
-			return this.validateSchema(request, contract.requestSchema)
+			return this.validateSchema(request.body, contract.requestSchema)
 		}
 
 		return true
@@ -539,7 +608,7 @@ export class ContractTester {
 	/**
 	 * Validate response against contract
 	 */
-	validateResponse(contractName: string, response: any): boolean {
+	validateResponse(contractName: string, response: HttpResponse): boolean {
 		const contract = this.contracts.get(contractName)
 		if (!contract) {
 			throw new Error(`Contract '${contractName}' not found`)
@@ -547,7 +616,7 @@ export class ContractTester {
 
 		// Validate response schema if provided
 		if (contract.responseSchema) {
-			return this.validateSchema(response, contract.responseSchema)
+			return this.validateSchema(response.body, contract.responseSchema)
 		}
 
 		// Validate status code if provided
@@ -561,11 +630,11 @@ export class ContractTester {
 	/**
 	 * Run contract test
 	 */
-	async testContract(
+	testContract(
 		contractName: string,
-		request: any,
-		response: any,
-	): Promise<boolean> {
+		request: HttpRequest,
+		response: HttpResponse,
+	): boolean {
 		const contract = this.contracts.get(contractName)
 		if (!contract) {
 			throw new Error(`Contract '${contractName}' not found`)
@@ -589,7 +658,7 @@ export class ContractTester {
 		return true
 	}
 
-	private validateSchema(data: any, schema: any): boolean {
+	private validateSchema(data: unknown, schema: JsonSchema): boolean {
 		// Simple schema validation - in a real implementation, you'd use a proper schema validator
 		// like Joi, Yup, or Zod
 		try {
@@ -607,16 +676,16 @@ export class ContractTester {
 				// Check properties
 				if (schema.properties) {
 					for (const [prop, propSchema] of Object.entries(schema.properties)) {
-						if (prop in data) {
-							const propType = (propSchema as any).type
-							if (propType === 'string' && typeof data[prop] !== 'string')
+						if (prop in (data as Record<string, unknown>)) {
+							const propType = propSchema.type
+							const value = (data as Record<string, unknown>)[prop]
+							if (propType === 'string' && typeof value !== 'string')
 								return false
-							if (propType === 'number' && typeof data[prop] !== 'number')
+							if (propType === 'number' && typeof value !== 'number')
 								return false
-							if (propType === 'boolean' && typeof data[prop] !== 'boolean')
+							if (propType === 'boolean' && typeof value !== 'boolean')
 								return false
-							if (propType === 'array' && !Array.isArray(data[prop]))
-								return false
+							if (propType === 'array' && !Array.isArray(value)) return false
 						}
 					}
 				}
@@ -637,7 +706,7 @@ export class MockDataFactory {
 	/**
 	 * Create realistic user data
 	 */
-	static createUser(overrides: Partial<any> = {}): any {
+	static createUser(overrides: Partial<UserData> = {}): UserData {
 		return {
 			id: faker.string.uuid(),
 			email: faker.internet.email(),
@@ -652,7 +721,7 @@ export class MockDataFactory {
 	/**
 	 * Create realistic chat data
 	 */
-	static createChat(overrides: Partial<any> = {}): any {
+	static createChat(overrides: Partial<ChatData> = {}): ChatData {
 		return {
 			id: faker.string.uuid(),
 			title: faker.lorem.sentence(),
@@ -666,13 +735,14 @@ export class MockDataFactory {
 	/**
 	 * Create realistic message data
 	 */
-	static createMessage(overrides: Partial<any> = {}): any {
+	static createMessage(overrides: Partial<MessageData> = {}): MessageData {
 		return {
 			id: faker.string.uuid(),
 			content: faker.lorem.paragraph(),
 			role: faker.helpers.arrayElement(['user', 'assistant', 'system']),
 			chatId: faker.string.uuid(),
 			createdAt: faker.date.past(),
+			updatedAt: faker.date.recent(),
 			...overrides,
 		}
 	}
@@ -694,7 +764,11 @@ export class MockDataFactory {
 	/**
 	 * Create mock API response
 	 */
-	static createApiResponse<T>(data: T, overrides: Partial<any> = {}): any {
+
+	static createApiResponse<T>(
+		data: T,
+		overrides: Partial<ApiResponse<T>> = {},
+	): ApiResponse<T> {
 		return {
 			success: true,
 			data,
@@ -710,7 +784,7 @@ export class MockDataFactory {
 		message: string,
 		code = 'ERROR',
 		status = 500,
-	): any {
+	): ErrorResponse {
 		return {
 			success: false,
 			error: {
@@ -738,14 +812,16 @@ export interface PerformanceTestOptions {
 	customMetrics?: string[]
 }
 
+export interface PerformanceTestResult {
+	operation: string
+	duration: number
+	memory?: number
+	timestamp: Date
+	metadata?: Record<string, unknown>
+}
+
 export class PerformanceTester {
-	private results: {
-		operation: string
-		duration: number
-		memory?: number
-		timestamp: Date
-		metadata?: Record<string, any>
-	}[] = []
+	private results: PerformanceTestResult[] = []
 
 	/**
 	 * Run performance test
@@ -755,7 +831,7 @@ export class PerformanceTester {
 		testFn: () => Promise<T> | T,
 		options: PerformanceTestOptions,
 	): Promise<{
-		results: typeof this.results
+		results: PerformanceTestResult[]
 		summary: {
 			avgDuration: number
 			minDuration: number
@@ -782,9 +858,10 @@ export class PerformanceTester {
 			const endMemory = measureMemory ? process.memoryUsage() : undefined
 
 			const duration = endTime - startTime
-			const memory = measureMemory
-				? (endMemory!.heapUsed - startMemory!.heapUsed) / 1024 / 1024 // MB
-				: undefined
+			const memory =
+				measureMemory && endMemory && startMemory
+					? (endMemory.heapUsed - startMemory.heapUsed) / 1024 / 1024 // MB
+					: undefined
 
 			this.results.push({
 				operation,
@@ -798,6 +875,7 @@ export class PerformanceTester {
 		const durations = this.results.map((r) => r.duration)
 		const memories = this.results
 			.filter((r) => r.memory !== undefined)
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			.map((r) => r.memory!)
 
 		const summary = {

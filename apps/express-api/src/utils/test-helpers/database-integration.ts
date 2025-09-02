@@ -462,6 +462,10 @@ export const createPerformanceTester = (
  */
 export const cleanupGlobalResources = async (): Promise<void> => {
 	if (globalContainer) {
+		// Wait a bit for any pending operations to complete
+		await new Promise((resolve) => setTimeout(resolve, 100))
+
+		// Stop the container
 		await globalContainer.stop()
 		globalContainer = null
 		globalContainerRefCount = 0

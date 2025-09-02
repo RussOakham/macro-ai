@@ -2,7 +2,8 @@
 
 ## Overview
 
-This document provides practical examples and proven patterns for testing different types of code in the macro-ai monorepo. Each example includes detailed explanations and can be used as templates for similar testing scenarios.
+This document provides practical examples and proven patterns for testing different types of code in the macro-ai monorepo.
+Each example includes detailed explanations and can be used as templates for similar testing scenarios.
 
 ## Table of Contents
 
@@ -1304,4 +1305,5 @@ describe('Property-Based Testing Patterns', () => {
 - Test authorization boundaries
 - Verify error message safety
 
-Remember: The best pattern is the one that provides the most value for your specific testing scenario. Don't be afraid to combine patterns or adapt them to your needs.
+Remember: The best pattern is the one that provides the most value for your specific testing scenario. Don't be afraid
+to combine patterns or adapt them to your needs.
