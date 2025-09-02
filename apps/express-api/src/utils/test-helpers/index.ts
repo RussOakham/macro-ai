@@ -1,6 +1,6 @@
 /**
  * Test Helpers Index
- * 
+ *
  * Centralized export of all testing utilities and helpers for the Express API.
  * This module provides a single entry point for importing testing utilities,
  * making it easy to use advanced testing capabilities across the application.
@@ -60,8 +60,8 @@ export {
 // ============================================================================
 
 export { faker } from '@faker-js/faker'
-export { and, eq, inArray, isNotNull,isNull, not, or } from 'drizzle-orm'
-export { type MockedFunction,vi } from 'vitest'
+export { and, eq, inArray, isNotNull, isNull, not, or } from 'drizzle-orm'
+export { type MockedFunction, vi } from 'vitest'
 
 // ============================================================================
 // Testing Configuration
@@ -147,11 +147,8 @@ export const createMockData = {
 		MockDataFactory.createMessage(overrides),
 	apiResponse: <T>(data: T, overrides: Partial<any> = {}) =>
 		MockDataFactory.createApiResponse(data, overrides),
-	errorResponse: (
-		message: string,
-		code = 'ERROR',
-		status = 500,
-	) => MockDataFactory.createErrorResponse(message, code, status),
+	errorResponse: (message: string, code = 'ERROR', status = 500) =>
+		MockDataFactory.createErrorResponse(message, code, status),
 	array: <T>(factory: () => T, count: number, overrides: Partial<T> = {}) =>
 		MockDataFactory.createArray(factory, count, overrides),
 }
@@ -192,11 +189,7 @@ export const testUtils = {
 	/**
 	 * Create a promise that resolves after a condition is met
 	 */
-	waitFor: async (
-		condition: () => boolean,
-		timeout = 5000,
-		interval = 100,
-	) => {
+	waitFor: async (condition: () => boolean, timeout = 5000, interval = 100) => {
 		const start = Date.now()
 		while (Date.now() - start < timeout) {
 			if (condition()) return

@@ -295,7 +295,13 @@ export interface ErrorSimulationOptions {
 	/** Probability of error (0-1, default: 0.1) */
 	probability?: number
 	/** Error types to simulate */
-	errorTypes?: ('network' | 'database' | 'validation' | 'timeout' | 'permission')[]
+	errorTypes?: (
+		| 'network'
+		| 'database'
+		| 'validation'
+		| 'timeout'
+		| 'permission'
+	)[]
 	/** Custom error messages */
 	customMessages?: Record<string, string>
 	/** Whether to log simulated errors (default: false) */
@@ -306,7 +312,7 @@ export class ErrorSimulator {
 	private originalMethods = new Map<string, any>()
 	private isActive = false
 
-	constructor(private options: ErrorSimulationOptions = {}) {
+	constructor(public options: ErrorSimulationOptions = {}) {
 		this.options = {
 			probability: 0.1,
 			errorTypes: [

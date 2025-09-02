@@ -1,10 +1,10 @@
 /**
  * Pact Contract Testing Utilities
- * 
+ *
  * Provides comprehensive contract testing capabilities using Pact for API contract validation.
  * This module enables testing of API contracts between consumers and providers to ensure
  * compatibility and prevent breaking changes.
- * 
+ *
  * Features:
  * - Consumer contract testing
  * - Provider contract testing
@@ -679,11 +679,4 @@ export class ContractExamples {
 // Export all utilities
 // ============================================================================
 
-export {
-	ContractBuilder,
-	ContractDataGenerator,
-	ContractExamples,
-	ContractTester,
-	InteractionBuilder,
-	MockPact,
-}
+// All classes are already exported above, no need for duplicate exports

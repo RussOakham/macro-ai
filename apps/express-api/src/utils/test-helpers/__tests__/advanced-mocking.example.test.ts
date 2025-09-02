@@ -20,7 +20,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-floating-promises */
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
- 
 
 import { faker } from '@faker-js/faker'
 import { eq } from 'drizzle-orm'
