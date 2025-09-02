@@ -14,7 +14,7 @@
  */
 
 import { faker } from '@faker-js/faker'
-import { and, desc, eq } from 'drizzle-orm'
+import { desc, eq, or, sql } from 'drizzle-orm'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import * as schema from '../../../data-access/schema.ts'
@@ -47,7 +47,7 @@ describe('Database Integration Testing Examples', () => {
 	// Reset database state before each test for isolation
 	beforeEach(async () => {
 		await dbContext.resetDatabase()
-	})
+	}, 10000) // 10 second timeout for database reset
 
 	describe('Basic CRUD Operations', () => {
 		it('should create, read, update, and delete users', async () => {
@@ -86,6 +86,7 @@ describe('Database Integration Testing Examples', () => {
 				.set({
 					emailVerified: true,
 					firstName: 'Updated',
+					updatedAt: new Date(), // Explicitly set updated_at
 				})
 				.where(eq(schema.usersTable.id, newUser.id))
 				.returning()
@@ -114,8 +115,105 @@ describe('Database Integration Testing Examples', () => {
 		it('should handle complex queries with joins and filtering', async () => {
 			const { db } = dbContext
 
-			// Seed some test data
-			await dbContext.seedTestData()
+			// Create test data directly in the test
+			const users = await db
+				.insert(schema.usersTable)
+				.values([
+					{
+						id: faker.string.uuid(),
+						email: 'john.doe@example.com',
+						emailVerified: true,
+						firstName: 'John',
+						lastName: 'Doe',
+					},
+					{
+						id: faker.string.uuid(),
+						email: 'jane.smith@example.com',
+						emailVerified: true,
+						firstName: 'Jane',
+						lastName: 'Smith',
+					},
+					{
+						id: faker.string.uuid(),
+						email: 'bob.wilson@example.com',
+						emailVerified: false,
+						firstName: 'Bob',
+						lastName: 'Wilson',
+					},
+				])
+				.returning()
+
+			expect(users.length).toBe(3)
+
+			// Create test chats
+			const chats = await db
+				.insert(schema.chatsTable)
+				.values([
+					{
+						id: faker.string.uuid(),
+						userId: users[0]?.id ?? '',
+						title: 'Project Planning Discussion',
+					},
+					{
+						id: faker.string.uuid(),
+						userId: users[1]?.id ?? '',
+						title: 'Technical Architecture Review',
+					},
+					{
+						id: faker.string.uuid(),
+						userId: users[0]?.id ?? '',
+						title: 'Bug Investigation Chat',
+					},
+				])
+				.returning()
+
+			expect(chats.length).toBe(3)
+
+			// Create test messages
+			const messages = await db
+				.insert(schema.chatMessagesTable)
+				.values([
+					{
+						id: faker.string.uuid(),
+						chatId: chats[0]?.id ?? '',
+						role: 'user' as const,
+						content: "Let's plan our next sprint",
+					},
+					{
+						id: faker.string.uuid(),
+						chatId: chats[0]?.id ?? '',
+						role: 'assistant' as const,
+						content:
+							"I'd be happy to help you plan your sprint. What are your main objectives?",
+					},
+					{
+						id: faker.string.uuid(),
+						chatId: chats[1]?.id ?? '',
+						role: 'user' as const,
+						content: 'Can you review our microservices architecture?',
+					},
+					{
+						id: faker.string.uuid(),
+						chatId: chats[2]?.id ?? '',
+						role: 'user' as const,
+						content: "I'm seeing a strange error in production",
+					},
+				])
+				.returning()
+
+			expect(messages.length).toBe(4)
+
+			// Verify we have test data
+			const allUsers = await db.select().from(schema.usersTable)
+			const allChats = await db.select().from(schema.chatsTable)
+			const allMessages = await db.select().from(schema.chatMessagesTable)
+
+			expect(allUsers.length).toBeGreaterThan(0)
+			expect(allChats.length).toBeGreaterThan(0)
+			expect(allMessages.length).toBeGreaterThan(0)
+
+			const verifiedUsers = allUsers.filter((u) => u.emailVerified)
+			expect(verifiedUsers.length).toBeGreaterThan(0)
 
 			// Complex query: Find all chats with their message count for verified users
 			const chatsWithMessageCount = await db
@@ -124,7 +222,9 @@ describe('Database Integration Testing Examples', () => {
 					chatTitle: schema.chatsTable.title,
 					userId: schema.chatsTable.userId,
 					userEmail: schema.usersTable.email,
-					messageCount: schema.chatMessagesTable.id,
+					messageCount: sql<number>`COUNT(${schema.chatMessagesTable.id})`.as(
+						'messageCount',
+					),
 				})
 				.from(schema.chatsTable)
 				.leftJoin(
@@ -136,6 +236,12 @@ describe('Database Integration Testing Examples', () => {
 					eq(schema.chatsTable.id, schema.chatMessagesTable.chatId),
 				)
 				.where(eq(schema.usersTable.emailVerified, true))
+				.groupBy(
+					schema.chatsTable.id,
+					schema.chatsTable.title,
+					schema.chatsTable.userId,
+					schema.usersTable.email,
+				)
 				.orderBy(desc(schema.chatsTable.createdAt))
 
 			expect(chatsWithMessageCount.length).toBeGreaterThan(0)
@@ -289,7 +395,7 @@ describe('Database Integration Testing Examples', () => {
 					.select()
 					.from(schema.usersTable)
 					.where(
-						and(
+						or(
 							eq(schema.usersTable.id, userId1),
 							eq(schema.usersTable.id, userId2),
 						),

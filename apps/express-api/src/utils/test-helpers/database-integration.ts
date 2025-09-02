@@ -108,8 +108,7 @@ export const setupDatabaseIntegration = async (
 		container = globalContainer
 		globalContainerRefCount++
 	} else {
-		console.log('🐳 Starting PostgreSQL container for integration tests...')
-		container = await new PostgreSqlContainer('postgres:16-alpine')
+		container = await new PostgreSqlContainer('pgvector/pgvector:pg16')
 			.withDatabase(databaseName)
 			.withUsername('testuser')
 			.withPassword('testpass')
@@ -118,9 +117,6 @@ export const setupDatabaseIntegration = async (
 
 		globalContainer = container
 		globalContainerRefCount = 1
-		console.log(
-			`✅ PostgreSQL container started on port ${String(container.getMappedPort(5432))}`,
-		)
 	}
 
 	// Create connection pool
@@ -138,22 +134,30 @@ export const setupDatabaseIntegration = async (
 		logger: enableLogging,
 	})
 
+	// Install required extensions first
+	try {
+		await db.execute(sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`)
+		await db.execute(sql`CREATE EXTENSION IF NOT EXISTS "vector"`)
+	} catch (error) {
+		console.error('❌ Extension installation failed:', error)
+		throw error // Re-throw to fail the test setup
+	}
+
 	// Run migrations if requested
 	if (runMigrations) {
 		try {
-			await migrate(db, { migrationsFolder: './src/data-access/migrations' })
-			console.log('✅ Database migrations completed')
+			// Use relative path since we're already in the express-api directory
+			const migrationsPath = './src/data-access/migrations'
+			await migrate(db, { migrationsFolder: migrationsPath })
 		} catch (error) {
-			console.warn(
-				'⚠️  Migration failed (may be expected in some test scenarios):',
-				error,
-			)
+			console.error('❌ Migration failed:', error)
+			throw error // Re-throw to fail the test setup
 		}
 	}
 
-	// Seed test data if requested
+	// Seed test data if requested (only after migrations are complete)
 	let testSeeds: TestDataSeeds | undefined
-	if (seedTestData) {
+	if (seedTestData && runMigrations) {
 		testSeeds = await seedDatabaseWithTestData(db)
 	}
 
@@ -169,11 +173,9 @@ export const setupDatabaseIntegration = async (
 				globalContainerRefCount--
 
 				if (globalContainerRefCount <= 0 && globalContainer) {
-					console.log('🧹 Stopping PostgreSQL container...')
 					await globalContainer.stop()
 					globalContainer = null
 					globalContainerRefCount = 0
-					console.log('✅ PostgreSQL container stopped')
 				}
 			} catch (error) {
 				console.error('❌ Error during database cleanup:', error)
@@ -185,17 +187,24 @@ export const setupDatabaseIntegration = async (
 			await client.query('BEGIN')
 
 			const transactionDb = drizzle(client, { schema, logger: enableLogging })
+			let isReleased = false
 
 			return {
 				db: transactionDb,
 				client,
 				async commit() {
-					await client.query('COMMIT')
-					client.release()
+					if (!isReleased) {
+						await client.query('COMMIT')
+						client.release()
+						isReleased = true
+					}
 				},
 				async rollback() {
-					await client.query('ROLLBACK')
-					client.release()
+					if (!isReleased) {
+						await client.query('ROLLBACK')
+						client.release()
+						isReleased = true
+					}
 				},
 			}
 		},
@@ -206,11 +215,12 @@ export const setupDatabaseIntegration = async (
 			await db.execute(sql`TRUNCATE TABLE ${schema.chatVectorsTable} CASCADE`)
 			await db.execute(sql`TRUNCATE TABLE ${schema.chatsTable} CASCADE`)
 			await db.execute(sql`TRUNCATE TABLE ${schema.usersTable} CASCADE`)
-			console.log('🧹 Database reset completed')
 		},
 
 		async seedTestData() {
-			if (testSeeds) return testSeeds
+			if (testSeeds) {
+				return testSeeds
+			}
 			testSeeds = await seedDatabaseWithTestData(db)
 			return testSeeds
 		},
@@ -229,98 +239,97 @@ export const setupDatabaseIntegration = async (
 export const seedDatabaseWithTestData = async (
 	db: ReturnType<typeof drizzle>,
 ): Promise<TestDataSeeds> => {
-	console.log('🌱 Seeding database with test data...')
+	try {
+		// Create test users
+		const users = await db
+			.insert(schema.usersTable)
+			.values([
+				{
+					id: faker.string.uuid(),
+					email: 'john.doe@example.com',
+					emailVerified: true,
+					firstName: 'John',
+					lastName: 'Doe',
+				},
+				{
+					id: faker.string.uuid(),
+					email: 'jane.smith@example.com',
+					emailVerified: true,
+					firstName: 'Jane',
+					lastName: 'Smith',
+				},
+				{
+					id: faker.string.uuid(),
+					email: 'bob.wilson@example.com',
+					emailVerified: false,
+					firstName: 'Bob',
+					lastName: 'Wilson',
+				},
+			])
+			.returning()
 
-	// Create test users
-	const users = await db
-		.insert(schema.usersTable)
-		.values([
-			{
-				id: faker.string.uuid(),
-				email: 'john.doe@example.com',
-				emailVerified: true,
-				firstName: 'John',
-				lastName: 'Doe',
-			},
-			{
-				id: faker.string.uuid(),
-				email: 'jane.smith@example.com',
-				emailVerified: true,
-				firstName: 'Jane',
-				lastName: 'Smith',
-			},
-			{
-				id: faker.string.uuid(),
-				email: 'bob.wilson@example.com',
-				emailVerified: false,
-				firstName: 'Bob',
-				lastName: 'Wilson',
-			},
-		])
-		.returning()
+		// Create test chats
+		const chats = await db
+			.insert(schema.chatsTable)
+			.values([
+				{
+					id: faker.string.uuid(),
+					userId: users[0]?.id ?? '',
+					title: 'Project Planning Discussion',
+				},
+				{
+					id: faker.string.uuid(),
+					userId: users[1]?.id ?? '',
+					title: 'Technical Architecture Review',
+				},
+				{
+					id: faker.string.uuid(),
+					userId: users[0]?.id ?? '',
+					title: 'Bug Investigation Chat',
+				},
+			])
+			.returning()
 
-	// Create test chats
-	const chats = await db
-		.insert(schema.chatsTable)
-		.values([
-			{
-				id: faker.string.uuid(),
-				userId: users[0]?.id ?? '',
-				title: 'Project Planning Discussion',
-			},
-			{
-				id: faker.string.uuid(),
-				userId: users[1]?.id ?? '',
-				title: 'Technical Architecture Review',
-			},
-			{
-				id: faker.string.uuid(),
-				userId: users[0]?.id ?? '',
-				title: 'Bug Investigation Chat',
-			},
-		])
-		.returning()
+		// Create test messages
+		const messages = await db
+			.insert(schema.chatMessagesTable)
+			.values([
+				{
+					id: faker.string.uuid(),
+					chatId: chats[0]?.id ?? '',
+					role: 'user' as const,
+					content: "Let's plan our next sprint",
+				},
+				{
+					id: faker.string.uuid(),
+					chatId: chats[0]?.id ?? '',
+					role: 'assistant' as const,
+					content:
+						"I'd be happy to help you plan your sprint. What are your main objectives?",
+				},
+				{
+					id: faker.string.uuid(),
+					chatId: chats[1]?.id ?? '',
+					role: 'user' as const,
+					content: 'Can you review our microservices architecture?',
+				},
+				{
+					id: faker.string.uuid(),
+					chatId: chats[2]?.id ?? '',
+					role: 'user' as const,
+					content: "I'm seeing a strange error in production",
+				},
+			])
+			.returning()
 
-	// Create test messages
-	const messages = await db
-		.insert(schema.chatMessagesTable)
-		.values([
-			{
-				id: faker.string.uuid(),
-				chatId: chats[0]?.id ?? '',
-				role: 'user' as const,
-				content: "Let's plan our next sprint",
-			},
-			{
-				id: faker.string.uuid(),
-				chatId: chats[0]?.id ?? '',
-				role: 'assistant' as const,
-				content:
-					"I'd be happy to help you plan your sprint. What are your main objectives?",
-			},
-			{
-				id: faker.string.uuid(),
-				chatId: chats[1]?.id ?? '',
-				role: 'user' as const,
-				content: 'Can you review our microservices architecture?',
-			},
-			{
-				id: faker.string.uuid(),
-				chatId: chats[2]?.id ?? '',
-				role: 'user' as const,
-				content: "I'm seeing a strange error in production",
-			},
-		])
-		.returning()
-
-	console.log(
-		`✅ Test data seeded: ${String(users.length)} users, ${String(chats.length)} chats, ${String(messages.length)} messages`,
-	)
-
-	return {
-		users,
-		chats,
-		messages,
+		return {
+			users,
+			chats,
+			messages,
+		}
+	} catch (error) {
+		console.error('❌ Error seeding test data:', error)
+		throw error
 	}
 }
 
@@ -392,10 +401,6 @@ export class DatabasePerformanceTester {
 	}> {
 		const testResults: { duration: number; timestamp: Date }[] = []
 
-		console.log(
-			`🏃 Running performance test: ${testName} (${String(iterations)} iterations)`,
-		)
-
 		for (let i = 0; i < iterations; i++) {
 			const start = performance.now()
 			await operation()
@@ -420,12 +425,6 @@ export class DatabasePerformanceTester {
 			maxTime: Math.max(...durations),
 			results: testResults,
 		}
-
-		console.log(`✅ Performance test completed:`)
-		console.log(`  Average: ${stats.averageTime.toFixed(2)}ms`)
-		console.log(`  Min: ${stats.minTime.toFixed(2)}ms`)
-		console.log(`  Max: ${stats.maxTime.toFixed(2)}ms`)
-		console.log(`  Total: ${stats.totalTime.toFixed(2)}ms`)
 
 		return stats
 	}
@@ -463,10 +462,8 @@ export const createPerformanceTester = (
  */
 export const cleanupGlobalResources = async (): Promise<void> => {
 	if (globalContainer) {
-		console.log('🧹 Cleaning up global PostgreSQL container...')
 		await globalContainer.stop()
 		globalContainer = null
 		globalContainerRefCount = 0
-		console.log('✅ Global cleanup completed')
 	}
 }
