@@ -38,6 +38,17 @@ export default defineConfig({
 		environment: 'jsdom',
 		setupFiles: ['./src/test/setup.ts'],
 		include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+		// Configure parallel test execution using Vitest's built-in capabilities
+		pool: 'threads',
+		poolOptions: {
+			threads: {
+				singleThread: false,
+				minThreads: 1,
+				maxThreads: 4,
+			},
+		},
+		// Enable parallel execution
+		fileParallelism: true,
 		coverage: {
 			...commonTestConfig.coverage,
 			exclude: [
