@@ -1,0 +1,95 @@
+name: Coverage Report
+
+on:
+  push:
+    branches: [main, develop, feature/*]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests with coverage
+        run: pnpm test:coverage
+
+      - name: Generate coverage report
+        run: pnpm test:coverage:report
+
+      - name: Analyze coverage gaps
+        run: pnpm test:coverage:analyze
+        continue-on-error: true
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./apps/express-api/coverage/lcov.info,./apps/client-ui/coverage/lcov.info,./packages/macro-ai-api-client/coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Read coverage summary
+            const coveragePath = path.join('apps', 'express-api', 'coverage', 'coverage-summary.json');
+            if (fs.existsSync(coveragePath)) {
+              const coverage = JSON.parse(fs.readFileSync(coveragePath, 'utf8'));
+              const total = coverage.total;
+              
+              const comment = `## 📊 Coverage Report
+              
+              | Metric | Coverage |
+              |--------|----------|
+              | Statements | ${total.statements}% |
+              | Branches | ${total.branches}% |
+              | Functions | ${total.functions}% |
+              | Lines | ${total.lines}% |
+              
+              **Overall Coverage: ${Math.round((total.statements + total.branches + total.functions + total.lines) / 4)}%**
+              
+              ${total.statements < 80 ? '⚠️ Statements coverage below 80% threshold' : '✅ Statements coverage meets threshold'}
+              ${total.branches < 75 ? '⚠️ Branches coverage below 75% threshold' : '✅ Branches coverage meets threshold'}
+              ${total.functions < 80 ? '⚠️ Functions coverage below 80% threshold' : '✅ Functions coverage meets threshold'}
+              ${total.lines < 80 ? '⚠️ Lines coverage below 80% threshold' : '✅ Lines coverage meets threshold'}
+              `;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+
+      - name: Archive coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            apps/*/coverage/
+            packages/*/coverage/
+          retention-days: 30

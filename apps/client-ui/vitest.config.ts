@@ -48,7 +48,19 @@ export default defineConfig({
 				'**/coverage/**',
 				'**/dist/**',
 				'**/.{idea,git,cache,output,temp}/**',
+				'src/routeTree.gen.ts', // Exclude generated route tree
+				'src/main.tsx', // Exclude main entry point
+				// Note: React components (.tsx) are included for coverage
+				// Focus on testing hooks and business logic per CLAUDE.md guidelines
 			],
+			thresholds: {
+				global: {
+					statements: 60, // Lower threshold for React components initially
+					branches: 50,
+					functions: 60,
+					lines: 60,
+				},
+			},
 		},
 		// Mock CSS modules and other assets
 		css: {
