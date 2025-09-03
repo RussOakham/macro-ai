@@ -1,12 +1,29 @@
 import { describe, expect, it } from 'vitest'
 
 /**
- * Example tests demonstrating Vitest's built-in parameterized testing
- * using describe.each() and it.each() for data-driven tests
+ * ⚠️ ANTI-PATTERN EXAMPLES - DO NOT USE IN PRODUCTION
+ *
+ * This file demonstrates TESTING ANTI-PATTERNS that violate CLAUDE.md guidelines.
+ * These examples show what NOT to do in real test suites.
+ *
+ * CLAUDE.md Rule Violations:
+ * - Exhaustive permutations (testing every possible combination)
+ * - Contrived edge cases not relevant to business logic
+ * - Over-specification of trivial functionality
+ *
+ * Use these examples to LEARN what to AVOID, not what to emulate.
+ *
+ * For production tests, focus on:
+ * ✅ Core logic correctness
+ * ✅ Critical failure paths
+ * ✅ Integration with external systems (mocked where possible)
+ * ✅ Realistic and valuable test cases only
  */
 
 describe('Parameterized Testing Examples', () => {
-	// Example 1: Testing validation with multiple inputs
+	// Example 1: ANTI-PATTERN - Exhaustive Email Validation Testing
+	// ❌ VIOLATION: Testing every possible email combination is exhaustive
+	// ✅ PRODUCTION: Test only critical email validation scenarios relevant to your business
 	describe.each([
 		['valid-email@example.com', true],
 		['invalid-email', false],
@@ -20,7 +37,9 @@ describe('Parameterized Testing Examples', () => {
 		})
 	})
 
-	// Example 2: Testing user creation with different roles
+	// Example 2: ANTI-PATTERN - Exhaustive User Role Testing
+	// ❌ VIOLATION: Testing every possible user role combination exhaustively
+	// ✅ PRODUCTION: Test only roles that have different business logic/behavior
 	describe.each([
 		['admin', 'admin@example.com', 'Admin User'],
 		['user', 'user@example.com', 'Regular User'],
@@ -41,7 +60,9 @@ describe('Parameterized Testing Examples', () => {
 		})
 	})
 
-	// Example 3: Testing authentication scenarios
+	// Example 3: ANTI-PATTERN - Exhaustive Authentication Scenario Testing
+	// ❌ VIOLATION: Testing every possible authentication edge case exhaustively
+	// ✅ PRODUCTION: Test only critical authentication flows and failure modes relevant to your app
 	describe.each([
 		['valid-token', true, 'User authenticated successfully'],
 		['invalid-token', false, 'Invalid token provided'],
@@ -63,7 +84,9 @@ describe('Parameterized Testing Examples', () => {
 		},
 	)
 
-	// Example 4: Testing API response status codes
+	// Example 4: ANTI-PATTERN - Exhaustive HTTP Status Code Testing
+	// ❌ VIOLATION: Testing every possible HTTP status code exhaustively
+	// ✅ PRODUCTION: Test only status codes that your application actually handles or returns
 	describe.each([
 		[200, 'success', 'Request successful'],
 		[400, 'error', 'Bad request'],
@@ -84,7 +107,9 @@ describe('Parameterized Testing Examples', () => {
 		})
 	})
 
-	// Example 5: Testing password strength validation
+	// Example 5: ANTI-PATTERN - Exhaustive Password Strength Testing
+	// ❌ VIOLATION: Testing every possible password strength combination exhaustively
+	// ✅ PRODUCTION: Test only critical password validation rules that affect your security requirements
 	describe.each([
 		['Password123!', true, 'strong'],
 		['password', false, 'weak'],
@@ -110,7 +135,9 @@ describe('Parameterized Testing Examples', () => {
 		})
 	})
 
-	// Example 6: Testing with objects (more complex scenarios)
+	// Example 6: ANTI-PATTERN - Exhaustive Object Comparison Testing
+	// ❌ VIOLATION: Testing every possible object comparison scenario exhaustively
+	// ✅ PRODUCTION: Test only object comparisons that are critical to your business logic
 	describe.each([
 		[
 			{ id: '1', name: 'John', age: 25 },
@@ -134,7 +161,9 @@ describe('Parameterized Testing Examples', () => {
 		})
 	})
 
-	// Example 7: Testing with arrays
+	// Example 7: ANTI-PATTERN - Exhaustive Array Operation Testing
+	// ❌ VIOLATION: Testing every possible array scenario exhaustively
+	// ✅ PRODUCTION: Test only array operations that are critical to your business logic
 	describe.each([
 		[[1, 2, 3], 6],
 		[[4, 5, 6], 15],
@@ -148,7 +177,9 @@ describe('Parameterized Testing Examples', () => {
 		})
 	})
 
-	// Example 8: Testing error handling scenarios
+	// Example 8: ANTI-PATTERN - Exhaustive Error Type Testing
+	// ❌ VIOLATION: Testing every possible JavaScript error type exhaustively
+	// ✅ PRODUCTION: Test only error types that your application actually throws or handles
 	describe.each([
 		['TypeError', 'Invalid type provided'],
 		['ReferenceError', 'Variable not defined'],
@@ -166,7 +197,9 @@ describe('Parameterized Testing Examples', () => {
 	})
 })
 
-// Example 9: Using it.each() for individual test cases
+// Example 9: ANTI-PATTERN - Exhaustive Individual Parameterized Tests
+// ❌ VIOLATION: Testing trivial operations with exhaustive permutations
+// ✅ PRODUCTION: Don't test built-in JavaScript methods or trivial operations
 describe('Individual Parameterized Tests', () => {
 	it.each([
 		[1, 1, 2],

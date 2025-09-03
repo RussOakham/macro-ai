@@ -9,6 +9,26 @@ import {
 	resetAllMocks,
 } from '../enhanced-mocks.ts'
 
+/**
+ * ⚠️ ANTI-PATTERN EXAMPLES - DO NOT USE IN PRODUCTION
+ *
+ * This file demonstrates TESTING ANTI-PATTERNS that violate CLAUDE.md guidelines.
+ * These examples show what NOT to do in real test suites.
+ *
+ * CLAUDE.md Rule Violations:
+ * - Over-testing of mock setup and configuration
+ * - Testing implementation details of mocking utilities
+ * - Exhaustive testing of helper functions
+ *
+ * Use these examples to LEARN what to AVOID, not what to emulate.
+ *
+ * For production tests, focus on:
+ * ✅ Core logic correctness
+ * ✅ Critical failure paths
+ * ✅ Integration with external systems (mocked where possible)
+ * ✅ Realistic and valuable test cases only
+ */
+
 // Example usage of enhanced mocks
 describe('Enhanced Mocks Examples', () => {
 	beforeEach(() => {
@@ -16,7 +36,9 @@ describe('Enhanced Mocks Examples', () => {
 	})
 
 	describe('Service Mocks', () => {
-		it('should create user service mock with automatic type inference', async () => {
+		it('ANTI-PATTERN: should create user service mock with exhaustive type inference testing', async () => {
+			// ❌ VIOLATION: Testing mock setup and type inference instead of business logic
+			// ✅ PRODUCTION: Use mocks to test your code, don't test the mocks themselves
 			const mockUserService = createMockUserService()
 
 			// Mock the getUserById method - it returns a Result<TUser> tuple
@@ -48,7 +70,9 @@ describe('Enhanced Mocks Examples', () => {
 			expect(mockUserService.getUserById).toHaveBeenCalledTimes(1)
 		})
 
-		it('should create multiple service mocks at once', () => {
+		it('ANTI-PATTERN: should create multiple service mocks with exhaustive setup testing', () => {
+			// ❌ VIOLATION: Testing mock creation and setup instead of business logic
+			// ✅ PRODUCTION: Focus on testing what your code does with the mocks, not the mocks themselves
 			const mocks = createServiceMocks()
 
 			// All services are automatically mocked with proper types
@@ -73,7 +97,9 @@ describe('Enhanced Mocks Examples', () => {
 	})
 
 	describe('Express Object Mocks', () => {
-		it('should create mock Express request and response objects', () => {
+		it('ANTI-PATTERN: should create mock Express objects with exhaustive property testing', () => {
+			// ❌ VIOLATION: Testing mock setup and configuration instead of Express middleware logic
+			// ✅ PRODUCTION: Use Express mocks to test your middleware, don't test the mock setup
 			const { req, res } = createMockExpressObjects({
 				body: { email: 'test@example.com' },
 				params: { id: '123' },
@@ -93,7 +119,9 @@ describe('Enhanced Mocks Examples', () => {
 			expect(res._getJSONData()).toEqual({ success: true })
 		})
 
-		it('should create mock Express objects with custom options', () => {
+		it('ANTI-PATTERN: should create mock Express objects with exhaustive custom option testing', () => {
+			// ❌ VIOLATION: Testing mock configuration options instead of middleware behavior
+			// ✅ PRODUCTION: Test your middleware logic, not the mock configuration details
 			const { req, res } = createMockExpressObjects(
 				{
 					method: 'POST',
@@ -113,7 +141,9 @@ describe('Enhanced Mocks Examples', () => {
 	})
 
 	describe('Generic Enhanced Mocks', () => {
-		it('should create enhanced mock for any type', () => {
+		it('ANTI-PATTERN: should create enhanced mock with exhaustive type and method testing', () => {
+			// ❌ VIOLATION: Testing mock creation and method setup instead of business logic
+			// ✅ PRODUCTION: Use generic mocks to test your code, don't test the mock framework
 			// Create a mock for a hypothetical service
 			const mockService = createEnhancedMock<{
 				getData: () => Promise<string>
@@ -134,28 +164,36 @@ describe('Enhanced Mocks Examples', () => {
 	})
 
 	describe('Mock Utilities', () => {
-		it('should create resolving mock', async () => {
+		it('ANTI-PATTERN: should create resolving mock with exhaustive utility testing', async () => {
+			// ❌ VIOLATION: Testing mock utility functions instead of business logic
+			// ✅ PRODUCTION: Use mock utilities to support testing, don't test the utilities themselves
 			const mock = mockUtils.createResolvingMock('test value')
 
 			const result = (await mock()) as string
 			expect(result).toBe('test value')
 		})
 
-		it('should create rejecting mock', async () => {
+		it('ANTI-PATTERN: should create rejecting mock with exhaustive error testing', async () => {
+			// ❌ VIOLATION: Testing mock error creation instead of error handling logic
+			// ✅ PRODUCTION: Test how your code handles errors, not how mocks create them
 			const error = new Error('Test error')
 			const mock = mockUtils.createRejectingMock(error)
 
 			await expect(mock()).rejects.toThrow(error)
 		})
 
-		it('should create returning mock', () => {
+		it('ANTI-PATTERN: should create returning mock with exhaustive behavior testing', () => {
+			// ❌ VIOLATION: Testing mock return behavior instead of business logic
+			// ✅ PRODUCTION: Use returning mocks to test your code, don't test the mock behavior
 			const mock = mockUtils.createReturningMock('test value')
 
 			const result = mock() as string
 			expect(result).toBe('test value')
 		})
 
-		it('should create throwing mock', () => {
+		it('ANTI-PATTERN: should create throwing mock with exhaustive exception testing', () => {
+			// ❌ VIOLATION: Testing mock exception throwing instead of exception handling
+			// ✅ PRODUCTION: Test how your code handles exceptions, not how mocks throw them
 			const error = new Error('Test error')
 			const mock = mockUtils.createThrowingMock(error)
 
