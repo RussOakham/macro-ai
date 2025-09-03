@@ -27,7 +27,6 @@ export {
 
 export {
 	server,
-	worker,
 	startServer,
 	stopServer,
 	resetServer,

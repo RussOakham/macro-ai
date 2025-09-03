@@ -64,14 +64,8 @@ export const resetWorker = () => {
 	}
 }
 
-// Auto-setup based on environment
-if (isNode) {
-	// Node.js environment - typically for tests
-	startServer()
-} else if (isBrowser && process.env.NODE_ENV === 'development') {
-	// Browser environment - only in development
-	startWorker()
-}
+// Auto-setup removed - individual applications should handle their own MSW setup
+// to avoid conflicts between Node.js and browser environments
 
 // Export setup functions for manual control
 export { setupServer }

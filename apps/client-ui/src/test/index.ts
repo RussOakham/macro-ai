@@ -85,15 +85,17 @@ export {
 	userFactory,
 } from '@repo/config-testing'
 
-// Re-export MSW utilities
+// Re-export MSW utilities (server imported from local setup)
 export {
 	authHandlers,
 	chatHandlers,
 	errorHandlers,
 	handlers,
-	server,
 	userHandlers,
 } from '@repo/config-testing'
+
+// Import server from local MSW setup instead of config-testing
+export { server } from './msw-setup'
 
 // Re-export React Testing Library utilities
 export {
