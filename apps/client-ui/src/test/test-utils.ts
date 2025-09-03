@@ -11,21 +11,18 @@ import {
 	apiResponseFactory,
 	authFactory,
 	chatFactory,
+	errorHandlers,
+	handlers,
 	testUtils,
 	userFactory,
 } from '@repo/config-testing'
-// Import MSW utilities
-import {
-	authHandlers,
-	chatHandlers,
-	errorHandlers,
-	handlers,
-	server,
-	userHandlers,
-} from '@repo/config-testing'
 import { render, RenderOptions } from '@testing-library/react'
 import { AxiosHeaders, AxiosInstance, AxiosResponse } from 'axios'
+import { RequestHandler } from 'msw'
 import { expect, vi } from 'vitest'
+
+// Import MSW utilities from our new setup
+import { server, setupServerWithHandlers } from './msw-setup'
 
 // ============================================================================
 // Type Definitions
@@ -256,18 +253,11 @@ export const createMockTokenRefresh = () => {
 /**
  * Setup MSW server with custom handlers
  */
-export const setupMSWServer = (customHandlers: unknown[] = []) => {
-	const allHandlers = [
-		...handlers,
-		...authHandlers,
-		...userHandlers,
-		...chatHandlers,
-		...errorHandlers,
-		...customHandlers,
-	]
-
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-	server.use(...(allHandlers as any[]))
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const setupMSWServer = (customHandlers: any[] = []) => {
+	if (customHandlers.length > 0) {
+		setupServerWithHandlers(customHandlers as RequestHandler[])
+	}
 	return server
 }
 

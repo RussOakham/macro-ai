@@ -32,7 +32,7 @@ describe('Performance and Reliability Tests', () => {
 			// Test client with credentials
 			expect(apiClient.instance.defaults.baseURL).toBe('http://localhost:3000')
 			expect(apiClient.instance.defaults.headers['X-API-KEY']).toBe(
-				'test-api-key',
+				'test-api-key-that-is-at-least-32-characters-long',
 			)
 			expect(apiClient.instance.defaults.withCredentials).toBe(true)
 
@@ -42,7 +42,7 @@ describe('Performance and Reliability Tests', () => {
 			)
 			expect(
 				apiClientWithoutCredentials.instance.defaults.headers['X-API-KEY'],
-			).toBe('test-api-key')
+			).toBe('test-api-key-that-is-at-least-32-characters-long')
 			expect(
 				apiClientWithoutCredentials.instance.defaults.withCredentials,
 			).toBe(false)

@@ -34,11 +34,11 @@ describe('API Client Validation', () => {
 		it('should have proper axios configuration', () => {
 			// Check that clients have proper base configuration
 			expect(apiClient.instance.defaults.headers['X-API-KEY']).toBe(
-				'test-api-key',
+				'test-api-key-that-is-at-least-32-characters-long',
 			)
 			expect(
 				apiClientWithoutCredentials.instance.defaults.headers['X-API-KEY'],
-			).toBe('test-api-key')
+			).toBe('test-api-key-that-is-at-least-32-characters-long')
 
 			// Check credentials configuration
 			expect(apiClient.instance.defaults.withCredentials).toBe(true)

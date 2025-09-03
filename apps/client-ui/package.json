@@ -80,6 +80,7 @@
 		"eslint-plugin-react-hooks": "catalog:",
 		"globals": "catalog:",
 		"jsdom": "^26.1.0",
+		"msw-auto-mock": "^0.31.0",
 		"postcss": "^8.5.6",
 		"tailwindcss": "catalog:",
 		"tailwindcss-animate": "^1.0.7",

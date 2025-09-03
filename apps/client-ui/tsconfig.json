@@ -5,7 +5,8 @@
 		"node_modules",
 		"coverage",
 		"eslint.config.js",
-		"tsconfig.json"
+		"tsconfig.json",
+		"src/test/mocks/**"
 	],
 	"references": [
 		{ "path": "./tsconfig.app.json" },

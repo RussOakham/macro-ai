@@ -2,21 +2,21 @@
 	"$schema": "http://json.schemastore.org/tsconfig",
 	"extends": "@repo/config-typescript/tsconfig-react.json",
 	"include": [
-		"src",
-		"tailwind.config.ts",
-		"postcss.config.js",
+		"src/test/**/*",
+		"src/**/*.test.*",
+		"src/**/*.spec.*",
 		"vitest.config.ts"
 	],
-	"exclude": ["src/test/**", "src/**/*.test.*", "src/**/*.spec.*"],
+	"exclude": ["node_modules", "dist", "coverage"],
 	"compilerOptions": {
-		"composite": true,
-		"declaration": true,
-		"noEmit": false,
-		"emitDeclarationOnly": true,
+		"composite": false,
+		"declaration": false,
+		"noEmit": true,
 		"allowImportingTsExtensions": true,
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["./src/*"]
-		}
+		},
+		"types": ["vitest/globals", "jsdom"]
 	}
 }

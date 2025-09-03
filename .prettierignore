@@ -1,0 +1,6 @@
+# Auto-generated MSW mocks
+**/src/test/mocks/
+**/src/test/mocks/**/*
+
+# Tanstack Router generated files
+routeTree.gen.ts    

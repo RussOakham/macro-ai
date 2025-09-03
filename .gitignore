@@ -19,6 +19,9 @@ tests/integration/results/
 tests/integration/tests/integration/results/
 **/integration-test-results.json
 
+# Auto-generated MSW mocks
+**/src/test/mocks/
+
 # Turbo
 .turbo/
 

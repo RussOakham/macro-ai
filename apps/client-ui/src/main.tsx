@@ -6,6 +6,7 @@ import { createRouter, RouterProvider } from '@tanstack/react-router'
 
 import { AuthRouteLoading } from './components/auth/auth-route-loading.tsx'
 import { ThemeProvider } from './components/providers/theme-provider.tsx'
+import { AppWrapper } from './lib/app-wrapper.tsx'
 import { standardizeError } from './lib/errors/standardize-error.ts'
 import { routeTree } from './routeTree.gen.ts'
 
@@ -51,15 +52,17 @@ if (!rootElement.innerHTML) {
 	const root = ReactDOM.createRoot(rootElement)
 	root.render(
 		<StrictMode>
-			<ThemeProvider defaultTheme="system" storageKey="macro-ai-ui-theme">
-				<QueryClientProvider client={queryClient}>
-					<RouterProvider router={router} />
-					<ReactQueryDevtools
-						initialIsOpen={false}
-						buttonPosition="bottom-right"
-					/>
-				</QueryClientProvider>
-			</ThemeProvider>
+			<AppWrapper>
+				<ThemeProvider defaultTheme="system" storageKey="macro-ai-ui-theme">
+					<QueryClientProvider client={queryClient}>
+						<RouterProvider router={router} />
+						<ReactQueryDevtools
+							initialIsOpen={false}
+							buttonPosition="bottom-right"
+						/>
+					</QueryClientProvider>
+				</ThemeProvider>
+			</AppWrapper>
 		</StrictMode>,
 	)
 }

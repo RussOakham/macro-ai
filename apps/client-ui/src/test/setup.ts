@@ -4,6 +4,9 @@ import { IStandardizedError } from '@/lib/types'
 
 import '@testing-library/jest-dom'
 
+// Setup MSW for testing
+import { setupMSWForTests } from './msw-setup'
+
 // Set up environment variables for tests
 Object.defineProperty(import.meta, 'env', {
 	value: {
@@ -86,3 +89,6 @@ Object.defineProperty(window, 'matchMedia', {
 		dispatchEvent: vi.fn(),
 	})),
 })
+
+// Setup MSW for all tests
+setupMSWForTests()

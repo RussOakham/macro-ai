@@ -6,20 +6,13 @@
  * and validating API client behavior.
  */
 
-// Import MSW utilities from config-testing
-import {
-	authHandlers,
-	chatHandlers,
-	errorHandlers,
-	handlers,
-	server,
-	userHandlers,
-} from '@repo/config-testing'
+// Import MSW utilities from our new setup
 import { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import MockAdapter from 'axios-mock-adapter'
 import { http, HttpResponse } from 'msw'
 import { expect, vi } from 'vitest'
 
+import { server, setupServerWithHandlers } from './msw-setup'
 // Import from main test utilities
 import {
 	createMockApiClient,
@@ -233,18 +226,14 @@ export const createDynamicMSWHandlers = (config: MSWHandlerConfig = {}) => {
 export const setupDynamicMSWServer = (config: MSWHandlerConfig = {}) => {
 	const dynamicHandlers = createDynamicMSWHandlers(config)
 	const allHandlers = [
-		...handlers,
-		...authHandlers,
-		...userHandlers,
-		...chatHandlers,
-		...errorHandlers,
-
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 		...dynamicHandlers,
 	]
 
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-	server.use(...allHandlers)
+	if (allHandlers.length > 0) {
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+		setupServerWithHandlers(allHandlers)
+	}
 
 	return { server, handlers: allHandlers }
 }
