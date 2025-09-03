@@ -1,5 +1,9 @@
 import React from 'react'
 import { faker } from '@faker-js/faker'
+import {
+	GetAuthUserResponse,
+	PostAuthLoginResponse,
+} from '@repo/macro-ai-api-client'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -15,20 +19,13 @@ import { setupMSWForTests, setupServerWithHandlers } from './msw-setup'
  * the OpenAPI-integrated MSW server with auto-generated handlers.
  */
 
-// Types for our mock data (using OpenAPI types)
-interface User {
-	id: string
-	email: string
-	emailVerified: boolean
-}
-
 // Simple Login Component using OpenAPI auth endpoints
 const LoginComponent = () => {
 	const [email, setEmail] = React.useState('')
 	const [password, setPassword] = React.useState('')
 	const [loading, setLoading] = React.useState(false)
 	const [error, setError] = React.useState('')
-	const [user, setUser] = React.useState<User | null>(null)
+	const [user, setUser] = React.useState<GetAuthUserResponse | null>(null)
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
@@ -42,27 +39,18 @@ const LoginComponent = () => {
 				body: JSON.stringify({ email, password }),
 			})
 
-			const data = (await response.json()) as {
-				message: string
-				tokens?: {
-					accessToken: string
-					refreshToken: string
-					expiresIn: number
-				}
-			}
+			const data = (await response.json()) as PostAuthLoginResponse
 
 			if (!response.ok) {
 				throw new Error(data.message || 'Login failed')
 			}
 
-			if (data.tokens) {
-				// Simulate getting user data after successful login
-				setUser({
-					id: faker.string.uuid(),
-					email: email,
-					emailVerified: true,
-				})
-			}
+			// Simulate getting user data after successful login
+			setUser({
+				id: faker.string.uuid(),
+				email: email,
+				emailVerified: true,
+			})
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Login failed')
 		} finally {
@@ -116,7 +104,7 @@ const LoginComponent = () => {
 
 // User Profile Component using OpenAPI auth/user endpoint
 const UserProfile = () => {
-	const [user, setUser] = React.useState<User | null>(null)
+	const [user, setUser] = React.useState<GetAuthUserResponse | null>(null)
 	const [loading, setLoading] = React.useState(true)
 	const [error, setError] = React.useState('')
 
@@ -127,7 +115,7 @@ const UserProfile = () => {
 					headers: { Authorization: 'Bearer valid-token' },
 				})
 
-				const data = (await response.json()) as User
+				const data = (await response.json()) as GetAuthUserResponse
 
 				if (!response.ok) {
 					throw new Error('Failed to fetch user')
@@ -284,7 +272,7 @@ describe('Basic MSW React Integration', () => {
 
 	describe('3. Custom Hook with MSW', () => {
 		const useUser = () => {
-			const [user, setUser] = React.useState<User | null>(null)
+			const [user, setUser] = React.useState<GetAuthUserResponse | null>(null)
 			const [loading, setLoading] = React.useState(true)
 			const [error, setError] = React.useState('')
 
@@ -295,7 +283,7 @@ describe('Basic MSW React Integration', () => {
 							headers: { Authorization: 'Bearer valid-token' },
 						})
 
-						const data = (await response.json()) as User
+						const data = (await response.json()) as GetAuthUserResponse
 
 						if (!response.ok) {
 							throw new Error('Failed to fetch user')
