@@ -3,7 +3,6 @@ import helmet from 'helmet'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { mockExpress } from '../../utils/test-helpers/express-mocks.ts'
-import { mockLogger } from '../../utils/test-helpers/logger.mock.ts'
 
 // Mock external dependencies before importing the middleware
 vi.mock('../../utils/logger.ts', () => ({
@@ -310,7 +309,10 @@ describe('Security Headers Middleware', () => {
 					)
 
 					// Assert
-					expect(mockResponse.setHeader).toHaveBeenCalledWith(name, expectedValue)
+					expect(mockResponse.setHeader).toHaveBeenCalledWith(
+						name,
+						expectedValue,
+					)
 				})
 			},
 		)
@@ -469,7 +471,9 @@ describe('Security Headers Middleware', () => {
 					const helmetCall = vi.mocked(helmet).mock.calls[0]?.[0]
 
 					expect(helmetCall).toHaveProperty(property)
-					expect(helmetCall?.[property as keyof typeof helmetCall]).toEqual(expectedValue)
+					expect(helmetCall?.[property as keyof typeof helmetCall]).toEqual(
+						expectedValue,
+					)
 				})
 			},
 		)
@@ -513,47 +517,41 @@ describe('Security Headers Middleware', () => {
 
 		const httpMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] as const
 
-		describe.each(httpMethods)(
-			'should handle %s requests',
-			(method) => {
-				it(`should work with ${method} requests`, async () => {
-					// Arrange
-					const middleware = await import('../security-headers.middleware.ts')
-					const request = mockExpress.createRequest({ method })
+		describe.each(httpMethods)('should handle %s requests', (method) => {
+			it(`should work with ${method} requests`, async () => {
+				// Arrange
+				const middleware = await import('../security-headers.middleware.ts')
+				const request = mockExpress.createRequest({ method })
 
-					// Act & Assert - Should work with different HTTP methods
-					expect(() => {
-						middleware.securityHeadersMiddleware(
-							request as Request,
-							mockResponse as Response,
-							mockNext,
-						)
-					}).not.toThrow()
-				})
-			},
-		)
+				// Act & Assert - Should work with different HTTP methods
+				expect(() => {
+					middleware.securityHeadersMiddleware(
+						request as Request,
+						mockResponse as Response,
+						mockNext,
+					)
+				}).not.toThrow()
+			})
+		})
 
 		const testUrls = ['/api/test', '/auth/login', '/health', '/docs'] as const
 
-		describe.each(testUrls)(
-			'should handle requests to %s',
-			(url) => {
-				it(`should work with requests to ${url}`, async () => {
-					// Arrange
-					const middleware = await import('../security-headers.middleware.ts')
-					const request = mockExpress.createRequest({ url })
+		describe.each(testUrls)('should handle requests to %s', (url) => {
+			it(`should work with requests to ${url}`, async () => {
+				// Arrange
+				const middleware = await import('../security-headers.middleware.ts')
+				const request = mockExpress.createRequest({ url })
 
-					// Act & Assert - Should work with different URLs
-					expect(() => {
-						middleware.securityHeadersMiddleware(
-							request as Request,
-							mockResponse as Response,
-							mockNext,
-						)
-					}).not.toThrow()
-				})
-			},
-		)
+				// Act & Assert - Should work with different URLs
+				expect(() => {
+					middleware.securityHeadersMiddleware(
+						request as Request,
+						mockResponse as Response,
+						mockNext,
+					)
+				}).not.toThrow()
+			})
+		})
 	})
 
 	describe('Error Handling', () => {
