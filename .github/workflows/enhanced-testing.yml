@@ -93,9 +93,9 @@ jobs:
               },
               {
                 "name": "Unit Tests - API Client",
-                "package": "macro-ai-api-client",
+                "package": "packages/macro-ai-api-client",
                 "test-pattern": "src/**/*.test.ts",
-                "exclude-pattern": "**/*.integration.test.* **/*.e2e.test.*", 
+                "exclude-pattern": "**/*.integration.test.* **/*.e2e.test.*",
                 "timeout": 60000,
                 "parallel": true
               }
@@ -190,7 +190,31 @@ jobs:
           # Create test-specific environment configuration
           mkdir -p apps/${{ matrix.package }}
 
-          # Basic test environment variables
+          # Set environment variables for Express API tests
+          if [ "${{ matrix.package }}" = "express-api" ]; then
+            echo "NODE_ENV=test" >> $GITHUB_ENV
+            echo "APP_ENV=test" >> $GITHUB_ENV
+            echo "SERVER_PORT=3000" >> $GITHUB_ENV
+            echo "API_KEY=test-api-key-at-least-32-chars-long-for-testing-purposes" >> $GITHUB_ENV
+            echo "AWS_COGNITO_REGION=us-east-1" >> $GITHUB_ENV
+            echo "AWS_COGNITO_USER_POOL_ID=test-pool-id" >> $GITHUB_ENV
+            echo "AWS_COGNITO_USER_POOL_CLIENT_ID=test-client-id" >> $GITHUB_ENV
+            echo "AWS_COGNITO_USER_POOL_SECRET_KEY=test-secret-key-at-least-32-chars-long-for-testing" >> $GITHUB_ENV
+            echo "COOKIE_ENCRYPTION_KEY=test-cookie-key-at-least-32-chars-long-for-testing" >> $GITHUB_ENV
+            echo "REDIS_URL=redis://localhost:6379" >> $GITHUB_ENV
+            echo "RELATIONAL_DATABASE_URL=postgres://test:test@localhost:5432/test_db" >> $GITHUB_ENV
+            echo "OPENAI_API_KEY=sk-test-openai-key-for-testing-purposes-only" >> $GITHUB_ENV
+            echo "COOKIE_DOMAIN=localhost" >> $GITHUB_ENV
+            echo "AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30" >> $GITHUB_ENV
+            echo "RATE_LIMIT_WINDOW_MS=900000" >> $GITHUB_ENV
+            echo "RATE_LIMIT_MAX_REQUESTS=100" >> $GITHUB_ENV
+            echo "AUTH_RATE_LIMIT_WINDOW_MS=3600000" >> $GITHUB_ENV
+            echo "AUTH_RATE_LIMIT_MAX_REQUESTS=10" >> $GITHUB_ENV
+            echo "API_RATE_LIMIT_WINDOW_MS=60000" >> $GITHUB_ENV
+            echo "API_RATE_LIMIT_MAX_REQUESTS=60" >> $GITHUB_ENV
+          fi
+
+          # Basic test environment variables (for other packages)
           cat > apps/${{ matrix.package }}/.env.test << EOF
           NODE_ENV=test
           APP_ENV=test
