@@ -22,48 +22,43 @@ describe('UtilityService', () => {
 	})
 
 	describe('getHealthStatus', () => {
-		it('should return health status successfully', () => {
-			// Arrange
-			const mockHealthStatus = {
-				message: 'Api Health Status: OK',
-				timestamp: '2023-01-01T00:00:00.000Z',
-				uptime: 100,
-				memoryUsageMB: 50,
-			}
+		describe.each([
+			[
+				'successful health check',
+				{
+					message: 'Api Health Status: OK',
+					timestamp: '2023-01-01T00:00:00.000Z',
+					uptime: 100,
+					memoryUsageMB: 50,
+				},
+				null,
+			],
+			[
+				'health check error',
+				null,
+				mockErrorHandling.errors.internal('Health check failed', 'test'),
+			],
+		])('should handle %s', (scenario, expectedResult, expectedError) => {
+			it(`should ${scenario}`, () => {
+				// Arrange
+				if (expectedError) {
+					vi.mocked(tryCatchSync).mockReturnValue(
+						mockErrorHandling.errorResult(expectedError),
+					)
+				} else {
+					vi.mocked(tryCatchSync).mockReturnValue(
+						mockErrorHandling.successResult(expectedResult),
+					)
+				}
 
-			// Mock tryCatchSync to return successful result
-			vi.mocked(tryCatchSync).mockReturnValue(
-				mockErrorHandling.successResult(mockHealthStatus),
-			)
+				// Act
+				const [result, error] = utilityService.getHealthStatus()
 
-			// Act
-			const [result, error] = utilityService.getHealthStatus()
-
-			// Assert
-			expect(tryCatchSync).toHaveBeenCalledOnce()
-			expect(result).toEqual(mockHealthStatus)
-			expect(error).toBeNull()
-		})
-
-		it('should handle error in health check', () => {
-			// Arrange
-			const mockError = mockErrorHandling.errors.internal(
-				'Health check failed',
-				'test',
-			)
-
-			// Mock tryCatchSync to return error
-			vi.mocked(tryCatchSync).mockReturnValue(
-				mockErrorHandling.errorResult(mockError),
-			)
-
-			// Act
-			const [result, error] = utilityService.getHealthStatus()
-
-			// Assert
-			expect(tryCatchSync).toHaveBeenCalledOnce()
-			expect(result).toBeNull()
-			expect(error).toEqual(mockError)
+				// Assert
+				expect(tryCatchSync).toHaveBeenCalledOnce()
+				expect(result).toEqual(expectedResult)
+				expect(error).toEqual(expectedError)
+			})
 		})
 
 		it('should handle invalid uptime error', () => {
@@ -90,59 +85,54 @@ describe('UtilityService', () => {
 	})
 
 	describe('getSystemInfo', () => {
-		it('should return system info successfully', () => {
-			// Arrange
-			const mockSystemInfo = {
-				nodeVersion: 'v18.0.0',
-				platform: 'linux',
-				architecture: 'x64',
-				uptime: 100,
-				memoryUsage: {
-					rss: 50,
-					heapTotal: 30,
-					heapUsed: 20,
-					external: 5,
+		describe.each([
+			[
+				'successful system info retrieval',
+				{
+					nodeVersion: 'v18.0.0',
+					platform: 'linux',
+					architecture: 'x64',
+					uptime: 100,
+					memoryUsage: {
+						rss: 50,
+						heapTotal: 30,
+						heapUsed: 20,
+						external: 5,
+					},
+					cpuUsage: {
+						user: 1000,
+						system: 500,
+					},
+					timestamp: '2023-01-01T00:00:00.000Z',
 				},
-				cpuUsage: {
-					user: 1000,
-					system: 500,
-				},
-				timestamp: '2023-01-01T00:00:00.000Z',
-			}
+				null,
+			],
+			[
+				'system info error',
+				null,
+				mockErrorHandling.errors.internal('System info failed', 'test'),
+			],
+		])('should handle %s', (scenario, expectedResult, expectedError) => {
+			it(`should ${scenario}`, () => {
+				// Arrange
+				if (expectedError) {
+					vi.mocked(tryCatchSync).mockReturnValue(
+						mockErrorHandling.errorResult(expectedError),
+					)
+				} else {
+					vi.mocked(tryCatchSync).mockReturnValue(
+						mockErrorHandling.successResult(expectedResult),
+					)
+				}
 
-			// Mock tryCatchSync to return successful result
-			vi.mocked(tryCatchSync).mockReturnValue(
-				mockErrorHandling.successResult(mockSystemInfo),
-			)
+				// Act
+				const [result, error] = utilityService.getSystemInfo()
 
-			// Act
-			const [result, error] = utilityService.getSystemInfo()
-
-			// Assert
-			expect(tryCatchSync).toHaveBeenCalledOnce()
-			expect(result).toEqual(mockSystemInfo)
-			expect(error).toBeNull()
-		})
-
-		it('should handle error in system info retrieval', () => {
-			// Arrange
-			const mockError = mockErrorHandling.errors.internal(
-				'System info failed',
-				'test',
-			)
-
-			// Mock tryCatchSync to return error
-			vi.mocked(tryCatchSync).mockReturnValue(
-				mockErrorHandling.errorResult(mockError),
-			)
-
-			// Act
-			const [result, error] = utilityService.getSystemInfo()
-
-			// Assert
-			expect(tryCatchSync).toHaveBeenCalledOnce()
-			expect(result).toBeNull()
-			expect(error).toEqual(mockError)
+				// Assert
+				expect(tryCatchSync).toHaveBeenCalledOnce()
+				expect(result).toEqual(expectedResult)
+				expect(error).toEqual(expectedError)
+			})
 		})
 	})
 })
