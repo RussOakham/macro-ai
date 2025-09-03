@@ -2,11 +2,11 @@ import { NextFunction, Request, Response } from 'express'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
+import { MockDataFactory } from '../../utils/test-helpers/advanced-mocking.ts'
 import {
 	createMockRequest,
 	createMockResponse,
 } from '../../utils/test-helpers/enhanced-mocks.ts'
-import { createMockData } from '../../utils/test-helpers/index.ts'
 import { mockLogger } from '../../utils/test-helpers/logger.mock.ts'
 
 // Mock external dependencies
@@ -65,7 +65,7 @@ describe('Validation Middleware', () => {
 					name: z.string().min(1),
 				})
 
-				const validData = createMockData.user({
+				const validData = MockDataFactory.createUser({
 					email: 'test@example.com',
 					firstName: 'John',
 					lastName: 'Doe',
@@ -112,12 +112,12 @@ describe('Validation Middleware', () => {
 			})
 
 			const validParams = {
-				id: '123e4567-e89b-12d3-a456-426614174000',
+				id: MockDataFactory.uuid(),
 			}
 
 			mockRequest = createMockRequest({
 				params: { id: 'original-id' },
-				path: '/api/users/123e4567-e89b-12d3-a456-426614174000',
+				path: `/api/users/${validParams.id}`,
 			})
 
 			// Mock the schema's parseAsync method

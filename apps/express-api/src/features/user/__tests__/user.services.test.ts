@@ -7,9 +7,9 @@ import {
 	UnauthorizedError,
 	ValidationError,
 } from '../../../utils/errors.ts'
+import { MockDataFactory } from '../../../utils/test-helpers/advanced-mocking.ts'
 import { createServiceMocks } from '../../../utils/test-helpers/enhanced-mocks.ts'
 import { mockErrorHandling } from '../../../utils/test-helpers/error-handling.mock.ts'
-import { createMockData } from '../../../utils/test-helpers/index.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { CognitoService } from '../../auth/auth.services.ts'
 import { UserService } from '../user.services.ts'
@@ -52,9 +52,7 @@ describe('UserService', () => {
 		mockUserRepository = mockUserService as unknown as IUserRepository
 		mockCognitoService = authService as unknown as CognitoService
 		// Create mock user data with proper TUser structure
-		mockUser = {
-			...createMockData.user(),
-		}
+		mockUser = MockDataFactory.createUser()
 
 		userService = new UserService(mockUserRepository, mockCognitoService)
 	})
@@ -68,14 +66,12 @@ describe('UserService', () => {
 		])('User ID validation: %s', (userId, isValid) => {
 			it(`should ${isValid ? 'return user' : 'return validation error'} for ${userId}`, async () => {
 				// Arrange
-				const testUser = {
-					...createMockData.user({
-						id: userId,
-						email: 'test@example.com',
-					}),
+				const testUser = MockDataFactory.createUser({
+					id: userId,
+					email: 'test@example.com',
 					emailVerified: true,
 					lastLogin: new Date(),
-				} as TUser
+				})
 
 				if (isValid) {
 					vi.mocked(tryCatchSync).mockReturnValue(
@@ -123,7 +119,7 @@ describe('UserService', () => {
 				'test',
 			)
 			vi.mocked(tryCatchSync).mockReturnValue(
-				mockErrorHandling.successResult('123e4567-e89b-12d3-a456-426614174000'),
+				mockErrorHandling.successResult(MockDataFactory.uuid()),
 			)
 			vi.mocked(mockUserRepository.findUserById).mockResolvedValue([
 				null,
@@ -132,7 +128,7 @@ describe('UserService', () => {
 
 			// Act
 			const [result, error] = await userService.getUserById({
-				userId: '123e4567-e89b-12d3-a456-426614174000',
+				userId: MockDataFactory.uuid(),
 			})
 
 			// Assert
@@ -144,8 +140,9 @@ describe('UserService', () => {
 
 		it('should return NotFoundError when user not found', async () => {
 			// Arrange
+			const testUserId = MockDataFactory.uuid()
 			vi.mocked(tryCatchSync).mockReturnValue(
-				mockErrorHandling.successResult('123e4567-e89b-12d3-a456-426614174000'),
+				mockErrorHandling.successResult(testUserId),
 			)
 			vi.mocked(mockUserRepository.findUserById).mockResolvedValue([
 				undefined,
@@ -154,7 +151,7 @@ describe('UserService', () => {
 
 			// Act
 			const [result, error] = await userService.getUserById({
-				userId: '123e4567-e89b-12d3-a456-426614174000',
+				userId: testUserId,
 			})
 
 			// Assert
@@ -163,7 +160,7 @@ describe('UserService', () => {
 			expect(result).toBeNull()
 			expect(error).toBeInstanceOf(NotFoundError)
 			expect((error as NotFoundError).message).toContain(
-				'User with ID 123e4567-e89b-12d3-a456-426614174000 not found',
+				`User with ID ${testUserId} not found`,
 			)
 		})
 	})
@@ -179,13 +176,11 @@ describe('UserService', () => {
 		])('Email validation: %s', (email, isValid) => {
 			it(`should ${isValid ? 'return user' : 'return validation error'} for ${email}`, async () => {
 				// Arrange
-				const testUser = {
-					...createMockData.user({
-						email,
-					}),
+				const testUser = MockDataFactory.createUser({
+					email,
 					emailVerified: true,
 					lastLogin: new Date(),
-				} as TUser
+				})
 
 				if (isValid) {
 					vi.mocked(tryCatchSync).mockReturnValue([email, null])
@@ -271,7 +266,7 @@ describe('UserService', () => {
 		it('should return user when valid access token provided', async () => {
 			// Arrange
 			const mockCognitoUser = {
-				Username: '123e4567-e89b-12d3-a456-426614174000',
+				Username: MockDataFactory.uuid(),
 				UserAttributes: [],
 				$metadata: {},
 			}
@@ -280,10 +275,7 @@ describe('UserService', () => {
 				mockCognitoUser,
 				null,
 			])
-			vi.mocked(tryCatchSync).mockReturnValue([
-				'123e4567-e89b-12d3-a456-426614174000',
-				null,
-			])
+			vi.mocked(tryCatchSync).mockReturnValue([MockDataFactory.uuid(), null])
 			vi.mocked(mockUserRepository.findUserById).mockResolvedValue([
 				mockUser,
 				null,
@@ -350,7 +342,7 @@ describe('UserService', () => {
 		it('should return error when getUserById fails', async () => {
 			// Arrange
 			const mockCognitoUser = {
-				Username: '123e4567-e89b-12d3-a456-426614174000',
+				Username: MockDataFactory.uuid(),
 				UserAttributes: [],
 				$metadata: {},
 			}
@@ -360,10 +352,7 @@ describe('UserService', () => {
 				mockCognitoUser,
 				null,
 			])
-			vi.mocked(tryCatchSync).mockReturnValue([
-				'123e4567-e89b-12d3-a456-426614174000',
-				null,
-			])
+			vi.mocked(tryCatchSync).mockReturnValue([MockDataFactory.uuid(), null])
 			vi.mocked(mockUserRepository.findUserById).mockResolvedValue([
 				null,
 				userError,
@@ -385,7 +374,7 @@ describe('UserService', () => {
 		it('should create new user when user does not exist', async () => {
 			// Arrange
 			const userData = {
-				id: '123e4567-e89b-12d3-a456-426614174000',
+				id: MockDataFactory.uuid(),
 				email: 'test@example.com',
 				firstName: 'John',
 				lastName: 'Doe',
@@ -416,7 +405,7 @@ describe('UserService', () => {
 		it('should update last login when user exists', async () => {
 			// Arrange
 			const userData = {
-				id: '123e4567-e89b-12d3-a456-426614174000',
+				id: MockDataFactory.uuid(),
 				email: 'test@example.com',
 			}
 			const updatedUser = { ...mockUser, lastLogin: new Date() }
@@ -448,7 +437,7 @@ describe('UserService', () => {
 		it('should return error when findUserById fails', async () => {
 			// Arrange
 			const userData = {
-				id: '123e4567-e89b-12d3-a456-426614174000',
+				id: MockDataFactory.uuid(),
 				email: 'test@example.com',
 			}
 			const dbError = new InternalError('Database error', 'test')
@@ -475,7 +464,7 @@ describe('UserService', () => {
 		it('should return error when createUser fails', async () => {
 			// Arrange
 			const userData = {
-				id: '123e4567-e89b-12d3-a456-426614174000',
+				id: MockDataFactory.uuid(),
 				email: 'test@example.com',
 			}
 			const createError = new InternalError('Create user failed', 'test')
@@ -505,7 +494,7 @@ describe('UserService', () => {
 		it('should return error when updateLastLogin fails', async () => {
 			// Arrange
 			const userData = {
-				id: '123e4567-e89b-12d3-a456-426614174000',
+				id: MockDataFactory.uuid(),
 				email: 'test@example.com',
 			}
 			const updateError = new InternalError('Update failed', 'test')
@@ -537,7 +526,7 @@ describe('UserService', () => {
 		it('should return InternalError when updateLastLogin returns undefined', async () => {
 			// Arrange
 			const userData = {
-				id: '123e4567-e89b-12d3-a456-426614174000',
+				id: MockDataFactory.uuid(),
 				email: 'test@example.com',
 			}
 

@@ -8,8 +8,8 @@ import {
 	NotFoundError,
 	UnauthorizedError,
 } from '../../../utils/errors.ts'
-import { mockChatService } from '../../../utils/test-helpers/chat-service.mock.ts'
-import { mockExpress } from '../../../utils/test-helpers/express-mocks.ts'
+import { MockDataFactory } from '../../../utils/test-helpers/advanced-mocking.ts'
+import { createMockExpressObjects } from '../../../utils/test-helpers/enhanced-mocks.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { chatController } from '../chat.controller.ts'
 import { chatService } from '../chat.service.ts'
@@ -17,44 +17,56 @@ import { chatService } from '../chat.service.ts'
 // Mock the logger using the reusable helper
 vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 
-// Mock the chat service using the reusable helper
-vi.mock('../chat.service.ts', () => mockChatService.createModule())
+// Mock the chat service
+vi.mock('../chat.service.ts', () => ({
+	chatService: {
+		getUserChats: vi.fn(),
+		createChat: vi.fn(),
+		getChatWithMessages: vi.fn(),
+		updateChat: vi.fn(),
+		deleteChat: vi.fn(),
+		sendMessageStreaming: vi.fn(),
+		updateMessageContent: vi.fn(),
+		verifyChatOwnership: vi.fn(),
+	},
+}))
 
 describe('ChatController', () => {
-	let mockRequest: Partial<Request>
-	let mockResponse: Partial<Response>
+	let mockRequest: Request
+	let mockResponse: Response
 	let mockNext: NextFunction
 	let mockedChatService: ReturnType<typeof vi.mocked<typeof chatService>>
 
-	const mockUserId = '123e4567-e89b-12d3-a456-426614174000'
-	const mockChatId = '987fcdeb-51a2-43d1-9f12-123456789abc'
+	const mockUserId = MockDataFactory.uuid()
+	const mockChatId = MockDataFactory.uuid()
 
-	// Use mock helper to create test data
-	const mockChat = mockChatService.createChat({
+	// Use MockDataFactory to create test data
+	const mockChat = MockDataFactory.createChat({
 		id: mockChatId,
 		userId: mockUserId,
 		title: 'Test Chat',
 	})
 
-	const mockMessage = mockChatService.createMessage({
+	const mockMessage = MockDataFactory.createMessage({
 		id: 'msg-123',
 		chatId: mockChatId,
 		role: 'user',
 		content: 'Hello, world!',
 	})
 
-	const mockChatWithMessages = mockChatService.createChatWithMessages({
-		id: mockChatId,
-		userId: mockUserId,
-		title: 'Test Chat',
+	const mockChatWithMessages = {
+		...mockChat,
 		messages: [mockMessage],
-	})
+	}
 
 	beforeEach(() => {
-		const mocks = mockExpress.setup()
-		mockRequest = mocks.req
-		mockResponse = mocks.res
-		mockNext = mocks.next
+		// Clear all mocks
+		vi.clearAllMocks()
+
+		const { req, res, next } = createMockExpressObjects()
+		mockRequest = req
+		mockResponse = res
+		mockNext = next
 		mockedChatService = vi.mocked(chatService)
 
 		// Set default authenticated user
@@ -64,10 +76,10 @@ describe('ChatController', () => {
 	describe('getChats', () => {
 		it('should return user chats with pagination', async () => {
 			// Arrange
-			const mockChatsData = mockChatService.createChatsPagination({
+			const mockChatsData = {
 				chats: [mockChat],
 				total: 1,
-			})
+			}
 			mockRequest.query = { page: '1', limit: '20' }
 			vi.mocked(chatService).getUserChats.mockResolvedValue([
 				mockChatsData,
@@ -75,11 +87,7 @@ describe('ChatController', () => {
 			])
 
 			// Act
-			await chatController.getChats(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.getChats(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockedChatService.getUserChats).toHaveBeenCalledWith(mockUserId, {
@@ -104,11 +112,7 @@ describe('ChatController', () => {
 			mockRequest.userId = undefined
 
 			// Act
-			await chatController.getChats(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.getChats(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.UNAUTHORIZED)
@@ -126,11 +130,7 @@ describe('ChatController', () => {
 			vi.mocked(chatService).getUserChats.mockResolvedValue([null, error])
 
 			// Act
-			await chatController.getChats(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.getChats(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(error)
@@ -139,21 +139,17 @@ describe('ChatController', () => {
 		it('should use default pagination values when not provided', async () => {
 			// Arrange
 			mockRequest.query = {} // No pagination params
-			const mockChatsData = mockChatService.createChatsPagination({
+			const mockChatsData = {
 				chats: [],
 				total: 0,
-			})
+			}
 			vi.mocked(chatService).getUserChats.mockResolvedValue([
 				mockChatsData,
 				null,
 			])
 
 			// Act
-			await chatController.getChats(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.getChats(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockedChatService.getUserChats).toHaveBeenCalledWith(mockUserId, {
@@ -165,21 +161,17 @@ describe('ChatController', () => {
 		it('should limit pagination to maximum 100', async () => {
 			// Arrange
 			mockRequest.query = { page: '1', limit: '150' }
-			const mockChatsData = mockChatService.createChatsPagination({
+			const mockChatsData = {
 				chats: [],
 				total: 0,
-			})
+			}
 			vi.mocked(chatService).getUserChats.mockResolvedValue([
 				mockChatsData,
 				null,
 			])
 
 			// Act
-			await chatController.getChats(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.getChats(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockedChatService.getUserChats).toHaveBeenCalledWith(mockUserId, {
@@ -191,21 +183,17 @@ describe('ChatController', () => {
 		it('should handle invalid pagination parameters gracefully', async () => {
 			// Arrange
 			mockRequest.query = { page: 'invalid', limit: 'invalid' }
-			const mockChatsData = mockChatService.createChatsPagination({
+			const mockChatsData = {
 				chats: [],
 				total: 0,
-			})
+			}
 			vi.mocked(chatService).getUserChats.mockResolvedValue([
 				mockChatsData,
 				null,
 			])
 
 			// Act
-			await chatController.getChats(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.getChats(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockedChatService.getUserChats).toHaveBeenCalledWith(mockUserId, {
@@ -217,21 +205,17 @@ describe('ChatController', () => {
 		it('should sanitize negative pagination values to defaults', async () => {
 			// Arrange
 			mockRequest.query = { page: '-1', limit: '-5' }
-			const mockChatsData = mockChatService.createChatsPagination({
+			const mockChatsData = {
 				chats: [],
 				total: 0,
-			})
+			}
 			vi.mocked(chatService).getUserChats.mockResolvedValue([
 				mockChatsData,
 				null,
 			])
 
 			// Act
-			await chatController.getChats(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.getChats(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockedChatService.getUserChats).toHaveBeenCalledWith(mockUserId, {
@@ -243,21 +227,17 @@ describe('ChatController', () => {
 		it('should sanitize zero pagination values to defaults', async () => {
 			// Arrange
 			mockRequest.query = { page: '0', limit: '0' }
-			const mockChatsData = mockChatService.createChatsPagination({
+			const mockChatsData = {
 				chats: [],
 				total: 0,
-			})
+			}
 			vi.mocked(chatService).getUserChats.mockResolvedValue([
 				mockChatsData,
 				null,
 			])
 
 			// Act
-			await chatController.getChats(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.getChats(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockedChatService.getUserChats).toHaveBeenCalledWith(mockUserId, {
@@ -269,21 +249,17 @@ describe('ChatController', () => {
 		it('should convert decimal pagination values to integers', async () => {
 			// Arrange
 			mockRequest.query = { page: '2.7', limit: '15.9' }
-			const mockChatsData = mockChatService.createChatsPagination({
+			const mockChatsData = {
 				chats: [],
 				total: 0,
-			})
+			}
 			vi.mocked(chatService).getUserChats.mockResolvedValue([
 				mockChatsData,
 				null,
 			])
 
 			// Act
-			await chatController.getChats(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.getChats(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockedChatService.getUserChats).toHaveBeenCalledWith(mockUserId, {
@@ -300,11 +276,7 @@ describe('ChatController', () => {
 			vi.mocked(chatService).createChat.mockResolvedValue([mockChat, null])
 
 			// Act
-			await chatController.createChat(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.createChat(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockedChatService.createChat).toHaveBeenCalledWith({
@@ -325,11 +297,7 @@ describe('ChatController', () => {
 			mockRequest.body = { title: 'New Chat' }
 
 			// Act
-			await chatController.createChat(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.createChat(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.UNAUTHORIZED)
@@ -348,11 +316,7 @@ describe('ChatController', () => {
 			vi.mocked(chatService).createChat.mockResolvedValue([null, error])
 
 			// Act
-			await chatController.createChat(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.createChat(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(error)
@@ -364,11 +328,7 @@ describe('ChatController', () => {
 			vi.mocked(chatService).createChat.mockResolvedValue([mockChat, null])
 
 			// Act
-			await chatController.createChat(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.createChat(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockedChatService.createChat).toHaveBeenCalledWith({
@@ -385,11 +345,7 @@ describe('ChatController', () => {
 			vi.mocked(chatService).createChat.mockResolvedValue([mockChat, null])
 
 			// Act
-			await chatController.createChat(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.createChat(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockedChatService.createChat).toHaveBeenCalledWith({
@@ -410,11 +366,7 @@ describe('ChatController', () => {
 			])
 
 			// Act
-			await chatController.getChatById(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.getChatById(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockedChatService.getChatWithMessages).toHaveBeenCalledWith(
@@ -435,11 +387,7 @@ describe('ChatController', () => {
 			mockRequest.params = { id: mockChatId }
 
 			// Act
-			await chatController.getChatById(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.getChatById(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.UNAUTHORIZED)
@@ -456,11 +404,7 @@ describe('ChatController', () => {
 			mockRequest.params = {} // No id parameter
 
 			// Act
-			await chatController.getChatById(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.getChatById(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST)
@@ -482,11 +426,7 @@ describe('ChatController', () => {
 			])
 
 			// Act
-			await chatController.getChatById(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.getChatById(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(error)
@@ -502,11 +442,7 @@ describe('ChatController', () => {
 			])
 
 			// Act
-			await chatController.getChatById(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.getChatById(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(error)
@@ -517,11 +453,7 @@ describe('ChatController', () => {
 			mockRequest.params = { id: '' } // Empty string
 
 			// Act
-			await chatController.getChatById(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.getChatById(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST)
@@ -534,14 +466,10 @@ describe('ChatController', () => {
 
 		it('should handle undefined chatId parameter', async () => {
 			// Arrange
-			delete mockRequest.params?.id // Remove id property
+			delete mockRequest.params.id // Remove id property
 
 			// Act
-			await chatController.getChatById(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.getChatById(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST)
@@ -558,7 +486,7 @@ describe('ChatController', () => {
 			// Arrange
 			mockRequest.params = { id: mockChatId }
 			mockRequest.body = { title: 'Updated Chat Title' }
-			const updatedChat = mockChatService.createChat({
+			const updatedChat = MockDataFactory.createChat({
 				...mockChat,
 				title: 'Updated Chat Title',
 			})
@@ -566,11 +494,7 @@ describe('ChatController', () => {
 			vi.mocked(chatService).updateChat.mockResolvedValue([updatedChat, null])
 
 			// Act
-			await chatController.updateChat(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.updateChat(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockedChatService.updateChat).toHaveBeenCalledWith(
@@ -595,11 +519,7 @@ describe('ChatController', () => {
 			mockRequest.body = { title: 'Updated Chat Title' }
 
 			// Act
-			await chatController.updateChat(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.updateChat(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.UNAUTHORIZED)
@@ -618,11 +538,7 @@ describe('ChatController', () => {
 			mockRequest.body = { title: 'Updated Chat Title' }
 
 			// Act
-			await chatController.updateChat(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.updateChat(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST)
@@ -647,11 +563,7 @@ describe('ChatController', () => {
 			vi.mocked(chatService).updateChat.mockResolvedValue([null, authError])
 
 			// Act
-			await chatController.updateChat(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.updateChat(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockedChatService.updateChat).toHaveBeenCalledWith(
@@ -673,11 +585,7 @@ describe('ChatController', () => {
 			vi.mocked(chatService).updateChat.mockResolvedValue([null, error])
 
 			// Act
-			await chatController.updateChat(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.updateChat(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockedChatService.updateChat).toHaveBeenCalledWith(
@@ -699,11 +607,7 @@ describe('ChatController', () => {
 			vi.mocked(chatService).updateChat.mockResolvedValue([null, error])
 
 			// Act
-			await chatController.updateChat(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.updateChat(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockedChatService.updateChat).toHaveBeenCalledWith(
@@ -724,11 +628,7 @@ describe('ChatController', () => {
 			vi.mocked(chatService).deleteChat.mockResolvedValue([undefined, null])
 
 			// Act
-			await chatController.deleteChat(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.deleteChat(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockedChatService.deleteChat).toHaveBeenCalledWith(
@@ -749,11 +649,7 @@ describe('ChatController', () => {
 			mockRequest.params = { id: mockChatId }
 
 			// Act
-			await chatController.deleteChat(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.deleteChat(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.UNAUTHORIZED)
@@ -770,11 +666,7 @@ describe('ChatController', () => {
 			mockRequest.params = {} // No id parameter
 
 			// Act
-			await chatController.deleteChat(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.deleteChat(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST)
@@ -793,11 +685,7 @@ describe('ChatController', () => {
 			vi.mocked(chatService).deleteChat.mockResolvedValue([null, error])
 
 			// Act
-			await chatController.deleteChat(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await chatController.deleteChat(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(error)
@@ -852,8 +740,8 @@ describe('ChatController', () => {
 
 			// Act
 			await chatController.streamChatMessage(
-				mockRequest as Request,
-				mockResponse as Response,
+				mockRequest,
+				mockResponse,
 				mockNext,
 			)
 
@@ -894,8 +782,8 @@ describe('ChatController', () => {
 
 			// Act
 			await chatController.streamChatMessage(
-				mockRequest as Request,
-				mockResponse as Response,
+				mockRequest,
+				mockResponse,
 				mockNext,
 			)
 
@@ -917,8 +805,8 @@ describe('ChatController', () => {
 
 			// Act
 			await chatController.streamChatMessage(
-				mockRequest as Request,
-				mockResponse as Response,
+				mockRequest,
+				mockResponse,
 				mockNext,
 			)
 
@@ -945,8 +833,8 @@ describe('ChatController', () => {
 
 			// Act
 			await chatController.streamChatMessage(
-				mockRequest as Request,
-				mockResponse as Response,
+				mockRequest,
+				mockResponse,
 				mockNext,
 			)
 
@@ -988,8 +876,8 @@ describe('ChatController', () => {
 
 			// Act
 			await chatController.streamChatMessage(
-				mockRequest as Request,
-				mockResponse as Response,
+				mockRequest,
+				mockResponse,
 				mockNext,
 			)
 
@@ -1018,8 +906,8 @@ describe('ChatController', () => {
 
 			// Act
 			await chatController.streamChatMessage(
-				mockRequest as Request,
-				mockResponse as Response,
+				mockRequest,
+				mockResponse,
 				mockNext,
 			)
 
@@ -1040,8 +928,8 @@ describe('ChatController', () => {
 
 			// Act
 			await chatController.streamChatMessage(
-				mockRequest as Request,
-				mockResponse as Response,
+				mockRequest,
+				mockResponse,
 				mockNext,
 			)
 
@@ -1063,8 +951,8 @@ describe('ChatController', () => {
 
 			// Act
 			await chatController.streamChatMessage(
-				mockRequest as Request,
-				mockResponse as Response,
+				mockRequest,
+				mockResponse,
 				mockNext,
 			)
 
