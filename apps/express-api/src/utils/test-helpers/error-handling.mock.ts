@@ -1,4 +1,4 @@
-import { type MockedFunction, vi } from 'vitest'
+import { expect, type MockedFunction, vi } from 'vitest'
 
 import {
 	tryCatch,
@@ -227,6 +227,23 @@ export const createErrorScenarios = {
 /**
  * Error boundary helper for testing error propagation
  * Wraps a function to ensure errors are properly caught and logged in tests
+ *
+ * @param fn - Function to execute within error boundary
+ * @param context - Context identifier for error logging
+ * @returns Result tuple containing data or error
+ *
+ * @example
+ * ```typescript
+ * const [result, error] = withErrorBoundary(() => {
+ *   return riskyOperation()
+ * }, 'user-service')
+ *
+ * if (error) {
+ *   console.log('Error caught:', error.message)
+ * } else {
+ *   console.log('Success:', result)
+ * }
+ * ```
  */
 export const withErrorBoundary = <T>(
 	fn: () => T,
@@ -244,6 +261,23 @@ export const withErrorBoundary = <T>(
 
 /**
  * Async error boundary helper for testing async error propagation
+ *
+ * @param fn - Async function to execute within error boundary
+ * @param context - Context identifier for error logging
+ * @returns Promise of Result tuple containing data or error
+ *
+ * @example
+ * ```typescript
+ * const [result, error] = await withAsyncErrorBoundary(async () => {
+ *   return await riskyAsyncOperation()
+ * }, 'api-service')
+ *
+ * if (error) {
+ *   console.log('Async error caught:', error.message)
+ * } else {
+ *   console.log('Async success:', result)
+ * }
+ * ```
  */
 export const withAsyncErrorBoundary = async <T>(
 	fn: () => Promise<T>,
@@ -260,9 +294,26 @@ export const withAsyncErrorBoundary = async <T>(
 }
 
 /**
- * Helper to create error assertions with better error messages
+ * Helper to create fluent error assertions with better error messages
+ *
+ * @param expectedType - Expected error type (e.g., 'ValidationError')
+ * @param expectedStatus - Expected HTTP status code (e.g., 400)
+ * @returns Object with fluent assertion methods
+ *
+ * @example
+ * ```typescript
+ * const assertError = createErrorAssertion('ValidationError', 400)
+ *
+ * assertError
+ *   .shouldHaveType()
+ *   .shouldHaveStatus()
+ *   .shouldHaveMessage('Invalid input')(error)
+ * ```
  */
-export const createErrorAssertion = (expectedType: string, expectedStatus: number) => ({
+export const createErrorAssertion = (
+	expectedType: string,
+	expectedStatus: number,
+) => ({
 	shouldHaveType: (error: AppError) => {
 		expect(error.type).toBe(expectedType)
 		return createErrorAssertion(expectedType, expectedStatus)
@@ -278,7 +329,7 @@ export const createErrorAssertion = (expectedType: string, expectedStatus: numbe
 	shouldHaveService: (service: string) => (error: AppError) => {
 		expect(error.service).toBe(service)
 		return createErrorAssertion(expectedType, expectedStatus)
-	}
+	},
 })
 
 /**

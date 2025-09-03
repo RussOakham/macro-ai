@@ -141,6 +141,22 @@ export {
 } from './pact-contract-testing.ts'
 
 // ============================================================================
+// Service Mocks
+// ============================================================================
+
+export { createChatServiceMock } from './chat-service.mock.ts'
+export { createCognitoServiceMock } from './cognito-service.mock.ts'
+export { createMockExpressObjects } from './enhanced-mocks.ts'
+export {
+	createErrorAssertion,
+	mockErrorHandling,
+	withAsyncErrorBoundary,
+	withErrorBoundary,
+} from './error-handling.mock.ts'
+export { mockLogger } from './logger.mock.ts'
+export { createUserServiceMock } from './user-service.mock.ts'
+
+// ============================================================================
 // Re-export Common Testing Dependencies
 // ============================================================================
 

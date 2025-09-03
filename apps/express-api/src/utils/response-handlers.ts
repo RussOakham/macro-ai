@@ -33,7 +33,7 @@ export type TServiceErrorResult =
 	| { success: false; error: { status: number; message: string } }
 
 /**
- * Type for AWS service response metadata with strict typing
+ * Type for AWS service response metadata
  */
 export interface TAwsServiceMetadata {
 	$metadata?: {
@@ -41,7 +41,6 @@ export interface TAwsServiceMetadata {
 		requestId?: string
 		extendedRequestId?: string
 		attempts?: number
-		totalRetryDelay?: number
 	}
 }
 
@@ -105,40 +104,20 @@ export const validateData = (
 }
 
 /**
- * Type for schema validation results
- */
-export type TValidationResult<T> =
-	| { success: true; data: T }
-	| { success: false; error: { message: string; details?: unknown } }
-
-/**
  * Validates data against a Zod schema
  * @param data Data to validate
  * @param schema Zod schema to validate against
  * @param logContext Context for logging
- * @returns Typed validation result with success/error state
+ * @returns Object with validation result and parsed data or error details
  */
 export const validateSchema = <T>(
 	data: unknown,
 	schema: z.ZodType<T>,
 	logContext: string,
-): TValidationResult<T> => {
-	const result = tryCatchSync(() => {
+) => {
+	return tryCatchSync(() => {
 		return schema.parse(data)
 	}, `${logContext} - validateSchema`)
-
-	if (result[1] === null) {
-		return { success: true, data: result[0] }
-	}
-
-	const error = result[1]
-	return {
-		success: false,
-		error: {
-			message: error.message,
-			details: error.details
-		}
-	}
 }
 
 /**
@@ -152,12 +131,12 @@ export const safeValidateSchema = <T>(
 	data: unknown,
 	schema: z.ZodType<T>,
 	logContext: string,
-): TValidationResult<T> => {
-	const result = tryCatchSync(() => {
-		const parseResult = schema.safeParse(data)
+) => {
+	return tryCatchSync(() => {
+		const result = schema.safeParse(data)
 
-		if (!parseResult.success) {
-			const validationError = fromError(parseResult.error)
+		if (!result.success) {
+			const validationError = fromError(result.error)
 			throw new ValidationError(
 				`Validation failed: ${validationError.message}`,
 				{ details: validationError.details },
@@ -165,19 +144,6 @@ export const safeValidateSchema = <T>(
 			)
 		}
 
-		return parseResult.data
+		return result.data
 	}, `${logContext} - safeValidateSchema`)
-
-	if (result[1] === null) {
-		return { success: true, data: result[0] }
-	}
-
-	const error = result[1]
-	return {
-		success: false,
-		error: {
-			message: error.message,
-			details: error.details
-		}
-	}
 }
