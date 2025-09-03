@@ -193,7 +193,10 @@ describe('UtilityService', () => {
 
 		it('should handle errors during readiness check', () => {
 			// Arrange
-			const serviceError = mockErrorHandling.errors.internal('Readiness check failed', 'test')
+			const serviceError = mockErrorHandling.errors.internal(
+				'Readiness check failed',
+				'test',
+			)
 			vi.mocked(tryCatchSync).mockReturnValue(
 				mockErrorHandling.errorResult(serviceError),
 			)
@@ -277,7 +280,10 @@ describe('UtilityService', () => {
 
 		it('should handle errors during detailed health check', () => {
 			// Arrange
-			const serviceError = mockErrorHandling.errors.internal('Health check failed', 'test')
+			const serviceError = mockErrorHandling.errors.internal(
+				'Health check failed',
+				'test',
+			)
 			vi.mocked(tryCatchSync).mockReturnValue(
 				mockErrorHandling.errorResult(serviceError),
 			)

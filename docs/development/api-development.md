@@ -40,7 +40,7 @@ import { registerZodSchema } from '../../utils/swagger/openapi-registry.ts'
 const userSchema = registerZodSchema(
 	'User',
 	z.object({
-		email: z.string().email().openapi({ description: 'User email address' }),
+		email: z.email().openapi({ description: 'User email address' }),
 		firstName: z.string().openapi({ description: 'User first name' }),
 	}),
 	'User information',

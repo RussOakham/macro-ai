@@ -688,7 +688,7 @@ async function loadAnalytics() {
 // ✅ Good: Zod schema validation
 const createUserSchema = z.object({
 	name: z.string().min(1).max(100),
-	email: z.string().email(),
+	email: z.email(),
 	age: z.number().int().min(13).max(120),
 })
 

@@ -200,8 +200,8 @@ const envSchema = z.object({
 	COOKIE_ENCRYPTION_KEY: z.string().min(32),
 
 	// Database
-	RELATIONAL_DATABASE_URL: z.string().url(),
-	REDIS_URL: z.string().url().optional(),
+	RELATIONAL_DATABASE_URL: z.url(),
+	REDIS_URL: z.url().optional(),
 
 	// OpenAI
 	OPENAI_API_KEY: z.string().startsWith('sk-'),
@@ -213,7 +213,7 @@ const envSchema = z.object({
 	AUTH_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(10),
 	API_RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60000),
 	API_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(60),
-	REDIS_URL: z.string().url().optional(),
+	REDIS_URL: z.url().optional(),
 })
 ```
 

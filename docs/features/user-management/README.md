@@ -209,8 +209,8 @@ export class UserService {
 export const userProfileSchema = z.object({
 	firstName: z.string().min(1).max(100).optional(),
 	lastName: z.string().min(1).max(100).optional(),
-	email: z.string().email(),
-	profileImageUrl: z.string().url().optional(),
+	email: z.email(),
+	profileImageUrl: z.url().optional(),
 	preferences: z.record(z.unknown()).default({}),
 })
 
