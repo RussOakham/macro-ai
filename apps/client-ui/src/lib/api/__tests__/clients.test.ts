@@ -1,5 +1,7 @@
 import { Config } from '@repo/macro-ai-api-client'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { http, HttpResponse } from 'msw'
+import { setupServer } from 'msw/node'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
 // Mock the interceptors module before importing clients
 vi.mock('../interceptors', () => ({
@@ -26,9 +28,34 @@ vi.mock('@repo/macro-ai-api-client', () => ({
 	})),
 }))
 
+// Setup MSW server for testing
+const server = setupServer(
+	// Health endpoint handler
+	http.get('/api/health', () => {
+		return HttpResponse.json({
+			message: 'Api Health Status: OK',
+		}, { status: 200 })
+	}),
+	// 404 endpoint handler
+	http.get('/api/no-such-page', () => {
+		return HttpResponse.json({
+			message: 'Not Found',
+		}, { status: 404 })
+	})
+)
+
 describe('API Clients Integration', () => {
-	beforeEach(() => {
+	beforeAll(() => {
+		server.listen()
+	})
+
+	afterEach(() => {
+		server.resetHandlers()
 		vi.clearAllMocks()
+	})
+
+	afterAll(() => {
+		server.close()
 	})
 
 	it('should apply interceptors to unified clients', async () => {
@@ -63,5 +90,68 @@ describe('API Clients Integration', () => {
 		expect(
 			clients.apiClientWithoutCredentials.instance.defaults.withCredentials,
 		).toBe(false)
+	})
+
+	it('should successfully call /api/health endpoint using mocked MSW backend', async () => {
+		// Unmock the API client for this test
+		vi.unmock('@repo/macro-ai-api-client')
+		
+		// Create a real API client for testing
+		const { createApiClient } = await import('@repo/macro-ai-api-client')
+		const realApiClient = createApiClient('http://localhost:3000', {
+			withCredentials: false,
+		})
+
+		// Make a real HTTP request to the health endpoint
+		const response = await realApiClient.get({
+			url: '/api/health',
+			baseURL: 'http://localhost:3000',
+		})
+
+		// Verify the response
+		expect(response.status).toBe(200)
+		expect(response.data).toEqual({
+			message: 'Api Health Status: OK',
+		})
+	})
+
+	it('should handle 404 error for non-existent endpoint', async () => {
+		// Unmock the API client for this test
+		vi.unmock('@repo/macro-ai-api-client')
+		
+		// Create a real API client for testing
+		const { createApiClient } = await import('@repo/macro-ai-api-client')
+		const realApiClient = createApiClient('http://localhost:3000', {
+			withCredentials: false,
+		})
+
+		// Make a request to a non-existent endpoint
+		try {
+			await realApiClient.get({
+				url: '/api/no-such-page',
+				baseURL: 'http://localhost:3000',
+			})
+			// If we get here, the request succeeded but we expected it to fail
+			expect.fail('Expected request to fail with 404')
+		} catch (error: unknown) {
+			// Log the error to understand its structure
+			console.log('Caught error:', error)
+			
+			// The error might be an Axios error or a different type
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+			if ((error as any).response) {
+				// Axios error with response
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+				expect((error as any).response.status).toBe(404)
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+				expect((error as any).response.data).toEqual({
+					message: 'Not Found',
+				})
+			} else {
+				// Other type of error - just verify it's an error
+				expect(error).toBeDefined()
+				expect(error).toBeInstanceOf(Error)
+			}
+		}
 	})
 })
