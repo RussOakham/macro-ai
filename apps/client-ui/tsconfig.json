@@ -6,7 +6,9 @@
 		"coverage",
 		"eslint.config.js",
 		"tsconfig.json",
-		"src/test/mocks/**"
+		"src/test/mocks/browser.js",
+		"src/test/mocks/native.js",
+		"src/test/mocks/node.js"
 	],
 	"references": [
 		{ "path": "./tsconfig.app.json" },

@@ -1,4 +1,4 @@
-import { Config } from '@repo/macro-ai-api-client'
+import { Config, HealthResponse } from '@repo/macro-ai-api-client'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Import MSW setup utilities
@@ -87,10 +87,12 @@ describe('API Clients Integration', () => {
 			baseURL: 'http://localhost:3000',
 		})
 
+		const data = response.data as HealthResponse
+
 		// Verify the response structure matches the OpenAPI spec
 		expect(response.status).toBe(200)
 		expect(response.data).toHaveProperty('message')
-		expect(typeof response.data.message).toBe('string')
+		expect(data.message).toBe('Api Health Status: OK')
 	})
 
 	it('should handle 404 error for non-existent endpoint', async () => {
@@ -99,7 +101,7 @@ describe('API Clients Integration', () => {
 
 		// Create a real API client for testing
 		const { createApiClient } = await import('@repo/macro-ai-api-client')
-		const realApiClient = createApiClient('http://localhost:3000', {
+		const realApiClient = createApiClient('http://localhost:3000/api', {
 			withCredentials: false,
 		})
 
@@ -107,7 +109,7 @@ describe('API Clients Integration', () => {
 		try {
 			await realApiClient.get({
 				url: '/api/no-such-page',
-				baseURL: 'http://localhost:3000',
+				baseURL: 'http://localhost:3000/api',
 			})
 			// If we get here, the request succeeded but we expected it to fail
 			expect.fail('Expected request to fail with 404')

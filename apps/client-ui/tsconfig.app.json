@@ -7,7 +7,11 @@
 		"postcss.config.js",
 		"vitest.config.ts"
 	],
-	"exclude": ["src/test/**", "src/**/*.test.*", "src/**/*.spec.*"],
+	"exclude": [
+		"src/test/mocks/browser.js",
+		"src/test/mocks/native.js",
+		"src/test/mocks/node.js"
+	],
 	"compilerOptions": {
 		"composite": true,
 		"declaration": true,
