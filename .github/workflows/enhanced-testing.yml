@@ -132,7 +132,9 @@ jobs:
             ]')
           fi
 
-          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          # Convert matrix to single line to avoid GitHub Actions output issues
+          matrix_single_line=$(echo "$matrix" | jq -c '.')
+          echo "matrix=$matrix_single_line" >> $GITHUB_OUTPUT
           echo "📊 Test matrix created:"
           echo "$matrix" | jq '.'
 
@@ -222,6 +224,13 @@ jobs:
           fi
 
           echo "✅ Dependencies built"
+
+      - name: Generate MSW handlers
+        if: matrix.package == 'client-ui'
+        run: |
+          echo "🔧 Generating MSW handlers for client-ui tests..."
+          pnpm --filter client-ui generate:msw
+          echo "✅ MSW handlers generated"
 
       - name: Run tests with enhanced reporting
         id: test-execution
