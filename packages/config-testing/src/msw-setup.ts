@@ -1,5 +1,4 @@
 import { setupServer } from 'msw/node'
-import { setupWorker } from 'msw/browser'
 import { handlers } from './msw-handlers.js'
 
 /**
@@ -17,7 +16,13 @@ export const isBrowser = typeof window !== 'undefined'
 export const server = setupServer(...handlers)
 
 // Browser environment setup (for development and browser tests)
-export const worker = isBrowser ? setupWorker(...handlers) : null
+// Lazy worker creation to avoid issues in test environments
+let _worker: ReturnType<typeof import('msw/browser').setupWorker> | null = null
+
+export const worker = (() => {
+	// Only create worker when explicitly requested in browser environment
+	return null
+})()
 
 // Server lifecycle management
 export const startServer = () => {
@@ -36,22 +41,26 @@ export const resetServer = () => {
 
 // Worker lifecycle management
 export const startWorker = async () => {
-	if (worker) {
-		await worker.start({
+	if (isBrowser && !_worker) {
+		const { setupWorker } = await import('msw/browser')
+		_worker = setupWorker(...handlers)
+	}
+	if (_worker) {
+		await _worker.start({
 			onUnhandledRequest: 'warn',
 		})
 	}
 }
 
 export const stopWorker = () => {
-	if (worker) {
-		worker.stop()
+	if (_worker) {
+		_worker.stop()
 	}
 }
 
 export const resetWorker = () => {
-	if (worker) {
-		worker.resetHandlers()
+	if (_worker) {
+		_worker.resetHandlers()
 	}
 }
 
@@ -65,4 +74,4 @@ if (isNode) {
 }
 
 // Export setup functions for manual control
-export { setupServer, setupWorker }
+export { setupServer }

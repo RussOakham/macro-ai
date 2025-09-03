@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { Button } from '@/components/ui/button'
 
+import { formTesting } from './component-test-utils'
+
 /**
  * Comprehensive React Testing Library Examples
  *
@@ -82,37 +84,295 @@ describe('React Testing Library Examples', () => {
 		})
 	})
 
-	describe('3. Simple Form Testing', () => {
-		it('should render a simple form component', () => {
-			const SimpleForm = () => (
-				<form>
-					<label htmlFor="email">Email</label>
-					<input id="email" type="email" />
+	describe('3. Enhanced Form Testing with New Utilities', () => {
+		it('should render a comprehensive form component', () => {
+			const ComprehensiveForm = () => (
+				<form data-testid="test-form">
+					<div>
+						<label htmlFor="email">Email</label>
+						<input id="email" name="email" type="email" />
+					</div>
+					<div>
+						<label htmlFor="name">Name</label>
+						<input id="name" name="name" type="text" />
+					</div>
+					<div>
+						<label htmlFor="country">Country</label>
+						<select id="country" name="country">
+							<option value="">Select a country</option>
+							<option value="us">United States</option>
+							<option value="uk">United Kingdom</option>
+						</select>
+					</div>
+					<div>
+						<label htmlFor="bio">Bio</label>
+						<textarea id="bio" name="bio" />
+					</div>
+					<div>
+						<label>
+							<input name="newsletter" type="checkbox" />
+							Subscribe to newsletter
+						</label>
+					</div>
+					<div>
+						<label>
+							<input name="gender" type="radio" value="male" />
+							Male
+						</label>
+						<label>
+							<input name="gender" type="radio" value="female" />
+							Female
+						</label>
+					</div>
 					<Button type="submit">Submit</Button>
 				</form>
 			)
 
-			render(<SimpleForm />)
+			render(<ComprehensiveForm />)
 
+			expect(screen.getByTestId('test-form')).toBeInTheDocument()
 			expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
+			expect(screen.getByLabelText(/name/i)).toBeInTheDocument()
+			expect(screen.getByLabelText(/country/i)).toBeInTheDocument()
+			expect(screen.getByLabelText(/bio/i)).toBeInTheDocument()
 			expect(
 				screen.getByRole('button', { name: /submit/i }),
 			).toBeInTheDocument()
 		})
 
-		it('should handle form input', async () => {
-			const user = userEvent.setup()
-			const SimpleForm = () => {
-				const [value, setValue] = React.useState('')
+		it('should fill and validate text inputs using new utilities', async () => {
+			const FormWithTextInputs = () => {
+				const [formData, setFormData] = React.useState({
+					email: '',
+					name: '',
+				})
+
 				return (
-					<form>
-						<label htmlFor="email">Email</label>
+					<form data-testid="text-form">
 						<input
-							id="email"
+							name="email"
 							type="email"
-							value={value}
+							value={formData.email}
 							onChange={(e) => {
-								setValue(e.target.value)
+								setFormData((prev) => ({ ...prev, email: e.target.value }))
+							}}
+						/>
+						<input
+							name="name"
+							type="text"
+							value={formData.name}
+							onChange={(e) => {
+								setFormData((prev) => ({ ...prev, name: e.target.value }))
+							}}
+						/>
+					</form>
+				)
+			}
+
+			const { container } = render(<FormWithTextInputs />)
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			const form = container.querySelector('form')!
+
+			// Use new form testing utilities
+			await formTesting.fillTextInputs(form, {
+				email: 'test@example.com',
+				name: 'John Doe',
+			})
+
+			// Validate using new utilities
+			formTesting.validateTextInputs(form, {
+				email: 'test@example.com',
+				name: 'John Doe',
+			})
+		})
+
+		it('should handle select dropdowns using new utilities', async () => {
+			const FormWithSelect = () => {
+				const [country, setCountry] = React.useState('')
+
+				return (
+					<form data-testid="select-form">
+						<select
+							name="country"
+							value={country}
+							onChange={(e) => {
+								setCountry(e.target.value)
+							}}
+						>
+							<option value="">Select a country</option>
+							<option value="us">United States</option>
+							<option value="uk">United Kingdom</option>
+							<option value="ca">Canada</option>
+						</select>
+					</form>
+				)
+			}
+
+			const { container } = render(<FormWithSelect />)
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			const form = container.querySelector('form')!
+
+			// Use new select testing utilities
+			await formTesting.fillSelectFields(form, {
+				country: 'us',
+			})
+
+			// Validate using new utilities
+			formTesting.validateSelectFields(form, {
+				country: 'us',
+			})
+		})
+
+		it('should handle textarea fields using new utilities', async () => {
+			const FormWithTextarea = () => {
+				const [bio, setBio] = React.useState('')
+
+				return (
+					<form data-testid="textarea-form">
+						<textarea
+							name="bio"
+							value={bio}
+							onChange={(e) => {
+								setBio(e.target.value)
+							}}
+						/>
+					</form>
+				)
+			}
+
+			const { container } = render(<FormWithTextarea />)
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			const form = container.querySelector('form')!
+
+			// Use new textarea testing utilities
+			await formTesting.fillTextareaFields(form, {
+				bio: 'This is a test bio with multiple lines.\nIt should handle line breaks properly.',
+			})
+
+			// Validate using new utilities
+			formTesting.validateTextareaFields(form, {
+				bio: 'This is a test bio with multiple lines.\nIt should handle line breaks properly.',
+			})
+		})
+
+		it('should handle radio buttons using new utilities', async () => {
+			const FormWithRadio = () => {
+				const [gender, setGender] = React.useState('')
+
+				return (
+					<form data-testid="radio-form">
+						<label>
+							<input
+								name="gender"
+								type="radio"
+								value="male"
+								checked={gender === 'male'}
+								onChange={(e) => {
+									setGender(e.target.value)
+								}}
+							/>
+							Male
+						</label>
+						<label>
+							<input
+								name="gender"
+								type="radio"
+								value="female"
+								checked={gender === 'female'}
+								onChange={(e) => {
+									setGender(e.target.value)
+								}}
+							/>
+							Female
+						</label>
+					</form>
+				)
+			}
+
+			const { container } = render(<FormWithRadio />)
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			const form = container.querySelector('form')!
+
+			// Use new radio button testing utilities
+			await formTesting.selectRadioButtons(form, {
+				gender: 'female',
+			})
+
+			// Validate using new utilities
+			formTesting.validateRadioButtons(form, {
+				gender: 'female',
+			})
+		})
+
+		it('should handle checkboxes using new utilities', async () => {
+			const FormWithCheckboxes = () => {
+				const [newsletter, setNewsletter] = React.useState(false)
+				const [updates, setUpdates] = React.useState(false)
+
+				return (
+					<form data-testid="checkbox-form">
+						<label>
+							<input
+								name="newsletter"
+								type="checkbox"
+								checked={newsletter}
+								onChange={(e) => {
+									setNewsletter(e.target.checked)
+								}}
+							/>
+							Subscribe to newsletter
+						</label>
+						<label>
+							<input
+								name="updates"
+								type="checkbox"
+								checked={updates}
+								onChange={(e) => {
+									setUpdates(e.target.checked)
+								}}
+							/>
+							Receive updates
+						</label>
+					</form>
+				)
+			}
+
+			const { container } = render(<FormWithCheckboxes />)
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			const form = container.querySelector('form')!
+
+			// Use new checkbox testing utilities
+			await formTesting.toggleCheckboxes(form, {
+				newsletter: true,
+				updates: false,
+			})
+
+			// Validate using new utilities
+			formTesting.validateCheckboxes(form, {
+				newsletter: true,
+				updates: false,
+			})
+		})
+
+		it('should handle form submission using new utilities', async () => {
+			const handleSubmit = vi.fn()
+			const FormWithSubmission = () => {
+				const [email, setEmail] = React.useState('')
+
+				return (
+					<form
+						data-testid="submit-form"
+						onSubmit={(e) => {
+							e.preventDefault()
+							handleSubmit({ email })
+						}}
+					>
+						<input
+							name="email"
+							type="email"
+							value={email}
+							onChange={(e) => {
+								setEmail(e.target.value)
 							}}
 						/>
 						<Button type="submit">Submit</Button>
@@ -120,12 +380,21 @@ describe('React Testing Library Examples', () => {
 				)
 			}
 
-			render(<SimpleForm />)
+			const { container } = render(<FormWithSubmission />)
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			const form = container.querySelector('form')!
 
-			const emailInput = screen.getByLabelText(/email/i)
-			await user.type(emailInput, 'test@example.com')
+			// Fill form and submit using new utilities
+			await formTesting.fillTextInputs(form, {
+				email: 'test@example.com',
+			})
 
-			expect(emailInput).toHaveValue('test@example.com')
+			await formTesting.submitForm(form)
+
+			// Verify submission was called
+			expect(handleSubmit).toHaveBeenCalledWith({
+				email: 'test@example.com',
+			})
 		})
 	})
 

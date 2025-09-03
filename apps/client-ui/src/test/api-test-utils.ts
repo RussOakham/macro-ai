@@ -603,7 +603,7 @@ export const testErrorHandling = async (
 		Object.values(mockClient).forEach((mockFn) => {
 			if (typeof mockFn === 'function' && 'mockClear' in mockFn) {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unnecessary-type-assertion
-				(mockFn as any).mockClear()
+				;(mockFn as any).mockClear()
 			}
 		})
 

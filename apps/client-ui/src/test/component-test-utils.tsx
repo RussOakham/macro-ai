@@ -7,7 +7,7 @@
  */
 
 import { ReactElement, ReactNode } from 'react'
-import { render, RenderResult } from '@testing-library/react'
+import { act, fireEvent, render, RenderResult } from '@testing-library/react'
 import { expect, vi } from 'vitest'
 
 // Import from main test utilities
@@ -211,26 +211,22 @@ export const waitForComponentReady = async () => {
  */
 export const simulateUserInteraction = {
 	click: async (element: HTMLElement) => {
-		element.click()
+		fireEvent.click(element)
 		await waitForComponentReady()
 	},
 
 	type: async (element: HTMLElement, text: string) => {
-		element.focus()
-
-		element.textContent = text
-		element.dispatchEvent(new Event('input', { bubbles: true }))
+		fireEvent.change(element, { target: { value: text } })
 		await waitForComponentReady()
 	},
 
 	submit: async (form: HTMLFormElement) => {
-		form.dispatchEvent(new Event('submit', { bubbles: true }))
+		fireEvent.submit(form)
 		await waitForComponentReady()
 	},
 
 	change: async (element: HTMLElement, value: string) => {
-		;(element as HTMLInputElement).value = value
-		element.dispatchEvent(new Event('change', { bubbles: true }))
+		fireEvent.change(element, { target: { value } })
 		await waitForComponentReady()
 	},
 }
@@ -388,12 +384,16 @@ export const formTesting = {
 	/**
 	 * Fill text input fields (input[type="text"], input[type="email"], etc.)
 	 */
-	fillTextInputs: async (form: HTMLFormElement, data: Record<string, string>) => {
+	fillTextInputs: async (
+		form: HTMLFormElement,
+		data: Record<string, string>,
+	) => {
 		Object.entries(data).forEach(([name, value]) => {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const field = form.querySelector<HTMLInputElement>(`input[name="${name}"]`)!
-			field.value = value
-			field.dispatchEvent(new Event('input', { bubbles: true }))
+			const field = form.querySelector<HTMLInputElement>(
+				`input[name="${name}"]`,
+			)!
+			fireEvent.change(field, { target: { value } })
 		})
 		await waitForComponentReady()
 	},
@@ -401,12 +401,16 @@ export const formTesting = {
 	/**
 	 * Fill select dropdown fields
 	 */
-	fillSelectFields: async (form: HTMLFormElement, data: Record<string, string>) => {
+	fillSelectFields: async (
+		form: HTMLFormElement,
+		data: Record<string, string>,
+	) => {
 		Object.entries(data).forEach(([name, value]) => {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const field = form.querySelector<HTMLSelectElement>(`select[name="${name}"]`)!
-			field.value = value
-			field.dispatchEvent(new Event('change', { bubbles: true }))
+			const field = form.querySelector<HTMLSelectElement>(
+				`select[name="${name}"]`,
+			)!
+			fireEvent.change(field, { target: { value } })
 		})
 		await waitForComponentReady()
 	},
@@ -414,12 +418,16 @@ export const formTesting = {
 	/**
 	 * Fill textarea fields
 	 */
-	fillTextareaFields: async (form: HTMLFormElement, data: Record<string, string>) => {
+	fillTextareaFields: async (
+		form: HTMLFormElement,
+		data: Record<string, string>,
+	) => {
 		Object.entries(data).forEach(([name, value]) => {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const field = form.querySelector<HTMLTextAreaElement>(`textarea[name="${name}"]`)!
-			field.value = value
-			field.dispatchEvent(new Event('input', { bubbles: true }))
+			const field = form.querySelector<HTMLTextAreaElement>(
+				`textarea[name="${name}"]`,
+			)!
+			fireEvent.change(field, { target: { value } })
 		})
 		await waitForComponentReady()
 	},
@@ -427,12 +435,16 @@ export const formTesting = {
 	/**
 	 * Select radio button fields
 	 */
-	selectRadioButtons: async (form: HTMLFormElement, data: Record<string, string>) => {
+	selectRadioButtons: async (
+		form: HTMLFormElement,
+		data: Record<string, string>,
+	) => {
 		Object.entries(data).forEach(([name, value]) => {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const field = form.querySelector<HTMLInputElement>(`input[name="${name}"][value="${value}"]`)!
-			field.checked = true
-			field.dispatchEvent(new Event('change', { bubbles: true }))
+			const field = form.querySelector<HTMLInputElement>(
+				`input[name="${name}"][value="${value}"]`,
+			)!
+			fireEvent.click(field)
 		})
 		await waitForComponentReady()
 	},
@@ -440,12 +452,21 @@ export const formTesting = {
 	/**
 	 * Toggle checkbox fields
 	 */
-	toggleCheckboxes: async (form: HTMLFormElement, data: Record<string, boolean>) => {
+	toggleCheckboxes: async (
+		form: HTMLFormElement,
+		data: Record<string, boolean>,
+	) => {
 		Object.entries(data).forEach(([name, checked]) => {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const field = form.querySelector<HTMLInputElement>(`input[name="${name}"][type="checkbox"]`)!
-			field.checked = checked
-			field.dispatchEvent(new Event('change', { bubbles: true }))
+			const field = form.querySelector<HTMLInputElement>(
+				`input[name="${name}"][type="checkbox"]`,
+			)!
+			// For checkboxes, we need to click to toggle, not change the value directly
+			if (checked && !field.checked) {
+				fireEvent.click(field)
+			} else if (!checked && field.checked) {
+				fireEvent.click(field)
+			}
 		})
 		await waitForComponentReady()
 	},
@@ -458,8 +479,7 @@ export const formTesting = {
 		Object.entries(data).forEach(([name, value]) => {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			const field = form.querySelector<HTMLInputElement>(`[name="${name}"]`)!
-			field.value = value
-			field.dispatchEvent(new Event('input', { bubbles: true }))
+			fireEvent.change(field, { target: { value } })
 		})
 		await waitForComponentReady()
 	},
@@ -468,8 +488,12 @@ export const formTesting = {
 	 * Submit form
 	 */
 	submitForm: async (form: HTMLFormElement) => {
-		form.dispatchEvent(new Event('submit', { bubbles: true }))
-		await waitForComponentReady()
+		// eslint-disable-next-line @typescript-eslint/require-await
+		await act(async () => {
+			fireEvent.submit(form)
+		})
+		// Wait a bit longer for React state updates
+		await new Promise((resolve) => setTimeout(resolve, 100))
 	},
 
 	/**
@@ -481,7 +505,9 @@ export const formTesting = {
 	) => {
 		Object.entries(expectedData).forEach(([name, expectedValue]) => {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const field = form.querySelector<HTMLInputElement>(`input[name="${name}"]`)!
+			const field = form.querySelector<HTMLInputElement>(
+				`input[name="${name}"]`,
+			)!
 			expect(field.value).toBe(expectedValue)
 		})
 	},
@@ -495,7 +521,9 @@ export const formTesting = {
 	) => {
 		Object.entries(expectedData).forEach(([name, expectedValue]) => {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const field = form.querySelector<HTMLSelectElement>(`select[name="${name}"]`)!
+			const field = form.querySelector<HTMLSelectElement>(
+				`select[name="${name}"]`,
+			)!
 			expect(field.value).toBe(expectedValue)
 		})
 	},
@@ -509,7 +537,9 @@ export const formTesting = {
 	) => {
 		Object.entries(expectedData).forEach(([name, expectedValue]) => {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const field = form.querySelector<HTMLTextAreaElement>(`textarea[name="${name}"]`)!
+			const field = form.querySelector<HTMLTextAreaElement>(
+				`textarea[name="${name}"]`,
+			)!
 			expect(field.value).toBe(expectedValue)
 		})
 	},
@@ -523,7 +553,9 @@ export const formTesting = {
 	) => {
 		Object.entries(expectedData).forEach(([name, expectedValue]) => {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const field = form.querySelector<HTMLInputElement>(`input[name="${name}"][value="${expectedValue}"]`)!
+			const field = form.querySelector<HTMLInputElement>(
+				`input[name="${name}"][value="${expectedValue}"]`,
+			)!
 			expect(field.checked).toBe(true)
 		})
 	},
@@ -537,7 +569,9 @@ export const formTesting = {
 	) => {
 		Object.entries(expectedData).forEach(([name, expectedChecked]) => {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const field = form.querySelector<HTMLInputElement>(`input[name="${name}"][type="checkbox"]`)!
+			const field = form.querySelector<HTMLInputElement>(
+				`input[name="${name}"][type="checkbox"]`,
+			)!
 			expect(field.checked).toBe(expectedChecked)
 		})
 	},
@@ -555,6 +589,98 @@ export const formTesting = {
 			const field = form.querySelector<HTMLInputElement>(`[name="${name}"]`)!
 			expect(field.value).toBe(expectedValue)
 		})
+	},
+}
+
+// ============================================================================
+// Component Testing Utilities
+// ============================================================================
+
+/**
+ * Enhanced component testing utilities
+ */
+export const componentTesting = {
+	/**
+	 * Get element by test id
+	 */
+	getElementByTestId: (testId: string) => {
+		const element = document.querySelector(`[data-testid="${testId}"]`)
+		if (!element) {
+			// Try to find the element in the current test container
+			const container = document.querySelector('#root') ?? document.body
+			const elementInContainer = container.querySelector(
+				`[data-testid="${testId}"]`,
+			)
+			if (elementInContainer) {
+				expect(elementInContainer).toBeInTheDocument()
+				return elementInContainer
+			}
+		}
+		expect(element).toBeInTheDocument()
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		return element!
+	},
+
+	/**
+	 * Assert element text content
+	 */
+	assertElementText: (testId: string, expectedText: string) => {
+		const element = document.querySelector(`[data-testid="${testId}"]`)
+		if (!element) {
+			// Try to find the element in the current test container
+			const container = document.querySelector('#root') ?? document.body
+			const elementInContainer = container.querySelector(
+				`[data-testid="${testId}"]`,
+			)
+			if (elementInContainer) {
+				expect(elementInContainer).toHaveTextContent(expectedText)
+				return
+			}
+		}
+		expect(element).toHaveTextContent(expectedText)
+	},
+
+	/**
+	 * Assert element does not exist
+	 */
+	assertElementNotExists: (testId: string) => {
+		const element = document.querySelector(`[data-testid="${testId}"]`)
+		if (!element) {
+			// Try to find the element in the current test container
+			const container = document.querySelector('#root') ?? document.body
+			const elementInContainer = container.querySelector(
+				`[data-testid="${testId}"]`,
+			)
+			expect(elementInContainer).not.toBeInTheDocument()
+			return
+		}
+		expect(element).not.toBeInTheDocument()
+	},
+
+	/**
+	 * Click element by test id
+	 */
+	clickElement: async (testId: string) => {
+		const element = document.querySelector<HTMLElement>(
+			`[data-testid="${testId}"]`,
+		)
+		if (!element) {
+			// Try to find the element in the current test container
+			const container = document.querySelector('#root') ?? document.body
+			const elementInContainer = container.querySelector<HTMLElement>(
+				`[data-testid="${testId}"]`,
+			)
+			if (elementInContainer) {
+				expect(elementInContainer).toBeInTheDocument()
+				fireEvent.click(elementInContainer)
+				await waitForComponentReady()
+				return
+			}
+		}
+		expect(element).toBeInTheDocument()
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		fireEvent.click(element!)
+		await waitForComponentReady()
 	},
 }
 
@@ -587,4 +713,7 @@ export default {
 
 	// Form Testing
 	formTesting,
+
+	// Component Testing Utilities
+	componentTesting,
 }

@@ -35,5 +35,4 @@ export {
 	stopWorker,
 	resetWorker,
 	setupServer,
-	setupWorker,
 } from './msw-setup.js'

@@ -1,6 +1,6 @@
 /**
  * Client-UI Testing Utilities Index
- * 
+ *
  * Central export point for all enhanced testing utilities in the client-ui project.
  * This provides a clean interface for importing testing utilities across the project.
  */

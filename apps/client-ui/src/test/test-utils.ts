@@ -1,6 +1,6 @@
 /**
  * Enhanced Client-UI Testing Utilities
- * 
+ *
  * Comprehensive testing utilities for client-ui that integrate with the config-testing package
  * and provide enhanced mocking patterns, React component testing helpers, and MSW integration.
  */
@@ -108,7 +108,9 @@ export interface ComponentTestContext {
 /**
  * Create a comprehensive mock Axios instance
  */
-export const createMockAxiosInstance = (config: Partial<ApiTestConfig> = {}): MockAxiosInstance => {
+export const createMockAxiosInstance = (
+	config: Partial<ApiTestConfig> = {},
+): MockAxiosInstance => {
 	const defaultConfig: ApiTestConfig = {
 		baseURL: 'http://localhost:3000',
 		apiKey: 'test-api-key',
@@ -149,7 +151,9 @@ export const createMockAxiosInstance = (config: Partial<ApiTestConfig> = {}): Mo
 /**
  * Create a comprehensive mock API client
  */
-export const createMockApiClient = (config: Partial<ApiTestConfig> = {}): MockApiClient => {
+export const createMockApiClient = (
+	config: Partial<ApiTestConfig> = {},
+): MockApiClient => {
 	const mockAxiosInstance = createMockAxiosInstance(config)
 
 	return {
@@ -168,7 +172,7 @@ export const createMockApiClient = (config: Partial<ApiTestConfig> = {}): MockAp
 export const createMockApiResponse = <T>(
 	data: T,
 	status = 200,
-	headers: Record<string, string> = {}
+	headers: Record<string, string> = {},
 ): AxiosResponse<T> => ({
 	data,
 	status,
@@ -184,7 +188,7 @@ export const createMockApiResponse = <T>(
 export const createMockApiError = (
 	message: string,
 	status = 400,
-	code = 'API_ERROR'
+	code = 'API_ERROR',
 ): AxiosResponse => ({
 	data: { success: false, error: { message, code, status } },
 	status,
@@ -201,7 +205,9 @@ export const createMockApiError = (
 /**
  * Create mock authentication state
  */
-export const createMockAuthState = (overrides: Partial<AuthTestState> = {}): AuthTestState => {
+export const createMockAuthState = (
+	overrides: Partial<AuthTestState> = {},
+): AuthTestState => {
 	const defaultState: AuthTestState = {
 		isAuthenticated: false,
 		user: null,
@@ -218,7 +224,9 @@ export const createMockAuthState = (overrides: Partial<AuthTestState> = {}): Aut
 /**
  * Create authenticated user state
  */
-export const createAuthenticatedUserState = (userOverrides = {}): AuthTestState => {
+export const createAuthenticatedUserState = (
+	userOverrides = {},
+): AuthTestState => {
 	const user = userFactory.create(userOverrides)
 
 	return {
@@ -270,26 +278,30 @@ export const createMSWHandlers = {
 	/**
 	 * Create handlers for authentication scenarios
 	 */
-	auth: (scenarios: {
-		loginSuccess?: boolean
-		loginError?: string
-		refreshSuccess?: boolean
-		refreshError?: string
-		logoutSuccess?: boolean
-	} = {}) => {
+	auth: (
+		scenarios: {
+			loginSuccess?: boolean
+			loginError?: string
+			refreshSuccess?: boolean
+			refreshError?: string
+			logoutSuccess?: boolean
+		} = {},
+	) => {
 		const authHandlers: unknown[] = []
 
 		// Login handler
 		if (scenarios.loginSuccess !== false) {
-			authHandlers.push(
+			authHandlers
+				.push
 				// Add specific login success handler
-			)
+				()
 		}
 
 		if (scenarios.loginError) {
-			authHandlers.push(
+			authHandlers
+				.push
 				// Add specific login error handler
-			)
+				()
 		}
 
 		return authHandlers
@@ -299,8 +311,8 @@ export const createMSWHandlers = {
 	 * Create handlers for API error scenarios
 	 */
 	errors: (errorTypes: string[] = ['network', 'validation', 'server']) => {
-		return errorHandlers.filter((handler: unknown) => 
-			errorTypes.some(type => String(handler).includes(type))
+		return errorHandlers.filter((handler: unknown) =>
+			errorTypes.some((type) => String(handler).includes(type)),
 		)
 	},
 
@@ -308,8 +320,8 @@ export const createMSWHandlers = {
 	 * Create handlers for specific API endpoints
 	 */
 	endpoints: (endpoints: string[]) => {
-		return handlers.filter((handler: unknown) => 
-			endpoints.some(endpoint => String(handler).includes(endpoint))
+		return handlers.filter((handler: unknown) =>
+			endpoints.some((endpoint) => String(handler).includes(endpoint)),
 		)
 	},
 }
@@ -327,7 +339,7 @@ export const renderWithProviders = (
 		authState?: AuthTestState
 		apiConfig?: Partial<ApiTestConfig>
 		mswHandlers?: unknown[]
-	} = {}
+	} = {},
 ) => {
 	const {
 		authState = createMockAuthState(),
@@ -437,7 +449,7 @@ export const clientUITestData = {
 				chatId: chat.id,
 				role: index % 2 === 0 ? 'user' : 'assistant',
 				content: `Test message ${String(index + 1)}`,
-			})
+			}),
 		)
 		return { user, chat, messages }
 	},
@@ -460,7 +472,7 @@ export const clientUITestUtils = {
 			if (mockFn.mock.calls.length > 0) {
 				return mockFn.mock.calls[0]
 			}
-			await new Promise(resolve => setTimeout(resolve, 100))
+			await new Promise((resolve) => setTimeout(resolve, 100))
 		}
 		throw new Error(`API call not made within ${String(timeout)}ms`)
 	},
@@ -469,20 +481,24 @@ export const clientUITestUtils = {
 	 * Wait for component to update
 	 */
 	waitForComponentUpdate: async () => {
-		await new Promise(resolve => setTimeout(resolve, 100))
+		await new Promise((resolve) => setTimeout(resolve, 100))
 	},
 
 	/**
 	 * Simulate user interaction delay
 	 */
 	simulateUserDelay: async (ms = 100) => {
-		await new Promise(resolve => setTimeout(resolve, ms))
+		await new Promise((resolve) => setTimeout(resolve, ms))
 	},
 
 	/**
 	 * Create mock file for file upload testing
 	 */
-	createMockFile: (name = 'test.txt', type = 'text/plain', content = 'test content') => {
+	createMockFile: (
+		name = 'test.txt',
+		type = 'text/plain',
+		content = 'test content',
+	) => {
 		const file = new File([content], name, { type })
 		return file
 	},
@@ -514,7 +530,7 @@ export const clientUITestAssertions = {
 		mockFn: ReturnType<typeof vi.fn>,
 		expectedUrl: string,
 		expectedMethod: string,
-		expectedData?: unknown
+		expectedData?: unknown,
 	) => {
 		expect(mockFn).toHaveBeenCalled()
 		const call = mockFn.mock.calls[0]
@@ -530,7 +546,10 @@ export const clientUITestAssertions = {
 	/**
 	 * Assert authentication state
 	 */
-	assertAuthState: (authState: AuthTestState, expected: Partial<AuthTestState>) => {
+	assertAuthState: (
+		authState: AuthTestState,
+		expected: Partial<AuthTestState>,
+	) => {
 		Object.entries(expected).forEach(([key, value]) => {
 			expect(authState[key as keyof AuthTestState]).toEqual(value)
 		})
@@ -543,7 +562,12 @@ export const clientUITestAssertions = {
 		expect(response).toHaveProperty('success')
 		expect(response).toHaveProperty('data')
 		expect(response).toHaveProperty('timestamp')
-		if (expectedData && response && typeof response === 'object' && 'data' in response) {
+		if (
+			expectedData &&
+			response &&
+			typeof response === 'object' &&
+			'data' in response
+		) {
 			expect((response as { data: unknown }).data).toEqual(expectedData)
 		}
 	},
@@ -551,7 +575,11 @@ export const clientUITestAssertions = {
 	/**
 	 * Assert error response structure
 	 */
-	assertErrorResponse: (response: unknown, expectedMessage?: string, expectedCode?: string) => {
+	assertErrorResponse: (
+		response: unknown,
+		expectedMessage?: string,
+		expectedCode?: string,
+	) => {
 		expect(response).toHaveProperty('success', false)
 		expect(response).toHaveProperty('error')
 		if (response && typeof response === 'object' && 'error' in response) {
@@ -559,10 +587,20 @@ export const clientUITestAssertions = {
 			expect(error).toHaveProperty('message')
 			expect(error).toHaveProperty('code')
 			expect(error).toHaveProperty('timestamp')
-			if (expectedMessage && error && typeof error === 'object' && 'message' in error) {
+			if (
+				expectedMessage &&
+				error &&
+				typeof error === 'object' &&
+				'message' in error
+			) {
 				expect((error as { message: unknown }).message).toBe(expectedMessage)
 			}
-			if (expectedCode && error && typeof error === 'object' && 'code' in error) {
+			if (
+				expectedCode &&
+				error &&
+				typeof error === 'object' &&
+				'code' in error
+			) {
 				expect((error as { code: unknown }).code).toBe(expectedCode)
 			}
 		}
