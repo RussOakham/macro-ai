@@ -26,6 +26,8 @@ export interface UserMockData extends MockDataBase {
 	email: string
 	firstName: string
 	lastName: string
+	emailVerified: boolean
+	lastLogin: Date | null
 }
 
 /**

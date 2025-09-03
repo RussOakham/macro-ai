@@ -1,7 +1,7 @@
 import type { NextFunction } from 'express'
 import { createMocks, createRequest, createResponse } from 'node-mocks-http'
 import { vi } from 'vitest'
-import { DeepMockProxy, mock, mockDeep } from 'vitest-mock-extended'
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended'
 
 import type { cognitoService } from '../../features/auth/auth.services.ts'
 import type { chatService } from '../../features/chat/chat.service.ts'
@@ -75,7 +75,19 @@ export const createMockExpressObjects = (
 	resOpts?: Parameters<typeof createResponse>[0],
 ) => {
 	const { req, res } = createMocks(reqOpts, resOpts)
-	const next = mock<NextFunction>()
+	const next = vi.fn() as NextFunction
+
+	// Ensure response methods are spies that also set the data
+	res.status = vi.fn().mockReturnValue(res)
+	res.json = vi.fn().mockImplementation((data) => {
+		// Set the JSON data so _getJSONData() can retrieve it
+		res._getJSONData = vi.fn().mockReturnValue(data)
+		return res
+	})
+	res.send = vi.fn().mockReturnValue(res)
+	res.cookie = vi.fn().mockReturnValue(res)
+	res.clearCookie = vi.fn().mockReturnValue(res)
+	res.end = vi.fn().mockReturnValue(res)
 
 	return { req, res, next }
 }

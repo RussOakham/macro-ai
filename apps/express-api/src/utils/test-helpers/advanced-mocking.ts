@@ -16,35 +16,18 @@ import { faker } from '@faker-js/faker'
 import type { Pool, PoolClient } from 'pg'
 import { vi } from 'vitest'
 
+import { TChat, TChatMessage } from '../../features/chat/chat.types.ts'
+import { TUser } from '../../features/user/user.types.ts'
+
 // ============================================================================
 // Type Definitions
 // ============================================================================
 
-export interface UserData {
-	id: string
-	email: string
-	firstName: string
-	lastName: string
-	createdAt: Date
-	updatedAt: Date
-}
+export type UserData = TUser
 
-export interface ChatData {
-	id: string
-	title: string
-	userId: string
-	createdAt: Date
-	updatedAt: Date
-}
+export type ChatData = TChat
 
-export interface MessageData {
-	id: string
-	content: string
-	role: 'user' | 'assistant' | 'system'
-	chatId: string
-	createdAt: Date
-	updatedAt: Date
-}
+export type MessageData = TChatMessage
 
 export interface ApiResponse<T = unknown> {
 	success: boolean
@@ -714,6 +697,8 @@ export class MockDataFactory {
 			lastName: faker.person.lastName(),
 			createdAt: faker.date.past(),
 			updatedAt: faker.date.recent(),
+			emailVerified: faker.datatype.boolean(),
+			lastLogin: faker.date.recent(),
 			...overrides,
 		}
 	}
@@ -742,7 +727,112 @@ export class MockDataFactory {
 			role: faker.helpers.arrayElement(['user', 'assistant', 'system']),
 			chatId: faker.string.uuid(),
 			createdAt: faker.date.past(),
-			updatedAt: faker.date.recent(),
+			metadata: {},
+			embedding: null,
+			...overrides,
+		}
+	}
+
+	/**
+	 * Generate UUID strings
+	 */
+	static uuid(): string {
+		return faker.string.uuid()
+	}
+
+	/**
+	 * Create AI messages array
+	 */
+	static aiMessages(
+		messages: { role: 'user' | 'assistant' | 'system'; content: string }[] = [],
+	): { role: 'user' | 'assistant' | 'system'; content: string }[] {
+		if (messages.length === 0) {
+			return [
+				{ role: 'user', content: 'Hello, AI!' },
+				{ role: 'assistant', content: 'Hello, human!' },
+			]
+		}
+		return messages
+	}
+
+	/**
+	 * Create Cognito user data
+	 */
+	static cognitoUser(
+		overrides: Partial<{
+			Username: string
+			UserAttributes: { Name: string; Value: string }[]
+			$metadata: {
+				httpStatusCode: number
+				requestId: string
+				attempts: number
+				totalRetryDelay: number
+			}
+		}> = {},
+	): {
+		Username: string
+		UserAttributes: { Name: string; Value: string }[]
+		$metadata: {
+			httpStatusCode: number
+			requestId: string
+			attempts: number
+			totalRetryDelay: number
+		}
+	} {
+		return {
+			Username: faker.string.uuid(),
+			UserAttributes: [
+				{ Name: 'email', Value: 'test@example.com' },
+				{ Name: 'email_verified', Value: 'true' },
+			],
+			$metadata: {
+				httpStatusCode: 200,
+				requestId: faker.string.uuid(),
+				attempts: 1,
+				totalRetryDelay: 0,
+			},
+			...overrides,
+		}
+	}
+
+	/**
+	 * Create embedding vector
+	 */
+	static embedding(dimensions = 1536): number[] {
+		return Array.from({ length: dimensions }, () => Math.random())
+	}
+
+	/**
+	 * Create multiple embeddings
+	 */
+	static embeddings(count: number, dimensions = 1536): number[][] {
+		return Array.from({ length: count }, () => this.embedding(dimensions))
+	}
+
+	/**
+	 * Create message data for vector operations
+	 */
+	static messageData(
+		overrides: Partial<{
+			messageId: string
+			chatId: string
+			userId: string
+			content: string
+			metadata?: Record<string, unknown>
+		}> = {},
+	): {
+		messageId: string
+		chatId: string
+		userId: string
+		content: string
+		metadata?: Record<string, unknown>
+	} {
+		return {
+			messageId: faker.string.uuid(),
+			chatId: faker.string.uuid(),
+			userId: faker.string.uuid(),
+			content: faker.lorem.sentence(),
+			metadata: {},
 			...overrides,
 		}
 	}

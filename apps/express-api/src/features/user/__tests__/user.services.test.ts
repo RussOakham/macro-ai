@@ -54,9 +54,7 @@ describe('UserService', () => {
 		// Create mock user data with proper TUser structure
 		mockUser = {
 			...createMockData.user(),
-			emailVerified: true,
-			lastLogin: new Date(),
-		} as TUser
+		}
 
 		userService = new UserService(mockUserRepository, mockCognitoService)
 	})

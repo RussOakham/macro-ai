@@ -75,7 +75,7 @@ describe('Validation Middleware', () => {
 				mockRequest = createMockRequest({
 					[target]: {
 						email: validData.email,
-						name: `${validData.firstName} ${validData.lastName}`,
+						name: `${validData.firstName?.toString() ?? 'Mockfirstname'} ${validData.lastName?.toString() ?? 'Mocklastname'}`,
 					},
 					path: '/api/test',
 				})

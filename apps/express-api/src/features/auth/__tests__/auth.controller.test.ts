@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 // AWS Cognito types
 import {
 	ConfirmForgotPasswordCommandOutput,
@@ -17,7 +18,6 @@ import {
 	getSynchronizeToken,
 } from '../../../utils/cookies.ts'
 import { decrypt, encrypt } from '../../../utils/crypto.ts'
-import { tryCatchSync } from '../../../utils/error-handling/try-catch.ts'
 import {
 	ErrorType,
 	InternalError,
@@ -27,9 +27,11 @@ import {
 	handleServiceError,
 	validateData,
 } from '../../../utils/response-handlers.ts'
+import { MockDataFactory } from '../../../utils/test-helpers/advanced-mocking.ts'
 import { mockCognitoService } from '../../../utils/test-helpers/cognito-service.mock.ts'
 import { mockConfig } from '../../../utils/test-helpers/config.mock.ts'
-import { mockExpress } from '../../../utils/test-helpers/express-mocks.ts'
+import { createMockExpressObjects } from '../../../utils/test-helpers/enhanced-mocks.ts'
+import { mockErrorHandling } from '../../../utils/test-helpers/error-handling.mock.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { mockUserService } from '../../../utils/test-helpers/user-service.mock.ts'
 import { userRepository } from '../../user/user.data-access.ts'
@@ -47,6 +49,14 @@ import {
 
 // Mock the logger using the reusable helper
 vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
+
+// Mock the error handling module using the helper
+vi.mock('../../../utils/error-handling/try-catch.ts', () =>
+	mockErrorHandling.createModule(),
+)
+
+// Import after mocking
+import { tryCatchSync } from '../../../utils/error-handling/try-catch.ts'
 
 // Mock the CognitoService using the reusable helper
 vi.mock('../auth.services.ts', () => mockCognitoService.createModule())
@@ -83,26 +93,33 @@ vi.mock('../../../utils/crypto.ts', () => ({
 	decrypt: vi.fn(),
 }))
 
-vi.mock('../../../utils/error-handling/try-catch.ts', () => ({
-	tryCatchSync: vi.fn(),
-}))
+// Import after mocking
 
 describe('AuthController', () => {
-	let mockRequest: Partial<Request>
-	let mockResponse: Partial<Response>
+	let mockRequest: Request
+	let mockResponse: Response
 	let mockNext: NextFunction
-	const mockUser = mockUserService.createUser()
+	let mockUser: ReturnType<typeof MockDataFactory.createUser>
 
 	beforeEach(() => {
+		vi.clearAllMocks()
+
 		// Setup config and logger mocks for consistent test environment
 		mockConfig.setup()
 		mockLogger.setup()
 
-		// Setup Express mocks
-		const mocks = mockExpress.setup()
-		mockRequest = mocks.req
-		mockResponse = mocks.res
-		mockNext = mocks.next
+		// Use enhanced Express mocking
+		const { req, res, next } = createMockExpressObjects()
+		mockRequest = req
+		mockResponse = res
+		mockNext = next
+
+		// Create mock user data using enhanced factory
+		mockUser = MockDataFactory.createUser({
+			email: 'test@example.com',
+			firstName: 'John',
+			lastName: 'Doe',
+		})
 
 		// Mock utility functions
 		vi.mocked(handleServiceError).mockReturnValue({ success: true })
@@ -116,37 +133,56 @@ describe('AuthController', () => {
 	})
 
 	describe('register', () => {
-		it('should handle user already exists scenario', async () => {
-			// Arrange
-			const registerRequest: TRegisterUserRequest = {
-				email: 'test@example.com',
-				password: 'Password123!',
-				confirmPassword: 'Password123!',
-			}
-			mockRequest.body = registerRequest
+		describe.each([
+			[
+				'test@example.com',
+				'Password123!',
+				'Password123!',
+				'valid registration',
+			],
+			[
+				'user@domain.com',
+				'SecurePass456!',
+				'SecurePass456!',
+				'different email',
+			],
+			['admin@company.org', 'AdminPass789!', 'AdminPass789!', 'admin email'],
+		])(
+			'Registration scenarios: %s',
+			(email, password, confirmPassword, description) => {
+				it(`should handle user already exists scenario for ${description}`, async () => {
+					// Arrange
+					const registerRequest: TRegisterUserRequest = {
+						email,
+						password,
+						confirmPassword,
+					}
+					mockRequest.body = registerRequest
 
-			vi.mocked(userService.getUserByEmail).mockResolvedValue([mockUser, null])
+					const existingUser = MockDataFactory.createUser({ email })
+					vi.mocked(userService.getUserByEmail).mockResolvedValue([
+						existingUser,
+						null,
+					])
 
-			// Act
-			await authController.register(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+					// Act
+					await authController.register(mockRequest, mockResponse, mockNext)
 
-			// Assert
-			expect(userService.getUserByEmail).toHaveBeenCalledWith({
-				email: registerRequest.email,
-			})
-			expect(mockNext).toHaveBeenCalledWith(
-				expect.objectContaining({
-					message: 'User already exists',
-					type: ErrorType.ConflictError,
-				}),
-			)
-			expect(mockResponse.status).not.toHaveBeenCalled()
-			expect(mockResponse.json).not.toHaveBeenCalled()
-		})
+					// Assert
+					expect(userService.getUserByEmail).toHaveBeenCalledWith({
+						email: registerRequest.email,
+					})
+					expect(mockNext).toHaveBeenCalledWith(
+						expect.objectContaining({
+							message: 'User already exists',
+							type: ErrorType.ConflictError,
+						}),
+					)
+					expect(mockResponse.status).not.toHaveBeenCalled()
+					expect(mockResponse.json).not.toHaveBeenCalled()
+				})
+			},
+		)
 
 		it('should handle getUserByEmail service error', async () => {
 			// Arrange
@@ -164,11 +200,7 @@ describe('AuthController', () => {
 			])
 
 			// Act
-			await authController.register(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.register(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(userService.getUserByEmail).toHaveBeenCalledWith({
@@ -193,13 +225,11 @@ describe('AuthController', () => {
 				UserSub: 'test-user-id',
 				UserConfirmed: false,
 			})
-			const mockCreatedUser = mockUserService.createUser({
+			const mockCreatedUser = MockDataFactory.createUser({
 				id: 'test-user-id',
 				email: 'test@example.com',
-				emailVerified: false,
-				firstName: null,
-				lastName: null,
-				lastLogin: null,
+				firstName: 'John',
+				lastName: 'Doe',
 			})
 
 			vi.mocked(userService.getUserByEmail).mockResolvedValue([
@@ -216,11 +246,7 @@ describe('AuthController', () => {
 			])
 
 			// Act
-			await authController.register(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.register(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(userService.getUserByEmail).toHaveBeenCalledWith({
@@ -267,11 +293,7 @@ describe('AuthController', () => {
 			])
 
 			// Act
-			await authController.register(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.register(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(cognitoService.signUpUser).toHaveBeenCalledWith(registerRequest)
@@ -309,11 +331,7 @@ describe('AuthController', () => {
 			})
 
 			// Act
-			await authController.register(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.register(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(cognitoService.signUpUser).toHaveBeenCalledWith(registerRequest)
@@ -351,11 +369,7 @@ describe('AuthController', () => {
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
 
 			// Act
-			await authController.register(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.register(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(cognitoService.signUpUser).toHaveBeenCalledWith(registerRequest)
@@ -402,11 +416,7 @@ describe('AuthController', () => {
 			])
 
 			// Act
-			await authController.register(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.register(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(userRepository.createUser).toHaveBeenCalledWith({
@@ -441,6 +451,8 @@ describe('AuthController', () => {
 			const mockUpdatedUser = mockUserService.createUser({
 				...mockUser,
 				emailVerified: true,
+				createdAt: mockUser.createdAt ?? new Date(),
+				updatedAt: mockUser.updatedAt ?? new Date(),
 			})
 
 			vi.mocked(cognitoService.confirmSignUp).mockResolvedValue([
@@ -455,8 +467,8 @@ describe('AuthController', () => {
 
 			// Act
 			await authController.confirmRegistration(
-				mockRequest as Request,
-				mockResponse as Response,
+				mockRequest,
+				mockResponse,
 				mockNext,
 			)
 
@@ -494,8 +506,8 @@ describe('AuthController', () => {
 
 			// Act
 			await authController.confirmRegistration(
-				mockRequest as Request,
-				mockResponse as Response,
+				mockRequest,
+				mockResponse,
 				mockNext,
 			)
 
@@ -547,11 +559,7 @@ describe('AuthController', () => {
 			vi.mocked(encrypt).mockReturnValue(['encrypted-value', null])
 
 			// Act
-			await authController.login(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.login(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(cognitoService.signInUser).toHaveBeenCalledWith(
@@ -618,11 +626,7 @@ describe('AuthController', () => {
 			])
 
 			// Act
-			await authController.login(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.login(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(cognitoService.signInUser).toHaveBeenCalledWith(
@@ -673,11 +677,7 @@ describe('AuthController', () => {
 			])
 
 			// Act
-			await authController.login(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.login(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(cognitoService.signInUser).toHaveBeenCalledWith(
@@ -732,11 +732,7 @@ describe('AuthController', () => {
 			vi.mocked(encrypt).mockReturnValue(['encrypted-value', null])
 
 			// Act
-			await authController.login(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.login(mockRequest, mockResponse, mockNext)
 
 			// Assert - Verify domain field is undefined for localhost (default test config)
 			expect(mockResponse.cookie).toHaveBeenCalledWith(
@@ -796,11 +792,7 @@ describe('AuthController', () => {
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
 
 			// Act
-			await authController.logout(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.logout(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(tryCatchSync).toHaveBeenCalledWith(
@@ -836,11 +828,7 @@ describe('AuthController', () => {
 			vi.mocked(tryCatchSync).mockReturnValue([null, accessTokenError])
 
 			// Act
-			await authController.logout(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.logout(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(tryCatchSync).toHaveBeenCalledWith(
@@ -863,11 +851,7 @@ describe('AuthController', () => {
 			])
 
 			// Act
-			await authController.logout(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.logout(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(tryCatchSync).toHaveBeenCalledWith(
@@ -905,8 +889,8 @@ describe('AuthController', () => {
 
 			// Act
 			await authController.resendConfirmationCode(
-				mockRequest as Request,
-				mockResponse as Response,
+				mockRequest,
+				mockResponse,
 				mockNext,
 			)
 
@@ -936,8 +920,8 @@ describe('AuthController', () => {
 
 			// Act
 			await authController.resendConfirmationCode(
-				mockRequest as Request,
-				mockResponse as Response,
+				mockRequest,
+				mockResponse,
 				mockNext,
 			)
 
@@ -976,8 +960,8 @@ describe('AuthController', () => {
 
 			// Act
 			await authController.resendConfirmationCode(
-				mockRequest as Request,
-				mockResponse as Response,
+				mockRequest,
+				mockResponse,
 				mockNext,
 			)
 
@@ -1016,11 +1000,7 @@ describe('AuthController', () => {
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
 
 			// Act
-			await authController.forgotPassword(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.forgotPassword(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(cognitoService.forgotPassword).toHaveBeenCalledWith(
@@ -1047,11 +1027,7 @@ describe('AuthController', () => {
 			])
 
 			// Act
-			await authController.forgotPassword(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.forgotPassword(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(cognitoService.forgotPassword).toHaveBeenCalledWith(
@@ -1091,8 +1067,8 @@ describe('AuthController', () => {
 
 			// Act
 			await authController.confirmForgotPassword(
-				mockRequest as Request,
-				mockResponse as Response,
+				mockRequest,
+				mockResponse,
 				mockNext,
 			)
 
@@ -1128,8 +1104,8 @@ describe('AuthController', () => {
 
 			// Act
 			await authController.confirmForgotPassword(
-				mockRequest as Request,
-				mockResponse as Response,
+				mockRequest,
+				mockResponse,
 				mockNext,
 			)
 
@@ -1179,11 +1155,7 @@ describe('AuthController', () => {
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
 
 			// Act
-			await authController.refreshToken(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.refreshToken(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(tryCatchSync).toHaveBeenCalledWith(
@@ -1269,11 +1241,7 @@ describe('AuthController', () => {
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
 
 			// Act
-			await authController.refreshToken(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.refreshToken(mockRequest, mockResponse, mockNext)
 
 			// Assert - Verify domain field is undefined for localhost (default test config)
 			expect(mockResponse.cookie).toHaveBeenCalledWith(
@@ -1317,11 +1285,7 @@ describe('AuthController', () => {
 			vi.mocked(tryCatchSync).mockReturnValue([null, refreshTokenError])
 
 			// Act
-			await authController.refreshToken(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.refreshToken(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(tryCatchSync).toHaveBeenCalledWith(
@@ -1344,11 +1308,7 @@ describe('AuthController', () => {
 				.mockReturnValueOnce([null, synchronizeTokenError]) // getSynchronizeToken
 
 			// Act
-			await authController.refreshToken(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.refreshToken(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(tryCatchSync).toHaveBeenCalledTimes(2)
@@ -1368,11 +1328,7 @@ describe('AuthController', () => {
 			vi.mocked(decrypt).mockReturnValue([null, decryptError])
 
 			// Act
-			await authController.refreshToken(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.refreshToken(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(decrypt).toHaveBeenCalledWith('encrypted-username')
@@ -1406,11 +1362,7 @@ describe('AuthController', () => {
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
 
 			// Act
-			await authController.refreshToken(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.refreshToken(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(
@@ -1446,11 +1398,7 @@ describe('AuthController', () => {
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
 
 			// Act
-			await authController.getAuthUser(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.getAuthUser(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(tryCatchSync).toHaveBeenCalledWith(
@@ -1476,11 +1424,7 @@ describe('AuthController', () => {
 			vi.mocked(tryCatchSync).mockReturnValue([null, accessTokenError])
 
 			// Act
-			await authController.getAuthUser(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.getAuthUser(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(tryCatchSync).toHaveBeenCalledWith(
@@ -1512,11 +1456,7 @@ describe('AuthController', () => {
 			vi.mocked(handleServiceError).mockReturnValue({ success: true })
 
 			// Act
-			await authController.getAuthUser(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await authController.getAuthUser(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(cognitoService.getAuthUser).toHaveBeenCalledWith('access-token')
