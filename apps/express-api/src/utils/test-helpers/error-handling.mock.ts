@@ -225,6 +225,63 @@ export const createErrorScenarios = {
 }
 
 /**
+ * Error boundary helper for testing error propagation
+ * Wraps a function to ensure errors are properly caught and logged in tests
+ */
+export const withErrorBoundary = <T>(
+	fn: () => T,
+	context = 'test-boundary',
+): Result<T> => {
+	try {
+		const result = fn()
+		return [result, null]
+	} catch (error: unknown) {
+		const appError = AppError.from(error, context)
+		console.error(`[Error Boundary - ${context}]: ${appError.message}`)
+		return [null, appError]
+	}
+}
+
+/**
+ * Async error boundary helper for testing async error propagation
+ */
+export const withAsyncErrorBoundary = async <T>(
+	fn: () => Promise<T>,
+	context = 'test-boundary',
+): Promise<Result<T>> => {
+	try {
+		const result = await fn()
+		return [result, null]
+	} catch (error: unknown) {
+		const appError = AppError.from(error, context)
+		console.error(`[Async Error Boundary - ${context}]: ${appError.message}`)
+		return [null, appError]
+	}
+}
+
+/**
+ * Helper to create error assertions with better error messages
+ */
+export const createErrorAssertion = (expectedType: string, expectedStatus: number) => ({
+	shouldHaveType: (error: AppError) => {
+		expect(error.type).toBe(expectedType)
+		return createErrorAssertion(expectedType, expectedStatus)
+	},
+	shouldHaveStatus: (error: AppError) => {
+		expect(error.status).toBe(expectedStatus)
+		return createErrorAssertion(expectedType, expectedStatus)
+	},
+	shouldHaveMessage: (message: string) => (error: AppError) => {
+		expect(error.message).toBe(message)
+		return createErrorAssertion(expectedType, expectedStatus)
+	},
+	shouldHaveService: (service: string) => (error: AppError) => {
+		expect(error.service).toBe(service)
+		return createErrorAssertion(expectedType, expectedStatus)
+	}
+})
+
+/**
  * Unified export object providing all error handling mock utilities
  * Follows the pattern established by logger.mock.ts and express-mocks.ts
  */
@@ -253,6 +310,14 @@ export const mockErrorHandling = {
 	// Error scenario creators
 	/** Create common error scenarios for testing */
 	errors: createErrorScenarios,
+
+	// Error boundary helpers
+	/** Wrap function in error boundary for testing */
+	withErrorBoundary,
+	/** Wrap async function in error boundary for testing */
+	withAsyncErrorBoundary,
+	/** Create fluent error assertions */
+	assertError: createErrorAssertion,
 }
 
 // Export types for use in test files

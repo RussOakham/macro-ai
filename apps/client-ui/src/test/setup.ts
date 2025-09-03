@@ -1,7 +1,5 @@
 import { vi } from 'vitest'
 
-import { IStandardizedError } from '@/lib/types'
-
 import '@testing-library/jest-dom'
 
 // Setup MSW for testing
@@ -58,7 +56,14 @@ vi.mock('@/lib/auth/shared-refresh-promise', () => ({
 
 // Mock error standardization
 vi.mock('@/lib/errors/standardize-error', () => ({
-	standardizeError: vi.fn((error) => error as IStandardizedError),
+	standardizeError: vi.fn((error: unknown) => ({
+		type: 'UnknownError',
+		name: 'UnknownError',
+		message: 'An unknown error occurred',
+		status: 500,
+		stack: '',
+		details: error,
+	})),
 }))
 
 // Global test utilities

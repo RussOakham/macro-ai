@@ -714,7 +714,8 @@ describe('response-handlers.ts', () => {
 				const schema = z.object({
 					user: z.object({
 						name: z.string(),
-						email: z.email(),
+						// eslint-disable-next-line @typescript-eslint/no-deprecated
+						email: z.string().email(),
 					}),
 					settings: z.object({
 						theme: z.enum(['light', 'dark']),
@@ -741,7 +742,8 @@ describe('response-handlers.ts', () => {
 				const schema = z.object({
 					user: z.object({
 						name: z.string(),
-						email: z.email(),
+						// eslint-disable-next-line @typescript-eslint/no-deprecated
+						email: z.string().email(),
 					}),
 				})
 				const invalidData = {
