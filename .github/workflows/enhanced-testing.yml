@@ -301,6 +301,19 @@ jobs:
           echo "duration=$duration" >> $GITHUB_OUTPUT
           echo "exit-code=${test_exit_code:-0}" >> $GITHUB_OUTPUT
 
+          # Save test metrics to file for later collection
+          mkdir -p test-metrics
+          cat > test-metrics/metrics.json << EOF
+          {
+            "package": "${{ matrix.package }}",
+            "name": "${{ matrix.name }}",
+            "tests": $(grep -o 'Tests.*[0-9]*' test-results.xml | grep -o '[0-9]*' | tail -1 || echo "0"),
+            "failures": $(grep -o 'failures="[0-9]*"' test-results.xml | head -1 | grep -o '[0-9]*' || echo "0"),
+            "duration": $duration,
+            "coverage": $(if [ -f "coverage/coverage-summary.json" ]; then jq -r '.total.lines.pct // 0' coverage/coverage-summary.json 2>/dev/null || echo "0"; else echo "0"; fi)
+          }
+          EOF
+
           # Check if tests exceeded expected duration
           if [ $duration -gt $((${{ matrix.timeout }} / 1000)) ]; then
             echo "⚠️ Tests took longer than expected timeout"
@@ -316,6 +329,7 @@ jobs:
           path: |
             apps/${{ matrix.package }}/test-results.xml
             apps/${{ matrix.package }}/coverage/
+            apps/${{ matrix.package }}/test-metrics/
           retention-days: 30
 
       - name: Publish test results
@@ -396,11 +410,11 @@ jobs:
           path: test-results/
           merge-multiple: true
 
-      - name: Generate simplified test report
+      - name: Generate test report from artifacts
         run: |
-          echo "📊 Generating simplified test report..."
+          echo "📊 Generating test report from collected metrics..."
 
-          # Create simple summary report
+          # Create summary report header
           cat > test-summary.md << 'EOF'
           # 🧪 Test Execution Summary
 
@@ -408,14 +422,69 @@ jobs:
 
           | Test Suite | Status | Coverage | Tests | Failures | Duration |
           |------------|--------|----------|-------|----------|----------|
-          | Test Suite 1 | ✅ PASS | N/A% | 140 | 0 | 13.584768712s |
+          EOF
+
+          # Process collected metrics
+          total_tests=0
+          total_failures=0
+          suite_count=0
+          total_coverage=0
+
+          # Look for metrics files in downloaded artifacts
+          for metrics_file in test-results/*/test-metrics/metrics.json; do
+            if [ -f "$metrics_file" ]; then
+              echo "Processing metrics: $metrics_file"
+              
+              # Extract metrics using jq
+              name=$(jq -r '.name' "$metrics_file")
+              tests=$(jq -r '.tests' "$metrics_file")
+              failures=$(jq -r '.failures' "$metrics_file")
+              duration=$(jq -r '.duration' "$metrics_file")
+              coverage=$(jq -r '.coverage' "$metrics_file")
+              
+              total_tests=$((total_tests + tests))
+              total_failures=$((total_failures + failures))
+              suite_count=$((suite_count + 1))
+              
+              # Calculate total coverage (simple average for now)
+              total_coverage=$((total_coverage + coverage))
+              
+              # Determine status
+              if [ "$failures" -eq 0 ]; then
+                status="✅ PASS"
+              else
+                status="❌ FAIL ($failures failures)"
+              fi
+              
+              # Format coverage
+              if [ "$coverage" != "0" ] && [ "$coverage" != "null" ]; then
+                coverage_display="${coverage}%"
+              else
+                coverage_display="N/A%"
+              fi
+              
+              # Add to report
+              echo "| $name | $status | $coverage_display | $tests | $failures | ${duration}s |" >> test-summary.md
+            fi
+          done
+
+          # Calculate average coverage
+          if [ $suite_count -gt 0 ]; then
+            avg_coverage=$((total_coverage / suite_count))
+          else
+            avg_coverage=0
+          fi
+
+          # Add summary
+          cat >> test-summary.md << EOF
 
           ## Overall Summary
 
-          - **Total Tests**: 140
-          - **Total Failures**: 0
-          - **Success Rate**: 100%
-          - **Test Suites**: 1
+          - **Total Tests**: $total_tests
+          - **Total Failures**: $total_failures
+          - **Success Rate**: $(( (total_tests - total_failures) * 100 / (total_tests == 0 ? 1 : total_tests) ))%
+          - **Test Suites**: $suite_count
+          - **Average Coverage**: ${avg_coverage}%
 
           ## Coverage Report
           Coverage reports are available as artifacts for each test suite.
@@ -427,7 +496,7 @@ jobs:
           *Generated on $(date -u '+%Y-%m-%d %H:%M:%S UTC') by GitHub Actions*
           EOF
 
-          echo "✅ Simplified test summary generated"
+          echo "✅ Test summary generated from artifacts"
           cat test-summary.md
 
       - name: Upload test summary
