@@ -7,13 +7,27 @@
 
 import React from 'react'
 import { render } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { http, HttpResponse } from 'msw'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Button } from '@/components/ui/button'
 
+import {
+	createNetworkErrorScenarios,
+	createTrackingMockApiClient,
+	testErrorHandling,
+} from './api-test-utils'
 import { componentTesting, formTesting } from './component-test-utils'
+import { setupMSWForTests, setupServerWithHandlers } from './msw-setup'
 
 describe('Pilot Tests - Enhanced Testing Utilities', () => {
+	// Setup MSW for all tests in this describe block
+	setupMSWForTests()
+
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
 	describe('Real-World Form Testing Scenarios', () => {
 		it('should handle a complete user registration form', async () => {
 			const RegistrationForm = () => {
@@ -921,6 +935,351 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 
 			// Validate all fields
 			formTesting.validateTextInputs(form, testData)
+		})
+	})
+
+	describe('Enhanced API Integration Testing', () => {
+		it('should handle form submission with real API calls', async () => {
+			// Setup MSW handler for registration endpoint
+			setupServerWithHandlers([
+				http.post('http://localhost:3000/api/auth/register', () => {
+					return HttpResponse.json(
+						{
+							message: 'User registered successfully',
+							user: {
+								id: '123',
+								email: 'john.doe@example.com',
+								firstName: 'John',
+								lastName: 'Doe',
+							},
+						},
+						{ status: 201 },
+					)
+				}),
+			])
+
+			const ApiRegistrationForm = () => {
+				const [formData, setFormData] = React.useState({
+					firstName: '',
+					lastName: '',
+					email: '',
+					password: '',
+				})
+				const [isSubmitting, setIsSubmitting] = React.useState(false)
+				const [result, setResult] = React.useState<Record<
+					string,
+					unknown
+				> | null>(null)
+
+				const handleSubmit = async (e: React.FormEvent) => {
+					e.preventDefault()
+					setIsSubmitting(true)
+
+					try {
+						const response = await fetch(
+							'http://localhost:3000/api/auth/register',
+							{
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+								},
+								body: JSON.stringify(formData),
+							},
+						)
+						const data = (await response.json()) as Record<string, unknown>
+						setResult(data)
+					} catch {
+						setResult({ error: 'Registration failed' })
+					} finally {
+						setIsSubmitting(false)
+					}
+				}
+
+				return (
+					<div data-testid="api-registration-container">
+						<form data-testid="api-registration-form" onSubmit={handleSubmit}>
+							<input
+								name="firstName"
+								type="text"
+								value={formData.firstName}
+								onChange={(e) => {
+									setFormData((prev) => ({
+										...prev,
+										firstName: e.target.value,
+									}))
+								}}
+								placeholder="First Name"
+							/>
+							<input
+								name="lastName"
+								type="text"
+								value={formData.lastName}
+								onChange={(e) => {
+									setFormData((prev) => ({ ...prev, lastName: e.target.value }))
+								}}
+								placeholder="Last Name"
+							/>
+							<input
+								name="email"
+								type="email"
+								value={formData.email}
+								onChange={(e) => {
+									setFormData((prev) => ({ ...prev, email: e.target.value }))
+								}}
+								placeholder="Email"
+							/>
+							<input
+								name="password"
+								type="password"
+								value={formData.password}
+								onChange={(e) => {
+									setFormData((prev) => ({ ...prev, password: e.target.value }))
+								}}
+								placeholder="Password"
+							/>
+							<Button type="submit" disabled={isSubmitting}>
+								{isSubmitting ? 'Registering...' : 'Register'}
+							</Button>
+						</form>
+						{result && (
+							<div data-testid="registration-result">
+								{JSON.stringify(result)}
+							</div>
+						)}
+					</div>
+				)
+			}
+
+			const { container } = render(<ApiRegistrationForm />)
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			const form = container.querySelector('form')!
+
+			// Fill the form
+			await formTesting.fillTextInputs(form, {
+				firstName: 'John',
+				lastName: 'Doe',
+				email: 'john.doe@example.com',
+				password: 'SecurePassword123!',
+			})
+
+			// Submit the form
+			await formTesting.submitForm(form)
+
+			// Wait for the API call to complete
+			await new Promise((resolve) => setTimeout(resolve, 200))
+
+			// Verify the result
+			const resultElement = componentTesting.getElementByTestId(
+				'registration-result',
+			)
+			expect(resultElement).toHaveTextContent('User registered successfully')
+			expect(resultElement).toHaveTextContent('john.doe@example.com')
+		})
+
+		it('should handle API errors gracefully', async () => {
+			// Setup MSW handler for error scenario
+			setupServerWithHandlers([
+				http.post('http://localhost:3000/api/auth/register', () => {
+					return HttpResponse.json(
+						{ message: 'Email already exists' },
+						{ status: 400 },
+					)
+				}),
+			])
+
+			const ErrorHandlingForm = () => {
+				const [formData, setFormData] = React.useState({
+					email: '',
+					password: '',
+				})
+				const [isSubmitting, setIsSubmitting] = React.useState(false)
+				const [error, setError] = React.useState<string | null>(null)
+
+				const handleSubmit = async (e: React.FormEvent) => {
+					e.preventDefault()
+					setIsSubmitting(true)
+					setError(null)
+
+					try {
+						const response = await fetch(
+							'http://localhost:3000/api/auth/register',
+							{
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+								},
+								body: JSON.stringify(formData),
+							},
+						)
+
+						if (!response.ok) {
+							const errorData = (await response.json()) as { message: string }
+							throw new Error(errorData.message)
+						}
+					} catch (err) {
+						setError(err instanceof Error ? err.message : 'Registration failed')
+					} finally {
+						setIsSubmitting(false)
+					}
+				}
+
+				return (
+					<div data-testid="error-form-container">
+						<form data-testid="error-form" onSubmit={handleSubmit}>
+							<input
+								name="email"
+								type="email"
+								value={formData.email}
+								onChange={(e) => {
+									setFormData((prev) => ({ ...prev, email: e.target.value }))
+								}}
+								placeholder="Email"
+							/>
+							<input
+								name="password"
+								type="password"
+								value={formData.password}
+								onChange={(e) => {
+									setFormData((prev) => ({ ...prev, password: e.target.value }))
+								}}
+								placeholder="Password"
+							/>
+							<Button type="submit" disabled={isSubmitting}>
+								{isSubmitting ? 'Registering...' : 'Register'}
+							</Button>
+						</form>
+						{error && (
+							<div data-testid="error-message" role="alert">
+								{error}
+							</div>
+						)}
+					</div>
+				)
+			}
+
+			const { container } = render(<ErrorHandlingForm />)
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			const form = container.querySelector('form')!
+
+			// Fill the form with existing email
+			await formTesting.fillTextInputs(form, {
+				email: 'existing@example.com',
+				password: 'password123',
+			})
+
+			// Submit the form
+			await formTesting.submitForm(form)
+
+			// Wait for the error message
+			await new Promise((resolve) => setTimeout(resolve, 200))
+
+			// Verify the error is displayed
+			const errorElement = componentTesting.getElementByTestId('error-message')
+			expect(errorElement).toHaveTextContent('Email already exists')
+		})
+
+		it('should handle network errors during form submission', async () => {
+			const mockClient = createTrackingMockApiClient()
+			const errorScenarios = createNetworkErrorScenarios()
+
+			// Test error handling
+			const results = await testErrorHandling(mockClient, errorScenarios)
+
+			// Verify all error scenarios were handled
+			expect(results).toHaveLength(Object.keys(errorScenarios).length)
+			results.forEach((result) => {
+				expect(result.scenario).toBeDefined()
+				expect(result.handled).toBe(true)
+				expect(result.error).toBeDefined()
+			})
+		})
+
+		it('should handle concurrent form submissions', async () => {
+			// Setup MSW handler with delay to simulate slow API
+			setupServerWithHandlers([
+				http.post('http://localhost:3000/api/data/submit', () => {
+					return new Promise((resolve) => {
+						setTimeout(() => {
+							resolve(
+								HttpResponse.json(
+									{ message: 'Data submitted successfully' },
+									{ status: 200 },
+								),
+							)
+						}, 100)
+					})
+				}),
+			])
+
+			const ConcurrentForm = () => {
+				const [formData, setFormData] = React.useState({
+					data: '',
+				})
+				const [isSubmitting, setIsSubmitting] = React.useState(false)
+				const [submissions, setSubmissions] = React.useState(0)
+
+				const handleSubmit = async (e: React.FormEvent) => {
+					e.preventDefault()
+					if (isSubmitting) return // Prevent double submission
+
+					setIsSubmitting(true)
+					try {
+						await fetch('http://localhost:3000/api/data/submit', {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+							},
+							body: JSON.stringify(formData),
+						})
+						setSubmissions((prev) => prev + 1)
+					} catch {
+						// Handle error
+					} finally {
+						setIsSubmitting(false)
+					}
+				}
+
+				return (
+					<div data-testid="concurrent-form-container">
+						<form data-testid="concurrent-form" onSubmit={handleSubmit}>
+							<input
+								name="data"
+								type="text"
+								value={formData.data}
+								onChange={(e) => {
+									setFormData((prev) => ({ ...prev, data: e.target.value }))
+								}}
+								placeholder="Enter data"
+							/>
+							<Button type="submit" disabled={isSubmitting}>
+								{isSubmitting ? 'Submitting...' : 'Submit'}
+							</Button>
+						</form>
+						<div data-testid="submission-count">Submissions: {submissions}</div>
+					</div>
+				)
+			}
+
+			const { container } = render(<ConcurrentForm />)
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			const form = container.querySelector('form')!
+
+			// Fill the form
+			await formTesting.fillTextInputs(form, {
+				data: 'Test data',
+			})
+
+			// Submit the form multiple times rapidly
+			await formTesting.submitForm(form)
+			await formTesting.submitForm(form) // This should be ignored due to isSubmitting
+
+			// Wait for the first submission to complete
+			await new Promise((resolve) => setTimeout(resolve, 200))
+
+			// Verify only one submission was processed
+			const countElement =
+				componentTesting.getElementByTestId('submission-count')
+			expect(countElement).toHaveTextContent('Submissions: 1')
 		})
 	})
 })
