@@ -6,11 +6,75 @@
  */
 
 // Main testing utilities
-export * from './test-utils'
+export type {
+	ApiTestConfig,
+	AuthTestState,
+	ComponentTestContext,
+	MockApiClient,
+	MockAxiosInstance,
+} from './test-utils'
+export {
+	clientUITestAssertions,
+	clientUITestData,
+	clientUITestUtils,
+	createAuthenticatedUserState,
+	createMockApiClient,
+	createMockApiError,
+	createMockApiResponse,
+	createMockAuthState,
+	createMockAxiosInstance,
+	createMockRouterContext,
+	createMockTokenRefresh,
+	createMSWHandlers,
+	renderWithProviders,
+	setupMSWServer,
+} from './test-utils'
 
 // Specialized testing utilities
-export * from './api-test-utils'
-export * from './component-test-utils'
+export type {
+	EnhancedApiCallScenario,
+	InterceptorTestConfig,
+	MockAdapterConfig,
+	MSWHandlerConfig,
+	TokenRefreshTestConfig,
+} from './api-test-utils'
+export {
+	createAuthTestScenarios,
+	createDynamicMSWHandlers,
+	createErrorTestScenarios,
+	createHybridTestSetup,
+	createMockAdapter,
+	createMockApiClientWithAdapter,
+	createMockAxiosWithInterceptors,
+	createMockInterceptors,
+	createMockSharedRefreshPromise,
+	createMockTokenRefreshFunction,
+	createNetworkErrorScenarios,
+	createPerformanceTestScenarios,
+	createTrackingMockApiClient,
+	testApiCallScenarios,
+	testErrorHandling,
+	testInterceptor,
+} from './api-test-utils'
+export type {
+	ComponentTestConfig,
+	EnhancedRenderResult,
+} from './component-test-utils'
+export {
+	componentAssertions,
+	componentTesting,
+	createMockComponentProps,
+	createMockHook,
+	createMockRouter,
+	formTesting,
+	renderComponent,
+	renderWithAuth,
+	renderWithoutAuth,
+	simulateUserInteraction,
+	testComponentState,
+	testRouterNavigation,
+	waitForComponentReady,
+} from './component-test-utils'
 
 // Re-export commonly used testing utilities from config-testing
 export {

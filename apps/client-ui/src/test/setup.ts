@@ -4,11 +4,21 @@ import { IStandardizedError } from '@/lib/types'
 
 import '@testing-library/jest-dom'
 
+// Set up environment variables for tests
+Object.defineProperty(import.meta, 'env', {
+	value: {
+		VITE_API_URL: 'http://localhost:3000',
+		VITE_API_KEY: 'test-api-key-that-is-at-least-32-characters-long',
+		VITE_APP_ENV: 'test',
+	},
+	writable: true,
+})
+
 // Mock environment variables
 vi.mock('@/lib/validation/environment', () => ({
 	validateEnvironment: vi.fn(() => ({
 		VITE_API_URL: 'http://localhost:3000',
-		VITE_API_KEY: 'test-api-key',
+		VITE_API_KEY: 'test-api-key-that-is-at-least-32-characters-long',
 		VITE_APP_ENV: 'test',
 	})),
 }))
