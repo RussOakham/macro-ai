@@ -195,9 +195,9 @@ From analysis of current test patterns:
 ```typescript
 // ❌ Hardcoded test data
 const mockUser = {
-  id: '123',
-  email: 'test@example.com',
-  name: 'Test User',
+	id: '123',
+	email: 'test@example.com',
+	name: 'Test User',
 }
 ```
 
@@ -208,8 +208,8 @@ const mockUser = {
 import { userFactory } from '@repo/config-testing'
 
 const mockUser = userFactory({
-  email: 'test@example.com',
-  role: 'admin',
+	email: 'test@example.com',
+	role: 'admin',
 })
 ```
 
@@ -254,11 +254,11 @@ const { req, res, next } = createMockExpressObjects()
 ```typescript
 // ❌ Duplicate test cases
 it('should validate email format', () => {
-  expect(validateEmail('valid@example.com')).toBe(true)
+	expect(validateEmail('valid@example.com')).toBe(true)
 })
 
 it('should reject invalid email', () => {
-  expect(validateEmail('invalid')).toBe(false)
+	expect(validateEmail('invalid')).toBe(false)
 })
 ```
 
@@ -267,13 +267,13 @@ it('should reject invalid email', () => {
 ```typescript
 // ✅ Parameterized testing
 describe.each([
-  ['valid@example.com', true],
-  ['invalid', false],
-  ['another@valid.com', true],
+	['valid@example.com', true],
+	['invalid', false],
+	['another@valid.com', true],
 ])('Email validation: %s', (email, expected) => {
-  it(`should ${expected ? 'accept' : 'reject'} ${email}`, () => {
-    expect(validateEmail(email)).toBe(expected)
-  })
+	it(`should ${expected ? 'accept' : 'reject'} ${email}`, () => {
+		expect(validateEmail(email)).toBe(expected)
+	})
 })
 ```
 
@@ -291,8 +291,8 @@ describe.each([
 ```typescript
 // ❌ Manual service mocking
 const mockUserService = {
-  getUserById: vi.fn(),
-  createUser: vi.fn(),
+	getUserById: vi.fn(),
+	createUser: vi.fn(),
 }
 ```
 

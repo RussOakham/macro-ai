@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+	AppError,
 	InternalError,
 	NotFoundError,
 	UnauthorizedError,
 	ValidationError,
 } from '../../../utils/errors.ts'
+import { createServiceMocks } from '../../../utils/test-helpers/enhanced-mocks.ts'
 import { mockErrorHandling } from '../../../utils/test-helpers/error-handling.mock.ts'
+import { createMockData } from '../../../utils/test-helpers/index.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { CognitoService } from '../../auth/auth.services.ts'
 import { UserService } from '../user.services.ts'
@@ -23,28 +26,6 @@ vi.mock('../../../utils/error-handling/try-catch.ts', () =>
 // Import after mocking
 import { tryCatchSync } from '../../../utils/error-handling/try-catch.ts'
 
-// Mock the user repository
-const mockUserRepository: IUserRepository = {
-	findUserById: vi.fn(),
-	findUserByEmail: vi.fn(),
-	createUser: vi.fn(),
-	updateLastLogin: vi.fn(),
-	updateUser: vi.fn(),
-}
-
-// Mock the Cognito service
-const mockGetAuthUser = vi.fn()
-const mockCognitoService = {
-	getAuthUser: mockGetAuthUser,
-	signUpUser: vi.fn(),
-	confirmSignUp: vi.fn(),
-	resendConfirmationCode: vi.fn(),
-	signInUser: vi.fn(),
-	signOutUser: vi.fn(),
-	forgotPassword: vi.fn(),
-	confirmForgotPassword: vi.fn(),
-} as unknown as CognitoService
-
 // Mock the user schemas
 vi.mock('../user.schemas.ts', () => ({
 	userIdSchema: {
@@ -59,68 +40,82 @@ vi.mock('zod-validation-error', () => ({
 
 describe('UserService', () => {
 	let userService: UserService
-	const mockUser: TUser = {
-		id: '123e4567-e89b-12d3-a456-426614174000',
-		email: 'test@example.com',
-		emailVerified: true,
-		firstName: 'John',
-		lastName: 'Doe',
-		createdAt: new Date('2023-01-01'),
-		updatedAt: new Date('2023-01-01'),
-		lastLogin: new Date('2023-01-01'),
-	}
+	let mockUserRepository: IUserRepository
+	let mockCognitoService: CognitoService
+	let mockUser: TUser
 
 	beforeEach(() => {
 		vi.clearAllMocks()
+
+		// Use enhanced service mocks
+		const { userService: mockUserService, authService } = createServiceMocks()
+		mockUserRepository = mockUserService as unknown as IUserRepository
+		mockCognitoService = authService as unknown as CognitoService
+		// Create mock user data with proper TUser structure
+		mockUser = {
+			...createMockData.user(),
+			emailVerified: true,
+			lastLogin: new Date(),
+		} as TUser
+
 		userService = new UserService(mockUserRepository, mockCognitoService)
 	})
 
 	describe('getUserById', () => {
-		it('should return user when found with valid ID', async () => {
-			// Arrange
-			vi.mocked(tryCatchSync).mockReturnValue(
-				mockErrorHandling.successResult('123e4567-e89b-12d3-a456-426614174000'),
-			)
-			vi.mocked(mockUserRepository.findUserById).mockResolvedValue([
-				mockUser,
-				null,
-			])
+		describe.each([
+			['valid-uuid', true],
+			['invalid-id', false],
+			['', false],
+			['123', false],
+		])('User ID validation: %s', (userId, isValid) => {
+			it(`should ${isValid ? 'return user' : 'return validation error'} for ${userId}`, async () => {
+				// Arrange
+				const testUser = {
+					...createMockData.user({
+						id: userId,
+						email: 'test@example.com',
+					}),
+					emailVerified: true,
+					lastLogin: new Date(),
+				} as TUser
 
-			// Act
-			const [result, error] = await userService.getUserById({
-				userId: '123e4567-e89b-12d3-a456-426614174000',
+				if (isValid) {
+					vi.mocked(tryCatchSync).mockReturnValue(
+						mockErrorHandling.successResult(userId),
+					)
+					vi.mocked(mockUserRepository.findUserById).mockResolvedValue([
+						testUser,
+						null,
+					])
+				} else {
+					const validationError = mockErrorHandling.errors.validation(
+						'Invalid user ID',
+						{},
+						'test',
+					)
+					vi.mocked(tryCatchSync).mockReturnValue(
+						mockErrorHandling.errorResult(validationError),
+					)
+				}
+
+				// Act
+				const [result, error] = await userService.getUserById({ userId })
+
+				// Assert
+				expect(tryCatchSync).toHaveBeenCalledOnce()
+
+				if (isValid) {
+					expect(mockUserRepository.findUserById).toHaveBeenCalledWith({
+						id: userId,
+					})
+					expect(result).toEqual(testUser)
+					expect(error).toBeNull()
+				} else {
+					expect(mockUserRepository.findUserById).not.toHaveBeenCalled()
+					expect(result).toBeNull()
+					expect(error).toBeInstanceOf(AppError)
+				}
 			})
-
-			// Assert
-			expect(tryCatchSync).toHaveBeenCalledOnce()
-			expect(mockUserRepository.findUserById).toHaveBeenCalledWith({
-				id: '123e4567-e89b-12d3-a456-426614174000',
-			})
-			expect(result).toEqual(mockUser)
-			expect(error).toBeNull()
-		})
-
-		it('should return validation error for invalid user ID', async () => {
-			// Arrange
-			const validationError = mockErrorHandling.errors.validation(
-				'Invalid user ID',
-				{},
-				'test',
-			)
-			vi.mocked(tryCatchSync).mockReturnValue(
-				mockErrorHandling.errorResult(validationError),
-			)
-
-			// Act
-			const [result, error] = await userService.getUserById({
-				userId: 'invalid-id',
-			})
-
-			// Assert
-			expect(tryCatchSync).toHaveBeenCalledOnce()
-			expect(mockUserRepository.findUserById).not.toHaveBeenCalled()
-			expect(result).toBeNull()
-			expect(error).toEqual(validationError)
 		})
 
 		it('should return repository error when database fails', async () => {
@@ -176,43 +171,57 @@ describe('UserService', () => {
 	})
 
 	describe('getUserByEmail', () => {
-		it('should return user when found with valid email', async () => {
-			// Arrange
-			vi.mocked(tryCatchSync).mockReturnValue(['test@example.com', null])
-			vi.mocked(mockUserRepository.findUserByEmail).mockResolvedValue([
-				mockUser,
-				null,
-			])
+		describe.each([
+			['test@example.com', true],
+			['user@domain.co.uk', true],
+			['invalid-email', false],
+			['@domain.com', false],
+			['user@', false],
+			['', false],
+		])('Email validation: %s', (email, isValid) => {
+			it(`should ${isValid ? 'return user' : 'return validation error'} for ${email}`, async () => {
+				// Arrange
+				const testUser = {
+					...createMockData.user({
+						email,
+					}),
+					emailVerified: true,
+					lastLogin: new Date(),
+				} as TUser
 
-			// Act
-			const [result, error] = await userService.getUserByEmail({
-				email: 'test@example.com',
+				if (isValid) {
+					vi.mocked(tryCatchSync).mockReturnValue([email, null])
+					vi.mocked(mockUserRepository.findUserByEmail).mockResolvedValue([
+						testUser,
+						null,
+					])
+				} else {
+					const validationError = new ValidationError(
+						'Invalid email',
+						{},
+						'test',
+					)
+					vi.mocked(tryCatchSync).mockReturnValue([null, validationError])
+				}
+
+				// Act
+				const [result, error] = await userService.getUserByEmail({ email })
+
+				// Assert
+				expect(tryCatchSync).toHaveBeenCalledOnce()
+
+				if (isValid) {
+					expect(mockUserRepository.findUserByEmail).toHaveBeenCalledWith({
+						email,
+					})
+					expect(result).toEqual(testUser)
+					expect(error).toBeNull()
+				} else {
+					expect(mockUserRepository.findUserByEmail).not.toHaveBeenCalled()
+					expect(result).toBeNull()
+					expect(error).toBeInstanceOf(ValidationError)
+				}
 			})
-
-			// Assert
-			expect(tryCatchSync).toHaveBeenCalledOnce()
-			expect(mockUserRepository.findUserByEmail).toHaveBeenCalledWith({
-				email: 'test@example.com',
-			})
-			expect(result).toEqual(mockUser)
-			expect(error).toBeNull()
-		})
-
-		it('should return validation error for invalid email', async () => {
-			// Arrange
-			const validationError = new ValidationError('Invalid email', {}, 'test')
-			vi.mocked(tryCatchSync).mockReturnValue([null, validationError])
-
-			// Act
-			const [result, error] = await userService.getUserByEmail({
-				email: 'invalid-email',
-			})
-
-			// Assert
-			expect(tryCatchSync).toHaveBeenCalledOnce()
-			expect(mockUserRepository.findUserByEmail).not.toHaveBeenCalled()
-			expect(result).toBeNull()
-			expect(error).toEqual(validationError)
 		})
 
 		it('should return repository error when database fails', async () => {
@@ -269,7 +278,10 @@ describe('UserService', () => {
 				$metadata: {},
 			}
 
-			mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			vi.mocked(mockCognitoService.getAuthUser).mockResolvedValue([
+				mockCognitoUser,
+				null,
+			])
 			vi.mocked(tryCatchSync).mockReturnValue([
 				'123e4567-e89b-12d3-a456-426614174000',
 				null,
@@ -285,7 +297,7 @@ describe('UserService', () => {
 			})
 
 			// Assert
-			expect(mockGetAuthUser).toHaveBeenCalledWith('valid-token')
+			expect(mockCognitoService.getAuthUser).toHaveBeenCalledWith('valid-token')
 			expect(result).toEqual(mockUser)
 			expect(error).toBeNull()
 		})
@@ -293,7 +305,10 @@ describe('UserService', () => {
 		it('should return error when Cognito service fails', async () => {
 			// Arrange
 			const cognitoError = new UnauthorizedError('Invalid token', 'cognito')
-			mockGetAuthUser.mockResolvedValue([null, cognitoError])
+			vi.mocked(mockCognitoService.getAuthUser).mockResolvedValue([
+				null,
+				cognitoError,
+			])
 
 			// Act
 			const [result, error] = await userService.getUserByAccessToken({
@@ -301,7 +316,9 @@ describe('UserService', () => {
 			})
 
 			// Assert
-			expect(mockGetAuthUser).toHaveBeenCalledWith('invalid-token')
+			expect(mockCognitoService.getAuthUser).toHaveBeenCalledWith(
+				'invalid-token',
+			)
 			expect(result).toBeNull()
 			expect(error).toEqual(cognitoError)
 		})
@@ -313,7 +330,10 @@ describe('UserService', () => {
 				UserAttributes: [],
 				$metadata: {},
 			}
-			mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			vi.mocked(mockCognitoService.getAuthUser).mockResolvedValue([
+				mockCognitoUser,
+				null,
+			])
 
 			// Act
 			const [result, error] = await userService.getUserByAccessToken({
@@ -321,7 +341,9 @@ describe('UserService', () => {
 			})
 
 			// Assert
-			expect(mockGetAuthUser).toHaveBeenCalledWith('token-without-username')
+			expect(mockCognitoService.getAuthUser).toHaveBeenCalledWith(
+				'token-without-username',
+			)
 			expect(result).toBeNull()
 			expect(error).toBeInstanceOf(UnauthorizedError)
 			expect((error as UnauthorizedError).message).toBe('Invalid access token')
@@ -336,7 +358,10 @@ describe('UserService', () => {
 			}
 			const userError = new NotFoundError('User not found', 'test')
 
-			mockGetAuthUser.mockResolvedValue([mockCognitoUser, null])
+			vi.mocked(mockCognitoService.getAuthUser).mockResolvedValue([
+				mockCognitoUser,
+				null,
+			])
 			vi.mocked(tryCatchSync).mockReturnValue([
 				'123e4567-e89b-12d3-a456-426614174000',
 				null,
@@ -352,7 +377,7 @@ describe('UserService', () => {
 			})
 
 			// Assert
-			expect(mockGetAuthUser).toHaveBeenCalledWith('valid-token')
+			expect(mockCognitoService.getAuthUser).toHaveBeenCalledWith('valid-token')
 			expect(result).toBeNull()
 			expect(error).toEqual(userError)
 		})

@@ -81,6 +81,24 @@ export const createMockExpressObjects = (
 }
 
 /**
+ * Create a mock Express Request object
+ */
+export const createMockRequest = (
+	opts?: Parameters<typeof createRequest>[0],
+) => {
+	return createRequest(opts)
+}
+
+/**
+ * Create a mock Express Response object
+ */
+export const createMockResponse = (
+	opts?: Parameters<typeof createResponse>[0],
+) => {
+	return createResponse(opts)
+}
+
+/**
  * Enhanced mock utilities for common testing patterns
  */
 export const mockUtils = {

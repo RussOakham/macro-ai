@@ -34,14 +34,14 @@ Based on analysis of 50+ test files:
 ```typescript
 // ❌ Current pattern in user.services.test.ts
 const mockUser: TUser = {
-  id: '123e4567-e89b-12d3-a456-426614174000',
-  email: 'test@example.com',
-  emailVerified: true,
-  firstName: 'John',
-  lastName: 'Doe',
-  createdAt: new Date('2023-01-01'),
-  updatedAt: new Date('2023-01-01'),
-  lastLogin: new Date('2023-01-01'),
+	id: '123e4567-e89b-12d3-a456-426614174000',
+	email: 'test@example.com',
+	emailVerified: true,
+	firstName: 'John',
+	lastName: 'Doe',
+	createdAt: new Date('2023-01-01'),
+	updatedAt: new Date('2023-01-01'),
+	lastLogin: new Date('2023-01-01'),
 }
 ```
 
@@ -58,22 +58,22 @@ const mockUser: TUser = {
 ```typescript
 // ❌ Current pattern in user.services.test.ts
 const mockUserRepository: IUserRepository = {
-  findUserById: vi.fn(),
-  findUserByEmail: vi.fn(),
-  createUser: vi.fn(),
-  updateLastLogin: vi.fn(),
-  updateUser: vi.fn(),
+	findUserById: vi.fn(),
+	findUserByEmail: vi.fn(),
+	createUser: vi.fn(),
+	updateLastLogin: vi.fn(),
+	updateUser: vi.fn(),
 }
 
 const mockCognitoService = {
-  getAuthUser: mockGetAuthUser,
-  signUpUser: vi.fn(),
-  confirmSignUp: vi.fn(),
-  resendConfirmationCode: vi.fn(),
-  signInUser: vi.fn(),
-  signOutUser: vi.fn(),
-  forgotPassword: vi.fn(),
-  confirmForgotPassword: vi.fn(),
+	getAuthUser: mockGetAuthUser,
+	signUpUser: vi.fn(),
+	confirmSignUp: vi.fn(),
+	resendConfirmationCode: vi.fn(),
+	signInUser: vi.fn(),
+	signOutUser: vi.fn(),
+	forgotPassword: vi.fn(),
+	confirmForgotPassword: vi.fn(),
 } as unknown as CognitoService
 ```
 
@@ -112,15 +112,15 @@ mockNext = expressMocks.next
 ```typescript
 // ❌ Current pattern - duplicate test cases
 it('should validate email format', () => {
-  expect(validateEmail('valid@example.com')).toBe(true)
+	expect(validateEmail('valid@example.com')).toBe(true)
 })
 
 it('should reject invalid email', () => {
-  expect(validateEmail('invalid')).toBe(false)
+	expect(validateEmail('invalid')).toBe(false)
 })
 
 it('should reject empty email', () => {
-  expect(validateEmail('')).toBe(false)
+	expect(validateEmail('')).toBe(false)
 })
 ```
 
@@ -133,14 +133,14 @@ it('should reject empty email', () => {
 ```typescript
 // ❌ Hardcoded test data
 const mockUser: TUser = {
-  id: '123e4567-e89b-12d3-a456-426614174000',
-  email: 'test@example.com',
-  emailVerified: true,
-  firstName: 'John',
-  lastName: 'Doe',
-  createdAt: new Date('2023-01-01'),
-  updatedAt: new Date('2023-01-01'),
-  lastLogin: new Date('2023-01-01'),
+	id: '123e4567-e89b-12d3-a456-426614174000',
+	email: 'test@example.com',
+	emailVerified: true,
+	firstName: 'John',
+	lastName: 'Doe',
+	createdAt: new Date('2023-01-01'),
+	updatedAt: new Date('2023-01-01'),
+	lastLogin: new Date('2023-01-01'),
 }
 ```
 
@@ -151,8 +151,8 @@ const mockUser: TUser = {
 import { createMockData } from '../../../utils/test-helpers'
 
 const mockUser = createMockData.user({
-  email: 'test@example.com',
-  emailVerified: true,
+	email: 'test@example.com',
+	emailVerified: true,
 })
 ```
 
@@ -177,11 +177,11 @@ const mockUser = createMockData.user({
 ```typescript
 // ❌ Manual service mocking
 const mockUserRepository: IUserRepository = {
-  findUserById: vi.fn(),
-  findUserByEmail: vi.fn(),
-  createUser: vi.fn(),
-  updateLastLogin: vi.fn(),
-  updateUser: vi.fn(),
+	findUserById: vi.fn(),
+	findUserByEmail: vi.fn(),
+	createUser: vi.fn(),
+	updateLastLogin: vi.fn(),
+	updateUser: vi.fn(),
 }
 ```
 
@@ -220,9 +220,9 @@ let mockResponse: Partial<Response>
 let mockNext: NextFunction
 
 beforeEach(() => {
-  const expressMocks = mockExpress.setup()
-  mockResponse = expressMocks.res
-  mockNext = expressMocks.next
+	const expressMocks = mockExpress.setup()
+	mockResponse = expressMocks.res
+	mockNext = expressMocks.next
 })
 ```
 
@@ -233,8 +233,8 @@ beforeEach(() => {
 import { createMockExpressObjects } from '../../../utils/test-helpers/enhanced-mocks'
 
 const { req, res, next } = createMockExpressObjects({
-  body: { email: 'test@example.com' },
-  params: { id: '123' },
+	body: { email: 'test@example.com' },
+	params: { id: '123' },
 })
 ```
 
@@ -259,15 +259,15 @@ const { req, res, next } = createMockExpressObjects({
 ```typescript
 // ❌ Duplicate test cases
 it('should validate email format', () => {
-  expect(validateEmail('valid@example.com')).toBe(true)
+	expect(validateEmail('valid@example.com')).toBe(true)
 })
 
 it('should reject invalid email', () => {
-  expect(validateEmail('invalid')).toBe(false)
+	expect(validateEmail('invalid')).toBe(false)
 })
 
 it('should reject empty email', () => {
-  expect(validateEmail('')).toBe(false)
+	expect(validateEmail('')).toBe(false)
 })
 ```
 
@@ -276,14 +276,14 @@ it('should reject empty email', () => {
 ```typescript
 // ✅ Parameterized testing
 describe.each([
-  ['valid@example.com', true],
-  ['invalid', false],
-  ['', false],
-  ['another@valid.com', true],
+	['valid@example.com', true],
+	['invalid', false],
+	['', false],
+	['another@valid.com', true],
 ])('Email validation: %s', (email, expected) => {
-  it(`should ${expected ? 'accept' : 'reject'} ${email}`, () => {
-    expect(validateEmail(email)).toBe(expected)
-  })
+	it(`should ${expected ? 'accept' : 'reject'} ${email}`, () => {
+		expect(validateEmail(email)).toBe(expected)
+	})
 })
 ```
 
@@ -324,18 +324,21 @@ describe.each([
 ```typescript
 // Before
 const mockUserRepository: IUserRepository = {
-  findUserById: vi.fn(),
-  // ... more manual mocks
+	findUserById: vi.fn(),
+	// ... more manual mocks
 }
 
 const mockUser: TUser = {
-  id: '123e4567-e89b-12d3-a456-426614174000',
-  email: 'test@example.com',
-  // ... hardcoded data
+	id: '123e4567-e89b-12d3-a456-426614174000',
+	email: 'test@example.com',
+	// ... hardcoded data
 }
 
 // After
-import { createMockUserService, createMockData } from '../../../utils/test-helpers'
+import {
+	createMockUserService,
+	createMockData,
+} from '../../../utils/test-helpers'
 
 const mockUserService = createMockUserService()
 const mockUser = createMockData.user({ email: 'test@example.com' })
@@ -366,17 +369,17 @@ let mockResponse: Partial<Response>
 let mockNext: NextFunction
 
 beforeEach(() => {
-  const expressMocks = mockExpress.setup()
-  mockResponse = expressMocks.res
-  mockNext = expressMocks.next
+	const expressMocks = mockExpress.setup()
+	mockResponse = expressMocks.res
+	mockNext = expressMocks.next
 })
 
 // After
 import { createMockExpressObjects } from '../../../utils/test-helpers/enhanced-mocks'
 
 const { req, res, next } = createMockExpressObjects({
-  body: { email: 'test@example.com' },
-  params: { id: '123' },
+	body: { email: 'test@example.com' },
+	params: { id: '123' },
 })
 ```
 
@@ -401,9 +404,9 @@ const { req, res, next } = createMockExpressObjects({
 ```typescript
 // Before
 const mockCipher: MockCipher = {
-  update: vi.fn().mockReturnValue('encrypted'),
-  final: vi.fn().mockReturnValue('text'),
-  getAuthTag: vi.fn().mockReturnValue(mockAuthTag),
+	update: vi.fn().mockReturnValue('encrypted'),
+	final: vi.fn().mockReturnValue('text'),
+	getAuthTag: vi.fn().mockReturnValue(mockAuthTag),
 }
 
 // After
