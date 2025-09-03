@@ -29,7 +29,6 @@ env:
   PNPM_VERSION: '10.14.0'
   # Test configuration
   VITEST_REPORTER: 'verbose'
-  VITEST_COVERAGE_REPORTER: 'json,lcov,text,html'
   # Performance thresholds
   MAX_TEST_DURATION_MS: 300000 # 5 minutes max for test suite
   MAX_INDIVIDUAL_TEST_MS: 30000 # 30 seconds max for individual test
@@ -190,29 +189,27 @@ jobs:
           # Create test-specific environment configuration
           mkdir -p apps/${{ matrix.package }}
 
-          # Set environment variables for Express API tests
-          if [ "${{ matrix.package }}" = "express-api" ]; then
-            echo "NODE_ENV=test" >> $GITHUB_ENV
-            echo "APP_ENV=test" >> $GITHUB_ENV
-            echo "SERVER_PORT=3000" >> $GITHUB_ENV
-            echo "API_KEY=test-api-key-at-least-32-chars-long-for-testing-purposes" >> $GITHUB_ENV
-            echo "AWS_COGNITO_REGION=us-east-1" >> $GITHUB_ENV
-            echo "AWS_COGNITO_USER_POOL_ID=test-pool-id" >> $GITHUB_ENV
-            echo "AWS_COGNITO_USER_POOL_CLIENT_ID=test-client-id" >> $GITHUB_ENV
-            echo "AWS_COGNITO_USER_POOL_SECRET_KEY=test-secret-key-at-least-32-chars-long-for-testing" >> $GITHUB_ENV
-            echo "COOKIE_ENCRYPTION_KEY=test-cookie-key-at-least-32-chars-long-for-testing" >> $GITHUB_ENV
-            echo "REDIS_URL=redis://localhost:6379" >> $GITHUB_ENV
-            echo "RELATIONAL_DATABASE_URL=postgres://test:test@localhost:5432/test_db" >> $GITHUB_ENV
-            echo "OPENAI_API_KEY=sk-test-openai-key-for-testing-purposes-only" >> $GITHUB_ENV
-            echo "COOKIE_DOMAIN=localhost" >> $GITHUB_ENV
-            echo "AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30" >> $GITHUB_ENV
-            echo "RATE_LIMIT_WINDOW_MS=900000" >> $GITHUB_ENV
-            echo "RATE_LIMIT_MAX_REQUESTS=100" >> $GITHUB_ENV
-            echo "AUTH_RATE_LIMIT_WINDOW_MS=3600000" >> $GITHUB_ENV
-            echo "AUTH_RATE_LIMIT_MAX_REQUESTS=10" >> $GITHUB_ENV
-            echo "API_RATE_LIMIT_WINDOW_MS=60000" >> $GITHUB_ENV
-            echo "API_RATE_LIMIT_MAX_REQUESTS=60" >> $GITHUB_ENV
-          fi
+          # Set environment variables for Express API tests (needed for API client build)
+          echo "NODE_ENV=test" >> $GITHUB_ENV
+          echo "APP_ENV=test" >> $GITHUB_ENV
+          echo "SERVER_PORT=3000" >> $GITHUB_ENV
+          echo "API_KEY=test-api-key-at-least-32-chars-long-for-testing-purposes" >> $GITHUB_ENV
+          echo "AWS_COGNITO_REGION=us-east-1" >> $GITHUB_ENV
+          echo "AWS_COGNITO_USER_POOL_ID=test-pool-id" >> $GITHUB_ENV
+          echo "AWS_COGNITO_USER_POOL_CLIENT_ID=test-client-id" >> $GITHUB_ENV
+          echo "AWS_COGNITO_USER_POOL_SECRET_KEY=test-secret-key-at-least-32-chars-long-for-testing" >> $GITHUB_ENV
+          echo "COOKIE_ENCRYPTION_KEY=test-cookie-key-at-least-32-chars-long-for-testing" >> $GITHUB_ENV
+          echo "REDIS_URL=redis://localhost:6379" >> $GITHUB_ENV
+          echo "RELATIONAL_DATABASE_URL=postgres://test:test@localhost:5432/test_db" >> $GITHUB_ENV
+          echo "OPENAI_API_KEY=sk-test-openai-key-for-testing-purposes-only" >> $GITHUB_ENV
+          echo "COOKIE_DOMAIN=localhost" >> $GITHUB_ENV
+          echo "AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30" >> $GITHUB_ENV
+          echo "RATE_LIMIT_WINDOW_MS=900000" >> $GITHUB_ENV
+          echo "RATE_LIMIT_MAX_REQUESTS=100" >> $GITHUB_ENV
+          echo "AUTH_RATE_LIMIT_WINDOW_MS=3600000" >> $GITHUB_ENV
+          echo "AUTH_RATE_LIMIT_MAX_REQUESTS=10" >> $GITHUB_ENV
+          echo "API_RATE_LIMIT_WINDOW_MS=60000" >> $GITHUB_ENV
+          echo "API_RATE_LIMIT_MAX_REQUESTS=60" >> $GITHUB_ENV
 
           # Basic test environment variables (for other packages)
           cat > apps/${{ matrix.package }}/.env.test << EOF
@@ -263,7 +260,6 @@ jobs:
 
           # Set test-specific configuration
           export VITEST_REPORTER="${{ env.VITEST_REPORTER }}"
-          export VITEST_COVERAGE_REPORTER="${{ env.VITEST_COVERAGE_REPORTER }}"
 
           # Calculate test timeout
           timeout_seconds=$((${{ matrix.timeout }} / 1000))
@@ -500,7 +496,8 @@ jobs:
       - name: Set job status
         run: |
           # Check if any test jobs failed
-          if [ "${{ contains(needs.test-execution.result, 'failure') }}" = "true" ]; then
+          # For matrix jobs, we need to check if any individual job failed
+          if [ "${{ needs.test-execution.result }}" = "failure" ]; then
             echo "❌ Some test suites failed"
             exit 1
           else

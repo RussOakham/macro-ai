@@ -32,15 +32,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build types package
-        run: pnpm --filter @repo/macro-ai-api-client build
-
-      - name: Generate MSW handlers
-        run: |
-          echo "🔧 Generating MSW handlers from OpenAPI spec..."
-          pnpm --filter client-ui generate:msw
-          echo "✅ MSW handlers generated successfully"
-
       - name: Setup test environment
         run: |
           echo "🔧 Setting up test environment variables..."
@@ -68,6 +59,15 @@ jobs:
           echo "API_RATE_LIMIT_MAX_REQUESTS=60" >> $GITHUB_ENV
 
           echo "✅ Test environment configured"
+
+      - name: Build types package
+        run: pnpm --filter @repo/macro-ai-api-client build
+
+      - name: Generate MSW handlers
+        run: |
+          echo "🔧 Generating MSW handlers from OpenAPI spec..."
+          pnpm --filter client-ui generate:msw
+          echo "✅ MSW handlers generated successfully"
 
       - name: Run tests with coverage
         run: pnpm test:coverage
