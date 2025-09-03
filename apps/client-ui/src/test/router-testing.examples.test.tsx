@@ -140,7 +140,7 @@ describe('TanStack Router Testing Examples', () => {
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
 				expect(routerTestUtils.getCurrentRoute(router as any).pathname).toBe(
 					'/about',
-				) // eslint-disable-line @typescript-eslint/no-explicit-any
+				)
 			})
 		})
 

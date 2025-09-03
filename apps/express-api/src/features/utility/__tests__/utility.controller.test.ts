@@ -62,7 +62,7 @@ describe('UtilityController', () => {
 				it(`should ${scenario}`, () => {
 					// Arrange
 					vi.mocked(utilityService.getHealthStatus).mockReturnValue(
-						mockError ? [null, mockError] : [mockResult, null]
+						mockError ? [null, mockError] : [mockResult, null],
 					)
 
 					// Act
@@ -104,7 +104,7 @@ describe('UtilityController', () => {
 				it(`should ${scenario}`, () => {
 					// Arrange
 					vi.mocked(utilityService.getSystemInfo).mockReturnValue(
-						mockError ? [null, mockError] : [mockResult, null]
+						mockError ? [null, mockError] : [mockResult, null],
 					)
 
 					// Act

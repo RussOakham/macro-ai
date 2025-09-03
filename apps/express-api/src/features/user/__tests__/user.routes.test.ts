@@ -1,4 +1,3 @@
-
 import express, { NextFunction, Request, Response, Router } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import request from 'supertest'
@@ -160,7 +159,14 @@ describe('userRouter', () => {
 			],
 		] as const)(
 			'should handle %s',
-			(scenario, expectedStatus, expectedResponse, shouldCallController, shouldFailAuth, shouldFailRateLimit) => {
+			(
+				scenario,
+				expectedStatus,
+				expectedResponse,
+				shouldCallController,
+				shouldFailAuth,
+				shouldFailRateLimit,
+			) => {
 				it(`should ${scenario}`, async () => {
 					// Arrange
 					if (shouldFailAuth) {
@@ -198,7 +204,10 @@ describe('userRouter', () => {
 						vi.mocked(userController.getCurrentUser).mockImplementation(
 							async (req: Request, res: Response, next: NextFunction) => {
 								if (scenario === 'user not found') {
-									const error = new NotFoundError('User not found', 'userController')
+									const error = new NotFoundError(
+										'User not found',
+										'userController',
+									)
 									next(error)
 								} else if (scenario === 'internal server error') {
 									const error = new Error('Unexpected error')
@@ -290,7 +299,15 @@ describe('userRouter', () => {
 			],
 		] as const)(
 			'should handle %s',
-			(scenario, testUserId, expectedStatus, expectedResponse, shouldCallController, shouldFailAuth, shouldFailRateLimit) => {
+			(
+				scenario,
+				testUserId,
+				expectedStatus,
+				expectedResponse,
+				shouldCallController,
+				shouldFailAuth,
+				shouldFailRateLimit,
+			) => {
 				it(`should ${scenario}`, async () => {
 					// Arrange
 					if (shouldFailAuth) {
@@ -328,7 +345,10 @@ describe('userRouter', () => {
 						vi.mocked(userController.getUserById).mockImplementation(
 							async (req: Request, res: Response, next: NextFunction) => {
 								if (scenario === 'user not found') {
-									const error = new NotFoundError('User not found', 'userController')
+									const error = new NotFoundError(
+										'User not found',
+										'userController',
+									)
 									next(error)
 								} else if (scenario === 'internal server error') {
 									const error = new Error('Database connection failed')

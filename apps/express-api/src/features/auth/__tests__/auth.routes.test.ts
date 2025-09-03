@@ -1,4 +1,3 @@
-
 import express, { type Router } from 'express'
 import request from 'supertest'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -195,7 +194,9 @@ describe('Auth Routes', () => {
 					expect(response.status).toBe(expectedStatus)
 					expect(response.body).toEqual(expectedResponse)
 					expect(authRateLimiter).toHaveBeenCalled()
-					expect(validate).toHaveBeenCalledWith(confirmRegistrationRequestSchema)
+					expect(validate).toHaveBeenCalledWith(
+						confirmRegistrationRequestSchema,
+					)
 					expect(authController.confirmRegistration).toHaveBeenCalled()
 				})
 			},
@@ -225,7 +226,9 @@ describe('Auth Routes', () => {
 					expect(response.status).toBe(expectedStatus)
 					expect(response.body).toEqual(expectedResponse)
 					expect(authRateLimiter).toHaveBeenCalled()
-					expect(validate).toHaveBeenCalledWith(resendConfirmationCodeRequestSchema)
+					expect(validate).toHaveBeenCalledWith(
+						resendConfirmationCodeRequestSchema,
+					)
 					expect(authController.resendConfirmationCode).toHaveBeenCalled()
 				})
 			},
@@ -248,7 +251,9 @@ describe('Auth Routes', () => {
 			(scenario, requestData, expectedStatus, expectedResponse) => {
 				it(`should ${scenario}`, async () => {
 					// Act
-					const response = await request(app).post('/auth/login').send(requestData)
+					const response = await request(app)
+						.post('/auth/login')
+						.send(requestData)
 
 					// Assert
 					expect(response.status).toBe(expectedStatus)
@@ -325,18 +330,15 @@ describe('Auth Routes', () => {
 
 	describe('POST /auth/logout', () => {
 		describe.each([
-			[
-				'successful logout',
-				{},
-				200,
-				{ message: 'Logout successful' },
-			],
+			['successful logout', {}, 200, { message: 'Logout successful' }],
 		] as const)(
 			'should handle %s',
 			(scenario, requestData, expectedStatus, expectedResponse) => {
 				it(`should ${scenario}`, async () => {
 					// Act
-					const response = await request(app).post('/auth/logout').send(requestData)
+					const response = await request(app)
+						.post('/auth/logout')
+						.send(requestData)
 
 					// Assert
 					expect(response.status).toBe(expectedStatus)
@@ -350,18 +352,15 @@ describe('Auth Routes', () => {
 
 	describe('POST /auth/refresh', () => {
 		describe.each([
-			[
-				'successful token refresh',
-				{},
-				200,
-				{ message: 'Token refreshed' },
-			],
+			['successful token refresh', {}, 200, { message: 'Token refreshed' }],
 		] as const)(
 			'should handle %s',
 			(scenario, requestData, expectedStatus, expectedResponse) => {
 				it(`should ${scenario}`, async () => {
 					// Act
-					const response = await request(app).post('/auth/refresh').send(requestData)
+					const response = await request(app)
+						.post('/auth/refresh')
+						.send(requestData)
 
 					// Assert
 					expect(response.status).toBe(expectedStatus)
@@ -388,7 +387,9 @@ describe('Auth Routes', () => {
 			(scenario, requestData, expectedStatus, expectedResponse) => {
 				it(`should ${scenario}`, async () => {
 					// Act
-					const response = await request(app).get('/auth/user').send(requestData)
+					const response = await request(app)
+						.get('/auth/user')
+						.send(requestData)
 
 					// Assert
 					expect(response.status).toBe(expectedStatus)

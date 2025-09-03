@@ -382,7 +382,7 @@ describe('Rate Limit Middleware', () => {
 
 			// Act
 			await middleware.defaultRateLimiter(
-				mockRequest,
+				mockRequest as Request,
 				mockResponse,
 				mockNext,
 			)
@@ -404,7 +404,7 @@ describe('Rate Limit Middleware', () => {
 			// Act & Assert - Should not throw errors
 			expect(async () => {
 				await middleware.authRateLimiter(
-					mockRequest,
+					mockRequest as Request,
 					mockResponse,
 					mockNext,
 				)
@@ -427,7 +427,7 @@ describe('Rate Limit Middleware', () => {
 
 			// Act
 			await middleware.apiRateLimiter(
-				mockRequest,
+				mockRequest as Request,
 				mockResponse,
 				mockNext,
 			)
@@ -515,7 +515,7 @@ describe('Rate Limit Middleware', () => {
 			// Act & Assert - All rate limiters should work without errors
 			expect(async () => {
 				await middleware.defaultRateLimiter(
-					mockRequest,
+					mockRequest as Request,
 					mockResponse,
 					mockNext,
 				)
@@ -523,7 +523,7 @@ describe('Rate Limit Middleware', () => {
 
 			expect(async () => {
 				await middleware.authRateLimiter(
-					mockRequest,
+					mockRequest as Request,
 					mockResponse,
 					mockNext,
 				)
@@ -531,7 +531,7 @@ describe('Rate Limit Middleware', () => {
 
 			expect(async () => {
 				await middleware.apiRateLimiter(
-					mockRequest,
+					mockRequest as Request,
 					mockResponse,
 					mockNext,
 				)
@@ -633,7 +633,7 @@ describe('Rate Limit Middleware', () => {
 			// Test default handler (should log "Rate limit exceeded")
 			const defaultHandler = capturedHandlers[0]
 			if (defaultHandler) {
-				defaultHandler(mockRequest, mockRes1, mockNext, {
+				defaultHandler(mockRequest as Request, mockRes1 as Response, mockNext, {
 					statusCode: 429,
 					message: {
 						status: 429,
@@ -645,7 +645,7 @@ describe('Rate Limit Middleware', () => {
 			// Test auth handler (should log "Auth rate limit exceeded")
 			const authHandler = capturedHandlers[1]
 			if (authHandler) {
-				authHandler(mockRequest, mockRes2, mockNext, {
+				authHandler(mockRequest as Request, mockRes2 as Response, mockNext, {
 					statusCode: 429,
 					message: {
 						status: 429,
@@ -658,7 +658,7 @@ describe('Rate Limit Middleware', () => {
 			// Test API handler (should log "API rate limit exceeded")
 			const apiHandler = capturedHandlers[2]
 			if (apiHandler) {
-				apiHandler(mockRequest, mockRes3, mockNext, {
+				apiHandler(mockRequest as Request, mockRes3 as Response, mockNext, {
 					statusCode: 429,
 					message: {
 						status: 429,
@@ -721,24 +721,24 @@ describe('Rate Limit Middleware', () => {
 			const mockRes1 = mockExpress.createResponse()
 			const mockNext1 = vi.fn()
 			await middleware.defaultRateLimiter(
-				mockRequest,
-				mockRes1,
+				mockRequest as Request,
+				mockRes1 as Response,
 				mockNext1,
 			)
 
 			const mockRes2 = mockExpress.createResponse()
 			const mockNext2 = vi.fn()
 			await middleware.defaultRateLimiter(
-				mockRequest,
-				mockRes2,
+				mockRequest as Request,
+				mockRes2 as Response,
 				mockNext2,
 			)
 
 			const mockRes3 = mockExpress.createResponse()
 			const mockNext3 = vi.fn()
 			await middleware.defaultRateLimiter(
-				mockRequest,
-				mockRes3,
+				mockRequest as Request,
+				mockRes3 as Response,
 				mockNext3,
 			)
 
@@ -787,19 +787,19 @@ describe('Rate Limit Middleware', () => {
 
 			// Act - Test all three rate limiters
 			await middleware.defaultRateLimiter(
-				mockRequest,
+				mockRequest as Request,
 				mockResponse,
 				mockNext,
 			)
 
 			await middleware.authRateLimiter(
-				mockRequest,
+				mockRequest as Request,
 				mockResponse,
 				mockNext,
 			)
 
 			await middleware.apiRateLimiter(
-				mockRequest,
+				mockRequest as Request,
 				mockResponse,
 				mockNext,
 			)
