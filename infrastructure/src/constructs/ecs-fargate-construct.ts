@@ -215,8 +215,7 @@ export class EcsFargateConstruct extends Construct {
 		this.cluster = new ecs.Cluster(this, 'EcsCluster', {
 			vpc,
 			clusterName: `macro-ai-${environmentName}-cluster`,
-			// Note: containerInsightsV2 has complex type requirements, disabling for now
-			// TODO: Re-enable when type issues are resolved
+			containerInsights: true, // Enable CloudWatch Container Insights for monitoring
 			enableFargateCapacityProviders: true,
 		})
 

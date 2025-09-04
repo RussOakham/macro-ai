@@ -20,7 +20,6 @@ const babelPlugins = shouldUseReactCompiler
 const isActEnvironment = process.env.ACT_LOCAL === 'true'
 
 export default defineConfig({
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 	plugins: [
 		tanstackRouter(),
 		react({
@@ -28,7 +27,7 @@ export default defineConfig({
 				plugins: babelPlugins,
 			},
 		}),
-	] as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- Type assertion to resolve Vite version conflicts
+	],
 	resolve: {
 		alias: {
 			'@': path.resolve(__dirname, './src'),
@@ -74,12 +73,11 @@ export default defineConfig({
 				// Focus on testing hooks and business logic per CLAUDE.md guidelines
 			],
 			thresholds: {
-				global: {
-					statements: 60, // Lower threshold for React components initially
-					branches: 50,
-					functions: 60,
-					lines: 60,
-				},
+				// Lower threshold for React components initially
+				statements: 60,
+				branches: 50,
+				functions: 60,
+				lines: 60,
 			},
 		},
 		// Mock CSS modules and other assets
