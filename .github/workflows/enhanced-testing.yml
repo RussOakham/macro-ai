@@ -89,7 +89,7 @@ jobs:
               },
               {
                 "name": "Unit Tests - Client UI",
-                "package": "apps/client-ui"
+                "package": "apps/client-ui",
                 "test-pattern": "",
                 "exclude-pattern": "**/*.integration.test.* **/*.e2e.test.*",
                 "timeout": 120000,
