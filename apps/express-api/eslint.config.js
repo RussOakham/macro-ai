@@ -13,6 +13,7 @@ export default repoConfig.config(
 			'coverage-summary.json',
 			'*.lcov',
 			'scripts/**/*',
+			'../../scripts/**/*',
 		],
 	},
 	...repoConfig.configs.base,

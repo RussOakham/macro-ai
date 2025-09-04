@@ -1,8 +1,8 @@
 import React from 'react'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Button } from '@/components/ui/button'
 
@@ -27,10 +27,6 @@ describe('React Testing Library Examples', () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks()
-	})
-
-	afterEach(() => {
-		cleanup()
 	})
 
 	describe('1. Basic Component Rendering', () => {

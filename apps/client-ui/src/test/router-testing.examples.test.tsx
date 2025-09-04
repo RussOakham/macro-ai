@@ -6,8 +6,8 @@
  */
 
 import React from 'react'
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
 
 import { componentTesting, formTesting } from './component-test-utils'
 import {
@@ -63,9 +63,6 @@ const ProtectedPage = () => {
 }
 
 describe('TanStack Router Testing Examples', () => {
-	afterEach(() => {
-		cleanup()
-	})
 	describe('Basic Component Rendering', () => {
 		it('renders a simple component with router context', async () => {
 			await renderWithRouter(HomePage, {

@@ -4,7 +4,7 @@
 	"extends": "@total-typescript/tsconfig/bundler/no-dom/library-monorepo",
 	"compilerOptions": {
 		"target": "ES2022",
-		"lib": ["ES2022", "DOM"],
+		"lib": ["ES2022"],
 		"outDir": "./dist"
 	},
 	"exclude": ["node_modules"]

@@ -1,8 +1,8 @@
 import React from 'react'
 import { faker } from '@faker-js/faker'
 import {
-	GetAuthUserResponse,
-	PostAuthLoginResponse,
+	type GetAuthUserResponse,
+	type PostAuthLoginResponse,
 } from '@repo/macro-ai-api-client'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

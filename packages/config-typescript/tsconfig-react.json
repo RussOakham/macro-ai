@@ -10,8 +10,8 @@
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
 		"noFallthroughCasesInSwitch": true,
-		"noEmit": false,
-		"allowImportingTsExtensions": true,
+		"noEmit": true,
+		"allowImportingTsExtensions": false,
 		"verbatimModuleSyntax": false
 	}
 }
