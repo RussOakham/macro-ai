@@ -444,7 +444,8 @@ class UtilityService implements IUtilityService {
 		// For now, we'll check if database connection string is configured
 		// In a real implementation, you would ping the database
 		// TODO: Use proper config management for database URL
-		const databaseUrl = process.env.DATABASE_URL || process.env.RELATIONAL_DATABASE_URL
+		const databaseUrl =
+			process.env.DATABASE_URL ?? process.env.RELATIONAL_DATABASE_URL
 
 		if (!databaseUrl) {
 			return {
