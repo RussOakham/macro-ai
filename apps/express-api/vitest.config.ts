@@ -26,7 +26,6 @@ export default defineConfig({
 			],
 			// Per-package coverage reporting
 			reportsDirectory: './coverage',
-			reporter: ['text', 'json-summary', 'lcov'],
 			thresholds: {
 				global: {
 					statements: 80,

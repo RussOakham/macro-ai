@@ -198,15 +198,15 @@ jobs:
           echo "NODE_ENV=test" >> $GITHUB_ENV
           echo "APP_ENV=test" >> $GITHUB_ENV
           echo "SERVER_PORT=3000" >> $GITHUB_ENV
-          echo "API_KEY=local-test-api-key-not-a-real-secret" >> $GITHUB_ENV
+          echo "API_KEY=local-test-api-key-not-a-real-secret-for-testing-purposes" >> $GITHUB_ENV
           echo "AWS_COGNITO_REGION=us-east-1" >> $GITHUB_ENV
           echo "AWS_COGNITO_USER_POOL_ID=test-pool-id" >> $GITHUB_ENV
           echo "AWS_COGNITO_USER_POOL_CLIENT_ID=test-client-id" >> $GITHUB_ENV
           echo "AWS_COGNITO_USER_POOL_SECRET_KEY=local-test-cognito-secret-not-real" >> $GITHUB_ENV
-          echo "COOKIE_ENCRYPTION_KEY=local-test-cookie-key-not-real" >> $GITHUB_ENV
+          echo "COOKIE_ENCRYPTION_KEY=local-test-cookie-key-not-real-32-chars-minimum" >> $GITHUB_ENV
           echo "REDIS_URL=redis://localhost:6379" >> $GITHUB_ENV
           echo "RELATIONAL_DATABASE_URL=postgres://test:test@localhost:5432/test_db" >> $GITHUB_ENV
-          echo "OPENAI_API_KEY=local-test-openai-key-not-real" >> $GITHUB_ENV
+          echo "OPENAI_API_KEY=sk-local-test-openai-key-not-real-for-testing" >> $GITHUB_ENV
           echo "COOKIE_DOMAIN=localhost" >> $GITHUB_ENV
           echo "AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30" >> $GITHUB_ENV
           echo "RATE_LIMIT_WINDOW_MS=900000" >> $GITHUB_ENV
@@ -221,7 +221,7 @@ jobs:
           NODE_ENV=test
           APP_ENV=test
           SERVER_PORT=3000
-          API_KEY=local-test-api-key-not-a-real-secret
+          API_KEY=local-test-api-key-not-a-real-secret-for-testing-purposes
 
           # Test database URLs (will be overridden by integration tests if needed)
           REDIS_URL=redis://localhost:6379
@@ -232,8 +232,8 @@ jobs:
           AWS_COGNITO_USER_POOL_ID=test-pool-id
           AWS_COGNITO_USER_POOL_CLIENT_ID=test-client-id
           AWS_COGNITO_USER_POOL_SECRET_KEY=local-test-cognito-secret-not-real
-          COOKIE_ENCRYPTION_KEY=local-test-cookie-key-not-real
-          OPENAI_API_KEY=local-test-openai-key-not-real
+          COOKIE_ENCRYPTION_KEY=local-test-cookie-key-not-real-32-chars-minimum
+          OPENAI_API_KEY=sk-local-test-openai-key-not-real-for-testing
           EOF
 
           echo "✅ Test environment configured"

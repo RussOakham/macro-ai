@@ -13,7 +13,7 @@ export const commonTestConfig = {
 	],
 	coverage: {
 		provider: 'v8' as const,
-		reporter: ['text', 'json', 'html', 'lcov'],
+		reporter: ['text', 'json-summary', 'html', 'lcov'],
 		reportsDirectory: './coverage',
 		exclude: [
 			'node_modules/',
