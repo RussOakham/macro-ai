@@ -77,7 +77,7 @@ jobs:
             "include": [
               {
                 "name": "Unit Tests - Express API",
-                "package": "express-api",
+                "package": "apps/express-api",
                 "test-pattern": "src/**/*.test.{ts,tsx}",
                 "exclude-pattern": "**/*.integration.test.* **/*.e2e.test.*",
                 "timeout": 120000,
@@ -85,7 +85,7 @@ jobs:
               },
               {
                 "name": "Unit Tests - Client UI",
-                "package": "client-ui", 
+                "package": "apps/client-ui", 
                 "test-pattern": "src/**/*.test.{ts,tsx}",
                 "exclude-pattern": "**/*.integration.test.* **/*.e2e.test.*",
                 "timeout": 120000,
@@ -108,7 +108,7 @@ jobs:
             matrix=$(echo "$matrix" | jq '.include += [
               {
                 "name": "Integration Tests",
-                "package": "express-api",
+                "package": "apps/express-api",
                 "test-pattern": "**/*.integration.test.*",
                 "exclude-pattern": "",
                 "timeout": 300000,
@@ -188,11 +188,7 @@ jobs:
           echo "🔧 Setting up test environment for ${{ matrix.name }}..."
 
           # Create test-specific environment configuration
-          if [[ "${{ matrix.package }}" == packages/* ]]; then
-            mkdir -p ${{ matrix.package }}
-          else
-            mkdir -p apps/${{ matrix.package }}
-          fi
+          mkdir -p ${{ matrix.package }}
 
           # Set environment variables for Express API tests (needed for API client build)
           echo "NODE_ENV=test" >> $GITHUB_ENV
@@ -217,11 +213,7 @@ jobs:
           echo "API_RATE_LIMIT_MAX_REQUESTS=60" >> $GITHUB_ENV
 
           # Basic test environment variables (for other packages)
-          if [[ "${{ matrix.package }}" == packages/* ]]; then
-            cat > ${{ matrix.package }}/.env.test << EOF
-          else
-            cat > apps/${{ matrix.package }}/.env.test << EOF
-          fi
+          cat > ${{ matrix.package }}/.env.test << EOF
           NODE_ENV=test
           APP_ENV=test
           SERVER_PORT=3000
@@ -273,12 +265,7 @@ jobs:
           # Calculate test timeout
           timeout_seconds=$((${{ matrix.timeout }} / 1000))
 
-          # Handle different package locations
-          if [[ "${{ matrix.package }}" == packages/* ]]; then
-            cd ${{ matrix.package }}
-          else
-            cd apps/${{ matrix.package }}
-          fi
+          cd ${{ matrix.package }}
 
           # Run tests with timeout and capture output
           start_time=$(date +%s)
@@ -357,12 +344,7 @@ jobs:
         run: |
           echo "📊 Extracting test metrics..."
 
-          # Handle different package locations
-          if [[ "${{ matrix.package }}" == packages/* ]]; then
-            cd ${{ matrix.package }}
-          else
-            cd apps/${{ matrix.package }}
-          fi
+          cd ${{ matrix.package }}
 
           # Extract coverage percentage
           if [ -f "coverage/coverage-summary.json" ]; then
