@@ -52,6 +52,7 @@
 	},
 	"devDependencies": {
 		"@faker-js/faker": "^10.0.0",
+		"@repo/config-testing": "workspace:*",
 		"@types/node": "catalog:",
 		"@vitest/coverage-v8": "catalog:",
 		"@vitest/ui": "^3.2.4",

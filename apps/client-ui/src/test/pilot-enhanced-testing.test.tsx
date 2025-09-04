@@ -12,6 +12,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Button } from '@/components/ui/button'
 
+import '@testing-library/jest-dom/vitest'
+
 import {
 	createNetworkErrorScenarios,
 	createTrackingMockApiClient,

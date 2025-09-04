@@ -1,8 +1,8 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Button } from '@/components/ui/button'
 
@@ -27,6 +27,10 @@ describe('React Testing Library Examples', () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks()
+	})
+
+	afterEach(() => {
+		cleanup()
 	})
 
 	describe('1. Basic Component Rendering', () => {
@@ -61,7 +65,7 @@ describe('React Testing Library Examples', () => {
 
 			render(<Button onClick={handleClick}>Click me</Button>)
 
-			const button = screen.getByRole('button')
+			const button = screen.getByRole('button', { name: /click me/i })
 			await user.click(button)
 
 			expect(handleClick).toHaveBeenCalledTimes(1)
@@ -73,7 +77,7 @@ describe('React Testing Library Examples', () => {
 
 			render(<Button onClick={handleClick}>Click me</Button>)
 
-			const button = screen.getByRole('button')
+			const button = screen.getByRole('button', { name: /click me/i })
 			button.focus()
 			await user.keyboard('{Enter}')
 
@@ -90,7 +94,7 @@ describe('React Testing Library Examples', () => {
 				</Button>,
 			)
 
-			const button = screen.getByRole('button')
+			const button = screen.getByRole('button', { name: /disabled/i })
 			expect(button).toBeDisabled()
 
 			await user.click(button)
@@ -522,7 +526,7 @@ describe('React Testing Library Examples', () => {
 				</Button>,
 			)
 
-			const button = screen.getByRole('button')
+			const button = screen.getByRole('button', { name: 'Close dialog' })
 			expect(button).toHaveAttribute('aria-label', 'Close dialog')
 			expect(button).toHaveAttribute('aria-describedby', 'close-description')
 		})

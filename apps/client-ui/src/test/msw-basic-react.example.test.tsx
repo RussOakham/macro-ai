@@ -4,10 +4,10 @@ import {
 	GetAuthUserResponse,
 	PostAuthLoginResponse,
 } from '@repo/macro-ai-api-client'
-import { render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 // Import MSW setup utilities
 import { setupMSWForTests, setupServerWithHandlers } from './msw-setup'
@@ -149,6 +149,10 @@ describe('Basic MSW React Integration', () => {
 	// Setup MSW for all tests in this describe block
 	setupMSWForTests()
 
+	afterEach(() => {
+		cleanup()
+	})
+
 	describe('1. Form Submission with API Mocking', () => {
 		it('should handle successful login', async () => {
 			const user = userEvent.setup()
@@ -215,16 +219,19 @@ describe('Basic MSW React Integration', () => {
 
 			render(<LoginComponent />)
 
-			// Fill out the form
-			await user.type(screen.getByLabelText(/email/i), 'test@example.com')
-			await user.type(screen.getByLabelText(/password/i), 'password')
+			// Fill out the form using specific selectors
+			const emailInput = screen.getByLabelText('Email:')
+			await user.type(emailInput, 'test@example.com')
+			const passwordInput = screen.getByLabelText('Password:')
+			await user.type(passwordInput, 'password')
 
 			// Submit the form
-			await user.click(screen.getByRole('button', { name: /login/i }))
+			const loginButton = screen.getByRole('button', { name: /login/i })
+			await user.click(loginButton)
 
 			// Should show loading state
 			expect(screen.getByText('Logging in...')).toBeInTheDocument()
-			expect(screen.getByRole('button')).toBeDisabled()
+			expect(loginButton).toBeDisabled()
 
 			// Wait for completion
 			await waitFor(() => {
@@ -246,8 +253,17 @@ describe('Basic MSW React Integration', () => {
 			})
 
 			// Should display user information (using auto-generated OpenAPI data)
-			expect(screen.getByText(/email:/i)).toBeInTheDocument()
-			expect(screen.getByText(/verified:/i)).toBeInTheDocument()
+			// Use more specific selectors to avoid conflicts with form labels
+			expect(
+				screen.getByText((content, element) => {
+					return content.includes('Email:') && element?.tagName === 'P'
+				}),
+			).toBeInTheDocument()
+			expect(
+				screen.getByText((content, element) => {
+					return content.includes('Verified:') && element?.tagName === 'P'
+				}),
+			).toBeInTheDocument()
 		})
 
 		it('should handle API errors gracefully', async () => {
