@@ -14,35 +14,10 @@ import {
 
 export default defineConfig({
 	test: {
+		// Coverage configuration is now handled by individual project configs
 		coverage: {
 			...commonTestConfig.coverage,
-			include: [
-				'apps/express-api/src/**/*.ts',
-				'packages/macro-ai-api-client/src/**/*.ts',
-			],
-			exclude: [
-				...commonTestConfig.coverage.exclude,
-				'apps/express-api/src/**/*.test.ts',
-				'apps/express-api/src/**/*.spec.ts',
-				'apps/express-api/src/**/*.d.ts',
-				'packages/macro-ai-api-client/src/**/*.test.ts',
-				'packages/macro-ai-api-client/src/**/*.spec.ts',
-				'packages/macro-ai-api-client/src/**/*.d.ts',
-				// Exclude auto-generated files from api-client
-				'packages/macro-ai-api-client/src/types/',
-				'packages/macro-ai-api-client/src/services/',
-				'packages/macro-ai-api-client/src/index.ts',
-				'packages/macro-ai-api-client/scripts/',
-			],
-			// 80% coverage for backend and api-client code
-			thresholds: {
-				global: {
-					statements: 80,
-					branches: 75,
-					functions: 80,
-					lines: 80,
-				},
-			},
+			// Project-specific includes and excludes are handled in individual configs
 		},
 		projects: [
 			// Express API - Backend tests
@@ -60,6 +35,7 @@ export default defineConfig({
 						},
 					},
 					setupFiles: ['./apps/express-api/vitest.setup.ts'],
+					exclude: [...commonTestConfig.exclude, 'src/test/mocks/**/*'],
 				},
 			},
 
@@ -89,6 +65,7 @@ export default defineConfig({
 						...commonTestConfig.exclude,
 						'src/routeTree.gen.ts',
 						'src/**/*.e2e.test.{ts,tsx}',
+						'src/test/mocks/**/*',
 					],
 					// Mock CSS modules and other assets
 					css: {
