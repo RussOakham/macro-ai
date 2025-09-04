@@ -1,18 +1,15 @@
 {
 	"$schema": "http://json.schemastore.org/tsconfig",
 	"display": "Vite Node Client",
-	"extends": "./tsconfig-base.json",
+	"extends": "@total-typescript/tsconfig/bundler/no-dom/app",
 	"compilerOptions": {
 		"target": "ES2022",
 		"lib": ["ES2022"],
-		"module": "ESNext",
-
-		/* Bundler mode */
-		"moduleDetection": "force",
-
-		/* Linting */
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
-		"noFallthroughCasesInSwitch": true
+		"noFallthroughCasesInSwitch": true,
+		"noEmit": false,
+		"allowImportingTsExtensions": true,
+		"verbatimModuleSyntax": false
 	}
 }

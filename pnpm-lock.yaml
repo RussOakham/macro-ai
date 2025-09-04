@@ -609,7 +609,11 @@ importers:
         specifier: 'catalog:'
         version: 5.9.2
 
-  packages/config-typescript: {}
+  packages/config-typescript:
+    dependencies:
+      '@total-typescript/tsconfig':
+        specifier: ^1.0.4
+        version: 1.0.4
 
   packages/macro-ai-api-client:
     dependencies:
@@ -4095,6 +4099,12 @@ packages:
     engines: { node: '>=12', npm: '>=6' }
     peerDependencies:
       '@testing-library/dom': '>=7.21.4'
+
+  '@total-typescript/tsconfig@1.0.4':
+    resolution:
+      {
+        integrity: sha512-fO4ctMPGz1kOFOQ4RCPBRBfMy3gDn+pegUfrGyUFRMv/Rd0ZM3/SHH3hFCYG4u6bPLG8OlmOGcBLDexvyr3A5w==,
+      }
 
   '@tybys/wasm-util@0.10.0':
     resolution:
@@ -13860,6 +13870,8 @@ snapshots:
   '@testing-library/user-event@14.6.1(@testing-library/dom@10.4.1)':
     dependencies:
       '@testing-library/dom': 10.4.1
+
+  '@total-typescript/tsconfig@1.0.4': {}
 
   '@tybys/wasm-util@0.10.0':
     dependencies:
