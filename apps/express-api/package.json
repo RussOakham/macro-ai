@@ -12,7 +12,7 @@
 	"scripts": {
 		"validate-env": "node scripts/validate-env.js",
 		"prebuild": "npm run validate-env",
-		"build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/index.js --sourcemap --packages=external && tsx src/utils/swagger/generate-swagger.ts",
+		"build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/index.js --sourcemap --packages=external && ( [ \"$ACT_LOCAL\" = \"true\" ] && echo \"Skipping swagger generation in act environment\" || tsx src/utils/swagger/generate-swagger.ts )",
 		"build:docker": "NODE_ENV=production SERVER_PORT=3000 esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/index.js --sourcemap --packages=external && NODE_ENV=production SERVER_PORT=3000 tsx src/utils/swagger/generate-swagger.ts",
 		"start": "node dist/index.js",
 		"dev:tsc": "tsc --watch -preserveWatchOutput",

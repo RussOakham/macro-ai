@@ -67,12 +67,22 @@ run_single() {
     local job="$1"
     if [ -z "$job" ]; then
         print_error "Please specify a job name"
-        echo "Usage: $0 single <job-name>"
+        echo "Usage: $0 single <job-name> or $0 <job-name>"
         exit 1
     fi
 
     print_header
     echo "Running single job: $job"
+    echo
+
+    "$SCRIPT_DIR/run-parallel.sh" single "$job"
+}
+
+# Handle job name passed directly as first argument
+run_job_direct() {
+    local job="$1"
+    print_header
+    echo "Running job: $job"
     echo
 
     "$SCRIPT_DIR/run-parallel.sh" single "$job"
@@ -87,6 +97,7 @@ show_help() {
     echo "  $0 fast          - Run only fast jobs (lint-md, actionlint, gitleaks)"
     echo "  $0 dependent     - Run dependent jobs (build, lint, test)"
     echo "  $0 single <job>  - Run a single job"
+    echo "  $0 <job>         - Run a specific job directly"
     echo "  $0 help          - Show this help"
     echo
     echo "Available Jobs:"
@@ -99,6 +110,7 @@ show_help() {
     echo "  $0 all"
     echo "  $0 fast"
     echo "  $0 single setup"
+    echo "  $0 setup"
 }
 
 # Main logic
@@ -115,7 +127,15 @@ case "${1:-help}" in
     "single")
         run_single "$2"
         ;;
-    "help"|*)
+    "help")
         show_help
+        ;;
+    *)
+        # Check if the argument is a valid job name
+        if act -W "$WORKFLOW_FILE" --list 2>/dev/null | grep -q " $1$"; then
+            run_job_direct "$1"
+        else
+            show_help
+        fi
         ;;
 esac

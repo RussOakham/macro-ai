@@ -86,7 +86,8 @@
 				"TEST_VAR2",
 				"TEST_ENVIRONMENT",
 				"TEST_FRONTEND_URL",
-				"MODE"
+				"MODE",
+				"ACT_LOCAL"
 			]
 		},
 		"test:ui": {

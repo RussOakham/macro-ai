@@ -62,3 +62,6 @@ yarn-error.log*
 
 # Act local testing configuration
 .act/secrets
+
+# Auto-generated API client code
+packages/macro-ai-api-client/src/client

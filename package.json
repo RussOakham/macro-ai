@@ -46,7 +46,9 @@
 		"test:integration:staging": "cd tests/integration && TEST_ENVIRONMENT=staging ./run-integration-tests.sh",
 		"test:integration:production": "cd tests/integration && TEST_ENVIRONMENT=hobby ./run-integration-tests.sh",
 		"type-check": "turbo run type-check",
-		"prepare": "husky"
+		"prepare": "husky",
+		"act": "./.act/run-fast.sh",
+		"act:job": "./.act/run-fast.sh job"
 	},
 	"devDependencies": {
 		"@faker-js/faker": "^10.0.0",

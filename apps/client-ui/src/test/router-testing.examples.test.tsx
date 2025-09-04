@@ -68,6 +68,7 @@ describe('TanStack Router Testing Examples', () => {
 			await renderWithRouter(HomePage, {
 				pathPattern: '/home',
 				initialEntry: '/home',
+				uniqueId: 'basic-routing',
 			})
 
 			expect(screen.getByText('Home Page')).toBeInTheDocument()
@@ -77,6 +78,7 @@ describe('TanStack Router Testing Examples', () => {
 		it('renders component at specific route', async () => {
 			await renderWithRouter(AboutPage, {
 				pathPattern: '/about',
+				uniqueId: 'specific-route',
 				initialEntry: '/about',
 			})
 
@@ -97,6 +99,7 @@ describe('TanStack Router Testing Examples', () => {
 			await renderWithRouter(UserDetail, {
 				pathPattern: '/users/$userId',
 				initialEntry: '/users/123',
+				uniqueId: 'dynamic-routes',
 			})
 
 			expect(screen.getByText('User Profile')).toBeInTheDocument()
@@ -110,6 +113,7 @@ describe('TanStack Router Testing Examples', () => {
 				pathPattern: '/dashboard',
 				initialEntry: '/dashboard',
 				context: createAuthenticatedContext(),
+				uniqueId: 'authenticated-context',
 			})
 
 			expect(screen.getByText('Protected Content')).toBeInTheDocument()
@@ -119,6 +123,7 @@ describe('TanStack Router Testing Examples', () => {
 			await renderWithRouter(ProtectedPage, {
 				pathPattern: '/dashboard',
 				initialEntry: '/dashboard',
+				uniqueId: 'unauthenticated-context',
 				context: createUnauthenticatedContext(),
 			})
 
@@ -131,6 +136,7 @@ describe('TanStack Router Testing Examples', () => {
 			const { router } = await renderWithRouter(HomePage, {
 				pathPattern: '/home',
 				initialEntry: '/home',
+				uniqueId: 'router-navigation',
 			})
 
 			// Navigate to a different route
@@ -149,6 +155,7 @@ describe('TanStack Router Testing Examples', () => {
 		it('can get current route information', async () => {
 			const { router } = await renderWithRouter(AboutPage, {
 				pathPattern: '/about',
+				uniqueId: 'current-route-info',
 				initialEntry: '/about',
 			})
 
@@ -197,6 +204,7 @@ describe('TanStack Router Testing Examples', () => {
 			await renderWithRouter(EnhancedHomePage, {
 				pathPattern: '/enhanced-home',
 				initialEntry: '/enhanced-home',
+				uniqueId: 'enhanced-home',
 			})
 
 			// Use enhanced component testing utilities
@@ -251,6 +259,7 @@ describe('TanStack Router Testing Examples', () => {
 			await renderWithRouter(InteractivePage, {
 				pathPattern: '/interactive',
 				initialEntry: '/interactive',
+				uniqueId: 'interactive-page',
 			})
 
 			// Test initial state
@@ -384,6 +393,7 @@ describe('TanStack Router Testing Examples', () => {
 			const { renderResult } = await renderWithRouter(FormPage, {
 				pathPattern: '/register',
 				initialEntry: '/register',
+				uniqueId: 'form-page',
 			})
 
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -493,6 +503,7 @@ describe('TanStack Router Testing Examples', () => {
 			const { renderResult } = await renderWithRouter(StatefulPage, {
 				pathPattern: '/items',
 				initialEntry: '/items',
+				uniqueId: 'stateful-page',
 			})
 
 			// Test initial state

@@ -17,6 +17,9 @@ WORKFLOW_FILE=".github/workflows/hygiene-checks.yml"
 SECRETS_FILE=".act/secrets"
 PARALLEL_JOBS=4
 
+# Generate unique session ID to avoid container name conflicts
+SESSION_ID=$(date +%s)_$RANDOM
+
 # Function to print colored output
 print_status() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -34,14 +37,28 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Function to cleanup containers
+cleanup_containers() {
+    print_status "Cleaning up act containers..."
+    docker stop $(docker ps -aq --filter name=act- 2>/dev/null) 2>/dev/null || true
+    docker rm $(docker ps -aq --filter name=act- 2>/dev/null) 2>/dev/null || true
+}
+
 # Function to run a single job
 run_job() {
     local job_name="$1"
     local container_suffix="$2"
 
-    print_status "Starting job: $job_name (Container: $container_suffix)"
+    print_status "Starting job: $job_name (Container: $container_suffix, Session: $SESSION_ID)"
 
-    # Run the job with parallel execution support
+    # Clean up any existing containers with similar names
+    cleanup_containers
+
+    # Create unique container name to avoid conflicts
+    local job_name_lower=$(echo "$job_name" | tr '[:upper:]' '[:lower:]')
+    local unique_container_name="act-${job_name_lower}-${SESSION_ID}-$container_suffix"
+
+    # Run the job (act handles container naming internally)
     if act -W "$WORKFLOW_FILE" --secret-file "$SECRETS_FILE" --env ACT_LOCAL=true -j "$job_name"; then
         print_success "Job $job_name completed successfully"
         return 0
@@ -152,6 +169,9 @@ main() {
     local command="$1"
     shift
 
+    # Cleanup containers at start
+    cleanup_containers
+
     case "$command" in
         "all")
             run_all_respecting_dependencies
@@ -190,10 +210,13 @@ main() {
             echo "  $0 jobs \"lint-md,actionlint,gitleaks\""
             echo "  $0 single setup"
             echo
-            echo "Current workflow: $WORKFLOW_FILE"
-            echo "Secrets file: $SECRETS_FILE"
-            ;;
+                echo "Current workflow: $WORKFLOW_FILE"
+    echo "Secrets file: $SECRETS_FILE"
+    ;;
     esac
+
+    # Final cleanup
+    cleanup_containers
 }
 
 # Run main function with all arguments

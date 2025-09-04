@@ -46,6 +46,7 @@ export const renderWithRouter = async (
 		initialEntry?: string
 		context?: MockRouterContext
 		renderOptions?: RenderOptions
+		uniqueId?: string
 	} = { pathPattern: '/' },
 ) => {
 	const {
@@ -53,13 +54,14 @@ export const renderWithRouter = async (
 		initialEntry = pathPattern,
 		context = mockUnauthenticatedContext,
 		renderOptions,
+		uniqueId,
 	} = options
 
 	// Root route with minimal Outlet for rendering child routes
 	const rootRoute = createRootRoute({
 		component: () => (
 			<>
-				<div data-testid="root-layout" />
+				<div data-testid={`root-layout${uniqueId ? `-${uniqueId}` : ''}`} />
 				<Outlet />
 			</>
 		),
@@ -92,7 +94,7 @@ export const renderWithRouter = async (
 	const renderResult = render(<RouterProvider router={router} />, renderOptions)
 
 	// Wait for router hydration
-	await renderResult.findByTestId('root-layout')
+	await renderResult.findByTestId(`root-layout${uniqueId ? `-${uniqueId}` : ''}`)
 
 	return { router, renderResult }
 }

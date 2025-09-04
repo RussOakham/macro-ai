@@ -22,7 +22,7 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 				})
 
 				return (
-					<form data-testid="test-form">
+					<form data-testid="test-form-text">
 						<input
 							name="name"
 							type="text"
@@ -65,7 +65,7 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 				const [country, setCountry] = React.useState('')
 
 				return (
-					<form data-testid="test-form">
+					<form data-testid="test-form-select">
 						<select
 							name="country"
 							value={country}
@@ -101,7 +101,7 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 				const [gender, setGender] = React.useState('')
 
 				return (
-					<form data-testid="test-form">
+					<form data-testid="test-form-radio">
 						<label>
 							<input
 								name="gender"
@@ -150,7 +150,7 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 				const [newsletter, setNewsletter] = React.useState(false)
 
 				return (
-					<form data-testid="test-form">
+					<form data-testid="test-form-checkbox">
 						<label>
 							<input
 								name="newsletter"
@@ -185,9 +185,9 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 	describe('Component Testing Utilities', () => {
 		it('should find elements by test id', () => {
 			const TestComponent = () => (
-				<div data-testid="test-container">
-					<h1 data-testid="test-title">Test Title</h1>
-					<p data-testid="test-content">Test content</p>
+				<div data-testid="test-container-standalone">
+					<h1 data-testid="test-title-standalone">Test Title</h1>
+					<p data-testid="test-content-standalone">Test content</p>
 				</div>
 			)
 
@@ -195,13 +195,13 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 
 			// Test element finding
 			expect(
-				componentTesting.getElementByTestId('test-container'),
+				componentTesting.getElementByTestId('test-container-standalone'),
 			).toBeInTheDocument()
 			expect(
-				componentTesting.getElementByTestId('test-title'),
+				componentTesting.getElementByTestId('test-title-standalone'),
 			).toBeInTheDocument()
 			expect(
-				componentTesting.getElementByTestId('test-content'),
+				componentTesting.getElementByTestId('test-content-standalone'),
 			).toBeInTheDocument()
 		})
 

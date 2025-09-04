@@ -21,7 +21,7 @@ describe('Enhanced Testing Utilities Validation', () => {
 				})
 
 				return (
-					<form data-testid="test-form">
+					<form data-testid="test-form-text-simple">
 						<input
 							name="name"
 							type="text"
@@ -64,7 +64,7 @@ describe('Enhanced Testing Utilities Validation', () => {
 				const [country, setCountry] = React.useState('')
 
 				return (
-					<form data-testid="test-form">
+					<form data-testid="test-form-select-simple">
 						<select
 							name="country"
 							value={country}
@@ -100,7 +100,7 @@ describe('Enhanced Testing Utilities Validation', () => {
 				const [bio, setBio] = React.useState('')
 
 				return (
-					<form data-testid="test-form">
+					<form data-testid="test-form-textarea-simple">
 						<textarea
 							name="bio"
 							value={bio}
@@ -132,7 +132,7 @@ describe('Enhanced Testing Utilities Validation', () => {
 				const [gender, setGender] = React.useState('')
 
 				return (
-					<form data-testid="test-form">
+					<form data-testid="test-form-radio-simple">
 						<label>
 							<input
 								name="gender"
@@ -182,7 +182,7 @@ describe('Enhanced Testing Utilities Validation', () => {
 				const [updates, setUpdates] = React.useState(false)
 
 				return (
-					<form data-testid="test-form">
+					<form data-testid="test-form-checkbox-simple">
 						<label>
 							<input
 								name="newsletter"
@@ -230,9 +230,9 @@ describe('Enhanced Testing Utilities Validation', () => {
 	describe('Component Testing Utilities', () => {
 		it('should find elements by test id', () => {
 			const TestComponent = () => (
-				<div data-testid="test-container">
-					<h1 data-testid="test-title">Test Title</h1>
-					<p data-testid="test-content">Test content</p>
+				<div data-testid="test-container-simple">
+					<h1 data-testid="test-title-simple">Test Title</h1>
+					<p data-testid="test-content-simple">Test content</p>
 				</div>
 			)
 
@@ -240,13 +240,13 @@ describe('Enhanced Testing Utilities Validation', () => {
 
 			// Test element finding
 			expect(
-				componentTesting.getElementByTestId('test-container'),
+				componentTesting.getElementByTestId('test-container-simple'),
 			).toBeInTheDocument()
 			expect(
-				componentTesting.getElementByTestId('test-title'),
+				componentTesting.getElementByTestId('test-title-simple'),
 			).toBeInTheDocument()
 			expect(
-				componentTesting.getElementByTestId('test-content'),
+				componentTesting.getElementByTestId('test-content-simple'),
 			).toBeInTheDocument()
 		})
 

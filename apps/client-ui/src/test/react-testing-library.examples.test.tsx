@@ -567,7 +567,7 @@ describe('React Testing Library Examples', () => {
 
 				return (
 					<div>
-						<span data-testid="count">{count}</span>
+						<span data-testid="count-hook">{count}</span>
 						<button onClick={increment}>+</button>
 						<button onClick={decrement}>-</button>
 					</div>
@@ -576,18 +576,18 @@ describe('React Testing Library Examples', () => {
 
 			render(<Counter />)
 
-			expect(screen.getByTestId('count')).toHaveTextContent('5')
+			expect(screen.getByTestId('count-hook')).toHaveTextContent('5')
 
 			const incrementButton = screen.getByRole('button', { name: '+' })
 			const decrementButton = screen.getByRole('button', { name: '-' })
 
 			// Test increment
 			await user.click(incrementButton)
-			expect(screen.getByTestId('count')).toHaveTextContent('6')
+			expect(screen.getByTestId('count-hook')).toHaveTextContent('6')
 
 			// Test decrement
 			await user.click(decrementButton)
-			expect(screen.getByTestId('count')).toHaveTextContent('5')
+			expect(screen.getByTestId('count-hook')).toHaveTextContent('5')
 		})
 	})
 
@@ -656,7 +656,7 @@ describe('React Testing Library Examples', () => {
 
 				return (
 					<div>
-						<span data-testid="count">{count}</span>
+						<span data-testid="count-state">{count}</span>
 						<button
 							onClick={() => {
 								setCount((c) => c + 1)
@@ -678,19 +678,19 @@ describe('React Testing Library Examples', () => {
 			render(<StateComponent />)
 
 			// Initial state
-			expect(screen.getByTestId('count')).toHaveTextContent('0')
+			expect(screen.getByTestId('count-state')).toHaveTextContent('0')
 
 			// Increment
 			await user.click(screen.getByRole('button', { name: /increment/i }))
-			expect(screen.getByTestId('count')).toHaveTextContent('1')
+			expect(screen.getByTestId('count-state')).toHaveTextContent('1')
 
 			// Increment again
 			await user.click(screen.getByRole('button', { name: /increment/i }))
-			expect(screen.getByTestId('count')).toHaveTextContent('2')
+			expect(screen.getByTestId('count-state')).toHaveTextContent('2')
 
 			// Reset
 			await user.click(screen.getByRole('button', { name: /reset/i }))
-			expect(screen.getByTestId('count')).toHaveTextContent('0')
+			expect(screen.getByTestId('count-state')).toHaveTextContent('0')
 		})
 	})
 

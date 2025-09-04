@@ -6,4 +6,4 @@
 routeTree.gen.ts    
 
 # Hey-Api autogen files
-packages\macro-ai-api-client\src\client
+**/macro-ai-api-client/src/client
