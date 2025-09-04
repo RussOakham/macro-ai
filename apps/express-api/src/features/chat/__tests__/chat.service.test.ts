@@ -6,6 +6,7 @@ import {
 	UnauthorizedError,
 	ValidationError,
 } from '../../../utils/errors.ts'
+import { MockDataFactory } from '../../../utils/test-helpers/advanced-mocking.ts'
 import { mockErrorHandling } from '../../../utils/test-helpers/error-handling.mock.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 
@@ -21,8 +22,6 @@ import type {
 	ChatMessageRole,
 	IChatRepository,
 	IMessageRepository,
-	TChat,
-	TChatMessage,
 } from '../chat.types.ts'
 import type { VectorService } from '../vector.service.ts'
 
@@ -107,28 +106,23 @@ async function* createMockStream(chunks: string[]): AsyncIterable<string> {
 describe('ChatService (Refactored)', () => {
 	let chatService: ChatService
 
-	// Mock data
-	const mockUserId = 'user-123'
-	const mockChatId = 'chat-456'
-	const mockMessageId = 'message-789'
+	// Mock data using MockDataFactory
+	const mockUserId = MockDataFactory.uuid()
+	const mockChatId = MockDataFactory.uuid()
+	const mockMessageId = MockDataFactory.uuid()
 
-	const mockChat: TChat = {
+	const mockChat = MockDataFactory.createChat({
 		id: mockChatId,
 		userId: mockUserId,
 		title: 'Test Chat',
-		createdAt: new Date('2023-01-01'),
-		updatedAt: new Date('2023-01-01'),
-	}
+	})
 
-	const mockChatMessage: TChatMessage = {
+	const mockChatMessage = MockDataFactory.createMessage({
 		id: mockMessageId,
 		chatId: mockChatId,
 		role: 'user',
 		content: 'Hello, world!',
-		metadata: {},
-		embedding: null,
-		createdAt: new Date('2023-01-01'),
-	}
+	})
 
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -292,65 +286,40 @@ describe('ChatService (Refactored)', () => {
 			expect(error).toBe(repositoryError)
 		})
 
-		it('should return validation error for empty title', async () => {
-			// Arrange
-			const invalidRequest = { userId: mockUserId, title: '' }
-			const validationError = new ValidationError(
+		describe.each([
+			[
+				'empty title',
+				{ userId: mockUserId, title: '' },
 				'Valid title is required',
-				undefined,
-				'chatService',
-			)
-
-			vi.mocked(tryCatchSync).mockReturnValue([null, validationError])
-
-			// Act
-			const [result, error] = await chatService.createChat(invalidRequest)
-
-			// Assert
-			expect(result).toBeNull()
-			expect(error).toBe(validationError)
-		})
-
-		it('should return validation error for title too long', async () => {
-			// Arrange
-			const longTitle = 'a'.repeat(256) // 256 characters, exceeds 255 limit
-			const invalidRequest = { userId: mockUserId, title: longTitle }
-			const validationError = new ValidationError(
+			],
+			[
+				'title too long',
+				{ userId: mockUserId, title: 'a'.repeat(256) },
 				'Title must be 255 characters or less',
-				undefined,
-				'chatService',
-			)
-
-			vi.mocked(tryCatchSync).mockReturnValue([null, validationError])
-
-			// Act
-			const [result, error] = await chatService.createChat(invalidRequest)
-
-			// Assert
-			expect(result).toBeNull()
-			expect(error).toBe(validationError)
-		})
-
-		it('should return validation error for invalid userId type', async () => {
-			// Arrange
-			const invalidRequest = {
-				userId: 123 as unknown as string,
-				title: 'Valid Title',
-			}
-			const validationError = new ValidationError(
+			],
+			[
+				'invalid userId type',
+				{ userId: 123 as unknown as string, title: 'Valid Title' },
 				'Valid userId is required',
-				undefined,
-				'chatService',
-			)
+			],
+		])('Validation scenarios: %s', (description, request, expectedMessage) => {
+			it(`should return validation error for ${description}`, async () => {
+				// Arrange
+				const validationError = new ValidationError(
+					expectedMessage,
+					undefined,
+					'chatService',
+				)
 
-			vi.mocked(tryCatchSync).mockReturnValue([null, validationError])
+				vi.mocked(tryCatchSync).mockReturnValue([null, validationError])
 
-			// Act
-			const [result, error] = await chatService.createChat(invalidRequest)
+				// Act
+				const [result, error] = await chatService.createChat(request)
 
-			// Assert
-			expect(result).toBeNull()
-			expect(error).toBe(validationError)
+				// Assert
+				expect(result).toBeNull()
+				expect(error).toBe(validationError)
+			})
 		})
 	})
 
@@ -378,65 +347,59 @@ describe('ChatService (Refactored)', () => {
 			expect(error).toBeNull()
 		})
 
-		it('should return validation error for invalid pagination ranges', async () => {
-			// Act
-			const [result, error] = await chatService.getUserChats(mockUserId, {
-				page: 0,
-				limit: 101,
-			})
-
-			// Assert
-			expect(result).toBeNull()
-			expect(error).toBeInstanceOf(ValidationError)
-			expect(error?.message).toBe(
+		describe.each([
+			[
+				'invalid pagination ranges',
+				{ page: 0, limit: 101 },
 				'Invalid pagination parameters: page must be >= 1, limit must be between 1 and 100',
-			)
-		})
-
-		it('should return validation error for non-integer page parameter', async () => {
-			// Act
-			const [result, error] = await chatService.getUserChats(mockUserId, {
-				page: 2.5,
-				limit: 20,
-			})
-
-			// Assert
-			expect(result).toBeNull()
-			expect(error).toBeInstanceOf(ValidationError)
-			expect(error?.message).toBe(
+			],
+			[
+				'non-integer page parameter',
+				{ page: 2.5, limit: 20 },
 				'Invalid pagination parameters: page and limit must be integers',
-			)
-		})
-
-		it('should return validation error for non-integer limit parameter', async () => {
-			// Act
-			const [result, error] = await chatService.getUserChats(mockUserId, {
-				page: 1,
-				limit: 15.7,
-			})
-
-			// Assert
-			expect(result).toBeNull()
-			expect(error).toBeInstanceOf(ValidationError)
-			expect(error?.message).toBe(
+			],
+			[
+				'non-integer limit parameter',
+				{ page: 1, limit: 15.7 },
 				'Invalid pagination parameters: page and limit must be integers',
-			)
-		})
-
-		it('should return validation error for both non-integer parameters', async () => {
-			// Act
-			const [result, error] = await chatService.getUserChats(mockUserId, {
-				page: 1.3,
-				limit: 20.8,
-			})
-
-			// Assert
-			expect(result).toBeNull()
-			expect(error).toBeInstanceOf(ValidationError)
-			expect(error?.message).toBe(
+			],
+			[
+				'both non-integer parameters',
+				{ page: 1.3, limit: 20.8 },
 				'Invalid pagination parameters: page and limit must be integers',
-			)
-		})
+			],
+			[
+				'negative page',
+				{ page: -1, limit: 20 },
+				'Invalid pagination parameters: page must be >= 1, limit must be between 1 and 100',
+			],
+			[
+				'zero limit',
+				{ page: 1, limit: 0 },
+				'Invalid pagination parameters: page must be >= 1, limit must be between 1 and 100',
+			],
+			[
+				'limit exceeding maximum',
+				{ page: 1, limit: 101 },
+				'Invalid pagination parameters: page must be >= 1, limit must be between 1 and 100',
+			],
+		])(
+			'Pagination validation scenarios: %s',
+			(description, options, expectedMessage) => {
+				it(`should return validation error for ${description}`, async () => {
+					// Act
+					const [result, error] = await chatService.getUserChats(
+						mockUserId,
+						options,
+					)
+
+					// Assert
+					expect(result).toBeNull()
+					expect(error).toBeInstanceOf(ValidationError)
+					expect(error?.message).toBe(expectedMessage)
+				})
+			},
+		)
 
 		it('should use default pagination when no options provided', async () => {
 			// Arrange
@@ -456,42 +419,6 @@ describe('ChatService (Refactored)', () => {
 			)
 			expect(result).toEqual(expectedResult)
 			expect(error).toBeNull()
-		})
-
-		it('should return validation error for negative page', async () => {
-			// Act
-			const [result, error] = await chatService.getUserChats(mockUserId, {
-				page: -1,
-				limit: 20,
-			})
-
-			// Assert
-			expect(result).toBeNull()
-			expect(error).toBeInstanceOf(ValidationError)
-		})
-
-		it('should return validation error for zero limit', async () => {
-			// Act
-			const [result, error] = await chatService.getUserChats(mockUserId, {
-				page: 1,
-				limit: 0,
-			})
-
-			// Assert
-			expect(result).toBeNull()
-			expect(error).toBeInstanceOf(ValidationError)
-		})
-
-		it('should return validation error for limit exceeding maximum', async () => {
-			// Act
-			const [result, error] = await chatService.getUserChats(mockUserId, {
-				page: 1,
-				limit: 101,
-			})
-
-			// Assert
-			expect(result).toBeNull()
-			expect(error).toBeInstanceOf(ValidationError)
 		})
 
 		it('should return error when repository fails', async () => {
@@ -753,76 +680,57 @@ describe('ChatService (Refactored)', () => {
 			expect(error).toBeInstanceOf(UnauthorizedError)
 		})
 
-		it('should return validation error for empty content', async () => {
-			// Arrange
-			const invalidRequest = {
-				chatId: mockChatId,
-				userId: mockUserId,
-				content: '',
-			}
-			const validationError = new ValidationError(
+		describe.each([
+			[
+				'empty content',
+				{
+					chatId: mockChatId,
+					userId: mockUserId,
+					content: '',
+				},
 				'Valid content is required',
-				undefined,
-				'chatService',
-			)
-
-			vi.mocked(tryCatchSync).mockReturnValue([null, validationError])
-
-			// Act
-			const [result, error] = await chatService.sendMessage(invalidRequest)
-
-			// Assert
-			expect(result).toBeNull()
-			expect(error).toBe(validationError)
-		})
-
-		it('should return validation error for content too long', async () => {
-			// Arrange
-			const longContent = 'a'.repeat(10001) // Exceeds 10000 character limit
-			const invalidRequest = {
-				chatId: mockChatId,
-				userId: mockUserId,
-				content: longContent,
-			}
-			const validationError = new ValidationError(
+			],
+			[
+				'content too long',
+				{
+					chatId: mockChatId,
+					userId: mockUserId,
+					content: 'a'.repeat(10001),
+				},
 				'Content must be 10000 characters or less',
-				undefined,
-				'chatService',
-			)
-
-			vi.mocked(tryCatchSync).mockReturnValue([null, validationError])
-
-			// Act
-			const [result, error] = await chatService.sendMessage(invalidRequest)
-
-			// Assert
-			expect(result).toBeNull()
-			expect(error).toBe(validationError)
-		})
-
-		it('should return validation error for invalid role', async () => {
-			// Arrange
-			const invalidRequest = {
-				chatId: mockChatId,
-				userId: mockUserId,
-				content: 'Hello AI',
-				role: 'invalid-role' as unknown as ChatMessageRole,
-			}
-			const validationError = new ValidationError(
+			],
+			[
+				'invalid role',
+				{
+					chatId: mockChatId,
+					userId: mockUserId,
+					content: 'Hello AI',
+					role: 'invalid-role' as unknown as ChatMessageRole,
+				},
 				'Invalid role specified',
-				undefined,
-				'chatService',
-			)
+			],
+		])(
+			'Message validation scenarios: %s',
+			(description, request, expectedMessage) => {
+				it(`should return validation error for ${description}`, async () => {
+					// Arrange
+					const validationError = new ValidationError(
+						expectedMessage,
+						undefined,
+						'chatService',
+					)
 
-			vi.mocked(tryCatchSync).mockReturnValue([null, validationError])
+					vi.mocked(tryCatchSync).mockReturnValue([null, validationError])
 
-			// Act
-			const [result, error] = await chatService.sendMessage(invalidRequest)
+					// Act
+					const [result, error] = await chatService.sendMessage(request)
 
-			// Assert
-			expect(result).toBeNull()
-			expect(error).toBe(validationError)
-		})
+					// Assert
+					expect(result).toBeNull()
+					expect(error).toBe(validationError)
+				})
+			},
+		)
 
 		it('should return error when ownership verification fails in sendMessage', async () => {
 			// Arrange

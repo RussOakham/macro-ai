@@ -32,16 +32,28 @@
 		"test": "turbo run test",
 		"test:ui": "turbo run --filter @repo/express-api test:ui",
 		"test:coverage": "turbo run test:coverage",
+		"test:coverage:report": "pnpm test:coverage && node coverage-badge.config.cjs",
+		"test:coverage:open": "pnpm test:coverage && open apps/express-api/coverage/index.html",
+		"test:coverage:ci": "turbo run test:coverage --reporter=json",
+		"test:coverage:analyze": "node scripts/analyze-coverage-gaps.cjs",
+		"test:report": "node scripts/test-automation-utils.cjs report",
+		"test:aggregate": "node scripts/test-automation-utils.cjs aggregate",
+		"test:optimize": "node scripts/test-automation-utils.cjs optimize",
+		"test:flaky": "node scripts/test-automation-utils.cjs flaky",
 		"test:integration": "cd tests/integration && pnpm test",
 		"test:integration:full": "cd tests/integration && ./run-integration-tests.sh",
 		"test:integration:parameter-store": "./tests/integration/run-parameter-store-integration.sh",
 		"test:integration:staging": "cd tests/integration && TEST_ENVIRONMENT=staging ./run-integration-tests.sh",
 		"test:integration:production": "cd tests/integration && TEST_ENVIRONMENT=hobby ./run-integration-tests.sh",
 		"type-check": "turbo run type-check",
-		"prepare": "husky"
+		"prepare": "husky",
+		"act": "./.act/run-fast.sh",
+		"act:job": "./.act/run-fast.sh job"
 	},
 	"devDependencies": {
+		"@faker-js/faker": "^10.0.0",
 		"@types/node": "catalog:",
+		"@vitest/coverage-v8": "catalog:",
 		"@vitest/ui": "^3.2.4",
 		"commitizen": "^4.3.1",
 		"cz-conventional-changelog": "^3.3.0",
@@ -50,16 +62,19 @@
 		"husky": "^9.1.7",
 		"knip": "^5.63.0",
 		"markdownlint-cli2": "catalog:",
+		"msw": "^2.11.1",
+		"node-mocks-http": "^1.17.2",
 		"prettier": "catalog:",
 		"tsx": "^4.20.5",
 		"turbo": "^2.5.6",
 		"vitest": "^3.2.4",
+		"vitest-mock-extended": "^3.1.0",
 		"yaml": "^2.8.1"
 	},
-	"packageManager": "pnpm@10.14.0+sha512.ad27a79641b49c3e481a16a805baa71817a04bbe06a38d17e60e2eaee83f6a146c6a688125f5792e48dd5ba30e7da52a5cda4c3992b9ccf333f9ce223af84748",
+	"packageManager": "pnpm@10.14.0",
 	"engines": {
-		"node": ">=20.0.0",
-		"pnpm": ">=9.0.0"
+		"node": ">=20.19.4",
+		"pnpm": ">=10.14.0"
 	},
 	"pnpm": {
 		"overrides": {

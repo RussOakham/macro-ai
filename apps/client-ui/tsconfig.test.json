@@ -1,0 +1,22 @@
+{
+	"$schema": "http://json.schemastore.org/tsconfig",
+	"extends": "@repo/config-typescript/tsconfig-react.json",
+	"include": [
+		"src/test/**/*",
+		"src/**/*.test.*",
+		"src/**/*.spec.*",
+		"vitest.config.ts"
+	],
+	"exclude": ["node_modules", "dist", "coverage"],
+	"compilerOptions": {
+		"composite": false,
+		"declaration": false,
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["./src/*"]
+		},
+		"types": ["vitest/globals", "jsdom"]
+	}
+}

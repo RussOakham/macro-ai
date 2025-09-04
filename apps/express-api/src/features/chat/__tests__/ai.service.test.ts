@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { AppError } from '../../../utils/errors.ts'
+import { MockDataFactory } from '../../../utils/test-helpers/advanced-mocking.ts'
 import { mockConfig } from '../../../utils/test-helpers/config.mock.ts'
 import { mockErrorHandling } from '../../../utils/test-helpers/error-handling.mock.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
@@ -49,16 +50,13 @@ describe('AIService', () => {
 	let mockChatModel: ReturnType<typeof vi.fn>
 	let mockEmbeddingModel: ReturnType<typeof vi.fn>
 
-	// Mock data
-	const mockMessages: {
-		role: 'user' | 'assistant' | 'system'
-		content: string
-	}[] = [
+	// Mock data using enhanced factory
+	const mockMessages = MockDataFactory.aiMessages([
 		{ role: 'user', content: 'Hello, AI!' },
 		{ role: 'assistant', content: 'Hello, human!' },
-	]
+	])
 
-	const mockEmbedding = [0.1, 0.2, 0.3, 0.4, 0.5]
+	const mockEmbedding = MockDataFactory.embedding()
 	const mockResponseText = 'This is a mock AI response'
 
 	beforeEach(async () => {
@@ -299,18 +297,14 @@ describe('AIService', () => {
 		it('should generate embeddings for multiple texts successfully', async () => {
 			// Arrange
 			const mockTexts = ['Text 1', 'Text 2', 'Text 3']
-			const mockEmbeddings = [
-				[0.1, 0.2, 0.3],
-				[0.4, 0.5, 0.6],
-				[0.7, 0.8, 0.9],
-			]
+			const mockEmbeddings = MockDataFactory.embeddings(3)
 
 			// Mock generateEmbedding to return different embeddings for each call
 			const generateEmbeddingSpy = vi
 				.spyOn(aiService, 'generateEmbedding')
-				.mockResolvedValueOnce([[0.1, 0.2, 0.3], null])
-				.mockResolvedValueOnce([[0.4, 0.5, 0.6], null])
-				.mockResolvedValueOnce([[0.7, 0.8, 0.9], null])
+				.mockResolvedValueOnce([mockEmbeddings[0] ?? [], null])
+				.mockResolvedValueOnce([mockEmbeddings[1] ?? [], null])
+				.mockResolvedValueOnce([mockEmbeddings[2] ?? [], null])
 
 			// Act
 			const [result, error] = await aiService.generateEmbeddings(mockTexts)
@@ -495,38 +489,46 @@ describe('AIService', () => {
 	})
 
 	describe('validateMessages', () => {
-		it('should validate messages successfully', () => {
-			// Arrange
-			const validMessages = [
-				{ role: 'user', content: 'Hello' },
-				{ role: 'assistant', content: 'Hi there!' },
-				{ role: 'system', content: 'You are a helpful assistant' },
-			]
+		describe.each([
+			['user', 'Hello', 'valid user message'],
+			['assistant', 'Hi there!', 'valid assistant message'],
+			['system', 'You are a helpful assistant', 'valid system message'],
+		])('Message validation: %s', (role, content, description) => {
+			it(`should validate ${description}`, () => {
+				// Arrange
+				const validMessages = [{ role, content }]
 
-			// Act
-			const [result, error] = aiService.validateMessages(validMessages)
+				// Act
+				const [result, error] = aiService.validateMessages(validMessages)
 
-			// Assert
-			expect(result).toEqual(validMessages)
-			expect(error).toBeNull()
+				// Assert
+				expect(result).toEqual(validMessages)
+				expect(error).toBeNull()
+			})
 		})
 
-		it('should return error for invalid role', () => {
-			// Arrange
-			const invalidMessages = [
-				{ role: 'user', content: 'Hello' },
-				{ role: 'invalid_role', content: 'Invalid message' },
-			]
+		describe.each([
+			['invalid_role', 'Invalid message role: invalid_role'],
+			['bot', 'Invalid message role: bot'],
+			['admin', 'Invalid message role: admin'],
+		])('Invalid role validation: %s', (invalidRole, expectedMessage) => {
+			it(`should return error for invalid role: ${invalidRole}`, () => {
+				// Arrange
+				const invalidMessages = [
+					{ role: 'user', content: 'Hello' },
+					{ role: invalidRole, content: 'Invalid message' },
+				]
 
-			// Act
-			const [result, error] = aiService.validateMessages(invalidMessages)
+				// Act
+				const [result, error] = aiService.validateMessages(invalidMessages)
 
-			// Assert
-			expect(result).toBeNull()
-			expect(error).toBeTruthy()
-			expect(error?.name).toBe('ValidationError') // Check name instead of instanceof
-			expect(error?.message).toBe('Invalid message role: invalid_role')
-			expect(error?.service).toBe('aiService')
+				// Assert
+				expect(result).toBeNull()
+				expect(error).toBeTruthy()
+				expect(error?.name).toBe('ValidationError')
+				expect(error?.message).toBe(expectedMessage)
+				expect(error?.service).toBe('aiService')
+			})
 		})
 
 		it('should return error for empty content', () => {

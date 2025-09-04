@@ -13,6 +13,7 @@ export default repoConfig.config(
 			'coverage-final.json',
 			'coverage-summary.json',
 			'*.lcov',
+			'src/test/mocks/**',
 		],
 	},
 	...repoConfig.configs.base,
@@ -22,7 +23,11 @@ export default repoConfig.config(
 	{
 		languageOptions: {
 			parserOptions: {
-				project: ['./tsconfig.node.json', './tsconfig.app.json'],
+				project: [
+					'./tsconfig.node.json',
+					'./tsconfig.app.json',
+					'./tsconfig.test.json',
+				],
 				tsconfigRootDir: import.meta.dirname,
 				globals: globals.browser,
 			},

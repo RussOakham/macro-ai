@@ -45,7 +45,8 @@
 				"CI",
 				"PREVIEW",
 				"AWS_ACCESS_KEY_ID",
-				"AWS_SECRET_ACCESS_KEY"
+				"AWS_SECRET_ACCESS_KEY",
+				"MODE"
 			]
 		},
 		"lint": {
@@ -61,7 +62,8 @@
 				"JENKINS_URL",
 				"BUILDKITE",
 				"PREVIEW",
-				"CORS_ALLOWED_ORIGINS"
+				"CORS_ALLOWED_ORIGINS",
+				"MODE"
 			]
 		},
 		"lint:md": {
@@ -83,7 +85,9 @@
 				"TEST_VAR1",
 				"TEST_VAR2",
 				"TEST_ENVIRONMENT",
-				"TEST_FRONTEND_URL"
+				"TEST_FRONTEND_URL",
+				"MODE",
+				"ACT_LOCAL"
 			]
 		},
 		"test:ui": {

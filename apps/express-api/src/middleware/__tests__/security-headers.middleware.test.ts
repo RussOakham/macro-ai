@@ -60,7 +60,7 @@ describe('Security Headers Middleware', () => {
 		// Reset module cache to ensure fresh imports
 		vi.resetModules()
 
-		// Setup Express mocks (includes vi.clearAllMocks())
+		// Setup enhanced Express mocks
 		const expressMocks = mockExpress.setup()
 		mockRequest = expressMocks.req
 		mockResponse = {
@@ -275,77 +275,47 @@ describe('Security Headers Middleware', () => {
 	})
 
 	describe('Header Values Validation', () => {
-		it('should set correct X-Content-Type-Options header value', async () => {
-			// Arrange
-			const middleware = await import('../security-headers.middleware.ts')
+		const headerTestCases = [
+			{
+				name: 'X-Content-Type-Options',
+				expectedValue: 'nosniff',
+			},
+			{
+				name: 'X-Frame-Options',
+				expectedValue: 'DENY',
+			},
+			{
+				name: 'X-XSS-Protection',
+				expectedValue: '1; mode=block',
+			},
+			{
+				name: 'Cache-Control',
+				expectedValue: 'no-store, no-cache, must-revalidate, proxy-revalidate',
+			},
+		] as const
 
-			// Act
-			middleware.securityHeadersMiddleware(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+		describe.each(headerTestCases)(
+			'should set correct $name header value',
+			({ name, expectedValue }) => {
+				it(`should set ${name} to ${expectedValue}`, async () => {
+					// Arrange
+					const middleware = await import('../security-headers.middleware.ts')
 
-			// Assert
-			expect(mockResponse.setHeader).toHaveBeenCalledWith(
-				'X-Content-Type-Options',
-				'nosniff',
-			)
-		})
+					// Act
+					middleware.securityHeadersMiddleware(
+						mockRequest as Request,
+						mockResponse as Response,
+						mockNext,
+					)
 
-		it('should set correct X-Frame-Options header value', async () => {
-			// Arrange
-			const middleware = await import('../security-headers.middleware.ts')
-
-			// Act
-			middleware.securityHeadersMiddleware(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
-
-			// Assert
-			expect(mockResponse.setHeader).toHaveBeenCalledWith(
-				'X-Frame-Options',
-				'DENY',
-			)
-		})
-
-		it('should set correct X-XSS-Protection header value', async () => {
-			// Arrange
-			const middleware = await import('../security-headers.middleware.ts')
-
-			// Act
-			middleware.securityHeadersMiddleware(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
-
-			// Assert
-			expect(mockResponse.setHeader).toHaveBeenCalledWith(
-				'X-XSS-Protection',
-				'1; mode=block',
-			)
-		})
-
-		it('should set correct Cache-Control header value', async () => {
-			// Arrange
-			const middleware = await import('../security-headers.middleware.ts')
-
-			// Act
-			middleware.securityHeadersMiddleware(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
-
-			// Assert
-			expect(mockResponse.setHeader).toHaveBeenCalledWith(
-				'Cache-Control',
-				'no-store, no-cache, must-revalidate, proxy-revalidate',
-			)
-		})
+					// Assert
+					expect(mockResponse.setHeader).toHaveBeenCalledWith(
+						name,
+						expectedValue,
+					)
+				})
+			},
+		)
 	})
 
 	describe('Content Security Policy Configuration', () => {
@@ -472,27 +442,41 @@ describe('Security Headers Middleware', () => {
 	})
 
 	describe('Additional Security Features', () => {
-		it('should enable DNS prefetch control', async () => {
-			// Act
-			await import('../security-headers.middleware.ts')
+		const securityFeatures = [
+			{
+				name: 'DNS prefetch control',
+				property: 'dnsPrefetchControl',
+				expectedValue: { allow: false },
+			},
+			{
+				name: 'frameguard',
+				property: 'frameguard',
+				expectedValue: { action: 'deny' },
+			},
+			{
+				name: 'referrer policy',
+				property: 'referrerPolicy',
+				expectedValue: { policy: 'strict-origin-when-cross-origin' },
+			},
+		] as const
 
-			// Assert - Verify DNS prefetch control
-			const helmetCall = vi.mocked(helmet).mock.calls[0]?.[0]
+		describe.each(securityFeatures)(
+			'should configure $name',
+			({ name, property, expectedValue }) => {
+				it(`should configure ${name} correctly`, async () => {
+					// Act
+					await import('../security-headers.middleware.ts')
 
-			expect(helmetCall).toHaveProperty('dnsPrefetchControl')
-			expect(helmetCall?.dnsPrefetchControl).toEqual({ allow: false })
-		})
+					// Assert - Verify security feature configuration
+					const helmetCall = vi.mocked(helmet).mock.calls[0]?.[0]
 
-		it('should configure frameguard to deny', async () => {
-			// Act
-			await import('../security-headers.middleware.ts')
-
-			// Assert - Verify frameguard configuration
-			const helmetCall = vi.mocked(helmet).mock.calls[0]?.[0]
-
-			expect(helmetCall).toHaveProperty('frameguard')
-			expect(helmetCall?.frameguard).toEqual({ action: 'deny' })
-		})
+					expect(helmetCall).toHaveProperty(property)
+					expect(helmetCall?.[property as keyof typeof helmetCall]).toEqual(
+						expectedValue,
+					)
+				})
+			},
+		)
 
 		it('should enable security features', async () => {
 			// Act
@@ -505,19 +489,6 @@ describe('Security Headers Middleware', () => {
 			expect(helmetCall?.noSniff).toBe(true)
 			expect(helmetCall?.originAgentCluster).toBe(true)
 			expect(helmetCall?.xssFilter).toBe(true)
-		})
-
-		it('should configure referrer policy', async () => {
-			// Act
-			await import('../security-headers.middleware.ts')
-
-			// Assert - Verify referrer policy
-			const helmetCall = vi.mocked(helmet).mock.calls[0]?.[0]
-
-			expect(helmetCall).toHaveProperty('referrerPolicy')
-			expect(helmetCall?.referrerPolicy).toEqual({
-				policy: 'strict-origin-when-cross-origin',
-			})
 		})
 	})
 
@@ -544,52 +515,42 @@ describe('Security Headers Middleware', () => {
 			expect(mockNext).toHaveBeenCalledWith()
 		})
 
-		it('should handle requests with different HTTP methods', async () => {
-			// Arrange
-			const middleware = await import('../security-headers.middleware.ts')
-			const getRequest = mockExpress.createRequest({ method: 'GET' })
-			const postRequest = mockExpress.createRequest({ method: 'POST' })
+		const httpMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] as const
 
-			// Act & Assert - Should work with different HTTP methods
-			expect(() => {
-				middleware.securityHeadersMiddleware(
-					getRequest as Request,
-					mockResponse as Response,
-					mockNext,
-				)
-			}).not.toThrow()
+		describe.each(httpMethods)('should handle %s requests', (method) => {
+			it(`should work with ${method} requests`, async () => {
+				// Arrange
+				const middleware = await import('../security-headers.middleware.ts')
+				const request = mockExpress.createRequest({ method })
 
-			expect(() => {
-				middleware.securityHeadersMiddleware(
-					postRequest as Request,
-					mockResponse as Response,
-					mockNext,
-				)
-			}).not.toThrow()
+				// Act & Assert - Should work with different HTTP methods
+				expect(() => {
+					middleware.securityHeadersMiddleware(
+						request as Request,
+						mockResponse as Response,
+						mockNext,
+					)
+				}).not.toThrow()
+			})
 		})
 
-		it('should handle requests with different URLs', async () => {
-			// Arrange
-			const middleware = await import('../security-headers.middleware.ts')
-			const apiRequest = mockExpress.createRequest({ url: '/api/test' })
-			const authRequest = mockExpress.createRequest({ url: '/auth/login' })
+		const testUrls = ['/api/test', '/auth/login', '/health', '/docs'] as const
 
-			// Act & Assert - Should work with different URLs
-			expect(() => {
-				middleware.securityHeadersMiddleware(
-					apiRequest as Request,
-					mockResponse as Response,
-					mockNext,
-				)
-			}).not.toThrow()
+		describe.each(testUrls)('should handle requests to %s', (url) => {
+			it(`should work with requests to ${url}`, async () => {
+				// Arrange
+				const middleware = await import('../security-headers.middleware.ts')
+				const request = mockExpress.createRequest({ url })
 
-			expect(() => {
-				middleware.securityHeadersMiddleware(
-					authRequest as Request,
-					mockResponse as Response,
-					mockNext,
-				)
-			}).not.toThrow()
+				// Act & Assert - Should work with different URLs
+				expect(() => {
+					middleware.securityHeadersMiddleware(
+						request as Request,
+						mockResponse as Response,
+						mockNext,
+					)
+				}).not.toThrow()
+			})
 		})
 	})
 

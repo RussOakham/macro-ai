@@ -3,4 +3,35 @@ export {
 	commonTestConfig,
 	integrationTestTimeouts,
 	unitTestTimeouts,
+	reactTestConfig,
 } from './config.js'
+
+// Test data factories
+export {
+	userFactory,
+	authFactory,
+	chatFactory,
+	apiResponseFactory,
+	dbFactory,
+	testUtils,
+} from './test-factories.js'
+
+// MSW (Mock Service Worker) setup
+export {
+	handlers,
+	authHandlers,
+	userHandlers,
+	chatHandlers,
+	errorHandlers,
+} from './msw-handlers.js'
+
+export {
+	server,
+	startServer,
+	stopServer,
+	resetServer,
+	startWorker,
+	stopWorker,
+	resetWorker,
+	setupServer,
+} from './msw-setup.js'

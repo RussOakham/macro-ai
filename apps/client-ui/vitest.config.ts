@@ -16,8 +16,10 @@ const babelPlugins = shouldUseReactCompiler
 	? [['babel-plugin-react-compiler', ReactCompilerConfig]]
 	: []
 
+// Detect if running in act environment
+const isActEnvironment = process.env.ACT_LOCAL === 'true'
+
 export default defineConfig({
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 	plugins: [
 		tanstackRouter(),
 		react({
@@ -25,7 +27,7 @@ export default defineConfig({
 				plugins: babelPlugins,
 			},
 		}),
-	] as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- Type assertion to resolve Vite version conflicts
+	],
 	resolve: {
 		alias: {
 			'@': path.resolve(__dirname, './src'),
@@ -38,6 +40,23 @@ export default defineConfig({
 		environment: 'jsdom',
 		setupFiles: ['./src/test/setup.ts'],
 		include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+		// Configure parallel test execution using Vitest's built-in capabilities
+		pool: 'threads',
+		poolOptions: {
+			threads: {
+				singleThread: isActEnvironment, // Run single-threaded in act for faster execution
+				minThreads: 1,
+				maxThreads: isActEnvironment ? 1 : 4, // Limit to 1 thread in act
+			},
+		},
+		// Enable parallel execution (but limit in act environment)
+		fileParallelism: !isActEnvironment,
+		// Optimize timeouts for act environment
+		...(isActEnvironment && {
+			testTimeout: 10000, // 10 seconds instead of 30 for act
+			hookTimeout: 15000, // 15 seconds instead of 30 for act
+			teardownTimeout: 10000, // 10 seconds instead of 30 for act
+		}),
 		coverage: {
 			...commonTestConfig.coverage,
 			exclude: [
@@ -48,7 +67,18 @@ export default defineConfig({
 				'**/coverage/**',
 				'**/dist/**',
 				'**/.{idea,git,cache,output,temp}/**',
+				'src/routeTree.gen.ts', // Exclude generated route tree
+				'src/main.tsx', // Exclude main entry point
+				// Note: React components (.tsx) are included for coverage
+				// Focus on testing hooks and business logic per CLAUDE.md guidelines
 			],
+			thresholds: {
+				// Lower threshold for React components initially
+				statements: 60,
+				branches: 50,
+				functions: 60,
+				lines: 60,
+			},
 		},
 		// Mock CSS modules and other assets
 		css: {

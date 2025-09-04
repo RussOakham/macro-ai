@@ -181,33 +181,22 @@ describe('crypto.ts', () => {
 		})
 
 		describe('edge cases', () => {
-			it('should handle empty string input', () => {
-				const result = encrypt('')
+			describe.each([
+				['empty string', ''],
+				['unicode characters', '🚀🌟✨'],
+				['very long string', 'a'.repeat(10000)],
+				['special characters', '!@#$%^&*()_+-=[]{}|;:,.<>?'],
+				['newlines and tabs', 'line1\nline2\tline3'],
+				['mixed content', 'Hello 世界! 🌍\n\tSpecial chars: !@#$%'],
+			])('Input type: %s', (description, plaintext) => {
+				it(`should handle ${description}`, () => {
+					const result = encrypt(plaintext)
 
-				expect(result[0]).toBe(
-					`${mockIv.toString('hex')}:${mockAuthTag.toString('hex')}:${mockEncryptedData}`,
-				)
-				expect(result[1]).toBeNull()
-			})
-
-			it('should handle unicode characters', () => {
-				const plaintext = '🚀🌟✨'
-				const result = encrypt(plaintext)
-
-				expect(result[0]).toBe(
-					`${mockIv.toString('hex')}:${mockAuthTag.toString('hex')}:${mockEncryptedData}`,
-				)
-				expect(result[1]).toBeNull()
-			})
-
-			it('should handle very long strings', () => {
-				const plaintext = 'a'.repeat(10000)
-				const result = encrypt(plaintext)
-
-				expect(result[0]).toBe(
-					`${mockIv.toString('hex')}:${mockAuthTag.toString('hex')}:${mockEncryptedData}`,
-				)
-				expect(result[1]).toBeNull()
+					expect(result[0]).toBe(
+						`${mockIv.toString('hex')}:${mockAuthTag.toString('hex')}:${mockEncryptedData}`,
+					)
+					expect(result[1]).toBeNull()
+				})
 			})
 		})
 	})
@@ -289,36 +278,35 @@ describe('crypto.ts', () => {
 		})
 
 		describe('input validation errors', () => {
-			it('should handle invalid format - wrong number of parts', () => {
-				const result = decrypt('invalid:format')
+			describe.each([
+				['invalid format - wrong number of parts', 'invalid:format'],
+				['empty parts in encrypted text', ':authTag:encrypted'],
+				['missing auth tag', 'iv::encrypted'],
+				['missing encrypted data', 'iv:authTag:'],
+				['single part', 'singlepart'],
+				['too many parts', 'iv:authTag:encrypted:extra'],
+				['empty string', ''],
+				['null input', null],
+				['undefined input', undefined],
+			])('Invalid input: %s', (description, invalidInput) => {
+				it(`should handle ${description}`, () => {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+					const result = decrypt(invalidInput as any)
 
-				expect(result[0]).toBeNull()
-				expect(result[1]).toBeInstanceOf(Error)
-				expect(result[1]?.message).toBe('Invalid encrypted text format')
-			})
-
-			it('should handle empty parts in encrypted text', () => {
-				const result = decrypt(':authTag:encrypted')
-
-				expect(result[0]).toBeNull()
-				expect(result[1]).toBeInstanceOf(Error)
-				expect(result[1]?.message).toBe('Invalid encrypted text format')
-			})
-
-			it('should handle missing auth tag', () => {
-				const result = decrypt('iv::encrypted')
-
-				expect(result[0]).toBeNull()
-				expect(result[1]).toBeInstanceOf(Error)
-				expect(result[1]?.message).toBe('Invalid encrypted text format')
-			})
-
-			it('should handle missing encrypted data', () => {
-				const result = decrypt('iv:authTag:')
-
-				expect(result[0]).toBeNull()
-				expect(result[1]).toBeInstanceOf(Error)
-				expect(result[1]?.message).toBe('Invalid encrypted text format')
+					expect(result[0]).toBeNull()
+					expect(result[1]).toBeInstanceOf(Error)
+					if (description === 'null input') {
+						expect(result[1]?.message).toContain(
+							'Cannot read properties of null',
+						)
+					} else if (description === 'undefined input') {
+						expect(result[1]?.message).toContain(
+							'Cannot read properties of undefined',
+						)
+					} else {
+						expect(result[1]?.message).toBe('Invalid encrypted text format')
+					}
+				})
 			})
 		})
 

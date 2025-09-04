@@ -65,6 +65,7 @@ describe('userRouter', () => {
 	}
 
 	beforeEach(async () => {
+		// Clear all mocks for test isolation
 		vi.clearAllMocks()
 
 		// Reset middleware mocks to default behavior
@@ -112,244 +113,268 @@ describe('userRouter', () => {
 	})
 
 	describe('GET /users/me', () => {
-		it('should return current user when authenticated', async () => {
-			// Arrange
-			vi.mocked(userController.getCurrentUser).mockImplementation(
-				async (req: Request, res: Response) => {
-					res.status(StatusCodes.OK).json(mockUserResponse)
-					return Promise.resolve()
+		describe.each([
+			[
+				'successful user retrieval',
+				StatusCodes.OK,
+				mockUserResponse,
+				true,
+				false,
+				false,
+			],
+			[
+				'authentication failure',
+				StatusCodes.UNAUTHORIZED,
+				{ message: 'Authentication required' },
+				false,
+				true,
+				false,
+			],
+			[
+				'rate limiting',
+				StatusCodes.TOO_MANY_REQUESTS,
+				{
+					status: StatusCodes.TOO_MANY_REQUESTS,
+					message: 'API rate limit exceeded, please try again later.',
 				},
-			)
+				false,
+				false,
+				true,
+			],
+			[
+				'user not found',
+				StatusCodes.NOT_FOUND,
+				{ message: 'User not found' },
+				true,
+				false,
+				false,
+			],
+			[
+				'internal server error',
+				StatusCodes.INTERNAL_SERVER_ERROR,
+				{ message: 'Internal server error' },
+				true,
+				false,
+				false,
+			],
+		] as const)(
+			'should handle %s',
+			(
+				scenario,
+				expectedStatus,
+				expectedResponse,
+				shouldCallController,
+				shouldFailAuth,
+				shouldFailRateLimit,
+			) => {
+				it(`should ${scenario}`, async () => {
+					// Arrange
+					if (shouldFailAuth) {
+						const { verifyAuth } = await import(
+							'../../../middleware/auth.middleware.ts'
+						)
+						vi.mocked(verifyAuth).mockImplementation(
+							async (req: Request, res: Response, next: NextFunction) => {
+								const error = new UnauthorizedError(
+									'Authentication required',
+									'verifyAuth middleware',
+								)
+								next(error)
+								return Promise.resolve()
+							},
+						)
+					}
 
-			// Act
-			const res = await request(app).get('/users/me')
+					if (shouldFailRateLimit) {
+						const { apiRateLimiter } = await import(
+							'../../../middleware/rate-limit.middleware.ts'
+						)
+						vi.mocked(apiRateLimiter).mockImplementation(
+							async (req: Request, res: Response) => {
+								res.status(StatusCodes.TOO_MANY_REQUESTS).json({
+									status: StatusCodes.TOO_MANY_REQUESTS,
+									message: 'API rate limit exceeded, please try again later.',
+								})
+								return Promise.resolve()
+							},
+						)
+					}
 
-			// Assert
-			expect(res.status).toBe(StatusCodes.OK)
-			expect(res.body).toEqual(mockUserResponse)
-			expect(userController.getCurrentUser).toHaveBeenCalledTimes(1)
-		})
+					if (shouldCallController) {
+						vi.mocked(userController.getCurrentUser).mockImplementation(
+							async (req: Request, res: Response, next: NextFunction) => {
+								if (scenario === 'user not found') {
+									const error = new NotFoundError(
+										'User not found',
+										'userController',
+									)
+									next(error)
+								} else if (scenario === 'internal server error') {
+									const error = new Error('Unexpected error')
+									next(error)
+								} else {
+									res.status(StatusCodes.OK).json(mockUserResponse)
+								}
+								return Promise.resolve()
+							},
+						)
+					}
 
-		it('should handle authentication failure', async () => {
-			// Arrange
-			const { verifyAuth } = await import(
-				'../../../middleware/auth.middleware.ts'
-			)
-			vi.mocked(verifyAuth).mockImplementation(
-				async (req: Request, res: Response, next: NextFunction) => {
-					const error = new UnauthorizedError(
-						'Authentication required',
-						'verifyAuth middleware',
-					)
-					next(error)
-					return Promise.resolve()
-				},
-			)
+					// Act
+					const res = await request(app).get('/users/me')
 
-			// Act
-			const res = await request(app).get('/users/me')
-
-			// Assert
-			expect(res.status).toBe(StatusCodes.UNAUTHORIZED)
-			expect(res.body).toEqual({ message: 'Authentication required' })
-			expect(userController.getCurrentUser).not.toHaveBeenCalled()
-		})
-
-		it('should handle rate limiting', async () => {
-			// Arrange
-			const { apiRateLimiter } = await import(
-				'../../../middleware/rate-limit.middleware.ts'
-			)
-			vi.mocked(apiRateLimiter).mockImplementation(
-				async (req: Request, res: Response) => {
-					res.status(StatusCodes.TOO_MANY_REQUESTS).json({
-						status: StatusCodes.TOO_MANY_REQUESTS,
-						message: 'API rate limit exceeded, please try again later.',
-					})
-					return Promise.resolve()
-				},
-			)
-
-			// Act
-			const res = await request(app).get('/users/me')
-
-			// Assert
-			expect(res.status).toBe(StatusCodes.TOO_MANY_REQUESTS)
-			expect(res.body).toEqual({
-				status: StatusCodes.TOO_MANY_REQUESTS,
-				message: 'API rate limit exceeded, please try again later.',
-			})
-			expect(userController.getCurrentUser).not.toHaveBeenCalled()
-		})
-
-		it('should handle controller errors', async () => {
-			// Arrange
-			vi.mocked(userController.getCurrentUser).mockImplementation(
-				async (req: Request, res: Response, next: NextFunction) => {
-					const error = new NotFoundError('User not found', 'userController')
-					next(error)
-					return Promise.resolve()
-				},
-			)
-
-			// Act
-			const res = await request(app).get('/users/me')
-
-			// Assert
-			expect(res.status).toBe(StatusCodes.NOT_FOUND)
-			expect(res.body).toEqual({ message: 'User not found' })
-			expect(userController.getCurrentUser).toHaveBeenCalledTimes(1)
-		})
-
-		it('should handle internal server errors', async () => {
-			// Arrange
-			vi.mocked(userController.getCurrentUser).mockImplementation(
-				async (req: Request, res: Response, next: NextFunction) => {
-					const error = new Error('Unexpected error')
-					next(error)
-					return Promise.resolve()
-				},
-			)
-
-			// Act
-			const res = await request(app).get('/users/me')
-
-			// Assert
-			expect(res.status).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
-			expect(res.body).toEqual({ message: 'Internal server error' })
-			expect(userController.getCurrentUser).toHaveBeenCalledTimes(1)
-		})
+					// Assert
+					expect(res.status).toBe(expectedStatus)
+					expect(res.body).toEqual(expectedResponse)
+					if (shouldCallController) {
+						expect(userController.getCurrentUser).toHaveBeenCalledTimes(1)
+					} else {
+						expect(userController.getCurrentUser).not.toHaveBeenCalled()
+					}
+				})
+			},
+		)
 	})
 
 	describe('GET /users/:id', () => {
 		const userId = '123e4567-e89b-12d3-a456-426614174000'
 
-		it('should return user by ID when authenticated', async () => {
-			// Arrange
-			vi.mocked(userController.getUserById).mockImplementation(
-				async (req: Request, res: Response) => {
-					res.status(StatusCodes.OK).json(mockUserResponse)
-					return Promise.resolve()
+		describe.each([
+			[
+				'successful user retrieval by ID',
+				userId,
+				StatusCodes.OK,
+				mockUserResponse,
+				true,
+				false,
+				false,
+			],
+			[
+				'authentication failure',
+				userId,
+				StatusCodes.UNAUTHORIZED,
+				{ message: 'Authentication required' },
+				false,
+				true,
+				false,
+			],
+			[
+				'rate limiting',
+				userId,
+				StatusCodes.TOO_MANY_REQUESTS,
+				{
+					status: StatusCodes.TOO_MANY_REQUESTS,
+					message: 'API rate limit exceeded, please try again later.',
 				},
-			)
+				false,
+				false,
+				true,
+			],
+			[
+				'user not found',
+				userId,
+				StatusCodes.NOT_FOUND,
+				{ message: 'User not found' },
+				true,
+				false,
+				false,
+			],
+			[
+				'invalid user ID format',
+				'invalid-id',
+				StatusCodes.OK,
+				mockUserResponse,
+				true,
+				false,
+				false,
+			],
+			[
+				'internal server error',
+				userId,
+				StatusCodes.INTERNAL_SERVER_ERROR,
+				{ message: 'Internal server error' },
+				true,
+				false,
+				false,
+			],
+		] as const)(
+			'should handle %s',
+			(
+				scenario,
+				testUserId,
+				expectedStatus,
+				expectedResponse,
+				shouldCallController,
+				shouldFailAuth,
+				shouldFailRateLimit,
+			) => {
+				it(`should ${scenario}`, async () => {
+					// Arrange
+					if (shouldFailAuth) {
+						const { verifyAuth } = await import(
+							'../../../middleware/auth.middleware.ts'
+						)
+						vi.mocked(verifyAuth).mockImplementation(
+							async (req: Request, res: Response, next: NextFunction) => {
+								const error = new UnauthorizedError(
+									'Authentication required',
+									'verifyAuth middleware',
+								)
+								next(error)
+								return Promise.resolve()
+							},
+						)
+					}
 
-			// Act
-			const res = await request(app).get(`/users/${userId}`)
+					if (shouldFailRateLimit) {
+						const { apiRateLimiter } = await import(
+							'../../../middleware/rate-limit.middleware.ts'
+						)
+						vi.mocked(apiRateLimiter).mockImplementation(
+							async (req: Request, res: Response) => {
+								res.status(StatusCodes.TOO_MANY_REQUESTS).json({
+									status: StatusCodes.TOO_MANY_REQUESTS,
+									message: 'API rate limit exceeded, please try again later.',
+								})
+								return Promise.resolve()
+							},
+						)
+					}
 
-			// Assert
-			expect(res.status).toBe(StatusCodes.OK)
-			expect(res.body).toEqual(mockUserResponse)
-			expect(userController.getUserById).toHaveBeenCalledTimes(1)
-		})
+					if (shouldCallController) {
+						vi.mocked(userController.getUserById).mockImplementation(
+							async (req: Request, res: Response, next: NextFunction) => {
+								if (scenario === 'user not found') {
+									const error = new NotFoundError(
+										'User not found',
+										'userController',
+									)
+									next(error)
+								} else if (scenario === 'internal server error') {
+									const error = new Error('Database connection failed')
+									next(error)
+								} else {
+									res.status(StatusCodes.OK).json(mockUserResponse)
+								}
+								return Promise.resolve()
+							},
+						)
+					}
 
-		it('should handle authentication failure', async () => {
-			// Arrange
-			const { verifyAuth } = await import(
-				'../../../middleware/auth.middleware.ts'
-			)
-			vi.mocked(verifyAuth).mockImplementation(
-				async (req: Request, res: Response, next: NextFunction) => {
-					const error = new UnauthorizedError(
-						'Authentication required',
-						'verifyAuth middleware',
-					)
-					next(error)
-					return Promise.resolve()
-				},
-			)
+					// Act
+					const res = await request(app).get(`/users/${testUserId}`)
 
-			// Act
-			const res = await request(app).get(`/users/${userId}`)
-
-			// Assert
-			expect(res.status).toBe(StatusCodes.UNAUTHORIZED)
-			expect(res.body).toEqual({ message: 'Authentication required' })
-			expect(userController.getUserById).not.toHaveBeenCalled()
-		})
-
-		it('should handle rate limiting', async () => {
-			// Arrange
-			const { apiRateLimiter } = await import(
-				'../../../middleware/rate-limit.middleware.ts'
-			)
-			vi.mocked(apiRateLimiter).mockImplementation(
-				async (req: Request, res: Response) => {
-					res.status(StatusCodes.TOO_MANY_REQUESTS).json({
-						status: StatusCodes.TOO_MANY_REQUESTS,
-						message: 'API rate limit exceeded, please try again later.',
-					})
-					return Promise.resolve()
-				},
-			)
-
-			// Act
-			const res = await request(app).get(`/users/${userId}`)
-
-			// Assert
-			expect(res.status).toBe(StatusCodes.TOO_MANY_REQUESTS)
-			expect(res.body).toEqual({
-				status: StatusCodes.TOO_MANY_REQUESTS,
-				message: 'API rate limit exceeded, please try again later.',
-			})
-			expect(userController.getUserById).not.toHaveBeenCalled()
-		})
-
-		it('should handle user not found error', async () => {
-			// Arrange
-			vi.mocked(userController.getUserById).mockImplementation(
-				async (req: Request, res: Response, next: NextFunction) => {
-					const error = new NotFoundError('User not found', 'userController')
-					next(error)
-					return Promise.resolve()
-				},
-			)
-
-			// Act
-			const res = await request(app).get(`/users/${userId}`)
-
-			// Assert
-			expect(res.status).toBe(StatusCodes.NOT_FOUND)
-			expect(res.body).toEqual({ message: 'User not found' })
-			expect(userController.getUserById).toHaveBeenCalledTimes(1)
-		})
-
-		it('should handle invalid user ID format', async () => {
-			// Arrange
-			const invalidUserId = 'invalid-id'
-			vi.mocked(userController.getUserById).mockImplementation(
-				async (req: Request, res: Response) => {
-					res.status(StatusCodes.OK).json(mockUserResponse)
-					return Promise.resolve()
-				},
-			)
-
-			// Act
-			const res = await request(app).get(`/users/${invalidUserId}`)
-
-			// Assert
-			expect(res.status).toBe(StatusCodes.OK)
-			expect(userController.getUserById).toHaveBeenCalledTimes(1)
-			// Note: The route itself doesn't validate UUID format - that's handled by the controller
-		})
-
-		it('should handle internal server errors', async () => {
-			// Arrange
-			vi.mocked(userController.getUserById).mockImplementation(
-				async (req: Request, res: Response, next: NextFunction) => {
-					const error = new Error('Database connection failed')
-					next(error)
-					return Promise.resolve()
-				},
-			)
-
-			// Act
-			const res = await request(app).get(`/users/${userId}`)
-
-			// Assert
-			expect(res.status).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
-			expect(res.body).toEqual({ message: 'Internal server error' })
-			expect(userController.getUserById).toHaveBeenCalledTimes(1)
-		})
+					// Assert
+					expect(res.status).toBe(expectedStatus)
+					expect(res.body).toEqual(expectedResponse)
+					if (shouldCallController) {
+						expect(userController.getUserById).toHaveBeenCalledTimes(1)
+					} else {
+						expect(userController.getUserById).not.toHaveBeenCalled()
+					}
+				})
+			},
+		)
 	})
 
 	describe('Route Integration', () => {

@@ -85,7 +85,8 @@
 				"src/**/*.d.ts",
 				"dist/**/*",
 				"coverage/**/*",
-				"src/routeTree.gen.ts"
+				"src/routeTree.gen.ts",
+				"src/test/mocks/**/*"
 			],
 			"ignoreDependencies": [
 				"@types/node",

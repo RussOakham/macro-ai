@@ -2,7 +2,11 @@ import { NextFunction, Request, Response } from 'express'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
-import { mockExpress } from '../../utils/test-helpers/express-mocks.ts'
+import { MockDataFactory } from '../../utils/test-helpers/advanced-mocking.ts'
+import {
+	createMockRequest,
+	createMockResponse,
+} from '../../utils/test-helpers/enhanced-mocks.ts'
 import { mockLogger } from '../../utils/test-helpers/logger.mock.ts'
 
 // Mock external dependencies
@@ -12,18 +16,19 @@ vi.mock('../../utils/error-handling/try-catch.ts', () => ({
 }))
 
 describe('Validation Middleware', () => {
-	let mockRequest: Partial<Request>
-	let mockResponse: Partial<Response>
+	let mockRequest: Request
+	let mockResponse: Response
 	let mockNext: NextFunction
 	let mockTryCatch: ReturnType<typeof vi.fn>
 
 	beforeEach(async () => {
 		vi.resetModules()
+		vi.clearAllMocks()
 
-		// Setup Express mocks (includes vi.clearAllMocks())
-		const expressMocks = mockExpress.setup()
-		mockResponse = expressMocks.res
-		mockNext = expressMocks.next
+		// Setup enhanced Express mocks using node-mocks-http
+		mockRequest = createMockRequest()
+		mockResponse = createMockResponse()
+		mockNext = vi.fn()
 
 		// Get the mocked tryCatch function
 		mockTryCatch = vi.mocked(
@@ -48,48 +53,56 @@ describe('Validation Middleware', () => {
 	})
 
 	describe('Successful Validation', () => {
-		it('should validate request body successfully with valid data', async () => {
-			// Arrange
-			const testSchema = z.object({
-				email: z.email(),
-				name: z.string().min(1),
+		describe.each([
+			['body', 'body validation'],
+			['params', 'params validation'],
+			['query', 'query validation'],
+		])('Validation target: %s', (target) => {
+			it(`should validate request ${target} successfully with valid data`, async () => {
+				// Arrange
+				const testSchema = z.object({
+					email: z.email(),
+					name: z.string().min(1),
+				})
+
+				const validData = MockDataFactory.createUser({
+					email: 'test@example.com',
+					firstName: 'John',
+					lastName: 'Doe',
+				})
+
+				// Create mock request with appropriate data based on target
+				mockRequest = createMockRequest({
+					[target]: {
+						email: validData.email,
+						name: `${validData.firstName?.toString() ?? 'Mockfirstname'} ${validData.lastName?.toString() ?? 'Mocklastname'}`,
+					},
+					path: '/api/test',
+				})
+
+				// Mock the schema's parseAsync method to prevent actual validation
+				const mockParseAsync = vi.fn().mockResolvedValue(validData)
+				vi.spyOn(testSchema, 'parseAsync').mockImplementation(mockParseAsync)
+
+				// Mock successful tryCatch result
+				mockTryCatch.mockResolvedValue([validData, null])
+
+				const middleware = await import('../validation.middleware.ts')
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+				const validator = middleware.validate(testSchema, target as any)
+
+				// Act
+				await validator(mockRequest, mockResponse, mockNext)
+
+				// Assert
+				expect(mockTryCatch).toHaveBeenCalledWith(
+					expect.any(Function),
+					`validation middleware - ${target}`,
+				)
+				expect(mockRequest[target as keyof Request]).toEqual(validData)
+				expect(mockNext).toHaveBeenCalledWith()
+				expect(mockNext).toHaveBeenCalledTimes(1)
 			})
-
-			const validData = {
-				email: 'test@example.com',
-				name: 'John Doe',
-			}
-
-			mockRequest = mockExpress.createRequest({
-				body: { email: 'original@example.com', name: 'Original' },
-				path: '/api/test',
-			})
-
-			// Mock the schema's parseAsync method to prevent actual validation
-			const mockParseAsync = vi.fn().mockResolvedValue(validData)
-			vi.spyOn(testSchema, 'parseAsync').mockImplementation(mockParseAsync)
-
-			// Mock successful tryCatch result
-			mockTryCatch.mockResolvedValue([validData, null])
-
-			const middleware = await import('../validation.middleware.ts')
-			const validator = middleware.validate(testSchema, 'body')
-
-			// Act
-			await validator(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
-
-			// Assert
-			expect(mockTryCatch).toHaveBeenCalledWith(
-				expect.any(Function),
-				'validation middleware - body',
-			)
-			expect(mockRequest.body).toEqual(validData)
-			expect(mockNext).toHaveBeenCalledWith()
-			expect(mockNext).toHaveBeenCalledTimes(1)
 		})
 
 		it('should validate request params successfully', async () => {
@@ -99,12 +112,12 @@ describe('Validation Middleware', () => {
 			})
 
 			const validParams = {
-				id: '123e4567-e89b-12d3-a456-426614174000',
+				id: MockDataFactory.uuid(),
 			}
 
-			mockRequest = mockExpress.createRequest({
+			mockRequest = createMockRequest({
 				params: { id: 'original-id' },
-				path: '/api/users/123e4567-e89b-12d3-a456-426614174000',
+				path: `/api/users/${validParams.id}`,
 			})
 
 			// Mock the schema's parseAsync method
@@ -118,11 +131,7 @@ describe('Validation Middleware', () => {
 			const validator = middleware.validate(testSchema, 'params')
 
 			// Act
-			await validator(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await validator(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockTryCatch).toHaveBeenCalledWith(
@@ -145,7 +154,7 @@ describe('Validation Middleware', () => {
 				limit: 10,
 			}
 
-			mockRequest = mockExpress.createRequest({
+			mockRequest = createMockRequest({
 				query: { page: '1', limit: '10' },
 				path: '/api/users',
 			})
@@ -161,11 +170,7 @@ describe('Validation Middleware', () => {
 			const validator = middleware.validate(testSchema, 'query')
 
 			// Act
-			await validator(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await validator(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockTryCatch).toHaveBeenCalledWith(
@@ -184,7 +189,7 @@ describe('Validation Middleware', () => {
 
 			const validData = { message: 'Hello World' }
 
-			mockRequest = mockExpress.createRequest({
+			mockRequest = createMockRequest({
 				body: { message: 'original' },
 				path: '/api/test',
 			})
@@ -200,11 +205,7 @@ describe('Validation Middleware', () => {
 			const validator = middleware.validate(testSchema) // No target specified
 
 			// Act
-			await validator(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await validator(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockTryCatch).toHaveBeenCalledWith(
@@ -217,60 +218,63 @@ describe('Validation Middleware', () => {
 	})
 
 	describe('ZodError Handling', () => {
-		it('should handle ZodError and call next with ValidationError', async () => {
-			// Arrange
-			const testSchema = z.object({
-				email: z.email(),
-				name: z.string().min(1),
+		describe.each([
+			['body', { email: 'invalid-email', name: '' }],
+			['params', { id: 'invalid-uuid' }],
+			['query', { page: 'invalid-number' }],
+		])('Validation target: %s', (target, invalidData) => {
+			it(`should handle ZodError for ${target} validation and call next with ValidationError`, async () => {
+				// Arrange
+				const testSchema = z.object({
+					email: z.email(),
+					name: z.string().min(1),
+				})
+
+				mockRequest = createMockRequest({
+					[target]: invalidData,
+					path: '/api/test',
+				})
+
+				// Mock the schema's parseAsync method to prevent actual validation
+				const mockParseAsync = vi
+					.fn()
+					.mockRejectedValue(new Error('Mocked validation'))
+				vi.spyOn(testSchema, 'parseAsync').mockImplementation(mockParseAsync)
+
+				// Mock ZodError from tryCatch
+				const { ErrorType } = await import('../../utils/errors.ts')
+				const mockZodError = {
+					type: ErrorType.ZodError,
+					message: 'Validation failed',
+					details: [
+						{ message: 'Invalid email', path: ['email'] },
+						{ message: 'Name is required', path: ['name'] },
+					],
+					status: 400,
+					service: `validation middleware - ${target}`,
+				}
+				mockTryCatch.mockResolvedValue([null, mockZodError])
+
+				const middleware = await import('../validation.middleware.ts')
+				const { ValidationError } = await import('../../utils/errors.ts')
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+				const validator = middleware.validate(testSchema, target as any)
+
+				// Act
+				await validator(mockRequest, mockResponse, mockNext)
+
+				// Assert
+				expect(mockTryCatch).toHaveBeenCalledWith(
+					expect.any(Function),
+					`validation middleware - ${target}`,
+				)
+				expect(mockNext).toHaveBeenCalledTimes(1)
+				const calledError = vi.mocked(mockNext).mock.calls[0]?.[0]
+				expect(calledError).toBeInstanceOf(ValidationError)
+				expect(calledError).toHaveProperty('message', 'Validation Failed')
+				expect(calledError).toHaveProperty('details', mockZodError.details)
+				expect(calledError).toHaveProperty('service', 'validation middleware')
 			})
-
-			mockRequest = mockExpress.createRequest({
-				body: { email: 'invalid-email', name: '' },
-				path: '/api/test',
-			})
-
-			// Mock the schema's parseAsync method to prevent actual validation
-			const mockParseAsync = vi
-				.fn()
-				.mockRejectedValue(new Error('Mocked validation'))
-			vi.spyOn(testSchema, 'parseAsync').mockImplementation(mockParseAsync)
-
-			// Mock ZodError from tryCatch
-			const { ErrorType } = await import('../../utils/errors.ts')
-			const mockZodError = {
-				type: ErrorType.ZodError,
-				message: 'Validation failed',
-				details: [
-					{ message: 'Invalid email', path: ['email'] },
-					{ message: 'Name is required', path: ['name'] },
-				],
-				status: 400,
-				service: 'validation middleware - body',
-			}
-			mockTryCatch.mockResolvedValue([null, mockZodError])
-
-			const middleware = await import('../validation.middleware.ts')
-			const { ValidationError } = await import('../../utils/errors.ts')
-			const validator = middleware.validate(testSchema, 'body')
-
-			// Act
-			await validator(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
-
-			// Assert
-			expect(mockTryCatch).toHaveBeenCalledWith(
-				expect.any(Function),
-				'validation middleware - body',
-			)
-			expect(mockNext).toHaveBeenCalledTimes(1)
-			const calledError = vi.mocked(mockNext).mock.calls[0]?.[0]
-			expect(calledError).toBeInstanceOf(ValidationError)
-			expect(calledError).toHaveProperty('message', 'Validation Failed')
-			expect(calledError).toHaveProperty('details', mockZodError.details)
-			expect(calledError).toHaveProperty('service', 'validation middleware')
 		})
 
 		it('should log warning for ZodError validation failures', async () => {
@@ -279,7 +283,7 @@ describe('Validation Middleware', () => {
 				email: z.email(),
 			})
 
-			mockRequest = mockExpress.createRequest({
+			mockRequest = createMockRequest({
 				body: { email: 'invalid' },
 				path: '/api/test',
 			})
@@ -305,11 +309,7 @@ describe('Validation Middleware', () => {
 			const validator = middleware.validate(testSchema, 'body')
 
 			// Act
-			await validator(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await validator(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			const { pino } = await import('../../utils/logger.ts')
@@ -326,7 +326,7 @@ describe('Validation Middleware', () => {
 				id: z.uuid(),
 			})
 
-			mockRequest = mockExpress.createRequest({
+			mockRequest = createMockRequest({
 				params: { id: 'invalid-uuid' },
 				path: '/api/users/invalid-uuid',
 			})
@@ -353,11 +353,7 @@ describe('Validation Middleware', () => {
 			const validator = middleware.validate(testSchema, 'params')
 
 			// Act
-			await validator(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await validator(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockTryCatch).toHaveBeenCalledWith(
@@ -376,7 +372,7 @@ describe('Validation Middleware', () => {
 				data: z.string(),
 			})
 
-			mockRequest = mockExpress.createRequest({
+			mockRequest = createMockRequest({
 				body: { data: 'test' },
 				path: '/api/test',
 			})
@@ -395,11 +391,7 @@ describe('Validation Middleware', () => {
 			const validator = middleware.validate(testSchema, 'body')
 
 			// Act
-			await validator(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await validator(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith(mockInternalError)
@@ -414,7 +406,7 @@ describe('Validation Middleware', () => {
 
 			const validData = { data: 'test' }
 
-			mockRequest = mockExpress.createRequest({
+			mockRequest = createMockRequest({
 				body: { data: 'original' },
 				path: '/api/test',
 			})
@@ -430,11 +422,7 @@ describe('Validation Middleware', () => {
 			const validator = middleware.validate(testSchema, 'body')
 
 			// Act
-			await validator(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await validator(mockRequest, mockResponse, mockNext)
 
 			// Assert - undefined is falsy, so middleware treats it as success
 			expect(mockRequest.body).toEqual(validData)
@@ -450,7 +438,7 @@ describe('Validation Middleware', () => {
 
 			const validData = { data: 'test' }
 
-			mockRequest = mockExpress.createRequest({
+			mockRequest = createMockRequest({
 				body: { data: 'original' },
 				path: '/api/test',
 			})
@@ -466,11 +454,7 @@ describe('Validation Middleware', () => {
 			const validator = middleware.validate(testSchema, 'body')
 
 			// Act
-			await validator(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await validator(mockRequest, mockResponse, mockNext)
 
 			// Assert - null is falsy, so middleware treats it as success
 			expect(mockRequest.body).toEqual(validData)
@@ -484,7 +468,7 @@ describe('Validation Middleware', () => {
 				data: z.string(),
 			})
 
-			mockRequest = mockExpress.createRequest({
+			mockRequest = createMockRequest({
 				body: { data: 'test' },
 				path: '/api/test',
 			})
@@ -496,11 +480,7 @@ describe('Validation Middleware', () => {
 			const validator = middleware.validate(testSchema, 'body')
 
 			// Act
-			await validator(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await validator(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledWith()
@@ -526,7 +506,7 @@ describe('Validation Middleware', () => {
 				confirmPassword: 'password123',
 			}
 
-			mockRequest = mockExpress.createRequest({
+			mockRequest = createMockRequest({
 				body: { password: 'original', confirmPassword: 'original' },
 				path: '/api/auth/register',
 			})
@@ -542,11 +522,7 @@ describe('Validation Middleware', () => {
 			const validator = middleware.validate(testSchema, 'body')
 
 			// Act
-			await validator(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await validator(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockRequest.body).toEqual(validData)
@@ -565,7 +541,7 @@ describe('Validation Middleware', () => {
 					path: ['confirmPassword'],
 				})
 
-			mockRequest = mockExpress.createRequest({
+			mockRequest = createMockRequest({
 				body: { password: 'password123', confirmPassword: 'different' },
 				path: '/api/auth/register',
 			})
@@ -594,11 +570,7 @@ describe('Validation Middleware', () => {
 			const validator = middleware.validate(testSchema, 'body')
 
 			// Act
-			await validator(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await validator(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			const calledError = vi.mocked(mockNext).mock.calls[0]?.[0]
@@ -627,7 +599,7 @@ describe('Validation Middleware', () => {
 				email: 'available@example.com',
 			}
 
-			mockRequest = mockExpress.createRequest({
+			mockRequest = createMockRequest({
 				body: { email: 'original@example.com' },
 				path: '/api/test',
 			})
@@ -643,11 +615,7 @@ describe('Validation Middleware', () => {
 			const validator = middleware.validate(asyncSchema, 'body')
 
 			// Act
-			await validator(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await validator(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockRequest.body).toEqual(validData)
@@ -664,7 +632,7 @@ describe('Validation Middleware', () => {
 
 			const validData = {}
 
-			mockRequest = mockExpress.createRequest({
+			mockRequest = createMockRequest({
 				body: {},
 				path: '/api/test',
 			})
@@ -680,11 +648,7 @@ describe('Validation Middleware', () => {
 			const validator = middleware.validate(testSchema, 'body')
 
 			// Act
-			await validator(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await validator(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockRequest.body).toEqual(validData)
@@ -701,7 +665,7 @@ describe('Validation Middleware', () => {
 				data: 'x'.repeat(10000), // 10KB string
 			}
 
-			mockRequest = mockExpress.createRequest({
+			mockRequest = createMockRequest({
 				body: { data: 'original' },
 				path: '/api/test',
 			})
@@ -717,11 +681,7 @@ describe('Validation Middleware', () => {
 			const validator = middleware.validate(testSchema, 'body')
 
 			// Act
-			await validator(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await validator(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockRequest.body).toEqual(largeData)
@@ -740,7 +700,7 @@ describe('Validation Middleware', () => {
 				emoji: '🚀💻🎉',
 			}
 
-			mockRequest = mockExpress.createRequest({
+			mockRequest = createMockRequest({
 				body: { message: 'original', emoji: 'original' },
 				path: '/api/test',
 			})
@@ -756,11 +716,7 @@ describe('Validation Middleware', () => {
 			const validator = middleware.validate(testSchema, 'body')
 
 			// Act
-			await validator(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await validator(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockRequest.body).toEqual(specialData)

@@ -57,6 +57,9 @@ describe('Auth Routes', () => {
 	let router: Router
 
 	beforeEach(() => {
+		// Clear all mocks for test isolation
+		vi.clearAllMocks()
+
 		// Setup config and logger mocks for consistent test environment
 		mockConfig.setup()
 		mockLogger.setup()
@@ -136,174 +139,266 @@ describe('Auth Routes', () => {
 	})
 
 	describe('POST /auth/register', () => {
-		it('should register route with correct middleware and controller', async () => {
-			// Arrange
-			const registerData = {
-				email: 'test@example.com',
-				password: 'Password123!',
-				confirmPassword: 'Password123!',
-			}
+		describe.each([
+			[
+				'successful registration',
+				{
+					email: 'test@example.com',
+					password: 'Password123!',
+					confirmPassword: 'Password123!',
+				},
+				201,
+				{ message: 'Registration successful' },
+			],
+		] as const)(
+			'should handle %s',
+			(scenario, requestData, expectedStatus, expectedResponse) => {
+				it(`should ${scenario}`, async () => {
+					// Act
+					const response = await request(app)
+						.post('/auth/register')
+						.send(requestData)
 
-			// Act
-			const response = await request(app)
-				.post('/auth/register')
-				.send(registerData)
-
-			// Assert
-			expect(response.status).toBe(201)
-			expect(response.body).toEqual({ message: 'Registration successful' })
-			expect(authRateLimiter).toHaveBeenCalled()
-			expect(validate).toHaveBeenCalledWith(registerUserRequestSchema)
-			expect(authController.register).toHaveBeenCalled()
-		})
+					// Assert
+					expect(response.status).toBe(expectedStatus)
+					expect(response.body).toEqual(expectedResponse)
+					expect(authRateLimiter).toHaveBeenCalled()
+					expect(validate).toHaveBeenCalledWith(registerUserRequestSchema)
+					expect(authController.register).toHaveBeenCalled()
+				})
+			},
+		)
 	})
 
 	describe('POST /auth/confirm-registration', () => {
-		it('should register route with correct middleware and controller', async () => {
-			// Arrange
-			const confirmData = {
-				email: 'test@example.com',
-				code: 123456,
-			}
+		describe.each([
+			[
+				'successful registration confirmation',
+				{
+					email: 'test@example.com',
+					code: 123456,
+				},
+				200,
+				{ message: 'Registration confirmed' },
+			],
+		] as const)(
+			'should handle %s',
+			(scenario, requestData, expectedStatus, expectedResponse) => {
+				it(`should ${scenario}`, async () => {
+					// Act
+					const response = await request(app)
+						.post('/auth/confirm-registration')
+						.send(requestData)
 
-			// Act
-			const response = await request(app)
-				.post('/auth/confirm-registration')
-				.send(confirmData)
-
-			// Assert
-			expect(response.status).toBe(200)
-			expect(response.body).toEqual({ message: 'Registration confirmed' })
-			expect(authRateLimiter).toHaveBeenCalled()
-			expect(validate).toHaveBeenCalledWith(confirmRegistrationRequestSchema)
-			expect(authController.confirmRegistration).toHaveBeenCalled()
-		})
+					// Assert
+					expect(response.status).toBe(expectedStatus)
+					expect(response.body).toEqual(expectedResponse)
+					expect(authRateLimiter).toHaveBeenCalled()
+					expect(validate).toHaveBeenCalledWith(
+						confirmRegistrationRequestSchema,
+					)
+					expect(authController.confirmRegistration).toHaveBeenCalled()
+				})
+			},
+		)
 	})
 
 	describe('POST /auth/resend-confirmation-code', () => {
-		it('should register route with correct middleware and controller', async () => {
-			// Arrange
-			const resendData = {
-				email: 'test@example.com',
-			}
+		describe.each([
+			[
+				'successful confirmation code resend',
+				{
+					email: 'test@example.com',
+				},
+				200,
+				{ message: 'Confirmation code resent' },
+			],
+		] as const)(
+			'should handle %s',
+			(scenario, requestData, expectedStatus, expectedResponse) => {
+				it(`should ${scenario}`, async () => {
+					// Act
+					const response = await request(app)
+						.post('/auth/resend-confirmation-code')
+						.send(requestData)
 
-			// Act
-			const response = await request(app)
-				.post('/auth/resend-confirmation-code')
-				.send(resendData)
-
-			// Assert
-			expect(response.status).toBe(200)
-			expect(response.body).toEqual({ message: 'Confirmation code resent' })
-			expect(authRateLimiter).toHaveBeenCalled()
-			expect(validate).toHaveBeenCalledWith(resendConfirmationCodeRequestSchema)
-			expect(authController.resendConfirmationCode).toHaveBeenCalled()
-		})
+					// Assert
+					expect(response.status).toBe(expectedStatus)
+					expect(response.body).toEqual(expectedResponse)
+					expect(authRateLimiter).toHaveBeenCalled()
+					expect(validate).toHaveBeenCalledWith(
+						resendConfirmationCodeRequestSchema,
+					)
+					expect(authController.resendConfirmationCode).toHaveBeenCalled()
+				})
+			},
+		)
 	})
 
 	describe('POST /auth/login', () => {
-		it('should register route with correct middleware and controller', async () => {
-			// Arrange
-			const loginData = {
-				email: 'test@example.com',
-				password: 'Password123!',
-			}
+		describe.each([
+			[
+				'successful login',
+				{
+					email: 'test@example.com',
+					password: 'Password123!',
+				},
+				200,
+				{ message: 'Login successful' },
+			],
+		] as const)(
+			'should handle %s',
+			(scenario, requestData, expectedStatus, expectedResponse) => {
+				it(`should ${scenario}`, async () => {
+					// Act
+					const response = await request(app)
+						.post('/auth/login')
+						.send(requestData)
 
-			// Act
-			const response = await request(app).post('/auth/login').send(loginData)
-
-			// Assert
-			expect(response.status).toBe(200)
-			expect(response.body).toEqual({ message: 'Login successful' })
-			expect(authRateLimiter).toHaveBeenCalled()
-			expect(validate).toHaveBeenCalledWith(loginRequestSchema)
-			expect(authController.login).toHaveBeenCalled()
-		})
+					// Assert
+					expect(response.status).toBe(expectedStatus)
+					expect(response.body).toEqual(expectedResponse)
+					expect(authRateLimiter).toHaveBeenCalled()
+					expect(validate).toHaveBeenCalledWith(loginRequestSchema)
+					expect(authController.login).toHaveBeenCalled()
+				})
+			},
+		)
 	})
 
 	describe('POST /auth/forgot-password', () => {
-		it('should register route with correct middleware and controller', async () => {
-			// Arrange
-			const forgotPasswordData = {
-				email: 'test@example.com',
-			}
+		describe.each([
+			[
+				'successful forgot password request',
+				{
+					email: 'test@example.com',
+				},
+				200,
+				{ message: 'Password reset initiated' },
+			],
+		] as const)(
+			'should handle %s',
+			(scenario, requestData, expectedStatus, expectedResponse) => {
+				it(`should ${scenario}`, async () => {
+					// Act
+					const response = await request(app)
+						.post('/auth/forgot-password')
+						.send(requestData)
 
-			// Act
-			const response = await request(app)
-				.post('/auth/forgot-password')
-				.send(forgotPasswordData)
-
-			// Assert
-			expect(response.status).toBe(200)
-			expect(response.body).toEqual({ message: 'Password reset initiated' })
-			expect(authRateLimiter).toHaveBeenCalled()
-			expect(validate).toHaveBeenCalledWith(forgotPasswordRequestSchema)
-			expect(authController.forgotPassword).toHaveBeenCalled()
-		})
+					// Assert
+					expect(response.status).toBe(expectedStatus)
+					expect(response.body).toEqual(expectedResponse)
+					expect(authRateLimiter).toHaveBeenCalled()
+					expect(validate).toHaveBeenCalledWith(forgotPasswordRequestSchema)
+					expect(authController.forgotPassword).toHaveBeenCalled()
+				})
+			},
+		)
 	})
 
 	describe('POST /auth/confirm-forgot-password', () => {
-		it('should register route with correct middleware and controller', async () => {
-			// Arrange
-			const confirmForgotPasswordData = {
-				email: 'test@example.com',
-				code: '123456',
-				newPassword: 'NewPassword123!',
-				confirmPassword: 'NewPassword123!',
-			}
+		describe.each([
+			[
+				'successful password reset confirmation',
+				{
+					email: 'test@example.com',
+					code: '123456',
+					newPassword: 'NewPassword123!',
+					confirmPassword: 'NewPassword123!',
+				},
+				200,
+				{ message: 'Password reset confirmed' },
+			],
+		] as const)(
+			'should handle %s',
+			(scenario, requestData, expectedStatus, expectedResponse) => {
+				it(`should ${scenario}`, async () => {
+					// Act
+					const response = await request(app)
+						.post('/auth/confirm-forgot-password')
+						.send(requestData)
 
-			// Act
-			const response = await request(app)
-				.post('/auth/confirm-forgot-password')
-				.send(confirmForgotPasswordData)
-
-			// Assert
-			expect(response.status).toBe(200)
-			expect(response.body).toEqual({ message: 'Password reset confirmed' })
-			expect(authRateLimiter).toHaveBeenCalled()
-			expect(authController.confirmForgotPassword).toHaveBeenCalled()
-		})
+					// Assert
+					expect(response.status).toBe(expectedStatus)
+					expect(response.body).toEqual(expectedResponse)
+					expect(authRateLimiter).toHaveBeenCalled()
+					expect(authController.confirmForgotPassword).toHaveBeenCalled()
+				})
+			},
+		)
 	})
 
 	describe('POST /auth/logout', () => {
-		it('should register route with correct middleware and controller', async () => {
-			// Act
-			const response = await request(app).post('/auth/logout')
+		describe.each([
+			['successful logout', {}, 200, { message: 'Logout successful' }],
+		] as const)(
+			'should handle %s',
+			(scenario, requestData, expectedStatus, expectedResponse) => {
+				it(`should ${scenario}`, async () => {
+					// Act
+					const response = await request(app)
+						.post('/auth/logout')
+						.send(requestData)
 
-			// Assert
-			expect(response.status).toBe(200)
-			expect(response.body).toEqual({ message: 'Logout successful' })
-			expect(verifyAuth).toHaveBeenCalled()
-			expect(authController.logout).toHaveBeenCalled()
-		})
+					// Assert
+					expect(response.status).toBe(expectedStatus)
+					expect(response.body).toEqual(expectedResponse)
+					expect(verifyAuth).toHaveBeenCalled()
+					expect(authController.logout).toHaveBeenCalled()
+				})
+			},
+		)
 	})
 
 	describe('POST /auth/refresh', () => {
-		it('should register route with correct controller', async () => {
-			// Act
-			const response = await request(app).post('/auth/refresh')
+		describe.each([
+			['successful token refresh', {}, 200, { message: 'Token refreshed' }],
+		] as const)(
+			'should handle %s',
+			(scenario, requestData, expectedStatus, expectedResponse) => {
+				it(`should ${scenario}`, async () => {
+					// Act
+					const response = await request(app)
+						.post('/auth/refresh')
+						.send(requestData)
 
-			// Assert
-			expect(response.status).toBe(200)
-			expect(response.body).toEqual({ message: 'Token refreshed' })
-			expect(authController.refreshToken).toHaveBeenCalled()
-		})
+					// Assert
+					expect(response.status).toBe(expectedStatus)
+					expect(response.body).toEqual(expectedResponse)
+					expect(authController.refreshToken).toHaveBeenCalled()
+				})
+			},
+		)
 	})
 
 	describe('GET /auth/user', () => {
-		it('should register route with correct middleware and controller', async () => {
-			// Act
-			const response = await request(app).get('/auth/user')
+		describe.each([
+			[
+				'successful user retrieval',
+				{},
+				200,
+				{
+					id: 'user-id',
+					email: 'test@example.com',
+				},
+			],
+		] as const)(
+			'should handle %s',
+			(scenario, requestData, expectedStatus, expectedResponse) => {
+				it(`should ${scenario}`, async () => {
+					// Act
+					const response = await request(app)
+						.get('/auth/user')
+						.send(requestData)
 
-			// Assert
-			expect(response.status).toBe(200)
-			expect(response.body).toEqual({
-				id: 'user-id',
-				email: 'test@example.com',
-			})
-			expect(verifyAuth).toHaveBeenCalled()
-			expect(authController.getAuthUser).toHaveBeenCalled()
-		})
+					// Assert
+					expect(response.status).toBe(expectedStatus)
+					expect(response.body).toEqual(expectedResponse)
+					expect(verifyAuth).toHaveBeenCalled()
+					expect(authController.getAuthUser).toHaveBeenCalled()
+				})
+			},
+		)
 	})
 
 	describe('Middleware Integration', () => {

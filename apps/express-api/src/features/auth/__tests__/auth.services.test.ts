@@ -33,6 +33,7 @@ import {
 	NotFoundError,
 	ValidationError,
 } from '../../../utils/errors.ts'
+import { MockDataFactory } from '../../../utils/test-helpers/advanced-mocking.ts'
 import { mockConfig } from '../../../utils/test-helpers/config.mock.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { mockParameterStore } from '../../../utils/test-helpers/parameter-store.mock.ts'
@@ -87,6 +88,9 @@ describe('CognitoService', () => {
 	let cognitoService: CognitoService
 
 	beforeEach(async () => {
+		// Clear all mocks for test isolation
+		vi.clearAllMocks()
+
 		// Use config mock setup for consistent test environment
 		mockConfig.setup()
 		mockLogger.setup()
@@ -113,7 +117,7 @@ describe('CognitoService', () => {
 
 		it('should successfully sign up a user when passwords match', async () => {
 			// Arrange
-			const mockUserId = '123e4567-e89b-12d3-a456-426614174000'
+			const mockUserId = MockDataFactory.uuid()
 			const mockSignUpResponse: SignUpCommandOutput = {
 				UserSub: mockUserId,
 				UserConfirmed: false,
@@ -123,7 +127,9 @@ describe('CognitoService', () => {
 				},
 			}
 
-			vi.mocked(crypto.randomUUID).mockReturnValue(mockUserId)
+			vi.mocked(crypto.randomUUID).mockReturnValue(
+				mockUserId as `${string}-${string}-${string}-${string}-${string}`,
+			)
 			vi.mocked(tryCatchSync)
 				.mockReturnValueOnce([true, null]) // password validation
 				.mockReturnValueOnce(['mock-secret-hash', null]) // hash generation
@@ -192,7 +198,9 @@ describe('CognitoService', () => {
 			const mockSecretHash = 'mock-secret-hash'
 			const cognitoError = new InternalError('Cognito error', 'authService')
 
-			vi.mocked(crypto.randomUUID).mockReturnValue(mockUserId)
+			vi.mocked(crypto.randomUUID).mockReturnValue(
+				mockUserId as `${string}-${string}-${string}-${string}-${string}`,
+			)
 			vi.mocked(tryCatchSync)
 				.mockReturnValueOnce([true, null]) // password validation
 				.mockReturnValueOnce([mockSecretHash, null]) // hash generation
@@ -215,7 +223,7 @@ describe('CognitoService', () => {
 		it('should successfully confirm sign up', async () => {
 			// Arrange
 			const mockUser: UserType = {
-				Username: '123e4567-e89b-12d3-a456-426614174000',
+				Username: MockDataFactory.uuid(),
 				Attributes: [{ Name: 'email', Value: email }],
 				UserCreateDate: new Date(),
 				UserLastModifiedDate: new Date(),

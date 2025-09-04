@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Auto-generated MSW mocks
+src/test/mocks/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

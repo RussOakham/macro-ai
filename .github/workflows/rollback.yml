@@ -35,7 +35,7 @@ on:
         type: string
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '20.19.4'
   AWS_REGION: 'us-east-1'
   PNPM_VERSION: '10.14.0'
 
@@ -120,7 +120,7 @@ jobs:
           ref: ${{ needs.validate-rollback.outputs.target-commit }}
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
 
@@ -173,7 +173,7 @@ jobs:
           ref: ${{ needs.validate-rollback.outputs.target-commit }}
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
 

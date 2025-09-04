@@ -794,7 +794,7 @@ const productionConfigSchema = z.object({
 	SERVER_PORT: z.coerce.number().default(3040),
 	COOKIE_DOMAIN: z.string().min(1),
 	COOKIE_ENCRYPTION_KEY: z.string().min(32),
-	RELATIONAL_DATABASE_URL: z.string().url(),
+	RELATIONAL_DATABASE_URL: z.url(),
 	OPENAI_API_KEY: z.string().startsWith('sk-'),
 	AWS_COGNITO_REGION: z.string().min(1),
 	AWS_COGNITO_USER_POOL_ID: z.string().min(1),
