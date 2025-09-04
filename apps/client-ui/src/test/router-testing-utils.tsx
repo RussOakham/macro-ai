@@ -13,9 +13,10 @@ import {
 	createRoute,
 	createRouter,
 	Outlet,
+	type Router,
 	RouterProvider,
 } from '@tanstack/react-router'
-import { render, RenderOptions } from '@testing-library/react'
+import { render, RenderOptions, RenderResult } from '@testing-library/react'
 
 // Mock types for testing
 interface MockAuthContext {
@@ -39,6 +40,7 @@ type MockRouterContext = MockAuthContext & Record<string, unknown>
  * @param options - Render options including path pattern and initial entry
  * @returns Object with router instance and render result
  */
+
 export const renderWithRouter = async (
 	Component: React.ComponentType,
 	options: {
@@ -48,7 +50,7 @@ export const renderWithRouter = async (
 		renderOptions?: RenderOptions
 		uniqueId?: string
 	} = { pathPattern: '/' },
-) => {
+): Promise<{ router: Router<AnyRoute>; renderResult: RenderResult }> => {
 	const {
 		pathPattern,
 		initialEntry = pathPattern,
@@ -94,7 +96,9 @@ export const renderWithRouter = async (
 	const renderResult = render(<RouterProvider router={router} />, renderOptions)
 
 	// Wait for router hydration
-	await renderResult.findByTestId(`root-layout${uniqueId ? `-${uniqueId}` : ''}`)
+	await renderResult.findByTestId(
+		`root-layout${uniqueId ? `-${uniqueId}` : ''}`,
+	)
 
 	return { router, renderResult }
 }
@@ -103,7 +107,7 @@ export const renderWithRouter = async (
  * Legacy render function for backward compatibility
  * @deprecated Use the new renderWithRouter function instead
  */
-export const renderWithRouterLegacy = (
+export const renderWithRouterLegacy = async (
 	_ui: React.ReactElement,
 	options: {
 		initialLocation?: string
@@ -112,7 +116,7 @@ export const renderWithRouterLegacy = (
 		customRoutes?: AnyRoute[]
 		renderOptions?: RenderOptions
 	} = {},
-) => {
+): Promise<{ router: unknown; renderResult: RenderResult }> => {
 	const {
 		initialLocation = '/',
 		routerContext = mockUnauthenticatedContext,

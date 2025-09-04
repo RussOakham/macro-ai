@@ -97,9 +97,22 @@ export const renderComponent = (
 		}),
 	})
 
+	// Create test context
+	const testContext: ComponentTestContext = {
+		authState,
+		apiConfig: {
+			baseURL: 'http://localhost:3000',
+			apiKey: 'test-api-key',
+			withCredentials: true,
+			timeout: 5000,
+		},
+		mswHandlers,
+	}
+
 	// Create enhanced result with additional utilities
 	const enhancedResult: EnhancedRenderResult = {
 		...renderResult,
+		testContext,
 		rerenderWithProps: (newProps: Record<string, unknown>) => {
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
 			const newElement = { ...ui, props: { ...(ui as any).props, ...newProps } }

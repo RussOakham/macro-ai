@@ -1,5 +1,11 @@
-import type { NextFunction } from 'express'
-import { createMocks, createRequest, createResponse } from 'node-mocks-http'
+import type { NextFunction, Request, Response } from 'express'
+import {
+	createMocks,
+	createRequest,
+	createResponse,
+	MockRequest,
+	MockResponse,
+} from 'node-mocks-http'
 import { vi } from 'vitest'
 import { DeepMockProxy, mockDeep } from 'vitest-mock-extended'
 
@@ -73,7 +79,11 @@ export const createEnhancedMock = <T extends object>() => {
 export const createMockExpressObjects = (
 	reqOpts?: Parameters<typeof createRequest>[0],
 	resOpts?: Parameters<typeof createResponse>[0],
-) => {
+): {
+	req: MockRequest<Request>
+	res: MockResponse<Response>
+	next: NextFunction
+} => {
 	const { req, res } = createMocks(reqOpts, resOpts)
 	const next = vi.fn() as NextFunction
 
@@ -97,7 +107,7 @@ export const createMockExpressObjects = (
  */
 export const createMockRequest = (
 	opts?: Parameters<typeof createRequest>[0],
-) => {
+): MockRequest<Request> => {
 	return createRequest(opts)
 }
 
@@ -106,7 +116,7 @@ export const createMockRequest = (
  */
 export const createMockResponse = (
 	opts?: Parameters<typeof createResponse>[0],
-) => {
+): MockResponse<Response> => {
 	return createResponse(opts)
 }
 

@@ -16,8 +16,15 @@ import {
 	testUtils,
 	userFactory,
 } from '@repo/config-testing'
-import { render, RenderOptions } from '@testing-library/react'
+import { render, RenderOptions, RenderResult } from '@testing-library/react'
 import { AxiosHeaders, AxiosInstance, AxiosResponse } from 'axios'
+
+/**
+ * Enhanced render result with test context
+ */
+export interface EnhancedRenderResult extends RenderResult {
+	testContext: ComponentTestContext
+}
 import { RequestHandler } from 'msw'
 import { expect, vi } from 'vitest'
 
@@ -330,7 +337,7 @@ export const renderWithProviders = (
 		apiConfig?: Partial<ApiTestConfig>
 		mswHandlers?: unknown[]
 	} = {},
-) => {
+): EnhancedRenderResult => {
 	const {
 		authState = createMockAuthState(),
 		apiConfig = {},
