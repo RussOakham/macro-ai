@@ -13,12 +13,12 @@ permissions:
 
 on:
   push:
-    branches: [main, develop]
+    branches: [ main, develop ]
   pull_request:
-    branches: [main, develop]
+    branches: [ main, develop ]
   schedule:
-    # Run comprehensive tests nightly at 2 AM UTC
-    - cron: '0 2 * * *'
+  # Run comprehensive tests nightly at 2 AM UTC
+  - cron: '0 2 * * *'
 
 concurrency:
   group: 'enhanced-testing-${{ github.workflow }}-${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
@@ -42,101 +42,101 @@ jobs:
       has-integration-tests: ${{ steps.check-tests.outputs.has-integration }}
       has-e2e-tests: ${{ steps.check-tests.outputs.has-e2e }}
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Analyze test structure
-        id: check-tests
-        run: |
-          echo "🔍 Analyzing test structure..."
+    - name: Analyze test structure
+      id: check-tests
+      run: |
+        echo "🔍 Analyzing test structure..."
 
-          # Check for different test types
-          has_integration="false"
-          has_e2e="false"
+        # Check for different test types
+        has_integration="false"
+        has_e2e="false"
 
-          if find . -name "*.integration.test.*" -o -name "*integration*.test.*" | grep -q .; then
-            has_integration="true"
-            echo "✅ Integration tests found"
-            find . -name "*.integration.test.*" -o -name "*integration*.test.*" | head -5
-          fi
+        if find . -name "*.integration.test.*" -o -name "*integration*.test.*" | grep -q .; then
+          has_integration="true"
+          echo "✅ Integration tests found"
+          find . -name "*.integration.test.*" -o -name "*integration*.test.*" | head -5
+        fi
 
-          if find . -name "*.e2e.test.*" -o -name "*e2e*.test.*" | grep -q .; then
-            has_e2e="true"
-            echo "✅ E2E tests found"
-          fi
+        if find . -name "*.e2e.test.*" -o -name "*e2e*.test.*" | grep -q .; then
+          has_e2e="true"
+          echo "✅ E2E tests found"
+        fi
 
-          echo "has-integration=$has_integration" >> $GITHUB_OUTPUT
-          echo "has-e2e=$has_e2e" >> $GITHUB_OUTPUT
+        echo "has-integration=$has_integration" >> $GITHUB_OUTPUT
+        echo "has-e2e=$has_e2e" >> $GITHUB_OUTPUT
 
-      - name: Create test matrix
-        id: matrix
-        run: |
-          echo "📋 Creating test execution matrix..."
+    - name: Create test matrix
+      id: matrix
+      run: |
+        echo "📋 Creating test execution matrix..."
 
-          # Define test matrix based on available test types
-          matrix='{
-            "include": [
-              {
-                "name": "Unit Tests - Express API",
-                "package": "apps/express-api",
-                "test-pattern": "src/**/*.test.{ts,tsx}",
-                "exclude-pattern": "**/*.integration.test.* **/*.e2e.test.*",
-                "timeout": 120000,
-                "parallel": true
-              },
-              {
-                "name": "Unit Tests - Client UI",
-                "package": "apps/client-ui", 
-                "test-pattern": "",
-                "exclude-pattern": "**/*.integration.test.* **/*.e2e.test.*",
-                "timeout": 120000,
-                "parallel": true
-              },
-              {
-                "name": "Unit Tests - API Client",
-                "package": "packages/macro-ai-api-client",
-                "test-pattern": "src/**/*.test.{ts,tsx} src/__tests__/**/*.test.{ts,tsx}",
-                "exclude-pattern": "**/*.integration.test.* **/*.e2e.test.*",
-                "timeout": 60000,
-                "parallel": true
-              }
-            ]
-          }'
+        # Define test matrix based on available test types
+        matrix='{
+          "include": [
+            {
+              "name": "Unit Tests - Express API",
+              "package": "apps/express-api",
+              "test-pattern": "src/**/*.test.{ts,tsx}",
+              "exclude-pattern": "**/*.integration.test.* **/*.e2e.test.*",
+              "timeout": 120000,
+              "parallel": true
+            },
+            {
+              "name": "Unit Tests - Client UI",
+              "package": "apps/client-ui", 
+              "test-pattern": "",
+              "exclude-pattern": "**/*.integration.test.* **/*.e2e.test.*",
+              "timeout": 120000,
+              "parallel": true
+            },
+            {
+              "name": "Unit Tests - API Client",
+              "package": "packages/macro-ai-api-client",
+              "test-pattern": "src/**/*.test.{ts,tsx} src/__tests__/**/*.test.{ts,tsx}",
+              "exclude-pattern": "**/*.integration.test.* **/*.e2e.test.*",
+              "timeout": 60000,
+              "parallel": true
+            }
+          ]
+        }'
 
-          # Add integration tests if they exist
-          if [ "${{ steps.check-tests.outputs.has-integration }}" = "true" ]; then
-            echo "Adding integration tests to matrix..."
-            matrix=$(echo "$matrix" | jq '.include += [
-              {
-                "name": "Integration Tests",
-                "package": "apps/express-api",
-                "test-pattern": "**/*.integration.test.*",
-                "exclude-pattern": "",
-                "timeout": 300000,
-                "parallel": false
-              }
-            ]')
-          fi
+        # Add integration tests if they exist
+        if [ "${{ steps.check-tests.outputs.has-integration }}" = "true" ]; then
+          echo "Adding integration tests to matrix..."
+          matrix=$(echo "$matrix" | jq '.include += [
+            {
+              "name": "Integration Tests",
+              "package": "apps/express-api",
+              "test-pattern": "**/*.integration.test.*",
+              "exclude-pattern": "",
+              "timeout": 300000,
+              "parallel": false
+            }
+          ]')
+        fi
 
-          # Add E2E tests if they exist
-          if [ "${{ steps.check-tests.outputs.has-e2e }}" = "true" ]; then
-            echo "Adding E2E tests to matrix..."
-            matrix=$(echo "$matrix" | jq '.include += [
-              {
-                "name": "E2E Tests",
-                "package": "client-ui",
-                "test-pattern": "**/*.e2e.test.*",
-                "exclude-pattern": "",
-                "timeout": 600000,
-                "parallel": false
-              }
-            ]')
-          fi
+        # Add E2E tests if they exist
+        if [ "${{ steps.check-tests.outputs.has-e2e }}" = "true" ]; then
+          echo "Adding E2E tests to matrix..."
+          matrix=$(echo "$matrix" | jq '.include += [
+            {
+              "name": "E2E Tests",
+              "package": "client-ui",
+              "test-pattern": "**/*.e2e.test.*",
+              "exclude-pattern": "",
+              "timeout": 600000,
+              "parallel": false
+            }
+          ]')
+        fi
 
-          # Convert matrix to single line to avoid GitHub Actions output issues
-          matrix_single_line=$(echo "$matrix" | jq -c '.')
-          echo "matrix=$matrix_single_line" >> $GITHUB_OUTPUT
-          echo "📊 Test matrix created:"
-          echo "$matrix" | jq '.'
+        # Convert matrix to single line to avoid GitHub Actions output issues
+        matrix_single_line=$(echo "$matrix" | jq -c '.')
+        echo "matrix=$matrix_single_line" >> $GITHUB_OUTPUT
+        echo "📊 Test matrix created:"
+        echo "$matrix" | jq '.'
 
   test-execution:
     name: ${{ matrix.name }}
@@ -148,408 +148,448 @@ jobs:
       matrix: ${{ fromJSON(needs.setup-test-matrix.outputs.matrix) }}
 
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup-node-pnpm
-        if: false # Disable custom action for now, use inline setup
+    - name: Setup Node.js and pnpm
+      uses: ./.github/actions/setup-node-pnpm
+      if: false # Disable custom action for now, use inline setup
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: ${{ env.PNPM_VERSION }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'pnpm'
 
-      - name: Cache test dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pnpm-store
-            node_modules
-            apps/*/node_modules
-            packages/*/node_modules
-          key: test-deps-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            test-deps-${{ runner.os }}-
+    - name: Cache test dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pnpm-store
+          node_modules
+          apps/*/node_modules
+          packages/*/node_modules
+        key: test-deps-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          test-deps-${{ runner.os }}-
 
-      - name: Install dependencies
-        run: |
-          echo "📦 Installing dependencies..."
-          pnpm install --frozen-lockfile
-          echo "✅ Dependencies installed"
+    - name: Install dependencies
+      run: |
+        echo "📦 Installing dependencies..."
+        pnpm install --frozen-lockfile
+        echo "✅ Dependencies installed"
 
-      - name: Setup test environment
-        run: |
-          echo "🔧 Setting up test environment for ${{ matrix.name }}..."
+    - name: Setup test environment
+      run: |
+        echo "🔧 Setting up test environment for ${{ matrix.name }}..."
 
-          # Create test-specific environment configuration
-          mkdir -p ${{ matrix.package }}
+        # Create test-specific environment configuration
+        mkdir -p ${{ matrix.package }}
 
-          # Set environment variables for Express API tests (needed for API client build)
-          echo "NODE_ENV=test" >> $GITHUB_ENV
-          echo "APP_ENV=test" >> $GITHUB_ENV
-          echo "SERVER_PORT=3000" >> $GITHUB_ENV
-          echo "API_KEY=test-api-key-at-least-32-chars-long-for-testing-purposes" >> $GITHUB_ENV
-          echo "AWS_COGNITO_REGION=us-east-1" >> $GITHUB_ENV
-          echo "AWS_COGNITO_USER_POOL_ID=test-pool-id" >> $GITHUB_ENV
-          echo "AWS_COGNITO_USER_POOL_CLIENT_ID=test-client-id" >> $GITHUB_ENV
-          echo "AWS_COGNITO_USER_POOL_SECRET_KEY=test-secret-key-at-least-32-chars-long-for-testing" >> $GITHUB_ENV
-          echo "COOKIE_ENCRYPTION_KEY=test-cookie-key-at-least-32-chars-long-for-testing" >> $GITHUB_ENV
-          echo "REDIS_URL=redis://localhost:6379" >> $GITHUB_ENV
-          echo "RELATIONAL_DATABASE_URL=postgres://test:test@localhost:5432/test_db" >> $GITHUB_ENV
-          echo "OPENAI_API_KEY=sk-test-openai-key-for-testing-purposes-only" >> $GITHUB_ENV
-          echo "COOKIE_DOMAIN=localhost" >> $GITHUB_ENV
-          echo "AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30" >> $GITHUB_ENV
-          echo "RATE_LIMIT_WINDOW_MS=900000" >> $GITHUB_ENV
-          echo "RATE_LIMIT_MAX_REQUESTS=100" >> $GITHUB_ENV
-          echo "AUTH_RATE_LIMIT_WINDOW_MS=3600000" >> $GITHUB_ENV
-          echo "AUTH_RATE_LIMIT_MAX_REQUESTS=10" >> $GITHUB_ENV
-          echo "API_RATE_LIMIT_WINDOW_MS=60000" >> $GITHUB_ENV
-          echo "API_RATE_LIMIT_MAX_REQUESTS=60" >> $GITHUB_ENV
+        # Set environment variables for Express API tests (needed for API client build)
+        echo "NODE_ENV=test" >> $GITHUB_ENV
+        echo "APP_ENV=test" >> $GITHUB_ENV
+        echo "SERVER_PORT=3000" >> $GITHUB_ENV
+        echo "API_KEY=test-api-key-at-least-32-chars-long-for-testing-purposes" >> $GITHUB_ENV
+        echo "AWS_COGNITO_REGION=us-east-1" >> $GITHUB_ENV
+        echo "AWS_COGNITO_USER_POOL_ID=test-pool-id" >> $GITHUB_ENV
+        echo "AWS_COGNITO_USER_POOL_CLIENT_ID=test-client-id" >> $GITHUB_ENV
+        echo "AWS_COGNITO_USER_POOL_SECRET_KEY=test-secret-key-at-least-32-chars-long-for-testing" >> $GITHUB_ENV
+        echo "COOKIE_ENCRYPTION_KEY=test-cookie-key-at-least-32-chars-long-for-testing" >> $GITHUB_ENV
+        echo "REDIS_URL=redis://localhost:6379" >> $GITHUB_ENV
+        echo "RELATIONAL_DATABASE_URL=postgres://test:test@localhost:5432/test_db" >> $GITHUB_ENV
+        echo "OPENAI_API_KEY=sk-test-openai-key-for-testing-purposes-only" >> $GITHUB_ENV
+        echo "COOKIE_DOMAIN=localhost" >> $GITHUB_ENV
+        echo "AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30" >> $GITHUB_ENV
+        echo "RATE_LIMIT_WINDOW_MS=900000" >> $GITHUB_ENV
+        echo "RATE_LIMIT_MAX_REQUESTS=100" >> $GITHUB_ENV
+        echo "AUTH_RATE_LIMIT_WINDOW_MS=3600000" >> $GITHUB_ENV
+        echo "AUTH_RATE_LIMIT_MAX_REQUESTS=10" >> $GITHUB_ENV
+        echo "API_RATE_LIMIT_WINDOW_MS=60000" >> $GITHUB_ENV
+        echo "API_RATE_LIMIT_MAX_REQUESTS=60" >> $GITHUB_ENV
 
-          # Basic test environment variables (for other packages)
-          cat > ${{ matrix.package }}/.env.test << EOF
-          NODE_ENV=test
-          APP_ENV=test
-          SERVER_PORT=3000
-          API_KEY=test-api-key-at-least-32-chars-long
+        # Basic test environment variables (for other packages)
+        cat > ${{ matrix.package }}/.env.test << EOF
+        NODE_ENV=test
+        APP_ENV=test
+        SERVER_PORT=3000
+        API_KEY=test-api-key-at-least-32-chars-long
 
-          # Test database URLs (will be overridden by integration tests if needed)
-          REDIS_URL=redis://localhost:6379
-          RELATIONAL_DATABASE_URL=postgres://test:test@localhost:5432/test_db
+        # Test database URLs (will be overridden by integration tests if needed)
+        REDIS_URL=redis://localhost:6379
+        RELATIONAL_DATABASE_URL=postgres://test:test@localhost:5432/test_db
 
-          # Test-safe values for other services
-          AWS_COGNITO_REGION=us-east-1
-          AWS_COGNITO_USER_POOL_ID=test-pool-id
-          AWS_COGNITO_USER_POOL_CLIENT_ID=test-client-id
-          AWS_COGNITO_USER_POOL_SECRET_KEY=test-secret-key-at-least-32-chars-long
-          COOKIE_ENCRYPTION_KEY=test-cookie-key-at-least-32-chars-long
-          OPENAI_API_KEY=sk-test-openai-key
-          EOF
+        # Test-safe values for other services
+        AWS_COGNITO_REGION=us-east-1
+        AWS_COGNITO_USER_POOL_ID=test-pool-id
+        AWS_COGNITO_USER_POOL_CLIENT_ID=test-client-id
+        AWS_COGNITO_USER_POOL_SECRET_KEY=test-secret-key-at-least-32-chars-long
+        COOKIE_ENCRYPTION_KEY=test-cookie-key-at-least-32-chars-long
+        OPENAI_API_KEY=sk-test-openai-key
+        EOF
 
-          echo "✅ Test environment configured"
+        echo "✅ Test environment configured"
 
-      - name: Build dependencies
-        run: |
-          echo "🔨 Building required dependencies..."
-          pnpm --filter @repo/config-testing build
-          pnpm --filter @repo/config-typescript build
+    - name: Build dependencies
+      run: |
+        echo "🔨 Building required dependencies..."
+        pnpm --filter @repo/config-testing build
+        pnpm --filter @repo/config-typescript build
 
-          # Build API client if testing other packages
-          if [ "${{ matrix.package }}" != "macro-ai-api-client" ]; then
-            pnpm --filter @repo/macro-ai-api-client build
-          fi
+        # Build API client if testing other packages
+        if [ "${{ matrix.package }}" != "macro-ai-api-client" ]; then
+          pnpm --filter @repo/macro-ai-api-client build
+        fi
 
-          echo "✅ Dependencies built"
+        echo "✅ Dependencies built"
 
-      - name: Generate MSW handlers
-        if: matrix.package == 'apps/client-ui'
-        run: |
-          echo "🔧 Generating MSW handlers for client-ui tests..."
-          cd apps/client-ui
-          pnpm generate:msw
-          echo "✅ MSW handlers generated"
+    - name: Generate MSW handlers
+      if: matrix.package == 'apps/client-ui'
+      run: |
+        echo "🔧 Generating MSW handlers for client-ui tests..."
+        cd apps/client-ui
+        pnpm generate:msw
+        echo "✅ MSW handlers generated"
 
-      - name: Run tests with enhanced reporting
-        id: test-execution
-        run: |
-          echo "🧪 Running ${{ matrix.name }}..."
+    - name: Run tests with enhanced reporting
+      id: test-execution
+      run: |
+        echo "🧪 Running ${{ matrix.name }}..."
 
-          # Set test-specific configuration
-          export VITEST_REPORTER="${{ env.VITEST_REPORTER }}"
+        # Set test-specific configuration
+        export VITEST_REPORTER="${{ env.VITEST_REPORTER }}"
 
-          # Calculate test timeout
-          timeout_seconds=$((${{ matrix.timeout }} / 1000))
+        # Calculate test timeout
+        timeout_seconds=$((${{ matrix.timeout }} / 1000))
 
-          cd ${{ matrix.package }}
+        cd ${{ matrix.package }}
 
-          # Run tests with timeout and capture output
-          start_time=$(date +%s)
+        # Run tests with timeout and capture output
+        start_time=$(date +%s)
 
-          if [ "${{ matrix.parallel }}" = "true" ]; then
-            echo "🚀 Running tests in parallel mode..."
-            timeout ${timeout_seconds}s pnpm vitest run \
-              --reporter=verbose \
-              --reporter=junit \
-              --outputFile=test-results.xml \
-              --coverage \
-              ${{ matrix.exclude-pattern != '' && format('--exclude "{0}"', matrix.exclude-pattern) || '' }} \
-              || test_exit_code=$?
-          else
-            echo "🔄 Running tests in sequential mode..."
-            timeout ${timeout_seconds}s pnpm vitest run \
-              --reporter=verbose \
-              --reporter=junit \
-              --outputFile=test-results.xml \
-              --coverage \
-              ${{ matrix.exclude-pattern != '' && format('--exclude "{0}"', matrix.exclude-pattern) || '' }} \
-              || test_exit_code=$?
-          fi
+        if [ "${{ matrix.parallel }}" = "true" ]; then
+          echo "🚀 Running tests in parallel mode..."
+          timeout ${timeout_seconds}s pnpm vitest run \
+            --reporter=verbose \
+            --reporter=junit \
+            --outputFile=test-results.xml \
+            --coverage \
+            ${{ matrix.exclude-pattern != '' && format('--exclude "{0}"', matrix.exclude-pattern) || '' }} \
+            || test_exit_code=$?
+        else
+          echo "🔄 Running tests in sequential mode..."
+          timeout ${timeout_seconds}s pnpm vitest run \
+            --reporter=verbose \
+            --reporter=junit \
+            --outputFile=test-results.xml \
+            --coverage \
+            ${{ matrix.exclude-pattern != '' && format('--exclude "{0}"', matrix.exclude-pattern) || '' }} \
+            || test_exit_code=$?
+        fi
 
-          end_time=$(date +%s)
-          duration=$((end_time - start_time))
+        end_time=$(date +%s)
+        duration=$((end_time - start_time))
 
-          echo "⏱️  Test execution completed in ${duration} seconds"
-          echo "duration=$duration" >> $GITHUB_OUTPUT
-          echo "exit-code=${test_exit_code:-0}" >> $GITHUB_OUTPUT
+        echo "⏱️  Test execution completed in ${duration} seconds"
+        echo "duration=$duration" >> $GITHUB_OUTPUT
+        echo "exit-code=${test_exit_code:-0}" >> $GITHUB_OUTPUT
 
-          # Save test metrics to file for later collection
-          mkdir -p test-metrics
-          cat > test-metrics/metrics.json << EOF
-          {
-            "package": "${{ matrix.package }}",
-            "name": "${{ matrix.name }}",
-            "tests": $(grep -o 'Tests.*[0-9]*' test-results.xml | grep -o '[0-9]*' | tail -1 || echo "0"),
-            "failures": $(grep -o 'failures="[0-9]*"' test-results.xml | head -1 | grep -o '[0-9]*' || echo "0"),
-            "duration": $duration,
-            "coverage": $(if [ -f "coverage/coverage-summary.json" ]; then jq -r '.total.lines.pct // 0' coverage/coverage-summary.json 2>/dev/null || echo "0"; else echo "0"; fi)
-          }
-          EOF
+        # Save test metrics to file for later collection
+        mkdir -p test-metrics
+        cat > test-metrics/metrics.json << EOF
+        {
+          "package": "${{ matrix.package }}",
+          "name": "${{ matrix.name }}",
+          "tests": $(grep -o 'Tests.*[0-9]*' test-results.xml | grep -o '[0-9]*' | tail -1 || echo "0"),
+          "failures": $(grep -o 'failures="[0-9]*"' test-results.xml | head -1 | grep -o '[0-9]*' || echo "0"),
+          "duration": $duration,
+          "coverage": $(if [ -f "coverage/coverage-summary.json" ]; then jq -r '.total.lines.pct // 0' coverage/coverage-summary.json 2>/dev/null || echo "0"; else echo "0"; fi)
+        }
+        EOF
 
-          # Check if tests exceeded expected duration
-          if [ $duration -gt $((${{ matrix.timeout }} / 1000)) ]; then
-            echo "⚠️ Tests took longer than expected timeout"
-          fi
+        # Check if tests exceeded expected duration
+        if [ $duration -gt $((${{ matrix.timeout }} / 1000)) ]; then
+          echo "⚠️ Tests took longer than expected timeout"
+        fi
 
-          exit ${test_exit_code:-0}
+        exit ${test_exit_code:-0}
 
-      - name: Sanitize artifact name
-        id: sanitize-name
-        if: always()
-        run: |
-          # Sanitize the matrix name and package for artifact naming
-          sanitized_name=$(echo "${{ matrix.name }}" | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
-          sanitized_package=$(echo "${{ matrix.package }}" | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
-          echo "sanitized-name=$sanitized_name" >> $GITHUB_OUTPUT
-          echo "sanitized-package=$sanitized_package" >> $GITHUB_OUTPUT
+    - name: Sanitize artifact name
+      id: sanitize-name
+      if: always()
+      run: |
+        # Sanitize the matrix name and package for artifact naming
+        sanitized_name=$(echo "${{ matrix.name }}" | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
+        sanitized_package=$(echo "${{ matrix.package }}" | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
+        echo "sanitized-name=$sanitized_name" >> $GITHUB_OUTPUT
+        echo "sanitized-package=$sanitized_package" >> $GITHUB_OUTPUT
 
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-${{ steps.sanitize-name.outputs.sanitized-package }}-${{ github.run_id }}-${{ steps.sanitize-name.outputs.sanitized-name }}
-          path: |
-            ${{ matrix.package }}/test-results.xml
-            ${{ matrix.package }}/coverage/
-            ${{ matrix.package }}/test-metrics/
-          retention-days: 30
-          overwrite: true
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ steps.sanitize-name.outputs.sanitized-package }}-${{ github.run_id }}-${{ steps.sanitize-name.outputs.sanitized-name }}
+        path: |
+          ${{ matrix.package }}/test-results.xml
+          ${{ matrix.package }}/coverage/
+          ${{ matrix.package }}/test-metrics/
+        retention-days: 30
+        overwrite: true
 
-      - name: Publish test results
-        uses: dorny/test-reporter@v1
-        if: always()
-        with:
-          name: ${{ matrix.name }} Results
-          path: ${{ matrix.package }}/test-results.xml
-          reporter: java-junit
-          fail-on-error: false
+    - name: Publish test results
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: ${{ matrix.name }} Results
+        path: ${{ matrix.package }}/test-results.xml
+        reporter: java-junit
+        fail-on-error: false
 
-      - name: Extract test metrics
-        id: metrics
-        if: always()
-        run: |
-          echo "📊 Extracting test metrics..."
+    - name: Extract test metrics
+      id: metrics
+      if: always()
+      run: |
+        echo "📊 Extracting test metrics..."
 
-          cd ${{ matrix.package }}
+        cd ${{ matrix.package }}
 
-          # Extract coverage percentage
-          if [ -f "coverage/coverage-summary.json" ]; then
-            coverage=$(node -p "
-              const fs = require('fs');
-              try {
-                const cov = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
-                Math.round(cov.total.statements.pct || 0);
-              } catch(e) { 0; }
-            ")
-            echo "coverage=$coverage" >> $GITHUB_OUTPUT
-            echo "✅ Coverage: $coverage%"
-          else
-            echo "coverage=0" >> $GITHUB_OUTPUT
-            echo "⚠️ No coverage data found"
-          fi
+        # Extract coverage percentage
+        if [ -f "coverage/coverage-summary.json" ]; then
+          coverage=$(node -p "
+            const fs = require('fs');
+            try {
+              const cov = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+              Math.round(cov.total.statements.pct || 0);
+            } catch(e) { 0; }
+          ")
+          echo "coverage=$coverage" >> $GITHUB_OUTPUT
+          echo "✅ Coverage: $coverage%"
+        else
+          echo "coverage=0" >> $GITHUB_OUTPUT
+          echo "⚠️ No coverage data found"
+        fi
 
-          # Extract test count from JUnit XML
-          if [ -f "test-results.xml" ]; then
-            test_count=$(grep -o 'tests="[0-9]*"' test-results.xml | head -1 | grep -o '[0-9]*' || echo "0")
-            failure_count=$(grep -o 'failures="[0-9]*"' test-results.xml | head -1 | grep -o '[0-9]*' || echo "0")
-            error_count=$(grep -o 'errors="[0-9]*"' test-results.xml | head -1 | grep -o '[0-9]*' || echo "0")
-            
-            echo "test-count=$test_count" >> $GITHUB_OUTPUT
-            echo "failure-count=$failure_count" >> $GITHUB_OUTPUT
-            echo "error-count=$error_count" >> $GITHUB_OUTPUT
-            
-            echo "✅ Tests: $test_count, Failures: $failure_count, Errors: $error_count"
-          fi
+        # Extract test count from JUnit XML
+        if [ -f "test-results.xml" ]; then
+          test_count=$(grep -o 'tests="[0-9]*"' test-results.xml | head -1 | grep -o '[0-9]*' || echo "0")
+          failure_count=$(grep -o 'failures="[0-9]*"' test-results.xml | head -1 | grep -o '[0-9]*' || echo "0")
+          error_count=$(grep -o 'errors="[0-9]*"' test-results.xml | head -1 | grep -o '[0-9]*' || echo "0")
+          
+          echo "test-count=$test_count" >> $GITHUB_OUTPUT
+          echo "failure-count=$failure_count" >> $GITHUB_OUTPUT
+          echo "error-count=$error_count" >> $GITHUB_OUTPUT
+          
+          echo "✅ Tests: $test_count, Failures: $failure_count, Errors: $error_count"
+        fi
 
-      - name: Performance analysis
-        if: always() && steps.test-execution.outputs.duration
-        run: |
-          duration=${{ steps.test-execution.outputs.duration }}
-          threshold=$((${{ matrix.timeout }} / 1000))
+    - name: Performance analysis
+      if: always() && steps.test-execution.outputs.duration
+      run: |
+        duration=${{ steps.test-execution.outputs.duration }}
+        threshold=$((${{ matrix.timeout }} / 1000))
 
-          echo "📈 Performance Analysis:"
-          echo "  Duration: ${duration}s"
-          echo "  Threshold: ${threshold}s"
-          echo "  Performance: $(( duration * 100 / threshold ))% of threshold"
+        echo "📈 Performance Analysis:"
+        echo "  Duration: ${duration}s"
+        echo "  Threshold: ${threshold}s"
+        echo "  Performance: $(( duration * 100 / threshold ))% of threshold"
 
-          if [ $duration -gt $threshold ]; then
-            echo "⚠️ Performance warning: Tests exceeded expected duration"
-            echo "::warning title=Test Performance::${{ matrix.name }} took ${duration}s (>${threshold}s threshold)"
-          fi
+        if [ $duration -gt $threshold ]; then
+          echo "⚠️ Performance warning: Tests exceeded expected duration"
+          echo "::warning title=Test Performance::${{ matrix.name }} took ${duration}s (>${threshold}s threshold)"
+        fi
 
   test-summary:
     name: Test Summary & Reporting
     runs-on: ubuntu-latest
-    needs: [setup-test-matrix, test-execution]
+    needs: [ setup-test-matrix, test-execution ]
     if: always()
 
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Download all test artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: test-results-*
-          path: test-results/
-          merge-multiple: true
+    - name: Download all test artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: test-results-*
+        path: test-results/
+        merge-multiple: true
 
-      - name: Generate test report from artifacts
-        run: |
-          echo "📊 Generating test report from collected metrics..."
+    - name: Generate test report from artifacts
+      run: |
+        echo "📊 Generating test report from collected metrics..."
 
-          # Create summary report header
-          cat > test-summary.md << 'EOF'
-          # 🧪 Test Execution Summary
+        # Create summary report header
+        cat > test-summary.md << 'EOF'
+        # 🧪 Test Execution Summary
 
-          ## Test Matrix Results
+        ## Test Matrix Results
 
-          | Test Suite | Status | Coverage | Tests | Failures | Duration |
-          |------------|--------|----------|-------|----------|----------|
-          EOF
+        | Test Suite | Status | Coverage | Tests | Failures | Duration |
+        |------------|--------|----------|-------|----------|----------|
+        EOF
 
-          # Process collected metrics
-          total_tests=0
-          total_failures=0
-          suite_count=0
-          total_coverage=0
+        # Process collected metrics
+        total_tests=0
+        total_failures=0
+        suite_count=0
+        total_coverage=0
 
-          # Look for metrics files in downloaded artifacts
-          for metrics_file in test-results/*/test-metrics/metrics.json; do
-            if [ -f "$metrics_file" ]; then
-              echo "Processing metrics: $metrics_file"
+        # Debug: List all files in test-results
+        echo "🔍 Debug: Listing test-results directory structure:"
+        find test-results -type f -name "*.json" | head -10
+        
+        # Look for metrics files in downloaded artifacts
+        for metrics_file in test-results/*/test-metrics/metrics.json; do
+          if [ -f "$metrics_file" ]; then
+            echo "Processing metrics: $metrics_file"
+            
+            # Extract metrics using jq
+            name=$(jq -r '.name' "$metrics_file")
+            tests=$(jq -r '.tests' "$metrics_file")
+            failures=$(jq -r '.failures' "$metrics_file")
+            duration=$(jq -r '.duration' "$metrics_file")
+            coverage=$(jq -r '.coverage' "$metrics_file")
+            
+            total_tests=$((total_tests + tests))
+            total_failures=$((total_failures + failures))
+            suite_count=$((suite_count + 1))
+            
+            # Calculate total coverage (simple average for now)
+            total_coverage=$((total_coverage + coverage))
+            
+            # Determine status
+            if [ "$failures" -eq 0 ]; then
+              status="✅ PASS"
+            else
+              status="❌ FAIL ($failures failures)"
+            fi
+            
+            # Format coverage
+            if [ "$coverage" != "0" ] && [ "$coverage" != "null" ]; then
+              coverage_display="${coverage}%"
+            else
+              coverage_display="N/A%"
+            fi
+            
+            # Add to report
+            echo "| $name | $status | $coverage_display | $tests | $failures | ${duration}s |" >> test-summary.md
+          fi
+        done
+        
+        # Fallback: If no metrics found, try to extract from JUnit XML files directly
+        if [ $suite_count -eq 0 ]; then
+          echo "⚠️ No metrics files found, trying to extract from JUnit XML files..."
+          for xml_file in test-results/*/test-results.xml; do
+            if [ -f "$xml_file" ]; then
+              echo "Processing XML: $xml_file"
               
-              # Extract metrics using jq
-              name=$(jq -r '.name' "$metrics_file")
-              tests=$(jq -r '.tests' "$metrics_file")
-              failures=$(jq -r '.failures' "$metrics_file")
-              duration=$(jq -r '.duration' "$metrics_file")
-              coverage=$(jq -r '.coverage' "$metrics_file")
+              # Extract package name from path
+              package_name=$(echo "$xml_file" | sed 's|test-results/||' | sed 's|/test-results.xml||' | sed 's|-.*||')
+              
+              # Extract test data from XML
+              tests=$(grep -o 'tests="[0-9]*"' "$xml_file" | head -1 | grep -o '[0-9]*' || echo "0")
+              failures=$(grep -o 'failures="[0-9]*"' "$xml_file" | head -1 | grep -o '[0-9]*' || echo "0")
+              errors=$(grep -o 'errors="[0-9]*"' "$xml_file" | head -1 | grep -o '[0-9]*' || echo "0")
+              duration=$(grep -o 'time="[0-9.]*"' "$xml_file" | head -1 | grep -o '[0-9.]*' || echo "0")
+              
+              # Convert duration to integer
+              duration_int=$(printf "%.0f" "$duration")
               
               total_tests=$((total_tests + tests))
-              total_failures=$((total_failures + failures))
+              total_failures=$((total_failures + failures + errors))
               suite_count=$((suite_count + 1))
               
-              # Calculate total coverage (simple average for now)
-              total_coverage=$((total_coverage + coverage))
-              
               # Determine status
-              if [ "$failures" -eq 0 ]; then
+              if [ "$failures" -eq 0 ] && [ "$errors" -eq 0 ]; then
                 status="✅ PASS"
               else
-                status="❌ FAIL ($failures failures)"
-              fi
-              
-              # Format coverage
-              if [ "$coverage" != "0" ] && [ "$coverage" != "null" ]; then
-                coverage_display="${coverage}%"
-              else
-                coverage_display="N/A%"
+                status="❌ FAIL ($((failures + errors)) failures)"
               fi
               
               # Add to report
-              echo "| $name | $status | $coverage_display | $tests | $failures | ${duration}s |" >> test-summary.md
+              echo "| $package_name | $status | N/A% | $tests | $((failures + errors)) | ${duration_int}s |" >> test-summary.md
             fi
           done
+        fi
 
-          # Calculate average coverage
-          if [ $suite_count -gt 0 ]; then
-            avg_coverage=$((total_coverage / suite_count))
-          else
-            avg_coverage=0
-          fi
+        # Calculate average coverage
+        if [ $suite_count -gt 0 ]; then
+          avg_coverage=$((total_coverage / suite_count))
+        else
+          avg_coverage=0
+        fi
 
-          # Add summary
-          cat >> test-summary.md << EOF
+        # Add summary
+        cat >> test-summary.md << EOF
 
-          ## Overall Summary
+        ## Overall Summary
 
-          - **Total Tests**: $total_tests
-          - **Total Failures**: $total_failures
-          - **Success Rate**: $(( (total_tests - total_failures) * 100 / (total_tests == 0 ? 1 : total_tests) ))%
-          - **Test Suites**: $suite_count
-          - **Average Coverage**: ${avg_coverage}%
+        - **Total Tests**: $total_tests
+        - **Total Failures**: $total_failures
+        - **Success Rate**: $(( (total_tests - total_failures) * 100 / (total_tests == 0 ? 1 : total_tests) ))%
+        - **Test Suites**: $suite_count
+        - **Average Coverage**: ${avg_coverage}%
 
-          ## Coverage Report
-          Coverage reports are available as artifacts for each test suite.
+        ## Coverage Report
+        Coverage reports are available as artifacts for each test suite.
 
-          ## Performance Metrics
-          Performance analysis is included in individual test job logs.
+        ## Performance Metrics
+        Performance analysis is included in individual test job logs.
 
-          ---
-          *Generated on $(date -u '+%Y-%m-%d %H:%M:%S UTC') by GitHub Actions*
-          EOF
+        ---
+        *Generated on $(date -u '+%Y-%m-%d %H:%M:%S UTC') by GitHub Actions*
+        EOF
 
-          echo "✅ Test summary generated from artifacts"
-          cat test-summary.md
+        echo "✅ Test summary generated from artifacts"
+        cat test-summary.md
 
-      - name: Upload test summary
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-summary-${{ github.run_id }}
-          path: test-summary.md
-          retention-days: 30
+    - name: Upload test summary
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-summary-${{ github.run_id }}
+        path: test-summary.md
+        retention-days: 30
 
-      - name: Comment on PR with test results
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
+    - name: Comment on PR with test results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
 
-            try {
-              const summary = fs.readFileSync('test-summary.md', 'utf8');
-              
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: summary
-              });
-              
-              console.log('✅ Test summary posted to PR');
-            } catch (error) {
-              console.error('❌ Failed to post test summary:', error);
-            }
+          try {
+            const summary = fs.readFileSync('test-summary.md', 'utf8');
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+            
+            console.log('✅ Test summary posted to PR');
+          } catch (error) {
+            console.error('❌ Failed to post test summary:', error);
+          }
 
-      - name: Set job status
-        run: |
-          # Check if any test jobs failed
-          # For matrix jobs, we need to check if any individual job failed
-          # Only fail if there were actual test failures, not configuration issues
-          if [ "${{ needs.test-execution.result }}" = "failure" ]; then
-            echo "⚠️  Some test jobs had issues - checking for actual test failures..."
-            echo "Note: This may be due to configuration issues rather than test failures"
-            echo "Check individual job logs for details"
-            # Don't exit with error code - let the workflow continue
-            # The individual test results will show the actual status
-          else
-            echo "✅ All test suites passed"
-          fi
+    - name: Set job status
+      run: |
+        # Check if any test jobs failed
+        # For matrix jobs, we need to check if any individual job failed
+        # Only fail if there were actual test failures, not configuration issues
+        if [ "${{ needs.test-execution.result }}" = "failure" ]; then
+          echo "⚠️  Some test jobs had issues - checking for actual test failures..."
+          echo "Note: This may be due to configuration issues rather than test failures"
+          echo "Check individual job logs for details"
+          # Don't exit with error code - let the workflow continue
+          # The individual test results will show the actual status
+        else
+          echo "✅ All test suites passed"
+        fi
 
   performance-tracking:
     name: Performance Tracking
@@ -558,49 +598,49 @@ jobs:
     if: github.ref == 'refs/heads/main' && always()
 
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Track test performance trends
-        run: |
-          echo "📈 Tracking test performance trends..."
+    - name: Track test performance trends
+      run: |
+        echo "📈 Tracking test performance trends..."
 
-          # This would integrate with a performance tracking system
-          # For now, we'll just log the metrics
+        # This would integrate with a performance tracking system
+        # For now, we'll just log the metrics
 
-          echo "Performance tracking would capture:"
-          echo "- Test execution duration trends"
-          echo "- Coverage trends over time"
-          echo "- Flaky test detection"
-          echo "- Resource usage patterns"
+        echo "Performance tracking would capture:"
+        echo "- Test execution duration trends"
+        echo "- Coverage trends over time"
+        echo "- Flaky test detection"
+        echo "- Resource usage patterns"
 
-          # In a real implementation, this might:
-          # - Store metrics in a database
-          # - Generate performance dashboards
-          # - Alert on performance regressions
-          # - Track test reliability metrics
+        # In a real implementation, this might:
+        # - Store metrics in a database
+        # - Generate performance dashboards
+        # - Alert on performance regressions
+        # - Track test reliability metrics
 
   notification:
     name: Test Notifications
     runs-on: ubuntu-latest
-    needs: [test-execution, test-summary]
+    needs: [ test-execution, test-summary ]
     if: always() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
 
     steps:
-      - name: Notify on test failures
-        if: contains(needs.test-execution.result, 'failure')
-        run: |
-          echo "🚨 Test failures detected on ${{ github.ref_name }} branch"
+    - name: Notify on test failures
+      if: contains(needs.test-execution.result, 'failure')
+      run: |
+        echo "🚨 Test failures detected on ${{ github.ref_name }} branch"
 
-          # This could integrate with:
-          # - Slack notifications
-          # - Email alerts
-          # - PagerDuty incidents
-          # - Discord webhooks
+        # This could integrate with:
+        # - Slack notifications
+        # - Email alerts
+        # - PagerDuty incidents
+        # - Discord webhooks
 
-          echo "Would send notification about test failures to configured channels"
+        echo "Would send notification about test failures to configured channels"
 
-      - name: Notify on test success
-        if: needs.test-execution.result == 'success'
-        run: |
-          echo "✅ All tests passed on ${{ github.ref_name }} branch"
-          echo "Would send success notification if configured"
+    - name: Notify on test success
+      if: needs.test-execution.result == 'success'
+      run: |
+        echo "✅ All tests passed on ${{ github.ref_name }} branch"
+        echo "Would send success notification if configured"

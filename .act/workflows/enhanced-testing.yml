@@ -15,31 +15,31 @@ env:
   GITHUB_WORKSPACE: '/Users/russell.oakham/repos/personal/macro-ai'
   NODE_ENV: 'development'
   CI: 'true'
-  
+
 # Matrix configuration for testing specific packages
 matrix:
   test-execution:
-    - name: "Unit Tests - API Client"
-      package: "packages/macro-ai-api-client"
-      test-pattern: "src/**/*.test.{ts,tsx}"
-      exclude-pattern: "**/*.integration.test.*"
+    - name: 'Unit Tests - API Client'
+      package: 'packages/macro-ai-api-client'
+      test-pattern: 'src/**/*.test.{ts,tsx}'
+      exclude-pattern: '**/*.integration.test.*'
       timeout: 60000
       parallel: true
-    - name: "Unit Tests - Express API"
-      package: "apps/express-api"
-      test-pattern: "src/**/*.test.{ts,tsx}"
-      exclude-pattern: "**/*.integration.test.*"
+    - name: 'Unit Tests - Express API'
+      package: 'apps/express-api'
+      test-pattern: 'src/**/*.test.{ts,tsx}'
+      exclude-pattern: '**/*.integration.test.*'
       timeout: 60000
       parallel: true
-    - name: "Unit Tests - Client UI"
-      package: "apps/client-ui"
-      test-pattern: "src/**/*.test.{ts,tsx}"
-      exclude-pattern: "**/*.integration.test.*"
+    - name: 'Unit Tests - Client UI'
+      package: 'apps/client-ui'
+      test-pattern: 'src/**/*.test.{ts,tsx}'
+      exclude-pattern: '**/*.integration.test.*'
       timeout: 60000
       parallel: true
-    - name: "Integration Tests - Express API"
-      package: "apps/express-api"
-      test-pattern: "**/*.integration.test.*"
-      exclude-pattern: ""
+    - name: 'Integration Tests - Express API'
+      package: 'apps/express-api'
+      test-pattern: '**/*.integration.test.*'
+      exclude-pattern: ''
       timeout: 120000
       parallel: false
