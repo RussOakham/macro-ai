@@ -300,14 +300,22 @@ jobs:
 
           # Save test metrics to file for later collection
           mkdir -p test-metrics
+          
+          # Extract test counts from JUnit XML properly
+          tests=$(grep -o 'tests="[0-9]*"' test-results.xml | head -1 | grep -o '[0-9]*' || echo "0")
+          failures=$(grep -o 'failures="[0-9]*"' test-results.xml | head -1 | grep -o '[0-9]*' || echo "0")
+          
+          # Extract coverage from coverage-final.json
+          coverage=$(if [ -f "coverage/coverage-final.json" ]; then jq -r '.total.lines.pct // 0' coverage/coverage-final.json 2>/dev/null || echo "0"; else echo "0"; fi)
+          
           cat > test-metrics/metrics.json << EOF
           {
             "package": "${{ matrix.package }}",
             "name": "${{ matrix.name }}",
-            "tests": $(grep -o 'Tests.*[0-9]*' test-results.xml | grep -o '[0-9]*' | tail -1 || echo "0"),
-            "failures": $(grep -o 'failures="[0-9]*"' test-results.xml | head -1 | grep -o '[0-9]*' || echo "0"),
+            "tests": $tests,
+            "failures": $failures,
             "duration": $duration,
-            "coverage": $(if [ -f "coverage/coverage-summary.json" ]; then jq -r '.total.lines.pct // 0' coverage/coverage-summary.json 2>/dev/null || echo "0"; else echo "0"; fi)
+            "coverage": $coverage
           }
           EOF
 
@@ -443,7 +451,7 @@ jobs:
           find test-results -type f -name "*.json" | head -10
 
           # Look for metrics files in downloaded artifacts
-          for metrics_file in test-results/*/test-metrics/metrics.json test-results/test-metrics/metrics.json; do
+          for metrics_file in test-results-*/test-metrics/metrics.json; do
           if [ -f "$metrics_file" ]; then
             echo "Processing metrics: $metrics_file"
               
