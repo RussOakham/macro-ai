@@ -188,7 +188,11 @@ jobs:
           echo "🔧 Setting up test environment for ${{ matrix.name }}..."
 
           # Create test-specific environment configuration
-          mkdir -p apps/${{ matrix.package }}
+          if [[ "${{ matrix.package }}" == packages/* ]]; then
+            mkdir -p ${{ matrix.package }}
+          else
+            mkdir -p apps/${{ matrix.package }}
+          fi
 
           # Set environment variables for Express API tests (needed for API client build)
           echo "NODE_ENV=test" >> $GITHUB_ENV
@@ -213,7 +217,11 @@ jobs:
           echo "API_RATE_LIMIT_MAX_REQUESTS=60" >> $GITHUB_ENV
 
           # Basic test environment variables (for other packages)
-          cat > apps/${{ matrix.package }}/.env.test << EOF
+          if [[ "${{ matrix.package }}" == packages/* ]]; then
+            cat > ${{ matrix.package }}/.env.test << EOF
+          else
+            cat > apps/${{ matrix.package }}/.env.test << EOF
+          fi
           NODE_ENV=test
           APP_ENV=test
           SERVER_PORT=3000
@@ -265,7 +273,12 @@ jobs:
           # Calculate test timeout
           timeout_seconds=$((${{ matrix.timeout }} / 1000))
 
-          cd apps/${{ matrix.package }}
+          # Handle different package locations
+          if [[ "${{ matrix.package }}" == packages/* ]]; then
+            cd ${{ matrix.package }}
+          else
+            cd apps/${{ matrix.package }}
+          fi
 
           # Run tests with timeout and capture output
           start_time=$(date +%s)
@@ -277,7 +290,6 @@ jobs:
               --reporter=junit \
               --outputFile=test-results.xml \
               --coverage \
-              "${{ matrix.test-pattern }}" \
               ${{ matrix.exclude-pattern != '' && format('--exclude "{0}"', matrix.exclude-pattern) || '' }} \
               || test_exit_code=$?
           else
@@ -287,7 +299,6 @@ jobs:
               --reporter=junit \
               --outputFile=test-results.xml \
               --coverage \
-              "${{ matrix.test-pattern }}" \
               ${{ matrix.exclude-pattern != '' && format('--exclude "{0}"', matrix.exclude-pattern) || '' }} \
               || test_exit_code=$?
           fi
@@ -323,11 +334,11 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results-${{ matrix.package }}-${{ github.run_id }}-${{ matrix.name }}
+          name: test-results-${{ matrix.package }}-${{ github.run_id }}-${{ matrix.name | replace(' ', '-') | replace('/', '-') }}
           path: |
-            apps/${{ matrix.package }}/test-results.xml
-            apps/${{ matrix.package }}/coverage/
-            apps/${{ matrix.package }}/test-metrics/
+            ${{ matrix.package }}/test-results.xml
+            ${{ matrix.package }}/coverage/
+            ${{ matrix.package }}/test-metrics/
           retention-days: 30
           overwrite: true
 
@@ -336,7 +347,7 @@ jobs:
         if: always()
         with:
           name: ${{ matrix.name }} Results
-          path: apps/${{ matrix.package }}/test-results.xml
+          path: ${{ matrix.package }}/test-results.xml
           reporter: java-junit
           fail-on-error: false
 
@@ -346,7 +357,12 @@ jobs:
         run: |
           echo "📊 Extracting test metrics..."
 
-          cd apps/${{ matrix.package }}
+          # Handle different package locations
+          if [[ "${{ matrix.package }}" == packages/* ]]; then
+            cd ${{ matrix.package }}
+          else
+            cd apps/${{ matrix.package }}
+          fi
 
           # Extract coverage percentage
           if [ -f "coverage/coverage-summary.json" ]; then
