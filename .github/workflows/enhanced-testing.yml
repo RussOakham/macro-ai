@@ -442,142 +442,25 @@ jobs:
         run: |
           echo "📊 Generating test report from collected metrics..."
 
-          # Create summary report header
-          cat > test-summary.md << 'EOF'
-          # 🧪 Test Execution Summary
-
-          ## Test Matrix Results
-
-          | Test Suite | Status | Coverage | Tests | Failures | Duration |
-          |------------|--------|----------|-------|----------|----------|
-          EOF
-
-          # Process collected metrics
-          total_tests=0
-          total_failures=0
-          suite_count=0
-          total_coverage=0
-
-          # Debug: List all files in test-results
-          echo "🔍 Debug: Listing test-results directory structure:"
-          find test-results -type f -name "*.json" | head -10
-
-          # Look for metrics files in downloaded artifacts
-          for metrics_file in test-results-*/test-metrics/metrics.json; do
-          if [ -f "$metrics_file" ]; then
-            echo "Processing metrics: $metrics_file"
-
-              # Extract metrics using jq
-              name=$(jq -r '.name' "$metrics_file")
-              tests=$(jq -r '.tests' "$metrics_file")
-              failures=$(jq -r '.failures' "$metrics_file")
-              duration=$(jq -r '.duration' "$metrics_file")
-              coverage=$(jq -r '.coverage' "$metrics_file")
-
-              total_tests=$((total_tests + tests))
-              total_failures=$((total_failures + failures))
-              suite_count=$((suite_count + 1))
-
-              # Calculate total coverage (simple average for now)
-              total_coverage=$((total_coverage + coverage))
-
-              # Determine status
-              if [ "$failures" -eq 0 ]; then
-                status="✅ PASS"
-              else
-                status="❌ FAIL ($failures failures)"
-              fi
-
-              # Format coverage
-              if [ "$coverage" != "0" ] && [ "$coverage" != "null" ]; then
-                coverage_display="${coverage}%"
-              else
-                coverage_display="N/A%"
-              fi
-
-              # Add to report
-              echo "| $name | $status | $coverage_display | $tests | $failures | ${duration}s |" >> test-summary.md
+          # Extract coverage reports from artifacts
+          echo "🔍 Extracting coverage reports from artifacts..."
+          find test-results -name "coverage" -type d | while read coverage_dir; do
+            echo "Found coverage directory: $coverage_dir"
+            if [ -f "$coverage_dir/coverage-summary.json" ]; then
+              # Copy coverage summary to a predictable location
+              package_name=$(basename "$(dirname "$coverage_dir")" | sed 's/test-results-//' | sed 's/-.*//')
+              mkdir -p coverage-reports/$package_name
+              cp "$coverage_dir/coverage-summary.json" coverage-reports/$package_name/
+              echo "✅ Copied coverage report for $package_name"
             fi
           done
 
-          # Fallback: If no metrics found, try to extract from JUnit XML files directly
-          if [ $suite_count -eq 0 ]; then
-            echo "⚠️ No metrics files found, trying to extract from JUnit XML files..."
-            for xml_file in test-results/*/test-results.xml; do
-              if [ -f "$xml_file" ]; then
-                echo "Processing XML: $xml_file"
+          # Generate comprehensive test and coverage report
+          echo "📋 Generating comprehensive report..."
+          node scripts/coverage-report.js --markdown > test-summary.md
 
-                # Extract package name from path
-                package_name=$(echo "$xml_file" | sed 's|test-results/||' | sed 's|/test-results.xml||' | sed 's|-.*||')
-
-                # Extract test data from XML with improved parsing
-                tests=$(grep -o 'tests="[0-9]*"' "$xml_file" | head -1 | sed 's/.*tests="\([0-9]*\)".*/\1/' || echo "0")
-                failures=$(grep -o 'failures="[0-9]*"' "$xml_file" | head -1 | sed 's/.*failures="\([0-9]*\)".*/\1/' || echo "0")
-                errors=$(grep -o 'errors="[0-9]*"' "$xml_file" | head -1 | sed 's/.*errors="\([0-9]*\)".*/\1/' || echo "0")
-                duration=$(grep -o 'time="[0-9.]*"' "$xml_file" | head -1 | sed 's/.*time="\([0-9.]*\)".*/\1/' || echo "0")
-
-                # Validate extracted values are numeric
-                tests=$([ "$tests" -eq "$tests" ] 2>/dev/null && echo "$tests" || echo "0")
-                failures=$([ "$failures" -eq "$failures" ] 2>/dev/null && echo "$failures" || echo "0")
-                errors=$([ "$errors" -eq "$errors" ] 2>/dev/null && echo "$errors" || echo "0")
-                duration=$([ "$duration" = "$duration" ] 2>/dev/null && echo "$duration" || echo "0")
-
-                # Convert duration to integer
-                duration_int=$(printf "%.0f" "$duration")
-
-                total_tests=$((total_tests + tests))
-                total_failures=$((total_failures + failures + errors))
-                suite_count=$((suite_count + 1))
-
-                # Determine status
-                if [ "$failures" -eq 0 ] && [ "$errors" -eq 0 ]; then
-                  status="✅ PASS"
-                else
-                  status="❌ FAIL ($((failures + errors)) failures)"
-                fi
-
-                # Add to report
-                echo "| $package_name | $status | N/A% | $tests | $((failures + errors)) | ${duration_int}s |" >> test-summary.md
-              fi
-            done
-          fi
-
-          # Calculate average coverage
-          if [ $suite_count -gt 0 ]; then
-            avg_coverage=$((total_coverage / suite_count))
-          else
-            avg_coverage=0
-          fi
-
-          # Add summary
-          # Calculate success rate safely (handle division by zero)
-          if [ $total_tests -eq 0 ]; then
-            success_rate=100
-          else
-            success_rate=$(( (total_tests - total_failures) * 100 / total_tests ))
-          fi
-
-          cat >> test-summary.md << EOF
-
-          ## Overall Summary
-
-          - **Total Tests**: $total_tests
-          - **Total Failures**: $total_failures
-          - **Success Rate**: ${success_rate}%
-          - **Test Suites**: $suite_count
-          - **Average Coverage**: ${avg_coverage}%
-
-          ## Coverage Report
-          Coverage reports are available as artifacts for each test suite.
-
-          ## Performance Metrics
-          Performance analysis is included in individual test job logs.
-
-          ---
-          *Generated on $(date -u '+%Y-%m-%d %H:%M:%S UTC') by GitHub Actions*
-          EOF
-
-          echo "✅ Test summary generated from artifacts"
+          echo "✅ Comprehensive test and coverage summary generated"
+          echo "📄 Report content:"
           cat test-summary.md
 
       - name: Upload test summary

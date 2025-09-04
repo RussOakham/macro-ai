@@ -74,6 +74,9 @@ export default defineConfig({
 				'**/main.tsx',
 				'src/**/*.stories.{ts,tsx}',
 			],
+			// Per-package coverage reporting
+			reportsDirectory: './coverage',
+			reporter: ['text', 'json-summary', 'lcov'],
 			thresholds: {
 				global: {
 					statements: 30,
