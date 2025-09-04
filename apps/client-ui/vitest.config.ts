@@ -16,6 +16,9 @@ const babelPlugins = shouldUseReactCompiler
 	? [['babel-plugin-react-compiler', ReactCompilerConfig]]
 	: []
 
+// Detect if running in act environment
+const isActEnvironment = process.env.ACT_LOCAL === 'true'
+
 export default defineConfig({
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 	plugins: [
@@ -42,13 +45,19 @@ export default defineConfig({
 		pool: 'threads',
 		poolOptions: {
 			threads: {
-				singleThread: false,
+				singleThread: isActEnvironment, // Run single-threaded in act for faster execution
 				minThreads: 1,
-				maxThreads: 4,
+				maxThreads: isActEnvironment ? 1 : 4, // Limit to 1 thread in act
 			},
 		},
-		// Enable parallel execution
-		fileParallelism: true,
+		// Enable parallel execution (but limit in act environment)
+		fileParallelism: !isActEnvironment,
+		// Optimize timeouts for act environment
+		...(isActEnvironment && {
+			testTimeout: 10000, // 10 seconds instead of 30 for act
+			hookTimeout: 15000, // 15 seconds instead of 30 for act
+			teardownTimeout: 10000, // 10 seconds instead of 30 for act
+		}),
 		coverage: {
 			...commonTestConfig.coverage,
 			exclude: [

@@ -24,6 +24,10 @@ concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
   cancel-in-progress: true
 
+env:
+  # Set default to false, will be overridden by act if running locally
+  ACT_LOCAL: false
+
 jobs:
   setup:
     name: Setup Environment
@@ -34,7 +38,27 @@ jobs:
       NODE_ENV: ${{ env.NODE_ENV }}
       APP_ENV: ${{ env.APP_ENV }}
     steps:
-      - name: Configure AWS credentials
+      - name: Detect environment
+        id: detect_env
+        run: |
+          if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
+            echo "🔍 Running in act (local testing) - using direct AWS credentials"
+            echo "use_direct_creds=true" >> $GITHUB_OUTPUT
+          else
+            echo "🔍 Running in GitHub Actions (remote) - using IAM role assumption"
+            echo "use_direct_creds=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure AWS credentials (Direct)
+        if: steps.detect_env.outputs.use_direct_creds == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Configure AWS credentials (Role)
+        if: steps.detect_env.outputs.use_direct_creds == 'false'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -82,9 +106,36 @@ jobs:
           echo "🔍 Using parameter store path: ${PARAM_PATH}"
 
           # Fetch all runtime configuration from Parameter Store using environment-specific path
-          echo "🔍 Fetching parameters from: ${PARAM_PATH}"
+          if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
+            echo "🔍 Running in act environment - using mock parameters for local testing"
 
-          # Function to fetch parameter with error handling
+            # Mock parameters for local act testing
+            AWS_COGNITO_REGION="us-east-1"
+            AWS_COGNITO_USER_POOL_ID="us-east-1_mock_pool"
+            AWS_COGNITO_USER_POOL_CLIENT_ID="mock_client_id"
+            AWS_COGNITO_USER_POOL_SECRET_KEY="mock_secret_key"
+            AWS_COGNITO_REFRESH_TOKEN_EXPIRY="2592000"
+
+            COOKIE_DOMAIN="localhost"
+            COOKIE_ENCRYPTION_KEY="mock-encryption-key-for-local-testing-only"
+
+            REDIS_URL="redis://localhost:6379"
+            RELATIONAL_DATABASE_URL="postgresql://user:password@localhost:5432/macro_ai_test"
+
+            OPENAI_API_KEY="mock-openai-key-for-local-testing-only"
+
+            RATE_LIMIT_WINDOW_MS="900000"
+            RATE_LIMIT_MAX_REQUESTS="100"
+            AUTH_RATE_LIMIT_WINDOW_MS="900000"
+            AUTH_RATE_LIMIT_MAX_REQUESTS="5"
+            API_RATE_LIMIT_WINDOW_MS="60000"
+            API_RATE_LIMIT_MAX_REQUESTS="10"
+
+            echo "✅ Using mock parameters for local testing"
+          else
+            echo "🔍 Running in GitHub Actions - fetching parameters from: ${PARAM_PATH}"
+
+            # Function to fetch parameter with error handling
           fetch_param() {
             local param_name="$1"
             local param_path="${PARAM_PATH}/${param_name}"
@@ -193,6 +244,7 @@ jobs:
           VITE_API_URL=${{ secrets.VITE_API_URL || 'http://localhost:3040/api' }}
           VITE_API_KEY=${{ secrets.VITE_API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
           EOF
+          fi
 
       - name: Upload env artifacts
         uses: actions/upload-artifact@v4
@@ -229,10 +281,58 @@ jobs:
 
       # Download .env files from artifacts to prevent secret exposure
       - name: Download env artifacts
+        if: env.ACT_LOCAL != 'true'
         uses: actions/download-artifact@v4
         with:
           name: ci-env-files
           path: /tmp/envs
+
+      - name: Create mock env files for act environment
+        if: env.ACT_LOCAL == 'true'
+        run: |
+          mkdir -p /tmp/envs apps/express-api apps/client-ui
+
+          # Create Express API .env file with mock values
+          cat << EOF > /tmp/envs/express-api.env
+          # API Configuration
+          API_KEY=dummy-api-key-for-act-testing
+          SERVER_PORT=3040
+          NODE_ENV=development
+          APP_ENV=development
+
+          # AWS Cognito Configuration
+          AWS_COGNITO_REGION=us-east-1
+          AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
+          AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
+          AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
+
+          # Cookie Configuration
+          COOKIE_DOMAIN=localhost
+          COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
+
+          # Databases
+          REDIS_URL=redis://localhost:6379
+          RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
+
+          # OpenAI
+          OPENAI_API_KEY=mock-openai-key-for-local-testing-only
+
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS=900000
+          RATE_LIMIT_MAX_REQUESTS=100
+          AUTH_RATE_LIMIT_WINDOW_MS=900000
+          AUTH_RATE_LIMIT_MAX_REQUESTS=5
+          API_RATE_LIMIT_WINDOW_MS=60000
+          API_RATE_LIMIT_MAX_REQUESTS=10
+          EOF
+
+          # Create Client UI .env file
+          cat << EOF > /tmp/envs/client-ui.env
+          VITE_API_URL=http://localhost:3040/api
+          VITE_API_KEY=dummy-api-key-at-least-32-chars-long
+          EOF
 
       - name: Create Express API .env file
         run: |
@@ -311,10 +411,58 @@ jobs:
 
       # Download .env files from artifacts to prevent secret exposure
       - name: Download env artifacts
+        if: env.ACT_LOCAL != 'true'
         uses: actions/download-artifact@v4
         with:
           name: ci-env-files
           path: /tmp/envs
+
+      - name: Create mock env files for act environment
+        if: env.ACT_LOCAL == 'true'
+        run: |
+          mkdir -p /tmp/envs apps/express-api apps/client-ui
+
+          # Create Express API .env file with mock values
+          cat << EOF > /tmp/envs/express-api.env
+          # API Configuration
+          API_KEY=dummy-api-key-for-act-testing
+          SERVER_PORT=3040
+          NODE_ENV=development
+          APP_ENV=development
+
+          # AWS Cognito Configuration
+          AWS_COGNITO_REGION=us-east-1
+          AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
+          AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
+          AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
+
+          # Cookie Configuration
+          COOKIE_DOMAIN=localhost
+          COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
+
+          # Databases
+          REDIS_URL=redis://localhost:6379
+          RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
+
+          # OpenAI
+          OPENAI_API_KEY=mock-openai-key-for-local-testing-only
+
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS=900000
+          RATE_LIMIT_MAX_REQUESTS=100
+          AUTH_RATE_LIMIT_WINDOW_MS=900000
+          AUTH_RATE_LIMIT_MAX_REQUESTS=5
+          API_RATE_LIMIT_WINDOW_MS=60000
+          API_RATE_LIMIT_MAX_REQUESTS=10
+          EOF
+
+          # Create Client UI .env file
+          cat << EOF > /tmp/envs/client-ui.env
+          VITE_API_URL=http://localhost:3040/api
+          VITE_API_KEY=dummy-api-key-at-least-32-chars-long
+          EOF
 
       - name: Create Express API .env file
         run: |
@@ -405,10 +553,58 @@ jobs:
 
       # Download .env files from artifacts to prevent secret exposure
       - name: Download env artifacts
+        if: env.ACT_LOCAL != 'true'
         uses: actions/download-artifact@v4
         with:
           name: ci-env-files
           path: /tmp/envs
+
+      - name: Create mock env files for act environment
+        if: env.ACT_LOCAL == 'true'
+        run: |
+          mkdir -p /tmp/envs apps/express-api apps/client-ui
+
+          # Create Express API .env file with mock values
+          cat << EOF > /tmp/envs/express-api.env
+          # API Configuration
+          API_KEY=dummy-api-key-for-act-testing
+          SERVER_PORT=3040
+          NODE_ENV=development
+          APP_ENV=development
+
+          # AWS Cognito Configuration
+          AWS_COGNITO_REGION=us-east-1
+          AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
+          AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
+          AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
+
+          # Cookie Configuration
+          COOKIE_DOMAIN=localhost
+          COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
+
+          # Databases
+          REDIS_URL=redis://localhost:6379
+          RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
+
+          # OpenAI
+          OPENAI_API_KEY=mock-openai-key-for-local-testing-only
+
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS=900000
+          RATE_LIMIT_MAX_REQUESTS=100
+          AUTH_RATE_LIMIT_WINDOW_MS=900000
+          AUTH_RATE_LIMIT_MAX_REQUESTS=5
+          API_RATE_LIMIT_WINDOW_MS=60000
+          API_RATE_LIMIT_MAX_REQUESTS=10
+          EOF
+
+          # Create Client UI .env file
+          cat << EOF > /tmp/envs/client-ui.env
+          VITE_API_URL=http://localhost:3040/api
+          VITE_API_KEY=dummy-api-key-at-least-32-chars-long
+          EOF
 
       - name: Create Express API .env file
         run: |
@@ -637,6 +833,7 @@ jobs:
           fetch-depth: 0 # Required for gitleaks to scan commit history
 
       - name: Run Gitleaks
+        if: env.ACT_LOCAL != 'true'
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -649,3 +846,9 @@ jobs:
           exit-code: 1
           # Enable verbose output for debugging
           verbose: true
+
+      - name: Skip Gitleaks in act environment
+        if: env.ACT_LOCAL == 'true'
+        run: |
+          echo "🔍 Running in act environment - skipping Gitleaks secret scanning"
+          echo "✅ Gitleaks check skipped for local testing"

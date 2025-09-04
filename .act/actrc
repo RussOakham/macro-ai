@@ -1,0 +1,42 @@
+# Act configuration for macro-ai monorepo
+# This file provides local testing configuration for GitHub Actions
+
+# Platform configurations
+-P ubuntu-latest=ubuntu:22.04
+-P ubuntu-22.04=ubuntu:22.04
+-P ubuntu-20.04=ubuntu:20.04
+-P ubuntu-18.04=ubuntu:18.04
+
+# Container architecture for M-series Macs
+--container-architecture linux/amd64
+
+# Environment variables for local testing
+--env AWS_DEFAULT_REGION=us-east-1
+--env AWS_REGION=us-east-1
+--env NODE_ENV=development
+--env CI=true
+--env GITHUB_ACTIONS=true
+--env ACT_LOCAL=true
+
+# Mock AWS credentials (use fake values for local testing)
+--env AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+--env AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+--env AWS_SESSION_TOKEN=your-session-token-here
+
+# Mock GitHub context
+--env GITHUB_REPOSITORY=RussOakham/macro-ai
+--env GITHUB_REF=refs/heads/feature/improve-testing-setup
+--env GITHUB_HEAD_REF=feature/improve-testing-setup
+--env GITHUB_BASE_REF=main
+--env GITHUB_SHA=1234567890abcdef
+--env GITHUB_WORKSPACE=/Users/russell.oakham/repos/personal/macro-ai
+
+# Disable problematic jobs for local testing
+--skip-job "Secret Scanning (Gitleaks)"
+--skip-job "Setup Environment"
+
+# Verbose output for debugging
+--verbose
+
+# Enable parallel execution of jobs
+--parallel

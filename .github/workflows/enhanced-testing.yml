@@ -56,6 +56,7 @@ jobs:
           if find . -name "*.integration.test.*" -o -name "*integration*.test.*" | grep -q .; then
             has_integration="true"
             echo "✅ Integration tests found"
+            find . -name "*.integration.test.*" -o -name "*integration*.test.*" | head -5
           fi
 
           if find . -name "*.e2e.test.*" -o -name "*e2e*.test.*" | grep -q .; then
@@ -276,9 +277,8 @@ jobs:
               --reporter=junit \
               --outputFile=test-results.xml \
               --coverage \
-
-              ${{ matrix.test-pattern }} \
-              ${{ matrix.exclude-pattern != '' && format('--exclude {0}', matrix.exclude-pattern) || '' }} \
+              "${{ matrix.test-pattern }}" \
+              ${{ matrix.exclude-pattern != '' && format('--exclude "{0}"', matrix.exclude-pattern) || '' }} \
               || test_exit_code=$?
           else
             echo "🔄 Running tests in sequential mode..."
@@ -287,10 +287,8 @@ jobs:
               --reporter=junit \
               --outputFile=test-results.xml \
               --coverage \
-
-
-              ${{ matrix.test-pattern }} \
-              ${{ matrix.exclude-pattern != '' && format('--exclude {0}', matrix.exclude-pattern) || '' }} \
+              "${{ matrix.test-pattern }}" \
+              ${{ matrix.exclude-pattern != '' && format('--exclude "{0}"', matrix.exclude-pattern) || '' }} \
               || test_exit_code=$?
           fi
 
@@ -325,12 +323,13 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results-${{ matrix.package }}-${{ github.run_id }}
+          name: test-results-${{ matrix.package }}-${{ github.run_id }}-${{ matrix.name }}
           path: |
             apps/${{ matrix.package }}/test-results.xml
             apps/${{ matrix.package }}/coverage/
             apps/${{ matrix.package }}/test-metrics/
           retention-days: 30
+          overwrite: true
 
       - name: Publish test results
         uses: dorny/test-reporter@v1
