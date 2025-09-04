@@ -317,11 +317,19 @@ jobs:
 
           exit ${test_exit_code:-0}
 
+      - name: Sanitize artifact name
+        id: sanitize-name
+        if: always()
+        run: |
+          # Sanitize the matrix name for artifact naming
+          sanitized_name=$(echo "${{ matrix.name }}" | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
+          echo "sanitized-name=$sanitized_name" >> $GITHUB_OUTPUT
+
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results-${{ matrix.package }}-${{ github.run_id }}-${{ matrix.name | replace(' ', '-') | replace('/', '-') }}
+          name: test-results-${{ matrix.package }}-${{ github.run_id }}-${{ steps.sanitize-name.outputs.sanitized-name }}
           path: |
             ${{ matrix.package }}/test-results.xml
             ${{ matrix.package }}/coverage/
