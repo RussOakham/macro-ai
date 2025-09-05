@@ -59,6 +59,7 @@ yarn-error.log*
 # IDE
 .idea
 .vscode
+.secrets
 
 # Act local testing configuration
 .act/secrets
