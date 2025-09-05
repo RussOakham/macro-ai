@@ -93,22 +93,28 @@ jobs:
           IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
           IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:${IMAGE_TAG}"
 
-          echo "🐳 Building Docker image..."
+          echo "🐳 Building Docker image with BuildKit..."
           echo "Repository: ${ECR_REPOSITORY}"
           echo "Tag: ${IMAGE_TAG}"
           echo "URI: ${IMAGE_URI}"
 
-          # Build with environment file
-          docker build \
-            --file apps/express-api/Dockerfile \
+          # Build with BuildKit and advanced caching
+          docker buildx build \
+            --file apps/express-api/Dockerfile.distroless \
+            --target ecs-runner \
+            --platform linux/amd64 \
             --build-arg ENV_FILE="${{ steps.generate-env.outputs.env-file }}" \
+            --build-arg BUILD_ENV=development \
+            --build-arg BUILD_VERSION="${{ steps.image-tag.outputs.image-tag }}" \
+            --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+            --build-arg BUILD_COMMIT=${{ github.sha }} \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --tag "${IMAGE_URI}" \
+            --push \
             .
 
-          echo "📤 Pushing image to ECR..."
-          docker push "${IMAGE_URI}"
-
-          echo "✅ Image pushed successfully!"
+          echo "✅ Image built and pushed successfully with BuildKit!"
           echo "image-uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
           echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
 

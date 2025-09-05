@@ -3,9 +3,6 @@ FROM node:20-alpine AS base
 RUN apk update && apk add --no-cache libc6-compat
 RUN corepack enable
 
-# The web Dockerfile is copy-pasted into our main docs at /docs/handbook/deploying-with-docker.
-# Make sure you update this Dockerfile, the Dockerfile in the web workspace and copy that over to Dockerfile in the docs.
-
 FROM base AS builder
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 RUN apk update && apk add --no-cache libc6-compat
@@ -28,10 +25,6 @@ RUN --mount=type=cache,target=.turbo \
 # Build stage - install ALL dependencies including dev dependencies for building
 FROM base AS builder-full
 RUN apk update && apk add --no-cache libc6-compat
-
-# Set pnpm home and path for build stage
-ENV PNPM_HOME="/root/.local/share/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
 
 WORKDIR /macro-ai
 
@@ -56,10 +49,6 @@ RUN --mount=type=cache,target=.turbo \
 FROM base AS installer
 RUN apk update && apk add --no-cache libc6-compat
 
-# Set pnpm home and path for installer stage
-ENV PNPM_HOME="/root/.local/share/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-
 WORKDIR /macro-ai
 
 # Install ONLY production dependencies
@@ -67,14 +56,10 @@ COPY --from=builder /macro-ai/out/json/ .
 RUN --mount=type=cache,target=/root/.local/share/pnpm \
     pnpm install --prod --frozen-lockfile --ignore-scripts
 
-FROM base AS runner
-RUN apk update && apk add --no-cache curl wget
+# ECS-compatible stage with health check tools
+FROM node:20-alpine AS ecs-runner
+RUN apk update && apk add --no-cache curl wget libc6-compat
 WORKDIR /macro-ai
-
-# Don't run production as root
-RUN addgroup --system --gid 1001 expressjs
-RUN adduser --system --uid 1001 expressjs
-USER expressjs
 
 # Copy built application from build stage and production dependencies from installer stage
 COPY --from=builder-full /macro-ai/apps/express-api/dist ./apps/express-api/dist
@@ -83,8 +68,43 @@ COPY --from=installer /macro-ai/apps/express-api/node_modules ./apps/express-api
 COPY --from=installer /macro-ai/package.json ./package.json
 COPY --from=installer /macro-ai/apps/express-api/package.json ./apps/express-api/package.json
 
-# Health check with curl (matches ECS expectations)
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 --ingroup nodejs nodejs
+USER nodejs
+
+# Expose port
+EXPOSE 3040
+
+# Health check with curl for ECS compatibility
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f -H "X-Api-Key: ${API_KEY}" http://localhost:3040/api/health || exit 1
 
+# Start the application
 CMD ["node", "apps/express-api/dist/index.js"]
+
+# Pure distroless stage (smallest but limited health check options)
+FROM gcr.io/distroless/nodejs20 AS distroless-runner
+WORKDIR /macro-ai
+
+# Copy built application from build stage and production dependencies from installer stage
+COPY --from=builder-full --chown=1001:1001 /macro-ai/apps/express-api/dist ./apps/express-api/dist
+COPY --from=installer --chown=1001:1001 /macro-ai/node_modules ./node_modules
+COPY --from=installer --chown=1001:1001 /macro-ai/apps/express-api/node_modules ./apps/express-api/node_modules
+COPY --from=installer --chown=1001:1001 /macro-ai/package.json ./package.json
+COPY --from=installer --chown=1001:1001 /macro-ai/apps/express-api/package.json ./apps/express-api/package.json
+
+# Set user to non-root (distroless uses numeric IDs)
+USER 1001
+
+# Expose port
+EXPOSE 3040
+
+# Health check using Node.js built-in http module
+# Note: distroless doesn't have shell, so we use HEALTHCHECK with node directly
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD ["node", "-e", "require('http').get('http://localhost:3040/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+
+# Start the application
+CMD ["apps/express-api/dist/index.js"]
+

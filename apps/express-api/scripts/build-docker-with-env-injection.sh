@@ -56,7 +56,8 @@ cd ../..
 docker build \
     --build-arg ENV_FILE="$ENV_FILE" \
     --tag "$ECR_REGISTRY/$REPOSITORY_NAME:$IMAGE_TAG" \
-    --file apps/express-api/Dockerfile \
+    --file apps/express-api/Dockerfile.distroless \
+    --target ecs-runner \
     .
 
 echo "[INFO] Docker image built successfully: $ECR_REGISTRY/$REPOSITORY_NAME:$IMAGE_TAG"

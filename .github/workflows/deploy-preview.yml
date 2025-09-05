@@ -356,7 +356,8 @@ jobs:
 
           # Build with environment file
           docker build \
-            --file apps/express-api/Dockerfile \
+            --file apps/express-api/Dockerfile.distroless \
+            --target ecs-runner \
             --build-arg ENV_FILE="${{ steps.generate-env.outputs.env-file }}" \
             --tag "${IMAGE_URI}" \
             .

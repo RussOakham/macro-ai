@@ -349,6 +349,13 @@ function validateEnvironment() {
  * Main execution
  */
 function main() {
+	// Skip validation if explicitly requested (e.g., during Docker build)
+	if (process.env.SKIP_ENV_VALIDATION === 'true') {
+		logInfo('Environment validation skipped (SKIP_ENV_VALIDATION=true)')
+		logSuccess('Environment validation bypassed for build process')
+		return
+	}
+
 	try {
 		validateEnvironment()
 	} catch (error) {

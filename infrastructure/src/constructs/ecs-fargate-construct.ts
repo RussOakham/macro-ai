@@ -274,7 +274,7 @@ export class EcsFargateConstruct extends Construct {
 			healthCheck: {
 				command: [
 					'CMD-SHELL',
-					`wget --no-verbose --tries=1 --spider http://localhost:${containerPort}${healthCheck.path} || exit 1`,
+					`curl -f -H "X-Api-Key: $API_KEY" http://localhost:${containerPort}${healthCheck.path} || exit 1`,
 				],
 				interval: healthCheck.interval,
 				timeout: healthCheck.timeout,
@@ -385,7 +385,7 @@ export class EcsFargateConstruct extends Construct {
 			healthCheck: {
 				command: [
 					'CMD-SHELL',
-					'wget --no-verbose --tries=1 --spider http://localhost:3040/api/health || exit 1',
+					'curl -f -H "X-Api-Key: $API_KEY" http://localhost:3040/api/health || exit 1',
 				],
 				interval: cdk.Duration.seconds(30),
 				timeout: cdk.Duration.seconds(5),

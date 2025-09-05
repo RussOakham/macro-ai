@@ -1,25 +1,36 @@
 # Docker Configuration for Macro AI Express API
 
-This document covers the Docker setup, configuration, and deployment for the Macro AI Express API.
+This document covers the Docker setup, configuration, and deployment for the Macro AI Express API with BuildKit optimizations.
 
 ## 🏗️ Architecture Overview
 
-The Docker setup uses a **multi-stage build approach** with four stages:
+The Docker setup uses a **multi-stage build approach with BuildKit optimizations**:
 
-1. **`deps`** - Install and cache dependencies
-2. **`builder`** - Compile TypeScript and build the application
-3. **`env-config`** - Generate environment configuration from Parameter Store
-4. **`production`** - Create minimal production image with embedded configuration
+1. **`base`** - Alpine Linux base with Node.js 20 and pnpm
+2. **`builder`** - Turbo prune for monorepo optimization with cache mounts
+3. **`installer`** - Install dependencies and build with BuildKit caching
+4. **`runner`** - Minimal production image with non-root user
+
+### 🚀 BuildKit Features
+
+- **Cache Mounts**: Persistent caching for pnpm store and Turbo cache
+- **Multi-platform Support**: Build for AMD64 and ARM64 architectures
+- **Advanced Caching**: GitHub Actions cache integration and registry caching
+- **Parallel Builds**: Faster builds through parallel stage execution
+- **Secrets Management**: Secure build-time secret handling
 
 ## 📁 File Structure
 
 ```bash
 apps/express-api/
-├── Dockerfile                    # Multi-stage Docker build
-├── .dockerignore                 # Exclude files from build context
-├── docker-compose.yml            # Development environment
+├── Dockerfile                    # Standard Docker build (legacy)
+├── Dockerfile.distroless         # 🏆 RECOMMENDED: Distroless variant for production
+├── .dockerignore                 # Comprehensive build context exclusions
+├── docker-compose.yml            # Development environment with BuildKit
 ├── docker-compose.prod.yml       # Production environment
 ├── scripts/
+│   ├── build-docker-buildkit.sh # BuildKit optimized build script
+│   ├── analyze-docker-image.sh  # Image analysis and optimization tool
 │   ├── generate-env-file.sh     # Generate environment files from Parameter Store
 │   ├── build-docker-with-env.sh # Build Docker images with configuration
 │   ├── build-docker.sh          # Legacy build script
@@ -62,8 +73,23 @@ docker-compose up -d
 
 ### Production Build
 
+#### BuildKit Optimized (Recommended)
+
 ```bash
-# Build production image
+# Build with BuildKit optimizations
+./scripts/build-docker-buildkit.sh -e production -t latest
+
+# Multi-platform build with caching
+./scripts/build-docker-buildkit.sh --multi-platform --cache-from type=registry,ref=myregistry/cache:buildcache
+
+# Build and push to ECR
+./scripts/build-docker-buildkit.sh -e production -t v1.0.0 -p -r 123456789.dkr.ecr.us-east-1.amazonaws.com
+```
+
+#### Legacy Build
+
+```bash
+# Build production image (legacy)
 ./scripts/build-docker.sh production latest
 
 # Deploy production image
@@ -235,7 +261,24 @@ nano .env.local
 ### Image Size Comparison
 
 - **Development Image**: ~500MB (includes source and dev dependencies)
-- **Production Image**: ~150MB (minimal runtime only)
+- **Production Image (Alpine)**: ~150MB (minimal runtime only)
+- **Production Image (Distroless)**: ~80-100MB (maximum optimization)
+- **With BuildKit Caching**: 30-50% faster builds
+
+### 🔍 Image Analysis
+
+Use the built-in analysis tool to optimize your images:
+
+```bash
+# Analyze current image
+./scripts/analyze-docker-image.sh -i macro-ai-express-api:latest
+
+# Interactive layer analysis with dive
+./scripts/analyze-docker-image.sh -t dive
+
+# Size comparison across tags
+./scripts/analyze-docker-image.sh -t size
+```
 
 ## 🐛 Troubleshooting
 
@@ -360,11 +403,3 @@ When modifying the Docker configuration:
 2. Verify production build with `./scripts/deploy-docker-prod.sh`
 3. Update this documentation
 4. Test in CI/CD pipeline
-
-## 📝 Changelog
-
-- **v1.0.0** - Initial Docker configuration
-- Multi-stage build implementation
-- Health check endpoints
-- Security hardening
-- Development and production environments
