@@ -269,8 +269,8 @@ jobs:
           # Sanitize coverage paths to remove absolute filesystem paths
           if [ -f "coverage/coverage-summary.json" ]; then
             echo "🧹 Sanitizing coverage paths..."
-            # Run sanitization script from repo root
-            node ../../scripts/sanitize-coverage-paths.js coverage/coverage-summary.json
+            # Run sanitization script using absolute path to repo root
+            node $GITHUB_WORKSPACE/scripts/sanitize-coverage-paths.js coverage/coverage-summary.json
             echo "✅ Coverage paths sanitized"
           fi
 
