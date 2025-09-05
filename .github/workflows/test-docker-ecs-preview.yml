@@ -93,6 +93,14 @@ jobs:
           IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
           IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:${IMAGE_TAG}"
 
+          echo "🔍 Checking ECR repository existence..."
+          aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" >/dev/null 2>&1 || {
+            echo "📦 Creating ECR repository: ${ECR_REPOSITORY}"
+            aws ecr create-repository --repository-name "${ECR_REPOSITORY}" \
+              --image-scanning-configuration scanOnPush=true \
+              --encryption-configuration encryptionType=AES256
+          }
+
           echo "🐳 Building Docker image with BuildKit..."
           echo "Repository: ${ECR_REPOSITORY}"
           echo "Tag: ${IMAGE_TAG}"

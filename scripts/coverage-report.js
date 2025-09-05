@@ -318,8 +318,13 @@ function findTestResults() {
 						const result = parseJUnitFile(full)
 						if (result) testResults.set(pkgName, result)
 					} else {
-						// Fallback: use directory name
+						// Fallback: use directory name (log ambiguity)
 						const pkgName = path.basename(path.dirname(full))
+						if (!pkgName) {
+							console.warn(
+								`Ambiguous JUnit path, could not derive package: ${full}`,
+							)
+						}
 						const result = parseJUnitFile(full)
 						if (result) testResults.set(pkgName, result)
 					}
@@ -385,7 +390,7 @@ function generateMarkdownOutput(reportData, totals) {
 
 	for (const report of reportData) {
 		const testResult = testResults.get(report.name)
-		const tests = testResult?.tests || report.data.total.tests || 0
+		const tests = testResult?.tests || 0
 		const passed = testResult?.passed || tests
 		const failed = testResult?.failures || 0
 		const duration = testResult?.time ? `${testResult.time.toFixed(1)}s` : 'N/A'

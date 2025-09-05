@@ -57,6 +57,7 @@ The application uses **build-time configuration injection**:
 - Configuration is baked into the container image
 - No runtime Parameter Store access needed
 - Faster container startup and more reliable operation
+- Set `SKIP_ENV_VALIDATION=true` during Docker builds to bypass local env checks and skip swagger generation
 
 ### Development Setup
 
@@ -130,15 +131,15 @@ docker build --target production -t macro-ai-express-api:v1.0.0 .
 
 ```bash
 # Run development container
-docker run -p 3001:3000 macro-ai-express-api:dev
+docker run -p 3001:3040 macro-ai-express-api:dev
 
 # Run production container with environment file
-docker run -p 3000:3000 --env-file .env macro-ai-express-api:prod
+docker run -p 3040:3040 --env-file .env macro-ai-express-api:prod
 
 # Run with specific environment variables
-docker run -p 3000:3000 \
+docker run -p 3040:3040 \
   -e NODE_ENV=production \
-  -e SERVER_PORT=3000 \
+  -e SERVER_PORT=3040 \
   macro-ai-express-api:prod
 ```
 
@@ -162,7 +163,9 @@ docker-compose down
 
 The Docker image includes built-in health checks:
 
-- **Endpoint**: `/health`
+- **Endpoints**:
+  - Local/dev: `/health`
+  - ECS: `/api/health` (requires `X-Api-Key: $API_KEY`)
 - **Interval**: 30 seconds
 - **Timeout**: 3 seconds
 - **Retries**: 3
@@ -172,7 +175,8 @@ The Docker image includes built-in health checks:
 
 The API provides multiple health check endpoints:
 
-- `/health` - Basic health status
+- `/health` - Basic health status (local development)
+- `/api/health` - ECS health check with API key authentication
 - `/health/detailed` - Comprehensive health information
 - `/health/ready` - Readiness check
 - `/health/live` - Liveness check
@@ -188,9 +192,8 @@ The API provides multiple health check endpoints:
 
 ### Signal Handling
 
-- Uses `dumb-init` for proper signal handling
-- Graceful shutdown on SIGTERM/SIGINT
-- Prevents zombie processes
+- Containers handle SIGTERM/SIGINT for graceful shutdown
+- If you need PID 1 signal forwarding/zombie reaping, consider adding `tini` to the ECS image
 
 ### Image Security
 
@@ -242,7 +245,7 @@ cp env.local.example .env.local
 nano .env.local
 ```
 
-**Note**: For comprehensive environment configuration options, see [ENVIRONMENT_TEMPLATE.md](./ENVIRONMENT_TEMPLATE.md).
+**Note**: For comprehensive environment configuration options, see [ENVIRONMENT_TEMPLATE.md](../configuration/ENVIRONMENT_TEMPLATE.md).
 
 ## 📊 Performance Optimization
 

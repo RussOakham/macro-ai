@@ -20,11 +20,10 @@ COPY . .
 # Use BuildKit cache mount for turbo cache during prune
 RUN --mount=type=cache,target=.turbo \
     --mount=type=cache,target=/root/.local/share/pnpm \
-    pnpm add -g turbo && /root/.local/share/pnpm/turbo prune @repo/express-api --docker
+    /root/.local/share/pnpm/turbo prune @repo/express-api --docker
 
 # Build stage - install ALL dependencies including dev dependencies for building
 FROM base AS builder-full
-RUN apk update && apk add --no-cache libc6-compat
 
 WORKDIR /macro-ai
 
@@ -58,7 +57,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm \
 
 # ECS-compatible stage with health check tools
 FROM node:20-alpine AS ecs-runner
-RUN apk update && apk add --no-cache curl wget libc6-compat
+RUN apk add --no-cache curl libc6-compat
 WORKDIR /macro-ai
 
 # Copy built application from build stage and production dependencies from installer stage
@@ -100,10 +99,10 @@ USER 1001
 # Expose port
 EXPOSE 3040
 
-# Health check using Node.js built-in http module
+# Health check using Node.js built-in http module with API key
 # Note: distroless doesn't have shell, so we use HEALTHCHECK with node directly
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD ["node", "-e", "require('http').get('http://localhost:3040/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+    CMD ["node", "-e", "require('http').get('http://localhost:3040/api/health', {headers: {'X-Api-Key': process.env.API_KEY}}, (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
 
 # Start the application
 CMD ["apps/express-api/dist/index.js"]

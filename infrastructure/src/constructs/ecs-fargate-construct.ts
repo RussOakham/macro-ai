@@ -382,6 +382,10 @@ export class EcsFargateConstruct extends Construct {
 				NODE_ENV: 'development',
 				APP_ENV: `pr-${prNumber}`,
 			},
+			secrets: {
+				// Use secure parameters as ECS secrets
+				...this.environmentConfig.getSecureParametersAsSecrets(),
+			},
 			healthCheck: {
 				command: [
 					'CMD-SHELL',

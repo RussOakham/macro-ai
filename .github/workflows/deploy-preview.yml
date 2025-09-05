@@ -354,15 +354,17 @@ jobs:
             exit 1
           fi
 
-          # Build with environment file
-          docker build \
+          # Build with environment file using BuildKit
+          docker buildx build \
             --file apps/express-api/Dockerfile.distroless \
             --target ecs-runner \
+            --platform linux/amd64 \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --build-arg ENV_FILE="${{ steps.generate-env.outputs.env-file }}" \
             --tag "${IMAGE_URI}" \
+            --push \
             .
-
-          echo "📤 Pushing image to ECR..."
 
           # Create ECR repository if it doesn't exist
           echo "🔧 Ensuring ECR repository exists..."
@@ -374,9 +376,7 @@ jobs:
               --encryption-configuration encryptionType=AES256
           }
 
-          docker push "${IMAGE_URI}"
-
-          echo "✅ Image pushed successfully!"
+          echo "✅ Image built and pushed successfully with BuildKit!"
           echo "image-uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
           echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
 

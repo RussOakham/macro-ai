@@ -109,7 +109,8 @@ analyze_size() {
     
     # Compare with other tags if available
     echo -e "${BLUE}📈 Size Comparison with Other Tags:${NC}"
-    docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" | grep macro-ai | head -10
+    REPO="${IMAGE_NAME%:*}"
+    docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" | grep -F "^${REPO}:" | head -10
     echo ""
     
     # Get layer information
@@ -193,8 +194,9 @@ generate_recommendations() {
     echo ""
     
     # Size-based recommendations
-    if [ "$IMAGE_SIZE_MB" -gt 200 ]; then
-        echo -e "${YELLOW}🔍 Large image detected (>${IMAGE_SIZE_MB}MB). Consider:${NC}"
+    THRESHOLD_MB=200
+    if [ "$IMAGE_SIZE_MB" -gt "$THRESHOLD_MB" ]; then
+        echo -e "${YELLOW}🔍 Large image detected (${IMAGE_SIZE_MB}MB > ${THRESHOLD_MB}MB). Consider:${NC}"
         echo "   • Use multi-stage builds to exclude build dependencies"
         echo "   • Use .dockerignore to exclude unnecessary files"
         echo "   • Use alpine-based images instead of full distributions"

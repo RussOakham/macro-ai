@@ -32,7 +32,7 @@ pnpm install
 # Set up environment variables
 cp config/examples/env.local.example .env.local
 # Edit .env.local with your configuration
-# See docs/configuration/ENVIRONMENT_TEMPLATE.md for comprehensive configuration options
+# See ../../docs/configuration/ENVIRONMENT_TEMPLATE.md for comprehensive configuration options
 
 # Generate database migrations
 pnpm db:generate
