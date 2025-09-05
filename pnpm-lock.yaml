@@ -520,6 +520,9 @@ importers:
       '@repo/config-eslint':
         specifier: workspace:*
         version: link:../packages/config-eslint
+      '@repo/config-testing':
+        specifier: workspace:*
+        version: link:../packages/config-testing
       '@repo/config-typescript':
         specifier: workspace:*
         version: link:../packages/config-typescript
@@ -550,6 +553,9 @@ importers:
       typescript-eslint:
         specifier: ^8.39.0
         version: 8.42.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2)
+      vitest:
+        specifier: 'catalog:'
+        version: 3.1.2(@types/debug@4.1.12)(@types/node@20.19.13)(@vitest/ui@3.1.2)(happy-dom@18.0.1)(jsdom@26.1.0)(msw@2.11.1(@types/node@20.19.13)(typescript@5.9.2))
 
   packages/config-eslint:
     devDependencies:
