@@ -20,6 +20,6 @@
 		"skipLibCheck": true,
 		"isolatedModules": false
 	},
-	"include": ["src/**/*"],
+	"include": ["src/**/*", "vitest.config.ts"],
 	"exclude": ["node_modules", "**/*.d.ts", "dist", "cdk.out"]
 }
