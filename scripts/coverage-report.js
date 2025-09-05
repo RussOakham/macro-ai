@@ -309,7 +309,10 @@ function findTestResults() {
 							.replace(/^test-results-/, '')
 							.replace(/-\d+-.*$/, '')
 						// If it starts with apps/ or packages/, extract the actual package name
-						if (pkgName.startsWith('apps-') || pkgName.startsWith('packages-')) {
+						if (
+							pkgName.startsWith('apps-') ||
+							pkgName.startsWith('packages-')
+						) {
 							pkgName = pkgName.replace(/^(apps|packages)-/, '')
 						}
 						const result = parseJUnitFile(full)

@@ -247,16 +247,16 @@ Add to your `.vscode/settings.json`:
 
 ```json
 {
-  "yaml.schemas": {
-    "https://json.schemastore.org/docker-compose": "docker-compose*.yml",
-    "https://json.schemastore.org/amplify": "**/amplify*.yml"
-  },
-  "yaml.format.enable": true,
-  "yaml.format.singleQuote": true,
-  "yaml.format.bracketSpacing": false,
-  "editor.rulers": [120],
-  "files.trimTrailingWhitespace": true,
-  "files.insertFinalNewline": true
+	"yaml.schemas": {
+		"https://json.schemastore.org/docker-compose": "docker-compose*.yml",
+		"https://json.schemastore.org/amplify": "**/amplify*.yml"
+	},
+	"yaml.format.enable": true,
+	"yaml.format.singleQuote": true,
+	"yaml.format.bracketSpacing": false,
+	"editor.rulers": [120],
+	"files.trimTrailingWhitespace": true,
+	"files.insertFinalNewline": true
 }
 ```
 
