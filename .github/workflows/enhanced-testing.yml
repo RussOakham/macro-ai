@@ -269,9 +269,8 @@ jobs:
           # Sanitize coverage paths to remove absolute filesystem paths
           if [ -f "coverage/coverage-summary.json" ]; then
             echo "🧹 Sanitizing coverage paths..."
-            cd ../../ # Go to repo root
-            node scripts/sanitize-coverage-paths.js ${{ matrix.package }}/coverage/coverage-summary.json
-            cd ${{ matrix.package }} # Return to package directory
+            # Run sanitization script from repo root
+            node ../../scripts/sanitize-coverage-paths.js coverage/coverage-summary.json
             echo "✅ Coverage paths sanitized"
           fi
 
