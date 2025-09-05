@@ -5,7 +5,7 @@
 This is a **TypeScript monorepo** managed with **pnpm workspaces**. It contains:
 
 - `apps/client-ui` — React + Vite application
-- `apps/express-api` — Node + Express API server  
+- `apps/express-api` — Node + Express API server
 - `packages/config-eslint` — Shared eslint config
 - `packages/config-typescript` — Shared TypeScript configs
 - `packages/macro-ai-api-client` — Shared API client and OpenAPI typings
@@ -36,6 +36,7 @@ This is a **TypeScript monorepo** managed with **pnpm workspaces**. It contains:
 ## CLI Tools & Shell Preferences
 
 **Use bash for:**
+
 - pnpm commands, scripts with pipes/redirection
 - Git operations, Docker commands
 - JSON/YAML processing (jq, yq)
@@ -43,6 +44,7 @@ This is a **TypeScript monorepo** managed with **pnpm workspaces**. It contains:
 - AWS SAM, aws-vault operations
 
 **Use PowerShell for:**
+
 - AWS CLI commands (`aws`, `session-manager-plugin`)
 - GitHub CLI (`gh`) operations
 - Basic commands when bash unavailable
@@ -50,16 +52,20 @@ This is a **TypeScript monorepo** managed with **pnpm workspaces**. It contains:
 ## Testing Requirements
 
 ### Frontend (`apps/client-ui`)
+
 - **.tsx files:** Only unit test hooks
 - **.ts files:** Unit test all functionality
 
 ### Backend (`apps/express-api`)
+
 - Unit test **everything** (business logic, API routes, services)
 
 ### Infrastructure & Packages
+
 - Unit test **everything** (schemas, utils, IaC helpers)
 
 ### General Testing Rules
+
 - Focus on **realistic and valuable cases**, not exhaustive permutations
 - Avoid contrived edge cases unless business-critical
 - Prioritize: core logic correctness, critical failure paths, external system integration
@@ -68,27 +74,31 @@ This is a **TypeScript monorepo** managed with **pnpm workspaces**. It contains:
 ## MCP Tool Usage (Core Principles)
 
 - Always use MCP tools proactively instead of re-implementing functionality
-- Maintain context across conversations through memory management  
+- Maintain context across conversations through memory management
 - Structure all complex work through Task Orchestrator
 - Reference documentation for best practices before implementation
 - Maintain security-first approach with regular Semgrep scans
 
 ### Memory Management Workflow
+
 - Store context after completing tasks or making architectural decisions
 - Create entities for project decisions, technical approaches, configuration details
 - Start conversations by reading relevant memory to restore context
 
-### Task Analysis Workflow  
+### Task Analysis Workflow
+
 - Use sequential thinking to break down complex requests
 - Create features/tasks in Task Orchestrator for multi-step work
 - Apply appropriate templates for requirements, technical approach, testing strategies
 
 ### Documentation Reference Strategy
+
 - Search AWS documentation for service-specific best practices
 - Use Ref tool to find relevant code patterns and examples
 - Validate implementations against official best practices
 
 ### Security Review Integration
+
 - Run Semgrep scans after significant code changes
 - Create security review tasks and document security decisions
 - Scan new code before suggesting and flag potential issues proactively
@@ -128,6 +138,7 @@ This is a **TypeScript monorepo** managed with **pnpm workspaces**. It contains:
 Documentation serves as a **living source of truth** for current state, not historical archive:
 
 ### Must Represent Current State
+
 - **Product:** user discovery, feature requirements, market context, value proposition
 - **Delivery:** roadmaps, integration plans, feature schedules, resourcing
 - **Development:** current implementation, active codebase, API contracts, infrastructure state
@@ -143,6 +154,7 @@ Documentation serves as a **living source of truth** for current state, not hist
 ## Response Guidelines
 
 When asked to:
+
 1. **Generate code** → Ensure it compiles, respects typing, follows conventions
 2. **Modify code** → Provide full code blocks, not just diffs
 3. **Explain structure** → Use correct package/app names
@@ -151,7 +163,7 @@ When asked to:
 ## Example Commands
 
 - Install: `pnpm install`
-- Build all: `pnpm build`  
+- Build all: `pnpm build`
 - Frontend: `pnpm --filter client-ui dev` or `pnpm ui`
 - Backend: `pnpm --filter @repo/express-api dev` or `pnpm api`
 - Test: `pnpm test`
@@ -160,6 +172,7 @@ When asked to:
 ## Out of Scope
 
 **Do NOT:**
+
 - Suggest switching core tooling without explicit request/clear benefit
 - Generate secrets or credentials
 - Remove TypeScript strictness

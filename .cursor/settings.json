@@ -31,7 +31,8 @@
 		"autoStoreContext": true,
 		"autoRestoreContext": true,
 		"storeAfterTasks": true,
-		"storeAfterDecisions": true
+		"storeAfterDecisions": true,
+		"projectSpecificMemories": ".cursor/memories/"
 	},
 	"security": {
 		"autoSemgrepScan": true,
@@ -84,5 +85,9 @@
 		"requireRealEvidence": true,
 		"avoidAssumptions": true,
 		"useStructuredApproach": true
+	},
+	"rules": {
+		"projectSpecific": ".cursor/rules/project-rules.md",
+		"generic": ".cursor/rules/generic-rules.md"
 	}
 }
