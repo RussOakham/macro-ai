@@ -417,7 +417,7 @@ jobs:
         with:
           pattern: test-results-*
           path: test-results/
-          merge-multiple: true
+          merge-multiple: false
 
       - name: Generate test report from artifacts
         shell: bash
