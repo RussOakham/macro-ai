@@ -26,6 +26,7 @@
 		"coverage": "node scripts/coverage-report.js",
 		"coverage:markdown": "node scripts/coverage-report.js --markdown",
 		"coverage:json": "node scripts/coverage-report.js --json",
+		"coverage:sanitize": "node scripts/sanitize-coverage-paths.js",
 		"coverage:express-api": "pnpm --filter @repo/express-api test:coverage",
 		"coverage:api-client": "pnpm --filter @repo/macro-ai-api-client test:coverage",
 		"coverage:client-ui": "pnpm --filter client-ui test:coverage",

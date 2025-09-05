@@ -266,6 +266,15 @@ jobs:
           echo "duration=$duration" >> $GITHUB_OUTPUT
           echo "exit-code=${test_exit_code:-0}" >> $GITHUB_OUTPUT
 
+          # Sanitize coverage paths to remove absolute filesystem paths
+          if [ -f "coverage/coverage-summary.json" ]; then
+            echo "🧹 Sanitizing coverage paths..."
+            cd ../../ # Go to repo root
+            node scripts/sanitize-coverage-paths.js ${{ matrix.package }}/coverage/coverage-summary.json
+            cd ${{ matrix.package }} # Return to package directory
+            echo "✅ Coverage paths sanitized"
+          fi
+
           # Save test metrics to file for later collection
           mkdir -p test-metrics
 

@@ -28,6 +28,62 @@ const colors = {
 }
 
 /**
+ * Determine package type based on repository layout/structure
+ * @param {string} packageName - The package name to classify
+ * @returns {'app' | 'package'} - The package type
+ */
+function determinePackageType(packageName) {
+	const repoRoot = path.join(__dirname, '..')
+
+	// Check if package exists in apps/ directory
+	const appsPath = path.join(repoRoot, 'apps', packageName)
+	if (fs.existsSync(appsPath)) {
+		const packageJsonPath = path.join(appsPath, 'package.json')
+		if (fs.existsSync(packageJsonPath)) {
+			return 'app'
+		}
+	}
+
+	// Check if package exists in packages/ directory
+	const packagesPath = path.join(repoRoot, 'packages', packageName)
+	if (fs.existsSync(packagesPath)) {
+		const packageJsonPath = path.join(packagesPath, 'package.json')
+		if (fs.existsSync(packageJsonPath)) {
+			return 'package'
+		}
+	}
+
+	// Additional checks for packages that might have different directory structures
+	// Look for express/ui subfolders or app-like characteristics
+	const potentialPaths = [
+		path.join(repoRoot, 'apps', packageName),
+		path.join(repoRoot, 'packages', packageName),
+		// Handle potential nested structures
+		path.join(repoRoot, packageName),
+	]
+
+	for (const pkgPath of potentialPaths) {
+		if (fs.existsSync(pkgPath)) {
+			// Check if it contains express or ui subfolders (indicates app)
+			const hasExpressFolder = fs.existsSync(path.join(pkgPath, 'express'))
+			const hasUiFolder = fs.existsSync(path.join(pkgPath, 'ui'))
+
+			if (hasExpressFolder || hasUiFolder) {
+				return 'app'
+			}
+
+			// Check if the path indicates it's under apps/ directory
+			if (pkgPath.includes(path.join(repoRoot, 'apps'))) {
+				return 'app'
+			}
+		}
+	}
+
+	// Default to 'package' if we can't determine otherwise
+	return 'package'
+}
+
+/**
  * Find all coverage-summary.json files in the monorepo
  */
 function findCoverageReports() {
@@ -46,13 +102,8 @@ function findCoverageReports() {
 				'coverage-summary.json',
 			)
 			if (fs.existsSync(coveragePath)) {
-				// Determine type based on directory name
-				const type =
-					pkg.includes('api') || pkg.includes('client')
-						? 'package'
-						: pkg.includes('express') || pkg.includes('ui')
-							? 'app'
-							: 'package'
+				// Determine type based on repository layout/structure
+				const type = determinePackageType(pkg)
 				reports.push({
 					name: pkg,
 					path: coveragePath,
@@ -158,7 +209,7 @@ function generateTableRow(name, type, total, coverage) {
 /**
  * Calculate totals across all packages
  */
-function calculateTotals(reports) {
+function calculateTotals(reports, testResults = null) {
 	let totalTests = 0
 	let totalStatements = 0
 	let totalBranches = 0
@@ -173,7 +224,11 @@ function calculateTotals(reports) {
 		const data = report.data
 		if (!data || !data.total) continue
 
-		totalTests += data.total.tests || 0
+		// Get test count from JUnit results instead of coverage JSON
+		const testResult = testResults?.get(report.name)
+		const testCount = testResult?.tests || 0
+		totalTests += testCount
+
 		totalStatements += data.total.statements.total
 		totalBranches += data.total.branches.total
 		totalFunctions += data.total.functions.total
@@ -210,23 +265,18 @@ function findTestResults() {
 	// Check test-results directory (used in CI)
 	const testResultsDir = path.join(__dirname, '..', 'test-results')
 	if (fs.existsSync(testResultsDir)) {
-		const entries = fs.readdirSync(testResultsDir, { withFileTypes: true })
-		for (const entry of entries) {
-			if (entry.isDirectory() && entry.name.startsWith('test-results-')) {
-				const packageName = entry.name
-					.replace('test-results-', '')
-					.split('-')[0]
-				const junitPath = path.join(
-					testResultsDir,
-					entry.name,
-					'test-results.xml',
-				)
-
-				if (fs.existsSync(junitPath)) {
-					const result = parseJUnitFile(junitPath)
-					if (result) {
-						testResults.set(packageName, result)
-					}
+		const stack = [testResultsDir]
+		while (stack.length) {
+			const dir = stack.pop()
+			const entries = fs.readdirSync(dir, { withFileTypes: true })
+			for (const e of entries) {
+				const full = path.join(dir, e.name)
+				if (e.isDirectory()) {
+					stack.push(full)
+				} else if (e.isFile() && e.name === 'test-results.xml') {
+					const pkgName = path.basename(path.dirname(full))
+					const result = parseJUnitFile(full)
+					if (result) testResults.set(pkgName, result)
 				}
 			}
 		}
@@ -347,7 +397,7 @@ function generateMarkdownOutput(reportData, totals) {
 /**
  * Generate JSON output for CI/CD integration
  */
-function generateJsonOutput(reportData, totals) {
+function generateJsonOutput(reportData, totals, testResults = null) {
 	const output = {
 		summary: {
 			totalPackages: reportData.length,
@@ -359,17 +409,23 @@ function generateJsonOutput(reportData, totals) {
 				lines: totals.lines,
 			},
 		},
-		packages: reportData.map((report) => ({
-			name: report.name,
-			type: report.type,
-			tests: report.data.total.tests || 0,
-			coverage: {
-				statements: report.data.total.statements.pct,
-				branches: report.data.total.branches.pct,
-				functions: report.data.total.functions.pct,
-				lines: report.data.total.lines.pct,
-			},
-		})),
+		packages: reportData.map((report) => {
+			// Get test count from JUnit results instead of coverage JSON
+			const testResult = testResults?.get(report.name)
+			const testCount = testResult?.tests || 0
+
+			return {
+				name: report.name,
+				type: report.type,
+				tests: testCount,
+				coverage: {
+					statements: report.data.total.statements.pct,
+					branches: report.data.total.branches.pct,
+					functions: report.data.total.functions.pct,
+					lines: report.data.total.lines.pct,
+				},
+			}
+		}),
 		generatedAt: new Date().toISOString(),
 	}
 
@@ -432,11 +488,13 @@ function main() {
 		process.exit(1)
 	}
 
-	const totals = calculateTotals(reportData)
+	// Get test results from JUnit files for accurate test counts
+	const testResults = findTestResults()
+	const totals = calculateTotals(reportData, testResults)
 
 	// Output based on format
 	if (format === 'json') {
-		console.log(generateJsonOutput(reportData, totals))
+		console.log(generateJsonOutput(reportData, totals, testResults))
 	} else if (format === 'markdown') {
 		console.log(generateMarkdownOutput(reportData, totals))
 	} else {
@@ -458,10 +516,14 @@ function main() {
 
 		// Print each package
 		for (const report of reportData) {
+			// Get test count from JUnit results instead of coverage JSON
+			const testResult = testResults.get(report.name)
+			const testCount = testResult?.tests || 0
+
 			const row = generateTableRow(
 				report.name,
 				report.type,
-				report.data.total.tests || 0,
+				testCount,
 				report.data.total,
 			)
 			console.log(row)
