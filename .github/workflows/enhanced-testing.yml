@@ -113,7 +113,7 @@ jobs:
               {
                 "name": "Integration Tests",
                 "package": "apps/express-api",
-                "test-pattern": "**/*.integration.test.*",
+                "test-pattern": "",
                 "exclude-pattern": "",
                 "timeout": 300000,
                 "parallel": false
@@ -275,26 +275,49 @@ jobs:
           start_time=$(date +%s)
 
           # Prepare include patterns (space-separated globs) into an array
-          IFS=' ' read -r -a pattern_args <<< "${{ matrix.test-pattern }}"
+          if [ -n "${{ matrix.test-pattern }}" ]; then
+            IFS=' ' read -r -a pattern_args <<< "${{ matrix.test-pattern }}"
+            pattern_args_str="${pattern_args[@]}"
+          else
+            pattern_args_str=""
+          fi
 
           if [ "${{ matrix.parallel }}" = "true" ]; then
             echo "🚀 Running tests in parallel mode..."
-            timeout ${timeout_seconds}s pnpm vitest run \
-              --reporter=verbose \
-              --reporter=junit \
-              --outputFile=test-results.xml \
-              --coverage \
-              "${pattern_args[@]}" \
-              || test_exit_code=$?
+            if [ -n "$pattern_args_str" ]; then
+              timeout ${timeout_seconds}s pnpm vitest run \
+                --reporter=verbose \
+                --reporter=junit \
+                --outputFile=test-results.xml \
+                --coverage \
+                $pattern_args_str \
+                || test_exit_code=$?
+            else
+              timeout ${timeout_seconds}s pnpm vitest run \
+                --reporter=verbose \
+                --reporter=junit \
+                --outputFile=test-results.xml \
+                --coverage \
+                || test_exit_code=$?
+            fi
           else
             echo "🔄 Running tests in sequential mode..."
-            timeout ${timeout_seconds}s pnpm vitest run \
-              --reporter=verbose \
-              --reporter=junit \
-              --outputFile=test-results.xml \
-              --coverage \
-              "${pattern_args[@]}" \
-              || test_exit_code=$?
+            if [ -n "$pattern_args_str" ]; then
+              timeout ${timeout_seconds}s pnpm vitest run \
+                --reporter=verbose \
+                --reporter=junit \
+                --outputFile=test-results.xml \
+                --coverage \
+                $pattern_args_str \
+                || test_exit_code=$?
+            else
+              timeout ${timeout_seconds}s pnpm vitest run \
+                --reporter=verbose \
+                --reporter=junit \
+                --outputFile=test-results.xml \
+                --coverage \
+                || test_exit_code=$?
+            fi
           fi
 
           end_time=$(date +%s)
