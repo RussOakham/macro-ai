@@ -11,6 +11,7 @@ export default repoConfig.config(
 			'node_modules/**',
 			'*.js',
 			'examples/**',
+			'vitest.config.ts',
 		],
 	},
 	// Use shared base config

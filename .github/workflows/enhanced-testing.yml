@@ -82,7 +82,7 @@ jobs:
               {
                 "name": "Unit Tests - Express API",
                 "package": "apps/express-api",
-                "test-pattern": "src/**/*.test.{ts,tsx}",
+                "test-pattern": "src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts}",
                 "exclude-pattern": "**/*.integration.test.* **/*.e2e.test.*",
                 "timeout": 120000,
                 "parallel": true
@@ -90,7 +90,7 @@ jobs:
               {
                 "name": "Unit Tests - Client UI",
                 "package": "apps/client-ui",
-                "test-pattern": "",
+                "test-pattern": "src/**/*.{test,spec}.{ts,tsx}",
                 "exclude-pattern": "**/*.integration.test.* **/*.e2e.test.*",
                 "timeout": 120000,
                 "parallel": true
@@ -98,7 +98,15 @@ jobs:
               {
                 "name": "Unit Tests - API Client",
                 "package": "packages/macro-ai-api-client",
-                "test-pattern": "src/**/*.test.{ts,tsx} src/__tests__/**/*.test.{ts,tsx}",
+                "test-pattern": "src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts}",
+                "exclude-pattern": "**/*.integration.test.* **/*.e2e.test.*",
+                "timeout": 60000,
+                "parallel": true
+              },
+              {
+                "name": "Unit Tests - Infrastructure",
+                "package": "infrastructure",
+                "test-pattern": "src/**/*.test.{ts,tsx}",
                 "exclude-pattern": "**/*.integration.test.* **/*.e2e.test.*",
                 "timeout": 60000,
                 "parallel": true

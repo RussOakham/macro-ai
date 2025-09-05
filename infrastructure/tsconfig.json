@@ -21,5 +21,11 @@
 		"isolatedModules": false
 	},
 	"include": ["src/**/*", "vitest.config.ts"],
-	"exclude": ["node_modules", "**/*.d.ts", "dist", "cdk.out"]
+	"exclude": [
+		"node_modules",
+		"**/*.d.ts",
+		"dist",
+		"cdk.out",
+		"vitest.config.ts"
+	]
 }
