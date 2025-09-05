@@ -371,5 +371,5 @@ set -x
 
 - [AWS Amplify Documentation](https://docs.aws.amazon.com/amplify/)
 - [GitHub Actions Workflow Documentation](../../.github/workflows/)
-- [Frontend Preview Deployment Guide](../AMPLIFY_DEPLOYMENT.md)
-- [Integration Guide](../INTEGRATION_GUIDE.md)
+- [Frontend Preview Deployment Guide](../docs/deployment/AMPLIFY_DEPLOYMENT.md)
+- [Integration Guide](../docs/integration/INTEGRATION_GUIDE.md)

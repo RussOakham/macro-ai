@@ -55,6 +55,7 @@ yarn-error.log*
 *.pem
 .cache
 .eslintcache
+*.tsbuildinfo
 
 # IDE
 .idea

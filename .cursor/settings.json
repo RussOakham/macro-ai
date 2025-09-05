@@ -1,15 +1,31 @@
 {
+	"project": {
+		"type": "typescript-monorepo",
+		"packageManager": "pnpm",
+		"buildSystem": "turbo",
+		"infrastructure": "aws-cdk"
+	},
 	"mcp": {
 		"enabled": true,
 		"autoMemoryManagement": true,
 		"proactiveToolUsage": true,
-		"securityFirst": true
+		"securityFirst": true,
+		"preferredServers": [
+			"aws-documentation",
+			"ref",
+			"semgrep",
+			"task-orchestrator",
+			"sequentialthinking",
+			"memory"
+		]
 	},
 	"workflow": {
 		"useSequentialThinking": true,
 		"useTaskOrchestrator": true,
 		"autoTemplateApplication": true,
-		"documentationReference": true
+		"documentationReference": true,
+		"preferCliTools": true,
+		"commitConvention": "conventional-commits"
 	},
 	"memory": {
 		"autoStoreContext": true,
@@ -21,12 +37,52 @@
 		"autoSemgrepScan": true,
 		"scanAfterChanges": true,
 		"createSecurityTasks": true,
-		"referenceBestPractices": true
+		"referenceBestPractices": true,
+		"requireSecurityReview": true
 	},
 	"documentation": {
 		"referenceAWS": true,
 		"useRefTool": true,
 		"validateBestPractices": true,
-		"searchBeforeImplementation": true
+		"searchBeforeImplementation": true,
+		"livingDocumentation": true,
+		"noHistoricalNotes": true
+	},
+	"testing": {
+		"framework": "vitest",
+		"coverage": "@vitest/coverage-v8",
+		"focusOnValueableCases": true,
+		"avoidTrivialTests": true,
+		"testAllBackendLogic": true,
+		"testOnlyHooksInFrontend": true
+	},
+	"codeStyle": {
+		"strictTypeScript": true,
+		"preferZodValidation": true,
+		"useImportAlias": true,
+		"functionalComponents": true,
+		"asyncAwaitPreferred": true,
+		"usePinoLogging": true,
+		"exportFromBarrelFiles": true
+	},
+	"shell": {
+		"preferBashFor": [
+			"pnpm",
+			"git",
+			"docker",
+			"json-processing",
+			"file-operations",
+			"aws-sam",
+			"aws-vault"
+		],
+		"preferPowerShellFor": ["aws-cli", "github-cli"],
+		"useStructuredOutput": true,
+		"avoidPagers": true
+	},
+	"triage": {
+		"prioritizeCliTools": true,
+		"requireRealEvidence": true,
+		"avoidAssumptions": true,
+		"useStructuredApproach": true
 	}
 }
