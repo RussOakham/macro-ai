@@ -1,0 +1,119 @@
+# YAML Linting Configuration
+# This file configures yamllint for consistent YAML formatting
+
+extends: default
+
+rules:
+  # Line length
+  line-length:
+    max: 120
+    level: warning
+
+  # Indentation
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    check-multi-line-strings: false
+
+  # Comments
+  comments:
+    min-spaces-from-content: 1
+
+  # Document start
+  document-start:
+    present: false
+
+  # Trailing spaces
+  trailing-spaces:
+    level: error
+
+  # Empty lines
+  empty-lines:
+    max: 2
+    max-start: 0
+    max-end: 1
+
+  # Truthy values
+  truthy:
+    allowed-values: ['true', 'false', 'on', 'off', 'yes', 'no']
+    check-keys: true
+
+  # Key ordering
+  key-ordering: disable
+
+  # Octal values
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true
+
+  # Quoted strings
+  quoted-strings:
+    quote-type: single
+    check-keys: false
+    required: false
+
+  # Brackets
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+    min-spaces-inside-empty: 0
+    max-spaces-inside-empty: 0
+
+  # Braces
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+    min-spaces-inside-empty: 0
+    max-spaces-inside-empty: 0
+
+  # Commas
+  commas:
+    max-spaces-before: 0
+    min-spaces-after: 1
+
+  # Colons
+  colons:
+    max-spaces-before: 0
+    min-spaces-after: 1
+
+  # Hyphens
+  hyphens:
+    max-spaces-after: 1
+
+  # Comments indentation
+  comments-indentation: disable
+
+  # Empty values
+  empty-values:
+    forbid-in-block-mappings: true
+    forbid-in-flow-mappings: true
+
+  # Flow sequence
+  flow-sequence:
+    max-spaces-inside: 0
+
+  # Flow mapping
+  flow-mapping:
+    max-spaces-inside: 0
+
+  # Key duplicates
+  key-duplicates: enable
+
+  # New line at end of file
+  new-line-at-end-of-file: enable
+
+  # New lines
+  new-lines:
+    type: unix
+
+  # Anchors
+  anchors:
+    max-length: 128
+
+  # Aliases
+  aliases:
+    max-length: 128
+
+  # Document indentation
+  document-indentation:
+    spaces: 2
