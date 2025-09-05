@@ -7,7 +7,10 @@ export default defineConfig({
 		...unitTestTimeouts,
 		name: 'express-api',
 		setupFiles: ['./vitest.setup.ts'],
-		include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts}', 'src/**/*.integration.test.{js,mjs,cjs,ts,mts,cts}'],
+		include: [
+			'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts}',
+			'src/**/*.integration.test.{js,mjs,cjs,ts,mts,cts}',
+		],
 		coverage: {
 			...commonTestConfig.coverage,
 			include: ['src/**/*.ts'],
