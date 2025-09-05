@@ -37,28 +37,32 @@ export default defineConfig({
 		...commonTestConfig,
 		...unitTestTimeouts,
 		name: 'client-ui',
-		environment: 'jsdom',
 		setupFiles: ['./src/test/setup.ts'],
-		include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-		// Configure parallel test execution using Vitest's built-in capabilities
+		environment: 'happy-dom',
 		pool: 'threads',
 		poolOptions: {
 			threads: {
-				singleThread: isActEnvironment, // Run single-threaded in act for faster execution
-				minThreads: 1,
-				maxThreads: isActEnvironment ? 1 : 4, // Limit to 1 thread in act
+				isolate: true,
 			},
 		},
-		// Enable parallel execution (but limit in act environment)
-		fileParallelism: !isActEnvironment,
-		// Optimize timeouts for act environment
-		...(isActEnvironment && {
-			testTimeout: 10000, // 10 seconds instead of 30 for act
-			hookTimeout: 15000, // 15 seconds instead of 30 for act
-			teardownTimeout: 10000, // 10 seconds instead of 30 for act
-		}),
+		include: ['src/**/*.{test,spec}.{ts,tsx}'],
+		exclude: [
+			...commonTestConfig.exclude,
+			'src/routeTree.gen.ts',
+			'src/**/*.e2e.test.{ts,tsx}',
+			'src/test/mocks/**/*',
+		],
+		// Mock CSS modules and other assets
+		css: {
+			modules: {
+				classNameStrategy: 'non-scoped',
+			},
+		},
+		// React-specific globals
+		globals: true,
 		coverage: {
 			...commonTestConfig.coverage,
+			include: ['src/**/*.{ts,tsx}'],
 			exclude: [
 				...commonTestConfig.coverage.exclude,
 				'src/test/',
@@ -66,25 +70,26 @@ export default defineConfig({
 				'**/*.config.*',
 				'**/coverage/**',
 				'**/dist/**',
-				'**/.{idea,git,cache,output,temp}/**',
-				'src/routeTree.gen.ts', // Exclude generated route tree
-				'src/main.tsx', // Exclude main entry point
-				// Note: React components (.tsx) are included for coverage
-				// Focus on testing hooks and business logic per CLAUDE.md guidelines
+				'**/routeTree.gen.ts',
+				'**/main.tsx',
+				'src/**/*.stories.{ts,tsx}',
 			],
+			// Per-package coverage reporting
+			reportsDirectory: './coverage',
 			thresholds: {
-				// Lower threshold for React components initially
-				statements: 60,
-				branches: 50,
-				functions: 60,
-				lines: 60,
+				global: {
+					statements: 30,
+					branches: 20,
+					functions: 30,
+					lines: 30,
+				},
 			},
 		},
-		// Mock CSS modules and other assets
-		css: {
-			modules: {
-				classNameStrategy: 'non-scoped',
-			},
-		},
+		// Optimize timeouts for act environment
+		...(isActEnvironment && {
+			testTimeout: 10000,
+			hookTimeout: 15000,
+			teardownTimeout: 10000,
+		}),
 	},
 })

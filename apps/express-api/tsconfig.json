@@ -5,10 +5,12 @@
 		"node_modules",
 		"coverage",
 		"eslint.config.js",
-		"tsconfig.json"
+		"tsconfig.json",
+		"scripts/**/*"
 	],
 	"extends": "@repo/config-typescript/tsconfig-express.json",
 	"compilerOptions": {
-		"typeRoots": ["./src/types/express"]
+		"typeRoots": ["./src/types/express"],
+		"noEmit": true
 	}
 }

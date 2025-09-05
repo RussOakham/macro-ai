@@ -61,7 +61,7 @@ describe('React Testing Library Examples', () => {
 
 			render(<Button onClick={handleClick}>Click me</Button>)
 
-			const button = screen.getByRole('button')
+			const button = screen.getByRole('button', { name: /click me/i })
 			await user.click(button)
 
 			expect(handleClick).toHaveBeenCalledTimes(1)
@@ -73,7 +73,7 @@ describe('React Testing Library Examples', () => {
 
 			render(<Button onClick={handleClick}>Click me</Button>)
 
-			const button = screen.getByRole('button')
+			const button = screen.getByRole('button', { name: /click me/i })
 			button.focus()
 			await user.keyboard('{Enter}')
 
@@ -90,7 +90,7 @@ describe('React Testing Library Examples', () => {
 				</Button>,
 			)
 
-			const button = screen.getByRole('button')
+			const button = screen.getByRole('button', { name: /disabled/i })
 			expect(button).toBeDisabled()
 
 			await user.click(button)
@@ -522,7 +522,7 @@ describe('React Testing Library Examples', () => {
 				</Button>,
 			)
 
-			const button = screen.getByRole('button')
+			const button = screen.getByRole('button', { name: 'Close dialog' })
 			expect(button).toHaveAttribute('aria-label', 'Close dialog')
 			expect(button).toHaveAttribute('aria-describedby', 'close-description')
 		})

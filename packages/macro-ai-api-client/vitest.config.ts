@@ -3,24 +3,41 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
 	test: {
-		globals: commonTestConfig.globals,
-		environment: commonTestConfig.environment,
-		include: commonTestConfig.include,
-		exclude: commonTestConfig.exclude,
-		silent: commonTestConfig.silent,
-		testTimeout: unitTestTimeouts.testTimeout,
-		hookTimeout: unitTestTimeouts.hookTimeout,
-		teardownTimeout: unitTestTimeouts.teardownTimeout,
+		...commonTestConfig,
+		...unitTestTimeouts,
 		name: 'macro-ai-api-client',
+		environment: 'node',
+		pool: 'threads',
+		poolOptions: {
+			threads: {
+				isolate: true,
+			},
+		},
 		coverage: {
-			provider: commonTestConfig.coverage.provider,
-			reporter: commonTestConfig.coverage.reporter,
+			...commonTestConfig.coverage,
+			include: ['src/**/*.ts'],
 			exclude: [
 				...commonTestConfig.coverage.exclude,
+				'src/**/*.test.ts',
+				'src/**/*.spec.ts',
+				'src/**/*.d.ts',
+				// Exclude auto-generated files
+				'src/client/',
+				'src/types/',
+				'src/services/',
+				'src/index.ts',
 				'scripts/',
-				'**/*.test.ts',
-				'**/*.config.ts',
 			],
+			// Per-package coverage reporting
+			reportsDirectory: './coverage',
+			thresholds: {
+				global: {
+					statements: 80,
+					branches: 75,
+					functions: 80,
+					lines: 80,
+				},
+			},
 		},
 	},
 })

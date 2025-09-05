@@ -38,6 +38,19 @@ This document lists the main CLI tools used in the project, along with preferred
 | **docker**              | Container engine                                               | Both            | Bash preferred for multi-command scripts and piping.                                                   |
 | **docker-compose**      | Multi-container orchestration                                  | Both            | Works in PowerShell but beware of YAML quoting. Bash preferred for scripts.                            |
 | **jq**                  | JSON processor                                                 | **bash**        | Syntax with quotes and escape characters can fail in PowerShell; bash avoids this.                     |
+| **gh act**              | GitHub Actions local runner                                   | **bash**        | Run GitHub Actions workflows locally. Use `gh act` to test workflows before pushing.                   |
+| **aws-sam**             | AWS Serverless Application Model CLI                          | **bash**        | Build, test, and deploy serverless applications. Use `sam build`, `sam local`, `sam deploy`.           |
+| **aws-vault**           | AWS credential management tool                                | **bash**        | Secure AWS credential storage and session management. Use `aws-vault exec <profile>` for sessions.     |
+| **bat**                 | Better cat with syntax highlighting                          | **bash**        | Modern replacement for cat with syntax highlighting and Git integration.                              |
+| **eza**                 | Modern ls replacement                                        | **bash**        | Enhanced ls with better formatting, icons, and Git status. Use `ls` (aliased).                       |
+| **fzf**                 | Fuzzy finder                                                  | **bash**        | Command-line fuzzy finder for files, history, and completion.                                        |
+| **ripgrep**             | Ultra-fast text search                                        | **bash**        | Faster grep replacement. Use `grep` (aliased) or `rg` directly.                                       |
+| **fd**                  | Better find command                                           | **bash**        | User-friendly find replacement with sensible defaults. Use `find` (aliased).                         |
+| **zoxide**              | Smarter cd command                                            | **bash**        | Learns your directory habits for faster navigation. Use `z` or `zi`.                                 |
+| **git-delta**           | Better git diff                                               | **bash**        | Enhanced git diff with syntax highlighting and better formatting.                                    |
+| **lazygit**             | Terminal Git UI                                               | **bash**        | Full terminal UI for Git operations. Use `lg` alias.                                                 |
+| **httpie**              | Better HTTP client                                            | **bash**        | User-friendly HTTP client for API testing. Use `http` (aliased).                                     |
+| **yq**                  | YAML processor                                                | **bash**        | Like jq but for YAML files. Process and query YAML data.                                            |
 <!-- prettier-ignore-end -->
 <!-- markdownlint-enable MD056 -->
 

@@ -116,6 +116,10 @@ describe('TanStack Router Testing Examples', () => {
 				uniqueId: 'authenticated-context',
 			})
 
+			// Use test ID that should be set by renderWithRouter
+			expect(
+				screen.getByTestId('root-layout-authenticated-context'),
+			).toBeInTheDocument()
 			expect(screen.getByText('Protected Content')).toBeInTheDocument()
 		})
 
@@ -127,6 +131,10 @@ describe('TanStack Router Testing Examples', () => {
 				context: createUnauthenticatedContext(),
 			})
 
+			// Use test ID that should be set by renderWithRouter
+			expect(
+				screen.getByTestId('root-layout-unauthenticated-context'),
+			).toBeInTheDocument()
 			expect(screen.getByText('Protected Content')).toBeInTheDocument()
 		})
 	})

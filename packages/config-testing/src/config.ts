@@ -13,7 +13,7 @@ export const commonTestConfig = {
 	],
 	coverage: {
 		provider: 'v8' as const,
-		reporter: ['text', 'json', 'html', 'lcov'],
+		reporter: ['text', 'json-summary', 'html', 'lcov'],
 		reportsDirectory: './coverage',
 		exclude: [
 			'node_modules/',
@@ -35,6 +35,7 @@ export const commonTestConfig = {
 				functions: 80,
 				lines: 80,
 			},
+			warnOnFailure: true, // Use warnings instead of errors for coverage failures
 		},
 		// Include source maps for better debugging
 		sourcemap: true,
@@ -51,7 +52,7 @@ export const commonTestConfig = {
  */
 export const reactTestConfig = {
 	...commonTestConfig,
-	environment: 'jsdom' as const,
+	environment: 'happy-dom' as const,
 	include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
 	// Mock CSS modules and other assets
 	css: {

@@ -3,26 +3,14 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
 	test: {
+		...commonTestConfig,
 		...unitTestTimeouts,
 		name: 'express-api',
 		setupFiles: ['./vitest.setup.ts'],
-		environment: 'node',
-		// Use the shared config but override specific settings
-		globals: commonTestConfig.globals,
-		include: commonTestConfig.include,
-		exclude: commonTestConfig.exclude,
-		silent: commonTestConfig.silent,
-		// Configure parallel test execution using Vitest's built-in capabilities
-		pool: 'threads',
-		poolOptions: {
-			threads: {
-				singleThread: false,
-				minThreads: 1,
-				maxThreads: 4,
-			},
-		},
-		// Enable parallel execution
-		fileParallelism: true,
+		include: [
+			'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts}',
+			'src/**/*.integration.test.{js,mjs,cjs,ts,mts,cts}',
+		],
 		coverage: {
 			...commonTestConfig.coverage,
 			include: ['src/**/*.ts'],
@@ -31,7 +19,25 @@ export default defineConfig({
 				'src/**/*.test.ts',
 				'src/**/*.spec.ts',
 				'src/**/*.d.ts',
+				// Exclude root level config files
+				'../drizzle.config.ts',
+				'../**/*.config.ts',
+				'../**/*.config.js',
+				'../**/*.config.cjs',
+				// Exclude scripts folder
+				'../scripts/',
+				'../scripts/**/*',
 			],
+			// Per-package coverage reporting
+			reportsDirectory: './coverage',
+			thresholds: {
+				global: {
+					statements: 80,
+					branches: 75,
+					functions: 80,
+					lines: 80,
+				},
+			},
 		},
 	},
 })

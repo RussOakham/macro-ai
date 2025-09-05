@@ -1,164 +1,145 @@
 /**
  * Vitest Workspace Configuration
  *
- * Configures test parallelization and workspace-wide test settings
- * for optimal performance across the monorepo.
+ * Modern workspace configuration using projects field
+ * that centralizes test settings and eliminates duplication across the monorepo.
  */
 
-import { defineWorkspace } from 'vitest/config'
+import { defineConfig } from 'vitest/config'
+import {
+	commonTestConfig,
+	unitTestTimeouts,
+	integrationTestTimeouts,
+} from '@repo/config-testing'
 
-export default defineWorkspace([
-	// Express API - Backend tests
-	{
-		extends: './apps/express-api/vitest.config.ts',
-		test: {
-			name: 'express-api',
-			root: './apps/express-api',
-			include: ['src/**/*.test.ts', 'src/**/*.spec.ts'],
-			exclude: [
-				'src/**/*.integration.test.ts',
-				'src/**/*.e2e.test.ts',
-				'node_modules/**',
-				'dist/**',
-			],
-			environment: 'node',
-			pool: 'threads',
-			poolOptions: {
-				threads: {
-					minThreads: 1,
-					maxThreads: 4,
+export default defineConfig({
+	test: {
+		// Coverage configuration is now handled by individual project configs
+		coverage: {
+			...commonTestConfig.coverage,
+			// Project-specific includes and excludes are handled in individual configs
+		},
+		projects: [
+			// Express API - Backend tests
+			{
+				root: './apps/express-api',
+				test: {
+					...commonTestConfig,
+					...unitTestTimeouts,
+					name: 'express-api',
+					environment: 'node',
+					pool: 'threads',
+					poolOptions: {
+						threads: {
+							isolate: true,
+						},
+					},
+					setupFiles: ['./apps/express-api/vitest.setup.ts'],
+					exclude: [...commonTestConfig.exclude, 'src/test/mocks/**/*'],
 				},
 			},
-			testTimeout: 30000,
-			hookTimeout: 10000,
-			teardownTimeout: 5000,
-			isolate: true,
-			// Optimize for CI/CD
-			reporter: process.env.CI ? ['junit', 'verbose'] : ['verbose'],
-			outputFile: {
-				junit: './test-results.xml',
-			},
-		},
-	},
 
-	// Client UI - Frontend tests
-	{
-		extends: './apps/client-ui/vitest.config.ts',
-		test: {
-			name: 'client-ui',
-			root: './apps/client-ui',
-			include: ['src/**/*.test.{ts,tsx}', 'src/**/*.spec.{ts,tsx}'],
-			exclude: [
-				'src/**/*.integration.test.{ts,tsx}',
-				'src/**/*.e2e.test.{ts,tsx}',
-				'node_modules/**',
-				'dist/**',
-				'src/routeTree.gen.ts',
-			],
-			environment: 'jsdom',
-			pool: 'threads',
-			poolOptions: {
-				threads: {
-					minThreads: 1,
-					maxThreads: 3,
+			// Client UI - Frontend tests
+			{
+				root: './apps/client-ui',
+				plugins: [],
+				resolve: {
+					alias: {
+						'@': './src',
+					},
+				},
+				test: {
+					...commonTestConfig,
+					...unitTestTimeouts,
+					name: 'client-ui',
+					environment: 'happy-dom',
+					pool: 'threads',
+					poolOptions: {
+						threads: {
+							isolate: true,
+						},
+					},
+					setupFiles: ['./apps/client-ui/src/test/setup.ts'],
+					include: ['src/**/*.{test,spec}.{ts,tsx}'],
+					exclude: [
+						...commonTestConfig.exclude,
+						'src/routeTree.gen.ts',
+						'src/**/*.e2e.test.{ts,tsx}',
+						'src/test/mocks/**/*',
+					],
+					// Mock CSS modules and other assets
+					css: {
+						modules: {
+							classNameStrategy: 'non-scoped',
+						},
+					},
+					// React-specific globals
+					globals: true,
 				},
 			},
-			testTimeout: 20000,
-			hookTimeout: 10000,
-			isolate: true,
-			// React-specific optimizations
-			setupFiles: ['./src/test/setup.ts'],
-			reporter: process.env.CI ? ['junit', 'verbose'] : ['verbose'],
-			outputFile: {
-				junit: './test-results.xml',
-			},
-		},
-	},
 
-	// API Client - Package tests
-	{
-		extends: './packages/macro-ai-api-client/vitest.config.ts',
-		test: {
-			name: 'api-client',
-			root: './packages/macro-ai-api-client',
-			include: ['src/**/*.test.ts', 'src/**/*.spec.ts'],
-			exclude: ['node_modules/**', 'dist/**'],
-			environment: 'node',
-			pool: 'threads',
-			poolOptions: {
-				threads: {
-					minThreads: 1,
-					maxThreads: 2,
+			// API Client - Package tests
+			{
+				root: './packages/macro-ai-api-client',
+				test: {
+					...commonTestConfig,
+					...unitTestTimeouts,
+					name: 'api-client',
+					environment: 'node',
+					pool: 'threads',
+					poolOptions: {
+						threads: {
+							isolate: true,
+						},
+					},
 				},
 			},
-			testTimeout: 15000,
-			hookTimeout: 5000,
-			isolate: true,
-			reporter: process.env.CI ? ['junit', 'verbose'] : ['verbose'],
-			outputFile: {
-				junit: './test-results.xml',
-			},
-		},
-	},
 
-	// Integration tests - Separate configuration for longer-running tests
-	{
-		test: {
-			name: 'integration',
-			root: './apps/express-api',
-			include: ['src/**/*.integration.test.ts'],
-			exclude: ['node_modules/**', 'dist/**'],
-			environment: 'node',
-			pool: 'forks', // Use forks for isolation in integration tests
-			poolOptions: {
-				forks: {
-					minForks: 1,
-					maxForks: 2, // Limit concurrent integration tests
+			// Integration tests - Separate configuration for longer-running tests
+			{
+				root: './apps/express-api',
+				test: {
+					...commonTestConfig,
+					...integrationTestTimeouts,
+					name: 'integration',
+					include: ['src/**/*.integration.test.ts'],
+					environment: 'node',
+					pool: 'forks',
+					poolOptions: {
+						forks: {
+							isolate: true,
+						},
+					},
+					sequence: {
+						concurrent: false,
+					},
 				},
 			},
-			testTimeout: 300000, // 5 minutes for integration tests
-			hookTimeout: 60000, // 1 minute for setup/teardown
-			teardownTimeout: 30000,
-			isolate: true,
-			// Sequential execution for integration tests that might share resources
-			sequence: {
-				concurrent: false,
-			},
-			reporter: process.env.CI ? ['junit', 'verbose'] : ['verbose'],
-			outputFile: {
-				junit: './integration-test-results.xml',
-			},
-		},
-	},
 
-	// E2E tests - Browser-based tests
-	{
-		test: {
-			name: 'e2e',
-			root: './apps/client-ui',
-			include: ['src/**/*.e2e.test.{ts,tsx}', 'e2e/**/*.test.{ts,tsx}'],
-			exclude: ['node_modules/**', 'dist/**'],
-			environment: 'jsdom',
-			pool: 'forks',
-			poolOptions: {
-				forks: {
-					minForks: 1,
-					maxForks: 1, // Single fork for E2E tests to avoid conflicts
+			// E2E tests - Browser-based tests
+			{
+				root: './apps/client-ui',
+				test: {
+					...commonTestConfig,
+					name: 'e2e',
+					include: ['src/**/*.e2e.test.{ts,tsx}', 'e2e/**/*.test.{ts,tsx}'],
+					environment: 'happy-dom',
+					pool: 'forks',
+					poolOptions: {
+						forks: {
+							isolate: true,
+						},
+					},
+					testTimeout: 600000,
+					hookTimeout: 120000,
+					sequence: {
+						concurrent: false,
+					},
 				},
 			},
-			testTimeout: 600000, // 10 minutes for E2E tests
-			hookTimeout: 120000, // 2 minutes for setup/teardown
-			isolate: true,
-			sequence: {
-				concurrent: false, // E2E tests run sequentially
-			},
-			reporter: process.env.CI ? ['junit', 'verbose'] : ['verbose'],
-			outputFile: {
-				junit: './e2e-test-results.xml',
-			},
-		},
+		],
 	},
-])
+})
 
 /**
  * Workspace Configuration Notes:

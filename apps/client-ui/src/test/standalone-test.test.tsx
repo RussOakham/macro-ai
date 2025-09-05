@@ -9,6 +9,8 @@ import React from 'react'
 import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
+import '@testing-library/jest-dom/vitest'
+
 // Import directly from our component-test-utils to avoid MSW setup
 import { componentTesting, formTesting } from './component-test-utils'
 

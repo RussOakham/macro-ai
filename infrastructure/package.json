@@ -25,6 +25,8 @@
 		"lint:fix": "eslint . --ext .ts,.tsx --fix",
 		"lint:ci": "eslint . --ext .ts,.tsx --max-warnings 0",
 		"type-check": "tsc --noEmit",
+		"test": "vitest run",
+		"test:watch": "vitest",
 		"deploy-ec2": "tsx scripts/deploy-ec2.ts",
 		"deploy-pipeline": "tsx scripts/deploy-pipeline.ts",
 		"deploy-ec2:github": "scripts/github-actions-deploy.sh"
@@ -36,6 +38,7 @@
 	},
 	"devDependencies": {
 		"@repo/config-eslint": "workspace:*",
+		"@repo/config-testing": "workspace:*",
 		"@repo/config-typescript": "workspace:*",
 		"@types/node": "catalog:",
 		"aws-cdk": "^2.1027.0",
@@ -45,6 +48,7 @@
 		"prettier": "^3.6.2",
 		"tsx": "catalog:",
 		"typescript": "catalog:",
-		"typescript-eslint": "^8.39.0"
+		"typescript-eslint": "^8.39.0",
+		"vitest": "catalog:"
 	}
 }
