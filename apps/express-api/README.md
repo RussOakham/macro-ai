@@ -30,9 +30,9 @@ Modern Express.js backend API for the Macro AI platform, built with TypeScript, 
 pnpm install
 
 # Set up environment variables
-cp env.local.example .env.local
+cp config/examples/env.local.example .env.local
 # Edit .env.local with your configuration
-# See ENVIRONMENT_TEMPLATE.md for comprehensive configuration options
+# See ../../docs/configuration/ENVIRONMENT_TEMPLATE.md for comprehensive configuration options
 
 # Generate database migrations
 pnpm db:generate
@@ -101,13 +101,13 @@ src/
 
 ### Environment Variables
 
-For comprehensive environment configuration, see [ENVIRONMENT_TEMPLATE.md](./ENVIRONMENT_TEMPLATE.md).
+For comprehensive environment configuration, see [ENVIRONMENT_TEMPLATE.md](./docs/configuration/ENVIRONMENT_TEMPLATE.md).
 
 **Quick Setup:**
 
 ```bash
 # Copy the local development template
-cp env.local.example .env.local
+cp config/examples/env.local.example .env.local
 
 # Edit with your configuration values
 nano .env.local

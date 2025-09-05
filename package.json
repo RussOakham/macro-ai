@@ -21,6 +21,9 @@
 		"db:push:express-api": "pnpm --filter @repo/express-api db:push",
 		"lint": "turbo run lint",
 		"lint:md": "markdownlint-cli2 \"**/*.md\" \"!**/node_modules/**\"",
+		"lint:yaml": "yaml-lint --config yaml-lint.config.js",
+		"lint:yaml:fix": "yaml-lint --config yaml-lint.config.js --fix",
+		"lint:yaml:js": "node scripts/yaml-lint.js",
 		"knip": "knip",
 		"knip:production": "knip --production",
 		"coverage": "node scripts/coverage-report.js",
@@ -39,7 +42,7 @@
 		"test": "turbo run test",
 		"test:ui": "turbo run --filter @repo/express-api test:ui",
 		"test:coverage": "turbo run test:coverage",
-		"test:coverage:report": "pnpm test:coverage && node coverage-badge.config.cjs",
+		"test:coverage:report": "pnpm test:coverage && node config/coverage-badge.config.cjs",
 		"test:coverage:open": "pnpm test:coverage && open apps/express-api/coverage/index.html",
 		"test:coverage:ci": "turbo run test:coverage --reporter=json",
 		"test:coverage:analyze": "node scripts/analyze-coverage-gaps.cjs",
@@ -68,6 +71,7 @@
 		"drizzle-kit": "^0.31.4",
 		"eslint": "catalog:",
 		"husky": "^9.1.7",
+		"js-yaml": "^4.1.0",
 		"knip": "^5.63.0",
 		"markdownlint-cli2": "catalog:",
 		"msw": "^2.11.1",
@@ -77,7 +81,8 @@
 		"turbo": "^2.5.6",
 		"vitest": "^3.2.4",
 		"vitest-mock-extended": "^3.1.0",
-		"yaml": "^2.8.1"
+		"yaml": "^2.8.1",
+		"yaml-lint": "^1.7.0"
 	},
 	"packageManager": "pnpm@10.14.0",
 	"engines": {

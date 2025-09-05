@@ -262,7 +262,28 @@ function calculateTotals(reports, testResults = null) {
 function findTestResults() {
 	const testResults = new Map()
 
-	// Check test-results directory (used in CI)
+	// Check test-results-organized directory first (used in CI after artifact processing)
+	const testResultsOrganizedDir = path.join(
+		__dirname,
+		'..',
+		'test-results-organized',
+	)
+	if (fs.existsSync(testResultsOrganizedDir)) {
+		const packages = fs.readdirSync(testResultsOrganizedDir)
+		for (const pkg of packages) {
+			const junitPath = path.join(
+				testResultsOrganizedDir,
+				pkg,
+				'test-results.xml',
+			)
+			if (fs.existsSync(junitPath)) {
+				const result = parseJUnitFile(junitPath)
+				if (result) testResults.set(pkg, result)
+			}
+		}
+	}
+
+	// Fallback: Check test-results directory (used in CI before artifact processing)
 	const testResultsDir = path.join(__dirname, '..', 'test-results')
 	if (fs.existsSync(testResultsDir)) {
 		const stack = [testResultsDir]
@@ -274,9 +295,39 @@ function findTestResults() {
 				if (e.isDirectory()) {
 					stack.push(full)
 				} else if (e.isFile() && e.name === 'test-results.xml') {
-					const pkgName = path.basename(path.dirname(full))
-					const result = parseJUnitFile(full)
-					if (result) testResults.set(pkgName, result)
+					// Extract package name from the full path structure
+					// Path structure: test-results/test-results-{package}-{run_id}-{name}/{package}/test-results.xml
+					const pathParts = full.split(path.sep)
+					const packageIndex = pathParts.findIndex(
+						(part) =>
+							part.startsWith('test-results-') && part !== 'test-results',
+					)
+					if (packageIndex !== -1) {
+						// Extract package name from artifact name like "test-results-apps-express-api-123456-Unit-Tests"
+						const artifactName = pathParts[packageIndex]
+						let pkgName = artifactName
+							.replace(/^test-results-/, '')
+							.replace(/-\d+-.*$/, '')
+						// If it starts with apps/ or packages/, extract the actual package name
+						if (
+							pkgName.startsWith('apps-') ||
+							pkgName.startsWith('packages-')
+						) {
+							pkgName = pkgName.replace(/^(apps|packages)-/, '')
+						}
+						const result = parseJUnitFile(full)
+						if (result) testResults.set(pkgName, result)
+					} else {
+						// Fallback: use directory name (log ambiguity)
+						const pkgName = path.basename(path.dirname(full))
+						if (!pkgName) {
+							console.warn(
+								`Ambiguous JUnit path, could not derive package: ${full}`,
+							)
+						}
+						const result = parseJUnitFile(full)
+						if (result) testResults.set(pkgName, result)
+					}
 				}
 			}
 		}
@@ -339,7 +390,7 @@ function generateMarkdownOutput(reportData, totals) {
 
 	for (const report of reportData) {
 		const testResult = testResults.get(report.name)
-		const tests = testResult?.tests || report.data.total.tests || 0
+		const tests = testResult?.tests || 0
 		const passed = testResult?.passed || tests
 		const failed = testResult?.failures || 0
 		const duration = testResult?.time ? `${testResult.time.toFixed(1)}s` : 'N/A'
@@ -473,6 +524,15 @@ function main() {
 		}
 	}
 
+	// Debug: Show what coverage reports were found
+	if (format === 'markdown') {
+		console.error('🔍 Debug: Coverage reports found:')
+		for (const report of reportData) {
+			console.error(`  - ${report.name} (${report.type}): ${report.path}`)
+		}
+		console.error(`Total packages with coverage: ${reportData.length}`)
+	}
+
 	if (reportData.length === 0) {
 		if (format === 'console') {
 			console.log(
@@ -490,6 +550,18 @@ function main() {
 
 	// Get test results from JUnit files for accurate test counts
 	const testResults = findTestResults()
+
+	// Debug: Show what test results were found
+	if (format === 'markdown') {
+		console.error('🔍 Debug: Test results found:')
+		for (const [pkg, result] of testResults) {
+			console.error(
+				`  - ${pkg}: ${result.tests} tests, ${result.passed} passed, ${result.failures} failed`,
+			)
+		}
+		console.error(`Total packages with test results: ${testResults.size}`)
+	}
+
 	const totals = calculateTotals(reportData, testResults)
 
 	// Output based on format

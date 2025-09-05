@@ -1,5 +1,5 @@
+# syntax=docker/dockerfile:1
 FROM node:20-alpine AS base
-RUN apk update
 RUN apk add --no-cache libc6-compat
 RUN corepack enable
 
@@ -8,8 +8,6 @@ RUN corepack enable
 
 FROM base AS builder
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk update
-RUN apk add --no-cache libc6-compat
 
 # Set pnpm home and path
 ENV PNPM_HOME="/root/.local/share/pnpm"
@@ -17,20 +15,28 @@ ENV PATH="$PNPM_HOME:$PATH"
 
 # Set working directory
 WORKDIR /macro-ai
-RUN pnpm add -g turbo
+# Use BuildKit cache mount for pnpm global packages
+RUN --mount=type=cache,target=/root/.local/share/pnpm \
+    pnpm add -g turbo
 COPY . .
-RUN turbo prune @repo/express-api --docker
+# Use BuildKit cache mount for turbo cache during prune
+RUN --mount=type=cache,target=.turbo \
+    --mount=type=cache,target=/root/.local/share/pnpm \
+    /root/.local/share/pnpm/turbo prune @repo/express-api --docker
 
-# Add lockfile and package.json's of isolated subworkspace
-FROM base AS installer
-RUN apk update
-RUN apk add --no-cache libc6-compat
+# Build stage - install ALL dependencies including dev dependencies for building
+FROM base AS builder-full
+
+# Set pnpm home and path for build stage
+ENV PNPM_HOME="/root/.local/share/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
 
 WORKDIR /macro-ai
 
-# First install dependencies (as they change less often)
+# First install ALL dependencies (including dev dependencies needed for build)
 COPY --from=builder /macro-ai/out/json/ .
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.local/share/pnpm \
+    pnpm install --frozen-lockfile
 
 # Build the project and its dependencies
 COPY --from=builder /macro-ai/out/full/ .
@@ -39,22 +45,46 @@ COPY --from=builder /macro-ai/out/full/ .
 ARG ENV_FILE
 RUN if [ "$ENV_FILE" ] && [ -f "$ENV_FILE" ]; then cp "$ENV_FILE" /macro-ai/.env && cp "$ENV_FILE" /macro-ai/apps/express-api/.env; fi
 
-# Uncomment and use build args to enable remote caching
-# ARG TURBO_TEAM
-# ENV TURBO_TEAM=$TURBO_TEAM
+# Use BuildKit cache mount for turbo cache during build
+RUN --mount=type=cache,target=.turbo \
+    --mount=type=cache,target=/root/.local/share/pnpm \
+    SKIP_ENV_VALIDATION=true pnpm turbo build
 
-# ARG TURBO_TOKEN
-# ENV TURBO_TOKEN=$TURBO_TOKEN
+# Production dependencies stage - install ONLY production dependencies
+FROM base AS installer
 
-RUN pnpm turbo build
+# Set pnpm home and path for installer stage
+ENV PNPM_HOME="/root/.local/share/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+
+WORKDIR /macro-ai
+
+# Install ONLY production dependencies
+COPY --from=builder /macro-ai/out/json/ .
+RUN --mount=type=cache,target=/root/.local/share/pnpm \
+    pnpm install --prod --frozen-lockfile --ignore-scripts
 
 FROM base AS runner
+RUN apk add --no-cache curl
 WORKDIR /macro-ai
 
 # Don't run production as root
-RUN addgroup --system --gid 1001 expressjs
-RUN adduser --system --uid 1001 expressjs
+RUN addgroup -S -g 1001 expressjs \
+ && adduser -S -u 1001 -G expressjs expressjs
+USER root
+# Copy built application from build stage and production dependencies from installer stage
+COPY --chown=expressjs:expressjs --from=builder-full /macro-ai/apps/express-api/dist ./apps/express-api/dist
+COPY --chown=expressjs:expressjs --from=installer /macro-ai/node_modules ./node_modules
+COPY --chown=expressjs:expressjs --from=installer /macro-ai/apps/express-api/node_modules ./apps/express-api/node_modules
+COPY --chown=expressjs:expressjs --from=installer /macro-ai/package.json ./package.json
+COPY --chown=expressjs:expressjs --from=installer /macro-ai/apps/express-api/package.json ./apps/express-api/package.json
 USER expressjs
-COPY --from=installer /macro-ai .
 
-CMD node apps/express-api/dist/index.js
+# Set NODE_ENV for runtime
+ENV NODE_ENV=production
+
+# Health check with curl (matches ECS expectations)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -fsS --connect-timeout 3 --max-time 5 -H "X-Api-Key: ${API_KEY}" http://localhost:3040/api/health || exit 1
+
+CMD ["node", "apps/express-api/dist/index.js"]

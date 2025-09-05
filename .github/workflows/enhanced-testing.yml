@@ -86,7 +86,7 @@ jobs:
             "timeout": 120000
           },
           {
-            "name": "Unit Tests - Client UI", 
+            "name": "Unit Tests - Client UI",
             "package": "apps/client-ui",
             "timeout": 120000
           },
@@ -417,23 +417,90 @@ jobs:
         with:
           pattern: test-results-*
           path: test-results/
-          merge-multiple: true
+          merge-multiple: false
 
       - name: Generate test report from artifacts
+        shell: bash
         run: |
           echo "📊 Generating test report from collected metrics..."
+
+          # Create directories for organized artifacts
+          mkdir -p coverage-reports
+          mkdir -p test-results-organized
 
           # Extract coverage reports from artifacts
           echo "🔍 Extracting coverage reports from artifacts..."
           find test-results -name "coverage" -type d | while read coverage_dir; do
             echo "Found coverage directory: $coverage_dir"
             if [ -f "$coverage_dir/coverage-summary.json" ]; then
-              # Copy coverage summary to a predictable location
-              package_name=$(basename "$(dirname "$coverage_dir")" | sed 's/test-results-//' | sed 's/-.*//')
-              mkdir -p coverage-reports/$package_name
-              cp "$coverage_dir/coverage-summary.json" coverage-reports/$package_name/
-              echo "✅ Copied coverage report for $package_name"
+              # Extract package name from the artifact directory name
+              # Path structure: test-results/test-results-{package}-{run_id}-{name}/coverage/
+              package_name=""
+              
+              # Get the artifact directory name (parent of coverage/)
+              artifact_dir=$(echo "$coverage_dir" | sed 's|test-results/\([^/]*\)/.*|\1|')
+              
+              # Extract package name from artifact name like "test-results-apps-client-ui-17505117788-Unit-Tests-Client-UI"
+              if [[ "$artifact_dir" =~ ^test-results-(apps|packages)-(.+)-[0-9]+- ]]; then
+                package_name="${BASH_REMATCH[2]}"
+              elif [[ "$artifact_dir" =~ ^test-results-(.+)-[0-9]+- ]]; then
+                package_name="${BASH_REMATCH[1]}"
+              fi
+
+              if [ -n "$package_name" ] && [ "$package_name" != "coverage" ]; then
+                mkdir -p "coverage-reports/$package_name"
+                cp "$coverage_dir/coverage-summary.json" "coverage-reports/$package_name/"
+                echo "✅ Copied coverage report for $package_name"
+              else
+                echo "⚠️ Could not extract package name from: $coverage_dir"
+                echo "   Artifact dir: $artifact_dir"
+                echo "   Extracted name: $package_name"
+              fi
             fi
+          done
+
+          # Extract JUnit test results from artifacts
+          echo "🔍 Extracting JUnit test results from artifacts..."
+          find test-results -name "test-results.xml" | while read junit_file; do
+            echo "Found JUnit file: $junit_file"
+            # Extract package name from the artifact directory name
+            # Path structure: test-results/test-results-{package}-{run_id}-{name}/test-results.xml
+            package_name=""
+            
+            # Get the artifact directory name (parent of test-results.xml)
+            artifact_dir=$(echo "$junit_file" | sed 's|test-results/\([^/]*\)/.*|\1|')
+            
+            # Extract package name from artifact name like "test-results-apps-client-ui-17505117788-Unit-Tests-Client-UI"
+            if [[ "$artifact_dir" =~ ^test-results-(apps|packages)-(.+)-[0-9]+- ]]; then
+              package_name="${BASH_REMATCH[2]}"
+            elif [[ "$artifact_dir" =~ ^test-results-(.+)-[0-9]+- ]]; then
+              package_name="${BASH_REMATCH[1]}"
+            fi
+
+            if [ -n "$package_name" ] && [ "$package_name" != "test-results.xml" ]; then
+              mkdir -p "test-results-organized/$package_name"
+              cp "$junit_file" "test-results-organized/$package_name/"
+              echo "✅ Copied JUnit results for $package_name"
+            else
+              echo "⚠️ Could not extract package name from: $junit_file"
+              echo "   Artifact dir: $artifact_dir"
+              echo "   Extracted name: $package_name"
+            fi
+          done
+
+          # Debug: Show what we found
+          echo "🔍 Debug: Artifact processing summary"
+          echo "Raw artifacts downloaded:"
+          find test-results -type d -maxdepth 1 | while read dir; do
+            echo "  - $(basename "$dir")"
+          done
+          echo "Coverage reports found:"
+          find coverage-reports -name "coverage-summary.json" | while read file; do
+            echo "  - $file"
+          done
+          echo "JUnit test results found:"
+          find test-results-organized -name "test-results.xml" | while read file; do
+            echo "  - $file"
           done
 
           # Generate comprehensive test and coverage report

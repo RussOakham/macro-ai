@@ -1,5 +1,9 @@
 #!/bin/bash
 set -e
+set -o pipefail
+
+# Cleanup secrets on any exit
+trap 'rm -f "$ENV_FILE"' EXIT
 
 # Build Docker image with environment variable injection for ECS deployment
 # This script is designed to be run during CDK deployment
@@ -52,11 +56,14 @@ echo "[INFO] Step 2: Building Docker image..."
 # Build the image from the repo root (for Turborepo context)
 cd ../..
 
-# Build with build args for environment injection
-docker build \
+# Build with build args for environment injection using BuildKit
+docker buildx build \
+    --progress=plain \
+    --platform=linux/amd64 \
     --build-arg ENV_FILE="$ENV_FILE" \
     --tag "$ECR_REGISTRY/$REPOSITORY_NAME:$IMAGE_TAG" \
-    --file apps/express-api/Dockerfile \
+    --file apps/express-api/Dockerfile.distroless \
+    --target ecs-runner \
     .
 
 echo "[INFO] Docker image built successfully: $ECR_REGISTRY/$REPOSITORY_NAME:$IMAGE_TAG"
@@ -72,7 +79,4 @@ aws ecr get-login-password --region "$AWS_REGION" \
 docker push "$ECR_REGISTRY/$REPOSITORY_NAME:$IMAGE_TAG"
 
 echo "[INFO] Docker image pushed successfully to ECR"
-
-# Cleanup
-rm -f "$ENV_FILE"
 echo "[INFO] Build complete!"

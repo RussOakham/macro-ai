@@ -1,25 +1,36 @@
 # Docker Configuration for Macro AI Express API
 
-This document covers the Docker setup, configuration, and deployment for the Macro AI Express API.
+This document covers the Docker setup, configuration, and deployment for the Macro AI Express API with BuildKit optimizations.
 
 ## 🏗️ Architecture Overview
 
-The Docker setup uses a **multi-stage build approach** with four stages:
+The Docker setup uses a **multi-stage build approach with BuildKit optimizations**:
 
-1. **`deps`** - Install and cache dependencies
-2. **`builder`** - Compile TypeScript and build the application
-3. **`env-config`** - Generate environment configuration from Parameter Store
-4. **`production`** - Create minimal production image with embedded configuration
+1. **`base`** - Alpine Linux base with Node.js 20 and pnpm
+2. **`builder`** - Turbo prune for monorepo optimization with cache mounts
+3. **`installer`** - Install dependencies and build with BuildKit caching
+4. **`runner`** - Minimal production image with non-root user
+
+### 🚀 BuildKit Features
+
+- **Cache Mounts**: Persistent caching for pnpm store and Turbo cache
+- **Multi-platform Support**: Build for AMD64 and ARM64 architectures
+- **Advanced Caching**: GitHub Actions cache integration and registry caching
+- **Parallel Builds**: Faster builds through parallel stage execution
+- **Secrets Management**: Secure build-time secret handling
 
 ## 📁 File Structure
 
 ```bash
 apps/express-api/
-├── Dockerfile                    # Multi-stage Docker build
-├── .dockerignore                 # Exclude files from build context
-├── docker-compose.yml            # Development environment
+├── Dockerfile                    # Standard Docker build (legacy)
+├── Dockerfile.distroless         # 🏆 RECOMMENDED: Distroless variant for production
+├── .dockerignore                 # Comprehensive build context exclusions
+├── docker-compose.yml            # Development environment with BuildKit
 ├── docker-compose.prod.yml       # Production environment
 ├── scripts/
+│   ├── build-docker-buildkit.sh # BuildKit optimized build script
+│   ├── analyze-docker-image.sh  # Image analysis and optimization tool
 │   ├── generate-env-file.sh     # Generate environment files from Parameter Store
 │   ├── build-docker-with-env.sh # Build Docker images with configuration
 │   ├── build-docker.sh          # Legacy build script
@@ -46,6 +57,7 @@ The application uses **build-time configuration injection**:
 - Configuration is baked into the container image
 - No runtime Parameter Store access needed
 - Faster container startup and more reliable operation
+- Set `SKIP_ENV_VALIDATION=true` during Docker builds to bypass local env checks and skip swagger generation
 
 ### Development Setup
 
@@ -62,8 +74,23 @@ docker-compose up -d
 
 ### Production Build
 
+#### BuildKit Optimized (Recommended)
+
 ```bash
-# Build production image
+# Build with BuildKit optimizations
+./scripts/build-docker-buildkit.sh -e production -t latest
+
+# Multi-platform build with caching
+./scripts/build-docker-buildkit.sh --multi-platform --cache-from type=registry,ref=myregistry/cache:buildcache
+
+# Build and push to ECR
+./scripts/build-docker-buildkit.sh -e production -t v1.0.0 -p -r 123456789.dkr.ecr.us-east-1.amazonaws.com
+```
+
+#### Legacy Build
+
+```bash
+# Build production image (legacy)
 ./scripts/build-docker.sh production latest
 
 # Deploy production image
@@ -104,15 +131,15 @@ docker build --target production -t macro-ai-express-api:v1.0.0 .
 
 ```bash
 # Run development container
-docker run -p 3001:3000 macro-ai-express-api:dev
+docker run -p 3001:3040 macro-ai-express-api:dev
 
 # Run production container with environment file
-docker run -p 3000:3000 --env-file .env macro-ai-express-api:prod
+docker run -p 3040:3040 --env-file .env macro-ai-express-api:prod
 
 # Run with specific environment variables
-docker run -p 3000:3000 \
+docker run -p 3040:3040 \
   -e NODE_ENV=production \
-  -e SERVER_PORT=3000 \
+  -e SERVER_PORT=3040 \
   macro-ai-express-api:prod
 ```
 
@@ -136,7 +163,9 @@ docker-compose down
 
 The Docker image includes built-in health checks:
 
-- **Endpoint**: `/health`
+- **Endpoints**:
+  - Local/dev: `/health`
+  - ECS: `/api/health` (requires `X-Api-Key: $API_KEY`)
 - **Interval**: 30 seconds
 - **Timeout**: 3 seconds
 - **Retries**: 3
@@ -146,7 +175,8 @@ The Docker image includes built-in health checks:
 
 The API provides multiple health check endpoints:
 
-- `/health` - Basic health status
+- `/health` - Basic health status (local development)
+- `/api/health` - ECS health check with API key authentication
 - `/health/detailed` - Comprehensive health information
 - `/health/ready` - Readiness check
 - `/health/live` - Liveness check
@@ -162,9 +192,8 @@ The API provides multiple health check endpoints:
 
 ### Signal Handling
 
-- Uses `dumb-init` for proper signal handling
-- Graceful shutdown on SIGTERM/SIGINT
-- Prevents zombie processes
+- Containers handle SIGTERM/SIGINT for graceful shutdown
+- If you need PID 1 signal forwarding/zombie reaping, consider adding `tini` to the ECS image
 
 ### Image Security
 
@@ -216,7 +245,7 @@ cp env.local.example .env.local
 nano .env.local
 ```
 
-**Note**: For comprehensive environment configuration options, see [ENVIRONMENT_TEMPLATE.md](./ENVIRONMENT_TEMPLATE.md).
+**Note**: For comprehensive environment configuration options, see [ENVIRONMENT_TEMPLATE.md](../configuration/ENVIRONMENT_TEMPLATE.md).
 
 ## 📊 Performance Optimization
 
@@ -235,7 +264,24 @@ nano .env.local
 ### Image Size Comparison
 
 - **Development Image**: ~500MB (includes source and dev dependencies)
-- **Production Image**: ~150MB (minimal runtime only)
+- **Production Image (Alpine)**: ~150MB (minimal runtime only)
+- **Production Image (Distroless)**: ~80-100MB (maximum optimization)
+- **With BuildKit Caching**: 30-50% faster builds
+
+### 🔍 Image Analysis
+
+Use the built-in analysis tool to optimize your images:
+
+```bash
+# Analyze current image
+./scripts/analyze-docker-image.sh -i macro-ai-express-api:latest
+
+# Interactive layer analysis with dive
+./scripts/analyze-docker-image.sh -t dive
+
+# Size comparison across tags
+./scripts/analyze-docker-image.sh -t size
+```
 
 ## 🐛 Troubleshooting
 
@@ -360,11 +406,3 @@ When modifying the Docker configuration:
 2. Verify production build with `./scripts/deploy-docker-prod.sh`
 3. Update this documentation
 4. Test in CI/CD pipeline
-
-## 📝 Changelog
-
-- **v1.0.0** - Initial Docker configuration
-- Multi-stage build implementation
-- Health check endpoints
-- Security hardening
-- Development and production environments
