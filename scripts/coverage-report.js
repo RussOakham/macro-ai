@@ -303,11 +303,15 @@ function findTestResults() {
 							part.startsWith('test-results-') && part !== 'test-results',
 					)
 					if (packageIndex !== -1) {
-						// Extract package name from artifact name like "test-results-express-api-123456-Unit-Tests"
+						// Extract package name from artifact name like "test-results-apps-express-api-123456-Unit-Tests"
 						const artifactName = pathParts[packageIndex]
-						const pkgName = artifactName
+						let pkgName = artifactName
 							.replace(/^test-results-/, '')
 							.replace(/-\d+-.*$/, '')
+						// If it starts with apps/ or packages/, extract the actual package name
+						if (pkgName.startsWith('apps-') || pkgName.startsWith('packages-')) {
+							pkgName = pkgName.replace(/^(apps|packages)-/, '')
+						}
 						const result = parseJUnitFile(full)
 						if (result) testResults.set(pkgName, result)
 					} else {

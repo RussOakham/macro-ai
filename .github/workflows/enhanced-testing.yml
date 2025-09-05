@@ -439,7 +439,9 @@ jobs:
               
               # Method 1: Extract from artifact directory name
               artifact_dir=$(echo "$coverage_dir" | sed 's|test-results/\([^/]*\)/.*|\1|')
-              if [[ "$artifact_dir" =~ ^test-results-([^-]+)- ]]; then
+              if [[ "$artifact_dir" =~ ^test-results-(apps|packages)-([^-]+)- ]]; then
+                package_name="${BASH_REMATCH[2]}"
+              elif [[ "$artifact_dir" =~ ^test-results-([^-]+)- ]]; then
                 package_name="${BASH_REMATCH[1]}"
               fi
               
@@ -475,7 +477,9 @@ jobs:
             
             # Method 1: Extract from artifact directory name
             artifact_dir=$(echo "$junit_file" | sed 's|test-results/\([^/]*\)/.*|\1|')
-            if [[ "$artifact_dir" =~ ^test-results-([^-]+)- ]]; then
+            if [[ "$artifact_dir" =~ ^test-results-(apps|packages)-([^-]+)- ]]; then
+              package_name="${BASH_REMATCH[2]}"
+            elif [[ "$artifact_dir" =~ ^test-results-([^-]+)- ]]; then
               package_name="${BASH_REMATCH[1]}"
             fi
             
@@ -502,6 +506,10 @@ jobs:
 
           # Debug: Show what we found
           echo "🔍 Debug: Artifact processing summary"
+          echo "Raw artifacts downloaded:"
+          find test-results -type d -maxdepth 1 | while read dir; do
+            echo "  - $(basename "$dir")"
+          done
           echo "Coverage reports found:"
           find coverage-reports -name "coverage-summary.json" | while read file; do
             echo "  - $file"
