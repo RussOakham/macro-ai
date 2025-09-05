@@ -114,6 +114,3 @@ rules:
   aliases:
     max-length: 128
 
-  # Document indentation
-  document-indentation:
-    spaces: 2

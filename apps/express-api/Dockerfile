@@ -69,22 +69,22 @@ RUN apk add --no-cache curl
 WORKDIR /macro-ai
 
 # Don't run production as root
-RUN addgroup --system --gid 1001 expressjs
-RUN adduser --system --uid 1001 expressjs
-USER expressjs
-
+RUN addgroup -S -g 1001 expressjs \
+ && adduser -S -u 1001 -G expressjs expressjs
+USER root
 # Copy built application from build stage and production dependencies from installer stage
-COPY --from=builder-full /macro-ai/apps/express-api/dist ./apps/express-api/dist
-COPY --from=installer /macro-ai/node_modules ./node_modules
-COPY --from=installer /macro-ai/apps/express-api/node_modules ./apps/express-api/node_modules
-COPY --from=installer /macro-ai/package.json ./package.json
-COPY --from=installer /macro-ai/apps/express-api/package.json ./apps/express-api/package.json
+COPY --chown=expressjs:expressjs --from=builder-full /macro-ai/apps/express-api/dist ./apps/express-api/dist
+COPY --chown=expressjs:expressjs --from=installer /macro-ai/node_modules ./node_modules
+COPY --chown=expressjs:expressjs --from=installer /macro-ai/apps/express-api/node_modules ./apps/express-api/node_modules
+COPY --chown=expressjs:expressjs --from=installer /macro-ai/package.json ./package.json
+COPY --chown=expressjs:expressjs --from=installer /macro-ai/apps/express-api/package.json ./apps/express-api/package.json
+USER expressjs
 
 # Set NODE_ENV for runtime
 ENV NODE_ENV=production
 
 # Health check with curl (matches ECS expectations)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f -H "X-Api-Key: ${API_KEY}" http://localhost:3040/api/health || exit 1
+    CMD curl -fsS --connect-timeout 3 --max-time 5 -H "X-Api-Key: ${API_KEY}" http://localhost:3040/api/health || exit 1
 
 CMD ["node", "apps/express-api/dist/index.js"]
