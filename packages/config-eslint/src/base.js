@@ -68,14 +68,6 @@ const base = {
 				],
 			},
 		},
-		{
-			languageOptions: {
-				parserOptions: {
-					project: true, // Allow tsconfig bubbling
-					tsconfigRootDir: import.meta.dirname, // needed if using ESM
-				},
-			},
-		},
 	],
 
 	// Code quality and best practices
@@ -288,6 +280,17 @@ const base = {
 				'@typescript-eslint/no-floating-promises': 'off',
 				'@typescript-eslint/no-misused-promises': 'off',
 				'sort-imports': 'off',
+			},
+		},
+		// Explicit override for ESLint config files to prevent TypeScript parsing
+		{
+			files: ['eslint.config.{js,ts}'],
+			...tseslint.configs.disableTypeChecked,
+			languageOptions: {
+				parserOptions: {
+					ecmaVersion: 'latest',
+					sourceType: 'module',
+				},
 			},
 		},
 	],

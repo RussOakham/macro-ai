@@ -2,7 +2,6 @@ import * as repoConfig from '@repo/config-eslint'
 import pluginQuery from '@tanstack/eslint-plugin-query'
 import pluginRouter from '@tanstack/eslint-plugin-router'
 import globals from 'globals'
-import tsParser from '@typescript-eslint/parser'
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript'
 
 export default repoConfig.config(
@@ -17,6 +16,8 @@ export default repoConfig.config(
 			'*.lcov',
 			'src/test/mocks/**',
 			'src/routeTree.gen.ts',
+			'postcss.config.js',
+			'eslint.config.js',
 		],
 	},
 	// Core configurations - foundation for all code
@@ -42,9 +43,6 @@ export default repoConfig.config(
 	// Third-party integrations
 	...pluginRouter.configs['flat/recommended'],
 	...pluginQuery.configs['flat/recommended'],
-
-	// TypeScript-specific configurations (applied after base configs)
-	...repoConfig.configs.base.strictTyping,
 
 	// Project-specific overrides
 	{
@@ -81,15 +79,6 @@ export default repoConfig.config(
 		},
 	},
 
-	// Test files - relaxed TypeScript rules
-	{
-		files: ['src/test/**/*.{ts,tsx,js,jsx}'],
-		rules: {
-			'@typescript-eslint/no-explicit-any': 'off',
-			'@typescript-eslint/no-unsafe-member-access': 'off',
-		},
-	},
-
 	// JavaScript files (like config files) - no TypeScript parser
 	{
 		files: ['**/*.{js,jsx}'],
@@ -104,4 +93,7 @@ export default repoConfig.config(
 			'jsdoc/require-returns': 'off',
 		},
 	},
+
+	// TypeScript-specific configurations (applied after JavaScript configs)
+	...repoConfig.configs.base.strictTyping,
 )

@@ -41,7 +41,6 @@
 		"eslint-plugin-simple-import-sort": "^12.1.1",
 		"eslint-plugin-unused-imports": "catalog:",
 		"eslint-plugin-import-x": "^4.16.1",
-		"eslint-import-resolver-typescript": "^3.6.3",
 		"globals": "catalog:",
 		"prettier": "catalog:",
 		"typescript": "catalog:",
