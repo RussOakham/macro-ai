@@ -36,7 +36,7 @@ const base = {
 				'@typescript-eslint/no-unsafe-member-access': 'warn', // Allow unsafe member access
 
 				// Variable declaration rules
-				'one-var': 'off', // Allow multiple variable declarations
+				'one-var': 'off', // Allow multiple variable declarations - DISABLED
 
 				// Object key sorting
 				'sort-keys': 'off', // Warn when object keys are not alphabetically sorted
@@ -264,7 +264,7 @@ const base = {
 				'no-ternary': 'off', // Allow ternary operators
 
 				// Variable declaration rules
-				'one-var': 'off', // Allow multiple variable declarations
+				'one-var': 'off', // Allow multiple variable declarations - DISABLED
 
 				// Object key sorting
 				'sort-keys': 'off', // Warn when object keys are not alphabetically sorted

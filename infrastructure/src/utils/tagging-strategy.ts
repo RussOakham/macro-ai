@@ -131,7 +131,6 @@ export interface PrTagConfig extends Omit<BaseTagConfig, 'environment'> {
  * - Monitoring level configuration
  * - Security classification tags
  */
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class TaggingStrategy {
 	/**
 	 * Create base tags for shared infrastructure resources

@@ -1,10 +1,9 @@
 import * as repoConfig from '@repo/config-eslint'
 import globals from 'globals'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const absolutePathToOutput = path.resolve(__dirname, 'src/output.ts')
+const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 /** @type {import("@typescript-eslint/utils").TSESLint.FlatConfig.Config} */
 export default repoConfig.config(
@@ -17,39 +16,72 @@ export default repoConfig.config(
 			'coverage-final.json',
 			'coverage-summary.json',
 			'*.lcov',
-			absolutePathToOutput,
+			'temp/**',
+			'src/client/**/*.gen.ts', // Generated client files
 		],
 	},
+	// Core configurations - foundation for all code
 	...repoConfig.configs.base.core,
 	...repoConfig.configs.base.codeQuality,
 	...repoConfig.configs.base.promises,
 	...repoConfig.configs.base.imports,
 	...repoConfig.configs.base.javascript,
+
+	// Node.js specific configurations
+	...repoConfig.configs.base.node,
+
+	// Testing configurations (Vitest)
+	...repoConfig.configs.base.testing,
+
+	// Documentation and code organization
+	...repoConfig.configs.base.documentation,
+	...repoConfig.configs.base.customRules,
+
+	// Security scanning
+	...repoConfig.configs.base.security,
+
+	// Project-specific overrides
 	{
+		files: ['**/*.{ts,tsx}'],
 		languageOptions: {
 			globals: globals.node,
 			parserOptions: {
 				project: './tsconfig.eslint.json',
-				tsconfigRootDir: __dirname,
-				ecmaVersion: 2022,
+				tsconfigRootDir: dirname,
 			},
 		},
 		rules: {
+			// API client specific relaxations
 			'func-style': 'off',
+			'@typescript-eslint/no-misused-promises': 'warn',
+			// Allow console.log in API client for debugging
+			'no-console': 'off',
+			// Allow __dirname for Node.js compatibility
+			'no-underscore-dangle': 'off',
+			// Allow inline comments in source files
+			'no-inline-comments': 'off',
 		},
-	},
-	// Add specific configuration for scripts directory
-	{
-		files: ['scripts/**/*.ts'],
-		languageOptions: {
-			parserOptions: {
-				project: './scripts/tsconfig.json',
-				tsconfigRootDir: __dirname,
-				ecmaVersion: 2022,
+		settings: {
+			'import-x/resolver': {
+				typescript: {
+					alwaysTryTypes: true,
+					project: './tsconfig.eslint.json',
+				},
 			},
 		},
 	},
-	// Add specific configuration for generated files to disable problematic rules
+
+	// Scripts directory - more lenient rules
+	{
+		files: ['scripts/**/*.{ts,tsx}'],
+		rules: {
+			'no-console': 'off',
+			'@typescript-eslint/no-unused-vars': 'off',
+			'@typescript-eslint/require-await': 'off',
+		},
+	},
+
+	// Generated client files - disable problematic rules for auto-generated code
 	{
 		files: ['src/client/**/*.ts'],
 		rules: {
@@ -77,6 +109,63 @@ export default repoConfig.config(
 			'@typescript-eslint/no-misused-spread': 'off',
 			'simple-import-sort/imports': 'off',
 			'simple-import-sort/exports': 'off',
+			// JSDoc rules for generated code
+			'jsdoc/require-jsdoc': 'off',
+			'jsdoc/require-param': 'off',
+			'jsdoc/require-param-description': 'off',
+			'jsdoc/require-param-type': 'off',
+			'jsdoc/require-returns': 'off',
+			'jsdoc/require-returns-description': 'off',
+			'jsdoc/require-returns-type': 'off',
+		},
+	},
+
+	// JavaScript files (like config files) - no TypeScript parser
+	{
+		files: ['**/*.{js,jsx}'],
+		languageOptions: {
+			globals: globals.node,
+		},
+		rules: {
+			// Relax JSDoc requirements for config files
+			'jsdoc/require-jsdoc': 'off',
+			'jsdoc/require-param-description': 'off',
+			'jsdoc/require-param-type': 'off',
+			'jsdoc/require-returns': 'off',
+		},
+	},
+
+	// Configuration files - allow default exports and relaxed rules
+	{
+		files: [
+			'**/eslint.config.{js,ts}',
+			'**/vite.config.{js,ts}',
+			'**/vitest.config.{js,ts}',
+			'**/tsup.config.{js,ts}',
+			'**/openapi-ts.config.{js,ts}',
+		],
+		rules: {
+			'import-x/no-default-export': 'off',
+			'no-inline-comments': 'off',
+			'sort-keys': 'off',
+			'perfectionist/sort-objects': 'off',
+		},
+	},
+
+	// Main index file - allow flexible import ordering
+	{
+		files: ['src/index.ts'],
+		rules: {
+			'perfectionist/sort-imports': 'off',
+		},
+	},
+
+	// Runtime files - relax JSDoc requirements
+	{
+		files: ['src/hey-api-runtime.ts'],
+		rules: {
+			'jsdoc/require-param': 'off',
+			'jsdoc/require-returns': 'off',
 		},
 	},
 )

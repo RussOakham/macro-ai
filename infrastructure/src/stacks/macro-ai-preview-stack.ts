@@ -1,11 +1,11 @@
 import * as cdk from 'aws-cdk-lib'
 import type { Construct } from 'constructs'
 
-import { EcsFargateConstruct } from '../constructs/ecs-fargate-construct.js'
-import { EcsLoadBalancerConstruct } from '../constructs/ecs-load-balancer-construct.js'
-import { EnvironmentConfigConstruct } from '../constructs/environment-config-construct.js'
-import { NetworkingConstruct } from '../constructs/networking.js'
-import { ParameterStoreConstruct } from '../constructs/parameter-store-construct.js'
+import { EcsFargateConstruct } from '../constructs/ecs-fargate-construct'
+import { EcsLoadBalancerConstruct } from '../constructs/ecs-load-balancer-construct'
+import { EnvironmentConfigConstruct } from '../constructs/environment-config-construct'
+import { NetworkingConstruct } from '../constructs/networking'
+import { ParameterStoreConstruct } from '../constructs/parameter-store-construct'
 // Note: TaggingStrategy imports removed to avoid tag conflicts with constructs
 
 export interface MacroAiPreviewStackProps extends cdk.StackProps {

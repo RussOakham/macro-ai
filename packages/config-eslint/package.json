@@ -16,8 +16,7 @@
 		"lint": "eslint ./src/**/*.js",
 		"lint:fix": "eslint ./src/**/*.js --fix",
 		"lint:ci": "eslint ./src/**/*.js --max-warnings 0",
-		"lint:ci:fix": "eslint ./src/**/*.js --max-warnings 0 --fix",
-		"type-check": "tsc --noEmit"
+		"lint:ci:fix": "eslint ./src/**/*.js --max-warnings 0 --fix"
 	},
 	"files": [
 		"./src/**/*.js"

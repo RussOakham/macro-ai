@@ -7,7 +7,7 @@ import * as route53 from 'aws-cdk-lib/aws-route53'
 import * as targets from 'aws-cdk-lib/aws-route53-targets'
 import { Construct } from 'constructs'
 
-import { EnvironmentConfigConstruct } from './environment-config-construct.js'
+import { EnvironmentConfigConstruct } from './environment-config-construct'
 
 export interface EcsLoadBalancerConstructProps {
 	/**

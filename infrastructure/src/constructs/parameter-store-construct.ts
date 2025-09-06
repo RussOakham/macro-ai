@@ -234,6 +234,7 @@ export class ParameterStoreConstruct extends Construct {
 		})
 	}
 
+	// eslint-disable-next-line class-methods-use-this
 	private toPascalCase(str: string): string {
 		return str
 			.split('-')

@@ -267,6 +267,7 @@ export class EnvironmentConfigConstruct extends Construct {
 	/**
 	 * Escape environment variable values for .env file format
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	private escapeEnvValue(value: string): string {
 		// If value contains spaces, quotes, or special characters, wrap in quotes
 		if (
