@@ -1,8 +1,8 @@
 packages:
-- apps/*
-- packages/*
-- infrastructure
-- tests/*
+  - apps/*
+  - packages/*
+  - infrastructure
+  - tests/*
 
 catalog:
   '@aws-sdk/client-auto-scaling': ^3.859.0

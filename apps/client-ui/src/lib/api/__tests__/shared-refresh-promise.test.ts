@@ -182,7 +182,18 @@ describe('Shared Refresh Promise', () => {
 					},
 					body: JSON.stringify({ refreshToken: 'test-token' }),
 				})
-				await response.json()
+				const result = (await response.json()) as {
+					message: string
+					tokens: {
+						accessToken: string
+						refreshToken: string
+						expiresIn: number
+					}
+				}
+				expect(result.message).toBe('Token refreshed')
+				expect(result.tokens.accessToken).toBe('new-access-token')
+				expect(result.tokens.refreshToken).toBe('new-refresh-token')
+				expect(result.tokens.expiresIn).toBe(3600)
 			}
 
 			// Set the shared refresh promise
@@ -193,6 +204,9 @@ describe('Shared Refresh Promise', () => {
 
 			// Clear the shared promise
 			module.clearSharedRefreshPromise()
+
+			// Verify the shared promise was cleared
+			expect(module.getSharedRefreshPromise()).toBeNull()
 		})
 
 		it('should handle network errors during refresh operations', async () => {
