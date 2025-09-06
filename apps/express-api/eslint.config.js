@@ -16,7 +16,12 @@ export default repoConfig.config(
 			'../../scripts/**/*',
 		],
 	},
-	...repoConfig.configs.base,
+	...repoConfig.configs.base.core,
+	...repoConfig.configs.base.codeQuality,
+	...repoConfig.configs.base.promises,
+	...repoConfig.configs.base.imports,
+	...repoConfig.configs.base.javascript,
+	...repoConfig.configs.base.node,
 	{
 		languageOptions: {
 			globals: globals.node,

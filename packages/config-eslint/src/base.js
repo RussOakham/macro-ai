@@ -30,6 +30,13 @@ const base = {
 				// General code style relaxations
 				'no-underscore-dangle': 'warn', // Allow _private members and config objects
 				'class-methods-use-this': 'warn', // Allow class methods without 'this' usage
+				'no-ternary': 'off', // Allow ternary operators
+
+				// Variable declaration rules
+				'one-var': 'off', // Allow multiple variable declarations
+
+				// Object key sorting
+				'sort-keys': 'off', // Warn when object keys are not alphabetically sorted
 			},
 		},
 	],
@@ -61,6 +68,14 @@ const base = {
 				],
 			},
 		},
+		{
+			languageOptions: {
+				parserOptions: {
+					project: true, // Allow tsconfig bubbling
+					tsconfigRootDir: import.meta.dirname, // needed if using ESM
+				},
+			},
+		},
 	],
 
 	// Code quality and best practices
@@ -79,7 +94,7 @@ const base = {
 				'unicorn/prefer-node-protocol': 'error',
 
 				// SonarJS - Code quality and maintainability
-				'sonarjs/no-duplicate-string': 'warn',
+				'sonarjs/no-duplicate-string': 'off',
 
 				// Perfectionist - Code organization
 				'perfectionist/sort-imports': ['error', { type: 'natural' }],
@@ -150,8 +165,19 @@ const base = {
 				'import-x': importXPlugin,
 			},
 			rules: {
+				// Core import validation
 				'import-x/no-unresolved': 'error',
 				'import-x/no-cycle': 'warn',
+
+				// Import quality and consistency
+				'import-x/no-unused-modules': 'warn',
+				'import-x/no-self-import': 'error',
+				'import-x/no-absolute-path': 'error',
+				'import-x/no-useless-path-segments': 'error',
+				'import-x/no-deprecated': 'warn',
+
+				// Export consistency
+				'import-x/no-mutable-exports': 'warn',
 			},
 		},
 	],
@@ -175,12 +201,10 @@ const base = {
 				'vitest/valid-expect': 'error',
 
 				// Testing Library rules
-				'testing-library/await-async-query': 'error',
-				'testing-library/no-await-sync-query': 'error',
-				'testing-library/no-debugging-utils': 'warn',
-				'testing-library/no-dom-import': 'error',
-				'testing-library/prefer-find-by': 'error',
+				'testing-library/no-container': 'error',
+				'testing-library/no-node-access': 'error',
 				'testing-library/prefer-screen-queries': 'error',
+				'testing-library/render-result-naming-convention': 'error',
 			},
 		},
 	],
@@ -199,7 +223,6 @@ const base = {
 					'jsdoc/check-tag-names': 'error',
 					'jsdoc/check-types': 'error',
 					'jsdoc/empty-tags': 'error',
-					'jsdoc/newline-after-description': 'error',
 					'jsdoc/no-undefined-types': 'error',
 					'jsdoc/require-description': 'error',
 					'jsdoc/require-param': 'error',
@@ -219,9 +242,9 @@ const base = {
 		{
 			rules: {
 				// Prefer named exports over default exports
-				'import/no-default-export': 'error',
+				'import-x/no-default-export': 'error',
 				// Allow export * from in barrel files
-				'import/export': 'off', // This allows export * syntax
+				'import-x/export': 'off', // This allows export * syntax
 			},
 		},
 		{
@@ -240,7 +263,14 @@ const base = {
 				'**/app.{js,ts}', // Entry points
 			],
 			rules: {
-				'import/no-default-export': 'off',
+				'import-x/no-default-export': 'off',
+				'no-ternary': 'off', // Allow ternary operators
+
+				// Variable declaration rules
+				'one-var': 'off', // Allow multiple variable declarations
+
+				// Object key sorting
+				'sort-keys': 'off', // Warn when object keys are not alphabetically sorted
 			},
 		},
 	],
@@ -248,11 +278,16 @@ const base = {
 	// JavaScript-specific overrides (disable TypeScript for .js files)
 	javascript: /** @type {import("typescript-eslint").ConfigWithExtends[]} */ [
 		{
-			files: ['*.{js,jsx}'],
+			files: ['**/*.{js,jsx}', '**/*.config.{js,ts}', 'eslint.config.{js,ts}'],
 			...tseslint.configs.disableTypeChecked,
 			rules: {
 				...js.configs.recommended.rules,
 				...js.configs.all.rules,
+				// Disable TypeScript-specific rules that require type information
+				'@typescript-eslint/await-thenable': 'off',
+				'@typescript-eslint/no-floating-promises': 'off',
+				'@typescript-eslint/no-misused-promises': 'off',
+				'sort-imports': 'off',
 			},
 		},
 	],

@@ -5,7 +5,6 @@
  * Provides utilities for testing route components with a minimal router setup.
  */
 
-import React from 'react'
 import {
 	type AnyRoute,
 	createMemoryHistory,
@@ -17,6 +16,7 @@ import {
 	RouterProvider,
 } from '@tanstack/react-router'
 import { render, RenderOptions, RenderResult } from '@testing-library/react'
+import React from 'react'
 
 // Mock types for testing
 interface MockAuthContext {
@@ -105,6 +105,13 @@ export const renderWithRouter = async (
 
 /**
  * Legacy render function for backward compatibility
+ * @param _ui
+ * @param options
+ * @param options.initialLocation
+ * @param options.routerContext
+ * @param options.useGeneratedRoutes
+ * @param options.customRoutes
+ * @param options.renderOptions
  * @deprecated Use the new renderWithRouter function instead
  */
 export const renderWithRouterLegacy = async (
@@ -134,6 +141,9 @@ export const renderWithRouterLegacy = async (
 
 /**
  * Create mock route for isolated testing
+ * @param path
+ * @param component
+ * @param options
  */
 export const createMockRoute = (
 	path: string,
@@ -152,6 +162,8 @@ export const createMockRoute = (
 
 /**
  * Common test components for router testing
+ * @param root0
+ * @param root0.title
  */
 export const TestComponent = ({ title = 'Test' }: { title?: string }) => {
 	return <div data-testid="test-component">{title}</div>
@@ -188,6 +200,7 @@ export const mockUnauthenticatedContext = {
 
 /**
  * Helper to create authenticated router context for testing
+ * @param user
  */
 export const createAuthenticatedContext = (
 	user = mockAuthContext.auth.user,
@@ -210,6 +223,9 @@ export const createUnauthenticatedContext = (): MockRouterContext =>
 export const routerTestUtils = {
 	/**
 	 * Navigate to a route programmatically
+	 * @param router
+	 * @param to
+	 * @param search
 	 */
 	navigateTo: (
 		router: ReturnType<typeof createRouter>,
@@ -221,6 +237,7 @@ export const routerTestUtils = {
 
 	/**
 	 * Get current route information
+	 * @param router
 	 */
 	getCurrentRoute: (router: ReturnType<typeof createRouter>) => ({
 		pathname: router.state.location.pathname,
@@ -232,6 +249,9 @@ export const routerTestUtils = {
 
 	/**
 	 * Mock route loader data
+	 * @param _router
+	 * @param routeId
+	 * @param data
 	 */
 	mockLoaderData: (
 		_router: ReturnType<typeof createRouter>,
@@ -242,20 +262,4 @@ export const routerTestUtils = {
 		// this can be strongly typed later.
 		console.warn(`mockLoaderData not implemented yet for ${routeId}`, data)
 	},
-}
-
-/**
- * Default export for easy importing
- */
-export default {
-	renderWithRouter,
-	createMockRoute,
-	TestComponent,
-	LoadingComponent,
-	ErrorComponent,
-	mockAuthContext,
-	mockUnauthenticatedContext,
-	createAuthenticatedContext,
-	createUnauthenticatedContext,
-	routerTestUtils,
 }

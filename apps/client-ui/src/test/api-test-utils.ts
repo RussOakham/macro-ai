@@ -86,6 +86,8 @@ export interface TokenRefreshTestConfig {
 
 /**
  * Create a mock adapter for an Axios instance
+ * @param axiosInstance
+ * @param config
  */
 export const createMockAdapter = (
 	axiosInstance: AxiosInstance,
@@ -101,6 +103,9 @@ export const createMockAdapter = (
 
 /**
  * Setup mock adapter with common scenarios
+ * @param axiosInstance
+ * @param scenarios
+ * @param config
  */
 export const setupMockAdapter = (
 	axiosInstance: AxiosInstance,
@@ -143,6 +148,8 @@ export const setupMockAdapter = (
 
 /**
  * Create a comprehensive mock API client with axios-mock-adapter
+ * @param scenarios
+ * @param config
  */
 export const createMockApiClientWithAdapter = (
 	scenarios: EnhancedApiCallScenario[] = [],
@@ -160,6 +167,7 @@ export const createMockApiClientWithAdapter = (
 
 /**
  * Create dynamic MSW handlers for test scenarios
+ * @param config
  */
 export const createDynamicMSWHandlers = (config: MSWHandlerConfig = {}) => {
 	const {
@@ -222,13 +230,11 @@ export const createDynamicMSWHandlers = (config: MSWHandlerConfig = {}) => {
 
 /**
  * Setup MSW server with dynamic handlers
+ * @param config
  */
 export const setupDynamicMSWServer = (config: MSWHandlerConfig = {}) => {
 	const dynamicHandlers = createDynamicMSWHandlers(config)
-	const allHandlers = [
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-		...dynamicHandlers,
-	]
+	const allHandlers = Array.from(dynamicHandlers)
 
 	if (allHandlers.length > 0) {
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
@@ -244,6 +250,11 @@ export const setupDynamicMSWServer = (config: MSWHandlerConfig = {}) => {
 
 /**
  * Create a hybrid testing setup that uses both axios-mock-adapter and MSW
+ * @param axiosInstance
+ * @param config
+ * @param config.axiosScenarios
+ * @param config.mswConfig
+ * @param config.mockAdapterConfig
  */
 export const createHybridTestSetup = (
 	axiosInstance: AxiosInstance,
@@ -321,6 +332,9 @@ export const createMockInterceptors = () => {
 
 /**
  * Test interceptor behavior
+ * @param interceptorFn
+ * @param input
+ * @param expectedOutput
  */
 export const testInterceptor = async (
 	interceptorFn: ReturnType<typeof vi.fn>,
@@ -338,6 +352,7 @@ export const testInterceptor = async (
 
 /**
  * Create a mock Axios instance with interceptors
+ * @param config
  */
 export const createMockAxiosWithInterceptors = (
 	config: InterceptorTestConfig = {},
@@ -360,6 +375,7 @@ export const createMockAxiosWithInterceptors = (
 
 /**
  * Create a mock token refresh function
+ * @param config
  */
 export const createMockTokenRefreshFunction = (
 	config: TokenRefreshTestConfig = { shouldSucceed: true },
@@ -408,6 +424,9 @@ export const createMockSharedRefreshPromise = () => {
 
 /**
  * Test API call scenarios
+ * @param apiClient
+ * @param scenarios
+ * @param useMSW
  */
 export const testApiCallScenarios = async (
 	apiClient: AxiosInstance,
@@ -580,6 +599,8 @@ export const createNetworkErrorScenarios = () => ({
 
 /**
  * Test error handling scenarios
+ * @param mockClient
+ * @param errorScenarios
  */
 export const testErrorHandling = async (
 	mockClient: MockApiClient,
@@ -620,6 +641,7 @@ export const testErrorHandling = async (
 
 /**
  * Create authentication test scenarios
+ * @param baseURL
  */
 export const createAuthTestScenarios = (
 	baseURL = 'http://localhost:3000',
@@ -655,6 +677,7 @@ export const createAuthTestScenarios = (
 
 /**
  * Create error test scenarios
+ * @param baseURL
  */
 export const createErrorTestScenarios = (
 	baseURL = 'http://localhost:3000',
@@ -688,6 +711,7 @@ export const createErrorTestScenarios = (
 
 /**
  * Create performance test scenarios
+ * @param baseURL
  */
 export const createPerformanceTestScenarios = (
 	baseURL = 'http://localhost:3000',
@@ -707,43 +731,3 @@ export const createPerformanceTestScenarios = (
 		delay: 2000, // 2 second delay
 	},
 ]
-
-// ============================================================================
-// Default Export
-// ============================================================================
-
-export default {
-	// Axios Mock Adapter Utilities
-	createMockAdapter,
-	setupMockAdapter,
-	createMockApiClientWithAdapter,
-
-	// Enhanced MSW Integration
-	createDynamicMSWHandlers,
-	setupDynamicMSWServer,
-
-	// Hybrid Testing
-	createHybridTestSetup,
-
-	// Interceptor Testing
-	createMockInterceptors,
-	testInterceptor,
-	createMockAxiosWithInterceptors,
-
-	// Token Refresh Testing
-	createMockTokenRefreshFunction,
-	createMockSharedRefreshPromise,
-
-	// API Call Testing
-	testApiCallScenarios,
-	createTrackingMockApiClient,
-
-	// Network Error Testing
-	createNetworkErrorScenarios,
-	testErrorHandling,
-
-	// Advanced Test Scenarios
-	createAuthTestScenarios,
-	createErrorTestScenarios,
-	createPerformanceTestScenarios,
-}

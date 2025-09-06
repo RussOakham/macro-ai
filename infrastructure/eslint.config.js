@@ -15,7 +15,12 @@ export default repoConfig.config(
 		],
 	},
 	// Use shared base config
-	...repoConfig.configs.base,
+	...repoConfig.configs.base.core,
+	...repoConfig.configs.base.codeQuality,
+	...repoConfig.configs.base.promises,
+	...repoConfig.configs.base.imports,
+	...repoConfig.configs.base.javascript,
+	...repoConfig.configs.base.node,
 	// Infrastructure-specific overrides
 	{
 		files: ['**/*.ts', '**/*.tsx'],

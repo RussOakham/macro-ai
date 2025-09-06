@@ -5,8 +5,6 @@
  * to use MSW instead of the real backend when NODE_ENV === 'test'.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
-
 import { setupWorker } from 'msw/browser'
 
 import { handlers } from './mocks/handlers.js'

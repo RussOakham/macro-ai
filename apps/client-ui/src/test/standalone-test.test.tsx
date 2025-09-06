@@ -5,10 +5,9 @@
  * without importing from config-testing package to avoid MSW setup issues.
  */
 
-import React from 'react'
 import { render } from '@testing-library/react'
+import React from 'react'
 import { describe, expect, it } from 'vitest'
-
 import '@testing-library/jest-dom/vitest'
 
 // Import directly from our component-test-utils to avoid MSW setup

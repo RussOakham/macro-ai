@@ -1,7 +1,7 @@
-import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
+import React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Button } from '@/components/ui/button'

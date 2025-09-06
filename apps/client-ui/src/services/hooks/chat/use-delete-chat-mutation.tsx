@@ -3,8 +3,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { QUERY_KEY, QUERY_KEY_MODIFIERS } from '@/constants/query-keys'
 import { logger } from '@/lib/logger/logger'
 
-import { deleteChat } from '../../network/chat/deleteChat'
-import type { GetChatsResponse } from '../../network/chat/getChats'
+import type { GetChatsResponse } from '../../network/chat/get-chats'
+
+import { deleteChat } from '../../network/chat/delete-chat'
 
 /**
  * TanStack Query mutation hook for deleting an existing chat

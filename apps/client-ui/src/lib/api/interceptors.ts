@@ -1,3 +1,4 @@
+/* eslint-disable no-underscore-dangle */
 import {
 	AxiosError,
 	AxiosInstance,
@@ -6,7 +7,7 @@ import {
 } from 'axios'
 
 import { router } from '@/main'
-import { postRefreshToken } from '@/services/network/auth/postRefreshToken'
+import { postRefreshToken } from '@/services/network/auth/post-refresh-token'
 
 import {
 	clearSharedRefreshPromise,
@@ -41,6 +42,8 @@ interface IExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
 /**
  * Applies token refresh interceptors to a client with an axios instance
  * This ensures consistent authentication behavior across all domain clients
+ * @param client
+ * @param client.axios
  */
 export const applyTokenRefreshInterceptors = (client: {
 	axios: AxiosInstance

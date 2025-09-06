@@ -5,8 +5,8 @@
  * based on https://dev.to/saltorgil/testing-tanstack-router-4io3
  */
 
-import React from 'react'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
+import React from 'react'
 import { describe, expect, it } from 'vitest'
 
 import { componentTesting, formTesting } from './component-test-utils'

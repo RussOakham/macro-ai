@@ -5,9 +5,9 @@
  * It serves as both documentation and validation of the enhanced testing capabilities.
  */
 
-import React from 'react'
 import { render } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
+import React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Button } from '@/components/ui/button'

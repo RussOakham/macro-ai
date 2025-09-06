@@ -4,7 +4,7 @@ import { logger } from '@/lib/logger/logger'
 import {
 	useEnhancedChat,
 	type UseEnhancedChatReturn,
-} from '@/services/hooks/chat/useEnhancedChat'
+} from '@/services/hooks/chat/use-enhanced-chat-mutation'
 
 interface UseChatInterfaceOptions {
 	chatId: string | null
@@ -33,6 +33,8 @@ interface UseChatInterfaceReturn {
 /**
  * Chat interface logic hook
  * Manages chat state, messaging, and auto-scroll behavior
+ * @param root0
+ * @param root0.chatId
  */
 const useChatInterface = ({
 	chatId,

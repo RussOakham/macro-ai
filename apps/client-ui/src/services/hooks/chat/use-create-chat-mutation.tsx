@@ -7,7 +7,7 @@ import { logger } from '@/lib/logger/logger'
 import {
 	CreateChatRequest,
 	postCreateChat,
-} from '../../network/chat/createChat'
+} from '../../network/chat/create-chat'
 
 /**
  * TanStack Query mutation hook for creating a new chat

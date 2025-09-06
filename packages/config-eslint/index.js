@@ -2,8 +2,22 @@
  * Barrel file for the ESLint configurations.
  */
 
-export { base } from './src/base'
-export { reactConfig } from './src/react'
-export { nodeConfig } from './src/node'
-export { securityConfig } from './src/security'
-export { prettierConfig } from './src/prettier'
+import { base } from './src/base.js'
+import { reactConfig } from './src/react.js'
+import { nodeConfig } from './src/node.js'
+import { securityConfig } from './src/security.js'
+import { prettierConfig } from './src/prettier.js'
+
+// Simple config utility for combining configurations
+const config = (...configs) => configs.flat()
+
+// Create configs object from modular configs
+const configs = {
+	base,
+	react: reactConfig,
+	node: nodeConfig,
+	security: securityConfig,
+	prettier: prettierConfig,
+}
+
+export { config, configs }

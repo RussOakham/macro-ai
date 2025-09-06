@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { QUERY_KEY, QUERY_KEY_MODIFIERS } from '@/constants/query-keys'
 import type { PaginationOptions } from '@/lib/types'
 
-import { getChats } from '../../network/chat/getChats'
+import { QUERY_KEY, QUERY_KEY_MODIFIERS } from '@/constants/query-keys'
+
+import { getChats } from '../../network/chat/get-chats'
 
 /**
  * Hook to fetch user's chats with pagination

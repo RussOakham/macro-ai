@@ -23,8 +23,8 @@
 		"./src/**/*.js"
 	],
 	"exports": {
-		".": "./src/index.js",
-		"./index": "./src/index.js"
+		".": "./index.js",
+		"./index": "./index.js"
 	},
 	"publishConfig": {
 		"access": "public"
@@ -40,6 +40,8 @@
 		"eslint-plugin-react-refresh": "^0.4.20",
 		"eslint-plugin-simple-import-sort": "^12.1.1",
 		"eslint-plugin-unused-imports": "catalog:",
+		"eslint-plugin-import-x": "^4.16.1",
+		"eslint-import-resolver-typescript": "^3.6.3",
 		"globals": "catalog:",
 		"prettier": "catalog:",
 		"typescript": "catalog:",

@@ -1,5 +1,5 @@
-import { useRef } from 'react'
 import { Loader2, Send } from 'lucide-react'
+import { useRef } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'

@@ -1,4 +1,5 @@
 import type React from 'react'
+
 import { Bot } from 'lucide-react'
 
 type NoChatSelectedProps = React.ComponentPropsWithoutRef<'div'>
@@ -6,6 +7,8 @@ type NoChatSelectedProps = React.ComponentPropsWithoutRef<'div'>
 /**
  * No chat selected component
  * Displays when no chat ID is provided in the route
+ * @param root0
+ * @param root0.className
  */
 const NoChatSelected = ({
 	className,

@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -27,12 +27,12 @@ import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
-import { usePostResendConfirmRegistrationCodeMutation } from '@/services/hooks/auth/usePostResendConfirmRegistrationCode'
-import { GetAuthUserResponse } from '@/services/network/auth/getAuthUser'
+import { usePostResendConfirmRegistrationCodeMutation } from '@/services/hooks/auth/use-post-resend-confirm-registration-code'
+import { GetAuthUserResponse } from '@/services/network/auth/get-auth-user'
 import {
 	ResendConfirmationCode,
 	zResendConfirmationCode,
-} from '@/services/network/auth/postResendConfirmRegistrationCode'
+} from '@/services/network/auth/post-resend-confirm-registration-code'
 
 const ResendConfirmationCodeForm = ({
 	className,

@@ -1,4 +1,5 @@
 import type { RegisterRequest } from '@repo/macro-ai-api-client'
+
 import {
 	postAuthRegister,
 	zPostAuthRegisterResponse,

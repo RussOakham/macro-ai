@@ -1,6 +1,6 @@
-import { useLayoutEffect, useState } from 'react'
 import { createLazyFileRoute } from '@tanstack/react-router'
 import { GalleryVerticalEnd } from 'lucide-react'
+import { useLayoutEffect, useState } from 'react'
 
 import { LoginForm } from '@/components/auth/login-form'
 

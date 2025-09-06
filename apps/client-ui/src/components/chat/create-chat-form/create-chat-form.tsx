@@ -1,6 +1,6 @@
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -8,11 +8,11 @@ import { Input } from '@/components/ui/input'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
-import { useCreateChatMutation } from '@/services/hooks/chat/useCreateChatMutation'
+import { useCreateChatMutation } from '@/services/hooks/chat/use-create-chat-mutation'
 import {
 	CreateChatRequest,
 	zCreateChatRequest,
-} from '@/services/network/chat/createChat'
+} from '@/services/network/chat/create-chat'
 
 import {
 	Form,

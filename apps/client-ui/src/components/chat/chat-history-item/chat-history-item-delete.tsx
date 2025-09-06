@@ -1,12 +1,12 @@
-import { useTransition } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { Check, Loader2, X } from 'lucide-react'
+import { useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { logger } from '@/lib/logger/logger'
 import { ChatWithDates } from '@/lib/types'
-import { useDeleteChatMutation } from '@/services/hooks/chat/useDeleteChatMutation'
+import { useDeleteChatMutation } from '@/services/hooks/chat/use-delete-chat-mutation'
 
 interface ChatHistoryItemDeleteProps {
 	chat: ChatWithDates

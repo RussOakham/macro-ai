@@ -1,6 +1,6 @@
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router'
+import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -23,11 +23,11 @@ import {
 import { Input } from '@/components/ui/input'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
-import { usePostForgotPassword } from '@/services/hooks/auth/usePostForgotPassword'
+import { usePostForgotPassword } from '@/services/hooks/auth/use-post-forgot-password'
 import {
 	ForgotPasswordRequest,
 	zForgotPasswordRequest,
-} from '@/services/network/auth/postForgotPassword'
+} from '@/services/network/auth/post-forgot-password'
 
 const RouteComponent = () => {
 	const navigate = useNavigate({ from: '/auth/forgotten-password' })

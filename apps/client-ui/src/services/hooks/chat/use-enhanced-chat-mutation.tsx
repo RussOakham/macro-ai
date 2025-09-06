@@ -1,7 +1,7 @@
-import { useCallback } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { useQueryClient } from '@tanstack/react-query'
 import Cookies from 'js-cookie'
+import { useCallback } from 'react'
 import { toast } from 'sonner'
 
 import { QUERY_KEY, QUERY_KEY_MODIFIERS } from '@/constants/query-keys'
@@ -9,7 +9,7 @@ import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { tryCatch } from '@/lib/utils/error-handling/try-catch'
 
-import { useChatById } from './useChatById'
+import { useChatById } from './use-chat-by-id'
 
 const apiUrl = import.meta.env.VITE_API_URL
 const apiKey = import.meta.env.VITE_API_KEY
@@ -51,6 +51,10 @@ type TChatMessage = UseEnhancedChatReturn['messages'][number]
  * - Optimistic updates for user messages
  * - Go-style error handling integration
  * - Automatic cache invalidation
+ * @param root0
+ * @param root0.chatId
+ * @param root0.onMessageSent
+ * @param root0.onStreamingComplete
  */
 const useEnhancedChat = ({
 	chatId,
@@ -134,7 +138,9 @@ const useEnhancedChat = ({
 						},
 						'[useEnhancedChat]: Failed to invalidate chat cache',
 					)
+					throw error
 				}
+				return
 			})
 
 			// Call optional callback

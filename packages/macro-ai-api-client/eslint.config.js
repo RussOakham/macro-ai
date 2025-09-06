@@ -20,7 +20,11 @@ export default repoConfig.config(
 			absolutePathToOutput,
 		],
 	},
-	...repoConfig.configs.base,
+	...repoConfig.configs.base.core,
+	...repoConfig.configs.base.codeQuality,
+	...repoConfig.configs.base.promises,
+	...repoConfig.configs.base.imports,
+	...repoConfig.configs.base.javascript,
 	{
 		languageOptions: {
 			globals: globals.node,

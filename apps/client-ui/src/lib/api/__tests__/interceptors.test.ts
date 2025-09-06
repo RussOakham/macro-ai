@@ -156,7 +156,7 @@ describe('Token Refresh Interceptors', () => {
 
 			// Mock the refresh token function to resolve successfully
 			const { postRefreshToken } = await import(
-				'@/services/network/auth/postRefreshToken'
+				'@/services/network/auth/post-refresh-token'
 			)
 			vi.mocked(postRefreshToken).mockResolvedValue({
 				message: 'Token refreshed',
@@ -349,7 +349,7 @@ describe('Token Refresh Interceptors', () => {
 
 			// Mock the refresh token function to resolve successfully
 			const { postRefreshToken } = await import(
-				'@/services/network/auth/postRefreshToken'
+				'@/services/network/auth/post-refresh-token'
 			)
 			vi.mocked(postRefreshToken).mockResolvedValue({
 				message: 'Token refreshed',

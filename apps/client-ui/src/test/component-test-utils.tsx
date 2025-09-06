@@ -6,8 +6,8 @@
  * for component testing scenarios.
  */
 
-import { ReactElement, ReactNode } from 'react'
 import { act, fireEvent, render, RenderResult } from '@testing-library/react'
+import { ReactElement, ReactNode } from 'react'
 import { expect, vi } from 'vitest'
 
 // Import from main test utilities
@@ -58,6 +58,8 @@ export interface EnhancedRenderResult extends RenderResult {
 
 /**
  * Render component with enhanced testing context
+ * @param ui
+ * @param config
  */
 export const renderComponent = (
 	ui: ReactElement,
@@ -141,6 +143,9 @@ export const renderComponent = (
 
 /**
  * Render component with authentication
+ * @param ui
+ * @param userOverrides
+ * @param config
  */
 export const renderWithAuth = (
 	ui: ReactElement,
@@ -153,6 +158,8 @@ export const renderWithAuth = (
 
 /**
  * Render component without authentication
+ * @param ui
+ * @param config
  */
 export const renderWithoutAuth = (
 	ui: ReactElement,
@@ -168,6 +175,8 @@ export const renderWithoutAuth = (
 
 /**
  * Create mock component props
+ * @param defaultProps
+ * @param overrides
  */
 export const createMockComponentProps = <T extends Record<string, unknown>>(
 	defaultProps: T,
@@ -179,6 +188,8 @@ export const createMockComponentProps = <T extends Record<string, unknown>>(
 
 /**
  * Mock component with custom behavior
+ * @param componentName
+ * @param implementation
  */
 export const mockComponent = (
 	componentName: string,
@@ -200,6 +211,8 @@ export const mockComponent = (
 
 /**
  * Create mock hook
+ * @param returnValue
+ * @param overrides
  */
 export const createMockHook = <T extends Record<string, unknown>>(
 	returnValue: T,
@@ -273,6 +286,7 @@ export const testComponentState = {
 export const componentAssertions = {
 	/**
 	 * Assert component renders without errors
+	 * @param component
 	 */
 	rendersWithoutError: (component: ReactElement) => {
 		expect(() => render(component)).not.toThrow()
@@ -280,6 +294,8 @@ export const componentAssertions = {
 
 	/**
 	 * Assert component displays expected content
+	 * @param component
+	 * @param expectedContent
 	 */
 	displaysContent: (
 		component: ReactElement,
@@ -291,6 +307,8 @@ export const componentAssertions = {
 
 	/**
 	 * Assert component has expected test ID
+	 * @param component
+	 * @param testId
 	 */
 	hasTestId: (component: ReactElement, testId: string) => {
 		const { getByTestId } = render(component)
@@ -299,6 +317,7 @@ export const componentAssertions = {
 
 	/**
 	 * Assert component is accessible
+	 * @param component
 	 */
 	isAccessible: (component: ReactElement) => {
 		const { container } = render(component)
@@ -309,6 +328,8 @@ export const componentAssertions = {
 
 	/**
 	 * Assert component handles loading state
+	 * @param component
+	 * @param loadingText
 	 */
 	handlesLoadingState: async (
 		component: ReactElement,
@@ -328,6 +349,8 @@ export const componentAssertions = {
 
 	/**
 	 * Assert component handles error state
+	 * @param component
+	 * @param errorMessage
 	 */
 	handlesErrorState: (component: ReactElement, errorMessage: string) => {
 		const { getByText } = render(component)
@@ -341,6 +364,7 @@ export const componentAssertions = {
 
 /**
  * Create mock router for testing
+ * @param initialPath
  */
 export const createMockRouter = (initialPath = '/test') => {
 	const mockRouter = {
@@ -363,6 +387,8 @@ export const createMockRouter = (initialPath = '/test') => {
 export const testRouterNavigation = {
 	/**
 	 * Assert navigation was called
+	 * @param mockNavigate
+	 * @param expectedPath
 	 */
 	assertNavigationCalled: (
 		mockNavigate: ReturnType<typeof vi.fn>,
@@ -373,6 +399,9 @@ export const testRouterNavigation = {
 
 	/**
 	 * Assert navigation was called with specific options
+	 * @param mockNavigate
+	 * @param expectedPath
+	 * @param expectedOptions
 	 */
 	assertNavigationCalledWith: (
 		mockNavigate: ReturnType<typeof vi.fn>,
@@ -396,6 +425,8 @@ export const testRouterNavigation = {
 export const formTesting = {
 	/**
 	 * Fill text input fields (input[type="text"], input[type="email"], etc.)
+	 * @param form
+	 * @param data
 	 */
 	fillTextInputs: async (
 		form: HTMLFormElement,
@@ -413,6 +444,8 @@ export const formTesting = {
 
 	/**
 	 * Fill select dropdown fields
+	 * @param form
+	 * @param data
 	 */
 	fillSelectFields: async (
 		form: HTMLFormElement,
@@ -430,6 +463,8 @@ export const formTesting = {
 
 	/**
 	 * Fill textarea fields
+	 * @param form
+	 * @param data
 	 */
 	fillTextareaFields: async (
 		form: HTMLFormElement,
@@ -447,6 +482,8 @@ export const formTesting = {
 
 	/**
 	 * Select radio button fields
+	 * @param form
+	 * @param data
 	 */
 	selectRadioButtons: async (
 		form: HTMLFormElement,
@@ -464,6 +501,8 @@ export const formTesting = {
 
 	/**
 	 * Toggle checkbox fields
+	 * @param form
+	 * @param data
 	 */
 	toggleCheckboxes: async (
 		form: HTMLFormElement,
@@ -486,6 +525,8 @@ export const formTesting = {
 
 	/**
 	 * Fill form fields (legacy function - use specific functions above)
+	 * @param form
+	 * @param data
 	 * @deprecated Use specific functions like fillTextInputs, fillSelectFields, etc.
 	 */
 	fillForm: async (form: HTMLFormElement, data: Record<string, string>) => {
@@ -499,6 +540,7 @@ export const formTesting = {
 
 	/**
 	 * Submit form
+	 * @param form
 	 */
 	submitForm: async (form: HTMLFormElement) => {
 		// eslint-disable-next-line @typescript-eslint/require-await
@@ -511,6 +553,8 @@ export const formTesting = {
 
 	/**
 	 * Validate text input fields
+	 * @param form
+	 * @param expectedData
 	 */
 	validateTextInputs: (
 		form: HTMLFormElement,
@@ -527,6 +571,8 @@ export const formTesting = {
 
 	/**
 	 * Validate select fields
+	 * @param form
+	 * @param expectedData
 	 */
 	validateSelectFields: (
 		form: HTMLFormElement,
@@ -543,6 +589,8 @@ export const formTesting = {
 
 	/**
 	 * Validate textarea fields
+	 * @param form
+	 * @param expectedData
 	 */
 	validateTextareaFields: (
 		form: HTMLFormElement,
@@ -559,6 +607,8 @@ export const formTesting = {
 
 	/**
 	 * Validate radio button selection
+	 * @param form
+	 * @param expectedData
 	 */
 	validateRadioButtons: (
 		form: HTMLFormElement,
@@ -575,6 +625,8 @@ export const formTesting = {
 
 	/**
 	 * Validate checkbox states
+	 * @param form
+	 * @param expectedData
 	 */
 	validateCheckboxes: (
 		form: HTMLFormElement,
@@ -591,6 +643,8 @@ export const formTesting = {
 
 	/**
 	 * Validate form fields (legacy function - use specific functions above)
+	 * @param form
+	 * @param expectedData
 	 * @deprecated Use specific validation functions like validateTextInputs, validateSelectFields, etc.
 	 */
 	validateForm: (
@@ -615,6 +669,7 @@ export const formTesting = {
 export const componentTesting = {
 	/**
 	 * Get element by test id
+	 * @param testId
 	 */
 	getElementByTestId: (testId: string) => {
 		const element = document.querySelector(`[data-testid="${testId}"]`)
@@ -636,6 +691,8 @@ export const componentTesting = {
 
 	/**
 	 * Assert element text content
+	 * @param testId
+	 * @param expectedText
 	 */
 	assertElementText: (testId: string, expectedText: string) => {
 		const element = document.querySelector(`[data-testid="${testId}"]`)
@@ -655,6 +712,7 @@ export const componentTesting = {
 
 	/**
 	 * Assert element does not exist
+	 * @param testId
 	 */
 	assertElementNotExists: (testId: string) => {
 		const element = document.querySelector(`[data-testid="${testId}"]`)
@@ -672,6 +730,7 @@ export const componentTesting = {
 
 	/**
 	 * Click element by test id
+	 * @param testId
 	 */
 	clickElement: async (testId: string) => {
 		const element = document.querySelector<HTMLElement>(
@@ -695,38 +754,4 @@ export const componentTesting = {
 		fireEvent.click(element!)
 		await waitForComponentReady()
 	},
-}
-
-// ============================================================================
-// Default Export
-// ============================================================================
-
-export default {
-	// Enhanced Component Rendering
-	renderComponent,
-	renderWithAuth,
-	renderWithoutAuth,
-
-	// Component Mocking
-	createMockComponentProps,
-	mockComponent,
-	createMockHook,
-
-	// Component Testing
-	waitForComponentReady,
-	simulateUserInteraction,
-	testComponentState,
-
-	// Component Assertions
-	componentAssertions,
-
-	// Router Testing
-	createMockRouter,
-	testRouterNavigation,
-
-	// Form Testing
-	formTesting,
-
-	// Component Testing Utilities
-	componentTesting,
 }

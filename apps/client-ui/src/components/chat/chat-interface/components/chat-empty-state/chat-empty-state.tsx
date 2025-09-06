@@ -7,6 +7,8 @@ type ChatEmptyStateProps = React.ComponentPropsWithoutRef<'div'>
 /**
  * Empty chat state component
  * Displays when no messages are present in the chat
+ * @param root0
+ * @param root0.className
  */
 const ChatEmptyState = ({
 	className,

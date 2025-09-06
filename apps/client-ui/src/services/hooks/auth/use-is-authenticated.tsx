@@ -3,7 +3,7 @@ import Cookies from 'js-cookie'
 
 import { QUERY_KEY } from '@/constants/query-keys'
 
-import { getAuthUser } from '../../network/auth/getAuthUser'
+import { getAuthUser } from '../../network/auth/get-auth-user'
 
 const useIsAuthenticated = () => {
 	const accessToken = Cookies.get('macro-ai-accessToken')
