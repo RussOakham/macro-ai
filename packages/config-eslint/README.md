@@ -48,7 +48,7 @@ For type-safe ESLint configuration with full IntelliSense, use JSDoc types:
 import baseConfig from '@repo/config-eslint'
 import reactConfig from '@repo/config-eslint/react'
 
-/** @type {import('eslint').Linter.FlatConfig[]} */
+/** @type {import('eslint').FlatConfig[]} */
 export default [
 	...baseConfig,
 	...reactConfig,

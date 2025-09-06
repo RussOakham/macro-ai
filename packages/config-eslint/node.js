@@ -1,6 +1,6 @@
 // @ts-check
 
-/** @type {import('eslint').Linter.FlatConfig[]} */
+/** @type {import('eslint').FlatConfig[]} */
 const nodeConfig = [
 	{
 		rules: {

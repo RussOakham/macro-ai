@@ -6,7 +6,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tailwind from 'eslint-plugin-tailwindcss'
 import reactCompiler from 'eslint-plugin-react-compiler'
 
-/** @type {import('eslint').Linter.FlatConfig[]} */
+/** @type {import('eslint').FlatConfig[]} */
 const reactConfig = [
 	{
 		plugins: {

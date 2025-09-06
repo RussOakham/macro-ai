@@ -11,7 +11,7 @@ import security from 'eslint-plugin-security'
 import securityNode from 'eslint-plugin-security-node'
 import importX from 'eslint-plugin-import-x'
 
-/** @type {import('eslint').Linter.FlatConfig[]} */
+/** @type {import('eslint').FlatConfig[]} */
 const baseConfig = [
 	gitignore(),
 	js.configs.recommended,
