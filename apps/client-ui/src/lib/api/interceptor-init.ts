@@ -15,7 +15,9 @@ import { applyTokenRefreshInterceptors } from './interceptors'
 export const initializeTokenRefreshInterceptors = () => {
 	try {
 		applyTokenRefreshInterceptors({ axios: apiClient.instance })
-		applyTokenRefreshInterceptors({ axios: apiClientWithoutCredentials.instance })
+		applyTokenRefreshInterceptors({
+			axios: apiClientWithoutCredentials.instance,
+		})
 	} catch (error) {
 		console.warn('Failed to initialize token refresh interceptors:', error)
 	}
