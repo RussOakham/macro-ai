@@ -5,6 +5,7 @@ across all packages and applications.
 
 ## Features
 
+- **Type-Safe Configuration**: Full TypeScript support with type-safe ESLint flat config
 - **Consistent Code Style**: Unified linting rules across the entire monorepo
 - **TypeScript Support**: Optimized rules for TypeScript projects
 - **React Integration**: Specialized rules for React applications
@@ -33,6 +34,22 @@ export default [...baseConfig]
 import baseConfig from '@repo/config-eslint'
 
 export default [...baseConfig]
+```
+
+### TypeScript Usage
+
+For type-safe ESLint configuration, you can import the TypeScript version:
+
+```typescript
+// eslint.config.ts
+import { config, configs } from '@repo/config-eslint'
+import type { ConfigWithExtends } from '@repo/config-eslint/types'
+
+export default config(...configs.base, ...configs.react, {
+	rules: {
+		'@typescript-eslint/array-type': 'error',
+	},
+} satisfies ConfigWithExtends)
 ```
 
 ## Configuration

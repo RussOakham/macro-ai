@@ -95,7 +95,7 @@ export const config = (...configs) =>
 
 export const configs = {
 	/** Generic rules for all JavaScript/Typescript code. */
-	base: [
+	base: /** @type {import("typescript-eslint").ConfigWithExtends[]} */ ([
 		// typescript base
 		...ts.configs.strictTypeChecked,
 		...ts.configs.stylisticTypeChecked,
@@ -136,9 +136,9 @@ export const configs = {
 				...js.configs.all.rules,
 			},
 		},
-	],
+	]),
 	/** Rules specific to React and React Hooks */
-	react: [
+	react: /** @type {import("typescript-eslint").ConfigWithExtends[]} */ ([
 		{
 			files: ['*/.{ts,tsx,js,jsx}'],
 			...react.configs.flat.recommended,
@@ -168,5 +168,5 @@ export const configs = {
 				// remove hyper-restrictive rules
 			},
 		},
-	],
+	]),
 }
