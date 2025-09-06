@@ -16,7 +16,7 @@ import {
 import { apiClient, apiClientWithoutCredentials } from '../clients'
 
 // Mock the auth service
-vi.mock('@/services/network/auth/postRefreshToken', () => ({
+vi.mock('@/services/network/auth/post-refresh-token', () => ({
 	postRefreshToken: vi.fn(),
 }))
 
@@ -145,7 +145,7 @@ describe('Token Refresh Integration Tests', () => {
 			const { postRefreshToken } = await import(
 				'@/services/network/auth/post-refresh-token'
 			)
-			vi.mocked(postRefreshToken).mockResolvedValue({
+			const mockPostRefreshToken = vi.fn().mockResolvedValue({
 				message: 'Token refreshed',
 				tokens: {
 					accessToken: 'new-access-token',
@@ -153,6 +153,7 @@ describe('Token Refresh Integration Tests', () => {
 					expiresIn: 3600,
 				},
 			})
+			vi.mocked(postRefreshToken).mockImplementation(mockPostRefreshToken)
 
 			// Make a request that should trigger 401 and refresh
 			try {
@@ -224,7 +225,7 @@ describe('Token Refresh Integration Tests', () => {
 			const { postRefreshToken } = await import(
 				'@/services/network/auth/post-refresh-token'
 			)
-			vi.mocked(postRefreshToken).mockResolvedValue({
+			const mockPostRefreshToken = vi.fn().mockResolvedValue({
 				message: 'Token refreshed',
 				tokens: {
 					accessToken: 'new-access-token',
@@ -232,6 +233,7 @@ describe('Token Refresh Integration Tests', () => {
 					expiresIn: 3600,
 				},
 			})
+			vi.mocked(postRefreshToken).mockImplementation(mockPostRefreshToken)
 
 			// Make concurrent requests that should trigger 401
 			const promises = [
@@ -280,7 +282,7 @@ describe('Token Refresh Integration Tests', () => {
 			const { postRefreshToken } = await import(
 				'@/services/network/auth/post-refresh-token'
 			)
-			vi.mocked(postRefreshToken).mockResolvedValue({
+			const mockPostRefreshToken = vi.fn().mockResolvedValue({
 				message: 'Token refreshed',
 				tokens: {
 					accessToken: 'new-access-token',
@@ -288,6 +290,7 @@ describe('Token Refresh Integration Tests', () => {
 					expiresIn: 3600,
 				},
 			})
+			vi.mocked(postRefreshToken).mockImplementation(mockPostRefreshToken)
 
 			// Mock the shared refresh promise functions
 			const { setSharedRefreshPromise, clearSharedRefreshPromise } =
@@ -353,7 +356,7 @@ describe('Token Refresh Integration Tests', () => {
 			const { postRefreshToken } = await import(
 				'@/services/network/auth/post-refresh-token'
 			)
-			vi.mocked(postRefreshToken).mockResolvedValue({
+			const mockPostRefreshToken = vi.fn().mockResolvedValue({
 				message: 'Token refreshed',
 				tokens: {
 					accessToken: 'new-access-token',
@@ -361,6 +364,7 @@ describe('Token Refresh Integration Tests', () => {
 					expiresIn: 3600,
 				},
 			})
+			vi.mocked(postRefreshToken).mockImplementation(mockPostRefreshToken)
 
 			// Perform various operations to test client stability
 			const operations = [
