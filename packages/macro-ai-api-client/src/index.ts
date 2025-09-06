@@ -11,7 +11,7 @@ import type { ClientOptions, Config } from './client/client/types.gen.js'
 // Create client configuration using our runtime settings
 const createClientConfig = (override?: ClientOptions) => {
 	const baseConfig = {
-		baseURL: process.env.API_BASE_URL ?? 'http://localhost:3000',
+		baseURL: 'http://localhost:3000', // Default fallback, should be overridden by calling code
 		headers: {
 			'Content-Type': 'application/json',
 			Accept: 'application/json',

@@ -70,6 +70,10 @@
 			"inputs": ["**/*.md", ".markdownlint.json"],
 			"outputs": []
 		},
+		"docs:lint": {
+			"inputs": ["**/*.md", ".markdownlint.json"],
+			"outputs": []
+		},
 		"type-check": {},
 		"test": {
 			"cache": false,

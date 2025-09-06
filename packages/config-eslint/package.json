@@ -11,28 +11,24 @@
 	},
 	"files": [
 		"./eslint.js",
-		"./dist/**/*"
+		"./index.js",
+		"./react.js",
+		"./node.js",
+		"./security.js",
+		"./prettier.js"
 	],
 	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./eslint.js"
-		},
-		"./types": "./dist/index.d.ts"
-	},
-	"scripts": {
-		"build": "tsc",
-		"dev": "tsc --watch"
+		".": "./eslint.js",
+		"./react": "./react.js",
+		"./node": "./node.js",
+		"./security": "./security.js",
+		"./prettier": "./prettier.js"
 	},
 	"publishConfig": {
 		"access": "public"
 	},
-	"dependencies": {
-		"@repo/config-typescript": "workspace:*"
-	},
 	"devDependencies": {
 		"@eslint/js": "^9.32.0",
-		"@types/node": "catalog:",
 		"eslint": "catalog:",
 		"eslint-config-prettier": "catalog:",
 		"eslint-config-turbo": "^2.5.5",

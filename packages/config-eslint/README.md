@@ -5,13 +5,15 @@ across all packages and applications.
 
 ## Features
 
-- **Type-Safe Configuration**: Full TypeScript support with type-safe ESLint flat config
+- **Type-Safe Configuration**: JSDoc types with full IntelliSense support
+- **ESM-First Design**: Modern JavaScript modules with ESLint Flat Config
 - **Consistent Code Style**: Unified linting rules across the entire monorepo
 - **TypeScript Support**: Optimized rules for TypeScript projects
-- **React Integration**: Specialized rules for React applications
+- **React Integration**: Specialized rules for React applications with React Compiler
 - **Node.js Support**: Backend-specific linting for Express.js applications
 - **Import Organization**: Automatic import sorting and organization
 - **Security Rules**: Built-in security-focused linting rules
+- **No Build Step**: Direct JavaScript files with instant configuration updates
 
 ## Usage
 
@@ -36,20 +38,26 @@ import baseConfig from '@repo/config-eslint'
 export default [...baseConfig]
 ```
 
-### TypeScript Usage
+### TypeScript Usage with JSDoc
 
-For type-safe ESLint configuration, you can import the TypeScript version:
+For type-safe ESLint configuration with full IntelliSense, use JSDoc types:
 
-```typescript
-// eslint.config.ts
-import { config, configs } from '@repo/config-eslint'
-import type { ConfigWithExtends } from '@repo/config-eslint/types'
+```javascript
+// eslint.config.js
+// @ts-check
+import baseConfig from '@repo/config-eslint'
+import reactConfig from '@repo/config-eslint/react'
 
-export default config(...configs.base, ...configs.react, {
-	rules: {
-		'@typescript-eslint/array-type': 'error',
+/** @type {import('eslint').Linter.FlatConfig[]} */
+export default [
+	...baseConfig,
+	...reactConfig,
+	{
+		rules: {
+			'@typescript-eslint/array-type': 'error',
+		},
 	},
-} satisfies ConfigWithExtends)
+]
 ```
 
 ## Configuration
