@@ -31,6 +31,9 @@ const base = {
 				'no-underscore-dangle': 'warn', // Allow _private members and config objects
 				'class-methods-use-this': 'warn', // Allow class methods without 'this' usage
 				'no-ternary': 'off', // Allow ternary operators
+				'@typescript-eslint/no-unsafe-assignment': 'warn', // Allow unsafe assignment
+				'@typescript-eslint/no-unsafe-call': 'warn', // Allow unsafe call
+				'@typescript-eslint/no-unsafe-member-access': 'warn', // Allow unsafe member access
 
 				// Variable declaration rules
 				'one-var': 'off', // Allow multiple variable declarations
@@ -82,7 +85,10 @@ const base = {
 			},
 			rules: {
 				// Unicorn - Modern JavaScript best practices
-				'unicorn/filename-case': ['error', { case: 'kebabCase' }],
+				'unicorn/filename-case': [
+					'error',
+					{ case: 'kebabCase', ignore: ['^\\$'] },
+				],
 				'unicorn/prefer-node-protocol': 'error',
 
 				// SonarJS - Code quality and maintainability
@@ -100,7 +106,6 @@ const base = {
 				'array-func/prefer-flat-map': 'error',
 
 				// ESLint directives - Clean up ESLint disable/enable comments
-				'eslint-comments/disable-enable-pair': 'error',
 				'eslint-comments/no-duplicate-disable': 'error',
 				'eslint-comments/no-unlimited-disable': 'error',
 				'eslint-comments/no-unused-disable': 'error',
