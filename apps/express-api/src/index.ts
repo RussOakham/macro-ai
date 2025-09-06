@@ -3,7 +3,7 @@
  * Uses the modular configuration system with Zod validation and runtime type checking
  */
 
-import { createServer as createHttpServer } from 'http'
+import { createServer as createHttpServer } from 'node:http'
 
 import { assertConfig } from './config/simple-config.ts'
 import { logger } from './utils/logger.ts'

@@ -1,7 +1,3 @@
-import { AppError, InternalError, Result } from '../../utils/errors.ts'
-import { pino } from '../../utils/logger.ts'
-
-import { type AIService } from './ai.service.ts'
 import type {
 	IVectorRepository,
 	SemanticSearchOptions,
@@ -9,6 +5,10 @@ import type {
 	TChatVector,
 	TInsertChatVector,
 } from './chat.types.ts'
+
+import { AppError, InternalError, Result } from '../../utils/errors.ts'
+import { pino } from '../../utils/logger.ts'
+import { type AIService } from './ai.service.ts'
 
 const { logger } = pino
 

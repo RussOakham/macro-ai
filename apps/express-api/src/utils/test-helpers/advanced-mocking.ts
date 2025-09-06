@@ -10,10 +10,9 @@
  * - Performance testing with controlled delays
  */
 
-/* eslint-disable @typescript-eslint/no-extraneous-class */
+import type { Pool, PoolClient } from 'pg'
 
 import { faker } from '@faker-js/faker'
-import type { Pool, PoolClient } from 'pg'
 import { vi } from 'vitest'
 
 import { TChat, TChatMessage } from '../../features/chat/chat.types.ts'
@@ -413,6 +412,7 @@ export class ErrorSimulator {
 	 * Check if error should be simulated based on probability
 	 */
 	shouldSimulateError(): boolean {
+		// eslint-disable-next-line security-node/detect-insecure-randomness
 		return Math.random() < (this.options.probability ?? 0.1)
 	}
 
@@ -478,8 +478,10 @@ export class ErrorSimulator {
 		})
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	// eslint-disable-next-line class-methods-use-this
 	private getOriginalMethod(_methodPath: string): (() => unknown) | null {
+		// Use the parameter to avoid unused variable warning
+		void _methodPath
 		// Implementation would depend on specific methods being mocked
 		// This is a placeholder for the actual method retrieval logic
 		return null
@@ -505,7 +507,6 @@ export class ErrorSimulator {
 		}
 
 		const errorMessage =
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			message ??
 			this.options.customMessages?.[type] ??
 			defaultMessages[type as keyof typeof defaultMessages] ??
@@ -641,6 +642,7 @@ export class ContractTester {
 		return true
 	}
 
+	// eslint-disable-next-line class-methods-use-this
 	private validateSchema(data: unknown, schema: JsonSchema): boolean {
 		// Simple schema validation - in a real implementation, you'd use a proper schema validator
 		// like Joi, Yup, or Zod
@@ -799,6 +801,7 @@ export class MockDataFactory {
 	 * Create embedding vector
 	 */
 	static embedding(dimensions = 1536): number[] {
+		// eslint-disable-next-line security-node/detect-insecure-randomness
 		return Array.from({ length: dimensions }, () => Math.random())
 	}
 
@@ -965,7 +968,7 @@ export class PerformanceTester {
 		const durations = this.results.map((r) => r.duration)
 		const memories = this.results
 			.filter((r) => r.memory !== undefined)
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
 			.map((r) => r.memory!)
 
 		const summary = {

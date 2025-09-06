@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express'
+
 import {
 	createMocks,
 	createRequest,
@@ -24,28 +25,28 @@ export type { MockRequest, MockResponse } from 'node-mocks-http'
 // Enhanced User Service Mock
 export type MockUserService = DeepMockProxy<typeof userService>
 
-export const createMockUserService = (): MockUserService => {
+const createMockUserService = (): MockUserService => {
 	return mockDeep<typeof userService>()
 }
 
 // Enhanced Chat Service Mock
 export type MockChatService = DeepMockProxy<typeof chatService>
 
-export const createMockChatService = (): MockChatService => {
+const createMockChatService = (): MockChatService => {
 	return mockDeep<typeof chatService>()
 }
 
 // Enhanced Auth Service Mock
-export type MockAuthService = DeepMockProxy<typeof cognitoService>
+type MockAuthService = DeepMockProxy<typeof cognitoService>
 
-export const createMockAuthService = (): MockAuthService => {
+const createMockAuthService = (): MockAuthService => {
 	return mockDeep<typeof cognitoService>()
 }
 
 /**
  * Mock factory for creating multiple service mocks at once
  */
-export const createServiceMocks = () => {
+const createServiceMocks = () => {
 	const userService = createMockUserService()
 	const chatService = createMockChatService()
 	const authService = createMockAuthService()
@@ -60,7 +61,7 @@ export const createServiceMocks = () => {
 /**
  * Reset all mocks - useful in beforeEach
  */
-export const resetAllMocks = () => {
+const resetAllMocks = () => {
 	vi.clearAllMocks()
 }
 
@@ -68,7 +69,7 @@ export const resetAllMocks = () => {
  * Enhanced mock factory with automatic type inference
  * Usage: const mock = createEnhancedMock<typeof someService>()
  */
-export const createEnhancedMock = <T extends object>() => {
+const createEnhancedMock = <T extends object>() => {
 	return mockDeep<T>()
 }
 
@@ -76,7 +77,7 @@ export const createEnhancedMock = <T extends object>() => {
  * Mock factory for Express Request/Response objects using node-mocks-http
  * This provides realistic Express object behavior with proper chaining
  */
-export const createMockExpressObjects = (
+const createMockExpressObjects = (
 	reqOpts?: Parameters<typeof createRequest>[0],
 	resOpts?: Parameters<typeof createResponse>[0],
 ): {
@@ -91,6 +92,7 @@ export const createMockExpressObjects = (
 	res.status = vi.fn().mockReturnValue(res)
 	res.json = vi.fn().mockImplementation((data) => {
 		// Set the JSON data so _getJSONData() can retrieve it
+		// eslint-disable-next-line no-underscore-dangle
 		res._getJSONData = vi.fn().mockReturnValue(data)
 		return res
 	})
@@ -123,7 +125,7 @@ export const createMockResponse = (
 /**
  * Enhanced mock utilities for common testing patterns
  */
-export const mockUtils = {
+const mockUtils = {
 	/**
 	 * Create a mock that resolves with the given value
 	 */
@@ -164,9 +166,9 @@ export const mockUtils = {
 }
 
 /**
- * Default export for easy importing
+ * Named exports for better tree shaking and explicit imports
  */
-export default {
+export {
 	createMockUserService,
 	createMockChatService,
 	createMockAuthService,

@@ -63,7 +63,11 @@
 				"BUILDKITE",
 				"PREVIEW",
 				"CORS_ALLOWED_ORIGINS",
-				"MODE"
+				"MODE",
+				"APP_VERSION",
+				"npm_package_version",
+				"DATABASE_URL",
+				"CUSTOM_DOMAIN_NAME"
 			]
 		},
 		"lint:md": {

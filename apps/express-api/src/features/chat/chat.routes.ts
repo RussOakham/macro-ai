@@ -13,7 +13,6 @@ import {
 	UnauthorizedErrorSchema,
 	ValidationErrorSchema,
 } from '../../utils/swagger/openapi-registry.ts'
-
 import { chatController } from './chat.controller.ts'
 import {
 	chatListResponseSchema,

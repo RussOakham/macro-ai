@@ -11,7 +11,6 @@
 import { type TEnv } from '../utils/env.schema.ts'
 import { type Result } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
-
 import { type EnvConfigOptions, loadEnvConfig } from './env-config.ts'
 
 const { logger } = pino
@@ -119,6 +118,9 @@ export interface ConfigType {
 
 /**
  * Convert raw environment variables to camelCase config object
+ *
+ * @param env Environment variables
+ * @returns Config object
  */
 const convertToConfigType = (env: TEnv): ConfigType => ({
 	apiKey: env.API_KEY,

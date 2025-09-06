@@ -115,7 +115,9 @@ describe('Enhanced Mocks Examples', () => {
 
 			// Test response chaining with node-mocks-http
 			res.status(200).json({ success: true })
+			// eslint-disable-next-line no-underscore-dangle
 			expect(res._getStatusCode()).toBe(200)
+			// eslint-disable-next-line no-underscore-dangle
 			expect(res._getJSONData()).toEqual({ success: true })
 		})
 
@@ -141,7 +143,7 @@ describe('Enhanced Mocks Examples', () => {
 	})
 
 	describe('Generic Enhanced Mocks', () => {
-		it('ANTI-PATTERN: should create enhanced mock with exhaustive type and method testing', () => {
+		it('ANTI-PATTERN: should create enhanced mock with exhaustive type and method testing', async () => {
 			// ❌ VIOLATION: Testing mock creation and method setup instead of business logic
 			// ✅ PRODUCTION: Use generic mocks to test your code, don't test the mock framework
 			// Create a mock for a hypothetical service
@@ -157,9 +159,9 @@ describe('Enhanced Mocks Examples', () => {
 			mockService.deleteData.mockResolvedValue(true)
 
 			// Use the mocked service
-			void expect(mockService.getData()).resolves.toBe('test data')
-			void expect(mockService.setData('new data')).resolves.toBeUndefined()
-			void expect(mockService.deleteData('123')).resolves.toBe(true)
+			await expect(mockService.getData()).resolves.toBe('test data')
+			await expect(mockService.setData('new data')).resolves.toBeUndefined()
+			await expect(mockService.deleteData('123')).resolves.toBe(true)
 		})
 	})
 

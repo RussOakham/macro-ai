@@ -3,7 +3,7 @@ import compression from 'compression'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import express, { Express } from 'express'
-import path from 'path'
+import path from 'node:path'
 import swaggerUi from 'swagger-ui-express'
 
 import { apiKeyAuth } from '../middleware/api-key.middleware.ts'
@@ -14,7 +14,6 @@ import {
 	securityHeadersMiddleware,
 } from '../middleware/security-headers.middleware.ts'
 import { appRouter } from '../router/index.routes.ts'
-
 import { config } from './load-config.ts'
 import { pino } from './logger.ts'
 

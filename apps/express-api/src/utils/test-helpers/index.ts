@@ -167,6 +167,8 @@ export { type MockedFunction, vi } from 'vitest'
 // Import for internal use
 import { vi } from 'vitest'
 
+import type { DatabaseTestContext } from './database-integration.ts'
+
 import {
 	ContractTester as AdvancedContractTester,
 	ErrorSimulator,
@@ -174,7 +176,6 @@ import {
 	PerformanceTester,
 	TimeController,
 } from './advanced-mocking.ts'
-import type { DatabaseTestContext } from './database-integration.ts'
 import {
 	ChatContractData,
 	ContractDataGenerator,
@@ -252,7 +253,7 @@ export const createTestSetup = (config: Partial<typeof TEST_CONFIG> = {}) => {
 		timeController: new TimeController(mergedConfig.timeControl),
 		errorSimulator: new ErrorSimulator({
 			probability: mergedConfig.errorSimulation.probability,
-			errorTypes: [...mergedConfig.errorSimulation.errorTypes],
+			errorTypes: Array.from(mergedConfig.errorSimulation.errorTypes),
 			logErrors: mergedConfig.errorSimulation.logErrors,
 		}),
 		performanceTester: new PerformanceTester(),
@@ -422,7 +423,9 @@ export const testAssertions = {
 		obj: Record<string, unknown>,
 		requiredProps: string[],
 	) => {
-		return requiredProps.every((prop) => obj.hasOwnProperty(prop))
+		return requiredProps.every((prop) =>
+			Object.prototype.hasOwnProperty.call(obj, prop),
+		)
 	},
 
 	/**

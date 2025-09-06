@@ -2,7 +2,6 @@ import express from 'express'
 import { z } from 'zod'
 
 import { type Result } from '../../utils/errors.ts'
-
 import {
 	insertUserSchema,
 	selectUserSchema,

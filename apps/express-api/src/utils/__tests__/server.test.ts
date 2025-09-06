@@ -1,5 +1,5 @@
 import express, { Express, NextFunction, Request, Response } from 'express'
-import path from 'path'
+import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { mockConfig } from '../test-helpers/config.mock.ts'
@@ -146,7 +146,7 @@ describe('createServer', () => {
 			// Arrange
 			const mockStaticMiddleware = vi.fn()
 			vi.mocked(express.static).mockReturnValue(mockStaticMiddleware)
-			// eslint-disable-next-line @typescript-eslint/unbound-method
+
 			vi.mocked(path.join).mockReturnValue('/mocked/public/path')
 
 			// Act
@@ -154,7 +154,7 @@ describe('createServer', () => {
 			createServer()
 
 			// Assert
-			// eslint-disable-next-line @typescript-eslint/unbound-method
+
 			expect(vi.mocked(path.join)).toHaveBeenCalledWith(
 				expect.any(String),
 				'public',
@@ -360,7 +360,7 @@ describe('createServer', () => {
 			// Arrange
 			const mockJsonMiddleware = vi.fn()
 			const bodyParser = await import('body-parser')
-			// eslint-disable-next-line @typescript-eslint/unbound-method
+
 			vi.mocked(bodyParser.default.json).mockReturnValue(mockJsonMiddleware)
 
 			// Act
@@ -368,7 +368,7 @@ describe('createServer', () => {
 			createServer()
 
 			// Assert
-			// eslint-disable-next-line @typescript-eslint/unbound-method
+
 			expect(vi.mocked(bodyParser.default.json)).toHaveBeenCalledTimes(1)
 			expect(mockApp.use).toHaveBeenCalledWith(mockJsonMiddleware)
 		})
@@ -491,7 +491,7 @@ describe('createServer', () => {
 			// Arrange
 			const mockSwaggerSetup = vi.fn()
 			const swaggerUi = await import('swagger-ui-express')
-			// eslint-disable-next-line @typescript-eslint/no-deprecated
+
 			vi.mocked(swaggerUi.default.setup).mockReturnValue(mockSwaggerSetup)
 
 			// Act
@@ -499,7 +499,7 @@ describe('createServer', () => {
 			createServer()
 
 			// Assert
-			// eslint-disable-next-line @typescript-eslint/no-deprecated
+
 			expect(vi.mocked(swaggerUi.default.setup)).toHaveBeenCalledWith(
 				undefined,
 				{

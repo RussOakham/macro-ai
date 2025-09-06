@@ -60,7 +60,7 @@ export default repoConfig.config(
 			},
 		},
 		rules: {
-			'@typescript-eslint/no-misused-promises': 'off',
+			'@typescript-eslint/no-misused-promises': 'warn',
 			'jsdoc/require-jsdoc': 'off',
 			'jsdoc/require-param-description': 'off',
 			'jsdoc/require-param-type': 'off',

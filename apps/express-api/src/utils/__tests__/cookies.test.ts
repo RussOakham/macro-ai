@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import type { Request } from 'express'
+
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {

@@ -1,16 +1,16 @@
 import { eq } from 'drizzle-orm'
 
-import { db } from '../../data-access/db.ts'
-import { tryCatch } from '../../utils/error-handling/try-catch.ts'
-import { AppError, InternalError, Result } from '../../utils/errors.ts'
-import { safeValidateSchema } from '../../utils/response-handlers.ts'
-
-import { chatMessagesTable, selectMessageSchema } from './chat.schemas.ts'
 import type {
 	IMessageRepository,
 	TChatMessage,
 	TInsertChatMessage,
 } from './chat.types.ts'
+
+import { db } from '../../data-access/db.ts'
+import { tryCatch } from '../../utils/error-handling/try-catch.ts'
+import { AppError, InternalError, Result } from '../../utils/errors.ts'
+import { safeValidateSchema } from '../../utils/response-handlers.ts'
+import { chatMessagesTable, selectMessageSchema } from './chat.schemas.ts'
 
 /**
  * MessageRepository class that implements the IMessageRepository interface

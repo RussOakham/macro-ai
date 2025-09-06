@@ -2,7 +2,9 @@ import { z } from 'zod'
 
 import { registerZodSchema } from '../../utils/swagger/openapi-registry.ts'
 
-// Utility Schemas
+/**
+ * Utility Schemas
+ */
 
 /**
  * Secure password validation function
@@ -138,6 +140,7 @@ const forgotPasswordRequestSchema = registerZodSchema(
 )
 
 const confirmForgotPasswordRequestSchema = registerZodSchema(
+	// eslint-disable-next-line no-secrets/no-secrets
 	'ConfirmForgotPasswordRequest',
 	z
 		.object({

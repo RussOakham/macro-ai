@@ -96,6 +96,7 @@ export const setupDatabaseIntegration = async (
 ): Promise<DatabaseTestContext> => {
 	const {
 		enableLogging = false,
+		// eslint-disable-next-line security-node/detect-insecure-randomness
 		databaseName = `test_db_${String(Date.now())}_${Math.random().toString(36).slice(2)}`,
 		runMigrations = true,
 		seedTestData = false,
@@ -386,6 +387,7 @@ export class DatabasePerformanceTester {
 	 * @param iterations - Number of iterations to run
 	 * @returns Performance statistics
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	async runPerformanceTest(
 		testName: string,
 		operation: () => Promise<void>,
@@ -434,7 +436,7 @@ export class DatabasePerformanceTester {
 	 * @returns Array of all performance measurements
 	 */
 	getResults() {
-		return [...this.results]
+		return Array.from(this.results)
 	}
 
 	/**

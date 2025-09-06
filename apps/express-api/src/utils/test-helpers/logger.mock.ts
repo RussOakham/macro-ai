@@ -1,5 +1,6 @@
 import type { Logger } from 'pino'
 import type { HttpLogger } from 'pino-http'
+
 import { type Mock, vi } from 'vitest'
 
 /**

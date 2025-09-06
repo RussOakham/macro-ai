@@ -13,6 +13,7 @@ vi.mock('../error-handling/try-catch.ts', () => ({
 vi.mock('../load-config.ts', () => ({
 	config: {
 		COOKIE_ENCRYPTION_KEY:
+			// eslint-disable-next-line no-secrets/no-secrets
 			'0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef', // 64 hex chars = 32 bytes
 	},
 }))
@@ -25,7 +26,7 @@ vi.mock('crypto', () => ({
 }))
 
 // Import the mocked crypto functions after mocking
-import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
+import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 
 // Define proper interfaces for mock objects
 interface MockCipher {
@@ -114,6 +115,7 @@ describe('crypto.ts', () => {
 				expect(mockCreateCipheriv).toHaveBeenCalledWith(
 					'aes-256-gcm',
 					Buffer.from(
+						// eslint-disable-next-line no-secrets/no-secrets
 						'0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
 						'hex',
 					),
@@ -246,6 +248,7 @@ describe('crypto.ts', () => {
 				expect(mockCreateDecipheriv).toHaveBeenCalledWith(
 					'aes-256-gcm',
 					Buffer.from(
+						// eslint-disable-next-line no-secrets/no-secrets
 						'0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
 						'hex',
 					),
@@ -290,7 +293,7 @@ describe('crypto.ts', () => {
 				['undefined input', undefined],
 			])('Invalid input: %s', (description, invalidInput) => {
 				it(`should handle ${description}`, () => {
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					const result = decrypt(invalidInput as any)
 
 					expect(result[0]).toBeNull()

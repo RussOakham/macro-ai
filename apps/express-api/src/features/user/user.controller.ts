@@ -3,7 +3,6 @@ import { StatusCodes } from 'http-status-codes'
 
 import { UnauthorizedError, ValidationError } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
-
 import { userService } from './user.services.ts'
 import { IUserController, TUserResponse } from './user.types.ts'
 

@@ -24,7 +24,7 @@ import {
 	ContractTester,
 	ErrorSimulator,
 	MockDataFactory,
-} from '../advanced-mocking.js'
+} from '../advanced-mocking.ts'
 
 // ============================================================================
 // Test Suite

@@ -1,5 +1,8 @@
 import type { NextFunction, Request, Response } from 'express'
+
 import { StatusCodes } from 'http-status-codes'
+
+import type { IChatController, PaginationOptions } from './chat.types.ts'
 
 import {
 	tryCatch,
@@ -7,14 +10,12 @@ import {
 	tryCatchSync,
 } from '../../utils/error-handling/try-catch.ts'
 import { pino } from '../../utils/logger.ts'
-
 import {
 	CreateChatRequest,
 	SendMessageRequest,
 	UpdateChatRequest,
 } from './chat.schemas.ts'
 import { chatService } from './chat.service.ts'
-import type { IChatController, PaginationOptions } from './chat.types.ts'
 
 const { logger } = pino
 
@@ -23,6 +24,7 @@ const { logger } = pino
  * Follows established patterns from auth.controller.ts and user.controller.ts
  * Uses Go-style error handling and proper response formatting
  */
+/* eslint-disable class-methods-use-this */
 export class ChatController implements IChatController {
 	/**
 	 * Get all chats for the authenticated user with pagination
@@ -410,7 +412,7 @@ export class ChatController implements IChatController {
 			const [, writeError] = tryCatchSync(() => {
 				res.write(text)
 				// Force immediate sending of the chunk
-				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
 				if (res.flush) {
 					res.flush()
 				}

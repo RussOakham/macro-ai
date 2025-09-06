@@ -21,13 +21,12 @@ import {
 	SignUpCommandOutput,
 	UserType,
 } from '@aws-sdk/client-cognito-identity-provider'
-import crypto from 'crypto'
+import crypto from 'node:crypto'
 
 import { tryCatch, tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import { NotFoundError, Result, ValidationError } from '../../utils/errors.ts'
 import { logger } from '../../utils/logger.ts'
 import { createParameterStoreService } from '../../utils/parameter-store.ts'
-
 import { ICognitoService, TRegisterUserRequest } from './auth.types.ts'
 
 class CognitoService implements ICognitoService {
@@ -103,7 +102,9 @@ class CognitoService implements ICognitoService {
 
 	/**
 	 * Sign up a new user with Cognito
-	 * @param request Registration request containing email, password, and confirmPassword
+	 * @param email User email address
+	 * @param password User password
+	 * @param confirmPassword Password confirmation
 	 * @returns Result tuple with SignUpCommandOutput or error
 	 */
 	public signUpUser = async ({
@@ -165,6 +166,7 @@ class CognitoService implements ICognitoService {
 	 * @param context The context string for error reporting
 	 * @returns Result tuple with the unique user or error
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	private validateAndExtractUser = (
 		users: ListUsersCommandOutput,
 		email: string,
@@ -230,7 +232,6 @@ class CognitoService implements ICognitoService {
 
 		// Generate hash using tryCatchSync
 		const [secretHash, hashError] = tryCatchSync(
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			() => this.generateHash(uniqueUser.Username!),
 			'authService - generateHash',
 		)
@@ -241,7 +242,7 @@ class CognitoService implements ICognitoService {
 
 		const command = new ConfirmSignUpCommand({
 			ClientId: this.clientId,
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
 			Username: uniqueUser.Username!,
 			ConfirmationCode: code.toString(),
 			SecretHash: secretHash,
@@ -480,7 +481,6 @@ class CognitoService implements ICognitoService {
 
 		// Generate hash using tryCatchSync
 		const [secretHash, hashError] = tryCatchSync(
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			() => this.generateHash(uniqueUser.Username!),
 			'authService - generateHash',
 		)

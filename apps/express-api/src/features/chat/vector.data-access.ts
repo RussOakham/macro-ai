@@ -1,11 +1,5 @@
 import { desc, eq, type SQL } from 'drizzle-orm'
 
-import { db } from '../../data-access/db.ts'
-import { tryCatch } from '../../utils/error-handling/try-catch.ts'
-import { AppError, InternalError, Result } from '../../utils/errors.ts'
-import { safeValidateSchema } from '../../utils/response-handlers.ts'
-
-import { chatVectorsTable, selectChatVectorSchema } from './chat.schemas.ts'
 import type {
 	IVectorRepository,
 	SemanticSearchOptions,
@@ -13,6 +7,12 @@ import type {
 	TChatVector,
 	TInsertChatVector,
 } from './chat.types.ts'
+
+import { db } from '../../data-access/db.ts'
+import { tryCatch } from '../../utils/error-handling/try-catch.ts'
+import { AppError, InternalError, Result } from '../../utils/errors.ts'
+import { safeValidateSchema } from '../../utils/response-handlers.ts'
+import { chatVectorsTable, selectChatVectorSchema } from './chat.schemas.ts'
 
 /**
  * VectorRepository class that implements the IVectorRepository interface
@@ -150,6 +150,7 @@ class VectorRepository implements IVectorRepository {
 	): Promise<Result<TChatVector[]>> => {
 		return await this.findVectorsWithFilter(
 			eq(chatVectorsTable.chatId, chatId),
+			// eslint-disable-next-line no-secrets/no-secrets
 			'findVectorsByChatId',
 		)
 	}
@@ -159,6 +160,7 @@ class VectorRepository implements IVectorRepository {
 	 * @param options Search options including query, limit, threshold, and user context
 	 * @returns Result tuple with search results array
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	public semanticSearch = async (
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		options: SemanticSearchOptions,

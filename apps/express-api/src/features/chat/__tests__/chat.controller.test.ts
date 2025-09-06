@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -698,7 +697,6 @@ describe('ChatController', () => {
 		// Helper to create a mock stream that can be consumed
 		const createMockStream = (chunks: string[]): AsyncIterable<string> => {
 			return {
-				// eslint-disable-next-line @typescript-eslint/require-await
 				[Symbol.asyncIterator]: async function* () {
 					for (const chunk of chunks) {
 						yield chunk
@@ -854,7 +852,6 @@ describe('ChatController', () => {
 			}
 
 			const errorStream = {
-				// eslint-disable-next-line @typescript-eslint/require-await
 				[Symbol.asyncIterator]: async function* () {
 					yield 'Hello'
 					throw new Error('Streaming error')

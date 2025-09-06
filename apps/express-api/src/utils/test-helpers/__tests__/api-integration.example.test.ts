@@ -61,7 +61,6 @@ describe('API Integration Testing Examples', () => {
 
 	// Clean up after all tests
 	afterAll(async () => {
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (dbContext) {
 			await dbContext.cleanup()
 			await cleanupGlobalResources()
@@ -70,7 +69,6 @@ describe('API Integration Testing Examples', () => {
 
 	// Reset database state before each test
 	beforeEach(async () => {
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (dbContext) {
 			await dbContext.resetDatabase()
 		}
@@ -78,7 +76,6 @@ describe('API Integration Testing Examples', () => {
 
 	describe('Health Check Endpoints', () => {
 		it('should return health status', async () => {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (!dbContext) {
 				console.warn('Skipping test: Docker/testcontainers not available')
 				return

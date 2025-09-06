@@ -11,7 +11,6 @@ import {
 } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 import { CognitoService } from '../auth/auth.services.ts'
-
 import { userRepository } from './user.data-access.ts'
 import { userIdSchema } from './user.schemas.ts'
 import { IUserRepository, IUserService, TUser } from './user.types.ts'

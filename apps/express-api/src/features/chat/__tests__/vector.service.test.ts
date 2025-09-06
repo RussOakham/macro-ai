@@ -40,7 +40,6 @@ vi.mock('../vector.data-access.ts', () => ({
 
 // Import after mocking
 import type { AIService } from '../ai.service.ts'
-import { aiService } from '../ai.service.ts'
 import type {
 	IVectorRepository,
 	SemanticSearchOptions,
@@ -48,6 +47,8 @@ import type {
 	TChatVector,
 	TInsertChatVector,
 } from '../chat.types.ts'
+
+import { aiService } from '../ai.service.ts'
 import { vectorRepository } from '../vector.data-access.ts'
 import { VectorService } from '../vector.service.ts'
 

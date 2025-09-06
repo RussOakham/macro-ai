@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
+import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 
 import { tryCatchSync } from './error-handling/try-catch.ts'
 import { config } from './load-config.ts'

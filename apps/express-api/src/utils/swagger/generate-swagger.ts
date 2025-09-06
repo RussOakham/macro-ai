@@ -1,11 +1,10 @@
 import { OpenApiGeneratorV3 } from '@asteasolutions/zod-to-openapi'
-import { writeFileSync } from 'fs'
-import { resolve } from 'path'
+import { writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 import { standardizeError } from '../errors.ts'
 import { config } from '../load-config.ts'
 import { pino } from '../logger.ts'
-
 import { registry } from './openapi-registry.ts'
 
 const { logger } = pino

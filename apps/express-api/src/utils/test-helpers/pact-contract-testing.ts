@@ -205,7 +205,7 @@ export class MockPact {
 	/**
 	 * Start mock server
 	 */
-	// eslint-disable-next-line @typescript-eslint/require-await
+
 	async start(): Promise<void> {
 		if (this.isActive) return
 
@@ -225,7 +225,7 @@ export class MockPact {
 	/**
 	 * Stop mock server
 	 */
-	// eslint-disable-next-line @typescript-eslint/require-await
+
 	async stop(): Promise<void> {
 		if (!this.isActive) return
 
@@ -237,7 +237,7 @@ export class MockPact {
 	/**
 	 * Verify all interactions were called
 	 */
-	// eslint-disable-next-line @typescript-eslint/require-await
+
 	async verify(): Promise<boolean> {
 		if (!this.isActive) {
 			throw new Error('Mock server is not active')
@@ -260,9 +260,9 @@ export class MockPact {
 	/**
 	 * Write contract to file
 	 */
-	// eslint-disable-next-line @typescript-eslint/require-await
+
 	async writeFile(_filePath: string): Promise<void> {
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		// eslint-disable-next-line no-underscore-dangle
 		const _contract = {
 			metadata: {
 				name: `${this.consumer}-${this.provider}`,
@@ -276,6 +276,8 @@ export class MockPact {
 		// Simulate writing to file
 		console.log(`📝 Contract written to ${_filePath}`)
 		console.log(`   Interactions: ${String(this.interactions.length)}`)
+		// Use the contract object to avoid unused variable warning
+		void _contract
 	}
 
 	/**
@@ -550,6 +552,7 @@ export class ContractTester {
 	/**
 	 * Validate response against contract
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	private validateResponse(
 		interaction: ContractInteraction,
 		response: ProviderTestResult,
@@ -591,7 +594,6 @@ export class ContractTester {
 // Mock Data Generators for Contracts
 // ============================================================================
 
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class ContractDataGenerator {
 	/**
 	 * Generate user data for contracts
@@ -692,7 +694,6 @@ export class ContractDataGenerator {
 // Contract Examples and Templates
 // ============================================================================
 
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class ContractExamples {
 	/**
 	 * Create user management contract

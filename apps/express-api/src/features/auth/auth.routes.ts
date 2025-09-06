@@ -18,7 +18,6 @@ import {
 	UnauthorizedErrorSchema,
 	ValidationErrorSchema,
 } from '../../utils/swagger/openapi-registry.ts'
-
 import { authController } from './auth.controller.ts'
 import {
 	authResponseSchema,

@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
 	CognitoIdentityProviderClient,
 	ConfirmForgotPasswordCommandOutput,
@@ -20,7 +19,7 @@ import {
 	UserType,
 } from '@aws-sdk/client-cognito-identity-provider'
 import { mockClient } from 'aws-sdk-client-mock'
-import crypto from 'crypto'
+import crypto from 'node:crypto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -151,6 +150,7 @@ describe('CognitoService', () => {
 			// Arrange
 			const invalidRequest = {
 				...validRequest,
+				// eslint-disable-next-line no-secrets/no-secrets
 				confirmPassword: 'DifferentPassword123!',
 			}
 			const validationError = new ValidationError(
@@ -768,6 +768,7 @@ describe('CognitoService', () => {
 				email,
 				code,
 				newPassword,
+				// eslint-disable-next-line no-secrets/no-secrets
 				'DifferentPassword123!',
 			)
 
@@ -955,6 +956,7 @@ describe('CognitoService', () => {
 				const requestWithMismatchedPasswords: TRegisterUserRequest = {
 					email: 'test@example.com',
 					password: 'Password123!',
+					// eslint-disable-next-line no-secrets/no-secrets
 					confirmPassword: 'DifferentPassword456!',
 				}
 
@@ -979,6 +981,7 @@ describe('CognitoService', () => {
 				const email = 'test@example.com'
 				const code = '123456'
 				const newPassword = 'NewPassword123!'
+				// eslint-disable-next-line no-secrets/no-secrets
 				const confirmPassword = 'DifferentPassword456!'
 
 				// Let tryCatchSync run the real password validation logic
