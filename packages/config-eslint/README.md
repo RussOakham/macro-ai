@@ -5,70 +5,140 @@ across all packages and applications.
 
 ## Features
 
+- **Modular Configuration**: Choose exactly what you need with focused config groups
 - **Type-Safe Configuration**: JSDoc types with full IntelliSense support
 - **ESM-First Design**: Modern JavaScript modules with ESLint Flat Config
-- **Consistent Code Style**: Unified linting rules across the entire monorepo
-- **TypeScript Support**: Optimized rules for TypeScript projects
+- **Comprehensive Coverage**: Testing, documentation, security, and performance rules
 - **React Integration**: Specialized rules for React applications with React Compiler
 - **Node.js Support**: Backend-specific linting for Express.js applications
-- **Import Organization**: Automatic import sorting and organization
-- **Security Rules**: Built-in security-focused linting rules
+- **Testing Support**: Vitest + React Testing Library rules
+- **Security Enhanced**: Advanced security scanning and secret detection
 - **No Build Step**: Direct JavaScript files with instant configuration updates
 
 ## Usage
 
-This package is automatically used by all applications and packages in the monorepo through their
-`eslint.config.js` files.
+### Modular Approach
 
-### In Applications
-
-```javascript
-// apps/client-ui/eslint.config.js
-import baseConfig from '@repo/config-eslint'
-
-export default [...baseConfig]
-```
-
-### In Packages
-
-```javascript
-// packages/*/eslint.config.js
-import baseConfig from '@repo/config-eslint'
-
-export default [...baseConfig]
-```
-
-### TypeScript Usage with JSDoc
-
-For type-safe ESLint configuration with full IntelliSense, use JSDoc types:
+Choose the specific config groups you need for your application:
 
 ```javascript
 // eslint.config.js
 // @ts-check
-import baseConfig from '@repo/config-eslint'
-import reactConfig from '@repo/config-eslint/react'
+import { base } from '@repo/config-eslint'
+import { reactConfig } from '@repo/config-eslint'
 
-/** @type {import('eslint').FlatConfig[]} */
 export default [
-	...baseConfig,
-	...reactConfig,
-	{
-		rules: {
-			'@typescript-eslint/array-type': 'error',
-		},
-	},
+	...base.core,
+	...base.strictTyping,
+	...base.codeQuality,
+	...base.testing,
+	...base.documentation,
+	...reactConfig.recommended,
 ]
 ```
 
-## Configuration
+### Quick Start
 
-The ESLint configuration includes:
+For a complete setup, use the recommended configurations:
 
-- **Base Rules**: Core ESLint recommended rules
-- **TypeScript Rules**: `@typescript-eslint` plugin with strict rules
-- **React Rules**: React-specific linting for frontend applications
-- **Import Rules**: Import/export organization and validation
-- **Security Rules**: Security-focused linting patterns
+```javascript
+// Full-featured setup
+export default [
+	...base.core,
+	...base.strictTyping,
+	...base.codeQuality,
+	...base.promises,
+	...base.node,
+	...base.security,
+	...base.imports,
+	...base.testing,
+	...base.documentation,
+	...base.customRules,
+	...base.javascript,
+]
+
+// Or use the legacy approach (maintains backward compatibility)
+import { base } from '@repo/config-eslint'
+export default [...base.recommended]
+```
+
+## Configuration Groups
+
+### Core Groups
+
+- **`base.core`** - Essential ESLint + TypeScript + Turborepo foundations
+- **`base.strictTyping`** - TypeScript strict checking with practical relaxations
+- **`base.codeQuality`** - Modern JS best practices (Unicorn, SonarJS, Perfectionist)
+- **`base.promises`** - Promise handling and async code patterns
+- **`base.node`** - Node.js specific rules and optimizations
+- **`base.security`** - Security-focused rules with secret detection
+- **`base.imports`** - Import/export organization and validation
+- **`base.javascript`** - JavaScript-specific overrides for .js/.jsx files
+
+### Advanced Groups
+
+- **`base.testing`** - Vitest + React Testing Library rules
+- **`base.documentation`** - JSDoc validation and comment standards
+- **`base.customRules`** - Project-specific preferences (named exports, etc.)
+
+### React Configuration
+
+- **`reactConfig.recommended`** - Complete React setup with JSX prop spreading
+
+## Plugins Included
+
+### Core ESLint
+
+- `eslint` - Core linting rules
+- `@eslint/js` - Recommended ESLint configurations
+- `typescript-eslint` - TypeScript-specific rules
+
+### Code Quality & Best Practices
+
+- `eslint-plugin-unicorn` - Modern JavaScript patterns
+- `eslint-plugin-sonarjs` - Code quality and maintainability
+- `eslint-plugin-perfectionist` - Code organization and sorting
+- `eslint-plugin-array-func` - Modern array method preferences
+- `eslint-plugin-eslint-comments` - ESLint directive management
+
+### Testing
+
+- `eslint-plugin-vitest` - Vitest testing framework rules
+- `eslint-plugin-testing-library` - React Testing Library rules
+
+### Documentation & Comments
+
+- `eslint-plugin-jsdoc` - JSDoc validation and standards
+
+### Security
+
+- `eslint-plugin-security` - Security vulnerability detection
+- `eslint-plugin-security-node` - Node.js security rules
+- `eslint-plugin-no-secrets` - Secret detection in code
+
+### Import Management
+
+- `eslint-plugin-import-x` - Modern import/export validation
+
+### React Ecosystem
+
+- `eslint-plugin-react` - React-specific rules
+- `eslint-plugin-react-hooks` - React Hooks validation
+- `eslint-plugin-react-refresh` - Fast refresh support
+- `eslint-plugin-react-compiler` - React Compiler optimization
+
+### Node.js
+
+- `eslint-plugin-n` - Node.js-specific rules
+
+### Formatting
+
+- `eslint-config-prettier` - Prettier conflict resolution
+- `eslint-plugin-prettier` - Prettier integration
+
+### Monorepo
+
+- `eslint-config-turbo/flat` - Turborepo-specific optimizations
 
 ## 📚 Documentation
 

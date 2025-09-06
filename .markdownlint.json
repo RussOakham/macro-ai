@@ -1,6 +1,28 @@
 {
 	"default": true,
-	"MD013": { "line_length": 120 },
-	"MD033": false,
-	"MD041": false
+	"MD007": {
+		"indent": 2,
+		"start_indented": false
+	},
+	"MD013": {
+		"line_length": 120,
+		"code_blocks": false,
+		"tables": false,
+		"headings": false
+	},
+	"MD024": {
+		"siblings_only": true
+	},
+	"MD033": {
+		"allowed_elements": ["details", "summary", "br", "augment_code_snippet"]
+	},
+	"MD041": false,
+	"MD046": {
+		"style": "fenced"
+	},
+	"MD029": {
+		"style": "ordered"
+	},
+	"MD036": false,
+	"no-hard-tabs": false
 }
