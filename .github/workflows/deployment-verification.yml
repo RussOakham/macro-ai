@@ -1,0 +1,572 @@
+name: Deployment Verification & Health Checks
+
+on:
+  workflow_run:
+    workflows: ["Deploy Production Environment", "Deploy Staging Environment", "Deploy Feature Environment"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to verify'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - production
+          - staging
+          - feature
+      deployment_url:
+        description: 'Deployment URL to verify (optional - auto-detected if empty)'
+        required: false
+        type: string
+      skip_health_checks:
+        description: 'Skip health checks (for troubleshooting)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  statuses: write
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20.19.4'
+  PNPM_VERSION: '10.14.0'
+
+jobs:
+  # ============================================================================
+  # DEPLOYMENT VERIFICATION TRIGGER
+  # ============================================================================
+  verify_deployment_trigger:
+    name: Verify Deployment Trigger
+    runs-on: ubuntu-latest
+    outputs:
+      should_verify: ${{ steps.check.outputs.should_verify }}
+      environment: ${{ steps.check.outputs.environment }}
+      deployment_url: ${{ steps.check.outputs.deployment_url }}
+      workflow_run_id: ${{ steps.check.outputs.workflow_run_id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if verification should run
+        id: check
+        run: |
+          # Determine if we should run verification
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # Manual trigger - always verify
+            echo "should_verify=true" >> $GITHUB_OUTPUT
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "deployment_url=${{ github.event.inputs.deployment_url }}" >> $GITHUB_OUTPUT
+            echo "workflow_run_id=manual-${{ github.run_id }}" >> $GITHUB_OUTPUT
+            echo "🔧 Manual verification triggered for ${{ github.event.inputs.environment }}"
+
+          elif [[ "${{ github.event.workflow_run.conclusion }}" == "success" ]]; then
+            # Successful deployment - verify
+            echo "should_verify=true" >> $GITHUB_OUTPUT
+            echo "workflow_run_id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
+
+            # Extract environment from workflow name
+            WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
+            if [[ "$WORKFLOW_NAME" == *"production"* ]]; then
+              echo "environment=production" >> $GITHUB_OUTPUT
+            elif [[ "$WORKFLOW_NAME" == *"staging"* ]]; then
+              echo "environment=staging" >> $GITHUB_OUTPUT
+            else
+              echo "environment=feature" >> $GITHUB_OUTPUT
+            fi
+
+            echo "🔄 Deployment verification triggered for $WORKFLOW_NAME"
+
+          else
+            # Failed deployment or other case - skip
+            echo "should_verify=false" >> $GITHUB_OUTPUT
+            echo "environment=unknown" >> $GITHUB_OUTPUT
+            echo "deployment_url=" >> $GITHUB_OUTPUT
+            echo "workflow_run_id=skip-${{ github.run_id }}" >> $GITHUB_OUTPUT
+            echo "⏭️ Skipping verification - deployment was not successful"
+          fi
+
+  # ============================================================================
+  # DEPLOYMENT HEALTH CHECKS
+  # ============================================================================
+  deployment_health_checks:
+    name: Deployment Health Checks
+    runs-on: ubuntu-latest
+    needs: [verify_deployment_trigger]
+    if: needs.verify_deployment_trigger.outputs.should_verify == 'true'
+    permissions:
+      contents: read
+      issues: write
+      statuses: write
+      id-token: write
+
+    outputs:
+      health_status: ${{ steps.final_check.outputs.status }}
+      api_endpoint: ${{ steps.endpoint_detection.outputs.api_endpoint }}
+      db_connection: ${{ steps.database_check.outputs.db_status }}
+      redis_connection: ${{ steps.redis_check.outputs.redis_status }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-health-check-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Detect API endpoint
+        id: endpoint_detection
+        run: |
+          ENVIRONMENT="${{ needs.verify_deployment_trigger.outputs.environment }}"
+
+          if [[ -n "${{ needs.verify_deployment_trigger.outputs.deployment_url }}" ]]; then
+            # Use provided URL
+            API_ENDPOINT="${{ needs.verify_deployment_trigger.outputs.deployment_url }}"
+          else
+            # Auto-detect from CloudFormation outputs
+            STACK_PATTERN="MacroAi${ENVIRONMENT^}Stack"
+            if [[ "$ENVIRONMENT" == "feature" ]]; then
+              STACK_PATTERN="MacroAiFeatureStack"
+            fi
+
+            echo "🔍 Detecting API endpoint for stack pattern: $STACK_PATTERN"
+
+            # List all stacks and find the matching one
+            STACKS=$(aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE --query 'StackSummaries[?contains(StackName, `MacroAi`)].StackName' --output text)
+
+            API_ENDPOINT=""
+            for STACK in $STACKS; do
+              if [[ "$STACK" == *"$ENVIRONMENT"* ]] || [[ "$ENVIRONMENT" == "feature" && "$STACK" == *"Feature"* ]]; then
+                echo "📋 Found matching stack: $STACK"
+                OUTPUT=$(aws cloudformation describe-stacks --stack-name "$STACK" --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" --output text 2>/dev/null)
+                if [[ -n "$OUTPUT" && "$OUTPUT" != "None" ]]; then
+                  API_ENDPOINT="$OUTPUT"
+                  echo "✅ Found API endpoint: $API_ENDPOINT"
+                  break
+                fi
+              fi
+            done
+
+            if [[ -z "$API_ENDPOINT" ]]; then
+              echo "❌ Could not detect API endpoint for $ENVIRONMENT environment"
+              echo "api_endpoint=" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+          fi
+
+          echo "api_endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
+          echo "🌐 Using API endpoint: $API_ENDPOINT"
+
+      - name: Set commit status - Health Check In Progress
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'pending',
+              context: '${{ needs.verify_deployment_trigger.outputs.environment }} Health Check',
+              description: 'Running health checks for ${{ needs.verify_deployment_trigger.outputs.environment }} deployment...'
+            })
+
+      - name: Basic connectivity check
+        id: connectivity_check
+        run: |
+          API_ENDPOINT="${{ steps.endpoint_detection.outputs.api_endpoint }}"
+
+          echo "🔍 Performing basic connectivity check..."
+          echo "Target: $API_ENDPOINT"
+
+          # Test basic HTTP connectivity
+          if curl -s --connect-timeout 10 --max-time 30 -I "$API_ENDPOINT" > /dev/null 2>&1; then
+            echo "✅ Basic connectivity successful"
+            echo "connectivity_status=success" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Basic connectivity failed"
+            echo "connectivity_status=failed" >> $GITHUB_OUTPUT
+          fi
+
+      - name: API health endpoint check
+        id: health_check
+        if: steps.connectivity_check.outputs.connectivity_status == 'success'
+        run: |
+          API_ENDPOINT="${{ steps.endpoint_detection.outputs.api_endpoint }}"
+          HEALTH_URL="$API_ENDPOINT/api/health"
+
+          echo "🏥 Checking health endpoint: $HEALTH_URL"
+
+          # Test health endpoint with timeout and retries
+          MAX_RETRIES=5
+          RETRY_COUNT=0
+
+          while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
+            echo "Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES..."
+
+            RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+                         --connect-timeout 10 \
+                         --max-time 30 \
+                         -H "X-Api-Key: ${{ secrets.API_KEY }}" \
+                         "$HEALTH_URL" 2>/dev/null || echo "")
+
+            HTTP_CODE=$(echo "$RESPONSE" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+            BODY=$(echo "$RESPONSE" | sed -e 's/HTTPSTATUS:.*//g')
+
+            if [[ "$HTTP_CODE" == "200" ]]; then
+              echo "✅ Health check passed (HTTP $HTTP_CODE)"
+              echo "health_status=success" >> $GITHUB_OUTPUT
+              echo "health_response=$BODY" >> $GITHUB_OUTPUT
+              break
+            else
+              echo "⚠️ Health check failed (HTTP $HTTP_CODE)"
+              if [[ $RETRY_COUNT -eq $((MAX_RETRIES - 1)) ]]; then
+                echo "❌ Health check failed after $MAX_RETRIES attempts"
+                echo "health_status=failed" >> $GITHUB_OUTPUT
+                echo "health_response=$RESPONSE" >> $GITHUB_OUTPUT
+              fi
+            fi
+
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; then
+              echo "⏳ Waiting 10 seconds before retry..."
+              sleep 10
+            fi
+          done
+
+      - name: Database connectivity check
+        id: database_check
+        run: |
+          ENVIRONMENT="${{ needs.verify_deployment_trigger.outputs.environment }}"
+
+          echo "🗄️ Checking database connectivity for $ENVIRONMENT..."
+
+          # Set environment-specific database connection
+          case "$ENVIRONMENT" in
+            "production")
+              export NEON_BRANCH_NAME="main-production-branch"
+              export APP_ENV="production"
+              ;;
+            "staging")
+              export NEON_BRANCH_NAME="auto-branch-from-production"
+              export APP_ENV="staging"
+              ;;
+            "feature")
+              export NEON_BRANCH_NAME="preview-pr-${{ github.event.workflow_run.id || github.run_id }}"
+              export APP_ENV="feature"
+              ;;
+          esac
+
+          # Run database verification script
+          if node scripts/verify-environment-connections.ts > db_check.log 2>&1; then
+            echo "✅ Database connectivity successful"
+            echo "db_status=success" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Database connectivity failed"
+            echo "db_status=failed" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Redis connectivity check
+        id: redis_check
+        run: |
+          ENVIRONMENT="${{ needs.verify_deployment_trigger.outputs.environment }}"
+
+          echo "🔴 Checking Redis connectivity for $ENVIRONMENT..."
+
+          # Set environment-specific Redis connection
+          case "$ENVIRONMENT" in
+            "production")
+              export REDIS_URL="${{ secrets.REDIS_URL_PRODUCTION }}"
+              ;;
+            "staging")
+              export REDIS_URL="${{ secrets.REDIS_URL_STAGING }}"
+              ;;
+            "feature")
+              export REDIS_URL="${{ secrets.REDIS_URL_FEATURE }}"
+              ;;
+          esac
+
+          # Run Redis verification script
+          if node scripts/verify-redis-config.ts > redis_check.log 2>&1; then
+            echo "✅ Redis connectivity successful"
+            echo "redis_status=success" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Redis connectivity failed"
+            echo "redis_status=failed" >> $GITHUB_OUTPUT
+          fi
+
+      - name: API functionality tests
+        id: api_tests
+        if: steps.health_check.outputs.health_status == 'success' && github.event.inputs.skip_health_checks != 'true'
+        run: |
+          API_ENDPOINT="${{ steps.endpoint_detection.outputs.api_endpoint }}"
+
+          echo "🧪 Running API functionality tests..."
+          echo "Target: $API_ENDPOINT"
+
+          # Test various API endpoints
+          TEST_RESULTS=""
+
+          # Test 1: Health endpoint
+          if curl -s --connect-timeout 5 --max-time 10 "$API_ENDPOINT/api/health" > /dev/null 2>&1; then
+            TEST_RESULTS="${TEST_RESULTS}✅ Health endpoint accessible\n"
+          else
+            TEST_RESULTS="${TEST_RESULTS}❌ Health endpoint failed\n"
+          fi
+
+          # Test 2: API info endpoint (if exists)
+          if curl -s --connect-timeout 5 --max-time 10 "$API_ENDPOINT/api/info" > /dev/null 2>&1; then
+            TEST_RESULTS="${TEST_RESULTS}✅ API info endpoint accessible\n"
+          else
+            TEST_RESULTS="${TEST_RESULTS}⚠️ API info endpoint not accessible (may not exist)\n"
+          fi
+
+          # Test 3: Swagger documentation (if exists)
+          if curl -s --connect-timeout 5 --max-time 10 "$API_ENDPOINT/api/docs" > /dev/null 2>&1; then
+            TEST_RESULTS="${TEST_RESULTS}✅ API documentation accessible\n"
+          else
+            TEST_RESULTS="${TEST_RESULTS}⚠️ API documentation not accessible\n"
+          fi
+
+          echo -e "$TEST_RESULTS"
+          echo "api_test_results<<EOF" >> $GITHUB_OUTPUT
+          echo "$TEST_RESULTS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Final health assessment
+        id: final_check
+        run: |
+          # Determine overall health status
+          CONNECTIVITY="${{ steps.connectivity_check.outputs.connectivity_status }}"
+          HEALTH="${{ steps.health_check.outputs.health_status }}"
+          DATABASE="${{ steps.database_check.outputs.db_status }}"
+          REDIS="${{ steps.redis_check.outputs.redis_status }}"
+
+          echo "📊 Health Assessment:"
+          echo "  Connectivity: $CONNECTIVITY"
+          echo "  Health Check: $HEALTH"
+          echo "  Database: $DATABASE"
+          echo "  Redis: $REDIS"
+
+          # Determine overall status
+          if [[ "$CONNECTIVITY" == "success" && "$HEALTH" == "success" && "$DATABASE" == "success" && "$REDIS" == "success" ]]; then
+            echo "status=healthy" >> $GITHUB_OUTPUT
+            echo "🎉 Overall status: HEALTHY"
+          elif [[ "$CONNECTIVITY" == "success" && "$HEALTH" == "success" ]]; then
+            echo "status=degraded" >> $GITHUB_OUTPUT
+            echo "⚠️ Overall status: DEGRADED (connectivity and health OK, but infrastructure issues)"
+          else
+            echo "status=unhealthy" >> $GITHUB_OUTPUT
+            echo "❌ Overall status: UNHEALTHY"
+          fi
+
+      - name: Update commit status - Success
+        if: steps.final_check.outputs.status == 'healthy'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'success',
+              context: '${{ needs.verify_deployment_trigger.outputs.environment }} Health Check',
+              description: '${{ needs.verify_deployment_trigger.outputs.environment }} deployment is healthy and fully operational',
+              target_url: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+            })
+
+      - name: Update commit status - Warning
+        if: steps.final_check.outputs.status == 'degraded'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'success',
+              context: '${{ needs.verify_deployment_trigger.outputs.environment }} Health Check',
+              description: '${{ needs.verify_deployment_trigger.outputs.environment }} deployment is operational but has some issues',
+              target_url: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+            })
+
+      - name: Update commit status - Failure
+        if: steps.final_check.outputs.status == 'unhealthy'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'failure',
+              context: '${{ needs.verify_deployment_trigger.outputs.environment }} Health Check',
+              description: '${{ needs.verify_deployment_trigger.outputs.environment }} deployment has critical health issues',
+              target_url: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+            })
+
+  # ============================================================================
+  # COMPREHENSIVE VERIFICATION REPORT
+  # ============================================================================
+  generate_report:
+    name: Generate Verification Report
+    runs-on: ubuntu-latest
+    needs: [verify_deployment_trigger, deployment_health_checks]
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate comprehensive report
+        id: report
+        run: |
+          ENVIRONMENT="${{ needs.verify_deployment_trigger.outputs.environment }}"
+          HEALTH_STATUS="${{ needs.deployment_health_checks.outputs.health_status }}"
+          API_ENDPOINT="${{ needs.deployment_health_checks.outputs.api_endpoint }}"
+          WORKFLOW_RUN_ID="${{ needs.verify_deployment_trigger.outputs.workflow_run_id }}"
+
+          echo "📋 Deployment Verification Report"
+          echo "=================================="
+          echo "Environment: $ENVIRONMENT"
+          echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "Workflow Run: $WORKFLOW_RUN_ID"
+          echo ""
+
+          if [[ "$HEALTH_STATUS" == "healthy" ]]; then
+            echo "✅ OVERALL STATUS: HEALTHY"
+            STATUS_EMOJI="✅"
+            STATUS_COLOR="green"
+          elif [[ "$HEALTH_STATUS" == "degraded" ]]; then
+            echo "⚠️ OVERALL STATUS: DEGRADED"
+            STATUS_EMOJI="⚠️"
+            STATUS_COLOR="yellow"
+          else
+            echo "❌ OVERALL STATUS: UNHEALTHY"
+            STATUS_EMOJI="❌"
+            STATUS_COLOR="red"
+          fi
+          echo ""
+
+          echo "🔗 Deployment Details:"
+          echo "  API Endpoint: $API_ENDPOINT"
+          echo "  Environment: $ENVIRONMENT"
+          echo "  Region: ${{ env.AWS_REGION }}"
+          echo ""
+
+          # Create comprehensive report
+          REPORT_BODY="$STATUS_EMOJI **Deployment Verification Report**\n\n"
+          REPORT_BODY+="### Deployment Summary\n"
+          REPORT_BODY+="**Environment**: \`$ENVIRONMENT\`\n"
+          REPORT_BODY+="**Status**: $STATUS_EMOJI ${HEALTH_STATUS^^}\n"
+          REPORT_BODY+="**API Endpoint**: $API_ENDPOINT\n"
+          REPORT_BODY+="**Timestamp**: $(date -u +%Y-%m-%dT%H:%M:%SZ)\n"
+          REPORT_BODY+="**Workflow Run**: [\`$WORKFLOW_RUN_ID\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/$WORKFLOW_RUN_ID)\n\n"
+
+          if [[ -n "$API_ENDPOINT" ]]; then
+            REPORT_BODY+="### Quick Links\n"
+            REPORT_BODY+="🔗 **API Health**: $API_ENDPOINT/api/health\n"
+            REPORT_BODY+="📚 **API Docs**: $API_ENDPOINT/api/docs\n"
+            REPORT_BODY+="🔍 **API Info**: $API_ENDPOINT/api/info\n\n"
+          fi
+
+          REPORT_BODY+="### Health Check Results\n"
+          REPORT_BODY+="**Connectivity**: ${{ needs.deployment_health_checks.outputs.health_status == 'healthy' && '✅ Passed' || '❌ Failed' }}\n"
+          REPORT_BODY+="**Database**: ${{ needs.deployment_health_checks.outputs.db_connection == 'success' && '✅ Connected' || '❌ Failed' }}\n"
+          REPORT_BODY+="**Redis**: ${{ needs.deployment_health_checks.outputs.redis_connection == 'success' && '✅ Connected' || '❌ Failed' }}\n\n"
+
+          if [[ "$HEALTH_STATUS" == "healthy" ]]; then
+            REPORT_BODY+="## ✅ Deployment Successful\n\n"
+            REPORT_BODY+="The $ENVIRONMENT environment has been successfully deployed and verified.\n\n"
+            REPORT_BODY+="### Next Steps\n"
+            REPORT_BODY+="1. **Monitor**: Keep an eye on CloudWatch metrics\n"
+            REPORT_BODY+="2. **Test**: Perform additional functional testing\n"
+            REPORT_BODY+="3. **Notify**: Inform stakeholders of successful deployment\n\n"
+          elif [[ "$HEALTH_STATUS" == "degraded" ]]; then
+            REPORT_BODY+="## ⚠️ Deployment Issues Detected\n\n"
+            REPORT_BODY+="The deployment is operational but has some infrastructure issues.\n\n"
+            REPORT_BODY+="### Recommended Actions\n"
+            REPORT_BODY+="1. **Investigate**: Check CloudWatch logs for errors\n"
+            REPORT_BODY+="2. **Monitor**: Keep monitoring for stability\n"
+            REPORT_BODY+="3. **Retry**: Consider re-running the deployment\n\n"
+          else
+            REPORT_BODY+="## ❌ Deployment Failed\n\n"
+            REPORT_BODY+="Critical issues detected with the deployment.\n\n"
+            REPORT_BODY+="### Immediate Actions Required\n"
+            REPORT_BODY+="1. **Rollback**: Consider rolling back to previous version\n"
+            REPORT_BODY+="2. **Investigate**: Check deployment logs and error messages\n"
+            REPORT_BODY+="3. **Fix**: Address the root cause before retrying\n\n"
+          fi
+
+          REPORT_BODY+="### Environment Information\n"
+          REPORT_BODY+="\`\`\`\n"
+          REPORT_BODY+="Environment: $ENVIRONMENT\n"
+          REPORT_BODY+="Region: ${{ env.AWS_REGION }}\n"
+          REPORT_BODY+="Build: ${{ github.sha }}\n"
+          REPORT_BODY+="Workflow: deployment-verification.yml\n"
+          REPORT_BODY+="\`\`\`\n\n"
+
+          REPORT_BODY+="*Report generated by automated verification system*"
+
+          # Save report for GitHub issue
+          echo "report_body<<EOF" >> $GITHUB_OUTPUT
+          echo "$REPORT_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create verification report issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const reportBody = '${{ steps.report.outputs.report_body }}'.replace(/'/g, "\\'");
+            const environment = '${{ needs.verify_deployment_trigger.outputs.environment }}';
+            const workflowRunId = '${{ needs.verify_deployment_trigger.outputs.workflow_run_id }}';
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Deployment Verification - ${environment} - $(new Date().toISOString().split('T')[0])`,
+              body: reportBody,
+              labels: [
+                'deployment',
+                'verification',
+                environment,
+                '${{ needs.deployment_health_checks.outputs.health_status == "healthy" && "success" || needs.deployment_health_checks.outputs.health_status == "degraded" && "warning" || "failure" }}',
+                'automated'
+              ]
+            });
+
+      - name: Send notification summary
+        run: |
+          ENVIRONMENT="${{ needs.verify_deployment_trigger.outputs.environment }}"
+          HEALTH_STATUS="${{ needs.deployment_health_checks.outputs.health_status }}"
+          API_ENDPOINT="${{ needs.deployment_health_checks.outputs.api_endpoint }}"
+
+          echo "📢 Deployment verification completed"
+          echo "Environment: $ENVIRONMENT"
+          echo "Status: $HEALTH_STATUS"
+          echo "API Endpoint: $API_ENDPOINT"
+
+          if [[ "$HEALTH_STATUS" == "healthy" ]]; then
+            echo "🎉 Deployment is healthy and ready for use!"
+          elif [[ "$HEALTH_STATUS" == "degraded" ]]; then
+            echo "⚠️ Deployment has some issues but is operational"
+          else
+            echo "❌ Deployment has critical issues requiring attention"
+          fi
