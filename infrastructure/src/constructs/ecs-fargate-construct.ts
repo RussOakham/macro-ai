@@ -58,6 +58,13 @@ export interface EcsFargateConstructProps {
 		readonly minCapacity: number
 		readonly maxCapacity: number
 		readonly targetCpuUtilization: number
+		readonly enableScheduledScaling?: boolean
+		readonly scheduledActions?: Array<{
+			readonly name: string
+			readonly scheduleExpression: string
+			readonly minCapacity: number
+			readonly maxCapacity: number
+		}>
 	}
 
 	/**
@@ -321,6 +328,22 @@ export class EcsFargateConstruct extends Construct {
 				scaleInCooldown: cdk.Duration.seconds(60),
 				scaleOutCooldown: cdk.Duration.seconds(60),
 			})
+
+			// Configure scheduled scaling actions if enabled
+			if (
+				scalingConfig.enableScheduledScaling &&
+				scalingConfig.scheduledActions
+			) {
+				for (const action of scalingConfig.scheduledActions) {
+					this.scalableTaskCount.scaleOnSchedule(action.name, {
+						schedule: autoscaling.Schedule.expression(
+							action.scheduleExpression,
+						),
+						minCapacity: action.minCapacity,
+						maxCapacity: action.maxCapacity,
+					})
+				}
+			}
 		}
 
 		// Add tags for resource management
@@ -551,7 +574,6 @@ export class EcsFargateConstruct extends Construct {
 		// ECR access for pulling images
 		role.addManagedPolicy(
 			iam.ManagedPolicy.fromAwsManagedPolicyName(
-				// eslint-disable-next-line no-secrets/no-secrets
 				'service-role/AmazonECSTaskExecutionRolePolicy',
 			),
 		)

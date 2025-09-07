@@ -7,6 +7,7 @@ import { createClient } from 'redis'
 import { standardizeError } from '../utils/errors.ts'
 import { config } from '../utils/load-config.ts'
 import { pino } from '../utils/logger.ts'
+import { getRedisUrl, logRedisConfig } from '../utils/redis-config.ts'
 
 const { logger } = pino
 
@@ -16,10 +17,14 @@ let defaultStore = undefined
 let authStore = undefined
 let apiStore = undefined
 
-// Initialize Redis if in production and Redis URL is available
-if (config.NODE_ENV === 'production' && config.REDIS_URL) {
+// Log Redis configuration on startup
+logRedisConfig()
+
+// Initialize Redis if enabled for current environment
+const redisUrl = getRedisUrl()
+if (redisUrl) {
 	const redisClient = createClient({
-		url: config.REDIS_URL,
+		url: redisUrl,
 		socket: {
 			connectTimeout: 50000,
 		},
@@ -48,7 +53,13 @@ if (config.NODE_ENV === 'production' && config.REDIS_URL) {
 		prefix: 'rl:api:',
 	})
 
-	logger.info('[middleware - rateLimit]: Using Redis store for rate limiting')
+	logger.info(
+		'[middleware - rateLimit]: Using Upstash Redis store for rate limiting',
+	)
+} else {
+	logger.info(
+		'[middleware - rateLimit]: Redis disabled for this environment - using memory store',
+	)
 }
 
 // Default rate limit configuration

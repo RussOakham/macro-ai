@@ -4,7 +4,8 @@ This directory contains architecture diagrams for the Macro AI deployment strate
 
 ## Current Status
 
-**✅ FIXED**: Visual diagrams have been successfully generated using Python diagrams library with Graphviz. All diagrams are now available in this directory.
+**✅ FIXED**: Visual diagrams have been successfully generated using Python
+diagrams library with Graphviz. All diagrams are now available in this directory.
 
 ## Available Diagrams
 
@@ -37,7 +38,7 @@ This directory contains architecture diagrams for the Macro AI deployment strate
 
 ### Branch Hierarchy (Corrected)
 
-```
+```text
 Production Branch (main-production-branch)
     ↓ auto-branch
 Staging Branch (auto-branch-from-production)

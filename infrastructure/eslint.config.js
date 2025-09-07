@@ -103,6 +103,8 @@ export default repoConfig.config(
 		rules: {
 			// Allow console.log in CDK constructs for debugging
 			'no-console': 'off',
+			// Disable no-secrets rule for CloudFormation output names (false positives)
+			'no-secrets/no-secrets': 'off',
 			// CDK often uses snake_case for AWS resource names
 			'@typescript-eslint/naming-convention': [
 				'error',

@@ -3,8 +3,10 @@ import * as cdk from 'aws-cdk-lib'
 
 import 'source-map-support/register.js'
 
-// Hobby stack removed - preview environments only
+// Import stacks for different environments
 import { MacroAiPreviewStack } from './stacks/macro-ai-preview-stack.js'
+import { MacroAiStagingStack } from './stacks/macro-ai-staging-stack.js'
+import { MacroAiProductionStack } from './stacks/macro-ai-production-stack.js'
 import { TAG_VALUES, TaggingStrategy } from './utils/tagging-strategy.js'
 
 const app = new cdk.App()
@@ -23,8 +25,10 @@ if (!account) {
 // Get deployment configuration
 const deploymentEnv = process.env.CDK_DEPLOY_ENV ?? 'development'
 
-// Detect ephemeral preview environments
+// Detect environment types
 const isPreviewEnvironment = deploymentEnv.startsWith('pr-')
+const isStagingEnvironment = deploymentEnv === 'staging'
+const isProductionEnvironment = deploymentEnv === 'production'
 const environmentType = isPreviewEnvironment ? 'ephemeral' : 'persistent'
 
 // Create environment-specific stack
@@ -81,8 +85,6 @@ if (isPreviewEnvironment) {
 		throw new Error(`Invalid PR number in environment name: ${deploymentEnv}`)
 	}
 
-	// Cost alert emails removed - focus on core ECS functionality
-
 	new MacroAiPreviewStack(app, stackName, {
 		env: {
 			account,
@@ -94,13 +96,52 @@ if (isPreviewEnvironment) {
 		branchName,
 		scale: 'preview',
 		customDomain,
-		// Complex features removed - focus on core ECS functionality
+		tags,
+	})
+} else if (isStagingEnvironment) {
+	// Staging environment configuration
+	const customDomain = {
+		domainName: 'macro-ai.russoakham.dev',
+		hostedZoneId: 'Z10081873B648ARROPNER',
+		apiSubdomain: 'staging-api',
+	}
+
+	new MacroAiStagingStack(app, stackName, {
+		env: {
+			account,
+			region,
+		},
+		description: stackDescription,
+		environmentName: deploymentEnv,
+		branchName: 'staging',
+		scale: 'staging',
+		customDomain,
+		tags,
+	})
+} else if (isProductionEnvironment) {
+	// Production environment configuration
+	const customDomain = {
+		domainName: 'macro-ai.russoakham.dev',
+		hostedZoneId: 'Z10081873B648ARROPNER',
+		apiSubdomain: 'api', // Production gets the main API subdomain
+	}
+
+	new MacroAiProductionStack(app, stackName, {
+		env: {
+			account,
+			region,
+		},
+		description: stackDescription,
+		environmentName: deploymentEnv,
+		branchName: 'main',
+		scale: 'production',
+		customDomain,
 		tags,
 	})
 } else {
-	// Only preview environments are supported
+	// Unsupported environment type
 	throw new Error(
-		`Only preview environments (pr-*) are supported. Got: ${deploymentEnv}`,
+		`Unsupported environment: ${deploymentEnv}. Supported: pr-*, staging, production`,
 	)
 }
 

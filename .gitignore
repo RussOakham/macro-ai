@@ -62,6 +62,26 @@ yarn-error.log*
 .vscode
 .secrets
 
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.pytest_cache/
+
 # Act local testing configuration
 .act/secrets
 
