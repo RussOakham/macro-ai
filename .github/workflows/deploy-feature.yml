@@ -1,0 +1,419 @@
+name: Deploy Feature Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      feature_name:
+        description: 'Feature name (e.g., user-authentication)'
+        required: true
+        type: string
+      branch_name:
+        description: 'Git branch name (e.g., feature/user-auth, defaults to current)'
+        required: false
+        type: string
+      neon_branch:
+        description: 'Neon branch to use (leave empty for auto-branch-from-staging)'
+        required: false
+        type: string
+        default: 'auto-branch-from-staging'
+      confirm:
+        description: 'Type "DEPLOY FEATURE" to confirm feature environment deployment'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+  issues: write
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20.19.4'
+  PNPM_VERSION: '10.14.0'
+  ENVIRONMENT: 'feature'
+  # CDK environment variables
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_REGION: us-east-1
+
+jobs:
+  # Validate deployment request
+  validate-request:
+    name: Validate Feature Deployment Request
+    runs-on: ubuntu-latest
+    outputs:
+      should-deploy: ${{ steps.decision.outputs.should-deploy }}
+      feature-name: ${{ steps.validate-feature.outputs.feature-name }}
+      branch-name: ${{ steps.validate-branch.outputs.branch-name }}
+      neon-branch: ${{ steps.neon-branch.outputs.branch }}
+      stack-name: ${{ steps.stack-name.outputs.name }}
+      is-owner: ${{ steps.codeowner-check.outputs.is-owner }}
+      target-user: ${{ steps.codeowner-check.outputs.target-user }}
+
+    steps:
+      - name: Validate confirmation input
+        run: |
+          if [[ "${{ inputs.confirm }}" != "DEPLOY FEATURE" ]]; then
+            echo "❌ Confirmation failed."
+            echo "Expected: 'DEPLOY FEATURE'"
+            echo "Got: '${{ inputs.confirm }}'"
+            exit 1
+          fi
+          echo "✅ Confirmation validated"
+
+      - name: Validate and sanitize feature name
+        id: validate-feature
+        run: |
+          FEATURE_NAME="${{ inputs.feature_name }}"
+          if [[ -z "${FEATURE_NAME}" ]]; then
+            echo "❌ Feature name is required"
+            exit 1
+          fi
+
+          # Sanitize feature name for AWS resources
+          SANITIZED_NAME=$(echo "${FEATURE_NAME}" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]-_' | cut -c1-20)
+          echo "feature-name=${SANITIZED_NAME}" >> $GITHUB_OUTPUT
+          echo "🔧 Feature name sanitized: ${SANITIZED_NAME}"
+
+      - name: Determine branch name
+        id: validate-branch
+        run: |
+          BRANCH_NAME="${{ inputs.branch_name }}"
+          if [[ -z "${BRANCH_NAME}" ]]; then
+            BRANCH_NAME="${{ github.ref_name }}"
+          fi
+          echo "branch-name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          echo "🌿 Using branch: ${BRANCH_NAME}"
+
+      - name: Determine Neon branch
+        id: neon-branch
+        run: |
+          BRANCH_NAME="${{ inputs.neon_branch }}"
+          if [[ -z "${BRANCH_NAME}" ]]; then
+            BRANCH_NAME="auto-branch-from-staging"
+          fi
+          echo "branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          echo "🔄 Using Neon branch: ${BRANCH_NAME}"
+
+      - name: Generate stack name
+        id: stack-name
+        run: |
+          FEATURE_NAME="${{ steps.validate-feature.outputs.feature-name }}"
+          STACK_NAME="MacroAiFeature-${FEATURE_NAME}Stack"
+          echo "name=${STACK_NAME}" >> $GITHUB_OUTPUT
+          echo "📦 Stack name: ${STACK_NAME}"
+
+      - name: Check code ownership
+        id: codeowner-check
+        uses: ./.github/actions/check-codeowner
+        with:
+          mode: 'manual'
+          base-ref: ${{ steps.validate-branch.outputs.branch-name }}
+
+      - name: Make deployment decision
+        id: decision
+        run: |
+          IS_OWNER="${{ steps.codeowner-check.outputs.is-owner }}"
+          ACTOR="${{ steps.codeowner-check.outputs.target-user }}"
+          FEATURE_NAME="${{ steps.validate-feature.outputs.feature-name }}"
+          BRANCH_NAME="${{ steps.validate-branch.outputs.branch-name }}"
+          NEON_BRANCH="${{ steps.neon-branch.outputs.branch }}"
+          STACK_NAME="${{ steps.stack-name.outputs.name }}"
+
+          if [[ "${IS_OWNER}" == "true" ]]; then
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+            echo "✅ FEATURE DEPLOYMENT approved for code owner: ${ACTOR}"
+            echo "🏷️ Feature: ${FEATURE_NAME}"
+            echo "🌿 Branch: ${BRANCH_NAME}"
+            echo "📊 Neon Branch: ${NEON_BRANCH}"
+            echo "📦 Stack: ${STACK_NAME}"
+          else
+            echo "should-deploy=false" >> $GITHUB_OUTPUT
+            echo "❌ FEATURE DEPLOYMENT blocked: ${ACTOR} is not a code owner"
+            exit 1
+          fi
+
+  # Build Docker image for ECS
+  build-feature:
+    name: Build Docker Image for Feature
+    runs-on: ubuntu-latest
+    needs: [validate-request]
+    if: needs.validate-request.outputs.should-deploy == 'true'
+    outputs:
+      image-uri: ${{ steps.build.outputs.image-uri }}
+      image-tag: ${{ steps.build.outputs.image-tag }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate-request.outputs.branch-name }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-BuildFeature-${{ github.run_id }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Install CDK CLI
+        run: pnpm add -g aws-cdk@2
+
+      - name: Build and push Docker image
+        id: build
+        run: |
+          cd apps/express-api
+
+          # Generate image tag
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          GITHUB_SHA_SHORT=$(echo $GITHUB_SHA | cut -c1-8)
+          FEATURE_NAME="${{ needs.validate-request.outputs.feature-name }}"
+          IMAGE_TAG="feature-${FEATURE_NAME}-${TIMESTAMP}-${GITHUB_SHA_SHORT}"
+
+          # Build and push image
+          ECR_REPOSITORY_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/macro-ai-api"
+
+          echo "🏗️ Building Docker image for feature: ${FEATURE_NAME}..."
+          docker build -t ${ECR_REPOSITORY_URI}:${IMAGE_TAG} .
+
+          echo "📤 Pushing to ECR..."
+          docker push ${ECR_REPOSITORY_URI}:${IMAGE_TAG}
+
+          # Output values
+          echo "image-uri=${ECR_REPOSITORY_URI}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+
+          echo "✅ Docker image built and pushed: ${ECR_REPOSITORY_URI}:${IMAGE_TAG}"
+
+  # Deploy feature infrastructure
+  deploy-feature:
+    name: Deploy Feature Infrastructure
+    runs-on: ubuntu-latest
+    needs: [validate-request, build-feature]
+    if: needs.validate-request.outputs.should-deploy == 'true'
+    environment: development
+
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+      issues: write
+
+    outputs:
+      api-endpoint: ${{ steps.deploy.outputs.api-endpoint }}
+      stack-name: ${{ needs.validate-request.outputs.stack-name }}
+      feature-name: ${{ needs.validate-request.outputs.feature-name }}
+      neon-branch: ${{ needs.validate-request.outputs.neon-branch }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate-request.outputs.branch-name }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-DeployFeature-${{ github.run_id }}
+
+      - name: Install CDK CLI
+        run: pnpm add -g aws-cdk@2
+
+      - name: Install infrastructure dependencies
+        run: |
+          cd infrastructure
+          pnpm install --frozen-lockfile
+
+      - name: Deploy feature infrastructure
+        id: deploy
+        run: |
+          cd infrastructure
+
+          FEATURE_NAME="${{ needs.validate-request.outputs.feature-name }}"
+          BRANCH_NAME="${{ needs.validate-request.outputs.branch-name }}"
+          IMAGE_URI="${{ needs.build-feature.outputs.image-uri }}"
+          STACK_NAME="${{ needs.validate-request.outputs.stack-name }}"
+          NEON_BRANCH="${{ needs.validate-request.outputs.neon-branch }}"
+
+          echo "🚀 Deploying FEATURE infrastructure..."
+          echo "🏷️ Feature: ${FEATURE_NAME}"
+          echo "🌿 Branch: ${BRANCH_NAME}"
+          echo "📦 Stack: ${STACK_NAME}"
+          echo "🐳 Image: ${IMAGE_URI}"
+          echo "🗄️ Neon Branch: ${NEON_BRANCH}"
+          echo "👤 Requested by: ${{ needs.validate-request.outputs.target-user }}"
+          echo "📅 Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+
+          # Set deployment environment variables
+          export CDK_DEPLOY_ENV="${{ env.ENVIRONMENT }}"
+          export AWS_REGION="${{ env.AWS_REGION }}"
+
+          # Deploy with CDK
+          cdk deploy "${STACK_NAME}" \
+            --context environmentName="${{ env.ENVIRONMENT }}" \
+            --context featureName="${FEATURE_NAME}" \
+            --context branchName="${BRANCH_NAME}" \
+            --context scale="feature" \
+            --context imageUri="${IMAGE_URI}" \
+            --context neonBranch="${NEON_BRANCH}" \
+            --require-approval never \
+            --outputs-file "cdk-outputs-${FEATURE_NAME}.json"
+
+          # Extract outputs
+          API_ENDPOINT=$(aws cloudformation describe-stacks \
+            --stack-name "${STACK_NAME}" \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
+            --output text 2>/dev/null || echo "")
+
+          echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
+          echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
+
+          echo "✅ FEATURE infrastructure deployed successfully!"
+
+  # Health check and verification
+  verify-feature:
+    name: Verify Feature Deployment
+    runs-on: ubuntu-latest
+    needs: [validate-request, deploy-feature]
+    if: always() && needs.validate-request.outputs.should-deploy == 'true'
+
+    steps:
+      - name: Health check
+        run: |
+          API_ENDPOINT="${{ needs.deploy-feature.outputs.api-endpoint }}"
+
+          if [[ -z "${API_ENDPOINT}" ]]; then
+            echo "❌ No API endpoint found in deployment outputs"
+            exit 1
+          fi
+
+          echo "🔍 Health checking feature deployment..."
+          echo "🌐 API Endpoint: ${API_ENDPOINT}"
+
+          # Wait for service to be ready
+          echo "⏳ Waiting for service to be ready..."
+          sleep 60
+
+          # Perform health check
+          MAX_RETRIES=10
+          RETRY_COUNT=0
+
+          while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
+            if curl -f -s "${API_ENDPOINT}/health" > /dev/null 2>&1; then
+              echo "✅ Health check passed!"
+              break
+            else
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              if [[ $RETRY_COUNT -eq $MAX_RETRIES ]]; then
+                echo "❌ Health check failed after ${MAX_RETRIES} attempts"
+                exit 1
+              fi
+              echo "⏳ Health check attempt ${RETRY_COUNT}/${MAX_RETRIES} failed, retrying in 30 seconds..."
+              sleep 30
+            fi
+          done
+
+          echo "🎉 FEATURE DEPLOYMENT VERIFICATION COMPLETE"
+
+  # Report deployment results
+  deployment-report:
+    name: Feature Deployment Report
+    runs-on: ubuntu-latest
+    needs: [validate-request, deploy-feature, verify-feature]
+    if: always() && needs.validate-request.outputs.should-deploy == 'true'
+
+    steps:
+      - name: Generate deployment report
+        run: |
+          FEATURE_NAME="${{ needs.validate-request.outputs.feature-name }}"
+          BRANCH_NAME="${{ needs.validate-request.outputs.branch-name }}"
+
+          echo "## 🚀 FEATURE ENVIRONMENT DEPLOYMENT REPORT" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** FEATURE" >> $GITHUB_STEP_SUMMARY
+          echo "**Feature:** ${FEATURE_NAME}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${BRANCH_NAME}" >> $GITHUB_STEP_SUMMARY
+          echo "**Stack:** \`${{ needs.validate-request.outputs.stack-name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Requested by:** @${{ needs.validate-request.outputs.target-user }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Neon Branch:** ${{ needs.validate-request.outputs.neon-branch }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Deployment status
+          DEPLOY_JOB_STATUS="${{ needs.deploy-feature.result }}"
+          VERIFY_JOB_STATUS="${{ needs.verify-feature.result }}"
+
+          if [[ "${DEPLOY_JOB_STATUS}" == "success" && "${VERIFY_JOB_STATUS}" == "success" ]]; then
+            echo "### ✅ DEPLOYMENT SUCCESSFUL" >> $GITHUB_STEP_SUMMARY
+            echo "The feature environment has been deployed and verified." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**API Endpoint:** ${{ needs.deploy-feature.outputs.api-endpoint }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Health Check:** ${{ needs.deploy-feature.outputs.api-endpoint }}/health" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${DEPLOY_JOB_STATUS}" == "success" && "${VERIFY_JOB_STATUS}" == "failure" ]]; then
+            echo "### ⚠️ DEPLOYMENT PARTIALLY SUCCESSFUL" >> $GITHUB_STEP_SUMMARY
+            echo "Infrastructure deployed but health checks failed. Manual verification required." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**API Endpoint:** ${{ needs.deploy-feature.outputs.api-endpoint }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ DEPLOYMENT FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "The feature deployment encountered errors." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Cost Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Estimated Monthly Cost:** £4-8" >> $GITHUB_STEP_SUMMARY
+          echo "- **ECS Fargate:** £2-4 (minimal configuration)" >> $GITHUB_STEP_SUMMARY
+          echo "- **ALB:** £1-2" >> $GITHUB_STEP_SUMMARY
+          echo "- **CloudWatch:** £0.50-1" >> $GITHUB_STEP_SUMMARY
+          echo "- **Secrets Manager:** £0.25" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ⏰ Auto-cleanup" >> $GITHUB_STEP_SUMMARY
+          echo "- **Auto-shutdown:** Enabled (14 days expiry)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Scheduled scaling:** Minimal usage outside business hours" >> $GITHUB_STEP_SUMMARY
+          echo "- **Cost savings:** ~£3-5/month compared to full environments" >> $GITHUB_STEP_SUMMARY
