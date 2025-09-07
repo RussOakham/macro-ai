@@ -54,7 +54,7 @@ export default repoConfig.config(
 			// Disable turbo env var rule for Express API
 			'turbo/no-undeclared-env-vars': 'warn',
 			'@typescript-eslint/no-misused-promises': 'warn',
-			'jsdoc/require-jsdoc': 'off',
+			'jsdoc/require-jsdoc': ['error', { publicOnly: true }],
 			'jsdoc/require-param': 'off',
 			'jsdoc/require-param-description': 'off',
 			'jsdoc/require-param-type': 'off',
