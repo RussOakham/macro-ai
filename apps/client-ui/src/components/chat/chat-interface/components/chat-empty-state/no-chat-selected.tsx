@@ -7,8 +7,6 @@ type NoChatSelectedProps = React.ComponentPropsWithoutRef<'div'>
 /**
  * No chat selected component
  * Displays when no chat ID is provided in the route
- * @param root0
- * @param root0.className
  */
 const NoChatSelected = ({
 	className,

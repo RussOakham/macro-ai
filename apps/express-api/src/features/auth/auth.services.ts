@@ -102,16 +102,13 @@ class CognitoService implements ICognitoService {
 
 	/**
 	 * Sign up a new user with Cognito
-	 * @param email User email address
-	 * @param password User password
-	 * @param confirmPassword Password confirmation
+	 * @param request User registration request containing email, password, and confirmPassword
 	 * @returns Result tuple with SignUpCommandOutput or error
 	 */
-	public signUpUser = async ({
-		email,
-		password,
-		confirmPassword,
-	}: TRegisterUserRequest): Promise<Result<SignUpCommandOutput>> => {
+	public signUpUser = async (
+		request: TRegisterUserRequest,
+	): Promise<Result<SignUpCommandOutput>> => {
+		const { email, password, confirmPassword } = request
 		// Ensure configuration is loaded from Parameter Store
 		await this.ensureConfigLoaded()
 
@@ -393,6 +390,11 @@ class CognitoService implements ICognitoService {
 		]
 	}
 
+	/**
+	 * Sign out a user by invalidating all their access tokens
+	 * @param accessToken User's access token
+	 * @returns Result tuple with GlobalSignOutCommandOutput or error
+	 */
 	public signOutUser = async (
 		accessToken: string,
 	): Promise<Result<GlobalSignOutCommandOutput>> => {
@@ -447,6 +449,11 @@ class CognitoService implements ICognitoService {
 		)
 	}
 
+	/**
+	 * Initiate forgot password flow for a user
+	 * @param email User's email address
+	 * @returns Result tuple with ForgotPasswordCommandOutput or error
+	 */
 	public forgotPassword = async (
 		email: string,
 	): Promise<Result<ForgotPasswordCommandOutput>> => {
@@ -501,6 +508,14 @@ class CognitoService implements ICognitoService {
 		)
 	}
 
+	/**
+	 * Confirm forgot password with verification code and new password
+	 * @param email User's email address
+	 * @param code Verification code sent to user's email
+	 * @param newPassword New password
+	 * @param confirmPassword Password confirmation
+	 * @returns Result tuple with ConfirmForgotPasswordCommandOutput or error
+	 */
 	public confirmForgotPassword = async (
 		email: string,
 		code: string,
@@ -576,6 +591,11 @@ class CognitoService implements ICognitoService {
 		)
 	}
 
+	/**
+	 * Get authenticated user information using access token
+	 * @param accessToken User's access token
+	 * @returns Result tuple with GetUserCommandOutput or error
+	 */
 	public getAuthUser = async (
 		accessToken: string,
 	): Promise<Result<GetUserCommandOutput>> => {

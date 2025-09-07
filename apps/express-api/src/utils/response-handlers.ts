@@ -80,8 +80,8 @@ export const handleServiceError = (
  * Validates required data exists
  * @param condition Condition to check
  * @param errorMessage Error message if condition fails
- * @param status HTTP status code to return if condition fails
  * @param logContext Context for logging
+ * @param status HTTP status code to return if condition fails
  * @returns Object with validation result and error details if validation failed
  */
 export const validateData = (

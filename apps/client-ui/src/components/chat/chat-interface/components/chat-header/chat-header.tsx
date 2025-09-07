@@ -12,11 +12,6 @@ interface ChatHeaderProps extends React.ComponentPropsWithoutRef<'div'> {
 /**
  * Chat header component containing title and actions
  * Displays chat title and mobile sidebar toggle button
- * @param root0
- * @param root0.title
- * @param root0.onMobileSidebarToggle
- * @param root0.status
- * @param root0.className
  */
 const ChatHeader = ({
 	title,

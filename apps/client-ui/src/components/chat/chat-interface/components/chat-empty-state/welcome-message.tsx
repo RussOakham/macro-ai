@@ -7,8 +7,6 @@ type WelcomeMessageProps = React.ComponentPropsWithoutRef<'div'>
 /**
  * Welcome message component
  * Displays introductory message when chat is empty
- * @param root0
- * @param root0.className
  */
 const WelcomeMessage = ({
 	className,

@@ -32,7 +32,8 @@ class UserService implements IUserService {
 
 	/**
 	 * Get user by ID from the database
-	 * @param userId The user's unique identifier
+	 * @param userId - User lookup parameters
+	 * @param userId.userId - The user's unique identifier
 	 * @returns Result tuple with the user object or error
 	 */
 	getUserById = async ({
@@ -94,7 +95,8 @@ class UserService implements IUserService {
 
 	/**
 	 * Get user by email from the database
-	 * @param email The user's email address
+	 * @param email - User lookup parameters
+	 * @param email.email - The user's email address
 	 * @returns Result tuple with the user object or error
 	 */
 	getUserByEmail = async ({

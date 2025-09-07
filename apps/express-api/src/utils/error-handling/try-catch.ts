@@ -5,7 +5,7 @@ const { logger } = pino
 
 /**
  * Wraps an async operation in a try-catch block and returns a Go-style Result tuple
- * @param promise - The promise to be executed
+ * @param promiseOrFunction - The promise or function to be executed
  * @param context - The context/service name for error logging (defaults to 'unknown')
  * @returns A Result tuple containing either [data, null] or [null, error]
  *
