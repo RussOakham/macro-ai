@@ -49,6 +49,7 @@ This document describes the comprehensive rate limiting and DDoS protection impl
 **Purpose**: Provides infrastructure-level rate limiting using AWS WAF.
 
 **Features**:
+
 - **Multi-tier rate limiting** with different limits for different endpoint types
 - **Progressive rate limiting** with increasing delays for repeat offenders
 - **Adaptive rate limiting** that adjusts based on traffic patterns
@@ -56,6 +57,7 @@ This document describes the comprehensive rate limiting and DDoS protection impl
 - **CloudWatch monitoring** and alerting
 
 **Configuration**:
+
 ```typescript
 rateLimiting: {
   generalLimit: 1000,    // 1000 requests per 5 minutes per IP
@@ -73,6 +75,7 @@ rateLimiting: {
 **Purpose**: Provides advanced DDoS protection and threat detection.
 
 **Features**:
+
 - **Real-time DDoS detection** with configurable thresholds
 - **Geographic-based protection** for monitored countries
 - **Bot detection and mitigation** using AWS managed rules
@@ -81,6 +84,7 @@ rateLimiting: {
 - **Lambda-based analysis** for complex threat detection
 
 **Configuration**:
+
 ```typescript
 ddosProtection: {
   enabled: true,
@@ -101,6 +105,7 @@ ddosProtection: {
 **Purpose**: Provides comprehensive security monitoring and incident response.
 
 **Features**:
+
 - **Threat intelligence monitoring** with real-time analysis
 - **Security event correlation** across multiple sources
 - **Automated incident response** with configurable actions
@@ -109,6 +114,7 @@ ddosProtection: {
 - **Incident response automation** with Lambda functions
 
 **Configuration**:
+
 ```typescript
 securityMonitoring: {
   enableThreatIntelligence: true,

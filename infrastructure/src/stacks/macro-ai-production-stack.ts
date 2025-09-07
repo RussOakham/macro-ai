@@ -585,7 +585,6 @@ export class MacroAiProductionStack extends cdk.Stack {
 			exportName: `${this.stackName}-SecurityHeadersLambdaArn`,
 		})
 
-
 		new cdk.CfnOutput(this, 'SecurityDashboardUrl', {
 			value: `https://${this.region}.console.aws.amazon.com/cloudwatch/home?region=${this.region}#dashboards:name=${environmentName}-security-dashboard`,
 			description: 'Security monitoring dashboard URL',

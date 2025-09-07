@@ -325,7 +325,10 @@ export class RateLimitingConstruct extends Construct {
 			priority++
 
 			// Geographic DDoS protection
-			if (options.enableGeoProtection && options.monitoredCountries.length > 0) {
+			if (
+				options.enableGeoProtection &&
+				options.monitoredCountries.length > 0
+			) {
 				rules.push({
 					name: 'GeoDDoSProtectionRule',
 					priority,
@@ -574,7 +577,10 @@ export class RateLimitingConstruct extends Construct {
 		return rules
 	}
 
-	private createRateLimitingAlarms(topic: sns.ITopic, environmentName: string): void {
+	private createRateLimitingAlarms(
+		topic: sns.ITopic,
+		environmentName: string,
+	): void {
 		// High rate limiting activity alarm
 		const highRateLimitAlarm = new cloudwatch.Alarm(
 			this,
@@ -599,9 +605,7 @@ export class RateLimitingConstruct extends Construct {
 			},
 		)
 
-		highRateLimitAlarm.addAlarmAction(
-			new cloudwatch.actions.SnsAction(topic),
-		)
+		highRateLimitAlarm.addAlarmAction(new cloudwatch.actions.SnsAction(topic))
 
 		this.alarms.push(highRateLimitAlarm)
 
@@ -630,9 +634,7 @@ export class RateLimitingConstruct extends Construct {
 			},
 		)
 
-		ddosDetectionAlarm.addAlarmAction(
-			new cloudwatch.actions.SnsAction(topic),
-		)
+		ddosDetectionAlarm.addAlarmAction(new cloudwatch.actions.SnsAction(topic))
 
 		this.alarms.push(ddosDetectionAlarm)
 
@@ -661,9 +663,7 @@ export class RateLimitingConstruct extends Construct {
 			},
 		)
 
-		botProtectionAlarm.addAlarmAction(
-			new cloudwatch.actions.SnsAction(topic),
-		)
+		botProtectionAlarm.addAlarmAction(new cloudwatch.actions.SnsAction(topic))
 
 		this.alarms.push(botProtectionAlarm)
 	}
@@ -744,7 +744,11 @@ export class RateLimitingConstruct extends Construct {
 		})
 
 		// Add widgets to dashboard
-		dashboard.addWidgets(rateLimitingWidget, ddosProtectionWidget, botProtectionWidget)
+		dashboard.addWidgets(
+			rateLimitingWidget,
+			ddosProtectionWidget,
+			botProtectionWidget,
+		)
 	}
 
 	/**

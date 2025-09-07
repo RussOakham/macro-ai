@@ -89,7 +89,11 @@ export class DDoSProtectionConstruct extends Construct {
 	public readonly alarms: cloudwatch.Alarm[]
 	public readonly ddosAnalysisLambda?: lambda.Function
 
-	constructor(scope: Construct, id: string, props: DDoSProtectionConstructProps) {
+	constructor(
+		scope: Construct,
+		id: string,
+		props: DDoSProtectionConstructProps,
+	) {
 		super(scope, id)
 
 		const {
@@ -241,33 +245,29 @@ async function updateWAFRules(patterns) {
 		})
 	}
 
-	private createDDoSProtectionAlarms(topic: sns.ITopic, environmentName: string): void {
+	private createDDoSProtectionAlarms(
+		topic: sns.ITopic,
+		environmentName: string,
+	): void {
 		// High request volume alarm
-		const highVolumeAlarm = new cloudwatch.Alarm(
-			this,
-			'HighVolumeAlarm',
-			{
-				alarmName: `${environmentName}-high-volume-traffic`,
-				alarmDescription: 'High volume traffic detected - potential DDoS',
-				metric: new cloudwatch.Metric({
-					namespace: 'AWS/ApplicationELB',
-					metricName: 'RequestCount',
-					dimensionsMap: {
-						LoadBalancer: `${environmentName}-alb`,
-					},
-				}),
-				threshold: 1000, // More than 1000 requests per minute
-				evaluationPeriods: 2,
-				datapointsToAlarm: 1,
-				comparisonOperator:
-					cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-				treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-			},
-		)
+		const highVolumeAlarm = new cloudwatch.Alarm(this, 'HighVolumeAlarm', {
+			alarmName: `${environmentName}-high-volume-traffic`,
+			alarmDescription: 'High volume traffic detected - potential DDoS',
+			metric: new cloudwatch.Metric({
+				namespace: 'AWS/ApplicationELB',
+				metricName: 'RequestCount',
+				dimensionsMap: {
+					LoadBalancer: `${environmentName}-alb`,
+				},
+			}),
+			threshold: 1000, // More than 1000 requests per minute
+			evaluationPeriods: 2,
+			datapointsToAlarm: 1,
+			comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+			treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+		})
 
-		highVolumeAlarm.addAlarmAction(
-			new cloudwatch.actions.SnsAction(topic),
-		)
+		highVolumeAlarm.addAlarmAction(new cloudwatch.actions.SnsAction(topic))
 
 		this.alarms.push(highVolumeAlarm)
 
@@ -296,48 +296,43 @@ async function updateWAFRules(patterns) {
 			},
 		)
 
-		unusualPatternAlarm.addAlarmAction(
-			new cloudwatch.actions.SnsAction(topic),
-		)
+		unusualPatternAlarm.addAlarmAction(new cloudwatch.actions.SnsAction(topic))
 
 		this.alarms.push(unusualPatternAlarm)
 
 		// Geographic anomaly alarm
-		const geoAnomalyAlarm = new cloudwatch.Alarm(
-			this,
-			'GeoAnomalyAlarm',
-			{
-				alarmName: `${environmentName}-geographic-anomaly`,
-				alarmDescription: 'Geographic traffic anomaly detected',
-				metric: new cloudwatch.Metric({
-					namespace: 'AWS/WAFV2',
-					metricName: 'BlockedRequests',
-					dimensionsMap: {
-						WebACL: `${environmentName}-rate-limiting-web-acl`,
-						Region: cdk.Stack.of(this).region,
-						Rule: 'GeoDDoSProtectionRule',
-					},
-				}),
-				threshold: 50, // More than 50 blocked requests from monitored countries
-				evaluationPeriods: 1,
-				datapointsToAlarm: 1,
-				comparisonOperator:
-					cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-				treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-			},
-		)
+		const geoAnomalyAlarm = new cloudwatch.Alarm(this, 'GeoAnomalyAlarm', {
+			alarmName: `${environmentName}-geographic-anomaly`,
+			alarmDescription: 'Geographic traffic anomaly detected',
+			metric: new cloudwatch.Metric({
+				namespace: 'AWS/WAFV2',
+				metricName: 'BlockedRequests',
+				dimensionsMap: {
+					WebACL: `${environmentName}-rate-limiting-web-acl`,
+					Region: cdk.Stack.of(this).region,
+					Rule: 'GeoDDoSProtectionRule',
+				},
+			}),
+			threshold: 50, // More than 50 blocked requests from monitored countries
+			evaluationPeriods: 1,
+			datapointsToAlarm: 1,
+			comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+			treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+		})
 
-		geoAnomalyAlarm.addAlarmAction(
-			new cloudwatch.actions.SnsAction(topic),
-		)
+		geoAnomalyAlarm.addAlarmAction(new cloudwatch.actions.SnsAction(topic))
 
 		this.alarms.push(geoAnomalyAlarm)
 	}
 
 	private createDDoSProtectionDashboard(environmentName: string): void {
-		const dashboard = new cloudwatch.Dashboard(this, 'DDoSProtectionDashboard', {
-			dashboardName: `${environmentName}-ddos-protection-dashboard`,
-		})
+		const dashboard = new cloudwatch.Dashboard(
+			this,
+			'DDoSProtectionDashboard',
+			{
+				dashboardName: `${environmentName}-ddos-protection-dashboard`,
+			},
+		)
 
 		// Traffic volume widget
 		const trafficVolumeWidget = new cloudwatch.GraphWidget({
@@ -443,9 +438,7 @@ async function updateWAFRules(patterns) {
 		})
 
 		if (this.ddosAnalysisLambda) {
-			rule.addTarget(
-				new targets.LambdaFunction(this.ddosAnalysisLambda),
-			)
+			rule.addTarget(new targets.LambdaFunction(this.ddosAnalysisLambda))
 		}
 	}
 

@@ -70,7 +70,11 @@ export class SecurityMonitoringConstruct extends Construct {
 	public readonly securityAnalysisLambda?: lambda.Function
 	public readonly incidentResponseLambda?: lambda.Function
 
-	constructor(scope: Construct, id: string, props: SecurityMonitoringConstructProps) {
+	constructor(
+		scope: Construct,
+		id: string,
+		props: SecurityMonitoringConstructProps,
+	) {
 		super(scope, id)
 
 		const {
@@ -100,11 +104,13 @@ export class SecurityMonitoringConstruct extends Construct {
 		})
 
 		// Create security analysis Lambda function
-		this.securityAnalysisLambda = this.createSecurityAnalysisLambda(environmentName)
+		this.securityAnalysisLambda =
+			this.createSecurityAnalysisLambda(environmentName)
 
 		// Create incident response Lambda function
 		if (enableIncidentResponse) {
-			this.incidentResponseLambda = this.createIncidentResponseLambda(environmentName)
+			this.incidentResponseLambda =
+				this.createIncidentResponseLambda(environmentName)
 		}
 
 		// Create CloudWatch alarms for security monitoring
@@ -119,7 +125,9 @@ export class SecurityMonitoringConstruct extends Construct {
 		this.scheduleSecurityAnalysis(environmentName)
 	}
 
-	private createSecurityAnalysisLambda(environmentName: string): lambda.Function {
+	private createSecurityAnalysisLambda(
+		environmentName: string,
+	): lambda.Function {
 		return new lambda.Function(this, 'SecurityAnalysisLambda', {
 			functionName: `${environmentName}-security-analysis`,
 			runtime: lambda.Runtime.NODEJS_18_X,
@@ -341,7 +349,9 @@ async function sendSecurityAlert(securityReport) {
 		})
 	}
 
-	private createIncidentResponseLambda(environmentName: string): lambda.Function {
+	private createIncidentResponseLambda(
+		environmentName: string,
+	): lambda.Function {
 		return new lambda.Function(this, 'IncidentResponseLambda', {
 			functionName: `${environmentName}-incident-response`,
 			runtime: lambda.Runtime.NODEJS_18_X,
@@ -465,34 +475,30 @@ async function logIncident(alert, actions) {
 		})
 	}
 
-	private createSecurityMonitoringAlarms(topic: sns.ITopic, environmentName: string): void {
+	private createSecurityMonitoringAlarms(
+		topic: sns.ITopic,
+		environmentName: string,
+	): void {
 		// High security risk alarm
-		const highRiskAlarm = new cloudwatch.Alarm(
-			this,
-			'HighSecurityRiskAlarm',
-			{
-				alarmName: `${environmentName}-high-security-risk`,
-				alarmDescription: 'High security risk detected',
-				metric: new cloudwatch.Metric({
-					namespace: 'AWS/WAFV2',
-					metricName: 'BlockedRequests',
-					dimensionsMap: {
-						WebACL: `${environmentName}-rate-limiting-web-acl`,
-						Region: cdk.Stack.of(this).region,
-					},
-				}),
-				threshold: 500, // More than 500 blocked requests in 5 minutes
-				evaluationPeriods: 1,
-				datapointsToAlarm: 1,
-				comparisonOperator:
-					cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-				treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-			},
-		)
+		const highRiskAlarm = new cloudwatch.Alarm(this, 'HighSecurityRiskAlarm', {
+			alarmName: `${environmentName}-high-security-risk`,
+			alarmDescription: 'High security risk detected',
+			metric: new cloudwatch.Metric({
+				namespace: 'AWS/WAFV2',
+				metricName: 'BlockedRequests',
+				dimensionsMap: {
+					WebACL: `${environmentName}-rate-limiting-web-acl`,
+					Region: cdk.Stack.of(this).region,
+				},
+			}),
+			threshold: 500, // More than 500 blocked requests in 5 minutes
+			evaluationPeriods: 1,
+			datapointsToAlarm: 1,
+			comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+			treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+		})
 
-		highRiskAlarm.addAlarmAction(
-			new cloudwatch.actions.SnsAction(topic),
-		)
+		highRiskAlarm.addAlarmAction(new cloudwatch.actions.SnsAction(topic))
 
 		this.alarms.push(highRiskAlarm)
 
@@ -519,17 +525,19 @@ async function logIncident(alert, actions) {
 			},
 		)
 
-		unusualAccessAlarm.addAlarmAction(
-			new cloudwatch.actions.SnsAction(topic),
-		)
+		unusualAccessAlarm.addAlarmAction(new cloudwatch.actions.SnsAction(topic))
 
 		this.alarms.push(unusualAccessAlarm)
 	}
 
 	private createSecurityMonitoringDashboard(environmentName: string): void {
-		const dashboard = new cloudwatch.Dashboard(this, 'SecurityMonitoringDashboard', {
-			dashboardName: `${environmentName}-security-monitoring-dashboard`,
-		})
+		const dashboard = new cloudwatch.Dashboard(
+			this,
+			'SecurityMonitoringDashboard',
+			{
+				dashboardName: `${environmentName}-security-monitoring-dashboard`,
+			},
+		)
 
 		// Security overview widget
 		const securityOverviewWidget = new cloudwatch.GraphWidget({
@@ -623,9 +631,7 @@ async function logIncident(alert, actions) {
 		})
 
 		if (this.securityAnalysisLambda) {
-			rule.addTarget(
-				new targets.LambdaFunction(this.securityAnalysisLambda),
-			)
+			rule.addTarget(new targets.LambdaFunction(this.securityAnalysisLambda))
 		}
 	}
 

@@ -105,7 +105,6 @@ export interface SecurityStackProps extends cdk.StackProps {
 		sslPolicy?: string
 		enableDetailedMonitoring?: boolean
 	}
-
 }
 
 export class SecurityStack extends cdk.Stack {
@@ -252,7 +251,6 @@ export class SecurityStack extends cdk.Stack {
 			this.configureSslEnforcement(loadBalancer)
 		}
 
-
 		// Create shared SNS topic for security alerts
 		const securityAlarmTopic = new sns.Topic(this, 'SecurityAlarmTopic', {
 			topicName: `${environmentName}-security-alerts`,
@@ -260,67 +258,81 @@ export class SecurityStack extends cdk.Stack {
 		})
 
 		// Create rate limiting construct
-		this.rateLimitingConstruct = new RateLimitingConstruct(this, 'RateLimiting', {
-			environmentName,
-			enableDetailedMonitoring: true,
-			alarmTopic: securityAlarmTopic,
-			rateLimiting: {
-				generalLimit: 1000, // 1000 requests per 5 minutes per IP
-				apiLimit: 500,      // 500 API requests per 5 minutes per IP
-				authLimit: 100,     // 100 auth requests per 5 minutes per IP
-				adminLimit: 200,    // 200 admin requests per 5 minutes per IP
-				burstLimit: 200,    // 200 requests per minute per IP
-				enableProgressiveLimiting: true,
-				enableAdaptiveLimiting: true,
+		this.rateLimitingConstruct = new RateLimitingConstruct(
+			this,
+			'RateLimiting',
+			{
+				environmentName,
+				enableDetailedMonitoring: true,
+				alarmTopic: securityAlarmTopic,
+				rateLimiting: {
+					generalLimit: 1000, // 1000 requests per 5 minutes per IP
+					apiLimit: 500, // 500 API requests per 5 minutes per IP
+					authLimit: 100, // 100 auth requests per 5 minutes per IP
+					adminLimit: 200, // 200 admin requests per 5 minutes per IP
+					burstLimit: 200, // 200 requests per minute per IP
+					enableProgressiveLimiting: true,
+					enableAdaptiveLimiting: true,
+				},
+				ddosProtection: {
+					enabled: true,
+					detectionThreshold: 50, // 50 requests per second per IP
+					mitigationThreshold: 100, // 100 requests per second per IP
+					enableGeoProtection: true,
+					monitoredCountries: ['CN', 'RU', 'KP', 'IR', 'KP'],
+					enableBotProtection: true,
+				},
 			},
-			ddosProtection: {
-				enabled: true,
-				detectionThreshold: 50,  // 50 requests per second per IP
-				mitigationThreshold: 100, // 100 requests per second per IP
-				enableGeoProtection: true,
-				monitoredCountries: ['CN', 'RU', 'KP', 'IR', 'KP'],
-				enableBotProtection: true,
-			},
-		})
+		)
 
 		// Associate rate limiting WebACL with Application Load Balancer
 		if (loadBalancer) {
-			this.rateLimitingConstruct.associateWithResource(loadBalancer.loadBalancerArn)
+			this.rateLimitingConstruct.associateWithResource(
+				loadBalancer.loadBalancerArn,
+			)
 		}
 
 		// Create DDoS protection construct
-		this.ddosProtectionConstruct = new DDoSProtectionConstruct(this, 'DDoSProtection', {
-			environmentName,
-			alarmTopic: securityAlarmTopic,
-			enableDetailedMonitoring: true,
-			ddosProtection: {
-				enabled: true,
-				detectionThreshold: 50,
-				mitigationThreshold: 100,
-				enableGeoProtection: true,
-				monitoredCountries: ['CN', 'RU', 'KP', 'IR', 'KP'],
-				enableBotProtection: true,
-				enableIpReputation: true,
-				enableBehavioralAnalysis: true,
-				enableAutoIpBlocking: true,
-				ipBlockingDuration: 60,
+		this.ddosProtectionConstruct = new DDoSProtectionConstruct(
+			this,
+			'DDoSProtection',
+			{
+				environmentName,
+				alarmTopic: securityAlarmTopic,
+				enableDetailedMonitoring: true,
+				ddosProtection: {
+					enabled: true,
+					detectionThreshold: 50,
+					mitigationThreshold: 100,
+					enableGeoProtection: true,
+					monitoredCountries: ['CN', 'RU', 'KP', 'IR', 'KP'],
+					enableBotProtection: true,
+					enableIpReputation: true,
+					enableBehavioralAnalysis: true,
+					enableAutoIpBlocking: true,
+					ipBlockingDuration: 60,
+				},
 			},
-		})
+		)
 
 		// Create security monitoring construct
-		this.securityMonitoringConstruct = new SecurityMonitoringConstruct(this, 'SecurityMonitoring', {
-			environmentName,
-			alarmTopic: securityAlarmTopic,
-			enableDetailedMonitoring: true,
-			securityMonitoring: {
-				enableThreatIntelligence: true,
-				enableEventCorrelation: true,
-				enableAutomatedResponse: true,
-				enableComplianceMonitoring: true,
-				enableVulnerabilityScanning: true,
-				enableIncidentResponse: true,
+		this.securityMonitoringConstruct = new SecurityMonitoringConstruct(
+			this,
+			'SecurityMonitoring',
+			{
+				environmentName,
+				alarmTopic: securityAlarmTopic,
+				enableDetailedMonitoring: true,
+				securityMonitoring: {
+					enableThreatIntelligence: true,
+					enableEventCorrelation: true,
+					enableAutomatedResponse: true,
+					enableComplianceMonitoring: true,
+					enableVulnerabilityScanning: true,
+					enableIncidentResponse: true,
+				},
 			},
-		})
+		)
 
 		// Create CloudWatch dashboard for security monitoring
 		this.createSecurityDashboard(environmentName)
@@ -366,7 +378,6 @@ export class SecurityStack extends cdk.Stack {
 				exportName: `${environmentName}-https-target-group-arn`,
 			})
 		}
-
 	}
 
 	private getContentSecurityPolicy(environment: string): string {
@@ -399,7 +410,6 @@ export class SecurityStack extends cdk.Stack {
 
 		return basePolicy.join('; ')
 	}
-
 
 	private configureSslEnforcement(
 		loadBalancer: elbv2.IApplicationLoadBalancer,
@@ -477,7 +487,8 @@ export class SecurityStack extends cdk.Stack {
 
 			if (this.securityMonitoringConstruct.getSecurityAnalysisLambdaArn()) {
 				new cdk.CfnOutput(this, 'SecurityAnalysisLambdaArn', {
-					value: this.securityMonitoringConstruct.getSecurityAnalysisLambdaArn()!,
+					value:
+						this.securityMonitoringConstruct.getSecurityAnalysisLambdaArn()!,
 					description: 'Security analysis Lambda function ARN',
 					exportName: `${environmentName}-security-analysis-lambda-arn`,
 				})
@@ -485,7 +496,8 @@ export class SecurityStack extends cdk.Stack {
 
 			if (this.securityMonitoringConstruct.getIncidentResponseLambdaArn()) {
 				new cdk.CfnOutput(this, 'IncidentResponseLambdaArn', {
-					value: this.securityMonitoringConstruct.getIncidentResponseLambdaArn()!,
+					value:
+						this.securityMonitoringConstruct.getIncidentResponseLambdaArn()!,
 					description: 'Incident response Lambda function ARN',
 					exportName: `${environmentName}-incident-response-lambda-arn`,
 				})
