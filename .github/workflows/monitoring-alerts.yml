@@ -1,0 +1,555 @@
+name: Monitoring Alerts & Notifications
+
+on:
+  schedule:
+    # Run daily health check
+    - cron: '0 2 * * *' # 2 AM UTC daily
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to check'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - production
+          - staging
+          - feature
+      check_type:
+        description: 'Type of check to perform'
+        required: false
+        default: 'health'
+        type: choice
+        options:
+          - health
+          - performance
+          - cost
+          - all
+      notify_on_success:
+        description: 'Send notification even when checks pass'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  statuses: write
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20.19.4'
+
+jobs:
+  # ============================================================================
+  # HEALTH CHECKS
+  # ============================================================================
+  health_check:
+    name: Health Check
+    runs-on: ubuntu-latest
+    if: github.event.inputs.check_type == 'health' || github.event.inputs.check_type == 'all' || github.event_name == 'schedule'
+
+    strategy:
+      matrix:
+        environment: [production, staging]
+        include:
+          - environment: production
+            api_endpoint_suffix: ''
+          - environment: staging
+            api_endpoint_suffix: '/staging'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-health-check-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get API endpoint from CloudFormation
+        id: get_endpoint
+        run: |
+          STACK_NAME="MacroAi${{ matrix.environment == 'production' && 'Production' || 'Staging' }}Stack"
+          API_ENDPOINT=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --query 'Stacks[0].Outputs[?OutputKey==`LoadBalancerUrl`].OutputValue' \
+            --output text 2>/dev/null || echo "")
+
+          if [[ -z "$API_ENDPOINT" ]]; then
+            echo "❌ Could not retrieve API endpoint for ${{ matrix.environment }}"
+            echo "endpoint=unknown" >> $GITHUB_OUTPUT
+            echo "status=error" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          echo "✅ Retrieved API endpoint: $API_ENDPOINT"
+          echo "endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
+          echo "status=ok" >> $GITHUB_OUTPUT
+
+      - name: Perform health check
+        id: health_check
+        run: |
+          API_ENDPOINT="${{ steps.get_endpoint.outputs.endpoint }}"
+          ENVIRONMENT="${{ matrix.environment }}"
+
+          echo "🏥 Performing health check for $ENVIRONMENT at $API_ENDPOINT/health"
+
+          # Perform health check with retry
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          STATUS="failure"
+
+          while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 10 \
+              --max-time 30 \
+              "$API_ENDPOINT/health" 2>/dev/null || echo "000")
+
+            if [[ "$HTTP_CODE" == "200" ]]; then
+              STATUS="success"
+              echo "✅ Health check passed with status $HTTP_CODE"
+              break
+            else
+              echo "❌ Health check failed (attempt $((RETRY_COUNT + 1))/$MAX_RETRIES) - HTTP $HTTP_CODE"
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+
+              if [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; then
+                echo "⏳ Retrying in 30 seconds..."
+                sleep 30
+              fi
+            fi
+          done
+
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          echo "http_code=$HTTP_CODE" >> $GITHUB_OUTPUT
+
+      - name: Check ECS service status
+        id: ecs_check
+        run: |
+          ENVIRONMENT="${{ matrix.environment }}"
+          STACK_NAME="MacroAi${{ matrix.environment == 'production' && 'Production' || 'Staging' }}Stack"
+
+          # Get cluster and service names from CloudFormation
+          CLUSTER_NAME=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --query 'Stacks[0].Outputs[?OutputKey==`EcsClusterName`].OutputValue' \
+            --output text 2>/dev/null || echo "")
+
+          SERVICE_NAME=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --query 'Stacks[0].Outputs[?OutputKey==`EcsServiceName`].OutputValue' \
+            --output text 2>/dev/null || echo "")
+
+          if [[ -z "$CLUSTER_NAME" || -z "$SERVICE_NAME" ]]; then
+            echo "❌ Could not retrieve ECS details for ${{ matrix.environment }}"
+            echo "ecs_status=unknown" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Check running tasks
+          RUNNING_TASKS=$(aws ecs describe-services \
+            --cluster "$CLUSTER_NAME" \
+            --services "$SERVICE_NAME" \
+            --query 'services[0].runningCount' \
+            --output text 2>/dev/null || echo "0")
+
+          DESIRED_TASKS=$(aws ecs describe-services \
+            --cluster "$CLUSTER_NAME" \
+            --services "$SERVICE_NAME" \
+            --query 'services[0].desiredCount' \
+            --output text 2>/dev/null || echo "0")
+
+          if [[ "$RUNNING_TASKS" == "$DESIRED_TASKS" && "$RUNNING_TASKS" != "0" ]]; then
+            echo "✅ ECS service healthy: $RUNNING_TASKS/$DESIRED_TASKS tasks running"
+            echo "ecs_status=healthy" >> $GITHUB_OUTPUT
+          else
+            echo "❌ ECS service unhealthy: $RUNNING_TASKS/$DESIRED_TASKS tasks running"
+            echo "ecs_status=unhealthy" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create health check report
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const environment = '${{ matrix.environment }}';
+            const healthStatus = '${{ steps.health_check.outputs.status }}';
+            const ecsStatus = '${{ steps.ecs_check.outputs.ecs_status }}';
+            const apiEndpoint = '${{ steps.get_endpoint.outputs.endpoint }}';
+            const httpCode = '${{ steps.health_check.outputs.http_code }}';
+
+            const isHealthy = healthStatus === 'success' && ecsStatus === 'healthy';
+            const shouldNotify = isHealthy ?
+              ${{ github.event.inputs.notify_on_success == 'true' || github.event_name == 'schedule' }} :
+              true;
+
+            if (!shouldNotify) {
+              core.info(`Skipping notification for healthy ${environment} environment`);
+              return;
+            }
+
+            const statusEmoji = isHealthy ? '✅' : '❌';
+            const title = `${statusEmoji} ${environment.toUpperCase()} Health Check - ${isHealthy ? 'PASSED' : 'FAILED'}`;
+
+            let body = `## ${title}\n\n`;
+            body += `**Environment**: \`${environment}\`\n`;
+            body += `**Timestamp**: ${new Date().toISOString()}\n`;
+            body += `**API Endpoint**: ${apiEndpoint}\n\n`;
+
+            body += `### Health Check Results\n\n`;
+
+            // API Health
+            const apiEmoji = healthStatus === 'success' ? '✅' : '❌';
+            body += `**API Health**: ${apiEmoji} ${healthStatus.toUpperCase()}\n`;
+            body += `- HTTP Status Code: \`${httpCode}\`\n`;
+            body += `- Endpoint: \`${apiEndpoint}/health\`\n\n`;
+
+            // ECS Status
+            const ecsEmoji = ecsStatus === 'healthy' ? '✅' : '❌';
+            body += `**ECS Service**: ${ecsEmoji} ${ecsStatus.toUpperCase()}\n\n`;
+
+            // Overall Status
+            body += `### Overall Status\n\n`;
+            if (isHealthy) {
+              body += `🎉 **All systems operational!**\n\n`;
+              body += `The ${environment} environment is running normally with all services healthy.\n\n`;
+            } else {
+              body += `🚨 **Issues detected!**\n\n`;
+              body += `The ${environment} environment has health check failures that require attention.\n\n`;
+              body += `### Recommended Actions\n\n`;
+              body += `1. **Review CloudWatch logs** for error details\n`;
+              body += `2. **Check ECS service events** in AWS Console\n`;
+              body += `3. **Verify database connectivity** if API is failing\n`;
+              body += `4. **Consider rollback** if issues persist\n\n`;
+            }
+
+            body += `### Monitoring Dashboard\n\n`;
+            body += `View detailed metrics: [CloudWatch Dashboard](https://${process.env.AWS_REGION}.console.aws.amazon.com/cloudwatch/home?region=${process.env.AWS_REGION}#dashboards:name=${environment}-monitoring-dashboard)\n\n`;
+
+            body += `*Automated health check performed by GitHub Actions*`;
+
+            const labels = ['health-check', environment];
+            if (!isHealthy) {
+              labels.push('bug', 'urgent');
+            }
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: labels
+            });
+
+  # ============================================================================
+  # PERFORMANCE MONITORING
+  # ============================================================================
+  performance_check:
+    name: Performance Check
+    runs-on: ubuntu-latest
+    if: github.event.inputs.check_type == 'performance' || github.event.inputs.check_type == 'all' || github.event_name == 'schedule'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-performance-check-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Check CloudWatch metrics
+        id: metrics_check
+        run: |
+          ENVIRONMENT="${{ github.event.inputs.environment || 'production' }}"
+
+          echo "📊 Analyzing performance metrics for $ENVIRONMENT..."
+
+          # Check CPU utilization over last hour
+          CPU_METRICS=$(aws cloudwatch get-metric-statistics \
+            --namespace AWS/ECS \
+            --metric-name CPUUtilization \
+            --dimensions Name=ClusterName,Value=macro-ai-${ENVIRONMENT}-cluster Name=ServiceName,Value=macro-ai-${ENVIRONMENT}-service \
+            --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ) \
+            --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+            --period 300 \
+            --statistics Average Maximum \
+            --query 'Datapoints[0].{Average:Average,Maximum:Maximum}' \
+            --output json 2>/dev/null || echo "{}")
+
+          # Check memory utilization
+          MEM_METRICS=$(aws cloudwatch get-metric-statistics \
+            --namespace AWS/ECS \
+            --metric-name MemoryUtilization \
+            --dimensions Name=ClusterName,Value=macro-ai-${ENVIRONMENT}-cluster Name=ServiceName,Value=macro-ai-${ENVIRONMENT}-service \
+            --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ) \
+            --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+            --period 300 \
+            --statistics Average Maximum \
+            --query 'Datapoints[0].{Average:Average,Maximum:Maximum}' \
+            --output json 2>/dev/null || echo "{}")
+
+          echo "cpu_metrics=$CPU_METRICS" >> $GITHUB_OUTPUT
+          echo "memory_metrics=$MEM_METRICS" >> $GITHUB_OUTPUT
+
+          echo "✅ Retrieved performance metrics"
+
+      - name: Analyze performance
+        id: analysis
+        run: |
+          CPU_METRICS='${{ steps.metrics_check.outputs.cpu_metrics }}'
+          MEM_METRICS='${{ steps.metrics_check.outputs.memory_metrics }}'
+
+          echo "🔍 Analyzing performance data..."
+
+          # Simple performance analysis
+          CPU_AVG=$(echo "$CPU_METRICS" | jq -r '.Average // 0')
+          CPU_MAX=$(echo "$CPU_METRICS" | jq -r '.Maximum // 0')
+          MEM_AVG=$(echo "$MEM_METRICS" | jq -r '.Average // 0')
+          MEM_MAX=$(echo "$MEM_METRICS" | jq -r '.Maximum // 0')
+
+          # Determine performance status
+          PERFORMANCE_ISSUES=""
+
+          if (( $(echo "$CPU_MAX > 85" | bc -l 2>/dev/null || echo "0") )); then
+            PERFORMANCE_ISSUES="${PERFORMANCE_ISSUES}❌ High CPU usage detected (${CPU_MAX}%)\n"
+          fi
+
+          if (( $(echo "$MEM_MAX > 90" | bc -l 2>/dev/null || echo "0") )); then
+            PERFORMANCE_ISSUES="${PERFORMANCE_ISSUES}❌ High memory usage detected (${MEM_MAX}%)\n"
+          fi
+
+          if [[ -z "$PERFORMANCE_ISSUES" ]]; then
+            echo "✅ Performance metrics within normal ranges"
+            echo "status=good" >> $GITHUB_OUTPUT
+            echo "issues=" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Performance issues detected:"
+            echo -e "$PERFORMANCE_ISSUES"
+            echo "status=warning" >> $GITHUB_OUTPUT
+            echo "issues<<EOF" >> $GITHUB_OUTPUT
+            echo "$PERFORMANCE_ISSUES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create performance report
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const environment = '${{ github.event.inputs.environment || "production" }}';
+            const status = '${{ steps.analysis.outputs.status }}';
+            const issues = '${{ steps.analysis.outputs.issues }}'.replace(/\n/g, '\\n');
+
+            const shouldNotify = status === 'warning' ||
+              ${{ github.event.inputs.notify_on_success == 'true' || github.event_name == 'schedule' }};
+
+            if (!shouldNotify) {
+              core.info(`Skipping notification for good performance in ${environment}`);
+              return;
+            }
+
+            const statusEmoji = status === 'good' ? '✅' : '⚠️';
+            const title = `${statusEmoji} ${environment.toUpperCase()} Performance Report`;
+
+            let body = `## ${title}\n\n`;
+            body += `**Environment**: \`${environment}\`\n`;
+            body += `**Report Period**: Last hour\n`;
+            body += `**Timestamp**: ${new Date().toISOString()}\n\n`;
+
+            body += `### Performance Summary\n\n`;
+
+            if (status === 'good') {
+              body += `🎉 **Performance is optimal!**\n\n`;
+              body += `All performance metrics are within acceptable ranges.\n\n`;
+            } else {
+              body += `⚠️ **Performance issues detected**\n\n`;
+              body += `The following performance concerns require attention:\n\n`;
+              body += `${issues.replace(/\\n/g, '\n')}\n\n`;
+              body += `### Recommended Actions\n\n`;
+              body += `1. **Scale up resources** if usage is consistently high\n`;
+              body += `2. **Optimize application performance**\n`;
+              body += `3. **Review CloudWatch metrics** for detailed analysis\n`;
+              body += `4. **Consider auto-scaling adjustments**\n\n`;
+            }
+
+            body += `### Performance Dashboard\n\n`;
+            body += `View detailed metrics: [CloudWatch Dashboard](https://${process.env.AWS_REGION}.console.aws.amazon.com/cloudwatch/home?region=${process.env.AWS_REGION}#dashboards:name=${environment}-monitoring-dashboard)\n\n`;
+
+            body += `*Automated performance check performed by GitHub Actions*`;
+
+            const labels = ['performance', 'monitoring', environment];
+            if (status === 'warning') {
+              labels.push('optimization-needed');
+            }
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: labels
+            });
+
+  # ============================================================================
+  # COST MONITORING
+  # ============================================================================
+  cost_check:
+    name: Cost Check
+    runs-on: ubuntu-latest
+    if: github.event.inputs.check_type == 'cost' || github.event.inputs.check_type == 'all'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-cost-check-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get cost data
+        id: cost_data
+        run: |
+          ENVIRONMENT="${{ github.event.inputs.environment || 'production' }}"
+
+          echo "💰 Analyzing cost data for $ENVIRONMENT..."
+
+          # Get cost data for the current month
+          COST_DATA=$(aws ce get-cost-and-usage \
+            --time-period Start=$(date -u +%Y-%m-01),End=$(date -u +%Y-%m-%d) \
+            --granularity MONTHLY \
+            --metrics BlendedCost \
+            --group-by Type=DIMENSION,Key=SERVICE \
+            --query 'ResultsByTime[0].Groups[?Keys[0]!=\`AWS CloudTrail\` && Keys[0]!=\`AmazonCloudWatch\` && Keys[0]!=\`AWS Key Management Service\`]' \
+            --output json 2>/dev/null || echo "[]")
+
+          echo "cost_data=$COST_DATA" >> $GITHUB_OUTPUT
+          echo "✅ Retrieved cost data"
+
+      - name: Analyze costs
+        id: cost_analysis
+        run: |
+          COST_DATA='${{ steps.cost_data.outputs.cost_data }}'
+
+          echo "🔍 Analyzing cost data..."
+
+          # Calculate total cost
+          TOTAL_COST=$(echo "$COST_DATA" | jq -r '[.[] | (.Metrics.BlendedCost.Amount | tonumber)] | add // 0')
+
+          # Get top 5 services by cost
+          TOP_SERVICES=$(echo "$COST_DATA" | jq -r 'sort_by(.Metrics.BlendedCost.Amount | tonumber) | reverse | .[0:5] | map("\(.Keys[0]): $\(.Metrics.BlendedCost.Amount)") | join("\\n")' 2>/dev/null || echo "No cost data available")
+
+          echo "total_cost=$TOTAL_COST" >> $GITHUB_OUTPUT
+          echo "top_services<<EOF" >> $GITHUB_OUTPUT
+          echo "$TOP_SERVICES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # Cost analysis
+          if (( $(echo "$TOTAL_COST > 100" | bc -l 2>/dev/null || echo "0") )); then
+            echo "status=high" >> $GITHUB_OUTPUT
+            echo "Monthly cost of $$TOTAL_COST exceeds threshold of $100"
+          elif (( $(echo "$TOTAL_COST > 50" | bc -l 2>/dev/null || echo "0") )); then
+            echo "status=moderate" >> $GITHUB_OUTPUT
+            echo "Monthly cost of $$TOTAL_COST is moderate"
+          else
+            echo "status=low" >> $GITHUB_OUTPUT
+            echo "Monthly cost of $$TOTAL_COST is within budget"
+          fi
+
+      - name: Create cost report
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const environment = '${{ github.event.inputs.environment || "production" }}';
+            const totalCost = '${{ steps.cost_analysis.outputs.total_cost }}';
+            const topServices = '${{ steps.cost_analysis.outputs.top_services }}'.replace(/\\n/g, '\n');
+            const costStatus = '${{ steps.cost_analysis.outputs.status }}';
+
+            const shouldNotify = costStatus === 'high' ||
+              ${{ github.event.inputs.notify_on_success == 'true' }};
+
+            if (!shouldNotify) {
+              core.info(`Skipping cost notification for ${environment} - costs within normal range`);
+              return;
+            }
+
+            const statusEmoji = costStatus === 'low' ? '✅' : costStatus === 'moderate' ? '⚠️' : '🚨';
+            const title = `${statusEmoji} ${environment.toUpperCase()} Cost Report - $${totalCost}`;
+
+            let body = `## ${title}\n\n`;
+            body += `**Environment**: \`${environment}\`\n`;
+            body += `**Report Period**: Current month\n`;
+            body += `**Timestamp**: ${new Date().toISOString()}\n\n`;
+
+            body += `### Cost Summary\n\n`;
+            body += `**Total Monthly Cost**: \`$${totalCost}\`\n\n`;
+
+            body += `### Top Cost Services\n\n`;
+            body += `\`\`\`\n${topServices}\n\`\`\`\n\n`;
+
+            if (costStatus === 'high') {
+              body += `### 🚨 High Cost Alert\n\n`;
+              body += `Monthly costs have exceeded the $100 threshold. Consider:\n\n`;
+              body += `1. **Review resource utilization**\n`;
+              body += `2. **Scale down unused resources**\n`;
+              body += `3. **Optimize instance types**\n`;
+              body += `4. **Review data transfer costs**\n\n`;
+            } else if (costStatus === 'moderate') {
+              body += `### ⚠️ Cost Monitoring\n\n`;
+              body += `Monthly costs are approaching budget limits. Monitor closely.\n\n`;
+            } else {
+              body += `### ✅ Cost Status Good\n\n`;
+              body += `Monthly costs are within acceptable ranges.\n\n`;
+            }
+
+            body += `### Cost Dashboard\n\n`;
+            body += `View detailed costs: [AWS Cost Explorer](https://${process.env.AWS_REGION}.console.aws.amazon.com/cost-management/home)\n\n`;
+
+            body += `*Automated cost check performed by GitHub Actions*`;
+
+            const labels = ['cost-monitoring', 'billing', environment];
+            if (costStatus === 'high') {
+              labels.push('urgent', 'cost-optimization');
+            }
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: labels
+            });
+
+  # ============================================================================
+  # SUMMARY REPORT
+  # ============================================================================
+  summary_report:
+    name: Summary Report
+    runs-on: ubuntu-latest
+    needs: [health_check, performance_check, cost_check]
+    if: always()
+
+    steps:
+      - name: Generate summary
+        run: |
+          echo "📊 Monitoring Summary Report"
+          echo "=========================="
+          echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo ""
+          echo "Health Checks: ${{ needs.health_check.result == 'success' && '✅ PASSED' || '❌ ISSUES' }}"
+          echo "Performance: ${{ needs.performance_check.result == 'success' && '✅ GOOD' || '⚠️ ISSUES' }}"
+          echo "Cost Analysis: ${{ needs.cost_check.result == 'success' && '✅ WITHIN BUDGET' || '🚨 REVIEW NEEDED' }}"
+          echo ""
+          echo "For detailed reports, check the GitHub issues created by each check."

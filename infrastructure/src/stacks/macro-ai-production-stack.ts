@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib'
 import type { Construct } from 'constructs'
 
+import { CloudWatchMonitoringConstruct } from '../constructs/cloudwatch-monitoring-construct'
 import { EcsFargateConstruct } from '../constructs/ecs-fargate-construct'
 import { EcsLoadBalancerConstruct } from '../constructs/ecs-load-balancer-construct'
 import { EnvironmentConfigConstruct } from '../constructs/environment-config-construct'
@@ -52,6 +53,7 @@ export class MacroAiProductionStack extends cdk.Stack {
 	public readonly environmentConfig: EnvironmentConfigConstruct
 	public readonly ecsService: EcsFargateConstruct
 	public readonly loadBalancer: EcsLoadBalancerConstruct
+	public readonly monitoring: CloudWatchMonitoringConstruct
 	public readonly environmentName: string
 	public readonly customDomain?: MacroAiProductionStackProps['customDomain']
 
@@ -169,6 +171,21 @@ export class MacroAiProductionStack extends cdk.Stack {
 				: undefined,
 		})
 
+		// Create CloudWatch monitoring and alerting
+		this.monitoring = new CloudWatchMonitoringConstruct(
+			this,
+			'CloudWatchMonitoring',
+			{
+				environment: environmentName,
+				service: this.ecsService.service,
+				loadBalancer: this.loadBalancer.loadBalancer,
+				clusterName: this.ecsService.cluster.clusterName,
+				serviceName: this.ecsService.service.serviceName,
+				enableDetailedMonitoring: true, // Enable detailed monitoring for production
+				enableCostMonitoring: true, // Enable cost monitoring for production
+			},
+		)
+
 		// Create comprehensive outputs
 		this.createOutputs()
 	}
@@ -264,6 +281,25 @@ export class MacroAiProductionStack extends cdk.Stack {
 			value: 'main-production-branch (Parent Branch)',
 			description: 'Neon database branch used in production',
 			exportName: `${this.stackName}-NeonDatabaseBranch`,
+		})
+
+		// Monitoring outputs
+		new cdk.CfnOutput(this, 'MonitoringDashboardUrl', {
+			value: `https://${this.region}.console.aws.amazon.com/cloudwatch/home?region=${this.region}#dashboards:name=${this.monitoring.dashboard.dashboardName}`,
+			description: 'CloudWatch monitoring dashboard URL',
+			exportName: `${this.stackName}-MonitoringDashboardUrl`,
+		})
+
+		new cdk.CfnOutput(this, 'AlarmTopicArn', {
+			value: this.monitoring.alarmTopic.topicArn,
+			description: 'SNS topic ARN for monitoring alarms',
+			exportName: `${this.stackName}-AlarmTopicArn`,
+		})
+
+		new cdk.CfnOutput(this, 'ActiveAlarms', {
+			value: this.monitoring.alarms.length.toString(),
+			description: 'Number of active CloudWatch alarms configured',
+			exportName: `${this.stackName}-ActiveAlarms`,
 		})
 	}
 }
