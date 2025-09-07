@@ -1,7 +1,11 @@
 import * as cdk from 'aws-cdk-lib'
+import * as events from 'aws-cdk-lib/aws-events'
+import * as events_targets from 'aws-cdk-lib/aws-events-targets'
 import type { Construct } from 'constructs'
 
 import { CloudWatchMonitoringConstruct } from '../constructs/cloudwatch-monitoring-construct'
+import { CostMonitoringConstruct } from '../constructs/cost-monitoring-construct'
+import { CostOptimizationLambdaConstruct } from '../constructs/cost-optimization-lambda-construct'
 import { EcsFargateConstruct } from '../constructs/ecs-fargate-construct'
 import { EcsLoadBalancerConstruct } from '../constructs/ecs-load-balancer-construct'
 import { EnvironmentConfigConstruct } from '../constructs/environment-config-construct'
@@ -54,6 +58,8 @@ export class MacroAiProductionStack extends cdk.Stack {
 	public readonly ecsService: EcsFargateConstruct
 	public readonly loadBalancer: EcsLoadBalancerConstruct
 	public readonly monitoring: CloudWatchMonitoringConstruct
+	public readonly costMonitoring: CostMonitoringConstruct
+	public readonly costOptimizationLambda: CostOptimizationLambdaConstruct
 	public readonly environmentName: string
 	public readonly customDomain?: MacroAiProductionStackProps['customDomain']
 
@@ -186,6 +192,57 @@ export class MacroAiProductionStack extends cdk.Stack {
 			},
 		)
 
+		// Create cost monitoring with budget alerts
+		this.costMonitoring = new CostMonitoringConstruct(this, 'CostMonitoring', {
+			environment: environmentName,
+			budgetAmount: 300, // $300 monthly budget for production
+			alertThresholds: [75, 90, 100],
+			costAnomalyDetection: true,
+			enableCostOptimization: true,
+			tags: {
+				Environment: environmentName,
+				Project: 'macro-ai',
+				Application: 'api',
+			},
+		})
+
+		// Create cost optimization Lambda function
+		this.costOptimizationLambda = new CostOptimizationLambdaConstruct(
+			this,
+			'CostOptimizationLambda',
+			{
+				environment: environmentName,
+				costOptimizationRole: this.costMonitoring.costOptimizationRole,
+			},
+		)
+
+		// Schedule cost optimization analysis (weekly on Mondays at 2 AM UTC)
+		const costOptimizationRule = new events.Rule(
+			this,
+			'CostOptimizationSchedule',
+			{
+				ruleName: `${environmentName}-cost-optimization-schedule`,
+				description:
+					'Weekly cost optimization analysis for production environment',
+				schedule: events.Schedule.cron({
+					minute: '0',
+					hour: '2',
+					weekDay: 'MON', // Every Monday
+				}),
+			},
+		)
+
+		costOptimizationRule.addTarget(
+			new events_targets.LambdaFunction(this.costOptimizationLambda.function, {
+				event: events.RuleTargetInput.fromObject({
+					environment: environmentName,
+					budgetThreshold: 75,
+					currentSpend: 0, // Will be calculated by Lambda
+					budgetLimit: 300,
+				}),
+			}),
+		)
+
 		// Create comprehensive outputs
 		this.createOutputs()
 	}
@@ -300,6 +357,49 @@ export class MacroAiProductionStack extends cdk.Stack {
 			value: this.monitoring.alarms.length.toString(),
 			description: 'Number of active CloudWatch alarms configured',
 			exportName: `${this.stackName}-ActiveAlarms`,
+		})
+
+		// Cost monitoring outputs
+		new cdk.CfnOutput(this, 'CostDashboardUrl', {
+			value: `https://${this.region}.console.aws.amazon.com/cloudwatch/home?region=${this.region}#dashboards:name=${this.costMonitoring.dashboard.dashboardName}`,
+			description: 'Cost monitoring dashboard URL',
+			exportName: `${this.stackName}-CostDashboardUrl`,
+		})
+
+		new cdk.CfnOutput(this, 'BudgetName', {
+			value: this.costMonitoring.budget.ref,
+			description: 'AWS Budget name for cost monitoring',
+			exportName: `${this.stackName}-BudgetName`,
+		})
+
+		new cdk.CfnOutput(this, 'MonthlyBudgetLimit', {
+			value: '300', // Fixed budget limit for production
+			description: 'Monthly budget limit in USD',
+			exportName: `${this.stackName}-MonthlyBudgetLimit`,
+		})
+
+		new cdk.CfnOutput(this, 'CostAlertTopicArn', {
+			value: this.costMonitoring.alertTopic.topicArn,
+			description: 'SNS topic ARN for cost alerts',
+			exportName: `${this.stackName}-CostAlertTopicArn`,
+		})
+
+		new cdk.CfnOutput(this, 'CostOptimizationRoleArn', {
+			value: this.costMonitoring.costOptimizationRole?.roleArn || 'N/A',
+			description: 'IAM role ARN for cost optimization (if enabled)',
+			exportName: `${this.stackName}-CostOptimizationRoleArn`,
+		})
+
+		new cdk.CfnOutput(this, 'CostOptimizationLambdaArn', {
+			value: this.costOptimizationLambda.function.functionArn,
+			description: 'Cost optimization Lambda function ARN',
+			exportName: `${this.stackName}-CostOptimizationLambdaArn`,
+		})
+
+		new cdk.CfnOutput(this, 'CostOptimizationScheduleRule', {
+			value: `${this.environmentName}-cost-optimization-schedule`,
+			description: 'EventBridge rule name for cost optimization schedule',
+			exportName: `${this.stackName}-CostOptimizationScheduleRule`,
 		})
 	}
 }

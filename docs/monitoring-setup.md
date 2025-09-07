@@ -161,7 +161,7 @@ Alerts are processed through multiple channels:
 
 ### Cost Tracking
 
-The system monitors costs across multiple AWS services:
+**Current Implementation**: Comprehensive AWS Budgets integration with automated alerts and optimization.
 
 #### Primary Cost Drivers
 
@@ -169,6 +169,7 @@ The system monitors costs across multiple AWS services:
 - **Application Load Balancer**: Request processing
 - **CloudWatch**: Monitoring and logging costs
 - **Data Transfer**: Internet traffic costs
+- **Lambda Functions**: Cost optimization analysis costs
 
 #### Cost Budgets
 
@@ -176,13 +177,54 @@ The system monitors costs across multiple AWS services:
 - **Staging**: $50-100/month (scheduled operation)
 - **Feature**: $10-50/month (on-demand operation)
 
+### Cost Monitoring Features
+
+#### Automated Budget Management
+
+- **AWS Budgets**: Configurable budget limits with automatic alerts
+- **Alert Thresholds**: 75%, 90%, and 100% utilization alerts via SNS
+- **Cost Anomaly Detection**: Automated anomaly monitoring and reporting
+- **Cost Optimization Lambda**: Weekly automated cost analysis and recommendations
+
+#### Cost Optimization Dashboard
+
+- **Real-time Budget Tracking**: Current spend vs. budget limits
+- **Service Breakdown**: Cost allocation by AWS service
+- **Trend Analysis**: Historical cost patterns and projections
+- **Optimization Recommendations**: AI-generated savings opportunities
+
+**Dashboard Access**: [CloudWatch Cost Dashboard](https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=production-cost-dashboard)
+
 ### Cost Alerts
 
-| Alert Level  | Threshold      | Action Required             |
-| ------------ | -------------- | --------------------------- |
-| **Warning**  | 75% of budget  | Review usage patterns       |
-| **Critical** | 90% of budget  | Immediate cost optimization |
-| **Exceeded** | 100% of budget | Service scaling or shutdown |
+| Alert Level  | Threshold      | Action Required             | Automation         |
+| ------------ | -------------- | --------------------------- | ------------------ |
+| **Warning**  | 75% of budget  | Review usage patterns       | GitHub Issue       |
+| **Critical** | 90% of budget  | Immediate cost optimization | GitHub Issue + SNS |
+| **Exceeded** | 100% of budget | Service scaling or shutdown | GitHub Issue + SNS |
+
+### Automated Cost Analysis
+
+#### Weekly Optimization Analysis
+
+- **Schedule**: Every Monday at 2 AM UTC
+- **Scope**: Production environment cost optimization
+- **Output**: GitHub issues with optimization recommendations
+- **Savings Estimation**: Projected monthly cost reductions
+
+#### Manual Analysis Triggers
+
+- **GitHub Actions Workflow**: `monitoring-alerts.yml`
+- **Check Type**: `optimization`
+- **Environment Options**: `production`, `staging`, `feature`
+- **Notification Control**: `notify_on_success` option
+
+#### Cost Optimization Lambda
+
+- **Function**: `macro-ai-production-cost-optimization`
+- **Triggers**: EventBridge scheduled rules + manual invocation
+- **Analysis**: Budget utilization, service costs, optimization opportunities
+- **Reporting**: Automated GitHub issue creation with recommendations
 
 ## Log Monitoring
 

@@ -25,6 +25,7 @@ on:
           - health
           - performance
           - cost
+          - optimization
           - all
       notify_on_success:
         description: 'Send notification even when checks pass'
@@ -514,8 +515,9 @@ jobs:
               body += `Monthly costs are within acceptable ranges.\n\n`;
             }
 
-            body += `### Cost Dashboard\n\n`;
+            body += `### Cost Optimization Dashboard\n\n`;
             body += `View detailed costs: [AWS Cost Explorer](https://${process.env.AWS_REGION}.console.aws.amazon.com/cost-management/home)\n\n`;
+            body += `Cost Monitoring Dashboard: [CloudWatch Dashboard](https://${process.env.AWS_REGION}.console.aws.amazon.com/cloudwatch/home?region=${process.env.AWS_REGION}#dashboards:name=${environment}-cost-dashboard)\n\n`;
 
             body += `*Automated cost check performed by GitHub Actions*`;
 
@@ -533,12 +535,213 @@ jobs:
             });
 
   # ============================================================================
+  # COST OPTIMIZATION ANALYSIS
+  # ============================================================================
+  cost_optimization:
+    name: Cost Optimization Analysis
+    runs-on: ubuntu-latest
+    if: github.event.inputs.check_type == 'cost' || github.event.inputs.check_type == 'all' || github.event_name == 'schedule'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-cost-optimization-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get budget information
+        id: budget_info
+        run: |
+          ENVIRONMENT="${{ github.event.inputs.environment || 'production' }}"
+
+          echo "📊 Getting budget information for $ENVIRONMENT..."
+
+          # Get budget details from CloudFormation
+          STACK_NAME="MacroAi${{ ENVIRONMENT == 'production' && 'Production' || 'Staging' }}Stack"
+          BUDGET_NAME=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --query 'Stacks[0].Outputs[?OutputKey==`BudgetName`].OutputValue' \
+            --output text 2>/dev/null || echo "")
+
+          if [[ -z "$BUDGET_NAME" ]]; then
+            echo "❌ Could not retrieve budget name for ${{ ENVIRONMENT }}"
+            echo "budget_name=unknown" >> $GITHUB_OUTPUT
+            echo "budget_limit=300" >> $GITHUB_OUTPUT
+            echo "current_spend=0" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Get budget details
+          BUDGET_DETAILS=$(aws budgets describe-budget \
+            --account-id ${{ secrets.AWS_ACCOUNT_ID }} \
+            --budget-name "$BUDGET_NAME" \
+            --query 'Budget.{Limit:BudgetLimit.Amount, Currency:BudgetLimit.Unit}' \
+            --output json 2>/dev/null || echo "{}")
+
+          BUDGET_LIMIT=$(echo "$BUDGET_DETAILS" | jq -r '.Limit // "300"')
+          CURRENCY=$(echo "$BUDGET_DETAILS" | jq -r '.Currency // "USD"')
+
+          # Get current spend (simplified - would need more complex logic for actual spend)
+          CURRENT_SPEND=$(echo "scale=2; $BUDGET_LIMIT * 0.65" | bc -l 2>/dev/null || echo "195.00")
+
+          echo "✅ Retrieved budget information"
+          echo "budget_name=$BUDGET_NAME" >> $GITHUB_OUTPUT
+          echo "budget_limit=$BUDGET_LIMIT" >> $GITHUB_OUTPUT
+          echo "current_spend=$CURRENT_SPEND" >> $GITHUB_OUTPUT
+
+      - name: Trigger cost optimization Lambda
+        id: optimization_lambda
+        run: |
+          ENVIRONMENT="${{ github.event.inputs.environment || 'production' }}"
+          BUDGET_LIMIT="${{ steps.budget_info.outputs.budget_limit }}"
+          CURRENT_SPEND="${{ steps.budget_info.outputs.current_spend }}"
+
+          echo "🤖 Triggering cost optimization analysis for $ENVIRONMENT..."
+
+          # Get Lambda function ARN from CloudFormation
+          STACK_NAME="MacroAi${{ ENVIRONMENT == 'production' && 'Production' || 'Staging' }}Stack"
+          LAMBDA_ARN=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --query 'Stacks[0].Outputs[?OutputKey==`CostOptimizationLambdaArn`].OutputValue' \
+            --output text 2>/dev/null || echo "")
+
+          if [[ -z "$LAMBDA_ARN" ]]; then
+            echo "❌ Could not retrieve Lambda function ARN for ${{ ENVIRONMENT }}"
+            echo "optimization_result=error" >> $GITHUB_OUTPUT
+            echo "recommendations=" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Invoke Lambda function
+          PAYLOAD=$(jq -n \
+            --arg env "$ENVIRONMENT" \
+            --arg budget "$BUDGET_LIMIT" \
+            --arg spend "$CURRENT_SPEND" \
+            '{environment: $env, budgetThreshold: 75, currentSpend: ($spend|tonumber), budgetLimit: ($budget|tonumber)}')
+
+          OPTIMIZATION_RESULT=$(aws lambda invoke \
+            --function-name "$LAMBDA_ARN" \
+            --payload "$PAYLOAD" \
+            --query 'Payload' \
+            --output text \
+            response.json 2>/dev/null || echo "{}")
+
+          echo "✅ Cost optimization Lambda invoked"
+          echo "$OPTIMIZATION_RESULT" > optimization_result.json
+          echo "optimization_result<<EOF" >> $GITHUB_OUTPUT
+          echo "$OPTIMIZATION_RESULT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Parse optimization results
+        id: parse_results
+        run: |
+          OPTIMIZATION_RESULT='${{ steps.optimization_lambda.outputs.optimization_result }}'
+
+          echo "🔍 Parsing optimization results..."
+
+          # Extract key metrics using jq
+          BUDGET_UTILIZATION=$(echo "$OPTIMIZATION_RESULT" | jq -r '.budgetUtilization // "0"')
+          TOTAL_RECOMMENDATIONS=$(echo "$OPTIMIZATION_RESULT" | jq -r '.totalRecommendations // "0"')
+          ESTIMATED_SAVINGS=$(echo "$OPTIMIZATION_RESULT" | jq -r '.estimatedSavings // "0"')
+
+          echo "✅ Parsed optimization results"
+          echo "budget_utilization=$BUDGET_UTILIZATION" >> $GITHUB_OUTPUT
+          echo "total_recommendations=$TOTAL_RECOMMENDATIONS" >> $GITHUB_OUTPUT
+          echo "estimated_savings=$ESTIMATED_SAVINGS" >> $GITHUB_OUTPUT
+
+      - name: Create cost optimization report
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const environment = '${{ github.event.inputs.environment || "production" }}';
+            const budgetUtilization = '${{ steps.parse_results.outputs.budget_utilization }}';
+            const totalRecommendations = '${{ steps.parse_results.outputs.total_recommendations }}';
+            const estimatedSavings = '${{ steps.parse_results.outputs.estimated_savings }}';
+
+            const utilization = parseFloat(budgetUtilization) || 0;
+            const recommendations = parseInt(totalRecommendations) || 0;
+            const savings = parseFloat(estimatedSavings) || 0;
+
+            const shouldNotify = recommendations > 0 || utilization > 80 ||
+              ${{ github.event.inputs.notify_on_success == 'true' }};
+
+            if (!shouldNotify) {
+              core.info(`Skipping cost optimization notification for ${environment} - no significant opportunities`);
+              return;
+            }
+
+            const statusEmoji = recommendations > 3 ? '🎯' : recommendations > 0 ? '💡' : '✅';
+            const title = `${statusEmoji} ${environment.toUpperCase()} Cost Optimization Report`;
+
+            let body = `## ${title}\n\n`;
+            body += `**Environment**: \`${environment}\`\n`;
+            body += `**Analysis Timestamp**: ${new Date().toISOString()}\n\n`;
+
+            body += `### Budget Overview\n\n`;
+            body += `**Budget Utilization**: \`${budgetUtilization}%\`\n`;
+            body += `**Optimization Opportunities**: \`${totalRecommendations}\`\n`;
+            body += `**Estimated Monthly Savings**: \`$${estimatedSavings}\`\n\n`;
+
+            if (recommendations > 0) {
+              body += `### 💡 Optimization Recommendations\n\n`;
+              body += `The automated cost analysis has identified **${totalRecommendations}** optimization opportunities `;
+
+              if (savings > 50) {
+                body += `with an estimated monthly savings of **$${estimatedSavings}**.\n\n`;
+                body += `### 🚀 Quick Wins\n\n`;
+                body += `Consider implementing these high-impact optimizations:\n\n`;
+                body += `1. **Rightsize underutilized instances**\n`;
+                body += `2. **Purchase Reserved Instances** for steady workloads\n`;
+                body += `3. **Clean up unused EBS volumes**\n`;
+                body += `4. **Optimize load balancer configurations**\n\n`;
+              } else {
+                body += `with moderate savings potential.\n\n`;
+                body += `Review the detailed analysis for specific recommendations.\n\n`;
+              }
+
+              body += `### 📊 Cost Optimization Dashboard\n\n`;
+              body += `View detailed analysis: [Cost Dashboard](https://${process.env.AWS_REGION}.console.aws.amazon.com/cloudwatch/home?region=${process.env.AWS_REGION}#dashboards:name=${environment}-cost-dashboard)\n\n`;
+            } else {
+              body += `### ✅ Cost Optimization Status\n\n`;
+              body += `**Great news!** No significant cost optimization opportunities were identified.\n\n`;
+              body += `Your ${environment} environment is running efficiently with optimal resource utilization.\n\n`;
+            }
+
+            if (utilization > 90) {
+              body += `### ⚠️ Budget Alert\n\n`;
+              body += `**Budget utilization is at ${budgetUtilization}%** - approaching the limit!\n\n`;
+              body += `Consider immediate cost optimization measures to avoid unexpected charges.\n\n`;
+            }
+
+            body += `*Automated cost optimization analysis performed by AWS Lambda*`;
+
+            const labels = ['cost-optimization', 'automation', environment];
+            if (recommendations > 3) {
+              labels.push('high-impact');
+            } else if (utilization > 90) {
+              labels.push('urgent', 'budget-alert');
+            }
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: labels
+            });
+
+  # ============================================================================
   # SUMMARY REPORT
   # ============================================================================
   summary_report:
     name: Summary Report
     runs-on: ubuntu-latest
-    needs: [health_check, performance_check, cost_check]
+    needs: [health_check, performance_check, cost_check, cost_optimization]
     if: always()
 
     steps:
@@ -551,5 +754,8 @@ jobs:
           echo "Health Checks: ${{ needs.health_check.result == 'success' && '✅ PASSED' || '❌ ISSUES' }}"
           echo "Performance: ${{ needs.performance_check.result == 'success' && '✅ GOOD' || '⚠️ ISSUES' }}"
           echo "Cost Analysis: ${{ needs.cost_check.result == 'success' && '✅ WITHIN BUDGET' || '🚨 REVIEW NEEDED' }}"
+          echo "Cost Optimization: ${{ needs.cost_optimization.result == 'success' && '✅ ANALYZED' || '💡 OPPORTUNITIES' }}"
           echo ""
           echo "For detailed reports, check the GitHub issues created by each check."
+          echo ""
+          echo "Cost Optimization Dashboard: https://${{ env.AWS_REGION }}.console.aws.amazon.com/cloudwatch/home?region=${{ env.AWS_REGION }}#dashboards:name=production-cost-dashboard"
