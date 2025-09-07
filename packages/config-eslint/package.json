@@ -19,12 +19,21 @@
 		"lint:ci:fix": "eslint ./src/**/*.js --max-warnings 0 --fix"
 	},
 	"files": [
-		"./src/**/*.js"
+		"./src/**/*.js",
+		"./index.js",
+		"./index.d.ts"
 	],
 	"exports": {
-		".": "./index.js",
-		"./index": "./index.js"
+		".": {
+			"types": "./index.d.ts",
+			"import": "./index.js"
+		},
+		"./index": {
+			"types": "./index.d.ts",
+			"import": "./index.js"
+		}
 	},
+	"types": "./index.d.ts",
 	"publishConfig": {
 		"access": "public"
 	},

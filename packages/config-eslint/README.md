@@ -6,7 +6,8 @@ across all packages and applications.
 ## Features
 
 - **Modular Configuration**: Choose exactly what you need with focused config groups
-- **Type-Safe Configuration**: JSDoc types with full IntelliSense support
+- **Full TypeScript Support**: Complete type inference with IntelliSense and autocompletion
+- **Type-Safe Configuration**: JSDoc + TypeScript declaration files for comprehensive type safety
 - **ESM-First Design**: Modern JavaScript modules with ESLint Flat Config
 - **Comprehensive Coverage**: Testing, documentation, security, and performance rules
 - **React Integration**: Specialized rules for React applications with React Compiler
@@ -35,6 +36,37 @@ export default [
 	...base.documentation,
 	...reactConfig.recommended,
 ]
+```
+
+### TypeScript Support & Type Inference
+
+This package provides complete TypeScript type inference for enhanced developer experience:
+
+```typescript
+// eslint.config.js (with .d.ts support)
+import { configs } from '@repo/config-eslint'
+
+// Full type inference - IntelliSense shows available properties
+export default [
+	...configs.base.core, // Type: ConfigWithExtends[]
+	...configs.base.strictTyping, // Type: ConfigWithExtends[]
+	...configs.react.core, // Type: ConfigWithExtends[]
+	...configs.node.security, // Type: ConfigWithExtends[]
+]
+```
+
+**Type-Safe Usage Examples:**
+
+```typescript
+import { configs, config } from '@repo/config-eslint'
+
+// TypeScript knows the exact structure of each config group
+const baseConfigs = configs.base.core // BaseConfig['core']
+const reactConfigs = configs.react.typescript // ReactConfig['typescript']
+const nodeConfigs = configs.node.core // NodeConfig['core']
+
+// The config utility function is also fully typed
+const combined = config(baseConfigs, reactConfigs) // ConfigWithExtends[]
 ```
 
 ### Quick Start
