@@ -57,11 +57,11 @@ export default repoConfig.config(
 			'jsdoc/require-jsdoc': ['error', { publicOnly: true }],
 			'jsdoc/require-param': 'off',
 			'jsdoc/require-param-description': 'off',
-			'jsdoc/require-param-type': 'off',
+			'jsdoc/require-param-type': 'error',
 			'jsdoc/check-param-names': 'off',
 			'jsdoc/require-returns': 'off',
 			'jsdoc/require-returns-description': 'error',
-			'jsdoc/require-returns-type': 'off',
+			'jsdoc/require-returns-type': 'error',
 		},
 	},
 
