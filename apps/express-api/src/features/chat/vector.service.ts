@@ -25,6 +25,11 @@ export class VectorService {
 	/**
 	 * Generate and store embedding for a chat message
 	 * @param messageData Message data for embedding generation
+	 * @param messageData.messageId - Unique identifier for the message
+	 * @param messageData.chatId - Chat ID the message belongs to
+	 * @param messageData.userId - User ID who sent the message
+	 * @param messageData.content - Message content to embed
+	 * @param messageData.metadata - Additional metadata for the embedding
 	 * @returns Result tuple with created vector or error
 	 */
 	public async createMessageEmbedding(messageData: {

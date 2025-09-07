@@ -74,7 +74,9 @@ export class ChatService implements IChatService {
 
 	/**
 	 * Create a new chat for a user
-	 * @param request - Chat creation request with userId and title
+	 * @param request - Chat creation request
+	 * @param request.userId - User ID creating the chat
+	 * @param request.title - Title for the new chat
 	 * @returns Result tuple with created chat or error
 	 */
 	public async createChat(request: {
@@ -433,7 +435,8 @@ export class ChatService implements IChatService {
 	 * Update a chat (with ownership verification)
 	 * @param chatId - The chat ID to update
 	 * @param userId - The user ID for ownership verification
-	 * @param updates - The updates to apply (e.g., title)
+	 * @param updates - The updates to apply
+	 * @param updates.title - New title for the chat (optional)
 	 * @returns Result tuple with updated chat or error
 	 */
 	public async updateChat(
