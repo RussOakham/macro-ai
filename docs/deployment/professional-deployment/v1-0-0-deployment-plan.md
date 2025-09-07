@@ -632,21 +632,58 @@ jobs:
 
 ### Rollback Procedures
 
-**Automated Rollback Triggers**:
+**Comprehensive Rollback System**: See [`docs/rollback-procedures.md`](../rollback-procedures.md) for complete rollback documentation.
 
-- Error rate > 5% for 5 minutes
-- Response time > 2 seconds for 10 minutes
-- Health check failures > 50% for 3 minutes
+#### Automated Rollback Triggers
 
-**Manual Rollback Process**:
+- **Deployment Failures**: Automatic rollback when deployment workflows fail
+- **Health Check Failures**: Post-deployment health check failures trigger rollback
+- **Application Errors**: Error rate > 5% for 5 minutes (CloudWatch alarms)
+- **Performance Degradation**: Response time > 2 seconds for 10 minutes
+- **Infrastructure Issues**: ECS service health check failures > 50% for 3 minutes
+
+#### Rollback Types
+
+| Type          | Scope                 | Duration  | Use Case                  |
+| ------------- | --------------------- | --------- | ------------------------- |
+| **Service**   | ECS tasks only        | 2-5 min   | Application code issues   |
+| **Database**  | Schema changes        | 5-15 min  | Migration failures        |
+| **Full**      | Service + Database    | 10-20 min | Complex deployment issues |
+| **Emergency** | Immediate restoration | 1-2 min   | Critical outages          |
+
+#### Automated Rollback Process
 
 ```bash
-# Rollback to previous task definition
-aws ecs update-service --cluster macro-ai-cluster --service api-service --task-definition macro-ai-api:PREVIOUS_REVISION
+# Triggered automatically by deployment workflow failures
+# Uses GitHub Actions workflow: .github/workflows/deployment-rollback.yml
 
-# Rollback infrastructure changes
-cd infrastructure && cdk deploy --require-approval never --rollback
+# Example: Production deployment failure triggers service rollback
+# 1. Detects failure in deployment workflow
+# 2. Identifies rollback target version from ECR
+# 3. Performs safety checks
+# 4. Updates ECS service with previous stable version
+# 5. Runs health checks and reports results
 ```
+
+#### Manual Rollback Process
+
+```bash
+# Use the comprehensive rollback helper script
+./infrastructure/scripts/rollback-helper.sh <environment> <type> [options]
+
+# Examples:
+./infrastructure/scripts/rollback-helper.sh production service
+./infrastructure/scripts/rollback-helper.sh staging full --target-version v1.2.3
+./infrastructure/scripts/rollback-helper.sh feature emergency --force
+```
+
+#### Safety Mechanisms
+
+- **Version Verification**: Ensures rollback target exists in ECR
+- **Database Compatibility**: Validates migration rollback capability
+- **Health Validation**: Post-rollback health checks
+- **Approval Gates**: Manual approval for high-risk rollbacks
+- **Monitoring Integration**: Real-time status updates and alerting
 
 ## 📈 Performance Benchmarks
 

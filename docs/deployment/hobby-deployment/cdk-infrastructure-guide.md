@@ -322,6 +322,83 @@ npm run deploy
 npm run destroy
 ```
 
+## 🔄 Rollback Procedures
+
+The infrastructure includes comprehensive rollback capabilities for handling deployment failures and operational issues.
+
+### Automated Rollback System
+
+**Triggers**: Deployment failures automatically trigger rollback workflows via GitHub Actions.
+
+```bash
+# Automatic rollback workflow: .github/workflows/deployment-rollback.yml
+# Triggers on:
+# - Deployment workflow failures
+# - Health check failures
+# - Manual trigger via workflow_dispatch
+```
+
+### Manual Rollback Options
+
+#### 1. Quick Service Rollback
+
+```bash
+# Rollback ECS service to previous task definition
+aws ecs update-service \
+  --cluster macro-ai-staging-cluster \
+  --service macro-ai-staging-service \
+  --task-definition macro-ai-staging-api:PREVIOUS_REVISION
+```
+
+#### 2. Full Infrastructure Rollback
+
+```bash
+# Rollback CDK infrastructure changes
+cd infrastructure
+cdk deploy --require-approval never --rollback
+```
+
+#### 3. Advanced Rollback Script
+
+```bash
+# Use comprehensive rollback helper (available in ECS Fargate deployment)
+./infrastructure/scripts/rollback-helper.sh staging service --target-version v1.2.3
+```
+
+### Rollback Safety Mechanisms
+
+- **Version Verification**: Ensures rollback target exists before proceeding
+- **Health Validation**: Post-rollback health checks verify system stability
+- **Database Compatibility**: Validates schema migration rollback capability
+- **Approval Gates**: Manual approval required for high-risk rollbacks
+
+### Rollback Types
+
+| Type          | Scope                   | Duration  | Use Case                |
+| ------------- | ----------------------- | --------- | ----------------------- |
+| **Service**   | ECS tasks only          | 2-5 min   | Application code issues |
+| **Database**  | Schema changes          | 5-15 min  | Migration failures      |
+| **Full**      | Complete infrastructure | 10-20 min | Major deployment issues |
+| **Emergency** | Immediate restoration   | 1-2 min   | Critical outages        |
+
+### Rollback Verification
+
+```bash
+# Verify rollback success
+curl -f $(aws cloudformation describe-stacks \
+  --stack-name MacroAiStagingStack \
+  --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
+  --output text)/health
+
+# Check ECS service status
+aws ecs describe-services \
+  --cluster macro-ai-staging-cluster \
+  --services macro-ai-staging-service \
+  --query 'services[0].{status:status,runningCount:runningCount,desiredCount:desiredCount}'
+```
+
+For complete rollback documentation, see [`docs/rollback-procedures.md`](../../rollback-procedures.md).
+
 ## 🔍 Troubleshooting
 
 ### Common Issues

@@ -15,7 +15,12 @@ on:
       - 'apps/express-api/src/utils/neon-branching.ts'
       - 'apps/express-api/drizzle.config.ts'
   workflow_run:
-    workflows: ["Deploy Production Environment", "Deploy Staging Environment", "Deploy Feature Environment"]
+    workflows:
+      [
+        'Deploy Production Environment',
+        'Deploy Staging Environment',
+        'Deploy Feature Environment',
+      ]
     types: [completed]
   schedule:
     # Run health checks daily at 2 AM UTC

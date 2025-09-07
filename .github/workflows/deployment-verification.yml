@@ -2,7 +2,12 @@ name: Deployment Verification & Health Checks
 
 on:
   workflow_run:
-    workflows: ["Deploy Production Environment", "Deploy Staging Environment", "Deploy Feature Environment"]
+    workflows:
+      [
+        'Deploy Production Environment',
+        'Deploy Staging Environment',
+        'Deploy Feature Environment',
+      ]
     types: [completed]
   workflow_dispatch:
     inputs:

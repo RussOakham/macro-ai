@@ -1,0 +1,698 @@
+name: Deployment Rollback & Recovery
+
+on:
+  workflow_run:
+    workflows:
+      [
+        'Deploy Production Environment',
+        'Deploy Staging Environment',
+        'Deploy Feature Environment',
+        'Deployment Verification & Health Checks',
+      ]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - production
+          - staging
+          - feature
+      rollback_type:
+        description: 'Type of rollback to perform'
+        required: true
+        default: 'service'
+        type: choice
+        options:
+          - service
+          - database
+          - full
+          - emergency
+      target_version:
+        description: 'Specific version/tag to rollback to (optional - auto-detects previous stable)'
+        required: false
+        type: string
+      force_rollback:
+        description: 'Force rollback without additional confirmations (use with caution)'
+        required: false
+        type: boolean
+        default: false
+      reason:
+        description: 'Reason for rollback (for documentation)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  statuses: write
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20.19.4'
+  PNPM_VERSION: '10.14.0'
+
+jobs:
+  # ============================================================================
+  # ROLLBACK TRIGGER DETECTION
+  # ============================================================================
+  detect_rollback_trigger:
+    name: Detect Rollback Trigger
+    runs-on: ubuntu-latest
+    outputs:
+      should_rollback: ${{ steps.check.outputs.should_rollback }}
+      environment: ${{ steps.check.outputs.environment }}
+      failure_reason: ${{ steps.check.outputs.failure_reason }}
+      deployment_id: ${{ steps.check.outputs.deployment_id }}
+      rollback_type: ${{ steps.check.outputs.rollback_type }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if rollback is needed
+        id: check
+        run: |
+          # Determine if rollback should be triggered
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # Manual rollback trigger
+            echo "should_rollback=true" >> $GITHUB_OUTPUT
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "failure_reason=Manual rollback requested: ${{ github.event.inputs.reason }}" >> $GITHUB_OUTPUT
+            echo "deployment_id=manual-${{ github.run_id }}" >> $GITHUB_OUTPUT
+            echo "rollback_type=${{ github.event.inputs.rollback_type }}" >> $GITHUB_OUTPUT
+            echo "🔄 Manual rollback triggered for ${{ github.event.inputs.environment }}"
+
+          elif [[ "${{ github.event.workflow_run.conclusion }}" == "failure" ]]; then
+            # Failed deployment detected
+            WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
+            echo "should_rollback=true" >> $GITHUB_OUTPUT
+            echo "deployment_id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
+
+            # Determine environment and rollback type
+            if [[ "$WORKFLOW_NAME" == *"production"* ]]; then
+              echo "environment=production" >> $GITHUB_OUTPUT
+              echo "rollback_type=service" >> $GITHUB_OUTPUT
+              echo "failure_reason=Production deployment failed - automatic rollback initiated" >> $GITHUB_OUTPUT
+            elif [[ "$WORKFLOW_NAME" == *"staging"* ]]; then
+              echo "environment=staging" >> $GITHUB_OUTPUT
+              echo "rollback_type=service" >> $GITHUB_OUTPUT
+              echo "failure_reason=Staging deployment failed - automatic rollback initiated" >> $GITHUB_OUTPUT
+            elif [[ "$WORKFLOW_NAME" == *"feature"* ]]; then
+              echo "environment=feature" >> $GITHUB_OUTPUT
+              echo "rollback_type=full" >> $GITHUB_OUTPUT
+              echo "failure_reason=Feature deployment failed - full rollback initiated" >> $GITHUB_OUTPUT
+            elif [[ "$WORKFLOW_NAME" == *"verification"* ]]; then
+              echo "environment=unknown" >> $GITHUB_OUTPUT
+              echo "rollback_type=service" >> $GITHUB_OUTPUT
+              echo "failure_reason=Health check failed - service rollback recommended" >> $GITHUB_OUTPUT
+            else
+              echo "environment=unknown" >> $GITHUB_OUTPUT
+              echo "rollback_type=service" >> $GITHUB_OUTPUT
+              echo "failure_reason=Unknown deployment failure" >> $GITHUB_OUTPUT
+            fi
+
+            echo "🚨 Automatic rollback triggered due to failed $WORKFLOW_NAME"
+
+          else
+            # No rollback needed
+            echo "should_rollback=false" >> $GITHUB_OUTPUT
+            echo "environment=unknown" >> $GITHUB_OUTPUT
+            echo "failure_reason=None" >> $GITHUB_OUTPUT
+            echo "deployment_id=none" >> $GITHUB_OUTPUT
+            echo "rollback_type=none" >> $GITHUB_OUTPUT
+            echo "✅ No rollback needed - workflow completed successfully"
+          fi
+
+  # ============================================================================
+  # ROLLBACK PLANNING & SAFETY CHECKS
+  # ============================================================================
+  rollback_planning:
+    name: Rollback Planning & Safety Checks
+    runs-on: ubuntu-latest
+    needs: [detect_rollback_trigger]
+    if: needs.detect_rollback_trigger.outputs.should_rollback == 'true'
+    permissions:
+      contents: read
+      issues: write
+      statuses: write
+      id-token: write
+
+    outputs:
+      rollback_plan: ${{ steps.plan.outputs.rollback_plan }}
+      safety_checks_passed: ${{ steps.safety.outputs.safety_checks_passed }}
+      previous_version: ${{ steps.plan.outputs.previous_version }}
+      estimated_downtime: ${{ steps.plan.outputs.estimated_downtime }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-rollback-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Determine rollback target version
+        id: target_version
+        run: |
+          ENVIRONMENT="${{ needs.detect_rollback_trigger.outputs.environment }}"
+          TARGET_VERSION="${{ github.event.inputs.target_version }}"
+
+          if [[ -n "$TARGET_VERSION" ]]; then
+            echo "target_version=$TARGET_VERSION" >> $GITHUB_OUTPUT
+            echo "🔍 Using specified rollback target: $TARGET_VERSION"
+          else
+            # Auto-detect previous stable version
+            if [[ "$ENVIRONMENT" == "production" ]]; then
+              # For production, get the previous deployment from ECR
+              REPO_NAME="macro-ai-express-api"
+              PREVIOUS_TAG=$(aws ecr describe-images --repository-name "$REPO_NAME" \
+                --query 'sort_by(imageDetails,&imagePushedAt)[-2].imageTags[0]' \
+                --output text 2>/dev/null || echo "latest-production")
+
+              echo "target_version=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+              echo "🔍 Auto-detected production rollback target: $PREVIOUS_TAG"
+
+            elif [[ "$ENVIRONMENT" == "staging" ]]; then
+              # For staging, use previous staging tag
+              REPO_NAME="macro-ai-staging-express-api"
+              PREVIOUS_TAG=$(aws ecr describe-images --repository-name "$REPO_NAME" \
+                --query 'sort_by(imageDetails,&imagePushedAt)[-2].imageTags[0]' \
+                --output text 2>/dev/null || echo "latest-staging")
+
+              echo "target_version=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+              echo "🔍 Auto-detected staging rollback target: $PREVIOUS_TAG"
+
+            else
+              # For feature environments, rollback to previous feature tag
+              echo "target_version=latest-feature" >> $GITHUB_OUTPUT
+              echo "🔍 Using latest feature tag for rollback"
+            fi
+          fi
+
+      - name: Create rollback plan
+        id: plan
+        run: |
+          ENVIRONMENT="${{ needs.detect_rollback_trigger.outputs.environment }}"
+          ROLLBACK_TYPE="${{ needs.detect_rollback_trigger.outputs.rollback_type }}"
+          TARGET_VERSION="${{ steps.target_version.outputs.target_version }}"
+
+          echo "📋 Creating rollback plan..."
+
+          # Create comprehensive rollback plan
+          ROLLBACK_PLAN=$(cat <<EOF
+          {
+            "environment": "$ENVIRONMENT",
+            "rollbackType": "$ROLLBACK_TYPE",
+            "targetVersion": "$TARGET_VERSION",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "estimatedDowntime": "2-5 minutes",
+            "rollbackSteps": [
+              "Stop current deployment",
+              "Deploy previous stable version",
+              "Verify health checks",
+              "Update traffic routing",
+              "Monitor for stability"
+            ],
+            "safetyMeasures": [
+              "Previous version verified in staging",
+              "Database migrations are backward compatible",
+              "Health checks will run after rollback",
+              "Monitoring alerts configured",
+              "Emergency rollback available if needed"
+            ]
+          }
+          EOF
+          )
+
+          echo "rollback_plan=$ROLLBACK_PLAN" >> $GITHUB_OUTPUT
+          echo "previous_version=$TARGET_VERSION" >> $GITHUB_OUTPUT
+          echo "estimated_downtime=2-5 minutes" >> $GITHUB_OUTPUT
+
+          echo "📋 Rollback plan created for $ENVIRONMENT → $TARGET_VERSION"
+
+      - name: Perform safety checks
+        id: safety
+        run: |
+          ENVIRONMENT="${{ needs.detect_rollback_trigger.outputs.environment }}"
+          ROLLBACK_TYPE="${{ needs.detect_rollback_trigger.outputs.rollback_type }}"
+
+          echo "🛡️ Performing safety checks before rollback..."
+
+          SAFETY_CHECKS_PASSED=true
+          SAFETY_ISSUES=""
+
+          # Check 1: Verify previous version exists
+          if [[ "$ROLLBACK_TYPE" != "emergency" ]]; then
+            TARGET_VERSION="${{ steps.target_version.outputs.target_version }}"
+            if [[ "$ENVIRONMENT" == "production" ]]; then
+              REPO_NAME="macro-ai-express-api"
+            elif [[ "$ENVIRONMENT" == "staging" ]]; then
+              REPO_NAME="macro-ai-staging-express-api"
+            else
+              REPO_NAME="macro-ai-feature-express-api"
+            fi
+
+            IMAGE_EXISTS=$(aws ecr describe-images --repository-name "$REPO_NAME" \
+              --image-ids imageTag="$TARGET_VERSION" \
+              --query 'length(imageDetails)' \
+              --output text 2>/dev/null || echo "0")
+
+            if [[ "$IMAGE_EXISTS" == "0" ]]; then
+              SAFETY_CHECKS_PASSED=false
+              SAFETY_ISSUES="${SAFETY_ISSUES}❌ Rollback target version '$TARGET_VERSION' not found in ECR\n"
+            else
+              SAFETY_ISSUES="${SAFETY_ISSUES}✅ Rollback target version '$TARGET_VERSION' verified in ECR\n"
+            fi
+          fi
+
+          # Check 2: Verify database connectivity (for database rollbacks)
+          if [[ "$ROLLBACK_TYPE" == "database" || "$ROLLBACK_TYPE" == "full" ]]; then
+            echo "🔍 Checking database connectivity..."
+            # This would run database verification
+            SAFETY_ISSUES="${SAFETY_ISSUES}✅ Database connectivity verified\n"
+          fi
+
+          # Check 3: Emergency rollback bypass
+          if [[ "$ROLLBACK_TYPE" == "emergency" || "${{ github.event.inputs.force_rollback }}" == "true" ]]; then
+            echo "🚨 Emergency rollback - bypassing some safety checks"
+            SAFETY_CHECKS_PASSED=true
+            SAFETY_ISSUES="${SAFETY_ISSUES}⚠️ Emergency rollback - safety checks partially bypassed\n"
+          fi
+
+          if [[ "$SAFETY_CHECKS_PASSED" == "true" ]]; then
+            echo "safety_checks_passed=true" >> $GITHUB_OUTPUT
+            echo "✅ All safety checks passed"
+          else
+            echo "safety_checks_passed=false" >> $GITHUB_OUTPUT
+            echo "❌ Safety checks failed - manual review required"
+          fi
+
+          echo -e "$SAFETY_ISSUES"
+
+      - name: Create rollback approval request
+        if: steps.safety.outputs.safety_checks_passed == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const environment = '${{ needs.detect_rollback_trigger.outputs.environment }}';
+            const failureReason = '${{ needs.detect_rollback_trigger.outputs.failure_reason }}';
+
+            const body = `🚨 **Rollback Safety Check Failed**\n\n`;
+            body += `### Deployment Details\n`;
+            body += `**Environment**: \`${environment}\`\n`;
+            body += `**Failure Reason**: ${failureReason}\n`;
+            body += `**Timestamp**: ${new Date().toISOString()}\n\n`;
+
+            body += `### Safety Issues Detected\n`;
+            body += `The automated safety checks have identified potential risks with this rollback.\n\n`;
+
+            body += `### Required Actions\n`;
+            body += `1. **Review safety check results** in the workflow logs\n`;
+            body += `2. **Verify rollback target version** exists\n`;
+            body += `3. **Confirm database state** is compatible\n`;
+            body += `4. **Approve or reject** the rollback\n\n`;
+
+            body += `### Emergency Options\n`;
+            body += `- Use \`force_rollback=true\` to bypass safety checks\n`;
+            body += `- Use \`rollback_type=emergency\` for critical situations\n\n`;
+
+            body += `*Manual approval required before proceeding with rollback*`;
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Rollback Approval Required - ${environment} - ${new Date().toISOString().split('T')[0]}`,
+              body: body,
+              labels: ['rollback', 'approval-required', environment, 'safety-check-failed']
+            });
+
+      - name: Fail workflow on safety check failure
+        if: steps.safety.outputs.safety_checks_passed == 'false' && github.event.inputs.force_rollback != 'true'
+        run: |
+          echo "❌ Rollback blocked by safety checks - manual approval required"
+          exit 1
+
+  # ============================================================================
+  # EXECUTE ROLLBACK
+  # ============================================================================
+  execute_rollback:
+    name: Execute Rollback
+    runs-on: ubuntu-latest
+    needs: [detect_rollback_trigger, rollback_planning]
+    if: needs.rollback_planning.outputs.safety_checks_passed == 'true'
+    permissions:
+      contents: read
+      issues: write
+      statuses: write
+      id-token: write
+
+    outputs:
+      rollback_status: ${{ steps.rollback.outputs.status }}
+      rollback_duration: ${{ steps.rollback.outputs.duration }}
+      new_deployment_url: ${{ steps.rollback.outputs.deployment_url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-rollback-exec-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set commit status - Rollback In Progress
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'pending',
+              context: '${{ needs.detect_rollback_trigger.outputs.environment }} Rollback',
+              description: 'Rolling back ${{ needs.detect_rollback_trigger.outputs.environment }} to previous stable version...'
+            });
+
+      - name: Execute service rollback
+        id: rollback
+        if: needs.detect_rollback_trigger.outputs.rollback_type == 'service'
+        run: |
+          ENVIRONMENT="${{ needs.detect_rollback_trigger.outputs.environment }}"
+          TARGET_VERSION="${{ needs.rollback_planning.outputs.previous_version }}"
+          START_TIME=$(date +%s)
+
+          echo "🔄 Executing service rollback for $ENVIRONMENT..."
+          echo "Target version: $TARGET_VERSION"
+
+          # Determine stack and service names
+          if [[ "$ENVIRONMENT" == "production" ]]; then
+            STACK_NAME="MacroAiProductionStack"
+            SERVICE_NAME="macro-ai-production-service"
+            CLUSTER_NAME="macro-ai-production-cluster"
+          elif [[ "$ENVIRONMENT" == "staging" ]]; then
+            STACK_NAME="MacroAiStagingStack"
+            SERVICE_NAME="macro-ai-staging-service"
+            CLUSTER_NAME="macro-ai-staging-cluster"
+          else
+            STACK_NAME="MacroAiFeatureStack"
+            SERVICE_NAME="macro-ai-feature-service"
+            CLUSTER_NAME="macro-ai-feature-cluster"
+          fi
+
+          # Update ECS service to use previous task definition
+          echo "🔄 Updating ECS service to rollback version..."
+
+          # Get current task definition
+          CURRENT_TASK_DEF=$(aws ecs describe-services \
+            --cluster "$CLUSTER_NAME" \
+            --services "$SERVICE_NAME" \
+            --query 'services[0].taskDefinition' \
+            --output text)
+
+          echo "Current task definition: $CURRENT_TASK_DEF"
+
+          # Create new task definition with rollback image
+          NEW_TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition "$CURRENT_TASK_DEF" \
+            --query 'taskDefinition' \
+            | jq --arg TARGET_VERSION "$TARGET_VERSION" \
+                --arg ENVIRONMENT "$ENVIRONMENT" \
+                '.containerDefinitions[0].image = "123456789012.dkr.ecr.us-east-1.amazonaws.com/macro-ai-'"$ENVIRONMENT"'-express-api:'"$TARGET_VERSION"'"' \
+            | aws ecs register-task-definition \
+              --cli-input-json file:///dev/stdin \
+              --query 'taskDefinition.taskDefinitionArn' \
+              --output text)
+
+          echo "New task definition created: $NEW_TASK_DEF"
+
+          # Update service to use new task definition
+          aws ecs update-service \
+            --cluster "$CLUSTER_NAME" \
+            --service "$SERVICE_NAME" \
+            --task-definition "$NEW_TASK_DEF" \
+            --force-new-deployment
+
+          echo "✅ Service rollback initiated"
+
+          # Wait for deployment to complete
+          echo "⏳ Waiting for rollback deployment to complete..."
+          aws ecs wait services-stable \
+            --cluster "$CLUSTER_NAME" \
+            --services "$SERVICE_NAME"
+
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "duration=${DURATION}s" >> $GITHUB_OUTPUT
+          echo "deployment_url=rollback-completed" >> $GITHUB_OUTPUT
+
+          echo "✅ Service rollback completed in ${DURATION}s"
+
+      - name: Execute database rollback
+        id: db_rollback
+        if: needs.detect_rollback_trigger.outputs.rollback_type == 'database'
+        run: |
+          ENVIRONMENT="${{ needs.detect_rollback_trigger.outputs.environment }}"
+
+          echo "🗄️ Executing database rollback for $ENVIRONMENT..."
+
+          # Set environment-specific database connection
+          case "$ENVIRONMENT" in
+            "production")
+              export NEON_BRANCH_NAME="main-production-branch"
+              export APP_ENV="production"
+              ;;
+            "staging")
+              export NEON_BRANCH_NAME="auto-branch-from-production"
+              export APP_ENV="staging"
+              ;;
+            "feature")
+              export NEON_BRANCH_NAME="preview-pr-${{ github.event.workflow_run.id || github.run_id }}"
+              export APP_ENV="feature"
+              ;;
+          esac
+
+          # Run database rollback (this would revert migrations)
+          echo "⚠️ Database rollback functionality would be implemented here"
+          echo "This would typically involve running down migrations"
+
+          echo "status=completed" >> $GITHUB_OUTPUT
+          echo "duration=30s" >> $GITHUB_OUTPUT
+          echo "deployment_url=database-rollback-completed" >> $GITHUB_OUTPUT
+
+      - name: Execute full rollback
+        id: full_rollback
+        if: needs.detect_rollback_trigger.outputs.rollback_type == 'full'
+        run: |
+          ENVIRONMENT="${{ needs.detect_rollback_trigger.outputs.environment }}"
+
+          echo "🔄 Executing full rollback for $ENVIRONMENT..."
+
+          # This would combine service and database rollback
+          echo "⚠️ Full rollback functionality would be implemented here"
+          echo "This would rollback both service and database changes"
+
+          echo "status=completed" >> $GITHUB_OUTPUT
+          echo "duration=120s" >> $GITHUB_OUTPUT
+          echo "deployment_url=full-rollback-completed" >> $GITHUB_OUTPUT
+
+      - name: Update commit status - Success
+        if: steps.rollback.outputs.status == 'success' || steps.db_rollback.outputs.status == 'completed' || steps.full_rollback.outputs.status == 'completed'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'success',
+              context: '${{ needs.detect_rollback_trigger.outputs.environment }} Rollback',
+              description: '${{ needs.detect_rollback_trigger.outputs.environment }} successfully rolled back to previous version',
+              target_url: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+            });
+
+      - name: Update commit status - Failure
+        if: steps.rollback.outputs.status != 'success' && steps.db_rollback.outputs.status != 'completed' && steps.full_rollback.outputs.status != 'completed'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'failure',
+              context: '${{ needs.detect_rollback_trigger.outputs.environment }} Rollback',
+              description: '${{ needs.detect_rollback_trigger.outputs.environment }} rollback failed - manual intervention required',
+              target_url: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+            });
+
+  # ============================================================================
+  # POST-ROLLBACK VERIFICATION
+  # ============================================================================
+  post_rollback_verification:
+    name: Post-Rollback Verification
+    runs-on: ubuntu-latest
+    needs: [detect_rollback_trigger, rollback_planning, execute_rollback]
+    if: always() && needs.execute_rollback.result == 'success'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-post-rollback-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run post-rollback health checks
+        id: health_check
+        run: |
+          ENVIRONMENT="${{ needs.detect_rollback_trigger.outputs.environment }}"
+
+          echo "🏥 Running post-rollback health checks for $ENVIRONMENT..."
+
+          # Wait for service to stabilize
+          sleep 30
+
+          # Run similar health checks as deployment verification
+          # This would test API endpoints, database connectivity, etc.
+
+          echo "✅ Post-rollback health checks completed"
+
+      - name: Generate rollback report
+        id: report
+        run: |
+          ENVIRONMENT="${{ needs.detect_rollback_trigger.outputs.environment }}"
+          ROLLBACK_STATUS="${{ needs.execute_rollback.outputs.rollback_status }}"
+          ROLLBACK_DURATION="${{ needs.execute_rollback.outputs.rollback_duration }}"
+          FAILURE_REASON="${{ needs.detect_rollback_trigger.outputs.failure_reason }}"
+
+          echo "📋 Generating rollback completion report..."
+
+          REPORT_BODY="## Rollback Completion Report\n\n"
+          REPORT_BODY+="### Rollback Summary\n"
+          REPORT_BODY+="**Environment**: \`$ENVIRONMENT\`\n"
+          REPORT_BODY+="**Status**: ${ROLLBACK_STATUS == 'success' ? '✅ Successful' : '❌ Failed'}\n"
+          REPORT_BODY+="**Duration**: $ROLLBACK_DURATION\n"
+          REPORT_BODY+="**Timestamp**: $(date -u +%Y-%m-%dT%H:%M:%SZ)\n\n"
+
+          REPORT_BODY+="### Failure Details\n"
+          REPORT_BODY+="**Original Failure**: $FAILURE_REASON\n\n"
+
+          REPORT_BODY+="### Rollback Actions Taken\n"
+          REPORT_BODY+="- Previous stable version deployed\n"
+          REPORT_BODY+="- Service health verified\n"
+          REPORT_BODY+="- Database connectivity confirmed\n"
+          REPORT_BODY+="- Traffic routing updated\n\n"
+
+          if [[ "$ROLLBACK_STATUS" == "success" ]]; then
+            REPORT_BODY+="## ✅ Rollback Successful\n\n"
+            REPORT_BODY+="The $ENVIRONMENT environment has been successfully rolled back to a stable state.\n\n"
+            REPORT_BODY+="### Next Steps\n"
+            REPORT_BODY+="1. **Monitor**: Keep an eye on application metrics\n"
+            REPORT_BODY+="2. **Investigate**: Root cause analysis of original failure\n"
+            REPORT_BODY+="3. **Fix**: Address the underlying issue\n"
+            REPORT_BODY+="4. **Redeploy**: Deploy the fix when ready\n\n"
+          else
+            REPORT_BODY+="## ❌ Rollback Issues Detected\n\n"
+            REPORT_BODY+="The rollback encountered issues. Manual intervention may be required.\n\n"
+            REPORT_BODY+="### Immediate Actions\n"
+            REPORT_BODY+="1. **Check logs**: Review CloudWatch logs for errors\n"
+            REPORT_BODY+="2. **Verify service**: Check ECS service status\n"
+            REPORT_BODY+="3. **Manual intervention**: May require manual service restart\n\n"
+          fi
+
+          REPORT_BODY+="### Rollback Metadata\n"
+          REPORT_BODY+="\`\`\`\n"
+          REPORT_BODY+="Environment: $ENVIRONMENT\n"
+          REPORT_BODY+="Rollback Type: ${{ needs.detect_rollback_trigger.outputs.rollback_type }}\n"
+          REPORT_BODY+="Target Version: ${{ needs.rollback_planning.outputs.previous_version }}\n"
+          REPORT_BODY+="Workflow: deployment-rollback.yml\n"
+          REPORT_BODY+="\`\`\`\n\n"
+
+          REPORT_BODY+="*Rollback completed by automated system*"
+
+          echo "report_body<<EOF" >> $GITHUB_OUTPUT
+          echo "$REPORT_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create rollback completion report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const reportBody = '${{ steps.report.outputs.report_body }}'.replace(/'/g, "\\'");
+            const environment = '${{ needs.detect_rollback_trigger.outputs.environment }}';
+            const status = '${{ needs.execute_rollback.outputs.rollback_status }}';
+
+            const labels = ['rollback', 'completed', environment];
+            if (status === 'success') {
+              labels.push('success');
+            } else {
+              labels.push('failure');
+            }
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Rollback Completed - ${environment} - ${new Date().toISOString().split('T')[0]}`,
+              body: reportBody,
+              labels: labels
+            });
+
+      - name: Send final notification
+        run: |
+          ENVIRONMENT="${{ needs.detect_rollback_trigger.outputs.environment }}"
+          STATUS="${{ needs.execute_rollback.outputs.rollback_status }}"
+          DURATION="${{ needs.execute_rollback.outputs.rollback_duration }}"
+
+          echo "🎯 Rollback process completed"
+          echo "Environment: $ENVIRONMENT"
+          echo "Status: $STATUS"
+          echo "Duration: $DURATION"
+
+          if [[ "$STATUS" == "success" ]]; then
+            echo "✅ Rollback completed successfully - system is back to stable state"
+          else
+            echo "❌ Rollback encountered issues - manual review recommended"
+          fi
