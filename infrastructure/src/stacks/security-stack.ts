@@ -4,11 +4,15 @@ import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2'
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront'
 import * as route53 from 'aws-cdk-lib/aws-route53'
 import * as acm from 'aws-cdk-lib/aws-certificatemanager'
+import * as sns from 'aws-cdk-lib/aws-sns'
 import { Construct } from 'constructs'
 import { WafSecurityConstruct } from '../constructs/waf-security-construct'
 import { SecurityHeadersConstruct } from '../constructs/security-headers-construct'
 import { SslCertificateConstruct } from '../constructs/ssl-certificate-construct'
 import { HttpsEnforcementConstruct } from '../constructs/https-enforcement-construct'
+import { RateLimitingConstruct } from '../constructs/rate-limiting-construct'
+import { DDoSProtectionConstruct } from '../constructs/ddos-protection-construct'
+import { SecurityMonitoringConstruct } from '../constructs/security-monitoring-construct'
 
 export interface SecurityStackProps extends cdk.StackProps {
 	/**
@@ -109,6 +113,9 @@ export class SecurityStack extends cdk.Stack {
 	public readonly securityHeadersConstruct?: SecurityHeadersConstruct
 	public readonly sslCertificateConstruct?: SslCertificateConstruct
 	public readonly httpsEnforcementConstruct?: HttpsEnforcementConstruct
+	public readonly rateLimitingConstruct?: RateLimitingConstruct
+	public readonly ddosProtectionConstruct?: DDoSProtectionConstruct
+	public readonly securityMonitoringConstruct?: SecurityMonitoringConstruct
 	public readonly webAclArn?: string
 	public readonly certificateArn?: string
 
@@ -246,6 +253,75 @@ export class SecurityStack extends cdk.Stack {
 		}
 
 
+		// Create shared SNS topic for security alerts
+		const securityAlarmTopic = new sns.Topic(this, 'SecurityAlarmTopic', {
+			topicName: `${environmentName}-security-alerts`,
+			displayName: `${environmentName} Security Alerts`,
+		})
+
+		// Create rate limiting construct
+		this.rateLimitingConstruct = new RateLimitingConstruct(this, 'RateLimiting', {
+			environmentName,
+			enableDetailedMonitoring: true,
+			alarmTopic: securityAlarmTopic,
+			rateLimiting: {
+				generalLimit: 1000, // 1000 requests per 5 minutes per IP
+				apiLimit: 500,      // 500 API requests per 5 minutes per IP
+				authLimit: 100,     // 100 auth requests per 5 minutes per IP
+				adminLimit: 200,    // 200 admin requests per 5 minutes per IP
+				burstLimit: 200,    // 200 requests per minute per IP
+				enableProgressiveLimiting: true,
+				enableAdaptiveLimiting: true,
+			},
+			ddosProtection: {
+				enabled: true,
+				detectionThreshold: 50,  // 50 requests per second per IP
+				mitigationThreshold: 100, // 100 requests per second per IP
+				enableGeoProtection: true,
+				monitoredCountries: ['CN', 'RU', 'KP', 'IR', 'KP'],
+				enableBotProtection: true,
+			},
+		})
+
+		// Associate rate limiting WebACL with Application Load Balancer
+		if (loadBalancer) {
+			this.rateLimitingConstruct.associateWithResource(loadBalancer.loadBalancerArn)
+		}
+
+		// Create DDoS protection construct
+		this.ddosProtectionConstruct = new DDoSProtectionConstruct(this, 'DDoSProtection', {
+			environmentName,
+			alarmTopic: securityAlarmTopic,
+			enableDetailedMonitoring: true,
+			ddosProtection: {
+				enabled: true,
+				detectionThreshold: 50,
+				mitigationThreshold: 100,
+				enableGeoProtection: true,
+				monitoredCountries: ['CN', 'RU', 'KP', 'IR', 'KP'],
+				enableBotProtection: true,
+				enableIpReputation: true,
+				enableBehavioralAnalysis: true,
+				enableAutoIpBlocking: true,
+				ipBlockingDuration: 60,
+			},
+		})
+
+		// Create security monitoring construct
+		this.securityMonitoringConstruct = new SecurityMonitoringConstruct(this, 'SecurityMonitoring', {
+			environmentName,
+			alarmTopic: securityAlarmTopic,
+			enableDetailedMonitoring: true,
+			securityMonitoring: {
+				enableThreatIntelligence: true,
+				enableEventCorrelation: true,
+				enableAutomatedResponse: true,
+				enableComplianceMonitoring: true,
+				enableVulnerabilityScanning: true,
+				enableIncidentResponse: true,
+			},
+		})
+
 		// Create CloudWatch dashboard for security monitoring
 		this.createSecurityDashboard(environmentName)
 
@@ -357,6 +433,70 @@ export class SecurityStack extends cdk.Stack {
 			value: dashboardName,
 			description: 'Security monitoring dashboard name',
 			exportName: `${environmentName}-security-dashboard`,
+		})
+
+		// Rate limiting outputs
+		if (this.rateLimitingConstruct) {
+			new cdk.CfnOutput(this, 'RateLimitingWebAclArn', {
+				value: this.rateLimitingConstruct.getWebAclArn(),
+				description: 'Rate limiting WebACL ARN',
+				exportName: `${environmentName}-rate-limiting-web-acl-arn`,
+			})
+
+			new cdk.CfnOutput(this, 'RateLimitingLogGroupArn', {
+				value: this.rateLimitingConstruct.getLogGroupArn(),
+				description: 'Rate limiting log group ARN',
+				exportName: `${environmentName}-rate-limiting-log-group-arn`,
+			})
+		}
+
+		// DDoS protection outputs
+		if (this.ddosProtectionConstruct) {
+			new cdk.CfnOutput(this, 'DDoSProtectionLogGroupArn', {
+				value: this.ddosProtectionConstruct.getLogGroupArn(),
+				description: 'DDoS protection log group ARN',
+				exportName: `${environmentName}-ddos-protection-log-group-arn`,
+			})
+
+			if (this.ddosProtectionConstruct.getDDoSAnalysisLambdaArn()) {
+				new cdk.CfnOutput(this, 'DDoSAnalysisLambdaArn', {
+					value: this.ddosProtectionConstruct.getDDoSAnalysisLambdaArn()!,
+					description: 'DDoS analysis Lambda function ARN',
+					exportName: `${environmentName}-ddos-analysis-lambda-arn`,
+				})
+			}
+		}
+
+		// Security monitoring outputs
+		if (this.securityMonitoringConstruct) {
+			new cdk.CfnOutput(this, 'SecurityMonitoringLogGroupArn', {
+				value: this.securityMonitoringConstruct.getLogGroupArn(),
+				description: 'Security monitoring log group ARN',
+				exportName: `${environmentName}-security-monitoring-log-group-arn`,
+			})
+
+			if (this.securityMonitoringConstruct.getSecurityAnalysisLambdaArn()) {
+				new cdk.CfnOutput(this, 'SecurityAnalysisLambdaArn', {
+					value: this.securityMonitoringConstruct.getSecurityAnalysisLambdaArn()!,
+					description: 'Security analysis Lambda function ARN',
+					exportName: `${environmentName}-security-analysis-lambda-arn`,
+				})
+			}
+
+			if (this.securityMonitoringConstruct.getIncidentResponseLambdaArn()) {
+				new cdk.CfnOutput(this, 'IncidentResponseLambdaArn', {
+					value: this.securityMonitoringConstruct.getIncidentResponseLambdaArn()!,
+					description: 'Incident response Lambda function ARN',
+					exportName: `${environmentName}-incident-response-lambda-arn`,
+				})
+			}
+		}
+
+		// Security alarm topic output
+		new cdk.CfnOutput(this, 'SecurityAlarmTopicArn', {
+			value: securityAlarmTopic.topicArn,
+			description: 'Security alarm SNS topic ARN',
+			exportName: `${environmentName}-security-alarm-topic-arn`,
 		})
 	}
 }
