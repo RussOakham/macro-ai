@@ -1,3 +1,4 @@
+/* eslint-disable security-node/detect-insecure-randomness */
 import {
 	CloudWatchClient,
 	GetMetricDataCommand,

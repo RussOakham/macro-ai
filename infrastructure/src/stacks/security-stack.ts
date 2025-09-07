@@ -7,6 +7,8 @@ import * as acm from 'aws-cdk-lib/aws-certificatemanager'
 import { Construct } from 'constructs'
 import { WafSecurityConstruct } from '../constructs/waf-security-construct'
 import { SecurityHeadersConstruct } from '../constructs/security-headers-construct'
+import { SslCertificateConstruct } from '../constructs/ssl-certificate-construct'
+import { HttpsEnforcementConstruct } from '../constructs/https-enforcement-construct'
 
 export interface SecurityStackProps extends cdk.StackProps {
 	/**
@@ -60,6 +62,11 @@ export interface SecurityStackProps extends cdk.StackProps {
 	domainName?: string
 
 	/**
+	 * Route 53 hosted zone for DNS validation
+	 */
+	hostedZone?: route53.IHostedZone
+
+	/**
 	 * Rate limiting threshold
 	 */
 	rateLimitThreshold?: number
@@ -73,12 +80,36 @@ export interface SecurityStackProps extends cdk.StackProps {
 	 * Countries to block
 	 */
 	blockedCountries?: string[]
+
+	/**
+	 * SSL certificate configuration
+	 */
+	sslCertificate?: {
+		domainName: string
+		subjectAlternativeNames?: string[]
+		enableDnsValidation?: boolean
+		alertDaysBeforeExpiration?: number
+	}
+
+	/**
+	 * HTTPS enforcement configuration
+	 */
+	httpsEnforcement?: {
+		enableHttpRedirect?: boolean
+		httpPort?: number
+		httpsPort?: number
+		sslPolicy?: string
+		enableDetailedMonitoring?: boolean
+	}
 }
 
 export class SecurityStack extends cdk.Stack {
 	public readonly wafConstruct?: WafSecurityConstruct
 	public readonly securityHeadersConstruct?: SecurityHeadersConstruct
+	public readonly sslCertificateConstruct?: SslCertificateConstruct
+	public readonly httpsEnforcementConstruct?: HttpsEnforcementConstruct
 	public readonly webAclArn?: string
+	public readonly certificateArn?: string
 
 	constructor(scope: Construct, id: string, props: SecurityStackProps) {
 		super(scope, id, props)
@@ -88,12 +119,15 @@ export class SecurityStack extends cdk.Stack {
 			vpc,
 			loadBalancer,
 			cloudFrontDistribution,
+			hostedZone,
 			enableWaf = true,
 			enableSecurityHeaders = true,
 			enableSslEnforcement = true,
 			rateLimitThreshold = 2000,
 			enableGeoBlocking = environmentName === 'production',
 			blockedCountries = ['CN', 'RU', 'KP'],
+			sslCertificate,
+			httpsEnforcement,
 		} = props
 
 		// Create WAF WebACL for regional protection
@@ -162,7 +196,52 @@ export class SecurityStack extends cdk.Stack {
 		}
 
 		// SSL/TLS Configuration
-		if (enableSslEnforcement && loadBalancer) {
+		if (sslCertificate && hostedZone) {
+			this.sslCertificateConstruct = new SslCertificateConstruct(
+				this,
+				'SslCertificate',
+				{
+					environmentName,
+					domainName: sslCertificate.domainName,
+					subjectAlternativeNames: sslCertificate.subjectAlternativeNames,
+					hostedZone,
+					enableDnsValidation: sslCertificate.enableDnsValidation ?? true,
+					alertDaysBeforeExpiration:
+						sslCertificate.alertDaysBeforeExpiration ?? 30,
+				},
+			)
+
+			this.certificateArn = this.sslCertificateConstruct.getCertificateArn()
+		}
+
+		// HTTPS Enforcement
+		if (enableSslEnforcement && loadBalancer && this.sslCertificateConstruct) {
+			this.httpsEnforcementConstruct = new HttpsEnforcementConstruct(
+				this,
+				'HttpsEnforcement',
+				{
+					environmentName,
+					loadBalancer,
+					certificate: this.sslCertificateConstruct.getCertificate(),
+					enableHttpRedirect: httpsEnforcement?.enableHttpRedirect ?? true,
+					httpPort: httpsEnforcement?.httpPort ?? 80,
+					httpsPort: httpsEnforcement?.httpsPort ?? 443,
+					sslPolicy:
+						httpsEnforcement?.sslPolicy ??
+						'ELBSecurityPolicy-TLS13-1-2-2021-06',
+					enableDetailedMonitoring:
+						httpsEnforcement?.enableDetailedMonitoring ?? true,
+					healthCheck: {
+						path: '/api/health',
+						interval: cdk.Duration.seconds(30),
+						timeout: cdk.Duration.seconds(5),
+						healthyThresholdCount: 3,
+						unhealthyThresholdCount: 2,
+					},
+				},
+			)
+		} else if (enableSslEnforcement && loadBalancer) {
+			// Fallback SSL enforcement without custom certificate
 			this.configureSslEnforcement(loadBalancer)
 		}
 
@@ -183,6 +262,31 @@ export class SecurityStack extends cdk.Stack {
 				value: this.securityHeadersConstruct.getLambdaFunctionArn(),
 				description: 'Security Headers Lambda Function ARN',
 				exportName: `${environmentName}-security-headers-arn`,
+			})
+		}
+
+		// SSL Certificate outputs
+		if (this.sslCertificateConstruct) {
+			new cdk.CfnOutput(this, 'SslCertificateArn', {
+				value: this.sslCertificateConstruct.getCertificateArn(),
+				description: 'SSL Certificate ARN',
+				exportName: `${environmentName}-ssl-certificate-arn`,
+			})
+		}
+
+		// HTTPS Enforcement outputs
+		if (this.httpsEnforcementConstruct) {
+			new cdk.CfnOutput(this, 'HttpsListenerArn', {
+				value: this.httpsEnforcementConstruct.getHttpsListener().listenerArn,
+				description: 'HTTPS Application Listener ARN',
+				exportName: `${environmentName}-https-listener-arn`,
+			})
+
+			new cdk.CfnOutput(this, 'HttpsTargetGroupArn', {
+				value:
+					this.httpsEnforcementConstruct.getHttpsTargetGroup().targetGroupArn,
+				description: 'HTTPS Target Group ARN',
+				exportName: `${environmentName}-https-target-group-arn`,
 			})
 		}
 	}

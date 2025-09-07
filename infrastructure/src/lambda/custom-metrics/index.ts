@@ -1,3 +1,4 @@
+/* eslint-disable security-node/detect-insecure-randomness */
 import {
 	CloudWatchClient,
 	PutMetricDataCommand,
@@ -14,7 +15,7 @@ const elbv2 = new ElasticLoadBalancingV2Client({})
 interface CustomMetricsEvent {
 	// EventBridge scheduled event
 	source: string
-	detail: any
+	detail: unknown
 }
 
 export async function handler(

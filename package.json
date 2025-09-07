@@ -62,12 +62,17 @@
 		"act:job": "./.act/run-fast.sh job"
 	},
 	"devDependencies": {
+		"@aws-sdk/client-acm": "^3.883.0",
+		"@aws-sdk/client-ecs": "^3.883.0",
+		"@aws-sdk/client-eventbridge": "^3.883.0",
 		"@eslint/js": "^9.34.0",
 		"@faker-js/faker": "^10.0.0",
 		"@repo/config-testing": "workspace:*",
+		"@types/aws-lambda": "^8.10.152",
 		"@types/node": "catalog:",
 		"@vitest/coverage-v8": "catalog:",
 		"@vitest/ui": "^3.2.4",
+		"aws-lambda": "^1.0.7",
 		"commitizen": "^4.3.1",
 		"cz-conventional-changelog": "^3.3.0",
 		"drizzle-kit": "^0.31.4",
