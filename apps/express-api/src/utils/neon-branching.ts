@@ -6,10 +6,18 @@
  * - Staging: auto-branch-from-production
  * - Feature: auto-branch-from-staging
  * - Preview: GitHub Actions PR branches (preview/pr-{number})
- * - Development: Uses branch-specific database or localhost
+ * - Development: Uses git branch-based database selection
  *
  * Hybrid Approach: Manual control for production/staging + automated GitHub integration for feature branches
+ *
+ * Git Branch Mapping:
+ * - main/master: Production branch
+ * - develop/staging: Staging branch
+ * - feature/*: Feature branch
+ * - other branches: Feature branch (fallback)
  */
+
+import { execSync } from 'node:child_process'
 
 import { config } from './load-config.ts'
 
@@ -51,9 +59,98 @@ function getGitHubBranchName(): string | null {
 }
 
 /**
+ * Get current git branch name (for local development)
+ *
+ * Returns the current git branch name or null if not in a git repository
+ * or if git command fails.
+ */
+function getCurrentGitBranch(): string | null {
+	try {
+		// Check if we're in a git repository
+		const isGitRepo = execSync('git rev-parse --git-dir', {
+			stdio: 'pipe',
+			encoding: 'utf-8',
+			timeout: 2000,
+		}).trim()
+
+		if (!isGitRepo) {
+			console.log('⚠️  Not in a git repository - using localhost database')
+			return null
+		}
+
+		// Get current branch name
+		const branchName = execSync('git rev-parse --abbrev-ref HEAD', {
+			stdio: 'pipe',
+			encoding: 'utf-8',
+			timeout: 2000,
+		}).trim()
+
+		// Handle detached HEAD state
+		if (branchName === 'HEAD') {
+			console.log('⚠️  Detached HEAD state detected - using localhost database')
+			return null
+		}
+
+		console.log(`📋 Detected git branch: ${branchName}`)
+		return branchName
+	} catch (error) {
+		console.log(
+			'⚠️  Git command failed - using localhost database:',
+			error.message,
+		)
+		return null
+	}
+}
+
+/**
+ * Map git branch name to environment type
+ *
+ * Branch mapping rules:
+ * - main/master: production
+ * - develop/staging: staging
+ * - feature/*: feature
+ * - other: feature (fallback)
+ */
+function mapGitBranchToEnvironment(
+	gitBranch: string,
+): 'production' | 'staging' | 'feature' {
+	const normalizedBranch = gitBranch.toLowerCase().trim()
+
+	// Production branches
+	if (['main', 'master'].includes(normalizedBranch)) {
+		return 'production'
+	}
+
+	// Staging/develop branches
+	if (['develop', 'development', 'staging'].includes(normalizedBranch)) {
+		return 'staging'
+	}
+
+	// Feature branches (anything starting with feature/ or other branches)
+	if (
+		normalizedBranch.startsWith('feature/') ||
+		normalizedBranch.includes('feature')
+	) {
+		return 'feature'
+	}
+
+	// Default to feature for any other branch
+	console.log(
+		`📋 Branch '${gitBranch}' mapped to feature environment (default)`,
+	)
+	return 'feature'
+}
+
+/**
  * Get the current environment type
  *
- * Hybrid approach: Detects GitHub Actions for automated branching
+ * Hybrid approach: Detects GitHub Actions for automated branching + git branch detection for local development
+ *
+ * Priority order:
+ * 1. GitHub Actions environment variables (highest priority)
+ * 2. Explicit APP_ENV configuration
+ * 3. Git branch detection (for local development)
+ * 4. Development fallback
  */
 export function getEnvironmentType():
 	| 'production'
@@ -85,13 +182,31 @@ export function getEnvironmentType():
 	if (appEnv === 'feature' || appEnv.startsWith('feature/')) return 'feature'
 	if (appEnv.startsWith('pr-') || appEnv === 'preview') return 'preview'
 
+	// Local development: Detect git branch and map to environment
+	if (appEnv === 'development' || !appEnv || appEnv === 'local') {
+		const gitBranch = getCurrentGitBranch()
+
+		if (gitBranch) {
+			// Map git branch to environment type
+			const mappedEnv = mapGitBranchToEnvironment(gitBranch)
+
+			console.log(
+				`🔄 Git branch '${gitBranch}' mapped to ${mappedEnv} environment`,
+			)
+			return mappedEnv
+		}
+
+		// No git branch detected - fall back to localhost
+		console.log('🏠 No git branch detected - using localhost database')
+	}
+
 	return 'development'
 }
 
 /**
  * Get Neon branch configuration for the current environment
  *
- * Hybrid approach: Handles both static branches and GitHub Actions dynamic branches
+ * Hybrid approach: Handles static branches, GitHub Actions dynamic branches, and git branch-based local development
  */
 export function getNeonBranchConfig() {
 	const envType = getEnvironmentType()
@@ -103,10 +218,6 @@ export function getNeonBranchConfig() {
 
 	if (envType === 'staging') {
 		return NEON_BRANCH_CONFIG.staging
-	}
-
-	if (envType === 'feature' && !isGitHubActions()) {
-		return NEON_BRANCH_CONFIG.feature
 	}
 
 	// GitHub Actions dynamic branch handling
@@ -129,13 +240,40 @@ export function getNeonBranchConfig() {
 		}
 	}
 
-	// Manual feature branch fallback
-	if (envType === 'feature') {
-		return NEON_BRANCH_CONFIG.feature
-	}
+	// Local development: git branch-based database selection
+	if (envType === 'development' || envType === 'feature') {
+		const gitBranch = getCurrentGitBranch()
 
-	// Development and other environments
-	if (envType === 'development') {
+		if (gitBranch) {
+			const mappedEnv = mapGitBranchToEnvironment(gitBranch)
+
+			// For production/staging git branches, use static branch names
+			if (mappedEnv === 'production') {
+				return NEON_BRANCH_CONFIG.production
+			}
+
+			if (mappedEnv === 'staging') {
+				return NEON_BRANCH_CONFIG.staging
+			}
+
+			// For feature branches, use dynamic branch names based on git branch
+			if (mappedEnv === 'feature') {
+				const sanitizedBranchName = gitBranch
+					.replace(/[^a-zA-Z0-9-_]/g, '-')
+					.toLowerCase()
+				return {
+					branch: `feature/${sanitizedBranchName}`,
+					description: `Local feature branch '${gitBranch}' database`,
+				}
+			}
+		}
+
+		// Fallback for when no git branch is detected
+		if (envType === 'feature') {
+			return NEON_BRANCH_CONFIG.feature
+		}
+
+		// For development without git branch detection
 		return {
 			branch: 'localhost',
 			description: 'Local development database',
@@ -274,12 +412,158 @@ export function requiresNeonBranch(): boolean {
 }
 
 /**
+ * Get git repository status information
+ */
+function getGitStatus(): {
+	isGitRepo: boolean
+	currentBranch: string | null
+	hasUncommittedChanges: boolean
+	isDetachedHead: boolean
+} {
+	try {
+		// Check if we're in a git repository
+		const isGitRepo =
+			execSync('git rev-parse --git-dir', {
+				stdio: 'pipe',
+				encoding: 'utf-8',
+				timeout: 2000,
+			}).trim() !== ''
+
+		if (!isGitRepo) {
+			return {
+				isGitRepo: false,
+				currentBranch: null,
+				hasUncommittedChanges: false,
+				isDetachedHead: false,
+			}
+		}
+
+		// Get current branch name
+		let currentBranch: string | null = null
+		let isDetachedHead = false
+
+		try {
+			currentBranch = execSync('git rev-parse --abbrev-ref HEAD', {
+				stdio: 'pipe',
+				encoding: 'utf-8',
+				timeout: 2000,
+			}).trim()
+
+			if (currentBranch === 'HEAD') {
+				isDetachedHead = true
+				currentBranch = null
+			}
+		} catch {
+			isDetachedHead = true
+		}
+
+		// Check for uncommitted changes
+		let hasUncommittedChanges = false
+		try {
+			const statusOutput = execSync('git status --porcelain', {
+				stdio: 'pipe',
+				encoding: 'utf-8',
+				timeout: 2000,
+			}).trim()
+			hasUncommittedChanges = statusOutput.length > 0
+		} catch {
+			// If git status fails, assume no changes (safe fallback)
+			hasUncommittedChanges = false
+		}
+
+		return {
+			isGitRepo,
+			currentBranch,
+			hasUncommittedChanges,
+			isDetachedHead,
+		}
+	} catch {
+		return {
+			isGitRepo: false,
+			currentBranch: null,
+			hasUncommittedChanges: false,
+			isDetachedHead: false,
+		}
+	}
+}
+
+/**
+ * Get comprehensive development environment information
+ */
+export function getDevelopmentEnvironmentInfo() {
+	const envType = getEnvironmentType()
+	const branchConfig = getNeonBranchConfig()
+	const gitStatus = getGitStatus()
+	const isGitHub = isGitHubActions()
+
+	return {
+		environment: {
+			type: envType,
+			appEnv: config.APP_ENV,
+			nodeEnv: process.env.NODE_ENV,
+		},
+		database: {
+			branch: branchConfig.branch,
+			description: branchConfig.description,
+			url: getNeonDatabaseUrl(),
+		},
+		git: {
+			...gitStatus,
+			mappedEnvironment: gitStatus.currentBranch
+				? mapGitBranchToEnvironment(gitStatus.currentBranch)
+				: null,
+		},
+		ci: {
+			isGitHubActions: isGitHub,
+			prNumber: isGitHub ? getGitHubPRNumber() : null,
+			branchName: isGitHub ? getGitHubBranchName() : null,
+		},
+	}
+}
+
+/**
+ * Log comprehensive environment information for debugging
+ */
+export function logEnvironmentInfo() {
+	const info = getDevelopmentEnvironmentInfo()
+
+	console.log('\n🌍 Development Environment Information:')
+	console.log('=====================================')
+	console.log(`Environment Type: ${info.environment.type}`)
+	console.log(`APP_ENV: ${info.environment.appEnv}`)
+	console.log(`NODE_ENV: ${info.environment.nodeEnv}`)
+	console.log('')
+	console.log('🗄️  Database Configuration:')
+	console.log(`Branch: ${info.database.branch}`)
+	console.log(`Description: ${info.database.description}`)
+	console.log(`URL: ${info.database.url.replace(/:[^:]+@/, ':***@')}`) // Hide password
+	console.log('')
+	console.log('📋 Git Status:')
+	console.log(`Is Git Repository: ${info.git.isGitRepo}`)
+	console.log(`Current Branch: ${info.git.currentBranch || 'N/A'}`)
+	console.log(`Has Uncommitted Changes: ${info.git.hasUncommittedChanges}`)
+	console.log(`Is Detached HEAD: ${info.git.isDetachedHead}`)
+	if (info.git.currentBranch && info.git.mappedEnvironment) {
+		console.log(`Mapped Environment: ${info.git.mappedEnvironment}`)
+	}
+	console.log('')
+	console.log('🤖 CI/CD Status:')
+	console.log(`GitHub Actions: ${info.ci.isGitHubActions}`)
+	if (info.ci.isGitHubActions) {
+		console.log(`PR Number: ${info.ci.prNumber || 'N/A'}`)
+		console.log(`Branch Name: ${info.ci.branchName || 'N/A'}`)
+	}
+	console.log('=====================================\n')
+}
+
+/**
  * Get all available branch configurations for reference
  */
 export function getAllBranchConfigs() {
 	const currentEnv = getEnvironmentType()
 	const currentBranch = getNeonBranchConfig()
 	const isGitHub = isGitHubActions()
+	const gitStatus = getGitStatus()
 
 	return {
 		current: {
@@ -294,5 +578,7 @@ export function getAllBranchConfigs() {
 			feature: NEON_BRANCH_CONFIG.feature,
 		},
 		github: isGitHub ? getGitHubBranchInfo() : null,
+		git: gitStatus,
+		development: getDevelopmentEnvironmentInfo(),
 	}
 }
