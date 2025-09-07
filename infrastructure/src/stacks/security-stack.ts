@@ -9,6 +9,7 @@ import { WafSecurityConstruct } from '../constructs/waf-security-construct'
 import { SecurityHeadersConstruct } from '../constructs/security-headers-construct'
 import { SslCertificateConstruct } from '../constructs/ssl-certificate-construct'
 import { HttpsEnforcementConstruct } from '../constructs/https-enforcement-construct'
+import { CorsConstruct } from '../constructs/cors-construct'
 
 export interface SecurityStackProps extends cdk.StackProps {
 	/**
@@ -101,6 +102,21 @@ export interface SecurityStackProps extends cdk.StackProps {
 		sslPolicy?: string
 		enableDetailedMonitoring?: boolean
 	}
+
+	/**
+	 * CORS configuration
+	 */
+	cors?: {
+		allowedOrigins: string[]
+		allowedMethods?: string[]
+		allowedHeaders?: string[]
+		exposedHeaders?: string[]
+		maxAge?: number
+		allowCredentials?: boolean
+		enableLogging?: boolean
+		enableDetailedMonitoring?: boolean
+		rateLimitThreshold?: number
+	}
 }
 
 export class SecurityStack extends cdk.Stack {
@@ -108,6 +124,7 @@ export class SecurityStack extends cdk.Stack {
 	public readonly securityHeadersConstruct?: SecurityHeadersConstruct
 	public readonly sslCertificateConstruct?: SslCertificateConstruct
 	public readonly httpsEnforcementConstruct?: HttpsEnforcementConstruct
+	public readonly corsConstruct?: CorsConstruct
 	public readonly webAclArn?: string
 	public readonly certificateArn?: string
 
@@ -128,6 +145,7 @@ export class SecurityStack extends cdk.Stack {
 			blockedCountries = ['CN', 'RU', 'KP'],
 			sslCertificate,
 			httpsEnforcement,
+			cors,
 		} = props
 
 		// Create WAF WebACL for regional protection
@@ -245,6 +263,22 @@ export class SecurityStack extends cdk.Stack {
 			this.configureSslEnforcement(loadBalancer)
 		}
 
+		// CORS Configuration
+		if (cors) {
+			this.corsConstruct = new CorsConstruct(this, 'CorsHandler', {
+				environmentName,
+				allowedOrigins: cors.allowedOrigins,
+				allowedMethods: cors.allowedMethods,
+				allowedHeaders: cors.allowedHeaders,
+				exposedHeaders: cors.exposedHeaders,
+				maxAge: cors.maxAge,
+				allowCredentials: cors.allowCredentials,
+				enableLogging: cors.enableLogging,
+				enableDetailedMonitoring: cors.enableDetailedMonitoring,
+				rateLimitThreshold: cors.rateLimitThreshold,
+			})
+		}
+
 		// Create CloudWatch dashboard for security monitoring
 		this.createSecurityDashboard(environmentName)
 
@@ -287,6 +321,15 @@ export class SecurityStack extends cdk.Stack {
 					this.httpsEnforcementConstruct.getHttpsTargetGroup().targetGroupArn,
 				description: 'HTTPS Target Group ARN',
 				exportName: `${environmentName}-https-target-group-arn`,
+			})
+		}
+
+		// CORS outputs
+		if (this.corsConstruct) {
+			new cdk.CfnOutput(this, 'CorsLambdaArn', {
+				value: this.corsConstruct.getCorsLambdaArn(),
+				description: 'CORS Lambda function ARN',
+				exportName: `${environmentName}-cors-lambda-arn`,
 			})
 		}
 	}

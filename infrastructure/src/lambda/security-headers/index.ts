@@ -6,10 +6,20 @@ interface SecurityHeadersConfig {
 	customHeaders: Record<string, string>
 	contentSecurityPolicy: string
 	corsAllowedOrigins: string[]
+	corsAllowedMethods: string[]
+	corsAllowedHeaders: string[]
+	corsMaxAge: number
+	corsAllowCredentials: boolean
 	enableHsts: boolean
 	hstsMaxAge: number
 	enableXFrameOptions: boolean
 	xFrameOptionsValue: string
+	enableXContentTypeOptions: boolean
+	enableXXssProtection: boolean
+	enableReferrerPolicy: boolean
+	referrerPolicyValue: string
+	enablePermissionsPolicy: boolean
+	permissionsPolicyValue: string
 }
 
 function getSecurityConfig(): SecurityHeadersConfig {
@@ -19,10 +29,30 @@ function getSecurityConfig(): SecurityHeadersConfig {
 		customHeaders: JSON.parse(process.env.CUSTOM_HEADERS || '{}'),
 		contentSecurityPolicy: process.env.CONTENT_SECURITY_POLICY || '',
 		corsAllowedOrigins: JSON.parse(process.env.CORS_ALLOWED_ORIGINS || '[]'),
+		corsAllowedMethods: JSON.parse(
+			process.env.CORS_ALLOWED_METHODS ||
+				'["GET","POST","PUT","DELETE","OPTIONS"]',
+		),
+		corsAllowedHeaders: JSON.parse(
+			process.env.CORS_ALLOWED_HEADERS ||
+				'["Content-Type","Authorization","X-Requested-With","Accept","Origin"]',
+		),
+		corsMaxAge: parseInt(process.env.CORS_MAX_AGE || '86400'),
+		corsAllowCredentials: process.env.CORS_ALLOW_CREDENTIALS === 'true',
 		enableHsts: process.env.ENABLE_HSTS === 'true',
 		hstsMaxAge: parseInt(process.env.HSTS_MAX_AGE || '31536000'),
 		enableXFrameOptions: process.env.ENABLE_X_FRAME_OPTIONS === 'true',
 		xFrameOptionsValue: process.env.X_FRAME_OPTIONS_VALUE || 'DENY',
+		enableXContentTypeOptions:
+			process.env.ENABLE_X_CONTENT_TYPE_OPTIONS === 'true',
+		enableXXssProtection: process.env.ENABLE_X_XSS_PROTECTION === 'true',
+		enableReferrerPolicy: process.env.ENABLE_REFERRER_POLICY === 'true',
+		referrerPolicyValue:
+			process.env.REFERRER_POLICY_VALUE || 'strict-origin-when-cross-origin',
+		enablePermissionsPolicy: process.env.ENABLE_PERMISSIONS_POLICY === 'true',
+		permissionsPolicyValue:
+			process.env.PERMISSIONS_POLICY_VALUE ||
+			'camera=(), microphone=(), geolocation=()',
 	}
 }
 
