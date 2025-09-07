@@ -4,6 +4,7 @@ import * as events_targets from 'aws-cdk-lib/aws-events-targets'
 import * as ssm from 'aws-cdk-lib/aws-ssm'
 import type { Construct } from 'constructs'
 
+import { AutoScalingConstruct } from '../constructs/auto-scaling-construct'
 import { CloudWatchMonitoringConstruct } from '../constructs/cloudwatch-monitoring-construct'
 import { CostMonitoringConstruct } from '../constructs/cost-monitoring-construct'
 import { CostOptimizationLambdaConstruct } from '../constructs/cost-optimization-lambda-construct'
@@ -60,6 +61,7 @@ export class MacroAiProductionStack extends cdk.Stack {
 	public readonly environmentConfig: EnvironmentConfigConstruct
 	public readonly ecsService: EcsFargateConstruct
 	public readonly loadBalancer: EcsLoadBalancerConstruct
+	public readonly autoScaling: AutoScalingConstruct
 	public readonly monitoring: CloudWatchMonitoringConstruct
 	public readonly costMonitoring: CostMonitoringConstruct
 	public readonly costOptimizationLambda: CostOptimizationLambdaConstruct
@@ -182,7 +184,32 @@ export class MacroAiProductionStack extends cdk.Stack {
 				: undefined,
 		})
 
-		// Create CloudWatch monitoring and alerting
+		// Create advanced auto-scaling with comprehensive scaling policies
+		this.autoScaling = new AutoScalingConstruct(this, 'AutoScaling', {
+			environmentName,
+			ecsService: this.ecsService.service,
+			loadBalancer: this.loadBalancer.loadBalancer,
+			alarmTopic: undefined, // Will be created internally
+			minCapacity: 2, // Production minimum for high availability
+			maxCapacity: 10, // Allow significant scaling for production
+			targetCpuUtilization: 70,
+			targetMemoryUtilization: 75,
+			targetRequestsPerMinute: 1000, // Scale based on request rate
+			enableStepScaling: true,
+			enableCustomMetrics: true,
+			enableScheduledScaling: false, // Production runs 24/7 with manual controls
+			cooldowns: {
+				scaleIn: cdk.Duration.seconds(300), // 5 minutes
+				scaleOut: cdk.Duration.seconds(180), // 3 minutes
+			},
+			tags: {
+				Environment: environmentName,
+				Service: 'auto-scaling',
+				Project: 'macro-ai',
+			},
+		})
+
+		// Create CloudWatch monitoring and alerting (share alarm topic with auto-scaling)
 		this.monitoring = new CloudWatchMonitoringConstruct(
 			this,
 			'CloudWatchMonitoring',
@@ -192,6 +219,7 @@ export class MacroAiProductionStack extends cdk.Stack {
 				loadBalancer: this.loadBalancer.loadBalancer,
 				clusterName: this.ecsService.cluster.clusterName,
 				serviceName: this.ecsService.service.serviceName,
+				alarmTopic: this.autoScaling.alarmTopic, // Share alarm topic with auto-scaling
 				enableDetailedMonitoring: true, // Enable detailed monitoring for production
 				enableCostMonitoring: true, // Enable cost monitoring for production
 			},
@@ -472,6 +500,43 @@ export class MacroAiProductionStack extends cdk.Stack {
 			value: this.upstashMonitoring.monitoringLambda.functionArn,
 			description: 'Upstash monitoring Lambda function ARN',
 			exportName: `${this.stackName}-UpstashMonitoringLambdaArn`,
+		})
+
+		// Auto-scaling outputs
+		new cdk.CfnOutput(this, 'AutoScalingDashboardUrl', {
+			value: `https://${this.region}.console.aws.amazon.com/cloudwatch/home?region=${this.region}#dashboards:name=production-scaling-dashboard`,
+			description: 'Auto-scaling monitoring dashboard URL',
+			exportName: `${this.stackName}-AutoScalingDashboardUrl`,
+		})
+
+		new cdk.CfnOutput(this, 'AutoScalingAlarmTopicArn', {
+			value: this.autoScaling.alarmTopic.topicArn,
+			description: 'SNS topic ARN for auto-scaling alarms',
+			exportName: `${this.stackName}-AutoScalingAlarmTopicArn`,
+		})
+
+		new cdk.CfnOutput(this, 'AutoScalingPoliciesCount', {
+			value: this.autoScaling.scalingPolicies.length.toString(),
+			description: 'Number of auto-scaling policies configured',
+			exportName: `${this.stackName}-AutoScalingPoliciesCount`,
+		})
+
+		new cdk.CfnOutput(this, 'AutoScalingMinCapacity', {
+			value: this.autoScaling.scalableTaskCount.scaleToTrackMetric ? '2' : 'N/A',
+			description: 'Minimum auto-scaling capacity',
+			exportName: `${this.stackName}-AutoScalingMinCapacity`,
+		})
+
+		new cdk.CfnOutput(this, 'AutoScalingMaxCapacity', {
+			value: this.autoScaling.scalableTaskCount.scaleToTrackMetric ? '10' : 'N/A',
+			description: 'Maximum auto-scaling capacity',
+			exportName: `${this.stackName}-AutoScalingMaxCapacity`,
+		})
+
+		new cdk.CfnOutput(this, 'CustomMetricsLambdaArn', {
+			value: this.autoScaling.customMetricsLambda?.functionArn || 'N/A',
+			description: 'Custom metrics collection Lambda function ARN',
+			exportName: `${this.stackName}-CustomMetricsLambdaArn`,
 		})
 	}
 }

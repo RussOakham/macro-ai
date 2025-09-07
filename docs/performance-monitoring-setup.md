@@ -2,7 +2,8 @@
 
 ## Overview
 
-This document describes the comprehensive performance monitoring system implemented for the Macro AI infrastructure, focusing on Neon PostgreSQL database and Upstash Redis monitoring.
+This document describes the comprehensive performance monitoring system implemented for the Macro AI infrastructure,
+focusing on Neon PostgreSQL database and Upstash Redis monitoring.
 
 ## Architecture
 
@@ -43,7 +44,7 @@ The performance monitoring system consists of:
 
 ### CloudWatch Namespace
 
-```
+```text
 Neon/Monitoring
 ```
 
@@ -78,7 +79,7 @@ Neon/Monitoring
 
 ### CloudWatch Namespace
 
-```
+```text
 Upstash/Monitoring
 ```
 
