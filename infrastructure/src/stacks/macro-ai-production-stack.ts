@@ -1,11 +1,14 @@
 import * as cdk from 'aws-cdk-lib'
 import * as events from 'aws-cdk-lib/aws-events'
 import * as events_targets from 'aws-cdk-lib/aws-events-targets'
+import * as ssm from 'aws-cdk-lib/aws-ssm'
 import type { Construct } from 'constructs'
 
 import { CloudWatchMonitoringConstruct } from '../constructs/cloudwatch-monitoring-construct'
 import { CostMonitoringConstruct } from '../constructs/cost-monitoring-construct'
 import { CostOptimizationLambdaConstruct } from '../constructs/cost-optimization-lambda-construct'
+import { NeonMonitoringConstruct } from '../constructs/neon-monitoring-construct'
+import { UpstashMonitoringConstruct } from '../constructs/upstash-monitoring-construct'
 import { EcsFargateConstruct } from '../constructs/ecs-fargate-construct'
 import { EcsLoadBalancerConstruct } from '../constructs/ecs-load-balancer-construct'
 import { EnvironmentConfigConstruct } from '../constructs/environment-config-construct'
@@ -60,6 +63,8 @@ export class MacroAiProductionStack extends cdk.Stack {
 	public readonly monitoring: CloudWatchMonitoringConstruct
 	public readonly costMonitoring: CostMonitoringConstruct
 	public readonly costOptimizationLambda: CostOptimizationLambdaConstruct
+	public readonly neonMonitoring: NeonMonitoringConstruct
+	public readonly upstashMonitoring: UpstashMonitoringConstruct
 	public readonly environmentName: string
 	public readonly customDomain?: MacroAiProductionStackProps['customDomain']
 
@@ -213,6 +218,48 @@ export class MacroAiProductionStack extends cdk.Stack {
 			{
 				environment: environmentName,
 				costOptimizationRole: this.costMonitoring.costOptimizationRole,
+			},
+		)
+
+		// Create Neon database monitoring
+		const neonConnectionStringParam =
+			ssm.StringParameter.fromStringParameterName(
+				this,
+				'NeonConnectionString',
+				`${this.parameterStore.parameterPrefix}/database/neon-connection-string`,
+			)
+
+		this.neonMonitoring = new NeonMonitoringConstruct(this, 'NeonMonitoring', {
+			environment: environmentName,
+			neonConnectionString: neonConnectionStringParam.stringValue,
+			alertTopic: this.monitoring.alarmTopic,
+			enableDetailedMonitoring: true,
+			enablePerformanceAlerts: true,
+		})
+
+		// Create Upstash Redis monitoring
+		const upstashRestTokenParam = ssm.StringParameter.fromStringParameterName(
+			this,
+			'UpstashRestToken',
+			`${this.parameterStore.parameterPrefix}/cache/upstash-rest-token`,
+		)
+
+		const upstashRestUrlParam = ssm.StringParameter.fromStringParameterName(
+			this,
+			'UpstashRestUrl',
+			`${this.parameterStore.parameterPrefix}/cache/upstash-rest-url`,
+		)
+
+		this.upstashMonitoring = new UpstashMonitoringConstruct(
+			this,
+			'UpstashMonitoring',
+			{
+				environment: environmentName,
+				upstashRestToken: upstashRestTokenParam.stringValue,
+				upstashRestUrl: upstashRestUrlParam.stringValue,
+				alertTopic: this.monitoring.alarmTopic,
+				enableDetailedMonitoring: true,
+				enablePerformanceAlerts: true,
 			},
 		)
 
@@ -400,6 +447,31 @@ export class MacroAiProductionStack extends cdk.Stack {
 			value: `${this.environmentName}-cost-optimization-schedule`,
 			description: 'EventBridge rule name for cost optimization schedule',
 			exportName: `${this.stackName}-CostOptimizationScheduleRule`,
+		})
+
+		// Monitoring outputs
+		new cdk.CfnOutput(this, 'NeonMonitoringDashboardUrl', {
+			value: `https://${cdk.Aws.REGION}.console.aws.amazon.com/cloudwatch/home?region=${cdk.Aws.REGION}#dashboards:name=${this.neonMonitoring.dashboard.dashboardName}`,
+			description: 'Neon monitoring CloudWatch dashboard URL',
+			exportName: `${this.stackName}-NeonMonitoringDashboardUrl`,
+		})
+
+		new cdk.CfnOutput(this, 'NeonMonitoringLambdaArn', {
+			value: this.neonMonitoring.monitoringLambda.functionArn,
+			description: 'Neon monitoring Lambda function ARN',
+			exportName: `${this.stackName}-NeonMonitoringLambdaArn`,
+		})
+
+		new cdk.CfnOutput(this, 'UpstashMonitoringDashboardUrl', {
+			value: `https://${cdk.Aws.REGION}.console.aws.amazon.com/cloudwatch/home?region=${cdk.Aws.REGION}#dashboards:name=${this.upstashMonitoring.dashboard.dashboardName}`,
+			description: 'Upstash monitoring CloudWatch dashboard URL',
+			exportName: `${this.stackName}-UpstashMonitoringDashboardUrl`,
+		})
+
+		new cdk.CfnOutput(this, 'UpstashMonitoringLambdaArn', {
+			value: this.upstashMonitoring.monitoringLambda.functionArn,
+			description: 'Upstash monitoring Lambda function ARN',
+			exportName: `${this.stackName}-UpstashMonitoringLambdaArn`,
 		})
 	}
 }

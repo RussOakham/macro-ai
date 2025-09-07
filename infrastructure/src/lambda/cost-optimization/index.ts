@@ -6,6 +6,7 @@ import {
 	CostExplorerClient,
 	GetCostAndUsageCommand,
 } from '@aws-sdk/client-cost-explorer'
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { EC2Client, DescribeInstancesCommand } from '@aws-sdk/client-ec2'
 import {
 	ElasticLoadBalancingV2Client,
@@ -218,7 +219,7 @@ async function analyzeEBSVolumes(
 		// Analyze for unused or underutilized EBS volumes
 		// This is a simplified analysis - in production, you'd want more detailed metrics
 		const totalEbsCost = costResponse.ResultsByTime?.[0]?.Groups?.find(
-			(group: Record<string, unknown>) =>
+			(group: any) =>
 				Array.isArray(group.Keys) &&
 				typeof group.Keys[0] === 'string' &&
 				group.Keys[0].includes('EBS'),
@@ -329,8 +330,7 @@ async function analyzeReservedInstances(
 		)
 
 		const onDemandCost = costResponse.ResultsByTime?.[0]?.Groups?.find(
-			(group: Record<string, unknown>) =>
-				Array.isArray(group.Keys) && group.Keys[0] === 'OnDemand',
+			(group: any) => Array.isArray(group.Keys) && group.Keys[0] === 'OnDemand',
 		)?.Metrics?.BlendedCost?.Amount
 
 		if (onDemandCost && parseFloat(onDemandCost) > 100) {
