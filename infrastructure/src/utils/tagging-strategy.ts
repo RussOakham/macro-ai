@@ -59,6 +59,7 @@ export const TAG_VALUES = {
 	PURPOSES: {
 		SHARED_INFRASTRUCTURE: 'SharedInfrastructure',
 		PREVIEW_ENVIRONMENT: 'PreviewEnvironment',
+		FEATURE_ENVIRONMENT: 'FeatureEnvironment',
 		COST_OPTIMIZATION: 'CostOptimization',
 		MONITORING: 'Monitoring',
 		SECURITY: 'Security',
@@ -107,6 +108,17 @@ export interface BaseTagConfig {
  */
 export interface PrTagConfig extends Omit<BaseTagConfig, 'environment'> {
 	readonly prNumber: number
+	readonly branch?: string
+	readonly expiryDays?: number
+	readonly autoShutdown?: boolean
+	readonly backupRequired?: boolean
+}
+
+/**
+ * Feature-specific tag configuration for ephemeral resources
+ */
+export interface FeatureTagConfig extends Omit<BaseTagConfig, 'environment'> {
+	readonly featureName: string
 	readonly branch?: string
 	readonly expiryDays?: number
 	readonly autoShutdown?: boolean
@@ -229,6 +241,53 @@ export class TaggingStrategy {
 	}
 
 	/**
+	 * Create feature-specific tags for ephemeral feature environments
+	 */
+	public static createFeatureTags(
+		config: FeatureTagConfig,
+	): Record<string, string> {
+		const baseTags = this.createBaseTags({
+			...config,
+			environment: `feature/${config.featureName}`,
+			environmentType: TAG_VALUES.ENVIRONMENT_TYPES.EPHEMERAL,
+			purpose: TAG_VALUES.PURPOSES.FEATURE_ENVIRONMENT,
+		})
+
+		const featureSpecificTags: Record<string, string> = {
+			...baseTags,
+			[TAG_KEYS.EXPIRY_DATE]: this.calculateExpiryDate(config.expiryDays ?? 14),
+		}
+
+		// Add optional feature-specific tags
+		if (config.branch) {
+			featureSpecificTags[TAG_KEYS.BRANCH] = config.branch
+		}
+
+		if (config.autoShutdown !== undefined) {
+			featureSpecificTags[TAG_KEYS.AUTO_SHUTDOWN] =
+				config.autoShutdown.toString()
+		}
+
+		if (config.backupRequired !== undefined) {
+			featureSpecificTags[TAG_KEYS.BACKUP_REQUIRED] =
+				config.backupRequired.toString()
+		}
+
+		return featureSpecificTags
+	}
+
+	/**
+	 * Apply feature-specific tags to a construct
+	 */
+	public static applyFeatureTags(
+		construct: Construct,
+		config: FeatureTagConfig,
+	): void {
+		const tags = this.createFeatureTags(config)
+		this.applyTags(construct, tags)
+	}
+
+	/**
 	 * Create cost allocation tags for billing and reporting
 	 */
 	public static createCostAllocationTags(
@@ -266,7 +325,7 @@ export class TaggingStrategy {
 	}
 
 	/**
-	 * Priority 3: Create auto-cleanup tags for preview environments
+	 * Priority 3: Create auto-cleanup tags for ephemeral environments (preview and feature)
 	 * Helps prevent orphaned resources and reduces costs
 	 */
 	public static createAutoCleanupTags(
@@ -277,9 +336,13 @@ export class TaggingStrategy {
 			environment &&
 				(environment.startsWith('pr-') || environment.includes('preview')),
 		)
+		const isFeatureEnv = Boolean(
+			environment && environment.startsWith('feature/'),
+		)
+		const isEphemeralEnv = isPreviewEnv || isFeatureEnv
 
 		return {
-			[TAG_KEYS.AUTO_CLEANUP]: isPreviewEnv ? 'true' : 'false',
+			[TAG_KEYS.AUTO_CLEANUP]: isEphemeralEnv ? 'true' : 'false',
 			[TAG_KEYS.CLEANUP_DATE]: this.calculateExpiryDate(cleanupDays),
 			[TAG_KEYS.COST_CENTER]: TAG_VALUES.COST_CENTERS.DEVELOPMENT,
 		}
@@ -302,7 +365,7 @@ export class TaggingStrategy {
 		if (environment === 'production') {
 			return TAG_VALUES.COST_CENTERS.PRODUCTION
 		}
-		if (environment.startsWith('pr-')) {
+		if (environment.startsWith('pr-') || environment.startsWith('feature/')) {
 			return TAG_VALUES.COST_CENTERS.DEVELOPMENT
 		}
 		return TAG_VALUES.COST_CENTERS.DEVELOPMENT
@@ -380,6 +443,18 @@ export class TaggingStrategy {
 				'',
 				'## PR Environment',
 				`- PR Number: ${tags[TAG_KEYS.PR_NUMBER] ?? 'N/A'}`,
+				`- Branch: ${tags[TAG_KEYS.BRANCH] ?? 'N/A'}`,
+				`- Expiry Date: ${tags[TAG_KEYS.EXPIRY_DATE] ?? 'N/A'}`,
+				`- Auto Shutdown: ${tags[TAG_KEYS.AUTO_SHUTDOWN] ?? 'N/A'}`,
+			)
+		}
+
+		// Add feature-specific information if present
+		if (tags[TAG_KEYS.ENVIRONMENT]?.startsWith('feature/')) {
+			sections.push(
+				'',
+				'## Feature Environment',
+				`- Feature Name: ${tags[TAG_KEYS.ENVIRONMENT]?.replace('feature/', '') ?? 'N/A'}`,
 				`- Branch: ${tags[TAG_KEYS.BRANCH] ?? 'N/A'}`,
 				`- Expiry Date: ${tags[TAG_KEYS.EXPIRY_DATE] ?? 'N/A'}`,
 				`- Auto Shutdown: ${tags[TAG_KEYS.AUTO_SHUTDOWN] ?? 'N/A'}`,

@@ -7,6 +7,7 @@ import 'source-map-support/register.js'
 import { MacroAiPreviewStack } from './stacks/macro-ai-preview-stack.js'
 import { MacroAiStagingStack } from './stacks/macro-ai-staging-stack.js'
 import { MacroAiProductionStack } from './stacks/macro-ai-production-stack.js'
+import { MacroAiFeatureStack } from './stacks/macro-ai-feature-stack.js'
 import { TAG_VALUES, TaggingStrategy } from './utils/tagging-strategy.js'
 
 const app = new cdk.App()
@@ -29,7 +30,9 @@ const deploymentEnv = process.env.CDK_DEPLOY_ENV ?? 'development'
 const isPreviewEnvironment = deploymentEnv.startsWith('pr-')
 const isStagingEnvironment = deploymentEnv === 'staging'
 const isProductionEnvironment = deploymentEnv === 'production'
-const environmentType = isPreviewEnvironment ? 'ephemeral' : 'persistent'
+const isFeatureEnvironment = deploymentEnv.startsWith('feature/')
+const environmentType =
+	isPreviewEnvironment || isFeatureEnvironment ? 'ephemeral' : 'persistent'
 
 // Create environment-specific stack
 const stackName = `MacroAi${deploymentEnv.charAt(0).toUpperCase() + deploymentEnv.slice(1)}Stack`
@@ -37,7 +40,9 @@ const stackName = `MacroAi${deploymentEnv.charAt(0).toUpperCase() + deploymentEn
 // Create stack description
 const stackDescription = isPreviewEnvironment
 	? `Macro AI ${deploymentEnv} Preview Environment - ECS Fargate-based architecture (ephemeral)`
-	: `Macro AI ${deploymentEnv} Environment - ECS Fargate-based architecture`
+	: isFeatureEnvironment
+		? `Macro AI ${deploymentEnv} Feature Environment - ECS Fargate-based architecture (ephemeral)`
+		: `Macro AI ${deploymentEnv} Environment - ECS Fargate-based architecture`
 
 // Centralized tag generation using TaggingStrategy
 const tags = isPreviewEnvironment
@@ -55,16 +60,31 @@ const tags = isPreviewEnvironment
 			expiryDays: 7,
 			// Note: environment is derived from prNumber by createPrTags
 		})
-	: TaggingStrategy.createBaseTags({
-			environment: deploymentEnv,
-			environmentType: environmentType,
-			component: 'shared-infrastructure',
-			purpose: 'SharedInfrastructure',
-			createdBy: 'github-actions',
-			scale: 'standard',
-			project: 'MacroAI',
-			owner: `${deploymentEnv}-deployment`,
-		})
+	: isFeatureEnvironment
+		? TaggingStrategy.createFeatureTags({
+				featureName: deploymentEnv.replace('feature/', ''),
+				branch:
+					process.env.GITHUB_HEAD_REF ?? deploymentEnv.replace('feature/', ''),
+				component: 'feature-environment',
+				purpose: TAG_VALUES.PURPOSES.FEATURE_ENVIRONMENT,
+				createdBy: 'github-actions',
+				scale: 'feature',
+				project: 'MacroAI',
+				owner: `${deploymentEnv}-deployment`,
+				monitoringLevel: TAG_VALUES.MONITORING_LEVELS.MINIMAL,
+				autoShutdown: true,
+				expiryDays: 14,
+			})
+		: TaggingStrategy.createBaseTags({
+				environment: deploymentEnv,
+				environmentType: environmentType,
+				component: 'shared-infrastructure',
+				purpose: 'SharedInfrastructure',
+				createdBy: 'github-actions',
+				scale: 'standard',
+				project: 'MacroAI',
+				owner: `${deploymentEnv}-deployment`,
+			})
 
 // Create the appropriate stack based on environment type
 if (isPreviewEnvironment) {
@@ -138,10 +158,35 @@ if (isPreviewEnvironment) {
 		customDomain,
 		tags,
 	})
+} else if (isFeatureEnvironment) {
+	// Feature environment configuration
+	const featureName = deploymentEnv.replace('feature/', '')
+	const branchName = process.env.GITHUB_HEAD_REF ?? featureName
+
+	// Custom domain configuration for feature environments
+	const customDomain = {
+		domainName: 'macro-ai.russoakham.dev',
+		hostedZoneId: 'Z10081873B648ARROPNER',
+		apiSubdomain: `feature-${featureName}-api`,
+	}
+
+	new MacroAiFeatureStack(app, stackName, {
+		env: {
+			account,
+			region,
+		},
+		description: stackDescription,
+		environmentName: deploymentEnv,
+		featureName,
+		branchName,
+		scale: 'feature',
+		customDomain,
+		tags,
+	})
 } else {
 	// Unsupported environment type
 	throw new Error(
-		`Unsupported environment: ${deploymentEnv}. Supported: pr-*, staging, production`,
+		`Unsupported environment: ${deploymentEnv}. Supported: pr-*, feature/*, staging, production`,
 	)
 }
 
