@@ -32,50 +32,6 @@ interface ICognitoError extends Error {
 	code?: string
 }
 
-/**
- * Reusable mock for CognitoService supporting both approaches:
- * 1. AWS SDK Client Mock (for service-level tests)
- * 2. Service Method Mock (for middleware/controller tests)
- *
- * AWS SDK Client Mock Usage (for auth.services.test.ts):
- * ```typescript
- * import { mockCognitoService } from '../../utils/test-helpers/cognito-service.mock.ts'
- *
- * describe('CognitoService', () => {
- *   let cognitoMock: AwsClientStub<CognitoIdentityProviderClient>
- *
- *   beforeEach(() => {
- *     cognitoMock = mockCognitoService.createAwsMock()
- *   })
- *
- *   it('should test something', () => {
- *     const mockUser = mockCognitoService.createUser({ Username: 'test-user' })
- *     cognitoMock.on(GetUserCommand).resolves(mockUser)
- *   })
- * })
- * ```
- *
- * Service Method Mock Usage (for middleware/controller tests):
- * ```typescript
- * import { mockCognitoService } from '../../utils/test-helpers/cognito-service.mock.ts'
- *
- * vi.mock('../../features/auth/auth.services.ts', () => mockCognitoService.createModule())
- *
- * describe('Auth Middleware', () => {
- *   let cognitoMocks: ReturnType<typeof mockCognitoService.setup>
- *
- *   beforeEach(() => {
- *     cognitoMocks = mockCognitoService.setup()
- *   })
- *
- *   it('should test something', () => {
- *     const mockUser = mockCognitoService.createUser({ Username: 'test-user' })
- *     cognitoMocks.getAuthUser.mockResolvedValue([mockUser, null])
- *   })
- * })
- * ```
- */
-
 // Service method mocks are statically defined to avoid hoisting issues with vi.mock
 // The type definition ensures our mocks stay in sync with the expected interface
 
@@ -207,6 +163,7 @@ export const createMockCognitoError = (
 		attempts: 1,
 		totalRetryDelay: 0,
 	}
+	// eslint-disable-next-line no-underscore-dangle
 	error.__type = __type
 	error.message = message
 

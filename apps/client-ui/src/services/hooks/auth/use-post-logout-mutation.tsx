@@ -6,7 +6,7 @@ import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 
-import { postLogout } from '../../network/auth/postLogout'
+import { postLogout } from '../../network/auth/post-logout'
 
 const usePostLogoutMutation = () => {
 	const queryClient = useQueryClient()

@@ -11,7 +11,7 @@ import {
 	type ContractInteraction,
 	ContractTester,
 	MockPact,
-} from '../pact-contract-testing.js'
+} from '../pact-contract-testing.ts'
 
 // ============================================================================
 // Test Suite

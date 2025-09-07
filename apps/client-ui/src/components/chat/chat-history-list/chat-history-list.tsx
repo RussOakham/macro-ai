@@ -2,11 +2,10 @@ import { AlertCircle, Loader2, MessageSquare } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { ChatWithDates } from '@/lib/types'
-import { formatRelativeDate } from '@/lib/utils/datetime/formatRelativeDate'
-import { useChats } from '@/services/hooks/chat/useChats'
+import { formatRelativeDate } from '@/lib/utils/datetime/format-relative-date'
+import { useChats } from '@/services/hooks/chat/use-chats'
 
 import { ChatHistoryDateGroup } from '../chat-history-date-group/chat-history-date-group'
-
 import { ChatHistoryListItem } from './chat-history-list-item'
 
 interface ChatHistoryListProps {

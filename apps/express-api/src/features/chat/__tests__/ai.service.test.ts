@@ -29,13 +29,14 @@ vi.mock('ai', () => ({
 	embed: mockEmbed,
 }))
 
+// Type imports for proper typing
+import type { AIService as AIServiceType } from '../ai.service.ts'
+
 // Import after mocking
 import {
 	tryCatch,
 	tryCatchSync,
 } from '../../../utils/error-handling/try-catch.ts'
-// Type imports for proper typing
-import type { AIService as AIServiceType } from '../ai.service.ts'
 
 // Type for the OpenAI provider mock to match the actual interface
 interface MockOpenAIProvider {

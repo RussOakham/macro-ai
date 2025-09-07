@@ -2,7 +2,6 @@ import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import { pino } from '../../utils/logger.ts'
-
 import { utilityService } from './utility.services.ts'
 import { IUtilityController, THealthResponse } from './utility.types.ts'
 

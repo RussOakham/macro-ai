@@ -1,5 +1,7 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Express } from 'express-serve-static-core'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars,
+import { type Express } from 'express'
+
+// Express types are used for module augmentation below
 
 declare global {
 	namespace Express {

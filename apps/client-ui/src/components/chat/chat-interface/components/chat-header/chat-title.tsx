@@ -7,6 +7,9 @@ interface ChatTitleProps extends React.ComponentPropsWithoutRef<'h1'> {
 /**
  * Chat title component
  * Displays the chat title with proper typography and styling
+ * @param root0
+ * @param root0.title
+ * @param root0.className
  */
 const ChatTitle = ({
 	title,

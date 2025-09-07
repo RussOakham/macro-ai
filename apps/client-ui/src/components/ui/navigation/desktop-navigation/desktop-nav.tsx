@@ -2,14 +2,13 @@ import { NavigationMenuList } from '@radix-ui/react-navigation-menu'
 import { Link } from '@tanstack/react-router'
 
 import { cn } from '@/lib/utils'
-import { useIsAuthenticated } from '@/services/hooks/auth/useIsAuthenticated'
+import { useIsAuthenticated } from '@/services/hooks/auth/use-is-authenticated'
 
 import {
 	NavigationMenu,
 	NavigationMenuItem,
 	navigationMenuTriggerStyle,
 } from '../../navigation-menu'
-
 import { DesktopAuthButtons } from './desktop-auth-buttons'
 
 const DesktopNav = ({

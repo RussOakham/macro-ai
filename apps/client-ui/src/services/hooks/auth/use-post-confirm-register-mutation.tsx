@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import {
 	ConfirmRegistration,
 	postConfirmRegistration,
-} from '../../network/auth/postConfirmRegistration'
+} from '../../network/auth/post-confirm-registration'
 
 const usePostConfirmRegisterMutation = () => {
 	return useMutation({

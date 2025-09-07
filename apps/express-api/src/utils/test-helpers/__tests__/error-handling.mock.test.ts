@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { AppError, ErrorType } from '../../errors.ts'
@@ -52,6 +51,7 @@ describe('Error Handling Mock Helper', () => {
 		})
 	})
 
+	// eslint-disable-next-line no-secrets/no-secrets
 	describe('setupErrorHandlingMock', () => {
 		let mock: MockErrorHandling
 
@@ -131,6 +131,7 @@ describe('Error Handling Mock Helper', () => {
 		})
 	})
 
+	// eslint-disable-next-line no-secrets/no-secrets
 	describe('mockTryCatchWithRealImplementation', () => {
 		it('should return success result for successful promise', async () => {
 			// Arrange
@@ -175,6 +176,7 @@ describe('Error Handling Mock Helper', () => {
 		})
 	})
 
+	// eslint-disable-next-line no-secrets/no-secrets
 	describe('mockTryCatchSyncWithRealImplementation', () => {
 		it('should return success result for successful function', () => {
 			// Arrange

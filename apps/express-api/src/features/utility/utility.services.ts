@@ -1,10 +1,9 @@
-import { readFileSync } from 'fs'
-import { join } from 'path'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import { InternalError, Result } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
-
 import {
 	IUtilityService,
 	TConfigurationStatus,
@@ -26,6 +25,7 @@ class UtilityService implements IUtilityService {
 	 * Get application version from package.json or environment variable
 	 * @returns Application version string
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	private getApplicationVersion(): string {
 		// Try environment variable first (useful for CI/CD)
 		const envVersion =
@@ -54,6 +54,7 @@ class UtilityService implements IUtilityService {
 	 * Check if database is ready for basic readiness checks
 	 * @returns Boolean indicating database readiness
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	private isDatabaseReady = (): boolean => {
 		// For now, check if database connection string is configured
 		// In a real implementation, you would perform a lightweight ping
@@ -67,6 +68,7 @@ class UtilityService implements IUtilityService {
 	 * @param includeErrorDetails - Whether to include detailed error messages
 	 * @returns Sanitized error message or null
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	private sanitizeErrorForEnvironment = (
 		error: string | undefined,
 		includeErrorDetails: boolean,
@@ -116,6 +118,7 @@ class UtilityService implements IUtilityService {
 	 * Performs basic health checks and returns status with sanitized errors for production
 	 * @returns Result tuple with health status or error
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	getHealthStatus = (): Result<THealthStatus> => {
 		// Perform basic health checks using tryCatchSync
 		const [healthCheck, error] = tryCatchSync(() => {
@@ -166,6 +169,7 @@ class UtilityService implements IUtilityService {
 	 * Returns more comprehensive system health data
 	 * @returns Result tuple with system info or error
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	getSystemInfo = (): Result<TSystemInfo> => {
 		const [systemInfo, error] = tryCatchSync(() => {
 			const memoryUsage = process.memoryUsage()
@@ -401,6 +405,7 @@ class UtilityService implements IUtilityService {
 	 * Checks if the application is alive and should not be restarted
 	 * @returns Result tuple with liveness status or error
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	getLivenessStatus = (): Result<TLivenessStatus> => {
 		const [livenessStatus, error] = tryCatchSync(() => {
 			const currentTime = new Date()
@@ -436,6 +441,7 @@ class UtilityService implements IUtilityService {
 	 * Check database health
 	 * @returns Database health status
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	private checkDatabaseHealth = (): {
 		status: 'healthy' | 'unhealthy' | 'unknown'
 		responseTime?: number
@@ -468,6 +474,7 @@ class UtilityService implements IUtilityService {
 	 * @param usageMB Memory usage in MB
 	 * @returns Memory health status
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	private checkMemoryHealth = (
 		usagePercent: number,
 		usageMB: number,
@@ -490,6 +497,7 @@ class UtilityService implements IUtilityService {
 	 * Check disk health
 	 * @returns Disk health status
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	private checkDiskHealth = (): {
 		status: 'healthy' | 'unhealthy'
 		usagePercent?: number
@@ -559,6 +567,7 @@ class UtilityService implements IUtilityService {
 	 * Check if configuration is ready
 	 * @returns Boolean indicating configuration readiness
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	private isConfigurationReady = (): boolean => {
 		// Check if critical configuration is available
 		// Use minimal required variables that should always be present
@@ -576,6 +585,7 @@ class UtilityService implements IUtilityService {
 	 * Get detailed configuration validation status for health checks
 	 * @returns Configuration validation details
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	private getConfigurationValidationStatus = () => {
 		const criticalEnvVars = ['NODE_ENV']
 		const importantEnvVars = [
@@ -669,6 +679,7 @@ class UtilityService implements IUtilityService {
 	 * Check OpenAI API health
 	 * @returns OpenAI health status
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	private checkOpenAIHealth = () => {
 		const apiKey = process.env.OPENAI_API_KEY
 
@@ -691,6 +702,7 @@ class UtilityService implements IUtilityService {
 	 * Check Redis health
 	 * @returns Redis health status
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	private checkRedisHealth = () => {
 		// TODO: Use proper config management for Redis URL
 		const redisUrl = process.env.REDIS_URL

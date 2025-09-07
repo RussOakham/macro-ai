@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import {
 	postResendConfirmRegistrationCode,
 	ResendConfirmationCode,
-} from '@/services/network/auth/postResendConfirmRegistrationCode'
+} from '@/services/network/auth/post-resend-confirm-registration-code'
 
 const usePostResendConfirmRegistrationCodeMutation = () => {
 	return useMutation({

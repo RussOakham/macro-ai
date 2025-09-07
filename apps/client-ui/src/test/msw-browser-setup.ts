@@ -1,11 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * MSW Browser Setup for Application Testing
  *
  * This module provides MSW setup for the browser environment, allowing the application
  * to use MSW instead of the real backend when NODE_ENV === 'test'.
  */
-
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
 
 import { setupWorker } from 'msw/browser'
 

@@ -1,13 +1,3 @@
-import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
-import {
-	NotFoundError,
-	Result,
-	UnauthorizedError,
-	ValidationError,
-} from '../../utils/errors.ts'
-import { pino } from '../../utils/logger.ts'
-
-import { type AIService } from './ai.service.ts'
 import type {
 	ChatWithMessages,
 	IChatRepository,
@@ -19,6 +9,16 @@ import type {
 	TChat,
 	TChatMessage,
 } from './chat.types.ts'
+
+import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
+import {
+	NotFoundError,
+	Result,
+	UnauthorizedError,
+	ValidationError,
+} from '../../utils/errors.ts'
+import { pino } from '../../utils/logger.ts'
+import { type AIService } from './ai.service.ts'
 import { type VectorService } from './vector.service.ts'
 
 const { logger } = pino
@@ -545,6 +545,7 @@ export class ChatService implements IChatService {
 	/**
 	 * Validate create chat request
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	private validateCreateChatRequest(request: {
 		userId: string
 		title: string
@@ -588,6 +589,7 @@ export class ChatService implements IChatService {
 	/**
 	 * Validate send message request
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	private validateSendMessageRequest(
 		request: SendMessageRequest,
 	): Result<SendMessageRequest> {

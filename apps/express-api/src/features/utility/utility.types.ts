@@ -2,7 +2,6 @@ import express from 'express'
 import { z } from 'zod'
 
 import { Result } from '../../utils/errors.ts'
-
 import { healthErrorSchema, healthResponseSchema } from './utility.schemas.ts'
 
 // Controller interface

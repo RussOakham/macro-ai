@@ -9,12 +9,31 @@
 		"node": ">=20.0.0",
 		"pnpm": ">=9.0.0"
 	},
+	"scripts": {
+		"format": "prettier --write ./src/**/*.js",
+		"format:check": "prettier --check ./src/**/*.js",
+		"format:fix": "prettier --write ./src/**/*.js",
+		"lint": "eslint ./src/**/*.js",
+		"lint:fix": "eslint ./src/**/*.js --fix",
+		"lint:ci": "eslint ./src/**/*.js --max-warnings 0",
+		"lint:ci:fix": "eslint ./src/**/*.js --max-warnings 0 --fix"
+	},
 	"files": [
-		"./eslint.js"
+		"./src/**/*.js",
+		"./index.js",
+		"./index.d.ts"
 	],
 	"exports": {
-		".": "./eslint.js"
+		".": {
+			"types": "./index.d.ts",
+			"import": "./index.js"
+		},
+		"./index": {
+			"types": "./index.d.ts",
+			"import": "./index.js"
+		}
 	},
+	"types": "./index.d.ts",
 	"publishConfig": {
 		"access": "public"
 	},
@@ -29,6 +48,7 @@
 		"eslint-plugin-react-refresh": "^0.4.20",
 		"eslint-plugin-simple-import-sort": "^12.1.1",
 		"eslint-plugin-unused-imports": "catalog:",
+		"eslint-plugin-import-x": "^4.16.1",
 		"globals": "catalog:",
 		"prettier": "catalog:",
 		"typescript": "catalog:",

@@ -818,6 +818,7 @@ describe('errorHandler Middleware', () => {
 		it('should not expose sensitive information in production', async () => {
 			// Arrange
 			const sensitiveError = new InternalError(
+				// eslint-disable-next-line no-secrets/no-secrets
 				'Database connection failed: password=FAKE_TEST_PASSWORD_123',
 				'database service',
 			)
@@ -833,6 +834,7 @@ describe('errorHandler Middleware', () => {
 
 			// Assert - In production, only message is exposed, not details or type
 			expect(mockResponse.json).toHaveBeenCalledWith({
+				// eslint-disable-next-line no-secrets/no-secrets
 				message: 'Database connection failed: password=FAKE_TEST_PASSWORD_123',
 			})
 			expect(mockResponse.json).toHaveBeenCalledTimes(1)

@@ -1,12 +1,12 @@
-import { useTransition } from 'react'
 import { Check, Loader2, X } from 'lucide-react'
+import { useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { logger } from '@/lib/logger/logger'
 import { ChatWithDates } from '@/lib/types'
-import { useUpdateChatMutation } from '@/services/hooks/chat/useUpdateChatMutation'
+import { useUpdateChatMutation } from '@/services/hooks/chat/use-update-chat-mutation'
 
 interface ChatHistoryItemEditProps {
 	chat: ChatWithDates

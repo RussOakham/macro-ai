@@ -9,8 +9,8 @@
  */
 
 import { config as dotenvConfig } from 'dotenv'
-import { existsSync } from 'fs'
-import { resolve } from 'path'
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { fromError } from 'zod-validation-error'
 
 import { envSchema, type TEnv } from '../utils/env.schema.ts'

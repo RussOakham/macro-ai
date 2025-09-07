@@ -1,9 +1,8 @@
 import type { Config } from '@repo/macro-ai-api-client'
+
 import { createApiClient } from '@repo/macro-ai-api-client'
 
 import { validateEnvironment } from '@/lib/validation/environment'
-
-import { applyTokenRefreshInterceptors } from './interceptors'
 
 const env = validateEnvironment()
 
@@ -31,10 +30,9 @@ export const apiClientWithoutCredentials = createApiClient(
 	sharedConfigWithoutCredentials,
 )
 
-// Apply token refresh interceptors to all clients
-applyTokenRefreshInterceptors({ axios: apiClient.instance })
-applyTokenRefreshInterceptors({ axios: apiClientWithoutCredentials.instance })
-
 // Export types for convenience
 export type ApiClient = typeof apiClient
 export type ApiClientWithoutCredentials = typeof apiClientWithoutCredentials
+
+// Initialize interceptors through a separate module to avoid circular dependencies
+import './interceptor-init'

@@ -50,11 +50,30 @@ describe('API Clients Integration', () => {
 		it('should apply interceptors to unified clients', async () => {
 			const { applyTokenRefreshInterceptors } = await import('../interceptors')
 
-			// Import clients after mocking
-			await import('../clients')
+			// Import clients - this will trigger interceptor initialization
+			const { apiClient, apiClientWithoutCredentials } = await import(
+				'../clients'
+			)
+
+			// Wait a bit for async initialization to complete
+			await new Promise((resolve) => setTimeout(resolve, 10))
 
 			// Verify that interceptors were applied to both clients
-			expect(applyTokenRefreshInterceptors).toHaveBeenCalledTimes(2) // apiClient, apiClientWithoutCredentials
+			expect(applyTokenRefreshInterceptors).toHaveBeenCalledTimes(2)
+
+			// Verify that interceptors are actually configured on the axios instances
+			expect(apiClient.instance.interceptors.response).toBeDefined()
+			expect(
+				apiClientWithoutCredentials.instance.interceptors.response,
+			).toBeDefined()
+
+			// Verify interceptor handlers are functions
+			expect(typeof apiClient.instance.interceptors.response.use).toBe(
+				'function',
+			)
+			expect(
+				typeof apiClientWithoutCredentials.instance.interceptors.response.use,
+			).toBe('function')
 		})
 
 		it('should export unified API clients with proper configuration', async () => {

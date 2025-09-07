@@ -1,7 +1,7 @@
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -9,11 +9,11 @@ import { Input } from '@/components/ui/input'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
-import { usePostRegisterMutation } from '@/services/hooks/auth/usePostRegisterMutation'
+import { usePostRegisterMutation } from '@/services/hooks/auth/use-post-register-mutation'
 import {
 	RegisterRequest,
 	zRegisterRequest,
-} from '@/services/network/auth/postRegister'
+} from '@/services/network/auth/post-register'
 
 import {
 	Form,

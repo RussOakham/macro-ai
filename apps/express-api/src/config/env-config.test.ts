@@ -2,9 +2,9 @@
  * Unit tests for the enhanced environment configuration system
  */
 
-import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'fs'
-import { tmpdir } from 'os'
-import { join } from 'path'
+import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Import the functions we're testing
@@ -190,7 +190,6 @@ describe('Enhanced Environment Configuration System', () => {
 		})
 
 		it('should respect enableLogging option', () => {
-			// eslint-disable-next-line @typescript-eslint/no-empty-function
 			const loggerSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
 
 			// Set valid environment variables

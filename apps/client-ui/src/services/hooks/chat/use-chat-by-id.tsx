@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { QUERY_KEY, QUERY_KEY_MODIFIERS } from '@/constants/query-keys'
 
-import { getChatById } from '../../network/chat/getChatById'
+import { getChatById } from '../../network/chat/get-chat-by-id'
 
 /**
  * Hook to fetch a specific chat with its messages by ID

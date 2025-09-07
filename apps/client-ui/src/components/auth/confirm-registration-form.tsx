@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import z from 'zod'
 
@@ -34,8 +34,8 @@ import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
-import { usePostConfirmRegisterMutation } from '@/services/hooks/auth/usePostConfirmRegisterMutation'
-import { GetAuthUserResponse } from '@/services/network/auth/getAuthUser'
+import { usePostConfirmRegisterMutation } from '@/services/hooks/auth/use-post-confirm-register-mutation'
+import { GetAuthUserResponse } from '@/services/network/auth/get-auth-user'
 
 const confirmRegistrationSchema = z.object({
 	email: z.email(),

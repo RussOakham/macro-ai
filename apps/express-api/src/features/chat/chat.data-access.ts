@@ -1,17 +1,17 @@
 import { and, desc, eq, sql } from 'drizzle-orm'
 
-import { db } from '../../data-access/db.ts'
-import { tryCatch } from '../../utils/error-handling/try-catch.ts'
-import { AppError, InternalError, Result } from '../../utils/errors.ts'
-import { safeValidateSchema } from '../../utils/response-handlers.ts'
-
-import { chatsTable, selectChatSchema } from './chat.schemas.ts'
 import type {
 	IChatRepository,
 	PaginationOptions,
 	TChat,
 	TInsertChat,
 } from './chat.types.ts'
+
+import { db } from '../../data-access/db.ts'
+import { tryCatch } from '../../utils/error-handling/try-catch.ts'
+import { AppError, InternalError, Result } from '../../utils/errors.ts'
+import { safeValidateSchema } from '../../utils/response-handlers.ts'
+import { chatsTable, selectChatSchema } from './chat.schemas.ts'
 
 /**
  * ChatRepository class that implements the IChatRepository interface
@@ -103,7 +103,6 @@ class ChatRepository implements IChatRepository {
 			return [null, totalError]
 		}
 
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion
 		const total = Number(totalResult[0]?.count ?? 0)
 
 		// Validate each chat

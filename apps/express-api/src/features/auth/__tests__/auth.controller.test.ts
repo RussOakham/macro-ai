@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 // AWS Cognito types
 import {
 	ConfirmForgotPasswordCommandOutput,

@@ -1,15 +1,14 @@
-import { StrictMode } from 'react'
-import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
+import { StrictMode } from 'react'
+import ReactDOM from 'react-dom/client'
 
 import { AuthRouteLoading } from './components/auth/auth-route-loading.tsx'
 import { ThemeProvider } from './components/providers/theme-provider.tsx'
 import { AppWrapper } from './lib/app-wrapper.tsx'
 import { standardizeError } from './lib/errors/standardize-error.ts'
 import { routeTree } from './routeTree.gen.ts'
-
 import './index.css'
 
 // Create a new Query Client instance

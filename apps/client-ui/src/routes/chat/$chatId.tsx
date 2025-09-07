@@ -1,5 +1,5 @@
-import { useState } from 'react'
 import { createFileRoute, redirect } from '@tanstack/react-router'
+import { useState } from 'react'
 import { z } from 'zod'
 
 import { AuthRouteLoading } from '@/components/auth/auth-route-loading'
@@ -8,7 +8,7 @@ import { ChatSidebar } from '@/components/chat/chat-sidebar/chat-sidebar'
 import { attemptAuthenticationWithRefresh } from '@/lib/auth/auth-utils'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
-import { useGetUser } from '@/services/hooks/user/getUser'
+import { useGetUser } from '@/services/hooks/user/get-user'
 
 // Route parameter validation schema
 const chatParamsSchema = z.object({

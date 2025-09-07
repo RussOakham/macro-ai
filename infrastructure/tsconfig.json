@@ -16,7 +16,6 @@
 		"strict": true,
 		"strictNullChecks": true,
 		"noEmit": false,
-		"allowImportingTsExtensions": false,
 		"skipLibCheck": true,
 		"isolatedModules": false
 	},

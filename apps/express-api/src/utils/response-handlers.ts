@@ -16,7 +16,7 @@ const { logger } = pino
  * @param status HTTP status code (defaults to 200 OK)
  * @returns The Express response object for chaining
  */
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
+
 export const sendSuccess = <TData>(
 	res: Response,
 	data: TData,

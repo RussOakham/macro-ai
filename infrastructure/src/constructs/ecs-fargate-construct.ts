@@ -7,7 +7,7 @@ import * as iam from 'aws-cdk-lib/aws-iam'
 import * as logs from 'aws-cdk-lib/aws-logs'
 import { Construct } from 'constructs'
 
-import { EnvironmentConfigConstruct } from './environment-config-construct.js'
+import { EnvironmentConfigConstruct } from './environment-config-construct'
 
 export interface EcsFargateConstructProps {
 	/**
@@ -551,6 +551,7 @@ export class EcsFargateConstruct extends Construct {
 		// ECR access for pulling images
 		role.addManagedPolicy(
 			iam.ManagedPolicy.fromAwsManagedPolicyName(
+				// eslint-disable-next-line no-secrets/no-secrets
 				'service-role/AmazonECSTaskExecutionRolePolicy',
 			),
 		)

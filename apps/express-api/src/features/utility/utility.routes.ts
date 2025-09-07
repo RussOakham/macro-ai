@@ -7,7 +7,6 @@ import {
 	RateLimitErrorSchema,
 	registry,
 } from '../../utils/swagger/openapi-registry.ts'
-
 import { utilityController } from './utility.controller.ts'
 import {
 	configurationResponseSchema,

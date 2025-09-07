@@ -47,7 +47,6 @@ describe('Database Integration Testing Examples', () => {
 
 	// Clean up after all tests
 	afterAll(async () => {
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (dbContext) {
 			await dbContext.cleanup()
 			await cleanupGlobalResources()
@@ -56,7 +55,6 @@ describe('Database Integration Testing Examples', () => {
 
 	// Reset database state before each test for isolation
 	beforeEach(async () => {
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (dbContext) {
 			await dbContext.resetDatabase()
 		}
@@ -64,7 +62,6 @@ describe('Database Integration Testing Examples', () => {
 
 	describe('Basic CRUD Operations', () => {
 		it('should create, read, update, and delete users', async () => {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (!dbContext) {
 				console.warn('Skipping test: Docker/testcontainers not available')
 				return
@@ -131,7 +128,6 @@ describe('Database Integration Testing Examples', () => {
 		})
 
 		it('should handle complex queries with joins and filtering', async () => {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (!dbContext) {
 				console.warn('Skipping test: Docker/testcontainers not available')
 				return
@@ -166,7 +162,7 @@ describe('Database Integration Testing Examples', () => {
 				])
 				.returning()
 
-			expect(users.length).toBe(3)
+			expect(users).toHaveLength(3)
 
 			// Create test chats
 			const chats = await db
@@ -190,7 +186,7 @@ describe('Database Integration Testing Examples', () => {
 				])
 				.returning()
 
-			expect(chats.length).toBe(3)
+			expect(chats).toHaveLength(3)
 
 			// Create test messages
 			const messages = await db
@@ -224,7 +220,7 @@ describe('Database Integration Testing Examples', () => {
 				])
 				.returning()
 
-			expect(messages.length).toBe(4)
+			expect(messages).toHaveLength(4)
 
 			// Verify we have test data
 			const allUsers = await db.select().from(schema.usersTable)
@@ -286,7 +282,6 @@ describe('Database Integration Testing Examples', () => {
 
 	describe('Transaction Testing', () => {
 		it('should handle successful transactions', async () => {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (!dbContext) {
 				console.warn('Skipping test: Docker/testcontainers not available')
 				return
@@ -340,7 +335,6 @@ describe('Database Integration Testing Examples', () => {
 		})
 
 		it('should handle transaction rollbacks', async () => {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (!dbContext) {
 				console.warn('Skipping test: Docker/testcontainers not available')
 				return
@@ -385,7 +379,6 @@ describe('Database Integration Testing Examples', () => {
 		})
 
 		it('should handle concurrent transactions', async () => {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (!dbContext) {
 				console.warn('Skipping test: Docker/testcontainers not available')
 				return
@@ -451,7 +444,6 @@ describe('Database Integration Testing Examples', () => {
 
 	describe('Error Scenarios', () => {
 		it('should handle database constraint violations', async () => {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (!dbContext) {
 				console.warn('Skipping test: Docker/testcontainers not available')
 				return
@@ -483,7 +475,6 @@ describe('Database Integration Testing Examples', () => {
 		})
 
 		it('should handle foreign key constraint violations', async () => {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (!dbContext) {
 				console.warn('Skipping test: Docker/testcontainers not available')
 				return
@@ -502,7 +493,6 @@ describe('Database Integration Testing Examples', () => {
 		})
 
 		it('should handle connection timeouts and retries', async () => {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (!dbContext) {
 				console.warn('Skipping test: Docker/testcontainers not available')
 				return
@@ -525,6 +515,7 @@ describe('Database Integration Testing Examples', () => {
 									client.release()
 									resolve()
 								}, 100)
+								return undefined
 							})
 							.catch((error: unknown) => {
 								reject(
@@ -548,7 +539,6 @@ describe('Database Integration Testing Examples', () => {
 
 	describe('Performance Testing', () => {
 		it('should measure insert performance', async () => {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (!dbContext) {
 				console.warn('Skipping test: Docker/testcontainers not available')
 				return
@@ -577,7 +567,6 @@ describe('Database Integration Testing Examples', () => {
 		})
 
 		it('should measure batch insert performance', async () => {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (!dbContext) {
 				console.warn('Skipping test: Docker/testcontainers not available')
 				return
@@ -610,7 +599,6 @@ describe('Database Integration Testing Examples', () => {
 		})
 
 		it('should measure complex query performance', async () => {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (!dbContext) {
 				console.warn('Skipping test: Docker/testcontainers not available')
 				return
@@ -652,7 +640,6 @@ describe('Database Integration Testing Examples', () => {
 
 	describe('Data Consistency and Integrity', () => {
 		it('should maintain referential integrity across operations', async () => {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (!dbContext) {
 				console.warn('Skipping test: Docker/testcontainers not available')
 				return
@@ -739,7 +726,6 @@ describe('Database Integration Testing Examples', () => {
 		})
 
 		it('should handle concurrent updates correctly', async () => {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			if (!dbContext) {
 				console.warn('Skipping test: Docker/testcontainers not available')
 				return

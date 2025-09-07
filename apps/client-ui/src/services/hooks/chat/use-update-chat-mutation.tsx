@@ -3,12 +3,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { QUERY_KEY, QUERY_KEY_MODIFIERS } from '@/constants/query-keys'
 import { logger } from '@/lib/logger/logger'
 
-import type { GetChatsResponse } from '../../network/chat/getChats'
+import type { GetChatsResponse } from '../../network/chat/get-chats'
+
 import {
 	updateChatById,
 	UpdateChatRequestBody,
 	UpdateChatRequestParam,
-} from '../../network/chat/updateChat'
+} from '../../network/chat/update-chat'
 
 /**
  * TanStack Query mutation hook for updating an existing chat

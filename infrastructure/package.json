@@ -43,6 +43,7 @@
 		"@types/node": "catalog:",
 		"aws-cdk": "^2.1027.0",
 		"eslint": "catalog:",
+		"globals": "catalog:",
 		"eslint-config-prettier": "catalog:",
 		"eslint-plugin-simple-import-sort": "^12.1.1",
 		"prettier": "^3.6.2",

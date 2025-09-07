@@ -1,12 +1,12 @@
-import { useState } from 'react'
 import { createFileRoute, redirect } from '@tanstack/react-router'
+import { useState } from 'react'
 
 import { AuthRouteLoading } from '@/components/auth/auth-route-loading'
 import { ChatInterface } from '@/components/chat/chat-interface/chat-interface'
 import { ChatSidebar } from '@/components/chat/chat-sidebar/chat-sidebar'
 import { attemptAuthenticationWithRefresh } from '@/lib/auth/auth-utils'
 import { standardizeError } from '@/lib/errors/standardize-error'
-import { useGetUser } from '@/services/hooks/user/getUser'
+import { useGetUser } from '@/services/hooks/user/get-user'
 
 const ChatLayout = () => {
 	const { data: user, isFetching, isError, error, isSuccess } = useGetUser()

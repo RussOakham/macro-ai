@@ -431,25 +431,32 @@ export default defineConfig({
 
 ### ESLint Configuration ✅ ENFORCED
 
-```json
-// .eslintrc.json
-{
-	"extends": [
-		"@typescript-eslint/recommended",
-		"@typescript-eslint/recommended-requiring-type-checking",
-		"prettier"
-	],
-	"rules": {
-		"@typescript-eslint/no-unused-vars": "error",
-		"@typescript-eslint/explicit-function-return-type": "warn",
-		"@typescript-eslint/no-explicit-any": "error",
-		"@typescript-eslint/prefer-nullish-coalescing": "error",
-		"@typescript-eslint/prefer-optional-chain": "error",
-		"prefer-const": "error",
-		"no-var": "error",
-		"no-console": "warn"
-	}
-}
+```javascript
+// eslint.config.js
+import * as repoConfig from '@repo/config-eslint'
+
+export default repoConfig.config(
+	// Global ignores - must be first
+	{
+		ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.lcov'],
+	},
+	// Use shared base config with modular approach
+	...repoConfig.configs.base,
+	// Add project-specific configurations
+	{
+		languageOptions: {
+			parserOptions: {
+				project: './tsconfig.json',
+				tsconfigRootDir: import.meta.dirname,
+			},
+		},
+		rules: {
+			// Project-specific rule overrides
+			'@typescript-eslint/no-unused-vars': 'error',
+			'@typescript-eslint/explicit-function-return-type': 'warn',
+		},
+	},
+)
 ```
 
 ### Prettier Configuration ✅ ENFORCED

@@ -179,6 +179,7 @@ class AIService {
 	 * @param messages - Messages to validate
 	 * @returns Result tuple with validated messages or error
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	public validateMessages(
 		messages: { role: string; content: string }[],
 	): Result<ChatMessage[]> {

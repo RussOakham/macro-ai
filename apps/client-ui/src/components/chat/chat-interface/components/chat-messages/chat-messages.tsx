@@ -1,6 +1,6 @@
 import type React from 'react'
 
-import { TChatMessage } from '@/services/hooks/chat/useEnhancedChat'
+import { TChatMessage } from '@/services/hooks/chat/use-enhanced-chat-mutation'
 
 import { MessageList } from './message-list'
 
@@ -13,6 +13,11 @@ interface ChatMessagesProps extends React.ComponentPropsWithoutRef<'div'> {
 /**
  * Chat messages container component
  * Manages the scrollable messages area and auto-scroll behavior
+ * @param root0
+ * @param root0.messages
+ * @param root0.status
+ * @param root0.messagesEndRef
+ * @param root0.className
  */
 const ChatMessages = ({
 	messages,

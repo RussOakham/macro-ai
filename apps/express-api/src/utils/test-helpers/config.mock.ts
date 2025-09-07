@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 
-import type { Config } from '../../utils/load-config.ts'
+import type { Config } from '../load-config.ts'
 
 /**
  * Config Mock Helper for Express API Tests

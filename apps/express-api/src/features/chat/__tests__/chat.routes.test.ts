@@ -107,27 +107,27 @@ describe('Chat Routes Integration', () => {
 
 		// Check GET routes
 		const getCalls = routerSpy.get.mock.calls
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
 		const getRoutes = getCalls.map((call) => call[0])
 		expect(getRoutes).toContain('/chats') // List user's chats
 		expect(getRoutes).toContain('/chats/:id') // Get specific chat with messages
 
 		// Check POST routes
 		const postCalls = routerSpy.post.mock.calls
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
 		const postRoutes = postCalls.map((call) => call[0])
 		expect(postRoutes).toContain('/chats') // Create new chat
 		expect(postRoutes).toContain('/chats/:id/stream') // Stream chat message response
 
 		// Check PUT routes
 		const putCalls = routerSpy.put.mock.calls
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
 		const putRoutes = putCalls.map((call) => call[0])
 		expect(putRoutes).toContain('/chats/:id') // Update chat title
 
 		// Check DELETE routes
 		const deleteCalls = routerSpy.delete.mock.calls
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
 		const deleteRoutes = deleteCalls.map((call) => call[0])
 		expect(deleteRoutes).toContain('/chats/:id') // Delete chat
 	})
@@ -156,7 +156,7 @@ describe('Chat Routes Integration', () => {
 		if (streamingCall) {
 			expect(streamingCall[0]).toBe('/chats/:id/stream')
 			// Verify middleware order: verifyAuth, apiRateLimiter, validate, controller
-			expect(streamingCall.length).toBe(5) // path + 3 middleware + controller
+			expect(streamingCall).toHaveLength(5) // path + 3 middleware + controller
 		}
 	})
 

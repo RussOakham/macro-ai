@@ -4,8 +4,8 @@ import Cookies from 'js-cookie'
 import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
-import { getAuthUser } from '@/services/network/auth/getAuthUser'
-import { postRefreshToken } from '@/services/network/auth/postRefreshToken'
+import { getAuthUser } from '@/services/network/auth/get-auth-user'
+import { postRefreshToken } from '@/services/network/auth/post-refresh-token'
 
 import { waitForRefreshCompletion } from './shared-refresh-promise'
 

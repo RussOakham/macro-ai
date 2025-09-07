@@ -88,7 +88,7 @@ describe('Validation Middleware', () => {
 				mockTryCatch.mockResolvedValue([validData, null])
 
 				const middleware = await import('../validation.middleware.ts')
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const validator = middleware.validate(testSchema, target as any)
 
 				// Act
@@ -257,7 +257,7 @@ describe('Validation Middleware', () => {
 
 				const middleware = await import('../validation.middleware.ts')
 				const { ValidationError } = await import('../../utils/errors.ts')
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const validator = middleware.validate(testSchema, target as any)
 
 				// Act

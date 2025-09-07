@@ -5,7 +5,6 @@
  * and provide enhanced mocking patterns, React component testing helpers, and MSW integration.
  */
 
-import { ReactElement } from 'react'
 // Import utilities from config-testing package
 import {
 	apiResponseFactory,
@@ -18,6 +17,7 @@ import {
 } from '@repo/config-testing'
 import { render, RenderOptions, RenderResult } from '@testing-library/react'
 import { AxiosHeaders, AxiosInstance, AxiosResponse } from 'axios'
+import { ReactElement } from 'react'
 
 /**
  * Enhanced render result with test context
@@ -109,17 +109,23 @@ export interface ComponentTestContext {
 // Enhanced API Client Mocking
 // ============================================================================
 
+const defaultBaseURL = 'http://localhost:3000'
+const defaultApiKey = 'test-api-key'
+const defaultWithCredentials = true
+const defaultTimeout = 5000
+
 /**
  * Create a comprehensive mock Axios instance
+ * @param config
  */
 export const createMockAxiosInstance = (
 	config: Partial<ApiTestConfig> = {},
 ): MockAxiosInstance => {
 	const defaultConfig: ApiTestConfig = {
-		baseURL: 'http://localhost:3000',
-		apiKey: 'test-api-key',
-		withCredentials: true,
-		timeout: 5000,
+		baseURL: defaultBaseURL,
+		apiKey: defaultApiKey,
+		withCredentials: defaultWithCredentials,
+		timeout: defaultTimeout,
 		...config,
 	}
 
@@ -154,6 +160,7 @@ export const createMockAxiosInstance = (
 
 /**
  * Create a comprehensive mock API client
+ * @param config
  */
 export const createMockApiClient = (
 	config: Partial<ApiTestConfig> = {},
@@ -172,6 +179,9 @@ export const createMockApiClient = (
 
 /**
  * Create mock API responses with consistent structure
+ * @param data
+ * @param status
+ * @param headers
  */
 export const createMockApiResponse = <T>(
 	data: T,
@@ -188,6 +198,9 @@ export const createMockApiResponse = <T>(
 
 /**
  * Create mock API error responses
+ * @param message
+ * @param status
+ * @param code
  */
 export const createMockApiError = (
 	message: string,
@@ -208,6 +221,7 @@ export const createMockApiError = (
 
 /**
  * Create mock authentication state
+ * @param overrides
  */
 export const createMockAuthState = (
 	overrides: Partial<AuthTestState> = {},
@@ -227,6 +241,7 @@ export const createMockAuthState = (
 
 /**
  * Create authenticated user state
+ * @param userOverrides
  */
 export const createAuthenticatedUserState = (
 	userOverrides = {},
@@ -259,6 +274,7 @@ export const createMockTokenRefresh = () => {
 
 /**
  * Setup MSW server with custom handlers
+ * @param customHandlers
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const setupMSWServer = (customHandlers: any[] = []) => {
@@ -274,6 +290,12 @@ export const setupMSWServer = (customHandlers: any[] = []) => {
 export const createMSWHandlers = {
 	/**
 	 * Create handlers for authentication scenarios
+	 * @param scenarios
+	 * @param scenarios.loginSuccess
+	 * @param scenarios.loginError
+	 * @param scenarios.refreshSuccess
+	 * @param scenarios.refreshError
+	 * @param scenarios.logoutSuccess
 	 */
 	auth: (
 		scenarios: {
@@ -306,6 +328,7 @@ export const createMSWHandlers = {
 
 	/**
 	 * Create handlers for API error scenarios
+	 * @param errorTypes
 	 */
 	errors: (errorTypes: string[] = ['network', 'validation', 'server']) => {
 		return errorHandlers.filter((handler: unknown) =>
@@ -315,6 +338,7 @@ export const createMSWHandlers = {
 
 	/**
 	 * Create handlers for specific API endpoints
+	 * @param endpoints
 	 */
 	endpoints: (endpoints: string[]) => {
 		return handlers.filter((handler: unknown) =>
@@ -329,6 +353,8 @@ export const createMSWHandlers = {
 
 /**
  * Enhanced render function with default providers
+ * @param ui
+ * @param options
  */
 export const renderWithProviders = (
 	ui: ReactElement,
@@ -354,10 +380,10 @@ export const renderWithProviders = (
 	const testContext: ComponentTestContext = {
 		authState,
 		apiConfig: {
-			baseURL: 'http://localhost:3000',
-			apiKey: 'test-api-key',
-			withCredentials: true,
-			timeout: 5000,
+			baseURL: defaultBaseURL,
+			apiKey: defaultApiKey,
+			withCredentials: defaultWithCredentials,
+			timeout: defaultTimeout,
 			...apiConfig,
 		},
 		mswHandlers,
@@ -372,6 +398,7 @@ export const renderWithProviders = (
 
 /**
  * Create mock router context for testing
+ * @param overrides
  */
 export const createMockRouterContext = (overrides = {}) => {
 	return {
@@ -399,17 +426,20 @@ export const createMockRouterContext = (overrides = {}) => {
 export const clientUITestData = {
 	/**
 	 * Create API client configuration
+	 * @param overrides
 	 */
 	apiConfig: (overrides: Partial<ApiTestConfig> = {}): ApiTestConfig => ({
-		baseURL: 'http://localhost:3000',
-		apiKey: 'test-api-key',
-		withCredentials: true,
-		timeout: 5000,
+		baseURL: defaultBaseURL,
+		apiKey: defaultApiKey,
+		withCredentials: defaultWithCredentials,
+		timeout: defaultTimeout,
 		...overrides,
 	}),
 
 	/**
 	 * Create chat data with user context
+	 * @param userOverrides
+	 * @param chatOverrides
 	 */
 	chatWithUser: (userOverrides = {}, chatOverrides = {}) => {
 		const user = userFactory.create(userOverrides)
@@ -422,6 +452,8 @@ export const clientUITestData = {
 
 	/**
 	 * Create message data with chat context
+	 * @param chatOverrides
+	 * @param messageOverrides
 	 */
 	messageWithChat: (chatOverrides = {}, messageOverrides = {}) => {
 		const chat = chatFactory.create(chatOverrides)
@@ -434,6 +466,9 @@ export const clientUITestData = {
 
 	/**
 	 * Create complete conversation data
+	 * @param userOverrides
+	 * @param chatOverrides
+	 * @param messageCount
 	 */
 	conversation: (userOverrides = {}, chatOverrides = {}, messageCount = 3) => {
 		const user = userFactory.create(userOverrides)
@@ -462,6 +497,8 @@ export const clientUITestData = {
 export const clientUITestUtils = {
 	/**
 	 * Wait for API call to complete
+	 * @param mockFn
+	 * @param timeout
 	 */
 	waitForApiCall: async (mockFn: ReturnType<typeof vi.fn>, timeout = 5000) => {
 		const start = Date.now()
@@ -483,6 +520,7 @@ export const clientUITestUtils = {
 
 	/**
 	 * Simulate user interaction delay
+	 * @param ms
 	 */
 	simulateUserDelay: async (ms = 100) => {
 		await new Promise((resolve) => setTimeout(resolve, ms))
@@ -490,6 +528,9 @@ export const clientUITestUtils = {
 
 	/**
 	 * Create mock file for file upload testing
+	 * @param name
+	 * @param type
+	 * @param content
 	 */
 	createMockFile: (
 		name = 'test.txt',
@@ -502,6 +543,7 @@ export const clientUITestUtils = {
 
 	/**
 	 * Create mock form data
+	 * @param data
 	 */
 	createMockFormData: (data: Record<string, string | Blob>) => {
 		const formData = new FormData()
@@ -522,6 +564,10 @@ export const clientUITestUtils = {
 export const clientUITestAssertions = {
 	/**
 	 * Assert API call was made with correct parameters
+	 * @param mockFn
+	 * @param expectedUrl
+	 * @param expectedMethod
+	 * @param expectedData
 	 */
 	assertApiCall: (
 		mockFn: ReturnType<typeof vi.fn>,
@@ -542,6 +588,8 @@ export const clientUITestAssertions = {
 
 	/**
 	 * Assert authentication state
+	 * @param authState
+	 * @param expected
 	 */
 	assertAuthState: (
 		authState: AuthTestState,
@@ -554,6 +602,8 @@ export const clientUITestAssertions = {
 
 	/**
 	 * Assert API response structure
+	 * @param response
+	 * @param expectedData
 	 */
 	assertApiResponse: (response: unknown, expectedData?: unknown) => {
 		expect(response).toHaveProperty('success')
@@ -571,6 +621,9 @@ export const clientUITestAssertions = {
 
 	/**
 	 * Assert error response structure
+	 * @param response
+	 * @param expectedMessage
+	 * @param expectedCode
 	 */
 	assertErrorResponse: (
 		response: unknown,
@@ -605,42 +658,7 @@ export const clientUITestAssertions = {
 }
 
 // ============================================================================
-// Default Export
+// Re-export from config-testing
 // ============================================================================
 
-export default {
-	// API Client Mocking
-	createMockAxiosInstance,
-	createMockApiClient,
-	createMockApiResponse,
-	createMockApiError,
-
-	// Authentication Mocking
-	createMockAuthState,
-	createAuthenticatedUserState,
-	createMockTokenRefresh,
-
-	// MSW Integration
-	setupMSWServer,
-	createMSWHandlers,
-
-	// React Component Testing
-	renderWithProviders,
-	createMockRouterContext,
-
-	// Test Data Factories
-	clientUITestData,
-
-	// Test Utilities
-	clientUITestUtils,
-
-	// Test Assertions
-	clientUITestAssertions,
-
-	// Re-export from config-testing
-	userFactory,
-	authFactory,
-	chatFactory,
-	apiResponseFactory,
-	testUtils,
-}
+export { userFactory, authFactory, chatFactory, apiResponseFactory, testUtils }

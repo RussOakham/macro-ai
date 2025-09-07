@@ -96,7 +96,7 @@ import { tryCatchSync } from '../../../utils/error-handling/try-catch.ts'
 import { ChatService } from '../chat.service.ts'
 
 // Helper function to create async generator for streaming tests
-// eslint-disable-next-line func-style, @typescript-eslint/require-await
+
 async function* createMockStream(chunks: string[]): AsyncIterable<string> {
 	for (const chunk of chunks) {
 		yield chunk
@@ -1886,7 +1886,7 @@ describe('ChatService (Refactored)', () => {
 					expect(result).toBeNull()
 					expect(error).toBeInstanceOf(NotFoundError)
 					expect(error?.message).toBe('Chat not found')
-					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
 					expect(error!.service).toBe('chatService')
 				})
 

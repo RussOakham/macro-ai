@@ -18,6 +18,10 @@ interface MessageListProps extends React.ComponentPropsWithoutRef<'div'> {
 /**
  * Scrollable message list component
  * Renders messages, loading states, and empty state
+ * @param root0
+ * @param root0.messages
+ * @param root0.status
+ * @param root0.className
  */
 const MessageList = ({
 	messages,
