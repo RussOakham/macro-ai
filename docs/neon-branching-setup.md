@@ -30,7 +30,7 @@
 
 ## Branching Hierarchy
 
-```
+```text
 Production Branch (main-production-branch)
     ↓ auto-branch
 Staging Branch (auto-branch-from-production)
