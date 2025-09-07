@@ -5,12 +5,9 @@ import * as ecsPatterns from 'aws-cdk-lib/aws-ecs-patterns'
 import * as route53 from 'aws-cdk-lib/aws-route53'
 import * as route53Targets from 'aws-cdk-lib/aws-route53-targets'
 import * as certificatemanager from 'aws-cdk-lib/aws-certificatemanager'
-import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager'
 import * as logs from 'aws-cdk-lib/aws-logs'
 
 import { Construct } from 'constructs'
-
-import { EcsFargateConstruct } from '../constructs/ecs-fargate-construct.js'
 
 export interface MacroAiFeatureStackProps extends cdk.StackProps {
 	readonly environmentName: string

@@ -71,7 +71,7 @@ const tags = isPreviewEnvironment
 				scale: 'feature',
 				project: 'MacroAI',
 				owner: `${deploymentEnv}-deployment`,
-				monitoringLevel: TAG_VALUES.MONITORING_LEVELS.MINIMAL,
+				monitoringLevel: TAG_VALUES.MONITORING_LEVELS.BASIC,
 				autoShutdown: true,
 				expiryDays: 14,
 			})

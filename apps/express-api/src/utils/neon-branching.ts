@@ -96,7 +96,7 @@ function getCurrentGitBranch(): string | null {
 	} catch (error) {
 		console.log(
 			'⚠️  Git command failed - using localhost database:',
-			error.message,
+			error instanceof Error ? error.message : String(error),
 		)
 		return null
 	}

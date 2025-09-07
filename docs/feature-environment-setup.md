@@ -2,7 +2,11 @@
 
 ## Overview
 
-Feature environments provide isolated, ephemeral infrastructure for developing and testing new features. They follow the same architecture as preview environments but are designed for longer-term feature development (up to 14 days).
+Feature environments provide isolated, ephemeral infrastructure for developing and testing new features.
+
+They follow the same architecture as preview environments but are designed for longer-term feature development.
+
+(up to 14 days).
 
 ## Architecture
 
@@ -16,7 +20,7 @@ Feature environments provide isolated, ephemeral infrastructure for developing a
 
 ### Branching Strategy
 
-```
+```text
 Production (main-production-branch)
 ├── Staging (auto-branch-from-production)
 │   ├── Feature Branches (feature/branch-name)
@@ -68,6 +72,7 @@ const branches = {
    ```
 
 3. **Verify Deployment**
+
    ```bash
    tsx scripts/verify-feature-environment.ts
    ```
