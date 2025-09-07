@@ -62,7 +62,7 @@ export default repoConfig.config(
 		rules: {
 			'@typescript-eslint/no-misused-promises': 'warn',
 			'jsdoc/require-jsdoc': ['error', { publicOnly: true }],
-			'jsdoc/require-param-description': 'off',
+			'jsdoc/require-param-description': 'error',
 			'jsdoc/require-param-type': 'off',
 			'jsdoc/require-returns': 'off',
 			'jsdoc/require-returns-description': 'off',

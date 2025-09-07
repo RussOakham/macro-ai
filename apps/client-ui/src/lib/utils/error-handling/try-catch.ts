@@ -95,14 +95,14 @@ const tryCatchSync = <T>(func: () => T, context = 'unknown'): Result<T> => {
 /**
  * Helper function to create a success Result tuple
  * Useful for consistent return patterns
- * @param data
+ * @param data - The successful data to wrap in a Result tuple
  */
 export const ok = <T>(data: T): Result<T, never> => [data, null]
 
 /**
  * Helper function to create an error Result tuple
  * Useful for consistent return patterns
- * @param error
+ * @param error - The error to wrap in a Result tuple
  */
 export const err = <E extends IStandardizedError>(
 	error: E,
