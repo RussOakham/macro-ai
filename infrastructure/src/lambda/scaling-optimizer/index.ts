@@ -1,4 +1,7 @@
-import { CloudWatchClient, GetMetricDataCommand } from '@aws-sdk/client-cloudwatch'
+import {
+	CloudWatchClient,
+	GetMetricDataCommand,
+} from '@aws-sdk/client-cloudwatch'
 import { ECSClient, UpdateServiceCommand } from '@aws-sdk/client-ecs'
 import { EventBridgeClient, PutRuleCommand } from '@aws-sdk/client-eventbridge'
 import type { Context } from 'aws-lambda'
@@ -14,19 +17,29 @@ interface ScalingOptimizerEvent {
 	budget: string
 }
 
-export async function handler(event: ScalingOptimizerEvent, context: Context): Promise<void> {
+export async function handler(
+	event: ScalingOptimizerEvent,
+	context: Context,
+): Promise<void> {
 	console.log('🔧 Scaling Optimizer Started')
 	console.log('Event:', JSON.stringify(event, null, 2))
 
 	try {
-		const environment = event.environment || process.env.ENVIRONMENT_NAME || 'production'
-		const monthlyBudget = parseFloat(event.budget || process.env.MONTHLY_BUDGET || '300')
+		const environment =
+			event.environment || process.env.ENVIRONMENT_NAME || 'production'
+		const monthlyBudget = parseFloat(
+			event.budget || process.env.MONTHLY_BUDGET || '300',
+		)
 
 		// Analyze current scaling patterns
 		const scalingAnalysis = await analyzeScalingPatterns(environment)
 
 		// Generate scaling recommendations
-		const recommendations = await generateScalingRecommendations(environment, monthlyBudget, scalingAnalysis)
+		const recommendations = await generateScalingRecommendations(
+			environment,
+			monthlyBudget,
+			scalingAnalysis,
+		)
 
 		// Apply cost optimizations
 		await applyCostOptimizations(environment, recommendations)
@@ -38,7 +51,6 @@ export async function handler(event: ScalingOptimizerEvent, context: Context): P
 		await logOptimizationResults(environment, recommendations)
 
 		console.log('✅ Scaling optimization completed successfully')
-
 	} catch (error) {
 		console.error('❌ Error in scaling optimization:', error)
 		await logOptimizationError(environment, error)
@@ -49,7 +61,9 @@ export async function handler(event: ScalingOptimizerEvent, context: Context): P
 /**
  * Analyze current scaling patterns over the past week
  */
-async function analyzeScalingPatterns(environment: string): Promise<ScalingAnalysis> {
+async function analyzeScalingPatterns(
+	environment: string,
+): Promise<ScalingAnalysis> {
 	console.log('📊 Analyzing scaling patterns...')
 
 	const endTime = new Date()
@@ -65,7 +79,7 @@ async function analyzeScalingPatterns(environment: string): Promise<ScalingAnaly
 		},
 		startTime,
 		endTime,
-		'Maximum'
+		'Maximum',
 	)
 
 	// Get memory utilization data
@@ -78,7 +92,7 @@ async function analyzeScalingPatterns(environment: string): Promise<ScalingAnaly
 		},
 		startTime,
 		endTime,
-		'Maximum'
+		'Maximum',
 	)
 
 	// Get request count data
@@ -90,7 +104,7 @@ async function analyzeScalingPatterns(environment: string): Promise<ScalingAnaly
 		},
 		startTime,
 		endTime,
-		'Sum'
+		'Sum',
 	)
 
 	// Get task count data
@@ -103,7 +117,7 @@ async function analyzeScalingPatterns(environment: string): Promise<ScalingAnaly
 		},
 		startTime,
 		endTime,
-		'Average'
+		'Average',
 	)
 
 	// Analyze peak hours
@@ -134,7 +148,7 @@ async function analyzeScalingPatterns(environment: string): Promise<ScalingAnaly
 async function generateScalingRecommendations(
 	environment: string,
 	monthlyBudget: number,
-	analysis: ScalingAnalysis
+	analysis: ScalingAnalysis,
 ): Promise<ScalingRecommendations> {
 	console.log('🎯 Generating scaling recommendations...')
 
@@ -154,7 +168,10 @@ async function generateScalingRecommendations(
 			recommendations.scheduledScaling.push({
 				type: 'scale-up',
 				schedule: `cron(${peakHour.minute} ${peakHour.hour} * * ? *)`,
-				minCapacity: Math.max(2, Math.ceil(utilizationPatterns.averageTasks * 1.5)),
+				minCapacity: Math.max(
+					2,
+					Math.ceil(utilizationPatterns.averageTasks * 1.5),
+				),
 				maxCapacity: Math.min(10, Math.ceil(utilizationPatterns.peakTasks * 2)),
 				reason: `Peak traffic detected at ${peakHour.hour}:${peakHour.minute}`,
 			})
@@ -167,7 +184,10 @@ async function generateScalingRecommendations(
 				type: 'scale-down',
 				schedule: `cron(${offPeakHour.minute} ${offPeakHour.hour} * * ? *)`,
 				minCapacity: 1,
-				maxCapacity: Math.max(1, Math.floor(utilizationPatterns.averageTasks * 0.7)),
+				maxCapacity: Math.max(
+					1,
+					Math.floor(utilizationPatterns.averageTasks * 0.7),
+				),
 				reason: `Low traffic detected at ${offPeakHour.hour}:${offPeakHour.minute}`,
 			})
 		}
@@ -179,24 +199,32 @@ async function generateScalingRecommendations(
 			policyType: 'cpu-target-tracking',
 			action: 'increase-target',
 			newValue: Math.min(80, Math.ceil(utilizationPatterns.averageCpu + 20)),
-			reason: 'CPU utilization consistently below target, can increase threshold',
+			reason:
+				'CPU utilization consistently below target, can increase threshold',
 		})
 	} else if (utilizationPatterns.averageCpu > 70) {
 		recommendations.policyAdjustments.push({
 			policyType: 'cpu-target-tracking',
 			action: 'decrease-target',
 			newValue: Math.max(50, Math.floor(utilizationPatterns.averageCpu - 10)),
-			reason: 'CPU utilization consistently above target, should decrease threshold',
+			reason:
+				'CPU utilization consistently above target, should decrease threshold',
 		})
 	}
 
 	// 3. Cost optimization recommendations
-	const estimatedMonthlyCost = calculateEstimatedCost(utilizationPatterns, monthlyBudget)
+	const estimatedMonthlyCost = calculateEstimatedCost(
+		utilizationPatterns,
+		monthlyBudget,
+	)
 	if (estimatedMonthlyCost > monthlyBudget * 0.8) {
 		recommendations.costOptimizations.push({
 			action: 'reduce-min-capacity',
 			currentValue: utilizationPatterns.averageTasks,
-			recommendedValue: Math.max(1, Math.floor(utilizationPatterns.averageTasks * 0.8)),
+			recommendedValue: Math.max(
+				1,
+				Math.floor(utilizationPatterns.averageTasks * 0.8),
+			),
 			estimatedSavings: estimatedMonthlyCost * 0.2,
 			reason: 'Monthly cost approaching budget limit',
 		})
@@ -217,14 +245,22 @@ async function generateScalingRecommendations(
 /**
  * Apply cost optimization changes
  */
-async function applyCostOptimizations(environment: string, recommendations: ScalingRecommendations): Promise<void> {
+async function applyCostOptimizations(
+	environment: string,
+	recommendations: ScalingRecommendations,
+): Promise<void> {
 	console.log('💰 Applying cost optimizations...')
 
 	for (const optimization of recommendations.costOptimizations) {
 		if (optimization.action === 'reduce-min-capacity') {
 			try {
-				await updateServiceMinCapacity(environment, optimization.recommendedValue)
-				console.log(`✅ Reduced min capacity to ${optimization.recommendedValue}`)
+				await updateServiceMinCapacity(
+					environment,
+					optimization.recommendedValue,
+				)
+				console.log(
+					`✅ Reduced min capacity to ${optimization.recommendedValue}`,
+				)
 			} catch (error) {
 				console.warn(`⚠️ Failed to apply cost optimization:`, error)
 			}
@@ -235,14 +271,19 @@ async function applyCostOptimizations(environment: string, recommendations: Scal
 /**
  * Update scaling policies based on recommendations
  */
-async function updateScalingPolicies(environment: string, recommendations: ScalingRecommendations): Promise<void> {
+async function updateScalingPolicies(
+	environment: string,
+	recommendations: ScalingRecommendations,
+): Promise<void> {
 	console.log('🔄 Updating scaling policies...')
 
 	for (const adjustment of recommendations.policyAdjustments) {
 		try {
 			if (adjustment.policyType === 'cpu-target-tracking') {
 				await updateCpuTargetTrackingPolicy(environment, adjustment.newValue)
-				console.log(`✅ Updated CPU target tracking policy to ${adjustment.newValue}%`)
+				console.log(
+					`✅ Updated CPU target tracking policy to ${adjustment.newValue}%`,
+				)
 			}
 		} catch (error) {
 			console.warn(`⚠️ Failed to update scaling policy:`, error)
@@ -263,7 +304,10 @@ async function updateScalingPolicies(environment: string, recommendations: Scali
 /**
  * Log optimization results
  */
-async function logOptimizationResults(environment: string, recommendations: ScalingRecommendations): Promise<void> {
+async function logOptimizationResults(
+	environment: string,
+	recommendations: ScalingRecommendations,
+): Promise<void> {
 	const logData = {
 		environment,
 		timestamp: new Date().toISOString(),
@@ -284,13 +328,23 @@ async function logOptimizationResults(environment: string, recommendations: Scal
 		Result: 'success',
 	})
 
-	await putMetricData('MacroAI/Scaling', 'PolicyAdjustments', recommendations.policyAdjustments.length, {
-		Environment: environment,
-	})
+	await putMetricData(
+		'MacroAI/Scaling',
+		'PolicyAdjustments',
+		recommendations.policyAdjustments.length,
+		{
+			Environment: environment,
+		},
+	)
 
-	await putMetricData('MacroAI/Scaling', 'ScheduledRules', recommendations.scheduledScaling.length, {
-		Environment: environment,
-	})
+	await putMetricData(
+		'MacroAI/Scaling',
+		'ScheduledRules',
+		recommendations.scheduledScaling.length,
+		{
+			Environment: environment,
+		},
+	)
 }
 
 /**
@@ -303,8 +357,8 @@ async function getMetricData(
 	dimensions: Record<string, string>,
 	startTime: Date,
 	endTime: Date,
-	statistic: string
-): Promise<Array<{timestamp: Date, value: number}>> {
+	statistic: string,
+): Promise<Array<{ timestamp: Date; value: number }>> {
 	try {
 		const command = new GetMetricDataCommand({
 			MetricDataQueries: [
@@ -330,19 +384,22 @@ async function getMetricData(
 		})
 
 		const response = await cloudwatch.send(command)
-		return response.MetricDataResults?.[0]?.Timestamps?.map((timestamp, index) => ({
-			timestamp,
-			value: response.MetricDataResults?.[0]?.Values?.[index] || 0,
-		})) || []
-
+		return (
+			response.MetricDataResults?.[0]?.Timestamps?.map((timestamp, index) => ({
+				timestamp,
+				value: response.MetricDataResults?.[0]?.Values?.[index] || 0,
+			})) || []
+		)
 	} catch (error) {
 		console.warn(`⚠️ Failed to get metric data for ${metricName}:`, error)
 		return []
 	}
 }
 
-function analyzePeakHours(metrics: Array<{timestamp: Date, value: number}>): Array<{hour: number, minute: number}> {
-	const hourlySums = new Map<number, {sum: number, count: number}>()
+function analyzePeakHours(
+	metrics: Array<{ timestamp: Date; value: number }>,
+): Array<{ hour: number; minute: number }> {
+	const hourlySums = new Map<number, { sum: number; count: number }>()
 
 	// Aggregate by hour
 	for (const metric of metrics) {
@@ -355,21 +412,25 @@ function analyzePeakHours(metrics: Array<{timestamp: Date, value: number}>): Arr
 	}
 
 	// Find peak hours (top 20% of hours)
-	const hourlyAverages = Array.from(hourlySums.entries()).map(([hour, data]) => ({
-		hour,
-		average: data.sum / data.count,
-	}))
+	const hourlyAverages = Array.from(hourlySums.entries()).map(
+		([hour, data]) => ({
+			hour,
+			average: data.sum / data.count,
+		}),
+	)
 
 	hourlyAverages.sort((a, b) => b.average - a.average)
 	const top20Percent = Math.ceil(hourlyAverages.length * 0.2)
 	const peakHours = hourlyAverages.slice(0, top20Percent)
 
-	return peakHours.map(p => ({ hour: p.hour, minute: 0 })) // Scale at top of hour
+	return peakHours.map((p) => ({ hour: p.hour, minute: 0 })) // Scale at top of hour
 }
 
-function findOffPeakHours(peakHours: Array<{hour: number, minute: number}>): Array<{hour: number, minute: number}> {
-	const peakHourSet = new Set(peakHours.map(p => p.hour))
-	const offPeakHours: Array<{hour: number, minute: number}> = []
+function findOffPeakHours(
+	peakHours: Array<{ hour: number; minute: number }>,
+): Array<{ hour: number; minute: number }> {
+	const peakHourSet = new Set(peakHours.map((p) => p.hour))
+	const offPeakHours: Array<{ hour: number; minute: number }> = []
 
 	// Find hours that are not in peak hours
 	for (let hour = 0; hour < 24; hour++) {
@@ -382,28 +443,39 @@ function findOffPeakHours(peakHours: Array<{hour: number, minute: number}>): Arr
 	return offPeakHours.slice(0, 3)
 }
 
-function calculateAverage(metrics: Array<{timestamp: Date, value: number}>): number {
+function calculateAverage(
+	metrics: Array<{ timestamp: Date; value: number }>,
+): number {
 	if (metrics.length === 0) return 0
 	const sum = metrics.reduce((acc, metric) => acc + metric.value, 0)
 	return sum / metrics.length
 }
 
-function calculatePeak(metrics: Array<{timestamp: Date, value: number}>): number {
+function calculatePeak(
+	metrics: Array<{ timestamp: Date; value: number }>,
+): number {
 	if (metrics.length === 0) return 0
-	return Math.max(...metrics.map(m => m.value))
+	return Math.max(...metrics.map((m) => m.value))
 }
 
-function calculateEstimatedCost(utilizationPatterns: any, monthlyBudget: number): number {
+function calculateEstimatedCost(
+	utilizationPatterns: any,
+	monthlyBudget: number,
+): number {
 	// Simplified cost estimation based on task count and utilization
 	const avgTasks = utilizationPatterns.averageTasks
 	const peakTasks = utilizationPatterns.peakTasks
 
 	// Rough Fargate cost estimation ($0.04048 per vCPU hour, $0.004445 per GB hour)
-	const estimatedCost = (avgTasks * 0.25 * 0.04048 + avgTasks * 0.5 * 0.004445) * 24 * 30
+	const estimatedCost =
+		(avgTasks * 0.25 * 0.04048 + avgTasks * 0.5 * 0.004445) * 24 * 30
 	return estimatedCost
 }
 
-async function updateServiceMinCapacity(environment: string, minCapacity: number): Promise<void> {
+async function updateServiceMinCapacity(
+	environment: string,
+	minCapacity: number,
+): Promise<void> {
 	const command = new UpdateServiceCommand({
 		cluster: `${environment}-cluster`,
 		service: `${environment}-service`,
@@ -413,13 +485,21 @@ async function updateServiceMinCapacity(environment: string, minCapacity: number
 	await ecs.send(command)
 }
 
-async function updateCpuTargetTrackingPolicy(environment: string, newTarget: number): Promise<void> {
+async function updateCpuTargetTrackingPolicy(
+	environment: string,
+	newTarget: number,
+): Promise<void> {
 	// Note: This is a simplified implementation. In practice, you'd need to
 	// describe the existing policy and update it, or create a new one.
-	console.log(`📝 Would update CPU target tracking policy to ${newTarget}% for ${environment}`)
+	console.log(
+		`📝 Would update CPU target tracking policy to ${newTarget}% for ${environment}`,
+	)
 }
 
-async function createScheduledScalingRule(environment: string, scheduled: any): Promise<void> {
+async function createScheduledScalingRule(
+	environment: string,
+	scheduled: any,
+): Promise<void> {
 	const ruleName = `${environment}-scheduled-${scheduled.type}-${Date.now()}`
 
 	// Create EventBridge rule
@@ -441,7 +521,7 @@ async function putMetricData(
 	namespace: string,
 	metricName: string,
 	value: number,
-	dimensions: Record<string, string>
+	dimensions: Record<string, string>,
 ): Promise<void> {
 	try {
 		const command = new PutMetricDataCommand({
@@ -465,7 +545,10 @@ async function putMetricData(
 	}
 }
 
-async function logOptimizationError(environment: string, error: any): Promise<void> {
+async function logOptimizationError(
+	environment: string,
+	error: any,
+): Promise<void> {
 	await putMetricData('MacroAI/Scaling', 'OptimizationErrors', 1, {
 		Environment: environment,
 		ErrorType: error.name || 'Unknown',
@@ -477,7 +560,7 @@ async function logOptimizationError(environment: string, error: any): Promise<vo
  */
 
 interface ScalingAnalysis {
-	peakHours: Array<{hour: number, minute: number}>
+	peakHours: Array<{ hour: number; minute: number }>
 	utilizationPatterns: {
 		averageCpu: number
 		peakCpu: number
@@ -488,7 +571,7 @@ interface ScalingAnalysis {
 		averageTasks: number
 		peakTasks: number
 	}
-	timeRange: { start: Date, end: Date }
+	timeRange: { start: Date; end: Date }
 }
 
 interface ScalingRecommendations {

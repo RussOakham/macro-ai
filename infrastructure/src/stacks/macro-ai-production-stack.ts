@@ -522,13 +522,17 @@ export class MacroAiProductionStack extends cdk.Stack {
 		})
 
 		new cdk.CfnOutput(this, 'AutoScalingMinCapacity', {
-			value: this.autoScaling.scalableTaskCount.scaleToTrackMetric ? '2' : 'N/A',
+			value: this.autoScaling.scalableTaskCount.scaleToTrackMetric
+				? '2'
+				: 'N/A',
 			description: 'Minimum auto-scaling capacity',
 			exportName: `${this.stackName}-AutoScalingMinCapacity`,
 		})
 
 		new cdk.CfnOutput(this, 'AutoScalingMaxCapacity', {
-			value: this.autoScaling.scalableTaskCount.scaleToTrackMetric ? '10' : 'N/A',
+			value: this.autoScaling.scalableTaskCount.scaleToTrackMetric
+				? '10'
+				: 'N/A',
 			description: 'Maximum auto-scaling capacity',
 			exportName: `${this.stackName}-AutoScalingMaxCapacity`,
 		})

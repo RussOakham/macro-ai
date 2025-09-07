@@ -127,7 +127,10 @@ export interface AutoScalingConstructProps {
 export class AutoScalingConstruct extends Construct {
 	public readonly scalableTaskCount: ecs.ScalableTaskCount
 	public readonly alarms: cloudwatch.Alarm[]
-	public readonly scalingPolicies: (autoscaling.TargetTrackingScalingPolicy | autoscaling.StepScalingPolicy)[]
+	public readonly scalingPolicies: (
+		| autoscaling.TargetTrackingScalingPolicy
+		| autoscaling.StepScalingPolicy
+	)[]
 	public readonly alarmTopic: sns.ITopic
 	public readonly customMetricsLambda?: lambda.Function
 
@@ -160,10 +163,12 @@ export class AutoScalingConstruct extends Construct {
 		this.scalingPolicies = []
 
 		// Create SNS topic for scaling alerts if not provided
-		this.alarmTopic = providedAlarmTopic ?? new sns.Topic(this, 'ScalingAlarmTopic', {
-			displayName: `${environmentName} Auto Scaling Alerts`,
-			topicName: `${environmentName.toLowerCase()}-auto-scaling-alerts`,
-		})
+		this.alarmTopic =
+			providedAlarmTopic ??
+			new sns.Topic(this, 'ScalingAlarmTopic', {
+				displayName: `${environmentName} Auto Scaling Alerts`,
+				topicName: `${environmentName.toLowerCase()}-auto-scaling-alerts`,
+			})
 
 		// Create scalable task count
 		this.scalableTaskCount = ecsService.autoScaleTaskCount({
@@ -207,63 +212,100 @@ export class AutoScalingConstruct extends Construct {
 	 * Create target tracking scaling policies
 	 */
 	private createTargetTrackingPolicies(props: AutoScalingConstructProps): void {
-		const { targetCpuUtilization, targetMemoryUtilization, targetRequestsPerMinute, loadBalancer } = props
+		const {
+			targetCpuUtilization,
+			targetMemoryUtilization,
+			targetRequestsPerMinute,
+			loadBalancer,
+		} = props
 
 		// CPU utilization scaling
-		const cpuScaling = this.scalableTaskCount.scaleOnCpuUtilization('CpuTargetTracking', {
-			targetUtilizationPercent: targetCpuUtilization,
-		})
+		const cpuScaling = this.scalableTaskCount.scaleOnCpuUtilization(
+			'CpuTargetTracking',
+			{
+				targetUtilizationPercent: targetCpuUtilization,
+			},
+		)
 		this.scalingPolicies.push(cpuScaling)
 
 		// Memory utilization scaling
-		const memoryScaling = this.scalableTaskCount.scaleOnMemoryUtilization('MemoryTargetTracking', {
-			targetUtilizationPercent: targetMemoryUtilization,
-		})
+		const memoryScaling = this.scalableTaskCount.scaleOnMemoryUtilization(
+			'MemoryTargetTracking',
+			{
+				targetUtilizationPercent: targetMemoryUtilization,
+			},
+		)
 		this.scalingPolicies.push(memoryScaling)
 
 		// Request rate scaling (if load balancer provided)
 		if (loadBalancer) {
-			const requestScaling = this.scalableTaskCount.scaleOnRequestCount('RequestTargetTracking', {
-				requestsPerTarget: targetRequestsPerMinute,
-				targetGroup: loadBalancer.listeners[0]?.targetGroups[0], // Use first target group
-			})
+			const requestScaling = this.scalableTaskCount.scaleOnRequestCount(
+				'RequestTargetTracking',
+				{
+					requestsPerTarget: targetRequestsPerMinute,
+					targetGroup: loadBalancer.listeners[0]?.targetGroups[0], // Use first target group
+				},
+			)
 			this.scalingPolicies.push(requestScaling)
 		}
 
-		console.log(`✅ Created ${this.scalingPolicies.length} target tracking scaling policies`)
+		console.log(
+			`✅ Created ${this.scalingPolicies.length} target tracking scaling policies`,
+		)
 	}
 
 	/**
 	 * Create step scaling policies for more granular control
 	 */
 	private createStepScalingPolicies(props: AutoScalingConstructProps): void {
-		const { environmentName, targetCpuUtilization, targetMemoryUtilization } = props
+		const { environmentName, targetCpuUtilization, targetMemoryUtilization } =
+			props
 
 		// CPU step scaling policy
-		const cpuScaleUpPolicy = new autoscaling.StepScalingPolicy(this, 'CpuScaleUpPolicy', {
-			metricAggregationType: autoscaling.MetricAggregationType.AVERAGE,
-			scalingSteps: [
-				{ lower: 0, upper: targetCpuUtilization - 10, change: +0 },
-				{ lower: targetCpuUtilization - 10, upper: targetCpuUtilization + 10, change: +1 },
-				{ lower: targetCpuUtilization + 10, upper: targetCpuUtilization + 20, change: +2 },
-				{ lower: targetCpuUtilization + 20, change: +3 },
-			],
-			adjustmentType: autoscaling.AdjustmentType.CHANGE_IN_CAPACITY,
-			cooldown: Duration.seconds(180),
-			estimatedInstanceWarmup: Duration.seconds(60),
-		})
+		const cpuScaleUpPolicy = new autoscaling.StepScalingPolicy(
+			this,
+			'CpuScaleUpPolicy',
+			{
+				metricAggregationType: autoscaling.MetricAggregationType.AVERAGE,
+				scalingSteps: [
+					{ lower: 0, upper: targetCpuUtilization - 10, change: +0 },
+					{
+						lower: targetCpuUtilization - 10,
+						upper: targetCpuUtilization + 10,
+						change: +1,
+					},
+					{
+						lower: targetCpuUtilization + 10,
+						upper: targetCpuUtilization + 20,
+						change: +2,
+					},
+					{ lower: targetCpuUtilization + 20, change: +3 },
+				],
+				adjustmentType: autoscaling.AdjustmentType.CHANGE_IN_CAPACITY,
+				cooldown: Duration.seconds(180),
+				estimatedInstanceWarmup: Duration.seconds(60),
+			},
+		)
 
-		const cpuScaleDownPolicy = new autoscaling.StepScalingPolicy(this, 'CpuScaleDownPolicy', {
-			metricAggregationType: autoscaling.MetricAggregationType.AVERAGE,
-			scalingSteps: [
-				{ lower: 0, upper: targetCpuUtilization - 20, change: -1 },
-				{ lower: targetCpuUtilization - 20, upper: targetCpuUtilization - 10, change: -1 },
-				{ lower: targetCpuUtilization - 10, change: -0 },
-			],
-			adjustmentType: autoscaling.AdjustmentType.CHANGE_IN_CAPACITY,
-			cooldown: Duration.seconds(300),
-			estimatedInstanceWarmup: Duration.seconds(60),
-		})
+		const cpuScaleDownPolicy = new autoscaling.StepScalingPolicy(
+			this,
+			'CpuScaleDownPolicy',
+			{
+				metricAggregationType: autoscaling.MetricAggregationType.AVERAGE,
+				scalingSteps: [
+					{ lower: 0, upper: targetCpuUtilization - 20, change: -1 },
+					{
+						lower: targetCpuUtilization - 20,
+						upper: targetCpuUtilization - 10,
+						change: -1,
+					},
+					{ lower: targetCpuUtilization - 10, change: -0 },
+				],
+				adjustmentType: autoscaling.AdjustmentType.CHANGE_IN_CAPACITY,
+				cooldown: Duration.seconds(300),
+				estimatedInstanceWarmup: Duration.seconds(60),
+			},
+		)
 
 		// CPU alarms for step scaling
 		const highCpuAlarm = new cloudwatch.Alarm(this, 'HighCpuAlarm', {
@@ -284,7 +326,9 @@ export class AutoScalingConstruct extends Construct {
 			comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
 			treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
 		})
-		highCpuAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(this.alarmTopic))
+		highCpuAlarm.addAlarmAction(
+			new cloudwatch_actions.SnsAction(this.alarmTopic),
+		)
 		this.alarms.push(highCpuAlarm)
 
 		const lowCpuAlarm = new cloudwatch.Alarm(this, 'LowCpuAlarm', {
@@ -305,26 +349,40 @@ export class AutoScalingConstruct extends Construct {
 			comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
 			treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
 		})
-		lowCpuAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(this.alarmTopic))
+		lowCpuAlarm.addAlarmAction(
+			new cloudwatch_actions.SnsAction(this.alarmTopic),
+		)
 		this.alarms.push(lowCpuAlarm)
 
 		// Attach step scaling policies to alarms
-		highCpuAlarm.addAlarmAction(new cloudwatch_actions.AutoScalingAction(cpuScaleUpPolicy.scalingAlarm))
-		lowCpuAlarm.addAlarmAction(new cloudwatch_actions.AutoScalingAction(cpuScaleDownPolicy.scalingAlarm))
+		highCpuAlarm.addAlarmAction(
+			new cloudwatch_actions.AutoScalingAction(cpuScaleUpPolicy.scalingAlarm),
+		)
+		lowCpuAlarm.addAlarmAction(
+			new cloudwatch_actions.AutoScalingAction(cpuScaleDownPolicy.scalingAlarm),
+		)
 
 		this.scalingPolicies.push(cpuScaleUpPolicy, cpuScaleDownPolicy)
 
 		// Memory step scaling (similar pattern)
-		const memoryScaleUpPolicy = new autoscaling.StepScalingPolicy(this, 'MemoryScaleUpPolicy', {
-			metricAggregationType: autoscaling.MetricAggregationType.AVERAGE,
-			scalingSteps: [
-				{ lower: 0, upper: targetMemoryUtilization - 10, change: +0 },
-				{ lower: targetMemoryUtilization - 10, upper: targetMemoryUtilization + 10, change: +1 },
-				{ lower: targetMemoryUtilization + 10, change: +2 },
-			],
-			adjustmentType: autoscaling.AdjustmentType.CHANGE_IN_CAPACITY,
-			cooldown: Duration.seconds(180),
-		})
+		const memoryScaleUpPolicy = new autoscaling.StepScalingPolicy(
+			this,
+			'MemoryScaleUpPolicy',
+			{
+				metricAggregationType: autoscaling.MetricAggregationType.AVERAGE,
+				scalingSteps: [
+					{ lower: 0, upper: targetMemoryUtilization - 10, change: +0 },
+					{
+						lower: targetMemoryUtilization - 10,
+						upper: targetMemoryUtilization + 10,
+						change: +1,
+					},
+					{ lower: targetMemoryUtilization + 10, change: +2 },
+				],
+				adjustmentType: autoscaling.AdjustmentType.CHANGE_IN_CAPACITY,
+				cooldown: Duration.seconds(180),
+			},
+		)
 
 		const highMemoryAlarm = new cloudwatch.Alarm(this, 'HighMemoryAlarm', {
 			alarmName: `${environmentName}-ecs-high-memory-step`,
@@ -344,13 +402,21 @@ export class AutoScalingConstruct extends Construct {
 			comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
 			treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
 		})
-		highMemoryAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(this.alarmTopic))
-		highMemoryAlarm.addAlarmAction(new cloudwatch_actions.AutoScalingAction(memoryScaleUpPolicy.scalingAlarm))
+		highMemoryAlarm.addAlarmAction(
+			new cloudwatch_actions.SnsAction(this.alarmTopic),
+		)
+		highMemoryAlarm.addAlarmAction(
+			new cloudwatch_actions.AutoScalingAction(
+				memoryScaleUpPolicy.scalingAlarm,
+			),
+		)
 		this.alarms.push(highMemoryAlarm)
 
 		this.scalingPolicies.push(memoryScaleUpPolicy)
 
-		console.log(`✅ Created step scaling policies for CPU and memory utilization`)
+		console.log(
+			`✅ Created step scaling policies for CPU and memory utilization`,
+		)
 	}
 
 	/**
@@ -360,25 +426,31 @@ export class AutoScalingConstruct extends Construct {
 		const { environmentName, loadBalancer } = props
 
 		// Create Lambda function for custom metrics
-		this.customMetricsLambda = new lambda.Function(this, 'CustomMetricsFunction', {
-			runtime: lambda.Runtime.NODEJS_18_X,
-			code: lambda.Code.fromAsset('src/lambda/custom-metrics'),
-			handler: 'index.handler',
-			timeout: Duration.seconds(30),
-			memorySize: 256,
-			logRetention: logs.RetentionDays.ONE_WEEK,
-			environment: {
-				ENVIRONMENT_NAME: environmentName,
-				LOAD_BALANCER_ARN: loadBalancer?.loadBalancerArn || '',
+		this.customMetricsLambda = new lambda.Function(
+			this,
+			'CustomMetricsFunction',
+			{
+				runtime: lambda.Runtime.NODEJS_18_X,
+				code: lambda.Code.fromAsset('src/lambda/custom-metrics'),
+				handler: 'index.handler',
+				timeout: Duration.seconds(30),
+				memorySize: 256,
+				logRetention: logs.RetentionDays.ONE_WEEK,
+				environment: {
+					ENVIRONMENT_NAME: environmentName,
+					LOAD_BALANCER_ARN: loadBalancer?.loadBalancerArn || '',
+				},
 			},
-		})
+		)
 
 		// Grant permissions for CloudWatch metrics
-		this.customMetricsLambda.addToRolePolicy(new iam.PolicyStatement({
-			effect: iam.Effect.ALLOW,
-			actions: ['cloudwatch:PutMetricData'],
-			resources: ['*'],
-		}))
+		this.customMetricsLambda.addToRolePolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: ['cloudwatch:PutMetricData'],
+				resources: ['*'],
+			}),
+		)
 
 		// Schedule custom metrics collection every 5 minutes
 		const rule = new events.Rule(this, 'CustomMetricsRule', {
@@ -388,47 +460,53 @@ export class AutoScalingConstruct extends Construct {
 		rule.addTarget(new events_targets.LambdaFunction(this.customMetricsLambda))
 
 		// Custom metric: Application Response Time
-		const responseTimeScaling = this.scalableTaskCount.scaleOnMetric('ResponseTimeScaling', {
-			metric: new cloudwatch.Metric({
-				namespace: 'MacroAI/Application',
-				metricName: 'ResponseTime',
-				dimensionsMap: {
-					Environment: environmentName,
-					Service: 'api',
-				},
-				statistic: 'Average',
-			}),
-			scalingSteps: [
-				{ lower: 0, upper: 500, change: -1 }, // Scale down if response time < 500ms
-				{ lower: 500, upper: 1000, change: +0 }, // Maintain if 500ms-1000ms
-				{ lower: 1000, upper: 2000, change: +1 }, // Scale up if 1000ms-2000ms
-				{ lower: 2000, change: +2 }, // Scale up aggressively if > 2000ms
-			],
-			adjustmentType: autoscaling.AdjustmentType.CHANGE_IN_CAPACITY,
-			cooldown: Duration.seconds(300),
-		})
+		const responseTimeScaling = this.scalableTaskCount.scaleOnMetric(
+			'ResponseTimeScaling',
+			{
+				metric: new cloudwatch.Metric({
+					namespace: 'MacroAI/Application',
+					metricName: 'ResponseTime',
+					dimensionsMap: {
+						Environment: environmentName,
+						Service: 'api',
+					},
+					statistic: 'Average',
+				}),
+				scalingSteps: [
+					{ lower: 0, upper: 500, change: -1 }, // Scale down if response time < 500ms
+					{ lower: 500, upper: 1000, change: +0 }, // Maintain if 500ms-1000ms
+					{ lower: 1000, upper: 2000, change: +1 }, // Scale up if 1000ms-2000ms
+					{ lower: 2000, change: +2 }, // Scale up aggressively if > 2000ms
+				],
+				adjustmentType: autoscaling.AdjustmentType.CHANGE_IN_CAPACITY,
+				cooldown: Duration.seconds(300),
+			},
+		)
 		this.scalingPolicies.push(responseTimeScaling)
 
 		// Custom metric: Error Rate
-		const errorRateScaling = this.scalableTaskCount.scaleOnMetric('ErrorRateScaling', {
-			metric: new cloudwatch.Metric({
-				namespace: 'MacroAI/Application',
-				metricName: 'ErrorRate',
-				dimensionsMap: {
-					Environment: environmentName,
-					Service: 'api',
-				},
-				statistic: 'Average',
-			}),
-			scalingSteps: [
-				{ lower: 0, upper: 1, change: -1 }, // Scale down if error rate < 1%
-				{ lower: 1, upper: 5, change: +0 }, // Maintain if 1%-5%
-				{ lower: 5, upper: 10, change: +1 }, // Scale up if 5%-10%
-				{ lower: 10, change: +2 }, // Scale up aggressively if > 10%
-			],
-			adjustmentType: autoscaling.AdjustmentType.CHANGE_IN_CAPACITY,
-			cooldown: Duration.seconds(180),
-		})
+		const errorRateScaling = this.scalableTaskCount.scaleOnMetric(
+			'ErrorRateScaling',
+			{
+				metric: new cloudwatch.Metric({
+					namespace: 'MacroAI/Application',
+					metricName: 'ErrorRate',
+					dimensionsMap: {
+						Environment: environmentName,
+						Service: 'api',
+					},
+					statistic: 'Average',
+				}),
+				scalingSteps: [
+					{ lower: 0, upper: 1, change: -1 }, // Scale down if error rate < 1%
+					{ lower: 1, upper: 5, change: +0 }, // Maintain if 1%-5%
+					{ lower: 5, upper: 10, change: +1 }, // Scale up if 5%-10%
+					{ lower: 10, change: +2 }, // Scale up aggressively if > 10%
+				],
+				adjustmentType: autoscaling.AdjustmentType.CHANGE_IN_CAPACITY,
+				cooldown: Duration.seconds(180),
+			},
+		)
 		this.scalingPolicies.push(errorRateScaling)
 
 		console.log(`✅ Created custom metrics-based scaling policies`)
@@ -437,7 +515,11 @@ export class AutoScalingConstruct extends Construct {
 	/**
 	 * Create scheduled scaling policies
 	 */
-	private createScheduledScaling(scheduledActions: NonNullable<AutoScalingConstructProps['scheduledActions']>): void {
+	private createScheduledScaling(
+		scheduledActions: NonNullable<
+			AutoScalingConstructProps['scheduledActions']
+		>,
+	): void {
 		for (const action of scheduledActions) {
 			this.scalableTaskCount.scaleOnSchedule(action.name, {
 				schedule: autoscaling.Schedule.expression(action.scheduleExpression),
@@ -457,8 +539,12 @@ export class AutoScalingConstruct extends Construct {
 		// configured after the service has been running for some time.
 		// This is a placeholder for future implementation.
 
-		console.log(`📋 Predictive scaling placeholder created for ${props.environmentName}`)
-		console.log(`   Note: Predictive scaling will be enabled once sufficient historical data is available`)
+		console.log(
+			`📋 Predictive scaling placeholder created for ${props.environmentName}`,
+		)
+		console.log(
+			`   Note: Predictive scaling will be enabled once sufficient historical data is available`,
+		)
 	}
 
 	/**
@@ -553,9 +639,16 @@ export class AutoScalingConstruct extends Construct {
 		})
 
 		// Add widgets to dashboard
-		dashboard.addWidgets(taskCountWidget, utilizationWidget, scalingPoliciesWidget, alarmWidget)
+		dashboard.addWidgets(
+			taskCountWidget,
+			utilizationWidget,
+			scalingPoliciesWidget,
+			alarmWidget,
+		)
 
-		console.log(`✅ Created scaling dashboard: ${environmentName}-scaling-dashboard`)
+		console.log(
+			`✅ Created scaling dashboard: ${environmentName}-scaling-dashboard`,
+		)
 	}
 
 	/**
@@ -568,21 +661,29 @@ export class AutoScalingConstruct extends Construct {
 		dimensions: Record<string, string>,
 		targetValue: number,
 		scaleInSteps: autoscaling.ScalingInterval[],
-		scaleOutSteps: autoscaling.ScalingInterval[]
+		scaleOutSteps: autoscaling.ScalingInterval[],
 	): void {
-		const scaleOutPolicy = new autoscaling.StepScalingPolicy(this, `${name}ScaleOutPolicy`, {
-			metricAggregationType: autoscaling.MetricAggregationType.AVERAGE,
-			scalingSteps: scaleOutSteps,
-			adjustmentType: autoscaling.AdjustmentType.CHANGE_IN_CAPACITY,
-			cooldown: Duration.seconds(180),
-		})
+		const scaleOutPolicy = new autoscaling.StepScalingPolicy(
+			this,
+			`${name}ScaleOutPolicy`,
+			{
+				metricAggregationType: autoscaling.MetricAggregationType.AVERAGE,
+				scalingSteps: scaleOutSteps,
+				adjustmentType: autoscaling.AdjustmentType.CHANGE_IN_CAPACITY,
+				cooldown: Duration.seconds(180),
+			},
+		)
 
-		const scaleInPolicy = new autoscaling.StepScalingPolicy(this, `${name}ScaleInPolicy`, {
-			metricAggregationType: autoscaling.MetricAggregationType.AVERAGE,
-			scalingSteps: scaleInSteps,
-			adjustmentType: autoscaling.AdjustmentType.CHANGE_IN_CAPACITY,
-			cooldown: Duration.seconds(300),
-		})
+		const scaleInPolicy = new autoscaling.StepScalingPolicy(
+			this,
+			`${name}ScaleInPolicy`,
+			{
+				metricAggregationType: autoscaling.MetricAggregationType.AVERAGE,
+				scalingSteps: scaleInSteps,
+				adjustmentType: autoscaling.AdjustmentType.CHANGE_IN_CAPACITY,
+				cooldown: Duration.seconds(300),
+			},
+		)
 
 		const scaleOutAlarm = new cloudwatch.Alarm(this, `${name}ScaleOutAlarm`, {
 			alarmName: `${name.toLowerCase()}-scale-out`,
@@ -616,11 +717,19 @@ export class AutoScalingConstruct extends Construct {
 			treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
 		})
 
-		scaleOutAlarm.addAlarmAction(new cloudwatch_actions.AutoScalingAction(scaleOutPolicy.scalingAlarm))
-		scaleInAlarm.addAlarmAction(new cloudwatch_actions.AutoScalingAction(scaleInPolicy.scalingAlarm))
+		scaleOutAlarm.addAlarmAction(
+			new cloudwatch_actions.AutoScalingAction(scaleOutPolicy.scalingAlarm),
+		)
+		scaleInAlarm.addAlarmAction(
+			new cloudwatch_actions.AutoScalingAction(scaleInPolicy.scalingAlarm),
+		)
 
-		scaleOutAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(this.alarmTopic))
-		scaleInAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(this.alarmTopic))
+		scaleOutAlarm.addAlarmAction(
+			new cloudwatch_actions.SnsAction(this.alarmTopic),
+		)
+		scaleInAlarm.addAlarmAction(
+			new cloudwatch_actions.SnsAction(this.alarmTopic),
+		)
 
 		this.alarms.push(scaleOutAlarm, scaleInAlarm)
 		this.scalingPolicies.push(scaleOutPolicy, scaleInPolicy)

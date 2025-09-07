@@ -1,5 +1,11 @@
-import { CloudWatchClient, PutMetricDataCommand } from '@aws-sdk/client-cloudwatch'
-import { ElasticLoadBalancingV2Client, DescribeTargetHealthCommand } from '@aws-sdk/client-elastic-load-balancing-v2'
+import {
+	CloudWatchClient,
+	PutMetricDataCommand,
+} from '@aws-sdk/client-cloudwatch'
+import {
+	ElasticLoadBalancingV2Client,
+	DescribeTargetHealthCommand,
+} from '@aws-sdk/client-elastic-load-balancing-v2'
 import type { Context } from 'aws-lambda'
 
 const cloudwatch = new CloudWatchClient({})
@@ -11,7 +17,10 @@ interface CustomMetricsEvent {
 	detail: any
 }
 
-export async function handler(event: CustomMetricsEvent, context: Context): Promise<void> {
+export async function handler(
+	event: CustomMetricsEvent,
+	context: Context,
+): Promise<void> {
 	console.log('🔍 Custom Metrics Collection Started')
 	console.log('Event:', JSON.stringify(event, null, 2))
 
@@ -29,7 +38,6 @@ export async function handler(event: CustomMetricsEvent, context: Context): Prom
 		await collectPerformanceMetrics(environmentName)
 
 		console.log('✅ Custom metrics collection completed successfully')
-
 	} catch (error) {
 		console.error('❌ Error collecting custom metrics:', error)
 
@@ -46,7 +54,9 @@ export async function handler(event: CustomMetricsEvent, context: Context): Prom
 /**
  * Collect application-specific metrics
  */
-async function collectApplicationMetrics(environmentName: string): Promise<void> {
+async function collectApplicationMetrics(
+	environmentName: string,
+): Promise<void> {
 	console.log('📊 Collecting application metrics...')
 
 	// Note: In a real implementation, these metrics would come from:
@@ -84,7 +94,12 @@ async function collectApplicationMetrics(environmentName: string): Promise<void>
 	]
 
 	for (const metric of metrics) {
-		await putMetricData('MacroAI/Application', metric.name, metric.value, metric.dimensions)
+		await putMetricData(
+			'MacroAI/Application',
+			metric.name,
+			metric.value,
+			metric.dimensions,
+		)
 	}
 
 	console.log(`✅ Collected ${metrics.length} application metrics`)
@@ -93,41 +108,64 @@ async function collectApplicationMetrics(environmentName: string): Promise<void>
 /**
  * Collect infrastructure-related metrics
  */
-async function collectInfrastructureMetrics(environmentName: string, loadBalancerArn: string): Promise<void> {
+async function collectInfrastructureMetrics(
+	environmentName: string,
+	loadBalancerArn: string,
+): Promise<void> {
 	console.log('🏗️ Collecting infrastructure metrics...')
 
 	try {
 		// Target group health metrics
 		if (loadBalancerArn) {
-			const targetHealth = await elbv2.send(new DescribeTargetHealthCommand({
-				TargetGroupArn: loadBalancerArn.replace('loadbalancer', 'targetgroup'), // Approximate mapping
-			}))
+			const targetHealth = await elbv2.send(
+				new DescribeTargetHealthCommand({
+					TargetGroupArn: loadBalancerArn.replace(
+						'loadbalancer',
+						'targetgroup',
+					), // Approximate mapping
+				}),
+			)
 
-			const healthyCount = targetHealth.TargetHealthDescriptions?.filter(
-				desc => desc.TargetHealth?.State === 'healthy'
-			).length || 0
+			const healthyCount =
+				targetHealth.TargetHealthDescriptions?.filter(
+					(desc) => desc.TargetHealth?.State === 'healthy',
+				).length || 0
 
 			const totalCount = targetHealth.TargetHealthDescriptions?.length || 0
 
-			await putMetricData('MacroAI/Infrastructure', 'HealthyTargets', healthyCount, {
-				Environment: environmentName,
-				Service: 'load-balancer',
-			})
+			await putMetricData(
+				'MacroAI/Infrastructure',
+				'HealthyTargets',
+				healthyCount,
+				{
+					Environment: environmentName,
+					Service: 'load-balancer',
+				},
+			)
 
-			await putMetricData('MacroAI/Infrastructure', 'TotalTargets', totalCount, {
-				Environment: environmentName,
-				Service: 'load-balancer',
-			})
+			await putMetricData(
+				'MacroAI/Infrastructure',
+				'TotalTargets',
+				totalCount,
+				{
+					Environment: environmentName,
+					Service: 'load-balancer',
+				},
+			)
 		}
 
 		// ECS service metrics
 		const ecsMetrics = await collectECSMetrics(environmentName)
 		for (const metric of ecsMetrics) {
-			await putMetricData('MacroAI/Infrastructure', metric.name, metric.value, metric.dimensions)
+			await putMetricData(
+				'MacroAI/Infrastructure',
+				metric.name,
+				metric.value,
+				metric.dimensions,
+			)
 		}
 
 		console.log('✅ Infrastructure metrics collected')
-
 	} catch (error) {
 		console.warn('⚠️ Failed to collect infrastructure metrics:', error)
 	}
@@ -136,14 +174,24 @@ async function collectInfrastructureMetrics(environmentName: string, loadBalance
 /**
  * Collect ECS-specific metrics
  */
-async function collectECSMetrics(environmentName: string): Promise<Array<{name: string, value: number, dimensions: Record<string, string>}>> {
-	const metrics: Array<{name: string, value: number, dimensions: Record<string, string>}> = []
+async function collectECSMetrics(
+	environmentName: string,
+): Promise<
+	Array<{ name: string; value: number; dimensions: Record<string, string> }>
+> {
+	const metrics: Array<{
+		name: string
+		value: number
+		dimensions: Record<string, string>
+	}> = []
 
 	try {
-		const serviceResponse = await ecs.send(new DescribeServicesCommand({
-			cluster: `${environmentName}-cluster`,
-			services: [`${environmentName}-service`],
-		}))
+		const serviceResponse = await ecs.send(
+			new DescribeServicesCommand({
+				cluster: `${environmentName}-cluster`,
+				services: [`${environmentName}-service`],
+			}),
+		)
 
 		const service = serviceResponse.services?.[0]
 		if (service) {
@@ -174,7 +222,6 @@ async function collectECSMetrics(environmentName: string): Promise<Array<{name: 
 				},
 			})
 		}
-
 	} catch (error) {
 		console.warn('⚠️ Failed to collect ECS metrics:', error)
 	}
@@ -185,7 +232,9 @@ async function collectECSMetrics(environmentName: string): Promise<Array<{name: 
 /**
  * Collect performance-related metrics
  */
-async function collectPerformanceMetrics(environmentName: string): Promise<void> {
+async function collectPerformanceMetrics(
+	environmentName: string,
+): Promise<void> {
 	console.log('⚡ Collecting performance metrics...')
 
 	// Simulate performance metrics (in real app, these would come from application)
@@ -227,7 +276,12 @@ async function collectPerformanceMetrics(environmentName: string): Promise<void>
 	]
 
 	for (const metric of performanceMetrics) {
-		await putMetricData('MacroAI/Performance', metric.name, metric.value, metric.dimensions)
+		await putMetricData(
+			'MacroAI/Performance',
+			metric.name,
+			metric.value,
+			metric.dimensions,
+		)
 	}
 
 	console.log(`✅ Collected ${performanceMetrics.length} performance metrics`)
@@ -240,7 +294,7 @@ async function putMetricData(
 	namespace: string,
 	metricName: string,
 	value: number,
-	dimensions: Record<string, string>
+	dimensions: Record<string, string>,
 ): Promise<void> {
 	try {
 		const command = new PutMetricDataCommand({
@@ -261,7 +315,6 @@ async function putMetricData(
 
 		await cloudwatch.send(command)
 		console.log(`📤 Sent metric: ${namespace}/${metricName} = ${value}`)
-
 	} catch (error) {
 		console.error(`❌ Failed to send metric ${metricName}:`, error)
 		throw error
