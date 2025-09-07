@@ -15,6 +15,7 @@ import { EcsLoadBalancerConstruct } from '../constructs/ecs-load-balancer-constr
 import { EnvironmentConfigConstruct } from '../constructs/environment-config-construct'
 import { NetworkingConstruct } from '../constructs/networking'
 import { ParameterStoreConstruct } from '../constructs/parameter-store-construct'
+import { SecurityStack } from './security-stack'
 
 export interface MacroAiProductionStackProps extends cdk.StackProps {
 	/**
@@ -40,6 +41,18 @@ export interface MacroAiProductionStackProps extends cdk.StackProps {
 		readonly hostedZoneId: string
 		readonly certificateArn?: string
 		readonly apiSubdomain?: string
+	}
+
+	/**
+	 * Security configuration options
+	 */
+	readonly security?: {
+		readonly enableWaf?: boolean
+		readonly enableSecurityHeaders?: boolean
+		readonly enableSslEnforcement?: boolean
+		readonly rateLimitThreshold?: number
+		readonly enableGeoBlocking?: boolean
+		readonly blockedCountries?: string[]
 	}
 }
 
@@ -67,6 +80,7 @@ export class MacroAiProductionStack extends cdk.Stack {
 	public readonly costOptimizationLambda: CostOptimizationLambdaConstruct
 	public readonly neonMonitoring: NeonMonitoringConstruct
 	public readonly upstashMonitoring: UpstashMonitoringConstruct
+	public readonly securityStack: SecurityStack
 	public readonly environmentName: string
 	public readonly customDomain?: MacroAiProductionStackProps['customDomain']
 
@@ -290,6 +304,19 @@ export class MacroAiProductionStack extends cdk.Stack {
 				enablePerformanceAlerts: true,
 			},
 		)
+
+		// Create security stack for WAF and security headers
+		this.securityStack = new SecurityStack(this, 'Security', {
+			environmentName,
+			vpc: this.networking.vpc,
+			loadBalancer: this.loadBalancer.loadBalancer,
+			enableWaf: props.security?.enableWaf ?? true,
+			enableSecurityHeaders: props.security?.enableSecurityHeaders ?? true,
+			enableSslEnforcement: props.security?.enableSslEnforcement ?? true,
+			rateLimitThreshold: props.security?.rateLimitThreshold ?? 2000,
+			enableGeoBlocking: props.security?.enableGeoBlocking ?? true,
+			blockedCountries: props.security?.blockedCountries ?? ['CN', 'RU', 'KP'],
+		})
 
 		// Schedule cost optimization analysis (weekly on Mondays at 2 AM UTC)
 		const costOptimizationRule = new events.Rule(
@@ -541,6 +568,27 @@ export class MacroAiProductionStack extends cdk.Stack {
 			value: this.autoScaling.customMetricsLambda?.functionArn || 'N/A',
 			description: 'Custom metrics collection Lambda function ARN',
 			exportName: `${this.stackName}-CustomMetricsLambdaArn`,
+		})
+
+		// Security outputs
+		new cdk.CfnOutput(this, 'WafWebAclArn', {
+			value: this.securityStack.webAclArn || 'N/A',
+			description: 'WAF WebACL ARN for security protection',
+			exportName: `${this.stackName}-WafWebAclArn`,
+		})
+
+		new cdk.CfnOutput(this, 'SecurityHeadersLambdaArn', {
+			value:
+				this.securityStack.securityHeadersConstruct?.getLambdaFunctionArn() ||
+				'N/A',
+			description: 'Security headers Lambda function ARN',
+			exportName: `${this.stackName}-SecurityHeadersLambdaArn`,
+		})
+
+		new cdk.CfnOutput(this, 'SecurityDashboardUrl', {
+			value: `https://${this.region}.console.aws.amazon.com/cloudwatch/home?region=${this.region}#dashboards:name=${environmentName}-security-dashboard`,
+			description: 'Security monitoring dashboard URL',
+			exportName: `${this.stackName}-SecurityDashboardUrl`,
 		})
 	}
 }
