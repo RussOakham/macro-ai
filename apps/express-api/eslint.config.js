@@ -60,7 +60,7 @@ export default repoConfig.config(
 			'jsdoc/require-param-type': 'off',
 			'jsdoc/check-param-names': 'off',
 			'jsdoc/require-returns': 'off',
-			'jsdoc/require-returns-description': 'off',
+			'jsdoc/require-returns-description': 'error',
 			'jsdoc/require-returns-type': 'off',
 		},
 	},

@@ -66,7 +66,7 @@ export default repoConfig.config(
 			'jsdoc/require-param-description': 'off',
 			'jsdoc/require-param-type': 'off',
 			'jsdoc/require-returns': 'off',
-			'jsdoc/require-returns-description': 'off',
+			'jsdoc/require-returns-description': 'error',
 			'jsdoc/require-returns-type': 'off',
 			'react/jsx-props-no-spreading': 'off',
 			'react/require-default-props': 'off',
