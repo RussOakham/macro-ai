@@ -102,16 +102,13 @@ class CognitoService implements ICognitoService {
 
 	/**
 	 * Sign up a new user with Cognito
-	 * @param email User email address
-	 * @param password User password
-	 * @param confirmPassword Password confirmation
+	 * @param request User registration request containing email, password, and confirmPassword
 	 * @returns Result tuple with SignUpCommandOutput or error
 	 */
-	public signUpUser = async ({
-		email,
-		password,
-		confirmPassword,
-	}: TRegisterUserRequest): Promise<Result<SignUpCommandOutput>> => {
+	public signUpUser = async (
+		request: TRegisterUserRequest,
+	): Promise<Result<SignUpCommandOutput>> => {
+		const { email, password, confirmPassword } = request
 		// Ensure configuration is loaded from Parameter Store
 		await this.ensureConfigLoaded()
 

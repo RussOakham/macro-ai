@@ -54,14 +54,8 @@ export default repoConfig.config(
 			// Disable turbo env var rule for Express API
 			'turbo/no-undeclared-env-vars': 'warn',
 			'@typescript-eslint/no-misused-promises': 'warn',
+			// Enable JSDoc for public exports only (API endpoints)
 			'jsdoc/require-jsdoc': ['error', { publicOnly: true }],
-			'jsdoc/require-param': 'error',
-			'jsdoc/require-param-description': 'off',
-			'jsdoc/require-param-type': 'off',
-			'jsdoc/check-param-names': 'off',
-			'jsdoc/require-returns': 'error',
-			'jsdoc/require-returns-description': 'error',
-			'jsdoc/require-returns-type': 'off',
 		},
 	},
 
@@ -74,9 +68,7 @@ export default repoConfig.config(
 		rules: {
 			// Relax JSDoc requirements for config files
 			'jsdoc/require-jsdoc': 'off',
-			'jsdoc/require-param-description': 'off',
-			'jsdoc/require-param-type': 'off',
-			'jsdoc/require-returns': 'off',
+			'jsdoc/require-returns-description': 'off',
 		},
 	},
 )

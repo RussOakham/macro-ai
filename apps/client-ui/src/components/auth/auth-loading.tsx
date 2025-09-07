@@ -16,6 +16,11 @@ interface AuthLoadingProps {
  * - Supports light/dark/system theme toggle functionality
  * - Matches chat interface loading patterns
  * - Configurable size and messaging
+ * @param root0
+ * @param root0.message
+ * @param root0.showIcon
+ * @param root0.size
+ * @param root0.className
  */
 const AuthLoading: React.FC<AuthLoadingProps> = ({
 	message = 'Authenticating...',
@@ -72,6 +77,8 @@ const AuthLoading: React.FC<AuthLoadingProps> = ({
 /**
  * Compact authentication loading component for inline use
  * Useful for smaller loading states within forms or components
+ * @param root0
+ * @param root0.message
  */
 const AuthLoadingCompact: React.FC<{ message?: string }> = ({
 	message = 'Authenticating...',

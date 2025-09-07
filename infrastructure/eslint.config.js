@@ -60,14 +60,7 @@ export default repoConfig.config(
 			'no-inline-comments': 'off',
 			// Relax JSDoc requirements for infrastructure code
 			'jsdoc/require-jsdoc': 'off',
-			'jsdoc/require-param': 'off',
-			'jsdoc/require-param-description': 'off',
-			'jsdoc/require-param-type': 'off',
-			'jsdoc/require-returns': 'off',
 			'jsdoc/require-returns-description': 'off',
-			'jsdoc/require-returns-type': 'off',
-			// Disable strict JSDoc param checking
-			'jsdoc/check-param-names': 'off',
 			// Relax import sorting for CDK files
 			'perfectionist/sort-imports': 'off',
 			'perfectionist/sort-objects': 'off',
@@ -91,9 +84,7 @@ export default repoConfig.config(
 		rules: {
 			// Relax JSDoc requirements for config files
 			'jsdoc/require-jsdoc': 'off',
-			'jsdoc/require-param-description': 'off',
-			'jsdoc/require-param-type': 'off',
-			'jsdoc/require-returns': 'off',
+			'jsdoc/require-returns-description': 'off',
 		},
 	},
 

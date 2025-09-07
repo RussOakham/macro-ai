@@ -41,6 +41,8 @@ interface IExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
 /**
  * Applies token refresh interceptors to a client with an axios instance
  * This ensures consistent authentication behavior across all domain clients
+ * @param client
+ * @param client.axios
  */
 export const applyTokenRefreshInterceptors = (client: {
 	axios: AxiosInstance
