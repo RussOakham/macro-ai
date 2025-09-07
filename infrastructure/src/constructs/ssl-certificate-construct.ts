@@ -81,6 +81,7 @@ export class SslCertificateConstruct extends Construct {
 			alertTopic,
 			alertDaysBeforeExpiration = 30,
 			keyAlgorithm = acm.KeyAlgorithm.RSA_2048,
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			validationMethod = acm.ValidationMethod.DNS,
 		} = props
 
@@ -91,9 +92,9 @@ export class SslCertificateConstruct extends Construct {
 		this.certificate = new acm.Certificate(this, 'Certificate', {
 			domainName,
 			subjectAlternativeNames,
-			validationMethod: enableDnsValidation
-				? acm.ValidationMethod.DNS
-				: validationMethod,
+			validation: enableDnsValidation
+				? acm.CertificateValidation.fromDns(hostedZone)
+				: acm.CertificateValidation.fromEmail(),
 			keyAlgorithm,
 		})
 
@@ -128,13 +129,15 @@ export class SslCertificateConstruct extends Construct {
 		const records: route53.CnameRecord[] = []
 
 		// Create DNS validation records for the certificate
-		const validationRecords = this.certificate.domainValidationOptions
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const validationRecords = (this.certificate as any).domainValidationOptions
 
-		validationRecords.forEach((validation, index) => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		validationRecords.forEach((validation: any, index: number) => {
 			const record = new route53.CnameRecord(this, `ValidationRecord${index}`, {
 				zone: hostedZone,
 				recordName: validation.resourceRecordName,
-				recordValue: validation.resourceRecordValue,
+				domainName: validation.resourceRecordValue,
 				comment: `Certificate validation for ${validation.domainName}`,
 				ttl: cdk.Duration.seconds(300), // 5 minutes TTL for validation records
 			})
@@ -205,7 +208,7 @@ export class SslCertificateConstruct extends Construct {
 		new cdk.CfnOutput(this, 'CertificateTransparencyEnabled', {
 			value: 'true',
 			description: 'Certificate Transparency logging enabled',
-			exportName: `${this.stackName}-CertificateTransparencyEnabled`,
+			exportName: `${cdk.Stack.of(this).stackName}-CertificateTransparencyEnabled`,
 		})
 	}
 
@@ -217,7 +220,8 @@ export class SslCertificateConstruct extends Construct {
 		})
 
 		new cdk.CfnOutput(this, 'CertificateDomainName', {
-			value: this.certificate.domainName,
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			value: (this.certificate as any).domainName,
 			description: 'SSL Certificate domain name',
 			exportName: `${environmentName}-ssl-certificate-domain`,
 		})

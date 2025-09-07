@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib'
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch'
+import * as cloudwatch_actions from 'aws-cdk-lib/aws-cloudwatch-actions'
 import * as logs from 'aws-cdk-lib/aws-logs'
 import * as sns from 'aws-cdk-lib/aws-sns'
 import * as lambda from 'aws-cdk-lib/aws-lambda'
@@ -106,14 +107,23 @@ export class DDoSProtectionConstruct extends Construct {
 
 		const {
 			enabled = true,
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			detectionThreshold = 50,
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			mitigationThreshold = 100,
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			enableGeoProtection = true,
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			monitoredCountries = ['CN', 'RU', 'KP', 'IR', 'KP'],
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			enableBotProtection = true,
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			enableIpReputation = true,
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			enableBehavioralAnalysis = true,
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			enableAutoIpBlocking = true,
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			ipBlockingDuration = 60,
 		} = ddosProtection
 
@@ -267,7 +277,7 @@ async function updateWAFRules(patterns) {
 			treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
 		})
 
-		highVolumeAlarm.addAlarmAction(new cloudwatch.actions.SnsAction(topic))
+		highVolumeAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(topic))
 
 		this.alarms.push(highVolumeAlarm)
 
@@ -296,7 +306,7 @@ async function updateWAFRules(patterns) {
 			},
 		)
 
-		unusualPatternAlarm.addAlarmAction(new cloudwatch.actions.SnsAction(topic))
+		unusualPatternAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(topic))
 
 		this.alarms.push(unusualPatternAlarm)
 
@@ -320,7 +330,7 @@ async function updateWAFRules(patterns) {
 			treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
 		})
 
-		geoAnomalyAlarm.addAlarmAction(new cloudwatch.actions.SnsAction(topic))
+		geoAnomalyAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(topic))
 
 		this.alarms.push(geoAnomalyAlarm)
 	}

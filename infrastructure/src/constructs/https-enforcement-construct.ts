@@ -23,12 +23,12 @@ export interface HttpsEnforcementConstructProps {
 	/**
 	 * Target group for HTTP traffic (will be redirected to HTTPS)
 	 */
-	httpTargetGroup?: elbv2.ITargetGroup
+	httpTargetGroup?: elbv2.ApplicationTargetGroup
 
 	/**
 	 * Target group for HTTPS traffic
 	 */
-	httpsTargetGroup?: elbv2.ITargetGroup
+	httpsTargetGroup?: elbv2.ApplicationTargetGroup
 
 	/**
 	 * Enable HTTP to HTTPS redirect
@@ -48,7 +48,7 @@ export interface HttpsEnforcementConstructProps {
 	/**
 	 * SSL policy for HTTPS listener
 	 */
-	sslPolicy?: string
+	sslPolicy?: elbv2.SslPolicy
 
 	/**
 	 * Health check configuration
@@ -68,6 +68,7 @@ export interface HttpsEnforcementConstructProps {
 }
 
 export class HttpsEnforcementConstruct extends Construct {
+	public readonly loadBalancer: elbv2.IApplicationLoadBalancer
 	public readonly httpsListener: elbv2.ApplicationListener
 	public readonly httpListener?: elbv2.ApplicationListener
 	public readonly httpsTargetGroup: elbv2.ApplicationTargetGroup
@@ -90,10 +91,11 @@ export class HttpsEnforcementConstruct extends Construct {
 			enableHttpRedirect = true,
 			httpPort = 80,
 			httpsPort = 443,
-			sslPolicy = 'ELBSecurityPolicy-TLS13-1-2-2021-06',
+			sslPolicy = elbv2.SslPolicy.RECOMMENDED_TLS,
 			enableDetailedMonitoring = true,
 		} = props
 
+		this.loadBalancer = loadBalancer
 		this.alarms = []
 
 		// Create target groups if not provided
@@ -178,7 +180,7 @@ export class HttpsEnforcementConstruct extends Construct {
 		certificate: acm.ICertificate,
 		targetGroup: elbv2.IApplicationTargetGroup,
 		httpsPort: number,
-		sslPolicy: string,
+		sslPolicy: elbv2.SslPolicy,
 	): elbv2.ApplicationListener {
 		const listener = new elbv2.ApplicationListener(this, 'HttpsListener', {
 			loadBalancer,
@@ -225,9 +227,7 @@ export class HttpsEnforcementConstruct extends Construct {
 					namespace: 'AWS/ApplicationELB',
 					metricName: 'UnHealthyHostCount',
 					dimensionsMap: {
-						LoadBalancer:
-							this.httpsTargetGroup.loadBalancerAttached
-								?.loadBalancerFullName || '',
+						LoadBalancer: this.loadBalancer.loadBalancerDnsName || '',
 						TargetGroup: this.httpsTargetGroup.targetGroupFullName,
 					},
 					statistic: 'Maximum',
@@ -251,9 +251,7 @@ export class HttpsEnforcementConstruct extends Construct {
 					namespace: 'AWS/ApplicationELB',
 					metricName: 'ClientTLSNegotiationErrorCount',
 					dimensionsMap: {
-						LoadBalancer:
-							this.httpsTargetGroup.loadBalancerAttached
-								?.loadBalancerFullName || '',
+						LoadBalancer: this.loadBalancer.loadBalancerDnsName || '',
 					},
 					statistic: 'Sum',
 				}),
@@ -274,9 +272,7 @@ export class HttpsEnforcementConstruct extends Construct {
 				namespace: 'AWS/ApplicationELB',
 				metricName: 'HTTP_Redirect_Count',
 				dimensionsMap: {
-					LoadBalancer:
-						this.httpsTargetGroup.loadBalancerAttached?.loadBalancerFullName ||
-						'',
+					LoadBalancer: this.loadBalancer.loadBalancerDnsName || '',
 				},
 				statistic: 'Sum',
 			}),

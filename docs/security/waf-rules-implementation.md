@@ -1,6 +1,7 @@
 # 🚨 WAF Rules Implementation
 
-This document outlines the comprehensive Web Application Firewall (WAF) implementation for the Macro AI infrastructure, providing enterprise-grade protection against common web attacks and security threats.
+This document outlines the comprehensive Web Application Firewall (WAF) implementation for the Macro AI infrastructure,
+providing enterprise-grade protection against common web attacks and security threats.
 
 ## 📋 Security Architecture Overview
 
@@ -8,7 +9,7 @@ This document outlines the comprehensive Web Application Firewall (WAF) implemen
 
 The security implementation follows a defense-in-depth strategy with multiple protection layers:
 
-```
+```text
 ┌─────────────────┐
 │   AWS Shield    │ ← DDoS Protection (Always-on)
 ├─────────────────┤
@@ -399,4 +400,5 @@ aws wafv2 get-web-acl \
 
 ---
 
-This implementation provides enterprise-grade security protection while maintaining performance and scalability. The layered approach ensures comprehensive coverage against modern web threats and attack vectors.
+This implementation provides enterprise-grade security protection while maintaining performance and scalability. The layered
+approach ensures comprehensive coverage against modern web threats and attack vectors.

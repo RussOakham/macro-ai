@@ -1,4 +1,7 @@
-import { CloudFrontRequestEvent, CloudFrontResponseEvent } from 'aws-lambda'
+import type {
+	CloudFrontRequestEvent,
+	CloudFrontResponseEvent,
+} from 'aws-lambda'
 
 interface SecurityHeadersConfig {
 	environment: string
@@ -56,6 +59,7 @@ function getSecurityConfig(): SecurityHeadersConfig {
 	}
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isCorsRequest(request: any): boolean {
 	return !!(
 		request.headers['origin'] ||
@@ -65,6 +69,7 @@ function isCorsRequest(request: any): boolean {
 	)
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getOriginFromRequest(request: any): string | null {
 	const origin = request.headers['origin'] || request.headers['Origin']
 	return Array.isArray(origin) ? origin[0]?.value : origin?.value || null
@@ -82,8 +87,10 @@ function isOriginAllowed(origin: string, allowedOrigins: string[]): boolean {
 }
 
 function addSecurityHeaders(
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	response: any,
 	config: SecurityHeadersConfig,
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	request?: any,
 ): void {
 	const headers = response.headers || {}
@@ -208,6 +215,7 @@ function addSecurityHeaders(
 function logSecurityEvent(
 	message: string,
 	level: 'INFO' | 'WARN' | 'ERROR',
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	details?: any,
 ): void {
 	const config = getSecurityConfig()
@@ -229,23 +237,28 @@ function logSecurityEvent(
 
 export async function handler(
 	event: CloudFrontRequestEvent | CloudFrontResponseEvent,
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> {
 	try {
 		const config = getSecurityConfig()
 
 		logSecurityEvent('Security headers handler invoked', 'INFO', {
-			eventType: event.Records[0].cf.eventType,
-			requestId: event.Records[0].cf.requestId,
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			eventType: (event.Records[0]?.cf as any)?.eventType,
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			requestId: (event.Records[0]?.cf as any)?.requestId,
 		})
 
 		// Handle different CloudFront events
-		if (event.Records[0].cf.eventType === 'viewer-request') {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const cfEvent = event.Records[0]?.cf as any
+		if (cfEvent?.eventType === 'viewer-request') {
 			// For request events, just pass through (security headers are added on response)
-			return event.Records[0].cf.request
-		} else if (event.Records[0].cf.eventType === 'viewer-response') {
+			return cfEvent.request
+		} else if (cfEvent?.eventType === 'viewer-response') {
 			// For response events, add security headers
-			const response = event.Records[0].cf.response
-			const request = event.Records[0].cf.request
+			const response = cfEvent.response
+			const request = cfEvent.request
 
 			addSecurityHeaders(response, config, request)
 
@@ -255,9 +268,9 @@ export async function handler(
 			})
 
 			return response
-		} else if (event.Records[0].cf.eventType === 'origin-request') {
+		} else if (cfEvent?.eventType === 'origin-request') {
 			// For origin request events, add security-related headers to the request
-			const request = event.Records[0].cf.request
+			const request = cfEvent.request
 
 			// Add security headers to the request that will be sent to origin
 			if (!request.headers) {
@@ -275,10 +288,10 @@ export async function handler(
 			}
 
 			return request
-		} else if (event.Records[0].cf.eventType === 'origin-response') {
+		} else if (cfEvent?.eventType === 'origin-response') {
 			// For origin response events, add security headers before sending to viewer
-			const response = event.Records[0].cf.response
-			const request = event.Records[0].cf.request
+			const response = cfEvent.response
+			const request = cfEvent.request
 
 			addSecurityHeaders(response, config, request)
 
@@ -286,7 +299,7 @@ export async function handler(
 		}
 
 		// Default: return the request/response unchanged
-		return event.Records[0].cf.request || event.Records[0].cf.response
+		return cfEvent?.request || cfEvent?.response
 	} catch (error) {
 		logSecurityEvent('Error in security headers handler', 'ERROR', {
 			error: error instanceof Error ? error.message : String(error),
@@ -294,7 +307,9 @@ export async function handler(
 		})
 
 		// In case of error, return the original request/response
-		return event.Records[0].cf.request || event.Records[0].cf.response
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const cfEvent = event.Records[0]?.cf as any
+		return cfEvent?.request || cfEvent?.response
 	}
 }
 

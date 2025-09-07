@@ -66,11 +66,6 @@ export interface SecurityStackProps extends cdk.StackProps {
 	domainName?: string
 
 	/**
-	 * Route 53 hosted zone for DNS validation
-	 */
-	hostedZone?: route53.IHostedZone
-
-	/**
 	 * Rate limiting threshold
 	 */
 	rateLimitThreshold?: number
@@ -102,7 +97,7 @@ export interface SecurityStackProps extends cdk.StackProps {
 		enableHttpRedirect?: boolean
 		httpPort?: number
 		httpsPort?: number
-		sslPolicy?: string
+		sslPolicy?: elbv2.SslPolicy
 		enableDetailedMonitoring?: boolean
 	}
 }
@@ -115,6 +110,7 @@ export class SecurityStack extends cdk.Stack {
 	public readonly rateLimitingConstruct?: RateLimitingConstruct
 	public readonly ddosProtectionConstruct?: DDoSProtectionConstruct
 	public readonly securityMonitoringConstruct?: SecurityMonitoringConstruct
+	public readonly securityAlarmTopic: sns.Topic
 	public readonly webAclArn?: string
 	public readonly certificateArn?: string
 
@@ -123,6 +119,7 @@ export class SecurityStack extends cdk.Stack {
 
 		const {
 			environmentName,
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			vpc,
 			loadBalancer,
 			cloudFrontDistribution,
@@ -187,16 +184,17 @@ export class SecurityStack extends cdk.Stack {
 				const cfnDistribution = distribution.node
 					.defaultChild as cloudfront.CfnDistribution
 
-				if (cfnDistribution.distributionConfig?.defaultCacheBehavior) {
-					cfnDistribution.distributionConfig.defaultCacheBehavior.lambdaFunctionAssociations =
-						[
-							{
-								eventType: 'viewer-response',
-								lambdaFunctionARN:
-									this.securityHeadersConstruct.getLambdaFunctionArn(),
-								includeBody: false,
-							},
-						]
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const distributionConfig = cfnDistribution.distributionConfig as any
+				if (distributionConfig?.defaultCacheBehavior) {
+					distributionConfig.defaultCacheBehavior.lambdaFunctionAssociations = [
+						{
+							eventType: 'viewer-response',
+							lambdaFunctionARN:
+								this.securityHeadersConstruct.getLambdaFunctionArn(),
+							includeBody: false,
+						},
+					]
 				}
 			}
 		}
@@ -233,8 +231,7 @@ export class SecurityStack extends cdk.Stack {
 					httpPort: httpsEnforcement?.httpPort ?? 80,
 					httpsPort: httpsEnforcement?.httpsPort ?? 443,
 					sslPolicy:
-						httpsEnforcement?.sslPolicy ??
-						'ELBSecurityPolicy-TLS13-1-2-2021-06',
+						httpsEnforcement?.sslPolicy ?? elbv2.SslPolicy.RECOMMENDED_TLS,
 					enableDetailedMonitoring:
 						httpsEnforcement?.enableDetailedMonitoring ?? true,
 					healthCheck: {
@@ -252,7 +249,7 @@ export class SecurityStack extends cdk.Stack {
 		}
 
 		// Create shared SNS topic for security alerts
-		const securityAlarmTopic = new sns.Topic(this, 'SecurityAlarmTopic', {
+		this.securityAlarmTopic = new sns.Topic(this, 'SecurityAlarmTopic', {
 			topicName: `${environmentName}-security-alerts`,
 			displayName: `${environmentName} Security Alerts`,
 		})
@@ -264,7 +261,7 @@ export class SecurityStack extends cdk.Stack {
 			{
 				environmentName,
 				enableDetailedMonitoring: true,
-				alarmTopic: securityAlarmTopic,
+				alarmTopic: this.securityAlarmTopic,
 				rateLimiting: {
 					generalLimit: 1000, // 1000 requests per 5 minutes per IP
 					apiLimit: 500, // 500 API requests per 5 minutes per IP
@@ -298,7 +295,7 @@ export class SecurityStack extends cdk.Stack {
 			'DDoSProtection',
 			{
 				environmentName,
-				alarmTopic: securityAlarmTopic,
+				alarmTopic: this.securityAlarmTopic,
 				enableDetailedMonitoring: true,
 				ddosProtection: {
 					enabled: true,
@@ -321,7 +318,7 @@ export class SecurityStack extends cdk.Stack {
 			'SecurityMonitoring',
 			{
 				environmentName,
-				alarmTopic: securityAlarmTopic,
+				alarmTopic: this.securityAlarmTopic,
 				enableDetailedMonitoring: true,
 				securityMonitoring: {
 					enableThreatIntelligence: true,
@@ -506,7 +503,7 @@ export class SecurityStack extends cdk.Stack {
 
 		// Security alarm topic output
 		new cdk.CfnOutput(this, 'SecurityAlarmTopicArn', {
-			value: securityAlarmTopic.topicArn,
+			value: this.securityAlarmTopic.topicArn,
 			description: 'Security alarm SNS topic ARN',
 			exportName: `${environmentName}-security-alarm-topic-arn`,
 		})

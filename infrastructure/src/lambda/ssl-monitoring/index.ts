@@ -2,13 +2,13 @@ import {
 	CloudWatchClient,
 	PutMetricDataCommand,
 	PutMetricAlarmCommand,
+	StandardUnit,
 } from '@aws-sdk/client-cloudwatch'
 import {
 	ACMClient,
 	ListCertificatesCommand,
 	DescribeCertificateCommand,
 } from '@aws-sdk/client-acm'
-import { EventBridgeClient, PutRuleCommand } from '@aws-sdk/client-eventbridge'
 import type { Context } from 'aws-lambda'
 
 interface CertificateInfo {
@@ -42,7 +42,8 @@ function getMonitoringConfig(): SslMonitoringConfig {
 	}
 }
 
-export async function handler(event: any, context: Context): Promise<void> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function handler(event: any, _context: Context): Promise<void> {
 	try {
 		const config = getMonitoringConfig()
 
@@ -108,13 +109,13 @@ export async function handler(event: any, context: Context): Promise<void> {
 
 async function monitorCertificatesInRegion(
 	region: string,
-	config: SslMonitoringConfig,
+	_config: SslMonitoringConfig,
 ): Promise<CertificateInfo[]> {
 	const acm = new ACMClient({ region })
 
 	// List all certificates
 	const listCommand = new ListCertificatesCommand({
-		Include: {
+		Includes: {
 			keyTypes: [
 				'RSA_2048',
 				'RSA_3072',
@@ -209,7 +210,7 @@ async function sendMetricsToCloudWatch(
 		{
 			MetricName: 'TotalCertificates',
 			Value: totalCertificates,
-			Unit: 'Count',
+			Unit: StandardUnit.Count,
 			Dimensions: [
 				{
 					Name: 'Environment',
@@ -220,7 +221,7 @@ async function sendMetricsToCloudWatch(
 		{
 			MetricName: 'ValidCertificates',
 			Value: validCertificates,
-			Unit: 'Count',
+			Unit: StandardUnit.Count,
 			Dimensions: [
 				{
 					Name: 'Environment',
@@ -231,7 +232,7 @@ async function sendMetricsToCloudWatch(
 		{
 			MetricName: 'ExpiredCertificates',
 			Value: expiredCertificates,
-			Unit: 'Count',
+			Unit: StandardUnit.Count,
 			Dimensions: [
 				{
 					Name: 'Environment',
@@ -242,7 +243,7 @@ async function sendMetricsToCloudWatch(
 		{
 			MetricName: 'ExpiringSoonCertificates',
 			Value: expiringSoonCertificates,
-			Unit: 'Count',
+			Unit: StandardUnit.Count,
 			Dimensions: [
 				{
 					Name: 'Environment',
@@ -258,7 +259,7 @@ async function sendMetricsToCloudWatch(
 			metrics.push({
 				MetricName: 'DaysToExpiry',
 				Value: cert.daysToExpiry,
-				Unit: 'Count',
+				Unit: StandardUnit.Count,
 				Dimensions: [
 					{
 						Name: 'Environment',

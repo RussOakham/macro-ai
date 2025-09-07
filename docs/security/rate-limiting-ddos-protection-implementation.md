@@ -2,13 +2,14 @@
 
 ## Overview
 
-This document describes the comprehensive rate limiting and DDoS protection implementation for the Macro AI infrastructure. The system provides multiple layers of protection at both the infrastructure and application levels.
+This document describes the comprehensive rate limiting and DDoS protection implementation for the Macro AI infrastructure.
+The system provides multiple layers of protection at both the infrastructure and application levels.
 
 ## Architecture
 
 ### Layered Defense Strategy
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                    Client Requests                         │
 └─────────────────────┬───────────────────────────────────────┘
@@ -282,7 +283,7 @@ The implementation uses a layered approach where:
 
 To avoid conflicts, the rate limiting thresholds are configured as follows:
 
-```
+```text
 AWS WAF (Infrastructure)     Express API (Application)
 ─────────────────────────    ──────────────────────────
 1000 requests/5min         100 requests/15min
@@ -484,4 +485,6 @@ ddosProtection: {
 
 ## Conclusion
 
-The rate limiting and DDoS protection implementation provides comprehensive security for the Macro AI infrastructure. The layered approach ensures both infrastructure-level and application-level protection while maintaining performance and flexibility. Regular monitoring and tuning are essential for maintaining effective security posture.
+The rate limiting and DDoS protection implementation provides comprehensive security for the Macro AI infrastructure. The
+layered approach ensures both infrastructure-level and application-level protection while maintaining performance and
+flexibility. Regular monitoring and tuning are essential for maintaining effective security posture.

@@ -158,7 +158,8 @@ export class SecurityHeadersConstruct extends Construct {
 	public updateSecurityConfig(
 		updates: Partial<SecurityHeadersConstructProps>,
 	): void {
-		const currentEnv = this.lambdaFunction.environment
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const currentEnv = (this.lambdaFunction as any).environment
 
 		const newEnvironment = {
 			...currentEnv,

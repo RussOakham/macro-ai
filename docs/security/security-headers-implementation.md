@@ -1,12 +1,14 @@
 # 🔒 Security Headers Implementation
 
-This document details the comprehensive security headers implementation for the Macro AI infrastructure, providing robust protection against common web vulnerabilities and attacks.
+This document details the comprehensive security headers implementation for the Macro AI infrastructure,
+providing robust protection against common web vulnerabilities and attacks.
 
 ## 📋 Security Headers Overview
 
 ### Implementation Strategy
 
-Security headers are implemented using Lambda@Edge functions that process HTTP responses and add security headers before content reaches the client. This approach provides:
+Security headers are implemented using Lambda@Edge functions that process HTTP responses and add security headers before
+content reaches the client. This approach provides:
 
 - **Global Coverage**: Headers applied at CloudFront edge locations
 - **Dynamic Configuration**: Environment-specific header values
@@ -311,7 +313,7 @@ await putMetricData('MacroAI/Security', 'HeaderErrors', 1, {
 
 #### Event Processing Flow
 
-```
+```text
 1. Viewer Request Event
    ├── Pass through (no headers to add)
    └── Continue to origin
@@ -505,4 +507,5 @@ const environmentConfigs = {
 
 ---
 
-This security headers implementation provides comprehensive protection against modern web vulnerabilities while maintaining optimal performance and user experience.
+This security headers implementation provides comprehensive protection against modern web vulnerabilities while maintaining
+optimal performance and user experience.

@@ -1,7 +1,9 @@
-/* eslint-disable security-node/detect-insecure-randomness */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
 	CloudWatchClient,
 	GetMetricDataCommand,
+	PutMetricDataCommand,
+	StandardUnit,
 } from '@aws-sdk/client-cloudwatch'
 import { ECSClient, UpdateServiceCommand } from '@aws-sdk/client-ecs'
 import { EventBridgeClient, PutRuleCommand } from '@aws-sdk/client-eventbridge'
@@ -20,7 +22,7 @@ interface ScalingOptimizerEvent {
 
 export async function handler(
 	event: ScalingOptimizerEvent,
-	context: Context,
+	_context: Context,
 ): Promise<void> {
 	console.log('🔧 Scaling Optimizer Started')
 	console.log('Event:', JSON.stringify(event, null, 2))
@@ -54,7 +56,7 @@ export async function handler(
 		console.log('✅ Scaling optimization completed successfully')
 	} catch (error) {
 		console.error('❌ Error in scaling optimization:', error)
-		await logOptimizationError(environment, error)
+		await logOptimizationError(process.env.ENVIRONMENT_NAME || 'unknown', error)
 		throw error
 	}
 }
@@ -413,12 +415,10 @@ function analyzePeakHours(
 	}
 
 	// Find peak hours (top 20% of hours)
-	const hourlyAverages = Array.from(hourlySums.entries()).map(
-		([hour, data]) => ({
-			hour,
-			average: data.sum / data.count,
-		}),
-	)
+	const hourlyAverages = Array.from(hourlySums.entries(), ([hour, data]) => ({
+		hour,
+		average: data.sum / data.count,
+	}))
 
 	hourlyAverages.sort((a, b) => b.average - a.average)
 	const top20Percent = Math.ceil(hourlyAverages.length * 0.2)
@@ -461,11 +461,11 @@ function calculatePeak(
 
 function calculateEstimatedCost(
 	utilizationPatterns: any,
-	monthlyBudget: number,
+	_monthlyBudget: number,
 ): number {
 	// Simplified cost estimation based on task count and utilization
 	const avgTasks = utilizationPatterns.averageTasks
-	const peakTasks = utilizationPatterns.peakTasks
+	const _peakTasks = utilizationPatterns.peakTasks
 
 	// Rough Fargate cost estimation ($0.04048 per vCPU hour, $0.004445 per GB hour)
 	const estimatedCost =
@@ -536,6 +536,7 @@ async function putMetricData(
 						Value: value,
 					})),
 					Timestamp: new Date(),
+					Unit: StandardUnit.Count,
 				},
 			],
 		})

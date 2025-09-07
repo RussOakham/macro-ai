@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib'
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch'
+import * as cloudwatch_actions from 'aws-cdk-lib/aws-cloudwatch-actions'
 import * as logs from 'aws-cdk-lib/aws-logs'
 import * as sns from 'aws-cdk-lib/aws-sns'
 import * as lambda from 'aws-cdk-lib/aws-lambda'
@@ -86,10 +87,15 @@ export class SecurityMonitoringConstruct extends Construct {
 		} = props
 
 		const {
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			enableThreatIntelligence = true,
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			enableEventCorrelation = true,
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			enableAutomatedResponse = true,
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			enableComplianceMonitoring = true,
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			enableVulnerabilityScanning = true,
 			enableIncidentResponse = true,
 		} = securityMonitoring
@@ -498,7 +504,7 @@ async function logIncident(alert, actions) {
 			treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
 		})
 
-		highRiskAlarm.addAlarmAction(new cloudwatch.actions.SnsAction(topic))
+		highRiskAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(topic))
 
 		this.alarms.push(highRiskAlarm)
 
@@ -525,7 +531,7 @@ async function logIncident(alert, actions) {
 			},
 		)
 
-		unusualAccessAlarm.addAlarmAction(new cloudwatch.actions.SnsAction(topic))
+		unusualAccessAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(topic))
 
 		this.alarms.push(unusualAccessAlarm)
 	}

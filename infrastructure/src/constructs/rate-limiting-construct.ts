@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib'
 import * as wafv2 from 'aws-cdk-lib/aws-wafv2'
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch'
+import * as cloudwatch_actions from 'aws-cdk-lib/aws-cloudwatch-actions'
 import * as logs from 'aws-cdk-lib/aws-logs'
 import * as sns from 'aws-cdk-lib/aws-sns'
 import { Construct } from 'constructs'
@@ -251,7 +252,7 @@ export class RateLimitingConstruct extends Construct {
 				priority,
 				statement: {
 					ipSetReferenceStatement: {
-						arn: options.allowedIpSets[0], // Use first IP set
+						arn: options.allowedIpSets[0]!, // Use first IP set
 					},
 				},
 				action: { allow: {} },
@@ -271,7 +272,7 @@ export class RateLimitingConstruct extends Construct {
 				priority,
 				statement: {
 					ipSetReferenceStatement: {
-						arn: options.blockedIpSets[0], // Use first IP set
+						arn: options.blockedIpSets[0]!, // Use first IP set
 					},
 				},
 				action: { block: {} },
@@ -605,7 +606,7 @@ export class RateLimitingConstruct extends Construct {
 			},
 		)
 
-		highRateLimitAlarm.addAlarmAction(new cloudwatch.actions.SnsAction(topic))
+		highRateLimitAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(topic))
 
 		this.alarms.push(highRateLimitAlarm)
 
@@ -634,7 +635,7 @@ export class RateLimitingConstruct extends Construct {
 			},
 		)
 
-		ddosDetectionAlarm.addAlarmAction(new cloudwatch.actions.SnsAction(topic))
+		ddosDetectionAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(topic))
 
 		this.alarms.push(ddosDetectionAlarm)
 
@@ -663,7 +664,7 @@ export class RateLimitingConstruct extends Construct {
 			},
 		)
 
-		botProtectionAlarm.addAlarmAction(new cloudwatch.actions.SnsAction(topic))
+		botProtectionAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(topic))
 
 		this.alarms.push(botProtectionAlarm)
 	}

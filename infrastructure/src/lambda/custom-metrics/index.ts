@@ -2,7 +2,9 @@
 import {
 	CloudWatchClient,
 	PutMetricDataCommand,
+	StandardUnit,
 } from '@aws-sdk/client-cloudwatch'
+import { ECSClient, DescribeServicesCommand } from '@aws-sdk/client-ecs'
 import {
 	ElasticLoadBalancingV2Client,
 	DescribeTargetHealthCommand,
@@ -10,6 +12,7 @@ import {
 import type { Context } from 'aws-lambda'
 
 const cloudwatch = new CloudWatchClient({})
+const ecsClient = new ECSClient({})
 const elbv2 = new ElasticLoadBalancingV2Client({})
 
 interface CustomMetricsEvent {
@@ -20,7 +23,7 @@ interface CustomMetricsEvent {
 
 export async function handler(
 	event: CustomMetricsEvent,
-	context: Context,
+	_context: Context,
 ): Promise<void> {
 	console.log('🔍 Custom Metrics Collection Started')
 	console.log('Event:', JSON.stringify(event, null, 2))
@@ -187,7 +190,7 @@ async function collectECSMetrics(
 	}> = []
 
 	try {
-		const serviceResponse = await ecs.send(
+		const serviceResponse = await ecsClient.send(
 			new DescribeServicesCommand({
 				cluster: `${environmentName}-cluster`,
 				services: [`${environmentName}-service`],
@@ -264,6 +267,7 @@ async function collectPerformanceMetrics(
 			dimensions: {
 				Environment: environmentName,
 				Service: 'api',
+				Endpoint: 'all',
 			},
 		},
 		{
@@ -272,6 +276,7 @@ async function collectPerformanceMetrics(
 			dimensions: {
 				Environment: environmentName,
 				Service: 'api',
+				Endpoint: 'all',
 			},
 		},
 	]
@@ -325,8 +330,8 @@ async function putMetricData(
 /**
  * Get appropriate CloudWatch unit for metric
  */
-function getMetricUnit(metricName: string): string {
-	const unitMap: Record<string, string> = {
+function getMetricUnit(metricName: string): StandardUnit {
+	const unitMap: Record<string, StandardUnit> = {
 		ActiveConnections: 'Count',
 		QueueDepth: 'Count',
 		CacheHitRate: 'Percent',
@@ -342,5 +347,5 @@ function getMetricUnit(metricName: string): string {
 		CollectionError: 'Count',
 	}
 
-	return unitMap[metricName] || 'Count'
+	return unitMap[metricName] || StandardUnit.Count
 }
