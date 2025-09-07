@@ -15,11 +15,11 @@ interface UseChatKeyboardReturn {
 /**
  * Chat keyboard shortcut handling hook
  * Manages keyboard interactions and form submission logic
- * @param root0
- * @param root0.onSubmit
- * @param root0.input
- * @param root0.currentChatId
- * @param root0.status
+ * @param options - Configuration options for keyboard handling
+ * @param options.onSubmit - Function to call when form is submitted
+ * @param options.input - Current input value
+ * @param options.currentChatId - ID of the current active chat
+ * @param options.status - Current chat status
  */
 const useChatKeyboard = ({
 	onSubmit,

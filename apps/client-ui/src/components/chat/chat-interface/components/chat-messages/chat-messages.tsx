@@ -13,11 +13,6 @@ interface ChatMessagesProps extends React.ComponentPropsWithoutRef<'div'> {
 /**
  * Chat messages container component
  * Manages the scrollable messages area and auto-scroll behavior
- * @param root0
- * @param root0.messages
- * @param root0.status
- * @param root0.messagesEndRef
- * @param root0.className
  */
 const ChatMessages = ({
 	messages,
