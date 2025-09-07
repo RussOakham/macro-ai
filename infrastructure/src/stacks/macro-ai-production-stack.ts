@@ -316,27 +316,6 @@ export class MacroAiProductionStack extends cdk.Stack {
 			rateLimitThreshold: props.security?.rateLimitThreshold ?? 2000,
 			enableGeoBlocking: props.security?.enableGeoBlocking ?? true,
 			blockedCountries: props.security?.blockedCountries ?? ['CN', 'RU', 'KP'],
-			cors: props.security?.cors ?? {
-				allowedOrigins: [
-					'https://macro-ai.com',
-					'https://www.macro-ai.com',
-					'https://app.macro-ai.com',
-				],
-				allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-				allowedHeaders: [
-					'Content-Type',
-					'Authorization',
-					'X-API-Key',
-					'X-Requested-With',
-					'Accept',
-					'Origin',
-				],
-				maxAge: 86400,
-				allowCredentials: true,
-				enableLogging: true,
-				enableDetailedMonitoring: true,
-				rateLimitThreshold: 1000,
-			},
 		})
 
 		// Schedule cost optimization analysis (weekly on Mondays at 2 AM UTC)
@@ -606,11 +585,6 @@ export class MacroAiProductionStack extends cdk.Stack {
 			exportName: `${this.stackName}-SecurityHeadersLambdaArn`,
 		})
 
-		new cdk.CfnOutput(this, 'CorsLambdaArn', {
-			value: this.securityStack.corsConstruct?.getCorsLambdaArn() || 'N/A',
-			description: 'CORS Lambda function ARN',
-			exportName: `${this.stackName}-CorsLambdaArn`,
-		})
 
 		new cdk.CfnOutput(this, 'SecurityDashboardUrl', {
 			value: `https://${this.region}.console.aws.amazon.com/cloudwatch/home?region=${this.region}#dashboards:name=${environmentName}-security-dashboard`,

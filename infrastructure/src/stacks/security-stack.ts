@@ -9,7 +9,6 @@ import { WafSecurityConstruct } from '../constructs/waf-security-construct'
 import { SecurityHeadersConstruct } from '../constructs/security-headers-construct'
 import { SslCertificateConstruct } from '../constructs/ssl-certificate-construct'
 import { HttpsEnforcementConstruct } from '../constructs/https-enforcement-construct'
-import { CorsConstruct } from '../constructs/cors-construct'
 
 export interface SecurityStackProps extends cdk.StackProps {
 	/**
@@ -103,20 +102,6 @@ export interface SecurityStackProps extends cdk.StackProps {
 		enableDetailedMonitoring?: boolean
 	}
 
-	/**
-	 * CORS configuration
-	 */
-	cors?: {
-		allowedOrigins: string[]
-		allowedMethods?: string[]
-		allowedHeaders?: string[]
-		exposedHeaders?: string[]
-		maxAge?: number
-		allowCredentials?: boolean
-		enableLogging?: boolean
-		enableDetailedMonitoring?: boolean
-		rateLimitThreshold?: number
-	}
 }
 
 export class SecurityStack extends cdk.Stack {
@@ -124,7 +109,6 @@ export class SecurityStack extends cdk.Stack {
 	public readonly securityHeadersConstruct?: SecurityHeadersConstruct
 	public readonly sslCertificateConstruct?: SslCertificateConstruct
 	public readonly httpsEnforcementConstruct?: HttpsEnforcementConstruct
-	public readonly corsConstruct?: CorsConstruct
 	public readonly webAclArn?: string
 	public readonly certificateArn?: string
 
@@ -145,7 +129,6 @@ export class SecurityStack extends cdk.Stack {
 			blockedCountries = ['CN', 'RU', 'KP'],
 			sslCertificate,
 			httpsEnforcement,
-			cors,
 		} = props
 
 		// Create WAF WebACL for regional protection
@@ -182,7 +165,6 @@ export class SecurityStack extends cdk.Stack {
 						'X-Security-Policy': 'MacroAI-Security-v1.0',
 					},
 					contentSecurityPolicy: this.getContentSecurityPolicy(environmentName),
-					corsAllowedOrigins: this.getCorsOrigins(environmentName),
 					enableHsts: true,
 					hstsMaxAge: 31536000, // 1 year
 					enableXFrameOptions: true,
@@ -263,21 +245,6 @@ export class SecurityStack extends cdk.Stack {
 			this.configureSslEnforcement(loadBalancer)
 		}
 
-		// CORS Configuration
-		if (cors) {
-			this.corsConstruct = new CorsConstruct(this, 'CorsHandler', {
-				environmentName,
-				allowedOrigins: cors.allowedOrigins,
-				allowedMethods: cors.allowedMethods,
-				allowedHeaders: cors.allowedHeaders,
-				exposedHeaders: cors.exposedHeaders,
-				maxAge: cors.maxAge,
-				allowCredentials: cors.allowCredentials,
-				enableLogging: cors.enableLogging,
-				enableDetailedMonitoring: cors.enableDetailedMonitoring,
-				rateLimitThreshold: cors.rateLimitThreshold,
-			})
-		}
 
 		// Create CloudWatch dashboard for security monitoring
 		this.createSecurityDashboard(environmentName)
@@ -324,14 +291,6 @@ export class SecurityStack extends cdk.Stack {
 			})
 		}
 
-		// CORS outputs
-		if (this.corsConstruct) {
-			new cdk.CfnOutput(this, 'CorsLambdaArn', {
-				value: this.corsConstruct.getCorsLambdaArn(),
-				description: 'CORS Lambda function ARN',
-				exportName: `${environmentName}-cors-lambda-arn`,
-			})
-		}
 	}
 
 	private getContentSecurityPolicy(environment: string): string {
@@ -365,22 +324,6 @@ export class SecurityStack extends cdk.Stack {
 		return basePolicy.join('; ')
 	}
 
-	private getCorsOrigins(environment: string): string[] {
-		switch (environment) {
-			case 'production':
-				return ['https://macro-ai.com', 'https://www.macro-ai.com']
-			case 'staging':
-				return ['https://staging.macro-ai.com']
-			case 'development':
-				return [
-					'http://localhost:3000',
-					'http://localhost:5173',
-					'https://dev.macro-ai.com',
-				]
-			default:
-				return ['https://macro-ai.com']
-		}
-	}
 
 	private configureSslEnforcement(
 		loadBalancer: elbv2.IApplicationLoadBalancer,
