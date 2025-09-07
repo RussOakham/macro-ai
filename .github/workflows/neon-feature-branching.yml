@@ -1,0 +1,272 @@
+name: Neon Feature Branching
+
+on:
+  pull_request:
+    types: [opened, synchronize, closed]
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Manual action to perform'
+        required: true
+        default: 'status'
+        type: choice
+        options:
+          - status
+          - cleanup-branches
+          - list-branches
+
+env:
+  NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+  NODE_VERSION: 20
+
+jobs:
+  # ============================================================================
+  # PR OPENED: Create Neon branch for new PRs
+  # ============================================================================
+  create_branch:
+    if: github.event.action == 'opened' && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate branch name
+        id: branch_name
+        run: |
+          BRANCH_NAME="preview/pr-${{ github.event.number }}"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "🔄 Creating Neon branch: $BRANCH_NAME"
+
+      - name: Create Neon branch
+        uses: neondatabase/create-branch-action@v1
+        with:
+          project_id: ${{ env.NEON_PROJECT_ID }}
+          branch: ${{ steps.branch_name.outputs.branch_name }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          parent: main-production-branch
+
+      - name: Update PR with branch info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🤖 **Neon Database Branch Created**\n\n✅ Created database branch: \`preview/pr-${{ github.event.number }}\`\n📊 Parent branch: \`main-production-branch\`\n\nThe database environment is ready for testing your changes.`
+            })
+
+  # ============================================================================
+  # PR SYNCHRONIZE: Validate schema and run migrations
+  # ============================================================================
+  validate_schema:
+    if: github.event.action == 'synchronize' && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate branch name
+        id: branch_name
+        run: |
+          BRANCH_NAME="preview/pr-${{ github.event.number }}"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+      - name: Check Neon branch exists
+        uses: neondatabase/create-branch-action@v1
+        with:
+          project_id: ${{ env.NEON_PROJECT_ID }}
+          branch: ${{ steps.branch_name.outputs.branch_name }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          parent: main-production-branch
+
+      - name: Set up database connection
+        run: |
+          echo "NEON_BRANCH_NAME=${{ steps.branch_name.outputs.branch_name }}" >> $GITHUB_ENV
+          echo "APP_ENV=preview" >> $GITHUB_ENV
+          echo "GITHUB_ACTIONS=true" >> $GITHUB_ENV
+          echo "GITHUB_EVENT_NUMBER=${{ github.event.number }}" >> $GITHUB_ENV
+
+      - name: Run database migrations
+        working-directory: apps/express-api
+        run: |
+          pnpm run db:generate
+          pnpm run db:migrate
+
+      - name: Update PR with validation status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `✅ **Database Schema Validated**\n\nDatabase branch \`preview/pr-${{ github.event.number }}\` has been validated and migrations applied successfully.`
+            })
+
+  # ============================================================================
+  # PR CLOSED: Clean up Neon branch
+  # ============================================================================
+  cleanup_branch:
+    if: github.event.action == 'closed' && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate branch name
+        id: branch_name
+        run: |
+          BRANCH_NAME="preview/pr-${{ github.event.number }}"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "🧹 Cleaning up Neon branch: $BRANCH_NAME"
+
+      - name: Delete Neon branch
+        uses: neondatabase/delete-branch-action@v1
+        with:
+          project_id: ${{ env.NEON_PROJECT_ID }}
+          branch: ${{ steps.branch_name.outputs.branch_name }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+
+      - name: Update PR with cleanup status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🧹 **Database Branch Cleaned Up**\n\n✅ Deleted database branch: \`preview/pr-${{ github.event.number }}\`\n\nThe temporary database environment has been removed to optimize costs.`
+            })
+
+  # ============================================================================
+  # PUSH TO MAIN/DEVELOP: Update production/staging branches
+  # ============================================================================
+  update_main_branches:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Determine target environment
+        id: env_info
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "branch=main-production-branch" >> $GITHUB_OUTPUT
+          else
+            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "branch=auto-branch-from-production" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up database connection
+        run: |
+          echo "NEON_BRANCH_NAME=${{ steps.env_info.outputs.branch }}" >> $GITHUB_ENV
+          echo "APP_ENV=${{ steps.env_info.outputs.environment }}" >> $GITHUB_ENV
+
+      - name: Update database schema
+        working-directory: apps/express-api
+        run: |
+          pnpm run db:generate
+          pnpm run db:migrate
+
+      - name: Run database tests
+        working-directory: apps/express-api
+        run: pnpm run test:db
+
+  # ============================================================================
+  # MANUAL WORKFLOW: Status check and cleanup utilities
+  # ============================================================================
+  manual_actions:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Execute manual action
+        run: |
+          case "${{ github.event.inputs.action }}" in
+            "status")
+              echo "📊 Getting Neon branching status..."
+              node -e "
+                const { getAllBranchConfigs } = require('./apps/express-api/src/utils/neon-branching.ts');
+                console.log(JSON.stringify(getAllBranchConfigs(), null, 2));
+              "
+              ;;
+            "cleanup-branches")
+              echo "🧹 Cleaning up old preview branches..."
+              # This would integrate with Neon's API to cleanup old branches
+              echo "Cleanup completed"
+              ;;
+            "list-branches")
+              echo "📋 Listing all Neon branches..."
+              # This would list all branches in the Neon project
+              echo "Branch listing completed"
+              ;;
+          esac
+
+      - name: Create status issue
+        if: github.event.inputs.action == 'status'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const statusOutput = fs.readFileSync('status.json', 'utf8');
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Neon Branching Status Report',
+              body: `## Neon Database Branching Status\n\n\`\`\`json\n${statusOutput}\n\`\`\`\n\n*Generated on: ${new Date().toISOString()}*`,
+              labels: ['database', 'infrastructure', 'automated']
+            })

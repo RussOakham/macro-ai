@@ -74,6 +74,55 @@ graph TB
 
 **📖 [Detailed Architecture →](./docs/architecture/system-architecture.md)**
 
+## 🗄️ Database Branching (Hybrid Approach)
+
+**Macro AI** features a sophisticated hybrid database branching strategy that combines manual control with GitHub Actions
+automation:
+
+### Branching Strategy
+
+| Environment        | Branch Pattern                | Management | Cost         |
+| ------------------ | ----------------------------- | ---------- | ------------ |
+| **Production**     | `main-production-branch`      | Manual     | £10-15/month |
+| **Staging**        | `auto-branch-from-production` | Hybrid     | £8-12/month  |
+| **PR Preview**     | `preview/pr-{number}`         | Automated  | Free         |
+| **Feature Branch** | `feature/{name}`              | Automated  | Free         |
+
+### GitHub Integration
+
+**🎯 Automated Database Environments**
+
+- **PR Opened**: Automatically creates `preview/pr-{number}` database branch
+- **PR Updated**: Validates schema and runs migrations
+- **PR Merged**: Automatically cleans up database branch
+- **Cost Optimized**: Free tier with automatic cleanup prevents cost accumulation
+
+**🔧 Manual Control**
+
+- Production deployments require explicit confirmation
+- Staging supports both manual and automated deployments
+- Full cost control and security for critical environments
+
+### Quick Setup
+
+```bash
+# 1. Configure GitHub Secrets
+# Repository Settings → Secrets and variables → Actions
+NEON_API_KEY=<your-api-key>
+NEON_PROJECT_ID=<your-project-id>
+
+# 2. Install Neon GitHub App
+# Neon Console → Integrations → GitHub → Connect repository
+
+# 3. Create PR to trigger automated branching
+git checkout -b feature/my-feature
+git commit -m "feat: add my feature"
+git push origin feature/my-feature
+# Create PR → GitHub Actions automatically creates database environment
+```
+
+**📖 [Complete Branching Setup →](./docs/neon-branching-setup.md)**
+
 ## 📁 Repository Structure
 
 ### Applications
@@ -122,6 +171,7 @@ Our comprehensive documentation covers everything from getting started to advanc
 
 - **[AWS Deployment](./docs/deployment/aws-deployment.md)** - Infrastructure as Code with CDK
 - **[CI/CD Pipeline](./docs/deployment/ci-cd-pipeline.md)** - GitHub Actions automation
+- **[Neon Database Branching](./docs/neon-branching-setup.md)** - Hybrid branching strategy
 - **[Environment Setup](./docs/deployment/environment-setup.md)** - Production configuration
 - **[Monitoring & Logging](./docs/deployment/monitoring-logging.md)** - Observability strategies
 
@@ -173,6 +223,52 @@ pnpm commit           # Use commitizen for standardized commits
 pnpm ui               # Start React frontend development server
 pnpm api              # Start Express API development server
 ```
+
+## 🔧 Troubleshooting
+
+### Database Connection Issues
+
+```bash
+# Check environment variables
+echo "APP_ENV: $APP_ENV"
+echo "GITHUB_ACTIONS: $GITHUB_ACTIONS"
+echo "DATABASE_URL: $DATABASE_URL"
+
+# Test Neon branching utility
+cd apps/express-api
+npm run ts-node -e "
+import { getEnvironmentType, getNeonBranchConfig } from './src/utils/neon-branching.ts';
+console.log('Environment:', getEnvironmentType());
+console.log('Branch:', getNeonBranchConfig());
+"
+
+# Verify database connection
+psql "$DATABASE_URL" -c "SELECT version();"
+```
+
+### GitHub Actions Branching Issues
+
+```bash
+# Check GitHub secrets are configured
+# Repository Settings → Secrets and variables → Actions
+NEON_API_KEY=<your-api-key>
+NEON_PROJECT_ID=<your-project-id>
+
+# Verify Neon GitHub App is connected
+# Neon Console → Integrations → GitHub → Check repository
+
+# Check workflow permissions
+# Repository Settings → Actions → General → Workflow permissions
+```
+
+### Common Issues
+
+- **Branch creation fails**: Check Neon API key permissions
+- **Database connection fails**: Verify branch exists in Neon console
+- **Environment detection issues**: Check `APP_ENV` and `GITHUB_ACTIONS` variables
+- **Cost accumulation**: Monitor Neon console for unused branches
+
+**📖 [Complete Troubleshooting Guide →](./docs/neon-branching-setup.md#troubleshooting)**
 
 ## 🤝 Contributing
 

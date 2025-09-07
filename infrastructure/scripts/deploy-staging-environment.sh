@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Deploy Staging Environment with Neon Branching
+# Deploy Staging Environment with Neon Branching (Hybrid Approach)
 # This script deploys the staging environment using the auto-branch-from-production
+# Supports both manual deployments and GitHub Actions automated deployments
 
 set -e
 
@@ -14,6 +15,23 @@ STACK_NAME="MacroAiStagingStack"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 NEON_PROJECT_ID="frosty-sunset-09708148"
 NEON_BRANCH_ID="br-silent-dust-a4qoulvz"
+
+# GitHub Actions Detection
+GITHUB_ACTIONS="${GITHUB_ACTIONS:-false}"
+GITHUB_EVENT_NAME="${GITHUB_EVENT_NAME:-}"
+GITHUB_REF="${GITHUB_REF:-}"
+PR_NUMBER="${GITHUB_EVENT_NUMBER:-}"
+
+# Deployment Context Detection
+if [[ "$GITHUB_ACTIONS" == "true" ]]; then
+    DEPLOYMENT_TYPE="github-actions"
+    DEPLOYMENT_TRIGGER="$GITHUB_EVENT_NAME"
+    echo "🤖 GitHub Actions detected - $GITHUB_EVENT_NAME trigger"
+else
+    DEPLOYMENT_TYPE="manual"
+    DEPLOYMENT_TRIGGER="manual"
+    echo "🔧 Manual deployment detected"
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -85,10 +103,28 @@ setup_environment() {
     export CDK_DEPLOY_ENV="$ENVIRONMENT"
     export AWS_REGION="$AWS_REGION"
 
-    # Set Neon database URL for staging
+    # Set deployment context for CDK
+    export DEPLOYMENT_TYPE="$DEPLOYMENT_TYPE"
+    export DEPLOYMENT_TRIGGER="$DEPLOYMENT_TRIGGER"
+
+    # GitHub Actions specific variables
+    if [[ "$DEPLOYMENT_TYPE" == "github-actions" ]]; then
+        export GITHUB_ACTIONS="$GITHUB_ACTIONS"
+        export GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME"
+        export GITHUB_REF="$GITHUB_REF"
+        export PR_NUMBER="$PR_NUMBER"
+        echo "📋 GitHub Context: $GITHUB_EVENT_NAME on $GITHUB_REF (PR: $PR_NUMBER)"
+    fi
+
+    # Set Neon database URL for staging (hybrid approach)
+    # For GitHub Actions, the branch will be determined by the neon-branching utility
     export NEON_DATABASE_URL="postgresql://users_owner:npg_yTk1BcCU7NeR@ep-plain-wave-a401hax3-pooler.us-east-1.aws.neon.tech/users?channel_binding=require&sslmode=require"
 
-    print_status "Environment variables configured"
+    # Set Neon branch information
+    export NEON_PROJECT_ID="$NEON_PROJECT_ID"
+    export NEON_BRANCH_ID="$NEON_BRANCH_ID"
+
+    print_status "Environment variables configured for $DEPLOYMENT_TYPE deployment"
 }
 
 # Function to bootstrap CDK if needed
@@ -128,11 +164,21 @@ build_and_deploy() {
     echo "  - Scheduled scaling (10 PM - 6 AM UTC)"
     echo ""
 
-    read -p "Do you want to proceed with staging deployment? (y/N): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Staging deployment cancelled."
-        exit 0
+    # Handle deployment confirmation based on deployment type
+    if [[ "$DEPLOYMENT_TYPE" == "github-actions" ]]; then
+        echo "🤖 GitHub Actions deployment - proceeding automatically"
+        echo "📋 Trigger: $DEPLOYMENT_TRIGGER"
+        if [[ -n "$PR_NUMBER" ]]; then
+            echo "🔗 Related PR: #$PR_NUMBER"
+        fi
+    else
+        # Manual deployment - require confirmation
+        read -p "Do you want to proceed with staging deployment? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "Staging deployment cancelled."
+            exit 0
+        fi
     fi
 
     # Deploy with CDK
@@ -140,7 +186,7 @@ build_and_deploy() {
         --require-approval never \
         --outputs-file "cdk-outputs-${ENVIRONMENT}.json"
 
-    print_status "Staging environment deployed successfully!"
+    print_status "Staging environment deployed successfully via $DEPLOYMENT_TYPE!"
 }
 
 # Function to verify deployment
@@ -172,6 +218,12 @@ display_results() {
     echo ""
     echo "📋 Staging Environment Deployment Results:"
     echo "=========================================="
+    echo "🔧 Deployment Type: $DEPLOYMENT_TYPE"
+    echo "📋 Trigger: $DEPLOYMENT_TRIGGER"
+    if [[ "$DEPLOYMENT_TYPE" == "github-actions" && -n "$PR_NUMBER" ]]; then
+        echo "🔗 Related PR: #$PR_NUMBER"
+    fi
+    echo ""
 
     if [ -f "cdk-outputs-${ENVIRONMENT}.json" ]; then
         echo "CloudFormation Outputs:"
@@ -184,10 +236,11 @@ display_results() {
     echo "  - Health Check: https://staging-api.macro-ai.russoakham.dev/api/health"
     echo ""
 
-    echo "🗄️ Database Configuration:"
+    echo "🗄️ Database Configuration (Hybrid Approach):"
     echo "  - Neon Branch: auto-branch-from-production"
     echo "  - Database: users"
     echo "  - Connection: Active and verified"
+    echo "  - Branching: Manual control + GitHub automation"
     echo ""
 
     echo "⏰ Scheduled Scaling:"
@@ -202,7 +255,15 @@ display_results() {
     echo "  - CloudWatch: £1-2"
     echo ""
 
-    print_status "Staging environment deployment completed!"
+    if [[ "$DEPLOYMENT_TYPE" == "github-actions" ]]; then
+        echo "🤖 GitHub Actions Integration:"
+        echo "  - Automatic PR deployments"
+        echo "  - Database branch per PR"
+        echo "  - Auto-cleanup on merge/close"
+        echo ""
+    fi
+
+    print_status "Staging environment deployment completed via $DEPLOYMENT_TYPE!"
 }
 
 # Main execution
