@@ -8,6 +8,7 @@ import { AuthLoading } from './auth-loading'
  * - Initial authentication validation
  * - Token refresh processes
  * - Route transitions with authentication checks
+ * @returns React component for full-screen authentication loading
  */
 const AuthRouteLoading: React.FC = () => {
 	return (
