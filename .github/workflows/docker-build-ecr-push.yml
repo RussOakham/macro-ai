@@ -251,24 +251,8 @@ jobs:
           echo "📦 Primary: ${IMAGE_URI}"
           echo "🏷️  Latest: ${LATEST_URI}"
 
-          # Generate build metadata
-          BUILD_METADATA=$(cat <<EOF
-          {
-            "imageUri": "${IMAGE_URI//\"/\\\"}",
-            "latestUri": "${LATEST_URI//\"/\\\"}",
-            "imageTag": "${IMAGE_TAG//\"/\\\"}",
-            "environment": "${{ steps.context.outputs.environment }}",
-            "buildDate": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "commitSha": "${{ github.sha }}",
-            "repository": "${{ github.repository }}",
-            "branch": "${{ github.ref_name }}",
-            "trigger": "${{ github.event_name }}",
-            "actor": "${{ github.actor }}"
-          }
-          EOF
-          )
-
-          echo "build-metadata=${BUILD_METADATA}" >> $GITHUB_OUTPUT
+          # Generate build metadata (simplified to avoid JSON escaping issues)
+          echo "build-metadata={\"imageUri\":\"${IMAGE_URI}\",\"latestUri\":\"${LATEST_URI}\",\"imageTag\":\"${IMAGE_TAG}\",\"environment\":\"${{ steps.context.outputs.environment }}\",\"buildDate\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"commitSha\":\"${{ github.sha }}\",\"repository\":\"${{ github.repository }}\",\"branch\":\"${{ github.ref_name }}\",\"trigger\":\"${{ github.event_name }}\",\"actor\":\"${{ github.actor }}\"}" >> $GITHUB_OUTPUT
           echo "image-uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
           echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
@@ -429,7 +413,7 @@ jobs:
             let description = 'Docker images built successfully';
 
             if (!expressApiUri && !clientUiUri) {
-              state = 'skipped';
+              state = 'success';
               description = 'No images built - no relevant changes';
             }
 
