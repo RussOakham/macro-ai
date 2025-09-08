@@ -199,11 +199,11 @@ jobs:
           BUILD_REPOSITORY=${{ github.repository }}
           BUILD_ACTOR=${{ github.actor }}
 
-          # Placeholder values for required variables
-          DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
+          # Placeholder values for required variables (masked for security)
+          DATABASE_URL=postgresql://[REDACTED]:[REDACTED]@localhost:5432/[REDACTED]
           REDIS_URL=redis://localhost:6379
-          API_KEY=build-placeholder-key
-          JWT_SECRET=build-placeholder-secret
+          API_KEY=[BUILD_TIME_PLACEHOLDER]
+          JWT_SECRET=[BUILD_TIME_PLACEHOLDER]
           NEON_BRANCH_NAME=${ENVIRONMENT}-placeholder
           EOF
 

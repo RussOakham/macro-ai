@@ -3,7 +3,7 @@
 # Deploy Staging Environment
 # This script deploys the staging environment with minimal cost configuration
 
-set -e
+set -euo pipefail
 
 echo "🚀 Deploying Staging Environment"
 echo "================================="
@@ -12,6 +12,8 @@ echo "================================="
 ENVIRONMENT="staging"
 STACK_NAME="MacroAiStagingStack"
 AWS_REGION="${AWS_REGION:-us-east-1}"
+export AWS_REGION
+export AWS_DEFAULT_REGION="${AWS_REGION}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -58,7 +60,7 @@ print_status "Prerequisites check passed"
 # Install dependencies
 echo "📦 Installing dependencies..."
 cd "$(dirname "$0")/.."
-npm install
+pnpm install --frozen-lockfile
 print_status "Dependencies installed"
 
 # Bootstrap CDK (if needed)
@@ -113,8 +115,17 @@ fi
 
 echo ""
 echo "🌐 Staging Environment URLs:"
-echo "  - API: https://staging-api.macro-ai.russoakham.dev"
-echo "  - Health Check: https://staging-api.macro-ai.russoakham.dev/api/health"
+
+# Parse API endpoint from CDK outputs
+API_ENDPOINT=$(jq -r '.MacroAiStagingStack.ApiEndpoint // empty' "cdk-outputs-${ENVIRONMENT}.json" 2>/dev/null || echo "")
+
+if [ -n "$API_ENDPOINT" ]; then
+    echo "  - API: ${API_ENDPOINT}"
+    echo "  - Health Check: ${API_ENDPOINT}/api/health"
+else
+    echo "  - API: [Could not parse from CDK outputs - check deployment]"
+    echo "  - Health Check: [Could not parse from CDK outputs - check deployment]"
+fi
 echo ""
 
 echo "⏰ Scheduled Scaling:"

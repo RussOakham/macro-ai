@@ -4,7 +4,7 @@
 # This script deploys the staging environment using the auto-branch-from-production
 # Supports both manual deployments and GitHub Actions automated deployments
 
-set -e
+set -euo pipefail
 
 echo "🚀 Deploying Staging Environment with Neon Branching"
 echo "===================================================="
@@ -13,6 +13,8 @@ echo "===================================================="
 ENVIRONMENT="staging"
 STACK_NAME="MacroAiStagingStack"
 AWS_REGION="${AWS_REGION:-us-east-1}"
+export AWS_REGION
+export AWS_DEFAULT_REGION="${AWS_REGION}"
 NEON_PROJECT_ID="frosty-sunset-09708148"
 NEON_BRANCH_ID="br-silent-dust-a4qoulvz"
 
@@ -183,6 +185,7 @@ build_and_deploy() {
 
     # Deploy with CDK
     cdk deploy "$STACK_NAME" \
+        --region "$AWS_REGION" \
         --require-approval never \
         --outputs-file "cdk-outputs-${ENVIRONMENT}.json"
 
@@ -194,13 +197,13 @@ verify_deployment() {
     echo "🔍 Verifying deployment..."
 
     if [ -f "cdk-outputs-${ENVIRONMENT}.json" ]; then
-        LOAD_BALANCER_URL=$(jq -r '.MacroAiStagingStack.LoadBalancerUrl // empty' "cdk-outputs-${ENVIRONMENT}.json")
-        if [ -n "$LOAD_BALANCER_URL" ]; then
-            print_status "Load balancer URL: $LOAD_BALANCER_URL"
+        API_ENDPOINT=$(jq -r '.MacroAiStagingStack.ApiEndpoint // empty' "cdk-outputs-${ENVIRONMENT}.json")
+        if [ -n "$API_ENDPOINT" ]; then
+            print_status "API endpoint: $API_ENDPOINT"
 
             # Test health endpoint
             echo "Testing health endpoint..."
-            if curl -f -s "$LOAD_BALANCER_URL/api/health" > /dev/null; then
+            if curl -f -s "$API_ENDPOINT/api/health" > /dev/null; then
                 print_status "Health check passed"
             else
                 print_warning "Health check failed - this may be expected if the application hasn't fully started"

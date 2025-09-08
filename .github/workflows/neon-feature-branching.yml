@@ -1,7 +1,7 @@
 name: Neon Database Branching & Integration
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, closed, ready_for_review]
     branches: [main, develop]
     paths-ignore:
@@ -60,6 +60,7 @@ jobs:
   create_branch:
     if: github.event.action == 'opened' && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: write
@@ -69,7 +70,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request_target.base.sha }}
 
       - name: Validate PR for database changes
         id: db_changes
@@ -140,6 +141,7 @@ jobs:
   validate_schema:
     if: github.event.action == 'synchronize' && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       pull-requests: write
@@ -150,7 +152,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request_target.base.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -322,6 +324,7 @@ jobs:
   cleanup_branch:
     if: github.event.action == 'closed' && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: write
@@ -330,6 +333,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request_target.base.sha }}
 
       - name: Generate branch name
         id: branch_name
@@ -408,6 +413,7 @@ jobs:
   update_main_branches:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       issues: write
@@ -573,6 +579,7 @@ jobs:
   deployment_sync:
     if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       issues: write
@@ -581,6 +588,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
 
       - name: Check if deployment workflow succeeded
         run: |
@@ -634,6 +643,7 @@ jobs:
   health_check:
     if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'health-check')
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       issues: write
@@ -641,6 +651,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -699,6 +711,10 @@ jobs:
   manual_actions:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: manual-${{ github.event.inputs.action }}
+      cancel-in-progress: true
     permissions:
       contents: read
       issues: write
@@ -707,6 +723,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

@@ -20,7 +20,6 @@
 import { execSync } from 'node:child_process'
 
 import { config } from './load-config.ts'
-
 // Neon branching configuration
 const NEON_BRANCH_CONFIG = {
 	production: {
@@ -297,6 +296,13 @@ export function getNeonDatabaseUrl(): string {
 	const baseUrl = config.RELATIONAL_DATABASE_URL
 	const branchConfig = getNeonBranchConfig()
 
+	// Handle invalid or dummy URLs
+	if (!baseUrl || baseUrl === 'dummy-url' || !baseUrl.startsWith('postgresql://')) {
+		console.warn('⚠️ Invalid or dummy database URL provided, returning as-is for testing')
+		// eslint-disable-next-line no-secrets/no-secrets
+		return baseUrl || 'postgresql://dummy:dummy@localhost:5432/dummy'
+	}
+
 	// For local development, use the original URL
 	if (branchConfig.branch === 'localhost') {
 		return baseUrl
@@ -305,7 +311,13 @@ export function getNeonDatabaseUrl(): string {
 	// For all Neon branches (production, staging, feature, preview), modify the URL
 	// Neon URLs typically look like: postgresql://user:pass@ep-xxx-xxx.us-east-1.neon.tech/dbname
 	// We need to modify this to include the branch parameter
-	const url = new URL(baseUrl)
+	let url: URL
+	try {
+		url = new URL(baseUrl)
+	} catch (error) {
+		console.warn(`⚠️ Failed to parse database URL: ${error}, returning original URL`)
+		return baseUrl
+	}
 
 	// Add branch parameter to the connection options
 	const searchParams = new URLSearchParams(url.search)

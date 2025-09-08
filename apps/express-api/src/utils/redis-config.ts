@@ -79,9 +79,9 @@ export function getRedisConfig() {
 
 	if (appEnv === 'production') return REDIS_CONFIG.production
 	if (appEnv === 'staging') return REDIS_CONFIG.staging
-	if (appEnv === 'feature' || appEnv.startsWith('feature/'))
+	if (appEnv === 'feature' || (typeof appEnv === 'string' && appEnv.startsWith('feature/')))
 		return REDIS_CONFIG.feature
-	if (appEnv.startsWith('pr-')) return REDIS_CONFIG.preview
+	if (typeof appEnv === 'string' && appEnv.startsWith('pr-')) return REDIS_CONFIG.preview
 
 	return REDIS_CONFIG.development
 }
