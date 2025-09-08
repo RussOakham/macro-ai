@@ -38,6 +38,7 @@ on:
           - list-branches
           - sync-production
           - sync-staging
+          - health-check
       target_branch:
         description: 'Target branch for sync operations (optional)'
         required: false

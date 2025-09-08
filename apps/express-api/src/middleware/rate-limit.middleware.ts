@@ -17,8 +17,8 @@ let defaultStore = undefined
 let authStore = undefined
 let apiStore = undefined
 
-// Log Redis configuration on startup
-logRedisConfig()
+// Log Redis configuration on startup (skip in test to reduce noise)
+if (process.env.NODE_ENV !== 'test') logRedisConfig()
 
 // Initialize Redis if enabled for current environment
 const redisUrl = getRedisUrl()
@@ -28,11 +28,11 @@ if (redisUrl) {
 		socket: {
 			connectTimeout: 10000, // Reduced from 50s to 10s for faster failure detection
 			reconnectStrategy: (retries: number) => {
-				// Exponential backoff with jitter, max 10 seconds
-				const delay = Math.min(
-					Math.pow(2, retries) * 1000 + (Date.now() % 1000),
-					10000,
-				)
+				// Exponential backoff with random jitter, max 10 seconds
+				const base = Math.min(2 ** retries * 1000, 10000)
+				// eslint-disable-next-line security-node/detect-insecure-randomness
+				const jitter = Math.random() * 1000
+				const delay = Math.min(base + jitter, 10000)
 				logger.warn(
 					`[middleware - rateLimit]: Redis reconnect attempt ${retries + 1} in ${delay}ms`,
 				)
@@ -42,6 +42,14 @@ if (redisUrl) {
 		},
 		// Production safety options
 		commandsQueueMaxLength: 1000, // Prevent unbounded queue growth
+	})
+
+	// Capture ongoing client errors beyond initial connect()
+	redisClient.on('error', (err: unknown) => {
+		const error = standardizeError(err)
+		logger.error(
+			`[middleware - rateLimit]: Redis client error: ${error.message}`,
+		)
 	})
 
 	redisClient.connect().catch((err: unknown) => {
@@ -69,7 +77,7 @@ if (redisUrl) {
 
 	logger.info('[middleware - rateLimit]: Using Redis store for rate limiting')
 } else {
-	logger.info(
+	logger.warn(
 		'[middleware - rateLimit]: Redis disabled for this environment - using memory store',
 	)
 }

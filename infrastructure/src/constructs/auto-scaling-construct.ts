@@ -1,5 +1,4 @@
 import * as cdk from 'aws-cdk-lib'
-import * as autoscaling from 'aws-cdk-lib/aws-autoscaling'
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch'
 import * as cloudwatch_actions from 'aws-cdk-lib/aws-cloudwatch-actions'
 import * as ecs from 'aws-cdk-lib/aws-ecs'
@@ -8,6 +7,7 @@ import * as events from 'aws-cdk-lib/aws-events'
 import * as events_targets from 'aws-cdk-lib/aws-events-targets'
 import * as iam from 'aws-cdk-lib/aws-iam'
 import * as lambda from 'aws-cdk-lib/aws-lambda'
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
 import * as logs from 'aws-cdk-lib/aws-logs'
 import * as sns from 'aws-cdk-lib/aws-sns'
 import { Construct } from 'constructs'
@@ -65,8 +65,13 @@ export interface AutoScalingConstructProps {
 	readonly targetRequestsPerMinute?: number
 
 	/**
+	 * Target group for request-count scaling
+	 */
+	readonly requestTargetGroup?: elbv2.IApplicationTargetGroup
+
+	/**
 	 * Enable step scaling for more granular control
-	 * @default true
+	 * @default false (not applicable to ECS Fargate)
 	 */
 	readonly enableStepScaling?: boolean
 
@@ -146,7 +151,7 @@ export class AutoScalingConstruct extends Construct {
 			targetMemoryUtilization = 75,
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			targetRequestsPerMinute = 1000,
-			enableStepScaling = true,
+			enableStepScaling = false,
 			enableCustomMetrics = true,
 			enableScheduledScaling = false,
 			enablePredictiveScaling = false,
@@ -185,9 +190,8 @@ export class AutoScalingConstruct extends Construct {
 
 		// Step scaling policies for granular control - disabled for ECS Fargate
 		// Note: Step scaling policies require EC2 Auto Scaling Groups which are not used in Fargate
-		if (enableStepScaling) {
-			console.log('Step scaling disabled for ECS Fargate deployment')
-		}
+		if (enableStepScaling)
+			console.log('Step scaling is not applicable to ECS Fargate; no-op')
 
 		// Custom metrics-based scaling
 		if (enableCustomMetrics) {
@@ -212,53 +216,23 @@ export class AutoScalingConstruct extends Construct {
 	 * Create target tracking scaling policies
 	 */
 	private createTargetTrackingPolicies(props: AutoScalingConstructProps): void {
-		const {
-			targetCpuUtilization = 70,
-			targetMemoryUtilization = 75,
-			targetRequestsPerMinute = 1000,
-			loadBalancer,
-		} = props
+		const { targetCpuUtilization = 70, targetMemoryUtilization = 75 } = props
 
 		// CPU utilization scaling with cooldowns
-		const cpuScaling = this.scalableTaskCount.scaleOnCpuUtilization(
-			'CpuTargetTracking',
-			{
-				targetUtilizationPercent: targetCpuUtilization,
-				scaleInCooldown: props.cooldowns?.scaleIn,
-				scaleOutCooldown: props.cooldowns?.scaleOut,
-			},
-		)
+		this.scalableTaskCount.scaleOnCpuUtilization('CpuTargetTracking', {
+			targetUtilizationPercent: targetCpuUtilization,
+			scaleInCooldown: props.cooldowns?.scaleIn,
+			scaleOutCooldown: props.cooldowns?.scaleOut,
+		})
 		// Note: scalingPolicies are managed internally by ScalableTaskCount
 
 		// Memory utilization scaling with cooldowns
-		const memoryScaling = this.scalableTaskCount.scaleOnMemoryUtilization(
-			'MemoryTargetTracking',
-			{
-				targetUtilizationPercent: targetMemoryUtilization,
-				scaleInCooldown: props.cooldowns?.scaleIn,
-				scaleOutCooldown: props.cooldowns?.scaleOut,
-			},
-		)
+		this.scalableTaskCount.scaleOnMemoryUtilization('MemoryTargetTracking', {
+			targetUtilizationPercent: targetMemoryUtilization,
+			scaleInCooldown: props.cooldowns?.scaleIn,
+			scaleOutCooldown: props.cooldowns?.scaleOut,
+		})
 		// Note: scalingPolicies are managed internally by ScalableTaskCount
-
-		// Request rate scaling (if load balancer provided)
-		if (loadBalancer && loadBalancer.listeners.length > 0) {
-			const firstListener = loadBalancer.listeners[0]
-			if (firstListener && 'targetGroups' in firstListener) {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				const targetGroups = (firstListener as any).targetGroups
-				if (targetGroups && targetGroups.length > 0) {
-					const requestScaling = this.scalableTaskCount.scaleOnRequestCount(
-						'RequestTargetTracking',
-						{
-							requestsPerTarget: targetRequestsPerMinute,
-							targetGroup: targetGroups[0],
-						},
-					)
-					// Note: scalingPolicies are managed internally by ScalableTaskCount
-				}
-			}
-		}
 
 		// Create CPU utilization alarm
 		const cpuAlarm = new cloudwatch.Alarm(this, 'HighCpuAlarm', {
@@ -316,13 +290,12 @@ export class AutoScalingConstruct extends Construct {
 		const { environmentName, loadBalancer } = props
 
 		// Create Lambda function for custom metrics
-		this.customMetricsLambda = new lambda.Function(
+		this.customMetricsLambda = new NodejsFunction(
 			this,
 			'CustomMetricsFunction',
 			{
-				runtime: lambda.Runtime.NODEJS_18_X,
-				code: lambda.Code.fromAsset('src/lambda/custom-metrics'),
-				handler: 'index.handler',
+				entry: 'src/lambda/custom-metrics/index.ts',
+				handler: 'handler',
 				timeout: Duration.seconds(30),
 				memorySize: 256,
 				logRetention: logs.RetentionDays.ONE_WEEK,
@@ -369,15 +342,11 @@ export class AutoScalingConstruct extends Construct {
 		}>,
 	): void {
 		scheduledActions.forEach((action) => {
-			const rule = new events.Rule(this, `ScheduledScaling-${action.name}`, {
+			this.scalableTaskCount.scaleOnSchedule(`Schedule-${action.name}`, {
 				schedule: events.Schedule.expression(action.scheduleExpression),
-				description: action.description || `Scheduled scaling: ${action.name}`,
+				minCapacity: action.minCapacity,
+				maxCapacity: action.maxCapacity,
 			})
-
-			// Note: Scheduled scaling for ECS Fargate would require a Lambda function
-			// to update the service's desired count, as direct ECS task targets
-			// are not suitable for scaling operations
-			console.log(`✅ Created scheduled scaling rule: ${action.name}`)
 		})
 	}
 
@@ -492,21 +461,6 @@ export class AutoScalingConstruct extends Construct {
 
 		console.log(
 			`✅ Created scaling dashboard: ${environmentName}-scaling-dashboard`,
-		)
-	}
-
-	/**
-	 * Add a custom scaling policy
-	 * Note: Custom step scaling policies are not directly supported with ECS Fargate
-	 */
-	public addCustomScalingPolicy(
-		name: string,
-		metric: cloudwatch.IMetric,
-	): void {
-		// Note: Custom step scaling policies require EC2 Auto Scaling Groups
-		// which are not used in ECS Fargate. Use target tracking scaling instead.
-		console.log(
-			`Custom scaling policy ${name} - use target tracking scaling for ECS Fargate`,
 		)
 	}
 }

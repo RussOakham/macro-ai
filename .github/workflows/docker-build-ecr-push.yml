@@ -133,7 +133,8 @@ jobs:
         id: changes
         run: |
           # Check if Docker-related files or app code changed
-          if git diff --name-only HEAD~1 | grep -qE '\.(js|ts|tsx|json|lock|dockerfile|yml)$|^apps/express-api|^packages|^infrastructure'; then
+          BASE_REF="$(git rev-parse --verify HEAD~1 2>/dev/null || echo $(git hash-object -t tree /dev/null))"
+          if git diff --name-only "$BASE_REF" | grep -qE '\.(js|ts|tsx|json|lock|dockerfile|yml)$|^apps/express-api|^packages|^infrastructure'; then
             echo "has-changes=true" >> $GITHUB_OUTPUT
             echo "🔄 Code changes detected - rebuilding image"
           elif [[ "${{ github.event.inputs.force_rebuild }}" == "true" ]]; then
@@ -217,6 +218,7 @@ jobs:
           ECR_REPOSITORY="macro-ai${{ steps.context.outputs.repository-suffix }}-express-api"
           IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
           IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          LATEST_URI="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:latest-${{ steps.context.outputs.environment }}"
 
           echo "🐳 Building Express API Docker image..."
           echo "Repository: ${ECR_REPOSITORY}"
@@ -238,19 +240,11 @@ jobs:
             --cache-from type=gha \
             --cache-to type=gha,mode=max \
             --tag "${IMAGE_URI}" \
-            --push \
-            .
-
-          # Also tag as latest for the environment
-          LATEST_URI="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:latest-${{ steps.context.outputs.environment }}"
-          docker buildx build \
-            --file apps/express-api/Dockerfile \
-            --platform linux/amd64 \
-            --build-arg ENV_FILE="${{ steps.env-file.outputs.env-file }}" \
-            --cache-from type=gha \
             --tag "${LATEST_URI}" \
             --push \
             .
+
+          # Build once, push both tags (latest tag added above)
 
           echo "✅ Express API image built and pushed successfully!"
           echo "📦 Primary: ${IMAGE_URI}"
@@ -326,7 +320,7 @@ jobs:
       - name: Check for UI changes
         id: ui-changes
         run: |
-          if git diff --name-only HEAD~1 | grep -qE '^apps/client-ui|^packages'; then
+          if git diff --name-only "$BASE_REF" | grep -qE '^apps/client-ui|^packages'; then
             echo "has-ui-changes=true" >> $GITHUB_OUTPUT
             echo "🔄 Client UI changes detected"
           else

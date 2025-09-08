@@ -3,6 +3,7 @@ import * as budgets from 'aws-cdk-lib/aws-budgets'
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch'
 import * as cloudwatch_actions from 'aws-cdk-lib/aws-cloudwatch-actions'
 import * as sns from 'aws-cdk-lib/aws-sns'
+import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions'
 import * as iam from 'aws-cdk-lib/aws-iam'
 import { Duration } from 'aws-cdk-lib'
 
@@ -20,7 +21,7 @@ export class CostMonitoringConstruct extends Construct {
 	public readonly budget: budgets.CfnBudget
 	public readonly alarms: cloudwatch.Alarm[]
 	public readonly dashboard: cloudwatch.Dashboard
-	public readonly costOptimizationRole: iam.Role
+	public readonly costOptimizationRole?: iam.Role
 	public readonly alertTopic: sns.ITopic
 
 	constructor(scope: Construct, id: string, props: CostMonitoringProps) {
@@ -38,11 +39,9 @@ export class CostMonitoringConstruct extends Construct {
 
 		// Add email subscription if provided
 		if (alertEmail) {
-			new sns.Subscription(this, 'EmailSubscription', {
-				protocol: sns.SubscriptionProtocol.EMAIL,
-				endpoint: alertEmail,
-				topic: this.alertTopic,
-			})
+			this.alertTopic.addSubscription(
+				new subscriptions.EmailSubscription(alertEmail),
+			)
 		}
 
 		// Create AWS Budget
@@ -122,30 +121,7 @@ export class CostMonitoringConstruct extends Construct {
 	private createBudgetAlarms(props: CostMonitoringProps): void {
 		const { environment, budgetAmount, alertThresholds = [75, 90, 100] } = props
 
-		// Create CloudWatch alarms for each threshold
-		alertThresholds.forEach((threshold) => {
-			const alarm = new cloudwatch.Alarm(this, `BudgetAlarm${threshold}`, {
-				alarmName: `${environment}-budget-${threshold}pct`,
-				alarmDescription: `${environment} environment has exceeded ${threshold}% of monthly budget`,
-				metric: new cloudwatch.Metric({
-					namespace: 'AWS/Budgets',
-					metricName: 'EstimatedMonthlyCost',
-					dimensionsMap: {
-						BudgetName: `${environment}-monthly-budget`,
-					},
-					statistic: 'Maximum',
-					period: Duration.hours(6),
-				}),
-				threshold: (budgetAmount * threshold) / 100,
-				evaluationPeriods: 1,
-				comparisonOperator:
-					cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-				treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-			})
-
-			alarm.addAlarmAction(new cloudwatch_actions.SnsAction(this.alertTopic))
-			this.alarms.push(alarm)
-		})
+		// Budget threshold alerts are delivered via AWS Budgets notifications (SNS)
 
 		// Daily cost spike alarm using Billing metrics
 		const dailyCostSpikeAlarm = new cloudwatch.Alarm(
@@ -181,7 +157,7 @@ export class CostMonitoringConstruct extends Construct {
 	private createCostDashboard(
 		props: CostMonitoringProps,
 	): cloudwatch.Dashboard {
-		const { environment } = props
+		const { environment, budgetAmount } = props
 
 		const dashboard = new cloudwatch.Dashboard(this, 'CostDashboard', {
 			dashboardName: `${environment}-cost-dashboard`,
@@ -192,11 +168,9 @@ export class CostMonitoringConstruct extends Construct {
 			title: 'Monthly Cost Trend',
 			left: [
 				new cloudwatch.Metric({
-					namespace: 'AWS/Budgets',
-					metricName: 'EstimatedMonthlyCost',
-					dimensionsMap: {
-						BudgetName: `${environment}-monthly-budget`,
-					},
+					namespace: 'AWS/Billing',
+					metricName: 'EstimatedCharges',
+					dimensionsMap: { Currency: 'USD' },
 					statistic: 'Maximum',
 				}),
 			],
@@ -206,25 +180,16 @@ export class CostMonitoringConstruct extends Construct {
 
 		// Budget utilization percentage
 		const budgetUtilizationWidget = new cloudwatch.GraphWidget({
-			title: 'Budget Utilization',
+			title: 'Budget Utilization (%)',
 			left: [
 				new cloudwatch.MathExpression({
-					expression: '(estimated_cost / budget_limit) * 100',
+					// Budget limit is in USD; inline constant from props
+					expression: `100 * (estimated / ${budgetAmount})`,
 					usingMetrics: {
-						estimated_cost: new cloudwatch.Metric({
-							namespace: 'AWS/Budgets',
-							metricName: 'EstimatedMonthlyCost',
-							dimensionsMap: {
-								BudgetName: `${environment}-monthly-budget`,
-							},
-							statistic: 'Maximum',
-						}),
-						budget_limit: new cloudwatch.Metric({
-							namespace: 'AWS/Budgets',
-							metricName: 'BudgetLimit',
-							dimensionsMap: {
-								BudgetName: `${environment}-monthly-budget`,
-							},
+						estimated: new cloudwatch.Metric({
+							namespace: 'AWS/Billing',
+							metricName: 'EstimatedCharges',
+							dimensionsMap: { Currency: 'USD' },
 							statistic: 'Maximum',
 						}),
 					},
@@ -240,29 +205,29 @@ export class CostMonitoringConstruct extends Construct {
 			title: 'Top Cost Services (Last 30 Days)',
 			left: [
 				new cloudwatch.Metric({
-					namespace: 'AWS/Budgets',
-					metricName: 'EstimatedMonthlyCost',
+					namespace: 'AWS/Billing',
+					metricName: 'EstimatedCharges',
 					dimensionsMap: {
+						Currency: 'USD',
 						ServiceName: 'Amazon Elastic Compute Cloud - Compute',
 					},
 					statistic: 'Maximum',
 					label: 'EC2',
 				}),
 				new cloudwatch.Metric({
-					namespace: 'AWS/Budgets',
-					metricName: 'EstimatedMonthlyCost',
+					namespace: 'AWS/Billing',
+					metricName: 'EstimatedCharges',
 					dimensionsMap: {
+						Currency: 'USD',
 						ServiceName: 'Amazon Elastic Load Balancing',
 					},
 					statistic: 'Maximum',
 					label: 'ELB',
 				}),
 				new cloudwatch.Metric({
-					namespace: 'AWS/Budgets',
-					metricName: 'EstimatedMonthlyCost',
-					dimensionsMap: {
-						ServiceName: 'Amazon CloudWatch',
-					},
+					namespace: 'AWS/Billing',
+					metricName: 'EstimatedCharges',
+					dimensionsMap: { Currency: 'USD', ServiceName: 'Amazon CloudWatch' },
 					statistic: 'Maximum',
 					label: 'CloudWatch',
 				}),
@@ -271,56 +236,17 @@ export class CostMonitoringConstruct extends Construct {
 			height: 8,
 		})
 
-		// Cost by availability zone (using Billing metrics)
-		const azCostWidget = new cloudwatch.GraphWidget({
-			title: 'Cost by Availability Zone',
-			left: [
-				new cloudwatch.Metric({
-					namespace: 'AWS/Billing',
-					metricName: 'EstimatedCharges',
-					dimensionsMap: {
-						Currency: 'USD',
-						AvailabilityZone: 'us-east-1a',
-					},
-					statistic: 'Maximum',
-					label: 'us-east-1a',
-				}),
-				new cloudwatch.Metric({
-					namespace: 'AWS/Billing',
-					metricName: 'EstimatedCharges',
-					dimensionsMap: {
-						Currency: 'USD',
-						AvailabilityZone: 'us-east-1b',
-					},
-					statistic: 'Maximum',
-					label: 'us-east-1b',
-				}),
-			],
-			width: 12,
-			height: 6,
-		})
-
 		// Cost optimization opportunities
 		const costOptimizationWidget = new cloudwatch.SingleValueWidget({
 			title: 'Cost Optimization Score',
 			metrics: [
 				new cloudwatch.MathExpression({
-					expression: '100 - ((estimated_cost / budget_limit) * 100)',
+					expression: `100 - (100 * (estimated / ${budgetAmount}))`,
 					usingMetrics: {
-						estimated_cost: new cloudwatch.Metric({
-							namespace: 'AWS/Budgets',
-							metricName: 'EstimatedMonthlyCost',
-							dimensionsMap: {
-								BudgetName: `${environment}-monthly-budget`,
-							},
-							statistic: 'Maximum',
-						}),
-						budget_limit: new cloudwatch.Metric({
-							namespace: 'AWS/Budgets',
-							metricName: 'BudgetLimit',
-							dimensionsMap: {
-								BudgetName: `${environment}-monthly-budget`,
-							},
+						estimated: new cloudwatch.Metric({
+							namespace: 'AWS/Billing',
+							metricName: 'EstimatedCharges',
+							dimensionsMap: { Currency: 'USD' },
 							statistic: 'Maximum',
 						}),
 					},
@@ -336,7 +262,6 @@ export class CostMonitoringConstruct extends Construct {
 			monthlyCostWidget,
 			budgetUtilizationWidget,
 			topServicesWidget,
-			azCostWidget,
 			costOptimizationWidget,
 		)
 

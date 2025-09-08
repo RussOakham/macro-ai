@@ -77,7 +77,7 @@ export class MacroAiProductionStack extends cdk.Stack {
 	public readonly autoScaling: AutoScalingConstruct
 	public readonly monitoring: CloudWatchMonitoringConstruct
 	public readonly costMonitoring: CostMonitoringConstruct
-	public readonly costOptimizationLambda: CostOptimizationLambdaConstruct
+	public readonly costOptimizationLambda?: CostOptimizationLambdaConstruct
 	public readonly neonMonitoring: NeonMonitoringConstruct
 	public readonly upstashMonitoring: UpstashMonitoringConstruct
 	public readonly securityStack: SecurityStack
@@ -253,15 +253,17 @@ export class MacroAiProductionStack extends cdk.Stack {
 			},
 		})
 
-		// Create cost optimization Lambda function
-		this.costOptimizationLambda = new CostOptimizationLambdaConstruct(
-			this,
-			'CostOptimizationLambda',
-			{
-				environment: environmentName,
-				costOptimizationRole: this.costMonitoring.costOptimizationRole,
-			},
-		)
+		// Create cost optimization Lambda function (only if role exists)
+		if (this.costMonitoring.costOptimizationRole) {
+			this.costOptimizationLambda = new CostOptimizationLambdaConstruct(
+				this,
+				'CostOptimizationLambda',
+				{
+					environment: environmentName,
+					costOptimizationRole: this.costMonitoring.costOptimizationRole,
+				},
+			)
+		}
 
 		// Create Neon database monitoring
 		const neonConnectionStringParam =
@@ -334,16 +336,22 @@ export class MacroAiProductionStack extends cdk.Stack {
 			},
 		)
 
-		costOptimizationRule.addTarget(
-			new events_targets.LambdaFunction(this.costOptimizationLambda.function, {
-				event: events.RuleTargetInput.fromObject({
-					environment: environmentName,
-					budgetThreshold: 75,
-					currentSpend: 0, // Will be calculated by Lambda
-					budgetLimit: 300,
-				}),
-			}),
-		)
+		// Only add EventBridge target if cost optimization Lambda exists
+		if (this.costOptimizationLambda) {
+			costOptimizationRule.addTarget(
+				new events_targets.LambdaFunction(
+					this.costOptimizationLambda.function,
+					{
+						event: events.RuleTargetInput.fromObject({
+							environment: environmentName,
+							budgetThreshold: 75,
+							currentSpend: 0, // Will be calculated by Lambda
+							budgetLimit: 300,
+						}),
+					},
+				),
+			)
+		}
 
 		// Create comprehensive outputs
 		this.createOutputs()
@@ -493,7 +501,7 @@ export class MacroAiProductionStack extends cdk.Stack {
 		})
 
 		new cdk.CfnOutput(this, 'CostOptimizationLambdaArn', {
-			value: this.costOptimizationLambda.function.functionArn,
+			value: this.costOptimizationLambda?.function.functionArn || 'N/A',
 			description: 'Cost optimization Lambda function ARN',
 			exportName: `${this.stackName}-CostOptimizationLambdaArn`,
 		})

@@ -236,7 +236,6 @@ jobs:
           AUTH_RATE_LIMIT_MAX_REQUESTS=${AUTH_RATE_LIMIT_MAX_REQUESTS}
           API_RATE_LIMIT_WINDOW_MS=${API_RATE_LIMIT_WINDOW_MS}
           API_RATE_LIMIT_MAX_REQUESTS=${API_RATE_LIMIT_MAX_REQUESTS}
-          REDIS_URL=${REDIS_URL}
           EOF
 
           # Create Client UI .env file
@@ -247,6 +246,7 @@ jobs:
           fi
 
       - name: Upload env artifacts
+        if: env.ACT_LOCAL != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ci-env-files
@@ -261,7 +261,7 @@ jobs:
       actions: read
     strategy:
       matrix:
-        node-version: [20.19.4]
+        node-version: ['20.x']
     steps:
       - uses: actions/checkout@v4
       - name: Install pnpm
@@ -276,9 +276,7 @@ jobs:
       - name: Cache pnpm dependencies
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.pnpm-store
-            node_modules
+          path: ~/.pnpm-store
           key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             pnpm-${{ runner.os }}-
@@ -401,7 +399,7 @@ jobs:
       actions: read
     strategy:
       matrix:
-        node-version: [20.19.4]
+        node-version: ['20.x']
     steps:
       - uses: actions/checkout@v4
       - name: Install pnpm
@@ -416,9 +414,7 @@ jobs:
       - name: Cache pnpm dependencies
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.pnpm-store
-            node_modules
+          path: ~/.pnpm-store
           key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             pnpm-${{ runner.os }}-
@@ -515,7 +511,7 @@ jobs:
           AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
           AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
           # AWS Cognito credentials removed - using IAM roles instead
-          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_USER_POOL_REFRESH_TOKEN_EXPIRY || '30' }}
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
 
           # Cookie Configuration
           COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
@@ -556,7 +552,7 @@ jobs:
       actions: write # For uploading artifacts
     strategy:
       matrix:
-        node-version: [20.19.4]
+        node-version: ['20.x']
     steps:
       - uses: actions/checkout@v4
       - name: Install pnpm
@@ -571,9 +567,7 @@ jobs:
       - name: Cache pnpm dependencies
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.pnpm-store
-            node_modules
+          path: ~/.pnpm-store
           key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             pnpm-${{ runner.os }}-
@@ -782,14 +776,12 @@ jobs:
       - name: Use Node.JS
         uses: actions/setup-node@v4
         with:
-          node-version: 20.19.4
+          node-version: '20.x'
 
       - name: Cache pnpm dependencies
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.pnpm-store
-            node_modules
+          path: ~/.pnpm-store
           key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             pnpm-${{ runner.os }}-
