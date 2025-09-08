@@ -35,7 +35,7 @@ on:
         type: string
 
 env:
-  NODE_VERSION: '20.19.4'
+  NODE_VERSION: '20.x'
   AWS_REGION: 'us-east-1'
   PNPM_VERSION: '10.14.0'
 

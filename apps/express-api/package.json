@@ -27,10 +27,10 @@
 		"lint:fix": "eslint ./src --fix",
 		"lint:ci": "eslint ./src --max-warnings 0",
 		"type-check": "tsc --noEmit",
-		"test": "vitest run --silent --config vitest.config.ts",
-		"test:ui": "vitest",
-		"test:coverage": "vitest run --coverage",
-		"test:coverage:ui": "vitest --coverage --ui"
+		"test": "npx vitest run --silent --config vitest.config.ts",
+		"test:ui": "npx vitest",
+		"test:coverage": "npx vitest run --coverage",
+		"test:coverage:ui": "npx vitest --coverage --ui"
 	},
 	"devDependencies": {
 		"@repo/config-eslint": "workspace:*",

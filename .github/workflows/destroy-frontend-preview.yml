@@ -11,7 +11,7 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
-  NODE_VERSION: '20.19.4'
+  NODE_VERSION: '20.x'
   PNPM_VERSION: '10.14.0'
   # AWS environment variables
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}

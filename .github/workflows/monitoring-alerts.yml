@@ -42,7 +42,7 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
-  NODE_VERSION: '20.19.4'
+  NODE_VERSION: '20.x'
 
 jobs:
   # ============================================================================

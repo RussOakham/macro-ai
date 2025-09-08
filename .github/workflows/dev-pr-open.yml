@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20.19.4]
+        node-version: [20.x]
     steps:
       - name: Check for version label
         id: label_check

@@ -42,10 +42,11 @@ on:
 permissions:
   contents: read
   id-token: write
+  statuses: write
 
 env:
   AWS_REGION: us-east-1
-  NODE_VERSION: '20.19.4'
+  NODE_VERSION: '20.x'
   PNPM_VERSION: '10.14.0'
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
@@ -253,9 +254,9 @@ jobs:
           # Generate build metadata
           BUILD_METADATA=$(cat <<EOF
           {
-            "imageUri": "${IMAGE_URI}",
-            "latestUri": "${LATEST_URI}",
-            "imageTag": "${IMAGE_TAG}",
+            "imageUri": "${IMAGE_URI//\"/\\\"}",
+            "latestUri": "${LATEST_URI//\"/\\\"}",
+            "imageTag": "${IMAGE_TAG//\"/\\\"}",
             "environment": "${{ steps.context.outputs.environment }}",
             "buildDate": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "commitSha": "${{ github.sha }}",

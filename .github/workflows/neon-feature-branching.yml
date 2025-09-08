@@ -51,7 +51,7 @@ on:
 
 env:
   NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
-  NODE_VERSION: '20.19.4'
+  NODE_VERSION: '20.x'
   PNPM_VERSION: '10.14.0'
 
 jobs:
@@ -66,6 +66,7 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
+      statuses: write
 
     steps:
       - name: Checkout code
@@ -330,6 +331,7 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
+      statuses: write
 
     steps:
       - name: Checkout code

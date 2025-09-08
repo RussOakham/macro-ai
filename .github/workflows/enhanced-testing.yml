@@ -29,7 +29,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20.19.4'
+  NODE_VERSION: '20.x'
   PNPM_VERSION: '10.14.0'
   #  Test configuration
   VITEST_REPORTER: 'verbose'

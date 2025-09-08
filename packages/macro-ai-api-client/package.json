@@ -21,9 +21,9 @@
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"lint:ci": "eslint . --max-warnings 0",
-		"test": "vitest run",
-		"test:watch": "vitest",
-		"test:coverage": "vitest run --coverage"
+		"test": "npx vitest run",
+		"test:watch": "npx vitest",
+		"test:coverage": "npx vitest run --coverage"
 	},
 	"devDependencies": {
 		"@hey-api/openapi-ts": "^0.82.3",

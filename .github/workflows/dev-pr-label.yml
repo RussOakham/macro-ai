@@ -24,7 +24,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [20.19.4]
+        node-version: [20.x]
     steps:
       - name: Check PR Label
         uses: mheap/github-action-required-labels@v5.4.1
