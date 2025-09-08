@@ -20,7 +20,8 @@ class UserRepository implements IUserRepository {
 
 	/**
 	 * Find a user by email
-	 * @param email The user's email address
+	 * @param email - User lookup parameters
+	 * @param email.email - The user's email address
 	 * @returns Result tuple with the user object or undefined if not found
 	 */
 	public findUserByEmail = async ({
@@ -63,7 +64,8 @@ class UserRepository implements IUserRepository {
 
 	/**
 	 * Find a user by ID
-	 * @param id The user's unique identifier
+	 * @param id - User lookup parameters
+	 * @param id.id - The user's unique identifier
 	 * @returns Result tuple with the user object or undefined if not found
 	 */
 	public findUserById = async ({
@@ -102,7 +104,8 @@ class UserRepository implements IUserRepository {
 
 	/**
 	 * Create a new user
-	 * @param userData The user data to insert
+	 * @param userData - User creation parameters
+	 * @param userData.userData - The user data to insert
 	 * @returns Result tuple with the created user object
 	 */
 	public createUser = async ({
@@ -149,7 +152,8 @@ class UserRepository implements IUserRepository {
 
 	/**
 	 * Update a user's last login timestamp
-	 * @param id The user's unique identifier
+	 * @param id - User update parameters
+	 * @param id.id - The user's unique identifier
 	 * @returns Result tuple with the updated user object or undefined if not found
 	 */
 	public updateLastLogin = async ({

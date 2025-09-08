@@ -61,9 +61,9 @@ export class ChatService implements IChatService {
 
 	/**
 	 * Verify that a user owns a specific chat
-	 * @param chatId - The chat ID to verify
-	 * @param userId - The user ID to verify ownership
-	 * @returns Result tuple with boolean ownership status or error
+	 * @param chatId - The ID of the chat to verify
+	 * @param userId - The ID of the user to check ownership for
+	 * @returns Result tuple with boolean indicating ownership or error
 	 */
 	public async verifyChatOwnership(
 		chatId: string,
@@ -74,7 +74,9 @@ export class ChatService implements IChatService {
 
 	/**
 	 * Create a new chat for a user
-	 * @param request - Chat creation request with userId and title
+	 * @param request - Chat creation request
+	 * @param request.userId - User ID creating the chat
+	 * @param request.title - Title for the new chat
 	 * @returns Result tuple with created chat or error
 	 */
 	public async createChat(request: {
@@ -108,10 +110,10 @@ export class ChatService implements IChatService {
 	}
 
 	/**
-	 * Get all chats for a user with pagination
-	 * @param userId - The user ID
-	 * @param options - Pagination options
-	 * @returns Result tuple with user's chats or error
+	 * Get all chats for a specific user with pagination
+	 * @param userId - The ID of the user to get chats for
+	 * @param options - Pagination options (page, limit)
+	 * @returns Result tuple with paginated chats and total count or error
 	 */
 	public async getUserChats(
 		userId: string,
@@ -433,7 +435,8 @@ export class ChatService implements IChatService {
 	 * Update a chat (with ownership verification)
 	 * @param chatId - The chat ID to update
 	 * @param userId - The user ID for ownership verification
-	 * @param updates - The updates to apply (e.g., title)
+	 * @param updates - The updates to apply
+	 * @param updates.title - New title for the chat (optional)
 	 * @returns Result tuple with updated chat or error
 	 */
 	public async updateChat(
@@ -485,10 +488,10 @@ export class ChatService implements IChatService {
 	}
 
 	/**
-	 * Delete a chat and all its messages
-	 * @param chatId - The chat ID to delete
-	 * @param userId - The user ID for ownership verification
-	 * @returns Result tuple with success status or error
+	 * Delete a chat and all its messages (ownership verification required)
+	 * @param chatId - The ID of the chat to delete
+	 * @param userId - The ID of the user requesting deletion (must own the chat)
+	 * @returns Result tuple with void on success or error
 	 */
 	public async deleteChat(
 		chatId: string,

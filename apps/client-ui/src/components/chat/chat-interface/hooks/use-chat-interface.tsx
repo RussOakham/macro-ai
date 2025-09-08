@@ -33,8 +33,9 @@ interface UseChatInterfaceReturn {
 /**
  * Chat interface logic hook
  * Manages chat state, messaging, and auto-scroll behavior
- * @param root0
- * @param root0.chatId
+ * @param options - Configuration options for the chat interface
+ * @param options.chatId - The ID of the chat to manage
+ * @returns Chat interface hook with messages, status, and scroll functions
  */
 const useChatInterface = ({
 	chatId,

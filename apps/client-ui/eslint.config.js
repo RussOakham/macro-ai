@@ -61,12 +61,8 @@ export default repoConfig.config(
 		},
 		rules: {
 			'@typescript-eslint/no-misused-promises': 'warn',
-			'jsdoc/require-jsdoc': 'off',
-			'jsdoc/require-param-description': 'off',
-			'jsdoc/require-param-type': 'off',
-			'jsdoc/require-returns': 'off',
-			'jsdoc/require-returns-description': 'off',
-			'jsdoc/require-returns-type': 'off',
+			// Enable JSDoc for public exports only (React component props)
+			'jsdoc/require-jsdoc': ['error', { publicOnly: true }],
 			'react/jsx-props-no-spreading': 'off',
 			'react/require-default-props': 'off',
 		},
@@ -88,9 +84,7 @@ export default repoConfig.config(
 		rules: {
 			// Relax JSDoc requirements for config files
 			'jsdoc/require-jsdoc': 'off',
-			'jsdoc/require-param-description': 'off',
-			'jsdoc/require-param-type': 'off',
-			'jsdoc/require-returns': 'off',
+			'jsdoc/require-returns-description': 'off',
 		},
 	},
 

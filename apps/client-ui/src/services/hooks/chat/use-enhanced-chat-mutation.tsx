@@ -51,10 +51,6 @@ type TChatMessage = UseEnhancedChatReturn['messages'][number]
  * - Optimistic updates for user messages
  * - Go-style error handling integration
  * - Automatic cache invalidation
- * @param root0
- * @param root0.chatId
- * @param root0.onMessageSent
- * @param root0.onStreamingComplete
  */
 const useEnhancedChat = ({
 	chatId,

@@ -162,8 +162,6 @@ export const createMockRoute = (
 
 /**
  * Common test components for router testing
- * @param root0
- * @param root0.title
  */
 export const TestComponent = ({ title = 'Test' }: { title?: string }) => {
 	return <div data-testid="test-component">{title}</div>

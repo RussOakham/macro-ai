@@ -11,9 +11,6 @@ interface ChatActionsProps extends React.ComponentPropsWithoutRef<'div'> {
 /**
  * Chat header actions component
  * Contains action buttons like mobile sidebar toggle
- * @param root0
- * @param root0.onMobileSidebarToggle
- * @param root0.className
  */
 const ChatActions = ({
 	onMobileSidebarToggle,
