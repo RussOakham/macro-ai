@@ -1,4 +1,5 @@
-import * as repoConfig from './packages/config-eslint/index.js'
+import * as repoConfig from '../config-eslint/index.js'
+import tseslint from 'typescript-eslint'
 
 /** @type {import("@typescript-eslint/utils").TSESLint.FlatConfig.Config} */
 export default repoConfig.config(
@@ -23,7 +24,17 @@ export default repoConfig.config(
 	// Core configurations - foundation for all code
 	...repoConfig.configs.base.core,
 	...repoConfig.configs.base.codeQuality,
-	...repoConfig.configs.base.javascript,
+
+	// TypeScript-specific configuration with type checking
+	{
+		files: ['**/*.{ts,tsx}'],
+		languageOptions: {
+			parserOptions: {
+				project: './tsconfig.json',
+				tsconfigRootDir: import.meta.dirname,
+			},
+		},
+	},
 
 	// Node.js specific configurations
 	...repoConfig.configs.node.recommended,
@@ -34,7 +45,19 @@ export default repoConfig.config(
 	// Security scanning
 	...repoConfig.configs.base.security,
 
-	// Project-specific overrides for root
+	// Explicit override for ESLint config files to prevent TypeScript parsing
+	{
+		files: ['eslint.config.{js,ts}'],
+		...tseslint.configs.disableTypeChecked,
+		languageOptions: {
+			parserOptions: {
+				ecmaVersion: 'latest',
+				sourceType: 'module',
+			},
+		},
+	},
+
+	// Project-specific overrides
 	{
 		files: ['**/*.{ts,tsx,js,jsx}'],
 		languageOptions: {
@@ -49,7 +72,7 @@ export default repoConfig.config(
 			},
 		},
 		rules: {
-			// Root-level specific rules
+			// Package-specific rules
 			'@typescript-eslint/no-unused-vars': 'warn',
 			'@typescript-eslint/no-explicit-any': 'warn',
 		},

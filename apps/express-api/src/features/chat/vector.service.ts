@@ -168,7 +168,7 @@ export class VectorService {
 		if (embeddingError) {
 			logger.error({
 				msg: 'Failed to generate embedding for search query',
-				query: query.substring(0, 100),
+				query: query.slice(0, 100),
 				userId,
 				error: embeddingError,
 			})
@@ -188,7 +188,7 @@ export class VectorService {
 		if (searchError) {
 			logger.error({
 				msg: 'Semantic search failed',
-				query: query.substring(0, 100),
+				query: query.slice(0, 100),
 				userId,
 				chatId,
 				error: searchError,
@@ -198,7 +198,7 @@ export class VectorService {
 
 		logger.info({
 			msg: 'Semantic search completed',
-			query: query.substring(0, 100),
+			query: query.slice(0, 100),
 			userId,
 			chatId,
 			resultsCount: results.length,

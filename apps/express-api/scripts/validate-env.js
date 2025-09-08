@@ -8,9 +8,9 @@
  * are caught early in the CI/CD pipeline.
  */
 
-import { readFileSync, existsSync } from 'fs'
-import { resolve, dirname } from 'path'
-import { fileURLToPath } from 'url'
+import { readFileSync, existsSync } from 'node:fs'
+import { resolve, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -270,7 +270,7 @@ function validateEnvironment() {
 				invalidVars.push({
 					name: varName,
 					error: validationError,
-					value: value.substring(0, 10) + '...',
+					value: value.slice(0, 10) + '...',
 				})
 			}
 		}
@@ -298,7 +298,7 @@ function validateEnvironment() {
 				invalidVars.push({
 					name: 'APP_ENV',
 					error: validationError,
-					value: appEnv.substring(0, 10) + '...',
+					value: appEnv.slice(0, 10) + '...',
 				})
 			}
 		}

@@ -18,7 +18,7 @@
  *   APP_ENV=pr-51 CUSTOM_DOMAIN_NAME=macro-ai.russoakham.dev node scripts/test-cors-configuration.js
  */
 
-const path = require('path')
+const path = require('node:path')
 
 // Colors for output
 const colors = {

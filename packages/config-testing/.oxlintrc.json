@@ -1,0 +1,12 @@
+{
+	"extends": ["../config-oxlint/base.json"],
+	"rules": {
+		// Testing config specific overrides
+		"no-console": "off", // Allow console in test configs
+		"@typescript-eslint/no-explicit-any": "off", // Test utilities may need any
+		"unicorn/filename-case": [
+			"error",
+			{ "case": "kebabCase", "ignore": ["^\\$"] }
+		]
+	}
+}

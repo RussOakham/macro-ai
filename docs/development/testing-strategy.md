@@ -130,24 +130,24 @@ import { setupMSWForTests } from '../test/msw-setup'
 import { formTesting, componentTesting } from '../test/component-test-utils'
 
 describe('User Registration Flow', () => {
-  setupMSWForTests()
+	setupMSWForTests()
 
-  it('should handle complete registration workflow', async () => {
-    const user = userEvent.setup()
-    render(<RegistrationForm />)
+	it('should handle complete registration workflow', async () => {
+		const user = userEvent.setup()
+		render(<RegistrationForm />)
 
-    // Fill registration form
-    await user.type(screen.getByLabelText(/email/i), 'user@example.com')
-    await user.type(screen.getByLabelText(/password/i), 'password123')
+		// Fill registration form
+		await user.type(screen.getByLabelText(/email/i), 'user@example.com')
+		await user.type(screen.getByLabelText(/password/i), 'password123')
 
-    // Submit form
-    await user.click(screen.getByRole('button', { name: /register/i }))
+		// Submit form
+		await user.click(screen.getByRole('button', { name: /register/i }))
 
-    // Verify success state
-    await waitFor(() => {
-      expect(screen.getByText(/registration successful/i)).toBeInTheDocument()
-    })
-  })
+		// Verify success state
+		await waitFor(() => {
+			expect(screen.getByText(/registration successful/i)).toBeInTheDocument()
+		})
+	})
 })
 ```
 
@@ -160,23 +160,23 @@ import { http, HttpResponse } from 'msw'
 import { setupServerWithHandlers } from '../test/msw-setup'
 
 describe('API Error Handling', () => {
-  it('should handle network errors gracefully', async () => {
-    setupServerWithHandlers([
-      http.get('http://localhost:3000/api/users', () => {
-        return HttpResponse.json(
-          { message: 'Internal server error' },
-          { status: 500 }
-        )
-      }),
-    ])
+	it('should handle network errors gracefully', async () => {
+		setupServerWithHandlers([
+			http.get('http://localhost:3000/api/users', () => {
+				return HttpResponse.json(
+					{ message: 'Internal server error' },
+					{ status: 500 },
+				)
+			}),
+		])
 
-    // Test component with API error
-    render(<UserList />)
+		// Test component with API error
+		render(<UserList />)
 
-    await waitFor(() => {
-      expect(screen.getByText(/error loading users/i)).toBeInTheDocument()
-    })
-  })
+		await waitFor(() => {
+			expect(screen.getByText(/error loading users/i)).toBeInTheDocument()
+		})
+	})
 })
 ```
 

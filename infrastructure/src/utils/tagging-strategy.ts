@@ -138,7 +138,7 @@ export class TaggingStrategy {
 	public static createBaseTags(config: BaseTagConfig): Record<string, string> {
 		const currentDate =
 			new Date().toISOString().split('T')[0] ??
-			new Date().toISOString().substring(0, 10)
+			new Date().toISOString().slice(0, 10)
 
 		return {
 			[TAG_KEYS.PROJECT]: config.project ?? TAG_VALUES.PROJECT,
@@ -292,7 +292,7 @@ export class TaggingStrategy {
 		const expiry = new Date()
 		expiry.setDate(expiry.getDate() + days)
 		const datePart = expiry.toISOString().split('T')[0]
-		return datePart ?? expiry.toISOString().substring(0, 10) // YYYY-MM-DD format
+		return datePart ?? expiry.toISOString().slice(0, 10) // YYYY-MM-DD format
 	}
 
 	/**

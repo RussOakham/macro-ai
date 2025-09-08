@@ -13,7 +13,7 @@ export const createClientConfig: CreateClientConfig = (config) => ({
 	headers: {
 		'Content-Type': 'application/json',
 		Accept: 'application/json',
-		...(config?.headers ?? {}),
+		...config?.headers,
 	},
 
 	// Timeout configuration

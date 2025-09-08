@@ -17,20 +17,10 @@ export interface BaseConfig {
 	strictTyping: ConfigWithExtends[]
 	/** Code quality and best practices */
 	codeQuality: ConfigWithExtends[]
-	/** Promise handling and async code */
-	promises: ConfigWithExtends[]
-	/** Node.js specific rules */
-	node: ConfigWithExtends[]
 	/** Security-focused rules */
 	security: ConfigWithExtends[]
-	/** Import/export management */
-	imports: ConfigWithExtends[]
 	/** Testing with Vitest */
 	testing: ConfigWithExtends[]
-	/** Documentation and JSDoc */
-	documentation: ConfigWithExtends[]
-	/** Custom rules for project preferences */
-	customRules: ConfigWithExtends[]
 	/** JavaScript-specific overrides */
 	javascript: ConfigWithExtends[]
 }

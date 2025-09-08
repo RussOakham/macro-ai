@@ -475,8 +475,7 @@ export function useCreateChat() {
 	const queryClient = useQueryClient()
 
 	return useMutation({
-		mutationFn: (data: CreateChatData) =>
-			chatClient.post('/chats', data),
+		mutationFn: (data: CreateChatData) => chatClient.post('/chats', data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['chats'] })
 		},
@@ -492,7 +491,7 @@ function ChatList() {
 
 	return (
 		<div>
-			{chats?.map(chat => (
+			{chats?.map((chat) => (
 				<div key={chat.id}>{chat.title}</div>
 			))}
 			<button onClick={() => createChat.mutate({ title: 'New Chat' })}>
@@ -569,70 +568,73 @@ authClient.interceptors.response.use(
 ```typescript
 // apps/client-ui/src/services/auth/auth.service.ts
 import { createAuthClient, tryCatch } from '@repo/macro-ai-api-client'
-import type { AuthPostRegisterRequest, AuthPostRegisterResponse } from '@repo/macro-ai-api-client'
+import type {
+	AuthPostRegisterRequest,
+	AuthPostRegisterResponse,
+} from '@repo/macro-ai-api-client'
 
 export class AuthService {
-  private authClient = createAuthClient(import.meta.env.VITE_API_URL)
+	private authClient = createAuthClient(import.meta.env.VITE_API_URL)
 
-  /**
-   * Register a new user account
-   */
-  async register(
-    userData: AuthPostRegisterRequest
-  ): Promise<Result<AuthPostRegisterResponse>> {
-    const [response, error] = await tryCatch(
-      this.authClient.post('/auth/register', userData),
-      'AuthService.register'
-    )
+	/**
+	 * Register a new user account
+	 */
+	async register(
+		userData: AuthPostRegisterRequest,
+	): Promise<Result<AuthPostRegisterResponse>> {
+		const [response, error] = await tryCatch(
+			this.authClient.post('/auth/register', userData),
+			'AuthService.register',
+		)
 
-    if (error) {
-      return [null, error]
-    }
+		if (error) {
+			return [null, error]
+		}
 
-    // Response is fully typed
-    console.log('Registration successful:', response.message)
-    console.log('User ID:', response.user.id)
+		// Response is fully typed
+		console.log('Registration successful:', response.message)
+		console.log('User ID:', response.user.id)
 
-    return [response, null]
-  }
+		return [response, null]
+	}
 
-  /**
-   * Login user with credentials
-   */
-  async login(credentials: AuthPostLoginRequest): Promise<Result<AuthPostLoginResponse>> {
-    const [response, error] = await tryCatch(
-      this.authClient.post('/auth/login', credentials),
-      'AuthService.login'
-    )
+	/**
+	 * Login user with credentials
+	 */
+	async login(
+		credentials: AuthPostLoginRequest,
+	): Promise<Result<AuthPostLoginResponse>> {
+		const [response, error] = await tryCatch(
+			this.authClient.post('/auth/login', credentials),
+			'AuthService.login',
+		)
 
-    if (error) {
-      return [null, error]
-    }
+		if (error) {
+			return [null, error]
+		}
 
-    return [response, null]
-  }
+		return [response, null]
+	}
 }
 
 // Usage in React component
 export function RegisterForm() {
-  const authService = new AuthService()
+	const authService = new AuthService()
 
-  const handleRegister = async (formData: AuthPostRegisterRequest) => {
-    const [result, error] = await authService.register(formData)
+	const handleRegister = async (formData: AuthPostRegisterRequest) => {
+		const [result, error] = await authService.register(formData)
 
-    if (error) {
-      console.error('Registration failed:', error.message)
-      return
-    }
+		if (error) {
+			console.error('Registration failed:', error.message)
+			return
+		}
 
-    console.log('Registration successful:', result)
-  }
+		console.log('Registration successful:', result)
+	}
 
-  return (
-    <form onSubmit={handleSubmit(handleRegister)}>
-      {/* Form fields */}
-    </form>
-  )
+	return (
+		<form onSubmit={handleSubmit(handleRegister)}>{/* Form fields */}</form>
+	)
 }
 ```
 

@@ -23,8 +23,6 @@ export default repoConfig.config(
 	// Core configurations - foundation for all code
 	...repoConfig.configs.base.core,
 	...repoConfig.configs.base.codeQuality,
-	...repoConfig.configs.base.promises,
-	...repoConfig.configs.base.imports,
 	...repoConfig.configs.base.javascript,
 
 	// React-specific configurations
@@ -32,10 +30,6 @@ export default repoConfig.config(
 
 	// Testing configurations (Vitest + React Testing Library)
 	...repoConfig.configs.base.testing,
-
-	// Documentation and code organization
-	...repoConfig.configs.base.documentation,
-	...repoConfig.configs.base.customRules,
 
 	// Security scanning
 	...repoConfig.configs.base.security,
@@ -61,8 +55,6 @@ export default repoConfig.config(
 		},
 		rules: {
 			'@typescript-eslint/no-misused-promises': 'warn',
-			// Enable JSDoc for public exports only (React component props)
-			'jsdoc/require-jsdoc': ['error', { publicOnly: true }],
 			'react/jsx-props-no-spreading': 'off',
 			'react/require-default-props': 'off',
 		},
@@ -72,19 +64,6 @@ export default repoConfig.config(
 					alwaysTryTypes: true,
 				}),
 			],
-		},
-	},
-
-	// JavaScript files (like config files) - no TypeScript parser
-	{
-		files: ['**/*.{js,jsx}'],
-		languageOptions: {
-			globals: globals.browser,
-		},
-		rules: {
-			// Relax JSDoc requirements for config files
-			'jsdoc/require-jsdoc': 'off',
-			'jsdoc/require-returns-description': 'off',
 		},
 	},
 

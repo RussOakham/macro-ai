@@ -270,13 +270,13 @@ describe('Database Integration Testing Examples', () => {
 			expect(uniqueUsers.size).toBeGreaterThan(0)
 
 			// Verify we have the expected test users (John and Jane are verified, Bob is not)
-			expect(Array.from(uniqueUsers)).toEqual(
+			expect([...uniqueUsers]).toEqual(
 				expect.arrayContaining([
 					'john.doe@example.com',
 					'jane.smith@example.com',
 				]),
 			)
-			expect(Array.from(uniqueUsers)).not.toContain('bob.wilson@example.com')
+			expect([...uniqueUsers]).not.toContain('bob.wilson@example.com')
 		})
 	})
 

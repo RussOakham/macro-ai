@@ -27,11 +27,12 @@ catalog:
   babel-plugin-react-compiler: 19.1.0-rc.2
   eslint: 9.34.0
   eslint-config-prettier: 9.1.2
+  eslint-import-resolver-typescript: ^3.6.3
   eslint-plugin-import: ^2.32.0
   eslint-plugin-jsx-a11y: 6.10.2
+  eslint-plugin-oxlint: ^1.14.0
   eslint-plugin-react: 7.37.5
   eslint-plugin-react-hooks: 5.2.0
-  eslint-import-resolver-typescript: ^3.6.3
   eslint-plugin-unused-imports: ^4.2.0
   express: ^4.21.2
   globals: ^15.15.0

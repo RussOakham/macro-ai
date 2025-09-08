@@ -97,20 +97,20 @@ graph TB
 ```typescript
 // Modern React component with compiler optimization
 export function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([])
-  const { mutate: sendMessage, isPending } = useMutation({
-    mutationFn: chatService.sendMessage,
-    onSuccess: (newMessage) => {
-      setMessages(prev => [...prev, newMessage])
-    }
-  })
+	const [messages, setMessages] = useState<Message[]>([])
+	const { mutate: sendMessage, isPending } = useMutation({
+		mutationFn: chatService.sendMessage,
+		onSuccess: (newMessage) => {
+			setMessages((prev) => [...prev, newMessage])
+		},
+	})
 
-  return (
-    <div className="chat-interface">
-      <MessageList messages={messages} />
-      <MessageInput onSend={sendMessage} disabled={isPending} />
-    </div>
-  )
+	return (
+		<div className="chat-interface">
+			<MessageList messages={messages} />
+			<MessageInput onSend={sendMessage} disabled={isPending} />
+		</div>
+	)
 }
 ```
 
@@ -594,17 +594,17 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { ChatMessage } from './ChatMessage'
 
 describe('ChatMessage', () => {
-  it('renders user message correctly', () => {
-    render(
-      <ChatMessage
-        message={{ role: 'user', content: 'Hello AI!' }}
-        timestamp={new Date()}
-      />
-    )
+	it('renders user message correctly', () => {
+		render(
+			<ChatMessage
+				message={{ role: 'user', content: 'Hello AI!' }}
+				timestamp={new Date()}
+			/>,
+		)
 
-    expect(screen.getByText('Hello AI!')).toBeInTheDocument()
-    expect(screen.getByTestId('user-message')).toHaveClass('user-message')
-  })
+		expect(screen.getByText('Hello AI!')).toBeInTheDocument()
+		expect(screen.getByTestId('user-message')).toHaveClass('user-message')
+	})
 })
 ```
 

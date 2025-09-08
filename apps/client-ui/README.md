@@ -98,7 +98,7 @@ The application supports light/dark/system themes with persistent storage:
 ```typescript
 // Theme provider configuration
 <ThemeProvider defaultTheme="system" storageKey="macro-ai-theme">
-  <App />
+	<App />
 </ThemeProvider>
 ```
 

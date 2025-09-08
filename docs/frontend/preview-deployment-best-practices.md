@@ -141,12 +141,12 @@ pnpm depcheck
 
 ```typescript
 // Use dynamic imports for route-based code splitting
-const UserProfile = lazy(() => import('./pages/UserProfile'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
+const UserProfile = lazy(() => import('./pages/UserProfile'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
 
 // Use React.Suspense for loading states
-<Suspense fallback={<LoadingSpinner />}>
-  <UserProfile />
+;<Suspense fallback={<LoadingSpinner />}>
+	<UserProfile />
 </Suspense>
 ```
 
@@ -176,17 +176,17 @@ import * as UI from '@/components/ui' // ❌ Imports everything
 ```typescript
 // Use React Query or SWR for caching
 const { data, error, isLoading } = useQuery(
-  ['user', userId],
-  () => fetchUser(userId),
-  {
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
-  }
-);
+	['user', userId],
+	() => fetchUser(userId),
+	{
+		staleTime: 5 * 60 * 1000, // 5 minutes
+		cacheTime: 10 * 60 * 1000, // 10 minutes
+	},
+)
 
 // Implement proper error boundaries
-<ErrorBoundary fallback={<ErrorFallback />}>
-  <UserComponent />
+;<ErrorBoundary fallback={<ErrorFallback />}>
+	<UserComponent />
 </ErrorBoundary>
 ```
 

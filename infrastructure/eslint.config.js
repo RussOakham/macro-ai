@@ -17,19 +17,13 @@ export default repoConfig.config(
 	// Core configurations - foundation for all code
 	...repoConfig.configs.base.core,
 	...repoConfig.configs.base.codeQuality,
-	...repoConfig.configs.base.promises,
-	...repoConfig.configs.base.imports,
 	...repoConfig.configs.base.javascript,
 
 	// Node.js specific configurations
-	...repoConfig.configs.base.node,
+	...repoConfig.configs.node.recommended,
 
 	// Testing configurations (Vitest)
 	...repoConfig.configs.base.testing,
-
-	// Documentation and code organization
-	...repoConfig.configs.base.documentation,
-	...repoConfig.configs.base.customRules,
 
 	// Security scanning
 	...repoConfig.configs.base.security,
@@ -58,9 +52,6 @@ export default repoConfig.config(
 			'@typescript-eslint/no-misused-promises': 'warn',
 			// Allow inline comments in infrastructure code
 			'no-inline-comments': 'off',
-			// Relax JSDoc requirements for infrastructure code
-			'jsdoc/require-jsdoc': 'off',
-			'jsdoc/require-returns-description': 'off',
 			// Relax import sorting for CDK files
 			'perfectionist/sort-imports': 'off',
 			'perfectionist/sort-objects': 'off',
@@ -72,19 +63,6 @@ export default repoConfig.config(
 					project: './tsconfig.json',
 				},
 			},
-		},
-	},
-
-	// JavaScript files (like config files) - no TypeScript parser
-	{
-		files: ['**/*.{js,jsx}'],
-		languageOptions: {
-			globals: globals.node,
-		},
-		rules: {
-			// Relax JSDoc requirements for config files
-			'jsdoc/require-jsdoc': 'off',
-			'jsdoc/require-returns-description': 'off',
 		},
 	},
 

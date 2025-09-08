@@ -503,55 +503,57 @@ export function useEnhancedChat(chatId: string) {
 ```typescript
 // apps/client-ui/src/components/chat/message/StreamingMessage.tsx
 interface StreamingMessageProps {
-  content: string
-  isStreaming: boolean
-  role: 'user' | 'assistant'
+	content: string
+	isStreaming: boolean
+	role: 'user' | 'assistant'
 }
 
 export function StreamingMessage({
-  content,
-  isStreaming,
-  role
+	content,
+	isStreaming,
+	role,
 }: StreamingMessageProps) {
-  const [displayedContent, setDisplayedContent] = useState('')
-  const [currentIndex, setCurrentIndex] = useState(0)
+	const [displayedContent, setDisplayedContent] = useState('')
+	const [currentIndex, setCurrentIndex] = useState(0)
 
-  // Typewriter effect for streaming messages
-  useEffect(() => {
-    if (isStreaming && currentIndex < content.length) {
-      const timer = setTimeout(() => {
-        setDisplayedContent(content.slice(0, currentIndex + 1))
-        setCurrentIndex(currentIndex + 1)
-      }, 20) // Adjust speed as needed
+	// Typewriter effect for streaming messages
+	useEffect(() => {
+		if (isStreaming && currentIndex < content.length) {
+			const timer = setTimeout(() => {
+				setDisplayedContent(content.slice(0, currentIndex + 1))
+				setCurrentIndex(currentIndex + 1)
+			}, 20) // Adjust speed as needed
 
-      return () => clearTimeout(timer)
-    } else if (!isStreaming) {
-      setDisplayedContent(content)
-      setCurrentIndex(content.length)
-    }
-  }, [content, currentIndex, isStreaming])
+			return () => clearTimeout(timer)
+		} else if (!isStreaming) {
+			setDisplayedContent(content)
+			setCurrentIndex(content.length)
+		}
+	}, [content, currentIndex, isStreaming])
 
-  return (
-    <div className={cn(
-      'message',
-      role === 'user' ? 'message-user' : 'message-assistant'
-    )}>
-      <div className="message-content">
-        {displayedContent}
-        {isStreaming && (
-          <span className="streaming-cursor animate-pulse">▊</span>
-        )}
-      </div>
-      {isStreaming && (
-        <div className="streaming-indicator">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
-            AI is thinking...
-          </div>
-        </div>
-      )}
-    </div>
-  )
+	return (
+		<div
+			className={cn(
+				'message',
+				role === 'user' ? 'message-user' : 'message-assistant',
+			)}
+		>
+			<div className="message-content">
+				{displayedContent}
+				{isStreaming && (
+					<span className="streaming-cursor animate-pulse">▊</span>
+				)}
+			</div>
+			{isStreaming && (
+				<div className="streaming-indicator">
+					<div className="flex items-center gap-2 text-sm text-muted-foreground">
+						<div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
+						AI is thinking...
+					</div>
+				</div>
+			)}
+		</div>
+	)
 }
 ```
 

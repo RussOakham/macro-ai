@@ -293,7 +293,7 @@ export type { User, CreateUserRequest }
 
 // ✅ Good: Default exports only for React components
 export default function UserProfile({ user }: { user: User }) {
-  return <div>{user.name}</div>
+	return <div>{user.name}</div>
 }
 ```
 

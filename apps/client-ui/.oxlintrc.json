@@ -1,0 +1,14 @@
+{
+	"extends": ["../../packages/config-oxlint/base.json"],
+	"rules": {
+		// React/Frontend specific overrides
+		"react/jsx-key": "error",
+		"react/jsx-no-duplicate-props": "error",
+		"react/jsx-no-undef": "error",
+		"react/no-unused-vars": "error",
+		"unicorn/filename-case": [
+			"error",
+			{ "case": "kebabCase", "ignore": ["^\\$"] }
+		]
+	}
+}

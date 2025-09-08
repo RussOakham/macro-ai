@@ -70,6 +70,111 @@
 				"CUSTOM_DOMAIN_NAME"
 			]
 		},
+		"lint:eslint": {
+			"env": [
+				"AWS_REGION",
+				"SERVICE_NAME",
+				"SERVICE_VERSION",
+				"AWS_EXECUTION_ENV",
+				"CI",
+				"GITHUB_ACTIONS",
+				"GITLAB_CI",
+				"CIRCLECI",
+				"JENKINS_URL",
+				"BUILDKITE",
+				"PREVIEW",
+				"CORS_ALLOWED_ORIGINS",
+				"MODE",
+				"APP_VERSION",
+				"npm_package_version",
+				"DATABASE_URL",
+				"CUSTOM_DOMAIN_NAME"
+			]
+		},
+		"lint:fix": {
+			"env": [
+				"AWS_REGION",
+				"SERVICE_NAME",
+				"SERVICE_VERSION",
+				"AWS_EXECUTION_ENV",
+				"CI",
+				"GITHUB_ACTIONS",
+				"GITLAB_CI",
+				"CIRCLECI",
+				"JENKINS_URL",
+				"BUILDKITE",
+				"PREVIEW",
+				"CORS_ALLOWED_ORIGINS",
+				"MODE",
+				"APP_VERSION",
+				"npm_package_version",
+				"DATABASE_URL",
+				"CUSTOM_DOMAIN_NAME"
+			]
+		},
+		"lint:ci": {
+			"env": [
+				"AWS_REGION",
+				"SERVICE_NAME",
+				"SERVICE_VERSION",
+				"AWS_EXECUTION_ENV",
+				"CI",
+				"GITHUB_ACTIONS",
+				"GITLAB_CI",
+				"CIRCLECI",
+				"JENKINS_URL",
+				"BUILDKITE",
+				"PREVIEW",
+				"CORS_ALLOWED_ORIGINS",
+				"MODE",
+				"APP_VERSION",
+				"npm_package_version",
+				"DATABASE_URL",
+				"CUSTOM_DOMAIN_NAME"
+			]
+		},
+		"lint:fix:eslint": {
+			"env": [
+				"AWS_REGION",
+				"SERVICE_NAME",
+				"SERVICE_VERSION",
+				"AWS_EXECUTION_ENV",
+				"CI",
+				"GITHUB_ACTIONS",
+				"GITLAB_CI",
+				"CIRCLECI",
+				"JENKINS_URL",
+				"BUILDKITE",
+				"PREVIEW",
+				"CORS_ALLOWED_ORIGINS",
+				"MODE",
+				"APP_VERSION",
+				"npm_package_version",
+				"DATABASE_URL",
+				"CUSTOM_DOMAIN_NAME"
+			]
+		},
+		"lint:ci:eslint": {
+			"env": [
+				"AWS_REGION",
+				"SERVICE_NAME",
+				"SERVICE_VERSION",
+				"AWS_EXECUTION_ENV",
+				"CI",
+				"GITHUB_ACTIONS",
+				"GITLAB_CI",
+				"CIRCLECI",
+				"JENKINS_URL",
+				"BUILDKITE",
+				"PREVIEW",
+				"CORS_ALLOWED_ORIGINS",
+				"MODE",
+				"APP_VERSION",
+				"npm_package_version",
+				"DATABASE_URL",
+				"CUSTOM_DOMAIN_NAME"
+			]
+		},
 		"lint:md": {
 			"inputs": ["**/*.md", ".markdownlint.json"],
 			"outputs": []

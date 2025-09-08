@@ -10,13 +10,8 @@
  * @property {ConfigWithExtends[]} core - Core ESLint + TypeScript + Turborepo configurations
  * @property {ConfigWithExtends[]} strictTyping - Strict TypeScript type checking
  * @property {ConfigWithExtends[]} codeQuality - Code quality and best practices
- * @property {ConfigWithExtends[]} promises - Promise handling and async code
- * @property {ConfigWithExtends[]} node - Node.js specific rules
  * @property {ConfigWithExtends[]} security - Security-focused rules
- * @property {ConfigWithExtends[]} imports - Import/export management
  * @property {ConfigWithExtends[]} testing - Testing with Vitest
- * @property {ConfigWithExtends[]} documentation - Documentation and JSDoc
- * @property {ConfigWithExtends[]} customRules - Custom rules for project preferences
  * @property {ConfigWithExtends[]} javascript - JavaScript-specific overrides
  */
 

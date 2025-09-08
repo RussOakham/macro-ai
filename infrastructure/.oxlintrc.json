@@ -1,0 +1,13 @@
+{
+	"extends": ["../packages/config-oxlint/base.json"],
+	"rules": {
+		// Infrastructure/C CDK specific overrides
+		"no-console": "off", // Allow console in CDK scripts
+		"@typescript-eslint/no-var-requires": "off", // CDK may need require
+		"@typescript-eslint/no-explicit-any": "off", // CDK types can be complex
+		"unicorn/filename-case": [
+			"error",
+			{ "case": "kebabCase", "ignore": ["^\\$"] }
+		]
+	}
+}

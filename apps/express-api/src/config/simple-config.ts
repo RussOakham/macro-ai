@@ -43,10 +43,7 @@ export const loadConfig = (options: ConfigOptions = {}): Result<TEnv> => {
 		const lastSeparatorIndex = Math.max(lastSlashIndex, lastBackslashIndex)
 
 		if (lastSeparatorIndex > 0) {
-			enhancedOptions.baseDir = options.envFilePath.substring(
-				0,
-				lastSeparatorIndex,
-			)
+			enhancedOptions.baseDir = options.envFilePath.slice(0, lastSeparatorIndex)
 		}
 	}
 

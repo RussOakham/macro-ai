@@ -5,35 +5,38 @@ This example shows how to use the new simplified router testing approach based o
 ## Basic Usage
 
 ```typescript
-import { renderWithRouter, createAuthenticatedContext } from './router-testing-utils'
+import {
+	renderWithRouter,
+	createAuthenticatedContext,
+} from './router-testing-utils'
 import { screen } from '@testing-library/react'
 
 // Test a simple component
 test('renders user profile', async () => {
-  const UserProfile = () => <div>User Profile</div>
+	const UserProfile = () => <div>User Profile</div>
 
-  const { router } = await renderWithRouter(UserProfile, {
-    pathPattern: '/profile',
-    initialEntry: '/profile',
-    context: createAuthenticatedContext()
-  })
+	const { router } = await renderWithRouter(UserProfile, {
+		pathPattern: '/profile',
+		initialEntry: '/profile',
+		context: createAuthenticatedContext(),
+	})
 
-  expect(screen.getByText('User Profile')).toBeInTheDocument()
+	expect(screen.getByText('User Profile')).toBeInTheDocument()
 })
 
 // Test with dynamic routes
 test('renders user by ID', async () => {
-  const UserDetail = () => {
-    const { userId } = useParams({ from: '/users/$userId' })
-    return <div>User {userId}</div>
-  }
+	const UserDetail = () => {
+		const { userId } = useParams({ from: '/users/$userId' })
+		return <div>User {userId}</div>
+	}
 
-  await renderWithRouter(UserDetail, {
-    pathPattern: '/users/$userId',
-    initialEntry: '/users/123'
-  })
+	await renderWithRouter(UserDetail, {
+		pathPattern: '/users/$userId',
+		initialEntry: '/users/123',
+	})
 
-  expect(screen.getByText('User 123')).toBeInTheDocument()
+	expect(screen.getByText('User 123')).toBeInTheDocument()
 })
 ```
 

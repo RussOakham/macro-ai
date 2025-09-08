@@ -3,20 +3,16 @@ import js from '@eslint/js'
 import gitignore from 'eslint-config-flat-gitignore'
 import tseslint from 'typescript-eslint'
 import turboConfig from 'eslint-config-turbo/flat'
-import unicornPlugin from 'eslint-plugin-unicorn'
 import sonarjsPlugin from 'eslint-plugin-sonarjs'
 import perfectionistPlugin from 'eslint-plugin-perfectionist'
-import promisePlugin from 'eslint-plugin-promise'
-import nPlugin from 'eslint-plugin-n'
 import securityPlugin from 'eslint-plugin-security'
 import securityNodePlugin from 'eslint-plugin-security-node'
-import importXPlugin from 'eslint-plugin-import-x'
-import vitestPlugin from 'eslint-plugin-vitest'
 import testingLibraryPlugin from 'eslint-plugin-testing-library'
-import jsdocPlugin from 'eslint-plugin-jsdoc'
 import noSecretsPlugin from 'eslint-plugin-no-secrets'
 import eslintCommentsPlugin from 'eslint-plugin-eslint-comments'
 import arrayFuncPlugin from 'eslint-plugin-array-func'
+import vitestPlugin from 'eslint-plugin-vitest'
+import oxlintPlugin from 'eslint-plugin-oxlint'
 
 const base = {
 	// Core ESLint + TypeScript + Turborepo configurations
@@ -42,6 +38,8 @@ const base = {
 				'sort-keys': 'off', // Warn when object keys are not alphabetically sorted
 			},
 		},
+		// Oxlint configuration - must be last to override ESLint rules
+		...oxlintPlugin.configs['flat/recommended'],
 	],
 
 	// Strict TypeScript type checking
@@ -77,20 +75,12 @@ const base = {
 	codeQuality: /** @type {import("typescript-eslint").ConfigWithExtends[]} */ [
 		{
 			plugins: {
-				unicorn: unicornPlugin,
 				sonarjs: sonarjsPlugin,
 				perfectionist: perfectionistPlugin,
 				'array-func': arrayFuncPlugin,
 				'eslint-comments': eslintCommentsPlugin,
 			},
 			rules: {
-				// Unicorn - Modern JavaScript best practices
-				'unicorn/filename-case': [
-					'error',
-					{ case: 'kebabCase', ignore: ['^\\$'] },
-				],
-				'unicorn/prefer-node-protocol': 'error',
-
 				// SonarJS - Code quality and maintainability
 				'sonarjs/no-duplicate-string': 'off',
 
@@ -114,31 +104,6 @@ const base = {
 		},
 	],
 
-	// Promise handling and async code
-	promises: /** @type {import("typescript-eslint").ConfigWithExtends[]} */ [
-		{
-			plugins: {
-				promise: promisePlugin,
-			},
-			rules: {
-				'promise/always-return': 'error',
-				'promise/no-nesting': 'warn',
-			},
-		},
-	],
-
-	// Node.js specific rules
-	node: /** @type {import("typescript-eslint").ConfigWithExtends[]} */ [
-		{
-			plugins: {
-				n: nPlugin,
-			},
-			rules: {
-				'n/no-deprecated-api': 'error',
-			},
-		},
-	],
-
 	// Security-focused rules
 	security: /** @type {import("typescript-eslint").ConfigWithExtends[]} */ [
 		{
@@ -151,30 +116,6 @@ const base = {
 				'security/detect-object-injection': 'off',
 				'security-node/detect-insecure-randomness': 'error',
 				'no-secrets/no-secrets': 'error',
-			},
-		},
-	],
-
-	// Import/export management
-	imports: /** @type {import("typescript-eslint").ConfigWithExtends[]} */ [
-		{
-			plugins: {
-				'import-x': importXPlugin,
-			},
-			rules: {
-				// Core import validation
-				'import-x/no-unresolved': 'error',
-				'import-x/no-cycle': 'warn',
-
-				// Import quality and consistency
-				'import-x/no-unused-modules': 'warn',
-				'import-x/no-self-import': 'error',
-				'import-x/no-absolute-path': 'error',
-				'import-x/no-useless-path-segments': 'error',
-				'import-x/no-deprecated': 'warn',
-
-				// Export consistency
-				'import-x/no-mutable-exports': 'warn',
 			},
 		},
 	],
@@ -202,74 +143,6 @@ const base = {
 				'testing-library/no-node-access': 'error',
 				'testing-library/prefer-screen-queries': 'error',
 				'testing-library/render-result-naming-convention': 'error',
-			},
-		},
-	],
-
-	// Documentation and JSDoc
-	documentation:
-		/** @type {import("typescript-eslint").ConfigWithExtends[]} */ [
-			{
-				plugins: {
-					jsdoc: jsdocPlugin,
-				},
-				rules: {
-					'jsdoc/check-alignment': 'error',
-					'jsdoc/check-indentation': 'error',
-					'jsdoc/check-tag-names': 'error',
-					'jsdoc/check-types': 'error',
-					'jsdoc/empty-tags': 'error',
-					'jsdoc/no-undefined-types': 'error',
-					'jsdoc/require-description': 'error',
-					'jsdoc/require-param-name': 'error',
-					'jsdoc/require-returns-description': 'error',
-					'jsdoc/valid-types': 'error',
-					// Conservative approach - disable noisy rules by default
-					'jsdoc/check-param-names': 'off',
-					'jsdoc/require-jsdoc': 'off',
-					'jsdoc/require-param': 'off',
-					'jsdoc/require-param-description': 'off',
-					'jsdoc/require-param-type': 'off',
-					'jsdoc/require-returns': 'off',
-					'jsdoc/require-returns-type': 'off',
-				},
-			},
-		],
-
-	// Custom rules for project preferences
-	customRules: /** @type {import("typescript-eslint").ConfigWithExtends[]} */ [
-		{
-			rules: {
-				// Prefer named exports over default exports
-				'import-x/no-default-export': 'error',
-				// Allow export * from in barrel files
-				'import-x/export': 'off', // This allows export * syntax
-			},
-		},
-		{
-			// Allow default exports in specific files (like config files, entry points)
-			files: [
-				'**/eslint.config.{js,ts}',
-				'**/vite.config.{js,ts}',
-				'**/vitest.config.{js,ts}',
-				'**/tailwind.config.{js,ts}',
-				'**/postcss.config.{js,ts}',
-				'**/next.config.{js,ts}',
-				'**/webpack.config.{js,ts}',
-				'**/rollup.config.{js,ts}',
-				'**/index.{js,ts}', // Entry points
-				'**/main.{js,ts}', // Entry points
-				'**/app.{js,ts}', // Entry points
-			],
-			rules: {
-				'import-x/no-default-export': 'off',
-				'no-ternary': 'off', // Allow ternary operators
-
-				// Variable declaration rules
-				'one-var': 'off', // Allow multiple variable declarations - DISABLED
-
-				// Object key sorting
-				'sort-keys': 'off', // Warn when object keys are not alphabetically sorted
 			},
 		},
 	],
