@@ -394,7 +394,7 @@ jobs:
           API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
 
   lint:
-    needs: setup
+    needs: [setup, build]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -549,7 +549,7 @@ jobs:
           echo "✅ Lint checks passed successfully"
 
   test:
-    needs: setup
+    needs: [setup, build]
     runs-on: ubuntu-latest
     permissions:
       contents: read
