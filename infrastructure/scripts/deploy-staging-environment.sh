@@ -144,10 +144,10 @@ build_and_deploy() {
     echo "🏗️ Building infrastructure..."
 
     # Install dependencies
-    npm install
+    pnpm install
 
     # Build TypeScript
-    npm run build
+    pnpm run build
 
     # Synthesize CloudFormation
     echo "🔨 Synthesizing CloudFormation template..."

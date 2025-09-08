@@ -74,6 +74,9 @@ export const REDIS_CONFIG = {
 export function getRedisConfig() {
 	const appEnv = config.APP_ENV
 
+	// Handle undefined/null appEnv (fallback to development)
+	if (!appEnv) return REDIS_CONFIG.development
+
 	if (appEnv === 'production') return REDIS_CONFIG.production
 	if (appEnv === 'staging') return REDIS_CONFIG.staging
 	if (appEnv === 'feature' || appEnv.startsWith('feature/'))
