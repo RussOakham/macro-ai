@@ -823,7 +823,8 @@ jobs:
             body += `- **Staging**: \`auto-branch-from-production\`\n`;
             body += `- **Feature**: \`preview/pr-{number}\` (auto-created)\n\n`;
             body += `### Environment Variables:\n`;
-            body += `- \`NEON_PROJECT_ID\`: ${{ vars.NEON_PROJECT_ID ? '✅ Configured' : '❌ Missing' }}\n`;
+            const neonProjectId = process.env.NEON_PROJECT_ID || '${{ vars.NEON_PROJECT_ID }}';
+            body += `- \`NEON_PROJECT_ID\`: ${neonProjectId ? '✅ Configured' : '❌ Missing'}\n`;
             body += `- \`NEON_API_KEY\`: ${{ secrets.NEON_API_KEY ? '✅ Configured' : '❌ Missing' }}\n\n`;
             body += `*Generated on: ${new Date().toISOString()}*`;
 

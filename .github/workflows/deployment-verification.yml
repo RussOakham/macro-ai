@@ -552,7 +552,7 @@ jobs:
                 'deployment',
                 'verification',
                 environment,
-                '${{ needs.deployment_health_checks.outputs.health_status == "healthy" && "success" || needs.deployment_health_checks.outputs.health_status == "degraded" && "warning" || "failure" }}',
+                '${{ needs.deployment_health_checks.outputs.health_status }}',
                 'automated'
               ]
             });

@@ -271,6 +271,7 @@ jobs:
         id: metrics_check
         run: |
           ENVIRONMENT="${{ github.event.inputs.environment || 'production' }}"
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
 
           echo "📊 Analyzing performance metrics for $ENVIRONMENT..."
 
@@ -423,6 +424,7 @@ jobs:
         id: cost_data
         run: |
           ENVIRONMENT="${{ github.event.inputs.environment || 'production' }}"
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
 
           echo "💰 Analyzing cost data for $ENVIRONMENT..."
 
@@ -557,11 +559,16 @@ jobs:
         id: budget_info
         run: |
           ENVIRONMENT="${{ github.event.inputs.environment || 'production' }}"
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
 
           echo "📊 Getting budget information for $ENVIRONMENT..."
 
           # Get budget details from CloudFormation
-          STACK_NAME="MacroAi${{ ENVIRONMENT == 'production' && 'Production' || 'Staging' }}Stack"
+          if [ "$ENVIRONMENT" = "production" ]; then
+            STACK_NAME="MacroAiProductionStack"
+          else
+            STACK_NAME="MacroAiStagingStack"
+          fi
           BUDGET_NAME=$(aws cloudformation describe-stacks \
             --stack-name "$STACK_NAME" \
             --query 'Stacks[0].Outputs[?OutputKey==`BudgetName`].OutputValue' \
@@ -597,13 +604,18 @@ jobs:
         id: optimization_lambda
         run: |
           ENVIRONMENT="${{ github.event.inputs.environment || 'production' }}"
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
           BUDGET_LIMIT="${{ steps.budget_info.outputs.budget_limit }}"
           CURRENT_SPEND="${{ steps.budget_info.outputs.current_spend }}"
 
           echo "🤖 Triggering cost optimization analysis for $ENVIRONMENT..."
 
           # Get Lambda function ARN from CloudFormation
-          STACK_NAME="MacroAi${{ ENVIRONMENT == 'production' && 'Production' || 'Staging' }}Stack"
+          if [ "$ENVIRONMENT" = "production" ]; then
+            STACK_NAME="MacroAiProductionStack"
+          else
+            STACK_NAME="MacroAiStagingStack"
+          fi
           LAMBDA_ARN=$(aws cloudformation describe-stacks \
             --stack-name "$STACK_NAME" \
             --query 'Stacks[0].Outputs[?OutputKey==`CostOptimizationLambdaArn`].OutputValue' \
