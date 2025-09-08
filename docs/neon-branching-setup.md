@@ -4,10 +4,10 @@
 
 ### Production Environment (Main Branch)
 
-- **Project**: macro-ai (frosty-sunset-09708148)
-- **Branch**: main-production-branch (br-rapid-shape-a4nj44z1)
+- **Project**: macro-ai (project-placeholder-12345678)
+- **Branch**: main-production-branch (br-production-placeholder)
 - **Status**: ✅ Active and ready
-- **Connection String**: postgresql://users_owner:\*\*\*@ep-calm-bonus-a4pext89-pooler.us-east-1.aws.neon.tech/users
+- **Connection String**: postgresql://user_placeholder:\*\*\*@ep-production-placeholder.us-east-1.aws.neon.tech/database_placeholder
 - **Database**: users
 - **Purpose**: Production database with live data and latest schema
 - **Management**: Manual control (prevents automated deployments for security)
@@ -15,10 +15,10 @@
 
 ### Staging Environment (Auto-branch from Production)
 
-- **Project**: macro-ai (frosty-sunset-09708148)
-- **Branch**: auto-branch-from-production (br-silent-dust-a4qoulvz)
+- **Project**: macro-ai (project-placeholder-12345678)
+- **Branch**: auto-branch-from-production (br-staging-placeholder)
 - **Status**: ✅ Active and ready
-- **Connection String**: postgresql://users_owner:\*\*\*@ep-plain-wave-a401hax3-pooler.us-east-1.aws.neon.tech/users
+- **Connection String**: postgresql://user_placeholder:\*\*\*@ep-staging-placeholder.us-east-1.aws.neon.tech/database_placeholder
 - **Database**: users
 - **Purpose**: Pre-deployment testing and schema validation
 - **Management**: Hybrid (manual + automated via GitHub Actions)
