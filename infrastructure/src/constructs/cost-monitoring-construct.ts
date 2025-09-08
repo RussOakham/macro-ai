@@ -72,11 +72,14 @@ export class CostMonitoringConstruct extends Construct {
 					amount: budgetAmount,
 					unit: 'USD',
 				},
-				costFilters: {
-					TagKeyValue: Object.entries(tags || {}).map(
-						([key, value]) => `user:${key}$${value}`,
-					),
-				},
+				costFilters:
+					Object.keys(tags || {}).length > 0
+						? {
+								TagKeyValue: Object.entries(tags || {}).map(
+									([key, value]) => `user:${key}$${value}`,
+								),
+							}
+						: undefined,
 				costTypes: {
 					includeCredit: false,
 					includeDiscount: true,
@@ -144,7 +147,7 @@ export class CostMonitoringConstruct extends Construct {
 			this.alarms.push(alarm)
 		})
 
-		// Daily cost spike alarm
+		// Daily cost spike alarm using Billing metrics
 		const dailyCostSpikeAlarm = new cloudwatch.Alarm(
 			this,
 			'DailyCostSpikeAlarm',
@@ -152,19 +155,20 @@ export class CostMonitoringConstruct extends Construct {
 				alarmName: `${environment}-daily-cost-spike`,
 				alarmDescription: `Unusual daily cost increase detected in ${environment} environment`,
 				metric: new cloudwatch.Metric({
-					namespace: 'AWS/Budgets',
-					metricName: 'DailyEstimatedCharges',
+					namespace: 'AWS/Billing',
+					metricName: 'EstimatedCharges',
 					dimensionsMap: {
-						ServiceName: 'Total',
+						Currency: 'USD',
 					},
 					statistic: 'Maximum',
 					period: Duration.hours(24),
 				}),
 				threshold: (budgetAmount / 30) * 2, // 2x daily average
-				evaluationPeriods: 1,
+				evaluationPeriods: 3, // More evaluation periods for stability
 				comparisonOperator:
 					cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
 				treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+				datapointsToAlarm: 2, // Require 2 out of 3 periods to trigger
 			},
 		)
 
@@ -267,23 +271,25 @@ export class CostMonitoringConstruct extends Construct {
 			height: 8,
 		})
 
-		// Cost by availability zone
+		// Cost by availability zone (using Billing metrics)
 		const azCostWidget = new cloudwatch.GraphWidget({
 			title: 'Cost by Availability Zone',
 			left: [
 				new cloudwatch.Metric({
-					namespace: 'AWS/Budgets',
-					metricName: 'EstimatedMonthlyCost',
+					namespace: 'AWS/Billing',
+					metricName: 'EstimatedCharges',
 					dimensionsMap: {
+						Currency: 'USD',
 						AvailabilityZone: 'us-east-1a',
 					},
 					statistic: 'Maximum',
 					label: 'us-east-1a',
 				}),
 				new cloudwatch.Metric({
-					namespace: 'AWS/Budgets',
-					metricName: 'EstimatedMonthlyCost',
+					namespace: 'AWS/Billing',
+					metricName: 'EstimatedCharges',
 					dimensionsMap: {
+						Currency: 'USD',
 						AvailabilityZone: 'us-east-1b',
 					},
 					statistic: 'Maximum',

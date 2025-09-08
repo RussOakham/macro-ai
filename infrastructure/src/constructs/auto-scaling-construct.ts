@@ -126,7 +126,6 @@ export interface AutoScalingConstructProps {
 export class AutoScalingConstruct extends Construct {
 	public readonly scalableTaskCount: ecs.ScalableTaskCount
 	public readonly alarms: cloudwatch.Alarm[]
-	public readonly scalingPolicies: autoscaling.TargetTrackingScalingPolicy[]
 	public readonly alarmTopic: sns.ITopic
 	public customMetricsLambda?: lambda.Function
 
@@ -161,7 +160,6 @@ export class AutoScalingConstruct extends Construct {
 		} = props
 
 		this.alarms = []
-		this.scalingPolicies = []
 
 		// Create SNS topic for scaling alerts if not provided
 		this.alarmTopic =
@@ -221,20 +219,24 @@ export class AutoScalingConstruct extends Construct {
 			loadBalancer,
 		} = props
 
-		// CPU utilization scaling
+		// CPU utilization scaling with cooldowns
 		const cpuScaling = this.scalableTaskCount.scaleOnCpuUtilization(
 			'CpuTargetTracking',
 			{
 				targetUtilizationPercent: targetCpuUtilization,
+				scaleInCooldown: props.cooldowns?.scaleIn,
+				scaleOutCooldown: props.cooldowns?.scaleOut,
 			},
 		)
 		// Note: scalingPolicies are managed internally by ScalableTaskCount
 
-		// Memory utilization scaling
+		// Memory utilization scaling with cooldowns
 		const memoryScaling = this.scalableTaskCount.scaleOnMemoryUtilization(
 			'MemoryTargetTracking',
 			{
 				targetUtilizationPercent: targetMemoryUtilization,
+				scaleInCooldown: props.cooldowns?.scaleIn,
+				scaleOutCooldown: props.cooldowns?.scaleOut,
 			},
 		)
 		// Note: scalingPolicies are managed internally by ScalableTaskCount
@@ -258,8 +260,52 @@ export class AutoScalingConstruct extends Construct {
 			}
 		}
 
+		// Create CPU utilization alarm
+		const cpuAlarm = new cloudwatch.Alarm(this, 'HighCpuAlarm', {
+			alarmName: `${props.environmentName}-high-cpu-utilization`,
+			alarmDescription: `High CPU utilization detected in ${props.environmentName} environment`,
+			metric: new cloudwatch.Metric({
+				namespace: 'AWS/ECS',
+				metricName: 'CPUUtilization',
+				dimensionsMap: {
+					ClusterName: `${props.environmentName}-cluster`,
+					ServiceName: `${props.environmentName}-service`,
+				},
+				statistic: 'Average',
+			}),
+			threshold: targetCpuUtilization + 10, // Alert 10% above target
+			evaluationPeriods: 3,
+			comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+			treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+		})
+		cpuAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(this.alarmTopic))
+		this.alarms.push(cpuAlarm)
+
+		// Create memory utilization alarm
+		const memoryAlarm = new cloudwatch.Alarm(this, 'HighMemoryAlarm', {
+			alarmName: `${props.environmentName}-high-memory-utilization`,
+			alarmDescription: `High memory utilization detected in ${props.environmentName} environment`,
+			metric: new cloudwatch.Metric({
+				namespace: 'AWS/ECS',
+				metricName: 'MemoryUtilization',
+				dimensionsMap: {
+					ClusterName: `${props.environmentName}-cluster`,
+					ServiceName: `${props.environmentName}-service`,
+				},
+				statistic: 'Average',
+			}),
+			threshold: targetMemoryUtilization + 15, // Alert 15% above target
+			evaluationPeriods: 3,
+			comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+			treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+		})
+		memoryAlarm.addAlarmAction(
+			new cloudwatch_actions.SnsAction(this.alarmTopic),
+		)
+		this.alarms.push(memoryAlarm)
+
 		console.log(
-			`✅ Created target tracking scaling policies for CPU and memory`,
+			`✅ Created target tracking scaling policies and alarms for CPU and memory`,
 		)
 	}
 

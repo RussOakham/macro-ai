@@ -542,10 +542,10 @@ export class MacroAiProductionStack extends cdk.Stack {
 			exportName: `${this.stackName}-AutoScalingAlarmTopicArn`,
 		})
 
-		new cdk.CfnOutput(this, 'AutoScalingPoliciesCount', {
-			value: this.autoScaling.scalingPolicies.length.toString(),
-			description: 'Number of auto-scaling policies configured',
-			exportName: `${this.stackName}-AutoScalingPoliciesCount`,
+		new cdk.CfnOutput(this, 'AutoScalingAlarmsCount', {
+			value: this.autoScaling.alarms.length.toString(),
+			description: 'Number of auto-scaling alarms configured',
+			exportName: `${this.stackName}-AutoScalingAlarmsCount`,
 		})
 
 		new cdk.CfnOutput(this, 'AutoScalingMinCapacity', {

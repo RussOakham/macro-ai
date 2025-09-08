@@ -29,8 +29,13 @@ if (redisUrl) {
 			connectTimeout: 10000, // Reduced from 50s to 10s for faster failure detection
 			reconnectStrategy: (retries: number) => {
 				// Exponential backoff with jitter, max 10 seconds
-				const delay = Math.min(Math.pow(2, retries) * 1000 + (Date.now() % 1000), 10000)
-				logger.warn(`[middleware - rateLimit]: Redis reconnect attempt ${retries + 1} in ${delay}ms`)
+				const delay = Math.min(
+					Math.pow(2, retries) * 1000 + (Date.now() % 1000),
+					10000,
+				)
+				logger.warn(
+					`[middleware - rateLimit]: Redis reconnect attempt ${retries + 1} in ${delay}ms`,
+				)
 				return delay
 			},
 			keepAlive: 30000, // Send keepalive every 30 seconds
@@ -62,9 +67,7 @@ if (redisUrl) {
 		prefix: 'rl:api:',
 	})
 
-	logger.info(
-		'[middleware - rateLimit]: Using Redis store for rate limiting',
-	)
+	logger.info('[middleware - rateLimit]: Using Redis store for rate limiting')
 } else {
 	logger.info(
 		'[middleware - rateLimit]: Redis disabled for this environment - using memory store',

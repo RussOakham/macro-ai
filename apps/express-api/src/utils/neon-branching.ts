@@ -297,8 +297,14 @@ export function getNeonDatabaseUrl(): string {
 	const branchConfig = getNeonBranchConfig()
 
 	// Handle invalid or dummy URLs
-	if (!baseUrl || baseUrl === 'dummy-url' || !baseUrl.startsWith('postgresql://')) {
-		console.warn('⚠️ Invalid or dummy database URL provided, returning as-is for testing')
+	if (
+		!baseUrl ||
+		baseUrl === 'dummy-url' ||
+		!baseUrl.startsWith('postgresql://')
+	) {
+		console.warn(
+			'⚠️ Invalid or dummy database URL provided, returning as-is for testing',
+		)
 		// eslint-disable-next-line no-secrets/no-secrets
 		return baseUrl || 'postgresql://dummy:dummy@localhost:5432/dummy'
 	}
@@ -315,7 +321,9 @@ export function getNeonDatabaseUrl(): string {
 	try {
 		url = new URL(baseUrl)
 	} catch (error) {
-		console.warn(`⚠️ Failed to parse database URL: ${error}, returning original URL`)
+		console.warn(
+			`⚠️ Failed to parse database URL: ${error}, returning original URL`,
+		)
 		return baseUrl
 	}
 
