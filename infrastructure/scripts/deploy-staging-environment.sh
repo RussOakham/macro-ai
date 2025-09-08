@@ -15,8 +15,8 @@ STACK_NAME="MacroAiStagingStack"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 export AWS_REGION
 export AWS_DEFAULT_REGION="${AWS_REGION}"
-NEON_PROJECT_ID="frosty-sunset-09708148"
-NEON_BRANCH_ID="br-silent-dust-a4qoulvz"
+NEON_PROJECT_ID="${NEON_PROJECT_ID:-frosty-sunset-12345678}"
+NEON_BRANCH_ID="${NEON_BRANCH_ID:-br-silent-dust-placeholder}"
 
 # GitHub Actions Detection
 GITHUB_ACTIONS="${GITHUB_ACTIONS:-false}"
@@ -120,7 +120,7 @@ setup_environment() {
 
     # Set Neon database URL for staging (hybrid approach)
     # For GitHub Actions, the branch will be determined by the neon-branching utility
-    export NEON_DATABASE_URL="postgresql://users_owner:npg_yTk1BcCU7NeR@ep-plain-wave-a401hax3-pooler.us-east-1.aws.neon.tech/users?channel_binding=require&sslmode=require"
+    export NEON_DATABASE_URL="${NEON_DATABASE_URL:-postgresql://user_placeholder:password_placeholder@ep-staging-placeholder.us-east-1.aws.neon.tech/database_placeholder?channel_binding=require&sslmode=require}"
 
     # Set Neon branch information
     export NEON_PROJECT_ID="$NEON_PROJECT_ID"
@@ -134,10 +134,16 @@ bootstrap_cdk() {
     echo "🔧 Bootstrapping CDK environment..."
 
     ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-    if ! cdk bootstrap "aws://${ACCOUNT_ID}/${AWS_REGION}" 2>/dev/null; then
-        print_warning "CDK bootstrap may have already been done"
+    BOOTSTRAP_OUTPUT=$(cdk bootstrap "aws://${ACCOUNT_ID}/${AWS_REGION}" 2>&1)
+    BOOTSTRAP_EXIT_CODE=$?
+
+    if [ $BOOTSTRAP_EXIT_CODE -eq 0 ]; then
+        print_status "CDK environment bootstrapped successfully"
+    elif echo "$BOOTSTRAP_OUTPUT" | grep -q "already bootstrapped"; then
+        print_status "CDK environment already bootstrapped"
     else
-        print_status "CDK environment bootstrapped"
+        print_warning "CDK bootstrap encountered issues: $BOOTSTRAP_OUTPUT"
+        print_warning "Continuing with deployment..."
     fi
 }
 
@@ -249,13 +255,13 @@ display_results() {
     echo "⏰ Scheduled Scaling:"
     echo "  - Shutdown: 10:00 PM UTC daily"
     echo "  - Startup: 6:00 AM UTC daily"
-    echo "  - Saves ~£4-6/month in compute costs"
+    echo "  - Saves ~$4-6/month in compute costs"
     echo ""
 
-    echo "💰 Estimated Monthly Cost: £8-12"
-    echo "  - ECS Fargate: £4-6 (with scheduled scaling)"
-    echo "  - ALB: £2-3"
-    echo "  - CloudWatch: £1-2"
+    echo "💰 Estimated Monthly Cost: $8-12"
+    echo "  - ECS Fargate: $4-6 (with scheduled scaling)"
+    echo "  - ALB: $2-3"
+    echo "  - CloudWatch: $1-2"
     echo ""
 
     if [[ "$DEPLOYMENT_TYPE" == "github-actions" ]]; then

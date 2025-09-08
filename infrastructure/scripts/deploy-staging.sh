@@ -65,8 +65,16 @@ print_status "Dependencies installed"
 
 # Bootstrap CDK (if needed)
 echo "🔧 Bootstrapping CDK environment..."
-if ! cdk bootstrap "aws://${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}/${AWS_REGION}" 2>/dev/null; then
-    print_warning "CDK bootstrap may have already been done or failed. Continuing..."
+BOOTSTRAP_OUTPUT=$(cdk bootstrap "aws://${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}/${AWS_REGION}" 2>&1)
+BOOTSTRAP_EXIT_CODE=$?
+
+if [ $BOOTSTRAP_EXIT_CODE -eq 0 ]; then
+    print_status "CDK environment bootstrapped successfully"
+elif echo "$BOOTSTRAP_OUTPUT" | grep -q "already bootstrapped"; then
+    print_status "CDK environment already bootstrapped"
+else
+    print_warning "CDK bootstrap encountered issues: $BOOTSTRAP_OUTPUT"
+    print_warning "Continuing with deployment..."
 fi
 
 # Synthesize the stack
@@ -131,14 +139,14 @@ echo ""
 echo "⏰ Scheduled Scaling:"
 echo "  - Shutdown: 10:00 PM UTC daily"
 echo "  - Startup: 6:00 AM UTC daily"
-echo "  - This saves ~£4-6/month in compute costs"
+echo "  - This saves ~$4-6/month in compute costs"
 echo ""
 
-echo "💰 Estimated Monthly Cost: £8-12"
-echo "  - ECS Fargate: £4-6 (with scheduled scaling)"
-echo "  - ALB: £2-3"
-echo "  - CloudWatch: £1-2"
-echo "  - Secrets Manager: £0.50"
+echo "💰 Estimated Monthly Cost: $8-12"
+echo "  - ECS Fargate: $4-6 (with scheduled scaling)"
+echo "  - ALB: $2-3"
+echo "  - CloudWatch: $1-2"
+echo "  - Secrets Manager: $0.50"
 echo ""
 
 print_status "Staging deployment completed successfully!"
