@@ -77,7 +77,7 @@ EXPOSE 3040
 
 # Health check with curl for ECS compatibility
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f -H "X-Api-Key: ${API_KEY}" http://localhost:3040/api/health || exit 1
+    CMD curl -f http://localhost:3040/api/health || exit 1
 
 # Start the application
 CMD ["node", "apps/express-api/dist/index.js"]
@@ -99,10 +99,10 @@ USER 1001
 # Expose port
 EXPOSE 3040
 
-# Health check using Node.js built-in http module with API key
+# Health check using Node.js built-in http module
 # Note: distroless doesn't have shell, so we use HEALTHCHECK with node directly
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD ["node", "-e", "require('http').get('http://localhost:3040/api/health', {headers: {'X-Api-Key': process.env.API_KEY}}, (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+    CMD ["node", "-e", "require('http').get('http://localhost:3040/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
 
 # Start the application
 CMD ["apps/express-api/dist/index.js"]
