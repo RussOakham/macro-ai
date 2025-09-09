@@ -18,7 +18,7 @@
  *   APP_ENV=pr-51 CUSTOM_DOMAIN_NAME=macro-ai.russoakham.dev node scripts/test-cors-configuration.js
  */
 
-const path = require('path')
+const path = require('node:path')
 
 // Colors for output
 const colors = {
@@ -151,8 +151,9 @@ function simulateCorsLogic(env) {
 
 	// Pattern-based CORS matching for preview environments with custom domains
 	const isCustomDomainPreview = isPreview && customDomainName
+	const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 	const previewDomainPattern = isCustomDomainPreview
-		? new RegExp(`^https://pr-\\d+\\.${customDomainName.replace('.', '\\.')}$`)
+		? new RegExp(`^https://pr-\\d+\\.${escapeRegex(customDomainName)}$`)
 		: null
 
 	// Add custom domain origins for preview environments

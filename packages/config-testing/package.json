@@ -9,7 +9,16 @@
 		"build": "tsc",
 		"clean": "rm -rf dist",
 		"type-check": "tsc --noEmit",
-		"prebuild": "pnpm clean"
+		"prebuild": "pnpm clean",
+		"lint": "npx oxlint . && eslint . --ext .ts,.tsx",
+		"lint:fix": "npx oxlint . --fix && eslint . --ext .ts,.tsx --fix",
+		"lint:ci": "npx oxlint . --max-warnings=0 && eslint . --ext .ts,.tsx --max-warnings 0",
+		"lint:oxlint": "npx oxlint .",
+		"lint:fix:oxlint": "npx oxlint . --fix",
+		"lint:ci:oxlint": "npx oxlint . --max-warnings=0",
+		"lint:eslint": "eslint . --ext .ts,.tsx",
+		"lint:fix:eslint": "eslint . --ext .ts,.tsx --fix",
+		"lint:ci:eslint": "eslint . --ext .ts,.tsx --max-warnings 0"
 	},
 	"exports": {
 		".": "./dist/src/index.js"
@@ -18,7 +27,8 @@
 		"@faker-js/faker": "^10.0.0"
 	},
 	"devDependencies": {
-		"typescript": "catalog:"
+		"typescript": "catalog:",
+		"eslint": "catalog:"
 	},
 	"engines": {
 		"node": ">=18.0.0",

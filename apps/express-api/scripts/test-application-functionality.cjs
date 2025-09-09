@@ -20,11 +20,11 @@
  *   APP_ENV=pr-51 node scripts/test-application-functionality.cjs
  */
 
-const http = require('http')
-const https = require('https')
-const { spawn } = require('child_process')
-const fs = require('fs')
-const path = require('path')
+const http = require('node:http')
+const https = require('node:https')
+const { spawn } = require('node:child_process')
+const fs = require('node:fs')
+const path = require('node:path')
 
 // Colors for output
 const colors = {

@@ -1,19 +1,40 @@
 import type { CreateClientConfig } from './client/client.gen'
 
 /**
+ * Get the base URL for the API client
+ * Supports both Node.js and browser environments
+ */
+function getBaseURL(): string {
+	// Check if we're in a browser environment
+	if (typeof window !== 'undefined') {
+		// Browser environment - use import.meta.env or fallback
+		const meta = import.meta as { env?: { VITE_API_URL?: string; VITE_API_BASE_URL?: string } }
+		return (
+			meta.env?.VITE_API_URL ??
+			meta.env?.VITE_API_BASE_URL ??
+			'http://localhost:3000'
+		)
+	}
+
+	// Node.js environment - use process.env
+	return process.env.API_BASE_URL ?? 'http://localhost:3000'
+}
+
+/**
  * Runtime configuration for the Hey API Axios client
  * This file is referenced by the generated client.gen.ts
  */
 export const createClientConfig: CreateClientConfig = (config) => ({
 	...config,
 	// Base configuration that will be applied to all requests
-	baseURL: process.env.API_BASE_URL ?? 'http://localhost:3000',
+	// Honor caller's baseURL if provided, otherwise use environment-based default
+	baseURL: config?.baseURL ?? getBaseURL(),
 
 	// Default headers
 	headers: {
 		'Content-Type': 'application/json',
 		Accept: 'application/json',
-		...(config?.headers ?? {}),
+		...config?.headers,
 	},
 
 	// Timeout configuration

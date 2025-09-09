@@ -2,12 +2,23 @@
 	"$schema": "http://json.schemastore.org/package",
 	"name": "@repo/config-typescript",
 	"license": "MIT",
-	"private": "true",
+	"private": true,
 	"version": "0.0.0",
 	"type": "module",
 	"engines": {
 		"node": ">=20.0.0",
 		"pnpm": ">=9.0.0"
+	},
+	"scripts": {
+		"lint": "echo 'No JS/TS files to lint in config-typescript'",
+		"lint:fix": "pnpm -s lint",
+		"lint:ci": "pnpm -s lint",
+		"lint:oxlint": "pnpm -s lint",
+		"lint:fix:oxlint": "pnpm -s lint",
+		"lint:ci:oxlint": "pnpm -s lint",
+		"lint:eslint": "pnpm -s lint",
+		"lint:fix:eslint": "pnpm -s lint",
+		"lint:ci:eslint": "pnpm -s lint"
 	},
 	"dependencies": {
 		"@total-typescript/tsconfig": "^1.0.4"

@@ -23,11 +23,4 @@ export const initializeTokenRefreshInterceptors = () => {
 	}
 }
 
-// Auto-initialize in the appropriate environment
-if (typeof window !== 'undefined') {
-	// Browser environment - initialize after a short delay
-	setTimeout(initializeTokenRefreshInterceptors, 0)
-} else {
-	// Node environment (tests) - initialize immediately
-	initializeTokenRefreshInterceptors()
-}
+// Auto-initialization is now handled by initialize-api.ts to avoid circular dependencies

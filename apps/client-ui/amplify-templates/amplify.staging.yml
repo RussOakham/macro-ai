@@ -186,7 +186,8 @@ customHeaders:
 
       # Content Security Policy (staging-appropriate) - use environment variable for custom domain
       - key: 'Content-Security-Policy'
-        value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ${VITE_API_URL} https://*.execute-api.*.amazonaws.com; frame-src 'none'"
+        value: >-
+          default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ${VITE_API_URL} https://*.execute-api.*.amazonaws.com; frame-src 'none'
 
       # Cache control for static assets
       - key: 'Cache-Control'

@@ -1,0 +1,226 @@
+{
+	"$schema": "https://oxc-project.github.io/oxlint/config-schema.json",
+	"plugins": [
+		"typescript",
+		"unicorn",
+		"import",
+		"jsdoc",
+		"promise",
+		"oxc",
+		"node",
+		"vitest",
+		"react",
+		"react-perf",
+		"jsx-a11y"
+	],
+	"ignorePatterns": [
+		"node_modules",
+		"dist",
+		"build",
+		".next",
+		".nuxt",
+		".output",
+		".vercel",
+		".netlify",
+		"coverage",
+		"*.d.ts",
+		"tsconfig.json",
+		"**/routeTree.gen.ts"
+	],
+	"env": {
+		"node": true,
+		"es2022": true,
+		"browser": true,
+		"vitest": true,
+		"jest": true
+	},
+	"globals": {
+		"console": "readonly",
+		"process": "readonly",
+		"Buffer": "readonly",
+		"setTimeout": "readonly",
+		"clearTimeout": "readonly",
+		"setInterval": "readonly",
+		"clearInterval": "readonly",
+		"fetch": "readonly",
+		"Event": "readonly",
+		"File": "readonly",
+		"FormData": "readonly",
+		"atob": "readonly",
+		"btoa": "readonly",
+		"module": "readonly",
+		"require": "readonly",
+		"__dirname": "readonly",
+		"__filename": "readonly"
+	},
+	"rules": {
+		"no-underscore-dangle": "warn",
+		"no-unused-vars": "off",
+		"no-undef": "off",
+		"class-methods-use-this": "warn",
+		"no-ternary": "off",
+		"prefer-const": "error",
+		"eqeqeq": "error",
+		"no-trailing-spaces": "error",
+		"no-multiple-empty-lines": ["error", { "max": 2 }],
+		"eol-last": "error",
+		"sort-keys": "off",
+		"one-var": "off",
+		"@typescript-eslint/no-unsafe-assignment": "error",
+		"@typescript-eslint/no-unsafe-call": "warn",
+		"@typescript-eslint/no-unsafe-member-access": "warn",
+		"@typescript-eslint/restrict-template-expressions": "warn",
+		"@typescript-eslint/unbound-method": "warn",
+		"@typescript-eslint/no-misused-promises": [
+			"error",
+			{
+				"checksVoidReturn": false
+			}
+		],
+		"import/order": [
+			"error",
+			{
+				"type": "natural",
+				"alphabetize": { "order": "asc" },
+				"groups": [
+					"builtin",
+					"external",
+					"internal",
+					"parent",
+					"sibling",
+					"index"
+				]
+			}
+		],
+		"import/no-unresolved": "error",
+		"import/no-cycle": "warn",
+		"import/no-unused-modules": "warn",
+		"import/no-self-import": "error",
+		"import/no-absolute-path": "error",
+		"import/no-useless-path-segments": "error",
+		"import/no-deprecated": "warn",
+		"import/no-mutable-exports": "warn",
+		"import/no-default-export": "error",
+		"import/export": "off",
+		"unicorn/filename-case": "off",
+		"unicorn/prefer-node-protocol": "error",
+		"jsdoc/check-alignment": "error",
+		"jsdoc/check-indentation": "error",
+		"jsdoc/check-tag-names": "off",
+		"jsdoc/check-types": "error",
+		"jsdoc/empty-tags": "error",
+		"jsdoc/no-undefined-types": "error",
+		"jsdoc/require-description": "error",
+		"jsdoc/require-param-name": "error",
+		"jsdoc/require-returns-description": "error",
+		"jsdoc/valid-types": "error",
+		"jsdoc/check-param-names": "off",
+		"jsdoc/require-jsdoc": "off",
+		"jsdoc/require-param": "off",
+		"jsdoc/require-param-description": "off",
+		"jsdoc/require-param-type": "off",
+		"jsdoc/require-returns": "off",
+		"jsdoc/require-returns-type": "off",
+		"node/no-deprecated-api": "error",
+		"node/no-missing-import": "off",
+		"node/no-unsupported-features/es-syntax": "off",
+		"node/no-process-exit": "warn",
+		"vitest/expect-expect": "error",
+		"vitest/no-disabled-tests": "warn",
+		"vitest/no-focused-tests": "error",
+		"vitest/no-identical-title": "error",
+		"vitest/prefer-to-be": "error",
+		"vitest/prefer-to-have-length": "error",
+		"vitest/valid-expect": "error",
+		"react/jsx-uses-react": "off",
+		"react/react-in-jsx-scope": "off",
+		"react/jsx-props-no-spreading": "off",
+		"react-hooks/rules-of-hooks": "error",
+		"react-hooks/exhaustive-deps": "warn",
+		"jsx-a11y/alt-text": "warn",
+		"jsx-a11y/no-autofocus": "warn"
+	},
+	"settings": {
+		"react": {
+			"version": "detect"
+		}
+	},
+	"overrides": [
+		{
+			"files": [
+				"*.config.js",
+				"*.config.ts",
+				"*.config.mjs",
+				"*.config.cjs",
+				"*-lint.config.js"
+			],
+			"rules": {
+				"no-console": "off",
+				"@typescript-eslint/no-var-requires": "off",
+				"@typescript-eslint/no-require-imports": "off",
+				"jsdoc/require-param": "off",
+				"jsdoc/require-returns": "off",
+				"no-undef": "off"
+			}
+		},
+		{
+			"files": ["*.js", "*.mjs", "*.cjs"],
+			"rules": {
+				"@typescript-eslint/no-var-requires": "off",
+				"@typescript-eslint/no-require-imports": "off",
+				"@typescript-eslint/await-thenable": "off",
+				"@typescript-eslint/no-floating-promises": "off",
+				"@typescript-eslint/no-misused-promises": "off"
+			}
+		},
+		{
+			"files": [
+				"**/**.config.{js,ts}",
+				"**/index.{js,ts}",
+				"**/main.{js,ts}",
+				"**/app.{js,ts}",
+				"**/vitest.workspace.{js,ts}",
+				"**/tsconfig.json",
+				"**/tsconfig.node.json",
+				"**/tsconfig.app.json",
+				"**/tsconfig.test.json"
+			],
+			"rules": {
+				"import/no-default-export": "off"
+			}
+		},
+		{
+			"files": [
+				"vitest.config.*",
+				"vitest.setup.*",
+				"**/vitest.config.*",
+				"**/vitest.setup.*",
+				"**/*.test.{ts,tsx,js,jsx}",
+				"**/*.spec.{ts,tsx,js,jsx}",
+				"**/__tests__/**"
+			],
+			"rules": {
+				"no-console": "off",
+				"@typescript-eslint/no-explicit-any": "off",
+				"no-undef": "off",
+				"@typescript-eslint/no-non-null-assertion": "off",
+				"jsdoc/require-param": "off",
+				"jsdoc/require-returns": "off",
+				"jsdoc/require-description": "off"
+			}
+		},
+		{
+			"files": [
+				"$chatId.tsx",
+				"routeTree.gen.ts",
+				"chat.tsx",
+				"chat-interface.tsx",
+				"chat-interface-error.tsx",
+				"main.tsx"
+			],
+			"rules": {
+				"import/no-cycle": "off"
+			}
+		}
+	]
+}

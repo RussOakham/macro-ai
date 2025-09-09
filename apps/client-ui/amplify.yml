@@ -185,7 +185,8 @@ customHeaders:
 
       # Content Security Policy (relaxed for preview debugging)
       - key: 'Content-Security-Policy'
-        value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api*.macro-ai.com https://*.execute-api.*.amazonaws.com wss: ws:; frame-src 'self'"
+        value: >-
+          default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api*.macro-ai.com https://*.execute-api.*.amazonaws.com wss: ws:; frame-src 'self'
 
   # Special handling for build info endpoint
   - pattern: '/build-info.json'

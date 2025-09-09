@@ -232,7 +232,7 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 
 							{/* Preferences */}
 							<div>
-								<label>
+								<label htmlFor="gender">
 									<input
 										name="gender"
 										type="radio"
@@ -247,7 +247,7 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 									/>
 									Male
 								</label>
-								<label>
+								<label htmlFor="gender">
 									<input
 										name="gender"
 										type="radio"
@@ -262,7 +262,7 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 									/>
 									Female
 								</label>
-								<label>
+								<label htmlFor="gender">
 									<input
 										name="gender"
 										type="radio"
@@ -302,7 +302,7 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 
 							{/* Checkboxes */}
 							<div>
-								<label>
+								<label htmlFor="gender">
 									<input
 										name="termsAccepted"
 										type="checkbox"
@@ -322,7 +322,7 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 							</div>
 
 							<div>
-								<label>
+								<label htmlFor="termsAccepted">
 									<input
 										name="newsletter"
 										type="checkbox"
@@ -486,7 +486,7 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 							</span>
 						)}
 
-						<label>
+						<label htmlFor="termsAccepted">
 							<input
 								name="termsAccepted"
 								type="checkbox"
@@ -684,7 +684,7 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 										<option value="dark">Dark</option>
 										<option value="auto">Auto</option>
 									</select>
-									<label>
+									<label htmlFor="notifications">
 										<input
 											name="notifications"
 											type="checkbox"
@@ -717,7 +717,7 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 									<div data-testid="skills-section">
 										{['React', 'TypeScript', 'Node.js', 'Python', 'Java'].map(
 											(skill) => (
-												<label key={skill}>
+												<label key={skill} htmlFor={skill}>
 													<input
 														type="checkbox"
 														checked={formData.skills.includes(skill)}

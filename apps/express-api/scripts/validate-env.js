@@ -8,9 +8,9 @@
  * are caught early in the CI/CD pipeline.
  */
 
-import { readFileSync, existsSync } from 'fs'
-import { resolve, dirname } from 'path'
-import { fileURLToPath } from 'url'
+import { readFileSync, existsSync } from 'node:fs'
+import { resolve, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -270,7 +270,7 @@ function validateEnvironment() {
 				invalidVars.push({
 					name: varName,
 					error: validationError,
-					value: value.substring(0, 10) + '...',
+					value: value.slice(0, 10) + '...',
 				})
 			}
 		}
@@ -288,17 +288,23 @@ function validateEnvironment() {
 	const nodeEnv = allEnvVars['NODE_ENV']
 	const appEnv = allEnvVars['APP_ENV']
 
-	if (nodeEnv && ['production', 'staging', 'preview'].includes(nodeEnv)) {
+	// Check if APP_ENV is required based on NODE_ENV
+	const requiresAppEnv = nodeEnv && ['production', 'staging'].includes(nodeEnv)
+	const isPreviewEnv = appEnv && appEnv.match(/^pr-\d+$/)
+
+	if (requiresAppEnv || isPreviewEnv) {
 		if (!appEnv) {
 			missingVars.push('APP_ENV')
-			logError(`APP_ENV is required when NODE_ENV is '${nodeEnv}'`)
+			logError(
+				`APP_ENV is required when NODE_ENV is '${nodeEnv}' or for preview environments`,
+			)
 		} else if (validationRules['APP_ENV']) {
 			const validationError = validationRules['APP_ENV'](appEnv)
 			if (validationError) {
 				invalidVars.push({
 					name: 'APP_ENV',
 					error: validationError,
-					value: appEnv.substring(0, 10) + '...',
+					value: appEnv.slice(0, 10) + '...',
 				})
 			}
 		}

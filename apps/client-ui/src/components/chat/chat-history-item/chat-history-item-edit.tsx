@@ -100,7 +100,6 @@ const ChatHistoryItemEdit = ({
 						cancelEdit()
 					}
 				}}
-				autoFocus
 			/>
 			<Button
 				size="sm"

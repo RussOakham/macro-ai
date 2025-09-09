@@ -81,7 +81,7 @@ export const applyTokenRefreshInterceptors = (client: {
 			}
 
 			// Handle 401 Unauthorized
-			// eslint-disable-next-line no-underscore-dangle
+
 			if (error.response?.status === 401 && !originalRequest._retry) {
 				// If the 401 came from the refresh endpoint itself, do NOT try to refresh again.
 				// This prevents an infinite interceptor loop and ensures the auth flow resolves.
@@ -91,7 +91,7 @@ export const applyTokenRefreshInterceptors = (client: {
 				if (isRefreshRequest) {
 					const err = standardizeError(error)
 					// Mark this error as already handled by the refresh endpoint to prevent duplicate work
-					// eslint-disable-next-line no-underscore-dangle
+
 					;(
 						err as IStandardizedError & { __refreshHandled?: boolean }
 					).__refreshHandled = true
@@ -117,7 +117,6 @@ export const applyTokenRefreshInterceptors = (client: {
 						.catch((err: unknown) => Promise.reject(standardizeError(err)))
 				}
 
-				// eslint-disable-next-line no-underscore-dangle
 				originalRequest._retry = true
 				isRefreshing = true
 
@@ -156,7 +155,7 @@ export const applyTokenRefreshInterceptors = (client: {
 					const standardizedErr = err as IStandardizedError & {
 						__refreshHandled?: boolean
 					}
-					// eslint-disable-next-line no-underscore-dangle
+
 					if (standardizedErr.__refreshHandled) {
 						// Error was already processed by the refresh endpoint handler, just reject
 						return Promise.reject(standardizedErr)

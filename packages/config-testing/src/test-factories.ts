@@ -5,32 +5,117 @@ import { faker } from '@faker-js/faker'
  * These factories generate realistic test data for consistent testing
  */
 
+// Type definitions for test data
+type User = {
+	id: string
+	email: string
+	username: string
+	firstName: string
+	lastName: string
+	createdAt: string
+	updatedAt: string
+	role?: string
+}
+
+type Overrides<T extends object> = Partial<T>
+
+// Additional type definitions
+type LoginCredentials = {
+	email: string
+	password: string
+}
+
+type RegistrationData = {
+	email: string
+	password: string
+	confirmPassword: string
+	firstName: string
+	lastName: string
+}
+
+type ChatMessage = {
+	id: string
+	content: string
+	role: 'user' | 'assistant' | 'system'
+	timestamp: string
+	chatId: string
+}
+
+type Chat = {
+	id: string
+	title: string
+	createdAt: string
+	updatedAt: string
+	userId: string
+	messages: ChatMessage[]
+}
+
+type TokenData = {
+	accessToken: string
+	refreshToken: string
+	expiresIn: number
+	tokenType: string
+}
+
+type ApiResponse<T = unknown> = {
+	success: boolean
+	data?: T
+	error?: {
+		message: string
+		code: string
+		details?: unknown
+	}
+}
+
+type PaginatedResponse<T = unknown> = {
+	success: boolean
+	data: T[]
+	pagination: {
+		page: number
+		limit: number
+		total: number
+		totalPages: number
+	}
+}
+
+type DatabaseConfig = {
+	host: string
+	port: number
+	database: string
+	username: string
+	password: string
+	ssl: boolean
+}
+
 // User-related test data factories
 export const userFactory = {
 	/**
 	 * Generate a realistic user object for testing
 	 */
-	create: (overrides: Partial<any> = {}) => ({
-		id: faker.string.uuid(),
-		email: faker.internet.email(),
-		username: faker.internet.username(),
-		firstName: faker.person.firstName(),
-		lastName: faker.person.lastName(),
-		createdAt: faker.date.past().toISOString(),
-		updatedAt: faker.date.recent().toISOString(),
-		...overrides,
-	}),
+	create: <T extends object = User>(
+		overrides: Overrides<T> = {} as Overrides<T>,
+	) =>
+		({
+			id: faker.string.uuid(),
+			email: faker.internet.email(),
+			username: faker.internet.username(),
+			firstName: faker.person.firstName(),
+			lastName: faker.person.lastName(),
+			createdAt: faker.date.past().toISOString(),
+			updatedAt: faker.date.recent().toISOString(),
+			...(overrides as object),
+		}) as User & T,
 
 	/**
 	 * Generate multiple users
 	 */
-	createMany: (count: number, overrides: Partial<any> = {}) =>
+	createMany: (count: number, overrides: Overrides<User> = {}) =>
 		Array.from({ length: count }, () => userFactory.create(overrides)),
 
 	/**
 	 * Generate a user with specific role
 	 */
-	createWithRole: (role: string, overrides: Partial<any> = {}) =>
+	createWithRole: (role: string, overrides: Overrides<User> = {}) =>
 		userFactory.create({ role, ...overrides }),
 }
 
@@ -39,7 +124,7 @@ export const authFactory = {
 	/**
 	 * Generate login credentials
 	 */
-	createLoginCredentials: (overrides: Partial<any> = {}) => ({
+	createLoginCredentials: (overrides: Overrides<LoginCredentials> = {}) => ({
 		email: faker.internet.email(),
 		password: faker.internet.password({ length: 12 }),
 		...overrides,
@@ -48,7 +133,7 @@ export const authFactory = {
 	/**
 	 * Generate registration data
 	 */
-	createRegistrationData: (overrides: Partial<any> = {}) => ({
+	createRegistrationData: (overrides: Overrides<RegistrationData> = {}) => ({
 		email: faker.internet.email(),
 		password: faker.internet.password({ length: 12 }),
 		confirmPassword: faker.internet.password({ length: 12 }),
@@ -60,7 +145,7 @@ export const authFactory = {
 	/**
 	 * Generate JWT token data
 	 */
-	createTokenData: (overrides: Partial<any> = {}) => ({
+	createTokenData: (overrides: Overrides<TokenData> = {}) => ({
 		accessToken: faker.string.alphanumeric(100),
 		refreshToken: faker.string.alphanumeric(100),
 		expiresIn: 3600,
@@ -74,7 +159,7 @@ export const chatFactory = {
 	/**
 	 * Generate a chat object
 	 */
-	create: (overrides: Partial<any> = {}) => ({
+	create: (overrides: Overrides<Chat> = {}) => ({
 		id: faker.string.uuid(),
 		title: faker.lorem.words(3),
 		userId: faker.string.uuid(),
@@ -86,13 +171,13 @@ export const chatFactory = {
 	/**
 	 * Generate multiple chats
 	 */
-	createMany: (count: number, overrides: Partial<any> = {}) =>
+	createMany: (count: number, overrides: Overrides<Chat> = {}) =>
 		Array.from({ length: count }, () => chatFactory.create(overrides)),
 
 	/**
 	 * Generate a chat message
 	 */
-	createMessage: (overrides: Partial<any> = {}) => ({
+	createMessage: (overrides: Overrides<ChatMessage> = {}) => ({
 		id: faker.string.uuid(),
 		chatId: faker.string.uuid(),
 		content: faker.lorem.paragraph(),
@@ -104,7 +189,7 @@ export const chatFactory = {
 	/**
 	 * Generate multiple messages
 	 */
-	createMessages: (count: number, overrides: Partial<any> = {}) =>
+	createMessages: (count: number, overrides: Overrides<ChatMessage> = {}) =>
 		Array.from({ length: count }, () => chatFactory.createMessage(overrides)),
 }
 
@@ -113,7 +198,7 @@ export const apiResponseFactory = {
 	/**
 	 * Generate a successful API response
 	 */
-	createSuccess: <T>(data: T, overrides: Partial<any> = {}) => ({
+	createSuccess: <T>(data: T, overrides: Overrides<ApiResponse<T>> = {}) => ({
 		success: true,
 		data,
 		message: faker.lorem.sentence(),
@@ -124,7 +209,7 @@ export const apiResponseFactory = {
 	/**
 	 * Generate an error API response
 	 */
-	createError: (overrides: Partial<any> = {}) => ({
+	createError: (overrides: Overrides<ApiResponse<never>> = {}) => ({
 		success: false,
 		error: {
 			code: faker.helpers.arrayElement([
@@ -143,7 +228,10 @@ export const apiResponseFactory = {
 	/**
 	 * Generate a paginated response
 	 */
-	createPaginated: <T>(data: T[], overrides: Partial<any> = {}) => ({
+	createPaginated: <T>(
+		data: T[],
+		overrides: Overrides<PaginatedResponse<T>> = {},
+	) => ({
 		success: true,
 		data,
 		pagination: {
@@ -162,7 +250,7 @@ export const dbFactory = {
 	/**
 	 * Generate database connection config
 	 */
-	createConnectionConfig: (overrides: Partial<any> = {}) => ({
+	createConnectionConfig: (overrides: Overrides<DatabaseConfig> = {}) => ({
 		host: faker.internet.ip(),
 		port: faker.number.int({ min: 1000, max: 9999 }),
 		database: faker.database.mongodbObjectId(),

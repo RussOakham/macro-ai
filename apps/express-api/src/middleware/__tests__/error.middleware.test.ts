@@ -219,7 +219,7 @@ describe('errorHandler Middleware', () => {
 					status: 404,
 					type: 'NotFoundError',
 					service: 'user service',
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
 					stack: expect.any(String), // Stack trace is included in non-production
 				}),
 				'[ErrorHandler]: User not found',
@@ -246,7 +246,6 @@ describe('errorHandler Middleware', () => {
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
 				expect.objectContaining({
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 					stack: expect.any(String),
 				}),
 				'[ErrorHandler]: Database connection failed',

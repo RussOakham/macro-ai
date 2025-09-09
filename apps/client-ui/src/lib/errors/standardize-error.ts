@@ -13,10 +13,11 @@ export const standardizeError = (error: unknown): IStandardizedError => {
 	}
 
 	if (error instanceof AxiosError) {
+		const responseData = error.response?.data as { message?: string }
+
 		standardError.type = 'AxiosError'
 		standardError.name = error.name
-		standardError.message =
-			(error.response?.data as { message?: string }).message ?? error.message
+		standardError.message = responseData.message ?? error.message
 		standardError.status = error.response?.status ?? 500
 		standardError.stack = error.stack ?? ''
 		standardError.details = error.response?.data

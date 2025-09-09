@@ -5,8 +5,8 @@
  * Analyzes coverage reports and identifies specific files and functions that need testing
  */
 
-const fs = require('fs')
-const path = require('path')
+const fs = require('node:fs')
+const path = require('node:path')
 
 // Color codes for console output
 const colors = {

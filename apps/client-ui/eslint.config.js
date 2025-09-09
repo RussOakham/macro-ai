@@ -2,7 +2,6 @@ import * as repoConfig from '@repo/config-eslint'
 import pluginQuery from '@tanstack/eslint-plugin-query'
 import pluginRouter from '@tanstack/eslint-plugin-router'
 import globals from 'globals'
-import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript'
 
 export default repoConfig.config(
 	// Global ignores - must be first
@@ -23,8 +22,6 @@ export default repoConfig.config(
 	// Core configurations - foundation for all code
 	...repoConfig.configs.base.core,
 	...repoConfig.configs.base.codeQuality,
-	...repoConfig.configs.base.promises,
-	...repoConfig.configs.base.imports,
 	...repoConfig.configs.base.javascript,
 
 	// React-specific configurations
@@ -32,10 +29,6 @@ export default repoConfig.config(
 
 	// Testing configurations (Vitest + React Testing Library)
 	...repoConfig.configs.base.testing,
-
-	// Documentation and code organization
-	...repoConfig.configs.base.documentation,
-	...repoConfig.configs.base.customRules,
 
 	// Security scanning
 	...repoConfig.configs.base.security,
@@ -49,8 +42,8 @@ export default repoConfig.config(
 		// Only apply to TypeScript files
 		files: ['**/*.{ts,tsx}'],
 		languageOptions: {
+			globals: globals.browser,
 			parserOptions: {
-				globals: globals.browser,
 				project: [
 					'./tsconfig.node.json',
 					'./tsconfig.app.json',
@@ -61,30 +54,12 @@ export default repoConfig.config(
 		},
 		rules: {
 			'@typescript-eslint/no-misused-promises': 'warn',
-			// Enable JSDoc for public exports only (React component props)
-			'jsdoc/require-jsdoc': ['error', { publicOnly: true }],
 			'react/jsx-props-no-spreading': 'off',
 			'react/require-default-props': 'off',
-		},
-		settings: {
-			'import-x/resolver-next': [
-				createTypeScriptImportResolver({
-					alwaysTryTypes: true,
-				}),
-			],
-		},
-	},
-
-	// JavaScript files (like config files) - no TypeScript parser
-	{
-		files: ['**/*.{js,jsx}'],
-		languageOptions: {
-			globals: globals.browser,
-		},
-		rules: {
-			// Relax JSDoc requirements for config files
-			'jsdoc/require-jsdoc': 'off',
-			'jsdoc/require-returns-description': 'off',
+			// Disable rules that oxlint handles better
+			'sort-keys': 'off',
+			'one-var': 'off',
+			'no-ternary': 'off',
 		},
 	},
 

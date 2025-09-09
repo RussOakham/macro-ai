@@ -83,8 +83,8 @@ const useEnhancedChat = ({
 		initialMessages,
 		streamProtocol: 'text',
 		headers: {
-			Authorization: `Bearer ${accessToken ?? ''}`,
-			'X-API-KEY': apiKey,
+			...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+			...(apiKey ? { 'X-API-KEY': apiKey } : {}),
 		},
 		credentials: 'include',
 		onResponse: (response) => {
@@ -199,7 +199,7 @@ const useEnhancedChat = ({
 			// Call callback for message sent
 			onMessageSent?.(tempUserMessage.id)
 
-			// Call original useChat submit (synchronous call)
+			// Call original useChat submit (handleSubmit is synchronous)
 			try {
 				chatHook.handleSubmit(e)
 			} catch (submitError) {
@@ -233,14 +233,7 @@ const useEnhancedChat = ({
 				toast.error('Failed to send message. Please try again.')
 			}
 		},
-		[
-			chatHook.input,
-			chatHook.handleSubmit,
-			chatHook.status,
-			queryClient,
-			chatId,
-			onMessageSent,
-		],
+		[chatHook, queryClient, chatId, onMessageSent],
 	)
 
 	return {

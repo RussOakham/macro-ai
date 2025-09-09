@@ -293,7 +293,7 @@ export type { User, CreateUserRequest }
 
 // ✅ Good: Default exports only for React components
 export default function UserProfile({ user }: { user: User }) {
-  return <div>{user.name}</div>
+	return <div>{user.name}</div>
 }
 ```
 
@@ -429,7 +429,29 @@ export default defineConfig({
 
 ## 🔧 Linting and Formatting
 
-### ESLint Configuration ✅ ENFORCED
+### Oxlint + ESLint Configuration ✅ ENFORCED
+
+Our project uses a **dual-linter approach** with Oxlint as the primary linter and ESLint for type-aware rules:
+
+#### Oxlint (Primary Linter)
+
+- **Fast**: 10-100x faster than ESLint
+- **Comprehensive**: Handles most code quality and style rules
+- **Zero-config**: Works out of the box with sensible defaults
+
+```bash
+# Run Oxlint
+pnpm lint:oxlint
+
+# Fix issues automatically
+pnpm lint:fix:oxlint
+```
+
+#### ESLint (Type-Aware Rules)
+
+- **TypeScript Integration**: Handles type-aware rules that require TypeScript analysis
+- **Specialized Rules**: Security, testing, and framework-specific rules
+- **Complementary**: Works alongside Oxlint without duplication
 
 ```javascript
 // eslint.config.js
@@ -457,6 +479,19 @@ export default repoConfig.config(
 		},
 	},
 )
+```
+
+#### Linting Workflow
+
+```bash
+# Run both linters
+pnpm lint
+
+# Fix issues with both linters
+pnpm lint:fix
+
+# CI mode (strict, no warnings)
+pnpm lint:ci
 ```
 
 ### Prettier Configuration ✅ ENFORCED

@@ -6,6 +6,7 @@
  */
 
 import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { Link } from '@tanstack/react-router'
 import React from 'react'
 import { describe, expect, it } from 'vitest'
 
@@ -24,12 +25,12 @@ const HomePage = () => {
 		<div>
 			<h1>Home Page</h1>
 			<nav>
-				<a href="/about" data-testid="about-link">
-					About
-				</a>
-				<a href="/dashboard" data-testid="dashboard-link">
-					Dashboard
-				</a>
+				<Link to="/chat" data-testid="chat-link">
+					Chat
+				</Link>
+				<Link to="/" data-testid="home-link">
+					Home
+				</Link>
 			</nav>
 		</div>
 	)
@@ -72,7 +73,7 @@ describe('TanStack Router Testing Examples', () => {
 			})
 
 			expect(screen.getByText('Home Page')).toBeInTheDocument()
-			expect(screen.getByTestId('about-link')).toBeInTheDocument()
+			expect(screen.getByTestId('chat-link')).toBeInTheDocument()
 		})
 
 		it('renders component at specific route', async () => {
@@ -350,7 +351,7 @@ describe('TanStack Router Testing Examples', () => {
 								}}
 								placeholder="Tell us about yourself"
 							/>
-							<label>
+							<label htmlFor="newsletter">
 								<input
 									name="newsletter"
 									type="checkbox"
@@ -365,7 +366,7 @@ describe('TanStack Router Testing Examples', () => {
 								Subscribe to newsletter
 							</label>
 							<div>
-								<label>
+								<label htmlFor="gender">
 									<input
 										name="gender"
 										type="radio"
@@ -380,7 +381,7 @@ describe('TanStack Router Testing Examples', () => {
 									/>
 									Male
 								</label>
-								<label>
+								<label htmlFor="gender">
 									<input
 										name="gender"
 										type="radio"

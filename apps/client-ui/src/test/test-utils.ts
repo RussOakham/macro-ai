@@ -1,3 +1,4 @@
+// oxlint-disable-next-line no-standalone-expect
 /**
  * Enhanced Client-UI Testing Utilities
  *

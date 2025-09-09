@@ -1,5 +1,4 @@
 import js from '@eslint/js'
-import prettier from 'eslint-config-prettier'
 
 export default [
 	// Global ignores
@@ -9,7 +8,6 @@ export default [
 	// JavaScript recommended rules
 	js.configs.recommended,
 	// Prettier (must be last)
-	prettier,
 	{
 		rules: {
 			'no-unused-vars': 'error',

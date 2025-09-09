@@ -436,7 +436,7 @@ export class DatabasePerformanceTester {
 	 * @returns Array of all performance measurements
 	 */
 	getResults() {
-		return Array.from(this.results)
+		return [...this.results]
 	}
 
 	/**

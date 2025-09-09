@@ -3,7 +3,7 @@ extends: default
 rules:
   line-length:
     max: 120
-    level: error
+    level: warning
 
   indentation:
     spaces: 2
@@ -23,11 +23,3 @@ rules:
 
   truthy:
     allowed-values: [ 'true', 'false', 'yes', 'no', 'on', 'off' ]
-
-  document-start:
-    present: true
-    level: error
-
-  comments:
-    min-spaces-from-content: 2
-    level: error

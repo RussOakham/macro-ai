@@ -123,17 +123,17 @@ describe('React Testing Library Examples', () => {
 						<textarea id="bio" name="bio" />
 					</div>
 					<div>
-						<label>
+						<label htmlFor="newsletter">
 							<input name="newsletter" type="checkbox" />
 							Subscribe to newsletter
 						</label>
 					</div>
 					<div>
-						<label>
+						<label htmlFor="gender">
 							<input name="gender" type="radio" value="male" />
 							Male
 						</label>
-						<label>
+						<label htmlFor="gender">
 							<input name="gender" type="radio" value="female" />
 							Female
 						</label>
@@ -280,7 +280,7 @@ describe('React Testing Library Examples', () => {
 
 				return (
 					<form data-testid="radio-form">
-						<label>
+						<label htmlFor="gender">
 							<input
 								name="gender"
 								type="radio"
@@ -292,7 +292,7 @@ describe('React Testing Library Examples', () => {
 							/>
 							Male
 						</label>
-						<label>
+						<label htmlFor="gender">
 							<input
 								name="gender"
 								type="radio"
@@ -331,7 +331,7 @@ describe('React Testing Library Examples', () => {
 
 				return (
 					<form data-testid="checkbox-form">
-						<label>
+						<label htmlFor="newsletter">
 							<input
 								name="newsletter"
 								type="checkbox"
@@ -342,7 +342,7 @@ describe('React Testing Library Examples', () => {
 							/>
 							Subscribe to newsletter
 						</label>
-						<label>
+						<label htmlFor="updates">
 							<input
 								name="updates"
 								type="checkbox"

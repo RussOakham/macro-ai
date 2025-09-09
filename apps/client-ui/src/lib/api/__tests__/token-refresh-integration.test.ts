@@ -57,6 +57,25 @@ vi.mock('../../errors/standardize-error', () => ({
 	})),
 }))
 
+// Mock the initialize-api module to prevent auto-initialization during tests
+vi.mock('../initialize-api', () => ({
+	initializeApiClients: vi.fn(),
+}))
+
+// Apply interceptors manually for integration tests
+// This simulates what initialize-api.ts does asynchronously
+const setupInterceptorsForTests = async () => {
+	const { applyTokenRefreshInterceptors } = await import('../interceptors')
+	const { apiClient, apiClientWithoutCredentials } = await import('../clients')
+	applyTokenRefreshInterceptors({ axios: apiClient.instance })
+	applyTokenRefreshInterceptors({ axios: apiClientWithoutCredentials.instance })
+}
+
+// Setup interceptors before running tests
+beforeAll(async () => {
+	await setupInterceptorsForTests()
+})
+
 describe('Token Refresh Integration Tests', () => {
 	// Setup MSW for all tests in this describe block
 	setupMSWForTests()

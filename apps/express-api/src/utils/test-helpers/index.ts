@@ -253,7 +253,7 @@ export const createTestSetup = (config: Partial<typeof TEST_CONFIG> = {}) => {
 		timeController: new TimeController(mergedConfig.timeControl),
 		errorSimulator: new ErrorSimulator({
 			probability: mergedConfig.errorSimulation.probability,
-			errorTypes: Array.from(mergedConfig.errorSimulation.errorTypes),
+			errorTypes: [...mergedConfig.errorSimulation.errorTypes],
 			logErrors: mergedConfig.errorSimulation.logErrors,
 		}),
 		performanceTester: new PerformanceTester(),

@@ -1,4 +1,5 @@
 import { AlertCircle, Loader2, MessageSquare } from 'lucide-react'
+import { useMemo } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { ChatWithDates } from '@/lib/types'
@@ -14,7 +15,7 @@ interface ChatHistoryListProps {
 }
 
 const ChatHistoryList = ({
-	isPending: isPending,
+	isPending,
 	onMobileClose,
 }: ChatHistoryListProps) => {
 	const {
@@ -26,22 +27,24 @@ const ChatHistoryList = ({
 	} = useChats({ page: 1, limit: 100 }) // Get first 100 chats
 
 	// Extract chats from response
-	const chats = chatsResponse?.success ? chatsResponse.data : []
+	const chats = useMemo(
+		() => (chatsResponse?.success ? chatsResponse.data : []),
+		[chatsResponse],
+	)
 
 	const handleRetry = () => {
 		void refetchChats()
 	}
 
 	// Group chats by date
-	const groupedChats = chats.reduce<Record<string, ChatWithDates[]>>(
-		(groups, chat) => {
+	const groupedChats = useMemo(() => {
+		return chats.reduce<Record<string, ChatWithDates[]>>((groups, chat) => {
 			const dateKey = formatRelativeDate(chat.updatedAt)
 			groups[dateKey] ??= []
 			groups[dateKey].push(chat)
 			return groups
-		},
-		{},
-	)
+		}, {})
+	}, [chats])
 
 	if (isChatsLoading) {
 		return (

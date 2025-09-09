@@ -13,10 +13,16 @@
 		"format": "prettier --write ./src/**/*.js",
 		"format:check": "prettier --check ./src/**/*.js",
 		"format:fix": "prettier --write ./src/**/*.js",
-		"lint": "eslint ./src/**/*.js",
-		"lint:fix": "eslint ./src/**/*.js --fix",
-		"lint:ci": "eslint ./src/**/*.js --max-warnings 0",
-		"lint:ci:fix": "eslint ./src/**/*.js --max-warnings 0 --fix"
+		"lint": "npx oxlint ./src/**/*.js && eslint ./src/**/*.js",
+		"lint:fix": "npx oxlint ./src/**/*.js --fix && eslint ./src/**/*.js --fix",
+		"lint:ci": "npx oxlint ./src/**/*.js --max-warnings=0 && eslint ./src/**/*.js --max-warnings 0",
+		"lint:oxlint": "npx oxlint ./src/**/*.js",
+		"lint:fix:oxlint": "npx oxlint ./src/**/*.js --fix",
+		"lint:ci:oxlint": "npx oxlint ./src/**/*.js --max-warnings=0",
+		"lint:eslint": "eslint ./src/**/*.js",
+		"lint:fix:eslint": "eslint ./src/**/*.js --fix",
+		"lint:ci:eslint": "eslint ./src/**/*.js --max-warnings 0",
+		"lint:ci:fix": "npx oxlint ./src/**/*.js --fix && eslint ./src/**/*.js --max-warnings 0 --fix"
 	},
 	"files": [
 		"./src/**/*.js",
@@ -40,18 +46,22 @@
 	"devDependencies": {
 		"@eslint/js": "^9.32.0",
 		"eslint": "catalog:",
-		"eslint-config-prettier": "catalog:",
 		"eslint-config-turbo": "^2.5.5",
-		"eslint-plugin-react": "catalog:",
 		"eslint-plugin-react-compiler": "19.1.0-rc.2",
-		"eslint-plugin-react-hooks": "catalog:",
 		"eslint-plugin-react-refresh": "^0.4.20",
-		"eslint-plugin-simple-import-sort": "^12.1.1",
 		"eslint-plugin-unused-imports": "catalog:",
-		"eslint-plugin-import-x": "^4.16.1",
+		"eslint-plugin-vitest": "catalog:",
+		"eslint-plugin-testing-library": "catalog:",
+		"eslint-plugin-security": "catalog:",
+		"eslint-plugin-security-node": "catalog:",
+		"eslint-plugin-no-secrets": "catalog:",
+		"eslint-plugin-eslint-comments": "catalog:",
+		"eslint-plugin-array-func": "catalog:",
+		"eslint-plugin-perfectionist": "catalog:",
+		"eslint-plugin-sonarjs": "catalog:",
 		"globals": "catalog:",
 		"prettier": "catalog:",
 		"typescript": "catalog:",
-		"typescript-eslint": "^8.39.0"
+		"typescript-eslint": "^8.42.0"
 	}
 }
