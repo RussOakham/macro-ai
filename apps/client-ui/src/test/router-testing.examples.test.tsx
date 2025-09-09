@@ -73,7 +73,7 @@ describe('TanStack Router Testing Examples', () => {
 			})
 
 			expect(screen.getByText('Home Page')).toBeInTheDocument()
-			expect(screen.getByTestId('about-link')).toBeInTheDocument()
+			expect(screen.getByTestId('chat-link')).toBeInTheDocument()
 		})
 
 		it('renders component at specific route', async () => {
