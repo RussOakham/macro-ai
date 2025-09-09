@@ -247,7 +247,7 @@ jobs:
     - name: Build and push Docker image
       id: build
       run: |
-        ECR_REPOSITORY="macro-ai-development-express-api"
+        ECR_REPOSITORY="macro-ai-pr-${{ github.event.number }}-express-api"
         IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
         ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
 
