@@ -44,6 +44,7 @@
 	},
 	"devDependencies": {
 		"@repo/config-eslint": "workspace:*",
+		"@repo/config-oxlint": "workspace:*",
 		"@repo/config-testing": "workspace:*",
 		"@repo/config-typescript": "workspace:*",
 		"@types/node": "catalog:",

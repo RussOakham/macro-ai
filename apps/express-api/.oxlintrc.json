@@ -1,9 +1,8 @@
 {
 	"extends": ["../../packages/config-oxlint/base.json"],
 	"rules": {
-		// Express API specific overrides
-		"no-console": "off", // Allow console in backend
-		"@typescript-eslint/no-explicit-any": "off", // May be needed for express types
+		"no-console": "off",
+		"@typescript-eslint/no-explicit-any": "off",
 		"unicorn/filename-case": [
 			"error",
 			{ "case": "kebabCase", "ignore": ["^\\$"] }

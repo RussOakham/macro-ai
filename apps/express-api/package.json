@@ -40,6 +40,7 @@
 	},
 	"devDependencies": {
 		"@repo/config-eslint": "workspace:*",
+		"@repo/config-oxlint": "workspace:*",
 		"@repo/config-testing": "workspace:*",
 		"@repo/config-typescript": "workspace:*",
 		"@testcontainers/postgresql": "^11.5.1",

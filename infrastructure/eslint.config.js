@@ -96,4 +96,7 @@ export default repoConfig.config(
 			'@typescript-eslint/require-await': 'off',
 		},
 	},
+
+	// Oxlint configurations
+	...repoConfig.configs.oxlint.fromConfigFile('./.oxlintrc.json'),
 )

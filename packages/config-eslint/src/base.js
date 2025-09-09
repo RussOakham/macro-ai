@@ -12,7 +12,6 @@ import noSecretsPlugin from 'eslint-plugin-no-secrets'
 import eslintCommentsPlugin from 'eslint-plugin-eslint-comments'
 import arrayFuncPlugin from 'eslint-plugin-array-func'
 import vitestPlugin from 'eslint-plugin-vitest'
-import oxlintPlugin from 'eslint-plugin-oxlint'
 
 const base = {
 	// Core ESLint + TypeScript + Turborepo configurations
@@ -38,8 +37,6 @@ const base = {
 				'sort-keys': 'off', // Warn when object keys are not alphabetically sorted
 			},
 		},
-		// Oxlint configuration - must be last to override ESLint rules
-		...oxlintPlugin.configs['flat/recommended'],
 	],
 
 	// Strict TypeScript type checking

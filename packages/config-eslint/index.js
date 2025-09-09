@@ -25,6 +25,13 @@
  */
 
 /**
+ * @typedef {Object} OxlintConfig
+ * @property {ConfigWithExtends[]} recommended - Oxlint recommended configurations
+ * @property {ConfigWithExtends[]} fromBaseConfig - Oxlint configurations from .oxlintrc.json
+ * @property {ConfigWithExtends[]} fromConfigFile - Oxlint configurations from a config file
+ */
+
+/**
  * @typedef {Object} NodeConfig
  * @property {ConfigWithExtends[]} core - Node.js core configurations
  * @property {ConfigWithExtends[]} typescript - Node.js + TypeScript configurations
@@ -47,6 +54,7 @@
  * @property {BaseConfig} base - Base ESLint configurations
  * @property {ReactConfig} react - React-specific configurations
  * @property {NodeConfig} node - Node.js-specific configurations
+ * @property {OxlintConfig} oxlint - Oxlint configurations
  * @property {SecurityConfig} security - Security-focused configurations
  * @property {PrettierConfig} prettier - Prettier integration configurations
  */
@@ -54,6 +62,7 @@
 import { base } from './src/base.js'
 import { reactConfig } from './src/react.js'
 import { nodeConfig } from './src/node.js'
+import { oxlintConfig } from './src/oxlint.js'
 import { securityConfig } from './src/security.js'
 import { prettierConfig } from './src/prettier.js'
 
@@ -71,6 +80,7 @@ const config = (...configs) => configs.flat()
 const configs = {
 	base,
 	react: reactConfig,
+	oxlint: oxlintConfig,
 	node: nodeConfig,
 	security: securityConfig,
 	prettier: prettierConfig,

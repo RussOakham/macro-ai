@@ -1,5 +1,6 @@
-import * as repoConfig from '../config-eslint/index.js'
 import tseslint from 'typescript-eslint'
+
+import * as repoConfig from '../config-eslint/index.js'
 
 /** @type {import("@typescript-eslint/utils").TSESLint.FlatConfig.Config} */
 export default repoConfig.config(
@@ -77,4 +78,7 @@ export default repoConfig.config(
 			'@typescript-eslint/no-explicit-any': 'warn',
 		},
 	},
+
+	// Oxlint configurations
+	...repoConfig.configs.oxlint.fromConfigFile('./.oxlintrc.json'),
 )

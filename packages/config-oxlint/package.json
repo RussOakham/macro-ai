@@ -30,5 +30,8 @@
 	},
 	"devDependencies": {
 		"prettier": "catalog:"
+	},
+	"publishConfig": {
+		"access": "public"
 	}
 }

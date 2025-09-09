@@ -1,9 +1,8 @@
 {
-	"extends": ["../config-oxlint/base.json"],
+	"extends": ["../../packages/config-oxlint/base.json"],
 	"rules": {
-		// TypeScript config specific overrides
-		"no-console": "off", // Allow console in TS configs
-		"@typescript-eslint/no-var-requires": "off", // TS configs may need require
+		"no-console": "off",
+		"@typescript-eslint/no-var-requires": "off",
 		"unicorn/filename-case": [
 			"error",
 			{ "case": "kebabCase", "ignore": ["^\\$"] }

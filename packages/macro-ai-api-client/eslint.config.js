@@ -138,4 +138,7 @@ export default repoConfig.config(
 			'perfectionist/sort-imports': 'off',
 		},
 	},
+
+	// Oxlint configurations
+	...repoConfig.configs.oxlint.fromConfigFile('./.oxlintrc.json'),
 )

@@ -23,6 +23,9 @@
 	"dependencies": {
 		"@total-typescript/tsconfig": "^1.0.4"
 	},
+	"devDependencies": {
+		"@repo/config-oxlint": "workspace:*"
+	},
 	"publishConfig": {
 		"access": "public"
 	}

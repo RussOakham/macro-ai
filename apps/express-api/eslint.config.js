@@ -50,4 +50,7 @@ export default repoConfig.config(
 			'turbo/no-undeclared-env-vars': 'warn',
 		},
 	},
+
+	// Oxlint configurations
+	...repoConfig.configs.oxlint.fromConfigFile('./.oxlintrc.json'),
 )

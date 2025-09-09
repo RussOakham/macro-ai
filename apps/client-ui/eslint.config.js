@@ -69,4 +69,7 @@ export default repoConfig.config(
 
 	// TypeScript-specific configurations (applied after JavaScript configs)
 	...repoConfig.configs.base.strictTyping,
+
+	// Oxlint configurations
+	...repoConfig.configs.oxlint.fromConfigFile('./.oxlintrc.json'),
 )

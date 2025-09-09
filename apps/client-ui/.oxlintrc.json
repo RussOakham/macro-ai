@@ -1,7 +1,6 @@
 {
 	"extends": ["../../packages/config-oxlint/base.json"],
 	"rules": {
-		// React/Frontend specific overrides
 		"react/jsx-key": "error",
 		"react/jsx-no-duplicate-props": "error",
 		"react/jsx-no-undef": "error",

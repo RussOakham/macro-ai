@@ -1,12 +1,3 @@
 {
-	"extends": ["../config-oxlint/base.json"],
-	"rules": {
-		// ESLint config specific overrides
-		"no-console": "off", // Allow console in config files
-		"@typescript-eslint/no-var-requires": "off", // May need require in configs
-		"unicorn/filename-case": [
-			"error",
-			{ "case": "kebabCase", "ignore": ["^\\$"] }
-		]
-	}
+	"extends": ["../../packages/config-oxlint/base.json"]
 }

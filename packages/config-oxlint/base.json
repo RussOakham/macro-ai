@@ -1,6 +1,5 @@
 {
 	"$schema": "https://oxc-project.github.io/oxlint/config-schema.json",
-	"extends": ["recommended"],
 	"plugins": [
 		"@typescript-eslint",
 		"unicorn",
@@ -13,139 +12,6 @@
 		"jsx-a11y",
 		"nextjs"
 	],
-	"rules": {
-		"no-console": "warn",
-		"no-debugger": "error",
-
-		"no-unused-vars": "error",
-		"no-undef": "error",
-		"no-shadow": "error",
-		"no-underscore-dangle": "warn",
-
-		"eqeqeq": "error",
-		"no-trailing-spaces": "error",
-		"no-multiple-empty-lines": ["error", { "max": 2 }],
-		"eol-last": "error",
-		"no-ternary": "off",
-		"sort-keys": "off",
-
-		"import/order": [
-			"error",
-			{
-				"type": "natural",
-				"alphabetize": { "order": "asc" },
-				"groups": [
-					"builtin",
-					"external",
-					"internal",
-					"parent",
-					"sibling",
-					"index"
-				]
-			}
-		],
-		"import/no-unresolved": "error",
-		"import/no-cycle": "warn",
-		"import/no-unused-modules": "warn",
-		"import/no-self-import": "error",
-		"import/no-absolute-path": "error",
-		"import/no-useless-path-segments": "error",
-		"import/no-deprecated": "warn",
-		"import/no-mutable-exports": "warn",
-
-		"unicorn/filename-case": [
-			"error",
-			{ "case": "kebabCase", "ignore": ["^\\$"] }
-		],
-		"unicorn/prefer-node-protocol": "error",
-		"unicorn/no-new-array": "error",
-		"unicorn/prefer-array-some": "error",
-		"unicorn/prefer-array-find": "error",
-		"unicorn/prefer-array-flat": "error",
-		"unicorn/prefer-array-flat-map": "error",
-		"unicorn/prefer-string-starts-ends-with": "error",
-		"unicorn/prefer-string-slice": "error",
-		"unicorn/prefer-includes": "error",
-		"unicorn/no-useless-fallback-in-spread": "error",
-		"unicorn/prefer-spread": "error",
-		"unicorn/prefer-array-from": "error",
-		"unicorn/avoid-reverse": "error",
-
-		"promise/always-return": "error",
-		"promise/no-nesting": "warn",
-		"promise/no-return-wrap": "error",
-		"promise/param-names": "error",
-
-		"react/jsx-key": "error",
-		"react/jsx-no-duplicate-props": "error",
-		"react/jsx-no-undef": "error",
-		"react/jsx-no-target-blank": "error",
-		"react/jsx-props-no-spread-multi": "error",
-		"react/no-children-prop": "error",
-		"react/no-danger-with-children": "error",
-		"react/no-direct-mutation-state": "error",
-		"react/no-find-dom-node": "error",
-		"react/no-is-mounted": "error",
-		"react/no-render-return-value": "error",
-		"react/no-string-refs": "error",
-		"react/void-dom-elements-no-children": "error",
-
-		"jsx-a11y/alt-text": "error",
-		"jsx-a11y/anchor-has-content": "error",
-		"jsx-a11y/anchor-is-valid": "error",
-		"jsx-a11y/aria-role": "error",
-		"jsx-a11y/aria-props": "error",
-		"jsx-a11y/heading-has-content": "error",
-		"jsx-a11y/html-has-lang": "error",
-		"jsx-a11y/img-redundant-alt": "error",
-		"jsx-a11y/lang": "error",
-
-		"vitest/no-conditional-tests": "error",
-		"vitest/valid-define-emits": "error",
-
-		"jsdoc/require-param": "warn",
-		"jsdoc/require-returns": "warn",
-		"jsdoc/require-description": "warn",
-		"jsdoc/check-alignment": "error",
-		"jsdoc/check-param-names": "warn",
-		"jsdoc/check-tag-names": "error",
-		"jsdoc/check-types": "error",
-		"jsdoc/empty-tags": "error",
-		"jsdoc/no-undefined-types": "error",
-		"jsdoc/require-param-name": "error",
-		"jsdoc/require-returns-description": "error",
-		"jsdoc/valid-types": "error",
-		"jsdoc/check-indentation": "error",
-
-		"@typescript-eslint/no-explicit-any": "warn",
-		"@typescript-eslint/prefer-const": "error",
-		"@typescript-eslint/no-var-requires": "error",
-		"@typescript-eslint/no-empty-function": "warn",
-		"@typescript-eslint/no-unsafe-assignment": "warn",
-		"@typescript-eslint/no-unsafe-call": "warn",
-		"@typescript-eslint/no-unsafe-member-access": "warn",
-
-		"no-eval": "error",
-		"no-implied-eval": "error",
-		"no-new-func": "error",
-		"no-script-url": "error",
-
-		"no-duplicate-imports": "error",
-		"no-self-compare": "error",
-		"no-template-curly-in-string": "error",
-		"no-unmodified-loop-condition": "error",
-		"no-unreachable-loop": "error",
-		"no-unsafe-negation": "error",
-
-		"no-new-object": "error",
-		"no-new-wrappers": "error",
-		"no-array-constructor": "error",
-		"no-bitwise": "warn",
-		"no-sequences": "error",
-		"class-methods-use-this": "warn",
-
-		"import/no-default-export": "error"
-	},
 	"ignorePatterns": [
 		"node_modules",
 		"dist",
@@ -160,11 +26,6 @@
 		"*.config.ts",
 		"*.d.ts"
 	],
-	"env": {
-		"browser": true,
-		"node": true,
-		"es2022": true
-	},
 	"globals": {
 		"console": "readonly",
 		"process": "readonly",

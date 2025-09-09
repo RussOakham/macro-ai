@@ -1,9 +1,8 @@
 {
-	"extends": ["../config-oxlint/base.json"],
+	"extends": ["../../packages/config-oxlint/base.json"],
 	"rules": {
-		// API Client specific overrides
-		"@typescript-eslint/no-explicit-any": "off", // Generated code may have any types
-		"@typescript-eslint/no-unused-vars": "warn", // Generated code may have unused vars
+		"@typescript-eslint/no-explicit-any": "off",
+		"@typescript-eslint/no-unused-vars": "warn",
 		"unicorn/filename-case": [
 			"error",
 			{ "case": "kebabCase", "ignore": ["^\\$"] }
