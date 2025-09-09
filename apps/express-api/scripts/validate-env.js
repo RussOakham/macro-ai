@@ -270,7 +270,7 @@ function validateEnvironment() {
 				invalidVars.push({
 					name: varName,
 					error: validationError,
-					value: value.slice(0, 10) + '...',
+					// Don't log sensitive values for security
 				})
 			}
 		}
@@ -304,7 +304,7 @@ function validateEnvironment() {
 				invalidVars.push({
 					name: 'APP_ENV',
 					error: validationError,
-					value: appEnv.slice(0, 10) + '...',
+					// Don't log sensitive values for security
 				})
 			}
 		}
