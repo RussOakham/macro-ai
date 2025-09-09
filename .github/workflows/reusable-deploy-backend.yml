@@ -1,0 +1,261 @@
+name: Reusable Backend Deployment
+
+on:
+  workflow_call:
+    inputs:
+      environment-name:
+        description: 'Environment name (e.g., pr-123, staging, production)'
+        required: true
+        type: string
+      deployment-type:
+        description: 'Deployment type (preview, staging, production)'
+        required: true
+        type: string
+      deployment-scale:
+        description: 'Deployment scale (preview, hobby, enterprise)'
+        required: true
+        type: string
+      pr-number:
+        description: 'PR number (for preview environments)'
+        required: false
+        type: string
+        default: ''
+      branch-name:
+        description: 'Branch name'
+        required: false
+        type: string
+        default: ''
+      image-uri:
+        description: 'Docker image URI to deploy'
+        required: true
+        type: string
+      custom-domain-name:
+        description: 'Custom domain name (optional)'
+        required: false
+        type: string
+        default: ''
+      hosted-zone-id:
+        description: 'Hosted zone ID for custom domain (optional)'
+        required: false
+        type: string
+        default: ''
+      cost-alert-emails:
+        description: 'Comma-separated list of cost alert emails'
+        required: false
+        type: string
+        default: ''
+      should-deploy:
+        description: 'Whether to actually deploy (for conditional deployment)'
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      API_KEY:
+        required: true
+      OPENAI_API_KEY:
+        required: true
+      AWS_ACCOUNT_ID:
+        required: true
+      AWS_ROLE_ARN:
+        required: true
+      SERVER_PORT:
+        required: true
+      RATE_LIMIT_WINDOW_MS:
+        required: true
+      RATE_LIMIT_MAX_REQUESTS:
+        required: true
+      AUTH_RATE_LIMIT_WINDOW_MS:
+        required: true
+      AUTH_RATE_LIMIT_MAX_REQUESTS:
+        required: true
+      API_RATE_LIMIT_WINDOW_MS:
+        required: true
+      API_RATE_LIMIT_MAX_REQUESTS:
+        required: true
+      COST_ALERT_EMAILS:
+        required: true
+    outputs:
+      api-endpoint:
+        description: 'Deployed API endpoint URL'
+        value: ${{ jobs.deploy-backend.outputs.api-endpoint }}
+      stack-name:
+        description: 'CloudFormation stack name'
+        value: ${{ jobs.deploy-backend.outputs.stack-name }}
+      health-status:
+        description: 'Health check status'
+        value: ${{ jobs.deploy-backend.outputs.health-status }}
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20.19.4'
+  PNPM_VERSION: '10.14.0'
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_REGION: us-east-1
+
+jobs:
+  deploy-backend:
+    name: Deploy Backend Infrastructure
+    runs-on: ubuntu-latest
+    if: inputs.should-deploy == true
+
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+      issues: write
+
+    outputs:
+      api-endpoint: ${{ steps.deploy.outputs.api-endpoint }}
+      stack-name: ${{ steps.deploy.outputs.stack-name }}
+      health-status: ${{ steps.health-check.outputs.health-status }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-Backend-Deploy-${{ github.run_id }}
+
+      - name: Install AWS CDK CLI
+        run: pnpm add -g aws-cdk@2
+
+      - name: Deploy Backend Infrastructure
+        id: deploy
+        env:
+          CDK_DEPLOY_ENV: ${{ inputs.environment-name }}
+          CDK_DEPLOY_TYPE: ${{ inputs.deployment-type }}
+          CDK_DEPLOY_SCALE: ${{ inputs.deployment-scale }}
+          PR_NUMBER: ${{ inputs.pr-number }}
+          CUSTOM_DOMAIN_NAME: ${{ inputs.custom-domain-name }}
+        run: |
+          ENV_NAME="${{ inputs.environment-name }}"
+          DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
+          DEPLOYMENT_SCALE="${{ inputs.deployment-scale }}"
+          IMAGE_URI="${{ inputs.image-uri }}"
+
+          echo "🚀 Deploying Backend Infrastructure"
+          echo "Environment: ${ENV_NAME}"
+          echo "Type: ${DEPLOYMENT_TYPE}"
+          echo "Scale: ${DEPLOYMENT_SCALE}"
+          echo "Image: ${IMAGE_URI}"
+
+          # Change to infrastructure directory
+          cd infrastructure
+          pnpm install --frozen-lockfile
+          pnpm build
+
+          # Generate stack name based on environment type
+          if [[ "${DEPLOYMENT_TYPE}" == "preview" ]]; then
+            STACK_NAME="MacroAiPr-${PR_NUMBER}Stack"
+          elif [[ "${DEPLOYMENT_TYPE}" == "staging" ]]; then
+            STACK_NAME="MacroAiStagingStack"
+          elif [[ "${DEPLOYMENT_TYPE}" == "production" ]]; then
+            if [[ "${DEPLOYMENT_SCALE}" == "hobby" ]]; then
+              STACK_NAME="MacroAiProductionHobbyStack"
+            else
+              STACK_NAME="MacroAiProductionEnterpriseStack"
+            fi
+          else
+            STACK_NAME="MacroAi${ENV_NAME}Stack"
+          fi
+
+          echo "📦 Stack Name: ${STACK_NAME}"
+
+          # Parse cost alert emails
+          CDK_CONTEXT_ARGS=""
+          if [[ -n "${{ inputs.cost-alert-emails }}" ]]; then
+            echo "🔍 Parsing cost alert emails..."
+            COST_ALERT_EMAILS_LIST=$(echo "${{ inputs.cost-alert-emails }}" | tr ',' '\n' | awk '{$1=$1};1' | grep -v '^$')
+            COST_ALERT_EMAILS_ARRAY=()
+            while IFS= read -r email; do
+              if [[ -n "$email" ]]; then
+                COST_ALERT_EMAILS_ARRAY+=("$email")
+              fi
+            done <<< "$COST_ALERT_EMAILS_LIST"
+            
+            for email in "${COST_ALERT_EMAILS_ARRAY[@]}"; do
+              CDK_CONTEXT_ARGS="${CDK_CONTEXT_ARGS} --context costAlertEmails=${email}"
+            done
+            echo "📧 Configured ${#COST_ALERT_EMAILS_ARRAY[@]} cost alert email(s)"
+          fi
+
+          # Deploy the stack
+          cdk deploy "${STACK_NAME}" \
+            --context environmentName="${ENV_NAME}" \
+            --context prNumber="${PR_NUMBER}" \
+            --context branchName="${{ inputs.branch-name }}" \
+            --context imageUri="${IMAGE_URI}" \
+            --context deploymentType="${DEPLOYMENT_TYPE}" \
+            --context deploymentScale="${DEPLOYMENT_SCALE}" \
+            ${CDK_CONTEXT_ARGS} \
+            --require-approval never \
+            --outputs-file cdk-outputs.json
+
+          echo "✅ Backend deployment completed"
+
+          # Extract API endpoint
+          API_ENDPOINT=$(aws cloudformation describe-stacks \
+            --stack-name "${STACK_NAME}" \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
+            --output text 2>/dev/null || echo "")
+
+          echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
+          echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
+          echo "🌐 API Endpoint: ${API_ENDPOINT}"
+
+      - name: Health Check
+        id: health-check
+        run: |
+          API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}"
+
+          if [[ -n "${API_ENDPOINT}" ]]; then
+            HEALTH_URL="${API_ENDPOINT%/}/health"
+            echo "🔍 Testing health endpoint: ${HEALTH_URL}"
+            
+            # Wait for deployment to stabilize
+            sleep 10
+            
+            # Test health endpoint with retries
+            for i in {1..3}; do
+              HEALTH_RESPONSE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 --connect-timeout 5 "${HEALTH_URL}" 2>/dev/null || echo "000")
+              if [[ "$HEALTH_RESPONSE" == "200" ]]; then
+                echo "health-status=healthy" >> $GITHUB_OUTPUT
+                echo "✅ Health check passed (attempt $i)"
+                break
+              else
+                echo "⚠️ Health check failed (attempt $i): $HEALTH_RESPONSE"
+                if [[ $i -eq 3 ]]; then
+                  echo "health-status=unhealthy" >> $GITHUB_OUTPUT
+                fi
+                sleep 5
+              fi
+            done
+          else
+            echo "health-status=unknown" >> $GITHUB_OUTPUT
+            echo "⚠️ Cannot perform health check - no API endpoint"
+          fi

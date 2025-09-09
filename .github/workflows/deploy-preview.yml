@@ -1,18 +1,19 @@
 name: Deploy PR Preview Environment
 
-on:
-  pull_request:
-    types: [opened, reopened, synchronize]
-    branches: [develop, main]
-    paths:
-      - 'infrastructure/**'
-      - 'apps/express-api/**'
-      - 'apps/client-ui/**'
-      - '.github/workflows/deploy-preview.yml'
-      - '.github/workflows/deploy-frontend-preview.yml'
-      - '.github/actions/check-codeowner/**'
-      - '.github/actions/discover-backend/**'
-      - '.github/actions/generate-frontend-env/**'
+# DISABLED: Old workflow - replaced by deploy-preview-v2.yml
+# on:
+#   pull_request:
+#     types: [opened, reopened, synchronize]
+#     branches: [develop, main]
+#     paths:
+#       - 'infrastructure/**'
+#       - 'apps/express-api/**'
+#       - 'apps/client-ui/**'
+#       - '.github/workflows/deploy-preview.yml'
+#       - '.github/workflows/deploy-frontend-preview.yml'
+#       - '.github/actions/check-codeowner/**'
+#       - '.github/actions/discover-backend/**'
+#       - '.github/actions/generate-frontend-env/**'
 
 permissions:
   contents: read
