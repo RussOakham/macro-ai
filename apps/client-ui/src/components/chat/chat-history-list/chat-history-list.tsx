@@ -1,4 +1,5 @@
 import { AlertCircle, Loader2, MessageSquare } from 'lucide-react'
+import { useMemo } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { ChatWithDates } from '@/lib/types'
@@ -33,15 +34,14 @@ const ChatHistoryList = ({
 	}
 
 	// Group chats by date
-	const groupedChats = chats.reduce<Record<string, ChatWithDates[]>>(
-		(groups, chat) => {
+	const groupedChats = useMemo(() => {
+		return chats.reduce<Record<string, ChatWithDates[]>>((groups, chat) => {
 			const dateKey = formatRelativeDate(chat.updatedAt)
 			groups[dateKey] ??= []
 			groups[dateKey].push(chat)
 			return groups
-		},
-		{},
-	)
+		}, {})
+	}, [chats])
 
 	if (isChatsLoading) {
 		return (

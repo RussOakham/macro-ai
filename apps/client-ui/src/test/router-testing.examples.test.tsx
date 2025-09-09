@@ -6,6 +6,7 @@
  */
 
 import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { Link } from '@tanstack/react-router'
 import React from 'react'
 import { describe, expect, it } from 'vitest'
 
@@ -24,12 +25,12 @@ const HomePage = () => {
 		<div>
 			<h1>Home Page</h1>
 			<nav>
-				<a href="/about" data-testid="about-link">
-					About
-				</a>
-				<a href="/dashboard" data-testid="dashboard-link">
-					Dashboard
-				</a>
+				<Link to="/chat" data-testid="chat-link">
+					Chat
+				</Link>
+				<Link to="/" data-testid="home-link">
+					Home
+				</Link>
 			</nav>
 		</div>
 	)

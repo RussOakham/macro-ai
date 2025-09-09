@@ -23,8 +23,6 @@
 		".vercel",
 		".netlify",
 		"coverage",
-		"*.config.js",
-		"*.config.ts",
 		"*.d.ts",
 		"tsconfig.json",
 		"**/routeTree.gen.ts"
@@ -124,7 +122,7 @@
 		"jsdoc/require-returns": "off",
 		"jsdoc/require-returns-type": "off",
 		"node/no-deprecated-api": "error",
-		"node/no-missing-import": "error",
+		"node/no-missing-import": "off",
 		"node/no-unsupported-features/es-syntax": "off",
 		"node/no-process-exit": "warn",
 		"vitest/expect-expect": "error",

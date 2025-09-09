@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { AuthRouteLoading } from '@/components/auth/auth-route-loading'
 import { ChatInterface } from '@/components/chat/chat-interface/chat-interface'
@@ -11,6 +11,20 @@ import { useGetUser } from '@/services/hooks/user/get-user'
 const ChatLayout = () => {
 	const { data: user, isFetching, isError, error, isSuccess } = useGetUser()
 	const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+
+	// Handle escape key for mobile sidebar
+	useEffect(() => {
+		if (!isMobileSidebarOpen) return
+
+		const onEsc = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') setIsMobileSidebarOpen(false)
+		}
+
+		document.addEventListener('keydown', onEsc)
+		return () => {
+			document.removeEventListener('keydown', onEsc)
+		}
+	}, [isMobileSidebarOpen])
 
 	if (isFetching && !user) {
 		return <div>Loading...</div>
@@ -31,12 +45,7 @@ const ChatLayout = () => {
 					onClick={() => {
 						setIsMobileSidebarOpen(false)
 					}}
-					onKeyDown={(e) => {
-						if (e.key === 'Escape') {
-							setIsMobileSidebarOpen(false)
-						}
-					}}
-					tabIndex={-1}
+					/* overlay click closes; Escape handled via document listener */
 				/>
 			)}
 

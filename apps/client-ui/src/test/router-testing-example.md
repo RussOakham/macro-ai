@@ -5,6 +5,7 @@ This example shows how to use the new simplified router testing approach based o
 ## Basic Usage
 
 ```typescript
+import { useParams } from '@tanstack/react-router'
 import {
 	renderWithRouter,
 	createAuthenticatedContext,

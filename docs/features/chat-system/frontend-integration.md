@@ -34,7 +34,7 @@ Client Component → useEnhancedChat → useChat (AI SDK) → API Endpoint
 **Purpose**: Wraps `@ai-sdk/react` `useChat` with TanStack Query integration for optimal state management.
 
 ```typescript
-import { useChat } from 'ai/react'
+import { useChat } from '@ai-sdk/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { tryCatch } from '@/lib/utils/error-handling/try-catch'
 
@@ -199,9 +199,6 @@ export function ChatInterface({ chatId }: { chatId: string }) {
 		isLoading: isStreaming,
 		status,
 	} = useEnhancedChat(chatId)
-
-	// Initialize with existing messages
-	const initialMessages = chat?.messages || []
 
 	return (
 		<div className="flex flex-col h-full">

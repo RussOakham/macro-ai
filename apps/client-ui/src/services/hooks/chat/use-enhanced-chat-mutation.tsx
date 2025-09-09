@@ -83,8 +83,8 @@ const useEnhancedChat = ({
 		initialMessages,
 		streamProtocol: 'text',
 		headers: {
-			Authorization: `Bearer ${accessToken ?? ''}`,
-			'X-API-KEY': apiKey,
+			...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+			...(apiKey ? { 'X-API-KEY': apiKey } : {}),
 		},
 		credentials: 'include',
 		onResponse: (response) => {
@@ -233,7 +233,14 @@ const useEnhancedChat = ({
 				toast.error('Failed to send message. Please try again.')
 			}
 		},
-		[chatHook, queryClient, chatId, onMessageSent],
+		[
+			chatHook.handleSubmit,
+			chatHook.input,
+			chatHook.status,
+			queryClient,
+			chatId,
+			onMessageSent,
+		],
 	)
 
 	return {

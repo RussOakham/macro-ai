@@ -8,6 +8,8 @@
  * - Better support for different deployment environments
  */
 
+import path from 'node:path'
+
 import { type TEnv } from '../utils/env.schema.ts'
 import { type Result } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
@@ -37,14 +39,7 @@ export const loadConfig = (options: ConfigOptions = {}): Result<TEnv> => {
 
 	// Handle legacy envFilePath option
 	if (options.envFilePath && !options.baseDir) {
-		// Extract directory from file path manually to avoid require() style import
-		const lastSlashIndex = options.envFilePath.lastIndexOf('/')
-		const lastBackslashIndex = options.envFilePath.lastIndexOf('\\')
-		const lastSeparatorIndex = Math.max(lastSlashIndex, lastBackslashIndex)
-
-		if (lastSeparatorIndex > 0) {
-			enhancedOptions.baseDir = options.envFilePath.slice(0, lastSeparatorIndex)
-		}
+		enhancedOptions.baseDir = path.dirname(options.envFilePath)
 	}
 
 	// Use the enhanced configuration loader

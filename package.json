@@ -19,12 +19,12 @@
 		"generate:types": "turbo run generate --filter=@repo/macro-ai-api-client",
 		"db:generate:express-api": "pnpm --filter @repo/express-api db:generate",
 		"db:push:express-api": "pnpm --filter @repo/express-api db:push",
-		"lint": "npx oxlint && turbo run lint",
-		"lint:fix": "npx oxlint --fix && turbo run lint:fix",
-		"lint:ci": "npx oxlint --max-warnings=0 && turbo run lint:ci",
-		"lint:oxlint": "npx oxlint",
-		"lint:fix:oxlint": "npx oxlint --fix",
-		"lint:ci:oxlint": "npx oxlint --max-warnings=0",
+		"lint": "oxlint && turbo run lint",
+		"lint:fix": "oxlint --fix && turbo run lint:fix",
+		"lint:ci": "oxlint --max-warnings=0 && turbo run lint:ci",
+		"lint:oxlint": "oxlint",
+		"lint:fix:oxlint": "oxlint --fix",
+		"lint:ci:oxlint": "oxlint --max-warnings=0",
 		"lint:eslint": "turbo run lint:eslint",
 		"lint:fix:eslint": "turbo run lint:fix:eslint",
 		"lint:ci:eslint": "turbo run lint:ci:eslint",
@@ -70,6 +70,7 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.34.0",
+		"oxlint": "^0.15.0",
 		"@faker-js/faker": "^10.0.0",
 		"@prettier/plugin-oxc": "^0.0.4",
 		"@repo/config-testing": "workspace:*",
@@ -118,8 +119,8 @@
 	"pnpm": {
 		"overrides": {
 			"@smithy/types": "4.3.1",
-			"@typescript-eslint/eslint-plugin": "^8.39.0",
-			"@typescript-eslint/parser": "^8.39.0"
+			"@typescript-eslint/eslint-plugin": "^8.42.0",
+			"@typescript-eslint/parser": "^8.42.0"
 		}
 	},
 	"config": {

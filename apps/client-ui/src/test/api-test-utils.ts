@@ -9,7 +9,7 @@
 // Import MSW utilities from our new setup
 import { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import MockAdapter from 'axios-mock-adapter'
-import { http, HttpResponse } from 'msw'
+import { http, HttpResponse, type HttpHandler } from 'msw'
 import { expect, vi } from 'vitest'
 
 import { server, setupServerWithHandlers } from './msw-setup'
@@ -56,8 +56,7 @@ export interface EnhancedApiCallScenario {
 export interface MSWHandlerConfig {
 	baseURL?: string
 	scenarios?: EnhancedApiCallScenario[]
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	customHandlers?: any[]
+	customHandlers?: HttpHandler[]
 }
 
 /**
@@ -224,8 +223,7 @@ export const createDynamicMSWHandlers = (config: MSWHandlerConfig = {}) => {
 		})
 	})
 
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment
-	return [...dynamicHandlers, ...customHandlers]
+	return [...dynamicHandlers, ...customHandlers] as HttpHandler[]
 }
 
 /**
@@ -234,11 +232,9 @@ export const createDynamicMSWHandlers = (config: MSWHandlerConfig = {}) => {
  */
 export const setupDynamicMSWServer = (config: MSWHandlerConfig = {}) => {
 	const dynamicHandlers = createDynamicMSWHandlers(config)
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-	const allHandlers = [...dynamicHandlers]
+	const allHandlers: HttpHandler[] = Array.from(dynamicHandlers)
 
 	if (allHandlers.length > 0) {
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 		setupServerWithHandlers(allHandlers)
 	}
 
@@ -305,23 +301,29 @@ export const createMockInterceptors = () => {
 
 	return {
 		request: {
-			use: vi.fn().mockImplementation((onFulfilled) => {
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-				requestInterceptor.mockImplementation(onFulfilled)
-				return 0 // Mock interceptor ID
-			}),
+			use: vi
+				.fn()
+				.mockImplementation((onFulfilled: (value: unknown) => unknown) => {
+					requestInterceptor.mockImplementation(onFulfilled)
+					return 0 // Mock interceptor ID
+				}),
 			eject: vi.fn(),
 		},
 		response: {
-			use: vi.fn().mockImplementation((onFulfilled, onRejected) => {
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-				responseInterceptor.mockImplementation(onFulfilled)
-				if (onRejected) {
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-					errorInterceptor.mockImplementation(onRejected)
-				}
-				return 1 // Mock interceptor ID
-			}),
+			use: vi
+				.fn()
+				.mockImplementation(
+					(
+						onFulfilled: (value: unknown) => unknown,
+						onRejected?: (error: unknown) => unknown,
+					) => {
+						responseInterceptor.mockImplementation(onFulfilled)
+						if (onRejected) {
+							errorInterceptor.mockImplementation(onRejected)
+						}
+						return 1 // Mock interceptor ID
+					},
+				),
 			eject: vi.fn(),
 		},
 		// Expose the actual mock functions for testing
@@ -337,17 +339,15 @@ export const createMockInterceptors = () => {
  * @param input
  * @param expectedOutput
  */
-export const testInterceptor = async (
-	interceptorFn: ReturnType<typeof vi.fn>,
-	input: unknown,
-	expectedOutput?: unknown,
-) => {
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+export const testInterceptor = async <TInput, TOutput>(
+	interceptorFn: (input: TInput) => Promise<TOutput>,
+	input: TInput,
+	expectedOutput?: TOutput,
+): Promise<TOutput> => {
 	const result = await interceptorFn(input)
 	if (expectedOutput !== undefined) {
 		expect(result).toEqual(expectedOutput)
 	}
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-return
 	return result
 }
 
@@ -364,8 +364,8 @@ export const createMockAxiosWithInterceptors = (
 	const mockInterceptors = createMockInterceptors()
 
 	// Replace the interceptor mocks
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
-	mockInstance.interceptors = mockInterceptors as any
+	mockInstance.interceptors =
+		mockInterceptors as typeof mockInstance.interceptors
 
 	return mockInstance
 }
@@ -613,8 +613,7 @@ export const testErrorHandling = async (
 		// Reset mocks
 		Object.values(mockClient).forEach((mockFn) => {
 			if (typeof mockFn === 'function' && 'mockClear' in mockFn) {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unnecessary-type-assertion
-				;(mockFn as any).mockClear()
+				;(mockFn as { mockClear: () => void }).mockClear()
 			}
 		})
 

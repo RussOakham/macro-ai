@@ -944,7 +944,7 @@ import { createChatClient } from '@repo/macro-ai-api-client'
 const chatClient = createChatClient('http://localhost:3030/api', {
 	axiosConfig: {
 		headers: {
-			'X-API-KEY': process.env.REACT_APP_API_KEY,
+			'X-API-KEY': import.meta.env.VITE_API_KEY,
 		},
 	},
 })
