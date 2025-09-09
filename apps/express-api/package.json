@@ -40,7 +40,6 @@
 	},
 	"devDependencies": {
 		"@repo/config-eslint": "workspace:*",
-		"@repo/config-oxlint": "workspace:*",
 		"@repo/config-testing": "workspace:*",
 		"@repo/config-typescript": "workspace:*",
 		"@testcontainers/postgresql": "^11.5.1",
@@ -59,9 +58,7 @@
 		"drizzle-kit": "^0.31.4",
 		"esbuild": "^0.19.12",
 		"eslint": "catalog:",
-		"eslint-config-prettier": "catalog:",
 		"eslint-plugin-drizzle": "^0.2.3",
-		"eslint-plugin-import": "catalog:",
 		"eslint-plugin-unused-imports": "catalog:",
 		"globals": "catalog:",
 		"nodemon": "^3.1.10",

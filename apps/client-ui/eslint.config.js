@@ -2,7 +2,6 @@ import * as repoConfig from '@repo/config-eslint'
 import pluginQuery from '@tanstack/eslint-plugin-query'
 import pluginRouter from '@tanstack/eslint-plugin-router'
 import globals from 'globals'
-import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript'
 
 export default repoConfig.config(
 	// Global ignores - must be first
@@ -61,13 +60,6 @@ export default repoConfig.config(
 			'sort-keys': 'off',
 			'one-var': 'off',
 			'no-ternary': 'off',
-		},
-		settings: {
-			'import-x/resolver-next': [
-				createTypeScriptImportResolver({
-					alwaysTryTypes: true,
-				}),
-			],
 		},
 	},
 

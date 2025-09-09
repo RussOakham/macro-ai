@@ -15,6 +15,7 @@ export default repoConfig.config(
 			'scripts/**/*',
 			'../../scripts/**/*',
 			'src/test-helpers/**',
+			'src/utils/test-helpers/**',
 		],
 	},
 	// Core configurations - foundation for all code

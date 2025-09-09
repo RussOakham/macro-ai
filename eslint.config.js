@@ -53,6 +53,11 @@ export default repoConfig.config(
 			'sort-keys': 'off',
 		},
 	},
+	{
+		rules: {
+			'import/no-cycle': 'off',
+		},
+	},
 
 	// Oxlint configurations
 	...oxlintPlugin.buildFromOxlintConfigFile('./.oxlintrc.json'),

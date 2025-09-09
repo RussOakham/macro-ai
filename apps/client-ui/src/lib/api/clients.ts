@@ -34,5 +34,5 @@ export const apiClientWithoutCredentials = createApiClient(
 export type ApiClient = typeof apiClient
 export type ApiClientWithoutCredentials = typeof apiClientWithoutCredentials
 
-// Initialize interceptors through a separate module to avoid circular dependencies
-import './interceptor-init'
+// Initialize API clients and interceptors using dynamic imports to avoid circular dependencies
+import './initialize-api'

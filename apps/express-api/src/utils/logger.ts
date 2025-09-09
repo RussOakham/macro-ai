@@ -52,7 +52,7 @@ const createLogger = (nodeEnv: string): HttpLogger => {
 }
 
 // Initialize with default value, will be reconfigured when config is loaded
-// eslint-disable-next-line import-x/no-mutable-exports
+// oxlint-disable-next-line no-mutable-exports
 let httpLogger: HttpLogger = createLogger('development')
 
 const configureLogger = (nodeEnv: string): void => {

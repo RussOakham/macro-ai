@@ -642,8 +642,7 @@ module.exports = {
 
 ```json
 {
-	"prettier": "catalog:",
-	"eslint-config-prettier": "catalog:"
+	"prettier": "catalog:"
 }
 ```
 

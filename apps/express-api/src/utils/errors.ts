@@ -362,7 +362,6 @@ const getCognitoErrorMessage = (error: ICognitoError): string => {
 	}
 
 	// Map common Cognito error types to user-friendly messages
-	// eslint-disable-next-line no-underscore-dangle
 	switch (error.__type) {
 		case 'UsernameExistsException':
 			return 'User already exists'
@@ -377,7 +376,6 @@ const getCognitoErrorMessage = (error: ICognitoError): string => {
 		case 'ExpiredCodeException':
 			return 'Verification code has expired'
 		default:
-			// eslint-disable-next-line no-underscore-dangle
 			return `Cognito error: ${error.__type}`
 	}
 }

@@ -40,7 +40,7 @@ const base = {
 		...tseslint.configs.strictTypeChecked,
 		...tseslint.configs.stylisticTypeChecked,
 		{
-			files: ['**/*.{ts,tsx}'],
+			files: ['**/*.{ts,tsx}', '**/*.spec.{ts,tsx}', '**/*.test.{ts,tsx}'],
 			rules: {
 				// Disable conflicting rules (handled by TypeScript)
 				'no-unused-vars': 'off',
@@ -48,6 +48,11 @@ const base = {
 
 				// Note: TypeScript unsafe rules are now handled by oxlint
 				// Only keeping rules that require type-aware analysis or oxlint doesn't support
+				'@typescript-eslint/no-unsafe-assignment': 'error',
+				'@typescript-eslint/no-unsafe-call': 'warn',
+				'@typescript-eslint/no-unsafe-member-access': 'warn',
+				'@typescript-eslint/restrict-template-expressions': 'warn',
+				'@typescript-eslint/unbound-method': 'warn',
 
 				// Configure promise handling for async functions
 				'@typescript-eslint/no-misused-promises': [

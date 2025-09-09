@@ -209,7 +209,6 @@ describe('createServer', () => {
 						'Cache-Control',
 					],
 					maxAge: 86400,
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 					origin: expect.any(Function),
 				}),
 			)
@@ -250,7 +249,6 @@ describe('createServer', () => {
 					'Cache-Control',
 				],
 				maxAge: 86400,
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 				origin: expect.any(Function),
 			}),
 		)
@@ -301,7 +299,6 @@ describe('createServer', () => {
 
 			// Assert
 			expect(compression.default).toHaveBeenCalledWith({
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 				filter: expect.any(Function),
 			})
 			expect(mockApp.use).toHaveBeenCalledWith(mockCompressionMiddleware)

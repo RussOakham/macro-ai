@@ -315,7 +315,6 @@ describe('appRouter', () => {
 
 			// Assert
 			expect(router).toBeDefined()
-			// eslint-disable-next-line no-underscore-dangle
 			expect(app._router).toBeDefined()
 		})
 

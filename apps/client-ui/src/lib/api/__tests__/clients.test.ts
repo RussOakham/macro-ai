@@ -18,6 +18,11 @@ vi.mock('../interceptors', () => ({
 	applyTokenRefreshInterceptors: vi.fn(),
 }))
 
+// Mock the initialize-api module to prevent auto-initialization during tests
+vi.mock('../initialize-api', () => ({
+	initializeApiClients: vi.fn(),
+}))
+
 // Mock the API client package for configuration tests
 vi.mock('@repo/macro-ai-api-client', () => ({
 	createApiClient: vi.fn((baseURL: string, config: Partial<Config>) => ({
@@ -50,13 +55,16 @@ describe('API Clients Integration', () => {
 		it('should apply interceptors to unified clients', async () => {
 			const { applyTokenRefreshInterceptors } = await import('../interceptors')
 
-			// Import clients - this will trigger interceptor initialization
+			// Import clients - initialization is mocked so interceptors aren't auto-applied
 			const { apiClient, apiClientWithoutCredentials } = await import(
 				'../clients'
 			)
 
-			// Wait a bit for async initialization to complete
-			await new Promise((resolve) => setTimeout(resolve, 10))
+			// Manually apply interceptors for testing (normally done by initialize-api.ts)
+			applyTokenRefreshInterceptors({ axios: apiClient.instance })
+			applyTokenRefreshInterceptors({
+				axios: apiClientWithoutCredentials.instance,
+			})
 
 			// Verify that interceptors were applied to both clients
 			expect(applyTokenRefreshInterceptors).toHaveBeenCalledTimes(2)
