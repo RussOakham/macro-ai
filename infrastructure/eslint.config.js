@@ -12,15 +12,13 @@ export default repoConfig.config(
 			'*.d.ts',
 			'*.js',
 			'vitest.config.ts',
+			'tsconfig.json',
 		],
 	},
 	// Core configurations - foundation for all code
 	...repoConfig.configs.base.core,
 	...repoConfig.configs.base.codeQuality,
 	...repoConfig.configs.base.javascript,
-
-	// Node.js specific configurations
-	...repoConfig.configs.node.recommended,
 
 	// Testing configurations (Vitest)
 	...repoConfig.configs.base.testing,
@@ -96,7 +94,4 @@ export default repoConfig.config(
 			'@typescript-eslint/require-await': 'off',
 		},
 	},
-
-	// Oxlint configurations
-	...repoConfig.configs.oxlint.fromConfigFile('./.oxlintrc.json'),
 )

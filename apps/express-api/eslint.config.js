@@ -22,9 +22,6 @@ export default repoConfig.config(
 	...repoConfig.configs.base.codeQuality,
 	...repoConfig.configs.base.javascript,
 
-	// Node.js specific configurations
-	...repoConfig.configs.node.recommended,
-
 	// Testing configurations (Vitest)
 	...repoConfig.configs.base.testing,
 
@@ -50,7 +47,4 @@ export default repoConfig.config(
 			'turbo/no-undeclared-env-vars': 'warn',
 		},
 	},
-
-	// Oxlint configurations
-	...repoConfig.configs.oxlint.fromConfigFile('./.oxlintrc.json'),
 )

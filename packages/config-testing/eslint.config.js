@@ -20,6 +20,7 @@ export default repoConfig.config(
 			'**/coverage-final.json',
 			'**/coverage-summary.json',
 			'**/*.lcov',
+			'tsconfig.json',
 		],
 	},
 	// Core configurations - foundation for all code
@@ -36,9 +37,6 @@ export default repoConfig.config(
 			},
 		},
 	},
-
-	// Node.js specific configurations
-	...repoConfig.configs.node.recommended,
 
 	// Testing configurations (Vitest)
 	...repoConfig.configs.base.testing,
@@ -78,7 +76,4 @@ export default repoConfig.config(
 			'@typescript-eslint/no-explicit-any': 'warn',
 		},
 	},
-
-	// Oxlint configurations
-	...repoConfig.configs.oxlint.fromConfigFile('./.oxlintrc.json'),
 )

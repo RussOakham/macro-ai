@@ -61,7 +61,6 @@
 	},
 	"devDependencies": {
 		"@repo/config-eslint": "workspace:*",
-		"@repo/config-oxlint": "workspace:*",
 		"@repo/config-testing": "workspace:*",
 		"@repo/config-typescript": "workspace:*",
 		"@repo/macro-ai-api-client": "workspace:*",
@@ -88,7 +87,6 @@
 		"eslint-import-resolver-typescript": "catalog:",
 		"eslint-plugin-react": "catalog:",
 		"eslint-plugin-react-hooks": "catalog:",
-		"eslint-plugin-oxlint": "catalog:",
 		"globals": "catalog:",
 		"happy-dom": "^18.0.1",
 		"msw-auto-mock": "^0.31.0",

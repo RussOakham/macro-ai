@@ -315,18 +315,22 @@ export const createErrorAssertion = (
 	expectedStatus: number,
 ) => ({
 	shouldHaveType: (error: AppError) => {
+		// oxlint-disable-next-line no-standalone-expect
 		expect(error.type).toBe(expectedType)
 		return createErrorAssertion(expectedType, expectedStatus)
 	},
 	shouldHaveStatus: (error: AppError) => {
+		// oxlint-disable-next-line no-standalone-expect
 		expect(error.status).toBe(expectedStatus)
 		return createErrorAssertion(expectedType, expectedStatus)
 	},
 	shouldHaveMessage: (message: string) => (error: AppError) => {
+		// oxlint-disable-next-line no-standalone-expect
 		expect(error.message).toBe(message)
 		return createErrorAssertion(expectedType, expectedStatus)
 	},
 	shouldHaveService: (service: string) => (error: AppError) => {
+		// oxlint-disable-next-line no-standalone-expect
 		expect(error.service).toBe(service)
 		return createErrorAssertion(expectedType, expectedStatus)
 	},

@@ -234,6 +234,7 @@ export const createDynamicMSWHandlers = (config: MSWHandlerConfig = {}) => {
  */
 export const setupDynamicMSWServer = (config: MSWHandlerConfig = {}) => {
 	const dynamicHandlers = createDynamicMSWHandlers(config)
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 	const allHandlers = [...dynamicHandlers]
 
 	if (allHandlers.length > 0) {

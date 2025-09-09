@@ -1,4 +1,5 @@
 import * as repoConfig from './packages/config-eslint/index.js'
+import oxlintPlugin from 'eslint-plugin-oxlint'
 
 /** @type {import("@typescript-eslint/utils").TSESLint.FlatConfig.Config} */
 export default repoConfig.config(
@@ -25,9 +26,6 @@ export default repoConfig.config(
 	...repoConfig.configs.base.codeQuality,
 	...repoConfig.configs.base.javascript,
 
-	// Node.js specific configurations
-	...repoConfig.configs.node.recommended,
-
 	// Testing configurations (Vitest)
 	...repoConfig.configs.base.testing,
 
@@ -52,6 +50,10 @@ export default repoConfig.config(
 			// Root-level specific rules
 			'@typescript-eslint/no-unused-vars': 'warn',
 			'@typescript-eslint/no-explicit-any': 'warn',
+			'sort-keys': 'off',
 		},
 	},
+
+	// Oxlint configurations
+	...oxlintPlugin.buildFromOxlintConfigFile('./.oxlintrc.json'),
 )

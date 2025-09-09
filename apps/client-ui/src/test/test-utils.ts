@@ -1,3 +1,4 @@
+// oxlint-disable no-standalone-expect
 /**
  * Enhanced Client-UI Testing Utilities
  *

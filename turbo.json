@@ -46,7 +46,8 @@
 				"PREVIEW",
 				"AWS_ACCESS_KEY_ID",
 				"AWS_SECRET_ACCESS_KEY",
-				"MODE"
+				"MODE",
+				"VITE_API_BASE_URL"
 			]
 		},
 		"lint": {
@@ -67,7 +68,16 @@
 				"APP_VERSION",
 				"npm_package_version",
 				"DATABASE_URL",
-				"CUSTOM_DOMAIN_NAME"
+				"CUSTOM_DOMAIN_NAME",
+				"VITE_API_BASE_URL"
+			]
+		},
+		"lint:oxlint": {
+			"env": [
+				"AWS_REGION",
+				"SERVICE_NAME",
+				"SERVICE_VERSION",
+				"AWS_EXECUTION_ENV"
 			]
 		},
 		"lint:eslint": {

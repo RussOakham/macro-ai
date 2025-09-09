@@ -1,3 +1,4 @@
+// oxlint-disable no-standalone-expect
 /**
  * React Component Testing Utilities
  *

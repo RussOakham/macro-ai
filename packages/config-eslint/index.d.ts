@@ -26,18 +26,6 @@ export interface BaseConfig {
 }
 
 /**
- * Oxlint-specific ESLint configuration object
- */
-export interface OxlintConfig {
-	/** Oxlint recommended configurations */
-	recommended: ConfigWithExtends[]
-	/** Oxlint configurations from .oxlintrc.json */
-	fromBaseConfig: ConfigWithExtends[]
-	/** Oxlint configurations from a config file */
-	fromConfigFile: (configPath: string) => ConfigWithExtends[]
-}
-
-/**
  * React-specific ESLint configuration object
  */
 export interface ReactConfig {
@@ -61,8 +49,6 @@ export interface ConfigObject {
 	base: BaseConfig
 	/** React-specific configurations */
 	react: ReactConfig
-	/** Oxlint-specific configurations */
-	oxlint: OxlintConfig
 	/** Security-focused configurations */
 	security: SecurityConfig
 }

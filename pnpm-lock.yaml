@@ -115,9 +115,6 @@ importers:
       '@faker-js/faker':
         specifier: ^10.0.0
         version: 10.0.0
-      '@repo/config-oxlint':
-        specifier: workspace:*
-        version: link:packages/config-oxlint
       '@repo/config-testing':
         specifier: workspace:*
         version: link:packages/config-testing
@@ -175,6 +172,9 @@ importers:
       eslint-plugin-no-secrets:
         specifier: ^2.2.1
         version: 2.2.1(eslint@9.34.0(jiti@2.5.1))
+      eslint-plugin-oxlint:
+        specifier: 'catalog:'
+        version: 1.14.0
       eslint-plugin-perfectionist:
         specifier: ^4.15.0
         version: 4.15.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2)
@@ -335,9 +335,6 @@ importers:
       '@repo/config-eslint':
         specifier: workspace:*
         version: link:../../packages/config-eslint
-      '@repo/config-oxlint':
-        specifier: workspace:*
-        version: link:../../packages/config-oxlint
       '@repo/config-testing':
         specifier: workspace:*
         version: link:../../packages/config-testing
@@ -410,9 +407,6 @@ importers:
       eslint-import-resolver-typescript:
         specifier: 'catalog:'
         version: 3.10.1(eslint-plugin-import-x@4.16.1(@typescript-eslint/utils@8.42.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint@9.34.0(jiti@2.5.1)))(eslint-plugin-import@2.32.0)(eslint@9.34.0(jiti@2.5.1))
-      eslint-plugin-oxlint:
-        specifier: 'catalog:'
-        version: 1.14.0
       eslint-plugin-react:
         specifier: 'catalog:'
         version: 7.37.5(eslint@9.34.0(jiti@2.5.1))
@@ -525,9 +519,6 @@ importers:
       '@repo/config-eslint':
         specifier: workspace:*
         version: link:../../packages/config-eslint
-      '@repo/config-oxlint':
-        specifier: workspace:*
-        version: link:../../packages/config-oxlint
       '@repo/config-testing':
         specifier: workspace:*
         version: link:../../packages/config-testing
@@ -591,9 +582,6 @@ importers:
       eslint-plugin-import:
         specifier: 'catalog:'
         version: 2.32.0(@typescript-eslint/parser@8.42.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1)(eslint@9.34.0(jiti@2.5.1))
-      eslint-plugin-oxlint:
-        specifier: 'catalog:'
-        version: 1.14.0
       eslint-plugin-unused-imports:
         specifier: 'catalog:'
         version: 4.2.0(@typescript-eslint/eslint-plugin@8.42.0(@typescript-eslint/parser@8.42.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2))(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2))(eslint@9.34.0(jiti@2.5.1))
@@ -640,9 +628,6 @@ importers:
       '@repo/config-eslint':
         specifier: workspace:*
         version: link:../packages/config-eslint
-      '@repo/config-oxlint':
-        specifier: workspace:*
-        version: link:../packages/config-oxlint
       '@repo/config-testing':
         specifier: workspace:*
         version: link:../packages/config-testing
@@ -688,9 +673,6 @@ importers:
       '@eslint/js':
         specifier: ^9.32.0
         version: 9.34.0
-      '@repo/config-oxlint':
-        specifier: workspace:*
-        version: link:../config-oxlint
       eslint:
         specifier: 'catalog:'
         version: 9.34.0(jiti@2.5.1)
@@ -734,21 +716,12 @@ importers:
         specifier: ^8.39.0
         version: 8.42.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2)
 
-  packages/config-oxlint:
-    devDependencies:
-      prettier:
-        specifier: 'catalog:'
-        version: 3.6.2
-
   packages/config-testing:
     dependencies:
       '@faker-js/faker':
         specifier: ^10.0.0
         version: 10.0.0
     devDependencies:
-      '@repo/config-oxlint':
-        specifier: workspace:*
-        version: link:../config-oxlint
       eslint:
         specifier: 'catalog:'
         version: 9.34.0(jiti@2.5.1)
@@ -761,10 +734,6 @@ importers:
       '@total-typescript/tsconfig':
         specifier: ^1.0.4
         version: 1.0.4
-    devDependencies:
-      '@repo/config-oxlint':
-        specifier: workspace:*
-        version: link:../config-oxlint
 
   packages/macro-ai-api-client:
     dependencies:
@@ -778,9 +747,6 @@ importers:
       '@repo/config-eslint':
         specifier: workspace:*
         version: link:../config-eslint
-      '@repo/config-oxlint':
-        specifier: workspace:*
-        version: link:../config-oxlint
       '@repo/config-testing':
         specifier: workspace:*
         version: link:../config-testing

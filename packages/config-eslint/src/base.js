@@ -21,6 +21,7 @@ const base = {
 		...tseslint.configs.recommended,
 		...turboConfig,
 		{
+			ignores: ['tsconfig.json'],
 			rules: {
 				// Note: Basic code style rules are now handled by oxlint
 				// Only keeping rules that ESLint handles better or oxlint doesn't support
@@ -140,6 +141,7 @@ const base = {
 				'@typescript-eslint/no-floating-promises': 'off',
 				'@typescript-eslint/no-misused-promises': 'off',
 				'sort-imports': 'off',
+				'sort-keys': 'off',
 			},
 		},
 		// Explicit override for ESLint config files to prevent TypeScript parsing

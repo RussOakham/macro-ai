@@ -14,7 +14,7 @@ interface ChatHistoryListProps {
 }
 
 const ChatHistoryList = ({
-	isPending: isPending,
+	isPending,
 	onMobileClose,
 }: ChatHistoryListProps) => {
 	const {

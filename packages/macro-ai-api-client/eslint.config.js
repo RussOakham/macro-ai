@@ -18,15 +18,13 @@ export default repoConfig.config(
 			'*.lcov',
 			'temp/**',
 			'src/client/**/*.gen.ts', // Generated client files
+			'tsconfig.json',
 		],
 	},
 	// Core configurations - foundation for all code
 	...repoConfig.configs.base.core,
 	...repoConfig.configs.base.codeQuality,
 	...repoConfig.configs.base.javascript,
-
-	// Node.js specific configurations
-	...repoConfig.configs.node.recommended,
 
 	// Testing configurations (Vitest)
 	...repoConfig.configs.base.testing,
@@ -138,7 +136,4 @@ export default repoConfig.config(
 			'perfectionist/sort-imports': 'off',
 		},
 	},
-
-	// Oxlint configurations
-	...repoConfig.configs.oxlint.fromConfigFile('./.oxlintrc.json'),
 )

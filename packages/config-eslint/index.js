@@ -16,13 +16,6 @@
  */
 
 /**
- * @typedef {Object} OxlintConfig
- * @property {ConfigWithExtends[]} recommended - Oxlint recommended configurations
- * @property {ConfigWithExtends[]} fromBaseConfig - Oxlint configurations from .oxlintrc.json
- * @property {ConfigWithExtends[]} fromConfigFile - Oxlint configurations from a config file
- */
-
-/**
  * @typedef {Object} ReactConfig
  * @property {ConfigWithExtends[]} recommended - React recommended configurations
  */
@@ -36,13 +29,11 @@
  * @typedef {Object} ConfigObject
  * @property {BaseConfig} base - Base ESLint configurations
  * @property {ReactConfig} react - React-specific configurations
- * @property {OxlintConfig} oxlint - Oxlint configurations
  * @property {SecurityConfig} security - Security-focused configurations
  */
 
 import { base } from './src/base.js'
 import { reactConfig } from './src/react.js'
-import { oxlintConfig } from './src/oxlint.js'
 import { securityConfig } from './src/security.js'
 
 /**
@@ -59,7 +50,6 @@ const config = (...configs) => configs.flat()
 const configs = {
 	base,
 	react: reactConfig,
-	oxlint: oxlintConfig,
 	security: securityConfig,
 }
 

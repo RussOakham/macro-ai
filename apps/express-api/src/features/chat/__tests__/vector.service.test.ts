@@ -799,7 +799,7 @@ describe('VectorService', () => {
 
 		it('should handle very large embedding arrays', async () => {
 			// Arrange
-			const largeEmbedding = new Array(1536).fill(0).map((_, i) => i / 1536)
+			const largeEmbedding = Array.from({ length: 1536 }, (_, i) => i / 1536)
 			mockAIService.generateEmbedding.mockResolvedValue([largeEmbedding, null])
 			mockVectorRepository.createVector.mockResolvedValue([
 				mockChatVector,

@@ -27,7 +27,6 @@
 		"@faker-js/faker": "^10.0.0"
 	},
 	"devDependencies": {
-		"@repo/config-oxlint": "workspace:*",
 		"typescript": "catalog:",
 		"eslint": "catalog:"
 	},

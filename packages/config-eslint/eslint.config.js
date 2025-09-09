@@ -1,5 +1,4 @@
 import js from '@eslint/js'
-import oxlintPlugin from 'eslint-plugin-oxlint'
 
 export default [
 	// Global ignores
@@ -14,16 +13,6 @@ export default [
 			'no-unused-vars': 'error',
 			'prefer-const': 'error',
 			'no-var': 'error',
-		},
-	},
-
-	// Oxlint configuration
-	{
-		plugins: {
-			oxlint: oxlintPlugin,
-		},
-		rules: {
-			...oxlintPlugin.buildFromOxlintConfigFile('./.oxlintrc.json'),
 		},
 	},
 ]

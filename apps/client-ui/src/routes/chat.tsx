@@ -31,6 +31,12 @@ const ChatLayout = () => {
 					onClick={() => {
 						setIsMobileSidebarOpen(false)
 					}}
+					onKeyDown={(e) => {
+						if (e.key === 'Escape') {
+							setIsMobileSidebarOpen(false)
+						}
+					}}
+					tabIndex={-1}
 				/>
 			)}
 
