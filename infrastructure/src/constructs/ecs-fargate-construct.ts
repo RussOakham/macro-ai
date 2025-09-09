@@ -274,7 +274,7 @@ export class EcsFargateConstruct extends Construct {
 			healthCheck: {
 				command: [
 					'CMD-SHELL',
-					`curl -f -H "X-Api-Key: $API_KEY" http://localhost:${containerPort}${healthCheck.path} || exit 1`,
+					`curl -f http://localhost:${containerPort}${healthCheck.path} || exit 1`,
 				],
 				interval: healthCheck.interval,
 				timeout: healthCheck.timeout,
