@@ -214,7 +214,8 @@ customHeaders:
 
       # Strict Content Security Policy - use environment variable for custom domain
       - key: 'Content-Security-Policy'
-        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ${VITE_API_URL}; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
+        value: >-
+          default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ${VITE_API_URL}; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'
 
       # Aggressive caching for static assets
       - key: 'Cache-Control'

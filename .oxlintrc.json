@@ -210,6 +210,19 @@
 				"jsdoc/require-returns": "off",
 				"jsdoc/require-description": "off"
 			}
+		},
+		{
+			"files": [
+				"$chatId.tsx",
+				"routeTree.gen.ts",
+				"chat.tsx",
+				"chat-interface.tsx",
+				"chat-interface-error.tsx",
+				"main.tsx"
+			],
+			"rules": {
+				"import/no-cycle": "off"
+			}
 		}
 	]
 }
