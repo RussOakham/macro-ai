@@ -1,0 +1,4 @@
+{
+	"$schema": "https://oxc-project.github.io/oxlint/config-schema.json",
+	"plugins": ["vitest"]
+}

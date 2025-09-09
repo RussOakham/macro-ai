@@ -16,15 +16,6 @@
  */
 
 /**
- * @typedef {Object} ReactConfig
- * @property {ConfigWithExtends[]} core - React core configurations
- * @property {ConfigWithExtends[]} typescript - React + TypeScript configurations
- * @property {ConfigWithExtends[]} accessibility - React accessibility rules
- * @property {ConfigWithExtends[]} testing - React testing configurations
- * @property {ConfigWithExtends[]} performance - React performance rules
- */
-
-/**
  * @typedef {Object} OxlintConfig
  * @property {ConfigWithExtends[]} recommended - Oxlint recommended configurations
  * @property {ConfigWithExtends[]} fromBaseConfig - Oxlint configurations from .oxlintrc.json
@@ -32,31 +23,21 @@
  */
 
 /**
- * @typedef {Object} NodeConfig
- * @property {ConfigWithExtends[]} core - Node.js core configurations
- * @property {ConfigWithExtends[]} typescript - Node.js + TypeScript configurations
- * @property {ConfigWithExtends[]} security - Node.js security rules
+ * @typedef {Object} ReactConfig
+ * @property {ConfigWithExtends[]} recommended - React recommended configurations
  */
 
 /**
  * @typedef {Object} SecurityConfig
- * @property {ConfigWithExtends[]} core - Security core configurations
- * @property {ConfigWithExtends[]} typescript - Security + TypeScript configurations
- */
-
-/**
- * @typedef {Object} PrettierConfig
- * @property {ConfigWithExtends[]} core - Prettier core configurations
+ * @property {ConfigWithExtends[]} recommended - Security recommended configurations
  */
 
 /**
  * @typedef {Object} ConfigObject
  * @property {BaseConfig} base - Base ESLint configurations
  * @property {ReactConfig} react - React-specific configurations
- * @property {NodeConfig} node - Node.js-specific configurations
  * @property {OxlintConfig} oxlint - Oxlint configurations
  * @property {SecurityConfig} security - Security-focused configurations
- * @property {PrettierConfig} prettier - Prettier integration configurations
  */
 
 import { base } from './src/base.js'

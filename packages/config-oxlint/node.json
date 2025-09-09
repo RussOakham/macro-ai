@@ -1,0 +1,14 @@
+{
+	"$schema": "https://oxc-project.github.io/oxlint/config-schema.json",
+	"plugins": ["node"],
+	"overrides": [
+		{
+			"files": ["*.ts", "*.tsx", "*.js", "*.jsx"],
+			"rules": {
+				"node/no-missing-import": "error",
+				"node/no-unsupported-features/es-syntax": "off",
+				"node/no-process-exit": "warn"
+			}
+		}
+	]
+}

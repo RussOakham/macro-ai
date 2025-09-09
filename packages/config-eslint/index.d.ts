@@ -26,49 +26,31 @@ export interface BaseConfig {
 }
 
 /**
- * React-specific ESLint configuration object
+ * Oxlint-specific ESLint configuration object
  */
-export interface ReactConfig {
-	/** React core configurations */
-	core: ConfigWithExtends[]
-	/** React + TypeScript configurations */
-	typescript: ConfigWithExtends[]
-	/** React accessibility rules */
-	accessibility: ConfigWithExtends[]
-	/** React testing configurations */
-	testing: ConfigWithExtends[]
-	/** React performance rules */
-	performance: ConfigWithExtends[]
+export interface OxlintConfig {
+	/** Oxlint recommended configurations */
+	recommended: ConfigWithExtends[]
+	/** Oxlint configurations from .oxlintrc.json */
+	fromBaseConfig: ConfigWithExtends[]
+	/** Oxlint configurations from a config file */
+	fromConfigFile: (configPath: string) => ConfigWithExtends[]
 }
 
 /**
- * Node.js-specific ESLint configuration object
+ * React-specific ESLint configuration object
  */
-export interface NodeConfig {
-	/** Node.js core configurations */
-	core: ConfigWithExtends[]
-	/** Node.js + TypeScript configurations */
-	typescript: ConfigWithExtends[]
-	/** Node.js security rules */
-	security: ConfigWithExtends[]
+export interface ReactConfig {
+	/** React recommended configurations */
+	recommended: ConfigWithExtends[]
 }
 
 /**
  * Security-focused ESLint configuration object
  */
 export interface SecurityConfig {
-	/** Security core configurations */
-	core: ConfigWithExtends[]
-	/** Security + TypeScript configurations */
-	typescript: ConfigWithExtends[]
-}
-
-/**
- * Prettier integration ESLint configuration object
- */
-export interface PrettierConfig {
-	/** Prettier core configurations */
-	core: ConfigWithExtends[]
+	/** Security recommended configurations */
+	recommended: ConfigWithExtends[]
 }
 
 /**
@@ -79,12 +61,10 @@ export interface ConfigObject {
 	base: BaseConfig
 	/** React-specific configurations */
 	react: ReactConfig
-	/** Node.js-specific configurations */
-	node: NodeConfig
+	/** Oxlint-specific configurations */
+	oxlint: OxlintConfig
 	/** Security-focused configurations */
 	security: SecurityConfig
-	/** Prettier integration configurations */
-	prettier: PrettierConfig
 }
 
 /**

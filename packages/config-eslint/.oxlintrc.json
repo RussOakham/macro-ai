@@ -1,3 +1,6 @@
 {
-	"extends": ["../../packages/config-oxlint/base.json"]
+	"extends": [
+		"../../packages/config-oxlint/base.json",
+		"../../packages/config-oxlint/node.json"
+	]
 }
