@@ -66,7 +66,14 @@
 		"type-check": "turbo run type-check",
 		"prepare": "husky",
 		"act": "./.act/run-fast.sh",
-		"act:job": "./.act/run-fast.sh job"
+		"act:job": "./.act/run-fast.sh job",
+		"security:scan": "node scripts/security-scan.js",
+		"security:scan:advanced": "node scripts/advanced-security-scan.js",
+		"security:scan:codeql": "node scripts/codeql-security-scan.js",
+		"security:scan:workflows": "actionlint -color",
+		"security:scan:secrets": "gitleaks detect --source .github/workflows/ --config .gitleaks.toml",
+		"security:scan:octoscan": "octoscan scan --path .github/workflows/",
+		"security:scan:act": "act --dry-run --list"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.34.0",

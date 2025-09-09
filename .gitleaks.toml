@@ -18,6 +18,8 @@ regexes = [
     "^test-api-key-12345678901234567890123456789012$",
     "^test-api-key-12345678901234567890$",
     "^test-api-key-fake-value-for-testing-only$",
+    "^placeholder-api-key-for-swagger-generation-32chars$",
+    "placeholder-api-key-for-swagger-generation-32chars",
     
     # Test OpenAI keys
     "^sk-test-key$",
@@ -26,12 +28,19 @@ regexes = [
     "^sk-test-mock-key-for-testing-only$",
     "^test-openai-key$",
     "^sk-dummy-openai-key$",
+    "^sk-placeholder-openai-api-key-for-swagger-generation$",
+    "sk-placeholder-openai-api-key-for-swagger-generation",
+    "mock-openai-key-for-local-testing-only",
     
     # Test encryption keys
     "^test-encryption-key-at-least-32-chars-long$",
     "^test-cookie-encryption-key-32-chars-long-enough$",
     "^test-cookie-encryption-key-32-chars$",
     "^dummy-encryption-key-at-least-32-chars-long$",
+    "^placeholder-cookie-encryption-key-32chars$",
+    "^mock-encryption-key-for-local-testing-only$",
+    "placeholder-cookie-encryption-key-32chars",
+    "mock-encryption-key-for-local-testing-only",
     
     # Test AWS Cognito keys
     "^test-pool-secret-key-32-chars-long$",
@@ -42,6 +51,8 @@ regexes = [
     "^dummy-pool-secret-key$",
     "^dummy-access-key$",
     "^dummy-secret-key$",
+    "^mock_secret_key$",
+    "mock_secret_key",
     
     # Test database URLs
     "^dummy-url$",
@@ -78,6 +89,10 @@ regexes = [
     "^dummy-.*$",
     "^sample-.*$",
     "^example-.*$",
+    
+    # Shell variable patterns (not actual secrets)
+    "^key=\\$\\{line%%=\\*\\}$",
+    "key=\\$\\{line%%=\\*\\}",
     
     # Test-specific patterns
     "^integration-test-.*$",

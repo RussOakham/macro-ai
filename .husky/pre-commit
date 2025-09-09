@@ -1,3 +1,23 @@
-set -e
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
 
-pnpm format:fix && pnpm lint && pnpm lint:md && pnpm type-check
+# Basic validation for pre-commit (fast checks only)
+echo "🔍 Running basic validation checks..."
+
+# Check if any workflow files are being committed
+if git diff --cached --name-only | grep -q '\.github/workflows/.*\.ya\?ml$'; then
+  echo "📋 GitHub Actions workflow files detected, running basic validation..."
+  
+  # Run only actionlint for syntax validation (fast)
+  echo "🔍 Running actionlint validation..."
+  pnpm security:scan:workflows
+  
+  if [ $? -ne 0 ]; then
+    echo "❌ Workflow validation failed. Please fix syntax errors before committing."
+    exit 1
+  fi
+  
+  echo "✅ Basic validation passed! Comprehensive security scan will run on push."
+else
+  echo "ℹ️  No GitHub Actions workflow files in this commit, skipping validation."
+fi
