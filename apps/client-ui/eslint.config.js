@@ -57,6 +57,10 @@ export default repoConfig.config(
 			'@typescript-eslint/no-misused-promises': 'warn',
 			'react/jsx-props-no-spreading': 'off',
 			'react/require-default-props': 'off',
+			// Disable rules that oxlint handles better
+			'sort-keys': 'off',
+			'one-var': 'off',
+			'no-ternary': 'off',
 		},
 		settings: {
 			'import-x/resolver-next': [

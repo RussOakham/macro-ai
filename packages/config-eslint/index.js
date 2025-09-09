@@ -42,10 +42,8 @@
 
 import { base } from './src/base.js'
 import { reactConfig } from './src/react.js'
-import { nodeConfig } from './src/node.js'
 import { oxlintConfig } from './src/oxlint.js'
 import { securityConfig } from './src/security.js'
-import { prettierConfig } from './src/prettier.js'
 
 /**
  * Simple config utility for combining configurations
@@ -62,9 +60,7 @@ const configs = {
 	base,
 	react: reactConfig,
 	oxlint: oxlintConfig,
-	node: nodeConfig,
 	security: securityConfig,
-	prettier: prettierConfig,
 }
 
 export { config, configs }

@@ -22,19 +22,14 @@ const base = {
 		...turboConfig,
 		{
 			rules: {
-				// General code style relaxations
-				'no-underscore-dangle': 'warn', // Allow _private members and config objects
+				// Note: Basic code style rules are now handled by oxlint
+				// Only keeping rules that ESLint handles better or oxlint doesn't support
 				'class-methods-use-this': 'warn', // Allow class methods without 'this' usage
-				'no-ternary': 'off', // Allow ternary operators
-				'@typescript-eslint/no-unsafe-assignment': 'warn', // Allow unsafe assignment
-				'@typescript-eslint/no-unsafe-call': 'warn', // Allow unsafe call
-				'@typescript-eslint/no-unsafe-member-access': 'warn', // Allow unsafe member access
 
-				// Variable declaration rules
-				'one-var': 'off', // Allow multiple variable declarations - DISABLED
-
-				// Object key sorting
-				'sort-keys': 'off', // Warn when object keys are not alphabetically sorted
+				// Disable overly annoying rules
+				'sort-keys': 'off',
+				'one-var': 'off',
+				'no-ternary': 'off',
 			},
 		},
 	],
@@ -50,12 +45,8 @@ const base = {
 				'no-unused-vars': 'off',
 				'no-undef': 'off',
 
-				// Relax overly strict TypeScript rules
-				'@typescript-eslint/no-unsafe-assignment': 'warn',
-				'@typescript-eslint/no-unsafe-call': 'warn',
-				'@typescript-eslint/no-unsafe-member-access': 'warn',
-				'@typescript-eslint/restrict-template-expressions': 'warn',
-				'@typescript-eslint/unbound-method': 'warn',
+				// Note: TypeScript unsafe rules are now handled by oxlint
+				// Only keeping rules that require type-aware analysis or oxlint doesn't support
 
 				// Configure promise handling for async functions
 				'@typescript-eslint/no-misused-promises': [
@@ -81,16 +72,8 @@ const base = {
 				// SonarJS - Code quality and maintainability
 				'sonarjs/no-duplicate-string': 'off',
 
-				// Perfectionist - Code organization
-				'perfectionist/sort-imports': ['error', { type: 'natural' }],
-
-				// Array methods - Modern array method preferences
-				'array-func/from-map': 'error',
-				'array-func/no-unnecessary-this-arg': 'error',
-				'array-func/prefer-array-from': 'error',
-				'array-func/avoid-reverse': 'error',
-				'array-func/prefer-flat': 'error',
-				'array-func/prefer-flat-map': 'error',
+				// Note: Import sorting and array function rules are now handled by oxlint
+				// perfectionist/sort-imports and array-func/* rules removed to avoid duplication
 
 				// ESLint directives - Clean up ESLint disable/enable comments
 				'eslint-comments/no-duplicate-disable': 'error',
