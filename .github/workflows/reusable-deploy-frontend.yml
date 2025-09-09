@@ -40,6 +40,13 @@ on:
         required: false
         type: boolean
         default: true
+    secrets:
+      AWS_ACCOUNT_ID:
+        required: true
+      AWS_ROLE_ARN:
+        required: true
+      API_KEY:
+        required: true
     outputs:
       app-url:
         description: 'Deployed frontend app URL'
