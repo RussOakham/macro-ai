@@ -151,8 +151,9 @@ function simulateCorsLogic(env) {
 
 	// Pattern-based CORS matching for preview environments with custom domains
 	const isCustomDomainPreview = isPreview && customDomainName
+	const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 	const previewDomainPattern = isCustomDomainPreview
-		? new RegExp(`^https://pr-\\d+\\.${customDomainName.replace('.', '\\.')}$`)
+		? new RegExp(`^https://pr-\\d+\\.${escapeRegex(customDomainName)}$`)
 		: null
 
 	// Add custom domain origins for preview environments

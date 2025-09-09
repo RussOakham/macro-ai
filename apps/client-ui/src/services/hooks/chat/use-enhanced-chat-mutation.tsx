@@ -199,7 +199,7 @@ const useEnhancedChat = ({
 			// Call callback for message sent
 			onMessageSent?.(tempUserMessage.id)
 
-			// Call original useChat submit (synchronous call)
+			// Call original useChat submit (handleSubmit is synchronous)
 			try {
 				chatHook.handleSubmit(e)
 			} catch (submitError) {

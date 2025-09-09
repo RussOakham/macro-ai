@@ -288,10 +288,16 @@ function validateEnvironment() {
 	const nodeEnv = allEnvVars['NODE_ENV']
 	const appEnv = allEnvVars['APP_ENV']
 
-	if (nodeEnv && ['production', 'staging', 'preview'].includes(nodeEnv)) {
+	// Check if APP_ENV is required based on NODE_ENV
+	const requiresAppEnv = nodeEnv && ['production', 'staging'].includes(nodeEnv)
+	const isPreviewEnv = appEnv && appEnv.match(/^pr-\d+$/)
+
+	if (requiresAppEnv || isPreviewEnv) {
 		if (!appEnv) {
 			missingVars.push('APP_ENV')
-			logError(`APP_ENV is required when NODE_ENV is '${nodeEnv}'`)
+			logError(
+				`APP_ENV is required when NODE_ENV is '${nodeEnv}' or for preview environments`,
+			)
 		} else if (validationRules['APP_ENV']) {
 			const validationError = validationRules['APP_ENV'](appEnv)
 			if (validationError) {

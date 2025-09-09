@@ -2,7 +2,7 @@
 	"$schema": "http://json.schemastore.org/package",
 	"name": "@repo/config-typescript",
 	"license": "MIT",
-	"private": "true",
+	"private": true,
 	"version": "0.0.0",
 	"type": "module",
 	"engines": {

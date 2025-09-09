@@ -114,6 +114,11 @@ const base = {
 				'testing-library': testingLibraryPlugin,
 			},
 			files: ['**/*.{test,spec}.{js,ts,jsx,tsx}'],
+			languageOptions: {
+				globals: {
+					...(vitestPlugin.environments?.globals?.globals || {}),
+				},
+			},
 			rules: {
 				// Vitest rules
 				'vitest/expect-expect': 'error',

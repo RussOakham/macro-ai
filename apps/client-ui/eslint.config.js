@@ -42,8 +42,8 @@ export default repoConfig.config(
 		// Only apply to TypeScript files
 		files: ['**/*.{ts,tsx}'],
 		languageOptions: {
+			globals: globals.browser,
 			parserOptions: {
-				globals: globals.browser,
 				project: [
 					'./tsconfig.node.json',
 					'./tsconfig.app.json',

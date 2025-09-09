@@ -75,7 +75,7 @@ export default repoConfig.config(
 
 	// Generated client files - disable problematic rules for auto-generated code
 	{
-		files: ['src/client/**/*.ts'],
+		files: ['src/client/**/*.gen.ts'],
 		rules: {
 			'@typescript-eslint/consistent-type-definitions': 'off',
 			'@typescript-eslint/no-empty-object-type': 'off',

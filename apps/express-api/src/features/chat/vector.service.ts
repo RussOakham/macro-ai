@@ -13,6 +13,17 @@ import { type AIService } from './ai.service.ts'
 const { logger } = pino
 
 /**
+ * Redact query text to prevent PII exposure in logs
+ * @param query The query text to redact
+ * @returns Redacted query text
+ */
+const redactQuery = (query: string): string => {
+	// Truncate to first 50 chars and add ellipsis
+	const truncated = query.slice(0, 50)
+	return truncated.length < query.length ? `${truncated}...` : truncated
+}
+
+/**
  * VectorService handles embedding generation and semantic search operations
  * Integrates with AI service for embedding generation and vector repository for storage
  */
@@ -168,7 +179,7 @@ export class VectorService {
 		if (embeddingError) {
 			logger.error({
 				msg: 'Failed to generate embedding for search query',
-				query: query.slice(0, 100),
+				query: redactQuery(query),
 				userId,
 				error: embeddingError,
 			})
@@ -188,7 +199,7 @@ export class VectorService {
 		if (searchError) {
 			logger.error({
 				msg: 'Semantic search failed',
-				query: query.slice(0, 100),
+				query: redactQuery(query),
 				userId,
 				chatId,
 				error: searchError,
@@ -198,7 +209,7 @@ export class VectorService {
 
 		logger.info({
 			msg: 'Semantic search completed',
-			query: query.slice(0, 100),
+			query: redactQuery(query),
 			userId,
 			chatId,
 			resultsCount: results.length,
