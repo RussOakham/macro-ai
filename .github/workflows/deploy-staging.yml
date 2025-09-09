@@ -286,11 +286,12 @@ jobs:
             const backendDeployed = '${{ needs.deploy-backend.result }}' === 'success';
             const deploymentScope = '${{ needs.change-detection.outputs.deployment-scope }}';
 
-            // Get deployment details
-            const appUrl = frontendDeployed ? '${{ needs.deploy-frontend.outputs.app-url }}' : null;
-            const appId = frontendDeployed ? '${{ needs.deploy-frontend.outputs.app-id }}' : null;
-            const backendUrl = backendDeployed ? '${{ needs.deploy-backend.outputs.api-endpoint }}' : null;
-            const backendStack = backendDeployed ? '${{ needs.deploy-backend.outputs.stack-name }}' : null;
+            // Get deployment details using predictable URLs
+            const customDomain = '${{ vars.CUSTOM_DOMAIN_NAME }}';
+            const appUrl = frontendDeployed ? `https://staging.${customDomain}` : null;
+            const appId = frontendDeployed ? 'Amplify App ID (check AWS Console)' : null;
+            const backendUrl = backendDeployed ? `https://api-staging.${customDomain}` : null;
+            const backendStack = backendDeployed ? 'macro-ai-staging' : null;
 
             const comment = `## 🚀 Staging Environment Deployed Successfully!
 
