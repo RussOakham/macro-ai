@@ -34,7 +34,6 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Logging functions
@@ -199,7 +198,7 @@ verify_tag_conflicts() {
         
         # Run audit and capture results
         local audit_output
-        if audit_output=$($audit_script $audit_args 2>&1); then
+        if audit_output=$($audit_script "$audit_args" 2>&1); then
             log_success "Tag conflict audit completed"
             
             # Parse audit results (simplified - in real implementation would parse JSON output)

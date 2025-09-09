@@ -44,21 +44,21 @@ pnpm security:scan:codeql
 
 ### Core Security Tools
 
-| Tool | Purpose | Command |
-|------|---------|---------|
+| Tool           | Purpose                            | Command                        |
+| -------------- | ---------------------------------- | ------------------------------ |
 | **actionlint** | GitHub Actions workflow validation | `pnpm security:scan:workflows` |
-| **gitleaks** | Secret scanning | `pnpm security:scan:secrets` |
-| **CodeQL CLI** | Deep security analysis | `pnpm security:scan:codeql` |
-| **Octoscan** | Static vulnerability scanner | `pnpm security:scan:octoscan` |
-| **Act** | Local workflow testing | `pnpm security:scan:act` |
+| **gitleaks**   | Secret scanning                    | `pnpm security:scan:secrets`   |
+| **CodeQL CLI** | Deep security analysis             | `pnpm security:scan:codeql`    |
+| **Octoscan**   | Static vulnerability scanner       | `pnpm security:scan:octoscan`  |
+| **Act**        | Local workflow testing             | `pnpm security:scan:act`       |
 
 ### Additional Tools
 
-| Tool | Purpose | Installation |
-|------|---------|-------------|
+| Tool             | Purpose                         | Installation            |
+| ---------------- | ------------------------------- | ----------------------- |
 | **Snyk Scanner** | GitHub Actions security scanner | Included in CodeQL scan |
-| **Semgrep** | Additional security scanning | `brew install semgrep` |
-| **Trivy** | Vulnerability scanning | `brew install trivy` |
+| **Semgrep**      | Additional security scanning    | `brew install semgrep`  |
+| **Trivy**        | Vulnerability scanning          | `brew install trivy`    |
 
 ## Detailed Usage
 
@@ -294,12 +294,12 @@ You can extend the security scanning with custom rules:
 ```javascript
 // In security-scan.js
 const customRules = [
-  {
-    name: 'Custom Rule',
-    pattern: /your-pattern/g,
-    severity: 'high',
-    message: 'Your custom message'
-  }
+	{
+		name: 'Custom Rule',
+		pattern: /your-pattern/g,
+		severity: 'high',
+		message: 'Your custom message',
+	},
 ]
 ```
 
@@ -311,13 +311,13 @@ Configure your IDE to run security scans:
 
 ```json
 {
-  "tasks": {
-    "security-scan": {
-      "command": "pnpm",
-      "args": ["security:scan"],
-      "group": "build"
-    }
-  }
+	"tasks": {
+		"security-scan": {
+			"command": "pnpm",
+			"args": ["security:scan"],
+			"group": "build"
+		}
+	}
 }
 ```
 

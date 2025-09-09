@@ -12,13 +12,13 @@ permissions:
 on:
   push:
     branches:
-    - develop
-    - main
+      - develop
+      - main
   pull_request:
-    types: [ opened, reopened, synchronize ]
+    types: [opened, reopened, synchronize]
     branches:
-    - develop
-    - main
+      - develop
+      - main
 
 concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
@@ -38,220 +38,220 @@ jobs:
       NODE_ENV: ${{ env.NODE_ENV }}
       APP_ENV: ${{ env.APP_ENV }}
     steps:
-    - name: Detect environment
-      id: detect_env
-      run: |
-        if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
-          echo "🔍 Running in act (local testing) - using direct AWS credentials"
-          echo "use_direct_creds=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "🔍 Running in GitHub Actions (remote) - using IAM role assumption"
-          echo "use_direct_creds=false" >> "$GITHUB_OUTPUT"
-        fi
-
-    - name: Configure AWS credentials (Direct)
-      if: steps.detect_env.outputs.use_direct_creds == 'true'
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
-
-    - name: Configure AWS credentials (Role)
-      if: steps.detect_env.outputs.use_direct_creds == 'false'
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        role-session-name: github-actions-hygiene-checks
-        aws-region: us-east-1
-
-    - name: Create Express API .env content
-      id: create_express_env
-      run: |
-        echo "🔍 Computing environment configuration..."
-
-        # Compute APP_ENV based on event and branch
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          APP_ENV="development"
-          echo "🌱 Pull request detected: using development environment"
-        else
-          # Direct push - determine branch
-          if [[ "${{ github.ref_name }}" == "develop" ]]; then
-            APP_ENV="staging"
-            echo "🚀 Develop branch detected: using staging environment"
-          elif [[ "${{ github.ref_name }}" == "main" ]]; then
-            APP_ENV="production"
-            echo "🏭 Main branch detected: using production environment"
+      - name: Detect environment
+        id: detect_env
+        run: |
+          if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
+            echo "🔍 Running in act (local testing) - using direct AWS credentials"
+            echo "use_direct_creds=true" >> "$GITHUB_OUTPUT"
           else
+            echo "🔍 Running in GitHub Actions (remote) - using IAM role assumption"
+            echo "use_direct_creds=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure AWS credentials (Direct)
+        if: steps.detect_env.outputs.use_direct_creds == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Configure AWS credentials (Role)
+        if: steps.detect_env.outputs.use_direct_creds == 'false'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-hygiene-checks
+          aws-region: us-east-1
+
+      - name: Create Express API .env content
+        id: create_express_env
+        run: |
+          echo "🔍 Computing environment configuration..."
+
+          # Compute APP_ENV based on event and branch
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             APP_ENV="development"
-            echo "🌱 Other branch detected: using development environment"
-          fi
-        fi
-
-        # Derive NODE_ENV from APP_ENV
-        if [[ "$APP_ENV" == "production" || "$APP_ENV" == "staging" ]]; then
-          NODE_ENV="production"
-        else
-          NODE_ENV="development"
-        fi
-
-        echo "✅ Environment configuration: APP_ENV=${APP_ENV}, NODE_ENV=${NODE_ENV}"
-
-        # Set workflow environment variables for all jobs
-        echo "APP_ENV=${APP_ENV}" >> $GITHUB_ENV
-        echo "NODE_ENV=${NODE_ENV}" >> $GITHUB_ENV
-
-        # Determine parameter store path based on APP_ENV
-        PARAM_PATH="/macro-ai/${APP_ENV}"
-        echo "🔍 Using parameter store path: ${PARAM_PATH}"
-
-        # Fetch all runtime configuration from Parameter Store using environment-specific path
-        if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
-          echo "🔍 Running in act environment - using mock parameters for local testing"
-
-          # Mock parameters for local act testing
-          AWS_COGNITO_REGION="us-east-1"
-          AWS_COGNITO_USER_POOL_ID="us-east-1_mock_pool"
-          AWS_COGNITO_USER_POOL_CLIENT_ID="mock_client_id"
-          AWS_COGNITO_USER_POOL_SECRET_KEY="mock_secret_key"
-          AWS_COGNITO_REFRESH_TOKEN_EXPIRY="2592000"
-
-          COOKIE_DOMAIN="localhost"
-          COOKIE_ENCRYPTION_KEY="mock-encryption-key-for-local-testing-only"
-
-          REDIS_URL="redis://localhost:6379"
-          RELATIONAL_DATABASE_URL="postgresql://user:password@localhost:5432/macro_ai_test"
-
-          OPENAI_API_KEY="mock-openai-key-for-local-testing-only"
-
-          RATE_LIMIT_WINDOW_MS="900000"
-          RATE_LIMIT_MAX_REQUESTS="100"
-          AUTH_RATE_LIMIT_WINDOW_MS="900000"
-          AUTH_RATE_LIMIT_MAX_REQUESTS="5"
-          API_RATE_LIMIT_WINDOW_MS="60000"
-          API_RATE_LIMIT_MAX_REQUESTS="10"
-
-          echo "✅ Using mock parameters for local testing"
-        else
-          echo "🔍 Running in GitHub Actions - fetching parameters from: ${PARAM_PATH}"
-
-          # Function to fetch parameter with error handling
-        fetch_param() {
-          local param_name="$1"
-          local param_path="${PARAM_PATH}/${param_name}"
-          local value
-          
-          echo "  📥 Fetching: ${param_path}"
-          value=$(aws ssm get-parameter --name "${param_path}" --with-decryption --query "Parameter.Value" --output text 2>&1)
-          
-          if [ $? -eq 0 ]; then
-            echo "    ✅ ${param_name}: OK"
-            echo "$value"
+            echo "🌱 Pull request detected: using development environment"
           else
-            echo "    ❌ ${param_name}: FAILED - $value"
-            return 1
+            # Direct push - determine branch
+            if [[ "${{ github.ref_name }}" == "develop" ]]; then
+              APP_ENV="staging"
+              echo "🚀 Develop branch detected: using staging environment"
+            elif [[ "${{ github.ref_name }}" == "main" ]]; then
+              APP_ENV="production"
+              echo "🏭 Main branch detected: using production environment"
+            else
+              APP_ENV="development"
+              echo "🌱 Other branch detected: using development environment"
+            fi
           fi
-        }
 
-        # Fetch all parameters with error handling
-        AWS_COGNITO_REGION=$(fetch_param "aws-cognito-region")
-        AWS_COGNITO_USER_POOL_ID=$(fetch_param "aws-cognito-user-pool-id")
-        AWS_COGNITO_USER_POOL_CLIENT_ID=$(fetch_param "aws-cognito-user-pool-client-id")
-        AWS_COGNITO_USER_POOL_SECRET_KEY=$(fetch_param "aws-cognito-user-pool-secret-key")
-
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY=$(fetch_param "aws-cognito-refresh-token-expiry")
-
-        COOKIE_DOMAIN=$(fetch_param "cookie-domain")
-        COOKIE_ENCRYPTION_KEY=$(fetch_param "cookie-encryption-key")
-
-        REDIS_URL=$(fetch_param "redis-url")
-        RELATIONAL_DATABASE_URL=$(fetch_param "relational-database-url")
-
-        OPENAI_API_KEY=$(fetch_param "openai-api-key")
-
-        RATE_LIMIT_WINDOW_MS=$(fetch_param "rate-limit-window-ms")
-        RATE_LIMIT_MAX_REQUESTS=$(fetch_param "rate-limit-max-requests")
-        AUTH_RATE_LIMIT_WINDOW_MS=$(fetch_param "auth-rate-limit-window-ms")
-        AUTH_RATE_LIMIT_MAX_REQUESTS=$(fetch_param "auth-rate-limit-max-requests")
-        API_RATE_LIMIT_WINDOW_MS=$(fetch_param "api-rate-limit-window-ms")
-        API_RATE_LIMIT_MAX_REQUESTS=$(fetch_param "api-rate-limit-max-requests")
-
-        # Verify all required parameters were fetched...
-        echo "🔍 Verifying all required parameters were fetched..."
-        required_params=(
-          "AWS_COGNITO_REGION" "AWS_COGNITO_USER_POOL_ID" "AWS_COGNITO_USER_POOL_CLIENT_ID"
-          		"AWS_COGNITO_USER_POOL_SECRET_KEY" "COOKIE_ENCRYPTION_KEY" "RELATIONAL_DATABASE_URL" "REDIS_URL"
-          "OPENAI_API_KEY"
-        )
-
-        missing_params=()
-        for param in "${required_params[@]}"; do
-          if [[ -z "${!param}" ]]; then
-            missing_params+=("$param")
+          # Derive NODE_ENV from APP_ENV
+          if [[ "$APP_ENV" == "production" || "$APP_ENV" == "staging" ]]; then
+            NODE_ENV="production"
+          else
+            NODE_ENV="development"
           fi
-        done
 
-        if [[ ${#missing_params[@]} -gt 0 ]]; then
-          echo "❌ Missing required parameters: ${missing_params[*]}"
-          exit 1
-        fi
+          echo "✅ Environment configuration: APP_ENV=${APP_ENV}, NODE_ENV=${NODE_ENV}"
 
-        echo "✅ All required parameters fetched successfully"
-        echo "✅ Environment variables loaded from AWS Parameter Store"
+          # Set workflow environment variables for all jobs
+          echo "APP_ENV=${APP_ENV}" >> $GITHUB_ENV
+          echo "NODE_ENV=${NODE_ENV}" >> $GITHUB_ENV
 
-        # Create .env files using artifacts instead of step outputs to prevent secret exposure
-        mkdir -p /tmp/envs
+          # Determine parameter store path based on APP_ENV
+          PARAM_PATH="/macro-ai/${APP_ENV}"
+          echo "🔍 Using parameter store path: ${PARAM_PATH}"
 
-        # Create Express API .env file
-        cat << EOF > /tmp/envs/express-api.env
-        # API Configuration
-        API_KEY=${{ secrets.API_KEY }}
-        SERVER_PORT=${{ secrets.SERVER_PORT || '3040' }}
-        NODE_ENV=${NODE_ENV}
-        APP_ENV=${APP_ENV}
+          # Fetch all runtime configuration from Parameter Store using environment-specific path
+          if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
+            echo "🔍 Running in act environment - using mock parameters for local testing"
 
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION=${AWS_COGNITO_REGION}
-        AWS_COGNITO_USER_POOL_ID=${AWS_COGNITO_USER_POOL_ID}
-        AWS_COGNITO_USER_POOL_CLIENT_ID=${AWS_COGNITO_USER_POOL_CLIENT_ID}
-        AWS_COGNITO_USER_POOL_SECRET_KEY=${AWS_COGNITO_USER_POOL_SECRET_KEY}
+            # Mock parameters for local act testing
+            AWS_COGNITO_REGION="us-east-1"
+            AWS_COGNITO_USER_POOL_ID="us-east-1_mock_pool"
+            AWS_COGNITO_USER_POOL_CLIENT_ID="mock_client_id"
+            AWS_COGNITO_USER_POOL_SECRET_KEY="mock_secret_key"
+            AWS_COGNITO_REFRESH_TOKEN_EXPIRY="2592000"
 
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY=${AWS_COGNITO_REFRESH_TOKEN_EXPIRY}
+            COOKIE_DOMAIN="localhost"
+            COOKIE_ENCRYPTION_KEY="mock-encryption-key-for-local-testing-only"
 
-        # Cookie Configuration
-        COOKIE_DOMAIN=${COOKIE_DOMAIN}
-        COOKIE_ENCRYPTION_KEY=${COOKIE_ENCRYPTION_KEY}
+            REDIS_URL="redis://localhost:6379"
+            RELATIONAL_DATABASE_URL="postgresql://user:password@localhost:5432/macro_ai_test"
 
-        # Databases
-        REDIS_URL=${REDIS_URL}
-        RELATIONAL_DATABASE_URL=${RELATIONAL_DATABASE_URL}
+            OPENAI_API_KEY="mock-openai-key-for-local-testing-only"
 
-        # OpenAI
-        OPENAI_API_KEY=${OPENAI_API_KEY}
+            RATE_LIMIT_WINDOW_MS="900000"
+            RATE_LIMIT_MAX_REQUESTS="100"
+            AUTH_RATE_LIMIT_WINDOW_MS="900000"
+            AUTH_RATE_LIMIT_MAX_REQUESTS="5"
+            API_RATE_LIMIT_WINDOW_MS="60000"
+            API_RATE_LIMIT_MAX_REQUESTS="10"
 
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS}
-        RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS}
-        AUTH_RATE_LIMIT_WINDOW_MS=${AUTH_RATE_LIMIT_WINDOW_MS}
-        AUTH_RATE_LIMIT_MAX_REQUESTS=${AUTH_RATE_LIMIT_MAX_REQUESTS}
-        API_RATE_LIMIT_WINDOW_MS=${API_RATE_LIMIT_WINDOW_MS}
-        API_RATE_LIMIT_MAX_REQUESTS=${API_RATE_LIMIT_MAX_REQUESTS}
-        REDIS_URL=${REDIS_URL}
-        EOF
+            echo "✅ Using mock parameters for local testing"
+          else
+            echo "🔍 Running in GitHub Actions - fetching parameters from: ${PARAM_PATH}"
 
-        # Create Client UI .env file
-        cat << EOF > /tmp/envs/client-ui.env
-        VITE_API_URL=${{ secrets.VITE_API_URL || 'http://localhost:3040/api' }}
-        VITE_API_KEY=${{ secrets.VITE_API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-        EOF
-        fi
+            # Function to fetch parameter with error handling
+          fetch_param() {
+            local param_name="$1"
+            local param_path="${PARAM_PATH}/${param_name}"
+            local value
+            
+            echo "  📥 Fetching: ${param_path}"
+            value=$(aws ssm get-parameter --name "${param_path}" --with-decryption --query "Parameter.Value" --output text 2>&1)
+            
+            if [ $? -eq 0 ]; then
+              echo "    ✅ ${param_name}: OK"
+              echo "$value"
+            else
+              echo "    ❌ ${param_name}: FAILED - $value"
+              return 1
+            fi
+          }
 
-    - name: Upload env artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: ci-env-files
-        path: /tmp/envs/
-        retention-days: 1
+          # Fetch all parameters with error handling
+          AWS_COGNITO_REGION=$(fetch_param "aws-cognito-region")
+          AWS_COGNITO_USER_POOL_ID=$(fetch_param "aws-cognito-user-pool-id")
+          AWS_COGNITO_USER_POOL_CLIENT_ID=$(fetch_param "aws-cognito-user-pool-client-id")
+          AWS_COGNITO_USER_POOL_SECRET_KEY=$(fetch_param "aws-cognito-user-pool-secret-key")
+
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=$(fetch_param "aws-cognito-refresh-token-expiry")
+
+          COOKIE_DOMAIN=$(fetch_param "cookie-domain")
+          COOKIE_ENCRYPTION_KEY=$(fetch_param "cookie-encryption-key")
+
+          REDIS_URL=$(fetch_param "redis-url")
+          RELATIONAL_DATABASE_URL=$(fetch_param "relational-database-url")
+
+          OPENAI_API_KEY=$(fetch_param "openai-api-key")
+
+          RATE_LIMIT_WINDOW_MS=$(fetch_param "rate-limit-window-ms")
+          RATE_LIMIT_MAX_REQUESTS=$(fetch_param "rate-limit-max-requests")
+          AUTH_RATE_LIMIT_WINDOW_MS=$(fetch_param "auth-rate-limit-window-ms")
+          AUTH_RATE_LIMIT_MAX_REQUESTS=$(fetch_param "auth-rate-limit-max-requests")
+          API_RATE_LIMIT_WINDOW_MS=$(fetch_param "api-rate-limit-window-ms")
+          API_RATE_LIMIT_MAX_REQUESTS=$(fetch_param "api-rate-limit-max-requests")
+
+          # Verify all required parameters were fetched...
+          echo "🔍 Verifying all required parameters were fetched..."
+          required_params=(
+            "AWS_COGNITO_REGION" "AWS_COGNITO_USER_POOL_ID" "AWS_COGNITO_USER_POOL_CLIENT_ID"
+            		"AWS_COGNITO_USER_POOL_SECRET_KEY" "COOKIE_ENCRYPTION_KEY" "RELATIONAL_DATABASE_URL" "REDIS_URL"
+            "OPENAI_API_KEY"
+          )
+
+          missing_params=()
+          for param in "${required_params[@]}"; do
+            if [[ -z "${!param}" ]]; then
+              missing_params+=("$param")
+            fi
+          done
+
+          if [[ ${#missing_params[@]} -gt 0 ]]; then
+            echo "❌ Missing required parameters: ${missing_params[*]}"
+            exit 1
+          fi
+
+          echo "✅ All required parameters fetched successfully"
+          echo "✅ Environment variables loaded from AWS Parameter Store"
+
+          # Create .env files using artifacts instead of step outputs to prevent secret exposure
+          mkdir -p /tmp/envs
+
+          # Create Express API .env file
+          cat << EOF > /tmp/envs/express-api.env
+          # API Configuration
+          API_KEY=${{ secrets.API_KEY }}
+          SERVER_PORT=${{ secrets.SERVER_PORT || '3040' }}
+          NODE_ENV=${NODE_ENV}
+          APP_ENV=${APP_ENV}
+
+          # AWS Cognito Configuration
+          AWS_COGNITO_REGION=${AWS_COGNITO_REGION}
+          AWS_COGNITO_USER_POOL_ID=${AWS_COGNITO_USER_POOL_ID}
+          AWS_COGNITO_USER_POOL_CLIENT_ID=${AWS_COGNITO_USER_POOL_CLIENT_ID}
+          AWS_COGNITO_USER_POOL_SECRET_KEY=${AWS_COGNITO_USER_POOL_SECRET_KEY}
+
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=${AWS_COGNITO_REFRESH_TOKEN_EXPIRY}
+
+          # Cookie Configuration
+          COOKIE_DOMAIN=${COOKIE_DOMAIN}
+          COOKIE_ENCRYPTION_KEY=${COOKIE_ENCRYPTION_KEY}
+
+          # Databases
+          REDIS_URL=${REDIS_URL}
+          RELATIONAL_DATABASE_URL=${RELATIONAL_DATABASE_URL}
+
+          # OpenAI
+          OPENAI_API_KEY=${OPENAI_API_KEY}
+
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS}
+          RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS}
+          AUTH_RATE_LIMIT_WINDOW_MS=${AUTH_RATE_LIMIT_WINDOW_MS}
+          AUTH_RATE_LIMIT_MAX_REQUESTS=${AUTH_RATE_LIMIT_MAX_REQUESTS}
+          API_RATE_LIMIT_WINDOW_MS=${API_RATE_LIMIT_WINDOW_MS}
+          API_RATE_LIMIT_MAX_REQUESTS=${API_RATE_LIMIT_MAX_REQUESTS}
+          REDIS_URL=${REDIS_URL}
+          EOF
+
+          # Create Client UI .env file
+          cat << EOF > /tmp/envs/client-ui.env
+          VITE_API_URL=${{ secrets.VITE_API_URL || 'http://localhost:3040/api' }}
+          VITE_API_KEY=${{ secrets.VITE_API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+          EOF
+          fi
+
+      - name: Upload env artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-env-files
+          path: /tmp/envs/
+          retention-days: 1
 
   build:
     needs: setup
@@ -261,137 +261,137 @@ jobs:
       actions: read
     strategy:
       matrix:
-        node-version: [ 20.19.4 ]
+        node-version: [20.19.4]
     steps:
-    - uses: actions/checkout@v4
-    - name: Install pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: 10.14.0
-    - name: Use Node.JS
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
+      - uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - name: Use Node.JS
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
 
-    - name: Cache pnpm dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.pnpm-store
-          node_modules
-        key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          pnpm-${{ runner.os }}-
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
 
-    - name: Install dependencies
-      run: |
-        echo "📦 Installing dependencies..."
-        pnpm install --frozen-lockfile
-        echo "✅ Dependencies installed successfully"
+      - name: Install dependencies
+        run: |
+          echo "📦 Installing dependencies..."
+          pnpm install --frozen-lockfile
+          echo "✅ Dependencies installed successfully"
 
-    # Download .env files from artifacts to prevent secret exposure
-    - name: Download env artifacts
-      if: env.ACT_LOCAL != 'true'
-      uses: actions/download-artifact@v4
-      with:
-        name: ci-env-files
-        path: /tmp/envs
+      # Download .env files from artifacts to prevent secret exposure
+      - name: Download env artifacts
+        if: env.ACT_LOCAL != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-env-files
+          path: /tmp/envs
 
-    - name: Create mock env files for act environment
-      if: env.ACT_LOCAL == 'true'
-      run: |
-        mkdir -p /tmp/envs apps/express-api apps/client-ui
+      - name: Create mock env files for act environment
+        if: env.ACT_LOCAL == 'true'
+        run: |
+          mkdir -p /tmp/envs apps/express-api apps/client-ui
 
-        # Create Express API .env file with mock values
-        cat << EOF > /tmp/envs/express-api.env
-        # API Configuration
-        API_KEY=dummy-api-key-for-act-testing
-        SERVER_PORT=3040
-        NODE_ENV=development
-        APP_ENV=development
+          # Create Express API .env file with mock values
+          cat << EOF > /tmp/envs/express-api.env
+          # API Configuration
+          API_KEY=dummy-api-key-for-act-testing
+          SERVER_PORT=3040
+          NODE_ENV=development
+          APP_ENV=development
 
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION=us-east-1
-        AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
-        AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
-        AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+          # AWS Cognito Configuration
+          AWS_COGNITO_REGION=us-east-1
+          AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
+          AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
+          AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
 
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
 
-        # Cookie Configuration
-        COOKIE_DOMAIN=localhost
-        COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
+          # Cookie Configuration
+          COOKIE_DOMAIN=localhost
+          COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
 
-        # Databases
-        REDIS_URL=redis://localhost:6379
-        RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
+          # Databases
+          REDIS_URL=redis://localhost:6379
+          RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
 
-        # OpenAI
-        OPENAI_API_KEY=mock-openai-key-for-local-testing-only
+          # OpenAI
+          OPENAI_API_KEY=mock-openai-key-for-local-testing-only
 
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS=900000
-        RATE_LIMIT_MAX_REQUESTS=100
-        AUTH_RATE_LIMIT_WINDOW_MS=900000
-        AUTH_RATE_LIMIT_MAX_REQUESTS=5
-        API_RATE_LIMIT_WINDOW_MS=60000
-        API_RATE_LIMIT_MAX_REQUESTS=10
-        EOF
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS=900000
+          RATE_LIMIT_MAX_REQUESTS=100
+          AUTH_RATE_LIMIT_WINDOW_MS=900000
+          AUTH_RATE_LIMIT_MAX_REQUESTS=5
+          API_RATE_LIMIT_WINDOW_MS=60000
+          API_RATE_LIMIT_MAX_REQUESTS=10
+          EOF
 
-        # Create Client UI .env file
-        cat << EOF > /tmp/envs/client-ui.env
-        VITE_API_URL=http://localhost:3040/api
-        VITE_API_KEY=dummy-api-key-at-least-32-chars-long
-        EOF
+          # Create Client UI .env file
+          cat << EOF > /tmp/envs/client-ui.env
+          VITE_API_URL=http://localhost:3040/api
+          VITE_API_KEY=dummy-api-key-at-least-32-chars-long
+          EOF
 
-    - name: Create Express API .env file
-      run: |
-        mkdir -p apps/express-api
-        cp /tmp/envs/express-api.env apps/express-api/.env
+      - name: Create Express API .env file
+        run: |
+          mkdir -p apps/express-api
+          cp /tmp/envs/express-api.env apps/express-api/.env
 
-    - name: Create Client UI .env file
-      run: |
-        mkdir -p apps/client-ui
-        cp /tmp/envs/client-ui.env apps/client-ui/.env
+      - name: Create Client UI .env file
+        run: |
+          mkdir -p apps/client-ui
+          cp /tmp/envs/client-ui.env apps/client-ui/.env
 
-    - name: Run build
-      run: |
-        echo "🔨 Starting build process..."
-        pnpm build
-        echo "✅ Build completed successfully"
-      env:
-        # Core Configuration
-        NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
-        APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
-        API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+      - name: Run build
+        run: |
+          echo "🔨 Starting build process..."
+          pnpm build
+          echo "✅ Build completed successfully"
+        env:
+          # Core Configuration
+          NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
+          APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
+          API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
 
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-        AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-        AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-        AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-        # AWS Cognito credentials removed - using IAM roles instead
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
+          # AWS Cognito Configuration
+          AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
+          AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
+          AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
+          AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
+          # AWS Cognito credentials removed - using IAM roles instead
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
 
-        # Cookie Configuration
-        COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
-        COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+          # Cookie Configuration
+          COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
+          COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
 
-        # Databases
-        REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
-        RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          # Databases
+          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
+          RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
 
-        # OpenAI
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+          # OpenAI
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
 
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-        RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-        AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-        AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-        API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-        API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
 
   lint:
     needs: setup
@@ -401,152 +401,152 @@ jobs:
       actions: read
     strategy:
       matrix:
-        node-version: [ 20.19.4 ]
+        node-version: [20.19.4]
     steps:
-    - uses: actions/checkout@v4
-    - name: Install pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: 10.14.0
-    - name: Use Node.JS
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
+      - uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - name: Use Node.JS
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
 
-    - name: Cache pnpm dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.pnpm-store
-          node_modules
-        key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          pnpm-${{ runner.os }}-
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
 
-    - name: Install dependencies
-      run: |
-        echo "📦 Installing dependencies for lint job..."
-        pnpm install --frozen-lockfile
-        echo "✅ Dependencies installed successfully"
+      - name: Install dependencies
+        run: |
+          echo "📦 Installing dependencies for lint job..."
+          pnpm install --frozen-lockfile
+          echo "✅ Dependencies installed successfully"
 
-    # Download .env files from artifacts to prevent secret exposure
-    - name: Download env artifacts
-      if: env.ACT_LOCAL != 'true'
-      uses: actions/download-artifact@v4
-      with:
-        name: ci-env-files
-        path: /tmp/envs
+      # Download .env files from artifacts to prevent secret exposure
+      - name: Download env artifacts
+        if: env.ACT_LOCAL != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-env-files
+          path: /tmp/envs
 
-    - name: Create mock env files for act environment
-      if: env.ACT_LOCAL == 'true'
-      run: |
-        mkdir -p /tmp/envs apps/express-api apps/client-ui
+      - name: Create mock env files for act environment
+        if: env.ACT_LOCAL == 'true'
+        run: |
+          mkdir -p /tmp/envs apps/express-api apps/client-ui
 
-        # Create Express API .env file with mock values
-        cat << EOF > /tmp/envs/express-api.env
-        # API Configuration
-        API_KEY=dummy-api-key-for-act-testing
-        SERVER_PORT=3040
-        NODE_ENV=development
-        APP_ENV=development
+          # Create Express API .env file with mock values
+          cat << EOF > /tmp/envs/express-api.env
+          # API Configuration
+          API_KEY=dummy-api-key-for-act-testing
+          SERVER_PORT=3040
+          NODE_ENV=development
+          APP_ENV=development
 
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION=us-east-1
-        AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
-        AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
-        AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+          # AWS Cognito Configuration
+          AWS_COGNITO_REGION=us-east-1
+          AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
+          AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
+          AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
 
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
 
-        # Cookie Configuration
-        COOKIE_DOMAIN=localhost
-        COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
+          # Cookie Configuration
+          COOKIE_DOMAIN=localhost
+          COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
 
-        # Databases
-        REDIS_URL=redis://localhost:6379
-        RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
+          # Databases
+          REDIS_URL=redis://localhost:6379
+          RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
 
-        # OpenAI
-        OPENAI_API_KEY=mock-openai-key-for-local-testing-only
+          # OpenAI
+          OPENAI_API_KEY=mock-openai-key-for-local-testing-only
 
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS=900000
-        RATE_LIMIT_MAX_REQUESTS=100
-        AUTH_RATE_LIMIT_WINDOW_MS=900000
-        AUTH_RATE_LIMIT_MAX_REQUESTS=5
-        API_RATE_LIMIT_WINDOW_MS=60000
-        API_RATE_LIMIT_MAX_REQUESTS=10
-        EOF
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS=900000
+          RATE_LIMIT_MAX_REQUESTS=100
+          AUTH_RATE_LIMIT_WINDOW_MS=900000
+          AUTH_RATE_LIMIT_MAX_REQUESTS=5
+          API_RATE_LIMIT_WINDOW_MS=60000
+          API_RATE_LIMIT_MAX_REQUESTS=10
+          EOF
 
-        # Create Client UI .env file
-        cat << EOF > /tmp/envs/client-ui.env
-        VITE_API_URL=http://localhost:3040/api
-        VITE_API_KEY=dummy-api-key-at-least-32-chars-long
-        EOF
+          # Create Client UI .env file
+          cat << EOF > /tmp/envs/client-ui.env
+          VITE_API_URL=http://localhost:3040/api
+          VITE_API_KEY=dummy-api-key-at-least-32-chars-long
+          EOF
 
-    - name: Create Express API .env file
-      run: |
-        mkdir -p apps/express-api
-        cp /tmp/envs/express-api.env apps/express-api/.env
+      - name: Create Express API .env file
+        run: |
+          mkdir -p apps/express-api
+          cp /tmp/envs/express-api.env apps/express-api/.env
 
-    - name: Create Client UI .env file
-      run: |
-        mkdir -p apps/client-ui
-        cp /tmp/envs/client-ui.env apps/client-ui/.env
+      - name: Create Client UI .env file
+        run: |
+          mkdir -p apps/client-ui
+          cp /tmp/envs/client-ui.env apps/client-ui/.env
 
-    - name: Build config packages
-      run: |
-        echo "🔨 Building config packages..."
-        pnpm --filter @repo/config-testing build
-        echo "✅ Config packages built successfully"
+      - name: Build config packages
+        run: |
+          echo "🔨 Building config packages..."
+          pnpm --filter @repo/config-testing build
+          echo "✅ Config packages built successfully"
 
-    - name: Build types package
-      run: pnpm --filter @repo/macro-ai-api-client build
-      env:
-        # Core Configuration
-        NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
-        APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
-        API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+      - name: Build types package
+        run: pnpm --filter @repo/macro-ai-api-client build
+        env:
+          # Core Configuration
+          NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
+          APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
+          API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
 
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-        AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-        AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-        AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-        # AWS Cognito credentials removed - using IAM roles instead
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_USER_POOL_REFRESH_TOKEN_EXPIRY || '30' }}
+          # AWS Cognito Configuration
+          AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
+          AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
+          AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
+          AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
+          # AWS Cognito credentials removed - using IAM roles instead
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_USER_POOL_REFRESH_TOKEN_EXPIRY || '30' }}
 
-        # Cookie Configuration
-        COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
-        COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+          # Cookie Configuration
+          COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
+          COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
 
-        # Databases
-        REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
-        RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          # Databases
+          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
+          RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
 
-        # OpenAI
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+          # OpenAI
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
 
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-        RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-        AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-        AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-        API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-        API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
 
-    - name: Generate MSW handlers
-      run: |
-        echo "🔧 Generating MSW handlers from OpenAPI spec..."
-        pnpm --filter client-ui generate:msw
-        echo "✅ MSW handlers generated successfully"
+      - name: Generate MSW handlers
+        run: |
+          echo "🔧 Generating MSW handlers from OpenAPI spec..."
+          pnpm --filter client-ui generate:msw
+          echo "✅ MSW handlers generated successfully"
 
-    - name: Run lint
-      run: |
-        echo "🔍 Starting lint checks..."
-        pnpm lint
-        echo "✅ Lint checks passed successfully"
+      - name: Run lint
+        run: |
+          echo "🔍 Starting lint checks..."
+          pnpm lint
+          echo "✅ Lint checks passed successfully"
 
   test:
     needs: setup
@@ -556,248 +556,248 @@ jobs:
       actions: write # For uploading artifacts
     strategy:
       matrix:
-        node-version: [ 20.19.4 ]
+        node-version: [20.19.4]
     steps:
-    - uses: actions/checkout@v4
-    - name: Install pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: 10.14.0
-    - name: Use Node.JS
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
+      - uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - name: Use Node.JS
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
 
-    - name: Cache pnpm dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.pnpm-store
-          node_modules
-        key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          pnpm-${{ runner.os }}-
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
 
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-    # Download .env files from artifacts to prevent secret exposure
-    - name: Download env artifacts
-      if: env.ACT_LOCAL != 'true'
-      uses: actions/download-artifact@v4
-      with:
-        name: ci-env-files
-        path: /tmp/envs
+      # Download .env files from artifacts to prevent secret exposure
+      - name: Download env artifacts
+        if: env.ACT_LOCAL != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-env-files
+          path: /tmp/envs
 
-    - name: Create mock env files for act environment
-      if: env.ACT_LOCAL == 'true'
-      run: |
-        mkdir -p /tmp/envs apps/express-api apps/client-ui
+      - name: Create mock env files for act environment
+        if: env.ACT_LOCAL == 'true'
+        run: |
+          mkdir -p /tmp/envs apps/express-api apps/client-ui
 
-        # Create Express API .env file with mock values
-        cat << EOF > /tmp/envs/express-api.env
-        # API Configuration
-        API_KEY=dummy-api-key-for-act-testing
-        SERVER_PORT=3040
-        NODE_ENV=development
-        APP_ENV=development
+          # Create Express API .env file with mock values
+          cat << EOF > /tmp/envs/express-api.env
+          # API Configuration
+          API_KEY=dummy-api-key-for-act-testing
+          SERVER_PORT=3040
+          NODE_ENV=development
+          APP_ENV=development
 
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION=us-east-1
-        AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
-        AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
-        AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+          # AWS Cognito Configuration
+          AWS_COGNITO_REGION=us-east-1
+          AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
+          AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
+          AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
 
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
 
-        # Cookie Configuration
-        COOKIE_DOMAIN=localhost
-        COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
+          # Cookie Configuration
+          COOKIE_DOMAIN=localhost
+          COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
 
-        # Databases
-        REDIS_URL=redis://localhost:6379
-        RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
+          # Databases
+          REDIS_URL=redis://localhost:6379
+          RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
 
-        # OpenAI
-        OPENAI_API_KEY=mock-openai-key-for-local-testing-only
+          # OpenAI
+          OPENAI_API_KEY=mock-openai-key-for-local-testing-only
 
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS=900000
-        RATE_LIMIT_MAX_REQUESTS=100
-        AUTH_RATE_LIMIT_WINDOW_MS=900000
-        AUTH_RATE_LIMIT_MAX_REQUESTS=5
-        API_RATE_LIMIT_WINDOW_MS=60000
-        API_RATE_LIMIT_MAX_REQUESTS=10
-        EOF
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS=900000
+          RATE_LIMIT_MAX_REQUESTS=100
+          AUTH_RATE_LIMIT_WINDOW_MS=900000
+          AUTH_RATE_LIMIT_MAX_REQUESTS=5
+          API_RATE_LIMIT_WINDOW_MS=60000
+          API_RATE_LIMIT_MAX_REQUESTS=10
+          EOF
 
-        # Create Client UI .env file
-        cat << EOF > /tmp/envs/client-ui.env
-        VITE_API_URL=http://localhost:3040/api
-        VITE_API_KEY=dummy-api-key-at-least-32-chars-long
-        EOF
+          # Create Client UI .env file
+          cat << EOF > /tmp/envs/client-ui.env
+          VITE_API_URL=http://localhost:3040/api
+          VITE_API_KEY=dummy-api-key-at-least-32-chars-long
+          EOF
 
-    - name: Create Express API .env file
-      run: |
-        mkdir -p apps/express-api
-        cp /tmp/envs/express-api.env apps/express-api/.env
+      - name: Create Express API .env file
+        run: |
+          mkdir -p apps/express-api
+          cp /tmp/envs/express-api.env apps/express-api/.env
 
-    - name: Create Client UI .env file
-      run: |
-        mkdir -p apps/client-ui
-        cp /tmp/envs/client-ui.env apps/client-ui/.env
+      - name: Create Client UI .env file
+        run: |
+          mkdir -p apps/client-ui
+          cp /tmp/envs/client-ui.env apps/client-ui/.env
 
-    - name: Build types package
-      run: pnpm --filter @repo/macro-ai-api-client build
-      env:
-        # Core Configuration
-        NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
-        APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
-        API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+      - name: Build types package
+        run: pnpm --filter @repo/macro-ai-api-client build
+        env:
+          # Core Configuration
+          NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
+          APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
+          API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
 
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-        AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-        AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-        AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-        # AWS Cognito credentials removed - using IAM roles instead
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
+          # AWS Cognito Configuration
+          AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
+          AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
+          AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
+          AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
+          # AWS Cognito credentials removed - using IAM roles instead
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
 
-        # Cookie Configuration
-        COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
-        COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+          # Cookie Configuration
+          COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
+          COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
 
-        # Databases
-        REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
-        RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          # Databases
+          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
+          RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
 
-        # OpenAI
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+          # OpenAI
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
 
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-        RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-        AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-        AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-        API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-        API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
 
-    - name: Generate MSW handlers
-      run: |
-        echo "🔧 Generating MSW handlers from OpenAPI spec..."
-        pnpm --filter client-ui generate:msw
-        echo "✅ MSW handlers generated successfully"
+      - name: Generate MSW handlers
+        run: |
+          echo "🔧 Generating MSW handlers from OpenAPI spec..."
+          pnpm --filter client-ui generate:msw
+          echo "✅ MSW handlers generated successfully"
 
-    - name: Run test with coverage
-      run: pnpm test:coverage
-      env:
-        # Core Configuration
-        NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
-        APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
-        API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+      - name: Run test with coverage
+        run: pnpm test:coverage
+        env:
+          # Core Configuration
+          NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
+          APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
+          API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
 
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-        AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-        AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-        AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-        # AWS Cognito credentials removed - using IAM roles instead
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
+          # AWS Cognito Configuration
+          AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
+          AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
+          AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
+          AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
+          # AWS Cognito credentials removed - using IAM roles instead
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
 
-        # Cookie Configuration
-        COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
-        COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+          # Cookie Configuration
+          COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
+          COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
 
-        # Databases
-        REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
-        RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+          # Databases
+          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
+          RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
 
-        # OpenAI
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+          # OpenAI
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
 
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-        RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-        AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-        AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-        API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-        API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
 
-    - name: Upload coverage reports
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: coverage-reports
-        path: |
-          apps/express-api/coverage/
-          **/coverage/
-        retention-days: 30
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-reports
+          path: |
+            apps/express-api/coverage/
+            **/coverage/
+          retention-days: 30
 
-    - name: Extract coverage percentage
-      id: coverage
-      if: always()
-      run: |
-        echo "📊 Extracting test coverage percentage..."
-        # Extract coverage percentage from the JSON report
-        if [ -f "apps/express-api/coverage/coverage-summary.json" ]; then
-          echo "✅ Coverage file found, extracting percentage..."
-          COVERAGE=$(node -p "
-            const fs = require('fs');
-            try {
-              const coverage = JSON.parse(fs.readFileSync('apps/express-api/coverage/coverage-summary.json', 'utf8'));
-              Math.round(coverage.total.lines.pct || 0);
-            } catch (error) {
-              console.error('Error parsing coverage file:', error.message);
-              0;
-            }
-          ")
-          echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
-          echo "✅ Coverage extracted: $COVERAGE%"
-        else
-          echo "⚠️ Coverage file not found, setting coverage to 0%"
-          echo "percentage=0" >> $GITHUB_OUTPUT
-        fi
+      - name: Extract coverage percentage
+        id: coverage
+        if: always()
+        run: |
+          echo "📊 Extracting test coverage percentage..."
+          # Extract coverage percentage from the JSON report
+          if [ -f "apps/express-api/coverage/coverage-summary.json" ]; then
+            echo "✅ Coverage file found, extracting percentage..."
+            COVERAGE=$(node -p "
+              const fs = require('fs');
+              try {
+                const coverage = JSON.parse(fs.readFileSync('apps/express-api/coverage/coverage-summary.json', 'utf8'));
+                Math.round(coverage.total.lines.pct || 0);
+              } catch (error) {
+                console.error('Error parsing coverage file:', error.message);
+                0;
+              }
+            ")
+            echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
+            echo "✅ Coverage extracted: $COVERAGE%"
+          else
+            echo "⚠️ Coverage file not found, setting coverage to 0%"
+            echo "percentage=0" >> $GITHUB_OUTPUT
+          fi
 
-    - name: Create coverage badge
-      if: github.ref == 'refs/heads/main' && always()
-      uses: schneegans/dynamic-badges-action@v1.7.0
-      with:
-        auth: ${{ secrets.GITHUB_TOKEN }}
-        gistID: ${{ secrets.COVERAGE_GIST_ID }}
-        filename: macro-ai-coverage.json
-        label: coverage
-        message: ${{ steps.coverage.outputs.percentage }}%
-        color: ${{ steps.coverage.outputs.percentage >= 80 && 'brightgreen' || steps.coverage.outputs.percentage >= 60 && 'yellow' || 'red' }}
+      - name: Create coverage badge
+        if: github.ref == 'refs/heads/main' && always()
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GITHUB_TOKEN }}
+          gistID: ${{ secrets.COVERAGE_GIST_ID }}
+          filename: macro-ai-coverage.json
+          label: coverage
+          message: ${{ steps.coverage.outputs.percentage }}%
+          color: ${{ steps.coverage.outputs.percentage >= 80 && 'brightgreen' || steps.coverage.outputs.percentage >= 60 && 'yellow' || 'red' }}
 
   lint-md:
     name: Lint Markdown
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Install pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: 10.14.0
-    - name: Use Node.JS
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20.19.4
+      - uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - name: Use Node.JS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.4
 
-    - name: Cache pnpm dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.pnpm-store
-          node_modules
-        key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          pnpm-${{ runner.os }}-
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
 
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
-    - name: Lint markdown files
-      run: pnpm lint:md
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint markdown files
+        run: pnpm lint:md
 
   actionlint:
     name: Validate GitHub Actions Workflows (actionlint)
@@ -805,60 +805,60 @@ jobs:
     permissions:
       contents: read
     steps:
-    - uses: actions/checkout@v4
-    - name: Install actionlint
-      shell: bash
-      run: |
-        set -euo pipefail
-        # Install latest actionlint version
-        curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- latest /usr/local/bin
-        actionlint -version
-    - name: Validate workflows with actionlint
-      shell: bash
-      run: |
-        set -euo pipefail
-        # Validate only changed workflow files on PRs; full scan on push
-        # NOTE: Temporarily treating shellcheck issues as warnings to unblock PR #31
-        # TODO: Address the 100+ shellcheck issues (SC2086, SC2129, SC2001, SC2016, security) in follow-up PR
+      - uses: actions/checkout@v4
+      - name: Install actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Install latest actionlint version
+          curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- latest /usr/local/bin
+          actionlint -version
+      - name: Validate workflows with actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Validate only changed workflow files on PRs; full scan on push
+          # NOTE: Temporarily treating shellcheck issues as warnings to unblock PR #31
+          # TODO: Address the 100+ shellcheck issues (SC2086, SC2129, SC2001, SC2016, security) in follow-up PR
 
-        echo "⚠️  ACTIONLINT RUNNING IN WARNING MODE - Issues will be reported but won't fail the build"
-        echo "📋 This is temporary to unblock PR #31 while we systematically fix shellcheck issues"
-        echo ""
+          echo "⚠️  ACTIONLINT RUNNING IN WARNING MODE - Issues will be reported but won't fail the build"
+          echo "📋 This is temporary to unblock PR #31 while we systematically fix shellcheck issues"
+          echo ""
 
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          echo "🔎 Validating changed workflow files..."
-          git fetch --no-tags --depth=2 origin ${GITHUB_BASE_REF:-main}
-          CHANGED=$(git diff --name-only "origin/${GITHUB_BASE_REF:-main}" | grep '^\.github/workflows/' || true)
-          if [[ -z "$CHANGED" ]]; then
-            echo "No changed workflow files; running full validation as a fallback"
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "🔎 Validating changed workflow files..."
+            git fetch --no-tags --depth=2 origin ${GITHUB_BASE_REF:-main}
+            CHANGED=$(git diff --name-only "origin/${GITHUB_BASE_REF:-main}" | grep '^\.github/workflows/' || true)
+            if [[ -z "$CHANGED" ]]; then
+              echo "No changed workflow files; running full validation as a fallback"
+              actionlint -color || {
+                echo ""
+                echo "⚠️  ACTIONLINT FOUND ISSUES (treated as warnings)"
+                echo "📝 Please review the issues above and address them in a follow-up PR"
+                echo "✅ Continuing build despite actionlint findings..."
+              }
+            else
+              echo "Changed workflows:"; echo "$CHANGED"
+              # actionlint accepts file paths directly
+              actionlint -color $CHANGED || {
+                echo ""
+                echo "⚠️  ACTIONLINT FOUND ISSUES (treated as warnings)"
+                echo "📝 Please review the issues above and address them in a follow-up PR"
+                echo "✅ Continuing build despite actionlint findings..."
+              }
+            fi
+          else
+            echo "🔎 Validating all workflow files..."
             actionlint -color || {
               echo ""
               echo "⚠️  ACTIONLINT FOUND ISSUES (treated as warnings)"
               echo "📝 Please review the issues above and address them in a follow-up PR"
               echo "✅ Continuing build despite actionlint findings..."
             }
-          else
-            echo "Changed workflows:"; echo "$CHANGED"
-            # actionlint accepts file paths directly
-            actionlint -color $CHANGED || {
-              echo ""
-              echo "⚠️  ACTIONLINT FOUND ISSUES (treated as warnings)"
-              echo "📝 Please review the issues above and address them in a follow-up PR"
-              echo "✅ Continuing build despite actionlint findings..."
-            }
           fi
-        else
-          echo "🔎 Validating all workflow files..."
-          actionlint -color || {
-            echo ""
-            echo "⚠️  ACTIONLINT FOUND ISSUES (treated as warnings)"
-            echo "📝 Please review the issues above and address them in a follow-up PR"
-            echo "✅ Continuing build despite actionlint findings..."
-          }
-        fi
 
-        echo ""
-        echo "✅ Actionlint validation completed (warning mode)"
+          echo ""
+          echo "✅ Actionlint validation completed (warning mode)"
 
   gitleaks:
     name: Secret Scanning (Gitleaks)
@@ -867,28 +867,28 @@ jobs:
       contents: read
       security-events: write
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0 # Required for gitleaks to scan commit history
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for gitleaks to scan commit history
 
-    - name: Run Gitleaks
-      if: env.ACT_LOCAL != 'true'
-      uses: gitleaks/gitleaks-action@v2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        # Use our custom configuration file
-        config-path: .gitleaks.toml
-        # Report findings to GitHub Security tab
-        report-format: sarif
-        # Fail on any secrets found (after allowlisting)
-        exit-code: 1
-        # Enable verbose output for debugging
-        verbose: true
+      - name: Run Gitleaks
+        if: env.ACT_LOCAL != 'true'
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Use our custom configuration file
+          config-path: .gitleaks.toml
+          # Report findings to GitHub Security tab
+          report-format: sarif
+          # Fail on any secrets found (after allowlisting)
+          exit-code: 1
+          # Enable verbose output for debugging
+          verbose: true
 
-    - name: Skip Gitleaks in act environment
-      if: env.ACT_LOCAL == 'true'
-      run: |
-        echo "🔍 Running in act environment - skipping Gitleaks secret scanning"
-        echo "✅ Gitleaks check skipped for local testing"
+      - name: Skip Gitleaks in act environment
+        if: env.ACT_LOCAL == 'true'
+        run: |
+          echo "🔍 Running in act environment - skipping Gitleaks secret scanning"
+          echo "✅ Gitleaks check skipped for local testing"

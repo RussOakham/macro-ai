@@ -180,7 +180,6 @@ EOF
     # Extract parameters and convert to .env format
     local param_count=0
     local success_count=0
-    local error_count=0
     
     # Process each parameter
     echo "$parameters_json" | jq -r '.Parameters[] | "\(.Name)\t\(.Value)"' | while IFS=$'\t' read -r name value; do

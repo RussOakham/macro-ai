@@ -75,13 +75,12 @@ assume_role_if_needed() {
         local session_name="amplify-permissions-validation-$(date +%s)"
         
         # Assume role and get credentials
-        local credentials=$(aws sts assume-role \
+        local credentials
+        if credentials=$(aws sts assume-role \
             --role-arn "$role_arn" \
             --role-session-name "$session_name" \
             --query 'Credentials.{AccessKeyId:AccessKeyId,SecretAccessKey:SecretAccessKey,SessionToken:SessionToken}' \
-            --output json)
-        
-        if [[ $? -eq 0 ]]; then
+            --output json); then
             # Export credentials
             export AWS_ACCESS_KEY_ID=$(echo "$credentials" | jq -r '.AccessKeyId')
             export AWS_SECRET_ACCESS_KEY=$(echo "$credentials" | jq -r '.SecretAccessKey')
@@ -213,16 +212,15 @@ test_amplify_app_creation() {
     fi
     
     # Create test app
-    local create_result=$(aws amplify create-app \
+    local create_result
+    if create_result=$(aws amplify create-app \
         --name "$TEST_APP_NAME" \
         --description "Test app for permission validation - safe to delete" \
         --platform "WEB" \
         --environment-variables \
             TEST_MODE="true" \
             CREATED_BY="permission-validation-script" \
-        --output json 2>/dev/null)
-    
-    if [[ $? -eq 0 ]]; then
+        --output json 2>/dev/null); then
         local app_id=$(echo "$create_result" | jq -r '.app.appId')
         print_status "Amplify CreateApp: OK"
         print_info "Test app created: $app_id"
@@ -269,11 +267,10 @@ test_s3_permissions() {
     
     # Test S3 bucket listing (for Amplify buckets)
     print_info "Testing S3 ListBuckets for Amplify buckets..."
-    local amplify_buckets=$(aws s3api list-buckets \
+    local amplify_buckets
+    if amplify_buckets=$(aws s3api list-buckets \
         --query 'Buckets[?starts_with(Name, `amplify`)].Name' \
-        --output text 2>/dev/null || echo "")
-    
-    if [[ $? -eq 0 ]]; then
+        --output text 2>/dev/null || echo ""); then
         print_status "S3 ListBuckets: OK"
         if [[ -n "$amplify_buckets" ]]; then
             print_info "Found Amplify buckets: $amplify_buckets"

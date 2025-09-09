@@ -136,11 +136,11 @@ save_to_cache() {
 
 # Function to clear cache
 clear_cache() {
-    if [[ -d "$CACHE_DIR" ]]; then
-        rm -rf "${CACHE_DIR}"/*
+    if [[ -d "$CACHE_DIR" ]] && [[ "$CACHE_DIR" != "/" ]] && [[ "$CACHE_DIR" != "" ]]; then
+        rm -rf "${CACHE_DIR:?}"/*
         print_status "Cache cleared"
     else
-        print_info "Cache directory does not exist"
+        print_info "Cache directory does not exist or is invalid"
     fi
 }
 

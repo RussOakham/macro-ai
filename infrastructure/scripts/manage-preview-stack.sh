@@ -203,7 +203,7 @@ cleanup_orphaned_resources() {
 
     # Extract PR number from environment name (e.g., pr-35 -> 35)
     local pr_number
-    pr_number=$(echo "${env_name}" | sed 's/pr-//')
+    pr_number=${env_name#pr-}
 
     # Clean up CloudWatch Log Groups
     log_info "Cleaning up CloudWatch Log Groups..."

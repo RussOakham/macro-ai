@@ -416,10 +416,9 @@ jobs:
             # Configure custom domain if available
             if [[ -n "${{ inputs.custom-domain-name }}" && -n "${{ inputs.hosted-zone-id }}" ]]; then
               echo "🌐 Configuring custom domain: ${{ inputs.custom-domain-name }}"
-              
+
               if [[ -f "scripts/configure-amplify-custom-domain.sh" ]]; then
                 chmod +x scripts/configure-amplify-custom-domain.sh
-                
                 if [[ "${{ inputs.deployment-type }}" == "preview" ]]; then
                   CUSTOM_SUBDOMAIN="pr-${{ inputs.pr-number }}.${{ inputs.custom-domain-name }}"
                 else

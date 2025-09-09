@@ -44,7 +44,7 @@ echo -e "${GREEN}✅ Docker is running${NC}"
 # Build the production image
 echo -e "${YELLOW}🔨 Building production Docker image...${NC}"
 cd "$(dirname "$0")/.."
-./scripts/build-docker.sh ${ENVIRONMENT} ${VERSION} false
+./scripts/build-docker.sh "${ENVIRONMENT}" "${VERSION}" false
 
 echo ""
 
@@ -52,10 +52,10 @@ echo ""
 echo -e "${YELLOW}🧪 Testing production image...${NC}"
 
 # Create a temporary container to test
-CONTAINER_ID=$(docker create ${FULL_IMAGE_NAME})
+CONTAINER_ID=$(docker create "${FULL_IMAGE_NAME}")
 
 # Check if container was created successfully
-if ! docker inspect ${CONTAINER_ID} >/dev/null 2>&1; then
+if ! docker inspect "${CONTAINER_ID}" >/dev/null 2>&1; then
     echo -e "${RED}❌ Failed to create test container${NC}"
     exit 1
 fi
@@ -64,19 +64,19 @@ echo -e "${GREEN}✅ Test container created successfully${NC}"
 
 # Test container startup
 echo -e "${YELLOW}🚀 Testing container startup...${NC}"
-docker start ${CONTAINER_ID}
+docker start "${CONTAINER_ID}"
 
 # Wait a moment for the container to start
 sleep 5
 
 # Check if container is running
-if docker ps | grep -q ${CONTAINER_ID}; then
+if docker ps | grep -q "${CONTAINER_ID}"; then
     echo -e "${GREEN}✅ Container started successfully${NC}"
 else
     echo -e "${RED}❌ Container failed to start${NC}"
     echo "Container logs:"
-    docker logs ${CONTAINER_ID}
-    docker rm -f ${CONTAINER_ID} >/dev/null 2>&1
+    docker logs "${CONTAINER_ID}"
+    docker rm -f "${CONTAINER_ID}" >/dev/null 2>&1
     exit 1
 fi
 
@@ -84,7 +84,7 @@ fi
 echo -e "${YELLOW}🏥 Testing health check endpoint...${NC}"
 
 # Get container IP address
-CONTAINER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_ID})
+CONTAINER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${CONTAINER_ID}")
 
 if [[ -n "$CONTAINER_IP" ]]; then
     # Test health endpoint
@@ -99,21 +99,21 @@ fi
 
 # Stop and remove test container
 echo -e "${YELLOW}🧹 Cleaning up test container...${NC}"
-docker stop ${CONTAINER_ID} >/dev/null 2>&1
-docker rm ${CONTAINER_ID} >/dev/null 2>&1
+docker stop "${CONTAINER_ID}" >/dev/null 2>&1
+docker rm "${CONTAINER_ID}" >/dev/null 2>&1
 echo -e "${GREEN}✅ Test container cleaned up${NC}"
 
 echo ""
 
 # Tag as latest
 echo -e "${YELLOW}🏷️  Tagging as latest...${NC}"
-docker tag ${FULL_IMAGE_NAME} ${LATEST_TAG}
+docker tag "${FULL_IMAGE_NAME}" "${LATEST_TAG}"
 echo -e "${GREEN}✅ Tagged as ${LATEST_TAG}${NC}"
 
 # Show final image information
 echo ""
 echo -e "${BLUE}📊 Final Image Information:${NC}"
-docker images ${IMAGE_NAME} --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"
+docker images "${IMAGE_NAME}" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"
 
 echo ""
 echo -e "${GREEN}🎉 Production deployment completed successfully!${NC}"

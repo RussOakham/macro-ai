@@ -15,6 +15,7 @@ pnpm security:scan:codeql
 ## 📋 Available Commands
 
 ### Basic Scans
+
 ```bash
 pnpm security:scan              # Basic security scan (actionlint + gitleaks)
 pnpm security:scan:workflows    # Actionlint validation only
@@ -22,6 +23,7 @@ pnpm security:scan:secrets      # Gitleaks secret scanning only
 ```
 
 ### Advanced Scans
+
 ```bash
 pnpm security:scan:advanced     # Comprehensive security analysis
 pnpm security:scan:codeql       # CodeQL deep security analysis
@@ -32,6 +34,7 @@ pnpm security:scan:act          # Act local workflow testing
 ## 🛠️ Individual Tools
 
 ### Actionlint
+
 ```bash
 # Basic validation
 actionlint
@@ -44,6 +47,7 @@ actionlint .github/workflows/my-workflow.yml
 ```
 
 ### Gitleaks
+
 ```bash
 # Scan workflows only
 gitleaks detect --source .github/workflows/ --config .gitleaks.toml
@@ -56,6 +60,7 @@ gitleaks detect --source . --config .gitleaks.toml --verbose
 ```
 
 ### CodeQL CLI
+
 ```bash
 # Create database
 codeql database create codeql-db --language=actions --source-root=.
@@ -68,6 +73,7 @@ codeql bqrs interpret codeql-db/results/codeql/actions/Query.ql.bqrs
 ```
 
 ### Octoscan
+
 ```bash
 # Scan workflows
 octoscan scan --path .github/workflows/
@@ -77,6 +83,7 @@ octoscan scan --path .github/workflows/ --output json
 ```
 
 ### Act (Local Testing)
+
 ```bash
 # List workflows
 act --list
@@ -94,6 +101,7 @@ act push
 ## 🔧 Installation Commands
 
 ### macOS (Homebrew)
+
 ```bash
 # Core tools
 brew install actionlint gitleaks act gh
@@ -109,6 +117,7 @@ export PATH="$PWD/codeql:$PATH"
 ```
 
 ### Linux
+
 ```bash
 # Core tools
 sudo apt-get install actionlint gitleaks act gh
@@ -126,21 +135,25 @@ export PATH="$PWD/codeql:$PATH"
 ## 📊 Understanding Results
 
 ### Actionlint Output
+
 - ✅ **No issues found** - Workflow is valid
 - ❌ **Syntax errors** - Fix YAML syntax issues
 - ⚠️ **Warnings** - Review and fix if needed
 
 ### Gitleaks Output
+
 - ✅ **No secrets found** - No sensitive data detected
 - ❌ **Secrets found** - Review and remove hardcoded secrets
 - ⚠️ **False positives** - Add patterns to `.gitleaks.toml` allowlist
 
 ### CodeQL Output
+
 - ✅ **No issues found** - No security vulnerabilities detected
 - ❌ **Vulnerabilities found** - Review SARIF results and fix issues
 - 📄 **SARIF file** - Detailed results in `codeql-results.sarif`
 
 ### Octoscan Output
+
 - ✅ **No issues found** - No vulnerabilities detected
 - ❌ **Vulnerabilities found** - Review and fix security issues
 - ⚠️ **Warnings** - Review potential security concerns
@@ -148,6 +161,7 @@ export PATH="$PWD/codeql:$PATH"
 ## 🚨 Common Issues & Solutions
 
 ### "command not found" errors
+
 ```bash
 # Check if tool is installed
 which actionlint
@@ -159,6 +173,7 @@ which codeql
 ```
 
 ### Permission denied
+
 ```bash
 # Make scripts executable
 chmod +x scripts/*.sh
@@ -168,6 +183,7 @@ sudo chown -R $(whoami) scripts/
 ```
 
 ### CodeQL database creation fails
+
 ```bash
 # Check disk space
 df -h
@@ -180,6 +196,7 @@ ls -la .github/workflows/
 ```
 
 ### Gitleaks false positives
+
 ```bash
 # Add to .gitleaks.toml allowlist
 [allowlist]
@@ -201,6 +218,7 @@ git commit -m "Add new workflow"
 ```
 
 To skip pre-commit hooks (not recommended):
+
 ```bash
 git commit --no-verify -m "Skip security checks"
 ```
@@ -208,6 +226,7 @@ git commit --no-verify -m "Skip security checks"
 ## 📈 Performance Tips
 
 ### Fast Scans
+
 ```bash
 # Quick validation (fastest)
 pnpm security:scan:workflows
@@ -217,6 +236,7 @@ pnpm security:scan
 ```
 
 ### Comprehensive Scans
+
 ```bash
 # Full analysis (slower but thorough)
 pnpm security:scan:codeql
@@ -226,6 +246,7 @@ pnpm security:scan:advanced
 ```
 
 ### Parallel Scanning
+
 ```bash
 # Run multiple scans in parallel
 pnpm security:scan:workflows &
@@ -236,18 +257,21 @@ wait
 ## 🎯 Workflow-Specific Scanning
 
 ### Scan Single Workflow
+
 ```bash
 actionlint .github/workflows/hygiene-checks.yml
 gitleaks detect --source .github/workflows/hygiene-checks.yml --config .gitleaks.toml
 ```
 
 ### Scan Modified Workflows
+
 ```bash
 # Get modified workflow files
 git diff --name-only HEAD~1 | grep '\.github/workflows/.*\.ya\?ml$' | xargs actionlint
 ```
 
 ### Scan All Workflows
+
 ```bash
 find .github/workflows -name "*.yml" -o -name "*.yaml" | xargs actionlint
 ```
@@ -255,6 +279,7 @@ find .github/workflows -name "*.yml" -o -name "*.yaml" | xargs actionlint
 ## 📝 Report Generation
 
 ### JSON Reports
+
 ```bash
 # Generate security report
 pnpm security:scan:advanced
@@ -266,6 +291,7 @@ pnpm security:scan:codeql
 ```
 
 ### SARIF Reports
+
 ```bash
 # CodeQL SARIF output
 codeql database analyze codeql-db --format=sarif-latest --output=results.sarif
@@ -274,6 +300,7 @@ codeql database analyze codeql-db --format=sarif-latest --output=results.sarif
 ## 🔍 Debugging
 
 ### Verbose Output
+
 ```bash
 # Actionlint with verbose output
 actionlint -verbose
@@ -286,6 +313,7 @@ act --debug
 ```
 
 ### Check Tool Versions
+
 ```bash
 actionlint -version
 gitleaks version
@@ -294,6 +322,7 @@ act --version
 ```
 
 ### Test Individual Tools
+
 ```bash
 # Test actionlint
 echo "name: test" | actionlint

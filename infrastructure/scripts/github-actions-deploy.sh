@@ -221,7 +221,8 @@ setup_dependencies() {
 build_and_upload_artifact() {
     log_info "Building and uploading application artifact..."
 
-    local build_dir="build-$(date +%s)"
+    local build_dir
+    build_dir="build-$(date +%s)"
     local artifact_name="macro-ai-express-api-${VERSION}.tar.gz"
     local artifact_key="artifacts/${PR_NUMBER}/${artifact_name}"
 
@@ -290,8 +291,10 @@ deploy_to_ec2() {
     export ENVIRONMENT
 
     # Navigate to infrastructure directory
-    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    local infra_dir="$(dirname "$script_dir")"
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local infra_dir
+    infra_dir="$(dirname "$script_dir")"
     cd "$infra_dir"
 
     # Install dependencies if needed
@@ -413,7 +416,7 @@ wait_for_instances_running() {
         fi
 
         # Convert space-separated string to array
-        local instance_array=($instance_ids)
+        read -ra instance_array <<< "$instance_ids"
         local total_instances=${#instance_array[@]}
         log_info "📋 Found $total_instances instance(s): ${instance_ids}"
 
@@ -498,7 +501,7 @@ wait_for_user_data_completion() {
         fi
 
         # Convert space-separated string to array
-        local instance_array=($instance_ids)
+        read -ra instance_array <<< "$instance_ids"
         local total_instances=${#instance_array[@]}
 
         # Check instance status (system status indicates user data completion)
@@ -514,8 +517,10 @@ wait_for_user_data_completion() {
                 --query "InstanceStatuses[0].[InstanceStatus.Status,SystemStatus.Status]" \
                 --output text 2>/dev/null); then
 
-                local instance_status=$(echo "$status_info" | cut -f1)
-                local system_status=$(echo "$status_info" | cut -f2)
+                local instance_status
+                instance_status=$(echo "$status_info" | cut -f1)
+                local system_status
+                system_status=$(echo "$status_info" | cut -f2)
 
                 # Both instance and system status should be "ok" for user data completion
                 if [[ "$instance_status" == "ok" && "$system_status" == "ok" ]]; then
@@ -658,10 +663,12 @@ set_github_outputs() {
         status_output=$(pnpm tsx scripts/deploy-ec2.ts status --pr "$PR_NUMBER" 2>&1 || true)
 
         # Extract information and set outputs
-        echo "pr-number=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
-        echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-        echo "environment=${ENVIRONMENT}" >> "$GITHUB_OUTPUT"
-        echo "deployment-status=success" >> "$GITHUB_OUTPUT"
+        {
+            echo "pr-number=${PR_NUMBER}"
+            echo "version=${VERSION}"
+            echo "environment=${ENVIRONMENT}"
+            echo "deployment-status=success"
+        } >> "$GITHUB_OUTPUT"
 
         # Try to extract health check URL (this would need to be implemented in the status command)
         # For now, we'll construct it based on the ALB
