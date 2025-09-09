@@ -26,7 +26,11 @@ env:
   AWS_REGION: us-east-1
   NODE_VERSION: '20.19.4'
   PNPM_VERSION: '10.14.0'
+  # CDK environment variables
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
   CDK_DEFAULT_REGION: us-east-1
+  # Custom domain configuration (optional)
   CUSTOM_DOMAIN_NAME: ${{ vars.CUSTOM_DOMAIN_NAME }}
   HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
 
@@ -251,7 +255,7 @@ jobs:
 
           if [[ -z "${ECR_REGISTRY}" ]]; then
             echo "⚠️ ECR registry output is empty, using fallback from AWS account ID"
-            ECR_REGISTRY="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
+            ECR_REGISTRY="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
           fi
 
           IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
