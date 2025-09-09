@@ -107,7 +107,7 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 
 				return (
 					<form data-testid="test-form-radio">
-						<label>
+						<label htmlFor="gender">
 							<input
 								name="gender"
 								type="radio"
@@ -119,7 +119,7 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 							/>
 							Male
 						</label>
-						<label>
+						<label htmlFor="gender">
 							<input
 								name="gender"
 								type="radio"
@@ -157,7 +157,7 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 
 				return (
 					<form data-testid="test-form-checkbox">
-						<label>
+						<label htmlFor="newsletter">
 							<input
 								name="newsletter"
 								type="checkbox"
@@ -299,7 +299,7 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 								<option value="us">United States</option>
 								<option value="uk">United Kingdom</option>
 							</select>
-							<label>
+							<label htmlFor="gender">
 								<input
 									name="gender"
 									type="radio"
@@ -311,7 +311,7 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 								/>
 								Male
 							</label>
-							<label>
+							<label htmlFor="gender">
 								<input
 									name="gender"
 									type="radio"
@@ -323,7 +323,7 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 								/>
 								Female
 							</label>
-							<label>
+							<label htmlFor="newsletter">
 								<input
 									name="newsletter"
 									type="checkbox"

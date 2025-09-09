@@ -40,7 +40,9 @@ const ChatLayout = () => {
 		<div className="flex h-full w-full min-h-0 relative">
 			{/* Mobile Sidebar Overlay */}
 			{isMobileSidebarOpen && (
-				<div
+				<button
+					aria-label="Close sidebar"
+					type="button"
 					className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
 					onClick={() => {
 						setIsMobileSidebarOpen(false)

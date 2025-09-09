@@ -351,7 +351,7 @@ describe('TanStack Router Testing Examples', () => {
 								}}
 								placeholder="Tell us about yourself"
 							/>
-							<label>
+							<label htmlFor="newsletter">
 								<input
 									name="newsletter"
 									type="checkbox"
@@ -366,7 +366,7 @@ describe('TanStack Router Testing Examples', () => {
 								Subscribe to newsletter
 							</label>
 							<div>
-								<label>
+								<label htmlFor="gender">
 									<input
 										name="gender"
 										type="radio"
@@ -381,7 +381,7 @@ describe('TanStack Router Testing Examples', () => {
 									/>
 									Male
 								</label>
-								<label>
+								<label htmlFor="gender">
 									<input
 										name="gender"
 										type="radio"

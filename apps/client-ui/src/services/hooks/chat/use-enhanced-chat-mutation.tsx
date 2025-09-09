@@ -233,14 +233,7 @@ const useEnhancedChat = ({
 				toast.error('Failed to send message. Please try again.')
 			}
 		},
-		[
-			chatHook.handleSubmit,
-			chatHook.input,
-			chatHook.status,
-			queryClient,
-			chatId,
-			onMessageSent,
-		],
+		[chatHook, queryClient, chatId, onMessageSent],
 	)
 
 	return {

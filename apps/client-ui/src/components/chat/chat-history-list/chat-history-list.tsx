@@ -27,7 +27,10 @@ const ChatHistoryList = ({
 	} = useChats({ page: 1, limit: 100 }) // Get first 100 chats
 
 	// Extract chats from response
-	const chats = chatsResponse?.success ? chatsResponse.data : []
+	const chats = useMemo(
+		() => (chatsResponse?.success ? chatsResponse.data : []),
+		[chatsResponse],
+	)
 
 	const handleRetry = () => {
 		void refetchChats()

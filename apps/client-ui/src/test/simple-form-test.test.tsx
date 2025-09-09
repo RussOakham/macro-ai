@@ -143,7 +143,7 @@ describe('Enhanced Testing Utilities Validation', () => {
 
 				return (
 					<form data-testid="test-form-radio-simple">
-						<label>
+						<label htmlFor="gender">
 							<input
 								name="gender"
 								type="radio"
@@ -155,7 +155,7 @@ describe('Enhanced Testing Utilities Validation', () => {
 							/>
 							Male
 						</label>
-						<label>
+						<label htmlFor="gender">
 							<input
 								name="gender"
 								type="radio"
@@ -194,7 +194,7 @@ describe('Enhanced Testing Utilities Validation', () => {
 
 				return (
 					<form data-testid="test-form-checkbox-simple">
-						<label>
+						<label htmlFor="newsletter">
 							<input
 								name="newsletter"
 								type="checkbox"
@@ -205,7 +205,7 @@ describe('Enhanced Testing Utilities Validation', () => {
 							/>
 							Subscribe to newsletter
 						</label>
-						<label>
+						<label htmlFor="updates">
 							<input
 								name="updates"
 								type="checkbox"
@@ -358,7 +358,7 @@ describe('Enhanced Testing Utilities Validation', () => {
 								}}
 								placeholder="Tell us about yourself"
 							/>
-							<label>
+							<label htmlFor="gender">
 								<input
 									name="gender"
 									type="radio"
@@ -370,7 +370,7 @@ describe('Enhanced Testing Utilities Validation', () => {
 								/>
 								Male
 							</label>
-							<label>
+							<label htmlFor="gender">
 								<input
 									name="gender"
 									type="radio"
@@ -382,7 +382,7 @@ describe('Enhanced Testing Utilities Validation', () => {
 								/>
 								Female
 							</label>
-							<label>
+							<label htmlFor="newsletter">
 								<input
 									name="newsletter"
 									type="checkbox"
