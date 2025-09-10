@@ -4,7 +4,7 @@
  */
 
 import { createServer as createHttpServer } from 'node:http'
-import { exit, on } from 'node:process'
+import { exit } from 'node:process'
 
 import { assertConfig } from './config/simple-config.ts'
 import { logger } from './utils/logger.ts'
@@ -55,10 +55,10 @@ const startServer = () => {
 			}, 10000)
 		}
 
-		on('SIGTERM', () => {
+		process.on('SIGTERM', () => {
 			gracefulShutdown('SIGTERM')
 		})
-		on('SIGINT', () => {
+		process.on('SIGINT', () => {
 			gracefulShutdown('SIGINT')
 		})
 	} catch (error) {
