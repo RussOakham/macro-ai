@@ -249,6 +249,7 @@ jobs:
       - name: Build and push Docker image
         id: build
         run: |
+          # Use the same naming convention as CDK to avoid conflicts
           ECR_REPOSITORY="macro-ai-pr-${{ github.event.number }}-express-api"
           IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
           ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
@@ -266,14 +267,16 @@ jobs:
           echo "Registry: ${ECR_REGISTRY}"
           echo "URI: ${IMAGE_URI}"
 
-          # Create ECR repository if it doesn't exist
-          aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" >/dev/null 2>&1 || {
-            echo "📦 Creating ECR repository: ${ECR_REPOSITORY}"
-            aws ecr create-repository \
-              --repository-name "${ECR_REPOSITORY}" \
-              --image-scanning-configuration scanOnPush=true \
-              --encryption-configuration encryptionType=AES256
-          }
+           # Check if ECR repository exists, create if it doesn't
+           if aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" >/dev/null 2>&1; then
+             echo "✅ ECR repository already exists: ${ECR_REPOSITORY}"
+           else
+             echo "📦 Creating ECR repository: ${ECR_REPOSITORY}"
+             aws ecr create-repository \
+               --repository-name "${ECR_REPOSITORY}" \
+               --image-scanning-configuration scanOnPush=true \
+               --encryption-configuration encryptionType=AES256
+           fi
 
           # Build with environment file using BuildKit
           docker buildx build \

@@ -203,18 +203,20 @@ export class EcsFargateConstruct extends Construct {
 		)
 
 		// Create or use provided ECR repository
+		// The ECR repository is created by the workflow, so we just reference it
+		const repositoryName = `macro-ai-${environmentName}-express-api`
+
 		this.ecrRepository =
 			providedEcrRepository ??
-			new ecr.Repository(this, 'EcrRepository', {
-				repositoryName: `macro-ai-${environmentName}-express-api`,
-				imageScanOnPush: true, // Security best practice
-				removalPolicy: cdk.RemovalPolicy.DESTROY, // Clean up on stack deletion
-			})
+			ecr.Repository.fromRepositoryName(this, 'EcrRepository', repositoryName)
 
 		// Create ECS cluster
+		// Use a consistent resource name that can be reused across deployments
+		const clusterName = `macro-ai-${environmentName}-cluster`
+
 		this.cluster = new ecs.Cluster(this, 'EcsCluster', {
 			vpc,
-			clusterName: `macro-ai-${environmentName}-cluster`,
+			clusterName,
 			containerInsights: true, // Enable CloudWatch Container Insights for monitoring
 			enableFargateCapacityProviders: true,
 		})

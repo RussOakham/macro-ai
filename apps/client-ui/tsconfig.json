@@ -1,11 +1,7 @@
 {
 	"$schema": "http://json.schemastore.org/tsconfig",
 	"extends": "@repo/config-typescript/tsconfig-react.json",
-	"include": [
-		"src",
-		"tailwind.config.ts",
-		"vitest.config.ts"
-	],
+	"include": ["src", "tailwind.config.ts", "vitest.config.ts"],
 	"exclude": [
 		"./dist",
 		"node_modules",
@@ -19,16 +15,10 @@
 	"compilerOptions": {
 		"baseUrl": ".",
 		"paths": {
-			"@/*": [
-				"./src/*"
-			]
+			"@/*": ["./src/*"]
 		},
 		"noEmit": true,
 		"allowImportingTsExtensions": true,
-		"types": [
-			"vitest/globals",
-			"@testing-library/jest-dom",
-			"vite/client"
-		]
+		"types": ["vitest/globals", "@testing-library/jest-dom", "vite/client"]
 	}
 }
