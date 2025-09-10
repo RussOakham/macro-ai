@@ -158,9 +158,8 @@ jobs:
       actions: write
 
     outputs:
-      image-uri: ${{ steps.build.outputs.image-uri }}
+      image-uri: ${{ steps.build.outputs.docker-image-uri }}
       image-tag: ${{ steps.build.outputs.image-tag }}
-      ecr-registry: ${{ steps.build.outputs.ecr-registry }}
 
     steps:
       - name: Checkout code
@@ -292,10 +291,9 @@ jobs:
             .
 
           echo "✅ Image built and pushed successfully!"
-          # Output image URI without registry to avoid secret masking
-          echo "image-uri=${ECR_REPOSITORY}:${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          # Use a different variable name to avoid secret masking
+          echo "docker-image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
           echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-          echo "ecr-registry=${ECR_REGISTRY}" >> "$GITHUB_OUTPUT"
 
       - name: Cleanup environment file
         if: always()
@@ -316,7 +314,7 @@ jobs:
       deployment-scale: preview
       pr-number: ${{ needs.validate-access.outputs.pr-number }}
       branch-name: ${{ github.event.pull_request.head.ref }}
-      image-uri: ${{ needs.build-express-api.outputs.ecr-registry }}/${{ needs.build-express-api.outputs.image-uri }}
+      image-uri: ${{ needs.build-express-api.outputs.image-uri }}
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
       should-deploy: ${{ needs.check-first-deployment.outputs.is-first-deployment == 'true' || needs.change-detection.outputs.has-backend-changes == 'true' || needs.change-detection.outputs.has-infrastructure-changes == 'true' }}
