@@ -381,7 +381,7 @@ export class EcsFargateConstruct extends Construct {
 
 		// Add container to PR task definition
 		taskDefinition.addContainer('ExpressApiContainer', {
-			image: imageUri 
+			image: imageUri
 				? ecs.ContainerImage.fromRegistry(imageUri)
 				: ecs.ContainerImage.fromEcrRepository(ecrRepository, imageTag),
 			containerName: 'express-api',
