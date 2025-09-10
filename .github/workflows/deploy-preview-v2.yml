@@ -296,6 +296,9 @@ jobs:
           echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Save image URI to artifact
+        env:
+          IMAGE_URI: ${{ steps.build.outputs.docker-image-uri }}
+          IMAGE_TAG: ${{ steps.build.outputs.image-tag }}
         run: |
           echo "${IMAGE_URI}" > image-uri.txt
           echo "${IMAGE_TAG}" > image-tag.txt
