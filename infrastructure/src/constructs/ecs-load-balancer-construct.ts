@@ -170,7 +170,6 @@ export class EcsLoadBalancerConstruct extends Construct {
 				loadBalancerName: `macro-ai-${environmentName}-alb`,
 				idleTimeout,
 				deletionProtection,
-				removalPolicy: cdk.RemovalPolicy.DESTROY, // Clean up on stack deletion
 			},
 		)
 
@@ -181,7 +180,6 @@ export class EcsLoadBalancerConstruct extends Construct {
 			protocol: elbv2.ApplicationProtocol.HTTP,
 			targetType: elbv2.TargetType.IP,
 			targetGroupName: `macro-ai-${environmentName}-tg`,
-			removalPolicy: cdk.RemovalPolicy.DESTROY, // Clean up on stack deletion
 			healthCheck: {
 				enabled: true,
 				path: healthCheck.path,
