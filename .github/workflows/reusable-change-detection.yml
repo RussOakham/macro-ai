@@ -43,6 +43,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.head-ref }}
 
       - name: Check for all changes
         id: check
@@ -51,6 +52,9 @@ jobs:
           HEAD_REF="${{ inputs.head-ref }}"
 
           echo "🔍 Checking changes between ${BASE_REF} and ${HEAD_REF}"
+
+          # Fetch the base branch to ensure it's available for comparison
+          git fetch origin "${BASE_REF}:${BASE_REF}"
 
           # Get all changed files
           CHANGED_FILES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" || echo "")
@@ -78,12 +82,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.head-ref }}
 
       - name: Check for backend changes
         id: check
         run: |
           BASE_REF="${{ inputs.base-ref }}"
           HEAD_REF="${{ inputs.head-ref }}"
+
+          # Fetch the base branch to ensure it's available for comparison
+          git fetch origin "${BASE_REF}:${BASE_REF}"
 
           # Check for backend-related changes
           BACKEND_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^infrastructure/|^apps/express-api/|^packages/macro-ai-api-client/' || true)
@@ -108,12 +116,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.head-ref }}
 
       - name: Check for frontend changes
         id: check
         run: |
           BASE_REF="${{ inputs.base-ref }}"
           HEAD_REF="${{ inputs.head-ref }}"
+
+          # Fetch the base branch to ensure it's available for comparison
+          git fetch origin "${BASE_REF}:${BASE_REF}"
 
           # Check for frontend-related changes
           FRONTEND_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^apps/client-ui/|^packages/ui-library/' || true)
@@ -138,12 +150,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.head-ref }}
 
       - name: Check for infrastructure changes
         id: check
         run: |
           BASE_REF="${{ inputs.base-ref }}"
           HEAD_REF="${{ inputs.head-ref }}"
+
+          # Fetch the base branch to ensure it's available for comparison
+          git fetch origin "${BASE_REF}:${BASE_REF}"
 
           # Check for infrastructure-related changes
           INFRASTRUCTURE_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^infrastructure/|^\.github/workflows/.*\.yml$' || true)
@@ -168,12 +184,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.head-ref }}
 
       - name: Check for workflow changes
         id: check
         run: |
           BASE_REF="${{ inputs.base-ref }}"
           HEAD_REF="${{ inputs.head-ref }}"
+
+          # Fetch the base branch to ensure it's available for comparison
+          git fetch origin "${BASE_REF}:${BASE_REF}"
 
           # Check for workflow-related changes
           WORKFLOW_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^\.github/workflows/|^\.github/actions/' || true)
