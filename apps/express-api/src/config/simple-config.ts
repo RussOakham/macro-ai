@@ -9,6 +9,7 @@
  */
 
 import path from 'node:path'
+import { exit } from 'node:process'
 
 import { type TEnv } from '../utils/env.schema.ts'
 import { type Result } from '../utils/errors.ts'
@@ -151,7 +152,7 @@ export const assertConfig = (shouldLog = false): ConfigType => {
 		)
 		// In production, we want to fail fast if configuration is invalid
 		if (process.env.NODE_ENV === 'production') {
-			process.exit(1)
+			exit(1)
 		}
 		// In non-production, throw the error to be handled by tests
 		throw error

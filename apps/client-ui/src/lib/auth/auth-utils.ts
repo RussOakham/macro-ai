@@ -21,9 +21,12 @@ let ongoingRefreshPromise: ReturnType<typeof postRefreshToken> | null = null
  */
 const decodeBase64 = (base64String: string): string => {
 	// Check if we're in a Node.js environment (SSR)
-	if (typeof window === 'undefined' && typeof Buffer !== 'undefined') {
+	if (
+		typeof globalThis.window === 'undefined' &&
+		typeof Buffer !== 'undefined'
+	) {
 		// Node.js environment - use Buffer
-		return Buffer.from(base64String, 'base64').toString('utf-8')
+		return Buffer.from(base64String, 'base64').toString('utf8')
 	} else {
 		// Browser environment - use atob
 		return atob(base64String)

@@ -52,11 +52,11 @@ describe('Advanced Mocking Integration Examples', () => {
 			// ❌ VIOLATION: Using contrived error simulation instead of testing real error scenarios
 			// ✅ PRODUCTION: Test actual error conditions that occur in your application
 			errorSimulator.start()
-			errorSimulator.options.probability = 1.0 // 100% error rate
+			errorSimulator.options.probability = 1 // 100% error rate
 
 			expect(errorSimulator.shouldSimulateError()).toBe(true)
 
-			errorSimulator.options.probability = 0.0 // 0% error rate
+			errorSimulator.options.probability = 0 // 0% error rate
 			expect(errorSimulator.shouldSimulateError()).toBe(false)
 		})
 	})

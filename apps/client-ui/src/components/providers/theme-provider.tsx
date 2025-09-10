@@ -29,21 +29,26 @@ const ThemeProvider = ({
 	const [theme, setTheme] = useState<Theme>(() => {
 		const storedTheme = localStorage.getItem(storageKey) as Theme
 
-		if (!storedTheme) return defaultTheme
+		if (!storedTheme) {
+			return defaultTheme
+		}
 
 		return storedTheme
 	})
 
 	useEffect(() => {
-		const root = window.document.documentElement
+		const root = globalThis.window.document.documentElement
 
 		root.classList.remove('light', 'dark')
 
-		if (!theme) return
+		if (!theme) {
+			return
+		}
 
 		if (theme === 'system') {
-			const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
-				.matches
+			const systemTheme = globalThis.window.matchMedia(
+				'(prefers-color-scheme: dark)',
+			).matches
 				? 'dark'
 				: 'light'
 
@@ -57,7 +62,9 @@ const ThemeProvider = ({
 	const value = {
 		theme,
 		setTheme: (theme: Theme) => {
-			if (!theme) return
+			if (!theme) {
+				return
+			}
 			localStorage.setItem(storageKey, theme)
 			setTheme(theme)
 		},
@@ -74,8 +81,9 @@ const useTheme = () => {
 	const context = useContext(ThemeProviderContext)
 
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-	if (context === undefined)
+	if (context === undefined) {
 		throw new Error('useTheme must be used within a ThemeProvider')
+	}
 
 	return context
 }

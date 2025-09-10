@@ -1278,7 +1278,7 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 			// Verify only one submission was processed (allow for test environment timing variations)
 			const countElement =
 				componentTesting.getElementByTestId('submission-count')
-			const textContent = countElement.textContent
+			const { textContent } = countElement
 			expect(textContent).toMatch(/Submissions: (1|2)/)
 
 			// If we got 2 submissions, that's actually fine - it shows the concurrent submission protection

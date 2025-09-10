@@ -50,7 +50,7 @@ function makePathRelative(absolutePath, projectRoot) {
  */
 function sanitizeCoverageFile(filePath, projectRoot) {
 	try {
-		const content = fs.readFileSync(filePath, 'utf-8')
+		const content = fs.readFileSync(filePath, 'utf8')
 		const coverage = JSON.parse(content)
 
 		// Create a new coverage object with sanitized paths
@@ -67,7 +67,7 @@ function sanitizeCoverageFile(filePath, projectRoot) {
 
 		// Write the sanitized coverage back to file
 		const sanitizedContent = JSON.stringify(sanitizedCoverage, null, 2)
-		fs.writeFileSync(filePath, sanitizedContent, 'utf-8')
+		fs.writeFileSync(filePath, sanitizedContent, 'utf8')
 
 		console.log(`✅ Sanitized paths in ${filePath}`)
 		return true

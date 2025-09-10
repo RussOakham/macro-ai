@@ -18,8 +18,6 @@
  *   APP_ENV=pr-51 CUSTOM_DOMAIN_NAME=macro-ai.russoakham.dev node scripts/test-cors-configuration.js
  */
 
-const path = require('node:path')
-
 // Colors for output
 const colors = {
 	reset: '\x1b[0m',
@@ -44,9 +42,6 @@ function logInfo(message) {
 }
 function logSuccess(message) {
 	log('green', message)
-}
-function logWarning(message) {
-	log('yellow', message)
 }
 function logError(message) {
 	log('red', message)

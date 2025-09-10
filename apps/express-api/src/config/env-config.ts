@@ -186,7 +186,7 @@ const loadEnvFiles = (
 			const result = dotenvConfig({
 				path: envFile.path,
 				override: false, // Don't override existing environment variables
-				encoding: 'UTF-8',
+				encoding: 'utf8',
 			})
 
 			if (result.error) {

@@ -8,7 +8,7 @@
  */
 
 import { setupWorker } from 'msw/browser'
-
+import type { RequestHandler } from 'msw'
 import { handlers } from './mocks/handlers.js'
 
 // Create MSW worker for browser environment
@@ -32,7 +32,6 @@ export const resetWorker = () => {
 }
 
 // Setup worker with custom handlers
-import type { RequestHandler } from 'msw'
 
 export const setupWorkerWithHandlers = (customHandlers: RequestHandler[]) => {
 	worker.use(...customHandlers)

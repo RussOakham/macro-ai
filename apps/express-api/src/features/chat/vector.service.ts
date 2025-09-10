@@ -6,8 +6,13 @@ import type {
 	TInsertChatVector,
 } from './chat.types.ts'
 
-import { AppError, InternalError, Result } from '../../utils/errors.ts'
+import {
+	type AppError,
+	InternalError,
+	type Result,
+} from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
+// oxlint-disable-next-line no-duplicate-imports
 import { type AIService } from './ai.service.ts'
 
 const { logger } = pino

@@ -21,13 +21,16 @@ import { logger } from '@/lib/logger/logger'
 const toSafeValidationMeta = (error: unknown, data: unknown) => {
 	// Safe error representation
 	const safeError =
+		// oxlint-disable-next-line no-nested-ternary
 		error instanceof Error
 			? { name: error.name, message: error.message }
-			: typeof error === 'string'
+			: // oxlint-disable-next-line no-nested-ternary
+				typeof error === 'string'
 				? error
 				: 'Unknown error'
 
 	// Safe data summary
+	// oxlint-disable-next-line init-declarations
 	let safeData: string
 	if (data === null || data === undefined) {
 		safeData = String(data)
@@ -47,7 +50,7 @@ const toSafeValidationMeta = (error: unknown, data: unknown) => {
 // Chat Response Validators
 // ============================================================================
 
-export const validateGetChatsResponse = (data: unknown) => {
+const validateGetChatsResponse = (data: unknown) => {
 	try {
 		return zGetChatsResponse.parse(data)
 	} catch (error: unknown) {
@@ -59,7 +62,7 @@ export const validateGetChatsResponse = (data: unknown) => {
 	}
 }
 
-export const validateGetChatByIdResponse = (data: unknown) => {
+const validateGetChatByIdResponse = (data: unknown) => {
 	try {
 		return zGetChatsByIdResponse.parse(data)
 	} catch (error: unknown) {
@@ -71,7 +74,7 @@ export const validateGetChatByIdResponse = (data: unknown) => {
 	}
 }
 
-export const validateCreateChatResponse = (data: unknown) => {
+const validateCreateChatResponse = (data: unknown) => {
 	try {
 		return zPostChatsResponse.parse(data)
 	} catch (error: unknown) {
@@ -94,7 +97,7 @@ export const validateCreateChatResponse = (data: unknown) => {
  * @param errorMessage - Custom error message for validation failures
  * @returns Parsed and validated data
  */
-export const validateApiResponse = <T>(
+const validateApiResponse = <T>(
 	schema: z.ZodType<T>,
 	data: unknown,
 	errorMessage = 'Invalid API response format',
@@ -114,7 +117,7 @@ export const validateApiResponse = <T>(
 // Safe Response Validator (returns result object instead of throwing)
 // ============================================================================
 
-export type ValidationResult<T> =
+type ValidationResult<T> =
 	| { success: true; data: T }
 	| { success: false; error: string }
 
@@ -124,7 +127,7 @@ export type ValidationResult<T> =
  * @param data - Data to validate
  * @returns Result object with success/error status
  */
-export const safeValidateApiResponse = <T>(
+const safeValidateApiResponse = <T>(
 	schema: z.ZodType<T>,
 	data: unknown,
 ): ValidationResult<T> => {
@@ -144,3 +147,12 @@ export const safeValidateApiResponse = <T>(
 		return { success: false, error: errorMessage }
 	}
 }
+
+export {
+	validateGetChatsResponse,
+	validateGetChatByIdResponse,
+	validateCreateChatResponse,
+	validateApiResponse,
+	safeValidateApiResponse,
+}
+export type { ValidationResult }

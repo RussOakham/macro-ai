@@ -151,7 +151,7 @@ function loadEnvFile() {
 
 	// Environment-specific files (highest priority)
 	switch (envType) {
-		case 'development':
+		case 'development': {
 			envFiles.push(
 				{
 					path: '.env.development',
@@ -163,22 +163,26 @@ function loadEnvFile() {
 				},
 			)
 			break
-		case 'test':
+		}
+		case 'test': {
 			envFiles.push({ path: '.env.test', description: 'Test environment file' })
 			break
-		case 'staging':
+		}
+		case 'staging': {
 			envFiles.push({
 				path: '.env.staging',
 				description: 'Staging environment file',
 			})
 			break
+		}
 		case 'production':
-		case 'preview':
+		case 'preview': {
 			// Production and preview environments should use pre-set environment variables
 			logInfo(
 				`${envType} environment detected - using pre-set environment variables`,
 			)
 			return {}
+		}
 	}
 
 	// Base .env file (lowest priority)
@@ -260,7 +264,6 @@ function validateEnvironment() {
 
 		if (!value) {
 			missingVars.push(varName)
-			continue
 		}
 
 		// Apply validation rules if they exist

@@ -161,7 +161,7 @@ describe('Enhanced Environment Configuration System', () => {
 			const envContent = Object.entries(validConfig)
 				.map(([key, value]) => `${key}=${value}`)
 				.join('\n')
-			writeFileSync(envFilePath, envContent, 'utf-8')
+			writeFileSync(envFilePath, envContent, 'utf8')
 
 			const result = loadEnvConfig({
 				baseDir: testDir,
@@ -218,7 +218,7 @@ describe('Enhanced Environment Configuration System', () => {
 			const envContent = Object.entries(validConfig)
 				.map(([key, value]) => `${key}=${value}`)
 				.join('\n')
-			writeFileSync(envFilePath, envContent, 'utf-8')
+			writeFileSync(envFilePath, envContent, 'utf8')
 
 			const result = loadEnvConfig({
 				baseDir: customDir,

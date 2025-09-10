@@ -166,7 +166,7 @@ function findCoverageReports() {
  */
 function readCoverageReport(reportPath) {
 	try {
-		const content = fs.readFileSync(reportPath, 'utf-8')
+		const content = fs.readFileSync(reportPath, 'utf8')
 		return JSON.parse(content)
 	} catch (error) {
 		console.error(`Error reading coverage report ${reportPath}:`, error.message)
@@ -341,7 +341,7 @@ function findTestResults() {
  */
 function parseJUnitFile(filePath) {
 	try {
-		const content = fs.readFileSync(filePath, 'utf-8')
+		const content = fs.readFileSync(filePath, 'utf8')
 
 		// Extract basic test information
 		const testsMatch = content.match(/tests="(\d+)"/)

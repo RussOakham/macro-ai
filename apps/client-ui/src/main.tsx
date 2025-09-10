@@ -9,6 +9,7 @@ import { ThemeProvider } from './components/providers/theme-provider.tsx'
 import { AppWrapper } from './lib/app-wrapper.tsx'
 import { standardizeError } from './lib/errors/standardize-error.ts'
 import { routeTree } from './routeTree.gen.ts'
+// oxlint-disable-next-line no-unassigned-import
 import './index.css'
 
 // Create a new Query Client instance
@@ -28,7 +29,7 @@ const queryClient = new QueryClient({
 })
 
 // Create a new router instance
-export const router = createRouter({
+const router = createRouter({
 	routeTree,
 	context: {
 		queryClient,
@@ -65,3 +66,5 @@ if (!rootElement.innerHTML) {
 		</StrictMode>,
 	)
 }
+
+export { router }

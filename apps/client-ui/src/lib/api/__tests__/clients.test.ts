@@ -1,4 +1,4 @@
-import { Config, HealthResponse } from '@repo/macro-ai-api-client'
+import type { Config, HealthResponse } from '@repo/macro-ai-api-client'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

@@ -77,11 +77,11 @@ const ConfirmRegistrationForm = ({
 			logger.info('Confirm registration success')
 			toast.success('Account confirmed successfully! Please login.')
 			await navigate({ to: '/auth/login' })
-		} catch (err: unknown) {
+		} catch (error: unknown) {
 			// Show error message
-			const error = standardizeError(err)
-			logger.error(error, 'Confirm registration error')
-			toast.error(error.message)
+			const err = standardizeError(error)
+			logger.error(err, 'Confirm registration error')
+			toast.error(err.message)
 		} finally {
 			setIsPending(false)
 		}

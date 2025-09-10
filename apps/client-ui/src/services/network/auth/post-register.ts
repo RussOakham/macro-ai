@@ -1,9 +1,8 @@
-import type { RegisterRequest } from '@repo/macro-ai-api-client'
-
 import {
 	postAuthRegister,
 	zPostAuthRegisterResponse,
 	zRegisterRequest,
+	type RegisterRequest,
 } from '@repo/macro-ai-api-client'
 
 import { apiClient } from '@/lib/api/clients'
