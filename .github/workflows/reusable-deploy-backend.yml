@@ -114,6 +114,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Download Docker image artifacts (fallback)
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-info
+          path: ./artifacts
+        continue-on-error: true
+
+      - name: Set image URI from artifact or input
+        id: image-uri
+        run: |
+          # Try to get image URI from artifact first (fallback)
+          if [[ -f "./artifacts/image-uri.txt" ]]; then
+            IMAGE_URI=$(cat ./artifacts/image-uri.txt)
+            echo "✅ Using image URI from artifact: ${IMAGE_URI}"
+          else
+            # Fall back to input parameter
+            IMAGE_URI="${{ inputs.image-uri }}"
+            echo "⚠️ Using image URI from input: ${IMAGE_URI}"
+          fi
+          
+          echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          echo "Final image URI: ${IMAGE_URI}"
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -156,7 +179,7 @@ jobs:
           ENV_NAME="${{ inputs.environment-name }}"
           DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
           DEPLOYMENT_SCALE="${{ inputs.deployment-scale }}"
-          IMAGE_URI="${{ inputs.image-uri }}"
+          IMAGE_URI="${{ steps.image-uri.outputs.image-uri }}"
 
           echo "🚀 Deploying Backend Infrastructure"
           echo "Environment: ${ENV_NAME}"

@@ -295,6 +295,20 @@ jobs:
           echo "docker-image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
           echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
 
+      - name: Save image URI to artifact
+        run: |
+          echo "${IMAGE_URI}" > image-uri.txt
+          echo "${IMAGE_TAG}" > image-tag.txt
+
+      - name: Upload Docker image artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-info
+          path: |
+            image-uri.txt
+            image-tag.txt
+          retention-days: 1
+
       - name: Cleanup environment file
         if: always()
         run: |
