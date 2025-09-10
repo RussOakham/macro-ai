@@ -144,6 +144,13 @@ export interface PrEcsServiceProps {
 	 * @default 'latest'
 	 */
 	readonly imageTag?: string
+
+	/**
+	 * Full container image URI to deploy (overrides ecrRepository and imageTag)
+	 * If provided, this will be used instead of constructing the image URI
+	 * from ecrRepository and imageTag
+	 */
+	readonly imageUri?: string
 }
 
 /**
@@ -347,6 +354,7 @@ export class EcsFargateConstruct extends Construct {
 			taskDefinition: taskConfig = { cpu: 256, memoryLimitMiB: 512 },
 			ecrRepository: providedEcrRepository,
 			imageTag = 'latest',
+			imageUri,
 		} = props
 
 		// Create PR-specific ECR repository if not provided
@@ -373,7 +381,9 @@ export class EcsFargateConstruct extends Construct {
 
 		// Add container to PR task definition
 		taskDefinition.addContainer('ExpressApiContainer', {
-			image: ecs.ContainerImage.fromEcrRepository(ecrRepository, imageTag),
+			image: imageUri 
+				? ecs.ContainerImage.fromRegistry(imageUri)
+				: ecs.ContainerImage.fromEcrRepository(ecrRepository, imageTag),
 			containerName: 'express-api',
 			portMappings: [{ containerPort: 3040 }],
 			logging: ecs.LogDrivers.awsLogs({
