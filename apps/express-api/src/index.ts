@@ -28,6 +28,7 @@ const startServer = () => {
 		)
 
 		// Create and start the server
+		// Note: Using HTTP server as HTTPS termination is handled by AWS ALB/CloudFront
 		const app = createServer()
 		const httpServer = createHttpServer(app)
 

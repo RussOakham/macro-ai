@@ -2,6 +2,7 @@ import { type Router } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import { apiRateLimiter } from '../../middleware/rate-limit.middleware.ts'
+import { generateCsrfToken } from '../../utils/server.ts'
 import {
 	InternalServerErrorSchema,
 	RateLimitErrorSchema,
@@ -254,6 +255,48 @@ registry.registerPath({
 	},
 })
 
+// Register the CSRF token endpoint with OpenAPI
+registry.registerPath({
+	method: 'get',
+	path: '/csrf-token',
+	tags: ['Utility'],
+	summary: 'Get CSRF token for form submissions',
+	description: 'Returns a CSRF token that must be included in POST, PUT, PATCH, and DELETE requests',
+	responses: {
+		[StatusCodes.OK]: {
+			description: 'CSRF token generated successfully',
+			content: {
+				'application/json': {
+					schema: {
+						type: 'object',
+						properties: {
+							success: { type: 'boolean' },
+							csrfToken: { type: 'string' },
+						},
+						required: ['success', 'csrfToken'],
+					},
+				},
+			},
+		},
+		[StatusCodes.TOO_MANY_REQUESTS]: {
+			description: 'Too many requests - rate limit exceeded',
+			content: {
+				'application/json': {
+					schema: RateLimitErrorSchema,
+				},
+			},
+		},
+		[StatusCodes.INTERNAL_SERVER_ERROR]: {
+			description: 'Failed to generate CSRF token - internal server error',
+			content: {
+				'application/json': {
+					schema: InternalServerErrorSchema,
+				},
+			},
+		},
+	},
+})
+
 const utilityRouter = (router: Router) => {
 	// Health check endpoint using Go-style error handling
 	// NOTE: No rate limiting on health endpoints to prevent ALB health check failures
@@ -281,6 +324,22 @@ const utilityRouter = (router: Router) => {
 	// Configuration validation endpoint for debugging
 	// NOTE: No rate limiting on health endpoints to prevent ALB health check failures
 	router.get('/health/config', utilityController.getConfigurationStatus)
+
+	// CSRF token endpoint for form submissions
+	router.get('/csrf-token', apiRateLimiter, (req, res) => {
+		try {
+			const csrfToken = generateCsrfToken(req, res)
+			res.json({
+				success: true,
+				csrfToken,
+			})
+		} catch (error) {
+			res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+				success: false,
+				error: 'Failed to generate CSRF token',
+			})
+		}
+	})
 }
 
 export { utilityRouter }

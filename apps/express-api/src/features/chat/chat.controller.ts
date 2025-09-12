@@ -359,7 +359,15 @@ export class ChatController implements IChatController {
 		const chatId = req.params.id
 		const requestBody = req.body as SendMessageRequest
 
-		// Validate messages array
+		// Validate messages array type and content
+		if (!Array.isArray(requestBody.messages)) {
+			res.status(StatusCodes.BAD_REQUEST).json({
+				success: false,
+				error: 'Messages must be an array',
+			})
+			return
+		}
+
 		if (requestBody.messages.length === 0) {
 			res.status(StatusCodes.BAD_REQUEST).json({
 				success: false,
@@ -370,10 +378,10 @@ export class ChatController implements IChatController {
 
 		// Extract the latest user message from the messages array
 		const latestMessage = requestBody.messages[requestBody.messages.length - 1]
-		if (!latestMessage || latestMessage.role !== 'user') {
+		if (!latestMessage || typeof latestMessage !== 'object' || latestMessage.role !== 'user') {
 			res.status(StatusCodes.BAD_REQUEST).json({
 				success: false,
-				error: 'Latest message must be from user',
+				error: 'Latest message must be a valid object from user',
 			})
 			return
 		}

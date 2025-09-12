@@ -8,6 +8,7 @@ ignore:
     - '*':
         reason: No upgrade available, used only in build process
         expires: '2025-12-31T23:59:59.999Z'
+  
 
 # Patch specific vulnerabilities (add as needed)
 # patch:

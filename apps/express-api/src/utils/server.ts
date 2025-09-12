@@ -2,6 +2,7 @@ import bodyParser from 'body-parser'
 import compression from 'compression'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
+import { doubleCsrf } from 'csrf-csrf'
 import express, { Express } from 'express'
 import path from 'node:path'
 import swaggerUi from 'swagger-ui-express'
@@ -19,8 +20,30 @@ import { pino } from './logger.ts'
 
 // Export options for use in generate-swagger.ts
 
+// CSRF protection configuration
+const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
+	getSecret: () => config.COOKIE_ENCRYPTION_KEY, // Use cookie encryption key for CSRF token generation
+	getSessionIdentifier: (req) => {
+		// Use user ID from auth middleware if available, otherwise use IP + User-Agent
+		return req.userId || `${req.ip}-${req.get('User-Agent') || 'unknown'}`
+	},
+	cookieName: 'macro-ai-csrf-token',
+	cookieOptions: {
+		httpOnly: true,
+		sameSite: 'strict',
+		secure: config.NODE_ENV === 'production',
+	},
+	size: 64, // Token size in bytes
+	ignoredMethods: ['GET', 'HEAD', 'OPTIONS'], // Methods that don't need CSRF protection
+	getCsrfTokenFromRequest: (req) =>
+		req.body._csrf || req.headers['x-csrf-token'],
+})
+
 const createServer = (): Express => {
 	const app: Express = express()
+
+	// Disable X-Powered-By header for security
+	app.disable('x-powered-by')
 
 	// Add static file serving for swagger.json
 	app.use(express.static(path.join(process.cwd(), 'public')))
@@ -115,6 +138,18 @@ const createServer = (): Express => {
 	app.use(express.urlencoded({ extended: true }))
 	app.use(cookieParser())
 
+	// Apply CSRF protection to all routes except public endpoints
+	app.use((req, res, next) => {
+		// Skip CSRF for public endpoints
+		if (
+			req.path.startsWith('/api-docs') ||
+			req.path.startsWith('/swagger.json')
+		) {
+			return next()
+		}
+		return doubleCsrfProtection(req, res, next)
+	})
+
 	// Add middlewares (CORS must come BEFORE authentication for OPTIONS preflight)
 	app.use(helmetMiddleware)
 	app.use(securityHeadersMiddleware)
@@ -139,4 +174,6 @@ const createServer = (): Express => {
 	return app
 }
 
+// Export CSRF token generator for use in API endpoints
+export { generateCsrfToken }
 export { createServer }
