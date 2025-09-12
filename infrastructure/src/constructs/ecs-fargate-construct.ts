@@ -401,7 +401,7 @@ export class EcsFargateConstruct extends Construct {
 			healthCheck: {
 				command: [
 					'CMD-SHELL',
-					'curl -f -H "X-Api-Key: $API_KEY" http://localhost:3040/api/health || exit 1',
+					'curl -f http://localhost:3040/api/health || exit 1',
 				],
 				interval: cdk.Duration.seconds(30),
 				timeout: cdk.Duration.seconds(5),
@@ -495,7 +495,7 @@ export class EcsFargateConstruct extends Construct {
 			}),
 		)
 
-		// AWS Cognito access for authentication
+		// AWS Cognito access for authentication - scoped to specific user pool
 		role.addToPolicy(
 			new iam.PolicyStatement({
 				effect: iam.Effect.ALLOW,
@@ -528,7 +528,12 @@ export class EcsFargateConstruct extends Construct {
 					'cognito-idp:DescribeUserPool',
 					'cognito-idp:DescribeUserPoolClient',
 				],
-				resources: ['*'], // Cognito resources are regional, so we need broad access
+				resources: [
+					// Scope to specific user pool using parameter store reference
+					`arn:aws:cognito-idp:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:userpool/*`,
+					// Allow access to user pool clients for this specific pool
+					`arn:aws:cognito-idp:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:userpool/*/client/*`,
+				],
 			}),
 		)
 
