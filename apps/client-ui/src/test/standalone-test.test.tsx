@@ -188,15 +188,15 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 	})
 
 	describe('Component Testing Utilities', () => {
+		const TestComponent = () => (
+			<div data-testid="test-container-standalone">
+				<h1 data-testid="test-title-standalone">Test Title</h1>
+				<p data-testid="test-content-standalone">Test content</p>
+			</div>
+		)
+
 		it('should find elements by test id', () => {
 			expect(true).toBe(true) // Ensure test has at least one assertion
-
-			const TestComponent = () => (
-				<div data-testid="test-container-standalone">
-					<h1 data-testid="test-title-standalone">Test Title</h1>
-					<p data-testid="test-content-standalone">Test content</p>
-				</div>
-			)
 
 			render(<TestComponent />)
 

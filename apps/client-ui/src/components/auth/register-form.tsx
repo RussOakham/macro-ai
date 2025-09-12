@@ -10,10 +10,8 @@ import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
 import { usePostRegisterMutation } from '@/services/hooks/auth/use-post-register-mutation'
-import {
-	RegisterRequest,
-	zRegisterRequest,
-} from '@/services/network/auth/post-register'
+import { zRegisterRequest } from '@/services/network/auth/post-register'
+import type { RegisterRequest } from '@/services/network/auth/post-register'
 
 import {
 	Form,

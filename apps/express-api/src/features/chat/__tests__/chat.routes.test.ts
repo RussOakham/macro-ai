@@ -1,4 +1,8 @@
-import express, { type NextFunction, type Request, type Response } from 'express'
+import express, {
+	type NextFunction,
+	type Request,
+	type Response,
+} from 'express'
 import { describe, expect, it, vi } from 'vitest'
 
 import { mockChatService } from '../../../utils/test-helpers/chat-service.mock.ts'

@@ -1,6 +1,6 @@
 import type React from 'react'
 
-import { TChatMessage } from '@/services/hooks/chat/use-enhanced-chat-mutation'
+import type { TChatMessage } from '@/services/hooks/chat/use-enhanced-chat-mutation'
 
 import { MessageList } from './message-list'
 

@@ -2,7 +2,10 @@ import type express from 'express'
 import type { z } from 'zod'
 
 import type { Result } from '../../utils/errors.ts'
-import { healthErrorSchema, healthResponseSchema } from './utility.schemas.ts'
+import type {
+	healthErrorSchema,
+	healthResponseSchema,
+} from './utility.schemas.ts'
 
 // Controller interface
 interface IUtilityController {

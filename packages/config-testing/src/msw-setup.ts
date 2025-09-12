@@ -1,5 +1,6 @@
 import { setupServer } from 'msw/node'
 import { handlers } from './msw-handlers.js'
+import { type SetupWorker } from 'msw/browser'
 
 /**
  * MSW (Mock Service Worker) Setup Configuration
@@ -17,7 +18,7 @@ export const server = setupServer(...handlers)
 
 // Browser environment setup (for development and browser tests)
 // Lazy worker creation to avoid issues in test environments
-let _worker: ReturnType<typeof import('msw/browser').setupWorker> | null = null
+let _worker: SetupWorker | null = null
 
 export const worker = (() => {
 	// Only create worker when explicitly requested in browser environment

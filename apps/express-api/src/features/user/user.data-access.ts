@@ -2,10 +2,14 @@ import { eq } from 'drizzle-orm'
 
 import { db } from '../../data-access/db.ts'
 import { tryCatch } from '../../utils/error-handling/try-catch.ts'
-import { AppError, InternalError, Result } from '../../utils/errors.ts'
+import { AppError, InternalError, type Result } from '../../utils/errors.ts'
 import { safeValidateSchema } from '../../utils/response-handlers.ts'
 import { selectUserSchema, usersTable } from './user.schemas.ts'
-import { IUserRepository, TInsertUser, TUser } from './user.types.ts'
+import {
+	type IUserRepository,
+	type TInsertUser,
+	type TUser,
+} from './user.types.ts'
 
 /**
  * UserRepository class that implements the IUserRepository interface

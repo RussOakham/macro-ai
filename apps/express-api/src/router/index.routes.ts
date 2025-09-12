@@ -5,6 +5,7 @@ import { chatRouter } from '../features/chat/chat.routes.ts'
 import { userRouter } from '../features/user/user.routes.ts'
 import { utilityRouter } from '../features/utility/utility.routes.ts'
 
+// oxlint-disable-next-line new-cap
 const router = Router()
 
 const appRouter = (): Router => {

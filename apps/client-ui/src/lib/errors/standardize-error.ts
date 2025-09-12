@@ -1,7 +1,7 @@
 import type { AxiosError } from 'axios'
 import type { ZodError } from 'zod'
 
-import { IStandardizedError } from '../types'
+import type { IStandardizedError } from '../types'
 
 export const standardizeError = (error: unknown): IStandardizedError => {
 	const standardError: IStandardizedError = {

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import { logger } from '@/lib/logger/logger'
-import { ChatWithDates } from '@/lib/types'
+import type { ChatWithDates } from '@/lib/types'
 
 import { ChatHistoryItem } from '../chat-history-item/chat-history-item'
 import { ChatHistoryItemDelete } from '../chat-history-item/chat-history-item-delete'

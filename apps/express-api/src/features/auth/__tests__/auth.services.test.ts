@@ -2,7 +2,7 @@
 import {
 	CognitoIdentityProviderClient,
 	ConfirmSignUpCommand,
-	ForgotPasswordCommandOutput,
+	type ForgotPasswordCommandOutput,
 	GetUserCommand,
 	GlobalSignOutCommand,
 	InitiateAuthCommand,

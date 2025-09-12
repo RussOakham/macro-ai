@@ -5,7 +5,7 @@ import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import {
 	InternalError,
 	NotFoundError,
-	Result,
+	type Result,
 	UnauthorizedError,
 	ValidationError,
 } from '../../utils/errors.ts'
@@ -13,7 +13,11 @@ import { pino } from '../../utils/logger.ts'
 import { CognitoService } from '../auth/auth.services.ts'
 import { userRepository } from './user.data-access.ts'
 import { userIdSchema } from './user.schemas.ts'
-import { IUserRepository, IUserService, TUser } from './user.types.ts'
+import {
+	type IUserRepository,
+	type IUserService,
+	type TUser,
+} from './user.types.ts'
 
 const { logger } = pino
 const cognito = new CognitoService()

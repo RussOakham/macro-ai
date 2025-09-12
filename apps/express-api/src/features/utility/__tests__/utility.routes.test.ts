@@ -1,4 +1,9 @@
-import express, { NextFunction, Request, Response, Router } from 'express'
+import express, {
+	type NextFunction,
+	type Request,
+	type Response,
+	Router,
+} from 'express'
 import request from 'supertest'
 import { beforeEach, describe, expect, it } from 'vitest'
 
@@ -9,6 +14,7 @@ describe('utilityRouter', () => {
 
 	beforeEach(() => {
 		app = express()
+		// oxlint-disable-next-line new-cap
 		const router = Router()
 		utilityRouter(router)
 		app.use(router)
@@ -39,6 +45,7 @@ describe('utilityRouter', () => {
 
 	it('should handle errors and return 500', async () => {
 		// Override the /health route to simulate an error
+		// oxlint-disable-next-line new-cap
 		const router = Router()
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		router.get('/health', (_req: Request, _res: Response) => {

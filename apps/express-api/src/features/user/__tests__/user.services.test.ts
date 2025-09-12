@@ -11,9 +11,9 @@ import { MockDataFactory } from '../../../utils/test-helpers/advanced-mocking.ts
 import { createServiceMocks } from '../../../utils/test-helpers/enhanced-mocks.ts'
 import { mockErrorHandling } from '../../../utils/test-helpers/error-handling.mock.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
-import { CognitoService } from '../../auth/auth.services.ts'
+import { type CognitoService } from '../../auth/auth.services.ts'
 import { UserService } from '../user.services.ts'
-import { IUserRepository, TUser } from '../user.types.ts'
+import type { IUserRepository, TUser } from '../user.types.ts'
 
 // Mock the logger using the reusable helper
 vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())

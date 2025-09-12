@@ -251,7 +251,9 @@
 				"**/__tests__/**"
 			],
 			"rules": {
-				"promise/avoid-new": "off"
+				"promise/avoid-new": "off",
+				"unicorn/consistent-function-scoping": "off",
+				"import/no-unassigned-import": "off"
 			}
 		}
 	]

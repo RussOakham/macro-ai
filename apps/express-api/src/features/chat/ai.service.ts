@@ -1,9 +1,9 @@
 import { createOpenAI } from '@ai-sdk/openai'
 import {
 	embed,
-	EmbeddingModel,
+	type EmbeddingModel,
 	generateText,
-	LanguageModelV1,
+	type LanguageModelV1,
 	streamText,
 } from 'ai'
 

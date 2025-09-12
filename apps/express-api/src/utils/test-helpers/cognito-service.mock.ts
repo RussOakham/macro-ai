@@ -1,14 +1,14 @@
 import {
 	CognitoIdentityProviderClient,
-	GetUserCommandOutput,
-	SignUpCommandOutput,
+	type GetUserCommandOutput,
+	type SignUpCommandOutput,
 } from '@aws-sdk/client-cognito-identity-provider'
-import { AwsClientStub, mockClient } from 'aws-sdk-client-mock'
+import { type AwsClientStub, mockClient } from 'aws-sdk-client-mock'
 import { vi } from 'vitest'
+import type { cognitoService } from '../../features/auth/auth.services.ts'
 
 // Type inference helper - this will be used inside functions to avoid hoisting issues
-type CognitoServiceType =
-	typeof import('../../features/auth/auth.services.ts').cognitoService
+type CognitoServiceType = typeof cognitoService
 
 // Type inference from actual cognitoService instance - following established pattern
 // This ensures our mocks stay in sync with the real implementation

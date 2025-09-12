@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express'
+import { type NextFunction, type Request, type Response } from 'express'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createMockExpressObjects } from '../../utils/test-helpers/enhanced-mocks.ts'
@@ -655,7 +655,8 @@ describe('Rate Limit Middleware', () => {
 			}
 
 			// Test API handler (should log "API rate limit exceeded")
-			const [, , apiHandler] = capturedHandlers
+			// oxlint-disable-next-line prefer-destructuring
+			const apiHandler = capturedHandlers[2]
 			if (apiHandler) {
 				apiHandler(mockRequest as Request, mockRes3 as Response, mockNext, {
 					statusCode: 429,

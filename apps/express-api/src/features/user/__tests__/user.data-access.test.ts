@@ -5,7 +5,7 @@ import { safeValidateSchema } from '../../../utils/response-handlers.ts'
 import { mockDatabase } from '../../../utils/test-helpers/drizzle-db.mock.ts'
 import { mockErrorHandling } from '../../../utils/test-helpers/error-handling.mock.ts'
 import { userRepository } from '../user.data-access.ts'
-import { TInsertUser, TUser } from '../user.types.ts'
+import { type TInsertUser, type TUser } from '../user.types.ts'
 
 // Mock the database using the standardized helper
 vi.mock('../../../data-access/db.ts', () => mockDatabase.createModule())

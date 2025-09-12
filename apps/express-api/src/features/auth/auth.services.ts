@@ -1,33 +1,39 @@
-import {
-	CognitoIdentityProviderClient,
+import type {
 	CognitoIdentityProviderClientConfig,
-	ConfirmForgotPasswordCommand,
 	ConfirmForgotPasswordCommandOutput,
-	ConfirmSignUpCommand,
 	ConfirmSignUpCommandOutput,
-	ForgotPasswordCommand,
 	ForgotPasswordCommandOutput,
-	GetUserCommand,
 	GetUserCommandOutput,
-	GlobalSignOutCommand,
 	GlobalSignOutCommandOutput,
-	InitiateAuthCommand,
 	InitiateAuthCommandOutput,
-	ListUsersCommand,
 	ListUsersCommandOutput,
-	ResendConfirmationCodeCommand,
 	ResendConfirmationCodeCommandOutput,
-	SignUpCommand,
 	SignUpCommandOutput,
 	UserType,
+} from '@aws-sdk/client-cognito-identity-provider'
+import {
+	CognitoIdentityProviderClient,
+	ConfirmForgotPasswordCommand,
+	ConfirmSignUpCommand,
+	ForgotPasswordCommand,
+	GetUserCommand,
+	GlobalSignOutCommand,
+	InitiateAuthCommand,
+	ListUsersCommand,
+	ResendConfirmationCodeCommand,
+	SignUpCommand,
 } from '@aws-sdk/client-cognito-identity-provider'
 import crypto from 'node:crypto'
 
 import { tryCatch, tryCatchSync } from '../../utils/error-handling/try-catch.ts'
-import { NotFoundError, Result, ValidationError } from '../../utils/errors.ts'
+import {
+	NotFoundError,
+	type Result,
+	ValidationError,
+} from '../../utils/errors.ts'
 import { logger } from '../../utils/logger.ts'
 import { createParameterStoreService } from '../../utils/parameter-store.ts'
-import { ICognitoService, TRegisterUserRequest } from './auth.types.ts'
+import type { ICognitoService, TRegisterUserRequest } from './auth.types.ts'
 
 class CognitoService implements ICognitoService {
 	private config: CognitoIdentityProviderClientConfig

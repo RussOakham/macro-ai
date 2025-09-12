@@ -1,5 +1,5 @@
-import { GetUserCommandOutput } from '@aws-sdk/client-cognito-identity-provider'
-import { NextFunction, Request, Response } from 'express'
+import { type GetUserCommandOutput } from '@aws-sdk/client-cognito-identity-provider'
+import { type NextFunction, type Request, type Response } from 'express'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { CognitoService } from '../../features/auth/auth.services.ts'

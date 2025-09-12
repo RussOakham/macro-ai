@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express'
+import { type NextFunction, type Request, type Response } from 'express'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -728,7 +728,7 @@ describe('errorHandler Middleware', () => {
 
 		it('should handle very large error messages', async () => {
 			// Arrange
-			const largeMessage = 'Error: ' + 'x'.repeat(10000)
+			const largeMessage = `Error: ${'x'.repeat(10000)}`
 			const error = new InternalError(largeMessage, 'test')
 
 			// Act

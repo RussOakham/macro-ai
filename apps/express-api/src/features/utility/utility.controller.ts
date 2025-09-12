@@ -1,9 +1,12 @@
-import { NextFunction, Request, Response } from 'express'
+import { type NextFunction, type Request, type Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import { pino } from '../../utils/logger.ts'
 import { utilityService } from './utility.services.ts'
-import { IUtilityController, THealthResponse } from './utility.types.ts'
+import {
+	type IUtilityController,
+	type THealthResponse,
+} from './utility.types.ts'
 
 const { logger } = pino
 
@@ -127,12 +130,15 @@ class UtilityController implements IUtilityController {
 		// This assertion is for runtime safety in case of unexpected null values
 
 		// Set appropriate HTTP status based on health status
-		const statusCode =
-			detailedHealthStatus.status === 'healthy'
-				? StatusCodes.OK
-				: detailedHealthStatus.status === 'degraded'
-					? StatusCodes.OK // Still return 200 for degraded but log warning
-					: StatusCodes.SERVICE_UNAVAILABLE
+		let statusCode: number
+
+		if (detailedHealthStatus.status === 'healthy') {
+			statusCode = StatusCodes.OK
+		} else if (detailedHealthStatus.status === 'degraded') {
+			statusCode = StatusCodes.OK // Still return 200 for degraded but log warning
+		} else {
+			statusCode = StatusCodes.SERVICE_UNAVAILABLE
+		}
 
 		if (detailedHealthStatus.status === 'degraded') {
 			logger.warn({

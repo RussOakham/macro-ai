@@ -261,7 +261,8 @@ registry.registerPath({
 	path: '/csrf-token',
 	tags: ['Utility'],
 	summary: 'Get CSRF token for form submissions',
-	description: 'Returns a CSRF token that must be included in POST, PUT, PATCH, and DELETE requests',
+	description:
+		'Returns a CSRF token that must be included in POST, PUT, PATCH, and DELETE requests',
 	responses: {
 		[StatusCodes.OK]: {
 			description: 'CSRF token generated successfully',

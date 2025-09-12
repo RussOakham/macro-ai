@@ -9,7 +9,7 @@ import type {
 
 import { db } from '../../data-access/db.ts'
 import { tryCatch } from '../../utils/error-handling/try-catch.ts'
-import { AppError, InternalError, Result } from '../../utils/errors.ts'
+import { AppError, InternalError, type Result } from '../../utils/errors.ts'
 import { safeValidateSchema } from '../../utils/response-handlers.ts'
 import { chatsTable, selectChatSchema } from './chat.schemas.ts'
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib'
 
+// oxlint-disable-next-line no-unassigned-import
 import 'source-map-support/register.js'
 
 // Hobby stack removed - preview environments only

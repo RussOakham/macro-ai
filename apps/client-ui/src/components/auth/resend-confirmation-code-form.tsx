@@ -28,11 +28,9 @@ import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
 import { usePostResendConfirmRegistrationCodeMutation } from '@/services/hooks/auth/use-post-resend-confirm-registration-code'
-import { GetAuthUserResponse } from '@/services/network/auth/get-auth-user'
-import {
-	ResendConfirmationCode,
-	zResendConfirmationCode,
-} from '@/services/network/auth/post-resend-confirm-registration-code'
+import type { GetAuthUserResponse } from '@/services/network/auth/get-auth-user'
+import { zResendConfirmationCode } from '@/services/network/auth/post-resend-confirm-registration-code'
+import type { ResendConfirmationCode } from '@/services/network/auth/post-resend-confirm-registration-code'
 
 const ResendConfirmationCodeForm = ({
 	className,

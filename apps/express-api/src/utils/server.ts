@@ -3,7 +3,7 @@ import compression from 'compression'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import { doubleCsrf } from 'csrf-csrf'
-import express, { Express } from 'express'
+import express, { type Express } from 'express'
 import path from 'node:path'
 import swaggerUi from 'swagger-ui-express'
 
@@ -130,7 +130,8 @@ const createServer = (): Express => {
 					return false
 				}
 				// Use default compression filter for other endpoints
-				return compression.filter(req, res)
+				// Default compression filter logic - check if response should be compressed
+				return res.getHeader('content-encoding') === undefined
 			},
 		}),
 	)

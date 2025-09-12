@@ -3,7 +3,7 @@ import { Edit3, MessageSquare, Trash2 } from 'lucide-react'
 import { startTransition } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { ChatWithDates } from '@/lib/types'
+import type { ChatWithDates } from '@/lib/types'
 
 interface ChatHistoryItemProps {
 	chat: ChatWithDates

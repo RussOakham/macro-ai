@@ -10,7 +10,7 @@ import {
 	tryCatchSync,
 } from '../../utils/error-handling/try-catch.ts'
 import { pino } from '../../utils/logger.ts'
-import {
+import type {
 	CreateChatRequest,
 	SendMessageRequest,
 	UpdateChatRequest,
@@ -378,7 +378,11 @@ export class ChatController implements IChatController {
 
 		// Extract the latest user message from the messages array
 		const latestMessage = requestBody.messages[requestBody.messages.length - 1]
-		if (!latestMessage || typeof latestMessage !== 'object' || latestMessage.role !== 'user') {
+		if (
+			!latestMessage ||
+			typeof latestMessage !== 'object' ||
+			latestMessage.role !== 'user'
+		) {
 			res.status(StatusCodes.BAD_REQUEST).json({
 				success: false,
 				error: 'Latest message must be a valid object from user',

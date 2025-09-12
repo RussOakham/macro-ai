@@ -7,7 +7,12 @@
  * for component testing scenarios.
  */
 
-import { act, fireEvent, render, type RenderResult } from '@testing-library/react'
+import {
+	act,
+	fireEvent,
+	render,
+	type RenderResult,
+} from '@testing-library/react'
 import type { ReactElement, ReactNode } from 'react'
 import { expect, vi } from 'vitest'
 

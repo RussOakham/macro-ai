@@ -1,14 +1,14 @@
 /* eslint-disable no-underscore-dangle */
 
-import {
+import type {
 	CognitoIdentityProviderClient,
-	GetUserCommand,
 	GetUserCommandOutput,
 } from '@aws-sdk/client-cognito-identity-provider'
-import { AwsClientStub } from 'aws-sdk-client-mock'
+import { GetUserCommand } from '@aws-sdk/client-cognito-identity-provider'
+import type { AwsClientStub } from 'aws-sdk-client-mock'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Result } from '../../errors.ts'
+import type { Result } from '../../errors.ts'
 import { mockCognitoService } from '../cognito-service.mock.ts'
 import { mockConfig } from '../config.mock.ts'
 

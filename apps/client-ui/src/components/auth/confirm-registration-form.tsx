@@ -35,7 +35,7 @@ import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
 import { usePostConfirmRegisterMutation } from '@/services/hooks/auth/use-post-confirm-register-mutation'
-import { GetAuthUserResponse } from '@/services/network/auth/get-auth-user'
+import type { GetAuthUserResponse } from '@/services/network/auth/get-auth-user'
 
 const confirmRegistrationSchema = z.object({
 	email: z.email(),
