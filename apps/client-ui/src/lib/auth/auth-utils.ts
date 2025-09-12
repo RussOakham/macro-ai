@@ -29,7 +29,7 @@ const decodeBase64 = (base64String: string): string => {
 	if (padLen) b64 += '='.repeat(padLen)
 
 	// Node.js (SSR)
-	if (typeof window === 'undefined' && typeof Buffer !== 'undefined') {
+	if (typeof globalThis.window === 'undefined' && typeof Buffer !== 'undefined') {
 		return Buffer.from(b64, 'base64').toString('utf8')
 	}
 	// Browser

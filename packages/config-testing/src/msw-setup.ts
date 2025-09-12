@@ -9,8 +9,8 @@ import { handlers } from './msw-handlers.js'
  */
 
 // Environment detection
-export const isNode = typeof window === 'undefined'
-export const isBrowser = typeof window !== 'undefined'
+export const isNode = typeof globalThis.window === 'undefined'
+export const isBrowser = typeof globalThis.window !== 'undefined'
 
 // Node.js environment setup (for Vitest tests)
 export const server = setupServer(...handlers)

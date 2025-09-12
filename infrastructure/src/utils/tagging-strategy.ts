@@ -1,5 +1,5 @@
-import * as cdk from 'aws-cdk-lib'
-import { Construct } from 'constructs'
+import type * as cdk from 'aws-cdk-lib'
+import type { Construct } from 'constructs'
 
 /**
  * Standardized tag keys for consistent resource management
