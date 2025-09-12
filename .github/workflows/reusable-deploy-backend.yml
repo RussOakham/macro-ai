@@ -213,11 +213,15 @@ jobs:
 
           echo "📦 Stack Name: ${STACK_NAME}"
 
-          # Parse cost alert emails
+          # Parse cost alert emails (prefer input; fallback to secret)
           CDK_CONTEXT_ARGS=""
-          if [[ -n "${{ inputs.cost-alert-emails }}" ]]; then
+          EMAILS_SOURCE="${{ inputs.cost-alert-emails }}"
+          if [[ -z "$EMAILS_SOURCE" ]]; then
+            EMAILS_SOURCE="${{ secrets.COST_ALERT_EMAILS }}"
+          fi
+          if [[ -n "$EMAILS_SOURCE" ]]; then
             echo "🔍 Parsing cost alert emails..."
-            COST_ALERT_EMAILS_LIST=$(echo "${{ inputs.cost-alert-emails }}" | tr ',' '\n' | awk '{$1=$1};1' | grep -v '^$')
+            COST_ALERT_EMAILS_LIST=$(echo "$EMAILS_SOURCE" | tr ',' '\n' | awk '{$1=$1};1' | grep -v '^$')
             COST_ALERT_EMAILS_ARRAY=()
             while IFS= read -r email; do
               if [[ -n "$email" ]]; then
@@ -229,6 +233,14 @@ jobs:
               CDK_CONTEXT_ARGS="${CDK_CONTEXT_ARGS} --context costAlertEmails=${email}"
             done
             echo "📧 Configured ${#COST_ALERT_EMAILS_ARRAY[@]} cost alert email(s)"
+          fi
+
+          # Optionally pass domain context
+          if [[ -n "${{ inputs.custom-domain-name }}" ]]; then
+            CDK_CONTEXT_ARGS="${CDK_CONTEXT_ARGS} --context customDomainName='${{ inputs.custom-domain-name }}'"
+          fi
+          if [[ -n "${{ inputs.hosted-zone-id }}" ]]; then
+            CDK_CONTEXT_ARGS="${CDK_CONTEXT_ARGS} --context hostedZoneId='${{ inputs.hosted-zone-id }}'"
           fi
 
           # Deploy the stack

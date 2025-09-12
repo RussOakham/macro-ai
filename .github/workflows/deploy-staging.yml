@@ -246,9 +246,9 @@ jobs:
             // Get deployment details using predictable URLs
             const customDomain = '${{ vars.CUSTOM_DOMAIN_NAME }}';
             const appUrl = frontendDeployed ? `https://staging.${customDomain}` : null;
-            const appId = frontendDeployed ? 'Amplify App ID (check AWS Console)' : null;
+            const appId = frontendDeployed ? '${{ needs.deploy-frontend.outputs.app-id }}' : null;
             const backendUrl = backendDeployed ? `https://api-staging.${customDomain}` : null;
-            const backendStack = backendDeployed ? 'macro-ai-staging' : null;
+            const backendStack = backendDeployed ? '${{ needs.deploy-backend.outputs.stack-name }}' : null;
 
             const comment = `## 🚀 Staging Environment Deployed Successfully!
 
@@ -285,7 +285,7 @@ jobs:
             const { data: commits } = await github.rest.repos.listCommits({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              branch: 'develop',
+              sha: 'develop',
               per_page: 1
             });
 
