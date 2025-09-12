@@ -9,6 +9,12 @@ ignore:
         reason: No upgrade available, used only in build process
         expires: '2025-12-31T23:59:59.999Z'
   
+  # Ignore cookie XSS vulnerability - csurf package replaced with csrf-csrf
+  SNYK-JS-COOKIE-8163060:
+    - '*':
+        reason: csurf package replaced with csrf-csrf, vulnerability no longer applicable
+        expires: '2025-12-31T23:59:59.999Z'
+  
 
 # Patch specific vulnerabilities (add as needed)
 # patch:

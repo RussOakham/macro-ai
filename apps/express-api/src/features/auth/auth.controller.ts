@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import {
@@ -21,9 +21,9 @@ import {
 } from '../../utils/response-handlers.ts'
 import { userRepository } from '../user/user.data-access.ts'
 import { userService } from '../user/user.services.ts'
-import { TInsertUser } from '../user/user.types.ts'
+import type { TInsertUser } from '../user/user.types.ts'
 import { cognitoService } from './auth.services.ts'
-import {
+import type {
 	IAuthController,
 	TAuthResponse,
 	TConfirmForgotPasswordRequest,
