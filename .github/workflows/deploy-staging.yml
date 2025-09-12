@@ -108,45 +108,11 @@ jobs:
           echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
           echo "Generated image tag: ${IMAGE_TAG}"
 
-      - name: Generate environment file from Parameter Store
-        id: generate-env
+      - name: Prepare build context (no secrets)
+        id: prepare-build
         run: |
-          echo "🔍 Fetching environment variables from AWS Parameter Store..."
-
-          # For staging deployments, use staging environment parameters
-          ENV_NAME="staging"
-          PARAM_PATH="/macro-ai/${ENV_NAME}"
-          ENV_FILE="apps/express-api/.env.docker"
-
-          echo "🌍 Environment: ${ENV_NAME}"
-          echo "📥 Fetching from: ${PARAM_PATH}"
-
-          # Create the environment file using our script
-          chmod +x apps/express-api/scripts/generate-env-from-parameter-store.sh
-
-          # Set APP_ENV for staging
-          APP_ENV="staging"
-
-          # Pass GitHub secrets as environment variables for the script
-          ENV_FILE="${ENV_FILE}" \
-          AWS_REGION="us-east-1" \
-          APP_ENV="${APP_ENV}" \
-          API_KEY="${{ secrets.API_KEY }}" \
-          OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
-          AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}" \
-          AWS_ROLE_ARN="${{ secrets.AWS_ROLE_ARN }}" \
-          SERVER_PORT="${{ secrets.SERVER_PORT }}" \
-          RATE_LIMIT_WINDOW_MS="${{ secrets.RATE_LIMIT_WINDOW_MS }}" \
-          RATE_LIMIT_MAX_REQUESTS="${{ secrets.RATE_LIMIT_MAX_REQUESTS }}" \
-          AUTH_RATE_LIMIT_WINDOW_MS="${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS }}" \
-          AUTH_RATE_LIMIT_MAX_REQUESTS="${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS }}" \
-          API_RATE_LIMIT_WINDOW_MS="${{ secrets.API_RATE_LIMIT_WINDOW_MS }}" \
-          API_RATE_LIMIT_MAX_REQUESTS="${{ secrets.API_RATE_LIMIT_MAX_REQUESTS }}" \
-          COST_ALERT_EMAILS="${{ secrets.COST_ALERT_EMAILS }}" \
-          ./apps/express-api/scripts/generate-env-from-parameter-store.sh
-
-          echo "✅ Environment file generated from ${ENV_NAME} environment"
-          echo "env-file=${ENV_FILE}" >> "$GITHUB_OUTPUT"
+          echo "🔍 Preparing Docker build context without secrets..."
+          echo "✅ Build context prepared - secrets will be injected at runtime via ECS"
 
       - name: Build and push Docker image
         id: build
@@ -177,14 +143,13 @@ jobs:
               --encryption-configuration encryptionType=AES256
           }
 
-          # Build with environment file using BuildKit
+          # Build without injecting secrets (use ECS runtime secrets)
           docker buildx build \
             --file apps/express-api/Dockerfile.distroless \
             --target ecs-runner \
             --platform linux/amd64 \
             --cache-from type=gha \
             --cache-to type=gha,mode=max \
-            --build-arg ENV_FILE="${{ steps.generate-env.outputs.env-file }}" \
             --tag "${IMAGE_URI}" \
             --push \
             .
@@ -193,14 +158,6 @@ jobs:
           echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
           echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
 
-      - name: Cleanup environment file
-        if: always()
-        run: |
-          ENV_FILE="${{ steps.generate-env.outputs.env-file }}"
-          if [[ -f "${ENV_FILE}" ]]; then
-            rm -f "${ENV_FILE}"
-            echo "🧹 Cleaned up: ${ENV_FILE}"
-          fi
 
   # Deploy backend using reusable workflow
   deploy-backend:

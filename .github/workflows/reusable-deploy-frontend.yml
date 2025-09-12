@@ -171,8 +171,8 @@ jobs:
           api-endpoint: ${{ inputs.backend-url }}
           custom-domain-name: ${{ inputs.custom-domain-name }}
           hosted-zone-id: ${{ inputs.hosted-zone-id }}
-          parameter-store-path: '/macro-ai/development/api-key'
-          api-key: ${{ secrets.API_KEY }}
+          # Do not pass secrets into client build artifacts
+          parameter-store-path: ''
           backend-stack-name: 'placeholder'
           resolution-method: 'artifact-based'
           output-file: '.env.preview'
