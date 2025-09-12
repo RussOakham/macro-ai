@@ -1,6 +1,5 @@
-import type React from 'react'
-
 import { Menu } from 'lucide-react'
+import type React from 'react'
 
 import { Button } from '@/components/ui/button'
 
@@ -13,17 +12,17 @@ interface ChatActionsProps extends React.ComponentPropsWithoutRef<'div'> {
  * Contains action buttons like mobile sidebar toggle
  */
 const ChatActions = ({
-	onMobileSidebarToggle,
 	className,
+	onMobileSidebarToggle,
 	...props
 }: ChatActionsProps): React.JSX.Element => {
 	return (
 		<div className={className} {...props}>
 			<Button
-				variant="ghost"
-				size="sm"
 				className="md:hidden"
 				onClick={onMobileSidebarToggle}
+				size="sm"
+				variant="ghost"
 			>
 				<Menu className="h-4 w-4" />
 			</Button>

@@ -61,19 +61,19 @@ export default repoConfig.config(
 		files: ['**/*.{ts,tsx,js,jsx}'],
 		languageOptions: {
 			globals: {
+				Buffer: 'readonly',
+				clearInterval: 'readonly',
+				clearTimeout: 'readonly',
 				console: 'readonly',
 				process: 'readonly',
-				Buffer: 'readonly',
-				setTimeout: 'readonly',
-				clearTimeout: 'readonly',
 				setInterval: 'readonly',
-				clearInterval: 'readonly',
+				setTimeout: 'readonly',
 			},
 		},
 		rules: {
+			'@typescript-eslint/no-explicit-any': 'warn',
 			// Package-specific rules
 			'@typescript-eslint/no-unused-vars': 'warn',
-			'@typescript-eslint/no-explicit-any': 'warn',
 		},
 	},
 )

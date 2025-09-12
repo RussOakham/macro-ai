@@ -33,9 +33,9 @@ vi.mock('@/main', () => ({
 
 // Mock the shared refresh promise
 vi.mock('../../auth/shared-refresh-promise', () => ({
-	setSharedRefreshPromise: vi.fn(),
 	clearSharedRefreshPromise: vi.fn(),
 	getSharedRefreshPromise: vi.fn(),
+	setSharedRefreshPromise: vi.fn(),
 	waitForRefreshCompletion: vi.fn(),
 }))
 
@@ -43,16 +43,16 @@ vi.mock('../../auth/shared-refresh-promise', () => ({
 vi.mock('../../logger/logger', () => ({
 	logger: {
 		error: vi.fn(),
-		warn: vi.fn(),
 		info: vi.fn(),
+		warn: vi.fn(),
 	},
 }))
 
 // Mock the error standardization
 vi.mock('../../errors/standardize-error', () => ({
 	standardizeError: vi.fn((error: unknown) => ({
-		message: (error as { message?: string }).message ?? 'Standardized error',
 		code: (error as { code?: string }).code ?? 'UNKNOWN_ERROR',
+		message: (error as { message?: string }).message ?? 'Standardized error',
 	})),
 }))
 
@@ -136,8 +136,8 @@ describe('Token Refresh Interceptors', () => {
 							message: 'Token refreshed',
 							tokens: {
 								accessToken: 'new-access-token',
-								refreshToken: 'new-refresh-token',
 								expiresIn: 3600,
+								refreshToken: 'new-refresh-token',
 							},
 						},
 						{ status: 200 },
@@ -162,8 +162,8 @@ describe('Token Refresh Interceptors', () => {
 			// Make a request that should trigger 401 and refresh
 			try {
 				await realApiClient.get({
-					url: '/protected',
 					baseURL: 'http://localhost:3000',
+					url: '/protected',
 				})
 			} catch {
 				// The request should fail, but we can verify the refresh was attempted
@@ -194,17 +194,17 @@ describe('Token Refresh Interceptors', () => {
 			// Make a request that should trigger 403
 			try {
 				await realApiClient.get({
-					url: '/forbidden',
 					baseURL: 'http://localhost:3000',
+					url: '/forbidden',
 				})
 			} catch {
 				// Verify the router was called to navigate to login
 				expect(router.navigate).toHaveBeenCalledWith({
-					to: '/auth/login',
 					search: {
 						code: '403',
 						message: 'You do not have permission to access this resource.',
 					},
+					to: '/auth/login',
 				})
 			}
 		})
@@ -235,8 +235,8 @@ describe('Token Refresh Interceptors', () => {
 			// Make a request that should trigger API key error
 			try {
 				await realApiClient.get({
-					url: '/api-error',
 					baseURL: 'http://localhost:3000',
+					url: '/api-error',
 				})
 			} catch (error) {
 				// Verify the logger was called with the API key error
@@ -293,15 +293,15 @@ describe('Token Refresh Interceptors', () => {
 			// Make a request to the refresh endpoint that should return 401
 			try {
 				await realApiClient.post({
-					url: '/auth/refresh',
 					baseURL: 'http://localhost:3000',
 					data: { refreshToken: 'expired-token' },
+					url: '/auth/refresh',
 				})
 			} catch {
 				// Verify the router was called to navigate to login (not infinite loop)
 				expect(router.navigate).toHaveBeenCalledWith({
-					to: '/auth/login',
 					search: { redirect: '/test' },
+					to: '/auth/login',
 				})
 			}
 		})
@@ -321,8 +321,8 @@ describe('Token Refresh Interceptors', () => {
 							message: 'Token refreshed',
 							tokens: {
 								accessToken: 'new-access-token',
-								refreshToken: 'new-refresh-token',
 								expiresIn: 3600,
+								refreshToken: 'new-refresh-token',
 							},
 						},
 						{ status: 200 },
@@ -342,12 +342,12 @@ describe('Token Refresh Interceptors', () => {
 			// Make concurrent requests that should trigger 401
 			const promises = [
 				realApiClient.get({
-					url: '/protected1',
 					baseURL: 'http://localhost:3000',
+					url: '/protected1',
 				}),
 				realApiClient.get({
-					url: '/protected2',
 					baseURL: 'http://localhost:3000',
+					url: '/protected2',
 				}),
 			]
 

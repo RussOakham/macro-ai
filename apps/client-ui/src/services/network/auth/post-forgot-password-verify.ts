@@ -1,8 +1,8 @@
 import {
+	type ConfirmForgotPasswordRequest,
 	postAuthConfirmForgotPassword,
 	zConfirmForgotPasswordRequest,
 	zPostAuthConfirmForgotPasswordResponse,
-	type ConfirmForgotPasswordRequest,
 } from '@repo/macro-ai-api-client'
 
 import { apiClient } from '@/lib/api/clients'
@@ -11,18 +11,18 @@ import { safeValidateApiResponse } from '@/lib/validation/api-response'
 // Type-safe endpoint for consumption using the generated SDK
 const postForgotPasswordVerify = async ({
 	code,
+	confirmPassword,
 	email,
 	newPassword,
-	confirmPassword,
 }: ConfirmForgotPasswordRequest) => {
 	const { data, error } = await postAuthConfirmForgotPassword({
-		client: apiClient,
 		body: {
 			code,
+			confirmPassword,
 			email,
 			newPassword,
-			confirmPassword,
 		},
+		client: apiClient,
 	})
 
 	if (error) {

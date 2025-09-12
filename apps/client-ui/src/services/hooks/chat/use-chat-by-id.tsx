@@ -11,18 +11,17 @@ import { getChatById } from '../../network/chat/get-chat-by-id'
  */
 const useChatById = (chatId: string | undefined) => {
 	return useQuery({
-		queryKey: [QUERY_KEY.chat, QUERY_KEY_MODIFIERS.detail, chatId],
+		enabled: !!chatId, // Only run query if chatId is provided
+		gcTime: 10 * 60 * 1000, // 10 minutes
 		queryFn: async () => {
 			if (!chatId) {
 				throw new Error('Chat ID is required')
 			}
 			return getChatById(chatId)
 		},
-		enabled: !!chatId, // Only run query if chatId is provided
-		staleTime: 5 * 60 * 1000, // 5 minutes
-		gcTime: 10 * 60 * 1000, // 10 minutes
-		refetchOnWindowFocus: false,
+		queryKey: [QUERY_KEY.chat, QUERY_KEY_MODIFIERS.detail, chatId],
 		refetchOnMount: true,
+		refetchOnWindowFocus: false,
 		select: (data) => {
 			// Transform dates from strings to Date objects and ensure proper typing
 			return {
@@ -30,14 +29,15 @@ const useChatById = (chatId: string | undefined) => {
 				data: {
 					...data.data,
 					createdAt: new Date(data.data.createdAt),
-					updatedAt: new Date(data.data.updatedAt),
 					messages: data.data.messages.map((message) => ({
 						...message,
 						createdAt: message.createdAt ? new Date(message.createdAt) : null,
 					})),
+					updatedAt: new Date(data.data.updatedAt),
 				},
 			}
 		},
+		staleTime: 5 * 60 * 1000, // 5 minutes
 	})
 }
 

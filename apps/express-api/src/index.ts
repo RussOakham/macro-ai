@@ -13,10 +13,10 @@ import { createServer } from './utils/server.ts'
 /**
  * Start the Express server with the simplified configuration system
  */
-const startServer = () => {
+const startServer = async () => {
 	try {
 		// Load configuration using the simplified system - ONCE at startup
-		const config = assertConfig(true)
+		const config = await assertConfig(true)
 
 		logger.info(
 			{
@@ -72,9 +72,7 @@ const startServer = () => {
 }
 
 // Start the server
-try {
-	startServer()
-} catch (error: unknown) {
+startServer().catch((error: unknown) => {
 	logger.error(error as Error, 'Unhandled error during server startup')
 	exit(1)
-}
+})

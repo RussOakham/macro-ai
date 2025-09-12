@@ -5,8 +5,8 @@
  * based on https://dev.to/saltorgil/testing-tanstack-router-4io3
  */
 
-import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { Link } from '@tanstack/react-router'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import React from 'react'
 import { describe, expect, it } from 'vitest'
 
@@ -25,10 +25,10 @@ const HomePage = () => {
 		<div>
 			<h1>Home Page</h1>
 			<nav>
-				<Link to="/chat" data-testid="chat-link">
+				<Link data-testid="chat-link" to="/chat">
 					Chat
 				</Link>
-				<Link to="/" data-testid="home-link">
+				<Link data-testid="home-link" to="/">
 					Home
 				</Link>
 			</nav>
@@ -67,8 +67,8 @@ describe('TanStack Router Testing Examples', () => {
 	describe('Basic Component Rendering', () => {
 		it('renders a simple component with router context', async () => {
 			await renderWithRouter(HomePage, {
-				pathPattern: '/home',
 				initialEntry: '/home',
+				pathPattern: '/home',
 				uniqueId: 'basic-routing',
 			})
 
@@ -78,9 +78,9 @@ describe('TanStack Router Testing Examples', () => {
 
 		it('renders component at specific route', async () => {
 			await renderWithRouter(AboutPage, {
+				initialEntry: '/about',
 				pathPattern: '/about',
 				uniqueId: 'specific-route',
-				initialEntry: '/about',
 			})
 
 			expect(screen.getByText('About Page')).toBeInTheDocument()
@@ -98,8 +98,8 @@ describe('TanStack Router Testing Examples', () => {
 			}
 
 			await renderWithRouter(UserDetail, {
-				pathPattern: '/users/$userId',
 				initialEntry: '/users/123',
+				pathPattern: '/users/$userId',
 				uniqueId: 'dynamic-routes',
 			})
 
@@ -111,9 +111,9 @@ describe('TanStack Router Testing Examples', () => {
 	describe('Authentication Context', () => {
 		it('renders component with authenticated context', async () => {
 			await renderWithRouter(ProtectedPage, {
-				pathPattern: '/dashboard',
-				initialEntry: '/dashboard',
 				context: createAuthenticatedContext(),
+				initialEntry: '/dashboard',
+				pathPattern: '/dashboard',
 				uniqueId: 'authenticated-context',
 			})
 
@@ -126,10 +126,10 @@ describe('TanStack Router Testing Examples', () => {
 
 		it('renders component with unauthenticated context', async () => {
 			await renderWithRouter(ProtectedPage, {
-				pathPattern: '/dashboard',
-				initialEntry: '/dashboard',
-				uniqueId: 'unauthenticated-context',
 				context: createUnauthenticatedContext(),
+				initialEntry: '/dashboard',
+				pathPattern: '/dashboard',
+				uniqueId: 'unauthenticated-context',
 			})
 
 			// Use test ID that should be set by renderWithRouter
@@ -143,8 +143,8 @@ describe('TanStack Router Testing Examples', () => {
 	describe('Router Utilities', () => {
 		it('can navigate programmatically', async () => {
 			const { router } = await renderWithRouter(HomePage, {
-				pathPattern: '/home',
 				initialEntry: '/home',
+				pathPattern: '/home',
 				uniqueId: 'router-navigation',
 			})
 
@@ -163,9 +163,9 @@ describe('TanStack Router Testing Examples', () => {
 
 		it('can get current route information', async () => {
 			const { router } = await renderWithRouter(AboutPage, {
+				initialEntry: '/about',
 				pathPattern: '/about',
 				uniqueId: 'current-route-info',
-				initialEntry: '/about',
 			})
 
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
@@ -202,8 +202,8 @@ describe('TanStack Router Testing Examples', () => {
 							Increment
 						</button>
 						<form data-testid="user-form">
-							<input name="name" type="text" placeholder="Name" />
-							<input name="email" type="email" placeholder="Email" />
+							<input name="name" placeholder="Name" type="text" />
+							<input name="email" placeholder="Email" type="email" />
 							<button type="submit">Save User</button>
 						</form>
 					</div>
@@ -211,8 +211,8 @@ describe('TanStack Router Testing Examples', () => {
 			}
 
 			await renderWithRouter(EnhancedHomePage, {
-				pathPattern: '/enhanced-home',
 				initialEntry: '/enhanced-home',
+				pathPattern: '/enhanced-home',
 				uniqueId: 'enhanced-home',
 			})
 
@@ -268,8 +268,8 @@ describe('TanStack Router Testing Examples', () => {
 			}
 
 			await renderWithRouter(InteractivePage, {
-				pathPattern: '/interactive',
 				initialEntry: '/interactive',
+				pathPattern: '/interactive',
 				uniqueId: 'interactive-page',
 			})
 
@@ -296,12 +296,12 @@ describe('TanStack Router Testing Examples', () => {
 
 			const FormPage = () => {
 				const [formData, setFormData] = React.useState({
-					name: '',
-					email: '',
-					country: '',
 					bio: '',
-					newsletter: false,
+					country: '',
+					email: '',
 					gender: '',
+					name: '',
+					newsletter: false,
 				})
 
 				const handleSubmit = (e: React.FormEvent) => {
@@ -315,28 +315,28 @@ describe('TanStack Router Testing Examples', () => {
 						<form data-testid="registration-form" onSubmit={handleSubmit}>
 							<input
 								name="name"
-								type="text"
-								value={formData.name}
 								onChange={(e) => {
 									setFormData((prev) => ({ ...prev, name: e.target.value }))
 								}}
 								placeholder="Full Name"
+								type="text"
+								value={formData.name}
 							/>
 							<input
 								name="email"
-								type="email"
-								value={formData.email}
 								onChange={(e) => {
 									setFormData((prev) => ({ ...prev, email: e.target.value }))
 								}}
 								placeholder="Email"
+								type="email"
+								value={formData.email}
 							/>
 							<select
 								name="country"
-								value={formData.country}
 								onChange={(e) => {
 									setFormData((prev) => ({ ...prev, country: e.target.value }))
 								}}
+								value={formData.country}
 							>
 								<option value="">Select Country</option>
 								<option value="us">United States</option>
@@ -345,54 +345,54 @@ describe('TanStack Router Testing Examples', () => {
 							</select>
 							<textarea
 								name="bio"
-								value={formData.bio}
 								onChange={(e) => {
 									setFormData((prev) => ({ ...prev, bio: e.target.value }))
 								}}
 								placeholder="Tell us about yourself"
+								value={formData.bio}
 							/>
 							<label htmlFor="newsletter">
 								<input
-									name="newsletter"
-									type="checkbox"
 									checked={formData.newsletter}
+									name="newsletter"
 									onChange={(e) => {
 										setFormData((prev) => ({
 											...prev,
 											newsletter: e.target.checked,
 										}))
 									}}
+									type="checkbox"
 								/>
 								Subscribe to newsletter
 							</label>
 							<div>
 								<label htmlFor="gender">
 									<input
-										name="gender"
-										type="radio"
-										value="male"
 										checked={formData.gender === 'male'}
+										name="gender"
 										onChange={(e) => {
 											setFormData((prev) => ({
 												...prev,
 												gender: e.target.value,
 											}))
 										}}
+										type="radio"
+										value="male"
 									/>
 									Male
 								</label>
 								<label htmlFor="gender">
 									<input
-										name="gender"
-										type="radio"
-										value="female"
 										checked={formData.gender === 'female'}
+										name="gender"
 										onChange={(e) => {
 											setFormData((prev) => ({
 												...prev,
 												gender: e.target.value,
 											}))
 										}}
+										type="radio"
+										value="female"
 									/>
 									Female
 								</label>
@@ -404,8 +404,8 @@ describe('TanStack Router Testing Examples', () => {
 			}
 
 			await renderWithRouter(FormPage, {
-				pathPattern: '/register',
 				initialEntry: '/register',
+				pathPattern: '/register',
 				uniqueId: 'form-page',
 			})
 
@@ -413,8 +413,8 @@ describe('TanStack Router Testing Examples', () => {
 
 			// Test comprehensive form filling with new utilities
 			await formTesting.fillTextInputs(form, {
-				name: 'John Doe',
 				email: 'john@example.com',
+				name: 'John Doe',
 			})
 
 			await formTesting.fillSelectFields(form, {
@@ -435,8 +435,8 @@ describe('TanStack Router Testing Examples', () => {
 
 			// Validate all form fields
 			formTesting.validateTextInputs(form, {
-				name: 'John Doe',
 				email: 'john@example.com',
+				name: 'John Doe',
 			})
 
 			formTesting.validateSelectFields(form, {
@@ -484,20 +484,20 @@ describe('TanStack Router Testing Examples', () => {
 						<form data-testid="add-item-form">
 							<input
 								name="newItem"
-								type="text"
-								value={newItem}
 								onChange={(e) => {
 									setNewItem(e.target.value)
 								}}
 								placeholder="Add new item"
+								type="text"
+								value={newItem}
 							/>
-							<button type="button" onClick={addItem}>
+							<button onClick={addItem} type="button">
 								Add Item
 							</button>
 						</form>
 						<ul data-testid="item-list">
 							{items.map((item, index) => (
-								<li key={index} data-testid={`item-${index.toString()}`}>
+								<li data-testid={`item-${index.toString()}`} key={index}>
 									{item}
 									<button
 										data-testid={`remove-${index.toString()}`}
@@ -515,8 +515,8 @@ describe('TanStack Router Testing Examples', () => {
 			}
 
 			await renderWithRouter(StatefulPage, {
-				pathPattern: '/items',
 				initialEntry: '/items',
+				pathPattern: '/items',
 				uniqueId: 'stateful-page',
 			})
 

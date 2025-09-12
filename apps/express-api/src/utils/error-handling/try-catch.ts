@@ -22,7 +22,7 @@ const { logger } = pino
  * return [user, null]
  */
 const tryCatch = async <T>(
-	promiseOrFunction: Promise<T> | (() => Promise<T>),
+	promiseOrFunction: (() => Promise<T>) | Promise<T>,
 	context = 'unknown',
 ): Promise<Result<T>> => {
 	try {

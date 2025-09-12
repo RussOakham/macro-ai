@@ -20,14 +20,14 @@ import { logger } from '@/lib/logger/logger'
  */
 const toSafeValidationMeta = (error: unknown, data: unknown) => {
 	// Safe error representation
-	const safeError =
-		// oxlint-disable-next-line no-nested-ternary
-		error instanceof Error
-			? { name: error.name, message: error.message }
-			: // oxlint-disable-next-line no-nested-ternary
-				typeof error === 'string'
-				? error
-				: 'Unknown error'
+	let safeError: string | { message: string; name: string }
+	if (error instanceof Error) {
+		safeError = { message: error.message, name: error.name }
+	} else if (typeof error === 'string') {
+		safeError = error
+	} else {
+		safeError = 'Unknown error'
+	}
 
 	// Safe data summary
 	// oxlint-disable-next-line init-declarations
@@ -38,12 +38,17 @@ const toSafeValidationMeta = (error: unknown, data: unknown) => {
 		const keys = Object.keys(data as Record<string, unknown>)
 		const keyPreview = keys.slice(0, 3).join(', ')
 		const keyCount = keys.length
-		safeData = `object with ${keyCount.toString()} keys${keyCount > 0 ? ` (${keyPreview}${keyCount > 3 ? '...' : ''})` : ''}`
+		let keyDetails = ''
+		if (keyCount > 0) {
+			const ellipsis = keyCount > 3 ? '...' : ''
+			keyDetails = ` (${keyPreview}${ellipsis})`
+		}
+		safeData = `object with ${keyCount.toString()} keys${keyDetails}`
 	} else {
 		safeData = `${typeof data} value`
 	}
 
-	return { error: safeError, data: safeData }
+	return { data: safeData, error: safeError }
 }
 
 // ============================================================================
@@ -118,8 +123,8 @@ const validateApiResponse = <T>(
 // ============================================================================
 
 type ValidationResult<T> =
-	| { success: true; data: T }
-	| { success: false; error: string }
+	| { data: T; success: true }
+	| { error: string; success: false }
 
 /**
  * Safe response validator that returns a result object instead of throwing
@@ -133,7 +138,7 @@ const safeValidateApiResponse = <T>(
 ): ValidationResult<T> => {
 	try {
 		const validatedData = schema.parse(data)
-		return { success: true, data: validatedData }
+		return { data: validatedData, success: true }
 	} catch (error: unknown) {
 		const errorMessage =
 			error instanceof z.ZodError
@@ -144,15 +149,15 @@ const safeValidateApiResponse = <T>(
 			toSafeValidationMeta(error, data),
 			'[API Validation] Safe validation failed',
 		)
-		return { success: false, error: errorMessage }
+		return { error: errorMessage, success: false }
 	}
 }
 
 export {
-	validateGetChatsResponse,
-	validateGetChatByIdResponse,
-	validateCreateChatResponse,
-	validateApiResponse,
 	safeValidateApiResponse,
+	validateApiResponse,
+	validateCreateChatResponse,
+	validateGetChatByIdResponse,
+	validateGetChatsResponse,
 }
 export type { ValidationResult }

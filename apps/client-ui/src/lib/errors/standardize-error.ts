@@ -5,11 +5,11 @@ import type { IStandardizedError } from '../types'
 
 export const standardizeError = (error: unknown): IStandardizedError => {
 	const standardError: IStandardizedError = {
-		type: 'UnknownError',
-		name: 'UnknownError',
 		message: 'An unknown error occurred',
-		status: 500,
+		name: 'UnknownError',
 		stack: '',
+		status: 500,
+		type: 'UnknownError',
 	}
 
 	if (error instanceof AxiosError) {

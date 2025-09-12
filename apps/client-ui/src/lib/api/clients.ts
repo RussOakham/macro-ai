@@ -1,4 +1,4 @@
-import { createApiClient, type Config } from '@repo/macro-ai-api-client'
+import { type Config, createApiClient } from '@repo/macro-ai-api-client'
 
 import { validateEnvironment } from '@/lib/validation/environment'
 

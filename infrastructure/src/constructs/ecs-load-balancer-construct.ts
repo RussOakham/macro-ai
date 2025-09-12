@@ -1,3 +1,4 @@
+/* eslint-disable security-node/detect-crlf */
 import * as cdk from 'aws-cdk-lib'
 import * as acm from 'aws-cdk-lib/aws-certificatemanager'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
@@ -11,68 +12,29 @@ import type { EnvironmentConfigConstruct } from './environment-config-construct'
 
 export interface EcsLoadBalancerConstructProps {
 	/**
-	 * VPC where the load balancer will be deployed
-	 */
-	readonly vpc: ec2.IVpc
-
-	/**
-	 * ECS service to attach to the load balancer
-	 */
-	readonly ecsService: ecs.FargateService
-
-	/**
-	 * Environment name for resource naming and tagging
-	 * @default 'development'
-	 */
-	readonly environmentName?: string
-
-	/**
-	 * Custom domain configuration for HTTPS endpoints
-	 */
-	readonly customDomain?: {
-		readonly domainName: string
-		readonly hostedZoneId: string
-		readonly certificateArn?: string
-		/**
-		 * API subdomain to use (e.g., 'pr-56-api')
-		 * @default derived from environmentName
-		 */
-		readonly apiSubdomain?: string
-		/**
-		 * Whether to create frontend subdomain DNS record
-		 * @default true (for backward compatibility)
-		 */
-		readonly createFrontendSubdomain?: boolean
-	}
-
-	/**
 	 * Container port for health checks
 	 * @default 3040
 	 */
 	readonly containerPort?: number
 
 	/**
-	 * Health check configuration
+	 * Custom domain configuration for HTTPS endpoints
 	 */
-	readonly healthCheck?: {
-		readonly path: string
-		readonly interval: cdk.Duration
-		readonly timeout: cdk.Duration
-		readonly healthyThresholdCount: number
-		readonly unhealthyThresholdCount: number
+	readonly customDomain?: {
+		/**
+		 * API subdomain to use (e.g., 'pr-56-api')
+		 * @default derived from environmentName
+		 */
+		readonly apiSubdomain?: string
+		readonly certificateArn?: string
+		/**
+		 * Whether to create frontend subdomain DNS record
+		 * @default true (for backward compatibility)
+		 */
+		readonly createFrontendSubdomain?: boolean
+		readonly domainName: string
+		readonly hostedZoneId: string
 	}
-
-	/**
-	 * Enable access logs for the load balancer
-	 * @default false (cost optimization)
-	 */
-	readonly enableAccessLogs?: boolean
-
-	/**
-	 * Security group for the load balancer
-	 * If not provided, will create a new one
-	 */
-	readonly securityGroup?: ec2.ISecurityGroup
 
 	/**
 	 * Enable deletion protection
@@ -81,15 +43,54 @@ export interface EcsLoadBalancerConstructProps {
 	readonly deletionProtection?: boolean
 
 	/**
+	 * ECS service to attach to the load balancer
+	 */
+	readonly ecsService: ecs.FargateService
+
+	/**
+	 * Enable access logs for the load balancer
+	 * @default false (cost optimization)
+	 */
+	readonly enableAccessLogs?: boolean
+
+	/**
+	 * Environment configuration for CORS and other settings
+	 */
+	readonly environmentConfig?: EnvironmentConfigConstruct
+
+	/**
+	 * Environment name for resource naming and tagging
+	 * @default 'development'
+	 */
+	readonly environmentName?: string
+
+	/**
+	 * Health check configuration
+	 */
+	readonly healthCheck?: {
+		readonly healthyThresholdCount: number
+		readonly interval: cdk.Duration
+		readonly path: string
+		readonly timeout: cdk.Duration
+		readonly unhealthyThresholdCount: number
+	}
+
+	/**
 	 * Idle timeout for connections
 	 * @default 60 seconds
 	 */
 	readonly idleTimeout?: cdk.Duration
 
 	/**
-	 * Environment configuration for CORS and other settings
+	 * Security group for the load balancer
+	 * If not provided, will create a new one
 	 */
-	readonly environmentConfig?: EnvironmentConfigConstruct
+	readonly securityGroup?: ec2.ISecurityGroup
+
+	/**
+	 * VPC where the load balancer will be deployed
+	 */
+	readonly vpc: ec2.IVpc
 }
 
 /**
@@ -103,11 +104,61 @@ export interface EcsLoadBalancerConstructProps {
  * - Custom domain support with ACM certificates
  */
 export class EcsLoadBalancerConstruct extends Construct {
-	public readonly loadBalancer: elbv2.ApplicationLoadBalancer
-	public readonly targetGroup: elbv2.ApplicationTargetGroup
 	public readonly httpListener: elbv2.ApplicationListener
 	public readonly httpsListener?: elbv2.ApplicationListener
+	public readonly loadBalancer: elbv2.ApplicationLoadBalancer
 	public readonly securityGroup: ec2.ISecurityGroup
+	public readonly targetGroup: elbv2.ApplicationTargetGroup
+
+	/**
+	 * Get the health check URL
+	 */
+	public get healthCheckUrl(): string {
+		return `${this.serviceUrl}/api/health`
+	}
+
+	/**
+	 * Get the HTTP listener ARN
+	 */
+	public get httpListenerArn(): string {
+		return this.httpListener.listenerArn
+	}
+
+	/**
+	 * Get the HTTPS listener ARN (if available)
+	 */
+	public get httpsListenerArn(): string | undefined {
+		return this.httpsListener?.listenerArn
+	}
+
+	/**
+	 * Get the load balancer ARN
+	 */
+	public get loadBalancerArn(): string {
+		return this.loadBalancer.loadBalancerArn
+	}
+
+	/**
+	 * Get the load balancer DNS name
+	 */
+	public get loadBalancerDnsName(): string {
+		return this.loadBalancer.loadBalancerDnsName
+	}
+
+	/**
+	 * Get the service URL (HTTP or HTTPS based on custom domain)
+	 */
+	public get serviceUrl(): string {
+		const protocol = this.httpsListener ? 'https' : 'http'
+		return `${protocol}://${this.loadBalancerDnsName}`
+	}
+
+	/**
+	 * Get the target group ARN
+	 */
+	public get targetGroupArn(): string {
+		return this.targetGroup.targetGroupArn
+	}
 
 	constructor(
 		scope: Construct,
@@ -325,55 +376,5 @@ export class EcsLoadBalancerConstruct extends Construct {
 		cdk.Tags.of(this.loadBalancer).add('Environment', environmentName)
 		cdk.Tags.of(this.targetGroup).add('Component', 'TargetGroup')
 		cdk.Tags.of(this.targetGroup).add('Environment', environmentName)
-	}
-
-	/**
-	 * Get the load balancer DNS name
-	 */
-	public get loadBalancerDnsName(): string {
-		return this.loadBalancer.loadBalancerDnsName
-	}
-
-	/**
-	 * Get the load balancer ARN
-	 */
-	public get loadBalancerArn(): string {
-		return this.loadBalancer.loadBalancerArn
-	}
-
-	/**
-	 * Get the target group ARN
-	 */
-	public get targetGroupArn(): string {
-		return this.targetGroup.targetGroupArn
-	}
-
-	/**
-	 * Get the HTTP listener ARN
-	 */
-	public get httpListenerArn(): string {
-		return this.httpListener.listenerArn
-	}
-
-	/**
-	 * Get the HTTPS listener ARN (if available)
-	 */
-	public get httpsListenerArn(): string | undefined {
-		return this.httpsListener?.listenerArn
-	}
-
-	/**
-	 * Get the service URL (HTTP or HTTPS based on custom domain)
-	 */
-	public get serviceUrl(): string {
-		const protocol = this.httpsListener ? 'https' : 'http'
-		return `${protocol}://${this.loadBalancerDnsName}`
-	}
-
-	/**
-	 * Get the health check URL
-	 */
-	public get healthCheckUrl(): string {
-		return `${this.serviceUrl}/api/health`
 	}
 }

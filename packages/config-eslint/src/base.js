@@ -69,6 +69,7 @@ const base = {
 	// Code quality and best practices
 	codeQuality: /** @type {import("typescript-eslint").ConfigWithExtends[]} */ [
 		{
+			files: ['**/*.{ts,tsx}', '**/*.spec.{ts,tsx}', '**/*.test.{ts,tsx}'],
 			plugins: {
 				sonarjs: sonarjsPlugin,
 				perfectionist: perfectionistPlugin,
@@ -76,8 +77,38 @@ const base = {
 				'eslint-comments': eslintCommentsPlugin,
 			},
 			rules: {
+				...sonarjsPlugin.configs.recommended.rules,
+				...perfectionistPlugin.configs['recommended-natural'].rules,
+				...arrayFuncPlugin.configs.recommended.rules,
+				...eslintCommentsPlugin.configs.recommended.rules,
+
 				// SonarJS - Code quality and maintainability
 				'sonarjs/no-duplicate-string': 'off',
+				'sonarjs/no-commented-out-code': 'off',
+				'sonarjs/prefer-read-only-properties': 'off',
+				'sonarjs/todo-tag': 'warn',
+
+				'perfectionist/sort-objects': 'off',
+				'perfectionist/sort-interfaces': 'off',
+				'perfectionist/sort-object-types': 'off',
+				'perfectionist/sort-modules': 'off',
+
+				'perfectionist/sort-imports': [
+					'error',
+					{
+						type: 'natural',
+						groups: [
+							['builtin'], // Node.js built-in modules
+							['external'], // External modules
+							['internal'], // Internal modules
+							['parent', 'sibling'], // Parent and sibling modules
+							['index'], // Index modules
+							['style'], // Style modules
+						],
+						order: 'asc',
+						newlinesBetween: 'always',
+					},
+				],
 
 				// Note: Import sorting and array function rules are now handled by oxlint
 				// perfectionist/sort-imports and array-func/* rules removed to avoid duplication
@@ -87,6 +118,7 @@ const base = {
 				'eslint-comments/no-unlimited-disable': 'error',
 				'eslint-comments/no-unused-disable': 'error',
 				'eslint-comments/no-unused-enable': 'error',
+				'eslint-comments/disable-enable-pair': 'off',
 			},
 		},
 	],
@@ -100,6 +132,9 @@ const base = {
 				'no-secrets': noSecretsPlugin,
 			},
 			rules: {
+				...securityPlugin.configs.recommended.rules,
+				...securityNodePlugin.configs.recommended.rules,
+
 				'security/detect-object-injection': 'off',
 				'security-node/detect-insecure-randomness': 'error',
 				'no-secrets/no-secrets': 'error',
@@ -115,13 +150,19 @@ const base = {
 				'testing-library': testingLibraryPlugin,
 				globals: globals,
 			},
-			files: ['**/*.{test,spec}.{js,ts,jsx,tsx}'],
+			files: [
+				'**/*.{test,spec}.{js,ts,jsx,tsx}',
+				'**/*.test-utils.{js,ts,jsx,tsx}',
+			],
 			languageOptions: {
 				globals: {
 					...globals.node,
 				},
 			},
 			rules: {
+				...vitestPlugin.configs.recommended.rules,
+				...testingLibraryPlugin.configs['flat/react'].rules,
+
 				// Vitest rules
 				'vitest/expect-expect': 'error',
 				'vitest/no-disabled-tests': 'warn',
@@ -136,6 +177,13 @@ const base = {
 				'testing-library/no-node-access': 'error',
 				'testing-library/prefer-screen-queries': 'error',
 				'testing-library/render-result-naming-convention': 'error',
+
+				// Relax Code Quality rules
+				'sonarjs/no-nested-functions': 'off',
+				'sonarjs/constructor-for-side-effects': 'off',
+				'sonarjs/no-hardcoded-ip': 'off',
+				'sonarjs/no-hardcoded-passwords': 'off',
+				'sonarjs/no-clear-text-protocols': 'off',
 			},
 		},
 	],
@@ -165,6 +213,18 @@ const base = {
 					ecmaVersion: 'latest',
 					sourceType: 'module',
 				},
+			},
+		},
+	],
+	overrides: [
+		{
+			files: ['**/*.spec.{ts,tsx}', '**/*.test.{ts,tsx}'],
+			rules: {
+				'sonarjs/no-nested-functions': 'off',
+				'sonarjs/constructor-for-side-effects': 'off',
+				'sonarjs/no-hardcoded-passwords': 'off',
+				'sonarjs/no-hardcoded-ip': 'off',
+				'sonarjs/no-clear-text-protocols': 'off',
 			},
 		},
 	],

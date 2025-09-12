@@ -1,10 +1,10 @@
+import path from 'node:path'
+
 import bodyParser from 'body-parser'
 import compression from 'compression'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
-import { doubleCsrfProtection } from './csrf.ts'
 import express, { type Express } from 'express'
-import path from 'node:path'
 import swaggerUi from 'swagger-ui-express'
 
 import { apiKeyAuth } from '../middleware/api-key.middleware.ts'
@@ -15,6 +15,7 @@ import {
 	securityHeadersMiddleware,
 } from '../middleware/security-headers.middleware.ts'
 import { appRouter } from '../router/index.routes.ts'
+import { doubleCsrfProtection } from './csrf.ts'
 import { config } from './load-config.ts'
 import { pino } from './logger.ts'
 
@@ -120,12 +121,13 @@ const createServer = (): Express => {
 	app.use(express.urlencoded({ extended: true }))
 	app.use(cookieParser())
 
-	// Apply CSRF protection to all routes except public endpoints
+	// Apply CSRF protection to all routes except public endpoints and API routes
 	app.use((req, res, next) => {
-		// Skip CSRF only for public documentation endpoints
+		// Skip CSRF for public documentation endpoints and API routes
 		if (
 			req.path.startsWith('/api-docs') ||
-			req.path.startsWith('/swagger.json')
+			req.path.startsWith('/swagger.json') ||
+			req.path.startsWith('/api/')
 		) {
 			return next()
 		}

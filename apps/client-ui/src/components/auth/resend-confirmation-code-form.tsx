@@ -47,10 +47,10 @@ const ResendConfirmationCodeForm = ({
 	])
 
 	const form = useForm<ResendConfirmationCode>({
-		resolver: zodResolver(zResendConfirmationCode),
 		defaultValues: {
 			email: authUser?.email ?? '',
 		},
+		resolver: zodResolver(zResendConfirmationCode),
 	})
 
 	const onSubmit = async ({ email }: ResendConfirmationCode) => {
@@ -84,7 +84,7 @@ const ResendConfirmationCodeForm = ({
 			</CardHeader>
 			<CardContent>
 				<Form {...form}>
-					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+					<form className="space-y-8" onSubmit={form.handleSubmit(onSubmit)}>
 						<FormField
 							control={form.control}
 							name="email"
@@ -98,7 +98,7 @@ const ResendConfirmationCodeForm = ({
 								</FormItem>
 							)}
 						/>
-						<Button type="submit" className="w-full" disabled={isPending}>
+						<Button className="w-full" disabled={isPending} type="submit">
 							{isPending ? 'Confirming...' : 'Resend Code'}
 						</Button>
 					</form>

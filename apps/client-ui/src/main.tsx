@@ -9,6 +9,7 @@ import { ThemeProvider } from './components/providers/theme-provider.tsx'
 import { AppWrapper } from './lib/app-wrapper.tsx'
 import { standardizeError } from './lib/errors/standardize-error.ts'
 import { routeTree } from './routeTree.gen.ts'
+
 // oxlint-disable-next-line no-unassigned-import
 import './index.css'
 
@@ -19,10 +20,7 @@ const queryClient = new QueryClient({
 			// only retry if error.status is 500 and max 3 times
 			retry: (failureCount, error) => {
 				const err = standardizeError(error)
-				if (err.status === 500 && failureCount < 3) {
-					return true
-				}
-				return false
+				return err.status === 500 && failureCount < 3
 			},
 		},
 	},
@@ -30,13 +28,13 @@ const queryClient = new QueryClient({
 
 // Create a new router instance
 const router = createRouter({
-	routeTree,
 	context: {
 		queryClient,
 	},
+	defaultPendingComponent: AuthRouteLoading,
 	defaultPreload: 'intent',
 	defaultPreloadStaleTime: 0,
-	defaultPendingComponent: AuthRouteLoading,
+	routeTree,
 })
 
 // Register the router instance for type safety
@@ -57,8 +55,8 @@ if (!rootElement.innerHTML) {
 					<QueryClientProvider client={queryClient}>
 						<RouterProvider router={router} />
 						<ReactQueryDevtools
-							initialIsOpen={false}
 							buttonPosition="bottom-right"
+							initialIsOpen={false}
 						/>
 					</QueryClientProvider>
 				</ThemeProvider>

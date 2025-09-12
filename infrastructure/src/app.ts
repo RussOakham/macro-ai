@@ -84,6 +84,7 @@ if (isPreviewEnvironment) {
 
 	// Cost alert emails removed - focus on core ECS functionality
 
+	// eslint-disable-next-line sonarjs/constructor-for-side-effects
 	new MacroAiPreviewStack(app, stackName, {
 		env: {
 			account,

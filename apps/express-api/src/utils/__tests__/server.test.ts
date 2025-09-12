@@ -1,10 +1,11 @@
+import path from 'node:path'
+
 import express, {
 	type Express,
 	type NextFunction,
 	type Request,
 	type Response,
 } from 'express'
-import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { mockConfig } from '../test-helpers/config.mock.ts'
@@ -107,8 +108,8 @@ vi.mock('process', () => ({
 
 describe('createServer', () => {
 	let mockApp: {
-		use: ReturnType<typeof vi.fn>
 		listen: ReturnType<typeof vi.fn>
+		use: ReturnType<typeof vi.fn>
 	}
 
 	beforeEach(() => {
@@ -126,7 +127,8 @@ describe('createServer', () => {
 			enable: vi.fn(),
 			set: vi.fn(),
 			get: vi.fn(),
-		}
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		} as any
 
 		// Mock express() to return our mock app
 		vi.mocked(express).mockReturnValue(mockApp as unknown as Express)

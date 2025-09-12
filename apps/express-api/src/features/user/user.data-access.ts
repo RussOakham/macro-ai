@@ -23,6 +23,54 @@ class UserRepository implements IUserRepository {
 	}
 
 	/**
+	 * Create a new user
+	 * @param userData - User creation parameters
+	 * @param userData.userData - The user data to insert
+	 * @returns Result tuple with the created user object
+	 */
+	public createUser = async ({
+		userData,
+	}: {
+		userData: TInsertUser
+	}): Promise<Result<TUser>> => {
+		const [user, error] = await tryCatch(
+			this.db.insert(usersTable).values(userData).returning(),
+			'userRepository - createUser',
+		)
+
+		if (error) {
+			return [null, error]
+		}
+
+		// If no user created, return error
+		if (!user.length) {
+			return [
+				null,
+				new InternalError(
+					'Failed to create user',
+					'userRepository - createUser',
+				),
+			]
+		}
+
+		// Validate the returned user with Zod
+		const [validationResult, validationError] = safeValidateSchema(
+			user[0],
+			selectUserSchema,
+			'userRepository - createUser',
+		)
+
+		if (validationError) {
+			return [
+				null,
+				AppError.from(validationError, 'userRepository - createUser'),
+			]
+		}
+
+		return [validationResult, null]
+	}
+
+	/**
 	 * Find a user by email
 	 * @param email - User lookup parameters
 	 * @param email.email - The user's email address
@@ -100,54 +148,6 @@ class UserRepository implements IUserRepository {
 			return [
 				null,
 				AppError.from(validationError, 'userRepository - findUserById'),
-			]
-		}
-
-		return [validationResult, null]
-	}
-
-	/**
-	 * Create a new user
-	 * @param userData - User creation parameters
-	 * @param userData.userData - The user data to insert
-	 * @returns Result tuple with the created user object
-	 */
-	public createUser = async ({
-		userData,
-	}: {
-		userData: TInsertUser
-	}): Promise<Result<TUser>> => {
-		const [user, error] = await tryCatch(
-			this.db.insert(usersTable).values(userData).returning(),
-			'userRepository - createUser',
-		)
-
-		if (error) {
-			return [null, error]
-		}
-
-		// If no user created, return error
-		if (!user.length) {
-			return [
-				null,
-				new InternalError(
-					'Failed to create user',
-					'userRepository - createUser',
-				),
-			]
-		}
-
-		// Validate the returned user with Zod
-		const [validationResult, validationError] = safeValidateSchema(
-			user[0],
-			selectUserSchema,
-			'userRepository - createUser',
-		)
-
-		if (validationError) {
-			return [
-				null,
-				AppError.from(validationError, 'userRepository - createUser'),
 			]
 		}
 

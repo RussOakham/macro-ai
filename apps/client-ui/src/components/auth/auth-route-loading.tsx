@@ -14,10 +14,10 @@ const AuthRouteLoading: React.FC = () => {
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-background">
 			<AuthLoading
+				className="min-h-[50vh]"
 				message="Verifying authentication..."
 				showIcon
 				size="lg"
-				className="min-h-[50vh]"
 			/>
 		</div>
 	)

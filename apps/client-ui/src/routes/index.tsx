@@ -1,5 +1,5 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
 import type { QueryClient } from '@tanstack/react-query'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 import { AuthRouteLoading } from '@/components/auth/auth-route-loading'
 import { attemptAuthenticationWithRefresh } from '@/lib/auth/auth-utils'
@@ -10,8 +10,6 @@ const Index = () => {
 }
 
 export const Route = createFileRoute('/')({
-	component: Index,
-	pendingComponent: AuthRouteLoading,
 	beforeLoad: async ({ context, location }) => {
 		const { queryClient } = context as { queryClient: QueryClient }
 
@@ -21,10 +19,10 @@ export const Route = createFileRoute('/')({
 		if (!authResult.success) {
 			// eslint-disable-next-line @typescript-eslint/only-throw-error
 			throw redirect({
-				to: '/auth/login',
 				search: {
 					redirect: location.pathname,
 				},
+				to: '/auth/login',
 			})
 		}
 
@@ -34,4 +32,6 @@ export const Route = createFileRoute('/')({
 			to: '/chat',
 		})
 	},
+	component: Index,
+	pendingComponent: AuthRouteLoading,
 })

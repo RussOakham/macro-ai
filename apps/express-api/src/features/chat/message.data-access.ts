@@ -1,16 +1,15 @@
 import { eq } from 'drizzle-orm'
 
-import type {
-	IMessageRepository,
-	TChatMessage,
-	TInsertChatMessage,
-} from './chat.types.ts'
-
 import { db } from '../../data-access/db.ts'
 import { tryCatch } from '../../utils/error-handling/try-catch.ts'
 import { AppError, InternalError, type Result } from '../../utils/errors.ts'
 import { safeValidateSchema } from '../../utils/response-handlers.ts'
 import { chatMessagesTable, selectMessageSchema } from './chat.schemas.ts'
+import type {
+	IMessageRepository,
+	TChatMessage,
+	TInsertChatMessage,
+} from './chat.types.ts'
 
 /**
  * MessageRepository class that implements the IMessageRepository interface
@@ -21,6 +20,80 @@ class MessageRepository implements IMessageRepository {
 
 	constructor(database: typeof db = db) {
 		this.db = database
+	}
+
+	/**
+	 * Create a new message
+	 * @param messageData The message data to insert
+	 * @returns Result tuple with the created message object
+	 */
+	public createMessage = async (
+		messageData: TInsertChatMessage,
+	): Promise<Result<TChatMessage>> => {
+		const [message, error] = await tryCatch(
+			this.db.insert(chatMessagesTable).values(messageData).returning(),
+			'messageRepository - createMessage',
+		)
+
+		if (error) {
+			return [null, error]
+		}
+
+		// If no message created, return error
+		if (!message.length) {
+			return [
+				null,
+				new InternalError(
+					'Failed to create message',
+					'messageRepository - createMessage',
+				),
+			]
+		}
+
+		const [createdMessage] = message
+		if (!createdMessage) {
+			return [
+				null,
+				new InternalError(
+					'Failed to create message',
+					'messageRepository - createMessage',
+				),
+			]
+		}
+
+		// Validate the returned message with Zod
+		const [validationResult, validationError] = safeValidateSchema(
+			createdMessage,
+			selectMessageSchema,
+			'messageRepository - createMessage',
+		)
+
+		if (validationError) {
+			return [
+				null,
+				AppError.from(validationError, 'messageRepository - createMessage'),
+			]
+		}
+
+		return [validationResult, null]
+	}
+
+	/**
+	 * Delete a message
+	 * @param id The message's unique identifier
+	 * @returns Result tuple with void or error
+	 */
+	public deleteMessage = async (id: string): Promise<Result<void>> => {
+		const [, error] = await tryCatch(
+			this.db.delete(chatMessagesTable).where(eq(chatMessagesTable.id, id)),
+			'messageRepository - deleteMessage',
+		)
+
+		if (error) {
+			return [null, error]
+		}
+
+		return [undefined, null]
 	}
 
 	/**
@@ -111,59 +184,28 @@ class MessageRepository implements IMessageRepository {
 	}
 
 	/**
-	 * Create a new message
-	 * @param messageData The message data to insert
-	 * @returns Result tuple with the created message object
+	 * Get chat history formatted for AI service
+	 * @param chatId The chat's unique identifier
+	 * @returns Result tuple with formatted chat history
 	 */
-	public createMessage = async (
-		messageData: TInsertChatMessage,
-	): Promise<Result<TChatMessage>> => {
-		const [message, error] = await tryCatch(
-			this.db.insert(chatMessagesTable).values(messageData).returning(),
-			'messageRepository - createMessage',
-		)
+	public getChatHistory = async (
+		chatId: string,
+	): Promise<
+		Result<{ role: 'assistant' | 'system' | 'user'; content: string }[]>
+	> => {
+		const [messages, error] = await this.findMessagesByChatId(chatId)
 
 		if (error) {
 			return [null, error]
 		}
 
-		// If no message created, return error
-		if (!message.length) {
-			return [
-				null,
-				new InternalError(
-					'Failed to create message',
-					'messageRepository - createMessage',
-				),
-			]
-		}
+		// Convert to AI service format
+		const chatHistory = messages.map((msg) => ({
+			role: msg.role as 'assistant' | 'system' | 'user',
+			content: msg.content,
+		}))
 
-		const [createdMessage] = message
-		if (!createdMessage) {
-			return [
-				null,
-				new InternalError(
-					'Failed to create message',
-					'messageRepository - createMessage',
-				),
-			]
-		}
-
-		// Validate the returned message with Zod
-		const [validationResult, validationError] = safeValidateSchema(
-			createdMessage,
-			selectMessageSchema,
-			'messageRepository - createMessage',
-		)
-
-		if (validationError) {
-			return [
-				null,
-				AppError.from(validationError, 'messageRepository - createMessage'),
-			]
-		}
-
-		return [validationResult, null]
+		return [chatHistory, null]
 	}
 
 	/**
@@ -210,49 +252,6 @@ class MessageRepository implements IMessageRepository {
 		}
 
 		return [validationResult, null]
-	}
-
-	/**
-	 * Delete a message
-	 * @param id The message's unique identifier
-	 * @returns Result tuple with void or error
-	 */
-	public deleteMessage = async (id: string): Promise<Result<void>> => {
-		const [, error] = await tryCatch(
-			this.db.delete(chatMessagesTable).where(eq(chatMessagesTable.id, id)),
-			'messageRepository - deleteMessage',
-		)
-
-		if (error) {
-			return [null, error]
-		}
-
-		return [undefined, null]
-	}
-
-	/**
-	 * Get chat history formatted for AI service
-	 * @param chatId The chat's unique identifier
-	 * @returns Result tuple with formatted chat history
-	 */
-	public getChatHistory = async (
-		chatId: string,
-	): Promise<
-		Result<{ role: 'user' | 'assistant' | 'system'; content: string }[]>
-	> => {
-		const [messages, error] = await this.findMessagesByChatId(chatId)
-
-		if (error) {
-			return [null, error]
-		}
-
-		// Convert to AI service format
-		const chatHistory = messages.map((msg) => ({
-			role: msg.role as 'user' | 'assistant' | 'system',
-			content: msg.content,
-		}))
-
-		return [chatHistory, null]
 	}
 }
 

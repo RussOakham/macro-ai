@@ -5,22 +5,22 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 
 interface ChatInputProps {
-	onSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>
-	input: string
 	handleInputChange: (
 		e:
 			| React.ChangeEvent<HTMLInputElement>
 			| React.ChangeEvent<HTMLTextAreaElement>,
 	) => void
 	handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
-	status: 'ready' | 'submitted' | 'streaming' | 'error'
+	input: string
+	onSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>
+	status: 'error' | 'ready' | 'streaming' | 'submitted'
 }
 
 const ChatInput = ({
-	onSubmit,
-	input,
 	handleInputChange,
 	handleKeyDown,
+	input,
+	onSubmit,
 	status,
 }: ChatInputProps) => {
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -28,27 +28,27 @@ const ChatInput = ({
 	return (
 		<div className="border-t border-border bg-background flex-shrink-0">
 			<div className="max-w-4xl mx-auto p-4">
-				<form onSubmit={onSubmit} className="flex gap-3">
+				<form className="flex gap-3" onSubmit={onSubmit}>
 					<div className="flex-1 relative">
 						<Textarea
-							ref={textareaRef}
-							value={input}
+							className="min-h-[44px] max-h-32 resize-none pr-12"
+							disabled={status === 'streaming'}
 							onChange={handleInputChange}
 							onKeyDown={handleKeyDown}
 							placeholder="Send a message..."
-							className="min-h-[44px] max-h-32 resize-none pr-12"
-							disabled={status === 'streaming'}
+							ref={textareaRef}
 							rows={1}
+							value={input}
 						/>
 						<Button
-							type="submit"
-							disabled={!input.trim() || status === 'streaming'}
-							size="sm"
 							className={`absolute right-2 bottom-2 h-8 w-8 p-0 transition-all duration-200 ${
 								status === 'streaming'
 									? 'bg-primary hover:bg-primary/90'
 									: 'bg-foreground hover:bg-foreground/90'
 							}`}
+							disabled={!input.trim() || status === 'streaming'}
+							size="sm"
+							type="submit"
 						>
 							{status === 'streaming' ? (
 								<Loader2 className="h-3 w-3 animate-spin text-primary-foreground" />

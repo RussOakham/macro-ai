@@ -1,8 +1,8 @@
 import {
 	postAuthRegister,
+	type RegisterRequest,
 	zPostAuthRegisterResponse,
 	zRegisterRequest,
-	type RegisterRequest,
 } from '@repo/macro-ai-api-client'
 
 import { apiClient } from '@/lib/api/clients'
@@ -10,17 +10,17 @@ import { safeValidateApiResponse } from '@/lib/validation/api-response'
 
 // Type-safe endpoint for consumption using the generated SDK
 const postRegister = async ({
+	confirmPassword,
 	email,
 	password,
-	confirmPassword,
 }: RegisterRequest) => {
 	const { data, error } = await postAuthRegister({
-		client: apiClient,
 		body: {
+			confirmPassword,
 			email,
 			password,
-			confirmPassword,
 		},
+		client: apiClient,
 	})
 
 	if (error) {

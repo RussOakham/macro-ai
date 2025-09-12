@@ -3,6 +3,7 @@ import {
 	type GetAuthUserResponse,
 	type PostAuthLoginResponse,
 } from '@repo/macro-ai-api-client'
+// eslint-disable-next-line testing-library/no-manual-cleanup
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -34,9 +35,9 @@ const LoginComponent = () => {
 
 		try {
 			const response = await fetch('http://localhost:3000/auth/login', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ email, password }),
+				headers: { 'Content-Type': 'application/json' },
+				method: 'POST',
 			})
 
 			const data = (await response.json()) as PostAuthLoginResponse
@@ -47,9 +48,9 @@ const LoginComponent = () => {
 
 			// Simulate getting user data after successful login
 			setUser({
-				id: faker.string.uuid(),
 				email: email,
 				emailVerified: true,
+				id: faker.string.uuid(),
 			})
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Login failed')
@@ -74,28 +75,28 @@ const LoginComponent = () => {
 				<label htmlFor="email">Email:</label>
 				<input
 					id="email"
-					type="email"
-					value={email}
 					onChange={(e) => {
 						setEmail(e.target.value)
 					}}
 					required
+					type="email"
+					value={email}
 				/>
 			</div>
 			<div>
 				<label htmlFor="password">Password:</label>
 				<input
 					id="password"
-					type="password"
-					value={password}
 					onChange={(e) => {
 						setPassword(e.target.value)
 					}}
 					required
+					type="password"
+					value={password}
 				/>
 			</div>
 			{error && <div style={{ color: 'red' }}>{error}</div>}
-			<button type="submit" disabled={loading}>
+			<button disabled={loading} type="submit">
 				{loading ? 'Logging in...' : 'Login'}
 			</button>
 		</form>
@@ -210,8 +211,8 @@ describe('Basic MSW React Integration', () => {
 						message: 'Login successful',
 						tokens: {
 							accessToken: 'test-token',
-							refreshToken: 'test-refresh-token',
 							expiresIn: 3600,
+							refreshToken: 'test-refresh-token',
 						},
 					})
 				}),
@@ -318,11 +319,11 @@ describe('Basic MSW React Integration', () => {
 				void fetchUser()
 			}, [])
 
-			return { user, loading, error }
+			return { error, loading, user }
 		}
 
 		const TestComponent = () => {
-			const { user, loading, error } = useUser()
+			const { error, loading, user } = useUser()
 
 			if (loading) return <div>Loading...</div>
 			if (error) return <div>Error: {error}</div>

@@ -10,14 +10,14 @@ const usePostRegisterMutation = () => {
 
 	return useMutation({
 		mutationFn: async ({
+			confirmPassword,
 			email,
 			password,
-			confirmPassword,
 		}: RegisterRequest) => {
 			const response = await postRegister({
+				confirmPassword,
 				email,
 				password,
-				confirmPassword,
 			})
 			return response
 		},

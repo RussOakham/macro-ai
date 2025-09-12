@@ -85,7 +85,7 @@ describe('React Testing Library Examples', () => {
 			const user = userEvent.setup()
 
 			render(
-				<Button onClick={handleClick} disabled>
+				<Button disabled onClick={handleClick}>
 					Disabled
 				</Button>,
 			)
@@ -167,19 +167,19 @@ describe('React Testing Library Examples', () => {
 					<form data-testid="text-form">
 						<input
 							name="email"
-							type="email"
-							value={formData.email}
 							onChange={(e) => {
 								setFormData((prev) => ({ ...prev, email: e.target.value }))
 							}}
+							type="email"
+							value={formData.email}
 						/>
 						<input
 							name="name"
-							type="text"
-							value={formData.name}
 							onChange={(e) => {
 								setFormData((prev) => ({ ...prev, name: e.target.value }))
 							}}
+							type="text"
+							value={formData.name}
 						/>
 					</form>
 				)
@@ -211,10 +211,10 @@ describe('React Testing Library Examples', () => {
 					<form data-testid="select-form">
 						<select
 							name="country"
-							value={country}
 							onChange={(e) => {
 								setCountry(e.target.value)
 							}}
+							value={country}
 						>
 							<option value="">Select a country</option>
 							<option value="us">United States</option>
@@ -249,10 +249,10 @@ describe('React Testing Library Examples', () => {
 					<form data-testid="textarea-form">
 						<textarea
 							name="bio"
-							value={bio}
 							onChange={(e) => {
 								setBio(e.target.value)
 							}}
+							value={bio}
 						/>
 					</form>
 				)
@@ -282,25 +282,25 @@ describe('React Testing Library Examples', () => {
 					<form data-testid="radio-form">
 						<label htmlFor="gender">
 							<input
-								name="gender"
-								type="radio"
-								value="male"
 								checked={gender === 'male'}
+								name="gender"
 								onChange={(e) => {
 									setGender(e.target.value)
 								}}
+								type="radio"
+								value="male"
 							/>
 							Male
 						</label>
 						<label htmlFor="gender">
 							<input
-								name="gender"
-								type="radio"
-								value="female"
 								checked={gender === 'female'}
+								name="gender"
 								onChange={(e) => {
 									setGender(e.target.value)
 								}}
+								type="radio"
+								value="female"
 							/>
 							Female
 						</label>
@@ -333,23 +333,23 @@ describe('React Testing Library Examples', () => {
 					<form data-testid="checkbox-form">
 						<label htmlFor="newsletter">
 							<input
-								name="newsletter"
-								type="checkbox"
 								checked={newsletter}
+								name="newsletter"
 								onChange={(e) => {
 									setNewsletter(e.target.checked)
 								}}
+								type="checkbox"
 							/>
 							Subscribe to newsletter
 						</label>
 						<label htmlFor="updates">
 							<input
-								name="updates"
-								type="checkbox"
 								checked={updates}
+								name="updates"
 								onChange={(e) => {
 									setUpdates(e.target.checked)
 								}}
+								type="checkbox"
 							/>
 							Receive updates
 						</label>
@@ -388,11 +388,11 @@ describe('React Testing Library Examples', () => {
 					>
 						<input
 							name="email"
-							type="email"
-							value={email}
 							onChange={(e) => {
 								setEmail(e.target.value)
 							}}
+							type="email"
+							value={email}
 						/>
 						<Button type="submit">Submit</Button>
 					</form>
@@ -463,7 +463,7 @@ describe('React Testing Library Examples', () => {
 		it('should handle loading states', async () => {
 			const AsyncComponent = () => {
 				const [loading, setLoading] = React.useState(false)
-				const [data, setData] = React.useState<string | null>(null)
+				const [data, setData] = React.useState<null | string>(null)
 
 				const fetchData = async () => {
 					setLoading(true)
@@ -521,7 +521,7 @@ describe('React Testing Library Examples', () => {
 	describe('7. Accessibility Testing', () => {
 		it('should have proper ARIA attributes', () => {
 			render(
-				<Button aria-label="Close dialog" aria-describedby="close-description">
+				<Button aria-describedby="close-description" aria-label="Close dialog">
 					×
 				</Button>,
 			)
@@ -563,11 +563,11 @@ describe('React Testing Library Examples', () => {
 				const decrement = () => {
 					setCount((c) => c - 1)
 				}
-				return { count, increment, decrement }
+				return { count, decrement, increment }
 			}
 
 			const Counter = () => {
-				const { count, increment, decrement } = useCounter(5)
+				const { count, decrement, increment } = useCounter(5)
 
 				return (
 					<div>
@@ -600,7 +600,7 @@ describe('React Testing Library Examples', () => {
 			const user = userEvent.setup()
 
 			const ParentComponent = () => {
-				const [selectedItem, setSelectedItem] = React.useState<string | null>(
+				const [selectedItem, setSelectedItem] = React.useState<null | string>(
 					null,
 				)
 
@@ -706,8 +706,8 @@ describe('React Testing Library Examples', () => {
 					// Add delay to simulate network latency and show loading state
 					await new Promise((resolve) => setTimeout(resolve, 100))
 					return HttpResponse.json([
-						{ id: 1, name: 'John Doe', email: 'john@example.com' },
-						{ id: 2, name: 'Jane Smith', email: 'jane@example.com' },
+						{ email: 'john@example.com', id: 1, name: 'John Doe' },
+						{ email: 'jane@example.com', id: 2, name: 'Jane Smith' },
 					])
 				}),
 			])
@@ -716,10 +716,10 @@ describe('React Testing Library Examples', () => {
 
 			const UserList = () => {
 				const [users, setUsers] = React.useState<
-					{ id: number; name: string; email: string }[]
+					{ email: string; id: number; name: string }[]
 				>([])
 				const [loading, setLoading] = React.useState(false)
-				const [error, setError] = React.useState<string | null>(null)
+				const [error, setError] = React.useState<null | string>(null)
 
 				const fetchUsers = async () => {
 					setLoading(true)
@@ -727,9 +727,9 @@ describe('React Testing Library Examples', () => {
 					try {
 						const response = await fetch('http://localhost:3000/api/users')
 						const data = (await response.json()) as {
+							email: string
 							id: number
 							name: string
-							email: string
 						}[]
 						setUsers(data)
 					} catch {
@@ -746,7 +746,7 @@ describe('React Testing Library Examples', () => {
 						{error && <div data-testid="error">{error}</div>}
 						<ul data-testid="user-list">
 							{users.map((user) => (
-								<li key={user.id} data-testid={`user-${user.id.toString()}`}>
+								<li data-testid={`user-${user.id.toString()}`} key={user.id}>
 									{user.name} - {user.email}
 								</li>
 							))}
@@ -800,7 +800,7 @@ describe('React Testing Library Examples', () => {
 			const user = userEvent.setup()
 
 			const ErrorHandlingComponent = () => {
-				const [error, setError] = React.useState<string | null>(null)
+				const [error, setError] = React.useState<null | string>(null)
 				const [loading, setLoading] = React.useState(false)
 
 				const fetchData = async () => {
@@ -872,12 +872,12 @@ describe('React Testing Library Examples', () => {
 
 			const ContactForm = () => {
 				const [formData, setFormData] = React.useState({
-					name: '',
 					email: '',
 					message: '',
+					name: '',
 				})
 				const [isSubmitting, setIsSubmitting] = React.useState(false)
-				const [result, setResult] = React.useState<string | null>(null)
+				const [result, setResult] = React.useState<null | string>(null)
 
 				const handleSubmit = async (e: React.FormEvent) => {
 					e.preventDefault()
@@ -886,11 +886,11 @@ describe('React Testing Library Examples', () => {
 
 					try {
 						const response = await fetch('http://localhost:3000/api/contact', {
-							method: 'POST',
+							body: JSON.stringify(formData),
 							headers: {
 								'Content-Type': 'application/json',
 							},
-							body: JSON.stringify(formData),
+							method: 'POST',
 						})
 						const data = (await response.json()) as { message: string }
 						setResult(data.message)
@@ -902,34 +902,34 @@ describe('React Testing Library Examples', () => {
 				}
 
 				return (
-					<form onSubmit={handleSubmit} data-testid="contact-form">
+					<form data-testid="contact-form" onSubmit={handleSubmit}>
 						<input
 							name="name"
-							type="text"
-							value={formData.name}
 							onChange={(e) => {
 								setFormData((prev) => ({ ...prev, name: e.target.value }))
 							}}
 							placeholder="Name"
+							type="text"
+							value={formData.name}
 						/>
 						<input
 							name="email"
-							type="email"
-							value={formData.email}
 							onChange={(e) => {
 								setFormData((prev) => ({ ...prev, email: e.target.value }))
 							}}
 							placeholder="Email"
+							type="email"
+							value={formData.email}
 						/>
 						<textarea
 							name="message"
-							value={formData.message}
 							onChange={(e) => {
 								setFormData((prev) => ({ ...prev, message: e.target.value }))
 							}}
 							placeholder="Message"
+							value={formData.message}
 						/>
-						<Button type="submit" disabled={isSubmitting}>
+						<Button disabled={isSubmitting} type="submit">
 							{isSubmitting ? 'Sending...' : 'Send Message'}
 						</Button>
 						{result && <div data-testid="result">{result}</div>}
@@ -1027,7 +1027,7 @@ describe('React Testing Library Examples', () => {
 						{loading && <div data-testid="loading">Loading...</div>}
 						<ul data-testid="responses">
 							{responses.map((response, index) => (
-								<li key={index} data-testid={`response-${index.toString()}`}>
+								<li data-testid={`response-${index.toString()}`} key={index}>
 									{response}
 								</li>
 							))}

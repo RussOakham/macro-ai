@@ -1,8 +1,8 @@
 import {
 	deleteChatsById,
+	type DeleteChatsByIdData,
 	zDeleteChatsByIdData,
 	zDeleteChatsByIdResponse,
-	type DeleteChatsByIdData,
 } from '@repo/macro-ai-api-client'
 
 import { apiClient } from '@/lib/api/clients'

@@ -5,19 +5,41 @@ import { faker } from '@faker-js/faker'
  * These factories generate realistic test data for consistent testing
  */
 
-// Type definitions for test data
-type User = {
-	id: string
-	email: string
-	username: string
-	firstName: string
-	lastName: string
-	createdAt: string
-	updatedAt: string
-	role?: string
+type ApiResponse<T = unknown> = {
+	data?: T
+	error?: {
+		code: string
+		details?: unknown
+		message: string
+	}
+	success: boolean
 }
 
-type Overrides<T extends object> = Partial<T>
+type Chat = {
+	createdAt: string
+	id: string
+	messages: ChatMessage[]
+	title: string
+	updatedAt: string
+	userId: string
+}
+
+type ChatMessage = {
+	chatId: string
+	content: string
+	id: string
+	role: 'assistant' | 'system' | 'user'
+	timestamp: string
+}
+
+type DatabaseConfig = {
+	database: string
+	host: string
+	password: string
+	port: number
+	ssl: boolean
+	username: string
+}
 
 // Additional type definitions
 type LoginCredentials = {
@@ -25,66 +47,44 @@ type LoginCredentials = {
 	password: string
 }
 
+type Overrides<T extends object> = Partial<T>
+
+type PaginatedResponse<T = unknown> = {
+	data: T[]
+	pagination: {
+		limit: number
+		page: number
+		total: number
+		totalPages: number
+	}
+	success: boolean
+}
+
 type RegistrationData = {
-	email: string
-	password: string
 	confirmPassword: string
+	email: string
 	firstName: string
 	lastName: string
-}
-
-type ChatMessage = {
-	id: string
-	content: string
-	role: 'user' | 'assistant' | 'system'
-	timestamp: string
-	chatId: string
-}
-
-type Chat = {
-	id: string
-	title: string
-	createdAt: string
-	updatedAt: string
-	userId: string
-	messages: ChatMessage[]
+	password: string
 }
 
 type TokenData = {
 	accessToken: string
-	refreshToken: string
 	expiresIn: number
+	refreshToken: string
 	tokenType: string
 }
 
-type ApiResponse<T = unknown> = {
-	success: boolean
-	data?: T
-	error?: {
-		message: string
-		code: string
-		details?: unknown
-	}
-}
-
-type PaginatedResponse<T = unknown> = {
-	success: boolean
-	data: T[]
-	pagination: {
-		page: number
-		limit: number
-		total: number
-		totalPages: number
-	}
-}
-
-type DatabaseConfig = {
-	host: string
-	port: number
-	database: string
+// Type definitions for test data
+type User = {
+	createdAt: string
+	email: string
+	firstName: string
+	id: string
+	lastName: string
+	role?: string
+	updatedAt: string
 	username: string
-	password: string
-	ssl: boolean
 }
 
 // User-related test data factories
@@ -96,15 +96,15 @@ export const userFactory = {
 		overrides: Overrides<T> = {} as Overrides<T>,
 	) =>
 		({
-			id: faker.string.uuid(),
-			email: faker.internet.email(),
-			username: faker.internet.username(),
-			firstName: faker.person.firstName(),
-			lastName: faker.person.lastName(),
 			createdAt: faker.date.past().toISOString(),
+			email: faker.internet.email(),
+			firstName: faker.person.firstName(),
+			id: faker.string.uuid(),
+			lastName: faker.person.lastName(),
 			updatedAt: faker.date.recent().toISOString(),
+			username: faker.internet.username(),
 			...(overrides as object),
-		}) as User & T,
+		}) as T & User,
 
 	/**
 	 * Generate multiple users
@@ -134,11 +134,11 @@ export const authFactory = {
 	 * Generate registration data
 	 */
 	createRegistrationData: (overrides: Overrides<RegistrationData> = {}) => ({
-		email: faker.internet.email(),
-		password: faker.internet.password({ length: 12 }),
 		confirmPassword: faker.internet.password({ length: 12 }),
+		email: faker.internet.email(),
 		firstName: faker.person.firstName(),
 		lastName: faker.person.lastName(),
+		password: faker.internet.password({ length: 12 }),
 		...overrides,
 	}),
 
@@ -147,8 +147,8 @@ export const authFactory = {
 	 */
 	createTokenData: (overrides: Overrides<TokenData> = {}) => ({
 		accessToken: faker.string.alphanumeric(100),
-		refreshToken: faker.string.alphanumeric(100),
 		expiresIn: 3600,
+		refreshToken: faker.string.alphanumeric(100),
 		tokenType: 'Bearer',
 		...overrides,
 	}),
@@ -160,11 +160,11 @@ export const chatFactory = {
 	 * Generate a chat object
 	 */
 	create: (overrides: Overrides<Chat> = {}) => ({
+		createdAt: faker.date.past().toISOString(),
 		id: faker.string.uuid(),
 		title: faker.lorem.words(3),
-		userId: faker.string.uuid(),
-		createdAt: faker.date.past().toISOString(),
 		updatedAt: faker.date.recent().toISOString(),
+		userId: faker.string.uuid(),
 		...overrides,
 	}),
 
@@ -178,9 +178,9 @@ export const chatFactory = {
 	 * Generate a chat message
 	 */
 	createMessage: (overrides: Overrides<ChatMessage> = {}) => ({
-		id: faker.string.uuid(),
 		chatId: faker.string.uuid(),
 		content: faker.lorem.paragraph(),
+		id: faker.string.uuid(),
 		role: faker.helpers.arrayElement(['user', 'assistant']),
 		timestamp: faker.date.recent().toISOString(),
 		...overrides,
@@ -196,21 +196,9 @@ export const chatFactory = {
 // API response factories
 export const apiResponseFactory = {
 	/**
-	 * Generate a successful API response
-	 */
-	createSuccess: <T>(data: T, overrides: Overrides<ApiResponse<T>> = {}) => ({
-		success: true,
-		data,
-		message: faker.lorem.sentence(),
-		timestamp: new Date().toISOString(),
-		...overrides,
-	}),
-
-	/**
 	 * Generate an error API response
 	 */
 	createError: (overrides: Overrides<ApiResponse<never>> = {}) => ({
-		success: false,
 		error: {
 			code: faker.helpers.arrayElement([
 				'VALIDATION_ERROR',
@@ -218,9 +206,10 @@ export const apiResponseFactory = {
 				'NOT_FOUND',
 				'SERVER_ERROR',
 			]),
-			message: faker.lorem.sentence(),
 			details: faker.lorem.paragraph(),
+			message: faker.lorem.sentence(),
 		},
+		success: false,
 		timestamp: new Date().toISOString(),
 		...overrides,
 	}),
@@ -232,14 +221,25 @@ export const apiResponseFactory = {
 		data: T[],
 		overrides: Overrides<PaginatedResponse<T>> = {},
 	) => ({
-		success: true,
 		data,
 		pagination: {
-			page: faker.number.int({ min: 1, max: 10 }),
-			limit: faker.number.int({ min: 10, max: 100 }),
+			limit: faker.number.int({ max: 100, min: 10 }),
+			page: faker.number.int({ max: 10, min: 1 }),
 			total: data.length,
 			totalPages: Math.ceil(data.length / 10),
 		},
+		success: true,
+		timestamp: new Date().toISOString(),
+		...overrides,
+	}),
+
+	/**
+	 * Generate a successful API response
+	 */
+	createSuccess: <T>(data: T, overrides: Overrides<ApiResponse<T>> = {}) => ({
+		data,
+		message: faker.lorem.sentence(),
+		success: true,
 		timestamp: new Date().toISOString(),
 		...overrides,
 	}),
@@ -251,11 +251,11 @@ export const dbFactory = {
 	 * Generate database connection config
 	 */
 	createConnectionConfig: (overrides: Overrides<DatabaseConfig> = {}) => ({
-		host: faker.internet.ip(),
-		port: faker.number.int({ min: 1000, max: 9999 }),
 		database: faker.database.mongodbObjectId(),
-		username: faker.internet.username(),
+		host: faker.internet.ip(),
 		password: faker.internet.password(),
+		port: faker.number.int({ max: 9999, min: 1000 }),
+		username: faker.internet.username(),
 		...overrides,
 	}),
 }
@@ -263,14 +263,42 @@ export const dbFactory = {
 // Utility functions for test data generation
 export const testUtils = {
 	/**
-	 * Generate a random ID
+	 * Generate a random array element
 	 */
-	randomId: () => faker.string.uuid(),
+	randomArrayElement: <T>(array: T[]) => faker.helpers.arrayElement(array),
+
+	/**
+	 * Generate a random subset of an array
+	 */
+	randomArraySubset: <T>(array: T[], count?: number) => {
+		const subsetCount = count ?? faker.number.int({ max: array.length, min: 1 })
+		return faker.helpers.arrayElements(array, subsetCount)
+	},
+
+	/**
+	 * Generate a random boolean
+	 */
+	randomBoolean: () => faker.datatype.boolean(),
 
 	/**
 	 * Generate a random email
 	 */
 	randomEmail: () => faker.internet.email(),
+
+	/**
+	 * Generate a random date in the future
+	 */
+	randomFutureDate: () => faker.date.future(),
+
+	/**
+	 * Generate a random ID
+	 */
+	randomId: () => faker.string.uuid(),
+
+	/**
+	 * Generate a random number within a range
+	 */
+	randomNumber: (min = 0, max = 100) => faker.number.int({ max, min }),
 
 	/**
 	 * Generate a random password
@@ -281,32 +309,4 @@ export const testUtils = {
 	 * Generate a random date in the past
 	 */
 	randomPastDate: () => faker.date.past(),
-
-	/**
-	 * Generate a random date in the future
-	 */
-	randomFutureDate: () => faker.date.future(),
-
-	/**
-	 * Generate a random number within a range
-	 */
-	randomNumber: (min = 0, max = 100) => faker.number.int({ min, max }),
-
-	/**
-	 * Generate a random boolean
-	 */
-	randomBoolean: () => faker.datatype.boolean(),
-
-	/**
-	 * Generate a random array element
-	 */
-	randomArrayElement: <T>(array: T[]) => faker.helpers.arrayElement(array),
-
-	/**
-	 * Generate a random subset of an array
-	 */
-	randomArraySubset: <T>(array: T[], count?: number) => {
-		const subsetCount = count ?? faker.number.int({ min: 1, max: array.length })
-		return faker.helpers.arrayElements(array, subsetCount)
-	},
 }

@@ -10,6 +10,25 @@ import { ParameterStoreConstruct } from '../constructs/parameter-store-construct
 
 export interface MacroAiPreviewStackProps extends cdk.StackProps {
 	/**
+	 * Branch name for the PR
+	 */
+	readonly branchName: string
+
+	/**
+	 * Custom domain configuration for HTTPS endpoints
+	 */
+	readonly customDomain?: {
+		/**
+		 * API subdomain to use (e.g., 'pr-56-api')
+		 * @default derived from environmentName
+		 */
+		readonly apiSubdomain?: string
+		readonly certificateArn?: string
+		readonly domainName: string
+		readonly hostedZoneId: string
+	}
+
+	/**
 	 * Environment name for the preview deployment (e.g., 'pr-123')
 	 */
 	readonly environmentName: string
@@ -20,29 +39,10 @@ export interface MacroAiPreviewStackProps extends cdk.StackProps {
 	readonly prNumber: number
 
 	/**
-	 * Branch name for the PR
-	 */
-	readonly branchName: string
-
-	/**
 	 * Deployment scale (preview, staging, production)
 	 * @default 'preview'
 	 */
 	readonly scale?: string
-
-	/**
-	 * Custom domain configuration for HTTPS endpoints
-	 */
-	readonly customDomain?: {
-		readonly domainName: string
-		readonly hostedZoneId: string
-		readonly certificateArn?: string
-		/**
-		 * API subdomain to use (e.g., 'pr-56-api')
-		 * @default derived from environmentName
-		 */
-		readonly apiSubdomain?: string
-	}
 
 	// Complex features removed - focus on core ECS functionality
 }
@@ -60,14 +60,14 @@ export interface MacroAiPreviewStackProps extends cdk.StackProps {
  * Uses Phase 4 production-ready constructs with preview-optimized configuration.
  */
 export class MacroAiPreviewStack extends cdk.Stack {
+	public readonly customDomain?: MacroAiPreviewStackProps['customDomain']
+	public readonly ecsService: EcsFargateConstruct
+	public readonly environmentConfig: EnvironmentConfigConstruct
+	public readonly environmentName: string
+	public readonly loadBalancer: EcsLoadBalancerConstruct
 	public readonly networking: NetworkingConstruct
 	public readonly parameterStore: ParameterStoreConstruct
-	public readonly environmentConfig: EnvironmentConfigConstruct
-	public readonly ecsService: EcsFargateConstruct
-	public readonly loadBalancer: EcsLoadBalancerConstruct
 	public readonly prNumber: number
-	public readonly environmentName: string
-	public readonly customDomain?: MacroAiPreviewStackProps['customDomain']
 
 	constructor(scope: Construct, id: string, props: MacroAiPreviewStackProps) {
 		super(scope, id, props)

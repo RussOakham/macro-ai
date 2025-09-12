@@ -39,11 +39,11 @@ describe('API Client Package', () => {
 			expect(mockCreateConfig).toHaveBeenCalledWith({
 				baseURL: 'https://api.example.com',
 				headers: {
-					'Content-Type': 'application/json',
 					Accept: 'application/json',
+					'Content-Type': 'application/json',
 				},
-				timeout: 30000,
 				responseType: 'json',
+				timeout: 30000,
 				validateStatus: expect.any(Function) as unknown as (
 					status: number,
 				) => boolean,
@@ -67,11 +67,11 @@ describe('API Client Package', () => {
 			expect(mockCreateConfig).toHaveBeenCalledWith({
 				baseURL: 'http://localhost:3000',
 				headers: {
-					'Content-Type': 'application/json',
 					Accept: 'application/json',
+					'Content-Type': 'application/json',
 				},
-				timeout: 30000,
 				responseType: 'json',
+				timeout: 30000,
 				validateStatus: expect.any(Function) as unknown as (
 					status: number,
 				) => boolean,
@@ -99,8 +99,8 @@ describe('API Client Package', () => {
 				headers: {
 					'X-Custom-Header': 'custom-value',
 				},
-				timeout: 60000,
 				responseType: 'json',
+				timeout: 60000,
 				validateStatus: expect.any(Function) as unknown as (
 					status: number,
 				) => boolean,

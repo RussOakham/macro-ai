@@ -6,8 +6,8 @@ import { MessageList } from './message-list'
 
 interface ChatMessagesProps extends React.ComponentPropsWithoutRef<'div'> {
 	messages: TChatMessage[]
-	status: 'ready' | 'submitted' | 'streaming' | 'error'
 	messagesEndRef: React.RefObject<HTMLDivElement | null>
+	status: 'error' | 'ready' | 'streaming' | 'submitted'
 }
 
 /**
@@ -15,10 +15,10 @@ interface ChatMessagesProps extends React.ComponentPropsWithoutRef<'div'> {
  * Manages the scrollable messages area and auto-scroll behavior
  */
 const ChatMessages = ({
-	messages,
-	status,
-	messagesEndRef,
 	className,
+	messages,
+	messagesEndRef,
+	status,
 	...props
 }: ChatMessagesProps): React.JSX.Element => {
 	return (

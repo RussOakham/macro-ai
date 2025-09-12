@@ -13,10 +13,10 @@ const postResendConfirmRegistrationCode = async ({
 	email,
 }: ResendConfirmationCode) => {
 	const { data, error } = await postAuthResendConfirmationCode({
-		client: apiClient,
 		body: {
 			email,
 		},
+		client: apiClient,
 	})
 
 	if (error) {

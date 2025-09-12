@@ -34,18 +34,18 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 
 			const RegistrationForm = () => {
 				const [formData, setFormData] = React.useState({
-					firstName: '',
-					lastName: '',
-					email: '',
-					password: '',
+					bio: '',
 					confirmPassword: '',
 					country: '',
 					dateOfBirth: '',
-					bio: '',
-					termsAccepted: false,
-					newsletter: false,
-					gender: '',
+					email: '',
 					experience: '',
+					firstName: '',
+					gender: '',
+					lastName: '',
+					newsletter: false,
+					password: '',
+					termsAccepted: false,
 				})
 
 				const [errors, setErrors] = React.useState<Record<string, string>>({})
@@ -89,14 +89,14 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 								<input
 									id="firstName"
 									name="firstName"
-									type="text"
-									value={formData.firstName}
 									onChange={(e) => {
 										setFormData((prev) => ({
 											...prev,
 											firstName: e.target.value,
 										}))
 									}}
+									type="text"
+									value={formData.firstName}
 								/>
 								{errors.firstName && (
 									<span data-testid="firstName-error">{errors.firstName}</span>
@@ -108,14 +108,14 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 								<input
 									id="lastName"
 									name="lastName"
-									type="text"
-									value={formData.lastName}
 									onChange={(e) => {
 										setFormData((prev) => ({
 											...prev,
 											lastName: e.target.value,
 										}))
 									}}
+									type="text"
+									value={formData.lastName}
 								/>
 								{errors.lastName && (
 									<span data-testid="lastName-error">{errors.lastName}</span>
@@ -127,11 +127,11 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 								<input
 									id="email"
 									name="email"
-									type="email"
-									value={formData.email}
 									onChange={(e) => {
 										setFormData((prev) => ({ ...prev, email: e.target.value }))
 									}}
+									type="email"
+									value={formData.email}
 								/>
 								{errors.email && (
 									<span data-testid="email-error">{errors.email}</span>
@@ -143,14 +143,14 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 								<input
 									id="password"
 									name="password"
-									type="password"
-									value={formData.password}
 									onChange={(e) => {
 										setFormData((prev) => ({
 											...prev,
 											password: e.target.value,
 										}))
 									}}
+									type="password"
+									value={formData.password}
 								/>
 								{errors.password && (
 									<span data-testid="password-error">{errors.password}</span>
@@ -162,14 +162,14 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 								<input
 									id="confirmPassword"
 									name="confirmPassword"
-									type="password"
-									value={formData.confirmPassword}
 									onChange={(e) => {
 										setFormData((prev) => ({
 											...prev,
 											confirmPassword: e.target.value,
 										}))
 									}}
+									type="password"
+									value={formData.confirmPassword}
 								/>
 								{errors.confirmPassword && (
 									<span data-testid="confirmPassword-error">
@@ -184,13 +184,13 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 								<select
 									id="country"
 									name="country"
-									value={formData.country}
 									onChange={(e) => {
 										setFormData((prev) => ({
 											...prev,
 											country: e.target.value,
 										}))
 									}}
+									value={formData.country}
 								>
 									<option value="">Select Country</option>
 									<option value="us">United States</option>
@@ -206,14 +206,14 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 								<input
 									id="dateOfBirth"
 									name="dateOfBirth"
-									type="date"
-									value={formData.dateOfBirth}
 									onChange={(e) => {
 										setFormData((prev) => ({
 											...prev,
 											dateOfBirth: e.target.value,
 										}))
 									}}
+									type="date"
+									value={formData.dateOfBirth}
 								/>
 							</div>
 
@@ -222,11 +222,11 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 								<textarea
 									id="bio"
 									name="bio"
-									value={formData.bio}
 									onChange={(e) => {
 										setFormData((prev) => ({ ...prev, bio: e.target.value }))
 									}}
 									placeholder="Tell us about yourself..."
+									value={formData.bio}
 								/>
 							</div>
 
@@ -234,46 +234,46 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 							<div>
 								<label htmlFor="gender">
 									<input
-										name="gender"
-										type="radio"
-										value="male"
 										checked={formData.gender === 'male'}
+										name="gender"
 										onChange={(e) => {
 											setFormData((prev) => ({
 												...prev,
 												gender: e.target.value,
 											}))
 										}}
+										type="radio"
+										value="male"
 									/>
 									Male
 								</label>
 								<label htmlFor="gender">
 									<input
-										name="gender"
-										type="radio"
-										value="female"
 										checked={formData.gender === 'female'}
+										name="gender"
 										onChange={(e) => {
 											setFormData((prev) => ({
 												...prev,
 												gender: e.target.value,
 											}))
 										}}
+										type="radio"
+										value="female"
 									/>
 									Female
 								</label>
 								<label htmlFor="gender">
 									<input
-										name="gender"
-										type="radio"
-										value="other"
 										checked={formData.gender === 'other'}
+										name="gender"
 										onChange={(e) => {
 											setFormData((prev) => ({
 												...prev,
 												gender: e.target.value,
 											}))
 										}}
+										type="radio"
+										value="other"
 									/>
 									Other
 								</label>
@@ -284,13 +284,13 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 								<select
 									id="experience"
 									name="experience"
-									value={formData.experience}
 									onChange={(e) => {
 										setFormData((prev) => ({
 											...prev,
 											experience: e.target.value,
 										}))
 									}}
+									value={formData.experience}
 								>
 									<option value="">Select Experience</option>
 									<option value="beginner">Beginner</option>
@@ -304,15 +304,15 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 							<div>
 								<label htmlFor="gender">
 									<input
-										name="termsAccepted"
-										type="checkbox"
 										checked={formData.termsAccepted}
+										name="termsAccepted"
 										onChange={(e) => {
 											setFormData((prev) => ({
 												...prev,
 												termsAccepted: e.target.checked,
 											}))
 										}}
+										type="checkbox"
 									/>
 									I accept the terms and conditions *
 								</label>
@@ -324,21 +324,21 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 							<div>
 								<label htmlFor="termsAccepted">
 									<input
-										name="newsletter"
-										type="checkbox"
 										checked={formData.newsletter}
+										name="newsletter"
 										onChange={(e) => {
 											setFormData((prev) => ({
 												...prev,
 												newsletter: e.target.checked,
 											}))
 										}}
+										type="checkbox"
 									/>
 									Subscribe to newsletter
 								</label>
 							</div>
 
-							<Button type="submit" disabled={isSubmitting}>
+							<Button disabled={isSubmitting} type="submit">
 								{isSubmitting ? 'Creating Account...' : 'Create Account'}
 							</Button>
 						</form>
@@ -351,12 +351,12 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 
 			// Test comprehensive form filling using new utilities
 			await formTesting.fillTextInputs(form, {
-				firstName: 'John',
-				lastName: 'Doe',
-				email: 'john.doe@example.com',
-				password: 'SecurePassword123!',
 				confirmPassword: 'SecurePassword123!',
 				dateOfBirth: '1990-01-15',
+				email: 'john.doe@example.com',
+				firstName: 'John',
+				lastName: 'Doe',
+				password: 'SecurePassword123!',
 			})
 
 			await formTesting.fillSelectFields(form, {
@@ -373,18 +373,18 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 			})
 
 			await formTesting.toggleCheckboxes(form, {
-				termsAccepted: true,
 				newsletter: true,
+				termsAccepted: true,
 			})
 
 			// Validate all form fields using new utilities
 			formTesting.validateTextInputs(form, {
-				firstName: 'John',
-				lastName: 'Doe',
-				email: 'john.doe@example.com',
-				password: 'SecurePassword123!',
 				confirmPassword: 'SecurePassword123!',
 				dateOfBirth: '1990-01-15',
+				email: 'john.doe@example.com',
+				firstName: 'John',
+				lastName: 'Doe',
+				password: 'SecurePassword123!',
 			})
 
 			formTesting.validateSelectFields(form, {
@@ -401,8 +401,8 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 			})
 
 			formTesting.validateCheckboxes(form, {
-				termsAccepted: true,
 				newsletter: true,
+				termsAccepted: true,
 			})
 
 			// Test form submission
@@ -420,9 +420,9 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 		it('should handle form validation errors', async () => {
 			const ValidationForm = () => {
 				const [formData, setFormData] = React.useState({
+					confirmPassword: '',
 					email: '',
 					password: '',
-					confirmPassword: '',
 					termsAccepted: false,
 				})
 
@@ -447,11 +447,11 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 					<form data-testid="validation-form" onSubmit={handleSubmit}>
 						<input
 							name="email"
-							type="email"
-							value={formData.email}
 							onChange={(e) => {
 								setFormData((prev) => ({ ...prev, email: e.target.value }))
 							}}
+							type="email"
+							value={formData.email}
 						/>
 						{errors.email && (
 							<span data-testid="email-error">{errors.email}</span>
@@ -459,11 +459,11 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 
 						<input
 							name="password"
-							type="password"
-							value={formData.password}
 							onChange={(e) => {
 								setFormData((prev) => ({ ...prev, password: e.target.value }))
 							}}
+							type="password"
+							value={formData.password}
 						/>
 						{errors.password && (
 							<span data-testid="password-error">{errors.password}</span>
@@ -471,14 +471,14 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 
 						<input
 							name="confirmPassword"
-							type="password"
-							value={formData.confirmPassword}
 							onChange={(e) => {
 								setFormData((prev) => ({
 									...prev,
 									confirmPassword: e.target.value,
 								}))
 							}}
+							type="password"
+							value={formData.confirmPassword}
 						/>
 						{errors.confirmPassword && (
 							<span data-testid="confirmPassword-error">
@@ -488,15 +488,15 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 
 						<label htmlFor="termsAccepted">
 							<input
-								name="termsAccepted"
-								type="checkbox"
 								checked={formData.termsAccepted}
+								name="termsAccepted"
 								onChange={(e) => {
 									setFormData((prev) => ({
 										...prev,
 										termsAccepted: e.target.checked,
 									}))
 								}}
+								type="checkbox"
 							/>
 							Accept terms
 						</label>
@@ -528,9 +528,9 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 
 			// Test password mismatch validation
 			await formTesting.fillTextInputs(form, {
+				confirmPassword: 'different123',
 				email: 'test@example.com',
 				password: 'password123',
-				confirmPassword: 'different123',
 			})
 			await formTesting.submitForm(form)
 
@@ -544,9 +544,9 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 
 			// Fill form with mismatched passwords
 			await formTesting.fillTextInputs(form, {
+				confirmPassword: 'differentpassword',
 				email: 'test@example.com',
 				password: 'password123',
-				confirmPassword: 'differentpassword',
 			})
 
 			await formTesting.toggleCheckboxes(form, {
@@ -582,15 +582,15 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 			const MultiStepWizard = () => {
 				const [currentStep, setCurrentStep] = React.useState(1)
 				const [formData, setFormData] = React.useState({
-					// Step 1: Personal Info
-					name: '',
-					email: '',
-					// Step 2: Preferences
-					theme: '',
-					notifications: false,
 					// Step 3: Additional Info
 					bio: '',
+					email: '',
+					// Step 1: Personal Info
+					name: '',
+					notifications: false,
 					skills: [] as string[],
+					// Step 2: Preferences
+					theme: '',
 				})
 
 				const steps = [
@@ -625,9 +625,9 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 						<div data-testid="step-indicator">
 							{steps.map((step) => (
 								<span
-									key={step.id}
-									data-testid={`step-${step.id.toString()}`}
 									className={currentStep >= step.id ? 'active' : ''}
+									data-testid={`step-${step.id.toString()}`}
+									key={step.id}
 								>
 									{step.title}
 								</span>
@@ -642,17 +642,15 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 								<form data-testid="step-1-form">
 									<input
 										name="name"
-										type="text"
-										value={formData.name}
 										onChange={(e) => {
 											setFormData((prev) => ({ ...prev, name: e.target.value }))
 										}}
 										placeholder="Full Name"
+										type="text"
+										value={formData.name}
 									/>
 									<input
 										name="email"
-										type="email"
-										value={formData.email}
 										onChange={(e) => {
 											setFormData((prev) => ({
 												...prev,
@@ -660,6 +658,8 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 											}))
 										}}
 										placeholder="Email"
+										type="email"
+										value={formData.email}
 									/>
 								</form>
 							</div>
@@ -671,13 +671,13 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 								<form data-testid="step-2-form">
 									<select
 										name="theme"
-										value={formData.theme}
 										onChange={(e) => {
 											setFormData((prev) => ({
 												...prev,
 												theme: e.target.value,
 											}))
 										}}
+										value={formData.theme}
 									>
 										<option value="">Select Theme</option>
 										<option value="light">Light</option>
@@ -686,15 +686,15 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 									</select>
 									<label htmlFor="notifications">
 										<input
-											name="notifications"
-											type="checkbox"
 											checked={formData.notifications}
+											name="notifications"
 											onChange={(e) => {
 												setFormData((prev) => ({
 													...prev,
 													notifications: e.target.checked,
 												}))
 											}}
+											type="checkbox"
 										/>
 										Enable notifications
 									</label>
@@ -708,22 +708,22 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 								<form data-testid="step-3-form">
 									<textarea
 										name="bio"
-										value={formData.bio}
 										onChange={(e) => {
 											setFormData((prev) => ({ ...prev, bio: e.target.value }))
 										}}
 										placeholder="Tell us about yourself"
+										value={formData.bio}
 									/>
 									<div data-testid="skills-section">
 										{['React', 'TypeScript', 'Node.js', 'Python', 'Java'].map(
 											(skill) => (
-												<label key={skill} htmlFor={skill}>
+												<label htmlFor={skill} key={skill}>
 													<input
-														type="checkbox"
 														checked={formData.skills.includes(skill)}
 														onChange={() => {
 															toggleSkill(skill)
 														}}
+														type="checkbox"
 													/>
 													{skill}
 												</label>
@@ -737,15 +737,15 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 						<div data-testid="wizard-navigation">
 							<Button
 								data-testid="prev-btn"
-								onClick={prevStep}
 								disabled={currentStep === 1}
+								onClick={prevStep}
 							>
 								Previous
 							</Button>
 							<Button
 								data-testid="next-btn"
-								onClick={nextStep}
 								disabled={currentStep === steps.length}
+								onClick={nextStep}
 							>
 								{currentStep === steps.length ? 'Finish' : 'Next'}
 							</Button>
@@ -767,8 +767,8 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 				'step-1-form',
 			) as HTMLFormElement
 			await formTesting.fillTextInputs(step1Form, {
-				name: 'Jane Smith',
 				email: 'jane@example.com',
+				name: 'Jane Smith',
 			})
 
 			// Navigate to step 2
@@ -822,8 +822,8 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 
 			// Verify step 1 data is preserved
 			formTesting.validateTextInputs(step1Form, {
-				name: 'Jane Smith',
 				email: 'jane@example.com',
+				name: 'Jane Smith',
 			})
 		})
 	})
@@ -843,24 +843,24 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 					<form data-testid="rapid-form">
 						<input
 							name="field1"
-							value={values.field1}
 							onChange={(e) => {
 								setValues((prev) => ({ ...prev, field1: e.target.value }))
 							}}
+							value={values.field1}
 						/>
 						<input
 							name="field2"
-							value={values.field2}
 							onChange={(e) => {
 								setValues((prev) => ({ ...prev, field2: e.target.value }))
 							}}
+							value={values.field2}
 						/>
 						<input
 							name="field3"
-							value={values.field3}
 							onChange={(e) => {
 								setValues((prev) => ({ ...prev, field3: e.target.value }))
 							}}
+							value={values.field3}
 						/>
 					</form>
 				)
@@ -906,15 +906,15 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 							<input
 								key={i}
 								name={`field${i.toString()}`}
-								value={
-									formData[`field${i.toString()}` as keyof typeof formData]
-								}
 								onChange={(e) => {
 									setFormData((prev) => ({
 										...prev,
 										[`field${i.toString()}`]: e.target.value,
 									}))
 								}}
+								value={
+									formData[`field${i.toString()}` as keyof typeof formData]
+								}
 							/>
 						))}
 					</form>
@@ -949,9 +949,9 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 						{
 							message: 'User registered successfully',
 							user: {
-								id: '123',
 								email: 'john.doe@example.com',
 								firstName: 'John',
+								id: '123',
 								lastName: 'Doe',
 							},
 						},
@@ -962,16 +962,16 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 
 			const ApiRegistrationForm = () => {
 				const [formData, setFormData] = React.useState({
+					email: '',
 					firstName: '',
 					lastName: '',
-					email: '',
 					password: '',
 				})
 				const [isSubmitting, setIsSubmitting] = React.useState(false)
-				const [result, setResult] = React.useState<Record<
+				const [result, setResult] = React.useState<null | Record<
 					string,
 					unknown
-				> | null>(null)
+				>>(null)
 
 				const handleSubmit = async (e: React.FormEvent) => {
 					e.preventDefault()
@@ -981,11 +981,11 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 						const response = await fetch(
 							'http://localhost:3000/api/auth/register',
 							{
-								method: 'POST',
+								body: JSON.stringify(formData),
 								headers: {
 									'Content-Type': 'application/json',
 								},
-								body: JSON.stringify(formData),
+								method: 'POST',
 							},
 						)
 						const data = (await response.json()) as Record<string, unknown>
@@ -1002,8 +1002,6 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 						<form data-testid="api-registration-form" onSubmit={handleSubmit}>
 							<input
 								name="firstName"
-								type="text"
-								value={formData.firstName}
 								onChange={(e) => {
 									setFormData((prev) => ({
 										...prev,
@@ -1011,35 +1009,37 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 									}))
 								}}
 								placeholder="First Name"
+								type="text"
+								value={formData.firstName}
 							/>
 							<input
 								name="lastName"
-								type="text"
-								value={formData.lastName}
 								onChange={(e) => {
 									setFormData((prev) => ({ ...prev, lastName: e.target.value }))
 								}}
 								placeholder="Last Name"
+								type="text"
+								value={formData.lastName}
 							/>
 							<input
 								name="email"
-								type="email"
-								value={formData.email}
 								onChange={(e) => {
 									setFormData((prev) => ({ ...prev, email: e.target.value }))
 								}}
 								placeholder="Email"
+								type="email"
+								value={formData.email}
 							/>
 							<input
 								name="password"
-								type="password"
-								value={formData.password}
 								onChange={(e) => {
 									setFormData((prev) => ({ ...prev, password: e.target.value }))
 								}}
 								placeholder="Password"
+								type="password"
+								value={formData.password}
 							/>
-							<Button type="submit" disabled={isSubmitting}>
+							<Button disabled={isSubmitting} type="submit">
 								{isSubmitting ? 'Registering...' : 'Register'}
 							</Button>
 						</form>
@@ -1057,9 +1057,9 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 
 			// Fill the form
 			await formTesting.fillTextInputs(form, {
+				email: 'john.doe@example.com',
 				firstName: 'John',
 				lastName: 'Doe',
-				email: 'john.doe@example.com',
 				password: 'SecurePassword123!',
 			})
 
@@ -1094,7 +1094,7 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 					password: '',
 				})
 				const [isSubmitting, setIsSubmitting] = React.useState(false)
-				const [error, setError] = React.useState<string | null>(null)
+				const [error, setError] = React.useState<null | string>(null)
 
 				const handleSubmit = async (e: React.FormEvent) => {
 					e.preventDefault()
@@ -1105,11 +1105,11 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 						const response = await fetch(
 							'http://localhost:3000/api/auth/register',
 							{
-								method: 'POST',
+								body: JSON.stringify(formData),
 								headers: {
 									'Content-Type': 'application/json',
 								},
-								body: JSON.stringify(formData),
+								method: 'POST',
 							},
 						)
 
@@ -1129,23 +1129,23 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 						<form data-testid="error-form" onSubmit={handleSubmit}>
 							<input
 								name="email"
-								type="email"
-								value={formData.email}
 								onChange={(e) => {
 									setFormData((prev) => ({ ...prev, email: e.target.value }))
 								}}
 								placeholder="Email"
+								type="email"
+								value={formData.email}
 							/>
 							<input
 								name="password"
-								type="password"
-								value={formData.password}
 								onChange={(e) => {
 									setFormData((prev) => ({ ...prev, password: e.target.value }))
 								}}
 								placeholder="Password"
+								type="password"
+								value={formData.password}
 							/>
-							<Button type="submit" disabled={isSubmitting}>
+							<Button disabled={isSubmitting} type="submit">
 								{isSubmitting ? 'Registering...' : 'Register'}
 							</Button>
 						</form>
@@ -1225,11 +1225,11 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 					setIsSubmitting(true)
 					try {
 						await fetch('http://localhost:3000/api/data/submit', {
-							method: 'POST',
+							body: JSON.stringify(formData),
 							headers: {
 								'Content-Type': 'application/json',
 							},
-							body: JSON.stringify(formData),
+							method: 'POST',
 						})
 						setSubmissions((prev) => prev + 1)
 					} catch {
@@ -1244,14 +1244,14 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 						<form data-testid="concurrent-form" onSubmit={handleSubmit}>
 							<input
 								name="data"
-								type="text"
-								value={formData.data}
 								onChange={(e) => {
 									setFormData((prev) => ({ ...prev, data: e.target.value }))
 								}}
 								placeholder="Enter data"
+								type="text"
+								value={formData.data}
 							/>
-							<Button type="submit" disabled={isSubmitting}>
+							<Button disabled={isSubmitting} type="submit">
 								{isSubmitting ? 'Submitting...' : 'Submit'}
 							</Button>
 						</form>
@@ -1279,7 +1279,7 @@ describe('Pilot Tests - Enhanced Testing Utilities', () => {
 			const countElement =
 				componentTesting.getElementByTestId('submission-count')
 			const { textContent } = countElement
-			expect(textContent).toMatch(/Submissions: (1|2)/)
+			expect(textContent).toMatch(/Submissions: [12]/)
 
 			// If we got 2 submissions, that's actually fine - it shows the concurrent submission protection
 			// is working in the real app but may have timing differences in tests

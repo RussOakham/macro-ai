@@ -4,9 +4,9 @@ import { ChatActions } from './chat-actions'
 import { ChatTitle } from './chat-title'
 
 interface ChatHeaderProps extends React.ComponentPropsWithoutRef<'div'> {
-	title: string
 	onMobileSidebarToggle?: () => void
-	status: 'ready' | 'submitted' | 'streaming' | 'error'
+	status: 'error' | 'ready' | 'streaming' | 'submitted'
+	title: string
 }
 
 /**
@@ -14,10 +14,10 @@ interface ChatHeaderProps extends React.ComponentPropsWithoutRef<'div'> {
  * Displays chat title and mobile sidebar toggle button
  */
 const ChatHeader = ({
-	title,
+	className,
 	onMobileSidebarToggle,
 	status,
-	className,
+	title,
 	...props
 }: ChatHeaderProps): React.JSX.Element => {
 	return (

@@ -26,6 +26,8 @@ vi.mock('../initialize-api', () => ({
 // Mock the API client package for configuration tests
 vi.mock('@repo/macro-ai-api-client', () => ({
 	createApiClient: vi.fn((baseURL: string, config: Partial<Config>) => ({
+		delete: vi.fn(),
+		get: vi.fn(),
 		instance: {
 			defaults: {
 				baseURL,
@@ -33,13 +35,11 @@ vi.mock('@repo/macro-ai-api-client', () => ({
 				withCredentials: config.withCredentials ?? false,
 			},
 			interceptors: {
-				response: { use: vi.fn(), eject: vi.fn() },
+				response: { eject: vi.fn(), use: vi.fn() },
 			},
 		},
 		post: vi.fn(),
-		get: vi.fn(),
 		put: vi.fn(),
-		delete: vi.fn(),
 	})),
 }))
 
@@ -142,8 +142,8 @@ describe('API Clients Integration', () => {
 
 			// Make a real HTTP request to the health endpoint (using auto-generated handler)
 			const response = await realApiClient.get({
-				url: '/health',
 				baseURL: 'http://localhost:3000',
+				url: '/health',
 			})
 
 			const data = response.data as HealthResponse
@@ -167,8 +167,8 @@ describe('API Clients Integration', () => {
 			// Make a request to a non-existent endpoint
 			try {
 				await realApiClient.get({
-					url: '/api/no-such-page',
 					baseURL: 'http://localhost:3000/api',
+					url: '/api/no-such-page',
 				})
 				// If we get here, the request succeeded but we expected it to fail
 				expect.fail('Expected request to fail with 404')
@@ -210,8 +210,8 @@ describe('API Clients Integration', () => {
 			// Make a request that should result in a server error
 			try {
 				await realApiClient.get({
-					url: '/server-error',
 					baseURL: 'http://localhost:3000',
+					url: '/server-error',
 				})
 				expect.fail('Expected request to fail with 500')
 			} catch (error: unknown) {
@@ -243,14 +243,14 @@ describe('API Clients Integration', () => {
 				url: '/users',
 			})
 			expect(trackingClient.callHistory[1]).toMatchObject({
+				data: { email: 'test@example.com' },
 				method: 'POST',
 				url: '/auth/login',
-				data: { email: 'test@example.com' },
 			})
 			expect(trackingClient.callHistory[2]).toMatchObject({
+				data: { name: 'Updated User' },
 				method: 'PUT',
 				url: '/users/1',
-				data: { name: 'Updated User' },
 			})
 
 			// Test clearing history
@@ -270,9 +270,9 @@ describe('API Clients Integration', () => {
 
 			// Test authentication endpoints using the MSW handlers
 			const loginResponse = await realApiClient.post({
-				url: '/auth/login',
 				baseURL: 'http://localhost:3000',
 				data: { email: 'test@example.com', password: 'password' },
+				url: '/auth/login',
 			})
 
 			expect(loginResponse.status).toBe(200)
@@ -281,9 +281,9 @@ describe('API Clients Integration', () => {
 
 			// Test refresh token endpoint
 			const refreshResponse = await realApiClient.post({
-				url: '/auth/refresh',
 				baseURL: 'http://localhost:3000',
 				data: { refreshToken: 'mock-refresh-token' },
+				url: '/auth/refresh',
 			})
 
 			expect(refreshResponse.status).toBe(200)
@@ -305,9 +305,9 @@ describe('API Clients Integration', () => {
 			// Test 400 error (validation error)
 			try {
 				await realApiClient.post({
-					url: '/auth/login',
 					baseURL: 'http://localhost:3000',
 					data: { email: 'invalid-email' }, // Missing password
+					url: '/auth/login',
 				})
 				expect.fail('Expected validation error')
 			} catch (error: unknown) {
@@ -321,9 +321,9 @@ describe('API Clients Integration', () => {
 			// Test 401 error (authentication error)
 			try {
 				await realApiClient.post({
-					url: '/auth/login',
 					baseURL: 'http://localhost:3000',
 					data: { email: 'test@example.com', password: 'wrong-password' },
+					url: '/auth/login',
 				})
 				expect.fail('Expected authentication error')
 			} catch (error: unknown) {
@@ -350,9 +350,9 @@ describe('API Clients Integration', () => {
 
 			// Test multiple concurrent requests
 			const promises = [
-				realApiClient.get({ url: '/health', baseURL: 'http://localhost:3000' }),
-				realApiClient.get({ url: '/health', baseURL: 'http://localhost:3000' }),
-				realApiClient.get({ url: '/health', baseURL: 'http://localhost:3000' }),
+				realApiClient.get({ baseURL: 'http://localhost:3000', url: '/health' }),
+				realApiClient.get({ baseURL: 'http://localhost:3000', url: '/health' }),
+				realApiClient.get({ baseURL: 'http://localhost:3000', url: '/health' }),
 			]
 
 			const results = await Promise.all(promises)
@@ -411,15 +411,15 @@ describe('API Clients Integration', () => {
 			// Create a real API client with short timeout
 			const { createApiClient } = await import('@repo/macro-ai-api-client')
 			const realApiClient = createApiClient('http://localhost:3000', {
-				withCredentials: false,
 				timeout: 50, // 50ms timeout
+				withCredentials: false,
 			})
 
 			// Make a request that should timeout
 			try {
 				await realApiClient.get({
-					url: '/timeout',
 					baseURL: 'http://localhost:3000',
+					url: '/timeout',
 				})
 				expect.fail('Expected request to timeout')
 			} catch (error: unknown) {

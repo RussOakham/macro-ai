@@ -5,10 +5,10 @@ import type { ConfirmRegistration } from '../../network/auth/post-confirm-regist
 
 const usePostConfirmRegisterMutation = () => {
 	return useMutation({
-		mutationFn: async ({ email, code }: ConfirmRegistration) => {
+		mutationFn: async ({ code, email }: ConfirmRegistration) => {
 			const response = await postConfirmRegistration({
-				email,
 				code,
+				email,
 			})
 			return response
 		},

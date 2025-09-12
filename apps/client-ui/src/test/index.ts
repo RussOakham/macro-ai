@@ -5,31 +5,6 @@
  * This provides a clean interface for importing testing utilities across the project.
  */
 
-// Main testing utilities
-export type {
-	ApiTestConfig,
-	AuthTestState,
-	ComponentTestContext,
-	MockApiClient,
-	MockAxiosInstance,
-} from './test-utils.test-utils'
-export {
-	clientUITestAssertions,
-	clientUITestData,
-	clientUITestUtils,
-	createAuthenticatedUserState,
-	createMockApiClient,
-	createMockApiError,
-	createMockApiResponse,
-	createMockAuthState,
-	createMockAxiosInstance,
-	createMockRouterContext,
-	createMockTokenRefresh,
-	createMSWHandlers,
-	renderWithProviders,
-	setupMSWServer,
-} from './test-utils.test-utils'
-
 // Specialized testing utilities
 export type {
 	EnhancedApiCallScenario,
@@ -56,6 +31,7 @@ export {
 	testErrorHandling,
 	testInterceptor,
 } from './api-test-utils.test-utils'
+
 export type {
 	ComponentTestConfig,
 	EnhancedRenderResult,
@@ -75,6 +51,33 @@ export {
 	testRouterNavigation,
 	waitForComponentReady,
 } from './component-test-utils'
+// Import server from local MSW setup instead of config-testing
+export { server } from './msw-setup'
+// Main testing utilities
+export type {
+	ApiTestConfig,
+	AuthTestState,
+	ComponentTestContext,
+	MockApiClient,
+	MockAxiosInstance,
+} from './test-utils.test-utils'
+
+export {
+	clientUITestAssertions,
+	clientUITestData,
+	clientUITestUtils,
+	createAuthenticatedUserState,
+	createMockApiClient,
+	createMockApiError,
+	createMockApiResponse,
+	createMockAuthState,
+	createMockAxiosInstance,
+	createMockRouterContext,
+	createMockTokenRefresh,
+	createMSWHandlers,
+	renderWithProviders,
+	setupMSWServer,
+} from './test-utils.test-utils'
 
 // Re-export commonly used testing utilities from config-testing
 export {
@@ -93,9 +96,6 @@ export {
 	handlers,
 	userHandlers,
 } from '@repo/config-testing'
-
-// Import server from local MSW setup instead of config-testing
-export { server } from './msw-setup'
 
 // Re-export React Testing Library utilities
 export {

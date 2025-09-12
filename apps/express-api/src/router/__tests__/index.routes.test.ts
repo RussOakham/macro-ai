@@ -307,6 +307,7 @@ describe('appRouter', () => {
 	describe('Integration Scenarios', () => {
 		it('should successfully integrate with Express application', () => {
 			// Arrange
+			// eslint-disable-next-line sonarjs/x-powered-by
 			const app = express()
 
 			// Act

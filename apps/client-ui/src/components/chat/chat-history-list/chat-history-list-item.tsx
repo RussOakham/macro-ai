@@ -18,9 +18,9 @@ const ChatHistoryListItem = ({
 	isPending,
 	onMobileClose,
 }: ChatHistoryListItemProps) => {
-	const [editingChatId, setEditingChatId] = useState<string | null>(null)
+	const [editingChatId, setEditingChatId] = useState<null | string>(null)
 	const [editTitle, setEditTitle] = useState('')
-	const [confirmDeleteChatId, setConfirmDeleteChatId] = useState<string | null>(
+	const [confirmDeleteChatId, setConfirmDeleteChatId] = useState<null | string>(
 		null,
 	)
 
@@ -46,12 +46,12 @@ const ChatHistoryListItem = ({
 
 	if (confirmDeleteChatId === chat.id) {
 		return (
-			<div key={chat.id} className="group px-3">
+			<div className="group px-3" key={chat.id}>
 				<ChatHistoryItemDelete
+					cancelDeleteChat={cancelDeleteChat}
 					chat={chat}
 					isPendingExternal={isPending}
 					setConfirmDeleteChatId={setConfirmDeleteChatId}
-					cancelDeleteChat={cancelDeleteChat}
 				/>
 			</div>
 		)
@@ -59,12 +59,12 @@ const ChatHistoryListItem = ({
 
 	if (editingChatId === chat.id) {
 		return (
-			<div key={chat.id} className="group px-3">
+			<div className="group px-3" key={chat.id}>
 				<ChatHistoryItemEdit
 					chat={chat}
-					isPending={isPending}
 					editingChatId={editingChatId}
 					editTitle={editTitle}
+					isPending={isPending}
 					setEditingChatId={setEditingChatId}
 					setEditTitle={setEditTitle}
 				/>
@@ -73,14 +73,14 @@ const ChatHistoryListItem = ({
 	}
 
 	return (
-		<div key={chat.id} className="group px-3">
+		<div className="group px-3" key={chat.id}>
 			<ChatHistoryItem
 				chat={chat}
+				confirmDeleteChatId={confirmDeleteChatId}
+				handleDeleteChat={handleDeleteChat}
 				isPending={isPending}
 				onMobileClose={onMobileClose}
 				startEditing={startEditing}
-				handleDeleteChat={handleDeleteChat}
-				confirmDeleteChatId={confirmDeleteChatId}
 			/>
 		</div>
 	)

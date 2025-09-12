@@ -12,7 +12,7 @@ import type {
 } from './chat.schemas.ts'
 
 // Chat message role type
-type ChatMessageRole = 'user' | 'assistant' | 'system'
+type ChatMessageRole = 'assistant' | 'system' | 'user'
 
 // Pagination interface
 interface PaginationOptions {

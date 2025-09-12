@@ -3,9 +3,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { QUERY_KEY, QUERY_KEY_MODIFIERS } from '@/constants/query-keys'
 import { logger } from '@/lib/logger/logger'
 
-import type { GetChatsResponse } from '../../network/chat/get-chats'
-
 import { deleteChat } from '../../network/chat/delete-chat'
+import type { GetChatsResponse } from '../../network/chat/get-chats'
 
 /**
  * TanStack Query mutation hook for deleting an existing chat
@@ -36,7 +35,7 @@ const useDeleteChatMutation = () => {
 			queryClient.setQueriesData(
 				{ queryKey: [QUERY_KEY.chat, QUERY_KEY_MODIFIERS.list] },
 				(oldData: GetChatsResponse | undefined) => {
-					if (!oldData) return []
+					if (!oldData) return { data: [], meta: { total: 0 } }
 
 					return {
 						...oldData,
@@ -52,18 +51,7 @@ const useDeleteChatMutation = () => {
 			// Return a context object with the snapshotted value
 			return { previousChats }
 		},
-		onSuccess: (data, variables) => {
-			// Remove the specific chat data from cache
-			if (data.success) {
-				queryClient.removeQueries({
-					queryKey: [
-						QUERY_KEY.chat,
-						QUERY_KEY_MODIFIERS.detail,
-						variables.chatId,
-					],
-				})
-			}
-		},
+
 		onError: (error, _variables, context) => {
 			// If the mutation fails, use the context returned from onMutate to roll back
 			if (context?.previousChats) {
@@ -87,6 +75,18 @@ const useDeleteChatMutation = () => {
 			await queryClient.invalidateQueries({
 				queryKey: [QUERY_KEY.chat, QUERY_KEY_MODIFIERS.list],
 			})
+		},
+		onSuccess: (data, variables) => {
+			// Remove the specific chat data from cache
+			if (data.success) {
+				queryClient.removeQueries({
+					queryKey: [
+						QUERY_KEY.chat,
+						QUERY_KEY_MODIFIERS.detail,
+						variables.chatId,
+					],
+				})
+			}
 		},
 	})
 }

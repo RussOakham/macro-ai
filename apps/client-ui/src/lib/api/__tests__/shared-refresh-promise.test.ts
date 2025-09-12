@@ -162,8 +162,8 @@ describe('Shared Refresh Promise', () => {
 							message: 'Token refreshed',
 							tokens: {
 								accessToken: 'new-access-token',
-								refreshToken: 'new-refresh-token',
 								expiresIn: 3600,
+								refreshToken: 'new-refresh-token',
 							},
 						},
 						{ status: 200 },
@@ -176,18 +176,18 @@ describe('Shared Refresh Promise', () => {
 			// Create a real refresh operation
 			const refreshOperation = async (): Promise<void> => {
 				const response = await fetch('http://localhost:3000/auth/refresh', {
-					method: 'POST',
+					body: JSON.stringify({ refreshToken: 'test-token' }),
 					headers: {
 						'Content-Type': 'application/json',
 					},
-					body: JSON.stringify({ refreshToken: 'test-token' }),
+					method: 'POST',
 				})
 				const result = (await response.json()) as {
 					message: string
 					tokens: {
 						accessToken: string
-						refreshToken: string
 						expiresIn: number
+						refreshToken: string
 					}
 				}
 				expect(result.message).toBe('Token refreshed')

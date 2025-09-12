@@ -48,8 +48,8 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 			{/* Header */}
 			<div className="p-3 border-b border-border flex-shrink-0">
 				<Button
-					onClick={createNewChat}
 					className="w-full justify-start gap-3"
+					onClick={createNewChat}
 					variant="outline"
 				>
 					<Plus className="h-4 w-4" />
@@ -61,9 +61,9 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 			{showCreateForm ? (
 				<div className="p-3 border-b border-border bg-muted flex-shrink-0">
 					<CreateChatForm
-						onSuccess={handleCreateChatSuccess}
-						onCancel={handleCreateChatCancel}
 						className="text-foreground"
+						onCancel={handleCreateChatCancel}
+						onSuccess={handleCreateChatSuccess}
 					/>
 				</div>
 			) : null}

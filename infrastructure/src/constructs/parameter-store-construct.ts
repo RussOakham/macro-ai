@@ -1,3 +1,4 @@
+/* eslint-disable security-node/detect-crlf */
 import * as cdk from 'aws-cdk-lib'
 import * as iam from 'aws-cdk-lib/aws-iam'
 import * as ssm from 'aws-cdk-lib/aws-ssm'
@@ -24,8 +25,8 @@ export interface ParameterStoreConstructProps {
  */
 export class ParameterStoreConstruct extends Construct {
 	public readonly parameterPrefix: string
-	public readonly readPolicy: iam.ManagedPolicy
 	public readonly parameters: Record<string, ssm.StringParameter>
+	public readonly readPolicy: iam.ManagedPolicy
 
 	constructor(
 		scope: Construct,
@@ -75,6 +76,74 @@ export class ParameterStoreConstruct extends Construct {
 			value: this.parameterPrefix,
 			description: `Parameter Store prefix for ${props.environmentName} environment${isPreviewEnvironment ? ' (shared development)' : ''}`,
 		})
+	}
+
+	/**
+	 * Get parameter ARN for a given parameter key
+	 */
+	public getParameterArn(
+		key: string,
+		tier: 'critical' | 'standard' = 'standard',
+	): string {
+		const parameterName = this.getParameterName(key, tier)
+		return `arn:aws:ssm:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:parameter${parameterName}`
+	}
+
+	/**
+	 * Get the full parameter name for a given parameter key
+	 */
+	public getParameterName(
+		key: string,
+		tier: 'critical' | 'standard' = 'standard',
+	): string {
+		// Handle both naming conventions for backward compatibility
+		if (this.parameterPrefix.includes('/')) {
+			// Legacy format: /macro-ai/development/critical/api-key
+			return `${this.parameterPrefix}/${tier}/${key}`
+		} else {
+			// New format: macro-ai-development-critical-api-key
+			return `${this.parameterPrefix}${tier}-${key}`
+		}
+	}
+
+	/**
+	 * Creates a parameter as String type initially (CloudFormation requirement)
+	 * Parameters marked with isSecure will be converted to SecureString post-deployment
+	 * @param param Parameter configuration
+	 * @param parameterName Full parameter name with prefix
+	 * @param constructId Unique construct ID
+	 * @returns StringParameter instance
+	 */
+	private createParameter(
+		param: {
+			description: string
+			isSecure: boolean
+			name: string
+			tier: ssm.ParameterTier
+		},
+		parameterName: string,
+		constructId: string,
+	): ssm.StringParameter {
+		// Create all parameters as String type initially (CloudFormation requirement)
+		// SecureString conversion happens post-deployment via update script
+		const parameter = new ssm.StringParameter(this, constructId, {
+			parameterName,
+			description: param.description,
+			tier: param.tier,
+			stringValue: 'PLACEHOLDER_VALUE_UPDATE_AFTER_DEPLOYMENT',
+		})
+
+		// Add metadata to indicate which parameters should be converted to SecureString
+		if (param.isSecure) {
+			parameter.node.addMetadata('SecureStringConversion', {
+				required: true,
+				postDeploymentAction: `Convert to SecureString: aws ssm put-parameter --name "${parameterName}" --type SecureString --tier ${param.tier} --overwrite --value "ACTUAL_VALUE"`,
+				parameterName,
+				tier: param.tier,
+			})
+		}
+
+		return parameter
 	}
 
 	private createParameters(): Record<string, ssm.StringParameter> {
@@ -164,46 +233,6 @@ export class ParameterStoreConstruct extends Construct {
 		return parameters
 	}
 
-	/**
-	 * Creates a parameter as String type initially (CloudFormation requirement)
-	 * Parameters marked with isSecure will be converted to SecureString post-deployment
-	 * @param param Parameter configuration
-	 * @param parameterName Full parameter name with prefix
-	 * @param constructId Unique construct ID
-	 * @returns StringParameter instance
-	 */
-	private createParameter(
-		param: {
-			name: string
-			description: string
-			isSecure: boolean
-			tier: ssm.ParameterTier
-		},
-		parameterName: string,
-		constructId: string,
-	): ssm.StringParameter {
-		// Create all parameters as String type initially (CloudFormation requirement)
-		// SecureString conversion happens post-deployment via update script
-		const parameter = new ssm.StringParameter(this, constructId, {
-			parameterName,
-			description: param.description,
-			tier: param.tier,
-			stringValue: 'PLACEHOLDER_VALUE_UPDATE_AFTER_DEPLOYMENT',
-		})
-
-		// Add metadata to indicate which parameters should be converted to SecureString
-		if (param.isSecure) {
-			parameter.node.addMetadata('SecureStringConversion', {
-				required: true,
-				postDeploymentAction: `Convert to SecureString: aws ssm put-parameter --name "${parameterName}" --type SecureString --tier ${param.tier} --overwrite --value "ACTUAL_VALUE"`,
-				parameterName,
-				tier: param.tier,
-			})
-		}
-
-		return parameter
-	}
-
 	private createReadPolicy(): iam.ManagedPolicy {
 		return new iam.ManagedPolicy(this, 'ParameterStoreReadPolicy', {
 			description:
@@ -240,33 +269,5 @@ export class ParameterStoreConstruct extends Construct {
 			.split('-')
 			.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
 			.join('')
-	}
-
-	/**
-	 * Get the full parameter name for a given parameter key
-	 */
-	public getParameterName(
-		key: string,
-		tier: 'critical' | 'standard' = 'standard',
-	): string {
-		// Handle both naming conventions for backward compatibility
-		if (this.parameterPrefix.includes('/')) {
-			// Legacy format: /macro-ai/development/critical/api-key
-			return `${this.parameterPrefix}/${tier}/${key}`
-		} else {
-			// New format: macro-ai-development-critical-api-key
-			return `${this.parameterPrefix}${tier}-${key}`
-		}
-	}
-
-	/**
-	 * Get parameter ARN for a given parameter key
-	 */
-	public getParameterArn(
-		key: string,
-		tier: 'critical' | 'standard' = 'standard',
-	): string {
-		const parameterName = this.getParameterName(key, tier)
-		return `arn:aws:ssm:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:parameter${parameterName}`
 	}
 }

@@ -13,11 +13,11 @@ const createClientConfig = (override?: ClientOptions) => {
 	const baseConfig = {
 		baseURL: 'http://localhost:3000', // Default fallback, should be overridden by calling code
 		headers: {
-			'Content-Type': 'application/json',
 			Accept: 'application/json',
+			'Content-Type': 'application/json',
 		},
-		timeout: 30000,
 		responseType: 'json' as const,
+		timeout: 30000,
 		validateStatus: (status: number) => status >= 200 && status < 300,
 		...override,
 	}

@@ -4,7 +4,7 @@
  */
 
 // Shared promise that tracks ongoing refresh operations
-let sharedRefreshPromise: Promise<void> | null = null
+let sharedRefreshPromise: null | Promise<void> = null
 
 /**
  * Sets the shared refresh promise when a refresh operation begins
@@ -24,7 +24,7 @@ export const setSharedRefreshPromise = (
  *
  * @returns The current refresh promise or null if no refresh is in progress
  */
-export const getSharedRefreshPromise = (): Promise<void> | null => {
+export const getSharedRefreshPromise = (): null | Promise<void> => {
 	return sharedRefreshPromise
 }
 

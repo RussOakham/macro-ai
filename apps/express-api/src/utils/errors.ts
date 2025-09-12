@@ -6,16 +6,16 @@ import { fromError, isValidationError } from 'zod-validation-error'
 export enum ErrorType {
 	ApiError = 'ApiError',
 	CognitoError = 'CognitoError',
-	ZodValidationError = 'ZodValidationError',
-	ZodError = 'ZodError',
-	ValidationError = 'ValidationError',
+	ConflictError = 'ConflictError',
+	Error = 'Error',
+	ForbiddenError = 'ForbiddenError',
+	InternalError = 'InternalError',
 	NotFoundError = 'NotFoundError',
 	UnauthorizedError = 'UnauthorizedError',
-	ForbiddenError = 'ForbiddenError',
-	ConflictError = 'ConflictError',
-	InternalError = 'InternalError',
-	Error = 'Error',
 	UnknownError = 'UnknownError',
+	ValidationError = 'ValidationError',
+	ZodError = 'ZodError',
+	ZodValidationError = 'ZodValidationError',
 }
 
 // Standardized error interface
@@ -38,11 +38,11 @@ interface IAppErrorParams {
 }
 
 export class AppError extends Error implements IStandardizedError {
-	readonly type: ErrorType
-	readonly status: number
 	readonly details?: unknown
 	readonly service: string
 	override readonly stack!: string
+	readonly status: number
+	readonly type: ErrorType
 
 	constructor({
 		message,
@@ -59,6 +59,34 @@ export class AppError extends Error implements IStandardizedError {
 		this.service = service
 
 		Error.captureStackTrace(this, this.constructor)
+	}
+
+	/**
+	 * Creates a conflict error
+	 * @param message Optional custom message
+	 * @returns AppError instance
+	 */
+	static conflict(message = 'Resource conflict', service?: string): AppError {
+		return new AppError({
+			type: ErrorType.ConflictError,
+			message,
+			status: StatusCodes.CONFLICT,
+			service,
+		})
+	}
+
+	/**
+	 * Creates a forbidden error
+	 * @param message Optional custom message
+	 * @returns AppError instance
+	 */
+	static forbidden(message = 'Forbidden', service?: string): AppError {
+		return new AppError({
+			type: ErrorType.ForbiddenError,
+			message,
+			status: StatusCodes.FORBIDDEN,
+			service,
+		})
 	}
 
 	/**
@@ -125,6 +153,23 @@ export class AppError extends Error implements IStandardizedError {
 	}
 
 	/**
+	 * Creates an internal server error
+	 * @param message Optional custom message
+	 * @returns AppError instance
+	 */
+	static internal(
+		message = 'Internal server error',
+		service?: string,
+	): AppError {
+		return new AppError({
+			type: ErrorType.InternalError,
+			message,
+			status: StatusCodes.INTERNAL_SERVER_ERROR,
+			service,
+		})
+	}
+
+	/**
 	 * Creates a not found error
 	 * @param message Optional custom message
 	 * @returns AppError instance
@@ -153,20 +198,6 @@ export class AppError extends Error implements IStandardizedError {
 	}
 
 	/**
-	 * Creates a forbidden error
-	 * @param message Optional custom message
-	 * @returns AppError instance
-	 */
-	static forbidden(message = 'Forbidden', service?: string): AppError {
-		return new AppError({
-			type: ErrorType.ForbiddenError,
-			message,
-			status: StatusCodes.FORBIDDEN,
-			service,
-		})
-	}
-
-	/**
 	 * Creates a validation error
 	 * @param message Error message
 	 * @param details Optional validation details
@@ -182,37 +213,6 @@ export class AppError extends Error implements IStandardizedError {
 			message,
 			status: StatusCodes.BAD_REQUEST,
 			details,
-			service,
-		})
-	}
-
-	/**
-	 * Creates a conflict error
-	 * @param message Optional custom message
-	 * @returns AppError instance
-	 */
-	static conflict(message = 'Resource conflict', service?: string): AppError {
-		return new AppError({
-			type: ErrorType.ConflictError,
-			message,
-			status: StatusCodes.CONFLICT,
-			service,
-		})
-	}
-
-	/**
-	 * Creates an internal server error
-	 * @param message Optional custom message
-	 * @returns AppError instance
-	 */
-	static internal(
-		message = 'Internal server error',
-		service?: string,
-	): AppError {
-		return new AppError({
-			type: ErrorType.InternalError,
-			message,
-			status: StatusCodes.INTERNAL_SERVER_ERROR,
 			service,
 		})
 	}
@@ -235,7 +235,7 @@ export class AppError extends Error implements IStandardizedError {
 }
 
 // Go-style Result type
-export type Result<T, E = AppError> = [T, null] | [null, E]
+export type Result<T, E = AppError> = [null, E] | [T, null]
 
 // Custom error classes that extend AppError with specific statusCode
 export class NotFoundError extends AppError {
@@ -363,18 +363,18 @@ const getCognitoErrorMessage = (error: ICognitoError): string => {
 
 	// Map common Cognito error types to user-friendly messages
 	switch (error.__type) {
+		case 'CodeMismatchException':
+			return 'Invalid verification code'
+		case 'ExpiredCodeException':
+			return 'Verification code has expired'
+		case 'NotAuthorizedException':
+			return 'Invalid username or password'
 		case 'UsernameExistsException':
 			return 'User already exists'
 		case 'UserNotConfirmedException':
 			return 'User is not confirmed'
 		case 'UserNotFoundException':
 			return 'User not found'
-		case 'NotAuthorizedException':
-			return 'Invalid username or password'
-		case 'CodeMismatchException':
-			return 'Invalid verification code'
-		case 'ExpiredCodeException':
-			return 'Verification code has expired'
 		default:
 			return `Cognito error: ${error.__type}`
 	}

@@ -29,8 +29,8 @@ export const sendSuccess = <TData>(
  * Type for service error check results
  */
 export type TServiceErrorResult =
-	| { success: true }
 	| { success: false; error: { status: number; message: string } }
+	| { success: true }
 
 /**
  * Type for AWS service response metadata

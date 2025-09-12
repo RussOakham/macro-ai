@@ -1,17 +1,16 @@
 import { and, desc, eq, sql } from 'drizzle-orm'
 
+import { db } from '../../data-access/db.ts'
+import { tryCatch } from '../../utils/error-handling/try-catch.ts'
+import { AppError, InternalError, type Result } from '../../utils/errors.ts'
+import { safeValidateSchema } from '../../utils/response-handlers.ts'
+import { chatsTable, selectChatSchema } from './chat.schemas.ts'
 import type {
 	IChatRepository,
 	PaginationOptions,
 	TChat,
 	TInsertChat,
 } from './chat.types.ts'
-
-import { db } from '../../data-access/db.ts'
-import { tryCatch } from '../../utils/error-handling/try-catch.ts'
-import { AppError, InternalError, type Result } from '../../utils/errors.ts'
-import { safeValidateSchema } from '../../utils/response-handlers.ts'
-import { chatsTable, selectChatSchema } from './chat.schemas.ts'
 
 /**
  * ChatRepository class that implements the IChatRepository interface
@@ -22,6 +21,78 @@ class ChatRepository implements IChatRepository {
 
 	constructor(database: typeof db = db) {
 		this.db = database
+	}
+
+	/**
+	 * Create a new chat
+	 * @param chatData The chat data to insert
+	 * @returns Result tuple with the created chat object
+	 */
+	public createChat = async (chatData: TInsertChat): Promise<Result<TChat>> => {
+		const [chat, error] = await tryCatch(
+			this.db.insert(chatsTable).values(chatData).returning(),
+			'chatRepository - createChat',
+		)
+
+		if (error) {
+			return [null, error]
+		}
+
+		// If no chat created, return error
+		if (!chat.length) {
+			return [
+				null,
+				new InternalError(
+					'Failed to create chat',
+					'chatRepository - createChat',
+				),
+			]
+		}
+
+		const [createdChat] = chat
+		if (!createdChat) {
+			return [
+				null,
+				new InternalError(
+					'Failed to create chat',
+					'chatRepository - createChat',
+				),
+			]
+		}
+
+		// Validate the returned chat with Zod
+		const [validationResult, validationError] = safeValidateSchema(
+			createdChat,
+			selectChatSchema,
+			'chatRepository - createChat',
+		)
+
+		if (validationError) {
+			return [
+				null,
+				AppError.from(validationError, 'chatRepository - createChat'),
+			]
+		}
+
+		return [validationResult, null]
+	}
+
+	/**
+	 * Delete a chat
+	 * @param id The chat's unique identifier
+	 * @returns Result tuple with void or error
+	 */
+	public deleteChat = async (id: string): Promise<Result<void>> => {
+		const [, error] = await tryCatch(
+			this.db.delete(chatsTable).where(eq(chatsTable.id, id)),
+			'chatRepository - deleteChat',
+		)
+
+		if (error) {
+			return [null, error]
+		}
+
+		return [undefined, null]
 	}
 
 	/**
@@ -128,60 +199,6 @@ class ChatRepository implements IChatRepository {
 	}
 
 	/**
-	 * Create a new chat
-	 * @param chatData The chat data to insert
-	 * @returns Result tuple with the created chat object
-	 */
-	public createChat = async (chatData: TInsertChat): Promise<Result<TChat>> => {
-		const [chat, error] = await tryCatch(
-			this.db.insert(chatsTable).values(chatData).returning(),
-			'chatRepository - createChat',
-		)
-
-		if (error) {
-			return [null, error]
-		}
-
-		// If no chat created, return error
-		if (!chat.length) {
-			return [
-				null,
-				new InternalError(
-					'Failed to create chat',
-					'chatRepository - createChat',
-				),
-			]
-		}
-
-		const [createdChat] = chat
-		if (!createdChat) {
-			return [
-				null,
-				new InternalError(
-					'Failed to create chat',
-					'chatRepository - createChat',
-				),
-			]
-		}
-
-		// Validate the returned chat with Zod
-		const [validationResult, validationError] = safeValidateSchema(
-			createdChat,
-			selectChatSchema,
-			'chatRepository - createChat',
-		)
-
-		if (validationError) {
-			return [
-				null,
-				AppError.from(validationError, 'chatRepository - createChat'),
-			]
-		}
-
-		return [validationResult, null]
-	}
-
-	/**
 	 * Update a chat
 	 * @param id The chat's unique identifier
 	 * @param chatData The chat data to update
@@ -228,14 +245,19 @@ class ChatRepository implements IChatRepository {
 	}
 
 	/**
-	 * Delete a chat
-	 * @param id The chat's unique identifier
+	 * Update chat timestamp
+	 * @param chatId The chat's unique identifier
 	 * @returns Result tuple with void or error
 	 */
-	public deleteChat = async (id: string): Promise<Result<void>> => {
+	public updateChatTimestamp = async (
+		chatId: string,
+	): Promise<Result<void>> => {
 		const [, error] = await tryCatch(
-			this.db.delete(chatsTable).where(eq(chatsTable.id, id)),
-			'chatRepository - deleteChat',
+			this.db
+				.update(chatsTable)
+				.set({ updatedAt: new Date() })
+				.where(eq(chatsTable.id, chatId)),
+			'chatRepository - updateChatTimestamp',
 		)
 
 		if (error) {
@@ -269,29 +291,6 @@ class ChatRepository implements IChatRepository {
 		}
 
 		return [chat.length > 0, null]
-	}
-
-	/**
-	 * Update chat timestamp
-	 * @param chatId The chat's unique identifier
-	 * @returns Result tuple with void or error
-	 */
-	public updateChatTimestamp = async (
-		chatId: string,
-	): Promise<Result<void>> => {
-		const [, error] = await tryCatch(
-			this.db
-				.update(chatsTable)
-				.set({ updatedAt: new Date() })
-				.where(eq(chatsTable.id, chatId)),
-			'chatRepository - updateChatTimestamp',
-		)
-
-		if (error) {
-			return [null, error]
-		}
-
-		return [undefined, null]
 	}
 }
 

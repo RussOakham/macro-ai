@@ -1,11 +1,3 @@
-import type {
-	IVectorRepository,
-	SemanticSearchOptions,
-	SemanticSearchResult,
-	TChatVector,
-	TInsertChatVector,
-} from './chat.types.ts'
-
 import {
 	type AppError,
 	InternalError,
@@ -14,6 +6,13 @@ import {
 import { pino } from '../../utils/logger.ts'
 // oxlint-disable-next-line no-duplicate-imports
 import { type AIService } from './ai.service.ts'
+import type {
+	IVectorRepository,
+	SemanticSearchOptions,
+	SemanticSearchResult,
+	TChatVector,
+	TInsertChatVector,
+} from './chat.types.ts'
 
 const { logger } = pino
 
@@ -169,6 +168,113 @@ export class VectorService {
 	}
 
 	/**
+	 * Delete all embeddings for a specific chat
+	 * @param chatId The chat ID to delete embeddings for
+	 * @returns Result tuple with void or error
+	 */
+	public async deleteChatEmbeddings(chatId: string): Promise<Result<void>> {
+		const [, error] = await this.vectorRepository.deleteVectorsByChatId(chatId)
+		if (error) {
+			logger.error({
+				msg: 'Failed to delete chat embeddings',
+				chatId,
+				error,
+			})
+			return [null, error]
+		}
+
+		logger.info({
+			msg: 'Successfully deleted chat embeddings',
+			chatId,
+		})
+
+		return [undefined, null]
+	}
+
+	/**
+	 * Delete embeddings for a specific message
+	 * @param messageId The message ID to delete embeddings for
+	 * @returns Result tuple with void or error
+	 */
+	public async deleteMessageEmbedding(
+		messageId: string,
+	): Promise<Result<void>> {
+		const [, error] =
+			await this.vectorRepository.deleteVectorsByMessageId(messageId)
+		if (error) {
+			logger.error({
+				msg: 'Failed to delete message embedding',
+				messageId,
+				error,
+			})
+			return [null, error]
+		}
+
+		logger.info({
+			msg: 'Successfully deleted message embedding',
+			messageId,
+		})
+
+		return [undefined, null]
+	}
+
+	/**
+	 * Get embeddings for a specific chat
+	 * @param chatId The chat ID to get embeddings for
+	 * @returns Result tuple with vectors array or error
+	 */
+	public async getChatEmbeddings(
+		chatId: string,
+	): Promise<Result<TChatVector[]>> {
+		const [vectors, error] =
+			await this.vectorRepository.findVectorsByChatId(chatId)
+		if (error) {
+			logger.error({
+				msg: 'Failed to get chat embeddings',
+				chatId,
+				error,
+			})
+			return [null, error]
+		}
+
+		logger.info({
+			msg: 'Successfully retrieved chat embeddings',
+			chatId,
+			vectorCount: vectors.length,
+		})
+
+		return [vectors, null]
+	}
+
+	/**
+	 * Get embeddings for a specific user
+	 * @param userId The user ID to get embeddings for
+	 * @returns Result tuple with vectors array or error
+	 */
+	public async getUserEmbeddings(
+		userId: string,
+	): Promise<Result<TChatVector[]>> {
+		const [vectors, error] =
+			await this.vectorRepository.findVectorsByUserId(userId)
+		if (error) {
+			logger.error({
+				msg: 'Failed to get user embeddings',
+				userId,
+				error,
+			})
+			return [null, error]
+		}
+
+		logger.info({
+			msg: 'Successfully retrieved user embeddings',
+			userId,
+			vectorCount: vectors.length,
+		})
+
+		return [vectors, null]
+	}
+
+	/**
 	 * Perform semantic search across chat messages
 	 * @param options Search options including query, user context, and filters
 	 * @returns Result tuple with search results or error
@@ -222,113 +328,6 @@ export class VectorService {
 		})
 
 		return [results, null]
-	}
-
-	/**
-	 * Delete embeddings for a specific message
-	 * @param messageId The message ID to delete embeddings for
-	 * @returns Result tuple with void or error
-	 */
-	public async deleteMessageEmbedding(
-		messageId: string,
-	): Promise<Result<void>> {
-		const [, error] =
-			await this.vectorRepository.deleteVectorsByMessageId(messageId)
-		if (error) {
-			logger.error({
-				msg: 'Failed to delete message embedding',
-				messageId,
-				error,
-			})
-			return [null, error]
-		}
-
-		logger.info({
-			msg: 'Successfully deleted message embedding',
-			messageId,
-		})
-
-		return [undefined, null]
-	}
-
-	/**
-	 * Delete all embeddings for a specific chat
-	 * @param chatId The chat ID to delete embeddings for
-	 * @returns Result tuple with void or error
-	 */
-	public async deleteChatEmbeddings(chatId: string): Promise<Result<void>> {
-		const [, error] = await this.vectorRepository.deleteVectorsByChatId(chatId)
-		if (error) {
-			logger.error({
-				msg: 'Failed to delete chat embeddings',
-				chatId,
-				error,
-			})
-			return [null, error]
-		}
-
-		logger.info({
-			msg: 'Successfully deleted chat embeddings',
-			chatId,
-		})
-
-		return [undefined, null]
-	}
-
-	/**
-	 * Get embeddings for a specific user
-	 * @param userId The user ID to get embeddings for
-	 * @returns Result tuple with vectors array or error
-	 */
-	public async getUserEmbeddings(
-		userId: string,
-	): Promise<Result<TChatVector[]>> {
-		const [vectors, error] =
-			await this.vectorRepository.findVectorsByUserId(userId)
-		if (error) {
-			logger.error({
-				msg: 'Failed to get user embeddings',
-				userId,
-				error,
-			})
-			return [null, error]
-		}
-
-		logger.info({
-			msg: 'Successfully retrieved user embeddings',
-			userId,
-			vectorCount: vectors.length,
-		})
-
-		return [vectors, null]
-	}
-
-	/**
-	 * Get embeddings for a specific chat
-	 * @param chatId The chat ID to get embeddings for
-	 * @returns Result tuple with vectors array or error
-	 */
-	public async getChatEmbeddings(
-		chatId: string,
-	): Promise<Result<TChatVector[]>> {
-		const [vectors, error] =
-			await this.vectorRepository.findVectorsByChatId(chatId)
-		if (error) {
-			logger.error({
-				msg: 'Failed to get chat embeddings',
-				chatId,
-				error,
-			})
-			return [null, error]
-		}
-
-		logger.info({
-			msg: 'Successfully retrieved chat embeddings',
-			chatId,
-			vectorCount: vectors.length,
-		})
-
-		return [vectors, null]
 	}
 }
 

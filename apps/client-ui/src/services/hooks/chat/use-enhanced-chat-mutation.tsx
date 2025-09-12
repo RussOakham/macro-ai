@@ -14,6 +14,8 @@ import { useChatById } from './use-chat-by-id'
 const apiUrl = import.meta.env.VITE_API_URL
 const apiKey = import.meta.env.VITE_API_KEY
 
+type TChatMessage = UseEnhancedChatReturn['messages'][number]
+
 interface UseEnhancedChatOptions {
 	chatId: string
 	onMessageSent?: (messageId: string) => void
@@ -21,25 +23,23 @@ interface UseEnhancedChatOptions {
 }
 
 interface UseEnhancedChatReturn {
-	messages: {
-		id: string
-		role: 'user' | 'assistant' | 'system' | 'data'
-		content: string
-	}[]
-	input: string
+	chatData: ReturnType<typeof useChatById>['data']
+	error: Error | undefined
 	handleInputChange: (
 		e:
 			| React.ChangeEvent<HTMLInputElement>
 			| React.ChangeEvent<HTMLTextAreaElement>,
 	) => void
 	handleSubmit: (e: React.FormEvent) => Promise<void>
-	status: 'ready' | 'submitted' | 'streaming' | 'error'
-	error: Error | undefined
+	input: string
 	isChatLoading: boolean
-	chatData: ReturnType<typeof useChatById>['data']
+	messages: {
+		content: string
+		id: string
+		role: 'assistant' | 'data' | 'system' | 'user'
+	}[]
+	status: 'error' | 'ready' | 'streaming' | 'submitted'
 }
-
-type TChatMessage = UseEnhancedChatReturn['messages'][number]
 
 /**
  * Enhanced chat hook that integrates @ai-sdk/react useChat with TanStack Query
@@ -66,43 +66,33 @@ const useEnhancedChat = ({
 	// Transform existing messages to AI SDK format
 	const initialMessages =
 		chatData?.data.messages.map((message) => ({
+			content: message.content,
 			id: message.id,
 			role: (['user', 'assistant', 'system'] as const).includes(
-				message.role as 'user' | 'assistant' | 'system',
+				message.role as 'assistant' | 'system' | 'user',
 			)
-				? (message.role as 'user' | 'assistant' | 'system')
+				? (message.role as 'assistant' | 'system' | 'user')
 				: 'user', // fallback to user role
-			content: message.content,
 		})) ?? []
 
 	// Use Vercel's AI SDK useChat hook for streaming
 	// Use chatId as the hook id to ensure separate instances for different chats
 	const chatHook = useChat({
-		id: chatId, // This ensures the hook resets when chatId changes
 		api: `${apiUrl}/chats/${chatId}/stream`,
-		initialMessages,
-		streamProtocol: 'text',
+		credentials: 'include',
 		headers: {
 			...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
 			...(apiKey ? { 'X-API-KEY': apiKey } : {}),
 		},
-		credentials: 'include',
-		onResponse: (response) => {
-			logger.info(
-				{
-					chatId,
-					status: response.status,
-				},
-				'[useEnhancedChat]: Response received',
-			)
-		},
+		id: chatId, // This ensures the hook resets when chatId changes
+		initialMessages,
 		onError: (error) => {
 			// Integrate with our error handling patterns
 			const standardizedError = standardizeError(error)
 			logger.error(
 				{
-					error: standardizedError,
 					chatId,
+					error: standardizedError,
 				},
 				'[useEnhancedChat]: Chat streaming error',
 			)
@@ -112,8 +102,8 @@ const useEnhancedChat = ({
 			logger.info(
 				{
 					chatId,
-					messageId: message.id,
 					contentLength: message.content.length,
+					messageId: message.id,
 				},
 				'[useEnhancedChat]: Message streaming finished',
 			)
@@ -128,20 +118,30 @@ const useEnhancedChat = ({
 				if (error) {
 					logger.error(
 						{
-							error: error.message,
 							chatId,
+							error: error.message,
 							messageId: message.id,
 						},
 						'[useEnhancedChat]: Failed to invalidate chat cache',
 					)
 					throw error
 				}
-				return
+				return undefined
 			})
 
 			// Call optional callback
 			onStreamingComplete?.(message.id, message.content)
 		},
+		onResponse: (response) => {
+			logger.info(
+				{
+					chatId,
+					status: response.status,
+				},
+				'[useEnhancedChat]: Response received',
+			)
+		},
+		streamProtocol: 'text',
 	})
 
 	// Enhanced submit with optimistic updates and error handling
@@ -157,10 +157,10 @@ const useEnhancedChat = ({
 
 			// Create optimistic user message
 			const tempUserMessage = {
-				id: crypto.randomUUID(),
-				role: 'user' as const,
 				content: userMessageContent,
 				createdAt: new Date(),
+				id: crypto.randomUUID(),
+				role: 'user' as const,
 			}
 
 			// Optimistic update for user message in TanStack Query cache
@@ -189,8 +189,8 @@ const useEnhancedChat = ({
 			if (cacheError) {
 				logger.warn(
 					{
-						error: cacheError.message,
 						chatId,
+						error: cacheError.message,
 					},
 					'[useEnhancedChat]: Failed to apply optimistic update',
 				)
@@ -206,8 +206,8 @@ const useEnhancedChat = ({
 				const standardizedError = standardizeError(submitError)
 				logger.error(
 					{
-						error: standardizedError.message,
 						chatId,
+						error: standardizedError.message,
 					},
 					'[useEnhancedChat]: Failed to submit message',
 				)
@@ -223,8 +223,8 @@ const useEnhancedChat = ({
 				if (rollbackError) {
 					logger.error(
 						{
-							error: rollbackError.message,
 							chatId,
+							error: rollbackError.message,
 						},
 						'[useEnhancedChat]: Failed to rollback optimistic update',
 					)
@@ -237,20 +237,20 @@ const useEnhancedChat = ({
 	)
 
 	return {
-		// Expose all useChat properties including all status values:
-		// 'ready', 'submitted', 'streaming', 'error'
-		messages: chatHook.messages,
-		input: chatHook.input,
-		handleInputChange: chatHook.handleInputChange,
-		status: chatHook.status, // Directly exposes AI SDK's useChat status
+		chatData,
 		error: chatHook.error,
-
+		handleInputChange: chatHook.handleInputChange,
 		// Enhanced submit function
 		handleSubmit: enhancedSubmit,
+		input: chatHook.input,
 
 		// Additional state
 		isChatLoading,
-		chatData,
+
+		// Expose all useChat properties including all status values:
+		// 'ready', 'submitted', 'streaming', 'error'
+		messages: chatHook.messages,
+		status: chatHook.status, // Directly exposes AI SDK's useChat status
 	}
 }
 

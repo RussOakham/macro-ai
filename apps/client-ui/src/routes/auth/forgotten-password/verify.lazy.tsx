@@ -29,31 +29,31 @@ import type { ConfirmForgotPasswordRequest } from '@/services/network/auth/post-
 
 const RouteComponent = () => {
 	const navigate = useNavigate({ from: '/auth/forgotten-password/verify' })
-	const { mutateAsync: postForgotPasswordVerify, isPending } =
+	const { isPending, mutateAsync: postForgotPasswordVerify } =
 		usePostForgotPasswordVerify()
 
 	const form = useForm<ConfirmForgotPasswordRequest>({
-		resolver: zodResolver(zConfirmForgotPasswordRequest),
 		defaultValues: {
 			code: '',
+			confirmPassword: '',
 			email: '',
 			newPassword: '',
-			confirmPassword: '',
 		},
+		resolver: zodResolver(zConfirmForgotPasswordRequest),
 	})
 
 	const onSubmit = async ({
 		code,
+		confirmPassword,
 		email,
 		newPassword,
-		confirmPassword,
 	}: ConfirmForgotPasswordRequest) => {
 		try {
 			const response = await postForgotPasswordVerify({
 				code,
+				confirmPassword,
 				email,
 				newPassword,
-				confirmPassword,
 			})
 
 			logger.info(response, 'Forgot password verify success')
@@ -78,7 +78,7 @@ const RouteComponent = () => {
 				</CardHeader>
 				<CardContent>
 					<Form {...form}>
-						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+						<form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
 							<FormField
 								control={form.control}
 								name="code"
@@ -113,8 +113,8 @@ const RouteComponent = () => {
 										<FormLabel>New Password</FormLabel>
 										<FormControl>
 											<Input
-												type="password"
 												placeholder="Enter new password"
+												type="password"
 												{...field}
 											/>
 										</FormControl>
@@ -130,8 +130,8 @@ const RouteComponent = () => {
 										<FormLabel>Confirm New Password</FormLabel>
 										<FormControl>
 											<Input
-												type="password"
 												placeholder="Confirm new password"
+												type="password"
 												{...field}
 											/>
 										</FormControl>
@@ -139,7 +139,7 @@ const RouteComponent = () => {
 									</FormItem>
 								)}
 							/>
-							<Button type="submit" className="w-full" disabled={isPending}>
+							<Button className="w-full" disabled={isPending} type="submit">
 								{isPending ? 'Resetting...' : 'Reset Password'}
 							</Button>
 						</form>
@@ -147,9 +147,9 @@ const RouteComponent = () => {
 				</CardContent>
 				<CardFooter className="flex justify-center">
 					<Button
+						onClick={() => navigate({ to: '/auth/forgotten-password' })}
 						type="button"
 						variant="link"
-						onClick={() => navigate({ to: '/auth/forgotten-password' })}
 					>
 						Resend code
 					</Button>

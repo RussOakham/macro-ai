@@ -54,6 +54,7 @@ export const createMockResponse = (): Partial<Response> => {
 		end,
 		setHeader: vi.fn((name: string, value: string) => {
 			headers[name.toLowerCase()] = value
+			return {} as Response
 		}),
 		removeHeader: vi.fn((name: string) => {
 			delete headers[name.toLowerCase()]

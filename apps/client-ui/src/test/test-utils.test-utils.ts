@@ -26,10 +26,13 @@ import { AxiosHeaders, type AxiosInstance, type AxiosResponse } from 'axios'
 import type { ReactElement } from 'react'
 
 /**
- * Enhanced render result with test context
+ * API test configuration
  */
-export interface EnhancedRenderResult extends RenderResult {
-	testContext: ComponentTestContext
+export interface ApiTestConfig {
+	apiKey: string
+	baseURL: string
+	timeout: number
+	withCredentials: boolean
 }
 import type { RequestHandler } from 'msw'
 import { expect, vi } from 'vitest'
@@ -42,73 +45,70 @@ import { server, setupServerWithHandlers } from './msw-setup'
 // ============================================================================
 
 /**
- * Enhanced API client mock interface
- */
-export interface MockApiClient {
-	instance: AxiosInstance
-	post: ReturnType<typeof vi.fn>
-	get: ReturnType<typeof vi.fn>
-	put: ReturnType<typeof vi.fn>
-	delete: ReturnType<typeof vi.fn>
-	patch: ReturnType<typeof vi.fn>
-}
-
-/**
- * Mock Axios instance interface
- */
-export interface MockAxiosInstance {
-	interceptors: {
-		request: {
-			use: ReturnType<typeof vi.fn>
-			eject: ReturnType<typeof vi.fn>
-		}
-		response: {
-			use: ReturnType<typeof vi.fn>
-			eject: ReturnType<typeof vi.fn>
-		}
-	}
-	defaults: {
-		baseURL: string
-		headers: AxiosHeaders
-		withCredentials: boolean
-	}
-	request: ReturnType<typeof vi.fn>
-	get: ReturnType<typeof vi.fn>
-	post: ReturnType<typeof vi.fn>
-	put: ReturnType<typeof vi.fn>
-	delete: ReturnType<typeof vi.fn>
-	patch: ReturnType<typeof vi.fn>
-	head: ReturnType<typeof vi.fn>
-	options: ReturnType<typeof vi.fn>
-}
-
-/**
  * Authentication state for testing
  */
 export interface AuthTestState {
 	isAuthenticated: boolean
-	user: ReturnType<typeof userFactory.create> | null
-	token: string | null
-	refreshToken: string | null
-}
-
-/**
- * API test configuration
- */
-export interface ApiTestConfig {
-	baseURL: string
-	apiKey: string
-	withCredentials: boolean
-	timeout: number
+	refreshToken: null | string
+	token: null | string
+	user: null | ReturnType<typeof userFactory.create>
 }
 
 /**
  * Component test context
  */
 export interface ComponentTestContext {
-	authState: AuthTestState
 	apiConfig: ApiTestConfig
+	authState: AuthTestState
 	mswHandlers: unknown[]
+}
+
+/**
+ * Enhanced render result with test context
+ */
+export interface EnhancedRenderResult extends RenderResult {
+	testContext: ComponentTestContext
+}
+
+/**
+ * Enhanced API client mock interface
+ */
+export interface MockApiClient {
+	delete: ReturnType<typeof vi.fn>
+	get: ReturnType<typeof vi.fn>
+	instance: AxiosInstance
+	patch: ReturnType<typeof vi.fn>
+	post: ReturnType<typeof vi.fn>
+	put: ReturnType<typeof vi.fn>
+}
+
+/**
+ * Mock Axios instance interface
+ */
+export interface MockAxiosInstance {
+	defaults: {
+		baseURL: string
+		headers: AxiosHeaders
+		withCredentials: boolean
+	}
+	delete: ReturnType<typeof vi.fn>
+	get: ReturnType<typeof vi.fn>
+	head: ReturnType<typeof vi.fn>
+	interceptors: {
+		request: {
+			eject: ReturnType<typeof vi.fn>
+			use: ReturnType<typeof vi.fn>
+		}
+		response: {
+			eject: ReturnType<typeof vi.fn>
+			use: ReturnType<typeof vi.fn>
+		}
+	}
+	options: ReturnType<typeof vi.fn>
+	patch: ReturnType<typeof vi.fn>
+	post: ReturnType<typeof vi.fn>
+	put: ReturnType<typeof vi.fn>
+	request: ReturnType<typeof vi.fn>
 }
 
 // ============================================================================
@@ -128,24 +128,14 @@ export const createMockAxiosInstance = (
 	config: Partial<ApiTestConfig> = {},
 ): MockAxiosInstance => {
 	const defaultConfig: ApiTestConfig = {
-		baseURL: defaultBaseURL,
 		apiKey: defaultApiKey,
-		withCredentials: defaultWithCredentials,
+		baseURL: defaultBaseURL,
 		timeout: defaultTimeout,
+		withCredentials: defaultWithCredentials,
 		...config,
 	}
 
 	return {
-		interceptors: {
-			request: {
-				use: vi.fn(),
-				eject: vi.fn(),
-			},
-			response: {
-				use: vi.fn(),
-				eject: vi.fn(),
-			},
-		},
 		defaults: {
 			baseURL: defaultConfig.baseURL,
 			headers: new AxiosHeaders({
@@ -153,14 +143,24 @@ export const createMockAxiosInstance = (
 			}),
 			withCredentials: defaultConfig.withCredentials,
 		},
-		request: vi.fn(),
+		delete: vi.fn(),
 		get: vi.fn(),
+		head: vi.fn(),
+		interceptors: {
+			request: {
+				eject: vi.fn(),
+				use: vi.fn(),
+			},
+			response: {
+				eject: vi.fn(),
+				use: vi.fn(),
+			},
+		},
+		options: vi.fn(),
+		patch: vi.fn(),
 		post: vi.fn(),
 		put: vi.fn(),
-		delete: vi.fn(),
-		patch: vi.fn(),
-		head: vi.fn(),
-		options: vi.fn(),
+		request: vi.fn(),
 	}
 }
 
@@ -174,12 +174,12 @@ export const createMockApiClient = (
 	const mockAxiosInstance = createMockAxiosInstance(config)
 
 	return {
-		instance: mockAxiosInstance as unknown as AxiosInstance,
-		post: vi.fn(),
-		get: vi.fn(),
-		put: vi.fn(),
 		delete: vi.fn(),
+		get: vi.fn(),
+		instance: mockAxiosInstance as unknown as AxiosInstance,
 		patch: vi.fn(),
+		post: vi.fn(),
+		put: vi.fn(),
 	}
 }
 
@@ -194,12 +194,12 @@ export const createMockApiResponse = <T>(
 	status = 200,
 	headers: Record<string, string> = {},
 ): AxiosResponse<T> => ({
-	data,
-	status,
-	statusText: status === 200 ? 'OK' : 'Error',
-	headers,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 	config: {} as any,
+	data,
+	headers,
+	status,
+	statusText: status === 200 ? 'OK' : 'Error',
 })
 
 /**
@@ -213,12 +213,12 @@ export const createMockApiError = (
 	status = 400,
 	code = 'API_ERROR',
 ): AxiosResponse => ({
-	data: { success: false, error: { message, code, status } },
-	status,
-	statusText: 'Error',
-	headers: {},
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 	config: {} as any,
+	data: { error: { code, message, status }, success: false },
+	headers: {},
+	status,
+	statusText: 'Error',
 })
 
 // ============================================================================
@@ -234,9 +234,9 @@ export const createMockAuthState = (
 ): AuthTestState => {
 	const defaultState: AuthTestState = {
 		isAuthenticated: false,
-		user: null,
-		token: null,
 		refreshToken: null,
+		token: null,
+		user: null,
 	}
 
 	return {
@@ -256,9 +256,9 @@ export const createAuthenticatedUserState = (
 
 	return {
 		isAuthenticated: true,
-		user,
-		token: 'mock-access-token',
 		refreshToken: 'mock-refresh-token',
+		token: 'mock-access-token',
+		user,
 	}
 }
 
@@ -305,11 +305,11 @@ export const createMSWHandlers = {
 	 */
 	auth: (
 		scenarios: {
-			loginSuccess?: boolean
 			loginError?: string
-			refreshSuccess?: boolean
-			refreshError?: string
+			loginSuccess?: boolean
 			logoutSuccess?: boolean
+			refreshError?: string
+			refreshSuccess?: boolean
 		} = {},
 	) => {
 		const authHandlers: unknown[] = []
@@ -327,22 +327,22 @@ export const createMSWHandlers = {
 	},
 
 	/**
-	 * Create handlers for API error scenarios
-	 * @param errorTypes
-	 */
-	errors: (errorTypes: string[] = ['network', 'validation', 'server']) => {
-		return errorHandlers.filter((handler: unknown) =>
-			errorTypes.some((type) => String(handler).includes(type)),
-		)
-	},
-
-	/**
 	 * Create handlers for specific API endpoints
 	 * @param endpoints
 	 */
 	endpoints: (endpoints: string[]) => {
 		return handlers.filter((handler: unknown) =>
 			endpoints.some((endpoint) => String(handler).includes(endpoint)),
+		)
+	},
+
+	/**
+	 * Create handlers for API error scenarios
+	 * @param errorTypes
+	 */
+	errors: (errorTypes: string[] = ['network', 'validation', 'server']) => {
+		return errorHandlers.filter((handler: unknown) =>
+			errorTypes.some((type) => String(handler).includes(type)),
 		)
 	},
 }
@@ -359,14 +359,14 @@ export const createMSWHandlers = {
 export const renderWithProviders = (
 	ui: ReactElement,
 	options: RenderOptions & {
-		authState?: AuthTestState
 		apiConfig?: Partial<ApiTestConfig>
+		authState?: AuthTestState
 		mswHandlers?: unknown[]
 	} = {},
 ): EnhancedRenderResult => {
 	const {
-		authState = createMockAuthState(),
 		apiConfig = {},
+		authState = createMockAuthState(),
 		mswHandlers = [],
 		...renderOptions
 	} = options
@@ -378,14 +378,14 @@ export const renderWithProviders = (
 
 	// Create test context
 	const testContext: ComponentTestContext = {
-		authState,
 		apiConfig: {
-			baseURL: defaultBaseURL,
 			apiKey: defaultApiKey,
-			withCredentials: defaultWithCredentials,
+			baseURL: defaultBaseURL,
 			timeout: defaultTimeout,
+			withCredentials: defaultWithCredentials,
 			...apiConfig,
 		},
+		authState,
 		mswHandlers,
 	}
 
@@ -406,9 +406,9 @@ export const createMockRouterContext = (overrides = {}) => {
 			navigate: vi.fn(),
 			state: {
 				location: {
+					hash: '',
 					pathname: '/test',
 					search: '',
-					hash: '',
 				},
 			},
 		},
@@ -429,10 +429,10 @@ export const clientUITestData = {
 	 * @param overrides
 	 */
 	apiConfig: (overrides: Partial<ApiTestConfig> = {}): ApiTestConfig => ({
-		baseURL: defaultBaseURL,
 		apiKey: defaultApiKey,
-		withCredentials: defaultWithCredentials,
+		baseURL: defaultBaseURL,
 		timeout: defaultTimeout,
+		withCredentials: defaultWithCredentials,
 		...overrides,
 	}),
 
@@ -447,21 +447,7 @@ export const clientUITestData = {
 			userId: user.id,
 			...chatOverrides,
 		})
-		return { user, chat }
-	},
-
-	/**
-	 * Create message data with chat context
-	 * @param chatOverrides
-	 * @param messageOverrides
-	 */
-	messageWithChat: (chatOverrides = {}, messageOverrides = {}) => {
-		const chat = chatFactory.create(chatOverrides)
-		const message = chatFactory.createMessage({
-			chatId: chat.id,
-			...messageOverrides,
-		})
-		return { chat, message }
+		return { chat, user }
 	},
 
 	/**
@@ -479,11 +465,25 @@ export const clientUITestData = {
 		const messages = Array.from({ length: messageCount }, (_, index) =>
 			chatFactory.createMessage({
 				chatId: chat.id,
-				role: index % 2 === 0 ? 'user' : 'assistant',
 				content: `Test message ${String(index + 1)}`,
+				role: index % 2 === 0 ? 'user' : 'assistant',
 			}),
 		)
-		return { user, chat, messages }
+		return { chat, messages, user }
+	},
+
+	/**
+	 * Create message data with chat context
+	 * @param chatOverrides
+	 * @param messageOverrides
+	 */
+	messageWithChat: (chatOverrides = {}, messageOverrides = {}) => {
+		const chat = chatFactory.create(chatOverrides)
+		const message = chatFactory.createMessage({
+			chatId: chat.id,
+			...messageOverrides,
+		})
+		return { chat, message }
 	},
 }
 
@@ -495,6 +495,41 @@ export const clientUITestData = {
  * Enhanced test utilities specific to client-ui
  */
 export const clientUITestUtils = {
+	/**
+	 * Create mock file for file upload testing
+	 * @param name
+	 * @param type
+	 * @param content
+	 */
+	createMockFile: (
+		name = 'test.txt',
+		type = 'text/plain',
+		content = 'test content',
+	) => {
+		const file = new File([content], name, { type })
+		return file
+	},
+
+	/**
+	 * Create mock form data
+	 * @param data
+	 */
+	createMockFormData: (data: Record<string, Blob | string>) => {
+		const formData = new FormData()
+		Object.entries(data).forEach(([key, value]) => {
+			formData.append(key, value)
+		})
+		return formData
+	},
+
+	/**
+	 * Simulate user interaction delay
+	 * @param ms
+	 */
+	simulateUserDelay: async (ms = 100) => {
+		await new Promise((resolve) => setTimeout(resolve, ms))
+	},
+
 	/**
 	 * Wait for API call to complete
 	 * @param mockFn
@@ -516,41 +551,6 @@ export const clientUITestUtils = {
 	 */
 	waitForComponentUpdate: async () => {
 		await new Promise((resolve) => setTimeout(resolve, 100))
-	},
-
-	/**
-	 * Simulate user interaction delay
-	 * @param ms
-	 */
-	simulateUserDelay: async (ms = 100) => {
-		await new Promise((resolve) => setTimeout(resolve, ms))
-	},
-
-	/**
-	 * Create mock file for file upload testing
-	 * @param name
-	 * @param type
-	 * @param content
-	 */
-	createMockFile: (
-		name = 'test.txt',
-		type = 'text/plain',
-		content = 'test content',
-	) => {
-		const file = new File([content], name, { type })
-		return file
-	},
-
-	/**
-	 * Create mock form data
-	 * @param data
-	 */
-	createMockFormData: (data: Record<string, string | Blob>) => {
-		const formData = new FormData()
-		Object.entries(data).forEach(([key, value]) => {
-			formData.append(key, value)
-		})
-		return formData
 	},
 }
 
@@ -587,20 +587,6 @@ export const clientUITestAssertions = {
 	},
 
 	/**
-	 * Assert authentication state
-	 * @param authState
-	 * @param expected
-	 */
-	assertAuthState: (
-		authState: AuthTestState,
-		expected: Partial<AuthTestState>,
-	) => {
-		Object.entries(expected).forEach(([key, value]) => {
-			expect(authState[key as keyof AuthTestState]).toEqual(value)
-		})
-	},
-
-	/**
 	 * Assert API response structure
 	 * @param response
 	 * @param expectedData
@@ -617,6 +603,20 @@ export const clientUITestAssertions = {
 		) {
 			expect((response as { data: unknown }).data).toEqual(expectedData)
 		}
+	},
+
+	/**
+	 * Assert authentication state
+	 * @param authState
+	 * @param expected
+	 */
+	assertAuthState: (
+		authState: AuthTestState,
+		expected: Partial<AuthTestState>,
+	) => {
+		Object.entries(expected).forEach(([key, value]) => {
+			expect(authState[key as keyof AuthTestState]).toEqual(value)
+		})
 	},
 
 	/**
@@ -661,4 +661,4 @@ export const clientUITestAssertions = {
 // Re-export from config-testing
 // ============================================================================
 
-export { userFactory, authFactory, chatFactory, apiResponseFactory, testUtils }
+export { apiResponseFactory, authFactory, chatFactory, testUtils, userFactory }

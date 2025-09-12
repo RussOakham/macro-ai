@@ -22,12 +22,12 @@ import React from 'react'
 // Mock types for testing
 interface MockAuthContext {
 	auth: {
-		user: {
-			id: string
-			email: string
-			name: string
-		} | null
 		isAuthenticated: boolean
+		user: null | {
+			email: string
+			id: string
+			name: string
+		}
 	}
 }
 
@@ -45,26 +45,27 @@ type MockRouterContext = MockAuthContext & Record<string, unknown>
 export const renderWithRouter = async (
 	Component: React.ComponentType,
 	options: {
-		pathPattern: string
-		initialEntry?: string
 		context?: MockRouterContext
+		initialEntry?: string
+		pathPattern: string
 		renderOptions?: RenderOptions
 		uniqueId?: string
 	} = { pathPattern: '/' },
-): Promise<{ router: Router<AnyRoute>; renderResult: RenderResult }> => {
+): Promise<{ renderResult: RenderResult; router: Router<AnyRoute> }> => {
 	const {
+		context = mockUnauthenticatedContext,
 		pathPattern,
 		initialEntry = pathPattern,
-		context = mockUnauthenticatedContext,
 		renderOptions,
 		uniqueId,
 	} = options
 
 	// Root route with minimal Outlet for rendering child routes
+	const testId = uniqueId ? `-${uniqueId}` : ''
 	const rootRoute = createRootRoute({
 		component: () => (
 			<>
-				<div data-testid={`root-layout${uniqueId ? `-${uniqueId}` : ''}`} />
+				<div data-testid={`root-layout${testId}`} />
 				<Outlet />
 			</>
 		),
@@ -72,36 +73,34 @@ export const renderWithRouter = async (
 
 	// Index route so '/' always matches
 	const indexRoute = createRoute({
+		component: () => <div>Index</div>,
 		getParentRoute: () => rootRoute,
 		path: '/',
-		component: () => <div>Index</div>,
 	})
 
 	// Test route mounting the Component at the dynamic path
 	const testRoute = createRoute({
-		getParentRoute: () => rootRoute,
-		path: pathPattern,
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 		component: Component as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+		getParentRoute: () => rootRoute,
+		path: pathPattern,
 	})
 
 	// Create the router instance with memory history
 	const router = createRouter({
-		routeTree: rootRoute.addChildren([indexRoute, testRoute]),
-		history: createMemoryHistory({ initialEntries: [initialEntry] }),
-		defaultPendingMinMs: 0,
 		context,
+		defaultPendingMinMs: 0,
+		history: createMemoryHistory({ initialEntries: [initialEntry] }),
+		routeTree: rootRoute.addChildren([indexRoute, testRoute]),
 	})
 
 	// Render and wait for the route to resolve and the component to mount
 	const renderResult = render(<RouterProvider router={router} />, renderOptions)
 
 	// Wait for router hydration
-	await renderResult.findByTestId(
-		`root-layout${uniqueId ? `-${uniqueId}` : ''}`,
-	)
+	await renderResult.findByTestId(`root-layout${testId}`)
 
-	return { router, renderResult }
+	return { renderResult, router }
 }
 
 /**
@@ -118,24 +117,24 @@ export const renderWithRouter = async (
 export const renderWithRouterLegacy = async (
 	_ui: React.ReactElement,
 	options: {
+		customRoutes?: AnyRoute[]
 		initialLocation?: string
+		renderOptions?: RenderOptions
 		routerContext?: MockRouterContext
 		useGeneratedRoutes?: boolean
-		customRoutes?: AnyRoute[]
-		renderOptions?: RenderOptions
 	} = {},
-): Promise<{ router: unknown; renderResult: RenderResult }> => {
+): Promise<{ renderResult: RenderResult; router: unknown }> => {
 	const {
 		initialLocation = '/',
-		routerContext = mockUnauthenticatedContext,
 		renderOptions,
+		routerContext = mockUnauthenticatedContext,
 	} = options
 
 	// Use the new approach with a simple component
 	return renderWithRouter(() => <div>Test Component</div>, {
-		pathPattern: initialLocation,
-		initialEntry: initialLocation,
 		context: routerContext,
+		initialEntry: initialLocation,
+		pathPattern: initialLocation,
 		renderOptions,
 	})
 }
@@ -153,10 +152,10 @@ export const createMockRoute = (
 ): AnyRoute => {
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 	return createRoute({
-		getParentRoute: () => createRootRoute(),
-		path,
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 		component: component as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+		getParentRoute: () => createRootRoute(),
+		path,
 		...options,
 	} as any) // eslint-disable-line @typescript-eslint/no-explicit-any
 }
@@ -181,19 +180,19 @@ export const ErrorComponent = ({ error }: { error: Error }) => {
  */
 export const mockAuthContext = {
 	auth: {
+		isAuthenticated: true,
 		user: {
-			id: 'test-user-id',
 			email: 'test@example.com',
+			id: 'test-user-id',
 			name: 'Test User',
 		},
-		isAuthenticated: true,
 	},
 }
 
 export const mockUnauthenticatedContext = {
 	auth: {
-		user: null,
 		isAuthenticated: false,
+		user: null,
 	},
 }
 
@@ -205,8 +204,8 @@ export const createAuthenticatedContext = (
 	user = mockAuthContext.auth.user,
 ): MockRouterContext => ({
 	auth: {
-		user,
 		isAuthenticated: true,
+		user,
 	},
 })
 
@@ -221,29 +220,15 @@ export const createUnauthenticatedContext = (): MockRouterContext =>
  */
 export const routerTestUtils = {
 	/**
-	 * Navigate to a route programmatically
-	 * @param router
-	 * @param to
-	 * @param search
-	 */
-	navigateTo: (
-		router: ReturnType<typeof createRouter>,
-		to: string,
-		search?: Record<string, unknown>,
-	): void => {
-		void router.navigate({ to, search })
-	},
-
-	/**
 	 * Get current route information
 	 * @param router
 	 */
 	getCurrentRoute: (router: ReturnType<typeof createRouter>) => ({
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+		params: (router.state.location as any).params as Record<string, string>, // eslint-disable-line @typescript-eslint/no-explicit-any
 		pathname: router.state.location.pathname,
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 		search: router.state.location.search,
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-		params: (router.state.location as any).params as Record<string, string>, // eslint-disable-line @typescript-eslint/no-explicit-any
 	}),
 
 	/**
@@ -260,5 +245,19 @@ export const routerTestUtils = {
 		// Placeholder: if TanStack Router exposes a way to inject loader data,
 		// this can be strongly typed later.
 		console.warn(`mockLoaderData not implemented yet for ${routeId}`, data)
+	},
+
+	/**
+	 * Navigate to a route programmatically
+	 * @param router
+	 * @param to
+	 * @param search
+	 */
+	navigateTo: (
+		router: ReturnType<typeof createRouter>,
+		to: string,
+		search?: Record<string, unknown>,
+	): void => {
+		void router.navigate({ search, to })
 	},
 }

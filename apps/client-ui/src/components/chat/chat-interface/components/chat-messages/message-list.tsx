@@ -8,11 +8,11 @@ import { ChatEmptyState } from '../chat-empty-state/chat-empty-state'
 
 interface MessageListProps extends React.ComponentPropsWithoutRef<'div'> {
 	messages: {
-		id: string
-		role: 'user' | 'assistant' | 'system' | 'data'
 		content: string
+		id: string
+		role: 'assistant' | 'data' | 'system' | 'user'
 	}[]
-	status: 'ready' | 'submitted' | 'streaming' | 'error'
+	status: 'error' | 'ready' | 'streaming' | 'submitted'
 }
 
 /**
@@ -20,9 +20,9 @@ interface MessageListProps extends React.ComponentPropsWithoutRef<'div'> {
  * Renders messages, loading states, and empty state
  */
 const MessageList = ({
+	className,
 	messages,
 	status,
-	className,
 	...props
 }: MessageListProps): React.JSX.Element => {
 	// Show empty state when no messages and not processing

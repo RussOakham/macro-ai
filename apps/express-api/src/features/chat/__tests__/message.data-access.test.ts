@@ -17,11 +17,10 @@ vi.mock('../../../utils/response-handlers.ts', () => ({
 	safeValidateSchema: vi.fn(),
 }))
 
-import type { TChatMessage, TInsertChatMessage } from '../chat.types.ts'
-
 // Import after mocking
 import { tryCatch } from '../../../utils/error-handling/try-catch.ts'
 import { safeValidateSchema } from '../../../utils/response-handlers.ts'
+import type { TChatMessage, TInsertChatMessage } from '../chat.types.ts'
 // Import the repository instances to test
 import { messageRepository } from '../message.data-access.ts'
 

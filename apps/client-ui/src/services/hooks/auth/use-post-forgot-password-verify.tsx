@@ -7,15 +7,15 @@ const usePostForgotPasswordVerify = () => {
 	return useMutation({
 		mutationFn: async ({
 			code,
+			confirmPassword,
 			email,
 			newPassword,
-			confirmPassword,
 		}: ConfirmForgotPasswordRequest) => {
 			const response = await postForgotPasswordVerify({
 				code,
+				confirmPassword,
 				email,
 				newPassword,
-				confirmPassword,
 			})
 			return response
 		},

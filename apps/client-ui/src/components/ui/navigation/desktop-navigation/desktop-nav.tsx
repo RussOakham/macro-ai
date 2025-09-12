@@ -24,10 +24,10 @@ const DesktopNav = ({
 					<NavigationMenuList>
 						<NavigationMenuItem asChild>
 							<Link
-								to="/"
 								className={navigationMenuTriggerStyle({
 									className: '[&.active]:font-bold',
 								})}
+								to="/"
 							>
 								Home
 							</Link>
@@ -35,10 +35,10 @@ const DesktopNav = ({
 						{isAuthenticated && (
 							<NavigationMenuItem asChild>
 								<Link
-									to="/chat"
 									className={navigationMenuTriggerStyle({
 										className: '[&.active]:font-bold',
 									})}
+									to="/chat"
 								>
 									Chat
 								</Link>

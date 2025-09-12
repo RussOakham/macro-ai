@@ -1,10 +1,10 @@
 import { Loader2, Shield } from 'lucide-react'
 
 interface AuthLoadingProps {
+	className?: string
 	message?: string
 	showIcon?: boolean
-	size?: 'sm' | 'md' | 'lg'
-	className?: string
+	size?: 'lg' | 'md' | 'sm'
 }
 
 /**
@@ -18,33 +18,33 @@ interface AuthLoadingProps {
  * - Configurable size and messaging
  */
 const AuthLoading: React.FC<AuthLoadingProps> = ({
+	className = '',
 	message = 'Authenticating...',
 	showIcon = true,
 	size = 'md',
-	className = '',
 }) => {
 	// Size configurations
 	const sizeConfig = {
-		sm: {
-			spinner: 'h-6 w-6',
-			icon: 'h-5 w-5',
-			text: 'text-sm',
-			spacing: 'mb-2',
-			gap: 'gap-2',
+		lg: {
+			gap: 'gap-4',
+			icon: 'h-8 w-8',
+			spacing: 'mb-6',
+			spinner: 'h-10 w-10',
+			text: 'text-lg',
 		},
 		md: {
-			spinner: 'h-8 w-8',
-			icon: 'h-6 w-6',
-			text: 'text-base',
-			spacing: 'mb-4',
 			gap: 'gap-3',
+			icon: 'h-6 w-6',
+			spacing: 'mb-4',
+			spinner: 'h-8 w-8',
+			text: 'text-base',
 		},
-		lg: {
-			spinner: 'h-10 w-10',
-			icon: 'h-8 w-8',
-			text: 'text-lg',
-			spacing: 'mb-6',
-			gap: 'gap-4',
+		sm: {
+			gap: 'gap-2',
+			icon: 'h-5 w-5',
+			spacing: 'mb-2',
+			spinner: 'h-6 w-6',
+			text: 'text-sm',
 		},
 	}
 

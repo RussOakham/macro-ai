@@ -9,7 +9,7 @@ function getBaseURL(): string {
 	if (typeof window !== 'undefined') {
 		// Browser environment - use import.meta.env or fallback
 		const meta = import.meta as {
-			env?: { VITE_API_URL?: string; VITE_API_BASE_URL?: string }
+			env?: { VITE_API_BASE_URL?: string; VITE_API_URL?: string }
 		}
 		return (
 			meta.env?.VITE_API_URL ??
@@ -34,16 +34,16 @@ export const createClientConfig: CreateClientConfig = (config) => ({
 
 	// Default headers
 	headers: {
-		'Content-Type': 'application/json',
 		Accept: 'application/json',
+		'Content-Type': 'application/json',
 		...config?.headers,
 	},
 
-	// Timeout configuration
-	timeout: 30000, // 30 seconds
-
 	// Response type
 	responseType: 'json',
+
+	// Timeout configuration
+	timeout: 30000, // 30 seconds
 
 	// Validate status (only consider 2xx as successful)
 	validateStatus: (status) => status >= 200 && status < 300,

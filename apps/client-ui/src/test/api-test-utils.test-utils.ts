@@ -9,7 +9,7 @@
 // Import MSW utilities from our new setup
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import MockAdapter from 'axios-mock-adapter'
-import { http, HttpResponse, type HttpHandler } from 'msw'
+import { http, type HttpHandler, HttpResponse } from 'msw'
 import { expect, vi } from 'vitest'
 
 import { server, setupServerWithHandlers } from './msw-setup'
@@ -28,6 +28,30 @@ import {
 // ============================================================================
 
 /**
+ * API test scenario with enhanced options
+ */
+export interface EnhancedApiCallScenario {
+	data?: unknown
+	delay?: number
+	expectedError?: string
+	expectedResponse?: unknown
+	headers?: Record<string, string>
+	method: 'DELETE' | 'GET' | 'PATCH' | 'POST' | 'PUT'
+	status?: number
+	times?: number // How many times this scenario should match
+	url: RegExp | string
+}
+
+/**
+ * Interceptor test configuration
+ */
+export interface InterceptorTestConfig {
+	errorInterceptor?: boolean
+	requestInterceptor?: boolean
+	responseInterceptor?: boolean
+}
+
+/**
  * Mock adapter configuration
  */
 export interface MockAdapterConfig {
@@ -36,47 +60,23 @@ export interface MockAdapterConfig {
 }
 
 /**
- * API test scenario with enhanced options
- */
-export interface EnhancedApiCallScenario {
-	url: string | RegExp
-	method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
-	data?: unknown
-	headers?: Record<string, string>
-	expectedResponse?: unknown
-	expectedError?: string
-	status?: number
-	delay?: number
-	times?: number // How many times this scenario should match
-}
-
-/**
  * MSW handler configuration
  */
 export interface MSWHandlerConfig {
 	baseURL?: string
-	scenarios?: EnhancedApiCallScenario[]
 	customHandlers?: HttpHandler[]
-}
-
-/**
- * Interceptor test configuration
- */
-export interface InterceptorTestConfig {
-	requestInterceptor?: boolean
-	responseInterceptor?: boolean
-	errorInterceptor?: boolean
+	scenarios?: EnhancedApiCallScenario[]
 }
 
 /**
  * Token refresh test configuration
  */
 export interface TokenRefreshTestConfig {
-	shouldSucceed: boolean
 	accessToken?: string
-	refreshToken?: string
-	errorMessage?: string
 	delay?: number
+	errorMessage?: string
+	refreshToken?: string
+	shouldSucceed: boolean
 }
 
 // ============================================================================
@@ -116,17 +116,17 @@ export const setupMockAdapter = (
 	// Apply scenarios to mock adapter
 	scenarios.forEach((scenario) => {
 		const {
-			url,
-			expectedResponse,
-			expectedError,
-			status = 200,
 			delay = 0,
+			expectedError,
+			expectedResponse,
+			status = 200,
+			url,
 		} = scenario
 
 		if (expectedError) {
 			mockAdapter.onAny(url).reply(status, { error: expectedError })
 		} else {
-			const response = expectedResponse ?? { success: true, data: {} }
+			const response = expectedResponse ?? { data: {}, success: true }
 			mockAdapter.onAny(url).reply(status, response)
 		}
 
@@ -135,7 +135,7 @@ export const setupMockAdapter = (
 			mockAdapter.onAny(url).reply(() => {
 				return new Promise((resolve) => {
 					setTimeout(() => {
-						resolve([status, expectedResponse ?? { success: true, data: {} }])
+						resolve([status, expectedResponse ?? { data: {}, success: true }])
 					}, delay)
 				})
 			})
@@ -153,11 +153,11 @@ export const setupMockAdapter = (
 export const createMockApiClientWithAdapter = (
 	scenarios: EnhancedApiCallScenario[] = [],
 	config: MockAdapterConfig = {},
-): { client: MockApiClient; adapter: MockAdapter } => {
+): { adapter: MockAdapter; client: MockApiClient } => {
 	const mockClient = createMockApiClient()
 	const mockAdapter = setupMockAdapter(mockClient.instance, scenarios, config)
 
-	return { client: mockClient, adapter: mockAdapter }
+	return { adapter: mockAdapter, client: mockClient }
 }
 
 // ============================================================================
@@ -171,18 +171,18 @@ export const createMockApiClientWithAdapter = (
 export const createDynamicMSWHandlers = (config: MSWHandlerConfig = {}) => {
 	const {
 		baseURL = 'http://localhost:3000',
-		scenarios = [],
 		customHandlers = [],
+		scenarios = [],
 	} = config
 
 	const dynamicHandlers = scenarios.map((scenario) => {
 		const {
-			url,
-			method,
-			expectedResponse,
-			expectedError,
-			status = 200,
 			delay = 0,
+			expectedError,
+			expectedResponse,
+			method,
+			status = 200,
+			url,
 		} = scenario
 
 		// Convert string URL to MSW pattern
@@ -190,11 +190,11 @@ export const createDynamicMSWHandlers = (config: MSWHandlerConfig = {}) => {
 
 		// Create handler based on method
 		const handlerMap = {
+			DELETE: http.delete,
 			GET: http.get,
+			PATCH: http.patch,
 			POST: http.post,
 			PUT: http.put,
-			DELETE: http.delete,
-			PATCH: http.patch,
 		}
 
 		const handler = handlerMap[method]
@@ -202,14 +202,14 @@ export const createDynamicMSWHandlers = (config: MSWHandlerConfig = {}) => {
 		if (expectedError) {
 			return handler(urlPattern, () => {
 				return HttpResponse.json(
-					{ success: false, error: { message: expectedError } },
+					{ error: { message: expectedError }, success: false },
 					{ status },
 				)
 			})
 		}
 
 		return handler(urlPattern, () => {
-			const response = expectedResponse ?? { success: true, data: {} }
+			const response = expectedResponse ?? { data: {}, success: true }
 
 			if (delay > 0) {
 				return new Promise((resolve) => {
@@ -238,7 +238,7 @@ export const setupDynamicMSWServer = (config: MSWHandlerConfig = {}) => {
 		setupServerWithHandlers(allHandlers)
 	}
 
-	return { server, handlers: allHandlers }
+	return { handlers: allHandlers, server }
 }
 
 // ============================================================================
@@ -257,11 +257,11 @@ export const createHybridTestSetup = (
 	axiosInstance: AxiosInstance,
 	config: {
 		axiosScenarios?: EnhancedApiCallScenario[]
-		mswConfig?: MSWHandlerConfig
 		mockAdapterConfig?: MockAdapterConfig
+		mswConfig?: MSWHandlerConfig
 	} = {},
 ) => {
-	const { axiosScenarios = [], mswConfig = {}, mockAdapterConfig = {} } = config
+	const { axiosScenarios = [], mockAdapterConfig = {}, mswConfig = {} } = config
 
 	// Setup axios mock adapter
 	const mockAdapter = setupMockAdapter(
@@ -275,14 +275,14 @@ export const createHybridTestSetup = (
 	const mswSetup = setupDynamicMSWServer(mswConfig)
 
 	return {
-		mockAdapter,
-		mswServer: mswSetup.server,
-
-		mswHandlers: mswSetup.handlers,
 		cleanup: () => {
 			mockAdapter.restore()
 			server.resetHandlers()
 		},
+		mockAdapter,
+
+		mswHandlers: mswSetup.handlers,
+		mswServer: mswSetup.server,
 	}
 }
 
@@ -300,16 +300,20 @@ export const createMockInterceptors = () => {
 	const errorInterceptor = vi.fn()
 
 	return {
+		errorInterceptor,
 		request: {
+			eject: vi.fn(),
 			use: vi
 				.fn()
 				.mockImplementation((onFulfilled: (value: unknown) => unknown) => {
 					requestInterceptor.mockImplementation(onFulfilled)
 					return 0 // Mock interceptor ID
 				}),
-			eject: vi.fn(),
 		},
+		// Expose the actual mock functions for testing
+		requestInterceptor,
 		response: {
+			eject: vi.fn(),
 			use: vi
 				.fn()
 				.mockImplementation(
@@ -324,12 +328,8 @@ export const createMockInterceptors = () => {
 						return 1 // Mock interceptor ID
 					},
 				),
-			eject: vi.fn(),
 		},
-		// Expose the actual mock functions for testing
-		requestInterceptor,
 		responseInterceptor,
-		errorInterceptor,
 	}
 }
 
@@ -359,6 +359,7 @@ export const createMockAxiosWithInterceptors = (
 	config: InterceptorTestConfig = {},
 ): MockAxiosInstance => {
 	// Use config parameter to avoid unused variable warning
+	// eslint-disable-next-line sonarjs/void-use
 	void config
 	const mockInstance = createMockAxiosInstance()
 	const mockInterceptors = createMockInterceptors()
@@ -406,16 +407,16 @@ export const createMockSharedRefreshPromise = () => {
 			accessToken: 'refreshed-access-token',
 			refreshToken: 'refreshed-refresh-token',
 		}),
-		resolve: vi.fn(),
 		reject: vi.fn(),
+		resolve: vi.fn(),
 	}
 
 	return {
-		setSharedRefreshPromise: vi.fn(),
 		clearSharedRefreshPromise: vi.fn(),
 		getSharedRefreshPromise: vi.fn().mockReturnValue(mockPromise.promise),
-		waitForRefreshCompletion: vi.fn().mockResolvedValue(undefined),
 		mockPromise,
+		setSharedRefreshPromise: vi.fn(),
+		waitForRefreshCompletion: vi.fn().mockResolvedValue(undefined),
 	}
 }
 
@@ -443,14 +444,14 @@ export const testApiCallScenarios = async (
 		for (const scenario of scenarios) {
 			try {
 				const response = await apiClient.request({
-					url: scenario.url as string,
-					method: scenario.method,
 					data: scenario.data,
 					headers: scenario.headers,
+					method: scenario.method,
+					url: scenario.url as string,
 				})
-				results.push({ scenario, result: response, error: null })
+				results.push({ error: null, result: response, scenario })
 			} catch (error) {
-				results.push({ scenario, result: null, error })
+				results.push({ error, result: null, scenario })
 			}
 		}
 
@@ -462,14 +463,14 @@ export const testApiCallScenarios = async (
 		for (const scenario of scenarios) {
 			try {
 				const response = await apiClient.request({
-					url: scenario.url as string,
-					method: scenario.method,
 					data: scenario.data,
 					headers: scenario.headers,
+					method: scenario.method,
+					url: scenario.url as string,
 				})
-				results.push({ scenario, result: response, error: null })
+				results.push({ error: null, result: response, scenario })
 			} catch (error) {
-				results.push({ scenario, result: null, error })
+				results.push({ error, result: null, scenario })
 			}
 		}
 
@@ -484,21 +485,21 @@ export const testApiCallScenarios = async (
  */
 export const createTrackingMockApiClient = (): MockApiClient & {
 	callHistory: {
-		method: string
-		url: string
 		data?: unknown
 		headers?: Record<string, string>
+		method: string
 		timestamp: number
+		url: string
 	}[]
 	clearHistory: () => void
 } => {
 	const mockClient = createMockApiClient()
 	const callHistory: {
-		method: string
-		url: string
 		data?: unknown
 		headers?: Record<string, string>
+		method: string
 		timestamp: number
+		url: string
 	}[] = []
 
 	const trackCall = (
@@ -508,11 +509,11 @@ export const createTrackingMockApiClient = (): MockApiClient & {
 		headers?: Record<string, string>,
 	) => {
 		callHistory.push({
-			method,
-			url,
 			data,
 			headers,
+			method,
 			timestamp: Date.now(),
+			url,
 		})
 	}
 
@@ -525,7 +526,7 @@ export const createTrackingMockApiClient = (): MockApiClient & {
 				undefined,
 				config?.headers as Record<string, string>,
 			)
-			return Promise.resolve(createMockApiResponse({ url, method: 'GET' }))
+			return Promise.resolve(createMockApiResponse({ method: 'GET', url }))
 		},
 	)
 
@@ -533,7 +534,7 @@ export const createTrackingMockApiClient = (): MockApiClient & {
 		(url: string, data?: unknown, config?: AxiosRequestConfig) => {
 			trackCall('POST', url, data, config?.headers as Record<string, string>)
 			return Promise.resolve(
-				createMockApiResponse({ url, method: 'POST', data }),
+				createMockApiResponse({ data, method: 'POST', url }),
 			)
 		},
 	)
@@ -542,7 +543,7 @@ export const createTrackingMockApiClient = (): MockApiClient & {
 		(url: string, data?: unknown, config?: AxiosRequestConfig) => {
 			trackCall('PUT', url, data, config?.headers as Record<string, string>)
 			return Promise.resolve(
-				createMockApiResponse({ url, method: 'PUT', data }),
+				createMockApiResponse({ data, method: 'PUT', url }),
 			)
 		},
 	)
@@ -555,7 +556,7 @@ export const createTrackingMockApiClient = (): MockApiClient & {
 				undefined,
 				config?.headers as Record<string, string>,
 			)
-			return Promise.resolve(createMockApiResponse({ url, method: 'DELETE' }))
+			return Promise.resolve(createMockApiResponse({ method: 'DELETE', url }))
 		},
 	)
 
@@ -563,7 +564,7 @@ export const createTrackingMockApiClient = (): MockApiClient & {
 		(url: string, data?: unknown, config?: AxiosRequestConfig) => {
 			trackCall('PATCH', url, data, config?.headers as Record<string, string>)
 			return Promise.resolve(
-				createMockApiResponse({ url, method: 'PATCH', data }),
+				createMockApiResponse({ data, method: 'PATCH', url }),
 			)
 		},
 	)
@@ -585,12 +586,12 @@ export const createTrackingMockApiClient = (): MockApiClient & {
  * Create common network error scenarios
  */
 export const createNetworkErrorScenarios = () => ({
-	timeout: new Error('Request timeout'),
-	networkError: new Error('Network Error'),
-	serverError: createMockApiError('Internal Server Error', 500, 'SERVER_ERROR'),
-	unauthorized: createMockApiError('Unauthorized', 401, 'UNAUTHORIZED'),
 	forbidden: createMockApiError('Forbidden', 403, 'FORBIDDEN'),
+	networkError: new Error('Network Error'),
 	notFound: createMockApiError('Not Found', 404, 'NOT_FOUND'),
+	serverError: createMockApiError('Internal Server Error', 500, 'SERVER_ERROR'),
+	timeout: new Error('Request timeout'),
+	unauthorized: createMockApiError('Unauthorized', 401, 'UNAUTHORIZED'),
 	validationError: createMockApiError(
 		'Validation Error',
 		422,
@@ -605,7 +606,7 @@ export const createNetworkErrorScenarios = () => ({
  */
 export const testErrorHandling = async (
 	mockClient: MockApiClient,
-	errorScenarios: Record<string, Error | AxiosResponse>,
+	errorScenarios: Record<string, AxiosResponse | Error>,
 ) => {
 	const results = []
 
@@ -622,12 +623,12 @@ export const testErrorHandling = async (
 
 		try {
 			await mockClient.get('/test')
-			results.push({ scenario: scenarioName, handled: false, error: null })
+			results.push({ error: null, handled: false, scenario: scenarioName })
 		} catch (caughtError) {
 			results.push({
-				scenario: scenarioName,
-				handled: true,
 				error: caughtError,
+				handled: true,
+				scenario: scenarioName,
 			})
 		}
 	}
@@ -647,31 +648,31 @@ export const createAuthTestScenarios = (
 	baseURL = 'http://localhost:3000',
 ): EnhancedApiCallScenario[] => [
 	{
-		url: `${baseURL}/auth/login`,
-		method: 'POST',
 		expectedResponse: {
-			success: true,
 			data: {
-				user: { id: '1', email: 'test@example.com', name: 'Test User' },
 				tokens: { accessToken: 'mock-token', refreshToken: 'mock-refresh' },
+				user: { email: 'test@example.com', id: '1', name: 'Test User' },
 			},
-		},
-		status: 200,
-	},
-	{
-		url: `${baseURL}/auth/refresh`,
-		method: 'POST',
-		expectedResponse: {
 			success: true,
-			data: { accessToken: 'new-token', refreshToken: 'new-refresh' },
 		},
+		method: 'POST',
 		status: 200,
+		url: `${baseURL}/auth/login`,
 	},
 	{
-		url: `${baseURL}/auth/logout`,
+		expectedResponse: {
+			data: { accessToken: 'new-token', refreshToken: 'new-refresh' },
+			success: true,
+		},
 		method: 'POST',
-		expectedResponse: { success: true, data: { message: 'Logged out' } },
 		status: 200,
+		url: `${baseURL}/auth/refresh`,
+	},
+	{
+		expectedResponse: { data: { message: 'Logged out' }, success: true },
+		method: 'POST',
+		status: 200,
+		url: `${baseURL}/auth/logout`,
 	},
 ]
 
@@ -683,29 +684,29 @@ export const createErrorTestScenarios = (
 	baseURL = 'http://localhost:3000',
 ): EnhancedApiCallScenario[] => [
 	{
-		url: `${baseURL}/network-error`,
-		method: 'GET',
 		expectedError: 'Network Error',
+		method: 'GET',
 		status: 0,
+		url: `${baseURL}/network-error`,
 	},
 	{
-		url: `${baseURL}/server-error`,
-		method: 'GET',
 		expectedError: 'Internal Server Error',
+		method: 'GET',
 		status: 500,
+		url: `${baseURL}/server-error`,
 	},
 	{
-		url: `${baseURL}/unauthorized`,
-		method: 'GET',
 		expectedError: 'Unauthorized',
+		method: 'GET',
 		status: 401,
+		url: `${baseURL}/unauthorized`,
 	},
 	{
-		url: `${baseURL}/timeout`,
-		method: 'GET',
-		expectedError: 'Request timeout',
-		status: 408,
 		delay: 10000, // 10 second delay to simulate timeout
+		expectedError: 'Request timeout',
+		method: 'GET',
+		status: 408,
+		url: `${baseURL}/timeout`,
 	},
 ]
 
@@ -717,17 +718,17 @@ export const createPerformanceTestScenarios = (
 	baseURL = 'http://localhost:3000',
 ): EnhancedApiCallScenario[] => [
 	{
-		url: `${baseURL}/fast-endpoint`,
-		method: 'GET',
-		expectedResponse: { success: true, data: { message: 'Fast response' } },
-		status: 200,
 		delay: 100, // 100ms delay
+		expectedResponse: { data: { message: 'Fast response' }, success: true },
+		method: 'GET',
+		status: 200,
+		url: `${baseURL}/fast-endpoint`,
 	},
 	{
-		url: `${baseURL}/slow-endpoint`,
-		method: 'GET',
-		expectedResponse: { success: true, data: { message: 'Slow response' } },
-		status: 200,
 		delay: 2000, // 2 second delay
+		expectedResponse: { data: { message: 'Slow response' }, success: true },
+		method: 'GET',
+		status: 200,
+		url: `${baseURL}/slow-endpoint`,
 	},
 ]

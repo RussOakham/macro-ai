@@ -47,7 +47,6 @@ import type {
 	TChatVector,
 	TInsertChatVector,
 } from '../chat.types.ts'
-
 import { vectorRepository } from '../vector.data-access.ts'
 import { VectorService } from '../vector.service.ts'
 

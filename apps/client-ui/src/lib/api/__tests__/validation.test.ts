@@ -142,12 +142,12 @@ describe('API Client Validation', () => {
 			// Test both clients with real HTTP requests
 			const [apiResponse, noCredsResponse] = await Promise.all([
 				apiClient.get({
-					url: '/health',
 					baseURL: 'http://localhost:3000',
+					url: '/health',
 				}),
 				apiClientWithoutCredentials.get({
-					url: '/health',
 					baseURL: 'http://localhost:3000',
+					url: '/health',
 				}),
 			])
 
@@ -171,8 +171,8 @@ describe('API Client Validation', () => {
 				http.post('http://localhost:3000/auth/login', () => {
 					return HttpResponse.json(
 						{
-							message: 'Validation Failed',
 							details: { field: 'email', message: 'Invalid email format' },
+							message: 'Validation Failed',
 						},
 						{ status: 400 },
 					)
@@ -182,9 +182,9 @@ describe('API Client Validation', () => {
 			// Test validation error handling
 			try {
 				await apiClient.post({
-					url: '/auth/login',
 					baseURL: 'http://localhost:3000',
 					data: { email: 'invalid-email' }, // Missing password
+					url: '/auth/login',
 				})
 				expect.fail('Expected validation error')
 			} catch (error: unknown) {
@@ -210,8 +210,8 @@ describe('API Client Validation', () => {
 			// Test that interceptors are working by making a request that should trigger 401
 			try {
 				await apiClient.get({
-					url: '/protected',
 					baseURL: 'http://localhost:3000',
+					url: '/protected',
 				})
 				expect.fail('Expected 401 error')
 			} catch (error: unknown) {
@@ -231,11 +231,11 @@ describe('API Client Validation', () => {
 					const { headers } = request
 					return HttpResponse.json(
 						{
-							message: 'Headers received',
 							headers: {
-								'x-api-key': headers.get('X-API-KEY'),
 								'content-type': headers.get('Content-Type'),
+								'x-api-key': headers.get('X-API-KEY'),
 							},
+							message: 'Headers received',
 						},
 						{ status: 200 },
 					)
@@ -244,8 +244,8 @@ describe('API Client Validation', () => {
 
 			// Test that headers are properly set
 			const response = await apiClient.get({
-				url: '/headers-test',
 				baseURL: 'http://localhost:3000',
+				url: '/headers-test',
 			})
 
 			expect(response.status).toBe(200)
@@ -295,9 +295,9 @@ describe('API Client Validation', () => {
 			// Test timeout handling
 			try {
 				await apiClient.get({
-					url: '/timeout',
 					baseURL: 'http://localhost:3000',
 					timeout: 50, // 50ms timeout
+					url: '/timeout',
 				})
 				expect.fail('Expected timeout error')
 			} catch (error: unknown) {

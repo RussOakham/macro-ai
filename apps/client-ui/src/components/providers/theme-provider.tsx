@@ -9,13 +9,13 @@ interface ThemeProviderProps {
 }
 
 interface ThemeProviderState {
-	theme: Theme
 	setTheme: (theme: Theme) => void
+	theme: Theme
 }
 
 const initialState: ThemeProviderState = {
-	theme: 'system',
 	setTheme: () => null,
+	theme: 'system',
 }
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
@@ -60,7 +60,6 @@ const ThemeProvider = ({
 	}, [theme])
 
 	const value = {
-		theme,
 		setTheme: (theme: Theme) => {
 			if (!theme) {
 				return
@@ -68,6 +67,7 @@ const ThemeProvider = ({
 			localStorage.setItem(storageKey, theme)
 			setTheme(theme)
 		},
+		theme,
 	}
 
 	return (
@@ -79,11 +79,6 @@ const ThemeProvider = ({
 
 const useTheme = () => {
 	const context = useContext(ThemeProviderContext)
-
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-	if (context === undefined) {
-		throw new Error('useTheme must be used within a ThemeProvider')
-	}
 
 	return context
 }

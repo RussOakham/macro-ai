@@ -20,6 +20,16 @@ const useCreateChatMutation = () => {
 			const response = await postCreateChat({ title })
 			return response
 		},
+		onError: (error) => {
+			// Error handling is managed by the component using this hook
+			// Following the pattern from existing auth mutations
+			logger.error(
+				{
+					error,
+				},
+				'[useCreateChatMutation]: unable to create chat',
+			)
+		},
 		onSuccess: async (data) => {
 			// Invalidate and refetch chat list queries to include the new chat
 			await queryClient.invalidateQueries({
@@ -39,16 +49,6 @@ const useCreateChatMutation = () => {
 					dataWithEmptyMessages,
 				)
 			}
-		},
-		onError: (error) => {
-			// Error handling is managed by the component using this hook
-			// Following the pattern from existing auth mutations
-			logger.error(
-				{
-					error,
-				},
-				'[useCreateChatMutation]: unable to create chat',
-			)
 		},
 	})
 }

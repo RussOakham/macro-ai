@@ -2,36 +2,36 @@
 export {
 	commonTestConfig,
 	integrationTestTimeouts,
-	unitTestTimeouts,
 	reactTestConfig,
+	unitTestTimeouts,
 } from './config.js'
-
-// Test data factories
-export {
-	userFactory,
-	authFactory,
-	chatFactory,
-	apiResponseFactory,
-	dbFactory,
-	testUtils,
-} from './test-factories.js'
 
 // MSW (Mock Service Worker) setup
 export {
-	handlers,
 	authHandlers,
-	userHandlers,
 	chatHandlers,
 	errorHandlers,
+	handlers,
+	userHandlers,
 } from './msw-handlers.js'
 
 export {
-	server,
-	startServer,
-	stopServer,
 	resetServer,
-	startWorker,
-	stopWorker,
 	resetWorker,
+	server,
 	setupServer,
+	startServer,
+	startWorker,
+	stopServer,
+	stopWorker,
 } from './msw-setup.js'
+
+// Test data factories
+export {
+	apiResponseFactory,
+	authFactory,
+	chatFactory,
+	dbFactory,
+	testUtils,
+	userFactory,
+} from './test-factories.js'

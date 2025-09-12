@@ -19,7 +19,7 @@ const RootComponent = () => {
 			suppressHydrationWarning
 		>
 			<div className="relative flex h-full flex-col">
-				<header id="macro-ai-header" className="container flex-shrink-0">
+				<header className="container flex-shrink-0" id="macro-ai-header">
 					<DesktopNav />
 				</header>
 
@@ -29,9 +29,9 @@ const RootComponent = () => {
 						<div className="h-full">
 							<Outlet />
 							<Toaster
-								position="bottom-left"
-								duration={8000}
 								closeButton
+								duration={8000}
+								position="bottom-left"
 								richColors
 							/>
 						</div>
@@ -39,7 +39,7 @@ const RootComponent = () => {
 				</main>
 				<hr className="flex-shrink-0" />
 
-				<footer id="marco-ai-footer" className="container flex-shrink-0">
+				<footer className="container flex-shrink-0" id="marco-ai-footer">
 					<div className="p-2 flex justify-between">
 						<p className="p-2">Footer</p>
 						<ModeToggle />
@@ -52,17 +52,17 @@ const RootComponent = () => {
 }
 
 const Route = createRootRouteWithContext<IRouterContext>()({
-	component: RootComponent,
 	beforeLoad: async ({ context }) => {
 		const { queryClient } = context
 		const accessToken = Cookies.get('macro-ai-accessToken')
 		if (accessToken) {
 			await queryClient.prefetchQuery({
-				queryKey: [QUERY_KEY.user],
 				queryFn: () => getUser(),
+				queryKey: [QUERY_KEY.user],
 			})
 		}
 	},
+	component: RootComponent,
 })
 
 export { Route }

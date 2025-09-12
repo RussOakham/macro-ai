@@ -1,13 +1,7 @@
+/* eslint-disable security-node/detect-crlf */
 import * as cdk from 'aws-cdk-lib'
 import * as ssm from 'aws-cdk-lib/aws-ssm'
 import { Construct } from 'constructs'
-
-interface ParameterMapping {
-	paramKey: string
-	envVar: string
-	isSecure: boolean
-	defaultValue?: string
-}
 
 export interface EnvironmentConfigConstructProps {
 	/**
@@ -16,15 +10,22 @@ export interface EnvironmentConfigConstructProps {
 	readonly environmentName: string
 
 	/**
+	 * Whether this is a preview environment
+	 */
+	readonly isPreviewEnvironment?: boolean
+
+	/**
 	 * Parameter prefix to use for fetching values
 	 * @default 'macro-ai-development-'
 	 */
 	readonly parameterPrefix?: string
+}
 
-	/**
-	 * Whether this is a preview environment
-	 */
-	readonly isPreviewEnvironment?: boolean
+interface ParameterMapping {
+	defaultValue?: string
+	envVar: string
+	isSecure: boolean
+	paramKey: string
 }
 
 /**
@@ -36,38 +37,9 @@ export interface EnvironmentConfigConstructProps {
  * all required configuration at deployment time.
  */
 export class EnvironmentConfigConstruct extends Construct {
-	public readonly parameterPrefix: string
 	public readonly envFileContent: string
 	public readonly environmentVariables: Record<string, string>
-
-	constructor(
-		scope: Construct,
-		id: string,
-		props: EnvironmentConfigConstructProps,
-	) {
-		super(scope, id)
-
-		// Use shared development parameters for preview environments
-		// Note: No trailing slash to avoid double slashes when joining with parameter keys
-		this.parameterPrefix = props.parameterPrefix ?? '/macro-ai/development'
-
-		// Fetch Parameter Store values during synthesis
-		this.environmentVariables = this.fetchParameterStoreValues()
-
-		// Generate complete .env file content
-		this.envFileContent = this.generateEnvFileContent()
-
-		// Output the configuration for reference
-		new cdk.CfnOutput(this, 'EnvironmentConfigStatus', {
-			value: 'Configuration resolved at synthesis time',
-			description: `Environment configuration for ${props.environmentName}`,
-		})
-
-		new cdk.CfnOutput(this, 'ParameterPrefix', {
-			value: this.parameterPrefix,
-			description: `Parameter Store prefix used for configuration`,
-		})
-	}
+	public readonly parameterPrefix: string
 
 	/**
 	 * Parameter mappings (Parameter Store key -> Environment variable name)
@@ -183,6 +155,142 @@ export class EnvironmentConfigConstruct extends Construct {
 		},
 	]
 
+	constructor(
+		scope: Construct,
+		id: string,
+		props: EnvironmentConfigConstructProps,
+	) {
+		super(scope, id)
+
+		// Use shared development parameters for preview environments
+		// Note: No trailing slash to avoid double slashes when joining with parameter keys
+		this.parameterPrefix = props.parameterPrefix ?? '/macro-ai/development'
+
+		// Fetch Parameter Store values during synthesis
+		this.environmentVariables = this.fetchParameterStoreValues()
+
+		// Generate complete .env file content
+		this.envFileContent = this.generateEnvFileContent()
+
+		// Output the configuration for reference
+		new cdk.CfnOutput(this, 'EnvironmentConfigStatus', {
+			value: 'Configuration resolved at synthesis time',
+			description: `Environment configuration for ${props.environmentName}`,
+		})
+
+		new cdk.CfnOutput(this, 'ParameterPrefix', {
+			value: this.parameterPrefix,
+			description: `Parameter Store prefix used for configuration`,
+		})
+	}
+
+	/**
+	 * Get all environment variables as a record
+	 */
+	public getAllEnvironmentVariables(): Record<string, string> {
+		return { ...this.environmentVariables }
+	}
+
+	/**
+	 * Get the .env file content for injection into user data
+	 */
+	public getEnvFileContent(): string {
+		return this.envFileContent
+	}
+
+	/**
+	 * Get environment variable value by name
+	 */
+	public getEnvironmentVariable(name: string): string {
+		return this.environmentVariables[name] ?? ''
+	}
+
+	/**
+	 * Get only non-secure environment variables for ECS task definition
+	 */
+	public getNonSecureEnvironmentVariables(): Record<string, string> {
+		const nonSecureVars: Record<string, string> = {}
+
+		for (const mapping of this.parameterMappings) {
+			if (!mapping.isSecure) {
+				const envVarName = mapping.envVar
+				if (this.environmentVariables[envVarName]) {
+					nonSecureVars[envVarName] = this.environmentVariables[envVarName]
+				}
+			}
+		}
+
+		// Add environment-specific configuration (these are always non-secure)
+		nonSecureVars.NODE_ENV = 'production'
+		nonSecureVars.APP_ENV =
+			(this.node.tryGetContext('environmentName') as string) || 'preview'
+		nonSecureVars.SERVER_PORT = '3040'
+
+		return nonSecureVars
+	}
+
+	/**
+	 * Get secure parameters as ECS secrets configuration
+	 */
+	public getSecureParametersAsSecrets(): Record<string, cdk.aws_ecs.Secret> {
+		const secrets: Record<string, cdk.aws_ecs.Secret> = {}
+
+		for (const mapping of this.parameterMappings) {
+			if (mapping.isSecure) {
+				const paramName = `${this.parameterPrefix}/${mapping.paramKey}`
+				secrets[mapping.envVar] = cdk.aws_ecs.Secret.fromSsmParameter(
+					ssm.StringParameter.fromSecureStringParameterAttributes(
+						this,
+						`SecureParam-${mapping.paramKey}`,
+						{
+							parameterName: paramName,
+							version: 1,
+						},
+					),
+				)
+			}
+		}
+
+		return secrets
+	}
+
+	/**
+	 * Get environment variables formatted for systemd service
+	 */
+	public getSystemdEnvironmentVariables(): string {
+		return Object.entries(this.environmentVariables)
+			.map(([key, value]) => `${key}="${value}"`)
+			.join('\n')
+	}
+
+	/**
+	 * Get environment variables formatted for /etc/environment
+	 */
+	public getSystemEnvironmentVariables(): string {
+		return Object.entries(this.environmentVariables)
+			.map(([key, value]) => `${key}=${value}`)
+			.join('\n')
+	}
+
+	/**
+	 * Escape environment variable values for .env file format
+	 */
+	// eslint-disable-next-line class-methods-use-this
+	private escapeEnvValue(value: string): string {
+		// If value contains spaces, quotes, or special characters, wrap in quotes
+		if (
+			value.includes(' ') ||
+			value.includes('"') ||
+			value.includes("'") ||
+			value.includes('\\')
+		) {
+			// Escape quotes and backslashes
+			const escaped = value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+			return `"${escaped}"`
+		}
+		return value
+	}
+
 	/**
 	 * Fetch Parameter Store values during CDK synthesis
 	 * This happens at deployment time, not at runtime
@@ -262,112 +370,5 @@ export class EnvironmentConfigConstruct extends Construct {
 		}
 
 		return lines.join('\n')
-	}
-
-	/**
-	 * Escape environment variable values for .env file format
-	 */
-	// eslint-disable-next-line class-methods-use-this
-	private escapeEnvValue(value: string): string {
-		// If value contains spaces, quotes, or special characters, wrap in quotes
-		if (
-			value.includes(' ') ||
-			value.includes('"') ||
-			value.includes("'") ||
-			value.includes('\\')
-		) {
-			// Escape quotes and backslashes
-			const escaped = value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-			return `"${escaped}"`
-		}
-		return value
-	}
-
-	/**
-	 * Get environment variable value by name
-	 */
-	public getEnvironmentVariable(name: string): string {
-		return this.environmentVariables[name] ?? ''
-	}
-
-	/**
-	 * Get all environment variables as a record
-	 */
-	public getAllEnvironmentVariables(): Record<string, string> {
-		return { ...this.environmentVariables }
-	}
-
-	/**
-	 * Get only non-secure environment variables for ECS task definition
-	 */
-	public getNonSecureEnvironmentVariables(): Record<string, string> {
-		const nonSecureVars: Record<string, string> = {}
-
-		for (const mapping of this.parameterMappings) {
-			if (!mapping.isSecure) {
-				const envVarName = mapping.envVar
-				if (this.environmentVariables[envVarName]) {
-					nonSecureVars[envVarName] = this.environmentVariables[envVarName]
-				}
-			}
-		}
-
-		// Add environment-specific configuration (these are always non-secure)
-		nonSecureVars.NODE_ENV = 'production'
-		nonSecureVars.APP_ENV =
-			(this.node.tryGetContext('environmentName') as string) || 'preview'
-		nonSecureVars.SERVER_PORT = '3040'
-
-		return nonSecureVars
-	}
-
-	/**
-	 * Get secure parameters as ECS secrets configuration
-	 */
-	public getSecureParametersAsSecrets(): Record<string, cdk.aws_ecs.Secret> {
-		const secrets: Record<string, cdk.aws_ecs.Secret> = {}
-
-		for (const mapping of this.parameterMappings) {
-			if (mapping.isSecure) {
-				const paramName = `${this.parameterPrefix}/${mapping.paramKey}`
-				secrets[mapping.envVar] = cdk.aws_ecs.Secret.fromSsmParameter(
-					ssm.StringParameter.fromSecureStringParameterAttributes(
-						this,
-						`SecureParam-${mapping.paramKey}`,
-						{
-							parameterName: paramName,
-							version: 1,
-						},
-					),
-				)
-			}
-		}
-
-		return secrets
-	}
-
-	/**
-	 * Get the .env file content for injection into user data
-	 */
-	public getEnvFileContent(): string {
-		return this.envFileContent
-	}
-
-	/**
-	 * Get environment variables formatted for systemd service
-	 */
-	public getSystemdEnvironmentVariables(): string {
-		return Object.entries(this.environmentVariables)
-			.map(([key, value]) => `${key}="${value}"`)
-			.join('\n')
-	}
-
-	/**
-	 * Get environment variables formatted for /etc/environment
-	 */
-	public getSystemEnvironmentVariables(): string {
-		return Object.entries(this.environmentVariables)
-			.map(([key, value]) => `${key}="${value}"`)
-			.join('\n')
 	}
 }

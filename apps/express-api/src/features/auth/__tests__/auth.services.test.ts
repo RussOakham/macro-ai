@@ -1,25 +1,26 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import crypto from 'node:crypto'
+
 import {
 	CognitoIdentityProviderClient,
+	type ConfirmForgotPasswordCommandOutput,
 	ConfirmSignUpCommand,
+	type ConfirmSignUpCommandOutput,
 	type ForgotPasswordCommandOutput,
 	GetUserCommand,
-	GlobalSignOutCommand,
-	InitiateAuthCommand,
-	ListUsersCommand,
-	SignUpCommand,
-	type ConfirmForgotPasswordCommandOutput,
-	type ConfirmSignUpCommandOutput,
 	type GetUserCommandOutput,
+	GlobalSignOutCommand,
 	type GlobalSignOutCommandOutput,
+	InitiateAuthCommand,
 	type InitiateAuthCommandOutput,
+	ListUsersCommand,
 	type ListUsersCommandOutput,
 	type ResendConfirmationCodeCommandOutput,
+	SignUpCommand,
 	type SignUpCommandOutput,
 	type UserType,
 } from '@aws-sdk/client-cognito-identity-provider'
 import { mockClient } from 'aws-sdk-client-mock'
-import crypto from 'node:crypto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -27,10 +28,10 @@ import {
 	tryCatchSync,
 } from '../../../utils/error-handling/try-catch.ts'
 import {
+	type AppError,
 	InternalError,
 	NotFoundError,
 	ValidationError,
-	type AppError,
 } from '../../../utils/errors.ts'
 import { MockDataFactory } from '../../../utils/test-helpers/advanced-mocking.ts'
 import { mockConfig } from '../../../utils/test-helpers/config.mock.ts'

@@ -11,11 +11,11 @@ import { safeValidateApiResponse } from '@/lib/validation/api-response'
 // Type-safe endpoint for consumption using the generated SDK
 const postLogin = async ({ email, password }: LoginRequest) => {
 	const { data, error } = await postAuthLogin({
-		client: apiClient,
 		body: {
 			email,
 			password,
 		},
+		client: apiClient,
 	})
 
 	if (error) {

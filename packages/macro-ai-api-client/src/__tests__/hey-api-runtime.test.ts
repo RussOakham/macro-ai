@@ -21,11 +21,11 @@ describe('Hey API Runtime Configuration', () => {
 			expect(config).toEqual({
 				baseURL: 'http://localhost:3000',
 				headers: {
-					'Content-Type': 'application/json',
 					Accept: 'application/json',
+					'Content-Type': 'application/json',
 				},
-				timeout: 30000,
 				responseType: 'json',
+				timeout: 30000,
 				validateStatus: expect.any(Function) as unknown as (
 					status: number,
 				) => boolean,
@@ -47,18 +47,18 @@ describe('Hey API Runtime Configuration', () => {
 
 			const customConfig = {
 				headers: {
-					'X-API-Key': 'secret-key',
 					Authorization: 'Bearer token',
+					'X-API-Key': 'secret-key',
 				},
 			}
 
 			const config = createClientConfig(customConfig)
 
 			expect(config.headers).toEqual({
-				'Content-Type': 'application/json',
 				Accept: 'application/json',
-				'X-API-Key': 'secret-key',
 				Authorization: 'Bearer token',
+				'Content-Type': 'application/json',
+				'X-API-Key': 'secret-key',
 			})
 		})
 
@@ -67,16 +67,16 @@ describe('Hey API Runtime Configuration', () => {
 
 			const customConfig = {
 				headers: {
-					'Content-Type': 'application/xml',
 					Accept: 'application/xml',
+					'Content-Type': 'application/xml',
 				},
 			}
 
 			const config = createClientConfig(customConfig)
 
 			expect(config.headers).toEqual({
-				'Content-Type': 'application/xml',
 				Accept: 'application/xml',
+				'Content-Type': 'application/xml',
 			})
 		})
 
@@ -84,8 +84,8 @@ describe('Hey API Runtime Configuration', () => {
 			const { createClientConfig } = await import('../hey-api-runtime.js')
 
 			const customConfig = {
-				timeout: 60000,
 				responseType: 'text' as const,
+				timeout: 60000,
 			}
 
 			const config = createClientConfig(customConfig)
@@ -101,8 +101,8 @@ describe('Hey API Runtime Configuration', () => {
 			const config = createClientConfig({ headers: undefined })
 
 			expect(config.headers).toEqual({
-				'Content-Type': 'application/json',
 				Accept: 'application/json',
+				'Content-Type': 'application/json',
 			})
 		})
 	})

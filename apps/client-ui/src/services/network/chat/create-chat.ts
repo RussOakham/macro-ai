@@ -11,10 +11,10 @@ import { safeValidateApiResponse } from '@/lib/validation/api-response'
 // Type-safe endpoint for consumption using the generated SDK
 const postCreateChat = async ({ title }: CreateChatRequest) => {
 	const { data, error } = await postChats({
-		client: apiClient,
 		body: {
 			title,
 		},
+		client: apiClient,
 	})
 
 	if (error) {
