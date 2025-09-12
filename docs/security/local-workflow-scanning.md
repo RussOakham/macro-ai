@@ -1,7 +1,9 @@
 # Local GitHub Actions Security Scanning
 
-This guide covers how to scan your GitHub Actions workflows for security issues locally before committing, using various
-CLI tools including GitHub CodeQL CLI.
+This guide covers how to scan your GitHub Actions workflows for security issues locally before committing, using modern
+security tools and established npm libraries.
+
+> **Note**: This document describes the legacy approach. For the modern security scanning setup, see [Modern Security Scanning](./modern-security-scanning.md).
 
 ## Overview
 
@@ -11,6 +13,19 @@ We provide multiple levels of security scanning for GitHub Actions workflows:
 2. **Advanced Security Scan** - Comprehensive analysis with multiple tools
 3. **CodeQL Security Scan** - Deep analysis using GitHub's CodeQL CLI
 4. **Individual Tool Scans** - Run specific tools independently
+
+## Modern Security Scanning
+
+**Recommended**: Use the modern security scanning approach with Snyk, ESLint security plugins, and Semgrep:
+
+```bash
+# Modern security scanning
+pnpm security:scan              # Basic security scan
+pnpm security:scan:advanced     # Advanced security scan
+pnpm security:scan:workflows    # Workflow validation
+```
+
+See [Modern Security Scanning](./modern-security-scanning.md) for complete documentation.
 
 ## Quick Start
 

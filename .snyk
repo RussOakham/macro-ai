@@ -1,0 +1,42 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.25.0
+
+# Ignore specific vulnerabilities (add as needed)
+# ignore:
+#   SNYK-JS-LODASH-567746:
+#     - '*':
+#         reason: No fix available
+#         expires: '2024-12-31T23:59:59.999Z'
+
+# Patch specific vulnerabilities (add as needed)
+# patch:
+#   SNYK-JS-LODASH-567746:
+#     - lodash:
+#         patched: '2024-01-01T00:00:00.000Z'
+
+# Language settings
+language-settings:
+  javascript:
+    # Scan dev dependencies
+    dev-dependencies: true
+  typescript:
+    # Scan dev dependencies
+    dev-dependencies: true
+
+# Severity threshold for failing builds
+severity-threshold: high
+
+# Fail on any vulnerabilities
+fail-on: all
+
+# Exclude certain paths from scanning
+exclude:
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/coverage/**"
+  - "**/.next/**"
+  - "**/out/**"
+  - "**/tmp/**"
+  - "**/.codeql/**"
+  - "**/.tools/**"

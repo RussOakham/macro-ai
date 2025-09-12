@@ -1,0 +1,42 @@
+# Semgrep configuration for security scanning
+# This file will be used when Semgrep is integrated via GitHub Actions
+
+rules:
+  # Use auto-config for comprehensive security scanning
+  - id: auto
+    pattern: |
+      rules:
+        - id: auto
+    message: "Using auto-config for security scanning"
+
+# Custom rules for GitHub Actions workflows
+rules:
+  - id: github-actions-security
+    languages: [yaml]
+    message: "GitHub Actions security rule"
+    severity: ERROR
+    patterns:
+      - pattern: |
+          uses: actions/checkout@v1
+        message: "Use actions/checkout@v4 or later for security fixes"
+      - pattern: |
+          uses: actions/setup-node@v1
+        message: "Use actions/setup-node@v4 or later for security fixes"
+      - pattern: |
+          uses: actions/upload-artifact@v1
+        message: "Use actions/upload-artifact@v4 or later for security fixes"
+      - pattern: |
+          uses: actions/download-artifact@v1
+        message: "Use actions/download-artifact@v4 or later for security fixes"
+
+# Exclude certain paths
+exclude:
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/coverage/**"
+  - "**/.next/**"
+  - "**/out/**"
+  - "**/tmp/**"
+  - "**/.codeql/**"
+  - "**/.tools/**"
