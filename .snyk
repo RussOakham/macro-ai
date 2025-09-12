@@ -2,11 +2,12 @@
 version: v1.25.0
 
 # Ignore specific vulnerabilities (add as needed)
-# ignore:
-#   SNYK-JS-LODASH-567746:
-#     - '*':
-#         reason: No fix available
-#         expires: '2024-12-31T23:59:59.999Z'
+ignore:
+  # Ignore tsup XSS vulnerability - no upgrade available, used only in build process
+  SNYK-JS-TSUP-9056218:
+    - '*':
+        reason: No upgrade available, used only in build process
+        expires: '2025-12-31T23:59:59.999Z'
 
 # Patch specific vulnerabilities (add as needed)
 # patch:
@@ -29,14 +30,43 @@ severity-threshold: high
 # Fail on any vulnerabilities
 fail-on: all
 
-# Exclude certain paths from scanning
+# Exclude certain paths from scanning (Code scanning only)
 exclude:
-  - "**/node_modules/**"
-  - "**/dist/**"
-  - "**/build/**"
-  - "**/coverage/**"
-  - "**/.next/**"
-  - "**/out/**"
-  - "**/tmp/**"
-  - "**/.codeql/**"
-  - "**/.tools/**"
+  global:
+    - "**/node_modules/**"
+    - "**/dist/**"
+    - "**/build/**"
+    - "**/coverage/**"
+    - "**/.next/**"
+    - "**/out/**"
+    - "**/tmp/**"
+    - "**/.codeql/**"
+    - "**/.tools/**"
+    # Exclude test files from code scanning
+    - "**/__tests__/**"
+    - "**/*.test.ts"
+    - "**/*.test.tsx"
+    - "**/*.test.js"
+    - "**/*.test.jsx"
+    - "**/*.spec.ts"
+    - "**/*.spec.tsx"
+    - "**/*.spec.js"
+    - "**/*.spec.jsx"
+    - "**/test/**"
+    - "**/tests/**"
+    - "**/test-results/**"
+    - "**/vitest.config.*"
+    - "**/jest.config.*"
+    - "**/setup.ts"
+    - "**/test-utils.*"
+    - "**/*.test-utils.*"
+    - "**/test-helpers/**"
+    - "**/msw-*"
+    - "**/pilot-*"
+    - "**/example.*"
+    - "**/*.mock.*"
+    - "**/mocks/**"
+    - "**/scripts/test-*"
+    - "**/test-automation-utils.*"
+    - "**/test-application-functionality.*"
+    - "**/cookies.ts"

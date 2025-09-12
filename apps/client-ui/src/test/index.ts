@@ -12,7 +12,7 @@ export type {
 	ComponentTestContext,
 	MockApiClient,
 	MockAxiosInstance,
-} from './test-utils'
+} from './test-utils.test-utils'
 export {
 	clientUITestAssertions,
 	clientUITestData,
@@ -28,7 +28,7 @@ export {
 	createMSWHandlers,
 	renderWithProviders,
 	setupMSWServer,
-} from './test-utils'
+} from './test-utils.test-utils'
 
 // Specialized testing utilities
 export type {
@@ -37,7 +37,7 @@ export type {
 	MockAdapterConfig,
 	MSWHandlerConfig,
 	TokenRefreshTestConfig,
-} from './api-test-utils'
+} from './api-test-utils.test-utils'
 export {
 	createAuthTestScenarios,
 	createDynamicMSWHandlers,
@@ -55,7 +55,7 @@ export {
 	testApiCallScenarios,
 	testErrorHandling,
 	testInterceptor,
-} from './api-test-utils'
+} from './api-test-utils.test-utils'
 export type {
 	ComponentTestConfig,
 	EnhancedRenderResult,

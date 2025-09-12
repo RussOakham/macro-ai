@@ -16,7 +16,7 @@ import {
 	createNetworkErrorScenarios,
 	createTrackingMockApiClient,
 	testErrorHandling,
-} from './api-test-utils'
+} from './api-test-utils.test-utils'
 import { componentTesting, formTesting } from './component-test-utils'
 import { setupMSWForTests, setupServerWithHandlers } from './msw-setup'
 

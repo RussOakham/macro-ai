@@ -21,7 +21,7 @@ import {
 	createMockAxiosInstance,
 	type MockApiClient,
 	type MockAxiosInstance,
-} from './test-utils'
+} from './test-utils.test-utils'
 
 // ============================================================================
 // Type Definitions

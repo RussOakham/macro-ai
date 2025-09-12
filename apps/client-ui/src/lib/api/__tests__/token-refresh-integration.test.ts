@@ -8,7 +8,7 @@ import {
 	createNetworkErrorScenarios,
 	createTrackingMockApiClient,
 	testErrorHandling,
-} from '../../../test/api-test-utils'
+} from '../../../test/api-test-utils.test-utils'
 import {
 	setupMSWForTests,
 	setupServerWithHandlers,
