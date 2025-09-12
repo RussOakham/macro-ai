@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [change-detection]
     if: |
-      needs.change-detection.outputs.has-backend-changes == 'true' || 
+      needs.change-detection.outputs.has-backend-changes == 'true' ||
       needs.change-detection.outputs.has-infrastructure-changes == 'true' ||
       github.event.inputs.force-deploy == 'true'
 

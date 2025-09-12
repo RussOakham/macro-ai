@@ -65,7 +65,7 @@ jobs:
           if [[ -n "$CHANGED_FILES" ]]; then
             echo "✅ Changes detected:"
             echo "$CHANGED_FILES"
-            
+
             # Convert to JSON array for output
             CHANGED_FILES_JSON=$(echo "$CHANGED_FILES" | jq -R -s -c 'split("\n")[:-1]')
             echo "changed-files=${CHANGED_FILES_JSON}" >> $GITHUB_OUTPUT

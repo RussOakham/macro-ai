@@ -148,8 +148,8 @@ jobs:
     needs: [validate-access, change-detection, check-first-deployment]
     if: |
       needs.validate-access.outputs.should-deploy == 'true' &&
-      (needs.check-first-deployment.outputs.is-first-deployment == 'true' || 
-       needs.change-detection.outputs.has-backend-changes == 'true' || 
+      (needs.check-first-deployment.outputs.is-first-deployment == 'true' ||
+       needs.change-detection.outputs.has-backend-changes == 'true' ||
        needs.change-detection.outputs.has-infrastructure-changes == 'true')
 
     permissions:
