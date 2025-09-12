@@ -3,7 +3,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { QUERY_KEY } from '@/constants/query-keys'
 
 import { getAuthUser } from '../../network/auth/get-auth-user'
-import { LoginRequest, postLogin } from '../../network/auth/post-login'
+import { postLogin } from '../../network/auth/post-login'
+import type { LoginRequest } from '../../network/auth/post-login'
 
 const usePostLoginMutation = () => {
 	const queryClient = useQueryClient()

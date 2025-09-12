@@ -1,4 +1,5 @@
-import { LoggerOptions, pino } from 'pino'
+import { pino } from 'pino'
+import type { LoggerOptions } from 'pino'
 
 const pinoOptions: LoggerOptions = {
 	transport: {

@@ -2,7 +2,7 @@
 // Derived Types for Frontend Use
 // ============================================================================
 
-import { GetChatsResponse } from '@repo/macro-ai-api-client'
+import type { GetChatsResponse } from '@repo/macro-ai-api-client'
 
 // Extract pagination metadata type
 export type PaginationMeta = NonNullable<GetChatsResponse['meta']>

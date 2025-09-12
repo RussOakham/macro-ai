@@ -1,6 +1,6 @@
-import { Response } from 'express'
+import type { Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
-import { z } from 'zod'
+import type { z } from 'zod'
 import { fromError } from 'zod-validation-error'
 
 import { tryCatchSync } from './error-handling/try-catch.ts'

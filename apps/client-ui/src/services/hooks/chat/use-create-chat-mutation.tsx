@@ -1,13 +1,11 @@
-import { ChatMessage } from '@repo/macro-ai-api-client'
+import type { ChatMessage } from '@repo/macro-ai-api-client'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { QUERY_KEY, QUERY_KEY_MODIFIERS } from '@/constants/query-keys'
 import { logger } from '@/lib/logger/logger'
 
-import {
-	CreateChatRequest,
-	postCreateChat,
-} from '../../network/chat/create-chat'
+import { postCreateChat } from '../../network/chat/create-chat'
+import type { CreateChatRequest } from '../../network/chat/create-chat'
 
 /**
  * TanStack Query mutation hook for creating a new chat

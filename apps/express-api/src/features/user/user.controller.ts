@@ -1,10 +1,10 @@
-import { NextFunction, Request, Response } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import { UnauthorizedError, ValidationError } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 import { userService } from './user.services.ts'
-import { IUserController, TUserResponse } from './user.types.ts'
+import type { IUserController, TUserResponse } from './user.types.ts'
 
 const { logger } = pino
 

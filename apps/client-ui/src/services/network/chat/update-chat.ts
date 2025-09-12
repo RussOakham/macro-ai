@@ -1,9 +1,9 @@
 import {
 	putChatsById,
-	PutChatsByIdData,
 	zPutChatsByIdData,
 	zPutChatsByIdResponse,
 } from '@repo/macro-ai-api-client'
+import type { PutChatsByIdData } from '@repo/macro-ai-api-client'
 
 import { apiClient } from '@/lib/api/clients'
 import { safeValidateApiResponse } from '@/lib/validation/api-response'

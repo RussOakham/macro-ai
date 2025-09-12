@@ -5,8 +5,8 @@ import { logger } from '@/lib/logger/logger'
 
 import type { GetChatsResponse } from '../../network/chat/get-chats'
 
-import {
-	updateChatById,
+import { updateChatById } from '../../network/chat/update-chat'
+import type {
 	UpdateChatRequestBody,
 	UpdateChatRequestParam,
 } from '../../network/chat/update-chat'

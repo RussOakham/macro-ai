@@ -2,7 +2,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { QUERY_KEY } from '@/constants/query-keys'
 
-import { postRegister, RegisterRequest } from '../../network/auth/post-register'
+import { postRegister } from '../../network/auth/post-register'
+import type { RegisterRequest } from '../../network/auth/post-register'
 
 const usePostRegisterMutation = () => {
 	const queryClient = useQueryClient()

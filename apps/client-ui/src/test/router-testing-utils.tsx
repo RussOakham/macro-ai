@@ -15,7 +15,8 @@ import {
 	type Router,
 	RouterProvider,
 } from '@tanstack/react-router'
-import { render, RenderOptions, RenderResult } from '@testing-library/react'
+import { render } from '@testing-library/react'
+import type { RenderOptions, RenderResult } from '@testing-library/react'
 import React from 'react'
 
 // Mock types for testing

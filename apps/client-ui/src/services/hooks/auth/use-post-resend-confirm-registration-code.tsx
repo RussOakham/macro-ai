@@ -1,9 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 
-import {
-	postResendConfirmRegistrationCode,
-	ResendConfirmationCode,
-} from '@/services/network/auth/post-resend-confirm-registration-code'
+import { postResendConfirmRegistrationCode } from '@/services/network/auth/post-resend-confirm-registration-code'
+import type { ResendConfirmationCode } from '@/services/network/auth/post-resend-confirm-registration-code'
 
 const usePostResendConfirmRegistrationCodeMutation = () => {
 	return useMutation({
