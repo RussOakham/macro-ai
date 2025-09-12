@@ -2,15 +2,7 @@
 # This file will be used when Semgrep is integrated via GitHub Actions
 
 rules:
-  # Use auto-config for comprehensive security scanning
-  - id: auto
-    pattern: |
-      rules:
-        - id: auto
-    message: "Using auto-config for security scanning"
-
-# Custom rules for GitHub Actions workflows
-rules:
+  # Custom rules for GitHub Actions workflows
   - id: github-actions-security
     languages: [yaml]
     message: "GitHub Actions security rule"
