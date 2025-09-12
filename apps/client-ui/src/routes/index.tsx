@@ -1,4 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
+import type { QueryClient } from '@tanstack/react-query'
 
 import { AuthRouteLoading } from '@/components/auth/auth-route-loading'
 import { attemptAuthenticationWithRefresh } from '@/lib/auth/auth-utils'
@@ -15,7 +16,7 @@ export const Route = createFileRoute('/')({
 		const { queryClient } = context
 
 		// Attempt authentication with automatic refresh capability
-		const authResult = await attemptAuthenticationWithRefresh(queryClient)
+		const authResult = await attemptAuthenticationWithRefresh(queryClient as QueryClient)
 
 		if (!authResult.success) {
 			// eslint-disable-next-line @typescript-eslint/only-throw-error

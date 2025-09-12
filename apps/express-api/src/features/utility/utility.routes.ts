@@ -333,7 +333,7 @@ const utilityRouter = (router: Router) => {
 				success: true,
 				csrfToken,
 			})
-		} catch (error) {
+		} catch {
 			res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
 				success: false,
 				error: 'Failed to generate CSRF token',
