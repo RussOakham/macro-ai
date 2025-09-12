@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 import helmet from 'helmet'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

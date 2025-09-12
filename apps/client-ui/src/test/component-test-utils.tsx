@@ -7,17 +7,17 @@
  * for component testing scenarios.
  */
 
-import { act, fireEvent, render, RenderResult } from '@testing-library/react'
-import { ReactElement, ReactNode } from 'react'
+import { act, fireEvent, render, type RenderResult } from '@testing-library/react'
+import type { ReactElement, ReactNode } from 'react'
 import { expect, vi } from 'vitest'
 
 // Import from main test utilities
 import {
-	AuthTestState,
-	ComponentTestContext,
 	createAuthenticatedUserState,
 	createMockAuthState,
 	renderWithProviders,
+	type AuthTestState,
+	type ComponentTestContext,
 } from './test-utils.test-utils'
 
 // ============================================================================

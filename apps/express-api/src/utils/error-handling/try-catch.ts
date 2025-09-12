@@ -1,4 +1,4 @@
-import { AppError, Result } from '../errors.ts'
+import { AppError, type Result } from '../errors.ts'
 import { pino } from '../logger.ts'
 
 const { logger } = pino

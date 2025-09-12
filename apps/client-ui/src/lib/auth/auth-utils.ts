@@ -1,4 +1,4 @@
-import { QueryClient } from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
 import Cookies from 'js-cookie'
 
 import { QUERY_KEY } from '@/constants/query-keys'

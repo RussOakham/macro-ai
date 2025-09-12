@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 
 import { CognitoService } from '../features/auth/auth.services.ts'
 import { getAccessToken } from '../utils/cookies.ts'

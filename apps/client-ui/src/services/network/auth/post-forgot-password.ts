@@ -1,8 +1,8 @@
 import {
-	ForgotPasswordRequest,
 	postAuthForgotPassword,
 	zForgotPasswordRequest,
 	zPostAuthForgotPasswordResponse,
+	type ForgotPasswordRequest,
 } from '@repo/macro-ai-api-client'
 
 import { apiClient } from '@/lib/api/clients'

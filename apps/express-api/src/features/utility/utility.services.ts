@@ -2,9 +2,9 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
-import { InternalError, Result } from '../../utils/errors.ts'
+import { InternalError, type Result } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
-import {
+import type {
 	IUtilityService,
 	TConfigurationStatus,
 	TDetailedHealthStatus,

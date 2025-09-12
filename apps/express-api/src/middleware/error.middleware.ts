@@ -1,4 +1,4 @@
-import { ErrorRequestHandler, NextFunction, Request, Response } from 'express'
+import type { ErrorRequestHandler, NextFunction, Request, Response } from 'express'
 
 import { AppError } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'

@@ -1,9 +1,9 @@
 import {
 	getChats as getChatsEndpoint,
-	GetChatsData,
-	GetChatsResponse,
 	zGetChatsData,
 	zGetChatsResponse,
+	type GetChatsData,
+	type GetChatsResponse,
 } from '@repo/macro-ai-api-client'
 
 import { apiClient } from '@/lib/api/clients'

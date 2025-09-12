@@ -1,8 +1,8 @@
 import {
-	ConfirmRegistration,
 	postAuthConfirmRegistration,
 	zConfirmRegistration,
 	zPostAuthConfirmRegistrationResponse,
+	type ConfirmRegistration,
 } from '@repo/macro-ai-api-client'
 
 import { apiClient } from '@/lib/api/clients'
