@@ -47,16 +47,14 @@ function installCodeQL() {
 		const platform = process.platform
 		const arch = process.arch
 
+		const version = process.env.CODEQL_CLI_VERSION || 'v2.18.4'
 		let downloadUrl
 		if (platform === 'darwin') {
-			downloadUrl =
-				'https://github.com/github/codeql-cli-binaries/releases/latest/download/codeql-osx64.zip'
+			downloadUrl = `https://github.com/github/codeql-cli-binaries/releases/download/${version}/codeql-osx64.zip`
 		} else if (platform === 'linux') {
-			downloadUrl =
-				'https://github.com/github/codeql-cli-binaries/releases/latest/download/codeql-linux64.zip'
+			downloadUrl = `https://github.com/github/codeql-cli-binaries/releases/download/${version}/codeql-linux64.zip`
 		} else if (platform === 'win32') {
-			downloadUrl =
-				'https://github.com/github/codeql-cli-binaries/releases/latest/download/codeql-win64.zip'
+			downloadUrl = `https://github.com/github/codeql-cli-binaries/releases/download/${version}/codeql-win64.zip`
 		} else {
 			log('red', '❌ Unsupported platform for CodeQL CLI')
 			return false

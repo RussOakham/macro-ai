@@ -20,16 +20,13 @@ let ongoingRefreshPromise: ReturnType<typeof postRefreshToken> | null = null
  * @returns The decoded string
  */
 const decodeBase64 = (base64String: string): string => {
-	// Normalize base64url -> base64 and add padding
-	let b64 = base64String.replace(/-/g, '+').replace(/_/g, '/')
-	const pad = b64.length % 4
-	if (pad) b64 += '='.repeat(4 - pad)
+	// Normalize base64url -> base64, strip whitespace, and add padding
+	let b64 = base64String.replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/')
+	const padLen = (4 - (b64.length % 4)) % 4
+	if (padLen) b64 += '='.repeat(padLen)
 
 	// Node.js (SSR)
-	if (
-		typeof globalThis.window === 'undefined' &&
-		typeof Buffer !== 'undefined'
-	) {
+	if (typeof window === 'undefined' && typeof Buffer !== 'undefined') {
 		return Buffer.from(b64, 'base64').toString('utf8')
 	}
 	// Browser
