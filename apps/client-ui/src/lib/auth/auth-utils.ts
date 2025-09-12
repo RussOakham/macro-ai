@@ -21,7 +21,10 @@ let ongoingRefreshPromise: ReturnType<typeof postRefreshToken> | null = null
  */
 const decodeBase64 = (base64String: string): string => {
 	// Normalize base64url -> base64, strip whitespace, and add padding
-	let b64 = base64String.replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/')
+	let b64 = base64String
+		.replace(/\s+/g, '')
+		.replace(/-/g, '+')
+		.replace(/_/g, '/')
 	const padLen = (4 - (b64.length % 4)) % 4
 	if (padLen) b64 += '='.repeat(padLen)
 

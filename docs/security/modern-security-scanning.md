@@ -10,7 +10,7 @@ replacing the previous custom security scripts.
 Before using Snyk-based security scripts, you need to:
 
 1. **Create a free Snyk account** at <https://snyk.io>
-2. **Get your API token** from your account settings  
+2. **Get your API token** from your account settings
 3. **Authenticate locally**:
 
    ```bash
@@ -126,10 +126,10 @@ severity-threshold: high
 
 # Exclude paths
 exclude:
-  - "**/node_modules/**"
-  - "**/dist/**"
-  - "**/build/**"
-  - "**/coverage/**"
+  - '**/node_modules/**'
+  - '**/dist/**'
+  - '**/build/**'
+  - '**/coverage/**'
 ```
 
 ### Semgrep Configuration (`.semgrep.yml`)
@@ -141,12 +141,12 @@ The `.semgrep.yml` file configures static analysis rules:
 rules:
   - id: github-actions-security
     languages: [yaml]
-    message: "GitHub Actions security rule"
+    message: 'GitHub Actions security rule'
     severity: ERROR
     patterns:
       - pattern: |
           uses: actions/checkout@v1
-        message: "Use actions/checkout@v4 or later for security fixes"
+        message: 'Use actions/checkout@v4 or later for security fixes'
 ```
 
 ## CI/CD Integration
@@ -272,11 +272,11 @@ pnpm security:scan:workflows
 
 ### Replaced Functionality
 
-| Custom Script | Modern Replacement |
-|---------------|-------------------|
-| `security-scan.js` | Snyk + ESLint |
-| `advanced-security-scan.js` | Snyk + ESLint + Semgrep |
-| `codeql-security-scan.js` | Semgrep + CodeQL Actions |
+| Custom Script               | Modern Replacement          |
+| --------------------------- | --------------------------- |
+| `security-scan.js`          | Snyk + ESLint               |
+| `advanced-security-scan.js` | Snyk + ESLint + Semgrep     |
+| `codeql-security-scan.js`   | Semgrep + CodeQL Actions    |
 | `install-security-tools.sh` | npm/pnpm package management |
 
 ## Setup Instructions
