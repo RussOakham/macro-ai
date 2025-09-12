@@ -133,7 +133,7 @@ jobs:
             IMAGE_URI="${{ inputs.image-uri }}"
             echo "⚠️ Using image URI from input: ${IMAGE_URI}"
           fi
-          
+
           echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
           echo "Final image URI: ${IMAGE_URI}"
 

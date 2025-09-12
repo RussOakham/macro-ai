@@ -5,7 +5,7 @@
  * Uses GitHub CodeQL CLI and other security tools for comprehensive analysis
  */
 
-import { execSync } from 'node:child_process'
+import { execSync, execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -151,22 +151,32 @@ function runCodeQLAnalysis() {
 	try {
 		// Create CodeQL database for GitHub Actions
 		log('blue', 'Creating CodeQL database...')
-		execSync(
-			`${codeqlPath} database create codeql-db --language=actions --source-root=.`,
-			{
-				cwd: projectRoot,
-				stdio: 'inherit',
-			},
+		execFileSync(
+			codeqlPath,
+			[
+				'database',
+				'create',
+				'codeql-db',
+				'--language=actions',
+				'--source-root=.',
+			],
+			{ cwd: projectRoot, stdio: 'inherit', timeout: 600000 },
 		)
 
 		// Analyze the database (use basic queries since actions-queries pack is not available)
 		log('blue', 'Analyzing CodeQL database...')
-		execSync(
-			`${codeqlPath} database analyze codeql-db --format=sarif-latest --output=codeql-results.sarif`,
-			{
-				cwd: projectRoot,
-				stdio: 'inherit',
-			},
+		execFileSync(
+			codeqlPath,
+			[
+				'database',
+				'analyze',
+				'codeql-db',
+				'--format',
+				'sarif-latest',
+				'--output',
+				'codeql-results.sarif',
+			],
+			{ cwd: projectRoot, stdio: 'inherit', timeout: 600000 },
 		)
 
 		// Check if results file exists and has content
