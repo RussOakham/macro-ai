@@ -31,10 +31,8 @@ set -euo pipefail
 
 # Configuration
 AWS_REGION="${AWS_REGION:-us-east-1}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VERBOSE=false
 TIMEOUT=30
-MAX_RETRIES=3
 TEST_CORS=false
 TEST_AUTH=false
 
@@ -109,7 +107,6 @@ OPTIONS:
     --test-auth                 Include authentication endpoint testing
     --comprehensive             Run all validation tests
     --timeout SECONDS           Request timeout in seconds (default: 30)
-    --max-retries NUMBER        Maximum retry attempts (default: 3)
     --region REGION             AWS region (default: us-east-1)
     --verbose                   Enable verbose logging
     --help                      Show this help message
@@ -172,10 +169,6 @@ parse_arguments() {
                 ;;
             --timeout)
                 TIMEOUT="$2"
-                shift 2
-                ;;
-            --max-retries)
-                MAX_RETRIES="$2"
                 shift 2
                 ;;
             --region)

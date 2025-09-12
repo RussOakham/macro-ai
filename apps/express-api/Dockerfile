@@ -84,7 +84,7 @@ USER expressjs
 ENV NODE_ENV=production
 
 # Health check with curl (matches ECS expectations)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -fsS --connect-timeout 3 --max-time 5 -H "X-Api-Key: ${API_KEY}" http://localhost:3040/api/health || exit 1
+HEALTHCHECK --interval=30s --timeout=6s --start-period=15s --retries=3 \
+    CMD curl -fsS --connect-timeout 3 --max-time 5 -o /dev/null http://127.0.0.1:3040/api/health || exit 1
 
 CMD ["node", "apps/express-api/dist/index.js"]

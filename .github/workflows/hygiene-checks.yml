@@ -43,10 +43,10 @@ jobs:
         run: |
           if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
             echo "🔍 Running in act (local testing) - using direct AWS credentials"
-            echo "use_direct_creds=true" >> $GITHUB_OUTPUT
+            echo "use_direct_creds=true" >> "$GITHUB_OUTPUT"
           else
             echo "🔍 Running in GitHub Actions (remote) - using IAM role assumption"
-            echo "use_direct_creds=false" >> $GITHUB_OUTPUT
+            echo "use_direct_creds=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Configure AWS credentials (Direct)
@@ -140,10 +140,10 @@ jobs:
             local param_name="$1"
             local param_path="${PARAM_PATH}/${param_name}"
             local value
-            
+
             echo "  📥 Fetching: ${param_path}"
             value=$(aws ssm get-parameter --name "${param_path}" --with-decryption --query "Parameter.Value" --output text 2>&1)
-            
+
             if [ $? -eq 0 ]; then
               echo "    ✅ ${param_name}: OK"
               echo "$value"

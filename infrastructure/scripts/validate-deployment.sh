@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 ENVIRONMENT=${CDK_DEPLOY_ENV:-development}
 AWS_REGION=${AWS_REGION:-us-east-1}
 # Generate stack name based on environment
-ENV_CAPITALIZED=$(echo "$ENVIRONMENT" | sed 's/.*/\u&/')
+ENV_CAPITALIZED=${ENVIRONMENT^}
 STACK_NAME="MacroAi${ENV_CAPITALIZED}Stack"
 
 echo -e "${BLUE}🔍 Macro AI Deployment Validation${NC}"
@@ -54,13 +54,11 @@ print_status "AWS CLI and credentials validated"
 
 # Get stack outputs
 echo -e "${BLUE}📋 Getting stack outputs...${NC}"
-STACK_OUTPUTS=$(aws cloudformation describe-stacks \
+if ! STACK_OUTPUTS=$(aws cloudformation describe-stacks \
     --stack-name "$STACK_NAME" \
     --region "$AWS_REGION" \
     --query 'Stacks[0].Outputs' \
-    --output json 2>/dev/null)
-
-if [ $? -ne 0 ]; then
+    --output json 2>/dev/null); then
     print_error "Failed to get stack outputs. Is the stack deployed?"
     exit 1
 fi

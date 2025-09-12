@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { logger } from '@/lib/logger/logger'
-import { ChatWithDates } from '@/lib/types'
+import { type ChatWithDates } from '@/lib/types'
 import { useDeleteChatMutation } from '@/services/hooks/chat/use-delete-chat-mutation'
 
 interface ChatHistoryItemDeleteProps {
@@ -31,7 +31,9 @@ const ChatHistoryItemDelete = ({
 	const [isPending, startTransition] = useTransition()
 
 	const confirmDeleteChat = (chatId: string) => {
-		if (isPendingExternal) return // Prevent multiple simultaneous operations
+		if (isPendingExternal) {
+			return
+		} // Prevent multiple simultaneous operations
 
 		setConfirmDeleteChatId(null) // Hide confirmation
 

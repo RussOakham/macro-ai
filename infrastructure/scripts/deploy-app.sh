@@ -423,7 +423,7 @@ cmd_cleanup() {
         releases_to_remove=$(ls -1t "$RELEASES_DIR" | tail -n +$((keep_releases + 1)))
         if [[ -n "$releases_to_remove" ]]; then
             echo "[DRY RUN] Would remove releases:"
-            echo "$releases_to_remove" | sed 's/^/    /'
+            echo "$releases_to_remove" | awk '{print "    " $0}'
         else
             log_info "[DRY RUN] No releases to remove"
         fi

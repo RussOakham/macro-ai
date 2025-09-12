@@ -18,7 +18,7 @@ echo "[INFO] Building Docker image with environment variable injection..."
 
 # Default values
 IMAGE_TAG="${IMAGE_TAG:-latest}"
-ECR_REGISTRY="${ECR_REGISTRY}"
+# ECR_REGISTRY is already set by environment or previous assignment
 REPOSITORY_NAME="${REPOSITORY_NAME:-macro-ai-express-api}"
 APP_ENV="${APP_ENV:-development}"
 AWS_REGION="${AWS_REGION:-us-east-1}"

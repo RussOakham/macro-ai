@@ -32,7 +32,9 @@ const useChatKeyboard = ({
 		e: React.FormEvent<HTMLFormElement>,
 	): Promise<void> => {
 		e.preventDefault()
-		if (!input.trim() || !currentChatId || status === 'streaming') return
+		if (!input.trim() || !currentChatId || status === 'streaming') {
+			return
+		}
 		await onSubmit(e)
 	}
 

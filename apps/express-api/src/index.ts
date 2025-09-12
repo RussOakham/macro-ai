@@ -4,6 +4,7 @@
  */
 
 import { createServer as createHttpServer } from 'node:http'
+import { exit } from 'node:process'
 
 import { assertConfig } from './config/simple-config.ts'
 import { logger } from './utils/logger.ts'
@@ -42,7 +43,7 @@ const startServer = () => {
 
 			httpServer.close(() => {
 				logger.info('Server closed')
-				process.exit(0)
+				exit(0)
 			})
 
 			// Force close after 10 seconds
@@ -50,7 +51,7 @@ const startServer = () => {
 				logger.error(
 					'Could not close connections in time, forcefully shutting down',
 				)
-				process.exit(1)
+				exit(1)
 			}, 10000)
 		}
 
@@ -65,7 +66,7 @@ const startServer = () => {
 			{ error: error instanceof Error ? error.message : String(error) },
 			'Failed to start server',
 		)
-		process.exit(1)
+		exit(1)
 	}
 }
 
@@ -74,5 +75,5 @@ try {
 	startServer()
 } catch (error: unknown) {
 	logger.error(error as Error, 'Unhandled error during server startup')
-	process.exit(1)
+	exit(1)
 }

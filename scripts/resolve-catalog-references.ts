@@ -28,7 +28,7 @@ class CatalogResolver {
 
 	private loadCatalogs(workspaceConfigPath: string): void {
 		try {
-			const workspaceContent = readFileSync(workspaceConfigPath, 'utf-8')
+			const workspaceContent = readFileSync(workspaceConfigPath, 'utf8')
 			const workspaceConfig: WorkspaceConfig = yaml.parse(workspaceContent)
 
 			// Load default catalog
@@ -124,7 +124,7 @@ class CatalogResolver {
 	): void {
 		try {
 			console.log(`📖 Reading package.json from: ${packageJsonPath}`)
-			const packageContent = readFileSync(packageJsonPath, 'utf-8')
+			const packageContent = readFileSync(packageJsonPath, 'utf8')
 			const packageJson: PackageJson = JSON.parse(packageContent)
 
 			console.log(

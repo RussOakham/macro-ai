@@ -85,6 +85,7 @@ describe('AIService', () => {
 
 		// Import AIService after mocks are set up and modules are reset
 		const aiServiceModule = await import('../ai.service.ts')
+		// oxlint-disable-next-line prefer-destructuring
 		AIService = aiServiceModule.AIService
 
 		// Create fresh service instance
@@ -386,7 +387,7 @@ describe('AIService', () => {
 				[0.3, 0.4],
 				[0.5, 0.6],
 				[0.7, 0.8],
-				[0.9, 1.0],
+				[0.9, 1],
 				[1.1, 1.2],
 			]
 

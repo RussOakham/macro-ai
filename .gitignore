@@ -67,3 +67,10 @@ yarn-error.log*
 
 # Auto-generated API client code
 packages/macro-ai-api-client/src/client
+
+# Security Scanning Tools
+.tools/
+.codeql/
+codeql-db/
+codeql-security-report.json
+scripts/octoscan

@@ -10,7 +10,7 @@ import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
 import { useCreateChatMutation } from '@/services/hooks/chat/use-create-chat-mutation'
 import {
-	CreateChatRequest,
+	type CreateChatRequest,
 	zCreateChatRequest,
 } from '@/services/network/chat/create-chat'
 
@@ -46,7 +46,9 @@ const CreateChatForm = ({
 	})
 
 	const onSubmit = async (values: CreateChatRequest) => {
-		if (isPending) return
+		if (isPending) {
+			return
+		}
 
 		setIsPending(true)
 

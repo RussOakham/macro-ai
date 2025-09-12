@@ -13,12 +13,14 @@ import type {
 import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import {
 	NotFoundError,
-	Result,
+	type Result,
 	UnauthorizedError,
 	ValidationError,
 } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
+// oxlint-disable-next-line no-duplicate-imports
 import { type AIService } from './ai.service.ts'
+// oxlint-disable-next-line no-duplicate-imports
 import { type VectorService } from './vector.service.ts'
 
 const { logger } = pino

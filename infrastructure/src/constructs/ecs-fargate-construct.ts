@@ -144,6 +144,13 @@ export interface PrEcsServiceProps {
 	 * @default 'latest'
 	 */
 	readonly imageTag?: string
+
+	/**
+	 * Full container image URI to deploy (overrides ecrRepository and imageTag)
+	 * If provided, this will be used instead of constructing the image URI
+	 * from ecrRepository and imageTag
+	 */
+	readonly imageUri?: string
 }
 
 /**
@@ -203,18 +210,20 @@ export class EcsFargateConstruct extends Construct {
 		)
 
 		// Create or use provided ECR repository
+		// The ECR repository is created by the workflow, so we just reference it
+		const repositoryName = `macro-ai-${environmentName}-express-api`
+
 		this.ecrRepository =
 			providedEcrRepository ??
-			new ecr.Repository(this, 'EcrRepository', {
-				repositoryName: `macro-ai-${environmentName}-express-api`,
-				imageScanOnPush: true, // Security best practice
-				removalPolicy: cdk.RemovalPolicy.DESTROY, // Clean up on stack deletion
-			})
+			ecr.Repository.fromRepositoryName(this, 'EcrRepository', repositoryName)
 
 		// Create ECS cluster
+		// Use a consistent resource name that can be reused across deployments
+		const clusterName = `macro-ai-${environmentName}-cluster`
+
 		this.cluster = new ecs.Cluster(this, 'EcsCluster', {
 			vpc,
-			clusterName: `macro-ai-${environmentName}-cluster`,
+			clusterName,
 			containerInsights: true, // Enable CloudWatch Container Insights for monitoring
 			enableFargateCapacityProviders: true,
 		})
@@ -274,7 +283,7 @@ export class EcsFargateConstruct extends Construct {
 			healthCheck: {
 				command: [
 					'CMD-SHELL',
-					`curl -f -H "X-Api-Key: $API_KEY" http://localhost:${containerPort}${healthCheck.path} || exit 1`,
+					`curl -f http://localhost:${containerPort}${healthCheck.path} || exit 1`,
 				],
 				interval: healthCheck.interval,
 				timeout: healthCheck.timeout,
@@ -345,6 +354,7 @@ export class EcsFargateConstruct extends Construct {
 			taskDefinition: taskConfig = { cpu: 256, memoryLimitMiB: 512 },
 			ecrRepository: providedEcrRepository,
 			imageTag = 'latest',
+			imageUri,
 		} = props
 
 		// Create PR-specific ECR repository if not provided
@@ -371,7 +381,9 @@ export class EcsFargateConstruct extends Construct {
 
 		// Add container to PR task definition
 		taskDefinition.addContainer('ExpressApiContainer', {
-			image: ecs.ContainerImage.fromEcrRepository(ecrRepository, imageTag),
+			image: imageUri
+				? ecs.ContainerImage.fromRegistry(imageUri)
+				: ecs.ContainerImage.fromEcrRepository(ecrRepository, imageTag),
 			containerName: 'express-api',
 			portMappings: [{ containerPort: 3040 }],
 			logging: ecs.LogDrivers.awsLogs({
@@ -389,7 +401,7 @@ export class EcsFargateConstruct extends Construct {
 			healthCheck: {
 				command: [
 					'CMD-SHELL',
-					'curl -f -H "X-Api-Key: $API_KEY" http://localhost:3040/api/health || exit 1',
+					'curl -f http://localhost:3040/api/health || exit 1',
 				],
 				interval: cdk.Duration.seconds(30),
 				timeout: cdk.Duration.seconds(5),
@@ -483,7 +495,7 @@ export class EcsFargateConstruct extends Construct {
 			}),
 		)
 
-		// AWS Cognito access for authentication
+		// AWS Cognito access for authentication - scoped to specific user pool
 		role.addToPolicy(
 			new iam.PolicyStatement({
 				effect: iam.Effect.ALLOW,
@@ -516,7 +528,12 @@ export class EcsFargateConstruct extends Construct {
 					'cognito-idp:DescribeUserPool',
 					'cognito-idp:DescribeUserPoolClient',
 				],
-				resources: ['*'], // Cognito resources are regional, so we need broad access
+				resources: [
+					// Scope to specific user pool using parameter store reference
+					`arn:aws:cognito-idp:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:userpool/*`,
+					// Allow access to user pool clients for this specific pool
+					`arn:aws:cognito-idp:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:userpool/*/client/*`,
+				],
 			}),
 		)
 

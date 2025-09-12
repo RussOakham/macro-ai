@@ -89,7 +89,7 @@ jobs:
       - name: Build and push Docker image
         id: build
         run: |
-          ECR_REPOSITORY="macro-ai-development-express-api"
+          ECR_REPOSITORY="macro-ai-pr-${{ github.event.number }}-express-api"
           IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
           IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:${IMAGE_TAG}"
 
@@ -264,7 +264,7 @@ jobs:
           echo "💡 Auto-Shutdown Information:"
           echo "   • Technology: Application Auto Scaling (no Lambda required)"
           echo "   • Shutdown: 10 PM UTC daily (6 PM EST, 3 PM PST)"
-          echo "   • Startup: ON-DEMAND ONLY (no automatic startup)"  
+          echo "   • Startup: ON-DEMAND ONLY (no automatic startup)"
           echo "   • Manual startup: Use AWS Console or CLI to scale service to 1"
           echo "   • Manual shutdown: Use the ManualShutdown output command"
           echo "   • Estimated savings: ~$5-10/month per preview environment"
@@ -276,10 +276,10 @@ jobs:
           if [[ -n "${API_ENDPOINT}" ]]; then
             HEALTH_URL="${API_ENDPOINT}/health"
             echo "🔍 Testing health endpoint: ${HEALTH_URL}"
-            
+
             # Wait for deployment to stabilize
             sleep 30
-            
+
             # Test health endpoint
             for i in {1..5}; do
               RESPONSE=$(curl -s -w "%{http_code}" "${HEALTH_URL}" 2>/dev/null || echo "000")

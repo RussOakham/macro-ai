@@ -7,7 +7,7 @@
  */
 
 // Import MSW utilities from our new setup
-import { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
+import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import MockAdapter from 'axios-mock-adapter'
 import { http, HttpResponse, type HttpHandler } from 'msw'
 import { expect, vi } from 'vitest'
@@ -19,8 +19,8 @@ import {
 	createMockApiError,
 	createMockApiResponse,
 	createMockAxiosInstance,
-	MockApiClient,
-	MockAxiosInstance,
+	type MockApiClient,
+	type MockAxiosInstance,
 } from './test-utils'
 
 // ============================================================================

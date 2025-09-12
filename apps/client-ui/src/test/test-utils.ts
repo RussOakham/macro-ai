@@ -1,3 +1,4 @@
+// oxlint-disable first
 // oxlint-disable-next-line no-standalone-expect
 /**
  * Enhanced Client-UI Testing Utilities
@@ -16,9 +17,13 @@ import {
 	testUtils,
 	userFactory,
 } from '@repo/config-testing'
-import { render, RenderOptions, RenderResult } from '@testing-library/react'
-import { AxiosHeaders, AxiosInstance, AxiosResponse } from 'axios'
-import { ReactElement } from 'react'
+import {
+	render,
+	type RenderOptions,
+	type RenderResult,
+} from '@testing-library/react'
+import { AxiosHeaders, type AxiosInstance, type AxiosResponse } from 'axios'
+import type { ReactElement } from 'react'
 
 /**
  * Enhanced render result with test context
@@ -26,7 +31,7 @@ import { ReactElement } from 'react'
 export interface EnhancedRenderResult extends RenderResult {
 	testContext: ComponentTestContext
 }
-import { RequestHandler } from 'msw'
+import type { RequestHandler } from 'msw'
 import { expect, vi } from 'vitest'
 
 // Import MSW utilities from our new setup
@@ -311,17 +316,11 @@ export const createMSWHandlers = {
 
 		// Login handler
 		if (scenarios.loginSuccess !== false) {
-			authHandlers
-				.push
-				// Add specific login success handler
-				()
+			authHandlers.push()
 		}
 
 		if (scenarios.loginError) {
-			authHandlers
-				.push
-				// Add specific login error handler
-				()
+			authHandlers.push()
 		}
 
 		return authHandlers

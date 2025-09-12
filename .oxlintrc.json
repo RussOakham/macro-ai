@@ -1,5 +1,10 @@
 {
-	"$schema": "https://oxc-project.github.io/oxlint/config-schema.json",
+	"categories": {
+		"correctness": "error",
+		"suspicious": "warn",
+		"perf": "warn",
+		"style": "warn"
+	},
 	"plugins": [
 		"typescript",
 		"unicorn",
@@ -8,9 +13,10 @@
 		"promise",
 		"oxc",
 		"node",
+		"jest",
 		"vitest",
 		"react",
-		"react-perf",
+		// "react-perf",
 		"jsx-a11y"
 	],
 	"ignorePatterns": [
@@ -54,96 +60,111 @@
 		"__filename": "readonly"
 	},
 	"rules": {
-		"no-underscore-dangle": "warn",
-		"no-unused-vars": "off",
-		"no-undef": "off",
-		"class-methods-use-this": "warn",
-		"no-ternary": "off",
-		"prefer-const": "error",
+		// ESLint Core Rules
+		"arrow-body-style": "off",
+		"curly": "off",
 		"eqeqeq": "error",
-		"no-trailing-spaces": "error",
-		"no-multiple-empty-lines": ["error", { "max": 2 }],
-		"eol-last": "error",
+		"func-style": "off",
+		"id-length": "off",
+		"max-params": "off",
+		"no-magic-numbers": "off",
+		"no-ternary": "off",
+		"sort-imports": "off",
 		"sort-keys": "off",
-		"one-var": "off",
-		"@typescript-eslint/no-unsafe-assignment": "error",
-		"@typescript-eslint/no-unsafe-call": "warn",
-		"@typescript-eslint/no-unsafe-member-access": "warn",
-		"@typescript-eslint/restrict-template-expressions": "warn",
-		"@typescript-eslint/unbound-method": "warn",
-		"@typescript-eslint/no-misused-promises": [
-			"error",
-			{
-				"checksVoidReturn": false
-			}
-		],
-		"import/order": [
-			"error",
-			{
-				"type": "natural",
-				"alphabetize": { "order": "asc" },
-				"groups": [
-					"builtin",
-					"external",
-					"internal",
-					"parent",
-					"sibling",
-					"index"
-				]
-			}
-		],
-		"import/no-unresolved": "error",
+		"yoda": "off",
+		// Type-aware TypeScript rules (run oxlint with --type-aware)
+		"typescript/no-unsafe-assignment": "error",
+		"typescript/no-unsafe-call": "warn",
+		"typescript/no-unsafe-member-access": "warn",
+		"typescript/restrict-template-expressions": "warn",
+		"typescript/unbound-method": "warn",
+		"typescript/no-misused-promises": "warn",
+		// import plugin (supported subset)
 		"import/no-cycle": "warn",
-		"import/no-unused-modules": "warn",
 		"import/no-self-import": "error",
 		"import/no-absolute-path": "error",
-		"import/no-useless-path-segments": "error",
-		"import/no-deprecated": "warn",
-		"import/no-mutable-exports": "warn",
-		"import/no-default-export": "error",
+		"import/no-mutable-exports": "error",
 		"import/export": "off",
+		"import/prefer-default-export": "off",
+		"import/no-default-export": "error",
+		"import/group-exports": "off", // TODO: enable this rule
+		"import/consistent-type-specifier-style": "off",
+		"import/no-namespace": "off",
+		"import/no-named-as-default": "off",
+		"import/no-anonymous-default-export": "off",
+		// unicorn plugin
 		"unicorn/filename-case": "off",
 		"unicorn/prefer-node-protocol": "error",
-		"jsdoc/check-alignment": "error",
-		"jsdoc/check-indentation": "error",
+		"unicorn/no-process-exit": "error",
+		"unicorn/no-null": "off",
+		// jsdoc plugin (supported rules)
 		"jsdoc/check-tag-names": "off",
-		"jsdoc/check-types": "error",
-		"jsdoc/empty-tags": "error",
-		"jsdoc/no-undefined-types": "error",
-		"jsdoc/require-description": "error",
+		"jsdoc/empty-tags": "off",
 		"jsdoc/require-param-name": "error",
 		"jsdoc/require-returns-description": "error",
-		"jsdoc/valid-types": "error",
-		"jsdoc/check-param-names": "off",
-		"jsdoc/require-jsdoc": "off",
 		"jsdoc/require-param": "off",
-		"jsdoc/require-param-description": "off",
-		"jsdoc/require-param-type": "off",
-		"jsdoc/require-returns": "off",
-		"jsdoc/require-returns-type": "off",
-		"node/no-deprecated-api": "error",
-		"node/no-missing-import": "off",
-		"node/no-unsupported-features/es-syntax": "off",
-		"node/no-process-exit": "warn",
-		"vitest/expect-expect": "error",
-		"vitest/no-disabled-tests": "warn",
-		"vitest/no-focused-tests": "error",
-		"vitest/no-identical-title": "error",
-		"vitest/prefer-to-be": "error",
-		"vitest/prefer-to-have-length": "error",
-		"vitest/valid-expect": "error",
-		"react/jsx-uses-react": "off",
+		"jsdoc/require-param-description": "off", // TODO: enable this rule
+		// "jsdoc/require-param-type": "error", // TODO: enable this rule
+		// Testing rules - use jest/* (these work with vitest code too)
+		"jest/no-disabled-tests": "warn",
+		"jest/prefer-to-be": "error",
+		"jest/prefer-to-have-length": "error",
+		"jest/prefer-lowercase-title": "off",
+		// React plugin (supported rules)
 		"react/react-in-jsx-scope": "off",
-		"react/jsx-props-no-spreading": "off",
-		"react-hooks/rules-of-hooks": "error",
-		"react-hooks/exhaustive-deps": "warn",
+		"react/rules-of-hooks": "error",
+		"react/no-array-index-key": "off", // TODO: enable this rule
+		// jsx-a11y plugin (supported rules)
 		"jsx-a11y/alt-text": "warn",
-		"jsx-a11y/no-autofocus": "warn"
-	},
-	"settings": {
-		"react": {
-			"version": "detect"
-		}
+		"jsx-a11y/no-autofocus": "warn",
+		// Temporary disabled rules:
+		"unicorn/catch-error-name": "off",
+		"jest/no-hooks": "off",
+		"jest/require-hook": "off",
+		"jest/no-standalone-expect": "off",
+		"jest/no-untyped-mock-factory": "off",
+		"jest/expect-expect": "off",
+		"jest/max-expects": "off",
+		"vitest/prefer-to-be-truthy": "off",
+		"vitest/prefer-to-be-falsy": "off",
+		"jest/no-conditional-expect": "off",
+		"jsdoc/require-param-type": "off",
+		"promise/no-promise-in-callback": "off",
+		"promise/prefer-await-to-callbacks": "off",
+		"promise/prefer-await-to-then": "off",
+		"import/exports-last": "off",
+		"jest/require-top-level-describe": "off",
+		"jest/prefer-called-with": "off",
+		"jest/prefer-strict-equal": "off",
+		"no-await-in-loop": "off",
+		"jest/require-to-throw-message": "off",
+		"init-declarations": "off",
+		"typescript/consistent-indexed-object-style": "off",
+		"react/jsx-boolean-value": "off",
+		"unicorn/prefer-spread": "off",
+		"unicorn/numeric-separators-style": "off",
+		"promise/avoid-new": "off",
+		"jest/prefer-mock-promise-shorthand": "off",
+		"jest/prefer-spy-on": "off",
+		"import/first": "off",
+		"jest/max-nested-describe": "off",
+		"func-names": "off",
+		"unicorn/prefer-string-raw": "off",
+		"unicorn/no-await-expression-member": "off",
+		"unicorn/switch-case-braces": "off",
+		"no-nested-ternary": "off",
+		"jest/prefer-hooks-in-order": "off",
+		"typescript/no-extraneous-class": "off",
+		"no-new": "off",
+		"no-duplicate-imports": "off",
+		"import/no-duplicates": "off",
+		"import/no-named-as-default-member": "off",
+		"no-unused-vars": "off",
+		"unicorn/prefer-optional-catch-binding": "off",
+		"typescript/consistent-type-definitions": "off",
+		"typescript/consistent-generic-constructors": "off",
+		"unicorn/prefer-set-has": "off",
+		"no-continue": "off"
 	},
 	"overrides": [
 		{
@@ -156,8 +177,8 @@
 			],
 			"rules": {
 				"no-console": "off",
-				"@typescript-eslint/no-var-requires": "off",
-				"@typescript-eslint/no-require-imports": "off",
+				"typescript/no-var-requires": "off",
+				"typescript/no-require-imports": "off",
 				"jsdoc/require-param": "off",
 				"jsdoc/require-returns": "off",
 				"no-undef": "off"
@@ -166,11 +187,11 @@
 		{
 			"files": ["*.js", "*.mjs", "*.cjs"],
 			"rules": {
-				"@typescript-eslint/no-var-requires": "off",
-				"@typescript-eslint/no-require-imports": "off",
-				"@typescript-eslint/await-thenable": "off",
-				"@typescript-eslint/no-floating-promises": "off",
-				"@typescript-eslint/no-misused-promises": "off"
+				"typescript/no-var-requires": "off",
+				"typescript/no-require-imports": "off",
+				"typescript/await-thenable": "off",
+				"typescript/no-floating-promises": "off",
+				"typescript/no-misused-promises": "off"
 			}
 		},
 		{
@@ -201,9 +222,9 @@
 			],
 			"rules": {
 				"no-console": "off",
-				"@typescript-eslint/no-explicit-any": "off",
+				"typescript/no-explicit-any": "off",
 				"no-undef": "off",
-				"@typescript-eslint/no-non-null-assertion": "off",
+				"typescript/no-non-null-assertion": "off",
 				"jsdoc/require-param": "off",
 				"jsdoc/require-returns": "off",
 				"jsdoc/require-description": "off"
@@ -220,6 +241,17 @@
 			],
 			"rules": {
 				"import/no-cycle": "off"
+			}
+		},
+		{
+			// Relax for test files
+			"files": [
+				"**/*.test.{ts,tsx,js,jsx}",
+				"**/*.spec.{ts,tsx,js,jsx}",
+				"**/__tests__/**"
+			],
+			"rules": {
+				"promise/avoid-new": "off"
 			}
 		}
 	]

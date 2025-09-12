@@ -1,0 +1,254 @@
+name: Reusable Change Detection
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      base-ref:
+        description: 'Base reference to compare against (e.g., develop, main)'
+        required: true
+        type: string
+      head-ref:
+        description: 'Head reference to compare (e.g., feature-branch)'
+        required: false
+        type: string
+        default: 'HEAD'
+    outputs:
+      has-backend-changes:
+        description: 'Whether backend changes were detected'
+        value: ${{ jobs.check-backend-changes.outputs.has-backend-changes }}
+      has-frontend-changes:
+        description: 'Whether frontend changes were detected'
+        value: ${{ jobs.check-frontend-changes.outputs.has-frontend-changes }}
+      has-infrastructure-changes:
+        description: 'Whether infrastructure changes were detected'
+        value: ${{ jobs.check-infrastructure-changes.outputs.has-infrastructure-changes }}
+      has-workflow-changes:
+        description: 'Whether workflow changes were detected'
+        value: ${{ jobs.check-workflow-changes.outputs.has-workflow-changes }}
+      deployment-scope:
+        description: 'Deployment scope based on changes (frontend, backend, both, none)'
+        value: ${{ jobs.determine-scope.outputs.deployment-scope }}
+      changed-files:
+        description: 'JSON array of changed files'
+        value: ${{ jobs.check-changes.outputs.changed-files }}
+
+jobs:
+  check-changes:
+    name: Check All Changes
+    runs-on: ubuntu-latest
+    outputs:
+      changed-files: ${{ steps.check.outputs.changed-files }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.head-ref }}
+
+      - name: Check for all changes
+        id: check
+        run: |
+          BASE_REF="${{ inputs.base-ref }}"
+          HEAD_REF="${{ inputs.head-ref }}"
+
+          echo "🔍 Checking changes between ${BASE_REF} and ${HEAD_REF}"
+
+          # Fetch the base branch to ensure it's available for comparison
+          git fetch origin "${BASE_REF}:${BASE_REF}"
+
+          # Get all changed files
+          CHANGED_FILES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" || echo "")
+
+          if [[ -n "$CHANGED_FILES" ]]; then
+            echo "✅ Changes detected:"
+            echo "$CHANGED_FILES"
+
+            # Convert to JSON array for output
+            CHANGED_FILES_JSON=$(echo "$CHANGED_FILES" | jq -R -s -c 'split("\n")[:-1]')
+            echo "changed-files=${CHANGED_FILES_JSON}" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️ No changes detected"
+            echo "changed-files=[]" >> $GITHUB_OUTPUT
+          fi
+
+  check-backend-changes:
+    name: Check Backend Changes
+    runs-on: ubuntu-latest
+    needs: check-changes
+    outputs:
+      has-backend-changes: ${{ steps.check.outputs.has-backend-changes }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.head-ref }}
+
+      - name: Check for backend changes
+        id: check
+        run: |
+          BASE_REF="${{ inputs.base-ref }}"
+          HEAD_REF="${{ inputs.head-ref }}"
+
+          # Fetch the base branch to ensure it's available for comparison
+          git fetch origin "${BASE_REF}:${BASE_REF}"
+
+          # Check for backend-related changes
+          BACKEND_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^infrastructure/|^apps/express-api/|^packages/macro-ai-api-client/' || true)
+
+          if [[ -n "$BACKEND_CHANGES" ]]; then
+            echo "✅ Backend changes detected:"
+            echo "$BACKEND_CHANGES"
+            echo "has-backend-changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️ No backend changes detected"
+            echo "has-backend-changes=false" >> $GITHUB_OUTPUT
+          fi
+
+  check-frontend-changes:
+    name: Check Frontend Changes
+    runs-on: ubuntu-latest
+    needs: check-changes
+    outputs:
+      has-frontend-changes: ${{ steps.check.outputs.has-frontend-changes }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.head-ref }}
+
+      - name: Check for frontend changes
+        id: check
+        run: |
+          BASE_REF="${{ inputs.base-ref }}"
+          HEAD_REF="${{ inputs.head-ref }}"
+
+          # Fetch the base branch to ensure it's available for comparison
+          git fetch origin "${BASE_REF}:${BASE_REF}"
+
+          # Check for frontend-related changes
+          FRONTEND_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^apps/client-ui/|^packages/ui-library/' || true)
+
+          if [[ -n "$FRONTEND_CHANGES" ]]; then
+            echo "✅ Frontend changes detected:"
+            echo "$FRONTEND_CHANGES"
+            echo "has-frontend-changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️ No frontend changes detected"
+            echo "has-frontend-changes=false" >> $GITHUB_OUTPUT
+          fi
+
+  check-infrastructure-changes:
+    name: Check Infrastructure Changes
+    runs-on: ubuntu-latest
+    needs: check-changes
+    outputs:
+      has-infrastructure-changes: ${{ steps.check.outputs.has-infrastructure-changes }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.head-ref }}
+
+      - name: Check for infrastructure changes
+        id: check
+        run: |
+          BASE_REF="${{ inputs.base-ref }}"
+          HEAD_REF="${{ inputs.head-ref }}"
+
+          # Fetch the base branch to ensure it's available for comparison
+          git fetch origin "${BASE_REF}:${BASE_REF}"
+
+          # Check for infrastructure-related changes
+          INFRASTRUCTURE_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^infrastructure/|^\.github/workflows/.*\.yml$' || true)
+
+          if [[ -n "$INFRASTRUCTURE_CHANGES" ]]; then
+            echo "✅ Infrastructure changes detected:"
+            echo "$INFRASTRUCTURE_CHANGES"
+            echo "has-infrastructure-changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️ No infrastructure changes detected"
+            echo "has-infrastructure-changes=false" >> $GITHUB_OUTPUT
+          fi
+
+  check-workflow-changes:
+    name: Check Workflow Changes
+    runs-on: ubuntu-latest
+    needs: check-changes
+    outputs:
+      has-workflow-changes: ${{ steps.check.outputs.has-workflow-changes }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.head-ref }}
+
+      - name: Check for workflow changes
+        id: check
+        run: |
+          BASE_REF="${{ inputs.base-ref }}"
+          HEAD_REF="${{ inputs.head-ref }}"
+
+          # Fetch the base branch to ensure it's available for comparison
+          git fetch origin "${BASE_REF}:${BASE_REF}"
+
+          # Check for workflow-related changes
+          WORKFLOW_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^\.github/workflows/|^\.github/actions/' || true)
+
+          if [[ -n "$WORKFLOW_CHANGES" ]]; then
+            echo "✅ Workflow changes detected:"
+            echo "$WORKFLOW_CHANGES"
+            echo "has-workflow-changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️ No workflow changes detected"
+            echo "has-workflow-changes=false" >> $GITHUB_OUTPUT
+          fi
+
+  determine-scope:
+    name: Determine Deployment Scope
+    runs-on: ubuntu-latest
+    needs:
+      [
+        check-backend-changes,
+        check-frontend-changes,
+        check-infrastructure-changes,
+      ]
+    outputs:
+      deployment-scope: ${{ steps.scope.outputs.deployment-scope }}
+    steps:
+      - name: Determine deployment scope
+        id: scope
+        run: |
+          HAS_BACKEND="${{ needs.check-backend-changes.outputs.has-backend-changes }}"
+          HAS_FRONTEND="${{ needs.check-frontend-changes.outputs.has-frontend-changes }}"
+          HAS_INFRASTRUCTURE="${{ needs.check-infrastructure-changes.outputs.has-infrastructure-changes }}"
+
+          echo "🔍 Determining deployment scope..."
+          echo "Backend changes: ${HAS_BACKEND}"
+          echo "Frontend changes: ${HAS_FRONTEND}"
+          echo "Infrastructure changes: ${HAS_INFRASTRUCTURE}"
+
+          if [[ "${HAS_BACKEND}" == "true" && "${HAS_FRONTEND}" == "true" ]]; then
+            DEPLOYMENT_SCOPE="both"
+            echo "📦 Deployment scope: Both frontend and backend"
+          elif [[ "${HAS_BACKEND}" == "true" ]]; then
+            DEPLOYMENT_SCOPE="backend"
+            echo "🔧 Deployment scope: Backend only"
+          elif [[ "${HAS_FRONTEND}" == "true" ]]; then
+            DEPLOYMENT_SCOPE="frontend"
+            echo "🎨 Deployment scope: Frontend only"
+          elif [[ "${HAS_INFRASTRUCTURE}" == "true" ]]; then
+            DEPLOYMENT_SCOPE="infrastructure"
+            echo "🏗️ Deployment scope: Infrastructure only"
+          else
+            DEPLOYMENT_SCOPE="none"
+            echo "⏭️ Deployment scope: No deployment needed"
+          fi
+
+          echo "deployment-scope=${DEPLOYMENT_SCOPE}" >> $GITHUB_OUTPUT

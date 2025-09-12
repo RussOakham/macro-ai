@@ -436,10 +436,10 @@ jobs:
               # Extract package name from the artifact directory name
               # Path structure: test-results/test-results-{package}-{run_id}-{name}/coverage/
               package_name=""
-              
+
               # Get the artifact directory name (parent of coverage/)
               artifact_dir=$(echo "$coverage_dir" | sed 's|test-results/\([^/]*\)/.*|\1|')
-              
+
               # Extract package name from artifact name like "test-results-apps-client-ui-17505117788-Unit-Tests-Client-UI"
               if [[ "$artifact_dir" =~ ^test-results-(apps|packages)-(.+)-[0-9]+- ]]; then
                 package_name="${BASH_REMATCH[2]}"
@@ -466,10 +466,10 @@ jobs:
             # Extract package name from the artifact directory name
             # Path structure: test-results/test-results-{package}-{run_id}-{name}/test-results.xml
             package_name=""
-            
+
             # Get the artifact directory name (parent of test-results.xml)
             artifact_dir=$(echo "$junit_file" | sed 's|test-results/\([^/]*\)/.*|\1|')
-            
+
             # Extract package name from artifact name like "test-results-apps-client-ui-17505117788-Unit-Tests-Client-UI"
             if [[ "$artifact_dir" =~ ^test-results-(apps|packages)-(.+)-[0-9]+- ]]; then
               package_name="${BASH_REMATCH[2]}"

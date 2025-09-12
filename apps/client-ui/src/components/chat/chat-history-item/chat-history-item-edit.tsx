@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { logger } from '@/lib/logger/logger'
-import { ChatWithDates } from '@/lib/types'
+import { type ChatWithDates } from '@/lib/types'
 import { useUpdateChatMutation } from '@/services/hooks/chat/use-update-chat-mutation'
 
 interface ChatHistoryItemEditProps {
@@ -36,7 +36,9 @@ const ChatHistoryItemEdit = ({
 	}
 
 	const saveEdit = () => {
-		if (!editingChatId || !editTitle.trim() || isPendingInternal) return
+		if (!editingChatId || !editTitle.trim() || isPendingInternal) {
+			return
+		}
 
 		const trimmedTitle = editTitle.trim()
 

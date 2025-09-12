@@ -4,7 +4,7 @@ import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 
 // Go-style Result type for client-side error handling
-export type Result<T, E = IStandardizedError> = [T, null] | [null, E]
+type Result<T, E = IStandardizedError> = [T, null] | [null, E]
 
 /**
  * Client-side wrapper for async operations using Go-style error handling
@@ -98,7 +98,7 @@ const tryCatchSync = <T>(func: () => T, context = 'unknown'): Result<T> => {
  * @param data - The successful data to wrap in a Result tuple
  * @returns Result tuple with success data and null error
  */
-export const ok = <T>(data: T): Result<T, never> => [data, null]
+const ok = <T>(data: T): Result<T, never> => [data, null]
 
 /**
  * Helper function to create an error Result tuple
@@ -106,8 +106,10 @@ export const ok = <T>(data: T): Result<T, never> => [data, null]
  * @param error - The error to wrap in a Result tuple
  * @returns Result tuple with null data and error
  */
-export const err = <E extends IStandardizedError>(
-	error: E,
-): Result<never, E> => [null, error]
+const err = <E extends IStandardizedError>(error: E): Result<never, E> => [
+	null,
+	error,
+]
 
-export { tryCatch, tryCatchSync }
+export { tryCatch, tryCatchSync, ok, err }
+export type { Result }

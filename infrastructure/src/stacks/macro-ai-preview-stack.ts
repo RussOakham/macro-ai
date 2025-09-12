@@ -120,7 +120,16 @@ export class MacroAiPreviewStack extends cdk.Stack {
 
 		// Get the image URI from CDK context (passed from CI/CD)
 		const imageUri = this.node.tryGetContext('imageUri') as string | undefined
-		const imageTag = imageUri ? 'context-provided' : 'latest'
+
+		if (!imageUri) {
+			throw new Error(
+				'❌ No imageUri provided in CDK context. ' +
+					'This suggests the GitHub workflow did not pass the correct image URI. ' +
+					'Please check that the workflow is building and pushing the Docker image correctly.',
+			)
+		}
+
+		const imageTag = 'context-provided'
 
 		console.log('🔍 Preview Stack: About to create ECS Fargate service...')
 

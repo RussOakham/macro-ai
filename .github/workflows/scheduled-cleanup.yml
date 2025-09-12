@@ -88,15 +88,15 @@ jobs:
           # Find all CloudFormation stacks matching preview pattern
           echo "🔍 Searching for preview environment stacks..."
           STACKS=$(aws cloudformation list-stacks \
-            --region "$AWS_REGION" \
+            --region "${AWS_REGION}" \
             --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE \
             --query 'StackSummaries[?contains(StackName, `MacroAiPr`) && contains(StackName, `Stack`)].{Name:StackName,CreationTime:CreationTime}' \
             --output json)
 
           echo "Found stacks:"
-          echo "$STACKS" | jq -r '.[] | "  - \(.Name) (created: \(.CreationTime))"'
+          echo "${STACKS}" | jq -r '.[] | "  - \(.Name) (created: \(.CreationTime))"'
 
-          TOTAL_COUNT=$(echo "$STACKS" | jq length)
+          TOTAL_COUNT=$(echo "${STACKS}" | jq length)
           echo "total-count=$TOTAL_COUNT" >> $GITHUB_OUTPUT
 
           # Filter stacks for cleanup based on age
@@ -107,44 +107,44 @@ jobs:
             echo ""
             echo "🕐 Evaluating environments for cleanup..."
 
-            for stack in $(echo "$STACKS" | jq -r '.[] | @base64'); do
-              STACK_DATA=$(echo "$stack" | base64 --decode)
-              STACK_NAME=$(echo "$STACK_DATA" | jq -r '.Name')
-              CREATION_TIME=$(echo "$STACK_DATA" | jq -r '.CreationTime')
+            for stack in $(echo "${STACKS}" | jq -r '.[] | @base64'); do
+              STACK_DATA=$(echo "${stack}" | base64 --decode)
+              STACK_NAME=$(echo "${STACK_DATA}" | jq -r '.Name')
+              CREATION_TIME=$(echo "${STACK_DATA}" | jq -r '.CreationTime')
 
               # Convert creation time to epoch
-              CREATION_EPOCH=$(date -d "$CREATION_TIME" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "${CREATION_TIME%.*}" +%s 2>/dev/null || echo "0")
+              CREATION_EPOCH=$(date -d "${CREATION_TIME}" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "${CREATION_TIME%.*}" +%s 2>/dev/null || echo "0")
               AGE_SECONDS=$((CURRENT_TIME - CREATION_EPOCH))
               AGE_HOURS=$((AGE_SECONDS / 3600))
 
               # Extract PR number from stack name (MacroAiPr123Stack -> 123)
-              PR_NUMBER=$(echo "$STACK_NAME" | sed 's/MacroAiPr\([0-9]*\)Stack/\1/')
-              ENV_NAME="pr-$PR_NUMBER"
+              PR_NUMBER=$(echo "${STACK_NAME}" | sed 's/MacroAiPr\([0-9]*\)Stack/\1/')
+              ENV_NAME="pr-${PR_NUMBER}"
 
-              echo "  Stack: $STACK_NAME"
-              echo "    PR: $PR_NUMBER"
-              echo "    Environment: $ENV_NAME"
-              echo "    Age: $AGE_HOURS hours"
+              echo "  Stack: ${STACK_NAME}"
+              echo "    PR: ${PR_NUMBER}"
+              echo "    Environment: ${ENV_NAME}"
+              echo "    Age: ${AGE_HOURS} hours"
 
               # Determine if should be cleaned up
               SHOULD_CLEANUP=false
-              if [[ "$FORCE_CLEANUP" == "true" ]]; then
+              if [[ "${FORCE_CLEANUP}" == "true" ]]; then
                 SHOULD_CLEANUP=true
                 echo "    Action: CLEANUP (forced)"
-              elif [[ "$AGE_SECONDS" -gt "$MAX_AGE_SECONDS" ]]; then
+              elif [[ "${AGE_SECONDS}" -gt "${MAX_AGE_SECONDS}" ]]; then
                 SHOULD_CLEANUP=true
-                echo "    Action: CLEANUP (age > $MAX_AGE_HOURS hours)"
+                echo "    Action: CLEANUP (age > ${MAX_AGE_HOURS} hours)"
               else
-                echo "    Action: SKIP (age < $MAX_AGE_HOURS hours)"
+                echo "    Action: SKIP (age < ${MAX_AGE_HOURS} hours)"
               fi
 
-              if [[ "$SHOULD_CLEANUP" == "true" ]]; then
+              if [[ "${SHOULD_CLEANUP}" == "true" ]]; then
                 CLEANUP_ENV=$(jq -n \
-                  --arg stack_name "$STACK_NAME" \
-                  --arg pr_number "$PR_NUMBER" \
-                  --arg env_name "$ENV_NAME" \
-                  --arg age_hours "$AGE_HOURS" \
-                  --arg creation_time "$CREATION_TIME" \
+                  --arg stack_name "${STACK_NAME}" \
+                  --arg pr_number "${PR_NUMBER}" \
+                  --arg env_name "${ENV_NAME}" \
+                  --arg age_hours "${AGE_HOURS}" \
+                  --arg creation_time "${CREATION_TIME}" \
                   '{
                     stack_name: $stack_name,
                     pr_number: $pr_number,
@@ -153,7 +153,7 @@ jobs:
                     creation_time: $creation_time
                   }')
 
-                CLEANUP_ENVIRONMENTS=$(echo "$CLEANUP_ENVIRONMENTS" | jq ". + [$CLEANUP_ENV]")
+                CLEANUP_ENVIRONMENTS=$(echo "${CLEANUP_ENVIRONMENTS}" | jq ". + [${CLEANUP_ENV}]")
                 ((CLEANUP_COUNT++))
               fi
 
@@ -161,17 +161,17 @@ jobs:
             done
           fi
 
-          echo "cleanup-count=$CLEANUP_COUNT" >> $GITHUB_OUTPUT
-          echo "environments=$(echo "$CLEANUP_ENVIRONMENTS" | jq -c .)" >> $GITHUB_OUTPUT
+          echo "cleanup-count=${CLEANUP_COUNT}" >> $GITHUB_OUTPUT
+          echo "environments=$(echo "${CLEANUP_ENVIRONMENTS}" | jq -c .)" >> $GITHUB_OUTPUT
 
           echo "📊 Discovery Summary:"
-          echo "  Total preview environments: $TOTAL_COUNT"
-          echo "  Environments for cleanup: $CLEANUP_COUNT"
+          echo "  Total preview environments: ${TOTAL_COUNT}"
+          echo "  Environments for cleanup: ${CLEANUP_COUNT}"
 
-          if [[ "$CLEANUP_COUNT" -gt 0 ]]; then
+          if [[ "${CLEANUP_COUNT}" -gt 0 ]]; then
             echo ""
             echo "🗑️ Environments scheduled for cleanup:"
-            echo "$CLEANUP_ENVIRONMENTS" | jq -r '.[] | "  - \(.env_name) (PR #\(.pr_number), age: \(.age_hours)h)"'
+            echo "${CLEANUP_ENVIRONMENTS}" | jq -r '.[] | "  - \(.env_name) (PR #\(.pr_number), age: \(.age_hours)h)"'
           fi
 
   # Clean up discovered environments
@@ -237,16 +237,16 @@ jobs:
             DRY_RUN="${{ inputs.dry_run || 'true' }}"
           fi
 
-          echo "🗑️ Scheduled cleanup for environment: $ENV_NAME"
-          echo "📦 Stack: $STACK_NAME"
-          echo "🔗 PR: #$PR_NUMBER"
+          echo "🗑️ Scheduled cleanup for environment: ${ENV_NAME}"
+          echo "📦 Stack: ${STACK_NAME}"
+          echo "🔗 PR: #${PR_NUMBER}"
           echo "🕐 Age: ${AGE_HOURS} hours"
-          echo "🧪 Dry Run: $DRY_RUN"
+          echo "🧪 Dry Run: ${DRY_RUN}"
           echo ""
 
-          if [[ "$DRY_RUN" == "true" ]]; then
+          if [[ "${DRY_RUN}" == "true" ]]; then
             echo "🧪 DRY RUN MODE - Would destroy the following resources:"
-            echo "  - CloudFormation Stack: $STACK_NAME"
+            echo "  - CloudFormation Stack: ${STACK_NAME}"
             echo "  - Auto Scaling Group: macro-ai-${ENV_NAME}-asg"
             echo "  - Application Load Balancer: macro-ai-${ENV_NAME}-alb"
             echo "  - Launch Template: macro-ai-${ENV_NAME}-preview-launch-template"
@@ -260,7 +260,7 @@ jobs:
             # List stack resources for logging
             echo "📋 Stack resources to be destroyed:"
             aws cloudformation list-stack-resources \
-              --stack-name "$STACK_NAME" \
+              --stack-name "${STACK_NAME}" \
               --query 'StackResourceSummaries[].{Type:ResourceType,LogicalId:LogicalResourceId,Status:ResourceStatus}' \
               --output table || echo "Could not list resources"
 
@@ -271,7 +271,7 @@ jobs:
             for attempt in {1..3}; do
               echo "🔄 Destruction attempt ${attempt}/3..."
 
-              if pnpm cdk destroy "$STACK_NAME" --force; then
+              if pnpm cdk destroy "${STACK_NAME}" --force; then
                 DESTROY_SUCCESS=true
                 echo "✅ Stack destroyed successfully"
                 break
@@ -284,7 +284,7 @@ jobs:
               fi
             done
 
-            if [[ "$DESTROY_SUCCESS" == "true" ]]; then
+            if [[ "${DESTROY_SUCCESS}" == "true" ]]; then
               echo "cleanup-result=success" >> $GITHUB_OUTPUT
             else
               echo "cleanup-result=failed" >> $GITHUB_OUTPUT
@@ -302,13 +302,13 @@ jobs:
           ENV_NAME="${{ matrix.environment.env_name }}"
           STACK_NAME="${{ matrix.environment.stack_name }}"
 
-          echo "🔍 Verifying ECS Fargate cleanup for environment: $ENV_NAME"
+          echo "🔍 Verifying ECS Fargate cleanup for environment: ${ENV_NAME}"
 
           # Wait a moment for AWS to process the deletion
           sleep 10
 
           # Verify CloudFormation stack deletion (ECS resources are managed by the stack)
-          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" --no-cli-pager &> /dev/null; then
+          if aws cloudformation describe-stacks --stack-name "${STACK_NAME}" --no-cli-pager &> /dev/null; then
             echo "verification-result=partial" >> $GITHUB_OUTPUT
             echo "⚠️ Stack still exists - cleanup may still be in progress"
           else
@@ -340,11 +340,11 @@ jobs:
             DRY_RUN="${{ inputs.dry_run || 'true' }}"
           fi
 
-          if [[ "$DRY_RUN" == "false" && "$CLEANUP_COUNT" -gt 0 ]]; then
+          if [[ "${DRY_RUN}" == "false" && "${CLEANUP_COUNT}" -gt 0 ]]; then
             echo "📊 Recording cost optimization data..."
 
             # Record cleanup operation for cost tracking
-            if ./scripts/cost-optimization-reporter.sh --report-cleanup --environments-cleaned "$CLEANUP_COUNT"; then
+            if ./scripts/cost-optimization-reporter.sh --report-cleanup --environments-cleaned "${CLEANUP_COUNT}"; then
               echo "✅ Cost optimization data recorded successfully"
             else
               echo "⚠️ Failed to record cost optimization data (non-critical)"
@@ -364,7 +364,7 @@ jobs:
           echo ""
 
           DRY_RUN="${{ inputs.dry_run || 'true' }}"
-          if [[ "$DRY_RUN" == "true" ]]; then
+          if [[ "${DRY_RUN}" == "true" ]]; then
             echo "🧪 DRY RUN MODE - No resources were actually destroyed"
             echo "This was a preview of what would be cleaned up in live mode."
           else
@@ -375,13 +375,13 @@ jobs:
           echo ""
           echo "📈 Cost Optimization Impact:"
           CLEANUP_COUNT="${{ needs.discover-environments.outputs.cleanup-count }}"
-          if [[ "$CLEANUP_COUNT" -gt 0 ]]; then
+          if [[ "${CLEANUP_COUNT}" -gt 0 ]]; then
             # Estimate cost savings (rough calculation)
             # Assume each preview environment costs ~$2-5/day
             ESTIMATED_DAILY_SAVINGS=$((CLEANUP_COUNT * 3))
             ESTIMATED_MONTHLY_SAVINGS=$((ESTIMATED_DAILY_SAVINGS * 30))
 
-            echo "  - Environments cleaned up: $CLEANUP_COUNT"
+            echo "  - Environments cleaned up: ${CLEANUP_COUNT}"
             echo "  - Estimated daily cost savings: ~\$${ESTIMATED_DAILY_SAVINGS}"
             echo "  - Estimated monthly cost savings: ~\$${ESTIMATED_MONTHLY_SAVINGS}"
           else
@@ -393,7 +393,7 @@ jobs:
           echo "🔧 Configuration Used:"
           echo "  - Max Age: ${{ inputs.max_age_hours || '24' }} hours"
           echo "  - Force Cleanup: ${{ inputs.force_cleanup || 'false' }}"
-          echo "  - Dry Run: $DRY_RUN"
+          echo "  - Dry Run: ${DRY_RUN}"
 
           echo ""
           echo "📅 Next Scheduled Run: Tomorrow at 10:00 PM UTC"

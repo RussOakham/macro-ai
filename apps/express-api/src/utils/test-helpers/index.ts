@@ -177,10 +177,10 @@ import {
 	TimeController,
 } from './advanced-mocking.ts'
 import {
-	ChatContractData,
+	type ChatContractData,
 	ContractDataGenerator,
-	MessageContractData,
-	UserContractData,
+	type MessageContractData,
+	type UserContractData,
 } from './pact-contract-testing.ts'
 
 // ============================================================================
@@ -423,9 +423,7 @@ export const testAssertions = {
 		obj: Record<string, unknown>,
 		requiredProps: string[],
 	) => {
-		return requiredProps.every((prop) =>
-			Object.prototype.hasOwnProperty.call(obj, prop),
-		)
+		return requiredProps.every((prop) => Object.hasOwn(obj, prop))
 	},
 
 	/**

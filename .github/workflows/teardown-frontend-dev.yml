@@ -68,7 +68,8 @@ jobs:
         id: codeowner-check
         uses: ./.github/actions/check-codeowner
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          mode: 'pr'
+          base-ref: ${{ github.event.pull_request.base.ref }}
 
       - name: Generate environment name
         id: env-name

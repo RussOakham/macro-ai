@@ -1,4 +1,8 @@
-import {
+// oxlint-disable prefer-await-to-then
+// oxlint-disable prefer-await-to-callbacks
+// oxlint-disable no-promise-in-callback
+// oxlint-disable avoid-new
+import type {
 	AxiosError,
 	AxiosInstance,
 	AxiosResponse,
@@ -14,7 +18,7 @@ import {
 } from '../auth/shared-refresh-promise'
 import { standardizeError } from '../errors/standardize-error'
 import { logger } from '../logger/logger'
-import { IStandardizedError } from '../types'
+import { type IStandardizedError } from '../types'
 
 // Track if we're currently refreshing to prevent multiple refresh calls
 let isRefreshing = false
@@ -41,8 +45,8 @@ interface IExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
 /**
  * Applies token refresh interceptors to a client with an axios instance
  * This ensures consistent authentication behavior across all domain clients
- * @param client
- * @param client.axios
+ * @param client - The axios instance
+ * @param client.axios - The axios instance
  */
 export const applyTokenRefreshInterceptors = (client: {
 	axios: AxiosInstance
@@ -108,13 +112,16 @@ export const applyTokenRefreshInterceptors = (client: {
 					return Promise.reject(err)
 				}
 				if (isRefreshing) {
-					return new Promise((resolve, reject) => {
-						failedQueue.push({ resolve, reject })
-					})
-						.then(() => {
-							return client.axios(originalRequest)
+					return (
+						new Promise((resolve, reject) => {
+							failedQueue.push({ resolve, reject })
 						})
-						.catch((err: unknown) => Promise.reject(standardizeError(err)))
+							.then(() => {
+								return client.axios(originalRequest)
+							})
+							// oxlint-disable-next-line no-return-wrap
+							.catch((err: unknown) => Promise.reject(standardizeError(err)))
+					)
 				}
 
 				originalRequest._retry = true

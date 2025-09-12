@@ -24,5 +24,6 @@
 		"style": "ordered"
 	},
 	"MD036": false,
-	"no-hard-tabs": false
+	"no-hard-tabs": false,
+	"ignore": [".codeql/**/*.md", ".tools/**/*.md"]
 }

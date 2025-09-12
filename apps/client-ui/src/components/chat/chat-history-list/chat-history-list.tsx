@@ -2,7 +2,7 @@ import { AlertCircle, Loader2, MessageSquare } from 'lucide-react'
 import { useMemo } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { ChatWithDates } from '@/lib/types'
+import { type ChatWithDates } from '@/lib/types'
 import { formatRelativeDate } from '@/lib/utils/datetime/format-relative-date'
 import { useChats } from '@/services/hooks/chat/use-chats'
 

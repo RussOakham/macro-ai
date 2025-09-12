@@ -4,6 +4,9 @@
 
 name: Dev - PR Label Check
 
+permissions:
+  pull-requests: read
+
 on:
   pull_request:
     types: [opened, reopened, labeled, unlabeled, synchronize]

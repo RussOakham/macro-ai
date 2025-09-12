@@ -8,7 +8,7 @@
 // Flag to prevent multiple initializations
 let isInitialized = false
 
-export const initializeApiClients = async () => {
+const initializeApiClients = async () => {
 	if (isInitialized) {
 		return
 	}
@@ -33,7 +33,7 @@ export const initializeApiClients = async () => {
 }
 
 // Auto-initialize in the appropriate environment
-if (typeof window !== 'undefined') {
+if (typeof globalThis.window !== 'undefined') {
 	// Browser environment - initialize after a short delay
 	setTimeout(() => {
 		void initializeApiClients()
@@ -42,3 +42,5 @@ if (typeof window !== 'undefined') {
 	// Node environment (tests) - initialize immediately
 	void initializeApiClients()
 }
+
+export { initializeApiClients }

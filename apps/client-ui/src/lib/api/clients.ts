@@ -1,6 +1,4 @@
-import type { Config } from '@repo/macro-ai-api-client'
-
-import { createApiClient } from '@repo/macro-ai-api-client'
+import { createApiClient, type Config } from '@repo/macro-ai-api-client'
 
 import { validateEnvironment } from '@/lib/validation/environment'
 
@@ -15,7 +13,7 @@ const sharedConfig: Partial<Config> = {
 }
 
 // Create unified client with shared configuration
-export const apiClient = createApiClient(env.VITE_API_URL, sharedConfig)
+const apiClient = createApiClient(env.VITE_API_URL, sharedConfig)
 
 // Create a version without credentials for non-auth endpoints
 const sharedConfigWithoutCredentials: Partial<Config> = {
@@ -25,14 +23,18 @@ const sharedConfigWithoutCredentials: Partial<Config> = {
 	withCredentials: false,
 }
 
-export const apiClientWithoutCredentials = createApiClient(
+const apiClientWithoutCredentials = createApiClient(
 	env.VITE_API_URL,
 	sharedConfigWithoutCredentials,
 )
 
 // Export types for convenience
-export type ApiClient = typeof apiClient
-export type ApiClientWithoutCredentials = typeof apiClientWithoutCredentials
+type ApiClient = typeof apiClient
+type ApiClientWithoutCredentials = typeof apiClientWithoutCredentials
 
 // Initialize API clients and interceptors using dynamic imports to avoid circular dependencies
+// oxlint-disable-next-line no-unassigned-import first
 import './initialize-api'
+
+export { apiClient, apiClientWithoutCredentials }
+export type { ApiClient, ApiClientWithoutCredentials }

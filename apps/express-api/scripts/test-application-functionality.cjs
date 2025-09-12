@@ -351,7 +351,7 @@ async function testHealthEndpoints() {
 								'Invalid health response format',
 							)
 						}
-					} catch (parseError) {
+					} catch {
 						recordTestResult(
 							category,
 							'Health endpoint response format',

@@ -36,20 +36,21 @@ jobs:
         id: codeowner-check
         uses: ./.github/actions/check-codeowner
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          mode: 'pr'
+          base-ref: ${{ github.event.pull_request.base.ref }}
 
       - name: Generate environment name
         id: env-name
         run: |
           ENV_NAME="pr-${{ github.event.pull_request.number }}"
-          echo "env-name=${ENV_NAME}" >> $GITHUB_OUTPUT
+          echo "env-name=${ENV_NAME}" >> "$GITHUB_OUTPUT"
           echo "🌍 Environment name: ${ENV_NAME}"
 
       - name: Generate Amplify app info
         id: amplify-info
         run: |
           AMPLIFY_APP_NAME="macro-ai-frontend-pr-${{ github.event.pull_request.number }}"
-          echo "amplify-app-name=${AMPLIFY_APP_NAME}" >> $GITHUB_OUTPUT
+          echo "amplify-app-name=${AMPLIFY_APP_NAME}" >> "$GITHUB_OUTPUT"
           echo "📱 Amplify app name: ${AMPLIFY_APP_NAME}"
 
       - name: Make teardown decision
@@ -61,13 +62,13 @@ jobs:
           PR_MERGED="${{ github.event.pull_request.merged }}"
 
           if [[ "${IS_OWNER}" == "true" ]]; then
-            echo "should-destroy=true" >> $GITHUB_OUTPUT
+            echo "should-destroy=true" >> "$GITHUB_OUTPUT"
             echo "✅ Frontend preview teardown approved for code owner: ${ACTOR}"
             echo "🌍 Target environment: ${{ steps.env-name.outputs.env-name }}"
             echo "📱 Amplify app: ${{ steps.amplify-info.outputs.amplify-app-name }}"
             echo "🔗 PR state: ${PR_STATE} (merged: ${PR_MERGED})"
           else
-            echo "should-destroy=false" >> $GITHUB_OUTPUT
+            echo "should-destroy=false" >> "$GITHUB_OUTPUT"
             echo "❌ Frontend preview teardown blocked: ${ACTOR} is not a code owner"
             echo "💡 Only code owners can trigger frontend preview teardown"
           fi
@@ -106,6 +107,7 @@ jobs:
 
           # Check if Amplify app exists
           APP_INFO=$(aws amplify list-apps \
+            --region "${{ env.AWS_REGION }}" \
             --query "apps[?name=='${AMPLIFY_APP_NAME}'].{appId:appId,name:name,status:status}" \
             --output json 2>/dev/null || echo "[]")
 
@@ -114,17 +116,17 @@ jobs:
             APP_STATUS=$(echo "$APP_INFO" | jq -r '.[0].status' 2>/dev/null || echo "")
 
             if [[ -n "$APP_ID" && "$APP_ID" != "null" ]]; then
-              echo "app-exists=true" >> $GITHUB_OUTPUT
-              echo "app-id=${APP_ID}" >> $GITHUB_OUTPUT
+              echo "app-exists=true" >> "$GITHUB_OUTPUT"
+              echo "app-id=${APP_ID}" >> "$GITHUB_OUTPUT"
               echo "✅ Amplify app found: ${APP_ID} (status: ${APP_STATUS})"
             else
-              echo "app-exists=false" >> $GITHUB_OUTPUT
-              echo "app-id=" >> $GITHUB_OUTPUT
+              echo "app-exists=false" >> "$GITHUB_OUTPUT"
+              echo "app-id=" >> "$GITHUB_OUTPUT"
               echo "⚠️ Amplify app data found but could not extract app ID"
             fi
           else
-            echo "app-exists=false" >> $GITHUB_OUTPUT
-            echo "app-id=" >> $GITHUB_OUTPUT
+            echo "app-exists=false" >> "$GITHUB_OUTPUT"
+            echo "app-id=" >> "$GITHUB_OUTPUT"
             echo "ℹ️ Amplify app not found - may have already been deleted"
           fi
 
@@ -181,6 +183,8 @@ jobs:
 
       - name: Destroy Amplify app
         id: destroy
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           cd apps/client-ui
 
@@ -193,7 +197,7 @@ jobs:
           echo "🆔 App ID: ${APP_ID}"
           echo "🌍 Environment: ${ENV_NAME}"
           echo "👤 PR Author: ${{ needs.validate-access.outputs.target-user }}"
-          echo "🔗 PR: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}"
+          echo "🔗 PR: #${{ github.event.pull_request.number }} - ${PR_TITLE}"
 
           # Make destroy script executable and run it
           chmod +x scripts/destroy-amplify-preview.sh
@@ -224,9 +228,9 @@ jobs:
           done
 
           if [[ "${DESTROY_SUCCESS}" == "true" ]]; then
-            echo "destroy-result=success" >> $GITHUB_OUTPUT
+            echo "destroy-result=success" >> "$GITHUB_OUTPUT"
           else
-            echo "destroy-result=failed" >> $GITHUB_OUTPUT
+            echo "destroy-result=failed" >> "$GITHUB_OUTPUT"
             echo "❌ All destruction attempts failed"
 
             # Try to get error details
@@ -255,10 +259,10 @@ jobs:
             --output text 2>/dev/null || echo "DOES_NOT_EXIST")
 
           if [[ "${APP_STATUS}" == "DOES_NOT_EXIST" ]]; then
-            echo "verification-result=success" >> $GITHUB_OUTPUT
+            echo "verification-result=success" >> "$GITHUB_OUTPUT"
             echo "✅ App deletion verified - frontend preview fully cleaned up"
           else
-            echo "verification-result=partial" >> $GITHUB_OUTPUT
+            echo "verification-result=partial" >> "$GITHUB_OUTPUT"
             echo "⚠️ App still exists with status: ${APP_STATUS}"
             echo "This may be normal if deletion is still in progress"
           fi
@@ -276,13 +280,15 @@ jobs:
     steps:
       - name: Generate teardown report
         run: |
-          echo "## 🗑️ Frontend Preview Environment Teardown Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Environment:** \`${{ needs.validate-access.outputs.env-name }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Amplify App:** \`${{ needs.validate-access.outputs.amplify-app-name }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**PR Author:** @${{ needs.validate-access.outputs.target-user }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## 🗑️ Frontend Preview Environment Teardown Report"
+            echo ""
+            echo "**Environment:** \`${{ needs.validate-access.outputs.env-name }}\`"
+            echo "**Amplify App:** \`${{ needs.validate-access.outputs.amplify-app-name }}\`"
+            echo "**PR Author:** @${{ needs.validate-access.outputs.target-user }}"
+            echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
 
           APP_EXISTS="${{ needs.check-amplify-app.outputs.app-exists }}"
           DESTROY_RESULT="${{ needs.destroy-frontend-preview.outputs.destroy-result }}"

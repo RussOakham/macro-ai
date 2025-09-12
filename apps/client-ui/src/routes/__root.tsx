@@ -1,4 +1,4 @@
-import { QueryClient } from '@tanstack/react-query'
+import { type QueryClient } from '@tanstack/react-query'
 import { createRootRouteWithContext, Outlet } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 import Cookies from 'js-cookie'
@@ -8,8 +8,7 @@ import { DesktopNav } from '@/components/ui/navigation/desktop-navigation/deskto
 import { Toaster } from '@/components/ui/sonner'
 import { QUERY_KEY } from '@/constants/query-keys'
 import { getUser } from '@/services/network/user/get-user'
-
-export interface IRouterContext {
+interface IRouterContext {
 	queryClient: QueryClient
 }
 
@@ -52,7 +51,7 @@ const RootComponent = () => {
 	)
 }
 
-export const Route = createRootRouteWithContext<IRouterContext>()({
+const Route = createRootRouteWithContext<IRouterContext>()({
 	component: RootComponent,
 	beforeLoad: async ({ context }) => {
 		const { queryClient } = context
@@ -65,3 +64,6 @@ export const Route = createRootRouteWithContext<IRouterContext>()({
 		}
 	},
 })
+
+export { Route }
+export type { IRouterContext }

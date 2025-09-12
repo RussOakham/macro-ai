@@ -1,6 +1,7 @@
 // @ts-check
 import js from '@eslint/js'
 import gitignore from 'eslint-config-flat-gitignore'
+import globals from 'globals'
 import tseslint from 'typescript-eslint'
 import turboConfig from 'eslint-config-turbo/flat'
 import sonarjsPlugin from 'eslint-plugin-sonarjs'
@@ -112,11 +113,12 @@ const base = {
 			plugins: {
 				vitest: vitestPlugin,
 				'testing-library': testingLibraryPlugin,
+				globals: globals,
 			},
 			files: ['**/*.{test,spec}.{js,ts,jsx,tsx}'],
 			languageOptions: {
 				globals: {
-					...(vitestPlugin.environments?.globals?.globals || {}),
+					...globals.node,
 				},
 			},
 			rules: {
