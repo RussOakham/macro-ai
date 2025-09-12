@@ -228,7 +228,7 @@ describe('API Client Validation', () => {
 			// Setup MSW handler that checks headers
 			setupServerWithHandlers([
 				http.get('http://localhost:3000/headers-test', ({ request }) => {
-					const headers = request.headers
+					const { headers } = request
 					return HttpResponse.json(
 						{
 							message: 'Headers received',

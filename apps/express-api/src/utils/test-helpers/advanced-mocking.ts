@@ -15,8 +15,8 @@ import type { Pool, PoolClient } from 'pg'
 import { faker } from '@faker-js/faker'
 import { vi } from 'vitest'
 
-import { TChat, TChatMessage } from '../../features/chat/chat.types.ts'
-import { TUser } from '../../features/user/user.types.ts'
+import type { TChat, TChatMessage } from '../../features/chat/chat.types.ts'
+import type { TUser } from '../../features/user/user.types.ts'
 
 // ============================================================================
 // Type Definitions

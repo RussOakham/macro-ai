@@ -53,7 +53,7 @@ class VectorRepository implements IVectorRepository {
 			]
 		}
 
-		const createdVector = vector[0]
+		const [createdVector] = vector
 		if (!createdVector) {
 			return [
 				null,

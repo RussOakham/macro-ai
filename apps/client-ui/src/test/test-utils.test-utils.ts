@@ -576,7 +576,7 @@ export const clientUITestAssertions = {
 		expectedData?: unknown,
 	) => {
 		expect(mockFn).toHaveBeenCalled()
-		const call = mockFn.mock.calls[0]
+		const [call] = mockFn.mock.calls
 		if (call) {
 			expect(call[0]).toBe(expectedUrl)
 			expect(call[1]).toBe(expectedMethod)
@@ -633,7 +633,7 @@ export const clientUITestAssertions = {
 		expect(response).toHaveProperty('success', false)
 		expect(response).toHaveProperty('error')
 		if (response && typeof response === 'object' && 'error' in response) {
-			const error = (response as { error: unknown }).error
+			const { error } = response as { error: unknown }
 			expect(error).toHaveProperty('message')
 			expect(error).toHaveProperty('code')
 			expect(error).toHaveProperty('timestamp')

@@ -291,7 +291,7 @@ export class TaggingStrategy {
 	private static calculateExpiryDate(days: number): string {
 		const expiry = new Date()
 		expiry.setDate(expiry.getDate() + days)
-		const datePart = expiry.toISOString().split('T')[0]
+		const [datePart] = expiry.toISOString().split('T')
 		return datePart ?? expiry.toISOString().slice(0, 10) // YYYY-MM-DD format
 	}
 

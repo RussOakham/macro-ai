@@ -18,7 +18,7 @@ const useChatNavigation = (): UseChatNavigationReturn => {
 
 	const currentChatId = useMemo(() => {
 		// Extract chatId from the current location pathname
-		const pathname = routerState.location.pathname
+		const { pathname } = routerState.location
 		const chatIdRegex = /^\/chat\/([^/]+)$/
 		const chatIdMatch = chatIdRegex.exec(pathname)
 		return chatIdMatch?.[1] ?? null

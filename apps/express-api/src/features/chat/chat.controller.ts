@@ -35,7 +35,7 @@ export class ChatController implements IChatController {
 		res: Response,
 		next: NextFunction,
 	): Promise<void> => {
-		const userId = req.userId // Set by auth middleware
+		const { userId } = req // Set by auth middleware
 
 		if (!userId) {
 			res.status(StatusCodes.UNAUTHORIZED).json({
@@ -107,7 +107,7 @@ export class ChatController implements IChatController {
 		res: Response,
 		next: NextFunction,
 	): Promise<void> => {
-		const userId = req.userId // Set by auth middleware
+		const { userId } = req // Set by auth middleware
 
 		if (!userId) {
 			res.status(StatusCodes.UNAUTHORIZED).json({
@@ -163,7 +163,7 @@ export class ChatController implements IChatController {
 		res: Response,
 		next: NextFunction,
 	): Promise<void> => {
-		const userId = req.userId // Set by auth middleware
+		const { userId } = req // Set by auth middleware
 		const chatId = req.params.id
 
 		if (!userId) {
@@ -226,7 +226,7 @@ export class ChatController implements IChatController {
 		res: Response,
 		next: NextFunction,
 	): Promise<void> => {
-		const userId = req.userId // Set by auth middleware
+		const { userId } = req // Set by auth middleware
 		const chatId = req.params.id
 		const { title } = req.body as UpdateChatRequest
 
@@ -292,7 +292,7 @@ export class ChatController implements IChatController {
 		res: Response,
 		next: NextFunction,
 	): Promise<void> => {
-		const userId = req.userId // Set by auth middleware
+		const { userId } = req // Set by auth middleware
 		const chatId = req.params.id
 
 		if (!userId) {
@@ -355,7 +355,7 @@ export class ChatController implements IChatController {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		next: NextFunction,
 	): Promise<void> => {
-		const userId = req.userId // Set by auth middleware
+		const { userId } = req // Set by auth middleware
 		const chatId = req.params.id
 		const requestBody = req.body as SendMessageRequest
 
@@ -386,8 +386,7 @@ export class ChatController implements IChatController {
 			return
 		}
 
-		const content = latestMessage.content
-		const role = latestMessage.role
+		const { content, role } = latestMessage
 
 		if (!userId) {
 			res.status(StatusCodes.UNAUTHORIZED).json({

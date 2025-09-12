@@ -153,7 +153,7 @@ class ChatRepository implements IChatRepository {
 			]
 		}
 
-		const createdChat = chat[0]
+		const [createdChat] = chat
 		if (!createdChat) {
 			return [
 				null,
@@ -207,7 +207,7 @@ class ChatRepository implements IChatRepository {
 		// If no chat found, return undefined
 		if (!chat.length) return [undefined, null]
 
-		const updatedChat = chat[0]
+		const [updatedChat] = chat
 		if (!updatedChat) return [undefined, null]
 
 		// Validate the returned chat with Zod

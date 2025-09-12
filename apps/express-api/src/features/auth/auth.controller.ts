@@ -42,8 +42,7 @@ import { assertConfig } from '../../config/simple-config.ts'
 
 // Load configuration once at module level (no logging)
 const config = assertConfig(false)
-const nodeEnv = config.nodeEnv
-const cookieDomain = config.cookieDomain
+const { nodeEnv, cookieDomain } = config
 const refreshTokenExpiryDays = config.awsCognitoRefreshTokenExpiry
 
 /**

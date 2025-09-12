@@ -332,7 +332,7 @@ describe('Security Headers Middleware', () => {
 			// Type guard to ensure contentSecurityPolicy is an object with directives
 			const csp = helmetCall?.contentSecurityPolicy
 			if (typeof csp === 'object' && 'directives' in csp) {
-				const directives = csp.directives
+				const { directives } = csp
 				expect(directives?.defaultSrc).toEqual(["'self'"])
 				expect(directives?.objectSrc).toEqual(["'none'"])
 				expect(directives?.frameSrc).toEqual(["'none'"])
@@ -347,7 +347,7 @@ describe('Security Headers Middleware', () => {
 			const helmetCall = vi.mocked(helmet).mock.calls[0]?.[0]
 			const csp = helmetCall?.contentSecurityPolicy
 			if (typeof csp === 'object' && 'directives' in csp) {
-				const directives = csp.directives
+				const { directives } = csp
 				expect(directives?.scriptSrc).toEqual(
 					expect.arrayContaining([
 						"'self'",
@@ -366,7 +366,7 @@ describe('Security Headers Middleware', () => {
 			const helmetCall = vi.mocked(helmet).mock.calls[0]?.[0]
 			const csp = helmetCall?.contentSecurityPolicy
 			if (typeof csp === 'object' && 'directives' in csp) {
-				const directives = csp.directives
+				const { directives } = csp
 				expect(directives?.connectSrc).toEqual(
 					expect.arrayContaining([
 						"'self'",
@@ -384,7 +384,7 @@ describe('Security Headers Middleware', () => {
 			const helmetCall = vi.mocked(helmet).mock.calls[0]?.[0]
 			const csp = helmetCall?.contentSecurityPolicy
 			if (typeof csp === 'object' && 'directives' in csp) {
-				const directives = csp.directives
+				const { directives } = csp
 				expect(directives?.imgSrc).toEqual(
 					expect.arrayContaining(["'self'", 'data:', 'https:']),
 				)

@@ -138,7 +138,7 @@ class MessageRepository implements IMessageRepository {
 			]
 		}
 
-		const createdMessage = message[0]
+		const [createdMessage] = message
 		if (!createdMessage) {
 			return [
 				null,
@@ -192,7 +192,7 @@ class MessageRepository implements IMessageRepository {
 		// If no message found, return undefined
 		if (!message.length) return [undefined, null]
 
-		const updatedMessage = message[0]
+		const [updatedMessage] = message
 		if (!updatedMessage) return [undefined, null]
 
 		// Validate the returned message with Zod

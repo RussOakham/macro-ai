@@ -151,7 +151,7 @@ export class VectorService {
 				successfulEmbeddings: vectors.length,
 				errorCount: errors.length,
 			})
-			const firstError = errors[0]
+			const [firstError] = errors
 			return [
 				null,
 				firstError ??
