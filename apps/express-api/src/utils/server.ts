@@ -2,7 +2,7 @@ import bodyParser from 'body-parser'
 import compression from 'compression'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
-import { doubleCsrf } from 'csrf-csrf'
+import { doubleCsrfProtection } from './csrf.ts'
 import express, { type Express } from 'express'
 import path from 'node:path'
 import swaggerUi from 'swagger-ui-express'
@@ -19,25 +19,6 @@ import { config } from './load-config.ts'
 import { pino } from './logger.ts'
 
 // Export options for use in generate-swagger.ts
-
-// CSRF protection configuration
-const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
-	getSecret: () => config.COOKIE_ENCRYPTION_KEY, // Use cookie encryption key for CSRF token generation
-	getSessionIdentifier: (req) => {
-		// Use user ID from auth middleware if available, otherwise use IP + User-Agent
-		return req.userId || `${req.ip}-${req.get('User-Agent') || 'unknown'}`
-	},
-	cookieName: 'macro-ai-csrf-token',
-	cookieOptions: {
-		httpOnly: true,
-		sameSite: 'strict',
-		secure: config.NODE_ENV === 'production',
-	},
-	size: 64, // Token size in bytes
-	ignoredMethods: ['GET', 'HEAD', 'OPTIONS'], // Methods that don't need CSRF protection
-	getCsrfTokenFromRequest: (req) =>
-		req.body._csrf || req.headers['x-csrf-token'],
-})
 
 const createServer = (): Express => {
 	const app: Express = express()
@@ -175,6 +156,5 @@ const createServer = (): Express => {
 	return app
 }
 
-// Export CSRF token generator for use in API endpoints
-export { generateCsrfToken }
+// Note: generateCsrfToken is now exported from ./csrf.ts
 export { createServer }

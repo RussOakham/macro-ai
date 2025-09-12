@@ -2,7 +2,7 @@ import { type Router } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import { apiRateLimiter } from '../../middleware/rate-limit.middleware.ts'
-import { generateCsrfToken } from '../../utils/server.ts'
+import { generateCsrfToken } from '../../utils/csrf.ts'
 import {
 	InternalServerErrorSchema,
 	RateLimitErrorSchema,
