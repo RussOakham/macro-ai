@@ -1,11 +1,11 @@
-import type * as cdk from 'aws-cdk-lib'
+import * as cdk from 'aws-cdk-lib'
 import type * as autoscaling from 'aws-cdk-lib/aws-autoscaling'
-import type * as ec2 from 'aws-cdk-lib/aws-ec2'
-import type * as ecr from 'aws-cdk-lib/aws-ecr'
-import type * as ecs from 'aws-cdk-lib/aws-ecs'
-import type * as iam from 'aws-cdk-lib/aws-iam'
-import type * as logs from 'aws-cdk-lib/aws-logs'
-import type { Construct } from 'constructs'
+import * as ec2 from 'aws-cdk-lib/aws-ec2'
+import * as ecr from 'aws-cdk-lib/aws-ecr'
+import * as ecs from 'aws-cdk-lib/aws-ecs'
+import * as iam from 'aws-cdk-lib/aws-iam'
+import * as logs from 'aws-cdk-lib/aws-logs'
+import { Construct } from 'constructs'
 
 import type { EnvironmentConfigConstruct } from './environment-config-construct'
 

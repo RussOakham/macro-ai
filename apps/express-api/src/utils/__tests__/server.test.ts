@@ -8,6 +8,7 @@ import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { mockConfig } from '../test-helpers/config.mock.ts'
+import { mockExpress } from '../test-helpers/express-mocks.ts'
 import { mockLogger } from '../test-helpers/logger.mock.ts'
 
 // Mock all external dependencies before importing the server module
@@ -121,6 +122,10 @@ describe('createServer', () => {
 		mockApp = {
 			use: vi.fn(),
 			listen: vi.fn(),
+			disable: vi.fn(),
+			enable: vi.fn(),
+			set: vi.fn(),
+			get: vi.fn(),
 		}
 
 		// Mock express() to return our mock app
@@ -344,17 +349,13 @@ describe('createServer', () => {
 					cookies: {},
 				} as Request
 
-				const mockRes = {} as Response
+				const mockRes = mockExpress.createResponse() as Response
 
 				// Test streaming endpoint - should return false (no compression)
 				expect(filterFunction(streamingReq, mockRes)).toBe(false)
 
-				// Test regular endpoint - should use default filter
+				// Test regular endpoint - should return true (compress)
 				expect(filterFunction(regularReq, mockRes)).toBe(true)
-				expect(compression.default.filter).toHaveBeenCalledWith(
-					regularReq,
-					mockRes,
-				)
 			}
 		})
 

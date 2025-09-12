@@ -18,7 +18,9 @@ const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
 	size: 64, // Token size in bytes
 	ignoredMethods: ['GET', 'HEAD', 'OPTIONS'], // Methods that don't need CSRF protection
 	getCsrfTokenFromRequest: (req) =>
-		req.body._csrf || req.headers['x-csrf-token'],
+		req.body._csrf ||
+		req.headers['x-csrf-token'] ||
+		req.headers['X-CSRF-Token'],
 })
 
 // Export CSRF middleware and token generator

@@ -1,5 +1,5 @@
-import type { AxiosError } from 'axios'
-import type { ZodError } from 'zod'
+import { AxiosError } from 'axios'
+import { ZodError } from 'zod'
 
 import type { IStandardizedError } from '../types'
 

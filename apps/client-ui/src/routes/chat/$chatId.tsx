@@ -76,12 +76,10 @@ export const Route = createFileRoute('/chat/$chatId')({
 		stringify: ({ chatId }) => ({ chatId }),
 	},
 	beforeLoad: async ({ context, location, params }) => {
-		const { queryClient } = context
+		const { queryClient } = context as { queryClient: QueryClient }
 
 		// Attempt authentication with automatic refresh capability
-		const authResult = await attemptAuthenticationWithRefresh(
-			queryClient as QueryClient,
-		)
+		const authResult = await attemptAuthenticationWithRefresh(queryClient)
 
 		if (!authResult.success) {
 			// eslint-disable-next-line @typescript-eslint/only-throw-error

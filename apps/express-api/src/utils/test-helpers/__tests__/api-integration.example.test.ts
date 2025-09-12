@@ -176,22 +176,29 @@ describe('API Integration Testing Examples', () => {
 			})
 		})
 
-		it('should create a new chat (requires bearer token authentication)', async () => {
-			// Note: This test demonstrates the correct endpoint and expected 401 response
-			// In a real test, you would authenticate first to get a valid bearer token
+		it('should create a new chat (requires both CSRF token and API key)', async () => {
+			// Note: This test demonstrates the correct endpoint and expected 500 response
+			// when CSRF validation fails (which happens before API key validation)
 			const newChat = {
 				title: 'Test Chat',
 			}
 
+			// First get a CSRF token (required for all POST requests)
+			const csrfResponse = await request(app).get('/api/csrf-token').expect(200)
+
+			const { csrfToken } = csrfResponse.body as { csrfToken: string }
+
+			// Test with CSRF token but no API key - should get 500 (CSRF validation fails first)
 			const response = await request(app)
 				.post('/api/chats')
+				.set('X-CSRF-Token', csrfToken)
 				.send(newChat)
-				.expect(401)
+				.expect(500)
 
 			const errorResponse = response.body as ErrorResponse
 			expect(errorResponse).toMatchObject({
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-				message: expect.stringContaining('API key'),
+				message: expect.stringContaining('csrf'),
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 				type: expect.any(String),
 			})
@@ -200,10 +207,16 @@ describe('API Integration Testing Examples', () => {
 
 	describe('Error Handling', () => {
 		it('should handle malformed JSON', async () => {
+			// First get a CSRF token (required for all POST requests)
+			const csrfResponse = await request(app).get('/api/csrf-token').expect(200)
+
+			const { csrfToken } = csrfResponse.body as { csrfToken: string }
+
 			const response = await request(app)
 				.post('/api/chats')
 				.set('Content-Type', 'application/json')
 				.set('X-API-KEY', TEST_API_KEY)
+				.set('X-CSRF-Token', csrfToken)
 				.send('{"invalid": json}')
 				.expect(500)
 

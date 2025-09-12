@@ -5,30 +5,26 @@ rules:
   # Custom rules for GitHub Actions workflows
   - id: github-actions-security
     languages: [yaml]
-    message: "GitHub Actions security rule"
+    message: 'GitHub Actions security rule'
     severity: ERROR
     patterns:
       - pattern: |
           uses: actions/checkout@v1
-        message: "Use actions/checkout@v4 or later for security fixes"
       - pattern: |
           uses: actions/setup-node@v1
-        message: "Use actions/setup-node@v4 or later for security fixes"
       - pattern: |
           uses: actions/upload-artifact@v1
-        message: "Use actions/upload-artifact@v4 or later for security fixes"
       - pattern: |
           uses: actions/download-artifact@v1
-        message: "Use actions/download-artifact@v4 or later for security fixes"
 
 # Exclude certain paths
 exclude:
-  - "**/node_modules/**"
-  - "**/dist/**"
-  - "**/build/**"
-  - "**/coverage/**"
-  - "**/.next/**"
-  - "**/out/**"
-  - "**/tmp/**"
-  - "**/.codeql/**"
-  - "**/.tools/**"
+  - '**/node_modules/**'
+  - '**/dist/**'
+  - '**/build/**'
+  - '**/coverage/**'
+  - '**/.next/**'
+  - '**/out/**'
+  - '**/tmp/**'
+  - '**/.codeql/**'
+  - '**/.tools/**'

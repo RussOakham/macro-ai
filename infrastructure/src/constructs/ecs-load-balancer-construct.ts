@@ -1,11 +1,11 @@
-import type * as cdk from 'aws-cdk-lib'
-import type * as acm from 'aws-cdk-lib/aws-certificatemanager'
-import type * as ec2 from 'aws-cdk-lib/aws-ec2'
+import * as cdk from 'aws-cdk-lib'
+import * as acm from 'aws-cdk-lib/aws-certificatemanager'
+import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import type * as ecs from 'aws-cdk-lib/aws-ecs'
-import type * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2'
-import type * as route53 from 'aws-cdk-lib/aws-route53'
-import type * as targets from 'aws-cdk-lib/aws-route53-targets'
-import type { Construct } from 'constructs'
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2'
+import * as route53 from 'aws-cdk-lib/aws-route53'
+import * as targets from 'aws-cdk-lib/aws-route53-targets'
+import { Construct } from 'constructs'
 
 import type { EnvironmentConfigConstruct } from './environment-config-construct'
 

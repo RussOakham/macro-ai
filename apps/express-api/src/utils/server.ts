@@ -122,7 +122,7 @@ const createServer = (): Express => {
 
 	// Apply CSRF protection to all routes except public endpoints
 	app.use((req, res, next) => {
-		// Skip CSRF for public endpoints
+		// Skip CSRF only for public documentation endpoints
 		if (
 			req.path.startsWith('/api-docs') ||
 			req.path.startsWith('/swagger.json')
