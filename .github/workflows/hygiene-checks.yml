@@ -39,7 +39,7 @@ jobs:
       - name: Detect environment
         id: detect_env
         run: |
-          if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
+          if [[ "${{ env.ACT_LOCAL }}" == "true" || "$ACT" == "true" ]]; then
             echo "🔍 Running in act (local testing) - using direct AWS credentials"
             echo "use_direct_creds=true" >> "$GITHUB_OUTPUT"
           else
@@ -370,7 +370,7 @@ jobs:
           AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
           AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
           # AWS Cognito credentials removed - using IAM roles instead
-          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
 
           # Cookie Configuration
           COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
@@ -381,15 +381,15 @@ jobs:
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
 
           # OpenAI
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
 
           # Rate Limiting
-          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
 
   lint:
     needs: setup
@@ -524,15 +524,15 @@ jobs:
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
 
           # OpenAI
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
 
           # Rate Limiting
-          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
 
       - name: Generate MSW handlers
         run: |
@@ -659,7 +659,7 @@ jobs:
           AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
           AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
           # AWS Cognito credentials removed - using IAM roles instead
-          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
 
           # Cookie Configuration
           COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
@@ -670,15 +670,15 @@ jobs:
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
 
           # OpenAI
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
 
           # Rate Limiting
-          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
 
       - name: Generate MSW handlers
         run: |
@@ -701,7 +701,7 @@ jobs:
           AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
           AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
           # AWS Cognito credentials removed - using IAM roles instead
-          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
 
           # Cookie Configuration
           COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
@@ -712,15 +712,15 @@ jobs:
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
 
           # OpenAI
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
 
           # Rate Limiting
-          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
