@@ -1,10 +1,10 @@
 import type React from 'react'
 
 interface UseChatKeyboardOptions {
-	onSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>
+	currentChatId: null | string
 	input: string
-	currentChatId: string | null
-	status: 'ready' | 'submitted' | 'streaming' | 'error'
+	onSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>
+	status: 'error' | 'ready' | 'streaming' | 'submitted'
 }
 
 interface UseChatKeyboardReturn {
@@ -22,9 +22,9 @@ interface UseChatKeyboardReturn {
  * @param options.status - Current chat status
  */
 const useChatKeyboard = ({
-	onSubmit,
-	input,
 	currentChatId,
+	input,
+	onSubmit,
 	status,
 }: UseChatKeyboardOptions): UseChatKeyboardReturn => {
 	// Handle form submission with enhanced handler

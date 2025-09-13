@@ -8,9 +8,11 @@
  * - Development/production environment detection
  */
 
-import { config as dotenvConfig } from 'dotenv'
-import { existsSync } from 'node:fs'
+import { access } from 'node:fs'
 import { resolve } from 'node:path'
+import { promisify } from 'node:util'
+
+import { config as dotenvConfig } from 'dotenv'
 import { fromError } from 'zod-validation-error'
 
 import { envSchema, type TEnv } from '../utils/env.schema.ts'
@@ -24,32 +26,32 @@ const { logger } = pino
  */
 export type EnvironmentType =
 	| 'development'
-	| 'staging'
-	| 'production'
-	| 'test'
 	| 'preview'
+	| 'production'
+	| 'staging'
+	| 'test'
 
 /**
  * Configuration loading options
  */
 export interface EnvConfigOptions {
-	/** Whether to validate the schema (default: true) */
-	validateSchema?: boolean
+	/** Custom base directory for .env files (default: project root) */
+	baseDir?: string
 	/** Whether to log configuration details (default: true) */
 	enableLogging?: boolean
 	/** Force a specific environment type */
 	forceEnvironment?: EnvironmentType
-	/** Custom base directory for .env files (default: project root) */
-	baseDir?: string
+	/** Whether to validate the schema (default: true) */
+	validateSchema?: boolean
 }
 
 /**
  * Environment file configuration
  */
 interface EnvFileConfig {
+	description: string
 	path: string
 	required: boolean
-	description: string
 }
 
 /**
@@ -79,10 +81,10 @@ export const getEnvironmentType = (
 		case 'production':
 			// In production, check APP_ENV for more specific environment
 			switch (appEnv) {
-				case 'staging':
-					return 'staging'
 				case 'production':
 					return 'production'
+				case 'staging':
+					return 'staging'
 				default:
 					return 'production'
 			}
@@ -124,12 +126,14 @@ const getEnvFilePaths = (
 			)
 			break
 
-		case 'test':
-			configs.push({
-				path: resolve(baseDir, '.env.test'),
-				required: false,
-				description: 'Test environment file',
-			})
+		case 'preview':
+			// Preview environments use CDK-generated configuration
+			// No .env files should be loaded in preview environments
+			break
+
+		case 'production':
+			// In production, we expect environment variables to be pre-set
+			// No .env files should be loaded
 			break
 
 		case 'staging':
@@ -140,14 +144,12 @@ const getEnvFilePaths = (
 			})
 			break
 
-		case 'production':
-			// In production, we expect environment variables to be pre-set
-			// No .env files should be loaded
-			break
-
-		case 'preview':
-			// Preview environments use CDK-generated configuration
-			// No .env files should be loaded in preview environments
+		case 'test':
+			configs.push({
+				path: resolve(baseDir, '.env.test'),
+				required: false,
+				description: 'Test environment file',
+			})
 			break
 	}
 
@@ -157,11 +159,12 @@ const getEnvFilePaths = (
 /**
  * Load environment variables from files based on environment type
  */
-const loadEnvFiles = (
+const loadEnvFiles = async (
 	envType: EnvironmentType,
 	baseDir: string,
 	enableLogging: boolean,
-): void => {
+	// eslint-disable-next-line sonarjs/cognitive-complexity
+): Promise<void> => {
 	const envFiles = getEnvFilePaths(envType, baseDir)
 
 	// In production or preview, don't load any .env files
@@ -181,8 +184,10 @@ const loadEnvFiles = (
 	let loadedAny = false
 
 	// Load files in order (later files override earlier ones)
+	const accessAsync = promisify(access)
 	for (const envFile of envFiles) {
-		if (existsSync(envFile.path)) {
+		try {
+			await accessAsync(envFile.path)
 			const result = dotenvConfig({
 				path: envFile.path,
 				override: false, // Don't override existing environment variables
@@ -213,10 +218,13 @@ const loadEnvFiles = (
 					)
 				}
 			}
-		} else if (envFile.required) {
-			throw new AppError({
-				message: `Required environment file not found: ${envFile.path} - Config file missing, ${envFile.description}`,
-			})
+		} catch {
+			// File doesn't exist
+			if (envFile.required) {
+				throw new AppError({
+					message: `Required environment file not found: ${envFile.path} - Config file missing, ${envFile.description}`,
+				})
+			}
 		}
 	}
 
@@ -235,7 +243,11 @@ const loadEnvFiles = (
 /**
  * Enhanced configuration loader with environment-specific support
  */
-export const loadEnvConfig = (options: EnvConfigOptions = {}): Result<TEnv> => {
+
+export const loadEnvConfig = async (
+	options: EnvConfigOptions = {},
+	// eslint-disable-next-line sonarjs/cognitive-complexity
+): Promise<Result<TEnv>> => {
 	const {
 		validateSchema = true,
 		enableLogging = false,
@@ -260,7 +272,7 @@ export const loadEnvConfig = (options: EnvConfigOptions = {}): Result<TEnv> => {
 		}
 
 		// Load environment files based on environment type
-		loadEnvFiles(envType, baseDir, enableLogging)
+		await loadEnvFiles(envType, baseDir, enableLogging)
 
 		// Validate environment variables using Zod schema
 		if (validateSchema) {
@@ -356,9 +368,11 @@ export const getConfigPrecedence = (
 	const envType = getEnvironmentType()
 	const envFiles = getEnvFilePaths(envType, baseDir)
 
+	// oxlint-disable-next-line no-array-reverse
+	const reversedEnvFiles = Array.from(envFiles).reverse()
 	const precedence = [
 		'process.env (highest priority)',
-		...envFiles.reverse().map((f) => `${f.path} (${f.description})`),
+		...reversedEnvFiles.map((f) => `${f.path} (${f.description})`),
 		'schema defaults (lowest priority)',
 	]
 

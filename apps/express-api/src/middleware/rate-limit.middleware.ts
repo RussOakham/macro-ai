@@ -1,5 +1,5 @@
-import { NextFunction, Request, Response } from 'express'
-import rateLimit, { Options } from 'express-rate-limit'
+import { type NextFunction, type Request, type Response } from 'express'
+import rateLimit, { type Options } from 'express-rate-limit'
 import { StatusCodes } from 'http-status-codes'
 import { RedisStore } from 'rate-limit-redis'
 import { createClient } from 'redis'

@@ -7,7 +7,6 @@
  */
 
 import type { RequestHandler } from 'msw'
-
 import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll } from 'vitest'
 

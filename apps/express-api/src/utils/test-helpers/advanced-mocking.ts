@@ -15,8 +15,8 @@ import type { Pool, PoolClient } from 'pg'
 import { faker } from '@faker-js/faker'
 import { vi } from 'vitest'
 
-import { TChat, TChatMessage } from '../../features/chat/chat.types.ts'
-import { TUser } from '../../features/user/user.types.ts'
+import type { TChat, TChatMessage } from '../../features/chat/chat.types.ts'
+import type { TUser } from '../../features/user/user.types.ts'
 
 // ============================================================================
 // Type Definitions
@@ -118,12 +118,12 @@ export class TimeController {
 		if (this.options.useFakeTimers) {
 			// Store original timers
 			this.originalTimers = {
-				setTimeout: global.setTimeout,
-				setInterval: global.setInterval,
-				clearTimeout: global.clearTimeout,
-				clearInterval: global.clearInterval,
-				Date: global.Date,
-				performance: global.performance,
+				setTimeout: globalThis.setTimeout,
+				setInterval: globalThis.setInterval,
+				clearTimeout: globalThis.clearTimeout,
+				clearInterval: globalThis.clearInterval,
+				Date: globalThis.Date,
+				performance: globalThis.performance,
 			}
 
 			// Install fake timers

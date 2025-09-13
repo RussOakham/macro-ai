@@ -25,24 +25,24 @@ import {
 
 interface CreateChatFormProps {
 	className?: string
-	onSuccess?: (chatId: string) => void
 	onCancel?: () => void
+	onSuccess?: (chatId: string) => void
 }
 
 const CreateChatForm = ({
 	className,
-	onSuccess,
 	onCancel,
+	onSuccess,
 	...props
 }: CreateChatFormProps & React.ComponentPropsWithoutRef<'div'>) => {
 	const [isPending, setIsPending] = useState(false)
 	const { mutateAsync: createChatMutation } = useCreateChatMutation()
 
 	const form = useForm<CreateChatRequest>({
-		resolver: zodResolver(zCreateChatRequest),
 		defaultValues: {
 			title: '',
 		},
+		resolver: zodResolver(zCreateChatRequest),
 	})
 
 	const onSubmit = async (values: CreateChatRequest) => {
@@ -100,7 +100,7 @@ const CreateChatForm = ({
 			</div>
 			<div className="grid gap-4">
 				<Form {...form}>
-					<form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-3">
+					<form className="grid gap-3" onSubmit={form.handleSubmit(onSubmit)}>
 						<FormField
 							control={form.control}
 							name="title"
@@ -111,8 +111,8 @@ const CreateChatForm = ({
 										<Input
 											placeholder="e.g., Help with React components"
 											{...field}
-											disabled={isPending}
 											className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400 focus:border-gray-500"
+											disabled={isPending}
 										/>
 									</FormControl>
 									<FormMessage />
@@ -122,19 +122,19 @@ const CreateChatForm = ({
 						<div className="flex gap-2 justify-end">
 							{onCancel && (
 								<Button
+									className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
+									disabled={isPending}
+									onClick={onCancel}
 									type="button"
 									variant="outline"
-									onClick={onCancel}
-									disabled={isPending}
-									className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
 								>
 									Cancel
 								</Button>
 							)}
 							<Button
-								type="submit"
-								disabled={isPending || !form.formState.isValid}
 								className="min-w-[100px] bg-blue-600 hover:bg-blue-700 text-white"
+								disabled={isPending || !form.formState.isValid}
+								type="submit"
 							>
 								{isPending ? 'Creating...' : 'Create Chat'}
 							</Button>

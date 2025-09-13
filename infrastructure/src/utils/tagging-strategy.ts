@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib'
-import { Construct } from 'constructs'
+import type { Construct } from 'constructs'
 
 /**
  * Standardized tag keys for consistent resource management
@@ -87,30 +87,30 @@ export const TAG_VALUES = {
  * Base tag configuration for all resources
  */
 export interface BaseTagConfig {
-	readonly project?: string
+	readonly complianceScope?: string
+	readonly component: string
+	readonly costCenter?: string
+	readonly createdBy: string
+	readonly dataClassification?: string
 	readonly environment: string
 	readonly environmentType?: string
-	readonly component: string
-	readonly purpose: string
-	readonly costCenter?: string
-	readonly owner?: string
-	readonly scale?: string
 	readonly managedBy?: string
-	readonly createdBy: string
 	readonly monitoringLevel?: string
-	readonly dataClassification?: string
-	readonly complianceScope?: string
+	readonly owner?: string
+	readonly project?: string
+	readonly purpose: string
+	readonly scale?: string
 }
 
 /**
  * PR-specific tag configuration for ephemeral resources
  */
 export interface PrTagConfig extends Omit<BaseTagConfig, 'environment'> {
-	readonly prNumber: number
-	readonly branch?: string
-	readonly expiryDays?: number
 	readonly autoShutdown?: boolean
 	readonly backupRequired?: boolean
+	readonly branch?: string
+	readonly expiryDays?: number
+	readonly prNumber: number
 }
 
 /**
@@ -132,6 +132,72 @@ export interface PrTagConfig extends Omit<BaseTagConfig, 'environment'> {
  * - Security classification tags
  */
 export class TaggingStrategy {
+	/**
+	 * Apply base tags to a construct
+	 */
+	public static applyBaseTags(
+		construct: Construct,
+		config: BaseTagConfig,
+	): void {
+		const tags = this.createBaseTags(config)
+		this.applyTags(construct, tags)
+	}
+
+	/**
+	 * Apply PR-specific tags to a construct
+	 */
+	public static applyPrTags(construct: Construct, config: PrTagConfig): void {
+		const tags = this.createPrTags(config)
+		this.applyTags(construct, tags)
+	}
+
+	/**
+	 * Apply tags to a CDK construct and all its child resources
+	 */
+	public static applyTags(
+		construct: Construct,
+		tags: Record<string, string>,
+	): void {
+		Object.entries(tags).forEach(([key, value]) => {
+			cdk.Tags.of(construct).add(key, value)
+		})
+	}
+
+	/**
+	 * Priority 3: Create auto-cleanup tags for preview environments
+	 * Helps prevent orphaned resources and reduces costs
+	 */
+	public static createAutoCleanupTags(
+		cleanupDays = 7,
+		environment?: string,
+	): Record<string, string> {
+		const isPreviewEnv = Boolean(
+			environment &&
+				(environment.startsWith('pr-') || environment.includes('preview')),
+		)
+
+		return {
+			[TAG_KEYS.AUTO_CLEANUP]: isPreviewEnv ? 'true' : 'false',
+			[TAG_KEYS.CLEANUP_DATE]: this.calculateExpiryDate(cleanupDays),
+			[TAG_KEYS.COST_CENTER]: TAG_VALUES.COST_CENTERS.DEVELOPMENT,
+		}
+	}
+
+	/**
+	 * Create automation tags for lifecycle management
+	 */
+	public static createAutomationTags(
+		autoShutdown = false,
+		backupRequired = false,
+		monitoringLevel: string = TAG_VALUES.MONITORING_LEVELS.BASIC,
+	): Record<string, string> {
+		return {
+			[TAG_KEYS.AUTO_SHUTDOWN]: autoShutdown.toString(),
+			[TAG_KEYS.BACKUP_REQUIRED]: backupRequired.toString(),
+			[TAG_KEYS.MONITORING_LEVEL]: monitoringLevel,
+		}
+	}
+
 	/**
 	 * Create base tags for shared infrastructure resources
 	 */
@@ -160,6 +226,28 @@ export class TaggingStrategy {
 				config.dataClassification ?? TAG_VALUES.DATA_CLASSIFICATION,
 			[TAG_KEYS.COMPLIANCE_SCOPE]:
 				config.complianceScope ?? TAG_VALUES.COMPLIANCE_SCOPE,
+		}
+	}
+
+	/**
+	 * Create cost allocation tags for billing and reporting
+	 */
+	public static createCostAllocationTags(
+		environment: string,
+		component: string,
+		prNumber?: number,
+	): Record<string, string> {
+		const costCenter = this.determineCostCenter(environment)
+		const owner = prNumber
+			? `pr-${prNumber.toString()}`
+			: `${environment}-deployment`
+
+		return {
+			[TAG_KEYS.COST_CENTER]: costCenter,
+			[TAG_KEYS.OWNER]: owner,
+			[TAG_KEYS.ENVIRONMENT]: environment,
+			[TAG_KEYS.COMPONENT]: component,
+			[TAG_KEYS.PROJECT]: TAG_VALUES.PROJECT,
 		}
 	}
 
@@ -195,158 +283,6 @@ export class TaggingStrategy {
 		}
 
 		return prSpecificTags
-	}
-
-	/**
-	 * Apply tags to a CDK construct and all its child resources
-	 */
-	public static applyTags(
-		construct: Construct,
-		tags: Record<string, string>,
-	): void {
-		Object.entries(tags).forEach(([key, value]) => {
-			cdk.Tags.of(construct).add(key, value)
-		})
-	}
-
-	/**
-	 * Apply base tags to a construct
-	 */
-	public static applyBaseTags(
-		construct: Construct,
-		config: BaseTagConfig,
-	): void {
-		const tags = this.createBaseTags(config)
-		this.applyTags(construct, tags)
-	}
-
-	/**
-	 * Apply PR-specific tags to a construct
-	 */
-	public static applyPrTags(construct: Construct, config: PrTagConfig): void {
-		const tags = this.createPrTags(config)
-		this.applyTags(construct, tags)
-	}
-
-	/**
-	 * Create cost allocation tags for billing and reporting
-	 */
-	public static createCostAllocationTags(
-		environment: string,
-		component: string,
-		prNumber?: number,
-	): Record<string, string> {
-		const costCenter = this.determineCostCenter(environment)
-		const owner = prNumber
-			? `pr-${prNumber.toString()}`
-			: `${environment}-deployment`
-
-		return {
-			[TAG_KEYS.COST_CENTER]: costCenter,
-			[TAG_KEYS.OWNER]: owner,
-			[TAG_KEYS.ENVIRONMENT]: environment,
-			[TAG_KEYS.COMPONENT]: component,
-			[TAG_KEYS.PROJECT]: TAG_VALUES.PROJECT,
-		}
-	}
-
-	/**
-	 * Create automation tags for lifecycle management
-	 */
-	public static createAutomationTags(
-		autoShutdown = false,
-		backupRequired = false,
-		monitoringLevel: string = TAG_VALUES.MONITORING_LEVELS.BASIC,
-	): Record<string, string> {
-		return {
-			[TAG_KEYS.AUTO_SHUTDOWN]: autoShutdown.toString(),
-			[TAG_KEYS.BACKUP_REQUIRED]: backupRequired.toString(),
-			[TAG_KEYS.MONITORING_LEVEL]: monitoringLevel,
-		}
-	}
-
-	/**
-	 * Priority 3: Create auto-cleanup tags for preview environments
-	 * Helps prevent orphaned resources and reduces costs
-	 */
-	public static createAutoCleanupTags(
-		cleanupDays = 7,
-		environment?: string,
-	): Record<string, string> {
-		const isPreviewEnv = Boolean(
-			environment &&
-				(environment.startsWith('pr-') || environment.includes('preview')),
-		)
-
-		return {
-			[TAG_KEYS.AUTO_CLEANUP]: isPreviewEnv ? 'true' : 'false',
-			[TAG_KEYS.CLEANUP_DATE]: this.calculateExpiryDate(cleanupDays),
-			[TAG_KEYS.COST_CENTER]: TAG_VALUES.COST_CENTERS.DEVELOPMENT,
-		}
-	}
-
-	/**
-	 * Calculate expiry date for resource cleanup
-	 */
-	private static calculateExpiryDate(days: number): string {
-		const expiry = new Date()
-		expiry.setDate(expiry.getDate() + days)
-		const datePart = expiry.toISOString().split('T')[0]
-		return datePart ?? expiry.toISOString().slice(0, 10) // YYYY-MM-DD format
-	}
-
-	/**
-	 * Determine cost center based on environment
-	 */
-	private static determineCostCenter(environment: string): string {
-		if (environment === 'production') {
-			return TAG_VALUES.COST_CENTERS.PRODUCTION
-		}
-		if (environment.startsWith('pr-')) {
-			return TAG_VALUES.COST_CENTERS.DEVELOPMENT
-		}
-		return TAG_VALUES.COST_CENTERS.DEVELOPMENT
-	}
-
-	/**
-	 * Validate tag configuration for compliance
-	 */
-	public static validateTags(tags: Record<string, string>): {
-		valid: boolean
-		errors: string[]
-	} {
-		const errors: string[] = []
-		const requiredTags = [
-			TAG_KEYS.PROJECT,
-			TAG_KEYS.ENVIRONMENT,
-			TAG_KEYS.COMPONENT,
-			TAG_KEYS.COST_CENTER,
-			TAG_KEYS.CREATED_BY,
-		]
-
-		// Check required tags
-		requiredTags.forEach((tag) => {
-			if (!tags[tag]) {
-				errors.push(`Missing required tag: ${tag}`)
-			}
-		})
-
-		// Validate tag value lengths (AWS limit is 256 characters)
-		Object.entries(tags).forEach(([key, value]) => {
-			if (key.length > 128) {
-				errors.push(`Tag key too long: ${key} (max 128 characters)`)
-			}
-			if (value.length > 256) {
-				errors.push(
-					`Tag value too long for ${key}: ${value} (max 256 characters)`,
-				)
-			}
-		})
-
-		return {
-			valid: errors.length === 0,
-			errors,
-		}
 	}
 
 	/**
@@ -387,5 +323,69 @@ export class TaggingStrategy {
 		}
 
 		return sections.join('\n')
+	}
+
+	/**
+	 * Validate tag configuration for compliance
+	 */
+	public static validateTags(tags: Record<string, string>): {
+		errors: string[]
+		valid: boolean
+	} {
+		const errors: string[] = []
+		const requiredTags = [
+			TAG_KEYS.PROJECT,
+			TAG_KEYS.ENVIRONMENT,
+			TAG_KEYS.COMPONENT,
+			TAG_KEYS.COST_CENTER,
+			TAG_KEYS.CREATED_BY,
+		]
+
+		// Check required tags
+		requiredTags.forEach((tag) => {
+			if (!tags[tag]) {
+				errors.push(`Missing required tag: ${tag}`)
+			}
+		})
+
+		// Validate tag value lengths (AWS limit is 256 characters)
+		Object.entries(tags).forEach(([key, value]) => {
+			if (key.length > 128) {
+				errors.push(`Tag key too long: ${key} (max 128 characters)`)
+			}
+			if (value.length > 256) {
+				errors.push(
+					`Tag value too long for ${key}: ${value} (max 256 characters)`,
+				)
+			}
+		})
+
+		return {
+			valid: errors.length === 0,
+			errors,
+		}
+	}
+
+	/**
+	 * Calculate expiry date for resource cleanup
+	 */
+	private static calculateExpiryDate(days: number): string {
+		const expiry = new Date()
+		expiry.setDate(expiry.getDate() + days)
+		const [datePart] = expiry.toISOString().split('T')
+		return datePart ?? expiry.toISOString().slice(0, 10) // YYYY-MM-DD format
+	}
+
+	/**
+	 * Determine cost center based on environment
+	 */
+	private static determineCostCenter(environment: string): string {
+		if (environment === 'production') {
+			return TAG_VALUES.COST_CENTERS.PRODUCTION
+		}
+		if (environment.startsWith('pr-')) {
+			return TAG_VALUES.COST_CENTERS.DEVELOPMENT
+		}
+		return TAG_VALUES.COST_CENTERS.DEVELOPMENT
 	}
 }

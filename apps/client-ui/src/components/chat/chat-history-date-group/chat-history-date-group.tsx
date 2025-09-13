@@ -1,11 +1,11 @@
 interface ChatHistoryDateGroupProps {
-	dateGroup: string
 	children: React.ReactNode
+	dateGroup: string
 }
 
 const ChatHistoryDateGroup = ({
-	dateGroup,
 	children,
+	dateGroup,
 }: ChatHistoryDateGroupProps) => {
 	return (
 		<div className="py-2">

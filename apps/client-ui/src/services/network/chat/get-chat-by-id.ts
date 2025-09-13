@@ -1,6 +1,6 @@
 import {
 	getChatsById,
-	GetChatsByIdData,
+	type GetChatsByIdData,
 	zGetChatsByIdData,
 	zGetChatsByIdResponse,
 } from '@repo/macro-ai-api-client'

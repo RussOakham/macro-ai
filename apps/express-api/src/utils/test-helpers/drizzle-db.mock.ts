@@ -1,6 +1,6 @@
 import { type MockedFunction, vi } from 'vitest'
 
-import { db } from '../../data-access/db.ts'
+import type { db } from '../../data-access/db.ts'
 
 /**
  * Mock interfaces for Drizzle ORM database operations

@@ -1,5 +1,5 @@
 import pino from 'pino'
-import { HttpLogger, Options, pinoHttp } from 'pino-http'
+import { type HttpLogger, type Options, pinoHttp } from 'pino-http'
 
 import { config } from './load-config.ts'
 

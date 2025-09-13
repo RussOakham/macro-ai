@@ -1,8 +1,8 @@
 import { vi } from 'vitest'
+import type { userService } from '../../features/user/user.services.ts'
 
 // Type inference helper - this will be used inside functions to avoid hoisting issues
-type UserServiceType =
-	typeof import('../../features/user/user.services.ts').userService
+type UserServiceType = typeof userService
 
 // Type inference from actual userService instance - following established pattern
 // This ensures our mocks stay in sync with the real implementation

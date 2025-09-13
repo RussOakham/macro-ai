@@ -1,25 +1,26 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import crypto from 'node:crypto'
+
 import {
 	CognitoIdentityProviderClient,
-	ConfirmForgotPasswordCommandOutput,
+	type ConfirmForgotPasswordCommandOutput,
 	ConfirmSignUpCommand,
-	ConfirmSignUpCommandOutput,
-	ForgotPasswordCommandOutput,
+	type ConfirmSignUpCommandOutput,
+	type ForgotPasswordCommandOutput,
 	GetUserCommand,
-	GetUserCommandOutput,
+	type GetUserCommandOutput,
 	GlobalSignOutCommand,
-	GlobalSignOutCommandOutput,
+	type GlobalSignOutCommandOutput,
 	InitiateAuthCommand,
-	InitiateAuthCommandOutput,
+	type InitiateAuthCommandOutput,
 	ListUsersCommand,
-	ListUsersCommandOutput,
-	ResendConfirmationCodeCommandOutput,
+	type ListUsersCommandOutput,
+	type ResendConfirmationCodeCommandOutput,
 	SignUpCommand,
-	SignUpCommandOutput,
-	UserType,
+	type SignUpCommandOutput,
+	type UserType,
 } from '@aws-sdk/client-cognito-identity-provider'
 import { mockClient } from 'aws-sdk-client-mock'
-import crypto from 'node:crypto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -27,7 +28,7 @@ import {
 	tryCatchSync,
 } from '../../../utils/error-handling/try-catch.ts'
 import {
-	AppError,
+	type AppError,
 	InternalError,
 	NotFoundError,
 	ValidationError,
@@ -37,7 +38,7 @@ import { mockConfig } from '../../../utils/test-helpers/config.mock.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { mockParameterStore } from '../../../utils/test-helpers/parameter-store.mock.ts'
 import { CognitoService } from '../auth.services.ts'
-import { TRegisterUserRequest } from '../auth.types.ts'
+import type { TRegisterUserRequest } from '../auth.types.ts'
 
 // Mock the logger using the reusable helper
 vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())

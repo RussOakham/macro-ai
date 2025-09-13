@@ -1,5 +1,5 @@
 import {
-	ConfirmRegistration,
+	type ConfirmRegistration,
 	postAuthConfirmRegistration,
 	zConfirmRegistration,
 	zPostAuthConfirmRegistrationResponse,
@@ -10,15 +10,15 @@ import { safeValidateApiResponse } from '@/lib/validation/api-response'
 
 // Type-safe endpoint for consumption using the generated SDK
 const postConfirmRegistration = async ({
-	email,
 	code,
+	email,
 }: ConfirmRegistration) => {
 	const { data, error } = await postAuthConfirmRegistration({
-		client: apiClient,
 		body: {
-			email,
 			code,
+			email,
 		},
+		client: apiClient,
 	})
 
 	if (error) {

@@ -1,23 +1,21 @@
 import { useMutation } from '@tanstack/react-query'
 
-import {
-	ConfirmForgotPasswordRequest,
-	postForgotPasswordVerify,
-} from '../../network/auth/post-forgot-password-verify'
+import { postForgotPasswordVerify } from '../../network/auth/post-forgot-password-verify'
+import type { ConfirmForgotPasswordRequest } from '../../network/auth/post-forgot-password-verify'
 
 const usePostForgotPasswordVerify = () => {
 	return useMutation({
 		mutationFn: async ({
 			code,
+			confirmPassword,
 			email,
 			newPassword,
-			confirmPassword,
 		}: ConfirmForgotPasswordRequest) => {
 			const response = await postForgotPasswordVerify({
 				code,
+				confirmPassword,
 				email,
 				newPassword,
-				confirmPassword,
 			})
 			return response
 		},

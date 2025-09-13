@@ -1,3 +1,13 @@
+import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
+import {
+	NotFoundError,
+	type Result,
+	UnauthorizedError,
+	ValidationError,
+} from '../../utils/errors.ts'
+import { pino } from '../../utils/logger.ts'
+// oxlint-disable-next-line no-duplicate-imports
+import { type AIService } from './ai.service.ts'
 import type {
 	ChatWithMessages,
 	IChatRepository,
@@ -9,24 +19,13 @@ import type {
 	TChat,
 	TChatMessage,
 } from './chat.types.ts'
-
-import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
-import {
-	NotFoundError,
-	type Result,
-	UnauthorizedError,
-	ValidationError,
-} from '../../utils/errors.ts'
-import { pino } from '../../utils/logger.ts'
-// oxlint-disable-next-line no-duplicate-imports
-import { type AIService } from './ai.service.ts'
 // oxlint-disable-next-line no-duplicate-imports
 import { type VectorService } from './vector.service.ts'
 
 const { logger } = pino
 
 // Type alias for message roles
-type MessageRole = 'user' | 'assistant' | 'system'
+type MessageRole = 'assistant' | 'system' | 'user'
 
 // Interface for chat message with AI role
 interface ChatMessageWithRole {
@@ -60,19 +59,6 @@ export class ChatService implements IChatService {
 		private readonly chatRepository: IChatRepository,
 		private readonly messageRepository: IMessageRepository,
 	) {}
-
-	/**
-	 * Verify that a user owns a specific chat
-	 * @param chatId - The ID of the chat to verify
-	 * @param userId - The ID of the user to check ownership for
-	 * @returns Result tuple with boolean indicating ownership or error
-	 */
-	public async verifyChatOwnership(
-		chatId: string,
-		userId: string,
-	): Promise<Result<boolean>> {
-		return await this.chatRepository.verifyChatOwnership(chatId, userId)
-	}
 
 	/**
 	 * Create a new chat for a user
@@ -112,44 +98,50 @@ export class ChatService implements IChatService {
 	}
 
 	/**
-	 * Get all chats for a specific user with pagination
-	 * @param userId - The ID of the user to get chats for
-	 * @param options - Pagination options (page, limit)
-	 * @returns Result tuple with paginated chats and total count or error
+	 * Delete a chat and all its messages (ownership verification required)
+	 * @param chatId - The ID of the chat to delete
+	 * @param userId - The ID of the user requesting deletion (must own the chat)
+	 * @returns Result tuple with void on success or error
 	 */
-	public async getUserChats(
+	public async deleteChat(
+		chatId: string,
 		userId: string,
-		options: PaginationOptions = {},
-	): Promise<Result<{ chats: TChat[]; total: number }>> {
-		const { page = 1, limit = 20 } = options
+	): Promise<Result<void>> {
+		// Verify ownership first
+		const [isOwner, ownershipError] = await this.verifyChatOwnership(
+			chatId,
+			userId,
+		)
+		if (ownershipError) {
+			return [null, ownershipError]
+		}
 
-		// Validate pagination parameters
-		// Check if page and limit are integers
-		if (!Number.isInteger(page) || !Number.isInteger(limit)) {
+		if (!isOwner) {
 			return [
 				null,
-				new ValidationError(
-					'Invalid pagination parameters: page and limit must be integers',
-					{ page, limit },
+				new UnauthorizedError(
+					'User does not have access to this chat',
 					'chatService',
 				),
 			]
 		}
 
-		// Check if page and limit are within valid ranges
-		if (page < 1 || limit < 1 || limit > 100) {
-			return [
-				null,
-				new ValidationError(
-					'Invalid pagination parameters: page must be >= 1, limit must be between 1 and 100',
-					{ page, limit },
-					'chatService',
-				),
-			]
+		// Delete chat embeddings first
+		await this.vectorService.deleteChatEmbeddings(chatId)
+
+		// Delete chat (messages will be deleted by cascade)
+		const [, error] = await this.chatRepository.deleteChat(chatId)
+		if (error) {
+			return [null, error]
 		}
 
-		// Get chats using repository
-		return await this.chatRepository.findChatsByUserId(userId, { page, limit })
+		logger.info({
+			msg: 'Chat deleted successfully',
+			chatId,
+			userId,
+		})
+
+		return [undefined, null]
 	}
 
 	/**
@@ -204,6 +196,58 @@ export class ChatService implements IChatService {
 		}
 
 		return [chatWithMessages, null]
+	}
+
+	/**
+	 * Get all chats for a specific user with pagination
+	 * @param userId - The ID of the user to get chats for
+	 * @param options - Pagination options (page, limit)
+	 * @returns Result tuple with paginated chats and total count or error
+	 */
+	public async getUserChats(
+		userId: string,
+		options: PaginationOptions = {},
+	): Promise<Result<{ chats: TChat[]; total: number }>> {
+		const { page = 1, limit = 20 } = options
+
+		// Validate pagination parameters
+		// Check if page and limit are integers
+		if (!Number.isInteger(page) || !Number.isInteger(limit)) {
+			return [
+				null,
+				new ValidationError(
+					'Invalid pagination parameters: page and limit must be integers',
+					{ page, limit },
+					'chatService',
+				),
+			]
+		}
+
+		// Check if page and limit are within valid ranges
+		if (page < 1 || limit < 1 || limit > 100) {
+			return [
+				null,
+				new ValidationError(
+					'Invalid pagination parameters: page must be >= 1, limit must be between 1 and 100',
+					{ page, limit },
+					'chatService',
+				),
+			]
+		}
+
+		// Get chats using repository
+		return await this.chatRepository.findChatsByUserId(userId, { page, limit })
+	}
+
+	/**
+	 * Perform semantic search across chat messages
+	 * @param options - Search options including query, user context, and filters
+	 * @returns Result tuple with search results or error
+	 */
+	public async semanticSearch(
+		options: SemanticSearchOptions,
+	): Promise<Result<SemanticSearchResult[]>> {
+		return await this.vectorService.semanticSearch(options)
 	}
 
 	/**
@@ -374,7 +418,7 @@ export class ChatService implements IChatService {
 
 		// Generate streaming AI response
 		const [streamResult, streamError] =
-			this.aiService.generateStreamingResponse(chatHistory)
+			await this.aiService.generateStreamingResponse(chatHistory)
 		if (streamError) {
 			return [null, streamError]
 		}
@@ -406,31 +450,6 @@ export class ChatService implements IChatService {
 		})
 
 		return [{ userMessage, streamingResponse }, null]
-	}
-
-	/**
-	 * Update a message content (used for completing streaming responses)
-	 * @param messageId - The message ID to update
-	 * @param content - The new content
-	 * @returns Result tuple with updated message or error
-	 */
-	public async updateMessageContent(
-		messageId: string,
-		content: string,
-	): Promise<Result<TChatMessage>> {
-		const [updatedMessage, error] = await this.messageRepository.updateMessage(
-			messageId,
-			{ content },
-		)
-		if (error) {
-			return [null, error]
-		}
-
-		if (!updatedMessage) {
-			return [null, new NotFoundError('Message not found', 'chatService')]
-		}
-
-		return [updatedMessage, null]
 	}
 
 	/**
@@ -490,61 +509,73 @@ export class ChatService implements IChatService {
 	}
 
 	/**
-	 * Delete a chat and all its messages (ownership verification required)
-	 * @param chatId - The ID of the chat to delete
-	 * @param userId - The ID of the user requesting deletion (must own the chat)
-	 * @returns Result tuple with void on success or error
+	 * Update a message content (used for completing streaming responses)
+	 * @param messageId - The message ID to update
+	 * @param content - The new content
+	 * @returns Result tuple with updated message or error
 	 */
-	public async deleteChat(
-		chatId: string,
-		userId: string,
-	): Promise<Result<void>> {
-		// Verify ownership first
-		const [isOwner, ownershipError] = await this.verifyChatOwnership(
-			chatId,
-			userId,
+	public async updateMessageContent(
+		messageId: string,
+		content: string,
+	): Promise<Result<TChatMessage>> {
+		const [updatedMessage, error] = await this.messageRepository.updateMessage(
+			messageId,
+			{ content },
 		)
-		if (ownershipError) {
-			return [null, ownershipError]
-		}
-
-		if (!isOwner) {
-			return [
-				null,
-				new UnauthorizedError(
-					'User does not have access to this chat',
-					'chatService',
-				),
-			]
-		}
-
-		// Delete chat embeddings first
-		await this.vectorService.deleteChatEmbeddings(chatId)
-
-		// Delete chat (messages will be deleted by cascade)
-		const [, error] = await this.chatRepository.deleteChat(chatId)
 		if (error) {
 			return [null, error]
 		}
 
-		logger.info({
-			msg: 'Chat deleted successfully',
-			chatId,
-			userId,
-		})
+		if (!updatedMessage) {
+			return [null, new NotFoundError('Message not found', 'chatService')]
+		}
 
-		return [undefined, null]
+		return [updatedMessage, null]
 	}
 
 	/**
-	 * Perform semantic search across chat messages
-	 * @param options - Search options including query, user context, and filters
-	 * @returns Result tuple with search results or error
+	 * Verify that a user owns a specific chat
+	 * @param chatId - The ID of the chat to verify
+	 * @param userId - The ID of the user to check ownership for
+	 * @returns Result tuple with boolean indicating ownership or error
 	 */
-	public async semanticSearch(
-		options: SemanticSearchOptions,
-	): Promise<Result<SemanticSearchResult[]>> {
-		return await this.vectorService.semanticSearch(options)
+	public async verifyChatOwnership(
+		chatId: string,
+		userId: string,
+	): Promise<Result<boolean>> {
+		return await this.chatRepository.verifyChatOwnership(chatId, userId)
+	}
+
+	/**
+	 * Get chat history formatted for AI service
+	 */
+	private async getChatHistory(
+		chatId: string,
+	): Promise<Result<ChatMessageWithRole[]>> {
+		return await this.messageRepository.getChatHistory(chatId)
+	}
+
+	/**
+	 * Save a message to the database
+	 */
+	private async saveMessage(messageData: {
+		chatId: string
+		role: MessageRole
+		content: string
+	}): Promise<Result<TChatMessage>> {
+		return await this.messageRepository.createMessage({
+			chatId: messageData.chatId,
+			role: messageData.role,
+			content: messageData.content,
+			metadata: {},
+		})
+	}
+
+	/**
+	 * Update chat timestamp
+	 */
+	private async updateChatTimestamp(chatId: string): Promise<Result<void>> {
+		return await this.chatRepository.updateChatTimestamp(chatId)
 	}
 
 	/**
@@ -649,38 +680,6 @@ export class ChatService implements IChatService {
 				content: request.content.trim(),
 			}
 		}, 'chatService - validateSendMessageRequest')
-	}
-
-	/**
-	 * Save a message to the database
-	 */
-	private async saveMessage(messageData: {
-		chatId: string
-		role: MessageRole
-		content: string
-	}): Promise<Result<TChatMessage>> {
-		return await this.messageRepository.createMessage({
-			chatId: messageData.chatId,
-			role: messageData.role,
-			content: messageData.content,
-			metadata: {},
-		})
-	}
-
-	/**
-	 * Get chat history formatted for AI service
-	 */
-	private async getChatHistory(
-		chatId: string,
-	): Promise<Result<ChatMessageWithRole[]>> {
-		return await this.messageRepository.getChatHistory(chatId)
-	}
-
-	/**
-	 * Update chat timestamp
-	 */
-	private async updateChatTimestamp(chatId: string): Promise<Result<void>> {
-		return await this.chatRepository.updateChatTimestamp(chatId)
 	}
 }
 

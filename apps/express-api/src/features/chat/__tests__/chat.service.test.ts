@@ -28,24 +28,24 @@ import type { VectorService } from '../vector.service.ts'
 // Create type-safe mocks using Pick to only include public methods
 type MockAIService = Pick<
 	AIService,
-	| 'generateResponse'
-	| 'generateStreamingResponse'
 	| 'generateEmbedding'
 	| 'generateEmbeddings'
 	| 'generateEmbeddingsBatch'
-	| 'validateMessages'
+	| 'generateResponse'
+	| 'generateStreamingResponse'
 	| 'getModelConfig'
+	| 'validateMessages'
 >
 
 type MockVectorService = Pick<
 	VectorService,
 	| 'createMessageEmbedding'
 	| 'createMessageEmbeddingsBatch'
-	| 'semanticSearch'
-	| 'deleteMessageEmbedding'
 	| 'deleteChatEmbeddings'
-	| 'getUserEmbeddings'
+	| 'deleteMessageEmbedding'
 	| 'getChatEmbeddings'
+	| 'getUserEmbeddings'
+	| 'semanticSearch'
 >
 
 // Create properly typed mock AI Service with vi.fn() return types
@@ -98,6 +98,7 @@ import { ChatService } from '../chat.service.ts'
 // Helper function to create async generator for streaming tests
 
 async function* createMockStream(chunks: string[]): AsyncIterable<string> {
+	// eslint-disable-next-line security-node/detect-unhandled-async-errors
 	for (const chunk of chunks) {
 		yield chunk
 	}
@@ -1059,7 +1060,7 @@ describe('ChatService (Refactored)', () => {
 				])
 
 				// Mock AI service streaming
-				mockAIService.generateStreamingResponse.mockReturnValue([
+				mockAIService.generateStreamingResponse.mockResolvedValue([
 					mockStream,
 					null,
 				])
@@ -1224,7 +1225,10 @@ describe('ChatService (Refactored)', () => {
 					mockChatHistory,
 					null,
 				])
-				mockAIService.generateStreamingResponse.mockReturnValue([null, aiError])
+				mockAIService.generateStreamingResponse.mockResolvedValue([
+					null,
+					aiError,
+				])
 
 				// Act
 				const [result, error] =
@@ -1258,7 +1262,7 @@ describe('ChatService (Refactored)', () => {
 					mockChatHistory,
 					null,
 				])
-				mockAIService.generateStreamingResponse.mockReturnValue([
+				mockAIService.generateStreamingResponse.mockResolvedValue([
 					mockStream,
 					null,
 				])
@@ -1533,7 +1537,7 @@ describe('ChatService (Refactored)', () => {
 						mockChatHistory,
 						null,
 					])
-					mockAIService.generateStreamingResponse.mockReturnValue([
+					mockAIService.generateStreamingResponse.mockResolvedValue([
 						mockStream,
 						null,
 					])

@@ -42,6 +42,7 @@ export const createMockResponse = (): Partial<Response> => {
 	const json = vi.fn()
 	const send = vi.fn()
 	const end = vi.fn()
+	const headers: Record<string, string> = {}
 
 	return {
 		status: vi.fn().mockReturnValue({ json, send, end }),
@@ -51,6 +52,16 @@ export const createMockResponse = (): Partial<Response> => {
 		clearCookie: vi.fn().mockReturnThis(),
 		redirect: vi.fn(),
 		end,
+		setHeader: vi.fn((name: string, value: string) => {
+			headers[name.toLowerCase()] = value
+			return {} as Response
+		}),
+		removeHeader: vi.fn((name: string) => {
+			delete headers[name.toLowerCase()]
+		}),
+		getHeader: vi.fn((name: string) => headers[name.toLowerCase()]),
+		getHeaders: vi.fn(() => headers),
+		hasHeader: vi.fn((name: string) => name.toLowerCase() in headers),
 	}
 }
 

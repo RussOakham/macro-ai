@@ -8,7 +8,7 @@
  * @param pathname - The current route pathname
  * @returns Chat ID if found, null otherwise
  */
-const extractChatIdFromPath = (pathname: string): string | null => {
+const extractChatIdFromPath = (pathname: string): null | string => {
 	const chatIdRegex = /^\/chat\/([^/]+)$/
 	const chatIdMatch = chatIdRegex.exec(pathname)
 	return chatIdMatch?.[1] ?? null
@@ -22,7 +22,7 @@ const extractChatIdFromPath = (pathname: string): string | null => {
  */
 const shouldShowEmptyState = (
 	messagesLength: number,
-	status: 'ready' | 'submitted' | 'streaming' | 'error',
+	status: 'error' | 'ready' | 'streaming' | 'submitted',
 ): boolean => {
 	return (
 		messagesLength === 0 && status !== 'streaming' && status !== 'submitted'
@@ -47,15 +47,15 @@ const generateChatTitleFallback = (chatId: string): string => {
  */
 const shouldPreventSubmission = (
 	input: string,
-	chatId: string | null,
-	status: 'ready' | 'submitted' | 'streaming' | 'error',
+	chatId: null | string,
+	status: 'error' | 'ready' | 'streaming' | 'submitted',
 ): boolean => {
 	return !input.trim() || !chatId || status === 'streaming'
 }
 
 export {
 	extractChatIdFromPath,
-	shouldShowEmptyState,
 	generateChatTitleFallback,
 	shouldPreventSubmission,
+	shouldShowEmptyState,
 }

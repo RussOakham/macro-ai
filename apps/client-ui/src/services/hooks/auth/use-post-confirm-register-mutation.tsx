@@ -1,16 +1,14 @@
 import { useMutation } from '@tanstack/react-query'
 
-import {
-	ConfirmRegistration,
-	postConfirmRegistration,
-} from '../../network/auth/post-confirm-registration'
+import { postConfirmRegistration } from '../../network/auth/post-confirm-registration'
+import type { ConfirmRegistration } from '../../network/auth/post-confirm-registration'
 
 const usePostConfirmRegisterMutation = () => {
 	return useMutation({
-		mutationFn: async ({ email, code }: ConfirmRegistration) => {
+		mutationFn: async ({ code, email }: ConfirmRegistration) => {
 			const response = await postConfirmRegistration({
-				email,
 				code,
+				email,
 			})
 			return response
 		},

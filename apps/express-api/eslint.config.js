@@ -37,6 +37,7 @@ export default repoConfig.config(
 			parserOptions: {
 				ecmaVersion: 2022,
 				project: './tsconfig.json',
+				allowImportingTsExtensions: true,
 			},
 		},
 		plugins: {

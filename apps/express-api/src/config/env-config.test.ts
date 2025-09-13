@@ -2,9 +2,11 @@
  * Unit tests for the enhanced environment configuration system
  */
 
-import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs'
+import { mkdir, unlink, writeFile } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { promisify } from 'node:util'
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Import the functions we're testing
@@ -41,7 +43,7 @@ describe('Enhanced Environment Configuration System', () => {
 		API_RATE_LIMIT_MAX_REQUESTS: '1000',
 	}
 
-	beforeEach(() => {
+	beforeEach(async () => {
 		// Clear environment completely
 		process.env = {}
 
@@ -49,15 +51,18 @@ describe('Enhanced Environment Configuration System', () => {
 		process.env.NODE_ENV = 'test'
 
 		// Create test directory
-		if (!existsSync(testDir)) {
-			mkdirSync(testDir, { recursive: true })
+		const mkdirAsync = promisify(mkdir)
+		try {
+			await mkdirAsync(testDir, { recursive: true })
+		} catch {
+			// Directory already exists or creation failed
 		}
 
 		// Mock process.cwd to return test directory to prevent loading root .env
 		vi.spyOn(process, 'cwd').mockReturnValue(testDir)
 	})
 
-	afterEach(() => {
+	afterEach(async () => {
 		// Restore original environment
 		process.env = originalEnv
 
@@ -65,14 +70,21 @@ describe('Enhanced Environment Configuration System', () => {
 		vi.restoreAllMocks()
 
 		// Clean up test files
-		try {
-			unlinkSync(join(testDir, '.env'))
-			unlinkSync(join(testDir, '.env.local'))
-			unlinkSync(join(testDir, '.env.development'))
-			unlinkSync(join(testDir, '.env.test'))
-			unlinkSync(join(testDir, '.env.preview'))
-		} catch {
-			// Ignore errors if files don't exist
+		const unlinkAsync = promisify(unlink)
+		const filesToClean = [
+			join(testDir, '.env'),
+			join(testDir, '.env.local'),
+			join(testDir, '.env.development'),
+			join(testDir, '.env.test'),
+			join(testDir, '.env.preview'),
+		]
+
+		for (const file of filesToClean) {
+			try {
+				await unlinkAsync(file)
+			} catch {
+				// Ignore errors if files don't exist
+			}
 		}
 	})
 
@@ -132,13 +144,13 @@ describe('Enhanced Environment Configuration System', () => {
 	})
 
 	describe('loadEnvConfig', () => {
-		it('should load configuration from environment variables', () => {
+		it('should load configuration from environment variables', async () => {
 			// Set valid environment variables
 			Object.entries(validConfig).forEach(([key, value]) => {
 				process.env[key] = value
 			})
 
-			const result = loadEnvConfig()
+			const result = await loadEnvConfig()
 
 			// Check result structure
 			expect(result).toBeDefined()
@@ -155,15 +167,16 @@ describe('Enhanced Environment Configuration System', () => {
 			expect(data.SERVER_PORT).toBe(3000) // Should be converted to number
 		})
 
-		it('should load configuration from .env file', () => {
+		it('should load configuration from .env file', async () => {
 			// Create .env file
 			const envFilePath = join(testDir, '.env')
 			const envContent = Object.entries(validConfig)
 				.map(([key, value]) => `${key}=${value}`)
 				.join('\n')
-			writeFileSync(envFilePath, envContent, 'utf8')
+			const writeFileAsync = promisify(writeFile)
+			await writeFileAsync(envFilePath, envContent, 'utf8')
 
-			const result = loadEnvConfig({
+			const result = await loadEnvConfig({
 				baseDir: testDir,
 			})
 
@@ -175,12 +188,12 @@ describe('Enhanced Environment Configuration System', () => {
 			expect(data.API_KEY).toBe(validConfig.API_KEY)
 		})
 
-		it('should respect validateSchema option', () => {
+		it('should respect validateSchema option', async () => {
 			// Set invalid configuration
 			process.env.API_KEY = 'invalid-key' // Too short
 			process.env.NODE_ENV = 'test'
 
-			const result = loadEnvConfig({
+			const result = await loadEnvConfig({
 				validateSchema: false,
 			})
 
@@ -189,7 +202,7 @@ describe('Enhanced Environment Configuration System', () => {
 			expect(result[1]).toBeNull()
 		})
 
-		it('should respect enableLogging option', () => {
+		it('should respect enableLogging option', async () => {
 			const loggerSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
 
 			// Set valid environment variables
@@ -197,7 +210,7 @@ describe('Enhanced Environment Configuration System', () => {
 				process.env[key] = value
 			})
 
-			loadEnvConfig({
+			await loadEnvConfig({
 				enableLogging: false,
 			})
 
@@ -207,20 +220,24 @@ describe('Enhanced Environment Configuration System', () => {
 			loggerSpy.mockRestore()
 		})
 
-		it('should handle custom base directory', () => {
+		it('should handle custom base directory', async () => {
 			// Create .env file in custom directory
 			const customDir = join(testDir, 'custom')
-			if (!existsSync(customDir)) {
-				mkdirSync(customDir, { recursive: true })
+			const mkdirAsync = promisify(mkdir)
+			try {
+				await mkdirAsync(customDir, { recursive: true })
+			} catch {
+				// Directory already exists or creation failed
 			}
 
 			const envFilePath = join(customDir, '.env')
 			const envContent = Object.entries(validConfig)
 				.map(([key, value]) => `${key}=${value}`)
 				.join('\n')
-			writeFileSync(envFilePath, envContent, 'utf8')
+			const writeFileAsync = promisify(writeFile)
+			await writeFileAsync(envFilePath, envContent, 'utf8')
 
-			const result = loadEnvConfig({
+			const result = await loadEnvConfig({
 				baseDir: customDir,
 			})
 

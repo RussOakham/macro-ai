@@ -28,11 +28,9 @@ import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
 import { usePostResendConfirmRegistrationCodeMutation } from '@/services/hooks/auth/use-post-resend-confirm-registration-code'
-import { GetAuthUserResponse } from '@/services/network/auth/get-auth-user'
-import {
-	ResendConfirmationCode,
-	zResendConfirmationCode,
-} from '@/services/network/auth/post-resend-confirm-registration-code'
+import type { GetAuthUserResponse } from '@/services/network/auth/get-auth-user'
+import { zResendConfirmationCode } from '@/services/network/auth/post-resend-confirm-registration-code'
+import type { ResendConfirmationCode } from '@/services/network/auth/post-resend-confirm-registration-code'
 
 const ResendConfirmationCodeForm = ({
 	className,
@@ -49,10 +47,10 @@ const ResendConfirmationCodeForm = ({
 	])
 
 	const form = useForm<ResendConfirmationCode>({
-		resolver: zodResolver(zResendConfirmationCode),
 		defaultValues: {
 			email: authUser?.email ?? '',
 		},
+		resolver: zodResolver(zResendConfirmationCode),
 	})
 
 	const onSubmit = async ({ email }: ResendConfirmationCode) => {
@@ -86,7 +84,7 @@ const ResendConfirmationCodeForm = ({
 			</CardHeader>
 			<CardContent>
 				<Form {...form}>
-					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+					<form className="space-y-8" onSubmit={form.handleSubmit(onSubmit)}>
 						<FormField
 							control={form.control}
 							name="email"
@@ -100,7 +98,7 @@ const ResendConfirmationCodeForm = ({
 								</FormItem>
 							)}
 						/>
-						<Button type="submit" className="w-full" disabled={isPending}>
+						<Button className="w-full" disabled={isPending} type="submit">
 							{isPending ? 'Confirming...' : 'Resend Code'}
 						</Button>
 					</form>

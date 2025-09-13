@@ -1,9 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 
-import {
-	ForgotPasswordRequest,
-	postForgotPassword,
-} from '../../network/auth/post-forgot-password'
+import { postForgotPassword } from '../../network/auth/post-forgot-password'
+import type { ForgotPasswordRequest } from '../../network/auth/post-forgot-password'
 
 const usePostForgotPassword = () => {
 	return useMutation({

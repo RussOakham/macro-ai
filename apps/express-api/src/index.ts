@@ -13,10 +13,10 @@ import { createServer } from './utils/server.ts'
 /**
  * Start the Express server with the simplified configuration system
  */
-const startServer = () => {
+const startServer = async () => {
 	try {
 		// Load configuration using the simplified system - ONCE at startup
-		const config = assertConfig(true)
+		const config = await assertConfig(true)
 
 		logger.info(
 			{
@@ -28,6 +28,7 @@ const startServer = () => {
 		)
 
 		// Create and start the server
+		// Note: Using HTTP server as HTTPS termination is handled by AWS ALB/CloudFront
 		const app = createServer()
 		const httpServer = createHttpServer(app)
 
@@ -71,9 +72,7 @@ const startServer = () => {
 }
 
 // Start the server
-try {
-	startServer()
-} catch (error: unknown) {
+startServer().catch((error: unknown) => {
 	logger.error(error as Error, 'Unhandled error during server startup')
 	exit(1)
-}
+})

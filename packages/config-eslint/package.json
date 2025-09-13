@@ -13,16 +13,16 @@
 		"format": "prettier --write ./src/**/*.js",
 		"format:check": "prettier --check ./src/**/*.js",
 		"format:fix": "prettier --write ./src/**/*.js",
-		"lint": "npx oxlint ./src/**/*.js && eslint ./src/**/*.js",
-		"lint:fix": "npx oxlint ./src/**/*.js --fix && eslint ./src/**/*.js --fix",
-		"lint:ci": "npx oxlint ./src/**/*.js --max-warnings=0 && eslint ./src/**/*.js --max-warnings 0",
-		"lint:oxlint": "npx oxlint ./src/**/*.js",
-		"lint:fix:oxlint": "npx oxlint ./src/**/*.js --fix",
-		"lint:ci:oxlint": "npx oxlint ./src/**/*.js --max-warnings=0",
+		"lint": "pnpm oxlint ./src/**/*.js && eslint ./src/**/*.js",
+		"lint:fix": "pnpm oxlint ./src/**/*.js --fix && eslint ./src/**/*.js --fix",
+		"lint:ci": "pnpm oxlint ./src/**/*.js --max-warnings=0 && eslint ./src/**/*.js --max-warnings 0",
+		"lint:oxlint": "pnpm oxlint ./src/**/*.js",
+		"lint:fix:oxlint": "pnpm oxlint ./src/**/*.js --fix",
+		"lint:ci:oxlint": "pnpm oxlint ./src/**/*.js --max-warnings=0",
 		"lint:eslint": "eslint ./src/**/*.js",
 		"lint:fix:eslint": "eslint ./src/**/*.js --fix",
 		"lint:ci:eslint": "eslint ./src/**/*.js --max-warnings 0",
-		"lint:ci:fix": "npx oxlint ./src/**/*.js --fix && eslint ./src/**/*.js --max-warnings 0 --fix"
+		"lint:ci:fix": "pnpm oxlint ./src/**/*.js --fix && eslint ./src/**/*.js --max-warnings 0 --fix"
 	},
 	"files": [
 		"./src/**/*.js",
@@ -46,9 +46,9 @@
 	"devDependencies": {
 		"@eslint/js": "^9.32.0",
 		"eslint": "catalog:",
-		"eslint-config-turbo": "^2.5.5",
-		"eslint-plugin-react-compiler": "19.1.0-rc.2",
-		"eslint-plugin-react-refresh": "^0.4.20",
+		"eslint-config-turbo": "catalog:",
+		"eslint-plugin-react-compiler": "catalog:",
+		"eslint-plugin-react-refresh": "catalog:",
 		"eslint-plugin-unused-imports": "catalog:",
 		"eslint-plugin-vitest": "catalog:",
 		"eslint-plugin-testing-library": "catalog:",
@@ -62,6 +62,6 @@
 		"globals": "catalog:",
 		"prettier": "catalog:",
 		"typescript": "catalog:",
-		"typescript-eslint": "^8.42.0"
+		"typescript-eslint": "catalog:"
 	}
 }

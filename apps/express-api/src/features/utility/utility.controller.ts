@@ -1,9 +1,12 @@
-import { NextFunction, Request, Response } from 'express'
+import { type NextFunction, type Request, type Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import { pino } from '../../utils/logger.ts'
 import { utilityService } from './utility.services.ts'
-import { IUtilityController, THealthResponse } from './utility.types.ts'
+import {
+	type IUtilityController,
+	type THealthResponse,
+} from './utility.types.ts'
 
 const { logger } = pino
 
@@ -19,64 +22,30 @@ class UtilityController implements IUtilityController {
 	}
 
 	/**
-	 * Health check endpoint
-	 * Returns the current health status of the API
+	 * Configuration validation endpoint
+	 * Returns detailed configuration validation status for debugging
 	 */
-	public getHealthStatus = (
+	public getConfigurationStatus = (
 		req: Request,
 		res: Response,
 		next: NextFunction,
 	): void => {
-		// Log health check request details
-		logger.info(
-			{
-				operation: 'healthCheck',
-				path: req.path,
-				method: req.method,
-				timestamp: new Date().toISOString(),
-			},
-			'Health check request received',
-		)
-
-		const [healthStatus, error] = this.utilityService.getHealthStatus()
+		const [configStatus, error] = this.utilityService.getConfigurationStatus()
 
 		if (error) {
 			logger.error({
-				msg: '[utilityController - getHealthStatus]: Error checking health status',
+				msg: '[utilityController - getConfigurationStatus]: Error checking configuration status',
 				error: error.message,
+				stack: error.stack,
+				service: error.service,
+				type: error.type,
 			})
 			next(error)
 			return
 		}
 
-		const healthResponse: THealthResponse = {
-			message: healthStatus.message,
-		}
-
-		res.status(StatusCodes.OK).json(healthResponse)
-	}
-
-	/**
-	 * System information endpoint
-	 * Returns detailed system information for monitoring
-	 */
-	public getSystemInfo = (
-		req: Request,
-		res: Response,
-		next: NextFunction,
-	): void => {
-		const [systemInfo, error] = this.utilityService.getSystemInfo()
-
-		if (error) {
-			logger.error({
-				msg: '[utilityController - getSystemInfo]: Error retrieving system info',
-				error: error.message,
-			})
-			next(error)
-			return
-		}
-
-		res.status(StatusCodes.OK).json(systemInfo)
+		// Return 200 for configuration status (always returns data, even if unhealthy)
+		res.status(StatusCodes.OK).json(configStatus)
 	}
 
 	/**
@@ -127,12 +96,15 @@ class UtilityController implements IUtilityController {
 		// This assertion is for runtime safety in case of unexpected null values
 
 		// Set appropriate HTTP status based on health status
-		const statusCode =
-			detailedHealthStatus.status === 'healthy'
-				? StatusCodes.OK
-				: detailedHealthStatus.status === 'degraded'
-					? StatusCodes.OK // Still return 200 for degraded but log warning
-					: StatusCodes.SERVICE_UNAVAILABLE
+		let statusCode: number
+
+		if (detailedHealthStatus.status === 'healthy') {
+			statusCode = StatusCodes.OK
+		} else if (detailedHealthStatus.status === 'degraded') {
+			statusCode = StatusCodes.OK // Still return 200 for degraded but log warning
+		} else {
+			statusCode = StatusCodes.SERVICE_UNAVAILABLE
+		}
 
 		if (detailedHealthStatus.status === 'degraded') {
 			logger.warn({
@@ -146,90 +118,41 @@ class UtilityController implements IUtilityController {
 	}
 
 	/**
-	 * Readiness probe endpoint
-	 * Returns whether the application is ready to receive traffic
+	 * Health check endpoint
+	 * Returns the current health status of the API
 	 */
-	public getReadinessStatus = (
+	public getHealthStatus = (
 		req: Request,
 		res: Response,
 		next: NextFunction,
 	): void => {
-		// Log readiness probe request details
+		// Log health check request details
 		logger.info(
 			{
-				operation: 'healthCheckReady',
+				operation: 'healthCheck',
 				path: req.path,
 				method: req.method,
-				headers: {
-					'user-agent': req.get('User-Agent'),
-					'x-forwarded-for': req.get('X-Forwarded-For'),
-					'x-real-ip': req.get('X-Real-IP'),
-					origin: req.get('Origin'),
-					referer: req.get('Referer'),
-				},
-				ip: req.ip,
-				query: req.query,
 				timestamp: new Date().toISOString(),
 			},
-			'Readiness probe request received',
+			'Health check request received',
 		)
 
-		const [readinessStatus, error] = this.utilityService.getReadinessStatus()
+		const [healthStatus, error] = this.utilityService.getHealthStatus()
 
 		if (error) {
 			logger.error({
-				msg: '[utilityController - getReadinessStatus]: Error checking readiness status',
+				msg: '[utilityController - getHealthStatus]: Error checking health status',
 				error: error.message,
-				stack: error.stack,
-				service: error.service,
-				type: error.type,
 			})
 			next(error)
 			return
 		}
 
-		// TypeScript knows readinessStatus is defined here due to Result tuple pattern
-
-		// Return 503 if not ready, 200 if ready
-		const statusCode = readinessStatus.ready
-			? StatusCodes.OK
-			: StatusCodes.SERVICE_UNAVAILABLE
-
-		res.status(statusCode).json(readinessStatus)
-	}
-
-	/**
-	 * Public readiness probe endpoint
-	 * Returns minimal readiness information without detailed error messages in production
-	 */
-	public getPublicReadinessStatus = (
-		req: Request,
-		res: Response,
-		next: NextFunction,
-	): void => {
-		const [readinessStatus, error] =
-			this.utilityService.getPublicReadinessStatus()
-
-		if (error) {
-			logger.error({
-				msg: '[utilityController - getPublicReadinessStatus]: Error checking public readiness status',
-				error: error.message,
-				stack: error.stack,
-				service: error.service,
-				type: error.type,
-			})
-			next(error)
-			return
+		const healthResponse: THealthResponse = {
+			message: healthStatus.message,
 		}
 
-		// TypeScript knows readinessStatus is defined here due to Result tuple pattern
-
-		// Return 503 if not ready, 200 if ready
-		const statusCode = readinessStatus.ready
-			? StatusCodes.OK
-			: StatusCodes.SERVICE_UNAVAILABLE
-
-		res.status(statusCode).json(readinessStatus)
+		res.status(StatusCodes.OK).json(healthResponse)
 	}
 
 	/**
@@ -287,19 +210,20 @@ class UtilityController implements IUtilityController {
 	}
 
 	/**
-	 * Configuration validation endpoint
-	 * Returns detailed configuration validation status for debugging
+	 * Public readiness probe endpoint
+	 * Returns minimal readiness information without detailed error messages in production
 	 */
-	public getConfigurationStatus = (
+	public getPublicReadinessStatus = (
 		req: Request,
 		res: Response,
 		next: NextFunction,
 	): void => {
-		const [configStatus, error] = this.utilityService.getConfigurationStatus()
+		const [readinessStatus, error] =
+			this.utilityService.getPublicReadinessStatus()
 
 		if (error) {
 			logger.error({
-				msg: '[utilityController - getConfigurationStatus]: Error checking configuration status',
+				msg: '[utilityController - getPublicReadinessStatus]: Error checking public readiness status',
 				error: error.message,
 				stack: error.stack,
 				service: error.service,
@@ -309,8 +233,90 @@ class UtilityController implements IUtilityController {
 			return
 		}
 
-		// Return 200 for configuration status (always returns data, even if unhealthy)
-		res.status(StatusCodes.OK).json(configStatus)
+		// TypeScript knows readinessStatus is defined here due to Result tuple pattern
+
+		// Return 503 if not ready, 200 if ready
+		const statusCode = readinessStatus.ready
+			? StatusCodes.OK
+			: StatusCodes.SERVICE_UNAVAILABLE
+
+		res.status(statusCode).json(readinessStatus)
+	}
+
+	/**
+	 * Readiness probe endpoint
+	 * Returns whether the application is ready to receive traffic
+	 */
+	public getReadinessStatus = (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): void => {
+		// Log readiness probe request details
+		logger.info(
+			{
+				operation: 'healthCheckReady',
+				path: req.path,
+				method: req.method,
+				headers: {
+					'user-agent': req.get('User-Agent'),
+					'x-forwarded-for': req.get('X-Forwarded-For'),
+					'x-real-ip': req.get('X-Real-IP'),
+					origin: req.get('Origin'),
+					referer: req.get('Referer'),
+				},
+				ip: req.ip,
+				query: req.query,
+				timestamp: new Date().toISOString(),
+			},
+			'Readiness probe request received',
+		)
+
+		const [readinessStatus, error] = this.utilityService.getReadinessStatus()
+
+		if (error) {
+			logger.error({
+				msg: '[utilityController - getReadinessStatus]: Error checking readiness status',
+				error: error.message,
+				stack: error.stack,
+				service: error.service,
+				type: error.type,
+			})
+			next(error)
+			return
+		}
+
+		// TypeScript knows readinessStatus is defined here due to Result tuple pattern
+
+		// Return 503 if not ready, 200 if ready
+		const statusCode = readinessStatus.ready
+			? StatusCodes.OK
+			: StatusCodes.SERVICE_UNAVAILABLE
+
+		res.status(statusCode).json(readinessStatus)
+	}
+
+	/**
+	 * System information endpoint
+	 * Returns detailed system information for monitoring
+	 */
+	public getSystemInfo = (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): void => {
+		const [systemInfo, error] = this.utilityService.getSystemInfo()
+
+		if (error) {
+			logger.error({
+				msg: '[utilityController - getSystemInfo]: Error retrieving system info',
+				error: error.message,
+			})
+			next(error)
+			return
+		}
+
+		res.status(StatusCodes.OK).json(systemInfo)
 	}
 }
 

@@ -20,11 +20,11 @@ const ChatHistoryList = ({
 }: ChatHistoryListProps) => {
 	const {
 		data: chatsResponse,
-		isLoading: isChatsLoading,
-		isError: isChatsError,
 		error: chatsError,
+		isError: isChatsError,
+		isLoading: isChatsLoading,
 		refetch: refetchChats,
-	} = useChats({ page: 1, limit: 100 }) // Get first 100 chats
+	} = useChats({ limit: 100, page: 1 }) // Get first 100 chats
 
 	// Extract chats from response
 	const chats = useMemo(
@@ -71,10 +71,10 @@ const ChatHistoryList = ({
 							: 'An error occurred'}
 					</p>
 					<Button
+						className="text-xs"
 						onClick={handleRetry}
 						size="sm"
 						variant="outline"
-						className="text-xs"
 					>
 						Retry
 					</Button>
@@ -100,12 +100,12 @@ const ChatHistoryList = ({
 	return (
 		<>
 			{Object.entries(groupedChats).map(([dateGroup, chatsInGroup]) => (
-				<ChatHistoryDateGroup key={dateGroup} dateGroup={dateGroup}>
+				<ChatHistoryDateGroup dateGroup={dateGroup} key={dateGroup}>
 					{chatsInGroup.map((chat) => (
 						<ChatHistoryListItem
-							key={chat.id}
 							chat={chat}
 							isPending={isPending}
+							key={chat.id}
 							onMobileClose={onMobileClose}
 						/>
 					))}

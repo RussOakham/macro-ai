@@ -25,15 +25,60 @@ export interface ParameterStoreConfig {
 }
 
 export class ParameterStoreService {
-	private ssmClient: SSMClient
-	private config: ParameterStoreConfig
 	private cache = new Map<string, string>()
+	private config: ParameterStoreConfig
+	private ssmClient: SSMClient
 
 	constructor(config: ParameterStoreConfig) {
 		this.config = config
 		this.ssmClient = new SSMClient({
 			region: config.region ?? process.env.AWS_REGION ?? 'us-east-1',
 		})
+	}
+
+	/**
+	 * Clear the cache
+	 */
+	clearCache(): void {
+		this.cache.clear()
+	}
+
+	/**
+	 * Get all Cognito-related parameters
+	 */
+	async getCognitoConfig(): Promise<{
+		region: string
+		userPoolId: string
+		userPoolClientId: string
+		userPoolSecretKey: string
+		refreshTokenExpiry: number
+	}> {
+		try {
+			const [
+				region,
+				userPoolId,
+				userPoolClientId,
+				userPoolSecretKey,
+				refreshTokenExpiry,
+			] = await Promise.all([
+				this.getParameter('aws-cognito-region', false),
+				this.getParameter('aws-cognito-user-pool-id'),
+				this.getParameter('aws-cognito-user-pool-client-id'),
+				this.getParameter('aws-cognito-user-pool-secret-key'),
+				this.getParameter('aws-cognito-refresh-token-expiry', false),
+			])
+
+			return {
+				region,
+				userPoolId,
+				userPoolClientId,
+				userPoolSecretKey,
+				refreshTokenExpiry: parseInt(refreshTokenExpiry, 10),
+			}
+		} catch (error) {
+			logger.error(error as Error, 'Failed to fetch Cognito configuration')
+			throw error
+		}
 	}
 
 	/**
@@ -113,51 +158,6 @@ export class ParameterStoreService {
 			logger.error(error as Error, `Failed to fetch parameters by path ${path}`)
 			throw error
 		}
-	}
-
-	/**
-	 * Get all Cognito-related parameters
-	 */
-	async getCognitoConfig(): Promise<{
-		region: string
-		userPoolId: string
-		userPoolClientId: string
-		userPoolSecretKey: string
-		refreshTokenExpiry: number
-	}> {
-		try {
-			const [
-				region,
-				userPoolId,
-				userPoolClientId,
-				userPoolSecretKey,
-				refreshTokenExpiry,
-			] = await Promise.all([
-				this.getParameter('aws-cognito-region', false),
-				this.getParameter('aws-cognito-user-pool-id'),
-				this.getParameter('aws-cognito-user-pool-client-id'),
-				this.getParameter('aws-cognito-user-pool-secret-key'),
-				this.getParameter('aws-cognito-refresh-token-expiry', false),
-			])
-
-			return {
-				region,
-				userPoolId,
-				userPoolClientId,
-				userPoolSecretKey,
-				refreshTokenExpiry: parseInt(refreshTokenExpiry, 10),
-			}
-		} catch (error) {
-			logger.error(error as Error, 'Failed to fetch Cognito configuration')
-			throw error
-		}
-	}
-
-	/**
-	 * Clear the cache
-	 */
-	clearCache(): void {
-		this.cache.clear()
 	}
 }
 

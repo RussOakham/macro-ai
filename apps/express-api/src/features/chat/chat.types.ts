@@ -1,8 +1,8 @@
-import express from 'express'
-import { z } from 'zod'
+import type express from 'express'
+import type { z } from 'zod'
 
 import { type Result } from '../../utils/errors.ts'
-import {
+import type {
 	insertChatSchema,
 	insertChatVectorSchema,
 	insertMessageSchema,
@@ -12,7 +12,7 @@ import {
 } from './chat.schemas.ts'
 
 // Chat message role type
-type ChatMessageRole = 'user' | 'assistant' | 'system'
+type ChatMessageRole = 'assistant' | 'system' | 'user'
 
 // Pagination interface
 interface PaginationOptions {

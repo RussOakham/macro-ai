@@ -18,13 +18,13 @@ const DesktopAuthButtons = ({ isAuthed }: IDesktopAuthButtonsProps) => {
 		return (
 			<NavigationMenuItem asChild>
 				<button
-					type="button"
-					onClick={() => {
-						useLogout()
-					}}
 					className={navigationMenuTriggerStyle({
 						className: '[&.active]:font-bold',
 					})}
+					onClick={() => {
+						useLogout()
+					}}
+					type="button"
 				>
 					Logout
 				</button>
@@ -36,20 +36,20 @@ const DesktopAuthButtons = ({ isAuthed }: IDesktopAuthButtonsProps) => {
 		<>
 			<NavigationMenuItem asChild>
 				<Link
-					to="/auth/login"
 					className={navigationMenuTriggerStyle({
 						className: '[&.active]:font-bold',
 					})}
+					to="/auth/login"
 				>
 					Login
 				</Link>
 			</NavigationMenuItem>
 			<NavigationMenuItem asChild>
 				<Link
-					to="/auth/register"
 					className={navigationMenuTriggerStyle({
 						className: '[&.active]:font-bold',
 					})}
+					to="/auth/register"
 				>
 					Register
 				</Link>

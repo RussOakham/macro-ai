@@ -1,9 +1,9 @@
 import {
 	postAuthResendConfirmationCode,
-	ResendConfirmationCode,
 	zPostAuthResendConfirmationCodeResponse,
 	zResendConfirmationCode,
 } from '@repo/macro-ai-api-client'
+import type { ResendConfirmationCode } from '@repo/macro-ai-api-client'
 
 import { apiClient } from '@/lib/api/clients'
 import { safeValidateApiResponse } from '@/lib/validation/api-response'
@@ -13,10 +13,10 @@ const postResendConfirmRegistrationCode = async ({
 	email,
 }: ResendConfirmationCode) => {
 	const { data, error } = await postAuthResendConfirmationCode({
-		client: apiClient,
 		body: {
 			email,
 		},
+		client: apiClient,
 	})
 
 	if (error) {

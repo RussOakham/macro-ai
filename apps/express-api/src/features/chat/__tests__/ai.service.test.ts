@@ -29,14 +29,10 @@ vi.mock('ai', () => ({
 	embed: mockEmbed,
 }))
 
+// Import after mocking
+import { tryCatch } from '../../../utils/error-handling/try-catch.ts'
 // Type imports for proper typing
 import type { AIService as AIServiceType } from '../ai.service.ts'
-
-// Import after mocking
-import {
-	tryCatch,
-	tryCatchSync,
-} from '../../../utils/error-handling/try-catch.ts'
 
 // Type for the OpenAI provider mock to match the actual interface
 interface MockOpenAIProvider {
@@ -93,7 +89,10 @@ describe('AIService', () => {
 	})
 
 	describe('constructor', () => {
-		it('should initialize OpenAI client with correct configuration', () => {
+		it('should initialize OpenAI client with correct configuration', async () => {
+			// Wait for initialization to complete by calling a public method that triggers initialization
+			await aiService.getModelConfig()
+
 			// Assert - Should create OpenAI client with a valid API key
 			// Note: Due to class property initialization timing, the actual env value is used
 			// In CI builds, this may be 'build-time-not-required' since OpenAI isn't needed during build
@@ -155,7 +154,7 @@ describe('AIService', () => {
 		it('should handle empty messages array', async () => {
 			// Arrange
 			const emptyMessages: {
-				role: 'user' | 'assistant' | 'system'
+				role: 'assistant' | 'system' | 'user'
 				content: string
 			}[] = []
 			const mockResult = { text: 'Empty response' }
@@ -177,7 +176,7 @@ describe('AIService', () => {
 	})
 
 	describe('generateStreamingResponse', () => {
-		it('should generate streaming response successfully', () => {
+		it('should generate streaming response successfully', async () => {
 			// Arrange
 			const mockTextStream = (function* () {
 				yield 'Hello'
@@ -185,13 +184,18 @@ describe('AIService', () => {
 				yield 'world'
 			})()
 			const mockStreamResult = { textStream: mockTextStream }
-			vi.mocked(tryCatchSync).mockReturnValue([mockStreamResult, null])
+			vi.mocked(tryCatch).mockImplementation(async (fn) => {
+				const result = await (fn as () => Promise<unknown>)()
+				return [result, null]
+			})
+			mockStreamText.mockReturnValue(mockStreamResult)
 
 			// Act
-			const [result, error] = aiService.generateStreamingResponse(mockMessages)
+			const [result, error] =
+				await aiService.generateStreamingResponse(mockMessages)
 
 			// Assert
-			expect(tryCatchSync).toHaveBeenCalledWith(
+			expect(tryCatch).toHaveBeenCalledWith(
 				expect.any(Function),
 				'aiService - generateStreamingResponse',
 			)
@@ -199,20 +203,21 @@ describe('AIService', () => {
 			expect(error).toBeNull()
 		})
 
-		it('should return error when streamText fails', () => {
+		it('should return error when streamText fails', async () => {
 			// Arrange
 			const mockError = AppError.from(new Error('Streaming error'), 'test')
-			vi.mocked(tryCatchSync).mockReturnValue([null, mockError])
+			vi.mocked(tryCatch).mockResolvedValue([null, mockError])
 
 			// Act
-			const [result, error] = aiService.generateStreamingResponse(mockMessages)
+			const [result, error] =
+				await aiService.generateStreamingResponse(mockMessages)
 
 			// Assert
 			expect(result).toBeNull()
 			expect(error).toBe(mockError)
 		})
 
-		it('should call streamText with correct parameters', () => {
+		it('should call streamText with correct parameters', async () => {
 			// Arrange
 			const mockTextStream = (function* () {
 				yield 'test'
@@ -220,13 +225,13 @@ describe('AIService', () => {
 			const mockStreamResult = { textStream: mockTextStream }
 			mockStreamText.mockReturnValue(mockStreamResult) // Make streamText return object with textStream
 
-			vi.mocked(tryCatchSync).mockImplementation((fn) => {
-				const result = fn()
+			vi.mocked(tryCatch).mockImplementation(async (fn) => {
+				const result = await (fn as () => Promise<unknown>)()
 				return [result, null]
 			})
 
 			// Act
-			aiService.generateStreamingResponse(mockMessages)
+			await aiService.generateStreamingResponse(mockMessages)
 
 			// Assert
 			expect(mockStreamText).toHaveBeenCalledWith({
@@ -636,9 +641,9 @@ describe('AIService', () => {
 	})
 
 	describe('getModelConfig', () => {
-		it('should return chat model configuration by default', () => {
+		it('should return chat model configuration by default', async () => {
 			// Act
-			const config = aiService.getModelConfig()
+			const config = await aiService.getModelConfig()
 
 			// Assert
 			expect(config).toEqual({
@@ -648,9 +653,9 @@ describe('AIService', () => {
 			})
 		})
 
-		it('should return chat model configuration when explicitly requested', () => {
+		it('should return chat model configuration when explicitly requested', async () => {
 			// Act
-			const config = aiService.getModelConfig('chat')
+			const config = await aiService.getModelConfig('chat')
 
 			// Assert
 			expect(config).toEqual({
@@ -660,9 +665,9 @@ describe('AIService', () => {
 			})
 		})
 
-		it('should return embedding model configuration when requested', () => {
+		it('should return embedding model configuration when requested', async () => {
 			// Act
-			const config = aiService.getModelConfig('embedding')
+			const config = await aiService.getModelConfig('embedding')
 
 			// Assert
 			expect(config).toEqual({
@@ -671,10 +676,10 @@ describe('AIService', () => {
 			})
 		})
 
-		it('should handle different use cases correctly', () => {
+		it('should handle different use cases correctly', async () => {
 			// Act & Assert
-			const chatConfig = aiService.getModelConfig('chat')
-			const embeddingConfig = aiService.getModelConfig('embedding')
+			const chatConfig = await aiService.getModelConfig('chat')
+			const embeddingConfig = await aiService.getModelConfig('embedding')
 
 			// Chat config should have maxTokens and temperature
 			expect(chatConfig).toHaveProperty('maxTokens', 1000)
@@ -687,20 +692,20 @@ describe('AIService', () => {
 			expect(embeddingConfig).not.toHaveProperty('temperature')
 		})
 
-		it('should return consistent model references', () => {
+		it('should return consistent model references', async () => {
 			// Act
-			const config1 = aiService.getModelConfig('chat')
-			const config2 = aiService.getModelConfig('chat')
+			const config1 = await aiService.getModelConfig('chat')
+			const config2 = await aiService.getModelConfig('chat')
 
 			// Assert - Should return the same model instance
 			expect(config1.model).toBe(config2.model)
 			expect(config1.model).toBe(mockChatModel)
 		})
 
-		it('should return different models for different use cases', () => {
+		it('should return different models for different use cases', async () => {
 			// Act
-			const chatConfig = aiService.getModelConfig('chat')
-			const embeddingConfig = aiService.getModelConfig('embedding')
+			const chatConfig = await aiService.getModelConfig('chat')
+			const embeddingConfig = await aiService.getModelConfig('embedding')
 
 			// Assert - Should return different model instances
 			expect(chatConfig.model).toBe(mockChatModel)

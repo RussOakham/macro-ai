@@ -1,5 +1,5 @@
-import { NextFunction, Request, Response } from 'express'
-import { z } from 'zod'
+import type { NextFunction, Request, Response } from 'express'
+import type { z } from 'zod'
 
 import { tryCatch } from '../utils/error-handling/try-catch.ts'
 import { ErrorType, ValidationError } from '../utils/errors.ts'

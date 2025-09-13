@@ -30,9 +30,11 @@ interface ConfigOptions extends EnvConfigOptions {
  * Load configuration from environment variables with optional .env file loading
  *
  * @param options Configuration loading options
- * @returns Result tuple with configuration or error
+ * @returns Promise resolving to Result tuple with configuration or error
  */
-export const loadConfig = (options: ConfigOptions = {}): Result<TEnv> => {
+export const loadConfig = async (
+	options: ConfigOptions = {},
+): Promise<Result<TEnv>> => {
 	// Convert legacy envFilePath option to baseDir
 	const enhancedOptions: EnvConfigOptions = {
 		...options,
@@ -56,18 +58,18 @@ export const loadConfig = (options: ConfigOptions = {}): Result<TEnv> => {
 export const loadConfigAsync = async (
 	options: ConfigOptions = {},
 ): Promise<Result<TEnv>> => {
-	return Promise.resolve(loadConfig(options))
+	return loadConfig(options)
 }
 
 /**
  * Get configuration with error throwing (for cases where you want to fail fast)
  *
  * @param options Configuration loading options
- * @returns Configuration object
+ * @returns Promise resolving to configuration object
  * @throws AppError if configuration loading fails
  */
-export const getConfig = (options: ConfigOptions = {}): TEnv => {
-	const [config, error] = loadConfig(options)
+export const getConfig = async (options: ConfigOptions = {}): Promise<TEnv> => {
+	const [config, error] = await loadConfig(options)
 
 	if (error) {
 		throw error
@@ -87,26 +89,26 @@ export const getConfig = (options: ConfigOptions = {}): TEnv => {
  */
 export interface ConfigType {
 	apiKey: string
-	nodeEnv: 'development' | 'production' | 'test'
+	apiRateLimitMaxRequests?: number
+	apiRateLimitWindowMs?: number
 	appEnv: string
-	port: number
-	awsCognitoRegion: string
-	awsCognitoUserPoolId: string
-	awsCognitoUserPoolClientId: string
+	authRateLimitMaxRequests?: number
+	authRateLimitWindowMs?: number
 	// AWS Cognito credentials removed - using IAM roles instead
 	awsCognitoRefreshTokenExpiry: number
-	openaiApiKey: string
-	relationalDatabaseUrl: string
-	redisUrl: string
-	cookieEncryptionKey: string
+	awsCognitoRegion: string
+	awsCognitoUserPoolClientId: string
+	awsCognitoUserPoolId: string
 	cookieDomain: string
+	cookieEncryptionKey: string
 	corsAllowedOrigins?: string
-	rateLimitWindowMs?: number
+	nodeEnv: 'development' | 'production' | 'test'
+	openaiApiKey: string
+	port: number
 	rateLimitMaxRequests?: number
-	authRateLimitWindowMs?: number
-	authRateLimitMaxRequests?: number
-	apiRateLimitWindowMs?: number
-	apiRateLimitMaxRequests?: number
+	rateLimitWindowMs?: number
+	redisUrl: string
+	relationalDatabaseUrl: string
 }
 
 /**
@@ -139,8 +141,8 @@ const convertToConfigType = (env: TEnv): ConfigType => ({
 	apiRateLimitMaxRequests: env.API_RATE_LIMIT_MAX_REQUESTS,
 })
 
-export const assertConfig = (shouldLog = false): ConfigType => {
-	const [config, error] = loadConfig()
+export const assertConfig = async (shouldLog = false): Promise<ConfigType> => {
+	const [config, error] = await loadConfig()
 
 	if (error) {
 		logger.error(

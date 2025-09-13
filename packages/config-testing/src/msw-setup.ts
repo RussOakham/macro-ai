@@ -1,4 +1,6 @@
+import { type SetupWorker } from 'msw/browser'
 import { setupServer } from 'msw/node'
+
 import { handlers } from './msw-handlers.js'
 
 /**
@@ -9,15 +11,15 @@ import { handlers } from './msw-handlers.js'
  */
 
 // Environment detection
-export const isNode = typeof window === 'undefined'
-export const isBrowser = typeof window !== 'undefined'
+export const isNode = typeof globalThis.window === 'undefined'
+export const isBrowser = typeof globalThis.window !== 'undefined'
 
 // Node.js environment setup (for Vitest tests)
 export const server = setupServer(...handlers)
 
 // Browser environment setup (for development and browser tests)
 // Lazy worker creation to avoid issues in test environments
-let _worker: ReturnType<typeof import('msw/browser').setupWorker> | null = null
+let _worker: null | SetupWorker = null
 
 export const worker = (() => {
 	// Only create worker when explicitly requested in browser environment

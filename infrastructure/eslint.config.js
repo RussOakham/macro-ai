@@ -37,22 +37,22 @@ export default repoConfig.config(
 			},
 		},
 		rules: {
+			'@typescript-eslint/no-misused-promises': 'warn',
+			'@typescript-eslint/no-non-null-assertion': 'off',
 			// Infrastructure-specific rule relaxations for CDK
 			'@typescript-eslint/no-unused-expressions': 'off',
-			'@typescript-eslint/no-non-null-assertion': 'off',
-			'@typescript-eslint/restrict-template-expressions': 'off',
-			'@typescript-eslint/require-await': 'off',
 			'@typescript-eslint/no-unused-vars': 'warn',
+			'@typescript-eslint/require-await': 'off',
+			'@typescript-eslint/restrict-template-expressions': 'off',
 			'func-style': 'off',
-			'turbo/no-undeclared-env-vars': 'off',
-			// CDK constructs often use `new` without assignment
-			'no-new': 'off',
-			'@typescript-eslint/no-misused-promises': 'warn',
 			// Allow inline comments in infrastructure code
 			'no-inline-comments': 'off',
+			// CDK constructs often use `new` without assignment
+			'no-new': 'off',
 			// Relax import sorting for CDK files
 			'perfectionist/sort-imports': 'off',
 			'perfectionist/sort-objects': 'off',
+			'turbo/no-undeclared-env-vars': 'off',
 		},
 		settings: {
 			'import-x/resolver': {
@@ -68,20 +68,20 @@ export default repoConfig.config(
 	{
 		files: ['src/constructs/**/*.{ts,tsx}', 'src/stacks/**/*.{ts,tsx}'],
 		rules: {
-			// Allow console.log in CDK constructs for debugging
-			'no-console': 'off',
 			// CDK often uses snake_case for AWS resource names
 			'@typescript-eslint/naming-convention': [
 				'error',
 				{
-					selector: 'variableLike',
-					format: ['camelCase', 'PascalCase', 'snake_case', 'UPPER_CASE'],
 					filter: {
-						regex: '^(AWS_|CDK_).*',
 						match: false,
+						regex: '^(AWS_|CDK_).*',
 					},
+					format: ['camelCase', 'PascalCase', 'snake_case', 'UPPER_CASE'],
+					selector: 'variableLike',
 				},
 			],
+			// Allow console.log in CDK constructs for debugging
+			'no-console': 'off',
 		},
 	},
 
@@ -89,9 +89,9 @@ export default repoConfig.config(
 	{
 		files: ['scripts/**/*.{ts,tsx}'],
 		rules: {
-			'no-console': 'off',
 			'@typescript-eslint/no-unused-vars': 'off',
 			'@typescript-eslint/require-await': 'off',
+			'no-console': 'off',
 		},
 	},
 )

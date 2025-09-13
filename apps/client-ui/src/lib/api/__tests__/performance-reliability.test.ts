@@ -6,7 +6,7 @@ import {
 	createNetworkErrorScenarios,
 	createTrackingMockApiClient,
 	testErrorHandling,
-} from '../../../test/api-test-utils'
+} from '../../../test/api-test-utils.test-utils'
 import {
 	setupMSWForTests,
 	setupServerWithHandlers,
@@ -96,8 +96,8 @@ describe('Performance and Reliability Tests', () => {
 			const startTime = Date.now()
 			const promises = Array.from({ length: 10 }, () =>
 				apiClient.get({
-					url: '/health',
 					baseURL: 'http://localhost:3000',
+					url: '/health',
 				}),
 			)
 
@@ -135,8 +135,8 @@ describe('Performance and Reliability Tests', () => {
 
 			for (let i = 0; i < requestCount; i++) {
 				const result = await apiClient.get({
-					url: '/health',
 					baseURL: 'http://localhost:3000',
+					url: '/health',
 				})
 				results.push(result)
 			}
@@ -172,8 +172,8 @@ describe('Performance and Reliability Tests', () => {
 			const startTime = Date.now()
 			const promises = Array.from({ length: 20 }, () =>
 				apiClient.get({
-					url: '/health',
 					baseURL: 'http://localhost:3000',
+					url: '/health',
 				}),
 			)
 
@@ -231,8 +231,8 @@ describe('Performance and Reliability Tests', () => {
 			// First requests should fail
 			try {
 				await apiClient.get({
-					url: '/health',
 					baseURL: 'http://localhost:3000',
+					url: '/health',
 				})
 				expect.fail('Expected 503 error')
 			} catch (error: unknown) {
@@ -241,8 +241,8 @@ describe('Performance and Reliability Tests', () => {
 
 			// Subsequent requests should succeed
 			const result = await apiClient.get({
-				url: '/health',
 				baseURL: 'http://localhost:3000',
+				url: '/health',
 			})
 
 			expect(result.status).toBe(200)
@@ -271,9 +271,9 @@ describe('Performance and Reliability Tests', () => {
 			// Test timeout handling
 			try {
 				await apiClient.get({
-					url: '/slow',
 					baseURL: 'http://localhost:3000',
 					timeout: 100, // 100ms timeout
+					url: '/slow',
 				})
 				expect.fail('Expected timeout error')
 			} catch (error: unknown) {
@@ -315,23 +315,23 @@ describe('Performance and Reliability Tests', () => {
 			// Perform various operations
 			const operations = [
 				() =>
-					apiClient.get({ url: '/health', baseURL: 'http://localhost:3000' }),
+					apiClient.get({ baseURL: 'http://localhost:3000', url: '/health' }),
 				() =>
 					apiClient.post({
-						url: '/auth/login',
 						baseURL: 'http://localhost:3000',
 						data: {},
+						url: '/auth/login',
 					}),
 				() =>
 					apiClient.put({
-						url: '/user/profile',
 						baseURL: 'http://localhost:3000',
 						data: {},
+						url: '/user/profile',
 					}),
 				() =>
 					apiClient.delete({
-						url: '/user/session',
 						baseURL: 'http://localhost:3000',
+						url: '/user/session',
 					}),
 			]
 
@@ -371,13 +371,13 @@ describe('Performance and Reliability Tests', () => {
 
 			// Test mixed scenarios
 			const successPromise = apiClient.get({
-				url: '/health',
 				baseURL: 'http://localhost:3000',
+				url: '/health',
 			})
 
 			const errorPromise = apiClient.get({
-				url: '/error',
 				baseURL: 'http://localhost:3000',
+				url: '/error',
 			})
 
 			// Wait for both to complete

@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express'
+import { type NextFunction, type Request, type Response } from 'express'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createMockExpressObjects } from '../../utils/test-helpers/enhanced-mocks.ts'
@@ -630,7 +630,7 @@ describe('Rate Limit Middleware', () => {
 			expect(capturedHandlers[2]).toBeDefined()
 
 			// Test default handler (should log "Rate limit exceeded")
-			const defaultHandler = capturedHandlers[0]
+			const [defaultHandler] = capturedHandlers
 			if (defaultHandler) {
 				defaultHandler(mockRequest as Request, mockRes1 as Response, mockNext, {
 					statusCode: 429,
@@ -642,7 +642,7 @@ describe('Rate Limit Middleware', () => {
 			}
 
 			// Test auth handler (should log "Auth rate limit exceeded")
-			const authHandler = capturedHandlers[1]
+			const [, authHandler] = capturedHandlers
 			if (authHandler) {
 				authHandler(mockRequest as Request, mockRes2 as Response, mockNext, {
 					statusCode: 429,
@@ -655,6 +655,7 @@ describe('Rate Limit Middleware', () => {
 			}
 
 			// Test API handler (should log "API rate limit exceeded")
+			// oxlint-disable-next-line prefer-destructuring
 			const apiHandler = capturedHandlers[2]
 			if (apiHandler) {
 				apiHandler(mockRequest as Request, mockRes3 as Response, mockNext, {

@@ -5,8 +5,8 @@ import { envSchema } from '../schemas/environment.schema'
 export const validateEnvironment = () => {
 	try {
 		const env = {
-			VITE_API_URL: import.meta.env.VITE_API_URL,
 			VITE_API_KEY: import.meta.env.VITE_API_KEY,
+			VITE_API_URL: import.meta.env.VITE_API_URL,
 		}
 
 		const result = envSchema.safeParse(env)

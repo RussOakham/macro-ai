@@ -14,7 +14,7 @@ vi.mock('../../error-handling/try-catch.ts', () =>
 
 // Import after mocking
 import { tryCatch, tryCatchSync } from '../../error-handling/try-catch.ts'
-import { AppError, Result } from '../../errors.ts'
+import { AppError, type Result } from '../../errors.ts'
 
 // Example service that uses error handling utilities
 class ExampleService {

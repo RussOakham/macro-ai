@@ -1,102 +1,108 @@
-import express from 'express'
-import { z } from 'zod'
+import type express from 'express'
+import type { z } from 'zod'
 
-import { Result } from '../../utils/errors.ts'
-import { healthErrorSchema, healthResponseSchema } from './utility.schemas.ts'
+import type { Result } from '../../utils/errors.ts'
+import type {
+	healthErrorSchema,
+	healthResponseSchema,
+} from './utility.schemas.ts'
+
+// Common status types
+type TStatus = 'degraded' | 'healthy' | 'unhealthy' | 'unknown'
 
 // Controller interface
 interface IUtilityController {
-	getHealthStatus: express.Handler
-	getSystemInfo: express.Handler
-	getDetailedHealthStatus: express.Handler
-	getReadinessStatus: express.Handler
-	getPublicReadinessStatus: express.Handler
-	getLivenessStatus: express.Handler
 	getConfigurationStatus: express.Handler
+	getDetailedHealthStatus: express.Handler
+	getHealthStatus: express.Handler
+	getLivenessStatus: express.Handler
+	getPublicReadinessStatus: express.Handler
+	getReadinessStatus: express.Handler
+	getSystemInfo: express.Handler
 }
 
 // Service interface
 interface IUtilityService {
-	getHealthStatus: () => Result<THealthStatus>
-	getSystemInfo: () => Result<TSystemInfo>
-	getDetailedHealthStatus: () => Result<TDetailedHealthStatus>
-	getReadinessStatus: () => Result<TReadinessStatus>
-	getPublicReadinessStatus: () => Result<TReadinessStatus>
-	getLivenessStatus: () => Result<TLivenessStatus>
 	getConfigurationStatus: () => Result<TConfigurationStatus>
+	getDetailedHealthStatus: () => Result<TDetailedHealthStatus>
+	getHealthStatus: () => Result<THealthStatus>
+	getLivenessStatus: () => Result<TLivenessStatus>
+	getPublicReadinessStatus: () => Result<TReadinessStatus>
+	getReadinessStatus: () => Result<TReadinessStatus>
+	getSystemInfo: () => Result<TSystemInfo>
 }
 
 // Health status type (internal service type)
 interface THealthStatus {
+	memoryUsageMB: number
 	message: string
 	timestamp: string
 	uptime: number
-	memoryUsageMB: number
 }
 
 interface TSystemInfo {
-	nodeVersion: string
-	platform: string
 	architecture: string
-	uptime: number
+	cpuUsage: {
+		system: number
+		user: number
+	}
 	memoryUsage: {
-		rss: number
+		external: number
 		heapTotal: number
 		heapUsed: number
-		external: number
+		rss: number
 	}
-	cpuUsage: {
-		user: number
-		system: number
-	}
+	nodeVersion: string
+	platform: string
 	timestamp: string
+	uptime: number
 }
 
 // Enhanced health status for ALB and monitoring
 interface TDetailedHealthStatus {
-	status: 'healthy' | 'unhealthy' | 'degraded'
-	message: string
-	timestamp: string
-	uptime: number
-	version: string
-	environment: string
 	checks: {
 		database: {
-			status: 'healthy' | 'unhealthy' | 'unknown'
-			responseTime?: number
 			error?: string
+			responseTime?: number
+			status: 'healthy' | 'unhealthy' | 'unknown'
 		}
-		memory: {
-			status: 'healthy' | 'unhealthy'
-			usagePercent: number
-			usageMB: number
+		dependencies: {
+			services: {
+				error?: string
+				name: string
+				responseTime?: number
+				status: 'healthy' | 'unhealthy'
+			}[]
+			status: TStatus
 		}
 		disk: {
 			status: 'healthy' | 'unhealthy'
 			usagePercent?: number
 		}
-		dependencies: {
-			status: 'healthy' | 'unhealthy' | 'degraded'
-			services: {
-				name: string
-				status: 'healthy' | 'unhealthy'
-				responseTime?: number
-				error?: string
-			}[]
+		memory: {
+			status: 'healthy' | 'unhealthy'
+			usageMB: number
+			usagePercent: number
 		}
 	}
+	environment: string
+	message: string
+	status: TStatus
+	timestamp: string
+	uptime: number
+	version: string
 }
 
 // Readiness probe for Kubernetes-style health checks
 interface TReadinessStatus {
-	ready: boolean
-	message: string
-	timestamp: string
 	checks: {
+		configuration: boolean
 		database: boolean
 		dependencies: boolean
-		configuration: boolean
 	}
+	message: string
+	ready: boolean
+	timestamp: string
 }
 
 // Liveness probe for Kubernetes-style health checks
@@ -109,23 +115,23 @@ interface TLivenessStatus {
 
 // Configuration validation status for debugging deployment issues
 interface TConfigurationStatus {
-	status: 'healthy' | 'unhealthy' | 'degraded'
-	message: string
-	timestamp: string
 	checks: {
 		critical: {
-			ready: boolean
 			missing: string[]
+			ready: boolean
 		}
 		important: {
-			ready: boolean
 			missing: string[]
+			ready: boolean
 		}
 		optional: {
-			ready: boolean
 			missing: string[]
+			ready: boolean
 		}
 	}
+	message: string
+	status: TStatus
+	timestamp: string
 }
 
 // API response types (from schemas)
@@ -142,5 +148,6 @@ export type {
 	THealthStatus,
 	TLivenessStatus,
 	TReadinessStatus,
+	TStatus,
 	TSystemInfo,
 }

@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express'
+import { type NextFunction, type Request, type Response } from 'express'
 import helmet from 'helmet'
 
 import { config } from '../utils/load-config.ts'
@@ -49,6 +49,7 @@ const securityHeadersMiddleware = (
 	next: NextFunction,
 ) => {
 	// Additional custom security headers
+	res.removeHeader('X-Powered-By') // Remove Express framework identification
 	res.setHeader('X-Content-Type-Options', 'nosniff')
 	res.setHeader('X-Frame-Options', 'DENY')
 	res.setHeader('X-XSS-Protection', '1; mode=block')

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
-import { AppError, ErrorType, Result } from '../../errors.ts'
+import { AppError, ErrorType, type Result } from '../../errors.ts'
 import { pino } from '../../logger.ts'
 import { createErrorScenarios } from '../../test-helpers/error-handling.mock.ts'
 import { tryCatch, tryCatchStream, tryCatchSync } from '../try-catch.ts'

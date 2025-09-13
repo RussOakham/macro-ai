@@ -1,7 +1,7 @@
 import {
+	type GetChatsData,
 	getChats as getChatsEndpoint,
-	GetChatsData,
-	GetChatsResponse,
+	type GetChatsResponse,
 	zGetChatsData,
 	zGetChatsResponse,
 } from '@repo/macro-ai-api-client'
@@ -17,7 +17,7 @@ const getChatsRequestQuerySchema = zGetChatsData.shape.query.unwrap()
 const getChats = async (options?: GetChatsOptions) => {
 	const { data, error } = await getChatsEndpoint({
 		client: apiClient,
-		query: { page: options?.page, limit: options?.limit },
+		query: { limit: options?.limit, page: options?.page },
 	})
 
 	if (error) {

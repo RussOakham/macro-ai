@@ -1,7 +1,8 @@
-import * as repoConfig from '@repo/config-eslint'
-import globals from 'globals'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import * as repoConfig from '@repo/config-eslint'
+import globals from 'globals'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -60,6 +61,7 @@ export default repoConfig.config(
 					project: './tsconfig.eslint.json',
 				},
 			},
+			'import-x/extensions': ['.ts', '.tsx', '.js', '.jsx'],
 		},
 	},
 

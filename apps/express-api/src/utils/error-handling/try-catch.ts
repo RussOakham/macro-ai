@@ -1,4 +1,4 @@
-import { AppError, Result } from '../errors.ts'
+import { AppError, type Result } from '../errors.ts'
 import { pino } from '../logger.ts'
 
 const { logger } = pino
@@ -22,7 +22,7 @@ const { logger } = pino
  * return [user, null]
  */
 const tryCatch = async <T>(
-	promiseOrFunction: Promise<T> | (() => Promise<T>),
+	promiseOrFunction: (() => Promise<T>) | Promise<T>,
 	context = 'unknown',
 ): Promise<Result<T>> => {
 	try {

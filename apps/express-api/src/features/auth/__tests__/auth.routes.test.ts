@@ -66,6 +66,7 @@ describe('Auth Routes', () => {
 
 		// Create Express app and router
 		app = express()
+		// oxlint-disable-next-line new-cap
 		router = express.Router()
 		app.use(express.json())
 

@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 
 import { UnauthorizedError } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
@@ -12,11 +12,12 @@ const API_KEY_HEADER = 'X-API-KEY'
  * Checks for API key in the X-API-KEY header
  */
 const apiKeyAuth = (req: Request, res: Response, next: NextFunction): void => {
-	// Skip API key check for health endpoints, Swagger documentation, and CORS preflight
+	// Skip API key check for health endpoints, Swagger documentation, CSRF token endpoint, and CORS preflight
 	const isSwagger = req.path.startsWith('/api-docs')
 	const isHealth = req.path.startsWith('/api/health')
+	const isCsrfToken = req.path === '/api/csrf-token'
 	const isOptions = req.method === 'OPTIONS'
-	if (isSwagger || isHealth || isOptions) {
+	if (isSwagger || isHealth || isCsrfToken || isOptions) {
 		next()
 		return
 	}

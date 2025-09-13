@@ -17,13 +17,12 @@ vi.mock('../../../utils/response-handlers.ts', () => ({
 	safeValidateSchema: vi.fn(),
 }))
 
-import type { PaginationOptions, TChat, TInsertChat } from '../chat.types.ts'
-
 // Import after mocking
 import { tryCatch } from '../../../utils/error-handling/try-catch.ts'
 import { safeValidateSchema } from '../../../utils/response-handlers.ts'
 // Import the repository instances to test
 import { chatRepository } from '../chat.data-access.ts'
+import type { PaginationOptions, TChat, TInsertChat } from '../chat.types.ts'
 
 describe('Chat Data Access Layer', () => {
 	// Mock data - properly typed

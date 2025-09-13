@@ -1,10 +1,9 @@
-import type { IStandardizedError } from '@/lib/types'
-
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
+import type { IStandardizedError } from '@/lib/types'
 
 // Go-style Result type for client-side error handling
-type Result<T, E = IStandardizedError> = [T, null] | [null, E]
+type Result<T, E = IStandardizedError> = [null, E] | [T, null]
 
 /**
  * Client-side wrapper for async operations using Go-style error handling
@@ -41,8 +40,8 @@ const tryCatch = async <T>(
 		// Log error with context
 		logger.error(
 			{
-				error: standardizedError,
 				context,
+				error: standardizedError,
 			},
 			`[${context}]: ${standardizedError.message}`,
 		)
@@ -82,8 +81,8 @@ const tryCatchSync = <T>(func: () => T, context = 'unknown'): Result<T> => {
 		// Log error with context
 		logger.error(
 			{
-				error: standardizedError,
 				context,
+				error: standardizedError,
 			},
 			`[${context}]: ${standardizedError.message}`,
 		)
@@ -111,5 +110,5 @@ const err = <E extends IStandardizedError>(error: E): Result<never, E> => [
 	error,
 ]
 
-export { tryCatch, tryCatchSync, ok, err }
+export { err, ok, tryCatch, tryCatchSync }
 export type { Result }

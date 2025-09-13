@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * MSW Browser Setup for Application Testing
  *
@@ -7,8 +5,9 @@
  * to use MSW instead of the real backend when NODE_ENV === 'test'.
  */
 
-import { setupWorker } from 'msw/browser'
 import type { RequestHandler } from 'msw'
+import { setupWorker } from 'msw/browser'
+
 import { handlers } from './mocks/handlers.js'
 
 // Create MSW worker for browser environment
@@ -40,7 +39,9 @@ export const setupWorkerWithHandlers = (customHandlers: RequestHandler[]) => {
 // Enable mocking when NODE_ENV is 'test'
 export const enableMocking = async () => {
 	if (
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
 		(import.meta.env as any).MODE === 'test' ||
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
 		(import.meta.env as any).NODE_ENV === 'test'
 	) {
 		await startWorker()

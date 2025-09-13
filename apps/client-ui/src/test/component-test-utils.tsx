@@ -7,18 +7,23 @@
  * for component testing scenarios.
  */
 
-import { act, fireEvent, render, RenderResult } from '@testing-library/react'
-import { ReactElement, ReactNode } from 'react'
+import {
+	act,
+	fireEvent,
+	render,
+	type RenderResult,
+} from '@testing-library/react'
+import type { ReactElement, ReactNode } from 'react'
 import { expect, vi } from 'vitest'
 
 // Import from main test utilities
 import {
-	AuthTestState,
-	ComponentTestContext,
+	type AuthTestState,
+	type ComponentTestContext,
 	createAuthenticatedUserState,
 	createMockAuthState,
 	renderWithProviders,
-} from './test-utils'
+} from './test-utils.test-utils'
 
 // ============================================================================
 // Type Definitions
@@ -29,27 +34,27 @@ import {
  */
 export interface ComponentTestConfig {
 	authState?: AuthTestState
+	mswHandlers?: unknown[]
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	providers?: any[] | ReactNode[]
 	routerState?: {
+		hash?: string
 		pathname: string
 		search?: string
-		hash?: string
 	}
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	providers?: ReactNode[] | any[]
-	mswHandlers?: unknown[]
 }
 
 /**
  * Enhanced render result with additional utilities
  */
 export interface EnhancedRenderResult extends RenderResult {
-	testContext: ComponentTestContext
 	rerenderWithProps: (newProps: Record<string, unknown>) => void
+	testContext: ComponentTestContext
 	updateAuthState: (newAuthState: AuthTestState) => void
 	updateRouterState: (newRouterState: {
+		hash?: string
 		pathname: string
 		search?: string
-		hash?: string
 	}) => void
 }
 
@@ -68,8 +73,8 @@ export const renderComponent = (
 ): EnhancedRenderResult => {
 	const {
 		authState = createMockAuthState(),
-		providers = [],
 		mswHandlers = [],
+		providers = [],
 	} = config
 
 	// Create mock router context (not used in current implementation)
@@ -102,34 +107,34 @@ export const renderComponent = (
 
 	// Create test context
 	const testContext: ComponentTestContext = {
-		authState,
 		apiConfig: {
-			baseURL: 'http://localhost:3000',
 			apiKey: 'test-api-key',
-			withCredentials: true,
+			baseURL: 'http://localhost:3000',
 			timeout: 5000,
+			withCredentials: true,
 		},
+		authState,
 		mswHandlers,
 	}
 
 	// Create enhanced result with additional utilities
 	const enhancedResult: EnhancedRenderResult = {
 		...renderResult,
-		testContext,
 		rerenderWithProps: (newProps: Record<string, unknown>) => {
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
 			const newElement = { ...ui, props: { ...(ui as any).props, ...newProps } }
 			renderResult.rerender(newElement)
 		},
+		testContext,
 		updateAuthState: (newAuthState: AuthTestState) => {
 			// This would require re-rendering with new auth state
 			// For now, we'll just update the test context
 			renderResult.testContext.authState = newAuthState
 		},
 		updateRouterState: (newRouterState: {
+			hash?: string
 			pathname: string
 			search?: string
-			hash?: string
 		}) => {
 			// Update router state in test context
 			renderResult.testContext.apiConfig = {
@@ -237,13 +242,13 @@ export const waitForComponentReady = async () => {
  * Simulate user interaction
  */
 export const simulateUserInteraction = {
-	click: async (element: HTMLElement) => {
-		fireEvent.click(element)
+	change: async (element: HTMLElement, value: string) => {
+		fireEvent.change(element, { target: { value } })
 		await waitForComponentReady()
 	},
 
-	type: async (element: HTMLElement, text: string) => {
-		fireEvent.change(element, { target: { value: text } })
+	click: async (element: HTMLElement) => {
+		fireEvent.click(element)
 		await waitForComponentReady()
 	},
 
@@ -252,8 +257,8 @@ export const simulateUserInteraction = {
 		await waitForComponentReady()
 	},
 
-	change: async (element: HTMLElement, value: string) => {
-		fireEvent.change(element, { target: { value } })
+	type: async (element: HTMLElement, text: string) => {
+		fireEvent.change(element, { target: { value: text } })
 		await waitForComponentReady()
 	},
 }
@@ -262,18 +267,18 @@ export const simulateUserInteraction = {
  * Test component state changes
  */
 export const testComponentState = {
-	initial: (component: ReactElement) => {
-		const { getByTestId } = render(component)
-		return { getByTestId, component }
-	},
-
 	afterInteraction: async (
 		component: ReactElement,
 		interaction: () => Promise<void>,
 	) => {
 		const { getByTestId } = render(component)
 		await interaction()
-		return { getByTestId, component }
+		return { component, getByTestId }
+	},
+
+	initial: (component: ReactElement) => {
+		const { getByTestId } = render(component)
+		return { component, getByTestId }
 	},
 }
 
@@ -286,45 +291,26 @@ export const testComponentState = {
  */
 export const componentAssertions = {
 	/**
-	 * Assert component renders without errors
-	 * @param component
-	 */
-	rendersWithoutError: (component: ReactElement) => {
-		expect(() => render(component)).not.toThrow()
-	},
-
-	/**
 	 * Assert component displays expected content
 	 * @param component
 	 * @param expectedContent
 	 */
 	displaysContent: (
 		component: ReactElement,
-		expectedContent: string | RegExp,
+		expectedContent: RegExp | string,
 	) => {
 		const { getByText } = render(component)
 		expect(getByText(expectedContent)).toBeInTheDocument()
 	},
 
 	/**
-	 * Assert component has expected test ID
+	 * Assert component handles error state
 	 * @param component
-	 * @param testId
+	 * @param errorMessage
 	 */
-	hasTestId: (component: ReactElement, testId: string) => {
-		const { getByTestId } = render(component)
-		expect(getByTestId(testId)).toBeInTheDocument()
-	},
-
-	/**
-	 * Assert component is accessible
-	 * @param component
-	 */
-	isAccessible: (component: ReactElement) => {
-		const { container } = render(component)
-		// Basic accessibility checks
-
-		expect(container.querySelector('[role]')).toBeInTheDocument()
+	handlesErrorState: (component: ReactElement, errorMessage: string) => {
+		const { getByText } = render(component)
+		expect(getByText(errorMessage)).toBeInTheDocument()
 	},
 
 	/**
@@ -349,13 +335,32 @@ export const componentAssertions = {
 	},
 
 	/**
-	 * Assert component handles error state
+	 * Assert component has expected test ID
 	 * @param component
-	 * @param errorMessage
+	 * @param testId
 	 */
-	handlesErrorState: (component: ReactElement, errorMessage: string) => {
-		const { getByText } = render(component)
-		expect(getByText(errorMessage)).toBeInTheDocument()
+	hasTestId: (component: ReactElement, testId: string) => {
+		const { getByTestId } = render(component)
+		expect(getByTestId(testId)).toBeInTheDocument()
+	},
+
+	/**
+	 * Assert component is accessible
+	 * @param component
+	 */
+	isAccessible: (component: ReactElement) => {
+		const { container } = render(component)
+		// Basic accessibility checks
+
+		expect(container.querySelector('[role]')).toBeInTheDocument()
+	},
+
+	/**
+	 * Assert component renders without errors
+	 * @param component
+	 */
+	rendersWithoutError: (component: ReactElement) => {
+		expect(() => render(component)).not.toThrow()
 	},
 }
 
@@ -372,9 +377,9 @@ export const createMockRouter = (initialPath = '/test') => {
 		navigate: vi.fn(),
 		state: {
 			location: {
+				hash: '',
 				pathname: initialPath,
 				search: '',
-				hash: '',
 			},
 		},
 	}
@@ -425,19 +430,15 @@ export const testRouterNavigation = {
  */
 export const formTesting = {
 	/**
-	 * Fill text input fields (input[type="text"], input[type="email"], etc.)
+	 * Fill form fields (legacy function - use specific functions above)
 	 * @param form
 	 * @param data
+	 * @deprecated Use specific functions like fillTextInputs, fillSelectFields, etc.
 	 */
-	fillTextInputs: async (
-		form: HTMLFormElement,
-		data: Record<string, string>,
-	) => {
+	fillForm: async (form: HTMLFormElement, data: Record<string, string>) => {
 		Object.entries(data).forEach(([name, value]) => {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const field = form.querySelector<HTMLInputElement>(
-				`input[name="${name}"]`,
-			)!
+			const field = form.querySelector<HTMLInputElement>(`[name="${name}"]`)!
 			fireEvent.change(field, { target: { value } })
 		})
 		await waitForComponentReady()
@@ -482,6 +483,25 @@ export const formTesting = {
 	},
 
 	/**
+	 * Fill text input fields (input[type="text"], input[type="email"], etc.)
+	 * @param form
+	 * @param data
+	 */
+	fillTextInputs: async (
+		form: HTMLFormElement,
+		data: Record<string, string>,
+	) => {
+		Object.entries(data).forEach(([name, value]) => {
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			const field = form.querySelector<HTMLInputElement>(
+				`input[name="${name}"]`,
+			)!
+			fireEvent.change(field, { target: { value } })
+		})
+		await waitForComponentReady()
+	},
+
+	/**
 	 * Select radio button fields
 	 * @param form
 	 * @param data
@@ -501,6 +521,19 @@ export const formTesting = {
 	},
 
 	/**
+	 * Submit form
+	 * @param form
+	 */
+	submitForm: async (form: HTMLFormElement) => {
+		// eslint-disable-next-line @typescript-eslint/require-await
+		await act(async () => {
+			fireEvent.submit(form)
+		})
+		// Wait a bit longer for React state updates
+		await new Promise((resolve) => setTimeout(resolve, 100))
+	},
+
+	/**
 	 * Toggle checkbox fields
 	 * @param form
 	 * @param data
@@ -515,9 +548,7 @@ export const formTesting = {
 				`input[name="${name}"][type="checkbox"]`,
 			)!
 			// For checkboxes, we need to click to toggle, not change the value directly
-			if (checked && !field.checked) {
-				fireEvent.click(field)
-			} else if (!checked && field.checked) {
+			if (checked !== field.checked) {
 				fireEvent.click(field)
 			}
 		})
@@ -525,48 +556,55 @@ export const formTesting = {
 	},
 
 	/**
-	 * Fill form fields (legacy function - use specific functions above)
-	 * @param form
-	 * @param data
-	 * @deprecated Use specific functions like fillTextInputs, fillSelectFields, etc.
-	 */
-	fillForm: async (form: HTMLFormElement, data: Record<string, string>) => {
-		Object.entries(data).forEach(([name, value]) => {
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const field = form.querySelector<HTMLInputElement>(`[name="${name}"]`)!
-			fireEvent.change(field, { target: { value } })
-		})
-		await waitForComponentReady()
-	},
-
-	/**
-	 * Submit form
-	 * @param form
-	 */
-	submitForm: async (form: HTMLFormElement) => {
-		// eslint-disable-next-line @typescript-eslint/require-await
-		await act(async () => {
-			fireEvent.submit(form)
-		})
-		// Wait a bit longer for React state updates
-		await new Promise((resolve) => setTimeout(resolve, 100))
-	},
-
-	/**
-	 * Validate text input fields
+	 * Validate checkbox states
 	 * @param form
 	 * @param expectedData
 	 */
-	validateTextInputs: (
+	validateCheckboxes: (
+		form: HTMLFormElement,
+		expectedData: Record<string, boolean>,
+	) => {
+		Object.entries(expectedData).forEach(([name, expectedChecked]) => {
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			const field = form.querySelector<HTMLInputElement>(
+				`input[name="${name}"][type="checkbox"]`,
+			)!
+			expect(field.checked).toBe(expectedChecked)
+		})
+	},
+
+	/**
+	 * Validate form fields (legacy function - use specific functions above)
+	 * @param form
+	 * @param expectedData
+	 * @deprecated Use specific validation functions like validateTextInputs, validateSelectFields, etc.
+	 */
+	validateForm: (
+		form: HTMLFormElement,
+		expectedData: Record<string, string>,
+	) => {
+		Object.entries(expectedData).forEach(([name, expectedValue]) => {
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			const field = form.querySelector<HTMLInputElement>(`[name="${name}"]`)!
+			expect(field.value).toBe(expectedValue)
+		})
+	},
+
+	/**
+	 * Validate radio button selection
+	 * @param form
+	 * @param expectedData
+	 */
+	validateRadioButtons: (
 		form: HTMLFormElement,
 		expectedData: Record<string, string>,
 	) => {
 		Object.entries(expectedData).forEach(([name, expectedValue]) => {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			const field = form.querySelector<HTMLInputElement>(
-				`input[name="${name}"]`,
+				`input[name="${name}"][value="${expectedValue}"]`,
 			)!
-			expect(field.value).toBe(expectedValue)
+			expect(field.checked).toBe(true)
 		})
 	},
 
@@ -607,54 +645,19 @@ export const formTesting = {
 	},
 
 	/**
-	 * Validate radio button selection
+	 * Validate text input fields
 	 * @param form
 	 * @param expectedData
 	 */
-	validateRadioButtons: (
+	validateTextInputs: (
 		form: HTMLFormElement,
 		expectedData: Record<string, string>,
 	) => {
 		Object.entries(expectedData).forEach(([name, expectedValue]) => {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			const field = form.querySelector<HTMLInputElement>(
-				`input[name="${name}"][value="${expectedValue}"]`,
+				`input[name="${name}"]`,
 			)!
-			expect(field.checked).toBe(true)
-		})
-	},
-
-	/**
-	 * Validate checkbox states
-	 * @param form
-	 * @param expectedData
-	 */
-	validateCheckboxes: (
-		form: HTMLFormElement,
-		expectedData: Record<string, boolean>,
-	) => {
-		Object.entries(expectedData).forEach(([name, expectedChecked]) => {
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const field = form.querySelector<HTMLInputElement>(
-				`input[name="${name}"][type="checkbox"]`,
-			)!
-			expect(field.checked).toBe(expectedChecked)
-		})
-	},
-
-	/**
-	 * Validate form fields (legacy function - use specific functions above)
-	 * @param form
-	 * @param expectedData
-	 * @deprecated Use specific validation functions like validateTextInputs, validateSelectFields, etc.
-	 */
-	validateForm: (
-		form: HTMLFormElement,
-		expectedData: Record<string, string>,
-	) => {
-		Object.entries(expectedData).forEach(([name, expectedValue]) => {
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const field = form.querySelector<HTMLInputElement>(`[name="${name}"]`)!
 			expect(field.value).toBe(expectedValue)
 		})
 	},
@@ -669,10 +672,10 @@ export const formTesting = {
  */
 export const componentTesting = {
 	/**
-	 * Get element by test id
+	 * Assert element does not exist
 	 * @param testId
 	 */
-	getElementByTestId: (testId: string) => {
+	assertElementNotExists: (testId: string) => {
 		const element = document.querySelector(`[data-testid="${testId}"]`)
 		if (!element) {
 			// Try to find the element in the current test container
@@ -680,14 +683,10 @@ export const componentTesting = {
 			const elementInContainer = container.querySelector(
 				`[data-testid="${testId}"]`,
 			)
-			if (elementInContainer) {
-				expect(elementInContainer).toBeInTheDocument()
-				return elementInContainer
-			}
+			expect(elementInContainer).not.toBeInTheDocument()
+			return
 		}
-		expect(element).toBeInTheDocument()
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		return element!
+		expect(element).not.toBeInTheDocument()
 	},
 
 	/**
@@ -709,24 +708,6 @@ export const componentTesting = {
 			}
 		}
 		expect(element).toHaveTextContent(expectedText)
-	},
-
-	/**
-	 * Assert element does not exist
-	 * @param testId
-	 */
-	assertElementNotExists: (testId: string) => {
-		const element = document.querySelector(`[data-testid="${testId}"]`)
-		if (!element) {
-			// Try to find the element in the current test container
-			const container = document.querySelector('#root') ?? document.body
-			const elementInContainer = container.querySelector(
-				`[data-testid="${testId}"]`,
-			)
-			expect(elementInContainer).not.toBeInTheDocument()
-			return
-		}
-		expect(element).not.toBeInTheDocument()
 	},
 
 	/**
@@ -754,5 +735,27 @@ export const componentTesting = {
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		fireEvent.click(element!)
 		await waitForComponentReady()
+	},
+
+	/**
+	 * Get element by test id
+	 * @param testId
+	 */
+	getElementByTestId: (testId: string) => {
+		const element = document.querySelector(`[data-testid="${testId}"]`)
+		if (!element) {
+			// Try to find the element in the current test container
+			const container = document.querySelector('#root') ?? document.body
+			const elementInContainer = container.querySelector(
+				`[data-testid="${testId}"]`,
+			)
+			if (elementInContainer) {
+				expect(elementInContainer).toBeInTheDocument()
+				return elementInContainer
+			}
+		}
+		expect(element).toBeInTheDocument()
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		return element!
 	},
 }

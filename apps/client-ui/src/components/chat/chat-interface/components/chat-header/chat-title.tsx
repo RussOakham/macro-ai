@@ -9,8 +9,8 @@ interface ChatTitleProps extends React.ComponentPropsWithoutRef<'h1'> {
  * Displays the chat title with proper typography and styling
  */
 const ChatTitle = ({
-	title,
 	className,
+	title,
 	...props
 }: ChatTitleProps): React.JSX.Element => {
 	return (

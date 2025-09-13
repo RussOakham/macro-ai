@@ -176,15 +176,22 @@ describe('API Integration Testing Examples', () => {
 			})
 		})
 
-		it('should create a new chat (requires bearer token authentication)', async () => {
+		it('should create a new chat (requires both CSRF token and API key)', async () => {
 			// Note: This test demonstrates the correct endpoint and expected 401 response
-			// In a real test, you would authenticate first to get a valid bearer token
+			// when API key validation fails (CSRF is skipped for /api/ routes)
 			const newChat = {
 				title: 'Test Chat',
 			}
 
+			// First get a CSRF token (required for all POST requests)
+			const csrfResponse = await request(app).get('/api/csrf-token').expect(200)
+
+			const { csrfToken } = csrfResponse.body as { csrfToken: string }
+
+			// Test with CSRF token but no API key - should get 401 (API key validation fails first)
 			const response = await request(app)
 				.post('/api/chats')
+				.set('X-CSRF-Token', csrfToken)
 				.send(newChat)
 				.expect(401)
 
@@ -200,10 +207,16 @@ describe('API Integration Testing Examples', () => {
 
 	describe('Error Handling', () => {
 		it('should handle malformed JSON', async () => {
+			// First get a CSRF token (required for all POST requests)
+			const csrfResponse = await request(app).get('/api/csrf-token').expect(200)
+
+			const { csrfToken } = csrfResponse.body as { csrfToken: string }
+
 			const response = await request(app)
 				.post('/api/chats')
 				.set('Content-Type', 'application/json')
 				.set('X-API-KEY', TEST_API_KEY)
+				.set('X-CSRF-Token', csrfToken)
 				.send('{"invalid": json}')
 				.expect(500)
 

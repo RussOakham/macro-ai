@@ -1,6 +1,6 @@
 import {
+	type GetAuthUserResponse,
 	getAuthUser as getAuthUserSdk,
-	GetAuthUserResponse,
 	zGetAuthUserResponse,
 } from '@repo/macro-ai-api-client'
 

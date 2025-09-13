@@ -7,27 +7,27 @@ import {
 } from '@/services/hooks/chat/use-enhanced-chat-mutation'
 
 interface UseChatInterfaceOptions {
-	chatId: string | null
+	chatId: null | string
 }
 
 interface UseChatInterfaceReturn {
-	messages: {
-		id: string
-		role: 'user' | 'assistant' | 'system' | 'data'
-		content: string
-	}[]
-	input: string
+	chatData: UseEnhancedChatReturn['chatData']
 	handleInputChange: (
 		e:
 			| React.ChangeEvent<HTMLInputElement>
 			| React.ChangeEvent<HTMLTextAreaElement>,
 	) => void
 	handleSubmit: (e: React.FormEvent) => Promise<void>
-	status: 'ready' | 'submitted' | 'streaming' | 'error'
+	input: string
 	isChatLoading: boolean
-	chatData: UseEnhancedChatReturn['chatData']
+	messages: {
+		content: string
+		id: string
+		role: 'assistant' | 'data' | 'system' | 'user'
+	}[]
 	messagesEndRef: React.RefObject<HTMLDivElement | null>
 	scrollToBottom: () => void
+	status: 'error' | 'ready' | 'streaming' | 'submitted'
 }
 
 /**
@@ -48,20 +48,20 @@ const useChatInterface = ({
 
 	// Use enhanced chat hook for streaming with TanStack Query integration
 	const {
-		messages,
-		input,
+		chatData,
 		handleInputChange,
 		handleSubmit,
-		status,
+		input,
 		isChatLoading,
-		chatData,
+		messages,
+		status,
 	} = useEnhancedChat({
 		chatId: chatId ?? '',
 		onMessageSent: (messageId) => {
 			logger.info(
 				{
-					messageId,
 					chatId,
+					messageId,
 				},
 				'[ChatInterface]: Message sent',
 			)
@@ -69,9 +69,9 @@ const useChatInterface = ({
 		onStreamingComplete: (messageId, content) => {
 			logger.info(
 				{
-					messageId,
 					chatId,
 					contentLength: content.length,
+					messageId,
 				},
 				'[ChatInterface]: Streaming complete',
 			)
@@ -95,15 +95,15 @@ const useChatInterface = ({
 	}, [status])
 
 	return {
-		messages,
-		input,
+		chatData,
 		handleInputChange,
 		handleSubmit,
-		status,
+		input,
 		isChatLoading,
-		chatData,
+		messages,
 		messagesEndRef,
 		scrollToBottom,
+		status,
 	}
 }
 

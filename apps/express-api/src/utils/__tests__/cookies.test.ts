@@ -1,5 +1,5 @@
+/* eslint-disable sonarjs/no-identical-functions */
 import type { Request } from 'express'
-
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {

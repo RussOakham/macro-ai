@@ -33,15 +33,13 @@ jobs:
     name: Setup Environment
     runs-on: ubuntu-latest
     outputs:
-      express_env: ${{ steps.create_express_env.outputs.env_content }}
-      client_env: ${{ steps.create_client_env.outputs.env_content }}
       NODE_ENV: ${{ env.NODE_ENV }}
       APP_ENV: ${{ env.APP_ENV }}
     steps:
       - name: Detect environment
         id: detect_env
         run: |
-          if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
+          if [[ "${{ env.ACT_LOCAL }}" == "true" || "$ACT" == "true" ]]; then
             echo "🔍 Running in act (local testing) - using direct AWS credentials"
             echo "use_direct_creds=true" >> "$GITHUB_OUTPUT"
           else
@@ -372,7 +370,7 @@ jobs:
           AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
           AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
           # AWS Cognito credentials removed - using IAM roles instead
-          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
 
           # Cookie Configuration
           COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
@@ -383,15 +381,15 @@ jobs:
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
 
           # OpenAI
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
 
           # Rate Limiting
-          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
 
   lint:
     needs: setup
@@ -515,7 +513,7 @@ jobs:
           AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
           AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
           # AWS Cognito credentials removed - using IAM roles instead
-          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_USER_POOL_REFRESH_TOKEN_EXPIRY || '30' }}
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
 
           # Cookie Configuration
           COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
@@ -526,15 +524,15 @@ jobs:
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
 
           # OpenAI
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
 
           # Rate Limiting
-          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
 
       - name: Generate MSW handlers
         run: |
@@ -547,6 +545,39 @@ jobs:
           echo "🔍 Starting lint checks..."
           pnpm lint
           echo "✅ Lint checks passed successfully"
+        env:
+          # Core Configuration
+          NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
+          APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
+          API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+
+          # AWS Cognito Configuration
+          AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
+          AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
+          AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
+          AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
+          # AWS Cognito credentials removed - using IAM roles instead
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
+
+          # Cookie Configuration
+          COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
+          COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+
+          # Databases
+          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
+          RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+
+          # OpenAI
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
+
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
 
   test:
     needs: setup
@@ -661,7 +692,7 @@ jobs:
           AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
           AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
           # AWS Cognito credentials removed - using IAM roles instead
-          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
 
           # Cookie Configuration
           COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
@@ -672,15 +703,15 @@ jobs:
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
 
           # OpenAI
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
 
           # Rate Limiting
-          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
 
       - name: Generate MSW handlers
         run: |
@@ -703,7 +734,7 @@ jobs:
           AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
           AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
           # AWS Cognito credentials removed - using IAM roles instead
-          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || '30' }}
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
 
           # Cookie Configuration
           COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
@@ -714,15 +745,15 @@ jobs:
           RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
 
           # OpenAI
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
 
           # Rate Limiting
-          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
@@ -892,3 +923,219 @@ jobs:
         run: |
           echo "🔍 Running in act environment - skipping Gitleaks secret scanning"
           echo "✅ Gitleaks check skipped for local testing"
+
+  security-scan:
+    name: Code Quality Security Scan
+    needs: setup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Download .env files from artifacts to prevent secret exposure
+      - name: Download env artifacts
+        if: env.ACT_LOCAL != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-env-files
+          path: /tmp/envs
+
+      - name: Create mock env files for act environment
+        if: env.ACT_LOCAL == 'true'
+        run: |
+          mkdir -p /tmp/envs apps/express-api apps/client-ui
+
+          # Create Express API .env file with mock values
+          cat << EOF > /tmp/envs/express-api.env
+          # API Configuration
+          API_KEY=dummy-api-key-for-act-testing
+          SERVER_PORT=3040
+          NODE_ENV=development
+          APP_ENV=development
+
+          # AWS Cognito Configuration
+          AWS_COGNITO_REGION=us-east-1
+          AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
+          AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
+          AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
+
+          # Cookie Configuration
+          COOKIE_DOMAIN=localhost
+          COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
+
+          # Databases
+          REDIS_URL=redis://localhost:6379
+          RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
+
+          # OpenAI
+          OPENAI_API_KEY=mock-openai-key-for-local-testing-only
+
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS=900000
+          RATE_LIMIT_MAX_REQUESTS=100
+          AUTH_RATE_LIMIT_WINDOW_MS=900000
+          AUTH_RATE_LIMIT_MAX_REQUESTS=5
+          API_RATE_LIMIT_WINDOW_MS=60000
+          API_RATE_LIMIT_MAX_REQUESTS=10
+          EOF
+
+          # Create Client UI .env file
+          cat << EOF > /tmp/envs/client-ui.env
+          VITE_API_URL=http://localhost:3040/api
+          VITE_API_KEY=dummy-api-key-at-least-32-chars-long
+          EOF
+
+      - name: Create Express API .env file
+        run: |
+          mkdir -p apps/express-api
+          cp /tmp/envs/express-api.env apps/express-api/.env
+
+      - name: Create Client UI .env file
+        run: |
+          mkdir -p apps/client-ui
+          cp /tmp/envs/client-ui.env apps/client-ui/.env
+
+      - name: Build config packages
+        run: |
+          echo "🔨 Building config packages..."
+          pnpm --filter @repo/config-testing build
+          echo "✅ Config packages built successfully"
+
+      - name: Build types package
+        run: pnpm --filter @repo/macro-ai-api-client build
+        env:
+          # Core Configuration
+          NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
+          APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
+          API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+
+          # AWS Cognito Configuration
+          AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
+          AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
+          AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
+          AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
+          # AWS Cognito credentials removed - using IAM roles instead
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
+
+          # Cookie Configuration
+          COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
+          COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+
+          # Databases
+          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
+          RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+
+          # OpenAI
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
+
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
+
+      - name: Generate MSW handlers
+        run: |
+          echo "🔧 Generating MSW handlers from OpenAPI spec..."
+          pnpm --filter client-ui generate:msw
+          echo "✅ MSW handlers generated successfully"
+
+      # ESLint Security Scanning
+      - name: Run ESLint Security Scan
+        run: pnpm lint:eslint
+        env:
+          # Core Configuration
+          NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
+          APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
+          API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
+
+          # AWS Cognito Configuration
+          AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
+          AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
+          AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
+          AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
+          # AWS Cognito credentials removed - using IAM roles instead
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
+
+          # Cookie Configuration
+          COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
+          COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
+
+          # Databases
+          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
+          RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
+
+          # OpenAI
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
+
+          # Rate Limiting
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
+
+      # Snyk Security Scanning
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      # Semgrep Security Scanning
+      - name: Run Semgrep Security Scan
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            .semgrep.yml
+            p/security
+            p/owasp-top-ten
+            p/javascript
+            p/typescript
+            p/yaml
+            p/github-actions
+          generateSarif: '1'
+          generateGitlab: '0'
+          generateGithub: '1'
+          sarifOutput: 'semgrep.sarif'
+
+      # Upload Semgrep results to GitHub Security tab
+      - name: Upload Semgrep results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+
+      # Dependency Audit
+      - name: Run npm audit
+        run: pnpm audit --audit-level moderate
+        continue-on-error: true

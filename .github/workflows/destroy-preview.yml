@@ -203,6 +203,7 @@ jobs:
           CDK_DEPLOY_ENV: ${{ needs.validate-access.outputs.env-name }}
           CDK_DEPLOY_TYPE: 'ec2-preview'
           CDK_DEPLOY_SCALE: 'preview'
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           cd infrastructure
 
@@ -213,7 +214,7 @@ jobs:
           echo "📦 Stack: ${STACK_NAME}"
           echo "🏗️ Deployment Type: ec2-preview"
           echo "👤 PR Author: ${{ needs.validate-access.outputs.target-user }}"
-          echo "🔗 PR: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}"
+          echo "🔗 PR: #${{ github.event.pull_request.number }} - ${PR_TITLE}"
           echo ""
           echo "🔍 Expected EC2 resources to be destroyed:"
           echo "  - Auto Scaling Group: macro-ai-${ENV_NAME}-asg"

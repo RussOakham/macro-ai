@@ -6,13 +6,13 @@ import { getUser } from '../../network/user/get-user'
 
 const useGetUser = () => {
 	return useQuery({
-		queryKey: [QUERY_KEY.user],
-		queryFn: async () => getUser(),
-		staleTime: Infinity,
 		gcTime: Infinity,
+		queryFn: async () => getUser(),
+		queryKey: [QUERY_KEY.user],
 		refetchOnMount: false,
 		refetchOnReconnect: false,
 		refetchOnWindowFocus: false,
+		staleTime: Infinity,
 	})
 }
 

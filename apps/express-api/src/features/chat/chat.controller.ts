@@ -1,8 +1,5 @@
 import type { NextFunction, Request, Response } from 'express'
-
 import { StatusCodes } from 'http-status-codes'
-
-import type { IChatController, PaginationOptions } from './chat.types.ts'
 
 import {
 	tryCatch,
@@ -10,12 +7,13 @@ import {
 	tryCatchSync,
 } from '../../utils/error-handling/try-catch.ts'
 import { pino } from '../../utils/logger.ts'
-import {
+import type {
 	CreateChatRequest,
 	SendMessageRequest,
 	UpdateChatRequest,
 } from './chat.schemas.ts'
 import { chatService } from './chat.service.ts'
+import type { IChatController, PaginationOptions } from './chat.types.ts'
 
 const { logger } = pino
 
@@ -27,6 +25,187 @@ const { logger } = pino
 /* eslint-disable class-methods-use-this */
 export class ChatController implements IChatController {
 	/**
+	 * Create a new chat for the authenticated user
+	 * POST /api/chats
+	 */
+	public createChat = async (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): Promise<void> => {
+		const { userId } = req // Set by auth middleware
+
+		if (!userId) {
+			res.status(StatusCodes.UNAUTHORIZED).json({
+				success: false,
+				error: 'Authentication required',
+			})
+			return
+		}
+
+		const { title } = req.body as CreateChatRequest
+
+		const [result, error] = await tryCatch(
+			chatService.createChat({ userId, title }),
+			'chatController - createChat',
+		)
+
+		if (error) {
+			logger.error({
+				msg: '[chatController - createChat]: Error creating chat',
+				error: error.message,
+				userId,
+				title,
+			})
+			next(error)
+			return
+		}
+
+		const [chat, serviceError] = result
+		if (serviceError) {
+			next(serviceError)
+			return
+		}
+
+		logger.info({
+			msg: '[chatController - createChat]: Chat created successfully',
+			chatId: chat.id,
+			userId,
+			title,
+		})
+
+		res.status(StatusCodes.CREATED).json({
+			success: true,
+			data: chat,
+		})
+	}
+
+	/**
+	 * Delete a chat and all its messages (with ownership verification)
+	 * DELETE /api/chats/:id
+	 */
+	public deleteChat = async (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): Promise<void> => {
+		const { userId } = req // Set by auth middleware
+		const chatId = req.params.id
+
+		if (!userId) {
+			res.status(StatusCodes.UNAUTHORIZED).json({
+				success: false,
+				error: 'Authentication required',
+			})
+			return
+		}
+
+		if (!chatId) {
+			res.status(StatusCodes.BAD_REQUEST).json({
+				success: false,
+				error: 'Chat ID is required',
+			})
+			return
+		}
+
+		const [result, error] = await tryCatch(
+			chatService.deleteChat(chatId, userId),
+			'chatController - deleteChat',
+		)
+
+		if (error) {
+			logger.error({
+				msg: '[chatController - deleteChat]: Error deleting chat',
+				error: error.message,
+				userId,
+				chatId,
+			})
+			next(error)
+			return
+		}
+
+		const [, serviceError] = result
+		if (serviceError) {
+			next(serviceError)
+			return
+		}
+
+		logger.info({
+			msg: '[chatController - deleteChat]: Chat deleted successfully',
+			chatId,
+			userId,
+		})
+
+		res.status(StatusCodes.OK).json({
+			success: true,
+			message: 'Chat deleted successfully',
+		})
+	}
+
+	/**
+	 * Get a specific chat with its messages (with ownership verification)
+	 * GET /api/chats/:id
+	 */
+	public getChatById = async (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): Promise<void> => {
+		const { userId } = req // Set by auth middleware
+		const chatId = req.params.id
+
+		if (!userId) {
+			res.status(StatusCodes.UNAUTHORIZED).json({
+				success: false,
+				error: 'Authentication required',
+			})
+			return
+		}
+
+		if (!chatId) {
+			res.status(StatusCodes.BAD_REQUEST).json({
+				success: false,
+				error: 'Chat ID is required',
+			})
+			return
+		}
+
+		const [result, error] = await tryCatch(
+			chatService.getChatWithMessages(chatId, userId),
+			'chatController - getChatById',
+		)
+
+		if (error) {
+			logger.error({
+				msg: '[chatController - getChatById]: Error retrieving chat',
+				error: error.message,
+				userId,
+				chatId,
+			})
+			next(error)
+			return
+		}
+
+		const [chatWithMessages, serviceError] = result
+		if (serviceError) {
+			next(serviceError)
+			return
+		}
+
+		logger.info({
+			msg: '[chatController - getChatById]: Successfully retrieved chat',
+			chatId,
+			userId,
+			messageCount: chatWithMessages.messages.length,
+		})
+
+		res.status(StatusCodes.OK).json({
+			success: true,
+			data: chatWithMessages,
+		})
+	}
+
+	/**
 	 * Get all chats for the authenticated user with pagination
 	 * GET /api/chats
 	 */
@@ -35,7 +214,7 @@ export class ChatController implements IChatController {
 		res: Response,
 		next: NextFunction,
 	): Promise<void> => {
-		const userId = req.userId // Set by auth middleware
+		const { userId } = req // Set by auth middleware
 
 		if (!userId) {
 			res.status(StatusCodes.UNAUTHORIZED).json({
@@ -99,253 +278,6 @@ export class ChatController implements IChatController {
 	}
 
 	/**
-	 * Create a new chat for the authenticated user
-	 * POST /api/chats
-	 */
-	public createChat = async (
-		req: Request,
-		res: Response,
-		next: NextFunction,
-	): Promise<void> => {
-		const userId = req.userId // Set by auth middleware
-
-		if (!userId) {
-			res.status(StatusCodes.UNAUTHORIZED).json({
-				success: false,
-				error: 'Authentication required',
-			})
-			return
-		}
-
-		const { title } = req.body as CreateChatRequest
-
-		const [result, error] = await tryCatch(
-			chatService.createChat({ userId, title }),
-			'chatController - createChat',
-		)
-
-		if (error) {
-			logger.error({
-				msg: '[chatController - createChat]: Error creating chat',
-				error: error.message,
-				userId,
-				title,
-			})
-			next(error)
-			return
-		}
-
-		const [chat, serviceError] = result
-		if (serviceError) {
-			next(serviceError)
-			return
-		}
-
-		logger.info({
-			msg: '[chatController - createChat]: Chat created successfully',
-			chatId: chat.id,
-			userId,
-			title,
-		})
-
-		res.status(StatusCodes.CREATED).json({
-			success: true,
-			data: chat,
-		})
-	}
-
-	/**
-	 * Get a specific chat with its messages (with ownership verification)
-	 * GET /api/chats/:id
-	 */
-	public getChatById = async (
-		req: Request,
-		res: Response,
-		next: NextFunction,
-	): Promise<void> => {
-		const userId = req.userId // Set by auth middleware
-		const chatId = req.params.id
-
-		if (!userId) {
-			res.status(StatusCodes.UNAUTHORIZED).json({
-				success: false,
-				error: 'Authentication required',
-			})
-			return
-		}
-
-		if (!chatId) {
-			res.status(StatusCodes.BAD_REQUEST).json({
-				success: false,
-				error: 'Chat ID is required',
-			})
-			return
-		}
-
-		const [result, error] = await tryCatch(
-			chatService.getChatWithMessages(chatId, userId),
-			'chatController - getChatById',
-		)
-
-		if (error) {
-			logger.error({
-				msg: '[chatController - getChatById]: Error retrieving chat',
-				error: error.message,
-				userId,
-				chatId,
-			})
-			next(error)
-			return
-		}
-
-		const [chatWithMessages, serviceError] = result
-		if (serviceError) {
-			next(serviceError)
-			return
-		}
-
-		logger.info({
-			msg: '[chatController - getChatById]: Successfully retrieved chat',
-			chatId,
-			userId,
-			messageCount: chatWithMessages.messages.length,
-		})
-
-		res.status(StatusCodes.OK).json({
-			success: true,
-			data: chatWithMessages,
-		})
-	}
-
-	/**
-	 * Update a chat title (with ownership verification)
-	 * PUT /api/chats/:id
-	 */
-	public updateChat = async (
-		req: Request,
-		res: Response,
-		next: NextFunction,
-	): Promise<void> => {
-		const userId = req.userId // Set by auth middleware
-		const chatId = req.params.id
-		const { title } = req.body as UpdateChatRequest
-
-		if (!userId) {
-			res.status(StatusCodes.UNAUTHORIZED).json({
-				success: false,
-				error: 'Authentication required',
-			})
-			return
-		}
-
-		if (!chatId) {
-			res.status(StatusCodes.BAD_REQUEST).json({
-				success: false,
-				error: 'Chat ID is required',
-			})
-			return
-		}
-
-		// Update the chat (service handles ownership verification)
-		const [updateResult, updateError] = await tryCatch(
-			chatService.updateChat(chatId, userId, { title }),
-			'chatController - updateChat',
-		)
-
-		if (updateError) {
-			logger.error({
-				msg: '[chatController - updateChat]: Error updating chat',
-				error: updateError.message,
-				userId,
-				chatId,
-				title,
-			})
-			next(updateError)
-			return
-		}
-
-		const [updatedChat, serviceError] = updateResult
-		if (serviceError) {
-			next(serviceError)
-			return
-		}
-
-		logger.info({
-			msg: '[chatController - updateChat]: Chat updated successfully',
-			chatId,
-			userId,
-			title,
-		})
-
-		res.status(StatusCodes.OK).json({
-			success: true,
-			data: updatedChat,
-		})
-	}
-
-	/**
-	 * Delete a chat and all its messages (with ownership verification)
-	 * DELETE /api/chats/:id
-	 */
-	public deleteChat = async (
-		req: Request,
-		res: Response,
-		next: NextFunction,
-	): Promise<void> => {
-		const userId = req.userId // Set by auth middleware
-		const chatId = req.params.id
-
-		if (!userId) {
-			res.status(StatusCodes.UNAUTHORIZED).json({
-				success: false,
-				error: 'Authentication required',
-			})
-			return
-		}
-
-		if (!chatId) {
-			res.status(StatusCodes.BAD_REQUEST).json({
-				success: false,
-				error: 'Chat ID is required',
-			})
-			return
-		}
-
-		const [result, error] = await tryCatch(
-			chatService.deleteChat(chatId, userId),
-			'chatController - deleteChat',
-		)
-
-		if (error) {
-			logger.error({
-				msg: '[chatController - deleteChat]: Error deleting chat',
-				error: error.message,
-				userId,
-				chatId,
-			})
-			next(error)
-			return
-		}
-
-		const [, serviceError] = result
-		if (serviceError) {
-			next(serviceError)
-			return
-		}
-
-		logger.info({
-			msg: '[chatController - deleteChat]: Chat deleted successfully',
-			chatId,
-			userId,
-		})
-
-		res.status(StatusCodes.OK).json({
-			success: true,
-			message: 'Chat deleted successfully',
-		})
-	}
-
-	/**
 	 * Stream chat message response using Server-Sent Events (SSE)
 	 * POST /api/chats/:id/stream
 	 */
@@ -355,11 +287,19 @@ export class ChatController implements IChatController {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		next: NextFunction,
 	): Promise<void> => {
-		const userId = req.userId // Set by auth middleware
+		const { userId } = req // Set by auth middleware
 		const chatId = req.params.id
 		const requestBody = req.body as SendMessageRequest
 
-		// Validate messages array
+		// Validate messages array type and content
+		if (!Array.isArray(requestBody.messages)) {
+			res.status(StatusCodes.BAD_REQUEST).json({
+				success: false,
+				error: 'Messages must be an array',
+			})
+			return
+		}
+
 		if (requestBody.messages.length === 0) {
 			res.status(StatusCodes.BAD_REQUEST).json({
 				success: false,
@@ -370,16 +310,19 @@ export class ChatController implements IChatController {
 
 		// Extract the latest user message from the messages array
 		const latestMessage = requestBody.messages[requestBody.messages.length - 1]
-		if (!latestMessage || latestMessage.role !== 'user') {
+		if (
+			!latestMessage ||
+			typeof latestMessage !== 'object' ||
+			latestMessage.role !== 'user'
+		) {
 			res.status(StatusCodes.BAD_REQUEST).json({
 				success: false,
-				error: 'Latest message must be from user',
+				error: 'Latest message must be a valid object from user',
 			})
 			return
 		}
 
-		const content = latestMessage.content
-		const role = latestMessage.role
+		const { content, role } = latestMessage
 
 		if (!userId) {
 			res.status(StatusCodes.UNAUTHORIZED).json({
@@ -525,6 +468,72 @@ export class ChatController implements IChatController {
 			// Always end the response
 			res.end()
 		}
+	}
+
+	/**
+	 * Update a chat title (with ownership verification)
+	 * PUT /api/chats/:id
+	 */
+	public updateChat = async (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): Promise<void> => {
+		const { userId } = req // Set by auth middleware
+		const chatId = req.params.id
+		const { title } = req.body as UpdateChatRequest
+
+		if (!userId) {
+			res.status(StatusCodes.UNAUTHORIZED).json({
+				success: false,
+				error: 'Authentication required',
+			})
+			return
+		}
+
+		if (!chatId) {
+			res.status(StatusCodes.BAD_REQUEST).json({
+				success: false,
+				error: 'Chat ID is required',
+			})
+			return
+		}
+
+		// Update the chat (service handles ownership verification)
+		const [updateResult, updateError] = await tryCatch(
+			chatService.updateChat(chatId, userId, { title }),
+			'chatController - updateChat',
+		)
+
+		if (updateError) {
+			logger.error({
+				msg: '[chatController - updateChat]: Error updating chat',
+				error: updateError.message,
+				userId,
+				chatId,
+				title,
+			})
+			next(updateError)
+			return
+		}
+
+		const [updatedChat, serviceError] = updateResult
+		if (serviceError) {
+			next(serviceError)
+			return
+		}
+
+		logger.info({
+			msg: '[chatController - updateChat]: Chat updated successfully',
+			chatId,
+			userId,
+			title,
+		})
+
+		res.status(StatusCodes.OK).json({
+			success: true,
+			data: updatedChat,
+		})
 	}
 }
 

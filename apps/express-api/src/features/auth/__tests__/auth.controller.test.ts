@@ -1,5 +1,5 @@
 // AWS Cognito types
-import {
+import type {
 	ConfirmForgotPasswordCommandOutput,
 	ConfirmSignUpCommandOutput,
 	ForgotPasswordCommandOutput,
@@ -7,7 +7,7 @@ import {
 	InitiateAuthCommandOutput,
 	ResendConfirmationCodeCommandOutput,
 } from '@aws-sdk/client-cognito-identity-provider'
-import { NextFunction, Request, Response } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -37,7 +37,7 @@ import { userRepository } from '../../user/user.data-access.ts'
 import { userService } from '../../user/user.services.ts'
 import { authController } from '../auth.controller.ts'
 import { cognitoService } from '../auth.services.ts'
-import {
+import type {
 	TConfirmForgotPasswordRequest,
 	TConfirmRegistrationRequest,
 	TForgotPasswordRequest,

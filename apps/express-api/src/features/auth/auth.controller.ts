@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 
 import {
@@ -21,9 +21,9 @@ import {
 } from '../../utils/response-handlers.ts'
 import { userRepository } from '../user/user.data-access.ts'
 import { userService } from '../user/user.services.ts'
-import { TInsertUser } from '../user/user.types.ts'
+import type { TInsertUser } from '../user/user.types.ts'
 import { cognitoService } from './auth.services.ts'
-import {
+import type {
 	IAuthController,
 	TAuthResponse,
 	TConfirmForgotPasswordRequest,
@@ -41,10 +41,21 @@ const { logger } = pino
 import { assertConfig } from '../../config/simple-config.ts'
 
 // Load configuration once at module level (no logging)
-const config = assertConfig(false)
-const nodeEnv = config.nodeEnv
-const cookieDomain = config.cookieDomain
-const refreshTokenExpiryDays = config.awsCognitoRefreshTokenExpiry
+let config: Awaited<ReturnType<typeof assertConfig>>
+let nodeEnv: string
+let cookieDomain: string
+let refreshTokenExpiryDays: number
+
+// Initialize config asynchronously
+assertConfig(false).then((loadedConfig) => {
+	config = loadedConfig
+	// oxlint-disable-next-line prefer-destructuring
+	nodeEnv = config.nodeEnv
+	// oxlint-disable-next-line prefer-destructuring
+	cookieDomain = config.cookieDomain
+	refreshTokenExpiryDays = config.awsCognitoRefreshTokenExpiry
+	return undefined
+})
 
 /**
  * AuthController class that implements the IAuthController interface
@@ -52,8 +63,8 @@ const refreshTokenExpiryDays = config.awsCognitoRefreshTokenExpiry
  */
 class AuthController implements IAuthController {
 	private readonly cognito: typeof cognitoService
-	private readonly userService: typeof userService
 	private readonly userRepository: typeof userRepository
+	private readonly userService: typeof userService
 
 	constructor(
 		cognitoSvc: typeof cognitoService = cognitoService,
@@ -65,52 +76,34 @@ class AuthController implements IAuthController {
 		this.userRepository = userRepo
 	}
 
-	public register = async (
+	public confirmForgotPassword = async (
 		req: Request,
 		res: Response,
 		next: NextFunction,
 	): Promise<void> => {
-		const { email, password, confirmPassword } =
-			req.body as TRegisterUserRequest
+		const { email, code, newPassword, confirmPassword } =
+			req.body as TConfirmForgotPasswordRequest
 
-		// Check if user already exists
-		const [getUserResponse, getUserError] =
-			await this.userService.getUserByEmail({ email })
-
-		if (getUserResponse) {
-			const error = new ConflictError(
-				'User already exists',
-				'authController - register',
+		// Confirm forgot password with Cognito
+		const [confirmForgotPasswordResponse, confirmForgotPasswordError] =
+			await this.cognito.confirmForgotPassword(
+				email,
+				code,
+				newPassword,
+				confirmPassword,
 			)
-			next(error)
+
+		if (confirmForgotPasswordError) {
+			next(confirmForgotPasswordError)
 			return
 		}
 
-		// if there is an error and it's not NotFoundError, propagate it
-		if (getUserError.type !== ErrorType.NotFoundError) {
-			next(getUserError)
-			return
-		}
-
-		// Register user with Cognito
-		const [signUpResponse, signUpError] = await this.cognito.signUpUser({
-			email,
-			password,
-			confirmPassword,
-		})
-
-		if (signUpError) {
-			next(signUpError)
-			return
-		}
-
-		// Check for Cognito service errors
+		// Check for service errors
 		const serviceResult = handleServiceError(
-			signUpResponse,
-			'Error registering user',
+			confirmForgotPasswordResponse,
+			'Error confirming forgot password',
 			'authController',
 		)
-
 		if (!serviceResult.success) {
 			res
 				.status(serviceResult.error.status)
@@ -118,42 +111,11 @@ class AuthController implements IAuthController {
 			return
 		}
 
-		// Check for service errors
-		if (!signUpResponse.UserSub) {
-			const error = new ValidationError(
-				'User not created - no user ID returned',
-				undefined,
-				'authController - register',
-			)
-			next(error)
-			return
+		const authResponse: TAuthResponse = {
+			message: 'Password reset successfully',
 		}
 
-		// Create user in database with Zod validation
-		const userData: TInsertUser = {
-			id: signUpResponse.UserSub,
-			email,
-		}
-
-		const [user, userError] = await this.userRepository.createUser({ userData })
-
-		if (userError) {
-			next(userError)
-			return
-		}
-
-		logger.info(`[authController]: User created: ${user.id}`)
-
-		const authResponse: TRegisterUserResponse = {
-			message:
-				'Registration successful. Please check your email for verification code.',
-			user: {
-				id: signUpResponse.UserSub,
-				email,
-			},
-		}
-
-		res.status(StatusCodes.CREATED).json(authResponse)
+		res.status(StatusCodes.OK).json(authResponse)
 	}
 
 	public confirmRegistration = async (
@@ -221,26 +183,26 @@ class AuthController implements IAuthController {
 		res.status(StatusCodes.OK).json(authResponse)
 	}
 
-	public resendConfirmationCode = async (
+	public forgotPassword = async (
 		req: Request,
 		res: Response,
 		next: NextFunction,
 	): Promise<void> => {
-		const { email } = req.body as TResendConfirmationCodeRequest
+		const { email } = req.body as TForgotPasswordRequest
 
-		// Resend confirmation code with Cognito
-		const [resendConfirmationCodeResponse, resendConfirmationCodeError] =
-			await this.cognito.resendConfirmationCode(email)
+		// Initiate forgot password with Cognito
+		const [forgotPasswordResponse, forgotPasswordError] =
+			await this.cognito.forgotPassword(email)
 
-		if (resendConfirmationCodeError) {
-			next(resendConfirmationCodeError)
+		if (forgotPasswordError) {
+			next(forgotPasswordError)
 			return
 		}
 
 		// Check for service errors
 		const serviceResult = handleServiceError(
-			resendConfirmationCodeResponse,
-			'Error resending confirmation code',
+			forgotPasswordResponse,
+			'Error initiating forgot password',
 			'authController',
 		)
 		if (!serviceResult.success) {
@@ -251,10 +213,116 @@ class AuthController implements IAuthController {
 		}
 
 		const authResponse: TAuthResponse = {
-			message: 'Confirmation code resent successfully',
+			message: 'Password reset initiated successfully',
 		}
 
 		res.status(StatusCodes.OK).json(authResponse)
+	}
+
+	public getAuthUser = async (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): Promise<void> => {
+		// Extract access token from cookies with error handling
+		const [accessToken, accessTokenError] = tryCatchSync(
+			() => getAccessToken(req),
+			'authController - getAuthUser',
+		)
+
+		if (accessTokenError) {
+			logger.error({
+				msg: '[authController - getAuthUser]: Error retrieving access token',
+				error: accessTokenError,
+			})
+			res.status(StatusCodes.UNAUTHORIZED).json({
+				message: 'Authentication required',
+			})
+			return
+		}
+
+		// Get user from Cognito
+		const [getAuthUserResponse, responseError] =
+			await this.cognito.getAuthUser(accessToken)
+
+		if (responseError) {
+			next(responseError)
+			return
+		}
+
+		// Check for service errors
+		const serviceResult = handleServiceError(
+			getAuthUserResponse,
+			'Failed to retrieve user information',
+			'authController',
+		)
+		if (!serviceResult.success) {
+			res
+				.status(serviceResult.error.status)
+				.json({ message: serviceResult.error.message })
+			return
+		}
+
+		// Validate user data exists
+		const usernameValidation = validateData(
+			!!getAuthUserResponse.Username,
+			'User not found',
+			'authController',
+			StatusCodes.NOT_FOUND,
+		)
+		if (!usernameValidation.valid && usernameValidation.error) {
+			res
+				.status(usernameValidation.error.status)
+				.json({ message: usernameValidation.error.message })
+			return
+		}
+
+		// Validate response.Username is not undefined for type inference
+		if (!getAuthUserResponse.Username) {
+			logger.error('[authController]: User not found')
+			res.status(StatusCodes.NOT_FOUND).json({ message: 'User not found' })
+			return
+		}
+
+		// Extract email from user attributes
+		const email = getAuthUserResponse.UserAttributes?.find(
+			(attr) => attr.Name === 'email',
+		)?.Value
+
+		// Validate email is no undefined for type inference
+		if (!email) {
+			logger.error('[authController]: User profile incomplete')
+			res
+				.status(StatusCodes.PARTIAL_CONTENT)
+				.json({ message: 'User profile incomplete' })
+			return
+		}
+
+		// Check for complete profile
+		const emailValidation = validateData(
+			!!email,
+			'User profile incomplete',
+			'authController',
+			StatusCodes.PARTIAL_CONTENT,
+		)
+		if (!emailValidation.valid && emailValidation.error) {
+			res
+				.status(emailValidation.error.status)
+				.json({ message: emailValidation.error.message })
+			return
+		}
+
+		// Build complete user response
+		const userResponse: TGetAuthUserResponse = {
+			id: getAuthUserResponse.Username,
+			email: email,
+			emailVerified:
+				getAuthUserResponse.UserAttributes?.find(
+					(attr) => attr.Name === 'email_verified',
+				)?.Value === 'true',
+		}
+
+		res.status(StatusCodes.OK).json(userResponse)
 	}
 
 	public login = async (
@@ -548,68 +616,117 @@ class AuthController implements IAuthController {
 			.json(refreshLoginResponse)
 	}
 
-	public forgotPassword = async (
+	public register = async (
 		req: Request,
 		res: Response,
 		next: NextFunction,
 	): Promise<void> => {
-		const { email } = req.body as TForgotPasswordRequest
+		const { email, password, confirmPassword } =
+			req.body as TRegisterUserRequest
 
-		// Initiate forgot password with Cognito
-		const [forgotPasswordResponse, forgotPasswordError] =
-			await this.cognito.forgotPassword(email)
+		// Check if user already exists
+		const [getUserResponse, getUserError] =
+			await this.userService.getUserByEmail({ email })
 
-		if (forgotPasswordError) {
-			next(forgotPasswordError)
-			return
-		}
-
-		// Check for service errors
-		const serviceResult = handleServiceError(
-			forgotPasswordResponse,
-			'Error initiating forgot password',
-			'authController',
-		)
-		if (!serviceResult.success) {
-			res
-				.status(serviceResult.error.status)
-				.json({ message: serviceResult.error.message })
-			return
-		}
-
-		const authResponse: TAuthResponse = {
-			message: 'Password reset initiated successfully',
-		}
-
-		res.status(StatusCodes.OK).json(authResponse)
-	}
-
-	public confirmForgotPassword = async (
-		req: Request,
-		res: Response,
-		next: NextFunction,
-	): Promise<void> => {
-		const { email, code, newPassword, confirmPassword } =
-			req.body as TConfirmForgotPasswordRequest
-
-		// Confirm forgot password with Cognito
-		const [confirmForgotPasswordResponse, confirmForgotPasswordError] =
-			await this.cognito.confirmForgotPassword(
-				email,
-				code,
-				newPassword,
-				confirmPassword,
+		if (getUserResponse) {
+			const error = new ConflictError(
+				'User already exists',
+				'authController - register',
 			)
+			next(error)
+			return
+		}
 
-		if (confirmForgotPasswordError) {
-			next(confirmForgotPasswordError)
+		// if there is an error and it's not NotFoundError, propagate it
+		if (getUserError.type !== ErrorType.NotFoundError) {
+			next(getUserError)
+			return
+		}
+
+		// Register user with Cognito
+		const [signUpResponse, signUpError] = await this.cognito.signUpUser({
+			email,
+			password,
+			confirmPassword,
+		})
+
+		if (signUpError) {
+			next(signUpError)
+			return
+		}
+
+		// Check for Cognito service errors
+		const serviceResult = handleServiceError(
+			signUpResponse,
+			'Error registering user',
+			'authController',
+		)
+
+		if (!serviceResult.success) {
+			res
+				.status(serviceResult.error.status)
+				.json({ message: serviceResult.error.message })
+			return
+		}
+
+		// Check for service errors
+		if (!signUpResponse.UserSub) {
+			const error = new ValidationError(
+				'User not created - no user ID returned',
+				undefined,
+				'authController - register',
+			)
+			next(error)
+			return
+		}
+
+		// Create user in database with Zod validation
+		const userData: TInsertUser = {
+			id: signUpResponse.UserSub,
+			email,
+		}
+
+		const [user, userError] = await this.userRepository.createUser({ userData })
+
+		if (userError) {
+			next(userError)
+			return
+		}
+
+		logger.info(`[authController]: User created: ${user.id}`)
+
+		const authResponse: TRegisterUserResponse = {
+			message:
+				'Registration successful. Please check your email for verification code.',
+			user: {
+				id: signUpResponse.UserSub,
+				email,
+			},
+		}
+
+		res.status(StatusCodes.CREATED).json(authResponse)
+	}
+
+	public resendConfirmationCode = async (
+		req: Request,
+		res: Response,
+		next: NextFunction,
+	): Promise<void> => {
+		const { email } = req.body as TResendConfirmationCodeRequest
+
+		// Resend confirmation code with Cognito
+		const [resendConfirmationCodeResponse, resendConfirmationCodeError] =
+			await this.cognito.resendConfirmationCode(email)
+
+		if (resendConfirmationCodeError) {
+			next(resendConfirmationCodeError)
 			return
 		}
 
 		// Check for service errors
 		const serviceResult = handleServiceError(
-			confirmForgotPasswordResponse,
-			'Error confirming forgot password',
+			resendConfirmationCodeResponse,
+			'Error resending confirmation code',
 			'authController',
 		)
 		if (!serviceResult.success) {
@@ -620,116 +737,10 @@ class AuthController implements IAuthController {
 		}
 
 		const authResponse: TAuthResponse = {
-			message: 'Password reset successfully',
+			message: 'Confirmation code resent successfully',
 		}
 
 		res.status(StatusCodes.OK).json(authResponse)
-	}
-
-	public getAuthUser = async (
-		req: Request,
-		res: Response,
-		next: NextFunction,
-	): Promise<void> => {
-		// Extract access token from cookies with error handling
-		const [accessToken, accessTokenError] = tryCatchSync(
-			() => getAccessToken(req),
-			'authController - getAuthUser',
-		)
-
-		if (accessTokenError) {
-			logger.error({
-				msg: '[authController - getAuthUser]: Error retrieving access token',
-				error: accessTokenError,
-			})
-			res.status(StatusCodes.UNAUTHORIZED).json({
-				message: 'Authentication required',
-			})
-			return
-		}
-
-		// Get user from Cognito
-		const [getAuthUserResponse, responseError] =
-			await this.cognito.getAuthUser(accessToken)
-
-		if (responseError) {
-			next(responseError)
-			return
-		}
-
-		// Check for service errors
-		const serviceResult = handleServiceError(
-			getAuthUserResponse,
-			'Failed to retrieve user information',
-			'authController',
-		)
-		if (!serviceResult.success) {
-			res
-				.status(serviceResult.error.status)
-				.json({ message: serviceResult.error.message })
-			return
-		}
-
-		// Validate user data exists
-		const usernameValidation = validateData(
-			!!getAuthUserResponse.Username,
-			'User not found',
-			'authController',
-			StatusCodes.NOT_FOUND,
-		)
-		if (!usernameValidation.valid && usernameValidation.error) {
-			res
-				.status(usernameValidation.error.status)
-				.json({ message: usernameValidation.error.message })
-			return
-		}
-
-		// Validate response.Username is not undefined for type inference
-		if (!getAuthUserResponse.Username) {
-			logger.error('[authController]: User not found')
-			res.status(StatusCodes.NOT_FOUND).json({ message: 'User not found' })
-			return
-		}
-
-		// Extract email from user attributes
-		const email = getAuthUserResponse.UserAttributes?.find(
-			(attr) => attr.Name === 'email',
-		)?.Value
-
-		// Validate email is no undefined for type inference
-		if (!email) {
-			logger.error('[authController]: User profile incomplete')
-			res
-				.status(StatusCodes.PARTIAL_CONTENT)
-				.json({ message: 'User profile incomplete' })
-			return
-		}
-
-		// Check for complete profile
-		const emailValidation = validateData(
-			!!email,
-			'User profile incomplete',
-			'authController',
-			StatusCodes.PARTIAL_CONTENT,
-		)
-		if (!emailValidation.valid && emailValidation.error) {
-			res
-				.status(emailValidation.error.status)
-				.json({ message: emailValidation.error.message })
-			return
-		}
-
-		// Build complete user response
-		const userResponse: TGetAuthUserResponse = {
-			id: getAuthUserResponse.Username,
-			email: email,
-			emailVerified:
-				getAuthUserResponse.UserAttributes?.find(
-					(attr) => attr.Name === 'email_verified',
-				)?.Value === 'true',
-		}
-
-		res.status(StatusCodes.OK).json(userResponse)
 	}
 }
 

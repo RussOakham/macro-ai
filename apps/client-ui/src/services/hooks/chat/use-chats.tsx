@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
-import type { PaginationOptions } from '@/lib/types'
-
 import { QUERY_KEY, QUERY_KEY_MODIFIERS } from '@/constants/query-keys'
+import type { PaginationOptions } from '@/lib/types'
 
 import { getChats } from '../../network/chat/get-chats'
 
@@ -13,12 +12,11 @@ import { getChats } from '../../network/chat/get-chats'
  */
 const useChats = (options?: PaginationOptions) => {
 	return useQuery({
-		queryKey: [QUERY_KEY.chat, QUERY_KEY_MODIFIERS.list, options],
-		queryFn: async () => getChats(options),
-		staleTime: 5 * 60 * 1000, // 5 minutes
 		gcTime: 10 * 60 * 1000, // 10 minutes
-		refetchOnWindowFocus: false,
+		queryFn: async () => getChats(options),
+		queryKey: [QUERY_KEY.chat, QUERY_KEY_MODIFIERS.list, options],
 		refetchOnMount: true,
+		refetchOnWindowFocus: false,
 		select: (data) => {
 			// Transform dates from strings to Date objects
 			return {
@@ -30,6 +28,7 @@ const useChats = (options?: PaginationOptions) => {
 				})),
 			}
 		},
+		staleTime: 5 * 60 * 1000, // 5 minutes
 	})
 }
 

@@ -1,13 +1,11 @@
-import { ChatMessage } from '@repo/macro-ai-api-client'
+import type { ChatMessage } from '@repo/macro-ai-api-client'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { QUERY_KEY, QUERY_KEY_MODIFIERS } from '@/constants/query-keys'
 import { logger } from '@/lib/logger/logger'
 
-import {
-	CreateChatRequest,
-	postCreateChat,
-} from '../../network/chat/create-chat'
+import { postCreateChat } from '../../network/chat/create-chat'
+import type { CreateChatRequest } from '../../network/chat/create-chat'
 
 /**
  * TanStack Query mutation hook for creating a new chat
@@ -21,6 +19,16 @@ const useCreateChatMutation = () => {
 		mutationFn: async ({ title }: CreateChatRequest) => {
 			const response = await postCreateChat({ title })
 			return response
+		},
+		onError: (error) => {
+			// Error handling is managed by the component using this hook
+			// Following the pattern from existing auth mutations
+			logger.error(
+				{
+					error,
+				},
+				'[useCreateChatMutation]: unable to create chat',
+			)
 		},
 		onSuccess: async (data) => {
 			// Invalidate and refetch chat list queries to include the new chat
@@ -41,16 +49,6 @@ const useCreateChatMutation = () => {
 					dataWithEmptyMessages,
 				)
 			}
-		},
-		onError: (error) => {
-			// Error handling is managed by the component using this hook
-			// Following the pattern from existing auth mutations
-			logger.error(
-				{
-					error,
-				},
-				'[useCreateChatMutation]: unable to create chat',
-			)
 		},
 	})
 }

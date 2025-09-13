@@ -20,27 +20,27 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 
 			const TestForm = () => {
 				const [formData, setFormData] = React.useState({
-					name: '',
 					email: '',
+					name: '',
 				})
 
 				return (
 					<form data-testid="test-form-text">
 						<input
 							name="name"
-							type="text"
-							value={formData.name}
 							onChange={(e) => {
 								setFormData((prev) => ({ ...prev, name: e.target.value }))
 							}}
+							type="text"
+							value={formData.name}
 						/>
 						<input
 							name="email"
-							type="email"
-							value={formData.email}
 							onChange={(e) => {
 								setFormData((prev) => ({ ...prev, email: e.target.value }))
 							}}
+							type="email"
+							value={formData.email}
 						/>
 					</form>
 				)
@@ -51,14 +51,14 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 
 			// Test filling text inputs
 			await formTesting.fillTextInputs(form, {
-				name: 'John Doe',
 				email: 'john@example.com',
+				name: 'John Doe',
 			})
 
 			// Test validation
 			formTesting.validateTextInputs(form, {
-				name: 'John Doe',
 				email: 'john@example.com',
+				name: 'John Doe',
 			})
 		})
 
@@ -72,10 +72,10 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 					<form data-testid="test-form-select">
 						<select
 							name="country"
-							value={country}
 							onChange={(e) => {
 								setCountry(e.target.value)
 							}}
+							value={country}
 						>
 							<option value="">Select Country</option>
 							<option value="us">United States</option>
@@ -109,25 +109,25 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 					<form data-testid="test-form-radio">
 						<label htmlFor="gender">
 							<input
-								name="gender"
-								type="radio"
-								value="male"
 								checked={gender === 'male'}
+								name="gender"
 								onChange={(e) => {
 									setGender(e.target.value)
 								}}
+								type="radio"
+								value="male"
 							/>
 							Male
 						</label>
 						<label htmlFor="gender">
 							<input
-								name="gender"
-								type="radio"
-								value="female"
 								checked={gender === 'female'}
+								name="gender"
 								onChange={(e) => {
 									setGender(e.target.value)
 								}}
+								type="radio"
+								value="female"
 							/>
 							Female
 						</label>
@@ -159,12 +159,12 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 					<form data-testid="test-form-checkbox">
 						<label htmlFor="newsletter">
 							<input
-								name="newsletter"
-								type="checkbox"
 								checked={newsletter}
+								name="newsletter"
 								onChange={(e) => {
 									setNewsletter(e.target.checked)
 								}}
+								type="checkbox"
 							/>
 							Subscribe to newsletter
 						</label>
@@ -188,15 +188,15 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 	})
 
 	describe('Component Testing Utilities', () => {
+		const TestComponent = () => (
+			<div data-testid="test-container-standalone">
+				<h1 data-testid="test-title-standalone">Test Title</h1>
+				<p data-testid="test-content-standalone">Test content</p>
+			</div>
+		)
+
 		it('should find elements by test id', () => {
 			expect(true).toBe(true) // Ensure test has at least one assertion
-
-			const TestComponent = () => (
-				<div data-testid="test-container-standalone">
-					<h1 data-testid="test-title-standalone">Test Title</h1>
-					<p data-testid="test-content-standalone">Test content</p>
-				</div>
-			)
 
 			render(<TestComponent />)
 
@@ -254,11 +254,11 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 		it('should handle a complete form workflow', async () => {
 			const CompleteForm = () => {
 				const [formData, setFormData] = React.useState({
-					name: '',
-					email: '',
 					country: '',
-					newsletter: false,
+					email: '',
 					gender: '',
+					name: '',
+					newsletter: false,
 				})
 
 				const handleSubmit = (e: React.FormEvent) => {
@@ -272,28 +272,28 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 						<form data-testid="complete-form" onSubmit={handleSubmit}>
 							<input
 								name="name"
-								type="text"
-								value={formData.name}
 								onChange={(e) => {
 									setFormData((prev) => ({ ...prev, name: e.target.value }))
 								}}
 								placeholder="Full Name"
+								type="text"
+								value={formData.name}
 							/>
 							<input
 								name="email"
-								type="email"
-								value={formData.email}
 								onChange={(e) => {
 									setFormData((prev) => ({ ...prev, email: e.target.value }))
 								}}
 								placeholder="Email"
+								type="email"
+								value={formData.email}
 							/>
 							<select
 								name="country"
-								value={formData.country}
 								onChange={(e) => {
 									setFormData((prev) => ({ ...prev, country: e.target.value }))
 								}}
+								value={formData.country}
 							>
 								<option value="">Select Country</option>
 								<option value="us">United States</option>
@@ -301,43 +301,43 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 							</select>
 							<label htmlFor="gender">
 								<input
-									name="gender"
-									type="radio"
-									value="male"
 									checked={formData.gender === 'male'}
+									name="gender"
 									onChange={(e) => {
 										setFormData((prev) => ({ ...prev, gender: e.target.value }))
 									}}
+									type="radio"
+									value="male"
 								/>
 								Male
 							</label>
 							<label htmlFor="gender">
 								<input
-									name="gender"
-									type="radio"
-									value="female"
 									checked={formData.gender === 'female'}
+									name="gender"
 									onChange={(e) => {
 										setFormData((prev) => ({ ...prev, gender: e.target.value }))
 									}}
+									type="radio"
+									value="female"
 								/>
 								Female
 							</label>
 							<label htmlFor="newsletter">
 								<input
-									name="newsletter"
-									type="checkbox"
 									checked={formData.newsletter}
+									name="newsletter"
 									onChange={(e) => {
 										setFormData((prev) => ({
 											...prev,
 											newsletter: e.target.checked,
 										}))
 									}}
+									type="checkbox"
 								/>
 								Subscribe to newsletter
 							</label>
-							<button type="submit" data-testid="submit-btn">
+							<button data-testid="submit-btn" type="submit">
 								Submit
 							</button>
 						</form>
@@ -359,8 +359,8 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 
 			// Test comprehensive form filling
 			await formTesting.fillTextInputs(form, {
-				name: 'Jane Smith',
 				email: 'jane@example.com',
+				name: 'Jane Smith',
 			})
 
 			await formTesting.fillSelectFields(form, {
@@ -377,8 +377,8 @@ describe('Enhanced Testing Utilities - Standalone Validation', () => {
 
 			// Test comprehensive validation
 			formTesting.validateTextInputs(form, {
-				name: 'Jane Smith',
 				email: 'jane@example.com',
+				name: 'Jane Smith',
 			})
 
 			formTesting.validateSelectFields(form, {

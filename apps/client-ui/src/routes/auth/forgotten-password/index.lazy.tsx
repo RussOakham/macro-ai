@@ -24,20 +24,18 @@ import { Input } from '@/components/ui/input'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { usePostForgotPassword } from '@/services/hooks/auth/use-post-forgot-password'
-import {
-	ForgotPasswordRequest,
-	zForgotPasswordRequest,
-} from '@/services/network/auth/post-forgot-password'
+import { zForgotPasswordRequest } from '@/services/network/auth/post-forgot-password'
+import type { ForgotPasswordRequest } from '@/services/network/auth/post-forgot-password'
 
 const RouteComponent = () => {
 	const navigate = useNavigate({ from: '/auth/forgotten-password' })
-	const { mutateAsync: postForgotPassword, isPending } = usePostForgotPassword()
+	const { isPending, mutateAsync: postForgotPassword } = usePostForgotPassword()
 
 	const form = useForm<ForgotPasswordRequest>({
-		resolver: zodResolver(zForgotPasswordRequest),
 		defaultValues: {
 			email: '',
 		},
+		resolver: zodResolver(zForgotPasswordRequest),
 	})
 
 	const onSubmit = async ({ email }: ForgotPasswordRequest) => {
@@ -66,7 +64,7 @@ const RouteComponent = () => {
 				</CardHeader>
 				<CardContent>
 					<Form {...form}>
-						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+						<form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
 							<FormField
 								control={form.control}
 								name="email"
@@ -80,7 +78,7 @@ const RouteComponent = () => {
 									</FormItem>
 								)}
 							/>
-							<Button type="submit" className="w-full" disabled={isPending}>
+							<Button className="w-full" disabled={isPending} type="submit">
 								{isPending ? 'Sending...' : 'Send verification code'}
 							</Button>
 						</form>
@@ -88,8 +86,8 @@ const RouteComponent = () => {
 				</CardContent>
 				<CardFooter className="flex justify-center">
 					<Button
-						variant="link"
 						onClick={() => navigate({ to: '/auth/login' })}
+						variant="link"
 					>
 						Back to login
 					</Button>

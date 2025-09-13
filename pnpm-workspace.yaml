@@ -20,12 +20,14 @@ catalog:
   '@types/node': ^20.19.9
   '@types/react': ^19.1.9
   '@types/react-dom': ^19.1.7
-  '@typescript-eslint/eslint-plugin': ^8.31.1
-  '@typescript-eslint/parser': ^8.31.1
+  '@typescript-eslint/eslint-plugin': ^8.42.0
+  '@typescript-eslint/parser': ^8.42.0
+  '@typescript-eslint/utils': ^8.42.0
+  typescript-eslint: ^8.42.0
   '@vitest/coverage-v8': 3.1.2
   '@vitest/ui': 3.1.2
   babel-plugin-react-compiler: 19.1.0-rc.2
-  eslint: 9.34.0
+  eslint: 9.35.0
   eslint-import-resolver-typescript: ^3.6.3
   eslint-plugin-oxlint: ^1.14.0
   eslint-plugin-unused-imports: ^4.2.0
@@ -38,11 +40,19 @@ catalog:
   eslint-plugin-array-func: ^5.0.2
   eslint-plugin-perfectionist: ^4.15.0
   eslint-plugin-sonarjs: ^3.0.5
+  eslint-plugin-tailwindcss: ^3.18.2
+  eslint-plugin-yml: ^1.18.0
+  eslint-plugin-drizzle: ^0.2.3
+  eslint-plugin-react-compiler: 19.1.0-rc.2
+  eslint-plugin-react-refresh: ^0.4.20
+  eslint-config-turbo: ^2.5.5
+  eslint-config-flat-gitignore: ^2.1.0
   express: ^4.21.2
   globals: ^15.15.0
   lucide-react: ^0.474.0
   markdownlint-cli2: 0.18.1
   oxlint: ^0.15.0
+  oxlint-tsgolint: ^0.2.0
   pino: ^9.7.0
   pino-pretty: ^11.3.0
   prettier: 3.6.2

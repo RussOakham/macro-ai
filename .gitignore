@@ -74,3 +74,6 @@ packages/macro-ai-api-client/src/client
 codeql-db/
 codeql-security-report.json
 scripts/octoscan
+
+# Personal tmux configuration (user-specific)
+~/.config/tmux/

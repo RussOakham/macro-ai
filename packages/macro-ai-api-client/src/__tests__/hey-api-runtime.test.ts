@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
+import { createClientConfig } from '../hey-api-runtime.js'
+
 // Mock environment variables
 const originalEnv = process.env
 
@@ -13,79 +15,69 @@ describe('Hey API Runtime Configuration', () => {
 	})
 
 	describe('createClientConfig', () => {
-		it('should create configuration with default values', async () => {
-			const { createClientConfig } = await import('../hey-api-runtime.js')
-
+		it('should create configuration with default values', () => {
 			const config = createClientConfig({})
 
 			expect(config).toEqual({
 				baseURL: 'http://localhost:3000',
 				headers: {
-					'Content-Type': 'application/json',
 					Accept: 'application/json',
+					'Content-Type': 'application/json',
 				},
-				timeout: 30000,
 				responseType: 'json',
+				timeout: 30000,
 				validateStatus: expect.any(Function) as unknown as (
 					status: number,
 				) => boolean,
 			})
 		})
 
-		it('should use API_BASE_URL from environment when available', async () => {
+		it('should use API_BASE_URL from environment when available', () => {
 			process.env.API_BASE_URL = 'https://api.production.com'
-
-			const { createClientConfig } = await import('../hey-api-runtime.js')
 
 			const config = createClientConfig({})
 
 			expect(config.baseURL).toBe('https://api.production.com')
 		})
 
-		it('should merge custom headers with defaults', async () => {
-			const { createClientConfig } = await import('../hey-api-runtime.js')
-
+		it('should merge custom headers with defaults', () => {
 			const customConfig = {
 				headers: {
-					'X-API-Key': 'secret-key',
 					Authorization: 'Bearer token',
+					'X-API-Key': 'secret-key',
 				},
 			}
 
 			const config = createClientConfig(customConfig)
 
 			expect(config.headers).toEqual({
-				'Content-Type': 'application/json',
 				Accept: 'application/json',
-				'X-API-Key': 'secret-key',
 				Authorization: 'Bearer token',
+				'Content-Type': 'application/json',
+				'X-API-Key': 'secret-key',
 			})
 		})
 
-		it('should override default headers when provided', async () => {
-			const { createClientConfig } = await import('../hey-api-runtime.js')
-
+		it('should override default headers when provided', () => {
 			const customConfig = {
 				headers: {
-					'Content-Type': 'application/xml',
 					Accept: 'application/xml',
+					'Content-Type': 'application/xml',
 				},
 			}
 
 			const config = createClientConfig(customConfig)
 
 			expect(config.headers).toEqual({
-				'Content-Type': 'application/xml',
 				Accept: 'application/xml',
+				'Content-Type': 'application/xml',
 			})
 		})
 
-		it('should preserve other configuration properties', async () => {
-			const { createClientConfig } = await import('../hey-api-runtime.js')
-
+		it('should preserve other configuration properties', () => {
 			const customConfig = {
-				timeout: 60000,
 				responseType: 'text' as const,
+				timeout: 60000,
 			}
 
 			const config = createClientConfig(customConfig)
@@ -95,24 +87,20 @@ describe('Hey API Runtime Configuration', () => {
 			expect(config.responseType).toBe('json') // Runtime default overrides
 		})
 
-		it('should handle undefined headers gracefully', async () => {
-			const { createClientConfig } = await import('../hey-api-runtime.js')
-
+		it('should handle undefined headers gracefully', () => {
 			const config = createClientConfig({ headers: undefined })
 
 			expect(config.headers).toEqual({
-				'Content-Type': 'application/json',
 				Accept: 'application/json',
+				'Content-Type': 'application/json',
 			})
 		})
 	})
 
 	describe('validateStatus function', () => {
-		it('should validate HTTP status codes correctly', async () => {
-			const { createClientConfig } = await import('../hey-api-runtime.js')
-
+		it('should validate HTTP status codes correctly', () => {
 			const config = createClientConfig({})
-			const validateStatus = config.validateStatus
+			const { validateStatus } = config
 
 			// Ensure validateStatus is defined
 			expect(validateStatus).toBeDefined()
@@ -137,20 +125,16 @@ describe('Hey API Runtime Configuration', () => {
 	})
 
 	describe('environment variable handling', () => {
-		it('should handle missing API_BASE_URL gracefully', async () => {
+		it('should handle missing API_BASE_URL gracefully', () => {
 			delete process.env.API_BASE_URL
-
-			const { createClientConfig } = await import('../hey-api-runtime.js')
 
 			const config = createClientConfig({})
 
 			expect(config.baseURL).toBe('http://localhost:3000')
 		})
 
-		it('should handle empty API_BASE_URL', async () => {
+		it('should handle empty API_BASE_URL', () => {
 			process.env.API_BASE_URL = ''
-
-			const { createClientConfig } = await import('../hey-api-runtime.js')
 
 			const config = createClientConfig({})
 

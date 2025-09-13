@@ -1,6 +1,5 @@
-import type React from 'react'
-
 import { Bot } from 'lucide-react'
+import type React from 'react'
 
 type WelcomeMessageProps = React.ComponentPropsWithoutRef<'div'>
 

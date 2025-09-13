@@ -1,4 +1,4 @@
-import { QueryClient } from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
 import Cookies from 'js-cookie'
 
 import { QUERY_KEY } from '@/constants/query-keys'
@@ -10,7 +10,7 @@ import { postRefreshToken } from '@/services/network/auth/post-refresh-token'
 import { waitForRefreshCompletion } from './shared-refresh-promise'
 
 // Module-level variable to store ongoing refresh promise (singleton pattern)
-let ongoingRefreshPromise: ReturnType<typeof postRefreshToken> | null = null
+let ongoingRefreshPromise: null | ReturnType<typeof postRefreshToken> = null
 
 /**
  * Cross-platform base64 decoding utility
@@ -21,12 +21,18 @@ let ongoingRefreshPromise: ReturnType<typeof postRefreshToken> | null = null
  */
 const decodeBase64 = (base64String: string): string => {
 	// Normalize base64url -> base64, strip whitespace, and add padding
-	let b64 = base64String.replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/')
+	let b64 = base64String
+		.replace(/\s+/g, '')
+		.replace(/-/g, '+')
+		.replace(/_/g, '/')
 	const padLen = (4 - (b64.length % 4)) % 4
 	if (padLen) b64 += '='.repeat(padLen)
 
 	// Node.js (SSR)
-	if (typeof window === 'undefined' && typeof Buffer !== 'undefined') {
+	if (
+		typeof globalThis.window === 'undefined' &&
+		typeof Buffer !== 'undefined'
+	) {
 		return Buffer.from(b64, 'base64').toString('utf8')
 	}
 	// Browser
@@ -34,29 +40,29 @@ const decodeBase64 = (base64String: string): string => {
 }
 
 /**
+ * Result type for authentication attempts
+ */
+type AuthenticationResult =
+	| {
+			reason:
+				| 'auth-error'
+				| 'invalid-user'
+				| 'no-access-token'
+				| 'refresh-failed'
+			success: false
+	  }
+	| { success: true; user: Awaited<ReturnType<typeof getAuthUser>> }
+
+/**
  * JWT payload interface for type safety
  * Contains the standard JWT claims we need for token validation
  */
 interface JwtPayload {
+	[key: string]: unknown // Allow additional claims
 	exp: number // Expiration time (Unix timestamp)
 	iat?: number // Issued at time (Unix timestamp)
 	sub?: string // Subject (user ID)
-	[key: string]: unknown // Allow additional claims
 }
-
-/**
- * Result type for authentication attempts
- */
-type AuthenticationResult =
-	| { success: true; user: Awaited<ReturnType<typeof getAuthUser>> }
-	| {
-			success: false
-			reason:
-				| 'no-access-token'
-				| 'invalid-user'
-				| 'refresh-failed'
-				| 'auth-error'
-	  }
 
 /**
  * Attempts authentication with automatic token refresh capability
@@ -73,6 +79,7 @@ type AuthenticationResult =
  */
 export const attemptAuthenticationWithRefresh = async (
 	queryClient: QueryClient,
+	// eslint-disable-next-line sonarjs/cognitive-complexity
 ): Promise<AuthenticationResult> => {
 	const accessToken = Cookies.get('macro-ai-accessToken')
 
@@ -99,7 +106,7 @@ export const attemptAuthenticationWithRefresh = async (
 
 			if (!authUser.id) {
 				logger.warn('Auth user has no ID after successful refresh')
-				return { success: false, reason: 'invalid-user' }
+				return { reason: 'invalid-user', success: false }
 			}
 
 			return { success: true, user: authUser }
@@ -108,7 +115,7 @@ export const attemptAuthenticationWithRefresh = async (
 			logger.error(`Token refresh failed: ${err.message}`)
 
 			// If refresh fails, it means no valid refresh token exists
-			return { success: false, reason: 'refresh-failed' }
+			return { reason: 'refresh-failed', success: false }
 		}
 	}
 
@@ -133,7 +140,7 @@ export const attemptAuthenticationWithRefresh = async (
 
 		if (!authUser.id) {
 			logger.warn('Auth user has no ID')
-			return { success: false, reason: 'invalid-user' }
+			return { reason: 'invalid-user', success: false }
 		}
 
 		return { success: true, user: authUser }
@@ -154,7 +161,7 @@ export const attemptAuthenticationWithRefresh = async (
 				queryClient.setQueryData([QUERY_KEY.authUser], authUser)
 
 				if (!authUser.id) {
-					return { success: false, reason: 'invalid-user' }
+					return { reason: 'invalid-user', success: false }
 				}
 
 				logger.debug('Auth successful after axios interceptor refresh')
@@ -162,12 +169,12 @@ export const attemptAuthenticationWithRefresh = async (
 			} catch (retryError) {
 				const retryErr = standardizeError(retryError)
 				logger.error(`Auth retry failed after interceptor: ${retryErr.message}`)
-				return { success: false, reason: 'refresh-failed' }
+				return { reason: 'refresh-failed', success: false }
 			}
 		}
 
 		// For non-401 errors, this is a genuine auth failure
-		return { success: false, reason: 'auth-error' }
+		return { reason: 'auth-error', success: false }
 	}
 }
 

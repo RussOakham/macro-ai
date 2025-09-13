@@ -1,6 +1,8 @@
-import { OpenApiGeneratorV3 } from '@asteasolutions/zod-to-openapi'
 import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+
+// oxlint-disable no-unassigned-import
+import { OpenApiGeneratorV3 } from '@asteasolutions/zod-to-openapi'
 
 import { standardizeError } from '../errors.ts'
 import { config } from '../load-config.ts'

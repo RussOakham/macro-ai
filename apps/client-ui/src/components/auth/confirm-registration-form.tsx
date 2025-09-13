@@ -35,11 +35,11 @@ import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
 import { usePostConfirmRegisterMutation } from '@/services/hooks/auth/use-post-confirm-register-mutation'
-import { GetAuthUserResponse } from '@/services/network/auth/get-auth-user'
+import type { GetAuthUserResponse } from '@/services/network/auth/get-auth-user'
 
 const confirmRegistrationSchema = z.object({
-	email: z.email(),
 	code: z.string().length(6),
+	email: z.email(),
 })
 
 type ConfirmRegistrationFormValues = z.infer<typeof confirmRegistrationSchema>
@@ -59,20 +59,20 @@ const ConfirmRegistrationForm = ({
 	])
 
 	const form = useForm<ConfirmRegistrationFormValues>({
-		resolver: zodResolver(confirmRegistrationSchema),
 		defaultValues: {
-			email: authUser?.email ?? '',
 			code: '',
+			email: authUser?.email ?? '',
 		},
+		resolver: zodResolver(confirmRegistrationSchema),
 	})
 
-	const onSubmit = async ({ email, code }: ConfirmRegistrationFormValues) => {
+	const onSubmit = async ({ code, email }: ConfirmRegistrationFormValues) => {
 		try {
 			setIsPending(true)
 
 			const codeNumber = Number(code)
 
-			await postConfirmRegistration({ email, code: codeNumber })
+			await postConfirmRegistration({ code: codeNumber, email })
 
 			logger.info('Confirm registration success')
 			toast.success('Account confirmed successfully! Please login.')
@@ -97,7 +97,7 @@ const ConfirmRegistrationForm = ({
 			</CardHeader>
 			<CardContent>
 				<Form {...form}>
-					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+					<form className="space-y-8" onSubmit={form.handleSubmit(onSubmit)}>
 						<FormField
 							control={form.control}
 							name="email"
@@ -136,7 +136,7 @@ const ConfirmRegistrationForm = ({
 								</FormItem>
 							)}
 						/>
-						<Button type="submit" className="w-full" disabled={isPending}>
+						<Button className="w-full" disabled={isPending} type="submit">
 							{isPending ? 'Confirming...' : 'Confirm Registration'}
 						</Button>
 					</form>

@@ -1,4 +1,9 @@
-import express, { NextFunction, Request, Response, Router } from 'express'
+import express, {
+	type NextFunction,
+	type Request,
+	type Response,
+	Router,
+} from 'express'
 import { StatusCodes } from 'http-status-codes'
 import request from 'supertest'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -7,7 +12,7 @@ import { NotFoundError, UnauthorizedError } from '../../../utils/errors.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { userController } from '../user.controller.ts'
 import { userRouter } from '../user.routes.ts'
-import { TUser } from '../user.types.ts'
+import type { TUser } from '../user.types.ts'
 
 // Mock the logger using the reusable helper
 vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
@@ -93,6 +98,7 @@ describe('userRouter', () => {
 
 		app = express()
 		app.use(express.json())
+		// oxlint-disable-next-line new-cap
 		const router = Router()
 		userRouter(router)
 		app.use(router)

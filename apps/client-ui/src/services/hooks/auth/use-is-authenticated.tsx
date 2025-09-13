@@ -10,15 +10,15 @@ const useIsAuthenticated = () => {
 
 	const {
 		data: user,
+		isError,
 		isFetching,
 		isSuccess,
-		isError,
 	} = useQuery({
-		queryKey: [QUERY_KEY.authUser],
-		queryFn: async () => getAuthUser(),
 		enabled: !!accessToken,
-		staleTime: Infinity,
 		gcTime: Infinity,
+		queryFn: async () => getAuthUser(),
+		queryKey: [QUERY_KEY.authUser],
+		staleTime: Infinity,
 	})
 
 	if (isFetching || isError) {

@@ -1,5 +1,5 @@
-import { http, HttpResponse } from 'msw'
 import { faker } from '@faker-js/faker'
+import { http, HttpResponse } from 'msw'
 
 /**
  * MSW (Mock Service Worker) Handlers
@@ -15,8 +15,8 @@ const API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://localhost:3000'
 const createApiResponse = <T>(data: T, status = 200) => {
 	return HttpResponse.json(
 		{
-			success: true,
 			data,
+			success: true,
 			timestamp: new Date().toISOString(),
 		},
 		{ status },
@@ -27,12 +27,12 @@ const createApiResponse = <T>(data: T, status = 200) => {
 const createErrorResponse = (message: string, status = 400, code?: string) => {
 	return HttpResponse.json(
 		{
-			success: false,
 			error: {
-				message,
 				code: code || 'API_ERROR',
+				message,
 				timestamp: new Date().toISOString(),
 			},
+			success: false,
 		},
 		{ status },
 	)
@@ -64,21 +64,21 @@ const authHandlers = [
 
 		// Simulate successful login
 		const user = {
-			id: faker.string.uuid(),
-			email: body.email,
-			name: faker.person.fullName(),
 			createdAt: faker.date.past().toISOString(),
+			email: body.email,
+			id: faker.string.uuid(),
+			name: faker.person.fullName(),
 		}
 
 		const tokens = {
 			accessToken: faker.string.alphanumeric(64),
-			refreshToken: faker.string.alphanumeric(64),
 			expiresIn: 3600,
+			refreshToken: faker.string.alphanumeric(64),
 		}
 
 		return createApiResponse({
-			user,
 			tokens,
+			user,
 		})
 	}),
 
@@ -86,8 +86,8 @@ const authHandlers = [
 	http.post(`${API_BASE_URL}/auth/register`, async ({ request }) => {
 		const body = (await request.json()) as {
 			email: string
-			password: string
 			name: string
+			password: string
 		}
 
 		// Simulate validation
@@ -106,17 +106,17 @@ const authHandlers = [
 
 		// Simulate successful registration
 		const user = {
-			id: faker.string.uuid(),
-			email: body.email,
-			name: body.name,
 			createdAt: new Date().toISOString(),
+			email: body.email,
+			id: faker.string.uuid(),
+			name: body.name,
 		}
 
 		return createApiResponse(
 			{
-				user,
 				message:
 					'Registration successful. Please check your email for verification.',
+				user,
 			},
 			201,
 		)
@@ -138,8 +138,8 @@ const authHandlers = [
 		// Simulate successful token refresh
 		const tokens = {
 			accessToken: faker.string.alphanumeric(64),
-			refreshToken: faker.string.alphanumeric(64),
 			expiresIn: 3600,
+			refreshToken: faker.string.alphanumeric(64),
 		}
 
 		return createApiResponse(tokens)
@@ -164,12 +164,12 @@ const userHandlers = [
 
 		// Simulate successful profile fetch
 		const user = {
-			id: faker.string.uuid(),
-			email: faker.internet.email(),
-			name: faker.person.fullName(),
 			avatar: faker.image.avatar(),
 			createdAt: faker.date.past().toISOString(),
+			email: faker.internet.email(),
+			id: faker.string.uuid(),
 			lastLoginAt: faker.date.recent().toISOString(),
+			name: faker.person.fullName(),
 		}
 
 		return createApiResponse(user)
@@ -183,14 +183,14 @@ const userHandlers = [
 			return createErrorResponse('Unauthorized', 401, 'UNAUTHORIZED')
 		}
 
-		const body = (await request.json()) as { name?: string; avatar?: string }
+		const body = (await request.json()) as { avatar?: string; name?: string }
 
 		// Simulate successful profile update
 		const updatedUser = {
-			id: faker.string.uuid(),
-			email: faker.internet.email(),
-			name: body.name || faker.person.fullName(),
 			avatar: body.avatar || faker.image.avatar(),
+			email: faker.internet.email(),
+			id: faker.string.uuid(),
+			name: body.name || faker.person.fullName(),
 			updatedAt: new Date().toISOString(),
 		}
 
@@ -210,13 +210,13 @@ const chatHandlers = [
 
 		// Simulate chat list
 		const chats = Array.from(
-			{ length: faker.number.int({ min: 3, max: 10 }) },
+			{ length: faker.number.int({ max: 10, min: 3 }) },
 			() => ({
-				id: faker.string.uuid(),
-				title: faker.lorem.sentence(3),
 				createdAt: faker.date.past().toISOString(),
+				id: faker.string.uuid(),
+				messageCount: faker.number.int({ max: 50, min: 1 }),
+				title: faker.lorem.sentence(3),
 				updatedAt: faker.date.recent().toISOString(),
-				messageCount: faker.number.int({ min: 1, max: 50 }),
 			}),
 		)
 
@@ -235,18 +235,18 @@ const chatHandlers = [
 
 		// Simulate successful chat creation
 		const newChat = {
-			id: faker.string.uuid(),
-			title: body.title || faker.lorem.sentence(3),
 			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
+			id: faker.string.uuid(),
 			messageCount: 0,
+			title: body.title || faker.lorem.sentence(3),
+			updatedAt: new Date().toISOString(),
 		}
 
 		return createApiResponse(newChat, 201)
 	}),
 
 	// GET /chats/:id
-	http.get(`${API_BASE_URL}/chats/:id`, ({ request, params }) => {
+	http.get(`${API_BASE_URL}/chats/:id`, ({ params, request }) => {
 		const authHeader = request.headers.get('Authorization')
 
 		if (!authHeader || authHeader === 'Bearer invalid') {
@@ -262,19 +262,19 @@ const chatHandlers = [
 
 		// Simulate successful chat fetch
 		const chat = {
-			id,
-			title: faker.lorem.sentence(3),
 			createdAt: faker.date.past().toISOString(),
-			updatedAt: faker.date.recent().toISOString(),
+			id,
 			messages: Array.from(
-				{ length: faker.number.int({ min: 1, max: 20 }) },
+				{ length: faker.number.int({ max: 20, min: 1 }) },
 				(_, index) => ({
-					id: faker.string.uuid(),
 					content: faker.lorem.paragraph(),
-					role: index % 2 === 0 ? 'user' : 'assistant',
 					createdAt: faker.date.recent().toISOString(),
+					id: faker.string.uuid(),
+					role: index % 2 === 0 ? 'user' : 'assistant',
 				}),
 			),
+			title: faker.lorem.sentence(3),
+			updatedAt: faker.date.recent().toISOString(),
 		}
 
 		return createApiResponse(chat)
@@ -283,7 +283,7 @@ const chatHandlers = [
 	// POST /chats/:id/messages
 	http.post(
 		`${API_BASE_URL}/chats/:id/messages`,
-		async ({ request, params }) => {
+		async ({ params, request }) => {
 			const authHeader = request.headers.get('Authorization')
 
 			if (!authHeader || authHeader === 'Bearer invalid') {
@@ -309,10 +309,10 @@ const chatHandlers = [
 
 			// Simulate successful message creation
 			const message = {
-				id: faker.string.uuid(),
 				content: body.content,
-				role: 'user' as const,
 				createdAt: new Date().toISOString(),
+				id: faker.string.uuid(),
+				role: 'user' as const,
 			}
 
 			return createApiResponse(message, 201)
@@ -320,7 +320,7 @@ const chatHandlers = [
 	),
 
 	// DELETE /chats/:id
-	http.delete(`${API_BASE_URL}/chats/:id`, ({ request, params }) => {
+	http.delete(`${API_BASE_URL}/chats/:id`, ({ params, request }) => {
 		const authHeader = request.headers.get('Authorization')
 
 		if (!authHeader || authHeader === 'Bearer invalid') {
@@ -361,18 +361,18 @@ const errorHandlers = [
 	http.get(`${API_BASE_URL}/rate-limit`, () => {
 		return HttpResponse.json(
 			{
-				success: false,
 				error: {
-					message: 'Rate limit exceeded',
 					code: 'RATE_LIMIT_EXCEEDED',
+					message: 'Rate limit exceeded',
 					retryAfter: 60,
 				},
+				success: false,
 			},
 			{
-				status: 429,
 				headers: {
 					'Retry-After': '60',
 				},
+				status: 429,
 			},
 		)
 	}),
@@ -387,4 +387,4 @@ export const handlers = [
 ]
 
 // Export individual handler groups for selective use
-export { authHandlers, userHandlers, chatHandlers, errorHandlers }
+export { authHandlers, chatHandlers, errorHandlers, userHandlers }

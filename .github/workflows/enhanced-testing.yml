@@ -219,12 +219,20 @@ jobs:
           pnpm --filter @repo/config-testing build
           pnpm --filter @repo/config-typescript build
 
-          # Build API client if testing other packages
+          # Generate and build API client if testing other packages
           if [ "${{ matrix.package }}" != "packages/macro-ai-api-client" ]; then
             pnpm --filter @repo/macro-ai-api-client build
           fi
 
           echo "✅ Dependencies built"
+
+      - name: Generate API client
+        if: contains(matrix.package, 'macro-ai-api-client')
+        run: |
+          echo "🔧 Generating API client files..."
+          cd ${{ matrix.package }}
+          pnpm generate
+          echo "✅ API client generated"
 
       - name: Generate MSW handlers
         if: contains(matrix.package, 'client-ui')

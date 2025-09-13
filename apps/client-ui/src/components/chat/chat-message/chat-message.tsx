@@ -1,6 +1,6 @@
 import { Bot, User } from 'lucide-react'
 
-import { TChatMessage } from '@/services/hooks/chat/use-enhanced-chat-mutation'
+import type { TChatMessage } from '@/services/hooks/chat/use-enhanced-chat-mutation'
 
 interface ChatMessageProps {
 	message: TChatMessage

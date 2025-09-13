@@ -29,10 +29,10 @@ const getParameterStorePrefix = (appEnv: string): string => {
 	switch (appEnv) {
 		case 'development':
 			return '/macro-ai/development/'
-		case 'staging':
-			return '/macro-ai/staging/'
 		case 'production':
 			return '/macro-ai/production/'
+		case 'staging':
+			return '/macro-ai/staging/'
 		case 'test':
 			// For tests, use development parameters as default
 			return '/macro-ai/development/'

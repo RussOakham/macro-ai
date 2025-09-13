@@ -1,11 +1,12 @@
-import { expect, type MockedFunction, vi } from 'vitest'
+import { expect, vi } from 'vitest'
+import type { MockedFunction } from 'vitest'
 
-import {
+import type {
 	tryCatch,
 	tryCatchStream,
 	tryCatchSync,
 } from '../error-handling/try-catch.ts'
-import { AppError, Result } from '../errors.ts'
+import { AppError, type Result } from '../errors.ts'
 
 /**
  * Mock interfaces for error handling utilities

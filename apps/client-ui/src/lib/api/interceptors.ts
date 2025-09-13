@@ -23,11 +23,11 @@ import { type IStandardizedError } from '../types'
 // Track if we're currently refreshing to prevent multiple refresh calls
 let isRefreshing = false
 let failedQueue: {
-	resolve: (value?: unknown) => void
 	reject: (reason?: unknown) => void
+	resolve: (value?: unknown) => void
 }[] = []
 
-const processQueue = (error: Error | null, token: string | null = null) => {
+const processQueue = (error: Error | null, token: null | string = null) => {
 	failedQueue.forEach((prom) => {
 		if (error) {
 			prom.reject(error)
@@ -53,6 +53,7 @@ export const applyTokenRefreshInterceptors = (client: {
 }) => {
 	client.axios.interceptors.response.use(
 		(response: AxiosResponse) => response,
+		// eslint-disable-next-line sonarjs/cognitive-complexity
 		async (error: AxiosError) => {
 			const originalRequest: IExtendedAxiosRequestConfig | undefined =
 				error.config
@@ -75,11 +76,11 @@ export const applyTokenRefreshInterceptors = (client: {
 			if (error.response?.status === 403) {
 				logger.error(error, `Access forbidden:`)
 				await router.navigate({
-					to: '/auth/login',
 					search: {
 						code: '403',
 						message: 'You do not have permission to access this resource.',
 					},
+					to: '/auth/login',
 				})
 				return Promise.reject(error)
 			}
@@ -106,15 +107,15 @@ export const applyTokenRefreshInterceptors = (client: {
 					clearSharedRefreshPromise()
 					// Redirect to login page so users are not stuck on a loading screen
 					await router.navigate({
-						to: '/auth/login',
 						search: { redirect: router.state.location.pathname },
+						to: '/auth/login',
 					})
 					return Promise.reject(err)
 				}
 				if (isRefreshing) {
 					return (
 						new Promise((resolve, reject) => {
-							failedQueue.push({ resolve, reject })
+							failedQueue.push({ reject, resolve })
 						})
 							.then(() => {
 								return client.axios(originalRequest)
@@ -139,10 +140,10 @@ export const applyTokenRefreshInterceptors = (client: {
 
 						// Redirect to login page
 						await router.navigate({
-							to: '/auth/login',
 							search: {
 								redirect: router.state.location.pathname,
 							},
+							to: '/auth/login',
 						})
 						throw err
 					} finally {

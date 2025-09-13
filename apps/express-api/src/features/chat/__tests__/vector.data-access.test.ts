@@ -17,16 +17,15 @@ vi.mock('../../../utils/response-handlers.ts', () => ({
 	safeValidateSchema: vi.fn(),
 }))
 
+// Import after mocking
+import { tryCatch } from '../../../utils/error-handling/try-catch.ts'
+import { safeValidateSchema } from '../../../utils/response-handlers.ts'
 import type {
 	SemanticSearchOptions,
 	SemanticSearchResult,
 	TChatVector,
 	TInsertChatVector,
 } from '../chat.types.ts'
-
-// Import after mocking
-import { tryCatch } from '../../../utils/error-handling/try-catch.ts'
-import { safeValidateSchema } from '../../../utils/response-handlers.ts'
 // Import the repository instances to test
 import { vectorRepository } from '../vector.data-access.ts'
 

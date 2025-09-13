@@ -1,9 +1,10 @@
+import path from 'node:path'
+
 import bodyParser from 'body-parser'
 import compression from 'compression'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
-import express, { Express } from 'express'
-import path from 'node:path'
+import express, { type Express } from 'express'
 import swaggerUi from 'swagger-ui-express'
 
 import { apiKeyAuth } from '../middleware/api-key.middleware.ts'
@@ -14,6 +15,7 @@ import {
 	securityHeadersMiddleware,
 } from '../middleware/security-headers.middleware.ts'
 import { appRouter } from '../router/index.routes.ts'
+import { doubleCsrfProtection } from './csrf.ts'
 import { config } from './load-config.ts'
 import { pino } from './logger.ts'
 
@@ -21,6 +23,9 @@ import { pino } from './logger.ts'
 
 const createServer = (): Express => {
 	const app: Express = express()
+
+	// Disable X-Powered-By header for security
+	app.disable('x-powered-by')
 
 	// Add static file serving for swagger.json
 	app.use(express.static(path.join(process.cwd(), 'public')))
@@ -107,13 +112,27 @@ const createServer = (): Express => {
 					return false
 				}
 				// Use default compression filter for other endpoints
-				return compression.filter(req, res)
+				// Default compression filter logic - check if response should be compressed
+				return res.getHeader('content-encoding') === undefined
 			},
 		}),
 	)
 	app.use(bodyParser.json())
 	app.use(express.urlencoded({ extended: true }))
 	app.use(cookieParser())
+
+	// Apply CSRF protection to all routes except public endpoints and API routes
+	app.use((req, res, next) => {
+		// Skip CSRF for public documentation endpoints and API routes
+		if (
+			req.path.startsWith('/api-docs') ||
+			req.path.startsWith('/swagger.json') ||
+			req.path.startsWith('/api/')
+		) {
+			return next()
+		}
+		return doubleCsrfProtection(req, res, next)
+	})
 
 	// Add middlewares (CORS must come BEFORE authentication for OPTIONS preflight)
 	app.use(helmetMiddleware)
@@ -139,4 +158,5 @@ const createServer = (): Express => {
 	return app
 }
 
+// Note: generateCsrfToken is now exported from ./csrf.ts
 export { createServer }

@@ -6,10 +6,42 @@ import { Construct } from 'constructs'
 
 export interface NetworkingConstructProps {
 	/**
-	 * Environment name for resource naming and tagging
-	 * @default 'development'
+	 * Branch name for deployment tracking
 	 */
-	readonly environmentName?: string
+	readonly branchName?: string
+
+	/**
+	 * Custom domain configuration for ALB
+	 */
+	readonly customDomain?: {
+		readonly certificateArn?: string
+		readonly domainName: string
+		readonly hostedZoneId: string
+	}
+
+	/**
+	 * Custom domain name for CORS configuration
+	 */
+	readonly customDomainName?: string
+
+	/**
+	 * Deployment ID to force instance replacement on every deployment
+	 * This ensures fresh instances with latest application code
+	 * @default current timestamp
+	 */
+	readonly deploymentId?: string
+
+	/**
+	 * Enable ALB (Application Load Balancer) integration
+	 * @default true (required for ECS Fargate preview environments)
+	 */
+	readonly enableAlb?: boolean
+
+	/**
+	 * Enable detailed monitoring and logging
+	 * @default false (cost optimization)
+	 */
+	readonly enableDetailedMonitoring?: boolean
 
 	/**
 	 * Enable VPC Flow Logs for network monitoring
@@ -17,17 +49,7 @@ export interface NetworkingConstructProps {
 	 */
 	readonly enableFlowLogs?: boolean
 
-	/**
-	 * Number of Availability Zones to use
-	 * @default 2 (minimum for ALB, cost-optimized)
-	 */
-	readonly maxAzs?: number
-
-	/**
-	 * Enable detailed monitoring and logging
-	 * @default false (cost optimization)
-	 */
-	readonly enableDetailedMonitoring?: boolean
+	// EC2 support removed - ECS Fargate only
 
 	/**
 	 * Enable NAT Gateway for private subnet internet access
@@ -42,21 +64,10 @@ export interface NetworkingConstructProps {
 	readonly enableVpcEndpoints?: boolean
 
 	/**
-	 * Enable ALB (Application Load Balancer) integration
-	 * @default true (required for ECS Fargate preview environments)
+	 * Environment name for resource naming and tagging
+	 * @default 'development'
 	 */
-	readonly enableAlb?: boolean
-
-	// EC2 support removed - ECS Fargate only
-
-	/**
-	 * Custom domain configuration for ALB
-	 */
-	readonly customDomain?: {
-		readonly domainName: string
-		readonly hostedZoneId: string
-		readonly certificateArn?: string
-	}
+	readonly environmentName?: string
 
 	/**
 	 * Prefix for CloudFormation export names to ensure uniqueness across environments
@@ -65,21 +76,10 @@ export interface NetworkingConstructProps {
 	readonly exportPrefix?: string
 
 	/**
-	 * Deployment ID to force instance replacement on every deployment
-	 * This ensures fresh instances with latest application code
-	 * @default current timestamp
+	 * Number of Availability Zones to use
+	 * @default 2 (minimum for ALB, cost-optimized)
 	 */
-	readonly deploymentId?: string
-
-	/**
-	 * Branch name for deployment tracking
-	 */
-	readonly branchName?: string
-
-	/**
-	 * Custom domain name for CORS configuration
-	 */
-	readonly customDomainName?: string
+	readonly maxAzs?: number
 }
 
 /**
@@ -89,19 +89,19 @@ export interface NetworkingConstructProps {
  * deployments without legacy EC2 dependencies.
  */
 export class NetworkingConstruct extends Construct {
-	public readonly vpc: ec2.IVpc
-	public readonly publicSubnets: ec2.ISubnet[]
-	public readonly privateSubnets: ec2.ISubnet[]
-	public readonly databaseSubnets: ec2.ISubnet[]
 	// EC2 construct property removed - ECS Fargate only
 	public readonly albSecurityGroup: ec2.ISecurityGroup
+	public readonly databaseSubnets: ec2.ISubnet[]
 	public readonly ecsServiceSecurityGroup: ec2.ISecurityGroup
-	public readonly vpcId: string
+	public readonly privateSubnets: ec2.ISubnet[]
+	public readonly publicSubnets: ec2.ISubnet[]
+	public readonly vpc: ec2.IVpc
 	public readonly vpcCidrBlock: string
+	public readonly vpcId: string
 
 	private readonly enableNatGateway: boolean
-	private readonly exportPrefix: string
 	private readonly environmentName: string
+	private readonly exportPrefix: string
 
 	constructor(
 		scope: Construct,
@@ -209,6 +209,33 @@ export class NetworkingConstruct extends Construct {
 	}
 
 	/**
+	 * Get the environment name for this construct
+	 */
+	public getEnvironmentName(): string {
+		return this.environmentName
+	}
+
+	/**
+	 * Validate that ALB requirements are met
+	 */
+	public validateAlbRequirements(): void {
+		if (this.publicSubnets.length < 2) {
+			throw new Error(
+				'ALB requires at least 2 public subnets across different availability zones',
+			)
+		}
+	}
+
+	/**
+	 * Apply consistent tagging to all networking resources
+	 */
+	private applyTags(): void {
+		cdk.Tags.of(this).add('Component', 'Networking')
+		cdk.Tags.of(this).add('Environment', this.environmentName)
+		cdk.Tags.of(this).add('ManagedBy', 'CDK')
+	}
+
+	/**
 	 * Create comprehensive CloudFormation outputs for the networking infrastructure
 	 */
 	private createOutputs(): void {
@@ -255,32 +282,5 @@ export class NetworkingConstruct extends Construct {
 		})
 
 		// EC2 outputs removed - ECS Fargate only
-	}
-
-	/**
-	 * Apply consistent tagging to all networking resources
-	 */
-	private applyTags(): void {
-		cdk.Tags.of(this).add('Component', 'Networking')
-		cdk.Tags.of(this).add('Environment', this.environmentName)
-		cdk.Tags.of(this).add('ManagedBy', 'CDK')
-	}
-
-	/**
-	 * Get the environment name for this construct
-	 */
-	public getEnvironmentName(): string {
-		return this.environmentName
-	}
-
-	/**
-	 * Validate that ALB requirements are met
-	 */
-	public validateAlbRequirements(): void {
-		if (this.publicSubnets.length < 2) {
-			throw new Error(
-				'ALB requires at least 2 public subnets across different availability zones',
-			)
-		}
 	}
 }

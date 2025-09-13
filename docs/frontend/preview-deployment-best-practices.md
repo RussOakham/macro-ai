@@ -400,8 +400,7 @@ cd apps/client-ui
 ./scripts/test-backend-integration.sh
 
 # Validate workflow configuration
-cd /path/to/repo
-./scripts/validate-workflow-integration.sh
+# Note: Workflow validation scripts should be implemented as needed
 ```
 
 ## 🔄 Continuous Improvement

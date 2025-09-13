@@ -1,5 +1,10 @@
 import { desc, eq, type SQL } from 'drizzle-orm'
 
+import { db } from '../../data-access/db.ts'
+import { tryCatch } from '../../utils/error-handling/try-catch.ts'
+import { AppError, InternalError, type Result } from '../../utils/errors.ts'
+import { safeValidateSchema } from '../../utils/response-handlers.ts'
+import { chatVectorsTable, selectChatVectorSchema } from './chat.schemas.ts'
 import type {
 	IVectorRepository,
 	SemanticSearchOptions,
@@ -7,12 +12,6 @@ import type {
 	TChatVector,
 	TInsertChatVector,
 } from './chat.types.ts'
-
-import { db } from '../../data-access/db.ts'
-import { tryCatch } from '../../utils/error-handling/try-catch.ts'
-import { AppError, InternalError, Result } from '../../utils/errors.ts'
-import { safeValidateSchema } from '../../utils/response-handlers.ts'
-import { chatVectorsTable, selectChatVectorSchema } from './chat.schemas.ts'
 
 /**
  * VectorRepository class that implements the IVectorRepository interface
@@ -53,7 +52,7 @@ class VectorRepository implements IVectorRepository {
 			]
 		}
 
-		const createdVector = vector[0]
+		const [createdVector] = vector
 		if (!createdVector) {
 			return [
 				null,
@@ -82,62 +81,47 @@ class VectorRepository implements IVectorRepository {
 	}
 
 	/**
-	 * Generic helper method to find vectors with a given filter condition
-	 * @param filterCondition The SQL filter condition to apply
-	 * @param methodName The method name for error context
-	 * @returns Result tuple with validated vectors array
+	 * Delete vectors by chat ID
+	 * @param chatId The chat's unique identifier
+	 * @returns Result tuple with void or error
 	 */
-	private async findVectorsWithFilter(
-		filterCondition: SQL,
-		methodName: string,
-	): Promise<Result<TChatVector[]>> {
-		const [vectors, error] = await tryCatch(
+	public deleteVectorsByChatId = async (
+		chatId: string,
+	): Promise<Result<void>> => {
+		const [, error] = await tryCatch(
 			this.db
-				.select()
-				.from(chatVectorsTable)
-				.where(filterCondition)
-				.orderBy(desc(chatVectorsTable.createdAt)),
-			`vectorRepository - ${methodName}`,
+				.delete(chatVectorsTable)
+				.where(eq(chatVectorsTable.chatId, chatId)),
+			'vectorRepository - deleteVectorsByChatId',
 		)
 
 		if (error) {
 			return [null, error]
 		}
 
-		// Validate each vector
-		const validatedVectors: TChatVector[] = []
-		for (const vector of vectors) {
-			const [validationResult, validationError] = safeValidateSchema(
-				vector,
-				selectChatVectorSchema,
-				`vectorRepository - ${methodName}`,
-			)
-
-			if (validationError) {
-				return [
-					null,
-					AppError.from(validationError, `vectorRepository - ${methodName}`),
-				]
-			}
-
-			validatedVectors.push(validationResult)
-		}
-
-		return [validatedVectors, null]
+		return [undefined, null]
 	}
 
 	/**
-	 * Find vectors by user ID
-	 * @param userId The user's unique identifier
-	 * @returns Result tuple with vectors array
+	 * Delete vectors by message ID
+	 * @param messageId The message's unique identifier
+	 * @returns Result tuple with void or error
 	 */
-	public findVectorsByUserId = async (
-		userId: string,
-	): Promise<Result<TChatVector[]>> => {
-		return await this.findVectorsWithFilter(
-			eq(chatVectorsTable.userId, userId),
-			'findVectorsByUserId',
+	public deleteVectorsByMessageId = async (
+		messageId: string,
+	): Promise<Result<void>> => {
+		const [, error] = await tryCatch(
+			this.db
+				.delete(chatVectorsTable)
+				.where(eq(chatVectorsTable.messageId, messageId)),
+			'vectorRepository - deleteVectorsByMessageId',
 		)
+
+		if (error) {
+			return [null, error]
+		}
+
+		return [undefined, null]
 	}
 
 	/**
@@ -152,6 +136,20 @@ class VectorRepository implements IVectorRepository {
 			eq(chatVectorsTable.chatId, chatId),
 			// eslint-disable-next-line no-secrets/no-secrets
 			'findVectorsByChatId',
+		)
+	}
+
+	/**
+	 * Find vectors by user ID
+	 * @param userId The user's unique identifier
+	 * @returns Result tuple with vectors array
+	 */
+	public findVectorsByUserId = async (
+		userId: string,
+	): Promise<Result<TChatVector[]>> => {
+		return await this.findVectorsWithFilter(
+			eq(chatVectorsTable.userId, userId),
+			'findVectorsByUserId',
 		)
 	}
 
@@ -197,47 +195,48 @@ class VectorRepository implements IVectorRepository {
 	}
 
 	/**
-	 * Delete vectors by message ID
-	 * @param messageId The message's unique identifier
-	 * @returns Result tuple with void or error
+	 * Generic helper method to find vectors with a given filter condition
+	 * @param filterCondition The SQL filter condition to apply
+	 * @param methodName The method name for error context
+	 * @returns Result tuple with validated vectors array
 	 */
-	public deleteVectorsByMessageId = async (
-		messageId: string,
-	): Promise<Result<void>> => {
-		const [, error] = await tryCatch(
+	private async findVectorsWithFilter(
+		filterCondition: SQL,
+		methodName: string,
+	): Promise<Result<TChatVector[]>> {
+		const [vectors, error] = await tryCatch(
 			this.db
-				.delete(chatVectorsTable)
-				.where(eq(chatVectorsTable.messageId, messageId)),
-			'vectorRepository - deleteVectorsByMessageId',
+				.select()
+				.from(chatVectorsTable)
+				.where(filterCondition)
+				.orderBy(desc(chatVectorsTable.createdAt)),
+			`vectorRepository - ${methodName}`,
 		)
 
 		if (error) {
 			return [null, error]
 		}
 
-		return [undefined, null]
-	}
+		// Validate each vector
+		const validatedVectors: TChatVector[] = []
+		for (const vector of vectors) {
+			const [validationResult, validationError] = safeValidateSchema(
+				vector,
+				selectChatVectorSchema,
+				`vectorRepository - ${methodName}`,
+			)
 
-	/**
-	 * Delete vectors by chat ID
-	 * @param chatId The chat's unique identifier
-	 * @returns Result tuple with void or error
-	 */
-	public deleteVectorsByChatId = async (
-		chatId: string,
-	): Promise<Result<void>> => {
-		const [, error] = await tryCatch(
-			this.db
-				.delete(chatVectorsTable)
-				.where(eq(chatVectorsTable.chatId, chatId)),
-			'vectorRepository - deleteVectorsByChatId',
-		)
+			if (validationError) {
+				return [
+					null,
+					AppError.from(validationError, `vectorRepository - ${methodName}`),
+				]
+			}
 
-		if (error) {
-			return [null, error]
+			validatedVectors.push(validationResult)
 		}
 
-		return [undefined, null]
+		return [validatedVectors, null]
 	}
 }
 

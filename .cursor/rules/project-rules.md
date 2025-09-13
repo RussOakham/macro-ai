@@ -84,7 +84,7 @@ This is a **TypeScript monorepo** managed with **pnpm workspaces**:
 
 **Do NOT:**
 
-- Suggest switching core tooling without explicit request/clear benefit
+- Suggest switching core tooling without clear rationale.
 - Generate secrets or credentials
 - Remove TypeScript strictness
 - Create junk tests or test trivial code

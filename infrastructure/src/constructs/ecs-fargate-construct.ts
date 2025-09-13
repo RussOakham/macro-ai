@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib'
-import * as autoscaling from 'aws-cdk-lib/aws-autoscaling'
+import type * as autoscaling from 'aws-cdk-lib/aws-autoscaling'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import * as ecr from 'aws-cdk-lib/aws-ecr'
 import * as ecs from 'aws-cdk-lib/aws-ecs'
@@ -7,18 +7,51 @@ import * as iam from 'aws-cdk-lib/aws-iam'
 import * as logs from 'aws-cdk-lib/aws-logs'
 import { Construct } from 'constructs'
 
-import { EnvironmentConfigConstruct } from './environment-config-construct'
+import type { EnvironmentConfigConstruct } from './environment-config-construct'
 
 export interface EcsFargateConstructProps {
 	/**
-	 * VPC where ECS services will be deployed
+	 * Auto-scaling configuration
 	 */
-	readonly vpc: ec2.IVpc
+	readonly autoScaling?: {
+		readonly maxCapacity: number
+		readonly minCapacity: number
+		readonly targetCpuUtilization: number
+	}
 
 	/**
-	 * Security group for ECS tasks
+	 * Branch name for deployment tracking
 	 */
-	readonly securityGroup: ec2.ISecurityGroup
+	readonly branchName?: string
+
+	/**
+	 * Container port for the application
+	 * @default 3040
+	 */
+	readonly containerPort?: number
+
+	/**
+	 * Custom domain name for CORS configuration
+	 */
+	readonly customDomainName?: string
+
+	/**
+	 * ECR repository for the container image
+	 * If not provided, will create a new one
+	 */
+	readonly ecrRepository?: ecr.IRepository
+
+	/**
+	 * Enable detailed monitoring and logging
+	 * @default false (cost optimization)
+	 */
+	readonly enableDetailedMonitoring?: boolean
+
+	/**
+	 * Environment configuration construct for Parameter Store integration
+	 * This provides all environment variables from Parameter Store
+	 */
+	readonly environmentConfig: EnvironmentConfigConstruct
 
 	/**
 	 * Environment name for resource naming and tagging
@@ -27,14 +60,33 @@ export interface EcsFargateConstructProps {
 	readonly environmentName?: string
 
 	/**
-	 * Branch name for deployment tracking
+	 * Health check configuration
 	 */
-	readonly branchName?: string
+	readonly healthCheck?: {
+		readonly healthyThresholdCount: number
+		readonly interval: cdk.Duration
+		readonly path: string
+		readonly timeout: cdk.Duration
+		readonly unhealthyThresholdCount: number
+	}
 
 	/**
-	 * Custom domain name for CORS configuration
+	 * Container image tag to deploy
+	 * @default 'latest'
 	 */
-	readonly customDomainName?: string
+	readonly imageTag?: string
+
+	/**
+	 * Full container image URI to deploy (overrides ecrRepository and imageTag)
+	 * If provided, this will be used instead of constructing the image URI
+	 * from ecrRepository and imageTag
+	 */
+	readonly imageUri?: string
+
+	/**
+	 * Security group for ECS tasks
+	 */
+	readonly securityGroup: ec2.ISecurityGroup
 
 	/**
 	 * ECS Task CPU and Memory configuration
@@ -46,25 +98,22 @@ export interface EcsFargateConstructProps {
 	}
 
 	/**
-	 * Enable detailed monitoring and logging
-	 * @default false (cost optimization)
+	 * VPC where ECS services will be deployed
 	 */
-	readonly enableDetailedMonitoring?: boolean
+	readonly vpc: ec2.IVpc
+}
 
-	/**
-	 * Auto-scaling configuration
-	 */
-	readonly autoScaling?: {
-		readonly minCapacity: number
-		readonly maxCapacity: number
-		readonly targetCpuUtilization: number
-	}
-
+export interface PrEcsServiceProps {
 	/**
 	 * ECR repository for the container image
-	 * If not provided, will create a new one
 	 */
 	readonly ecrRepository?: ecr.IRepository
+
+	/**
+	 * Environment name for resource naming
+	 * @default 'development'
+	 */
+	readonly environmentName?: string
 
 	/**
 	 * Container image tag to deploy
@@ -80,50 +129,14 @@ export interface EcsFargateConstructProps {
 	readonly imageUri?: string
 
 	/**
-	 * Container port for the application
-	 * @default 3040
-	 */
-	readonly containerPort?: number
-
-	/**
-	 * Health check configuration
-	 */
-	readonly healthCheck?: {
-		readonly path: string
-		readonly interval: cdk.Duration
-		readonly timeout: cdk.Duration
-		readonly healthyThresholdCount: number
-		readonly unhealthyThresholdCount: number
-	}
-
-	/**
-	 * Environment configuration construct for Parameter Store integration
-	 * This provides all environment variables from Parameter Store
-	 */
-	readonly environmentConfig: EnvironmentConfigConstruct
-}
-
-export interface PrEcsServiceProps {
-	/**
 	 * PR number for resource naming and tagging
 	 */
 	readonly prNumber: number
 
 	/**
-	 * VPC where the service will be deployed
-	 */
-	readonly vpc: ec2.IVpc
-
-	/**
 	 * Security group for the PR service
 	 */
 	readonly securityGroup: ec2.ISecurityGroup
-
-	/**
-	 * Environment name for resource naming
-	 * @default 'development'
-	 */
-	readonly environmentName?: string
 
 	/**
 	 * ECS Task CPU and Memory configuration
@@ -135,22 +148,9 @@ export interface PrEcsServiceProps {
 	}
 
 	/**
-	 * ECR repository for the container image
+	 * VPC where the service will be deployed
 	 */
-	readonly ecrRepository?: ecr.IRepository
-
-	/**
-	 * Container image tag to deploy
-	 * @default 'latest'
-	 */
-	readonly imageTag?: string
-
-	/**
-	 * Full container image URI to deploy (overrides ecrRepository and imageTag)
-	 * If provided, this will be used instead of constructing the image URI
-	 * from ecrRepository and imageTag
-	 */
-	readonly imageUri?: string
+	readonly vpc: ec2.IVpc
 }
 
 /**
@@ -165,15 +165,15 @@ export interface PrEcsServiceProps {
  * - Cost-optimized task sizing for different environments
  */
 export class EcsFargateConstruct extends Construct {
-	public readonly cluster: ecs.ICluster
-	public readonly taskDefinition: ecs.FargateTaskDefinition
-	public readonly service: ecs.FargateService
 	public readonly autoScalingGroup?: autoscaling.AutoScalingGroup
+	public readonly cluster: ecs.ICluster
 	public readonly ecrRepository: ecr.IRepository
-	public readonly taskRole: iam.Role
+	public readonly environmentConfig: EnvironmentConfigConstruct
 	public readonly executionRole: iam.Role
 	public readonly scalableTaskCount?: ecs.ScalableTaskCount
-	public readonly environmentConfig: EnvironmentConfigConstruct
+	public readonly service: ecs.FargateService
+	public readonly taskDefinition: ecs.FargateTaskDefinition
+	public readonly taskRole: iam.Role
 
 	constructor(scope: Construct, id: string, props: EcsFargateConstructProps) {
 		super(scope, id)
@@ -433,6 +433,54 @@ export class EcsFargateConstruct extends Construct {
 	}
 
 	/**
+	 * Create IAM role for ECS task execution (pulling images, etc.)
+	 */
+	private createExecutionRole(environmentName: string): iam.Role {
+		const role = new iam.Role(this, 'EcsExecutionRole', {
+			assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
+			roleName: `macro-ai-${environmentName}-ecs-execution-role`,
+			description: 'IAM role for Macro AI ECS task execution',
+		})
+
+		// ECR access for pulling images
+		role.addManagedPolicy(
+			iam.ManagedPolicy.fromAwsManagedPolicyName(
+				// eslint-disable-next-line no-secrets/no-secrets
+				'service-role/AmazonECSTaskExecutionRolePolicy',
+			),
+		)
+
+		// Parameter Store access for task execution
+		role.addToPolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: [
+					'ssm:GetParameter',
+					'ssm:GetParameters',
+					'ssm:GetParametersByPath',
+				],
+				resources: ['*'], // Needed for task execution
+			}),
+		)
+
+		// KMS permissions for decrypting Parameter Store SecureString values during task execution
+		role.addToPolicy(
+			new iam.PolicyStatement({
+				effect: iam.Effect.ALLOW,
+				actions: ['kms:Decrypt', 'kms:DescribeKey'],
+				resources: ['*'],
+				conditions: {
+					StringLike: {
+						'kms:ViaService': 'ssm.*.amazonaws.com',
+					},
+				},
+			}),
+		)
+
+		return role
+	}
+
+	/**
 	 * Create IAM role for ECS tasks with least-privilege access
 	 */
 	private createTaskRole(environmentName: string): iam.Role {
@@ -551,54 +599,6 @@ export class EcsFargateConstruct extends Construct {
 		)
 
 		// Note: CloudWatch Logs permissions are defined above with proper resource scoping
-
-		return role
-	}
-
-	/**
-	 * Create IAM role for ECS task execution (pulling images, etc.)
-	 */
-	private createExecutionRole(environmentName: string): iam.Role {
-		const role = new iam.Role(this, 'EcsExecutionRole', {
-			assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
-			roleName: `macro-ai-${environmentName}-ecs-execution-role`,
-			description: 'IAM role for Macro AI ECS task execution',
-		})
-
-		// ECR access for pulling images
-		role.addManagedPolicy(
-			iam.ManagedPolicy.fromAwsManagedPolicyName(
-				// eslint-disable-next-line no-secrets/no-secrets
-				'service-role/AmazonECSTaskExecutionRolePolicy',
-			),
-		)
-
-		// Parameter Store access for task execution
-		role.addToPolicy(
-			new iam.PolicyStatement({
-				effect: iam.Effect.ALLOW,
-				actions: [
-					'ssm:GetParameter',
-					'ssm:GetParameters',
-					'ssm:GetParametersByPath',
-				],
-				resources: ['*'], // Needed for task execution
-			}),
-		)
-
-		// KMS permissions for decrypting Parameter Store SecureString values during task execution
-		role.addToPolicy(
-			new iam.PolicyStatement({
-				effect: iam.Effect.ALLOW,
-				actions: ['kms:Decrypt', 'kms:DescribeKey'],
-				resources: ['*'],
-				conditions: {
-					StringLike: {
-						'kms:ViaService': 'ssm.*.amazonaws.com',
-					},
-				},
-			}),
-		)
 
 		return role
 	}

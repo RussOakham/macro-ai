@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib'
 
+// oxlint-disable-next-line no-unassigned-import
 import 'source-map-support/register.js'
 
 // Hobby stack removed - preview environments only
@@ -83,6 +84,7 @@ if (isPreviewEnvironment) {
 
 	// Cost alert emails removed - focus on core ECS functionality
 
+	// eslint-disable-next-line sonarjs/constructor-for-side-effects
 	new MacroAiPreviewStack(app, stackName, {
 		env: {
 			account,

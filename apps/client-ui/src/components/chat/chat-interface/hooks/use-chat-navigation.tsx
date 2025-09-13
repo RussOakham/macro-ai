@@ -2,9 +2,9 @@ import { useRouterState } from '@tanstack/react-router'
 import { useMemo } from 'react'
 
 interface UseChatNavigationReturn {
-	currentChatId: string | null
-	isChatError: boolean
 	chatError: Error | null
+	currentChatId: null | string
+	isChatError: boolean
 }
 
 /**
@@ -18,7 +18,7 @@ const useChatNavigation = (): UseChatNavigationReturn => {
 
 	const currentChatId = useMemo(() => {
 		// Extract chatId from the current location pathname
-		const pathname = routerState.location.pathname
+		const { pathname } = routerState.location
 		const chatIdRegex = /^\/chat\/([^/]+)$/
 		const chatIdMatch = chatIdRegex.exec(pathname)
 		return chatIdMatch?.[1] ?? null
@@ -29,9 +29,9 @@ const useChatNavigation = (): UseChatNavigationReturn => {
 	const chatError = !currentChatId ? new Error('No chat ID provided') : null
 
 	return {
+		chatError,
 		currentChatId,
 		isChatError,
-		chatError,
 	}
 }
 

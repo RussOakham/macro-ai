@@ -2,22 +2,22 @@
 // All schemas, types, and clients are generated directly from the OpenAPI specification
 
 // Export all generated artifacts (types, schemas, etc.)
-export * from './client/index.js'
+export * from './client/index.ts'
 
 // Create a configured client instance using our runtime configuration
-import { createClient, createConfig } from './client/client/index.js'
-import type { ClientOptions, Config } from './client/client/types.gen.js'
+import { createClient, createConfig } from './client/client/index.ts'
+import type { ClientOptions, Config } from './client/client/types.gen.ts'
 
 // Create client configuration using our runtime settings
 const createClientConfig = (override?: ClientOptions) => {
 	const baseConfig = {
 		baseURL: 'http://localhost:3000', // Default fallback, should be overridden by calling code
 		headers: {
-			'Content-Type': 'application/json',
 			Accept: 'application/json',
+			'Content-Type': 'application/json',
 		},
-		timeout: 30000,
 		responseType: 'json' as const,
+		timeout: 30000,
 		validateStatus: (status: number) => status >= 200 && status < 300,
 		...override,
 	}

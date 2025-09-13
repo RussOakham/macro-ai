@@ -1,5 +1,5 @@
 import {
-	ConfirmForgotPasswordRequest,
+	type ConfirmForgotPasswordRequest,
 	postAuthConfirmForgotPassword,
 	zConfirmForgotPasswordRequest,
 	zPostAuthConfirmForgotPasswordResponse,
@@ -11,18 +11,18 @@ import { safeValidateApiResponse } from '@/lib/validation/api-response'
 // Type-safe endpoint for consumption using the generated SDK
 const postForgotPasswordVerify = async ({
 	code,
+	confirmPassword,
 	email,
 	newPassword,
-	confirmPassword,
 }: ConfirmForgotPasswordRequest) => {
 	const { data, error } = await postAuthConfirmForgotPassword({
-		client: apiClient,
 		body: {
 			code,
+			confirmPassword,
 			email,
 			newPassword,
-			confirmPassword,
 		},
+		client: apiClient,
 	})
 
 	if (error) {

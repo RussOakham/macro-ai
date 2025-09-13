@@ -1,0 +1,79 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.25.0
+
+# Ignore specific vulnerabilities (add as needed)
+ignore:
+  # Ignore tsup XSS vulnerability - no upgrade available, used only in build process
+  SNYK-JS-TSUP-9056218:
+    - '*':
+        reason: No upgrade available, used only in build process
+        expires: '2025-12-31T23:59:59.999Z'
+  
+  # Ignore cookie XSS vulnerability - csurf package replaced with csrf-csrf
+  SNYK-JS-COOKIE-8163060:
+    - '*':
+        reason: csurf package replaced with csrf-csrf, vulnerability no longer applicable
+        expires: '2025-12-31T23:59:59.999Z'
+  
+
+# Patch specific vulnerabilities (add as needed)
+# patch:
+#   SNYK-JS-LODASH-567746:
+#     - lodash:
+#         patched: '2024-01-01T00:00:00.000Z'
+
+# Language settings
+language-settings:
+  javascript:
+    # Scan dev dependencies
+    dev-dependencies: true
+  typescript:
+    # Scan dev dependencies
+    dev-dependencies: true
+
+# Severity threshold for failing builds
+severity-threshold: high
+
+# Fail on any vulnerabilities
+fail-on: all
+
+# Exclude certain paths from scanning (Code scanning only)
+exclude:
+  global:
+    - "**/node_modules/**"
+    - "**/dist/**"
+    - "**/build/**"
+    - "**/coverage/**"
+    - "**/.next/**"
+    - "**/out/**"
+    - "**/tmp/**"
+    - "**/.codeql/**"
+    - "**/.tools/**"
+    # Exclude test files from code scanning
+    - "**/__tests__/**"
+    - "**/*.test.ts"
+    - "**/*.test.tsx"
+    - "**/*.test.js"
+    - "**/*.test.jsx"
+    - "**/*.spec.ts"
+    - "**/*.spec.tsx"
+    - "**/*.spec.js"
+    - "**/*.spec.jsx"
+    - "**/test/**"
+    - "**/tests/**"
+    - "**/test-results/**"
+    - "**/vitest.config.*"
+    - "**/jest.config.*"
+    - "**/setup.ts"
+    - "**/test-utils.*"
+    - "**/*.test-utils.*"
+    - "**/test-helpers/**"
+    - "**/msw-*"
+    - "**/pilot-*"
+    - "**/example.*"
+    - "**/*.mock.*"
+    - "**/mocks/**"
+    - "**/scripts/test-*"
+    - "**/test-automation-utils.*"
+    - "**/test-application-functionality.*"
+    - "**/cookies.ts"
