@@ -177,8 +177,8 @@ describe('API Integration Testing Examples', () => {
 		})
 
 		it('should create a new chat (requires both CSRF token and API key)', async () => {
-			// Note: This test demonstrates the correct endpoint and expected 500 response
-			// when CSRF validation fails (which happens before API key validation)
+			// Note: This test demonstrates the correct endpoint and expected 401 response
+			// when API key validation fails (CSRF is skipped for /api/ routes)
 			const newChat = {
 				title: 'Test Chat',
 			}
@@ -188,17 +188,17 @@ describe('API Integration Testing Examples', () => {
 
 			const { csrfToken } = csrfResponse.body as { csrfToken: string }
 
-			// Test with CSRF token but no API key - should get 500 (CSRF validation fails first)
+			// Test with CSRF token but no API key - should get 401 (API key validation fails first)
 			const response = await request(app)
 				.post('/api/chats')
 				.set('X-CSRF-Token', csrfToken)
 				.send(newChat)
-				.expect(500)
+				.expect(401)
 
 			const errorResponse = response.body as ErrorResponse
 			expect(errorResponse).toMatchObject({
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-				message: expect.stringContaining('csrf'),
+				message: expect.stringContaining('API key'),
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 				type: expect.any(String),
 			})

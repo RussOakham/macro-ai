@@ -1060,7 +1060,7 @@ describe('ChatService (Refactored)', () => {
 				])
 
 				// Mock AI service streaming
-				mockAIService.generateStreamingResponse.mockReturnValue([
+				mockAIService.generateStreamingResponse.mockResolvedValue([
 					mockStream,
 					null,
 				])
@@ -1225,7 +1225,10 @@ describe('ChatService (Refactored)', () => {
 					mockChatHistory,
 					null,
 				])
-				mockAIService.generateStreamingResponse.mockReturnValue([null, aiError])
+				mockAIService.generateStreamingResponse.mockResolvedValue([
+					null,
+					aiError,
+				])
 
 				// Act
 				const [result, error] =
@@ -1259,7 +1262,7 @@ describe('ChatService (Refactored)', () => {
 					mockChatHistory,
 					null,
 				])
-				mockAIService.generateStreamingResponse.mockReturnValue([
+				mockAIService.generateStreamingResponse.mockResolvedValue([
 					mockStream,
 					null,
 				])
@@ -1534,7 +1537,7 @@ describe('ChatService (Refactored)', () => {
 						mockChatHistory,
 						null,
 					])
-					mockAIService.generateStreamingResponse.mockReturnValue([
+					mockAIService.generateStreamingResponse.mockResolvedValue([
 						mockStream,
 						null,
 					])

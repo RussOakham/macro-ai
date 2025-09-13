@@ -8,7 +8,7 @@ import {
 } from 'ai'
 
 import { assertConfig } from '../../config/simple-config.ts'
-import { tryCatch, tryCatchSync } from '../../utils/error-handling/try-catch.ts'
+import { tryCatch } from '../../utils/error-handling/try-catch.ts'
 import { AppError, type Result, ValidationError } from '../../utils/errors.ts'
 
 // Interface for chat messages to avoid repetition
@@ -24,12 +24,14 @@ interface ChatMessage {
 class AIService {
 	private chatModel: LanguageModelV1 | null = null
 	private embeddingModel: EmbeddingModel<string> | null = null
+	private initialized = false
+	private initPromise: null | Promise<void> = null
 	private openai: null | ReturnType<typeof createOpenAI> = null
 
 	constructor() {
 		// Initialize asynchronously
 		// eslint-disable-next-line sonarjs/no-async-constructor
-		this.initialize()
+		this.initPromise = this.initialize()
 	}
 
 	/**
@@ -39,6 +41,8 @@ class AIService {
 	 * @returns Result tuple with number array (embedding vector) or error
 	 */
 	public async generateEmbedding(text: string): Promise<Result<number[]>> {
+		await this.ensureInitialized()
+
 		const [result, error] = await tryCatch(
 			embed({
 				model: this.embeddingModel!,
@@ -130,6 +134,8 @@ class AIService {
 	public async generateResponse(
 		messages: ChatMessage[],
 	): Promise<Result<string>> {
+		await this.ensureInitialized()
+
 		const [result, error] = await tryCatch(
 			generateText({
 				model: this.chatModel!,
@@ -152,23 +158,29 @@ class AIService {
 	 * @param messages - Array of chat messages with role and content
 	 * @returns Result tuple with AsyncIterable<string> for streaming or error
 	 */
-	public generateStreamingResponse(
+	public async generateStreamingResponse(
 		messages: ChatMessage[],
-	): Result<AsyncIterable<string>> {
-		const [streamResult, error] = tryCatchSync(() => {
-			return streamText({
+	): Promise<Result<AsyncIterable<string>>> {
+		await this.ensureInitialized()
+
+		const [streamResult, error] = await tryCatch(async () => {
+			const result = streamText({
 				model: this.chatModel!,
 				messages,
 				maxTokens: 1000,
 				temperature: 0.7,
 			})
+			return result
 		}, 'aiService - generateStreamingResponse')
 
 		if (error) {
 			return [null, error]
 		}
 
-		return [streamResult.textStream, null]
+		return [
+			(streamResult as { textStream: AsyncIterable<string> }).textStream,
+			null,
+		]
 	}
 
 	/**
@@ -176,12 +188,14 @@ class AIService {
 	 * @param useCase - The use case for model selection
 	 * @returns Model configuration object
 	 */
-	public getModelConfig(useCase: 'chat' | 'embedding' = 'chat'): {
+	public async getModelConfig(useCase: 'chat' | 'embedding' = 'chat'): Promise<{
 		dimensions?: number
 		maxTokens?: number
 		model: EmbeddingModel<string> | LanguageModelV1
 		temperature?: number
-	} {
+	}> {
+		await this.ensureInitialized()
+
 		switch (useCase) {
 			case 'chat':
 				return {
@@ -237,6 +251,16 @@ class AIService {
 		return [messages as ChatMessage[], null]
 	}
 
+	/**
+	 * Ensure the service is initialized before use
+	 * @returns Promise that resolves when initialization is complete
+	 */
+	private async ensureInitialized(): Promise<void> {
+		if (!this.initialized && this.initPromise) {
+			await this.initPromise
+		}
+	}
+
 	private async initialize() {
 		const config = await assertConfig(false)
 		this.openai = createOpenAI({
@@ -244,6 +268,7 @@ class AIService {
 		})
 		this.chatModel = this.openai('gpt-3.5-turbo')
 		this.embeddingModel = this.openai.embedding('text-embedding-3-small')
+		this.initialized = true
 	}
 }
 

@@ -418,7 +418,7 @@ export class ChatService implements IChatService {
 
 		// Generate streaming AI response
 		const [streamResult, streamError] =
-			this.aiService.generateStreamingResponse(chatHistory)
+			await this.aiService.generateStreamingResponse(chatHistory)
 		if (streamError) {
 			return [null, streamError]
 		}
