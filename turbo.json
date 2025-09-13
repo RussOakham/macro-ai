@@ -83,7 +83,7 @@
 			]
 		},
 		"lint:eslint": {
-			"dependsOn": ["^build"],
+			"dependsOn": ["^build", "generate:msw"],
 			"env": [
 				"AWS_REGION",
 				"SERVICE_NAME",
@@ -234,6 +234,9 @@
 			"persistent": true
 		},
 		"generate": {
+			"cache": false
+		},
+		"generate:msw": {
 			"cache": false
 		},
 		"clean": {
