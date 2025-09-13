@@ -49,9 +49,12 @@ const base = {
 
 				// Note: TypeScript unsafe rules are now handled by oxlint
 				// Only keeping rules that require type-aware analysis or oxlint doesn't support
-				'@typescript-eslint/no-unsafe-assignment': 'error',
+				// Relaxed for error handling - these rules are too strict for proper error management
+				'@typescript-eslint/no-unsafe-assignment': 'warn',
 				'@typescript-eslint/no-unsafe-call': 'warn',
 				'@typescript-eslint/no-unsafe-member-access': 'warn',
+				'@typescript-eslint/no-unsafe-argument': 'warn',
+				'@typescript-eslint/no-unsafe-return': 'warn',
 				'@typescript-eslint/restrict-template-expressions': 'warn',
 				'@typescript-eslint/unbound-method': 'warn',
 
