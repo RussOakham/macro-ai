@@ -61,6 +61,7 @@ export default repoConfig.config(
 					project: './tsconfig.eslint.json',
 				},
 			},
+			'import-x/extensions': ['.ts', '.tsx', '.js', '.jsx'],
 		},
 	},
 
