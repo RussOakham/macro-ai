@@ -1,23 +1,67 @@
 # Semgrep configuration for security scanning
-# This file will be used when Semgrep is integrated via GitHub Actions
+# This file provides custom rules and path exclusions for Semgrep scans
 
 rules:
-  # Custom rules for GitHub Actions workflows
-  - id: github-actions-security
-    languages: [yaml]
-    message: 'GitHub Actions security rule'
+  # Custom security rules for this project
+  
+  # Detect hardcoded AWS credentials
+  - id: hardcoded-aws-credentials
+    languages: [typescript, javascript, yaml]
+    message: 'Hardcoded AWS credentials detected. Use environment variables or AWS IAM roles instead.'
     severity: ERROR
     patterns:
       - pattern: |
-          uses: actions/checkout@v1
+          AWS_ACCESS_KEY_ID\s*=\s*['"][^'"]+['"]
       - pattern: |
-          uses: actions/setup-node@v1
+          AWS_SECRET_ACCESS_KEY\s*=\s*['"][^'"]+['"]
       - pattern: |
-          uses: actions/upload-artifact@v1
+          aws_access_key_id\s*:\s*['"][^'"]+['"]
       - pattern: |
-          uses: actions/download-artifact@v1
+          aws_secret_access_key\s*:\s*['"][^'"]+['"]
 
-# Exclude certain paths
+  # Detect potential SQL injection patterns
+  - id: potential-sql-injection
+    languages: [typescript, javascript]
+    message: 'Potential SQL injection vulnerability. Use parameterized queries instead of string concatenation.'
+    severity: WARNING
+    patterns:
+      - pattern: |
+          $QUERY = `SELECT * FROM $TABLE WHERE id = ${...$USER_INPUT}`
+      - pattern: |
+          $QUERY = "SELECT * FROM " + $TABLE + " WHERE id = " + $USER_INPUT
+
+  # Detect console.log in production code
+  - id: console-log-in-production
+    languages: [typescript, javascript]
+    message: 'console.log detected. Consider using a proper logging library for production code.'
+    severity: INFO
+    patterns:
+      - pattern: console.log(...)
+    paths:
+      exclude:
+        - '**/*.test.*'
+        - '**/*.spec.*'
+        - '**/test/**'
+        - '**/tests/**'
+
+  # Detect missing error handling in async functions
+  - id: missing-error-handling
+    languages: [typescript, javascript]
+    message: 'Async function without proper error handling. Consider adding try-catch or .catch()'
+    severity: WARNING
+    patterns:
+      - pattern: |
+          async function $FUNC(...) {
+            ...
+            await $EXPR;
+            ...
+          }
+    paths:
+      exclude:
+        - '**/*.test.*'
+        - '**/*.spec.*'
+
+# Exclude certain paths from scanning
 exclude:
   - '**/node_modules/**'
   - '**/dist/**'
@@ -28,3 +72,5 @@ exclude:
   - '**/tmp/**'
   - '**/.codeql/**'
   - '**/.tools/**'
+  - '**/cdk.out/**'
+  - '**/test-results/**'
