@@ -11,13 +11,13 @@ rules:
     severity: ERROR
     patterns:
       - pattern: |
-          AWS_ACCESS_KEY_ID\\s*=\\s*['"][^'"]+['"]
+          AWS_ACCESS_KEY_ID\s*=\s*['"][^'"]+['"]
       - pattern: |
-          AWS_SECRET_ACCESS_KEY\\s*=\\s*['"][^'"]+['"]
+          AWS_SECRET_ACCESS_KEY\s*=\s*['"][^'"]+['"]
       - pattern: |
-          aws_access_key_id\\s*:\\s*['"][^'"]+['"]
+          aws_access_key_id\s*:\s*['"][^'"]+['"]
       - pattern: |
-          aws_secret_access_key\\s*:\\s*['"][^'"]+['"]
+          aws_secret_access_key\s*:\s*['"][^'"]+['"]
 
   # Detect potential SQL injection patterns
   - id: potential-sql-injection
