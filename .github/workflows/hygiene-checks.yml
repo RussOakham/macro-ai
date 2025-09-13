@@ -925,7 +925,7 @@ jobs:
           echo "✅ Gitleaks check skipped for local testing"
 
   security-scan:
-    name: Security Scan
+    name: Code Quality Security Scan
     needs: setup
     runs-on: ubuntu-latest
     permissions:
