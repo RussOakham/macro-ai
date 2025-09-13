@@ -49,7 +49,9 @@ let refreshTokenExpiryDays: number
 // Initialize config asynchronously
 assertConfig(false).then((loadedConfig) => {
 	config = loadedConfig
+	// oxlint-disable-next-line prefer-destructuring
 	nodeEnv = config.nodeEnv
+	// oxlint-disable-next-line prefer-destructuring
 	cookieDomain = config.cookieDomain
 	refreshTokenExpiryDays = config.awsCognitoRefreshTokenExpiry
 	return undefined

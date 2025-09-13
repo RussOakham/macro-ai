@@ -32,7 +32,9 @@ interface ConfigOptions extends EnvConfigOptions {
  * @param options Configuration loading options
  * @returns Promise resolving to Result tuple with configuration or error
  */
-export const loadConfig = async (options: ConfigOptions = {}): Promise<Result<TEnv>> => {
+export const loadConfig = async (
+	options: ConfigOptions = {},
+): Promise<Result<TEnv>> => {
 	// Convert legacy envFilePath option to baseDir
 	const enhancedOptions: EnvConfigOptions = {
 		...options,

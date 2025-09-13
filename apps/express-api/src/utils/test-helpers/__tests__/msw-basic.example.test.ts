@@ -16,6 +16,7 @@ const server = setupServer(
 	}),
 
 	http.post('http://localhost:3000/api/login', async ({ request }) => {
+		// oxlint-disable-next-line no-unsafe-type-assertion
 		const body = (await request.json()) as { email: string; password: string }
 
 		if (body.email === 'test@example.com' && body.password === 'password') {

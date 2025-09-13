@@ -368,6 +368,7 @@ export const getConfigPrecedence = (
 	const envType = getEnvironmentType()
 	const envFiles = getEnvFilePaths(envType, baseDir)
 
+	// oxlint-disable-next-line no-array-reverse
 	const reversedEnvFiles = Array.from(envFiles).reverse()
 	const precedence = [
 		'process.env (highest priority)',

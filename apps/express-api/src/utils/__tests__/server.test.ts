@@ -127,7 +127,7 @@ describe('createServer', () => {
 			enable: vi.fn(),
 			set: vi.fn(),
 			get: vi.fn(),
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		} as any
 
 		// Mock express() to return our mock app
