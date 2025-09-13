@@ -3,7 +3,7 @@
 
 rules:
   # Custom security rules for this project
-  
+
   # Detect hardcoded AWS credentials
   - id: hardcoded-aws-credentials
     languages: [typescript, javascript, yaml]
