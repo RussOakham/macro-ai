@@ -2,11 +2,14 @@ import { eq } from 'drizzle-orm'
 
 import { db } from '../../data-access/db.ts'
 import { tryCatch } from '../../utils/error-handling/try-catch.ts'
-import { AppError, InternalError, Result } from '../../utils/errors.ts'
+import { AppError, InternalError, type Result } from '../../utils/errors.ts'
 import { safeValidateSchema } from '../../utils/response-handlers.ts'
-
 import { selectUserSchema, usersTable } from './user.schemas.ts'
-import { IUserRepository, TInsertUser, TUser } from './user.types.ts'
+import {
+	type IUserRepository,
+	type TInsertUser,
+	type TUser,
+} from './user.types.ts'
 
 /**
  * UserRepository class that implements the IUserRepository interface
@@ -20,90 +23,9 @@ class UserRepository implements IUserRepository {
 	}
 
 	/**
-	 * Find a user by email
-	 * @param email The user's email address
-	 * @returns Result tuple with the user object or undefined if not found
-	 */
-	public findUserByEmail = async ({
-		email,
-	}: {
-		email: string
-	}): Promise<Result<TUser | undefined>> => {
-		const [users, error] = await tryCatch(
-			this.db
-				.select()
-				.from(usersTable)
-				.where(eq(usersTable.email, email))
-				.limit(1),
-			'userRepository - findUserByEmail',
-		)
-
-		if (error) {
-			return [null, error]
-		}
-
-		// If no user found, return undefined
-		if (!users.length) return [undefined, null]
-
-		// Validate the returned user with Zod
-		const [validationResult, validationError] = safeValidateSchema(
-			users[0],
-			selectUserSchema,
-			'userRepository - findUserByEmail',
-		)
-
-		if (validationError) {
-			return [
-				null,
-				AppError.from(validationError, 'userRepository - findUserByEmail'),
-			]
-		}
-
-		return [validationResult, null]
-	}
-
-	/**
-	 * Find a user by ID
-	 * @param id The user's unique identifier
-	 * @returns Result tuple with the user object or undefined if not found
-	 */
-	public findUserById = async ({
-		id,
-	}: {
-		id: string
-	}): Promise<Result<TUser | undefined>> => {
-		const [users, error] = await tryCatch(
-			this.db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1),
-			'userRepository - findUserById',
-		)
-
-		if (error) {
-			return [null, error]
-		}
-
-		// If no user found, return undefined
-		if (!users.length) return [undefined, null]
-
-		// Validate the returned user with Zod
-		const [validationResult, validationError] = safeValidateSchema(
-			users[0],
-			selectUserSchema,
-			'userRepository - findUserById',
-		)
-
-		if (validationError) {
-			return [
-				null,
-				AppError.from(validationError, 'userRepository - findUserById'),
-			]
-		}
-
-		return [validationResult, null]
-	}
-
-	/**
 	 * Create a new user
-	 * @param userData The user data to insert
+	 * @param userData - User creation parameters
+	 * @param userData.userData - The user data to insert
 	 * @returns Result tuple with the created user object
 	 */
 	public createUser = async ({
@@ -149,8 +71,93 @@ class UserRepository implements IUserRepository {
 	}
 
 	/**
+	 * Find a user by email
+	 * @param email - User lookup parameters
+	 * @param email.email - The user's email address
+	 * @returns Result tuple with the user object or undefined if not found
+	 */
+	public findUserByEmail = async ({
+		email,
+	}: {
+		email: string
+	}): Promise<Result<TUser | undefined>> => {
+		const [users, error] = await tryCatch(
+			this.db
+				.select()
+				.from(usersTable)
+				.where(eq(usersTable.email, email))
+				.limit(1),
+			'userRepository - findUserByEmail',
+		)
+
+		if (error) {
+			return [null, error]
+		}
+
+		// If no user found, return undefined
+		if (!users.length) return [undefined, null]
+
+		// Validate the returned user with Zod
+		const [validationResult, validationError] = safeValidateSchema(
+			users[0],
+			selectUserSchema,
+			'userRepository - findUserByEmail',
+		)
+
+		if (validationError) {
+			return [
+				null,
+				AppError.from(validationError, 'userRepository - findUserByEmail'),
+			]
+		}
+
+		return [validationResult, null]
+	}
+
+	/**
+	 * Find a user by ID
+	 * @param id - User lookup parameters
+	 * @param id.id - The user's unique identifier
+	 * @returns Result tuple with the user object or undefined if not found
+	 */
+	public findUserById = async ({
+		id,
+	}: {
+		id: string
+	}): Promise<Result<TUser | undefined>> => {
+		const [users, error] = await tryCatch(
+			this.db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1),
+			'userRepository - findUserById',
+		)
+
+		if (error) {
+			return [null, error]
+		}
+
+		// If no user found, return undefined
+		if (!users.length) return [undefined, null]
+
+		// Validate the returned user with Zod
+		const [validationResult, validationError] = safeValidateSchema(
+			users[0],
+			selectUserSchema,
+			'userRepository - findUserById',
+		)
+
+		if (validationError) {
+			return [
+				null,
+				AppError.from(validationError, 'userRepository - findUserById'),
+			]
+		}
+
+		return [validationResult, null]
+	}
+
+	/**
 	 * Update a user's last login timestamp
-	 * @param id The user's unique identifier
+	 * @param id - User update parameters
+	 * @param id.id - The user's unique identifier
 	 * @returns Result tuple with the updated user object or undefined if not found
 	 */
 	public updateLastLogin = async ({

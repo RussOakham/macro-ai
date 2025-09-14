@@ -3,50 +3,59 @@
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
-	"main": "./dist/index.cjs",
+	"engines": {
+		"node": ">=20.0.0",
+		"pnpm": ">=9.0.0"
+	},
+	"main": "./dist/index.js",
 	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
 		"build": "pnpm generate && tsup",
 		"dev": "pnpm generate && tsup --watch",
-		"clean": "rm -rf dist && find src -type f \\( -name '*.ts' -o -name '*.js' \\) ! -name 'index.ts' -delete",
+		"clean": "rm -rf dist && rm -rf src/client",
 		"type-check": "tsc --noEmit",
-		"generate": "cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && tsx --tsconfig scripts/tsconfig.json scripts/generate-modular.ts",
+		"generate": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo \"Skipping API client generation in act environment\" || (cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && openapi-ts) )",
+		"format": "prettier --check --cache .",
+		"format:fix": "prettier --write --cache .",
+		"lint": "pnpm oxlint . && eslint .",
+		"lint:fix": "pnpm oxlint . --fix && eslint . --fix",
+		"lint:ci": "pnpm oxlint . --max-warnings=0 && eslint . --max-warnings 0",
+		"lint:oxlint": "pnpm oxlint .",
+		"lint:fix:oxlint": "pnpm oxlint . --fix",
+		"lint:ci:oxlint": "pnpm oxlint . --max-warnings=0",
+		"lint:eslint": "eslint .",
+		"lint:fix:eslint": "eslint . --fix",
+		"lint:ci:eslint": "eslint . --max-warnings 0",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"test:coverage": "vitest run --coverage",
-		"lint": "eslint ."
+		"test:coverage": "vitest run --coverage"
 	},
 	"devDependencies": {
-		"@apidevtools/swagger-parser": "^10.1.1",
-		"@repo/config-typescript": "workspace:*",
+		"@hey-api/openapi-ts": "^0.82.3",
+		"oxlint": "catalog:",
+		"oxlint-tsgolint": "catalog:",
 		"@repo/config-eslint": "workspace:*",
+		"@repo/config-testing": "workspace:*",
+		"@repo/config-typescript": "workspace:*",
 		"@types/node": "catalog:",
 		"@vitest/coverage-v8": "catalog:",
 		"eslint": "catalog:",
-		"eslint-config-prettier": "catalog:",
-		"eslint-plugin-import": "catalog:",
-		"eslint-plugin-react": "catalog:",
-		"eslint-plugin-react-hooks": "catalog:",
-		"eslint-plugin-jsx-a11y": "catalog:",
 		"eslint-plugin-unused-imports": "catalog:",
+		"eslint-plugin-vitest": "catalog:",
 		"globals": "catalog:",
-		"openapi-zod-client": "^1.15.0",
 		"prettier": "catalog:",
-		"tsup": "^8.0.0",
+		"tsup": "^8.5.0",
 		"tsx": "catalog:",
 		"typescript": "catalog:",
 		"vitest": "catalog:"
 	},
 	"dependencies": {
-		"@zodios/core": "^10.9.6",
-		"openapi3-ts": "^3.0.2",
-		"zod": "catalog:"
+		"axios": "^1.11.0"
 	},
 	"exports": {
 		".": {
-			"import": "./dist/index.js",
-			"require": "./dist/index.cjs"
+			"import": "./dist/index.js"
 		}
 	}
 }

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
-import { AppError, ErrorType, Result } from '../../errors.ts'
+import { AppError, ErrorType, type Result } from '../../errors.ts'
 import { pino } from '../../logger.ts'
 import { createErrorScenarios } from '../../test-helpers/error-handling.mock.ts'
 import { tryCatch, tryCatchStream, tryCatchSync } from '../try-catch.ts'
@@ -401,7 +401,6 @@ describe('Error Handling Utilities', () => {
 		// Helper to create a mock stream that can be consumed
 		const createMockStream = (chunks: string[]): AsyncIterable<string> => {
 			return {
-				// eslint-disable-next-line @typescript-eslint/require-await
 				[Symbol.asyncIterator]: async function* (): AsyncGenerator<
 					string,
 					void,
@@ -420,7 +419,6 @@ describe('Error Handling Utilities', () => {
 			errorAtIndex: number,
 		): AsyncIterable<string> => {
 			return {
-				// eslint-disable-next-line @typescript-eslint/require-await
 				[Symbol.asyncIterator]: async function* (): AsyncGenerator<
 					string,
 					void,

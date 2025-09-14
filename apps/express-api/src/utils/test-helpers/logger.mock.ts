@@ -1,5 +1,6 @@
 import type { Logger } from 'pino'
 import type { HttpLogger } from 'pino-http'
+
 import { type Mock, vi } from 'vitest'
 
 /**
@@ -70,6 +71,7 @@ export const createPinoHttpMock = (): MockPinoHttp => {
  * @returns Object with pino and configureLogger mocks
  */
 export const createLoggerModuleMock = () => ({
+	logger: createLoggerMock(),
 	pino: createPinoHttpMock(),
 	configureLogger: vi.fn(),
 })

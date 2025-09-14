@@ -1,4 +1,4 @@
-import { QueryClient } from '@tanstack/react-query'
+import { type QueryClient } from '@tanstack/react-query'
 import { createRootRouteWithContext, Outlet } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 import Cookies from 'js-cookie'
@@ -7,9 +7,8 @@ import { ModeToggle } from '@/components/mode-toggle'
 import { DesktopNav } from '@/components/ui/navigation/desktop-navigation/desktop-nav'
 import { Toaster } from '@/components/ui/sonner'
 import { QUERY_KEY } from '@/constants/query-keys'
-import { getUser } from '@/services/network/user/getUser'
-
-export interface IRouterContext {
+import { getUser } from '@/services/network/user/get-user'
+interface IRouterContext {
 	queryClient: QueryClient
 }
 
@@ -20,7 +19,7 @@ const RootComponent = () => {
 			suppressHydrationWarning
 		>
 			<div className="relative flex h-full flex-col">
-				<header id="macro-ai-header" className="container flex-shrink-0">
+				<header className="container flex-shrink-0" id="macro-ai-header">
 					<DesktopNav />
 				</header>
 
@@ -30,9 +29,9 @@ const RootComponent = () => {
 						<div className="h-full">
 							<Outlet />
 							<Toaster
-								position="bottom-left"
-								duration={8000}
 								closeButton
+								duration={8000}
+								position="bottom-left"
 								richColors
 							/>
 						</div>
@@ -40,7 +39,7 @@ const RootComponent = () => {
 				</main>
 				<hr className="flex-shrink-0" />
 
-				<footer id="marco-ai-footer" className="container flex-shrink-0">
+				<footer className="container flex-shrink-0" id="marco-ai-footer">
 					<div className="p-2 flex justify-between">
 						<p className="p-2">Footer</p>
 						<ModeToggle />
@@ -52,16 +51,19 @@ const RootComponent = () => {
 	)
 }
 
-export const Route = createRootRouteWithContext<IRouterContext>()({
-	component: RootComponent,
+const Route = createRootRouteWithContext<IRouterContext>()({
 	beforeLoad: async ({ context }) => {
 		const { queryClient } = context
 		const accessToken = Cookies.get('macro-ai-accessToken')
 		if (accessToken) {
 			await queryClient.prefetchQuery({
-				queryKey: [QUERY_KEY.user],
 				queryFn: () => getUser(),
+				queryKey: [QUERY_KEY.user],
 			})
 		}
 	},
+	component: RootComponent,
 })
+
+export { Route }
+export type { IRouterContext }

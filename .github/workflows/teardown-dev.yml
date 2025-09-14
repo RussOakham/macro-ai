@@ -1,0 +1,351 @@
+name: Manual Teardown - Development Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number for the development environment to destroy (e.g., 123 for pr-123)'
+        required: true
+        type: string
+      confirm:
+        description: 'Type "I UNDERSTAND" to confirm environment destruction'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20.19.4'
+  PNPM_VERSION: '10.14.0'
+  # CDK environment variables
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_REGION: us-east-1
+
+jobs:
+  # Validate inputs and code ownership
+  validate-request:
+    name: Validate Teardown Request
+    runs-on: ubuntu-latest
+    outputs:
+      is-owner: ${{ steps.codeowner-check.outputs.is-owner }}
+      target-user: ${{ steps.codeowner-check.outputs.target-user }}
+      should-destroy: ${{ steps.decision.outputs.should-destroy }}
+      env-name: ${{ steps.env-name.outputs.env-name }}
+      stack-name: ${{ steps.stack-info.outputs.stack-name }}
+
+    steps:
+      - name: Validate confirmation input
+        run: |
+          if [[ "${{ inputs.confirm }}" != "I UNDERSTAND" ]]; then
+            echo "❌ Confirmation failed. Expected 'I UNDERSTAND', got '${{ inputs.confirm }}'"
+            echo "This will permanently destroy the development environment and all its resources."
+            exit 1
+          fi
+          echo "✅ Confirmation validated"
+
+      - name: Validate PR number format
+        run: |
+          if [[ ! "${{ inputs.pr_number }}" =~ ^[0-9]+$ ]]; then
+            echo "❌ Invalid PR number format: '${{ inputs.pr_number }}'"
+            echo "PR number must be a positive integer"
+            exit 1
+          fi
+          echo "✅ PR number format valid: ${{ inputs.pr_number }}"
+
+      - name: Checkout repository (required for composite actions)
+        uses: actions/checkout@v4
+
+      - name: Check code ownership of workflow actor
+        id: codeowner-check
+        uses: ./.github/actions/check-codeowner
+        with:
+          mode: 'manual'
+          base-ref: 'develop'
+
+      - name: Generate environment and stack names
+        id: env-name
+        run: |
+          ENV_NAME="pr-${{ inputs.pr_number }}"
+          echo "env-name=${ENV_NAME}" >> $GITHUB_OUTPUT
+          echo "Environment name: ${ENV_NAME}"
+
+      - name: Generate stack information
+        id: stack-info
+        run: |
+          ENV_NAME="pr-${{ inputs.pr_number }}"
+          # Capitalize first letter for stack name (pr-123 -> Pr-123)
+          STACK_NAME="MacroAi$(echo "${ENV_NAME}" | sed 's/^./\U&/')Stack"
+          echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
+          echo "Stack name: ${STACK_NAME}"
+
+      - name: Make destruction decision
+        id: decision
+        run: |
+          IS_OWNER="${{ steps.codeowner-check.outputs.is-owner }}"
+          ACTOR="${{ steps.codeowner-check.outputs.target-user }}"
+
+          if [[ "${IS_OWNER}" == "true" ]]; then
+            echo "should-destroy=true" >> $GITHUB_OUTPUT
+            echo "✅ Manual teardown approved for code owner: ${ACTOR}"
+            echo "🗑️ Target environment: ${{ steps.env-name.outputs.env-name }}"
+            echo "📦 Target stack: ${{ steps.stack-info.outputs.stack-name }}"
+          else
+            echo "should-destroy=false" >> $GITHUB_OUTPUT
+            echo "❌ Manual teardown blocked: ${ACTOR} is not a code owner"
+            exit 1
+          fi
+
+  # Check if stack exists before attempting destruction
+  check-stack:
+    name: Check Stack Existence
+    runs-on: ubuntu-latest
+    needs: validate-request
+    if: needs.validate-request.outputs.should-destroy == 'true'
+    outputs:
+      stack-exists: ${{ steps.check.outputs.stack-exists }}
+      stack-status: ${{ steps.check.outputs.stack-status }}
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Check if stack exists
+        id: check
+        run: |
+          STACK_NAME="${{ needs.validate-request.outputs.stack-name }}"
+
+          echo "🔍 Checking for development stack: ${STACK_NAME}"
+
+          # Check if stack exists and get its status
+          STACK_STATUS=$(aws cloudformation describe-stacks \
+            --stack-name "${STACK_NAME}" \
+            --query 'Stacks[0].StackStatus' \
+            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+
+          if [[ "${STACK_STATUS}" == "DOES_NOT_EXIST" ]]; then
+            echo "stack-exists=false" >> $GITHUB_OUTPUT
+            echo "stack-status=DOES_NOT_EXIST" >> $GITHUB_OUTPUT
+            echo "ℹ️ Stack does not exist - no teardown needed"
+          else
+            echo "stack-exists=true" >> $GITHUB_OUTPUT
+            echo "stack-status=${STACK_STATUS}" >> $GITHUB_OUTPUT
+            echo "✅ Stack found with status: ${STACK_STATUS}"
+
+            # List stack resources for logging
+            echo "📋 Stack resources to be destroyed:"
+            aws cloudformation list-stack-resources \
+              --stack-name "${STACK_NAME}" \
+              --query 'StackResourceSummaries[].{Type:ResourceType,LogicalId:LogicalResourceId,Status:ResourceStatus}' \
+              --output table || echo "Could not list resources"
+          fi
+
+  # Destroy the development environment
+  destroy-environment:
+    name: Destroy Development Environment
+    runs-on: ubuntu-latest
+    needs: [validate-request, check-stack]
+    if: needs.validate-request.outputs.should-destroy == 'true' && needs.check-stack.outputs.stack-exists == 'true'
+
+    permissions:
+      id-token: write
+      contents: read
+
+    outputs:
+      destroy-result: ${{ steps.destroy.outputs.destroy-result }}
+      verification-result: ${{ steps.verify.outputs.verification-result }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Install AWS CDK CLI globally
+        run: pnpm add -g aws-cdk
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install infrastructure dependencies
+        run: |
+          cd infrastructure
+          pnpm install --frozen-lockfile
+
+      - name: Destroy infrastructure
+        id: destroy
+        env:
+          # EC2 preview environment context
+          CDK_DEPLOY_ENV: ${{ needs.validate-request.outputs.env-name }}
+          CDK_DEPLOY_TYPE: 'ec2-preview'
+          CDK_DEPLOY_SCALE: 'preview'
+        run: |
+          cd infrastructure
+
+          STACK_NAME="${{ needs.validate-request.outputs.stack-name }}"
+          ENV_NAME="${{ needs.validate-request.outputs.env-name }}"
+
+          echo "🗑️ MANUAL TEARDOWN: Destroying EC2-based development environment"
+          echo "📦 Stack: ${STACK_NAME}"
+          echo "🌍 Environment: ${ENV_NAME}"
+          echo "🏗️ Deployment Type: ec2-preview"
+          echo "👤 Requested by: ${{ needs.validate-request.outputs.target-user }}"
+          echo "📅 Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo ""
+          echo "⚠️  This action will permanently destroy all EC2 resources in this environment"
+          echo "🔍 Expected EC2 resources to be destroyed:"
+          echo "  - Auto Scaling Group: macro-ai-${ENV_NAME}-asg"
+          echo "  - Application Load Balancer: macro-ai-${ENV_NAME}-alb"
+          echo "  - Launch Template: macro-ai-${ENV_NAME}-preview-launch-template"
+          echo "  - EC2 instances managed by Auto Scaling Group"
+          echo "  - VPC networking components and security groups"
+          echo ""
+
+          # Attempt to destroy the stack with retries
+          DESTROY_SUCCESS=false
+          for attempt in {1..3}; do
+            echo "🔄 Destruction attempt ${attempt}/3..."
+
+            if pnpm cdk destroy "${STACK_NAME}" --force; then
+              DESTROY_SUCCESS=true
+              echo "✅ Stack destroyed successfully"
+              break
+            else
+              echo "❌ Destruction attempt ${attempt} failed"
+              if [[ ${attempt} -lt 3 ]]; then
+                echo "⏳ Waiting 30 seconds before retry..."
+                sleep 30
+              fi
+            fi
+          done
+
+          if [[ "${DESTROY_SUCCESS}" == "true" ]]; then
+            echo "destroy-result=success" >> $GITHUB_OUTPUT
+          else
+            echo "destroy-result=failed" >> $GITHUB_OUTPUT
+            echo "❌ All destruction attempts failed"
+            exit 1
+          fi
+
+      - name: Verify ECS cleanup
+        id: verify
+        run: |
+          cd infrastructure
+
+          ENV_NAME="${{ needs.validate-request.outputs.env-name }}"
+          STACK_NAME="${{ needs.validate-request.outputs.stack-name }}"
+
+          echo "🔍 Verifying ECS Fargate cleanup for manual teardown..."
+
+          # Wait a moment for AWS to process the deletion
+          sleep 15
+
+          # Verify CloudFormation stack deletion (ECS resources are managed by the stack)
+          if aws cloudformation describe-stacks --stack-name "${STACK_NAME}" --no-cli-pager &> /dev/null; then
+            echo "verification-result=partial" >> $GITHUB_OUTPUT
+            echo "⚠️ Stack still exists - cleanup may still be in progress"
+          else
+            echo "verification-result=success" >> $GITHUB_OUTPUT
+            echo "✅ Manual teardown verification complete - all ECS Fargate resources cleaned up"
+          fi
+
+  # Report results
+  report-results:
+    name: Report Teardown Results
+    runs-on: ubuntu-latest
+    needs: [validate-request, check-stack, destroy-environment]
+    if: always() && needs.validate-request.outputs.should-destroy == 'true'
+
+    steps:
+      - name: Generate teardown report
+        run: |
+          echo "## 🗑️ Manual Development Environment Teardown Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** \`${{ needs.validate-request.outputs.env-name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Stack:** \`${{ needs.validate-request.outputs.stack-name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Requested by:** @${{ needs.validate-request.outputs.target-user }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          STACK_EXISTS="${{ needs.check-stack.outputs.stack-exists }}"
+          DESTROY_RESULT="${{ needs.destroy-environment.result }}"
+          VERIFICATION_RESULT="${{ needs.destroy-environment.outputs.verification-result }}"
+
+          if [[ "${STACK_EXISTS}" == "false" ]]; then
+            echo "### ℹ️ No Action Needed" >> $GITHUB_STEP_SUMMARY
+            echo "The specified development environment did not exist." >> $GITHUB_STEP_SUMMARY
+          elif [[ "${DESTROY_RESULT}" == "success" ]]; then
+            echo "### ✅ Teardown Successful" >> $GITHUB_STEP_SUMMARY
+            echo "The development environment has been destroyed." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Verification:** ${VERIFICATION_RESULT}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Resources Cleaned Up:**" >> $GITHUB_STEP_SUMMARY
+            echo "- ECS Fargate services and tasks" >> $GITHUB_STEP_SUMMARY
+            echo "- Application Load Balancer and Target Groups" >> $GITHUB_STEP_SUMMARY
+            echo "- VPC networking components (subnets, security groups)" >> $GITHUB_STEP_SUMMARY
+            echo "- CloudWatch Log Groups and monitoring resources" >> $GITHUB_STEP_SUMMARY
+            echo "- IAM roles and policies" >> $GITHUB_STEP_SUMMARY
+            echo "- CloudFormation stack" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Teardown Failed" >> $GITHUB_STEP_SUMMARY
+            echo "The teardown encountered an error. Manual cleanup may be required." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Check AWS Console for remaining resources" >> $GITHUB_STEP_SUMMARY
+            echo "- Review workflow logs for specific errors" >> $GITHUB_STEP_SUMMARY
+            echo "- Contact AWS support if resources are stuck" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Handle case where no stack exists
+  report-no-stack:
+    name: Report No Stack Found
+    runs-on: ubuntu-latest
+    needs: [validate-request, check-stack]
+    if: needs.validate-request.outputs.should-destroy == 'true' && needs.check-stack.outputs.stack-exists == 'false'
+
+    steps:
+      - name: Generate no-stack report
+        run: |
+          echo "## ℹ️ Development Environment Not Found" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** \`${{ needs.validate-request.outputs.env-name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Stack:** \`${{ needs.validate-request.outputs.stack-name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Requested by:** @${{ needs.validate-request.outputs.target-user }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The specified development environment does not exist. This could mean:" >> $GITHUB_STEP_SUMMARY
+          echo "- The environment was never created" >> $GITHUB_STEP_SUMMARY
+          echo "- It was already destroyed" >> $GITHUB_STEP_SUMMARY
+          echo "- The PR number is incorrect" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No cleanup action was needed."

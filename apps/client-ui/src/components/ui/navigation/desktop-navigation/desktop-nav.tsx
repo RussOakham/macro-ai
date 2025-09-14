@@ -2,14 +2,13 @@ import { NavigationMenuList } from '@radix-ui/react-navigation-menu'
 import { Link } from '@tanstack/react-router'
 
 import { cn } from '@/lib/utils'
-import { useIsAuthenticated } from '@/services/hooks/auth/useIsAuthenticated'
+import { useIsAuthenticated } from '@/services/hooks/auth/use-is-authenticated'
 
 import {
 	NavigationMenu,
 	NavigationMenuItem,
 	navigationMenuTriggerStyle,
 } from '../../navigation-menu'
-
 import { DesktopAuthButtons } from './desktop-auth-buttons'
 
 const DesktopNav = ({
@@ -25,10 +24,10 @@ const DesktopNav = ({
 					<NavigationMenuList>
 						<NavigationMenuItem asChild>
 							<Link
-								to="/"
 								className={navigationMenuTriggerStyle({
 									className: '[&.active]:font-bold',
 								})}
+								to="/"
 							>
 								Home
 							</Link>
@@ -36,10 +35,10 @@ const DesktopNav = ({
 						{isAuthenticated && (
 							<NavigationMenuItem asChild>
 								<Link
-									to="/chat"
 									className={navigationMenuTriggerStyle({
 										className: '[&.active]:font-bold',
 									})}
+									to="/chat"
 								>
 									Chat
 								</Link>

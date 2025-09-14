@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -27,12 +27,10 @@ import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
-import { usePostResendConfirmRegistrationCodeMutation } from '@/services/hooks/auth/usePostResendConfirmRegistrationCode'
-import { TGetAuthUserResponse } from '@/services/network/auth/getAuthUser'
-import {
-	resendConfirmationCodeSchemaClient,
-	TResendConfirmationCodeClient,
-} from '@/services/network/auth/postResendConfirmRegistrationCode'
+import { usePostResendConfirmRegistrationCodeMutation } from '@/services/hooks/auth/use-post-resend-confirm-registration-code'
+import type { GetAuthUserResponse } from '@/services/network/auth/get-auth-user'
+import { zResendConfirmationCode } from '@/services/network/auth/post-resend-confirm-registration-code'
+import type { ResendConfirmationCode } from '@/services/network/auth/post-resend-confirm-registration-code'
 
 const ResendConfirmationCodeForm = ({
 	className,
@@ -44,18 +42,18 @@ const ResendConfirmationCodeForm = ({
 	const navigate = useNavigate({ from: '/auth/resend-confirmation-code' })
 	const queryClient = useQueryClient()
 
-	const authUser = queryClient.getQueryData<TGetAuthUserResponse>([
+	const authUser = queryClient.getQueryData<GetAuthUserResponse>([
 		QUERY_KEY.authUser,
 	])
 
-	const form = useForm<TResendConfirmationCodeClient>({
-		resolver: zodResolver(resendConfirmationCodeSchemaClient),
+	const form = useForm<ResendConfirmationCode>({
 		defaultValues: {
 			email: authUser?.email ?? '',
 		},
+		resolver: zodResolver(zResendConfirmationCode),
 	})
 
-	const onSubmit = async ({ email }: TResendConfirmationCodeClient) => {
+	const onSubmit = async ({ email }: ResendConfirmationCode) => {
 		try {
 			setIsPending(true)
 
@@ -69,7 +67,7 @@ const ResendConfirmationCodeForm = ({
 		} catch (err: unknown) {
 			// Show error message
 			const error = standardizeError(err)
-			logger.error('Error resending confirmation code', error)
+			logger.error(error, 'Error resending confirmation code')
 			toast.error(error.message)
 		} finally {
 			setIsPending(false)
@@ -86,7 +84,7 @@ const ResendConfirmationCodeForm = ({
 			</CardHeader>
 			<CardContent>
 				<Form {...form}>
-					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+					<form className="space-y-8" onSubmit={form.handleSubmit(onSubmit)}>
 						<FormField
 							control={form.control}
 							name="email"
@@ -100,7 +98,7 @@ const ResendConfirmationCodeForm = ({
 								</FormItem>
 							)}
 						/>
-						<Button type="submit" className="w-full" disabled={isPending}>
+						<Button className="w-full" disabled={isPending} type="submit">
 							{isPending ? 'Confirming...' : 'Resend Code'}
 						</Button>
 					</form>

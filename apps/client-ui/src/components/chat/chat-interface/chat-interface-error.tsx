@@ -1,7 +1,7 @@
 import { Bot } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { IStandardizedError } from '@/lib/types'
+import type { IStandardizedError } from '@/lib/types'
 import { router } from '@/main'
 
 interface ChatInterfaceErrorProps {

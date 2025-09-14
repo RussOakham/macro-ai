@@ -3,15 +3,15 @@ import type React from 'react'
 import { standardizeError } from '@/lib/errors/standardize-error'
 
 import { ChatInput } from './chat-input/chat-input'
+import { ChatInterfaceError } from './chat-interface-error'
+import { ChatInterfaceLoading } from './chat-interface-loading'
 import { NoChatSelected } from './components/chat-empty-state/no-chat-selected'
 import { ChatHeader } from './components/chat-header/chat-header'
 import { ChatMessages } from './components/chat-messages/chat-messages'
-import { useChatInterface } from './hooks/useChatInterface'
-import { useChatKeyboard } from './hooks/useChatKeyboard'
-import { useChatNavigation } from './hooks/useChatNavigation'
+import { useChatInterface } from './hooks/use-chat-interface'
+import { useChatKeyboard } from './hooks/use-chat-keyboard'
+import { useChatNavigation } from './hooks/use-chat-navigation'
 import { generateChatTitleFallback } from './utils/chat-interface.utils'
-import { ChatInterfaceError } from './chat-interface-error'
-import { ChatInterfaceLoading } from './chat-interface-loading'
 
 interface ChatInterfaceProps {
 	onMobileSidebarToggle?: () => void
@@ -21,27 +21,27 @@ const ChatInterface = ({
 	onMobileSidebarToggle,
 }: ChatInterfaceProps): React.JSX.Element => {
 	// Extract navigation logic
-	const { currentChatId, isChatError, chatError } = useChatNavigation()
+	const { chatError, currentChatId, isChatError } = useChatNavigation()
 
 	// Extract interface logic
 	const {
-		messages,
-		input,
+		chatData,
 		handleInputChange,
 		handleSubmit,
-		status,
+		input,
 		isChatLoading,
-		chatData,
+		messages,
 		messagesEndRef,
+		status,
 	} = useChatInterface({
 		chatId: currentChatId,
 	})
 
 	// Extract keyboard handling logic
 	const { handleKeyDown, onFormSubmit } = useChatKeyboard({
-		onSubmit: handleSubmit,
-		input,
 		currentChatId,
+		input,
+		onSubmit: handleSubmit,
 		status,
 	})
 
@@ -69,24 +69,24 @@ const ChatInterface = ({
 		<div className="flex-1 flex flex-col h-full bg-background min-h-0">
 			{/* Header */}
 			<ChatHeader
-				title={chatTitle}
 				onMobileSidebarToggle={onMobileSidebarToggle}
 				status={status}
+				title={chatTitle}
 			/>
 
 			{/* Messages */}
 			<ChatMessages
 				messages={messages}
-				status={status}
 				messagesEndRef={messagesEndRef}
+				status={status}
 			/>
 
 			{/* Chat Input */}
 			<ChatInput
-				onSubmit={onFormSubmit}
-				input={input}
 				handleInputChange={handleInputChange}
 				handleKeyDown={handleKeyDown}
+				input={input}
+				onSubmit={onFormSubmit}
 				status={status}
 			/>
 		</div>

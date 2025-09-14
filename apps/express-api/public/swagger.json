@@ -1271,6 +1271,295 @@
 				],
 				"description": "System information response"
 			},
+			"DetailedHealthResponse": {
+				"type": "object",
+				"properties": {
+					"status": {
+						"type": "string",
+						"enum": ["healthy", "unhealthy", "degraded"],
+						"description": "Overall health status",
+						"example": "healthy"
+					},
+					"message": {
+						"type": "string",
+						"description": "Health status message",
+						"example": "API Health Status: HEALTHY"
+					},
+					"timestamp": {
+						"type": "string",
+						"description": "ISO timestamp when the health check was performed",
+						"example": "2024-01-01T12:00:00.000Z"
+					},
+					"uptime": {
+						"type": "number",
+						"description": "Application uptime in seconds",
+						"example": 3600
+					},
+					"version": {
+						"type": "string",
+						"description": "Application version",
+						"example": "1.0.0"
+					},
+					"environment": {
+						"type": "string",
+						"description": "Environment name",
+						"example": "production"
+					},
+					"checks": {
+						"type": "object",
+						"properties": {
+							"database": {
+								"type": "object",
+								"properties": {
+									"status": {
+										"type": "string",
+										"enum": ["healthy", "unhealthy", "unknown"],
+										"description": "Database health status"
+									},
+									"responseTime": {
+										"type": "number",
+										"description": "Database response time in milliseconds"
+									},
+									"error": {
+										"type": "string",
+										"description": "Database error message if unhealthy"
+									}
+								},
+								"required": ["status"]
+							},
+							"memory": {
+								"type": "object",
+								"properties": {
+									"status": {
+										"type": "string",
+										"enum": ["healthy", "unhealthy"],
+										"description": "Memory health status"
+									},
+									"usagePercent": {
+										"type": "number",
+										"description": "Memory usage percentage"
+									},
+									"usageMB": {
+										"type": "number",
+										"description": "Memory usage in megabytes"
+									}
+								},
+								"required": ["status", "usagePercent", "usageMB"]
+							},
+							"disk": {
+								"type": "object",
+								"properties": {
+									"status": {
+										"type": "string",
+										"enum": ["healthy", "unhealthy"],
+										"description": "Disk health status"
+									},
+									"usagePercent": {
+										"type": "number",
+										"description": "Disk usage percentage"
+									}
+								},
+								"required": ["status"]
+							},
+							"dependencies": {
+								"type": "object",
+								"properties": {
+									"status": {
+										"type": "string",
+										"enum": ["healthy", "unhealthy", "degraded"],
+										"description": "Dependencies health status"
+									},
+									"services": {
+										"type": "array",
+										"items": {
+											"type": "object",
+											"properties": {
+												"name": {
+													"type": "string",
+													"description": "Service name"
+												},
+												"status": {
+													"type": "string",
+													"enum": ["healthy", "unhealthy"],
+													"description": "Service health status"
+												},
+												"responseTime": {
+													"type": "number",
+													"description": "Service response time in milliseconds"
+												},
+												"error": {
+													"type": "string",
+													"description": "Service error message if unhealthy"
+												}
+											},
+											"required": ["name", "status"]
+										}
+									}
+								},
+								"required": ["status", "services"]
+							}
+						},
+						"required": ["database", "memory", "disk", "dependencies"]
+					}
+				},
+				"required": [
+					"status",
+					"message",
+					"timestamp",
+					"uptime",
+					"version",
+					"environment",
+					"checks"
+				],
+				"description": "Detailed API health check response for ALB and monitoring"
+			},
+			"ReadinessResponse": {
+				"type": "object",
+				"properties": {
+					"ready": {
+						"type": "boolean",
+						"description": "Whether the application is ready to receive traffic",
+						"example": true
+					},
+					"message": {
+						"type": "string",
+						"description": "Readiness status message",
+						"example": "Application is ready"
+					},
+					"timestamp": {
+						"type": "string",
+						"description": "ISO timestamp when the readiness check was performed",
+						"example": "2024-01-01T12:00:00.000Z"
+					},
+					"checks": {
+						"type": "object",
+						"properties": {
+							"database": {
+								"type": "boolean",
+								"description": "Database readiness status"
+							},
+							"dependencies": {
+								"type": "boolean",
+								"description": "Dependencies readiness status"
+							},
+							"configuration": {
+								"type": "boolean",
+								"description": "Configuration readiness status"
+							}
+						},
+						"required": ["database", "dependencies", "configuration"]
+					}
+				},
+				"required": ["ready", "message", "timestamp", "checks"],
+				"description": "Application readiness probe response"
+			},
+			"LivenessResponse": {
+				"type": "object",
+				"properties": {
+					"alive": {
+						"type": "boolean",
+						"description": "Whether the application is alive",
+						"example": true
+					},
+					"message": {
+						"type": "string",
+						"description": "Liveness status message",
+						"example": "Application is alive"
+					},
+					"timestamp": {
+						"type": "string",
+						"description": "ISO timestamp when the liveness check was performed",
+						"example": "2024-01-01T12:00:00.000Z"
+					},
+					"uptime": {
+						"type": "number",
+						"description": "Application uptime in seconds",
+						"example": 3600
+					}
+				},
+				"required": ["alive", "message", "timestamp", "uptime"],
+				"description": "Application liveness probe response"
+			},
+			"ConfigurationResponse": {
+				"type": "object",
+				"properties": {
+					"status": {
+						"type": "string",
+						"enum": ["healthy", "unhealthy", "degraded"],
+						"description": "Overall configuration health status",
+						"example": "healthy"
+					},
+					"message": {
+						"type": "string",
+						"description": "Configuration status message",
+						"example": "Configuration is healthy"
+					},
+					"timestamp": {
+						"type": "string",
+						"description": "ISO timestamp when the configuration check was performed",
+						"example": "2024-01-01T12:00:00.000Z"
+					},
+					"checks": {
+						"type": "object",
+						"properties": {
+							"critical": {
+								"type": "object",
+								"properties": {
+									"ready": {
+										"type": "boolean",
+										"description": "Critical configuration variables status"
+									},
+									"missing": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										},
+										"description": "Missing critical configuration variables"
+									}
+								},
+								"required": ["ready", "missing"]
+							},
+							"important": {
+								"type": "object",
+								"properties": {
+									"ready": {
+										"type": "boolean",
+										"description": "Important configuration variables status"
+									},
+									"missing": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										},
+										"description": "Missing important configuration variables"
+									}
+								},
+								"required": ["ready", "missing"]
+							},
+							"optional": {
+								"type": "object",
+								"properties": {
+									"ready": {
+										"type": "boolean",
+										"description": "Optional configuration variables status"
+									},
+									"missing": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										},
+										"description": "Missing optional configuration variables"
+									}
+								},
+								"required": ["ready", "missing"]
+							}
+						},
+						"required": ["critical", "important", "optional"]
+					}
+				},
+				"required": ["status", "message", "timestamp", "checks"],
+				"description": "Configuration validation response"
+			},
 			"HealthErrorResponse": {
 				"type": "object",
 				"properties": {
@@ -3934,7 +4223,7 @@
 			"get": {
 				"tags": ["Utility"],
 				"summary": "Health check endpoint",
-				"description": "Returns the current health status of the API service",
+				"description": "Returns the current health status of the API service. No rate limiting applied to ensure ALB health checks work reliably.",
 				"responses": {
 					"200": {
 						"description": "Health check successful",
@@ -3950,29 +4239,6 @@
 										}
 									},
 									"required": ["message"]
-								}
-							}
-						}
-					},
-					"429": {
-						"description": "Too many requests - rate limit exceeded",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"status": {
-											"type": "number",
-											"description": "HTTP status code",
-											"example": 429
-										},
-										"message": {
-											"type": "string",
-											"description": "Rate limit error message",
-											"example": "Too many requests, please try again later."
-										}
-									},
-									"required": ["status", "message"]
 								}
 							}
 						}
@@ -4119,6 +4385,773 @@
 					},
 					"500": {
 						"description": "Failed to retrieve system information - internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Internal server error message",
+											"example": "Internal server error"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/health/detailed": {
+			"get": {
+				"tags": ["Utility"],
+				"summary": "Detailed health check endpoint for ALB and monitoring",
+				"description": "Returns comprehensive health status including database, memory, disk, and dependencies checks. No rate limiting applied to ensure ALB health checks work reliably.",
+				"responses": {
+					"200": {
+						"description": "Detailed health check successful",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "string",
+											"enum": ["healthy", "unhealthy", "degraded"],
+											"description": "Overall health status",
+											"example": "healthy"
+										},
+										"message": {
+											"type": "string",
+											"description": "Health status message",
+											"example": "API Health Status: HEALTHY"
+										},
+										"timestamp": {
+											"type": "string",
+											"description": "ISO timestamp when the health check was performed",
+											"example": "2024-01-01T12:00:00.000Z"
+										},
+										"uptime": {
+											"type": "number",
+											"description": "Application uptime in seconds",
+											"example": 3600
+										},
+										"version": {
+											"type": "string",
+											"description": "Application version",
+											"example": "1.0.0"
+										},
+										"environment": {
+											"type": "string",
+											"description": "Environment name",
+											"example": "production"
+										},
+										"checks": {
+											"type": "object",
+											"properties": {
+												"database": {
+													"type": "object",
+													"properties": {
+														"status": {
+															"type": "string",
+															"enum": ["healthy", "unhealthy", "unknown"],
+															"description": "Database health status"
+														},
+														"responseTime": {
+															"type": "number",
+															"description": "Database response time in milliseconds"
+														},
+														"error": {
+															"type": "string",
+															"description": "Database error message if unhealthy"
+														}
+													},
+													"required": ["status"]
+												},
+												"memory": {
+													"type": "object",
+													"properties": {
+														"status": {
+															"type": "string",
+															"enum": ["healthy", "unhealthy"],
+															"description": "Memory health status"
+														},
+														"usagePercent": {
+															"type": "number",
+															"description": "Memory usage percentage"
+														},
+														"usageMB": {
+															"type": "number",
+															"description": "Memory usage in megabytes"
+														}
+													},
+													"required": ["status", "usagePercent", "usageMB"]
+												},
+												"disk": {
+													"type": "object",
+													"properties": {
+														"status": {
+															"type": "string",
+															"enum": ["healthy", "unhealthy"],
+															"description": "Disk health status"
+														},
+														"usagePercent": {
+															"type": "number",
+															"description": "Disk usage percentage"
+														}
+													},
+													"required": ["status"]
+												},
+												"dependencies": {
+													"type": "object",
+													"properties": {
+														"status": {
+															"type": "string",
+															"enum": ["healthy", "unhealthy", "degraded"],
+															"description": "Dependencies health status"
+														},
+														"services": {
+															"type": "array",
+															"items": {
+																"type": "object",
+																"properties": {
+																	"name": {
+																		"type": "string",
+																		"description": "Service name"
+																	},
+																	"status": {
+																		"type": "string",
+																		"enum": ["healthy", "unhealthy"],
+																		"description": "Service health status"
+																	},
+																	"responseTime": {
+																		"type": "number",
+																		"description": "Service response time in milliseconds"
+																	},
+																	"error": {
+																		"type": "string",
+																		"description": "Service error message if unhealthy"
+																	}
+																},
+																"required": ["name", "status"]
+															}
+														}
+													},
+													"required": ["status", "services"]
+												}
+											},
+											"required": ["database", "memory", "disk", "dependencies"]
+										}
+									},
+									"required": [
+										"status",
+										"message",
+										"timestamp",
+										"uptime",
+										"version",
+										"environment",
+										"checks"
+									]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Health check failed - internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Internal server error message",
+											"example": "Internal server error"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Service is unhealthy",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "string",
+											"enum": ["healthy", "unhealthy", "degraded"],
+											"description": "Overall health status",
+											"example": "healthy"
+										},
+										"message": {
+											"type": "string",
+											"description": "Health status message",
+											"example": "API Health Status: HEALTHY"
+										},
+										"timestamp": {
+											"type": "string",
+											"description": "ISO timestamp when the health check was performed",
+											"example": "2024-01-01T12:00:00.000Z"
+										},
+										"uptime": {
+											"type": "number",
+											"description": "Application uptime in seconds",
+											"example": 3600
+										},
+										"version": {
+											"type": "string",
+											"description": "Application version",
+											"example": "1.0.0"
+										},
+										"environment": {
+											"type": "string",
+											"description": "Environment name",
+											"example": "production"
+										},
+										"checks": {
+											"type": "object",
+											"properties": {
+												"database": {
+													"type": "object",
+													"properties": {
+														"status": {
+															"type": "string",
+															"enum": ["healthy", "unhealthy", "unknown"],
+															"description": "Database health status"
+														},
+														"responseTime": {
+															"type": "number",
+															"description": "Database response time in milliseconds"
+														},
+														"error": {
+															"type": "string",
+															"description": "Database error message if unhealthy"
+														}
+													},
+													"required": ["status"]
+												},
+												"memory": {
+													"type": "object",
+													"properties": {
+														"status": {
+															"type": "string",
+															"enum": ["healthy", "unhealthy"],
+															"description": "Memory health status"
+														},
+														"usagePercent": {
+															"type": "number",
+															"description": "Memory usage percentage"
+														},
+														"usageMB": {
+															"type": "number",
+															"description": "Memory usage in megabytes"
+														}
+													},
+													"required": ["status", "usagePercent", "usageMB"]
+												},
+												"disk": {
+													"type": "object",
+													"properties": {
+														"status": {
+															"type": "string",
+															"enum": ["healthy", "unhealthy"],
+															"description": "Disk health status"
+														},
+														"usagePercent": {
+															"type": "number",
+															"description": "Disk usage percentage"
+														}
+													},
+													"required": ["status"]
+												},
+												"dependencies": {
+													"type": "object",
+													"properties": {
+														"status": {
+															"type": "string",
+															"enum": ["healthy", "unhealthy", "degraded"],
+															"description": "Dependencies health status"
+														},
+														"services": {
+															"type": "array",
+															"items": {
+																"type": "object",
+																"properties": {
+																	"name": {
+																		"type": "string",
+																		"description": "Service name"
+																	},
+																	"status": {
+																		"type": "string",
+																		"enum": ["healthy", "unhealthy"],
+																		"description": "Service health status"
+																	},
+																	"responseTime": {
+																		"type": "number",
+																		"description": "Service response time in milliseconds"
+																	},
+																	"error": {
+																		"type": "string",
+																		"description": "Service error message if unhealthy"
+																	}
+																},
+																"required": ["name", "status"]
+															}
+														}
+													},
+													"required": ["status", "services"]
+												}
+											},
+											"required": ["database", "memory", "disk", "dependencies"]
+										}
+									},
+									"required": [
+										"status",
+										"message",
+										"timestamp",
+										"uptime",
+										"version",
+										"environment",
+										"checks"
+									]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/health/ready": {
+			"get": {
+				"tags": ["Utility"],
+				"summary": "Readiness probe endpoint",
+				"description": "Returns whether the application is ready to receive traffic (Kubernetes-style readiness probe). No rate limiting applied to ensure ALB health checks work reliably.",
+				"responses": {
+					"200": {
+						"description": "Application is ready",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"ready": {
+											"type": "boolean",
+											"description": "Whether the application is ready to receive traffic",
+											"example": true
+										},
+										"message": {
+											"type": "string",
+											"description": "Readiness status message",
+											"example": "Application is ready"
+										},
+										"timestamp": {
+											"type": "string",
+											"description": "ISO timestamp when the readiness check was performed",
+											"example": "2024-01-01T12:00:00.000Z"
+										},
+										"checks": {
+											"type": "object",
+											"properties": {
+												"database": {
+													"type": "boolean",
+													"description": "Database readiness status"
+												},
+												"dependencies": {
+													"type": "boolean",
+													"description": "Dependencies readiness status"
+												},
+												"configuration": {
+													"type": "boolean",
+													"description": "Configuration readiness status"
+												}
+											},
+											"required": ["database", "dependencies", "configuration"]
+										}
+									},
+									"required": ["ready", "message", "timestamp", "checks"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Readiness check failed - internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Internal server error message",
+											"example": "Internal server error"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Application is not ready",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"ready": {
+											"type": "boolean",
+											"description": "Whether the application is ready to receive traffic",
+											"example": true
+										},
+										"message": {
+											"type": "string",
+											"description": "Readiness status message",
+											"example": "Application is ready"
+										},
+										"timestamp": {
+											"type": "string",
+											"description": "ISO timestamp when the readiness check was performed",
+											"example": "2024-01-01T12:00:00.000Z"
+										},
+										"checks": {
+											"type": "object",
+											"properties": {
+												"database": {
+													"type": "boolean",
+													"description": "Database readiness status"
+												},
+												"dependencies": {
+													"type": "boolean",
+													"description": "Dependencies readiness status"
+												},
+												"configuration": {
+													"type": "boolean",
+													"description": "Configuration readiness status"
+												}
+											},
+											"required": ["database", "dependencies", "configuration"]
+										}
+									},
+									"required": ["ready", "message", "timestamp", "checks"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/health/ready/public": {
+			"get": {
+				"tags": ["Utility"],
+				"summary": "Public readiness probe endpoint",
+				"description": "Returns minimal readiness information without detailed error messages in production. Suitable for public ALB health checks. No rate limiting applied.",
+				"responses": {
+					"200": {
+						"description": "Application is ready",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"ready": {
+											"type": "boolean",
+											"description": "Whether the application is ready to receive traffic",
+											"example": true
+										},
+										"message": {
+											"type": "string",
+											"description": "Readiness status message",
+											"example": "Application is ready"
+										},
+										"timestamp": {
+											"type": "string",
+											"description": "ISO timestamp when the readiness check was performed",
+											"example": "2024-01-01T12:00:00.000Z"
+										},
+										"checks": {
+											"type": "object",
+											"properties": {
+												"database": {
+													"type": "boolean",
+													"description": "Database readiness status"
+												},
+												"dependencies": {
+													"type": "boolean",
+													"description": "Dependencies readiness status"
+												},
+												"configuration": {
+													"type": "boolean",
+													"description": "Configuration readiness status"
+												}
+											},
+											"required": ["database", "dependencies", "configuration"]
+										}
+									},
+									"required": ["ready", "message", "timestamp", "checks"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Readiness check failed - internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Internal server error message",
+											"example": "Internal server error"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Application is not ready",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"ready": {
+											"type": "boolean",
+											"description": "Whether the application is ready to receive traffic",
+											"example": true
+										},
+										"message": {
+											"type": "string",
+											"description": "Readiness status message",
+											"example": "Application is ready"
+										},
+										"timestamp": {
+											"type": "string",
+											"description": "ISO timestamp when the readiness check was performed",
+											"example": "2024-01-01T12:00:00.000Z"
+										},
+										"checks": {
+											"type": "object",
+											"properties": {
+												"database": {
+													"type": "boolean",
+													"description": "Database readiness status"
+												},
+												"dependencies": {
+													"type": "boolean",
+													"description": "Dependencies readiness status"
+												},
+												"configuration": {
+													"type": "boolean",
+													"description": "Configuration readiness status"
+												}
+											},
+											"required": ["database", "dependencies", "configuration"]
+										}
+									},
+									"required": ["ready", "message", "timestamp", "checks"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/health/live": {
+			"get": {
+				"tags": ["Utility"],
+				"summary": "Liveness probe endpoint",
+				"description": "Returns whether the application is alive and should not be restarted (Kubernetes-style liveness probe). No rate limiting applied to ensure ALB health checks work reliably.",
+				"responses": {
+					"200": {
+						"description": "Application is alive",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"alive": {
+											"type": "boolean",
+											"description": "Whether the application is alive",
+											"example": true
+										},
+										"message": {
+											"type": "string",
+											"description": "Liveness status message",
+											"example": "Application is alive"
+										},
+										"timestamp": {
+											"type": "string",
+											"description": "ISO timestamp when the liveness check was performed",
+											"example": "2024-01-01T12:00:00.000Z"
+										},
+										"uptime": {
+											"type": "number",
+											"description": "Application uptime in seconds",
+											"example": 3600
+										}
+									},
+									"required": ["alive", "message", "timestamp", "uptime"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Liveness check failed - internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"description": "Internal server error message",
+											"example": "Internal server error"
+										}
+									},
+									"required": ["message"]
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Application is not alive",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"alive": {
+											"type": "boolean",
+											"description": "Whether the application is alive",
+											"example": true
+										},
+										"message": {
+											"type": "string",
+											"description": "Liveness status message",
+											"example": "Application is alive"
+										},
+										"timestamp": {
+											"type": "string",
+											"description": "ISO timestamp when the liveness check was performed",
+											"example": "2024-01-01T12:00:00.000Z"
+										},
+										"uptime": {
+											"type": "number",
+											"description": "Application uptime in seconds",
+											"example": 3600
+										}
+									},
+									"required": ["alive", "message", "timestamp", "uptime"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/health/config": {
+			"get": {
+				"tags": ["Utility"],
+				"summary": "Configuration validation endpoint",
+				"description": "Returns detailed configuration validation status for debugging deployment issues. No rate limiting applied to ensure ALB health checks work reliably.",
+				"responses": {
+					"200": {
+						"description": "Configuration validation successful",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "string",
+											"enum": ["healthy", "unhealthy", "degraded"],
+											"description": "Overall configuration health status",
+											"example": "healthy"
+										},
+										"message": {
+											"type": "string",
+											"description": "Configuration status message",
+											"example": "Configuration is healthy"
+										},
+										"timestamp": {
+											"type": "string",
+											"description": "ISO timestamp when the configuration check was performed",
+											"example": "2024-01-01T12:00:00.000Z"
+										},
+										"checks": {
+											"type": "object",
+											"properties": {
+												"critical": {
+													"type": "object",
+													"properties": {
+														"ready": {
+															"type": "boolean",
+															"description": "Critical configuration variables status"
+														},
+														"missing": {
+															"type": "array",
+															"items": {
+																"type": "string"
+															},
+															"description": "Missing critical configuration variables"
+														}
+													},
+													"required": ["ready", "missing"]
+												},
+												"important": {
+													"type": "object",
+													"properties": {
+														"ready": {
+															"type": "boolean",
+															"description": "Important configuration variables status"
+														},
+														"missing": {
+															"type": "array",
+															"items": {
+																"type": "string"
+															},
+															"description": "Missing important configuration variables"
+														}
+													},
+													"required": ["ready", "missing"]
+												},
+												"optional": {
+													"type": "object",
+													"properties": {
+														"ready": {
+															"type": "boolean",
+															"description": "Optional configuration variables status"
+														},
+														"missing": {
+															"type": "array",
+															"items": {
+																"type": "string"
+															},
+															"description": "Missing optional configuration variables"
+														}
+													},
+													"required": ["ready", "missing"]
+												}
+											},
+											"required": ["critical", "important", "optional"]
+										}
+									},
+									"required": ["status", "message", "timestamp", "checks"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Configuration validation failed - internal server error",
 						"content": {
 							"application/json": {
 								"schema": {

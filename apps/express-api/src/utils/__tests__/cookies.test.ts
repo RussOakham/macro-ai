@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/no-identical-functions */
 import type { Request } from 'express'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -12,6 +13,7 @@ import {
 	type TCookieValue,
 } from '../cookies.ts'
 import { AppError } from '../errors.ts'
+import { mockExpress } from '../test-helpers/express-mocks.ts'
 
 // Mock the errors module
 vi.mock('../errors.ts', () => ({
@@ -28,7 +30,8 @@ vi.mock('../errors.ts', () => ({
 
 describe('cookies.ts', () => {
 	beforeEach(() => {
-		vi.clearAllMocks()
+		// Setup Express mocks (includes vi.clearAllMocks())
+		mockExpress.setup()
 	})
 
 	describe('COOKIE_NAMES constant', () => {
@@ -51,10 +54,15 @@ describe('cookies.ts', () => {
 	})
 
 	describe('getCookie function', () => {
-		const createMockRequest = (cookies: Record<string, string> = {}): Request =>
-			({
+		const createMockRequest = (
+			cookies: Record<string, string> = {},
+		): Request => {
+			const expressMocks = mockExpress.setup()
+			return {
+				...expressMocks.req,
 				cookies,
-			}) as Request
+			} as Request
+		}
 
 		describe('when cookie exists', () => {
 			it('should return cookie value when cookie exists and is required', () => {
@@ -81,7 +89,6 @@ describe('cookies.ts', () => {
 				const req = createMockRequest({})
 
 				expect(() => getCookie(req, 'missingCookie', true)).toThrow()
-				// eslint-disable-next-line @typescript-eslint/unbound-method
 				expect(AppError.unauthorized).toHaveBeenCalledWith(
 					"Cookie 'missingCookie' not found",
 				)
@@ -91,7 +98,6 @@ describe('cookies.ts', () => {
 				const req = createMockRequest({})
 
 				expect(() => getCookie(req, 'missingCookie')).toThrow()
-				// eslint-disable-next-line @typescript-eslint/unbound-method
 				expect(AppError.unauthorized).toHaveBeenCalledWith(
 					"Cookie 'missingCookie' not found",
 				)
@@ -109,7 +115,6 @@ describe('cookies.ts', () => {
 				const req = createMockRequest({ emptyCookie: '' })
 
 				expect(() => getCookie(req, 'emptyCookie', true)).toThrow()
-				// eslint-disable-next-line @typescript-eslint/unbound-method
 				expect(AppError.unauthorized).toHaveBeenCalledWith(
 					"Cookie 'emptyCookie' not found",
 				)
@@ -174,7 +179,7 @@ describe('cookies.ts', () => {
 				const req = createMockRequest({})
 
 				expect(() => getAccessToken(req, true)).toThrow()
-				// eslint-disable-next-line @typescript-eslint/unbound-method
+
 				expect(AppError.unauthorized).toHaveBeenCalledWith(
 					`Cookie '${COOKIE_NAMES.ACCESS_TOKEN}' not found`,
 				)
@@ -184,7 +189,7 @@ describe('cookies.ts', () => {
 				const req = createMockRequest({})
 
 				expect(() => getAccessToken(req)).toThrow()
-				// eslint-disable-next-line @typescript-eslint/unbound-method
+
 				expect(AppError.unauthorized).toHaveBeenCalledWith(
 					`Cookie '${COOKIE_NAMES.ACCESS_TOKEN}' not found`,
 				)
@@ -202,7 +207,7 @@ describe('cookies.ts', () => {
 				const req = createMockRequest({ [COOKIE_NAMES.ACCESS_TOKEN]: '' })
 
 				expect(() => getAccessToken(req, true)).toThrow()
-				// eslint-disable-next-line @typescript-eslint/unbound-method
+
 				expect(AppError.unauthorized).toHaveBeenCalledWith(
 					`Cookie '${COOKIE_NAMES.ACCESS_TOKEN}' not found`,
 				)
@@ -247,7 +252,7 @@ describe('cookies.ts', () => {
 				const req = createMockRequest({})
 
 				expect(() => getRefreshToken(req, true)).toThrow()
-				// eslint-disable-next-line @typescript-eslint/unbound-method
+
 				expect(AppError.unauthorized).toHaveBeenCalledWith(
 					`Cookie '${COOKIE_NAMES.REFRESH_TOKEN}' not found`,
 				)
@@ -257,7 +262,7 @@ describe('cookies.ts', () => {
 				const req = createMockRequest({})
 
 				expect(() => getRefreshToken(req)).toThrow()
-				// eslint-disable-next-line @typescript-eslint/unbound-method
+
 				expect(AppError.unauthorized).toHaveBeenCalledWith(
 					`Cookie '${COOKIE_NAMES.REFRESH_TOKEN}' not found`,
 				)
@@ -275,7 +280,7 @@ describe('cookies.ts', () => {
 				const req = createMockRequest({ [COOKIE_NAMES.REFRESH_TOKEN]: '' })
 
 				expect(() => getRefreshToken(req, true)).toThrow()
-				// eslint-disable-next-line @typescript-eslint/unbound-method
+
 				expect(AppError.unauthorized).toHaveBeenCalledWith(
 					`Cookie '${COOKIE_NAMES.REFRESH_TOKEN}' not found`,
 				)
@@ -320,7 +325,7 @@ describe('cookies.ts', () => {
 				const req = createMockRequest({})
 
 				expect(() => getSynchronizeToken(req, true)).toThrow()
-				// eslint-disable-next-line @typescript-eslint/unbound-method
+
 				expect(AppError.unauthorized).toHaveBeenCalledWith(
 					`Cookie '${COOKIE_NAMES.SYNCHRONIZE}' not found`,
 				)
@@ -330,7 +335,7 @@ describe('cookies.ts', () => {
 				const req = createMockRequest({})
 
 				expect(() => getSynchronizeToken(req)).toThrow()
-				// eslint-disable-next-line @typescript-eslint/unbound-method
+
 				expect(AppError.unauthorized).toHaveBeenCalledWith(
 					`Cookie '${COOKIE_NAMES.SYNCHRONIZE}' not found`,
 				)
@@ -348,7 +353,7 @@ describe('cookies.ts', () => {
 				const req = createMockRequest({ [COOKIE_NAMES.SYNCHRONIZE]: '' })
 
 				expect(() => getSynchronizeToken(req, true)).toThrow()
-				// eslint-disable-next-line @typescript-eslint/unbound-method
+
 				expect(AppError.unauthorized).toHaveBeenCalledWith(
 					`Cookie '${COOKIE_NAMES.SYNCHRONIZE}' not found`,
 				)

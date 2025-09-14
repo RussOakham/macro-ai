@@ -1,8 +1,8 @@
 import { vi } from 'vitest'
+import type { chatService } from '../../features/chat/chat.service.ts'
 
 // Type inference helper - this will be used inside functions to avoid hoisting issues
-type ChatServiceType =
-	typeof import('../../features/chat/chat.service.ts').chatService
+type ChatServiceType = typeof chatService
 
 // Type inference from actual chatService instance - following established pattern
 // This ensures our mocks stay in sync with the real implementation

@@ -1,11 +1,10 @@
-import crypto from 'crypto'
-
-import { config } from '../../config/default.ts'
+import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 
 import { tryCatchSync } from './error-handling/try-catch.ts'
+import { config } from './load-config.ts'
 
 // Use a secure encryption key from environment variables
-const encryptionKey = config.cookieEncryptionKey
+const encryptionKey = config.COOKIE_ENCRYPTION_KEY
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 12 // For GCM, recommended IV length is 12 bytes
 
@@ -21,8 +20,8 @@ const IV_LENGTH = 12 // For GCM, recommended IV length is 12 bytes
  */
 export const encrypt = (text: string) => {
 	return tryCatchSync(() => {
-		const iv = crypto.randomBytes(IV_LENGTH)
-		const cipher = crypto.createCipheriv(
+		const iv = randomBytes(IV_LENGTH)
+		const cipher = createCipheriv(
 			ALGORITHM,
 			Buffer.from(encryptionKey, 'hex'),
 			iv,
@@ -61,7 +60,7 @@ export const decrypt = (encryptedText: string) => {
 			throw new Error('Invalid encrypted text format')
 		}
 
-		const decipher = crypto.createDecipheriv(
+		const decipher = createDecipheriv(
 			ALGORITHM,
 			Buffer.from(encryptionKey, 'hex'),
 			Buffer.from(ivHex, 'hex'),

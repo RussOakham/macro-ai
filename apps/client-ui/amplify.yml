@@ -1,0 +1,206 @@
+# Amplify Configuration Template for Preview Environments (PR Deployments)
+# Optimized for fast builds and comprehensive debugging capabilities
+
+version: 1
+
+# Backend configuration
+backend:
+  phases:
+    build:
+      commands:
+        - echo "=== Preview Environment Backend Phase ==="
+        - echo "Environment: pr-123 (Preview)"
+        - echo "PR Number: 123"
+        - echo "Build timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+        - echo "Commit: 5776ee9a6c8af72d4f96e8856d54ed6344751111"
+        - echo "Branch: feature/frontend-preview-deployment"
+
+# Frontend configuration optimized for preview deployments
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "=== Preview Environment Pre-Build Phase ==="
+        - echo "Node version: $(node --version)"
+        - echo "Environment: ${AMPLIFY_ENVIRONMENT_NAME:-preview} (Preview)"
+        - echo "PR Number: ${VITE_PR_NUMBER:-unknown}"
+        - echo "API URL: ${VITE_API_URL:-not-set}"
+
+        # Install pnpm with specific version for consistency
+        - echo "Installing pnpm package manager..."
+        - npm install -g pnpm@10.14.0
+        - echo "pnpm version: $(pnpm --version)"
+
+        # Install dependencies with frozen lockfile for consistency
+        - echo "Installing project dependencies..."
+        - pnpm install --frozen-lockfile
+
+        # Display comprehensive environment configuration for debugging
+        - echo "=== Preview Environment Configuration ==="
+        - echo "VITE_API_URL: ${VITE_API_URL:-not-set}"
+        - echo "VITE_APP_ENV: ${VITE_APP_ENV:-preview}"
+        - echo "VITE_APP_NAME: ${VITE_APP_NAME:-Macro AI (Preview)}"
+        - echo "VITE_PR_NUMBER: ${VITE_PR_NUMBER:-unknown}"
+        - echo "VITE_PREVIEW_MODE: ${VITE_PREVIEW_MODE:-true}"
+        - echo "VITE_ENABLE_DEVTOOLS: ${VITE_ENABLE_DEVTOOLS:-true}"
+        - echo "VITE_ENABLE_DEBUG_LOGGING: ${VITE_ENABLE_DEBUG_LOGGING:-true}"
+        - echo "VITE_SHOW_BUILD_INFO: ${VITE_SHOW_BUILD_INFO:-true}"
+        - echo "VITE_BUILD_TIMESTAMP: ${VITE_BUILD_TIMESTAMP:-unknown}"
+        - echo "VITE_BUILD_COMMIT: ${VITE_BUILD_COMMIT:-unknown}"
+        - echo "VITE_BUILD_BRANCH: ${VITE_BUILD_BRANCH:-unknown}"
+
+        # Validate critical environment variables
+        - echo "=== Environment Validation ==="
+        - |
+          if [ -z "https://api-test.example.com/api" ]; then
+            echo "ERROR: VITE_API_URL is not set"
+            exit 1
+          fi
+        - |
+          if [ -z "test-key" ]; then
+            echo "ERROR: VITE_API_KEY is not set"
+            exit 1
+          fi
+        - |
+          if [ -z "123" ]; then
+            echo "WARNING: VITE_PR_NUMBER is not set (may not be a PR deployment)"
+          fi
+        - echo "Environment validation completed"
+
+    build:
+      commands:
+        - echo "=== Preview Environment Build Phase ==="
+        - echo "Building React application for preview..."
+        - echo "Target environment: pr-123"
+        - echo "Preview mode: enabled"
+        # Skip type checking in preview for faster builds (optional)
+        - echo "Running TypeScript type check..."
+        - pnpm type-check
+
+        # Build the application
+        - echo "Building application..."
+        - pnpm build
+
+        # Create build metadata file for debugging
+        - echo "=== Creating Build Metadata ==="
+        - |
+          cat > dist/build-info.json << EOF
+          {
+            "environment": "pr-123",
+            "pr_number": "123",
+            "build_timestamp": "2025-08-09 10:03:27 UTC",
+            "commit": "5776ee9a6c8af72d4f96e8856d54ed6344751111",
+            "branch": "feature/frontend-preview-deployment",
+            "api_url": "https://api-test.example.com/api",
+            "preview_mode": "",
+            "amplify_app_id": "",
+            "amplify_branch": ""
+          }
+          EOF
+
+        # Validate build output
+        - echo "=== Build Validation ==="
+        - |
+          if [ ! -d "dist" ]; then
+            echo "ERROR: Build output directory 'dist' not found"
+            exit 1
+          fi
+        - echo "Build output size: $(du -sh dist | cut -f1)"
+        - echo "Build files count: $(find dist -type f | wc -l)"
+        - echo "Build metadata created: dist/build-info.json"
+        - echo "Preview build completed successfully"
+
+  # Build artifacts with preview-specific naming
+  artifacts:
+    baseDirectory: dist
+    files:
+      - '**/*'
+    name: macro-ai-frontend-preview-pr123-$(date +%Y%m%d-%H%M%S)
+
+  # Aggressive caching for faster preview builds
+  cache:
+    paths:
+      - node_modules/**/*
+      - .pnpm-store/**/*
+      - ~/.pnpm-store/**/*
+      - ~/.npm/**/*
+
+# Test configuration (enabled for preview to catch issues early)
+test:
+  phases:
+    preTest:
+      commands:
+        - echo "=== Preview Environment Pre-Test Phase ==="
+        - echo "Installing test dependencies..."
+        - pnpm install --frozen-lockfile
+
+    test:
+      commands:
+        - echo "=== Preview Environment Test Phase ==="
+        - echo "Running unit tests..."
+        - pnpm test:run
+
+        - echo "Running TypeScript type check..."
+        - pnpm type-check
+
+        - echo "Running linting..."
+        - pnpm lint
+
+        - echo "All preview tests completed successfully"
+
+  # Test artifacts with preview-specific naming
+  artifacts:
+    baseDirectory: coverage
+    files:
+      - '**/*'
+    name: test-results-preview-pr123-$(date +%Y%m%d-%H%M%S)
+
+# Preview-specific custom headers for debugging and security
+customHeaders:
+  - pattern: '**/*'
+    headers:
+      # Security headers (relaxed for preview)
+      - key: 'X-Frame-Options'
+        value: 'SAMEORIGIN'
+      - key: 'X-Content-Type-Options'
+        value: 'nosniff'
+      - key: 'Referrer-Policy'
+        value: 'strict-origin-when-cross-origin'
+
+      # Preview-specific headers
+      - key: 'X-Preview-Environment'
+        value: 'true'
+      - key: 'X-PR-Number'
+        value: '123'
+      - key: 'X-Build-Timestamp'
+        value: '2025-08-09 10:03:27 UTC'
+
+      # CORS headers for preview (more permissive)
+      - key: 'Access-Control-Allow-Origin'
+        value: '*'
+      - key: 'Access-Control-Allow-Methods'
+        value: 'GET, POST, PUT, DELETE, OPTIONS'
+      - key: 'Access-Control-Allow-Headers'
+        value: 'Content-Type, Authorization, X-Requested-With'
+
+      # Content Security Policy (relaxed for preview debugging)
+      - key: 'Content-Security-Policy'
+        value: >-
+          default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api*.macro-ai.com https://*.execute-api.*.amazonaws.com wss: ws:; frame-src 'self'
+
+  # Special handling for build info endpoint
+  - pattern: '/build-info.json'
+    headers:
+      - key: 'Content-Type'
+        value: 'application/json'
+      - key: 'Cache-Control'
+        value: 'no-cache, no-store, must-revalidate'
+
+# Preview-specific redirects and rewrites
+redirects:
+  - source: '/health'
+    target: '/build-info.json'
+    status: '200'
+  - source: '/<*>'
+    target: '/index.html'
+    status: '404-200'

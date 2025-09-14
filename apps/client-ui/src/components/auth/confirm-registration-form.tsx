@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
+import z from 'zod'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -33,12 +34,15 @@ import { QUERY_KEY } from '@/constants/query-keys'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
-import { usePostConfirmRegisterMutation } from '@/services/hooks/auth/usePostConfirmRegisterMutation'
-import { TGetAuthUserResponse } from '@/services/network/auth/getAuthUser'
-import {
-	confirmRegistrationSchemaClient,
-	TConfirmRegistrationClient,
-} from '@/services/network/auth/postConfirmRegistration'
+import { usePostConfirmRegisterMutation } from '@/services/hooks/auth/use-post-confirm-register-mutation'
+import type { GetAuthUserResponse } from '@/services/network/auth/get-auth-user'
+
+const confirmRegistrationSchema = z.object({
+	code: z.string().length(6),
+	email: z.email(),
+})
+
+type ConfirmRegistrationFormValues = z.infer<typeof confirmRegistrationSchema>
 
 const ConfirmRegistrationForm = ({
 	className,
@@ -50,32 +54,34 @@ const ConfirmRegistrationForm = ({
 	const navigate = useNavigate({ from: '/auth/confirm-registration' })
 	const queryClient = useQueryClient()
 
-	const authUser = queryClient.getQueryData<TGetAuthUserResponse>([
+	const authUser = queryClient.getQueryData<GetAuthUserResponse>([
 		QUERY_KEY.authUser,
 	])
 
-	const form = useForm<TConfirmRegistrationClient>({
-		resolver: zodResolver(confirmRegistrationSchemaClient),
+	const form = useForm<ConfirmRegistrationFormValues>({
 		defaultValues: {
-			username: authUser?.email ?? '',
 			code: '',
+			email: authUser?.email ?? '',
 		},
+		resolver: zodResolver(confirmRegistrationSchema),
 	})
 
-	const onSubmit = async ({ email, code }: TConfirmRegistrationClient) => {
+	const onSubmit = async ({ code, email }: ConfirmRegistrationFormValues) => {
 		try {
 			setIsPending(true)
 
-			await postConfirmRegistration({ email, code })
+			const codeNumber = Number(code)
+
+			await postConfirmRegistration({ code: codeNumber, email })
 
 			logger.info('Confirm registration success')
 			toast.success('Account confirmed successfully! Please login.')
 			await navigate({ to: '/auth/login' })
-		} catch (err: unknown) {
+		} catch (error: unknown) {
 			// Show error message
-			const error = standardizeError(err)
-			logger.error('Confirm registration error', error)
-			toast.error(error.message)
+			const err = standardizeError(error)
+			logger.error(err, 'Confirm registration error')
+			toast.error(err.message)
 		} finally {
 			setIsPending(false)
 		}
@@ -91,7 +97,7 @@ const ConfirmRegistrationForm = ({
 			</CardHeader>
 			<CardContent>
 				<Form {...form}>
-					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+					<form className="space-y-8" onSubmit={form.handleSubmit(onSubmit)}>
 						<FormField
 							control={form.control}
 							name="email"
@@ -130,7 +136,7 @@ const ConfirmRegistrationForm = ({
 								</FormItem>
 							)}
 						/>
-						<Button type="submit" className="w-full" disabled={isPending}>
+						<Button className="w-full" disabled={isPending} type="submit">
 							{isPending ? 'Confirming...' : 'Confirm Registration'}
 						</Button>
 					</form>

@@ -67,8 +67,7 @@ AWS_COGNITO_REGION=us-east-1
 AWS_COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
 AWS_COGNITO_USER_POOL_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
 AWS_COGNITO_USER_POOL_SECRET_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-AWS_COGNITO_ACCESS_KEY=AKIAXXXXXXXXXXXXXXXX
-AWS_COGNITO_SECRET_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# AWS credentials are no longer required - using IAM roles instead
 AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30
 ```
 
@@ -78,9 +77,16 @@ AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30
 - **AWS_COGNITO_USER_POOL_ID**: Unique identifier for your Cognito User Pool
 - **AWS_COGNITO_USER_POOL_CLIENT_ID**: App client ID from your User Pool
 - **AWS_COGNITO_USER_POOL_SECRET_KEY**: App client secret (confidential clients only)
-- **AWS_COGNITO_ACCESS_KEY**: IAM user access key with Cognito permissions
-- **AWS_COGNITO_SECRET_KEY**: IAM user secret key
 - **AWS_COGNITO_REFRESH_TOKEN_EXPIRY**: Token expiry in days (align with AWS settings)
+
+**IAM Role Authentication:**
+
+The application now uses AWS IAM roles instead of hardcoded credentials for enhanced security:
+
+- ECS tasks automatically use the task role for AWS service authentication
+- No need to manage or rotate access keys
+- Follows AWS security best practices
+- Eliminates credential storage in environment variables
 
 #### Cookie Configuration
 
@@ -101,7 +107,7 @@ COOKIE_ENCRYPTION_KEY=your-32-character-encryption-key-here
 ```bash
 # Database Configuration
 RELATIONAL_DATABASE_URL=postgresql://username:password@localhost:5432/database_name
-NON_RELATIONAL_DATABASE_URL=mongodb://localhost:27017/macro_ai_dev
+REDIS_URL=redis://localhost:6379
 ```
 
 **PostgreSQL URL Format:**
@@ -152,12 +158,10 @@ REDIS_URL=redis://localhost:6379
 **Rate Limiting Tiers:**
 
 1. **Global Rate Limiting:**
-
    - Window: 15 minutes (900000ms)
    - Max requests: 100 per window
 
 2. **Authentication Rate Limiting:**
-
    - Window: 1 hour (3600000ms)
    - Max requests: 10 per window
    - Protects against brute force attacks
@@ -188,8 +192,7 @@ const envSchema = z.object({
 	AWS_COGNITO_USER_POOL_ID: z.string().min(1),
 	AWS_COGNITO_USER_POOL_CLIENT_ID: z.string().min(1),
 	AWS_COGNITO_USER_POOL_SECRET_KEY: z.string().min(1),
-	AWS_COGNITO_ACCESS_KEY: z.string().min(1),
-	AWS_COGNITO_SECRET_KEY: z.string().min(1),
+	// AWS Cognito credentials removed - using IAM roles instead
 	AWS_COGNITO_REFRESH_TOKEN_EXPIRY: z.coerce.number().default(30),
 
 	// Cookies
@@ -197,8 +200,8 @@ const envSchema = z.object({
 	COOKIE_ENCRYPTION_KEY: z.string().min(32),
 
 	// Database
-	RELATIONAL_DATABASE_URL: z.string().url(),
-	NON_RELATIONAL_DATABASE_URL: z.string().url().optional(),
+	RELATIONAL_DATABASE_URL: z.url(),
+	REDIS_URL: z.url().optional(),
 
 	// OpenAI
 	OPENAI_API_KEY: z.string().startsWith('sk-'),
@@ -210,7 +213,7 @@ const envSchema = z.object({
 	AUTH_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(10),
 	API_RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60000),
 	API_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(60),
-	REDIS_URL: z.string().url().optional(),
+	REDIS_URL: z.url().optional(),
 })
 ```
 

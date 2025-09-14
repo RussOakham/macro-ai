@@ -1,0 +1,18 @@
+# Configuration for hygiene-checks workflow
+# This allows us to test specific jobs without external dependencies
+
+# Skip jobs that require external services
+skip-job:
+  - 'Secret Scanning (Gitleaks)' # Requires GitHub repository context
+  - 'Setup Environment' # Requires AWS credentials
+
+# Override environment variables for this workflow
+env:
+  GITHUB_REPOSITORY: 'RussOakham/macro-ai'
+  GITHUB_REF: 'refs/heads/feature/improve-testing-setup'
+  GITHUB_HEAD_REF: 'feature/improve-testing-setup'
+  GITHUB_BASE_REF: 'main'
+  GITHUB_SHA: '1234567890abcdef'
+  GITHUB_WORKSPACE: '/Users/russell.oakham/repos/personal/macro-ai'
+  NODE_ENV: 'development'
+  CI: 'true'

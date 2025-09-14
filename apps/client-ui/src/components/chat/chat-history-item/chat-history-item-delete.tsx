@@ -1,25 +1,25 @@
-import { useTransition } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { Check, Loader2, X } from 'lucide-react'
+import { useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { logger } from '@/lib/logger/logger'
-import { ChatWithDates } from '@/lib/types'
-import { useDeleteChatMutation } from '@/services/hooks/chat/useDeleteChatMutation'
+import { type ChatWithDates } from '@/lib/types'
+import { useDeleteChatMutation } from '@/services/hooks/chat/use-delete-chat-mutation'
 
 interface ChatHistoryItemDeleteProps {
+	cancelDeleteChat: () => void
 	chat: ChatWithDates
 	isPendingExternal: boolean
-	setConfirmDeleteChatId: (chatId: string | null) => void
-	cancelDeleteChat: () => void
+	setConfirmDeleteChatId: (chatId: null | string) => void
 }
 
 const ChatHistoryItemDelete = ({
+	cancelDeleteChat,
 	chat,
 	isPendingExternal,
 	setConfirmDeleteChatId,
-	cancelDeleteChat,
 }: ChatHistoryItemDeleteProps) => {
 	const navigate = useNavigate()
 	const params = useParams({ strict: false })
@@ -31,7 +31,9 @@ const ChatHistoryItemDelete = ({
 	const [isPending, startTransition] = useTransition()
 
 	const confirmDeleteChat = (chatId: string) => {
-		if (isPendingExternal) return // Prevent multiple simultaneous operations
+		if (isPendingExternal) {
+			return
+		} // Prevent multiple simultaneous operations
 
 		setConfirmDeleteChatId(null) // Hide confirmation
 
@@ -39,9 +41,12 @@ const ChatHistoryItemDelete = ({
 			try {
 				await deleteChatMutation({ chatId })
 
-				logger.info('[ChatSidebar]: Chat deleted successfully', {
-					chatId,
-				})
+				logger.info(
+					{
+						chatId,
+					},
+					'[ChatSidebar]: Chat deleted successfully',
+				)
 
 				toast.success('Chat deleted successfully!')
 
@@ -50,10 +55,13 @@ const ChatHistoryItemDelete = ({
 					void navigate({ to: '/chat' })
 				}
 			} catch (error: unknown) {
-				logger.error('[ChatSidebar]: Error deleting chat', {
-					chatId,
-					error: error instanceof Error ? error.message : 'Unknown error',
-				})
+				logger.error(
+					{
+						chatId,
+						error: error instanceof Error ? error.message : 'Unknown error',
+					},
+					'[ChatSidebar]: Error deleting chat',
+				)
 
 				toast.error('Failed to delete chat. Please try again.')
 			}
@@ -71,13 +79,13 @@ const ChatHistoryItemDelete = ({
 				</p>
 			</div>
 			<Button
-				size="sm"
-				variant="ghost"
+				className="h-6 w-6 p-0 text-destructive hover:text-destructive/80 disabled:opacity-50"
+				disabled={isPending}
 				onClick={() => {
 					confirmDeleteChat(chat.id)
 				}}
-				disabled={isPending}
-				className="h-6 w-6 p-0 text-destructive hover:text-destructive/80 disabled:opacity-50"
+				size="sm"
+				variant="ghost"
 			>
 				{isPending ? (
 					<Loader2 className="h-3 w-3 animate-spin" />
@@ -86,11 +94,11 @@ const ChatHistoryItemDelete = ({
 				)}
 			</Button>
 			<Button
+				className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
+				disabled={isPending}
+				onClick={cancelDeleteChat}
 				size="sm"
 				variant="ghost"
-				onClick={cancelDeleteChat}
-				disabled={isPending}
-				className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
 			>
 				<X className="h-3 w-3" />
 			</Button>

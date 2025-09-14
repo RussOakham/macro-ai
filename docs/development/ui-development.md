@@ -50,28 +50,28 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // React Compiler automatically optimizes components
 const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: (failureCount, error) => {
-        // Only retry on 500 errors, max 3 times
-        return error.status === 500 && failureCount < 3
-      },
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    },
-  },
+	defaultOptions: {
+		queries: {
+			retry: (failureCount, error) => {
+				// Only retry on 500 errors, max 3 times
+				return error.status === 500 && failureCount < 3
+			},
+			staleTime: 5 * 60 * 1000, // 5 minutes
+		},
+	},
 })
 
 const router = createRouter({
-  routeTree,
-  context: { queryClient },
+	routeTree,
+	context: { queryClient },
 })
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  </StrictMode>
+	<StrictMode>
+		<QueryClientProvider client={queryClient}>
+			<RouterProvider router={router} />
+		</QueryClientProvider>
+	</StrictMode>,
 )
 ```
 
@@ -159,37 +159,38 @@ import { createContext, useContext, useEffect, useState } from 'react'
 type Theme = 'dark' | 'light' | 'system'
 
 const ThemeProviderContext = createContext<{
-  theme: Theme
-  setTheme: (theme: Theme) => void
+	theme: Theme
+	setTheme: (theme: Theme) => void
 }>({
-  theme: 'system',
-  setTheme: () => null,
+	theme: 'system',
+	setTheme: () => null,
 })
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() =>
-    (localStorage.getItem('ui-theme') as Theme) || 'system'
-  )
+	const [theme, setTheme] = useState<Theme>(
+		() => (localStorage.getItem('ui-theme') as Theme) || 'system',
+	)
 
-  useEffect(() => {
-    const root = window.document.documentElement
-    root.classList.remove('light', 'dark')
+	useEffect(() => {
+		const root = window.document.documentElement
+		root.classList.remove('light', 'dark')
 
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light'
-      root.classList.add(systemTheme)
-    } else {
-      root.classList.add(theme)
-    }
-  }, [theme])
+		if (theme === 'system') {
+			const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
+				.matches
+				? 'dark'
+				: 'light'
+			root.classList.add(systemTheme)
+		} else {
+			root.classList.add(theme)
+		}
+	}, [theme])
 
-  return (
-    <ThemeProviderContext.Provider value={{ theme, setTheme }}>
-      {children}
-    </ThemeProviderContext.Provider>
-  )
+	return (
+		<ThemeProviderContext.Provider value={{ theme, setTheme }}>
+			{children}
+		</ThemeProviderContext.Provider>
+	)
 }
 ```
 
@@ -203,48 +204,55 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import {
+	Form,
+	FormControl,
+	FormField,
+	FormItem,
+	FormLabel,
+	FormMessage,
+} from '@/components/ui/form'
 
 const formSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+	email: z.string().email('Please enter a valid email address'),
+	password: z.string().min(8, 'Password must be at least 8 characters'),
 })
 
 type FormData = z.infer<typeof formSchema>
 
 export function LoginForm() {
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  })
+	const form = useForm<FormData>({
+		resolver: zodResolver(formSchema),
+		defaultValues: {
+			email: '',
+			password: '',
+		},
+	})
 
-  const onSubmit = async (data: FormData) => {
-    // Handle form submission
-  }
+	const onSubmit = async (data: FormData) => {
+		// Handle form submission
+	}
 
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter your email" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        {/* Additional fields */}
-      </form>
-    </Form>
-  )
+	return (
+		<Form {...form}>
+			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+				<FormField
+					control={form.control}
+					name="email"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>Email</FormLabel>
+							<FormControl>
+								<Input placeholder="Enter your email" {...field} />
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				{/* Additional fields */}
+			</form>
+		</Form>
+	)
 }
 ```
 
@@ -259,29 +267,26 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
 export function PasswordInput({ ...props }) {
-  const [showPassword, setShowPassword] = useState(false)
+	const [showPassword, setShowPassword] = useState(false)
 
-  return (
-    <div className="relative">
-      <Input
-        type={showPassword ? 'text' : 'password'}
-        {...props}
-      />
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-        onClick={() => setShowPassword(!showPassword)}
-      >
-        {showPassword ? (
-          <EyeOff className="h-4 w-4" />
-        ) : (
-          <Eye className="h-4 w-4" />
-        )}
-      </Button>
-    </div>
-  )
+	return (
+		<div className="relative">
+			<Input type={showPassword ? 'text' : 'password'} {...props} />
+			<Button
+				type="button"
+				variant="ghost"
+				size="sm"
+				className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+				onClick={() => setShowPassword(!showPassword)}
+			>
+				{showPassword ? (
+					<EyeOff className="h-4 w-4" />
+				) : (
+					<Eye className="h-4 w-4" />
+				)}
+			</Button>
+		</div>
+	)
 }
 ```
 
@@ -334,30 +339,24 @@ export function usePostLoginMutation() {
 import { useGetUser } from './queries'
 
 export function useIsAuthenticated() {
-  const { data: user, isLoading, error } = useGetUser()
+	const { data: user, isLoading, error } = useGetUser()
 
-  return {
-    isAuthenticated: !!user && !error,
-    user,
-    isLoading,
-  }
+	return {
+		isAuthenticated: !!user && !error,
+		user,
+		isLoading,
+	}
 }
 
 // Usage in components
 export function Navigation() {
-  const { isAuthenticated, user, isLoading } = useIsAuthenticated()
+	const { isAuthenticated, user, isLoading } = useIsAuthenticated()
 
-  if (isLoading) return <NavigationSkeleton />
+	if (isLoading) return <NavigationSkeleton />
 
-  return (
-    <nav>
-      {isAuthenticated ? (
-        <UserMenu user={user} />
-      ) : (
-        <AuthButtons />
-      )}
-    </nav>
-  )
+	return (
+		<nav>{isAuthenticated ? <UserMenu user={user} /> : <AuthButtons />}</nav>
+	)
 }
 ```
 
@@ -395,42 +394,44 @@ export function standardizeError(error: unknown): {
 import { Component, ErrorInfo, ReactNode } from 'react'
 
 interface Props {
-  children: ReactNode
-  fallback?: ReactNode
+	children: ReactNode
+	fallback?: ReactNode
 }
 
 interface State {
-  hasError: boolean
+	hasError: boolean
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props)
-    this.state = { hasError: false }
-  }
+	constructor(props: Props) {
+		super(props)
+		this.state = { hasError: false }
+	}
 
-  static getDerivedStateFromError(): State {
-    return { hasError: true }
-  }
+	static getDerivedStateFromError(): State {
+		return { hasError: true }
+	}
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Error boundary caught an error:', error, errorInfo)
-  }
+	componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+		console.error('Error boundary caught an error:', error, errorInfo)
+	}
 
-  render() {
-    if (this.state.hasError) {
-      return this.props.fallback || (
-        <div className="p-4 text-center">
-          <h2>Something went wrong</h2>
-          <button onClick={() => this.setState({ hasError: false })}>
-            Try again
-          </button>
-        </div>
-      )
-    }
+	render() {
+		if (this.state.hasError) {
+			return (
+				this.props.fallback || (
+					<div className="p-4 text-center">
+						<h2>Something went wrong</h2>
+						<button onClick={() => this.setState({ hasError: false })}>
+							Try again
+						</button>
+					</div>
+				)
+			)
+		}
 
-    return this.props.children
-  }
+		return this.props.children
+	}
 }
 ```
 
@@ -448,19 +449,19 @@ import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { QueryClient } from '@tanstack/react-query'
 
 interface RouterContext {
-  queryClient: QueryClient
+	queryClient: QueryClient
 }
 
 export const Route = createRootRoute<RouterContext>()({
-  component: () => (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 py-8">
-        <Outlet />
-      </main>
-      <Footer />
-    </div>
-  ),
+	component: () => (
+		<div className="min-h-screen bg-background">
+			<Header />
+			<main className="container mx-auto px-4 py-8">
+				<Outlet />
+			</main>
+			<Footer />
+		</div>
+	),
 })
 
 // routes/login.tsx
@@ -468,23 +469,23 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { LoginForm } from '@/components/auth/login-form'
 
 export const Route = createFileRoute('/login')({
-  beforeLoad: ({ context }) => {
-    // Redirect if already authenticated
-    const user = context.queryClient.getQueryData(['user'])
-    if (user) {
-      throw redirect({ to: '/dashboard' })
-    }
-  },
-  component: LoginPage,
+	beforeLoad: ({ context }) => {
+		// Redirect if already authenticated
+		const user = context.queryClient.getQueryData(['user'])
+		if (user) {
+			throw redirect({ to: '/dashboard' })
+		}
+	},
+	component: LoginPage,
 })
 
 function LoginPage() {
-  return (
-    <div className="max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Sign In</h1>
-      <LoginForm />
-    </div>
-  )
+	return (
+		<div className="max-w-md mx-auto">
+			<h1 className="text-2xl font-bold mb-6">Sign In</h1>
+			<LoginForm />
+		</div>
+	)
 }
 ```
 
@@ -498,35 +499,35 @@ import { useIsAuthenticated } from '@/hooks/auth'
 import { Button } from '@/components/ui/button'
 
 export function Navigation() {
-  const { isAuthenticated, user } = useIsAuthenticated()
+	const { isAuthenticated, user } = useIsAuthenticated()
 
-  return (
-    <nav className="flex items-center justify-between p-4">
-      <Link to="/" className="text-xl font-bold">
-        Macro AI
-      </Link>
+	return (
+		<nav className="flex items-center justify-between p-4">
+			<Link to="/" className="text-xl font-bold">
+				Macro AI
+			</Link>
 
-      <div className="flex items-center gap-4">
-        {isAuthenticated ? (
-          <>
-            <Link to="/dashboard">
-              <Button variant="ghost">Dashboard</Button>
-            </Link>
-            <UserMenu user={user} />
-          </>
-        ) : (
-          <>
-            <Link to="/login">
-              <Button variant="ghost">Sign In</Button>
-            </Link>
-            <Link to="/register">
-              <Button>Sign Up</Button>
-            </Link>
-          </>
-        )}
-      </div>
-    </nav>
-  )
+			<div className="flex items-center gap-4">
+				{isAuthenticated ? (
+					<>
+						<Link to="/dashboard">
+							<Button variant="ghost">Dashboard</Button>
+						</Link>
+						<UserMenu user={user} />
+					</>
+				) : (
+					<>
+						<Link to="/login">
+							<Button variant="ghost">Sign In</Button>
+						</Link>
+						<Link to="/register">
+							<Button>Sign Up</Button>
+						</Link>
+					</>
+				)}
+			</div>
+		</nav>
+	)
 }
 ```
 
@@ -543,17 +544,17 @@ import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 export function App() {
-  return (
-    <>
-      <RouterProvider router={router} />
-      {process.env.NODE_ENV === 'development' && (
-        <>
-          <TanStackRouterDevtools router={router} />
-          <ReactQueryDevtools initialIsOpen={false} />
-        </>
-      )}
-    </>
-  )
+	return (
+		<>
+			<RouterProvider router={router} />
+			{process.env.NODE_ENV === 'development' && (
+				<>
+					<TanStackRouterDevtools router={router} />
+					<ReactQueryDevtools initialIsOpen={false} />
+				</>
+			)}
+		</>
+	)
 }
 ```
 
@@ -615,17 +616,19 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { LoginForm } from '@/components/auth/login-form'
 
 describe('LoginForm', () => {
-  it('should validate email format', async () => {
-    render(<LoginForm />)
+	it('should validate email format', async () => {
+		render(<LoginForm />)
 
-    const emailInput = screen.getByLabelText(/email/i)
-    const submitButton = screen.getByRole('button', { name: /sign in/i })
+		const emailInput = screen.getByLabelText(/email/i)
+		const submitButton = screen.getByRole('button', { name: /sign in/i })
 
-    fireEvent.change(emailInput, { target: { value: 'invalid-email' } })
-    fireEvent.click(submitButton)
+		fireEvent.change(emailInput, { target: { value: 'invalid-email' } })
+		fireEvent.click(submitButton)
 
-    expect(await screen.findByText(/please enter a valid email/i)).toBeInTheDocument()
-  })
+		expect(
+			await screen.findByText(/please enter a valid email/i),
+		).toBeInTheDocument()
+	})
 })
 ```
 
@@ -636,20 +639,20 @@ import { renderWithProviders } from '@/test-utils'
 import { App } from '@/App'
 
 describe('Authentication Flow', () => {
-  it('should redirect to dashboard after login', async () => {
-    const { user } = renderWithProviders(<App />)
+	it('should redirect to dashboard after login', async () => {
+		const { user } = renderWithProviders(<App />)
 
-    // Navigate to login
-    await user.click(screen.getByText(/sign in/i))
+		// Navigate to login
+		await user.click(screen.getByText(/sign in/i))
 
-    // Fill and submit form
-    await user.type(screen.getByLabelText(/email/i), 'user@example.com')
-    await user.type(screen.getByLabelText(/password/i), 'password123')
-    await user.click(screen.getByRole('button', { name: /sign in/i }))
+		// Fill and submit form
+		await user.type(screen.getByLabelText(/email/i), 'user@example.com')
+		await user.type(screen.getByLabelText(/password/i), 'password123')
+		await user.click(screen.getByRole('button', { name: /sign in/i }))
 
-    // Verify redirect
-    expect(await screen.findByText(/dashboard/i)).toBeInTheDocument()
-  })
+		// Verify redirect
+		expect(await screen.findByText(/dashboard/i)).toBeInTheDocument()
+	})
 })
 ```
 

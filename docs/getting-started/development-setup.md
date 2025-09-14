@@ -203,7 +203,6 @@ pnpm db:push
 
 1. Navigate to AWS Cognito in the AWS Console
 2. Create a new User Pool with these settings:
-
    - **Sign-in options**: Email
    - **Password policy**: Custom (8-15 characters, mixed case, numbers, symbols)
    - **MFA**: Optional (recommended for production)
@@ -224,14 +223,13 @@ AWS_COGNITO_REGION=us-east-1
 AWS_COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
 AWS_COGNITO_USER_POOL_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
 AWS_COGNITO_USER_POOL_SECRET_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-AWS_COGNITO_ACCESS_KEY=AKIAXXXXXXXXXXXXXXXX
-AWS_COGNITO_SECRET_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# AWS credentials are no longer required - using IAM roles instead
 AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30
 ```
 
-#### 3. IAM User Setup
+#### 3. IAM Role Setup (Production/ECS)
 
-Create an IAM user with Cognito permissions:
+For production and ECS deployments, the application uses IAM roles instead of hardcoded credentials:
 
 ```json
 {
@@ -258,6 +256,11 @@ Create an IAM user with Cognito permissions:
 	]
 }
 ```
+
+**Local Development:**
+
+For local development, you can still use IAM user credentials by setting the appropriate
+environment variables, but this is not required for production deployments.
 
 ### OpenAI API Configuration
 

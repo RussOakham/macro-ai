@@ -1,4 +1,8 @@
-import {
+// oxlint-disable prefer-await-to-then
+// oxlint-disable prefer-await-to-callbacks
+// oxlint-disable no-promise-in-callback
+// oxlint-disable avoid-new
+import type {
 	AxiosError,
 	AxiosInstance,
 	AxiosResponse,
@@ -6,7 +10,7 @@ import {
 } from 'axios'
 
 import { router } from '@/main'
-import { postRefreshToken } from '@/services/network/auth/postRefreshToken'
+import { postRefreshToken } from '@/services/network/auth/post-refresh-token'
 
 import {
 	clearSharedRefreshPromise,
@@ -14,16 +18,16 @@ import {
 } from '../auth/shared-refresh-promise'
 import { standardizeError } from '../errors/standardize-error'
 import { logger } from '../logger/logger'
-import { IStandardizedError } from '../types'
+import { type IStandardizedError } from '../types'
 
 // Track if we're currently refreshing to prevent multiple refresh calls
 let isRefreshing = false
 let failedQueue: {
-	resolve: (value?: unknown) => void
 	reject: (reason?: unknown) => void
+	resolve: (value?: unknown) => void
 }[] = []
 
-const processQueue = (error: Error | null, token: string | null = null) => {
+const processQueue = (error: Error | null, token: null | string = null) => {
 	failedQueue.forEach((prom) => {
 		if (error) {
 			prom.reject(error)
@@ -41,12 +45,15 @@ interface IExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
 /**
  * Applies token refresh interceptors to a client with an axios instance
  * This ensures consistent authentication behavior across all domain clients
+ * @param client - The axios instance
+ * @param client.axios - The axios instance
  */
 export const applyTokenRefreshInterceptors = (client: {
 	axios: AxiosInstance
 }) => {
 	client.axios.interceptors.response.use(
 		(response: AxiosResponse) => response,
+		// eslint-disable-next-line sonarjs/cognitive-complexity
 		async (error: AxiosError) => {
 			const originalRequest: IExtendedAxiosRequestConfig | undefined =
 				error.config
@@ -67,27 +74,55 @@ export const applyTokenRefreshInterceptors = (client: {
 
 			// Handle 403 Forbidden
 			if (error.response?.status === 403) {
-				logger.error(`Access forbidden:`, error)
+				logger.error(error, `Access forbidden:`)
 				await router.navigate({
-					to: '/auth/login',
 					search: {
 						code: '403',
 						message: 'You do not have permission to access this resource.',
 					},
+					to: '/auth/login',
 				})
 				return Promise.reject(error)
 			}
 
 			// Handle 401 Unauthorized
+
 			if (error.response?.status === 401 && !originalRequest._retry) {
-				if (isRefreshing) {
-					return new Promise((resolve, reject) => {
-						failedQueue.push({ resolve, reject })
+				// If the 401 came from the refresh endpoint itself, do NOT try to refresh again.
+				// This prevents an infinite interceptor loop and ensures the auth flow resolves.
+				const requestUrl =
+					typeof originalRequest.url === 'string' ? originalRequest.url : ''
+				const isRefreshRequest = requestUrl.includes('/auth/refresh')
+				if (isRefreshRequest) {
+					const err = standardizeError(error)
+					// Mark this error as already handled by the refresh endpoint to prevent duplicate work
+
+					;(
+						err as IStandardizedError & { __refreshHandled?: boolean }
+					).__refreshHandled = true
+					logger.warn(`Refresh endpoint returned 401: ${err.message}`)
+					// Reject any queued requests and clear refreshing state
+					processQueue(err, null)
+					isRefreshing = false
+					clearSharedRefreshPromise()
+					// Redirect to login page so users are not stuck on a loading screen
+					await router.navigate({
+						search: { redirect: router.state.location.pathname },
+						to: '/auth/login',
 					})
-						.then(() => {
-							return client.axios(originalRequest)
+					return Promise.reject(err)
+				}
+				if (isRefreshing) {
+					return (
+						new Promise((resolve, reject) => {
+							failedQueue.push({ reject, resolve })
 						})
-						.catch((err: unknown) => Promise.reject(standardizeError(err)))
+							.then(() => {
+								return client.axios(originalRequest)
+							})
+							// oxlint-disable-next-line no-return-wrap
+							.catch((err: unknown) => Promise.reject(standardizeError(err)))
+					)
 				}
 
 				originalRequest._retry = true
@@ -105,10 +140,10 @@ export const applyTokenRefreshInterceptors = (client: {
 
 						// Redirect to login page
 						await router.navigate({
-							to: '/auth/login',
 							search: {
 								redirect: router.state.location.pathname,
 							},
+							to: '/auth/login',
 						})
 						throw err
 					} finally {
@@ -123,6 +158,16 @@ export const applyTokenRefreshInterceptors = (client: {
 					await refreshPromise
 					return await client.axios(originalRequest)
 				} catch (err: unknown) {
+					// Check if this error was already handled by the refresh endpoint 401 handler
+					// to avoid duplicate processQueue calls and navigation
+					const standardizedErr = err as IStandardizedError & {
+						__refreshHandled?: boolean
+					}
+
+					if (standardizedErr.__refreshHandled) {
+						// Error was already processed by the refresh endpoint handler, just reject
+						return Promise.reject(standardizedErr)
+					}
 					return Promise.reject(err as IStandardizedError)
 				}
 			}

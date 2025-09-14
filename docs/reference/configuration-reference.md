@@ -102,9 +102,16 @@ Macro AI uses a **two-variable environment pattern** for enterprise-grade deploy
 | `AWS_COGNITO_USER_POOL_ID`         | string | ✅       | -       | Cognito User Pool ID            |
 | `AWS_COGNITO_USER_POOL_CLIENT_ID`  | string | ✅       | -       | Cognito User Pool Client ID     |
 | `AWS_COGNITO_USER_POOL_SECRET_KEY` | string | ✅       | -       | Cognito User Pool Client Secret |
-| `AWS_COGNITO_ACCESS_KEY`           | string | ✅       | -       | AWS Access Key ID               |
-| `AWS_COGNITO_SECRET_KEY`           | string | ✅       | -       | AWS Secret Access Key           |
 | `AWS_COGNITO_REFRESH_TOKEN_EXPIRY` | number | ❌       | `30`    | Refresh token expiry (days)     |
+
+**IAM Role Authentication:**
+
+The application now uses AWS IAM roles instead of hardcoded credentials:
+
+- ECS tasks automatically use the task role for AWS service authentication
+- No need to manage or rotate access keys
+- Follows AWS security best practices
+- Eliminates credential storage in environment variables
 
 #### Cookie Configuration
 
@@ -121,10 +128,10 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 #### Database Configuration
 
-| Variable                      | Type   | Required | Default | Description               |
-| ----------------------------- | ------ | -------- | ------- | ------------------------- |
-| `RELATIONAL_DATABASE_URL`     | string | ✅       | -       | PostgreSQL connection URL |
-| `NON_RELATIONAL_DATABASE_URL` | string | ✅       | -       | Redis connection URL      |
+| Variable                  | Type   | Required | Default | Description                       |
+| ------------------------- | ------ | -------- | ------- | --------------------------------- |
+| `RELATIONAL_DATABASE_URL` | string | ✅       | -       | PostgreSQL connection URL         |
+| `REDIS_URL`               | string | ❌       | -       | Redis URL for rate limiting store |
 
 **Database URL Formats**:
 
@@ -133,7 +140,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 RELATIONAL_DATABASE_URL=postgresql://username:password@host:port/database
 
 # Redis
-NON_RELATIONAL_DATABASE_URL=redis://username:password@host:port/database
+REDIS_URL=redis://username:password@host:port/database
 ```
 
 #### OpenAI Configuration
@@ -183,12 +190,7 @@ const envSchema = z.object({
 	AWS_COGNITO_USER_POOL_SECRET_KEY: z
 		.string()
 		.min(1, 'AWS Cognito user pool secret key is required'),
-	AWS_COGNITO_ACCESS_KEY: z
-		.string()
-		.min(1, 'AWS Cognito access key is required'),
-	AWS_COGNITO_SECRET_KEY: z
-		.string()
-		.min(1, 'AWS Cognito secret key is required'),
+
 	AWS_COGNITO_REFRESH_TOKEN_EXPIRY: z.coerce.number().default(30),
 
 	// Cookie Settings
@@ -200,7 +202,7 @@ const envSchema = z.object({
 		.min(32, 'Cookie encryption key must be at least 32 characters'),
 
 	// Database
-	NON_RELATIONAL_DATABASE_URL: z
+	REDIS_URL: z.string().optional(),
 		.string()
 		.min(1, 'Non-relational database URL is required'),
 	RELATIONAL_DATABASE_URL: z
@@ -247,12 +249,11 @@ const config = {
 	awsCognitoUserPoolId: env.AWS_COGNITO_USER_POOL_ID,
 	awsCognitoUserPoolClientId: env.AWS_COGNITO_USER_POOL_CLIENT_ID,
 	awsCognitoUserPoolSecretKey: env.AWS_COGNITO_USER_POOL_SECRET_KEY,
-	awsCognitoAccessKey: env.AWS_COGNITO_ACCESS_KEY,
-	awsCognitoSecretKey: env.AWS_COGNITO_SECRET_KEY,
+	// AWS Cognito credentials removed - using IAM roles instead
 	awsCognitoRefreshTokenExpiry: env.AWS_COGNITO_REFRESH_TOKEN_EXPIRY,
 	cookieDomain: env.COOKIE_DOMAIN,
 	cookieEncryptionKey: env.COOKIE_ENCRYPTION_KEY,
-	nonRelationalDatabaseUrl: env.NON_RELATIONAL_DATABASE_URL,
+	redisUrl: env.REDIS_URL,
 	relationalDatabaseUrl: env.RELATIONAL_DATABASE_URL,
 	openaiApiKey: env.OPENAI_API_KEY,
 	rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
@@ -345,14 +346,13 @@ SERVER_PORT=3040
 COOKIE_DOMAIN=localhost
 COOKIE_ENCRYPTION_KEY=dev-32-character-encryption-key-here
 RELATIONAL_DATABASE_URL=postgresql://postgres:password@localhost:5432/macro_ai_dev
-NON_RELATIONAL_DATABASE_URL=redis://localhost:6379/0
+REDIS_URL=redis://localhost:6379/0
 OPENAI_API_KEY=sk-your-development-openai-key
 AWS_COGNITO_REGION=us-east-1
 AWS_COGNITO_USER_POOL_ID=us-east-1_YourPoolId
 AWS_COGNITO_USER_POOL_CLIENT_ID=YourClientId
 AWS_COGNITO_USER_POOL_SECRET_KEY=YourSecretKey
-AWS_COGNITO_ACCESS_KEY=YourAccessKey
-AWS_COGNITO_SECRET_KEY=YourSecretKey
+# AWS Cognito credentials removed - using IAM roles instead
 AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30
 
 # Client UI (.env)
@@ -360,18 +360,33 @@ VITE_API_URL=http://localhost:3040/api
 VITE_API_KEY=dev-32-character-key-for-local-development
 ```
 
-### Staging Environment 📋 PLANNED
+## 🏗️ Infrastructure Scaling Strategy
+
+Environments (staging/production) can operate at different infrastructure scales:
+
+- **Hobby Scale**: Cost-optimized for <£10/month (Neon, Upstash, Lambda)
+- **Enterprise Scale**: Production-ready for £100-300/month (RDS, ElastiCache, ECS)
+
+### Environment + Scale Matrix
+
+| Environment | Default Scale | Upgrade Path | Cost Target       |
+| ----------- | ------------- | ------------ | ----------------- |
+| staging     | hobby         | N/A          | <£5/month         |
+| production  | hobby         | enterprise   | <£10 → £300/month |
+
+### Staging Environment (Hobby Scale) 📋 PLANNED
 
 ```bash
 # Express API
 NODE_ENV=production    # Uses production for library optimizations
 APP_ENV=staging        # Application knows it's staging
+CDK_DEPLOY_SCALE=hobby # Infrastructure scale
 API_KEY=staging-unique-32-character-key-here
 SERVER_PORT=3040
 COOKIE_DOMAIN=staging.macro-ai.com
 COOKIE_ENCRYPTION_KEY=staging-32-character-encryption-key
-RELATIONAL_DATABASE_URL=postgresql://staging_user:secure_pass@staging-db:5432/macro_ai_staging?sslmode=require
-NON_RELATIONAL_DATABASE_URL=redis://staging-redis:6379/0
+RELATIONAL_DATABASE_URL=postgresql://staging_user:secure_pass@neon-staging:5432/macro_ai_staging?sslmode=require
+REDIS_URL=redis://upstash-staging:6379/0
 OPENAI_API_KEY=sk-your-staging-openai-key
 
 # Client UI
@@ -379,18 +394,41 @@ VITE_API_URL=https://api-staging.macro-ai.com/api
 VITE_API_KEY=staging-unique-32-character-key-here
 ```
 
-### Production Environment 📋 PLANNED
+### Production Environment (Hobby Scale → Enterprise Scale) 📋 PLANNED
+
+#### Production (Hobby Scale)
 
 ```bash
 # Express API
 NODE_ENV=production
 APP_ENV=production
+CDK_DEPLOY_SCALE=hobby # Cost-optimized infrastructure
 API_KEY=production-unique-32-character-key-here
 SERVER_PORT=3040
 COOKIE_DOMAIN=macro-ai.com
 COOKIE_ENCRYPTION_KEY=production-32-character-encryption-key
-RELATIONAL_DATABASE_URL=postgresql://prod_user:very_secure_pass@prod-db:5432/macro_ai_prod?sslmode=require
-NON_RELATIONAL_DATABASE_URL=redis://prod-redis:6379/0
+RELATIONAL_DATABASE_URL=postgresql://prod_user:secure_pass@neon-prod:5432/macro_ai_prod?sslmode=require
+REDIS_URL=redis://upstash-prod:6379/0
+OPENAI_API_KEY=sk-your-production-openai-key
+
+# Client UI
+VITE_API_URL=https://api.macro-ai.com/api
+VITE_API_KEY=production-unique-32-character-key-here
+```
+
+#### Production (Enterprise Scale)
+
+```bash
+# Express API
+NODE_ENV=production
+APP_ENV=production
+CDK_DEPLOY_SCALE=enterprise # Full AWS managed services
+API_KEY=production-unique-32-character-key-here
+SERVER_PORT=3040
+COOKIE_DOMAIN=macro-ai.com
+COOKIE_ENCRYPTION_KEY=production-32-character-encryption-key
+RELATIONAL_DATABASE_URL=postgresql://prod_user:very_secure_pass@rds-prod:5432/macro_ai_prod?sslmode=require
+REDIS_URL=redis://elasticache-prod:6379/0
 OPENAI_API_KEY=sk-your-production-openai-key
 
 # Client UI

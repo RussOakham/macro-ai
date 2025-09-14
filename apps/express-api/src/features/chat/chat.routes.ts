@@ -13,7 +13,6 @@ import {
 	UnauthorizedErrorSchema,
 	ValidationErrorSchema,
 } from '../../utils/swagger/openapi-registry.ts'
-
 import { chatController } from './chat.controller.ts'
 import {
 	chatListResponseSchema,
@@ -395,7 +394,7 @@ registry.registerPath({
 	security: [{ bearerAuth: [] }],
 	request: {
 		params: z.object({
-			id: z.string().uuid().openapi({ description: 'Chat ID' }),
+			id: z.uuid().openapi({ description: 'Chat ID' }),
 		}),
 		body: {
 			description: 'Message to send',

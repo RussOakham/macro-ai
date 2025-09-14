@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -446,7 +445,6 @@ describe('mockChatService Example Usage', () => {
 
 				// Create a simple async iterable for testing
 				const mockStream = {
-					// eslint-disable-next-line @typescript-eslint/require-await
 					async *[Symbol.asyncIterator]() {
 						yield 'Once upon a time...'
 						yield ' there was a helpful AI...'

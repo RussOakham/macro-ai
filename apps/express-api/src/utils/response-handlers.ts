@@ -1,6 +1,6 @@
-import { Response } from 'express'
+import type { Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
-import { z } from 'zod'
+import type { z } from 'zod'
 import { fromError } from 'zod-validation-error'
 
 import { tryCatchSync } from './error-handling/try-catch.ts'
@@ -16,7 +16,7 @@ const { logger } = pino
  * @param status HTTP status code (defaults to 200 OK)
  * @returns The Express response object for chaining
  */
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
+
 export const sendSuccess = <TData>(
 	res: Response,
 	data: TData,
@@ -29,8 +29,8 @@ export const sendSuccess = <TData>(
  * Type for service error check results
  */
 export type TServiceErrorResult =
-	| { success: true }
 	| { success: false; error: { status: number; message: string } }
+	| { success: true }
 
 /**
  * Type for AWS service response metadata
@@ -76,16 +76,12 @@ export const handleServiceError = (
 	return { success: true }
 }
 
-type TValidationResult =
-	| { valid: true }
-	| { valid: false; error: { message: string; status: number } }
-
 /**
  * Validates required data exists
  * @param condition Condition to check
  * @param errorMessage Error message if condition fails
- * @param status HTTP status code to return if condition fails
  * @param logContext Context for logging
+ * @param status HTTP status code to return if condition fails
  * @returns Object with validation result and error details if validation failed
  */
 export const validateData = (
@@ -93,7 +89,7 @@ export const validateData = (
 	errorMessage: string,
 	logContext: string,
 	status: number = StatusCodes.BAD_REQUEST,
-): TValidationResult => {
+) => {
 	if (!condition) {
 		logger.error(`[${logContext}]: ${errorMessage}`)
 		return {

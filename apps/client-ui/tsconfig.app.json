@@ -1,11 +1,11 @@
 {
 	"$schema": "http://json.schemastore.org/tsconfig",
 	"extends": "@repo/config-typescript/tsconfig-react.json",
-	"include": [
-		"src",
-		"tailwind.config.ts",
-		"postcss.config.js",
-		"vitest.config.ts"
+	"include": ["src", "tailwind.config.ts", "vitest.config.ts"],
+	"exclude": [
+		"src/test/mocks/browser.js",
+		"src/test/mocks/native.js",
+		"src/test/mocks/node.js"
 	],
 	"compilerOptions": {
 		"composite": true,
@@ -16,6 +16,7 @@
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["./src/*"]
-		}
+		},
+		"types": ["vitest/globals", "@testing-library/jest-dom", "vite/client"]
 	}
 }

@@ -4,6 +4,7 @@
 node_modules
 .pnp
 .pnp.js
+.pnpm-store
 
 # Local env files
 .env
@@ -14,6 +15,12 @@ node_modules
 
 # Testing
 coverage
+tests/integration/results/
+tests/integration/tests/integration/results/
+**/integration-test-results.json
+
+# Auto-generated MSW mocks
+**/src/test/mocks/
 
 # Turbo
 .turbo/
@@ -30,6 +37,13 @@ dist-ssr
 server/dist
 public/dist
 
+# Deployment Artifacts
+*.tar.gz
+*.tar
+**/deployment-package/
+**/express-api-deployment.tar.gz
+deployment-artifacts/
+
 
 # Debug
 npm-debug.log*
@@ -41,7 +55,25 @@ yarn-error.log*
 *.pem
 .cache
 .eslintcache
+*.tsbuildinfo
 
 # IDE
 .idea
 .vscode
+.secrets
+
+# Act local testing configuration
+.act/secrets
+
+# Auto-generated API client code
+packages/macro-ai-api-client/src/client
+
+# Security Scanning Tools
+.tools/
+.codeql/
+codeql-db/
+codeql-security-report.json
+scripts/octoscan
+
+# Personal tmux configuration (user-specific)
+~/.config/tmux/

@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  express-api:
+    container_name: macro-ai-express-api
+    build:
+      context: .
+      dockerfile: ./apps/express-api/Dockerfile.distroless
+      target: ecs-runner
+      cache_from:
+        - macro-ai-express-api:cache
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+        - BUILD_ENV=development
+        - BUILD_VERSION=dev
+    environment:
+      - DOCKER_BUILDKIT=1
+    restart: always
+    ports:
+      - 3040:3040
+    networks:
+      - app_network
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          require('http').get('http://localhost:3040/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+# Define a network, which allows containers to communicate
+# with each other, by using their container name as a hostname
+networks:
+  app_network:

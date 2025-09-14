@@ -1,20 +1,24 @@
 {
 	"$schema": "http://json.schemastore.org/tsconfig",
+	"extends": "@repo/config-typescript/tsconfig-react.json",
+	"include": ["src", "tailwind.config.ts", "vitest.config.ts"],
 	"exclude": [
 		"./dist",
 		"node_modules",
 		"coverage",
 		"eslint.config.js",
-		"tsconfig.json"
-	],
-	"references": [
-		{ "path": "./tsconfig.app.json" },
-		{ "path": "./tsconfig.node.json" }
+		"tsconfig.json",
+		"src/test/mocks/browser.js",
+		"src/test/mocks/native.js",
+		"src/test/mocks/node.js"
 	],
 	"compilerOptions": {
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["./src/*"]
-		}
+		},
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"types": ["vitest/globals", "@testing-library/jest-dom", "vite/client"]
 	}
 }

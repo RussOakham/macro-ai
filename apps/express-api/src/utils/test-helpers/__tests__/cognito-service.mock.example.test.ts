@@ -1,12 +1,14 @@
-import {
+/* eslint-disable no-underscore-dangle */
+
+import type {
 	CognitoIdentityProviderClient,
-	GetUserCommand,
 	GetUserCommandOutput,
 } from '@aws-sdk/client-cognito-identity-provider'
-import { AwsClientStub } from 'aws-sdk-client-mock'
+import { GetUserCommand } from '@aws-sdk/client-cognito-identity-provider'
+import type { AwsClientStub } from 'aws-sdk-client-mock'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Result } from '../../../utils/errors.ts'
+import type { Result } from '../../errors.ts'
 import { mockCognitoService } from '../cognito-service.mock.ts'
 import { mockConfig } from '../config.mock.ts'
 
@@ -16,7 +18,7 @@ import { mockConfig } from '../config.mock.ts'
  */
 
 // Mock the config using the reusable helper
-vi.mock('../../../config/default.ts', () => mockConfig.createModule())
+vi.mock('../../../utils/load-config.ts', () => mockConfig.createModule())
 
 describe('CognitoService Mock Example - AWS SDK Client Mock', () => {
 	let cognitoMock: AwsClientStub<CognitoIdentityProviderClient>

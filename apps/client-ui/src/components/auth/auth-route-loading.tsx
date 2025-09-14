@@ -8,15 +8,16 @@ import { AuthLoading } from './auth-loading'
  * - Initial authentication validation
  * - Token refresh processes
  * - Route transitions with authentication checks
+ * @returns React component for full-screen authentication loading
  */
 const AuthRouteLoading: React.FC = () => {
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-background">
 			<AuthLoading
-				message="Verifying authentication..."
-				showIcon={true}
-				size="lg"
 				className="min-h-[50vh]"
+				message="Verifying authentication..."
+				showIcon
+				size="lg"
 			/>
 		</div>
 	)

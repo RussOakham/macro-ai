@@ -34,7 +34,7 @@ Client Component → useEnhancedChat → useChat (AI SDK) → API Endpoint
 **Purpose**: Wraps `@ai-sdk/react` `useChat` with TanStack Query integration for optimal state management.
 
 ```typescript
-import { useChat } from 'ai/react'
+import { useChat } from '@ai-sdk/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { tryCatch } from '@/lib/utils/error-handling/try-catch'
 
@@ -190,51 +190,48 @@ export function tryCatchSync<T>(fn: () => T, context: string): Result<T> {
 
 ```typescript
 export function ChatInterface({ chatId }: { chatId: string }) {
-  const { data: chat, isLoading: isChatLoading } = useChatById(chatId)
-  const {
-    messages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    isLoading: isStreaming,
-    status,
-  } = useEnhancedChat(chatId)
+	const { data: chat, isLoading: isChatLoading } = useChatById(chatId)
+	const {
+		messages,
+		input,
+		handleInputChange,
+		handleSubmit,
+		isLoading: isStreaming,
+		status,
+	} = useEnhancedChat(chatId)
 
-  // Initialize with existing messages
-  const initialMessages = chat?.messages || []
+	return (
+		<div className="flex flex-col h-full">
+			{/* Chat header */}
+			<div className="flex-shrink-0 border-b border-border bg-background">
+				<div className="max-w-4xl mx-auto p-4">
+					<h1 className="text-xl font-semibold">
+						{chat?.title || 'Loading...'}
+					</h1>
+				</div>
+			</div>
 
-  return (
-    <div className="flex flex-col h-full">
-      {/* Chat header */}
-      <div className="flex-shrink-0 border-b border-border bg-background">
-        <div className="max-w-4xl mx-auto p-4">
-          <h1 className="text-xl font-semibold">
-            {chat?.title || 'Loading...'}
-          </h1>
-        </div>
-      </div>
+			{/* Messages area */}
+			<div className="flex-1 overflow-y-auto min-h-0">
+				{messages.map((message) => (
+					<MessageComponent key={message.id} message={message} />
+				))}
 
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto min-h-0">
-        {messages.map((message) => (
-          <MessageComponent key={message.id} message={message} />
-        ))}
+				{/* Loading state indicator */}
+				{status === 'submitted' && <LoadingIndicator />}
+			</div>
 
-        {/* Loading state indicator */}
-        {status === 'submitted' && <LoadingIndicator />}
-      </div>
-
-      {/* Input area */}
-      <div className="flex-shrink-0 border-t border-border bg-background">
-        <ChatInput
-          input={input}
-          handleInputChange={handleInputChange}
-          handleSubmit={handleSubmit}
-          isStreaming={isStreaming}
-        />
-      </div>
-    </div>
-  )
+			{/* Input area */}
+			<div className="flex-shrink-0 border-t border-border bg-background">
+				<ChatInput
+					input={input}
+					handleInputChange={handleInputChange}
+					handleSubmit={handleSubmit}
+					isStreaming={isStreaming}
+				/>
+			</div>
+		</div>
+	)
 }
 ```
 
@@ -307,27 +304,29 @@ function LoadingIndicator() {
 
 ```typescript
 export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
-  return (
-    <>
-      {/* Mobile backdrop */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={onClose}
-        />
-      )}
+	return (
+		<>
+			{/* Mobile backdrop */}
+			{isOpen && (
+				<div
+					className="fixed inset-0 bg-black/50 z-40 md:hidden"
+					onClick={onClose}
+				/>
+			)}
 
-      {/* Sidebar */}
-      <div className={cn(
-        "fixed left-0 top-0 h-full w-80 bg-background border-r border-border z-50",
-        "transform transition-transform duration-300 ease-in-out",
-        "md:relative md:translate-x-0 md:z-auto",
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        <ChatList onChatSelect={onClose} />
-      </div>
-    </>
-  )
+			{/* Sidebar */}
+			<div
+				className={cn(
+					'fixed left-0 top-0 h-full w-80 bg-background border-r border-border z-50',
+					'transform transition-transform duration-300 ease-in-out',
+					'md:relative md:translate-x-0 md:z-auto',
+					isOpen ? 'translate-x-0' : '-translate-x-full',
+				)}
+			>
+				<ChatList onChatSelect={onClose} />
+			</div>
+		</>
+	)
 }
 ```
 
@@ -437,14 +436,12 @@ const { messages, input, handleInputChange, handleSubmit } = useChat({
 ### Performance Benefits
 
 1. **Streaming Performance**:
-
    - ✅ Preserved real-time streaming with no degradation
    - ✅ < 100ms initial response time
    - ✅ Efficient memory usage during streaming
    - ✅ Optimized protocol for reduced parsing overhead
 
 2. **State Management**:
-
    - ✅ Intelligent caching with TanStack Query
    - ✅ Optimistic updates for immediate feedback
    - ✅ Automatic cache invalidation and synchronization
@@ -459,7 +456,6 @@ const { messages, input, handleInputChange, handleSubmit } = useChat({
 ### Developer Experience Benefits
 
 1. **Code Quality**:
-
    - ✅ Go-style error handling consistency
    - ✅ Type-safe operations with TypeScript
    - ✅ Reusable hooks and components

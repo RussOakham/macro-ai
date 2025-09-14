@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { mockErrorHandling } from '../error-handling.mock.ts'
@@ -15,7 +14,7 @@ vi.mock('../../error-handling/try-catch.ts', () =>
 
 // Import after mocking
 import { tryCatch, tryCatchSync } from '../../error-handling/try-catch.ts'
-import { AppError, Result } from '../../errors.ts'
+import { AppError, type Result } from '../../errors.ts'
 
 // Example service that uses error handling utilities
 class ExampleService {
@@ -37,6 +36,7 @@ class ExampleService {
 		)
 	}
 
+	// eslint-disable-next-line class-methods-use-this
 	private async simulateApiCall(
 		userId: string,
 	): Promise<{ id: string; name: string }> {
@@ -47,6 +47,7 @@ class ExampleService {
 		return Promise.resolve({ id: userId, name: 'John Doe' })
 	}
 
+	// eslint-disable-next-line class-methods-use-this
 	private simulateConfigParsing(configString: string): {
 		theme: string
 		language: string

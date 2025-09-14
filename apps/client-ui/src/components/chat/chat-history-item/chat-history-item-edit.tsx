@@ -1,27 +1,27 @@
-import { useTransition } from 'react'
 import { Check, Loader2, X } from 'lucide-react'
+import { useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { logger } from '@/lib/logger/logger'
-import { ChatWithDates } from '@/lib/types'
-import { useUpdateChatMutation } from '@/services/hooks/chat/useUpdateChatMutation'
+import { type ChatWithDates } from '@/lib/types'
+import { useUpdateChatMutation } from '@/services/hooks/chat/use-update-chat-mutation'
 
 interface ChatHistoryItemEditProps {
 	chat: ChatWithDates
-	isPending: boolean
+	editingChatId: null | string
 	editTitle: string
-	editingChatId: string | null
-	setEditingChatId: (chatId: string | null) => void
+	isPending: boolean
+	setEditingChatId: (chatId: null | string) => void
 	setEditTitle: (title: string) => void
 }
 
 const ChatHistoryItemEdit = ({
 	chat,
-	isPending,
-	editTitle,
 	editingChatId,
+	editTitle,
+	isPending,
 	setEditingChatId,
 	setEditTitle,
 }: ChatHistoryItemEditProps) => {
@@ -36,7 +36,9 @@ const ChatHistoryItemEdit = ({
 	}
 
 	const saveEdit = () => {
-		if (!editingChatId || !editTitle.trim() || isPendingInternal) return
+		if (!editingChatId || !editTitle.trim() || isPendingInternal) {
+			return
+		}
 
 		const trimmedTitle = editTitle.trim()
 
@@ -54,10 +56,13 @@ const ChatHistoryItemEdit = ({
 					title: trimmedTitle,
 				})
 
-				logger.info('[ChatSidebar]: Chat updated successfully', {
-					chatId: editingChatId,
-					newTitle: trimmedTitle,
-				})
+				logger.info(
+					{
+						chatId: editingChatId,
+						newTitle: trimmedTitle,
+					},
+					'[ChatSidebar]: Chat updated successfully',
+				)
 
 				toast.success('Chat title updated successfully!')
 
@@ -65,11 +70,14 @@ const ChatHistoryItemEdit = ({
 				setEditingChatId(null)
 				setEditTitle('')
 			} catch (error: unknown) {
-				logger.error('[ChatSidebar]: Error updating chat', {
-					chatId: editingChatId,
-					newTitle: trimmedTitle,
-					error: error instanceof Error ? error.message : 'Unknown error',
-				})
+				logger.error(
+					{
+						chatId: editingChatId,
+						error: error instanceof Error ? error.message : 'Unknown error',
+						newTitle: trimmedTitle,
+					},
+					'[ChatSidebar]: Error updating chat',
+				)
 
 				toast.error('Failed to update chat title. Please try again.')
 				// Keep editing state active on error so user can retry
@@ -80,12 +88,11 @@ const ChatHistoryItemEdit = ({
 	return (
 		<div className="flex items-center gap-2">
 			<Input
-				value={editTitle}
+				className="h-8 text-sm disabled:opacity-50"
+				disabled={isPending}
 				onChange={(e) => {
 					setEditTitle(e.target.value)
 				}}
-				disabled={isPending}
-				className="h-8 text-sm disabled:opacity-50"
 				onKeyDown={(e) => {
 					if (e.key === 'Enter') {
 						saveEdit()
@@ -94,16 +101,16 @@ const ChatHistoryItemEdit = ({
 						cancelEdit()
 					}
 				}}
-				autoFocus
+				value={editTitle}
 			/>
 			<Button
-				size="sm"
-				variant="ghost"
+				className="h-6 w-6 p-0 text-green-500 hover:text-green-600 disabled:opacity-50"
+				disabled={isPending}
 				onClick={() => {
 					saveEdit()
 				}}
-				disabled={isPending}
-				className="h-6 w-6 p-0 text-green-500 hover:text-green-600 disabled:opacity-50"
+				size="sm"
+				variant="ghost"
 			>
 				{isPending ? (
 					<Loader2 className="h-3 w-3 animate-spin" />
@@ -112,11 +119,11 @@ const ChatHistoryItemEdit = ({
 				)}
 			</Button>
 			<Button
+				className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
+				disabled={isPending}
+				onClick={cancelEdit}
 				size="sm"
 				variant="ghost"
-				onClick={cancelEdit}
-				disabled={isPending}
-				className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
 			>
 				<X className="h-3 w-3" />
 			</Button>

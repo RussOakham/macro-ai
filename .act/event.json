@@ -1,0 +1,25 @@
+{
+	"pull_request": {
+		"number": 31,
+		"title": "Improve testing setup",
+		"head": {
+			"ref": "feature/improve-testing-setup",
+			"sha": "1234567890abcdef"
+		},
+		"base": {
+			"ref": "main",
+			"sha": "abcdef1234567890"
+		}
+	},
+	"repository": {
+		"name": "macro-ai",
+		"owner": {
+			"login": "RussOakham"
+		},
+		"full_name": "RussOakham/macro-ai"
+	},
+	"ref": "refs/heads/feature/improve-testing-setup",
+	"head_ref": "feature/improve-testing-setup",
+	"base_ref": "main",
+	"sha": "1234567890abcdef"
+}

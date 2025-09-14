@@ -1,12 +1,12 @@
 import { AlertCircle, Loader2, MessageSquare } from 'lucide-react'
+import { useMemo } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { ChatWithDates } from '@/lib/types'
-import { formatRelativeDate } from '@/lib/utils/datetime/formatRelativeDate'
-import { useChats } from '@/services/hooks/chat/useChats'
+import { type ChatWithDates } from '@/lib/types'
+import { formatRelativeDate } from '@/lib/utils/datetime/format-relative-date'
+import { useChats } from '@/services/hooks/chat/use-chats'
 
 import { ChatHistoryDateGroup } from '../chat-history-date-group/chat-history-date-group'
-
 import { ChatHistoryListItem } from './chat-history-list-item'
 
 interface ChatHistoryListProps {
@@ -15,34 +15,36 @@ interface ChatHistoryListProps {
 }
 
 const ChatHistoryList = ({
-	isPending: isPending,
+	isPending,
 	onMobileClose,
 }: ChatHistoryListProps) => {
 	const {
 		data: chatsResponse,
-		isLoading: isChatsLoading,
-		isError: isChatsError,
 		error: chatsError,
+		isError: isChatsError,
+		isLoading: isChatsLoading,
 		refetch: refetchChats,
-	} = useChats({ page: 1, limit: 100 }) // Get first 100 chats
+	} = useChats({ limit: 100, page: 1 }) // Get first 100 chats
 
 	// Extract chats from response
-	const chats = chatsResponse?.success ? chatsResponse.data : []
+	const chats = useMemo(
+		() => (chatsResponse?.success ? chatsResponse.data : []),
+		[chatsResponse],
+	)
 
 	const handleRetry = () => {
 		void refetchChats()
 	}
 
 	// Group chats by date
-	const groupedChats = chats.reduce<Record<string, ChatWithDates[]>>(
-		(groups, chat) => {
+	const groupedChats = useMemo(() => {
+		return chats.reduce<Record<string, ChatWithDates[]>>((groups, chat) => {
 			const dateKey = formatRelativeDate(chat.updatedAt)
 			groups[dateKey] ??= []
 			groups[dateKey].push(chat)
 			return groups
-		},
-		{},
-	)
+		}, {})
+	}, [chats])
 
 	if (isChatsLoading) {
 		return (
@@ -69,10 +71,10 @@ const ChatHistoryList = ({
 							: 'An error occurred'}
 					</p>
 					<Button
+						className="text-xs"
 						onClick={handleRetry}
 						size="sm"
 						variant="outline"
-						className="text-xs"
 					>
 						Retry
 					</Button>
@@ -98,12 +100,12 @@ const ChatHistoryList = ({
 	return (
 		<>
 			{Object.entries(groupedChats).map(([dateGroup, chatsInGroup]) => (
-				<ChatHistoryDateGroup key={dateGroup} dateGroup={dateGroup}>
+				<ChatHistoryDateGroup dateGroup={dateGroup} key={dateGroup}>
 					{chatsInGroup.map((chat) => (
 						<ChatHistoryListItem
-							key={chat.id}
 							chat={chat}
 							isPending={isPending}
+							key={chat.id}
 							onMobileClose={onMobileClose}
 						/>
 					))}

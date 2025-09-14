@@ -22,48 +22,43 @@ describe('UtilityService', () => {
 	})
 
 	describe('getHealthStatus', () => {
-		it('should return health status successfully', () => {
-			// Arrange
-			const mockHealthStatus = {
-				message: 'Api Health Status: OK',
-				timestamp: '2023-01-01T00:00:00.000Z',
-				uptime: 100,
-				memoryUsageMB: 50,
-			}
+		describe.each([
+			[
+				'successful health check',
+				{
+					message: 'Api Health Status: OK',
+					timestamp: '2023-01-01T00:00:00.000Z',
+					uptime: 100,
+					memoryUsageMB: 50,
+				},
+				null,
+			],
+			[
+				'health check error',
+				null,
+				mockErrorHandling.errors.internal('Health check failed', 'test'),
+			],
+		])('should handle %s', (scenario, expectedResult, expectedError) => {
+			it(`should ${scenario}`, () => {
+				// Arrange
+				if (expectedError) {
+					vi.mocked(tryCatchSync).mockReturnValue(
+						mockErrorHandling.errorResult(expectedError),
+					)
+				} else {
+					vi.mocked(tryCatchSync).mockReturnValue(
+						mockErrorHandling.successResult(expectedResult),
+					)
+				}
 
-			// Mock tryCatchSync to return successful result
-			vi.mocked(tryCatchSync).mockReturnValue(
-				mockErrorHandling.successResult(mockHealthStatus),
-			)
+				// Act
+				const [result, error] = utilityService.getHealthStatus()
 
-			// Act
-			const [result, error] = utilityService.getHealthStatus()
-
-			// Assert
-			expect(tryCatchSync).toHaveBeenCalledOnce()
-			expect(result).toEqual(mockHealthStatus)
-			expect(error).toBeNull()
-		})
-
-		it('should handle error in health check', () => {
-			// Arrange
-			const mockError = mockErrorHandling.errors.internal(
-				'Health check failed',
-				'test',
-			)
-
-			// Mock tryCatchSync to return error
-			vi.mocked(tryCatchSync).mockReturnValue(
-				mockErrorHandling.errorResult(mockError),
-			)
-
-			// Act
-			const [result, error] = utilityService.getHealthStatus()
-
-			// Assert
-			expect(tryCatchSync).toHaveBeenCalledOnce()
-			expect(result).toBeNull()
-			expect(error).toEqual(mockError)
+				// Assert
+				expect(tryCatchSync).toHaveBeenCalledOnce()
+				expect(result).toEqual(expectedResult)
+				expect(error).toEqual(expectedError)
+			})
 		})
 
 		it('should handle invalid uptime error', () => {
@@ -90,59 +85,215 @@ describe('UtilityService', () => {
 	})
 
 	describe('getSystemInfo', () => {
-		it('should return system info successfully', () => {
-			// Arrange
-			const mockSystemInfo = {
-				nodeVersion: 'v18.0.0',
-				platform: 'linux',
-				architecture: 'x64',
-				uptime: 100,
-				memoryUsage: {
-					rss: 50,
-					heapTotal: 30,
-					heapUsed: 20,
-					external: 5,
+		describe.each([
+			[
+				'successful system info retrieval',
+				{
+					nodeVersion: 'v18.0.0',
+					platform: 'linux',
+					architecture: 'x64',
+					uptime: 100,
+					memoryUsage: {
+						rss: 50,
+						heapTotal: 30,
+						heapUsed: 20,
+						external: 5,
+					},
+					cpuUsage: {
+						user: 1000,
+						system: 500,
+					},
+					timestamp: '2023-01-01T00:00:00.000Z',
 				},
-				cpuUsage: {
-					user: 1000,
-					system: 500,
-				},
-				timestamp: '2023-01-01T00:00:00.000Z',
-			}
+				null,
+			],
+			[
+				'system info error',
+				null,
+				mockErrorHandling.errors.internal('System info failed', 'test'),
+			],
+		])('should handle %s', (scenario, expectedResult, expectedError) => {
+			it(`should ${scenario}`, () => {
+				// Arrange
+				if (expectedError) {
+					vi.mocked(tryCatchSync).mockReturnValue(
+						mockErrorHandling.errorResult(expectedError),
+					)
+				} else {
+					vi.mocked(tryCatchSync).mockReturnValue(
+						mockErrorHandling.successResult(expectedResult),
+					)
+				}
 
-			// Mock tryCatchSync to return successful result
+				// Act
+				const [result, error] = utilityService.getSystemInfo()
+
+				// Assert
+				expect(tryCatchSync).toHaveBeenCalledOnce()
+				expect(result).toEqual(expectedResult)
+				expect(error).toEqual(expectedError)
+			})
+		})
+	})
+
+	describe('getPublicReadinessStatus', () => {
+		it('should return ready status when database and configuration are ready', () => {
+			// Arrange
 			vi.mocked(tryCatchSync).mockReturnValue(
-				mockErrorHandling.successResult(mockSystemInfo),
+				mockErrorHandling.successResult({
+					ready: true,
+					message: 'Application is ready to receive traffic',
+					timestamp: '2023-01-01T00:00:00.000Z',
+					checks: {
+						database: true,
+						configuration: true,
+					},
+				}),
 			)
 
 			// Act
-			const [result, error] = utilityService.getSystemInfo()
+			const [result, error] = utilityService.getPublicReadinessStatus()
 
 			// Assert
 			expect(tryCatchSync).toHaveBeenCalledOnce()
-			expect(result).toEqual(mockSystemInfo)
+			expect(result).toEqual({
+				ready: true,
+				message: 'Application is ready to receive traffic',
+				timestamp: '2023-01-01T00:00:00.000Z',
+				checks: {
+					database: true,
+					configuration: true,
+				},
+			})
 			expect(error).toBeNull()
 		})
 
-		it('should handle error in system info retrieval', () => {
+		it('should return not ready status when database is not ready', () => {
 			// Arrange
-			const mockError = mockErrorHandling.errors.internal(
-				'System info failed',
-				'test',
-			)
-
-			// Mock tryCatchSync to return error
 			vi.mocked(tryCatchSync).mockReturnValue(
-				mockErrorHandling.errorResult(mockError),
+				mockErrorHandling.successResult({
+					ready: false,
+					message: 'Application is not ready to receive traffic',
+					timestamp: '2023-01-01T00:00:00.000Z',
+					checks: {
+						database: false,
+						configuration: true,
+					},
+				}),
 			)
 
 			// Act
-			const [result, error] = utilityService.getSystemInfo()
+			const [result, error] = utilityService.getPublicReadinessStatus()
 
 			// Assert
-			expect(tryCatchSync).toHaveBeenCalledOnce()
+			expect(result?.ready).toBe(false)
+			expect(result?.message).toContain('not ready')
+			expect(error).toBeNull()
+		})
+
+		it('should handle errors during readiness check', () => {
+			// Arrange
+			const serviceError = mockErrorHandling.errors.internal(
+				'Readiness check failed',
+				'test',
+			)
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.errorResult(serviceError),
+			)
+
+			// Act
+			const [result, error] = utilityService.getPublicReadinessStatus()
+
+			// Assert
 			expect(result).toBeNull()
-			expect(error).toEqual(mockError)
+			expect(error).toEqual(serviceError)
+		})
+	})
+
+	describe('getDetailedHealthStatus', () => {
+		it('should return healthy status when all checks pass', () => {
+			// Arrange
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult({
+					status: 'healthy',
+					message: 'All systems operational',
+					timestamp: '2023-01-01T00:00:00.000Z',
+					checks: {
+						database: { status: 'healthy', responseTime: 10 },
+						memory: { status: 'healthy', usagePercent: 50 },
+						disk: { status: 'healthy' },
+						dependencies: {
+							status: 'healthy',
+							services: [{ name: 'API', status: 'healthy' }],
+						},
+						configuration: {
+							status: 'healthy',
+							critical: { ready: true, missing: [] },
+							important: { ready: true, missing: [] },
+							optional: { ready: true, missing: [] },
+						},
+					},
+				}),
+			)
+
+			// Act
+			const [result, error] = utilityService.getDetailedHealthStatus()
+
+			// Assert
+			expect(result?.status).toBe('healthy')
+			expect(result?.message).toBe('All systems operational')
+			expect(error).toBeNull()
+		})
+
+		it('should return degraded status when some checks fail', () => {
+			// Arrange
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.successResult({
+					status: 'degraded',
+					message: 'Some systems experiencing issues',
+					timestamp: '2023-01-01T00:00:00.000Z',
+					checks: {
+						database: { status: 'healthy', responseTime: 10 },
+						memory: { status: 'healthy', usagePercent: 50 },
+						disk: { status: 'healthy' },
+						dependencies: {
+							status: 'unhealthy',
+							services: [{ name: 'API', status: 'unhealthy' }],
+						},
+						configuration: {
+							status: 'healthy',
+							critical: { ready: true, missing: [] },
+							important: { ready: true, missing: [] },
+							optional: { ready: true, missing: [] },
+						},
+					},
+				}),
+			)
+
+			// Act
+			const [result, error] = utilityService.getDetailedHealthStatus()
+
+			// Assert
+			expect(result?.status).toBe('degraded')
+			expect(error).toBeNull()
+		})
+
+		it('should handle errors during detailed health check', () => {
+			// Arrange
+			const serviceError = mockErrorHandling.errors.internal(
+				'Health check failed',
+				'test',
+			)
+			vi.mocked(tryCatchSync).mockReturnValue(
+				mockErrorHandling.errorResult(serviceError),
+			)
+
+			// Act
+			const [result, error] = utilityService.getDetailedHealthStatus()
+
+			// Assert
+			expect(result).toBeNull()
+			expect(error).toEqual(serviceError)
 		})
 	})
 })

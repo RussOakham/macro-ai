@@ -1,4 +1,4 @@
-import { Response } from 'express'
+import { type Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
@@ -14,8 +14,8 @@ import {
 	validateData,
 	validateSchema,
 } from '../response-handlers.ts'
+import { createMockExpressObjects } from '../test-helpers/enhanced-mocks.ts'
 import { mockErrorHandling } from '../test-helpers/error-handling.mock.ts'
-import { mockExpress } from '../test-helpers/express-mocks.ts'
 import { mockLogger } from '../test-helpers/logger.mock.ts'
 
 // Mock dependencies
@@ -43,139 +43,64 @@ describe('response-handlers.ts', () => {
 	const mockLoggerInstance = vi.mocked(pino.logger)
 
 	beforeEach(() => {
-		vi.clearAllMocks()
 		vi.resetModules()
 
-		// Setup logger mock for consistent test environment
+		// Setup logger mock for consistent test environment (includes vi.clearAllMocks())
 		mockLogger.setup()
 	})
 
 	describe('sendSuccess function', () => {
-		let mockResponse: Partial<Response>
+		let mockResponse: Response
 
 		beforeEach(() => {
-			const mocks = mockExpress.setup()
-			mockResponse = mocks.res
-			mockResponse.status = vi.fn().mockReturnValue(mockResponse)
-			mockResponse.json = vi.fn().mockReturnValue(mockResponse)
+			vi.clearAllMocks()
+			const { res } = createMockExpressObjects()
+			mockResponse = res
 		})
 
 		describe('successful responses', () => {
-			it('should send success response with default status 200', () => {
-				const testData = { message: 'Success', id: 123 }
+			describe.each([
+				['object data', { message: 'Success', id: 123 }, StatusCodes.OK],
+				['null data', null, StatusCodes.OK],
+				['undefined data', undefined, StatusCodes.OK],
+				['empty object data', {}, StatusCodes.OK],
+				['array data', [{ id: 1 }, { id: 2 }, { id: 3 }], StatusCodes.OK],
+				['string data', 'Simple string response', StatusCodes.OK],
+				['number data', 42, StatusCodes.OK],
+				['boolean data', true, StatusCodes.OK],
+			])('should handle %s', (dataType, testData, expectedStatus) => {
+				it(`should send success response with ${dataType}`, () => {
+					const result = sendSuccess(mockResponse, testData)
 
-				const result = sendSuccess(mockResponse as Response, testData)
-
-				expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
-				expect(mockResponse.json).toHaveBeenCalledWith(testData)
-				expect(result).toBe(mockResponse)
+					expect(mockResponse.status).toHaveBeenCalledWith(expectedStatus)
+					expect(mockResponse.json).toHaveBeenCalledWith(testData)
+					expect(result).toBe(mockResponse)
+				})
 			})
 
 			it('should send success response with custom status code', () => {
 				const testData = { created: true, id: 456 }
 				const customStatus = StatusCodes.CREATED
 
-				const result = sendSuccess(
-					mockResponse as Response,
-					testData,
-					customStatus,
-				)
+				const result = sendSuccess(mockResponse, testData, customStatus)
 
 				expect(mockResponse.status).toHaveBeenCalledWith(customStatus)
-				expect(mockResponse.json).toHaveBeenCalledWith(testData)
-				expect(result).toBe(mockResponse)
-			})
-
-			it('should handle null data', () => {
-				const result = sendSuccess(mockResponse as Response, null)
-
-				expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
-				expect(mockResponse.json).toHaveBeenCalledWith(null)
-				expect(result).toBe(mockResponse)
-			})
-
-			it('should handle undefined data', () => {
-				const result = sendSuccess(mockResponse as Response, undefined)
-
-				expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
-				expect(mockResponse.json).toHaveBeenCalledWith(undefined)
-				expect(result).toBe(mockResponse)
-			})
-
-			it('should handle empty object data', () => {
-				const testData = {}
-
-				const result = sendSuccess(mockResponse as Response, testData)
-
-				expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
-				expect(mockResponse.json).toHaveBeenCalledWith(testData)
-				expect(result).toBe(mockResponse)
-			})
-
-			it('should handle array data', () => {
-				const testData = [{ id: 1 }, { id: 2 }, { id: 3 }]
-
-				const result = sendSuccess(mockResponse as Response, testData)
-
-				expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
-				expect(mockResponse.json).toHaveBeenCalledWith(testData)
-				expect(result).toBe(mockResponse)
-			})
-
-			it('should handle string data', () => {
-				const testData = 'Simple string response'
-
-				const result = sendSuccess(mockResponse as Response, testData)
-
-				expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
-				expect(mockResponse.json).toHaveBeenCalledWith(testData)
-				expect(result).toBe(mockResponse)
-			})
-
-			it('should handle number data', () => {
-				const testData = 42
-
-				const result = sendSuccess(mockResponse as Response, testData)
-
-				expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
-				expect(mockResponse.json).toHaveBeenCalledWith(testData)
-				expect(result).toBe(mockResponse)
-			})
-
-			it('should handle boolean data', () => {
-				const testData = true
-
-				const result = sendSuccess(mockResponse as Response, testData)
-
-				expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
 				expect(mockResponse.json).toHaveBeenCalledWith(testData)
 				expect(result).toBe(mockResponse)
 			})
 		})
 
 		describe('status code variations', () => {
-			it('should handle 201 Created status', () => {
-				const testData = { created: true }
+			describe.each([
+				['201 Created', { created: true }, StatusCodes.CREATED],
+				['202 Accepted', { accepted: true }, StatusCodes.ACCEPTED],
+				['204 No Content', null, StatusCodes.NO_CONTENT],
+			])('should handle %s', (statusName, testData, statusCode) => {
+				it(`should handle ${statusName} status`, () => {
+					sendSuccess(mockResponse, testData, statusCode)
 
-				sendSuccess(mockResponse as Response, testData, StatusCodes.CREATED)
-
-				expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.CREATED)
-			})
-
-			it('should handle 202 Accepted status', () => {
-				const testData = { accepted: true }
-
-				sendSuccess(mockResponse as Response, testData, StatusCodes.ACCEPTED)
-
-				expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.ACCEPTED)
-			})
-
-			it('should handle 204 No Content status', () => {
-				const testData = null
-
-				sendSuccess(mockResponse as Response, testData, StatusCodes.NO_CONTENT)
-
-				expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.NO_CONTENT)
+					expect(mockResponse.status).toHaveBeenCalledWith(statusCode)
+				})
 			})
 		})
 
@@ -183,7 +108,7 @@ describe('response-handlers.ts', () => {
 			it('should return the response object for method chaining', () => {
 				const testData = { test: 'data' }
 
-				const result = sendSuccess(mockResponse as Response, testData)
+				const result = sendSuccess(mockResponse, testData)
 
 				expect(result).toBe(mockResponse)
 				// Verify that the response object can be chained
@@ -198,240 +123,112 @@ describe('response-handlers.ts', () => {
 		const mockLogContext = 'TestService'
 
 		describe('successful service responses', () => {
-			it('should return success for 200 status code', () => {
-				const response: TAwsServiceMetadata = {
-					$metadata: {
-						httpStatusCode: 200,
-						requestId: 'test-request-id',
-					},
-				}
+			describe.each([
+				[
+					'200 status code',
+					{ $metadata: { httpStatusCode: 200, requestId: 'test-request-id' } },
+				],
+				[
+					'undefined httpStatusCode',
+					{ $metadata: { requestId: 'test-request-id' } },
+				],
+				['undefined $metadata', {}],
+			])('should return success for %s', (scenario, response) => {
+				it(`should return success for ${scenario}`, () => {
+					const result = handleServiceError(
+						response as TAwsServiceMetadata,
+						mockErrorMessage,
+						mockLogContext,
+					)
 
-				const result = handleServiceError(
-					response,
-					mockErrorMessage,
-					mockLogContext,
-				)
-
-				expect(result).toEqual({ success: true })
-				expect(mockLoggerInstance.error).not.toHaveBeenCalled()
-			})
-
-			it('should return success when httpStatusCode is undefined', () => {
-				const response: TAwsServiceMetadata = {
-					$metadata: {
-						requestId: 'test-request-id',
-					},
-				}
-
-				const result = handleServiceError(
-					response,
-					mockErrorMessage,
-					mockLogContext,
-				)
-
-				expect(result).toEqual({ success: true })
-				expect(mockLoggerInstance.error).not.toHaveBeenCalled()
-			})
-
-			it('should return success when $metadata is undefined', () => {
-				const response: TAwsServiceMetadata = {}
-
-				const result = handleServiceError(
-					response,
-					mockErrorMessage,
-					mockLogContext,
-				)
-
-				expect(result).toEqual({ success: true })
-				expect(mockLoggerInstance.error).not.toHaveBeenCalled()
+					expect(result).toEqual({ success: true })
+					expect(mockLoggerInstance.error).not.toHaveBeenCalled()
+				})
 			})
 		})
 
 		describe('error service responses', () => {
-			it('should return error for 400 status code', () => {
-				const response: TAwsServiceMetadata = {
-					$metadata: {
-						httpStatusCode: 400,
-						requestId: 'test-request-id',
-					},
-				}
+			describe.each([
+				[400, '400 status code'],
+				[401, '401 status code'],
+				[403, '403 status code'],
+				[404, '404 status code'],
+				[500, '500 status code'],
+			])('should return error for %s', (statusCode, scenario) => {
+				it(`should return error for ${scenario}`, () => {
+					const response: TAwsServiceMetadata = {
+						$metadata: {
+							httpStatusCode: statusCode,
+							requestId: 'test-request-id',
+						},
+					}
 
-				const result = handleServiceError(
-					response,
-					mockErrorMessage,
-					mockLogContext,
-				)
+					const result = handleServiceError(
+						response,
+						mockErrorMessage,
+						mockLogContext,
+					)
 
-				expect(result).toEqual({
-					success: false,
-					error: {
-						status: 400,
-						message: mockErrorMessage,
-					},
+					expect(result).toEqual({
+						success: false,
+						error: {
+							status: statusCode,
+							message: mockErrorMessage,
+						},
+					})
+					expect(mockLoggerInstance.error).toHaveBeenCalledWith(
+						`[${mockLogContext}]: ${mockErrorMessage}: ${statusCode.toString()}`,
+					)
 				})
-				expect(mockLoggerInstance.error).toHaveBeenCalledWith(
-					`[${mockLogContext}]: ${mockErrorMessage}: 400`,
-				)
-			})
-
-			it('should return error for 401 status code', () => {
-				const response: TAwsServiceMetadata = {
-					$metadata: {
-						httpStatusCode: 401,
-						requestId: 'test-request-id',
-					},
-				}
-
-				const result = handleServiceError(
-					response,
-					mockErrorMessage,
-					mockLogContext,
-				)
-
-				expect(result).toEqual({
-					success: false,
-					error: {
-						status: 401,
-						message: mockErrorMessage,
-					},
-				})
-				expect(mockLoggerInstance.error).toHaveBeenCalledWith(
-					`[${mockLogContext}]: ${mockErrorMessage}: 401`,
-				)
-			})
-
-			it('should return error for 403 status code', () => {
-				const response: TAwsServiceMetadata = {
-					$metadata: {
-						httpStatusCode: 403,
-						requestId: 'test-request-id',
-					},
-				}
-
-				const result = handleServiceError(
-					response,
-					mockErrorMessage,
-					mockLogContext,
-				)
-
-				expect(result).toEqual({
-					success: false,
-					error: {
-						status: 403,
-						message: mockErrorMessage,
-					},
-				})
-				expect(mockLoggerInstance.error).toHaveBeenCalledWith(
-					`[${mockLogContext}]: ${mockErrorMessage}: 403`,
-				)
-			})
-
-			it('should return error for 404 status code', () => {
-				const response: TAwsServiceMetadata = {
-					$metadata: {
-						httpStatusCode: 404,
-						requestId: 'test-request-id',
-					},
-				}
-
-				const result = handleServiceError(
-					response,
-					mockErrorMessage,
-					mockLogContext,
-				)
-
-				expect(result).toEqual({
-					success: false,
-					error: {
-						status: 404,
-						message: mockErrorMessage,
-					},
-				})
-				expect(mockLoggerInstance.error).toHaveBeenCalledWith(
-					`[${mockLogContext}]: ${mockErrorMessage}: 404`,
-				)
-			})
-
-			it('should return error for 500 status code', () => {
-				const response: TAwsServiceMetadata = {
-					$metadata: {
-						httpStatusCode: 500,
-						requestId: 'test-request-id',
-					},
-				}
-
-				const result = handleServiceError(
-					response,
-					mockErrorMessage,
-					mockLogContext,
-				)
-
-				expect(result).toEqual({
-					success: false,
-					error: {
-						status: 500,
-						message: mockErrorMessage,
-					},
-				})
-				expect(mockLoggerInstance.error).toHaveBeenCalledWith(
-					`[${mockLogContext}]: ${mockErrorMessage}: 500`,
-				)
 			})
 		})
 
 		describe('edge cases', () => {
-			it('should handle response with additional metadata fields', () => {
-				const response: TAwsServiceMetadata = {
-					$metadata: {
-						httpStatusCode: 400,
-						requestId: 'test-request-id',
-						extendedRequestId: 'extended-id',
-						attempts: 3,
+			describe.each([
+				[
+					'additional metadata fields',
+					{
+						$metadata: {
+							httpStatusCode: 400,
+							requestId: 'test-request-id',
+							extendedRequestId: 'extended-id',
+							attempts: 3,
+						},
 					},
-				}
-
-				const result = handleServiceError(
-					response,
-					mockErrorMessage,
-					mockLogContext,
-				)
-
-				expect(result).toEqual({
-					success: false,
-					error: {
-						status: 400,
-						message: mockErrorMessage,
+					400,
+				],
+				[
+					'alternative metadata structure',
+					{
+						$metadata: {
+							httpStatusCode: 403,
+						},
 					},
-				})
-				expect(mockLoggerInstance.error).toHaveBeenCalledWith(
-					`[${mockLogContext}]: ${mockErrorMessage}: 400`,
-				)
-			})
+					403,
+				],
+			])(
+				'should handle response with %s',
+				(scenario, response, expectedStatus) => {
+					it(`should handle response with ${scenario}`, () => {
+						const result = handleServiceError(
+							response as TAwsServiceMetadata,
+							mockErrorMessage,
+							mockLogContext,
+						)
 
-			it('should handle alternative metadata structure', () => {
-				const response = {
-					$metadata: {
-						httpStatusCode: 403,
-					},
-				}
-
-				const result = handleServiceError(
-					response,
-					mockErrorMessage,
-					mockLogContext,
-				)
-
-				expect(result).toEqual({
-					success: false,
-					error: {
-						status: 403,
-						message: mockErrorMessage,
-					},
-				})
-				expect(mockLoggerInstance.error).toHaveBeenCalledWith(
-					`[${mockLogContext}]: ${mockErrorMessage}: 403`,
-				)
-			})
+						expect(result).toEqual({
+							success: false,
+							error: {
+								status: expectedStatus,
+								message: mockErrorMessage,
+							},
+						})
+						expect(mockLoggerInstance.error).toHaveBeenCalledWith(
+							`[${mockLogContext}]: ${mockErrorMessage}: ${expectedStatus.toString()}`,
+						)
+					})
+				},
+			)
 		})
 	})
 
@@ -440,72 +237,56 @@ describe('response-handlers.ts', () => {
 		const mockLogContext = 'TestValidation'
 
 		describe('successful validation', () => {
-			it('should return valid true when condition is true', () => {
-				const result = validateData(true, mockErrorMessage, mockLogContext)
+			describe.each([
+				['true condition', true],
+				['truthy values', !!1],
+				['non-empty string', Boolean('test')],
+				['non-empty array', Boolean(['item'].length)],
+				['non-empty object', Boolean(Object.keys({ key: 'value' }).length)],
+			])('should return valid true for %s', (scenario, condition) => {
+				it(`should return valid true for ${scenario}`, () => {
+					const result = validateData(
+						condition,
+						mockErrorMessage,
+						mockLogContext,
+					)
 
-				expect(result).toEqual({ valid: true })
-				expect(mockLoggerInstance.error).not.toHaveBeenCalled()
-			})
-
-			it('should return valid true for truthy values', () => {
-				const result = validateData(!!1, mockErrorMessage, mockLogContext)
-
-				expect(result).toEqual({ valid: true })
-				expect(mockLoggerInstance.error).not.toHaveBeenCalled()
-			})
-
-			it('should return valid true for non-empty string', () => {
-				const testString = 'test'
-				const result = validateData(
-					Boolean(testString),
-					mockErrorMessage,
-					mockLogContext,
-				)
-
-				expect(result).toEqual({ valid: true })
-				expect(mockLoggerInstance.error).not.toHaveBeenCalled()
-			})
-
-			it('should return valid true for non-empty array', () => {
-				const testArray = ['item']
-				const result = validateData(
-					Boolean(testArray.length),
-					mockErrorMessage,
-					mockLogContext,
-				)
-
-				expect(result).toEqual({ valid: true })
-				expect(mockLoggerInstance.error).not.toHaveBeenCalled()
-			})
-
-			it('should return valid true for non-empty object', () => {
-				const testObject = { key: 'value' }
-				const result = validateData(
-					Boolean(Object.keys(testObject).length),
-					mockErrorMessage,
-					mockLogContext,
-				)
-
-				expect(result).toEqual({ valid: true })
-				expect(mockLoggerInstance.error).not.toHaveBeenCalled()
+					expect(result).toEqual({ valid: true })
+					expect(mockLoggerInstance.error).not.toHaveBeenCalled()
+				})
 			})
 		})
 
 		describe('validation failures', () => {
-			it('should return error with default BAD_REQUEST status when condition is false', () => {
-				const result = validateData(false, mockErrorMessage, mockLogContext)
+			describe.each([
+				['false condition', false, StatusCodes.BAD_REQUEST],
+				['falsy values', Boolean(0), StatusCodes.BAD_REQUEST],
+				['empty string', Boolean(''), StatusCodes.BAD_REQUEST],
+				['null value', Boolean(null), StatusCodes.BAD_REQUEST],
+				['undefined value', Boolean(undefined), StatusCodes.BAD_REQUEST],
+			])(
+				'should return error for %s',
+				(scenario, condition, expectedStatus) => {
+					it(`should return error for ${scenario}`, () => {
+						const result = validateData(
+							condition,
+							mockErrorMessage,
+							mockLogContext,
+						)
 
-				expect(result).toEqual({
-					valid: false,
-					error: {
-						message: mockErrorMessage,
-						status: StatusCodes.BAD_REQUEST,
-					},
-				})
-				expect(mockLoggerInstance.error).toHaveBeenCalledWith(
-					`[${mockLogContext}]: ${mockErrorMessage}`,
-				)
-			})
+						expect(result).toEqual({
+							valid: false,
+							error: {
+								message: mockErrorMessage,
+								status: expectedStatus,
+							},
+						})
+						expect(mockLoggerInstance.error).toHaveBeenCalledWith(
+							`[${mockLogContext}]: ${mockErrorMessage}`,
+						)
+					})
+				},
+			)
 
 			it('should return error with custom status code', () => {
 				const customStatus = StatusCodes.UNAUTHORIZED
@@ -527,137 +308,33 @@ describe('response-handlers.ts', () => {
 					`[${mockLogContext}]: ${mockErrorMessage}`,
 				)
 			})
-
-			it('should return error for falsy values', () => {
-				const falsyValue = 0
-				const result = validateData(
-					Boolean(falsyValue),
-					mockErrorMessage,
-					mockLogContext,
-				)
-
-				expect(result).toEqual({
-					valid: false,
-					error: {
-						message: mockErrorMessage,
-						status: StatusCodes.BAD_REQUEST,
-					},
-				})
-				expect(mockLoggerInstance.error).toHaveBeenCalledWith(
-					`[${mockLogContext}]: ${mockErrorMessage}`,
-				)
-			})
-
-			it('should return error for empty string', () => {
-				const emptyString = ''
-				const result = validateData(
-					Boolean(emptyString),
-					mockErrorMessage,
-					mockLogContext,
-				)
-
-				expect(result).toEqual({
-					valid: false,
-					error: {
-						message: mockErrorMessage,
-						status: StatusCodes.BAD_REQUEST,
-					},
-				})
-				expect(mockLoggerInstance.error).toHaveBeenCalledWith(
-					`[${mockLogContext}]: ${mockErrorMessage}`,
-				)
-			})
-
-			it('should return error for null', () => {
-				const nullValue = null
-				const result = validateData(
-					Boolean(nullValue),
-					mockErrorMessage,
-					mockLogContext,
-				)
-
-				expect(result).toEqual({
-					valid: false,
-					error: {
-						message: mockErrorMessage,
-						status: StatusCodes.BAD_REQUEST,
-					},
-				})
-				expect(mockLoggerInstance.error).toHaveBeenCalledWith(
-					`[${mockLogContext}]: ${mockErrorMessage}`,
-				)
-			})
-
-			it('should return error for undefined', () => {
-				const undefinedValue = undefined
-				const result = validateData(
-					Boolean(undefinedValue),
-					mockErrorMessage,
-					mockLogContext,
-				)
-
-				expect(result).toEqual({
-					valid: false,
-					error: {
-						message: mockErrorMessage,
-						status: StatusCodes.BAD_REQUEST,
-					},
-				})
-				expect(mockLoggerInstance.error).toHaveBeenCalledWith(
-					`[${mockLogContext}]: ${mockErrorMessage}`,
-				)
-			})
 		})
 
 		describe('status code variations', () => {
-			it('should handle NOT_FOUND status', () => {
-				const result = validateData(
-					false,
-					'Resource not found',
-					mockLogContext,
-					StatusCodes.NOT_FOUND,
-				)
-
-				expect(result).toEqual({
-					valid: false,
-					error: {
-						message: 'Resource not found',
-						status: StatusCodes.NOT_FOUND,
-					},
-				})
-			})
-
-			it('should handle FORBIDDEN status', () => {
-				const result = validateData(
-					false,
-					'Access denied',
-					mockLogContext,
-					StatusCodes.FORBIDDEN,
-				)
-
-				expect(result).toEqual({
-					valid: false,
-					error: {
-						message: 'Access denied',
-						status: StatusCodes.FORBIDDEN,
-					},
-				})
-			})
-
-			it('should handle INTERNAL_SERVER_ERROR status', () => {
-				const result = validateData(
-					false,
+			describe.each([
+				['NOT_FOUND', 'Resource not found', StatusCodes.NOT_FOUND],
+				['FORBIDDEN', 'Access denied', StatusCodes.FORBIDDEN],
+				[
+					'INTERNAL_SERVER_ERROR',
 					'Server error',
-					mockLogContext,
 					StatusCodes.INTERNAL_SERVER_ERROR,
-				)
+				],
+			])('should handle %s status', (statusName, message, statusCode) => {
+				it(`should handle ${statusName} status`, () => {
+					const result = validateData(
+						false,
+						message,
+						mockLogContext,
+						statusCode,
+					)
 
-				expect(result).toEqual({
-					valid: false,
-					error: {
-						message: 'Server error',
-						status: StatusCodes.INTERNAL_SERVER_ERROR,
-					},
+					expect(result).toEqual({
+						valid: false,
+						error: {
+							message,
+							status: statusCode,
+						},
+					})
 				})
 			})
 		})
@@ -824,7 +501,7 @@ describe('response-handlers.ts', () => {
 				const schema = z.object({
 					user: z.object({
 						name: z.string(),
-						email: z.string().email(),
+						email: z.email(),
 					}),
 					settings: z.object({
 						theme: z.enum(['light', 'dark']),
@@ -1007,7 +684,7 @@ describe('response-handlers.ts', () => {
 
 			it('should include validation details in error', () => {
 				const schema = z.object({
-					email: z.string().email(),
+					email: z.email(),
 				})
 				const invalidData = { email: 'invalid-email' }
 
@@ -1036,7 +713,7 @@ describe('response-handlers.ts', () => {
 				const schema = z.object({
 					user: z.object({
 						name: z.string(),
-						email: z.string().email(),
+						email: z.email(),
 					}),
 					settings: z.object({
 						theme: z.enum(['light', 'dark']),
@@ -1063,7 +740,7 @@ describe('response-handlers.ts', () => {
 				const schema = z.object({
 					user: z.object({
 						name: z.string(),
-						email: z.string().email(),
+						email: z.email(),
 					}),
 				})
 				const invalidData = {

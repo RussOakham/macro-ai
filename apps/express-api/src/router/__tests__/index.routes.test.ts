@@ -82,10 +82,10 @@ describe('appRouter', () => {
 			const router = appRouter()
 
 			// Assert
-			const authRouterCall = vi.mocked(authRouter).mock.calls[0]
-			const chatRouterCall = vi.mocked(chatRouter).mock.calls[0]
-			const utilityRouterCall = vi.mocked(utilityRouter).mock.calls[0]
-			const userRouterCall = vi.mocked(userRouter).mock.calls[0]
+			const [authRouterCall] = vi.mocked(authRouter).mock.calls
+			const [chatRouterCall] = vi.mocked(chatRouter).mock.calls
+			const [utilityRouterCall] = vi.mocked(utilityRouter).mock.calls
+			const [userRouterCall] = vi.mocked(userRouter).mock.calls
 
 			// Verify the same router instance is passed to all feature routers
 			expect(router).toBeDefined()
@@ -307,6 +307,7 @@ describe('appRouter', () => {
 	describe('Integration Scenarios', () => {
 		it('should successfully integrate with Express application', () => {
 			// Arrange
+			// eslint-disable-next-line sonarjs/x-powered-by
 			const app = express()
 
 			// Act

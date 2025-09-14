@@ -1,6 +1,7 @@
-import { NextFunction, Request, Response } from 'express'
+import { type NextFunction, type Request, type Response } from 'express'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { createMockExpressObjects } from '../../utils/test-helpers/enhanced-mocks.ts'
 import { mockExpress } from '../../utils/test-helpers/express-mocks.ts'
 
 // Mock external dependencies before importing the middleware
@@ -15,16 +16,16 @@ vi.mock('../../utils/logger.ts', () => ({
 	configureLogger: vi.fn(),
 }))
 
-vi.mock('../../config/default.ts', () => ({
+vi.mock('../../utils/load-config.ts', () => ({
 	config: {
-		nodeEnv: 'test',
-		rateLimitWindowMs: 900000,
-		rateLimitMaxRequests: 100,
-		authRateLimitWindowMs: 3600000,
-		authRateLimitMaxRequests: 10,
-		apiRateLimitWindowMs: 60000,
-		apiRateLimitMaxRequests: 60,
-		redisUrl: undefined,
+		NODE_ENV: 'test',
+		RATE_LIMIT_WINDOW_MS: 900000,
+		RATE_LIMIT_MAX_REQUESTS: 100,
+		AUTH_RATE_LIMIT_WINDOW_MS: 3600000,
+		AUTH_RATE_LIMIT_MAX_REQUESTS: 10,
+		API_RATE_LIMIT_WINDOW_MS: 60000,
+		API_RATE_LIMIT_MAX_REQUESTS: 60,
+		REDIS_URL: undefined,
 	},
 }))
 
@@ -78,19 +79,18 @@ vi.mock('../../utils/errors.ts', () => ({
 }))
 
 describe('Rate Limit Middleware', () => {
-	let mockResponse: Partial<Response>
+	let mockResponse: Response
 	let mockNext: NextFunction
 
 	beforeEach(() => {
-		vi.clearAllMocks()
-		vi.resetAllMocks()
 		// Reset module cache to ensure fresh imports
 		vi.resetModules()
+		vi.clearAllMocks()
 
-		// Setup Express mocks
-		const expressMocks = mockExpress.setup()
-		mockResponse = expressMocks.res
-		mockNext = expressMocks.next
+		// Setup Express mocks using enhanced mocking
+		const { res, next } = createMockExpressObjects()
+		mockResponse = res
+		mockNext = next
 	})
 
 	describe('Middleware Exports', () => {
@@ -110,26 +110,12 @@ describe('Rate Limit Middleware', () => {
 		it('should call next() when rate limit is not exceeded', async () => {
 			// Arrange
 			const middleware = await import('../rate-limit.middleware.ts')
-			const mockRequest = mockExpress.createRequest({ ip: '127.0.0.1' })
+			const { req: mockRequest } = createMockExpressObjects({ ip: '127.0.0.1' })
 
 			// Act
-			await middleware.defaultRateLimiter(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
-
-			await middleware.authRateLimiter(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
-
-			await middleware.apiRateLimiter(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+			await middleware.defaultRateLimiter(mockRequest, mockResponse, mockNext)
+			await middleware.authRateLimiter(mockRequest, mockResponse, mockNext)
+			await middleware.apiRateLimiter(mockRequest, mockResponse, mockNext)
 
 			// Assert
 			expect(mockNext).toHaveBeenCalledTimes(3)
@@ -152,22 +138,16 @@ describe('Rate Limit Middleware', () => {
 			// Reset modules to pick up the new mock
 			vi.resetModules()
 			const middleware = await import('../rate-limit.middleware.ts')
-			const mockRequest = mockExpress.createRequest({ ip: '127.0.0.1' })
-			const mockRes = mockExpress.createResponse()
+			const { req: mockRequest, res: mockRes } = createMockExpressObjects({
+				ip: '127.0.0.1',
+			})
 
 			// Act
-			await middleware.defaultRateLimiter(
-				mockRequest as Request,
-				mockRes as Response,
-				mockNext,
-			)
+			await middleware.defaultRateLimiter(mockRequest, mockRes, mockNext)
 
 			// Assert
 			expect(mockRes.status).toHaveBeenCalledWith(429)
-			const statusResult = mockRes.status(429) as {
-				json: ReturnType<typeof vi.fn>
-			}
-			expect(statusResult.json).toHaveBeenCalledWith({
+			expect(mockRes.json).toHaveBeenCalledWith({
 				status: 429,
 				message: 'Too many requests, please try again later.',
 			})
@@ -209,29 +189,21 @@ describe('Rate Limit Middleware', () => {
 			// Reset modules to pick up the new mocks
 			vi.resetModules()
 			const middleware = await import('../rate-limit.middleware.ts')
-			const mockRequest = mockExpress.createRequest({
+			const { req: mockRequest, res: mockRes } = createMockExpressObjects({
 				ip: '192.168.1.100',
 				method: 'GET',
 				url: '/test',
 			})
-			const mockRes = mockExpress.createResponse()
 
 			// Act - Call the rate limiter which should trigger the real handler
-			await middleware.defaultRateLimiter(
-				mockRequest as Request,
-				mockRes as Response,
-				mockNext,
-			)
+			await middleware.defaultRateLimiter(mockRequest, mockRes, mockNext)
 
 			// Assert - Verify the real handler was called and logged correctly
 			expect(mockLogger.warn).toHaveBeenCalledWith(
 				'[middleware - rateLimit]: Rate limit exceeded for IP: 192.168.1.100',
 			)
 			expect(mockRes.status).toHaveBeenCalledWith(429)
-			const statusResult = mockRes.status(429) as {
-				json: ReturnType<typeof vi.fn>
-			}
-			expect(statusResult.json).toHaveBeenCalledWith({
+			expect(mockRes.json).toHaveBeenCalledWith({
 				status: 429,
 				message: 'Too many requests, please try again later.',
 			})
@@ -273,29 +245,21 @@ describe('Rate Limit Middleware', () => {
 			// Reset modules to pick up the new mocks
 			vi.resetModules()
 			const middleware = await import('../rate-limit.middleware.ts')
-			const mockRequest = mockExpress.createRequest({
+			const { req: mockRequest, res: mockRes } = createMockExpressObjects({
 				ip: '10.0.0.50',
 				method: 'POST',
 				url: '/auth/login',
 			})
-			const mockRes = mockExpress.createResponse()
 
 			// Act - Call the auth rate limiter which should trigger the real handler
-			await middleware.authRateLimiter(
-				mockRequest as Request,
-				mockRes as Response,
-				mockNext,
-			)
+			await middleware.authRateLimiter(mockRequest, mockRes, mockNext)
 
 			// Assert - Verify the real auth handler was called and logged correctly
 			expect(mockLogger.warn).toHaveBeenCalledWith(
 				'[middleware - rateLimit]: Auth rate limit exceeded for IP: 10.0.0.50',
 			)
 			expect(mockRes.status).toHaveBeenCalledWith(429)
-			const statusResult = mockRes.status(429) as {
-				json: ReturnType<typeof vi.fn>
-			}
-			expect(statusResult.json).toHaveBeenCalledWith({
+			expect(mockRes.json).toHaveBeenCalledWith({
 				status: 429,
 				message: 'Too many authentication attempts, please try again later.',
 			})
@@ -337,29 +301,21 @@ describe('Rate Limit Middleware', () => {
 			// Reset modules to pick up the new mocks
 			vi.resetModules()
 			const middleware = await import('../rate-limit.middleware.ts')
-			const mockRequest = mockExpress.createRequest({
+			const { req: mockRequest, res: mockRes } = createMockExpressObjects({
 				ip: '172.16.0.25',
 				method: 'GET',
 				url: '/api/data',
 			})
-			const mockRes = mockExpress.createResponse()
 
 			// Act - Call the API rate limiter which should trigger the real handler
-			await middleware.apiRateLimiter(
-				mockRequest as Request,
-				mockRes as Response,
-				mockNext,
-			)
+			await middleware.apiRateLimiter(mockRequest, mockRes, mockNext)
 
 			// Assert - Verify the real API handler was called and logged correctly
 			expect(mockLogger.warn).toHaveBeenCalledWith(
 				'[middleware - rateLimit]: API rate limit exceeded for IP: 172.16.0.25',
 			)
 			expect(mockRes.status).toHaveBeenCalledWith(429)
-			const statusResult = mockRes.status(429) as {
-				json: ReturnType<typeof vi.fn>
-			}
-			expect(statusResult.json).toHaveBeenCalledWith({
+			expect(mockRes.json).toHaveBeenCalledWith({
 				status: 429,
 				message: 'API rate limit exceeded, please try again later.',
 			})
@@ -426,7 +382,7 @@ describe('Rate Limit Middleware', () => {
 			// Act
 			await middleware.defaultRateLimiter(
 				mockRequest as Request,
-				mockResponse as Response,
+				mockResponse,
 				mockNext,
 			)
 
@@ -448,7 +404,7 @@ describe('Rate Limit Middleware', () => {
 			expect(async () => {
 				await middleware.authRateLimiter(
 					mockRequest as Request,
-					mockResponse as Response,
+					mockResponse,
 					mockNext,
 				)
 			}).not.toThrow()
@@ -471,7 +427,7 @@ describe('Rate Limit Middleware', () => {
 			// Act
 			await middleware.apiRateLimiter(
 				mockRequest as Request,
-				mockResponse as Response,
+				mockResponse,
 				mockNext,
 			)
 
@@ -559,7 +515,7 @@ describe('Rate Limit Middleware', () => {
 			expect(async () => {
 				await middleware.defaultRateLimiter(
 					mockRequest as Request,
-					mockResponse as Response,
+					mockResponse,
 					mockNext,
 				)
 			}).not.toThrow()
@@ -567,7 +523,7 @@ describe('Rate Limit Middleware', () => {
 			expect(async () => {
 				await middleware.authRateLimiter(
 					mockRequest as Request,
-					mockResponse as Response,
+					mockResponse,
 					mockNext,
 				)
 			}).not.toThrow()
@@ -575,7 +531,7 @@ describe('Rate Limit Middleware', () => {
 			expect(async () => {
 				await middleware.apiRateLimiter(
 					mockRequest as Request,
-					mockResponse as Response,
+					mockResponse,
 					mockNext,
 				)
 			}).not.toThrow()
@@ -674,7 +630,7 @@ describe('Rate Limit Middleware', () => {
 			expect(capturedHandlers[2]).toBeDefined()
 
 			// Test default handler (should log "Rate limit exceeded")
-			const defaultHandler = capturedHandlers[0]
+			const [defaultHandler] = capturedHandlers
 			if (defaultHandler) {
 				defaultHandler(mockRequest as Request, mockRes1 as Response, mockNext, {
 					statusCode: 429,
@@ -686,7 +642,7 @@ describe('Rate Limit Middleware', () => {
 			}
 
 			// Test auth handler (should log "Auth rate limit exceeded")
-			const authHandler = capturedHandlers[1]
+			const [, authHandler] = capturedHandlers
 			if (authHandler) {
 				authHandler(mockRequest as Request, mockRes2 as Response, mockNext, {
 					statusCode: 429,
@@ -699,6 +655,7 @@ describe('Rate Limit Middleware', () => {
 			}
 
 			// Test API handler (should log "API rate limit exceeded")
+			// oxlint-disable-next-line prefer-destructuring
 			const apiHandler = capturedHandlers[2]
 			if (apiHandler) {
 				apiHandler(mockRequest as Request, mockRes3 as Response, mockNext, {
@@ -794,13 +751,15 @@ describe('Rate Limit Middleware', () => {
 			// Third call should be rate limited
 			expect(mockNext3).not.toHaveBeenCalled()
 			expect(mockRes3.status).toHaveBeenCalledWith(429)
-			const statusResult = mockRes3.status(429) as {
-				json: ReturnType<typeof vi.fn>
+
+			// Use proper type guard for the status method
+			if (mockRes3.status) {
+				const statusResult = mockRes3.status(429)
+				expect(statusResult.json).toHaveBeenCalledWith({
+					status: 429,
+					message: 'Too many requests, please try again later.',
+				})
 			}
-			expect(statusResult.json).toHaveBeenCalledWith({
-				status: 429,
-				message: 'Too many requests, please try again later.',
-			})
 		})
 
 		it('should handle different rate limiter configurations', async () => {
@@ -829,19 +788,19 @@ describe('Rate Limit Middleware', () => {
 			// Act - Test all three rate limiters
 			await middleware.defaultRateLimiter(
 				mockRequest as Request,
-				mockResponse as Response,
+				mockResponse,
 				mockNext,
 			)
 
 			await middleware.authRateLimiter(
 				mockRequest as Request,
-				mockResponse as Response,
+				mockResponse,
 				mockNext,
 			)
 
 			await middleware.apiRateLimiter(
 				mockRequest as Request,
-				mockResponse as Response,
+				mockResponse,
 				mockNext,
 			)
 

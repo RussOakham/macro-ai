@@ -1,6 +1,6 @@
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -8,11 +8,11 @@ import { Input } from '@/components/ui/input'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
 import { cn } from '@/lib/utils'
-import { useCreateChatMutation } from '@/services/hooks/chat/useCreateChatMutation'
+import { useCreateChatMutation } from '@/services/hooks/chat/use-create-chat-mutation'
 import {
-	createChatSchemaClient,
-	TCreateChatRequest,
-} from '@/services/network/chat/createChat'
+	type CreateChatRequest,
+	zCreateChatRequest,
+} from '@/services/network/chat/create-chat'
 
 import {
 	Form,
@@ -25,28 +25,30 @@ import {
 
 interface CreateChatFormProps {
 	className?: string
-	onSuccess?: (chatId: string) => void
 	onCancel?: () => void
+	onSuccess?: (chatId: string) => void
 }
 
 const CreateChatForm = ({
 	className,
-	onSuccess,
 	onCancel,
+	onSuccess,
 	...props
 }: CreateChatFormProps & React.ComponentPropsWithoutRef<'div'>) => {
 	const [isPending, setIsPending] = useState(false)
 	const { mutateAsync: createChatMutation } = useCreateChatMutation()
 
-	const form = useForm<TCreateChatRequest>({
-		resolver: zodResolver(createChatSchemaClient),
+	const form = useForm<CreateChatRequest>({
 		defaultValues: {
 			title: '',
 		},
+		resolver: zodResolver(zCreateChatRequest),
 	})
 
-	const onSubmit = async (values: TCreateChatRequest) => {
-		if (isPending) return
+	const onSubmit = async (values: CreateChatRequest) => {
+		if (isPending) {
+			return
+		}
 
 		setIsPending(true)
 
@@ -54,10 +56,13 @@ const CreateChatForm = ({
 			const response = await createChatMutation(values)
 
 			if (response.success) {
-				logger.info('[CreateChatForm]: Chat created successfully', {
-					chatId: response.data.id,
-					title: values.title,
-				})
+				logger.info(
+					{
+						chatId: response.data.id,
+						title: values.title,
+					},
+					'[CreateChatForm]: Chat created successfully',
+				)
 
 				toast.success('Chat created successfully!')
 
@@ -71,10 +76,13 @@ const CreateChatForm = ({
 			}
 		} catch (error: unknown) {
 			const err = standardizeError(error)
-			logger.error('[CreateChatForm]: Error creating chat', {
-				error: err.message,
-				title: values.title,
-			})
+			logger.error(
+				{
+					error: err.message,
+					title: values.title,
+				},
+				'[CreateChatForm]: Error creating chat',
+			)
 
 			toast.error(err.message || 'Failed to create chat')
 		} finally {
@@ -92,7 +100,7 @@ const CreateChatForm = ({
 			</div>
 			<div className="grid gap-4">
 				<Form {...form}>
-					<form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-3">
+					<form className="grid gap-3" onSubmit={form.handleSubmit(onSubmit)}>
 						<FormField
 							control={form.control}
 							name="title"
@@ -103,8 +111,8 @@ const CreateChatForm = ({
 										<Input
 											placeholder="e.g., Help with React components"
 											{...field}
-											disabled={isPending}
 											className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400 focus:border-gray-500"
+											disabled={isPending}
 										/>
 									</FormControl>
 									<FormMessage />
@@ -114,19 +122,19 @@ const CreateChatForm = ({
 						<div className="flex gap-2 justify-end">
 							{onCancel && (
 								<Button
+									className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
+									disabled={isPending}
+									onClick={onCancel}
 									type="button"
 									variant="outline"
-									onClick={onCancel}
-									disabled={isPending}
-									className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
 								>
 									Cancel
 								</Button>
 							)}
 							<Button
-								type="submit"
-								disabled={isPending || !form.formState.isValid}
 								className="min-w-[100px] bg-blue-600 hover:bg-blue-700 text-white"
+								disabled={isPending || !form.formState.isValid}
+								type="submit"
 							>
 								{isPending ? 'Creating...' : 'Create Chat'}
 							</Button>

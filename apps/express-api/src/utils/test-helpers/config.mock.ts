@@ -1,25 +1,19 @@
 import { vi } from 'vitest'
 
-import { config } from '../../../config/default.ts'
+import type { Config } from '../load-config.ts'
 
 /**
  * Config Mock Helper for Express API Tests
  * Provides type-safe mocking for application configuration
  *
- * IMPLEMENTATION FOLLOWS TYPE INFERENCE PATTERN:
- * Types are inferred from the actual config object to ensure:
- * - Mock interfaces stay in sync with the real configuration
- * - TypeScript catches any mismatches between mocks and actual usage
- * - Automatic updates when configuration structure changes
- *
- * See: documentation/implementation/test-helpers-and-mocking-strategy.md
+ * This mock now matches the simplified load-config.ts structure
+ * which directly exposes environment variables without complex loading logic
  */
 
 /**
- * Infer the actual config type from the implementation
- * This ensures our mock types match the real config structure
+ * Use the actual Config type from load-config.ts
  */
-type ConfigType = typeof config
+type ConfigType = Config
 
 /**
  * Default test configuration values
@@ -27,41 +21,38 @@ type ConfigType = typeof config
  */
 export const defaultTestConfig: ConfigType = {
 	// API Configuration
-	apiKey: 'test-api-key-12345678901234567890',
-	nodeEnv: 'test',
-	appEnv: 'test',
-	port: 3000,
+	API_KEY: 'test-api-key-12345678901234567890',
+	NODE_ENV: 'test',
+	APP_ENV: 'test',
+	SERVER_PORT: 3000,
 
 	// AWS Cognito Configuration
-	awsCognitoRegion: 'us-east-1',
-	awsCognitoUserPoolId: 'test-pool-id',
-	awsCognitoUserPoolClientId: 'test-client-id',
-	awsCognitoUserPoolSecretKey: 'test-pool-secret',
-	awsCognitoAccessKey: 'test-access-key',
-	awsCognitoSecretKey: 'test-secret-key',
-	awsCognitoRefreshTokenExpiry: 30,
+	AWS_COGNITO_REGION: 'us-east-1',
+	AWS_COGNITO_USER_POOL_ID: 'test-pool-id',
+	AWS_COGNITO_USER_POOL_CLIENT_ID: 'test-client-id',
+	// AWS Cognito credentials removed - using IAM roles instead
+	AWS_COGNITO_REFRESH_TOKEN_EXPIRY: 30,
 
 	// Cookie Configuration
-	cookieDomain: 'localhost',
-	cookieEncryptionKey: 'test-cookie-encryption-key-32-chars',
+	COOKIE_DOMAIN: 'localhost',
+	COOKIE_ENCRYPTION_KEY: 'test-cookie-encryption-key-32-chars',
 
 	// Database Configuration
-	nonRelationalDatabaseUrl: 'mongodb://localhost:27017/test_db',
-	relationalDatabaseUrl: 'postgresql://test:test@localhost:5432/test_db',
+	RELATIONAL_DATABASE_URL: 'postgresql://test:test@localhost:5432/test_db',
 
 	// OpenAI Configuration
-	openaiApiKey: 'sk-test-mock-key-for-testing-only',
+	OPENAI_API_KEY: 'sk-test-mock-key-for-testing-only',
 
 	// Rate Limiting Configuration
-	rateLimitWindowMs: 900000, // 15 minutes
-	rateLimitMaxRequests: 100,
-	authRateLimitWindowMs: 3600000, // 1 hour
-	authRateLimitMaxRequests: 10,
-	apiRateLimitWindowMs: 60000, // 1 minute
-	apiRateLimitMaxRequests: 60,
+	RATE_LIMIT_WINDOW_MS: 900000, // 15 minutes
+	RATE_LIMIT_MAX_REQUESTS: 100,
+	AUTH_RATE_LIMIT_WINDOW_MS: 3600000, // 1 hour
+	AUTH_RATE_LIMIT_MAX_REQUESTS: 10,
+	API_RATE_LIMIT_WINDOW_MS: 60000, // 1 minute
+	API_RATE_LIMIT_MAX_REQUESTS: 60,
 
 	// Redis Configuration
-	redisUrl: 'redis://localhost:6379',
+	REDIS_URL: 'redis://localhost:6379',
 }
 
 /**
@@ -107,9 +98,9 @@ export const setupConfigMock = (overrides: Partial<ConfigType> = {}) => {
  */
 export const createDevelopmentConfig = () =>
 	createConfigMock({
-		nodeEnv: 'development',
-		appEnv: 'development',
-		port: 3001,
+		NODE_ENV: 'development',
+		APP_ENV: 'development',
+		SERVER_PORT: 3001,
 	})
 
 /**
@@ -118,9 +109,9 @@ export const createDevelopmentConfig = () =>
  */
 export const createProductionConfig = () =>
 	createConfigMock({
-		nodeEnv: 'production',
-		appEnv: 'production',
-		port: 8080,
+		NODE_ENV: 'production',
+		APP_ENV: 'production',
+		SERVER_PORT: 8080,
 	})
 
 /**
@@ -129,9 +120,9 @@ export const createProductionConfig = () =>
  */
 export const createStagingConfig = () =>
 	createConfigMock({
-		nodeEnv: 'production', // Staging uses NODE_ENV=production for library optimizations
-		appEnv: 'staging',
-		port: 3040,
+		NODE_ENV: 'production', // Staging uses NODE_ENV=production for library optimizations
+		APP_ENV: 'staging',
+		SERVER_PORT: 3040,
 	})
 
 /**
@@ -140,9 +131,9 @@ export const createStagingConfig = () =>
  */
 export const createTestConfig = () =>
 	createConfigMock({
-		nodeEnv: 'test',
-		appEnv: 'test',
-		port: 3000,
+		NODE_ENV: 'test',
+		APP_ENV: 'test',
+		SERVER_PORT: 3000,
 	})
 
 /**
@@ -155,24 +146,20 @@ export const createCognitoConfig = (
 	overrides: Partial<
 		Pick<
 			ConfigType,
-			| 'awsCognitoRegion'
-			| 'awsCognitoUserPoolId'
-			| 'awsCognitoUserPoolClientId'
-			| 'awsCognitoUserPoolSecretKey'
-			| 'awsCognitoAccessKey'
-			| 'awsCognitoSecretKey'
-			| 'awsCognitoRefreshTokenExpiry'
+			| 'AWS_COGNITO_REGION'
+			| 'AWS_COGNITO_USER_POOL_ID'
+			| 'AWS_COGNITO_USER_POOL_CLIENT_ID'
+			// AWS Cognito credentials removed - using IAM roles instead
+			| 'AWS_COGNITO_REFRESH_TOKEN_EXPIRY'
 		>
 	> = {},
 ) =>
 	createConfigMock({
-		awsCognitoRegion: 'us-west-2',
-		awsCognitoUserPoolId: 'cognito-test-pool-id',
-		awsCognitoUserPoolClientId: 'cognito-test-client-id',
-		awsCognitoUserPoolSecretKey: 'cognito-test-pool-secret',
-		awsCognitoAccessKey: 'cognito-test-access-key',
-		awsCognitoSecretKey: 'cognito-test-secret-key',
-		awsCognitoRefreshTokenExpiry: 60,
+		AWS_COGNITO_REGION: 'us-west-2',
+		AWS_COGNITO_USER_POOL_ID: 'cognito-test-pool-id',
+		AWS_COGNITO_USER_POOL_CLIENT_ID: 'cognito-test-client-id',
+		// AWS Cognito credentials removed - using IAM roles instead
+		AWS_COGNITO_REFRESH_TOKEN_EXPIRY: 60,
 		...overrides,
 	})
 
@@ -184,13 +171,13 @@ export const createCognitoConfig = (
  */
 export const createDatabaseConfig = (
 	overrides: Partial<
-		Pick<ConfigType, 'relationalDatabaseUrl' | 'nonRelationalDatabaseUrl'>
+		Pick<ConfigType, 'RELATIONAL_DATABASE_URL' | 'REDIS_URL'>
 	> = {},
 ) =>
 	createConfigMock({
-		relationalDatabaseUrl:
+		RELATIONAL_DATABASE_URL:
 			'postgresql://testuser:testpass@localhost:5432/testdb',
-		nonRelationalDatabaseUrl: 'mongodb://localhost:27017/testdb',
+		REDIS_URL: 'redis://localhost:6379/1',
 		...overrides,
 	})
 
@@ -204,22 +191,22 @@ export const createRateLimitConfig = (
 	overrides: Partial<
 		Pick<
 			ConfigType,
-			| 'rateLimitWindowMs'
-			| 'rateLimitMaxRequests'
-			| 'authRateLimitWindowMs'
-			| 'authRateLimitMaxRequests'
-			| 'apiRateLimitWindowMs'
-			| 'apiRateLimitMaxRequests'
+			| 'RATE_LIMIT_WINDOW_MS'
+			| 'RATE_LIMIT_MAX_REQUESTS'
+			| 'AUTH_RATE_LIMIT_WINDOW_MS'
+			| 'AUTH_RATE_LIMIT_MAX_REQUESTS'
+			| 'API_RATE_LIMIT_WINDOW_MS'
+			| 'API_RATE_LIMIT_MAX_REQUESTS'
 		>
 	> = {},
 ) =>
 	createConfigMock({
-		rateLimitWindowMs: 60000, // 1 minute for testing
-		rateLimitMaxRequests: 10,
-		authRateLimitWindowMs: 300000, // 5 minutes for testing
-		authRateLimitMaxRequests: 5,
-		apiRateLimitWindowMs: 30000, // 30 seconds for testing
-		apiRateLimitMaxRequests: 30,
+		RATE_LIMIT_WINDOW_MS: 60000, // 1 minute for testing
+		RATE_LIMIT_MAX_REQUESTS: 10,
+		AUTH_RATE_LIMIT_WINDOW_MS: 300000, // 5 minutes for testing
+		AUTH_RATE_LIMIT_MAX_REQUESTS: 5,
+		API_RATE_LIMIT_WINDOW_MS: 30000, // 30 seconds for testing
+		API_RATE_LIMIT_MAX_REQUESTS: 30,
 		...overrides,
 	})
 

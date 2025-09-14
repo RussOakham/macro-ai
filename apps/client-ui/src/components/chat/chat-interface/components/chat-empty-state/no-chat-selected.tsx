@@ -1,5 +1,5 @@
-import type React from 'react'
 import { Bot } from 'lucide-react'
+import type React from 'react'
 
 type NoChatSelectedProps = React.ComponentPropsWithoutRef<'div'>
 

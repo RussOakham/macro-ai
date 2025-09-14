@@ -1,14 +1,25 @@
 import { vi } from 'vitest'
+// oxlint-disable-next-line no-unassigned-import
+import '@testing-library/jest-dom/vitest'
 
-import { IStandardizedError } from '@/lib/types'
+// Setup MSW for testing
+import { setupMSWForTests } from './msw-setup'
 
-import '@testing-library/jest-dom'
+// Set up environment variables for tests
+Object.defineProperty(import.meta, 'env', {
+	value: {
+		VITE_API_KEY: 'test-api-key-that-is-at-least-32-characters-long',
+		VITE_API_URL: 'http://localhost:3000',
+		VITE_APP_ENV: 'test',
+	},
+	writable: true,
+})
 
 // Mock environment variables
 vi.mock('@/lib/validation/environment', () => ({
 	validateEnvironment: vi.fn(() => ({
+		VITE_API_KEY: 'test-api-key-that-is-at-least-32-characters-long',
 		VITE_API_URL: 'http://localhost:3000',
-		VITE_API_KEY: 'test-api-key',
 		VITE_APP_ENV: 'test',
 	})),
 }))
@@ -28,51 +39,61 @@ vi.mock('@/main', () => ({
 // Mock logger
 vi.mock('@/lib/logger/logger', () => ({
 	logger: {
-		error: vi.fn(),
-		warn: vi.fn(),
-		info: vi.fn(),
 		debug: vi.fn(),
+		error: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
 	},
 }))
 
 // Mock shared refresh promise utilities
 vi.mock('@/lib/auth/shared-refresh-promise', () => ({
-	setSharedRefreshPromise: vi.fn(),
 	clearSharedRefreshPromise: vi.fn(),
 	getSharedRefreshPromise: vi.fn(() => null),
+	setSharedRefreshPromise: vi.fn(),
 	waitForRefreshCompletion: vi.fn(() => Promise.resolve()),
 }))
 
 // Mock error standardization
 vi.mock('@/lib/errors/standardize-error', () => ({
-	standardizeError: vi.fn((error) => error as IStandardizedError),
+	standardizeError: vi.fn((error: unknown) => ({
+		details: error,
+		message: 'An unknown error occurred',
+		name: 'UnknownError',
+		stack: '',
+		status: 500,
+		type: 'UnknownError',
+	})),
 }))
 
 // Global test utilities
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
+globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
+	disconnect: vi.fn(),
 	observe: vi.fn(),
 	unobserve: vi.fn(),
-	disconnect: vi.fn(),
 }))
 
 // Mock IntersectionObserver
-global.IntersectionObserver = vi.fn().mockImplementation(() => ({
+globalThis.IntersectionObserver = vi.fn().mockImplementation(() => ({
+	disconnect: vi.fn(),
 	observe: vi.fn(),
 	unobserve: vi.fn(),
-	disconnect: vi.fn(),
 }))
 
 // Mock matchMedia
-Object.defineProperty(window, 'matchMedia', {
-	writable: true,
+Object.defineProperty(globalThis.window, 'matchMedia', {
 	value: vi.fn().mockImplementation((query: string) => ({
+		addEventListener: vi.fn(),
+		addListener: vi.fn(), // deprecated
+		dispatchEvent: vi.fn(),
 		matches: false,
 		media: query,
 		onchange: null,
-		addListener: vi.fn(), // deprecated
-		removeListener: vi.fn(), // deprecated
-		addEventListener: vi.fn(),
 		removeEventListener: vi.fn(),
-		dispatchEvent: vi.fn(),
+		removeListener: vi.fn(), // deprecated
 	})),
+	writable: true,
 })
+
+// Setup MSW for all tests
+setupMSWForTests()

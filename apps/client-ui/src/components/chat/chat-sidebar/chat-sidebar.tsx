@@ -1,6 +1,6 @@
-import { useState, useTransition } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
+import { useState, useTransition } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { logger } from '@/lib/logger/logger'
@@ -30,10 +30,10 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 		startTransition(() => {
 			void navigate({ to: `/chat/${chatId}` })
 			logger.info(
-				'[ChatSidebar]: Chat created successfully, navigating to chat',
 				{
 					chatId,
 				},
+				'[ChatSidebar]: Chat created successfully, navigating to chat',
 			)
 		})
 	}
@@ -48,8 +48,8 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 			{/* Header */}
 			<div className="p-3 border-b border-border flex-shrink-0">
 				<Button
-					onClick={createNewChat}
 					className="w-full justify-start gap-3"
+					onClick={createNewChat}
 					variant="outline"
 				>
 					<Plus className="h-4 w-4" />
@@ -61,9 +61,9 @@ const ChatSidebar = ({ onMobileClose }: ChatSidebarProps) => {
 			{showCreateForm ? (
 				<div className="p-3 border-b border-border bg-muted flex-shrink-0">
 					<CreateChatForm
-						onSuccess={handleCreateChatSuccess}
-						onCancel={handleCreateChatCancel}
 						className="text-foreground"
+						onCancel={handleCreateChatCancel}
+						onSuccess={handleCreateChatSuccess}
 					/>
 				</div>
 			) : null}

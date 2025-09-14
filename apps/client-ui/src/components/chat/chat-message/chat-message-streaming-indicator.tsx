@@ -33,7 +33,7 @@ const ChatMessageStreamingIndicator: React.FC = () => {
 						</div>
 						<div className="mt-2">
 							<div className="w-full bg-muted rounded-full h-1">
-								<div className="bg-gradient-to-r from-primary to-accent h-1 rounded-full animate-pulse w-3/4"></div>
+								<div className="bg-gradient-to-r from-primary to-accent h-1 rounded-full animate-pulse w-3/4" />
 							</div>
 						</div>
 					</div>

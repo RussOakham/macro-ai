@@ -5,23 +5,26 @@ import { tryCatchSync } from '../../utils/error-handling/try-catch.ts'
 import {
 	InternalError,
 	NotFoundError,
-	Result,
+	type Result,
 	UnauthorizedError,
 	ValidationError,
 } from '../../utils/errors.ts'
 import { pino } from '../../utils/logger.ts'
 import { CognitoService } from '../auth/auth.services.ts'
-
 import { userRepository } from './user.data-access.ts'
 import { userIdSchema } from './user.schemas.ts'
-import { IUserRepository, IUserService, TUser } from './user.types.ts'
+import {
+	type IUserRepository,
+	type IUserService,
+	type TUser,
+} from './user.types.ts'
 
 const { logger } = pino
 const cognito = new CognitoService()
 
 class UserService implements IUserService {
-	private readonly userRepository: IUserRepository
 	private readonly cognitoService: CognitoService
+	private readonly userRepository: IUserRepository
 
 	constructor(
 		userRepo: IUserRepository = userRepository,
@@ -32,8 +35,123 @@ class UserService implements IUserService {
 	}
 
 	/**
+	 * Get user by access token
+	 * Verifies the token with Cognito and retrieves the user from the database
+	 * @param accessToken The Cognito access token
+	 * @returns Result tuple with the user object or error
+	 */
+	getUserByAccessToken = async ({
+		accessToken,
+	}: {
+		accessToken: string
+	}): Promise<Result<TUser>> => {
+		// Get user ID from Cognito using access token
+		const [cognitoUser, cognitoError] =
+			await this.cognitoService.getAuthUser(accessToken)
+
+		if (cognitoError) {
+			logger.error({
+				msg: '[userService - getUserByAccessToken]: Error retrieving user by token',
+				error: cognitoError,
+			})
+			return [null, cognitoError]
+		}
+
+		// Check if cognitoUser exists and has a Username property
+		if (!cognitoUser.Username) {
+			const error = new UnauthorizedError('Invalid access token', 'userService')
+			logger.error({
+				msg: '[userService - getUserByAccessToken]: Missing or invalid user data from token',
+				error: error.message,
+			})
+			return [null, error]
+		}
+
+		// Use ID to get user from database
+		const [user, userError] = await this.getUserById({
+			userId: cognitoUser.Username,
+		})
+
+		// No need to check for undefined here since getUserById now returns an error if user not found
+		if (userError) {
+			logger.error({
+				msg: '[userService - getUserByAccessToken]: Error retrieving user by ID',
+				userId: cognitoUser.Username,
+				error: userError,
+			})
+			return [null, userError]
+		}
+
+		return [user, null]
+	}
+
+	/**
+	 * Get user by email from the database
+	 * @param email - User lookup parameters
+	 * @param email.email - The user's email address
+	 * @returns Result tuple with the user object or error
+	 */
+	getUserByEmail = async ({
+		email,
+	}: {
+		email: string
+	}): Promise<Result<TUser>> => {
+		// Validate email with Zod and tryCatchSync
+		const [validatedEmail, validationError] = tryCatchSync(() => {
+			const result = z.email().safeParse(email)
+			if (!result.success) {
+				const validationError = fromError(result.error)
+				throw new ValidationError(
+					`Invalid email: ${validationError.message}`,
+					{ details: validationError.details },
+					'userService',
+				)
+			}
+			return result.data
+		}, 'userService - validateEmail')
+
+		if (validationError) {
+			logger.error({
+				msg: '[userService - getUserByEmail]: Invalid email',
+				email,
+				error: validationError,
+			})
+			return [null, validationError]
+		}
+
+		const [user, repositoryError] = await this.userRepository.findUserByEmail({
+			email: validatedEmail,
+		})
+
+		if (repositoryError) {
+			logger.error({
+				msg: '[userService - getUserByEmail]: Error retrieving user',
+				email,
+				error: repositoryError,
+			})
+			return [null, repositoryError]
+		}
+
+		// If user is not found, return a NotFoundError instead of undefined
+		if (!user) {
+			const error = new NotFoundError(
+				`User with email ${email} not found`,
+				'userService - getUserByEmail',
+			)
+			logger.info({
+				msg: '[userService - getUserByEmail]: User not found',
+				email,
+			})
+			return [null, error]
+		}
+
+		return [user, null]
+	}
+
+	/**
 	 * Get user by ID from the database
-	 * @param userId The user's unique identifier
+	 * @param userId - User lookup parameters
+	 * @param userId.userId - The user's unique identifier
 	 * @returns Result tuple with the user object or error
 	 */
 	getUserById = async ({
@@ -88,119 +206,6 @@ class UserService implements IUserService {
 				userId,
 			})
 			return [null, error]
-		}
-
-		return [user, null]
-	}
-
-	/**
-	 * Get user by email from the database
-	 * @param email The user's email address
-	 * @returns Result tuple with the user object or error
-	 */
-	getUserByEmail = async ({
-		email,
-	}: {
-		email: string
-	}): Promise<Result<TUser>> => {
-		// Validate email with Zod and tryCatchSync
-		const [validatedEmail, validationError] = tryCatchSync(() => {
-			const result = z.string().email().safeParse(email)
-			if (!result.success) {
-				const validationError = fromError(result.error)
-				throw new ValidationError(
-					`Invalid email: ${validationError.message}`,
-					{ details: validationError.details },
-					'userService',
-				)
-			}
-			return result.data
-		}, 'userService - validateEmail')
-
-		if (validationError) {
-			logger.error({
-				msg: '[userService - getUserByEmail]: Invalid email',
-				email,
-				error: validationError,
-			})
-			return [null, validationError]
-		}
-
-		const [user, repositoryError] = await this.userRepository.findUserByEmail({
-			email: validatedEmail,
-		})
-
-		if (repositoryError) {
-			logger.error({
-				msg: '[userService - getUserByEmail]: Error retrieving user',
-				email,
-				error: repositoryError,
-			})
-			return [null, repositoryError]
-		}
-
-		// If user is not found, return a NotFoundError instead of undefined
-		if (!user) {
-			const error = new NotFoundError(
-				`User with email ${email} not found`,
-				'userService - getUserByEmail',
-			)
-			logger.info({
-				msg: '[userService - getUserByEmail]: User not found',
-				email,
-			})
-			return [null, error]
-		}
-
-		return [user, null]
-	}
-
-	/**
-	 * Get user by access token
-	 * Verifies the token with Cognito and retrieves the user from the database
-	 * @param accessToken The Cognito access token
-	 * @returns Result tuple with the user object or error
-	 */
-	getUserByAccessToken = async ({
-		accessToken,
-	}: {
-		accessToken: string
-	}): Promise<Result<TUser>> => {
-		// Get user ID from Cognito using access token
-		const [cognitoUser, cognitoError] =
-			await this.cognitoService.getAuthUser(accessToken)
-
-		if (cognitoError) {
-			logger.error({
-				msg: '[userService - getUserByAccessToken]: Error retrieving user by token',
-				error: cognitoError,
-			})
-			return [null, cognitoError]
-		}
-
-		// Check if cognitoUser exists and has a Username property
-		if (!cognitoUser.Username) {
-			const error = new UnauthorizedError('Invalid access token', 'userService')
-			logger.error({
-				msg: '[userService - getUserByAccessToken]: Missing or invalid user data from token',
-				error: error.message,
-			})
-			return [null, error]
-		}
-
-		// Use ID to get user from database
-		const [user, userError] = await this.getUserById({
-			userId: cognitoUser.Username,
-		})
-
-		// No need to check for undefined here since getUserById now returns an error if user not found
-		if (userError) {
-			logger.error({
-				msg: '[userService - getUserByAccessToken]: Error retrieving user by ID',
-				userId: cognitoUser.Username,
-				error: userError,
-			})
-			return [null, userError]
 		}
 
 		return [user, null]

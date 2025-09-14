@@ -103,12 +103,10 @@ const helmetMiddleware = helmet({
 **Rate Limiting Strategy:**
 
 1. **Global Rate Limiting** - Applied to all API endpoints
-
    - 100 requests per 15 minutes per IP address
    - Protects against general API abuse
 
 2. **Authentication Rate Limiting** - Applied to auth endpoints
-
    - 10 requests per hour per IP address
    - Prevents brute force attacks on login/registration
 
@@ -226,12 +224,48 @@ app.use(
 - **Security Header Violations**: Monitoring for CSP and other header violations
 - **Suspicious Activity**: Detection of unusual access patterns
 
-## 🔗 Related Documentation
+## 🚀 Future Security Improvements
 
-- **[Authentication Security](../features/authentication/security-considerations.md)** - Authentication-specific security
-- **[Database Design](./database-design.md)** - Database security considerations
-- **[System Architecture](./system-architecture.md)** - Overall system security integration
-- **[Deployment Security](../deployment/aws-deployment.md)** - Production security deployment
+### IAM Role Migration for AWS Services
+
+**Priority:** Medium  
+**Target:** Future PR  
+**Status:** Planned
+
+**Current State:**
+
+- Using static AWS access keys for Cognito authentication
+- Keys stored in Parameter Store and environment variables
+- Creates potential for secret sprawl and accidental exposure
+
+**Target State:**
+
+- Replace static keys with ECS task roles in production
+- Use AWS CLI credential providers for local development
+
+**Benefits:**
+
+- Improved security through automatic credential management
+- Easier credential rotation and audit trails
+- Reduced risk of accidental key exposure
+- Better alignment with AWS security best practices
+
+**Implementation Notes:**
+
+- Requires ECS task role configuration
+- Local development setup changes needed
+- Schema updates to remove static key requirements
+- Migration path needed for existing deployments
+
+**CodeRabbit Security Review Findings:**
+
+- Identified static AWS credentials as security anti-pattern
+- Recommended IAM roles for production environments
+- Suggested AWS CLI credential providers for local development
+
+---
+
+## 🔗 Related Documentation
 
 ## 🎯 Security Goals
 

@@ -11,12 +11,14 @@ across all packages and applications with environment-specific optimizations.
 - **Path Mapping**: Consistent module resolution and path mapping
 - **Build Optimization**: Optimized build settings for development and production
 - **IDE Integration**: Enhanced IDE support with proper type checking
+- **Industry Standard**: Built on top of [@total-typescript/tsconfig](https://github.com/total-typescript/tsconfig)
 
 ## Available Configurations
 
 ### Base Configuration (`tsconfig-base.json`)
 
 Core TypeScript configuration with strict type checking and modern JavaScript features.
+Extends `@total-typescript/tsconfig/bundler/no-dom/library-monorepo`.
 
 ```json
 {
@@ -30,10 +32,12 @@ Core TypeScript configuration with strict type checking and modern JavaScript fe
 - Modern ES2022 target with Node.js 20+ support
 - Comprehensive type checking options
 - Optimized module resolution
+- DOM types included for compatibility
 
 ### React Configuration (`tsconfig-react.json`)
 
 Specialized configuration for React applications with JSX support.
+Extends `@total-typescript/tsconfig/bundler/dom/app`.
 
 ```json
 {
@@ -47,10 +51,12 @@ Specialized configuration for React applications with JSX support.
 - DOM type definitions included
 - React-specific compiler options
 - Vite integration support
+- TypeScript strict mode enabled
 
 ### Express Configuration (`tsconfig-express.json`)
 
 Backend-specific configuration for Express.js applications.
+Extends `@total-typescript/tsconfig/tsc/no-dom/app`.
 
 ```json
 {
@@ -64,10 +70,12 @@ Backend-specific configuration for Express.js applications.
 - CommonJS and ESM module support
 - Server-side optimizations
 - Express.js compatibility
+- TypeScript strict mode enabled
 
 ### Vite Node Configuration (`tsconfig-vite-node.json`)
 
 Configuration for Vite-based tooling and testing environments.
+Extends `@total-typescript/tsconfig/bundler/no-dom/app`.
 
 ```json
 {
@@ -80,6 +88,7 @@ Configuration for Vite-based tooling and testing environments.
 - Vite-specific module resolution
 - Testing environment support
 - Development tooling optimizations
+- TypeScript strict mode enabled
 
 ## Usage
 
@@ -129,45 +138,51 @@ Configuration for Vite-based tooling and testing environments.
 
 ## Configuration Details
 
-### Strict Type Checking
+### Base Framework
 
-All configurations enable strict type checking:
+All configurations are built on top of [@total-typescript/tsconfig](https://github.com/total-typescript/tsconfig),
+which provides industry-standard TypeScript configurations optimized for different use cases:
+
+- **Bundler configurations**: For apps using Vite, Webpack, or other bundlers
+- **TSC configurations**: For apps using TypeScript compiler directly
+- **DOM vs No-DOM**: Separate configs for browser and server environments
+- **App vs Library**: Different optimization strategies for applications vs libraries
+
+### Compatibility Overrides
+
+To maintain compatibility with existing codebase patterns, the following overrides are applied:
 
 ```json
 {
-	"strict": true,
-	"noImplicitAny": true,
-	"strictNullChecks": true,
-	"strictFunctionTypes": true,
-	"noImplicitReturns": true,
-	"noFallthroughCasesInSwitch": true
+	"allowImportingTsExtensions": true,
+	"verbatimModuleSyntax": false,
+	"noEmit": false
 }
 ```
+
+These settings allow:
+
+- Direct `.ts` file imports in test files
+- Mixed import/export syntax patterns
+- Declaration file generation for project references
+
+### Strict Type Checking
+
+All configurations enable strict type checking with additional safety features:
+
+- Strict mode enabled for maximum type safety
+- `noUncheckedIndexedAccess` for safer array/object access
+- `noImplicitOverride` for method override safety
+- `exactOptionalPropertyTypes` for precise optional handling
 
 ### Module Resolution
 
-Optimized module resolution for monorepo structure:
+Optimized module resolution for monorepo structure with modern bundler support:
 
-```json
-{
-	"moduleResolution": "bundler",
-	"allowImportingTsExtensions": true,
-	"resolveJsonModule": true,
-	"isolatedModules": true
-}
-```
-
-### Build Optimization
-
-Performance-optimized build settings:
-
-```json
-{
-	"incremental": true,
-	"skipLibCheck": true,
-	"forceConsistentCasingInFileNames": true
-}
-```
+- Bundler-aware module resolution
+- JSON module resolution enabled
+- Isolated modules for better incremental compilation
+- Consistent file name casing enforcement
 
 ## 📚 Documentation
 

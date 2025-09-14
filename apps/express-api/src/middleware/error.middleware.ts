@@ -1,4 +1,9 @@
-import { ErrorRequestHandler, NextFunction, Request, Response } from 'express'
+import type {
+	ErrorRequestHandler,
+	NextFunction,
+	Request,
+	Response,
+} from 'express'
 
 import { AppError } from '../utils/errors.ts'
 import { pino } from '../utils/logger.ts'
@@ -30,14 +35,17 @@ const errorHandler: ErrorRequestHandler = (
 			: AppError.from(error, 'globalErrorHandler')
 
 	// Log the error with context
-	logger.error(`[ErrorHandler]: ${err.message}`, {
-		path: req.path,
-		method: req.method,
-		status: err.status,
-		type: err.type,
-		service: err.service,
-		stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
-	})
+	logger.error(
+		{
+			path: req.path,
+			method: req.method,
+			status: err.status,
+			type: err.type,
+			service: err.service,
+			stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
+		},
+		`[ErrorHandler]: ${err.message}`,
+	)
 
 	// Determine appropriate response
 	const responseBody = {

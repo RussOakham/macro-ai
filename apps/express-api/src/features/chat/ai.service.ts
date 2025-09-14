@@ -1,20 +1,20 @@
 import { createOpenAI } from '@ai-sdk/openai'
 import {
 	embed,
-	EmbeddingModel,
+	type EmbeddingModel,
 	generateText,
-	LanguageModelV1,
+	type LanguageModelV1,
 	streamText,
 } from 'ai'
 
-import { config } from '../../../config/default.ts'
-import { tryCatch, tryCatchSync } from '../../utils/error-handling/try-catch.ts'
+import { assertConfig } from '../../config/simple-config.ts'
+import { tryCatch } from '../../utils/error-handling/try-catch.ts'
 import { AppError, type Result, ValidationError } from '../../utils/errors.ts'
 
 // Interface for chat messages to avoid repetition
 interface ChatMessage {
-	role: 'user' | 'assistant' | 'system'
 	content: string
+	role: 'assistant' | 'system' | 'user'
 }
 
 /**
@@ -22,61 +22,16 @@ interface ChatMessage {
  * Provides Go-style error handling for all AI operations
  */
 class AIService {
-	private readonly openai = createOpenAI({
-		apiKey: config.openaiApiKey,
-	})
-	private readonly chatModel = this.openai('gpt-3.5-turbo')
-	private readonly embeddingModel = this.openai.embedding(
-		'text-embedding-3-small',
-	)
+	private chatModel: LanguageModelV1 | null = null
+	private embeddingModel: EmbeddingModel<string> | null = null
+	private initialized = false
+	private initPromise: null | Promise<void> = null
+	private openai: null | ReturnType<typeof createOpenAI> = null
 
-	/**
-	 * Generate streaming response from OpenAI with Go-style error handling
-	 * @param messages - Array of chat messages with role and content
-	 * @returns Result tuple with AsyncIterable<string> for streaming or error
-	 */
-	public generateStreamingResponse(
-		messages: ChatMessage[],
-	): Result<AsyncIterable<string>> {
-		const [streamResult, error] = tryCatchSync(() => {
-			return streamText({
-				model: this.chatModel,
-				messages,
-				maxTokens: 1000,
-				temperature: 0.7,
-			})
-		}, 'aiService - generateStreamingResponse')
-
-		if (error) {
-			return [null, error]
-		}
-
-		return [streamResult.textStream, null]
-	}
-
-	/**
-	 * Generate non-streaming response from OpenAI with Go-style error handling
-	 * @param messages - Array of chat messages with role and content
-	 * @returns Result tuple with string response or error
-	 */
-	public async generateResponse(
-		messages: ChatMessage[],
-	): Promise<Result<string>> {
-		const [result, error] = await tryCatch(
-			generateText({
-				model: this.chatModel,
-				messages,
-				maxTokens: 1000,
-				temperature: 0.7,
-			}),
-			'aiService - generateResponse',
-		)
-
-		if (error) {
-			return [null, error]
-		}
-
-		return [result.text, null]
+	constructor() {
+		// Initialize asynchronously
+		// eslint-disable-next-line sonarjs/no-async-constructor
+		this.initPromise = this.initialize()
 	}
 
 	/**
@@ -86,9 +41,11 @@ class AIService {
 	 * @returns Result tuple with number array (embedding vector) or error
 	 */
 	public async generateEmbedding(text: string): Promise<Result<number[]>> {
+		await this.ensureInitialized()
+
 		const [result, error] = await tryCatch(
 			embed({
-				model: this.embeddingModel,
+				model: this.embeddingModel!,
 				value: text,
 			}),
 			'aiService - generateEmbedding',
@@ -170,12 +127,98 @@ class AIService {
 	}
 
 	/**
+	 * Generate non-streaming response from OpenAI with Go-style error handling
+	 * @param messages - Array of chat messages with role and content
+	 * @returns Result tuple with string response or error
+	 */
+	public async generateResponse(
+		messages: ChatMessage[],
+	): Promise<Result<string>> {
+		await this.ensureInitialized()
+
+		const [result, error] = await tryCatch(
+			generateText({
+				model: this.chatModel!,
+				messages,
+				maxTokens: 1000,
+				temperature: 0.7,
+			}),
+			'aiService - generateResponse',
+		)
+
+		if (error) {
+			return [null, error]
+		}
+
+		return [result.text, null]
+	}
+
+	/**
+	 * Generate streaming response from OpenAI with Go-style error handling
+	 * @param messages - Array of chat messages with role and content
+	 * @returns Result tuple with AsyncIterable<string> for streaming or error
+	 */
+	public async generateStreamingResponse(
+		messages: ChatMessage[],
+	): Promise<Result<AsyncIterable<string>>> {
+		await this.ensureInitialized()
+
+		const [streamResult, error] = await tryCatch(async () => {
+			const result = streamText({
+				model: this.chatModel!,
+				messages,
+				maxTokens: 1000,
+				temperature: 0.7,
+			})
+			return result
+		}, 'aiService - generateStreamingResponse')
+
+		if (error) {
+			return [null, error]
+		}
+
+		return [
+			(streamResult as { textStream: AsyncIterable<string> }).textStream,
+			null,
+		]
+	}
+
+	/**
+	 * Get model configuration for different use cases
+	 * @param useCase - The use case for model selection
+	 * @returns Model configuration object
+	 */
+	public async getModelConfig(useCase: 'chat' | 'embedding' = 'chat'): Promise<{
+		dimensions?: number
+		maxTokens?: number
+		model: EmbeddingModel<string> | LanguageModelV1
+		temperature?: number
+	}> {
+		await this.ensureInitialized()
+
+		switch (useCase) {
+			case 'chat':
+				return {
+					model: this.chatModel!,
+					maxTokens: 1000,
+					temperature: 0.7,
+				}
+			case 'embedding':
+				return {
+					model: this.embeddingModel!,
+					dimensions: 1536,
+				}
+		}
+	}
+
+	/**
 	 * Validate message format for AI processing
 	 * @param messages - Messages to validate
 	 * @returns Result tuple with validated messages or error
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	public validateMessages(
-		messages: { role: string; content: string }[],
+		messages: { content: string; role: string }[],
 	): Result<ChatMessage[]> {
 		type ValidRoles = ChatMessage['role']
 
@@ -209,29 +252,23 @@ class AIService {
 	}
 
 	/**
-	 * Get model configuration for different use cases
-	 * @param useCase - The use case for model selection
-	 * @returns Model configuration object
+	 * Ensure the service is initialized before use
+	 * @returns Promise that resolves when initialization is complete
 	 */
-	public getModelConfig(useCase: 'chat' | 'embedding' = 'chat'): {
-		model: LanguageModelV1 | EmbeddingModel<string>
-		maxTokens?: number
-		temperature?: number
-		dimensions?: number
-	} {
-		switch (useCase) {
-			case 'chat':
-				return {
-					model: this.chatModel,
-					maxTokens: 1000,
-					temperature: 0.7,
-				}
-			case 'embedding':
-				return {
-					model: this.embeddingModel,
-					dimensions: 1536,
-				}
+	private async ensureInitialized(): Promise<void> {
+		if (!this.initialized && this.initPromise) {
+			await this.initPromise
 		}
+	}
+
+	private async initialize() {
+		const config = await assertConfig(false)
+		this.openai = createOpenAI({
+			apiKey: config.openaiApiKey,
+		})
+		this.chatModel = this.openai('gpt-3.5-turbo')
+		this.embeddingModel = this.openai.embedding('text-embedding-3-small')
+		this.initialized = true
 	}
 }
 

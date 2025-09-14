@@ -1,7 +1,6 @@
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { schemas } from '@repo/macro-ai-api-client'
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router'
+import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -24,39 +23,40 @@ import {
 import { Input } from '@/components/ui/input'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
-import { usePostForgotPasswordVerify } from '@/services/hooks/auth/usePostForgotPasswordVerify'
-import { TConfirmForgotPassword } from '@/services/network/auth/postForgotPasswordVerify'
+import { usePostForgotPasswordVerify } from '@/services/hooks/auth/use-post-forgot-password-verify'
+import { zConfirmForgotPasswordRequest } from '@/services/network/auth/post-forgot-password-verify'
+import type { ConfirmForgotPasswordRequest } from '@/services/network/auth/post-forgot-password-verify'
 
 const RouteComponent = () => {
 	const navigate = useNavigate({ from: '/auth/forgotten-password/verify' })
-	const { mutateAsync: postForgotPasswordVerify, isPending } =
+	const { isPending, mutateAsync: postForgotPasswordVerify } =
 		usePostForgotPasswordVerify()
 
-	const form = useForm<TConfirmForgotPassword>({
-		resolver: zodResolver(schemas.postAuthconfirmForgotPassword_Body),
+	const form = useForm<ConfirmForgotPasswordRequest>({
 		defaultValues: {
 			code: '',
+			confirmPassword: '',
 			email: '',
 			newPassword: '',
-			confirmPassword: '',
 		},
+		resolver: zodResolver(zConfirmForgotPasswordRequest),
 	})
 
 	const onSubmit = async ({
 		code,
+		confirmPassword,
 		email,
 		newPassword,
-		confirmPassword,
-	}: TConfirmForgotPassword) => {
+	}: ConfirmForgotPasswordRequest) => {
 		try {
 			const response = await postForgotPasswordVerify({
 				code,
+				confirmPassword,
 				email,
 				newPassword,
-				confirmPassword,
 			})
 
-			logger.info('Forgot password verify success', response)
+			logger.info(response, 'Forgot password verify success')
 			toast.success('Password reset successfully! Please login.')
 			await navigate({ to: '/auth/login' })
 		} catch (error: unknown) {
@@ -78,7 +78,7 @@ const RouteComponent = () => {
 				</CardHeader>
 				<CardContent>
 					<Form {...form}>
-						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+						<form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
 							<FormField
 								control={form.control}
 								name="code"
@@ -113,8 +113,8 @@ const RouteComponent = () => {
 										<FormLabel>New Password</FormLabel>
 										<FormControl>
 											<Input
-												type="password"
 												placeholder="Enter new password"
+												type="password"
 												{...field}
 											/>
 										</FormControl>
@@ -130,8 +130,8 @@ const RouteComponent = () => {
 										<FormLabel>Confirm New Password</FormLabel>
 										<FormControl>
 											<Input
-												type="password"
 												placeholder="Confirm new password"
+												type="password"
 												{...field}
 											/>
 										</FormControl>
@@ -139,7 +139,7 @@ const RouteComponent = () => {
 									</FormItem>
 								)}
 							/>
-							<Button type="submit" className="w-full" disabled={isPending}>
+							<Button className="w-full" disabled={isPending} type="submit">
 								{isPending ? 'Resetting...' : 'Reset Password'}
 							</Button>
 						</form>
@@ -147,9 +147,9 @@ const RouteComponent = () => {
 				</CardContent>
 				<CardFooter className="flex justify-center">
 					<Button
+						onClick={() => navigate({ to: '/auth/forgotten-password' })}
 						type="button"
 						variant="link"
-						onClick={() => navigate({ to: '/auth/forgotten-password' })}
 					>
 						Resend code
 					</Button>

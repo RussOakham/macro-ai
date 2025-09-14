@@ -1,52 +1,39 @@
-import { config } from 'dotenv'
-import { resolve } from 'path'
-import { fromError } from 'zod-validation-error'
+/**
+ * Simple Configuration Loader
+ *
+ * This replaces the complex configuration system with a simple, predictable approach:
+ * - Load environment variables directly
+ * - Validate against the schema
+ * - No complex loading logic or Parameter Store integration
+ * - Easy to test and reason about
+ */
 
-import { envSchema, TEnv } from './env.schema.ts'
-import { AppError, Result } from './errors.ts'
-import { pino } from './logger.ts'
+import { config as dotenvConfig } from 'dotenv'
 
-const { logger } = pino
+import { envSchema, type TEnv } from './env.schema.ts'
 
-const loadConfig = (): Result<TEnv> => {
-	const envPath = resolve(process.cwd(), '.env')
+/**
+ * Get configuration for immediate use
+ */
+export const config = (() => {
+	// Load .env file if it exists (for local development)
+	dotenvConfig()
 
-	const enableDebug =
-		process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test'
+	// Parse and validate environment variables
+	const result = envSchema.safeParse(process.env)
 
-	// Load environment variables from .env file
-	const result = config({
-		path: envPath,
-		encoding: 'UTF-8',
-		debug: enableDebug,
-	})
+	if (!result.success) {
+		const errors = result.error.issues
+			.map((err) => `${err.path.join('.')}: ${err.message}`)
+			.join(', ')
 
-	if (result.error) {
-		const appError = AppError.validation(
-			`Cannot parse .env file '${envPath}': ${result.error.message}`,
-			{ envPath, error: result.error },
-			'configLoader',
-		)
-		return [null, appError]
+		throw new Error(`Environment configuration error: ${errors}`)
 	}
 
-	// Validate environment variables
-	const env = envSchema.safeParse(process.env)
+	return result.data
+})()
 
-	if (!env.success) {
-		const validationError = fromError(env.error)
-		const appError = AppError.validation(
-			`Invalid environment configuration in '${envPath}': ${validationError.message}`,
-			{ envPath, errors: validationError.details },
-			'configLoader',
-		)
-		return [null, appError]
-	}
-
-	logger.info(`Loaded configuration from ${envPath}`)
-
-	return [env.data, null]
-}
-
-// Export the function instead of the loaded config
-export { loadConfig }
+/**
+ * Type-safe configuration access
+ */
+export type Config = TEnv

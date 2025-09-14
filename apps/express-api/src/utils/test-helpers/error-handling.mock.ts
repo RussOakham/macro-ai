@@ -1,11 +1,12 @@
-import { type MockedFunction, vi } from 'vitest'
+import { expect, vi } from 'vitest'
+import type { MockedFunction } from 'vitest'
 
-import {
+import type {
 	tryCatch,
 	tryCatchStream,
 	tryCatchSync,
 } from '../error-handling/try-catch.ts'
-import { AppError, Result } from '../errors.ts'
+import { AppError, type Result } from '../errors.ts'
 
 /**
  * Mock interfaces for error handling utilities
@@ -98,10 +99,14 @@ export const mockTryCatchWithRealImplementation =
 		const mockTryCatch = vi.fn() as MockedFunction<TryCatchType>
 		mockTryCatch.mockImplementation(
 			async <T>(
-				promise: Promise<T>,
+				promiseOrFunction: Promise<T> | (() => Promise<T>),
 				context = 'unknown',
 			): Promise<Result<T>> => {
 				try {
+					const promise =
+						typeof promiseOrFunction === 'function'
+							? promiseOrFunction()
+							: promiseOrFunction
 					const data = await promise
 					return [data, null]
 				} catch (error: unknown) {
@@ -221,6 +226,118 @@ export const createErrorScenarios = {
 }
 
 /**
+ * Error boundary helper for testing error propagation
+ * Wraps a function to ensure errors are properly caught and logged in tests
+ *
+ * @param fn - Function to execute within error boundary
+ * @param context - Context identifier for error logging
+ * @returns Result tuple containing data or error
+ *
+ * @example
+ * ```typescript
+ * const [result, error] = withErrorBoundary(() => {
+ *   return riskyOperation()
+ * }, 'user-service')
+ *
+ * if (error) {
+ *   console.log('Error caught:', error.message)
+ * } else {
+ *   console.log('Success:', result)
+ * }
+ * ```
+ */
+export const withErrorBoundary = <T>(
+	fn: () => T,
+	context = 'test-boundary',
+): Result<T> => {
+	try {
+		const result = fn()
+		return [result, null]
+	} catch (error: unknown) {
+		const appError = AppError.from(error, context)
+		console.error(`[Error Boundary - ${context}]: ${appError.message}`)
+		return [null, appError]
+	}
+}
+
+/**
+ * Async error boundary helper for testing async error propagation
+ *
+ * @param fn - Async function to execute within error boundary
+ * @param context - Context identifier for error logging
+ * @returns Promise of Result tuple containing data or error
+ *
+ * @example
+ * ```typescript
+ * const [result, error] = await withAsyncErrorBoundary(async () => {
+ *   return await riskyAsyncOperation()
+ * }, 'api-service')
+ *
+ * if (error) {
+ *   console.log('Async error caught:', error.message)
+ * } else {
+ *   console.log('Async success:', result)
+ * }
+ * ```
+ */
+export const withAsyncErrorBoundary = async <T>(
+	fn: () => Promise<T>,
+	context = 'test-boundary',
+): Promise<Result<T>> => {
+	try {
+		const result = await fn()
+		return [result, null]
+	} catch (error: unknown) {
+		const appError = AppError.from(error, context)
+		console.error(`[Async Error Boundary - ${context}]: ${appError.message}`)
+		return [null, appError]
+	}
+}
+
+/**
+ * Helper to create fluent error assertions with better error messages
+ *
+ * @param expectedType - Expected error type (e.g., 'ValidationError')
+ * @param expectedStatus - Expected HTTP status code (e.g., 400)
+ * @returns Object with fluent assertion methods
+ *
+ * @example
+ * ```typescript
+ * const assertError = createErrorAssertion('ValidationError', 400)
+ *
+ * assertError
+ *   .shouldHaveType()
+ *   .shouldHaveStatus()
+ *   .shouldHaveMessage('Invalid input')(error)
+ * ```
+ */
+export const createErrorAssertion = (
+	expectedType: string,
+	expectedStatus: number,
+) => ({
+	shouldHaveType: (error: AppError) => {
+		// oxlint-disable-next-line no-standalone-expect
+		expect(error.type).toBe(expectedType)
+		return createErrorAssertion(expectedType, expectedStatus)
+	},
+	shouldHaveStatus: (error: AppError) => {
+		// oxlint-disable-next-line no-standalone-expect
+		expect(error.status).toBe(expectedStatus)
+		return createErrorAssertion(expectedType, expectedStatus)
+	},
+	shouldHaveMessage: (message: string) => (error: AppError) => {
+		// oxlint-disable-next-line no-standalone-expect
+		expect(error.message).toBe(message)
+		return createErrorAssertion(expectedType, expectedStatus)
+	},
+	shouldHaveService: (service: string) => (error: AppError) => {
+		// oxlint-disable-next-line no-standalone-expect
+		expect(error.service).toBe(service)
+		return createErrorAssertion(expectedType, expectedStatus)
+	},
+})
+
+/**
  * Unified export object providing all error handling mock utilities
  * Follows the pattern established by logger.mock.ts and express-mocks.ts
  */
@@ -249,6 +366,14 @@ export const mockErrorHandling = {
 	// Error scenario creators
 	/** Create common error scenarios for testing */
 	errors: createErrorScenarios,
+
+	// Error boundary helpers
+	/** Wrap function in error boundary for testing */
+	withErrorBoundary,
+	/** Wrap async function in error boundary for testing */
+	withAsyncErrorBoundary,
+	/** Create fluent error assertions */
+	assertError: createErrorAssertion,
 }
 
 // Export types for use in test files

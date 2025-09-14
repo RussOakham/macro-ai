@@ -1,16 +1,31 @@
-import { useState } from 'react'
+import type { QueryClient } from '@tanstack/react-query'
 import { createFileRoute, redirect } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 
 import { AuthRouteLoading } from '@/components/auth/auth-route-loading'
 import { ChatInterface } from '@/components/chat/chat-interface/chat-interface'
 import { ChatSidebar } from '@/components/chat/chat-sidebar/chat-sidebar'
 import { attemptAuthenticationWithRefresh } from '@/lib/auth/auth-utils'
 import { standardizeError } from '@/lib/errors/standardize-error'
-import { useGetUser } from '@/services/hooks/user/getUser'
+import { useGetUser } from '@/services/hooks/user/get-user'
 
 const ChatLayout = () => {
-	const { data: user, isFetching, isError, error, isSuccess } = useGetUser()
+	const { data: user, error, isError, isFetching, isSuccess } = useGetUser()
 	const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+
+	// Handle escape key for mobile sidebar
+	useEffect(() => {
+		if (!isMobileSidebarOpen) return
+
+		const onEsc = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') setIsMobileSidebarOpen(false)
+		}
+
+		document.addEventListener('keydown', onEsc)
+		return () => {
+			document.removeEventListener('keydown', onEsc)
+		}
+	}, [isMobileSidebarOpen])
 
 	if (isFetching && !user) {
 		return <div>Loading...</div>
@@ -26,11 +41,14 @@ const ChatLayout = () => {
 		<div className="flex h-full w-full min-h-0 relative">
 			{/* Mobile Sidebar Overlay */}
 			{isMobileSidebarOpen && (
-				<div
+				<button
+					aria-label="Close sidebar"
 					className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
 					onClick={() => {
 						setIsMobileSidebarOpen(false)
 					}}
+					type="button"
+					/* overlay click closes; Escape handled via document listener */
 				/>
 			)}
 
@@ -60,10 +78,8 @@ const ChatLayout = () => {
 }
 
 export const Route = createFileRoute('/chat')({
-	component: ChatLayout,
-	pendingComponent: AuthRouteLoading,
 	beforeLoad: async ({ context, location }) => {
-		const { queryClient } = context
+		const { queryClient } = context as { queryClient: QueryClient }
 
 		// Attempt authentication with automatic refresh capability
 		const authResult = await attemptAuthenticationWithRefresh(queryClient)
@@ -71,11 +87,13 @@ export const Route = createFileRoute('/chat')({
 		if (!authResult.success) {
 			// eslint-disable-next-line @typescript-eslint/only-throw-error
 			throw redirect({
-				to: '/auth/login',
 				search: {
 					redirect: location.pathname,
 				},
+				to: '/auth/login',
 			})
 		}
 	},
+	component: ChatLayout,
+	pendingComponent: AuthRouteLoading,
 })

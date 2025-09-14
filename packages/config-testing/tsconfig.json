@@ -1,0 +1,23 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"strict": true,
+
+		// Monorepo friendliness
+		"composite": true,
+		"declaration": true,
+		"declarationMap": true,
+		"outDir": "dist",
+
+		// Nice-to-haves
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"forceConsistentCasingInFileNames": true
+	},
+	"include": ["src"],
+	"exclude": ["dist", "node_modules"]
+}

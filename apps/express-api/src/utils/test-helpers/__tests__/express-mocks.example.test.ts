@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express'
+
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
-	ChainedResult,
 	createAuthenticatedRequest,
 	createExpressMocks,
 	createMockNext,
@@ -12,10 +12,8 @@ import {
 	createRequestWithCookies,
 	createRequestWithHeaders,
 	createRequestWithParams,
-	createStatusChain,
+	type ExpressMocks,
 	mockExpress,
-	type MockRequest,
-	type MockResponse,
 	setupExpressMocks,
 } from '../express-mocks.ts'
 
@@ -30,13 +28,16 @@ describe('Express Mocks Helper', () => {
 			const mockRequest = createMockRequest()
 
 			// Assert
-			expect(mockRequest).toEqual({
-				body: {},
-				params: {},
-				query: {},
-				headers: {},
-				cookies: {},
-			})
+			expect(mockRequest.body).toEqual({})
+			expect(mockRequest.params).toEqual({})
+			expect(mockRequest.query).toEqual({})
+			expect(mockRequest.headers).toEqual({})
+			expect(mockRequest.cookies).toEqual({})
+			expect(mockRequest.method).toBe('GET')
+			expect(mockRequest.ip).toBe('127.0.0.1')
+			expect(mockRequest.path).toBe('/')
+			expect(mockRequest.url).toBe('/')
+			expect(typeof mockRequest.get).toBe('function')
 		})
 
 		it('should create a mock request with overrides', () => {
@@ -51,14 +52,17 @@ describe('Express Mocks Helper', () => {
 			const mockRequest = createMockRequest(overrides)
 
 			// Assert
-			expect(mockRequest).toEqual({
-				body: { email: 'test@example.com' },
-				params: { id: '123' },
-				query: {},
-				headers: {},
-				cookies: {},
-				userId: 'user-123',
-			})
+			expect(mockRequest.body).toEqual({ email: 'test@example.com' })
+			expect(mockRequest.params).toEqual({ id: '123' })
+			expect(mockRequest.query).toEqual({})
+			expect(mockRequest.headers).toEqual({})
+			expect(mockRequest.cookies).toEqual({})
+			expect(mockRequest.method).toBe('GET')
+			expect(mockRequest.ip).toBe('127.0.0.1')
+			expect(mockRequest.path).toBe('/')
+			expect(mockRequest.url).toBe('/')
+			expect(typeof mockRequest.get).toBe('function')
+			expect(mockRequest.userId).toBe('user-123')
 		})
 
 		it('should allow partial overrides', () => {
@@ -97,7 +101,8 @@ describe('Express Mocks Helper', () => {
 			const mockResponse = createMockResponse()
 
 			// Act
-			const result = mockResponse.status(200) as ChainedResult
+			if (!mockResponse.status) throw new Error('status method not found')
+			const result = mockResponse.status(200)
 
 			// Assert
 			expect(result).toHaveProperty('json')
@@ -110,7 +115,8 @@ describe('Express Mocks Helper', () => {
 			const mockResponse = createMockResponse()
 
 			// Act
-			const result = mockResponse.cookie('test', 'value') as MockResponse
+			if (!mockResponse.cookie) throw new Error('cookie method not found')
+			const result = mockResponse.cookie('test', 'value')
 
 			// Assert
 			expect(result).toBe(mockResponse)
@@ -121,7 +127,9 @@ describe('Express Mocks Helper', () => {
 			const mockResponse = createMockResponse()
 
 			// Act
-			const result = mockResponse.clearCookie('test') as MockResponse
+			if (!mockResponse.clearCookie)
+				throw new Error('clearCookie method not found')
+			const result = mockResponse.clearCookie('test')
 
 			// Assert
 			expect(result).toBe(mockResponse)
@@ -132,8 +140,9 @@ describe('Express Mocks Helper', () => {
 			const mockResponse = createMockResponse()
 
 			// Act
+			if (!mockResponse.status) throw new Error('status method not found')
 			mockResponse.status(201)
-			const chainedResult = mockResponse.status(201) as ChainedResult
+			const chainedResult = mockResponse.status(201)
 			chainedResult.json({ message: 'success' })
 
 			// Assert
@@ -146,8 +155,9 @@ describe('Express Mocks Helper', () => {
 			// Arrange
 			const mockResponse = createMockResponse()
 
-			// Act - Using the helper to avoid 'any' type issues
-			const result = createStatusChain(mockResponse, 200)
+			// Act - Test the status chaining directly
+			if (!mockResponse.status) throw new Error('status method not found')
+			const result = mockResponse.status(200)
 
 			// Assert - Now result is properly typed
 			expect(result).toHaveProperty('json')
@@ -189,19 +199,22 @@ describe('Express Mocks Helper', () => {
 	describe('createExpressMocks', () => {
 		it('should create a complete set of Express mocks', () => {
 			// Act
-			const mocks = createExpressMocks()
+			const mocks: ExpressMocks = createExpressMocks()
 
 			// Assert
 			expect(mocks).toHaveProperty('req')
 			expect(mocks).toHaveProperty('res')
 			expect(mocks).toHaveProperty('next')
-			expect(mocks.req).toEqual({
-				body: {},
-				params: {},
-				query: {},
-				headers: {},
-				cookies: {},
-			})
+			expect(mocks.req.body).toEqual({})
+			expect(mocks.req.params).toEqual({})
+			expect(mocks.req.query).toEqual({})
+			expect(mocks.req.headers).toEqual({})
+			expect(mocks.req.cookies).toEqual({})
+			expect(mocks.req.method).toBe('GET')
+			expect(mocks.req.ip).toBe('127.0.0.1')
+			expect(mocks.req.path).toBe('/')
+			expect(mocks.req.url).toBe('/')
+			expect(typeof mocks.req.get).toBe('function')
 			expect(mocks.res.status).toBeDefined()
 			expect(vi.isMockFunction(mocks.next)).toBe(true)
 		})
@@ -227,7 +240,9 @@ describe('Express Mocks Helper', () => {
 			// Arrange
 			const firstMocks = createExpressMocks()
 			firstMocks.next()
-			firstMocks.res.status(200)
+			if (firstMocks.res.status) {
+				firstMocks.res.status(200)
+			}
 
 			// Act
 			const freshMocks = setupExpressMocks()
@@ -372,8 +387,8 @@ describe('Express Mocks Helper', () => {
 
 		it('should support MockRequest and MockResponse types', () => {
 			// Arrange
-			const mockRequest: MockRequest = createMockRequest()
-			const mockResponse: MockResponse = createMockResponse()
+			const mockRequest = createMockRequest()
+			const mockResponse = createMockResponse()
 
 			// Act & Assert - This test passes if TypeScript compilation succeeds
 			expect(mockRequest).toBeDefined()

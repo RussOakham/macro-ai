@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { InternalError } from '../../../utils/errors.ts'
+import { MockDataFactory } from '../../../utils/test-helpers/advanced-mocking.ts'
 import { mockErrorHandling } from '../../../utils/test-helpers/error-handling.mock.ts'
+import { faker } from '../../../utils/test-helpers/index.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 
 // Mock dependencies BEFORE any imports
@@ -37,8 +39,7 @@ vi.mock('../vector.data-access.ts', () => ({
 }))
 
 // Import after mocking
-import type { AIService } from '../ai.service.ts'
-import { aiService } from '../ai.service.ts'
+import { aiService, type AIService } from '../ai.service.ts'
 import type {
 	IVectorRepository,
 	SemanticSearchOptions,
@@ -70,21 +71,21 @@ describe('VectorService', () => {
 	let mockAIService: MockAIService
 	let mockVectorRepository: MockVectorRepository
 
-	// Mock data - properly typed
-	const mockUserId = '123e4567-e89b-12d3-a456-426614174000'
-	const mockChatId = 'chat-456-789-012'
-	const mockMessageId = 'message-789-012-345'
-	const mockVectorId = 'vector-012-345-678'
+	// Mock data using enhanced factory
+	const mockUserId = faker.string.uuid()
+	const mockChatId = faker.string.uuid()
+	const mockMessageId = faker.string.uuid()
+	const mockVectorId = faker.string.uuid()
 
-	const mockEmbedding = [0.1, 0.2, 0.3, 0.4, 0.5]
+	const mockEmbedding = MockDataFactory.embedding()
 
-	const mockMessageData = {
+	const mockMessageData = MockDataFactory.messageData({
 		messageId: mockMessageId,
 		chatId: mockChatId,
 		userId: mockUserId,
 		content: 'Hello, world!',
 		metadata: { source: 'user' },
-	}
+	})
 
 	const mockInsertChatVector: TInsertChatVector = {
 		messageId: mockMessageId,
@@ -408,28 +409,39 @@ describe('VectorService', () => {
 			threshold: 0.7,
 		}
 
-		it('should perform semantic search successfully', async () => {
-			// Arrange
-			const mockSearchResults = [mockSemanticSearchResult]
-			mockAIService.generateEmbedding.mockResolvedValue([mockEmbedding, null])
-			mockVectorRepository.semanticSearch.mockResolvedValue([
-				mockSearchResults,
-				null,
-			])
+		describe.each([
+			['test search query', 'basic search'],
+			['complex query with multiple terms', 'complex search'],
+			['short query', 'minimal search'],
+		])('Search query validation: %s', (query, description) => {
+			it(`should perform semantic search successfully for ${description}`, async () => {
+				// Arrange
+				const searchOptions: SemanticSearchOptions = {
+					query,
+					userId: mockUserId,
+					chatId: mockChatId,
+					limit: 10,
+					threshold: 0.7,
+				}
+				const mockSearchResults = [mockSemanticSearchResult]
+				mockAIService.generateEmbedding.mockResolvedValue([mockEmbedding, null])
+				mockVectorRepository.semanticSearch.mockResolvedValue([
+					mockSearchResults,
+					null,
+				])
 
-			// Act
-			const [result, error] =
-				await vectorService.semanticSearch(mockSearchOptions)
+				// Act
+				const [result, error] =
+					await vectorService.semanticSearch(searchOptions)
 
-			// Assert
-			expect(mockAIService.generateEmbedding).toHaveBeenCalledWith(
-				mockSearchOptions.query,
-			)
-			expect(mockVectorRepository.semanticSearch).toHaveBeenCalledWith(
-				mockSearchOptions,
-			)
-			expect(result).toEqual(mockSearchResults)
-			expect(error).toBeNull()
+				// Assert
+				expect(mockAIService.generateEmbedding).toHaveBeenCalledWith(query)
+				expect(mockVectorRepository.semanticSearch).toHaveBeenCalledWith(
+					searchOptions,
+				)
+				expect(result).toEqual(mockSearchResults)
+				expect(error).toBeNull()
+			})
 		})
 
 		it('should return error when AI service fails to generate query embedding', async () => {
@@ -489,32 +501,40 @@ describe('VectorService', () => {
 			expect(error).toBeNull()
 		})
 
-		it('should use default limit and threshold when not provided', async () => {
-			// Arrange
-			const optionsWithoutDefaults = {
-				query: 'test query',
-				userId: mockUserId,
-			}
-			const expectedOptions = {
-				...optionsWithoutDefaults,
-				limit: 10,
-				threshold: 0.7,
-			}
-			mockAIService.generateEmbedding.mockResolvedValue([mockEmbedding, null])
-			mockVectorRepository.semanticSearch.mockResolvedValue([[], null])
+		describe.each([
+			[5, 0.8, 'high precision search'],
+			[20, 0.5, 'broad search'],
+			[1, 0.9, 'very precise search'],
+		])(
+			'Search parameters: limit=%s, threshold=%s',
+			(limit, threshold, description) => {
+				it(`should use custom ${description} parameters`, async () => {
+					// Arrange
+					const customOptions = {
+						query: 'test query',
+						userId: mockUserId,
+						limit,
+						threshold,
+					}
+					mockAIService.generateEmbedding.mockResolvedValue([
+						mockEmbedding,
+						null,
+					])
+					mockVectorRepository.semanticSearch.mockResolvedValue([[], null])
 
-			// Act
-			const [result, error] = await vectorService.semanticSearch(
-				optionsWithoutDefaults,
-			)
+					// Act
+					const [result, error] =
+						await vectorService.semanticSearch(customOptions)
 
-			// Assert
-			expect(mockVectorRepository.semanticSearch).toHaveBeenCalledWith(
-				expectedOptions,
-			)
-			expect(result).toEqual([])
-			expect(error).toBeNull()
-		})
+					// Assert
+					expect(mockVectorRepository.semanticSearch).toHaveBeenCalledWith(
+						customOptions,
+					)
+					expect(result).toEqual([])
+					expect(error).toBeNull()
+				})
+			},
+		)
 
 		it('should handle search without chatId filter', async () => {
 			// Arrange
@@ -777,7 +797,7 @@ describe('VectorService', () => {
 
 		it('should handle very large embedding arrays', async () => {
 			// Arrange
-			const largeEmbedding = new Array(1536).fill(0).map((_, i) => i / 1536)
+			const largeEmbedding = Array.from({ length: 1536 }, (_, i) => i / 1536)
 			mockAIService.generateEmbedding.mockResolvedValue([largeEmbedding, null])
 			mockVectorRepository.createVector.mockResolvedValue([
 				mockChatVector,

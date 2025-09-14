@@ -4,9 +4,9 @@ import { ChatActions } from './chat-actions'
 import { ChatTitle } from './chat-title'
 
 interface ChatHeaderProps extends React.ComponentPropsWithoutRef<'div'> {
-	title: string
 	onMobileSidebarToggle?: () => void
-	status: 'ready' | 'submitted' | 'streaming' | 'error'
+	status: 'error' | 'ready' | 'streaming' | 'submitted'
+	title: string
 }
 
 /**
@@ -14,10 +14,10 @@ interface ChatHeaderProps extends React.ComponentPropsWithoutRef<'div'> {
  * Displays chat title and mobile sidebar toggle button
  */
 const ChatHeader = ({
-	title,
+	className,
 	onMobileSidebarToggle,
 	status,
-	className,
+	title,
 	...props
 }: ChatHeaderProps): React.JSX.Element => {
 	return (
@@ -38,22 +38,25 @@ const ChatHeader = ({
 							<div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
 							<span className="hidden sm:inline">Streaming</span>
 						</div>
-					) : status === 'submitted' ? (
+					) : null}{' '}
+					{status === 'submitted' ? (
 						<div className="flex items-center gap-1 text-muted-foreground">
 							<div className="w-2 h-2 bg-muted-foreground rounded-full animate-pulse" />
 							<span className="hidden sm:inline">Processing</span>
 						</div>
-					) : status === 'error' ? (
+					) : null}{' '}
+					{status === 'error' ? (
 						<div className="flex items-center gap-1 text-destructive">
 							<div className="w-2 h-2 bg-destructive rounded-full" />
 							<span className="hidden sm:inline">Error</span>
 						</div>
-					) : (
+					) : null}
+					{status === 'ready' ? (
 						<div className="flex items-center gap-1 text-muted-foreground">
 							<div className="w-2 h-2 bg-green-500 rounded-full" />
 							<span className="hidden sm:inline">Ready</span>
 						</div>
-					)}
+					) : null}
 				</div>
 			</div>
 		</div>

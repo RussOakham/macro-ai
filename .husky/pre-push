@@ -1,1 +1,47 @@
-pnpm test
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Modern security scanning for pre-push using Snyk and ESLint
+echo "🛡️  Running modern security scans before push..."
+
+# Check if any workflow files are being pushed
+if git diff --name-only origin/$(git rev-parse --abbrev-ref HEAD)..HEAD | grep -q '\.github/workflows/.*\.ya\?ml$'; then
+  echo "📋 GitHub Actions workflow files detected in push, running security scans..."
+  
+  # Run Snyk security scan (dependency + code vulnerabilities)
+  echo "🔍 Running Snyk security scan..."
+  pnpm security:scan
+  
+  if [ $? -ne 0 ]; then
+    echo "❌ Snyk security scan failed. Please fix the issues before pushing."
+    echo "💡 Tip: Run 'pnpm security:scan' locally to see detailed results."
+    exit 1
+  fi
+  
+  # Run workflow validation with actionlint
+  echo "🔍 Running GitHub Actions workflow validation..."
+  pnpm security:scan:workflows
+  
+  if [ $? -ne 0 ]; then
+    echo "❌ Workflow validation failed. Please fix the issues before pushing."
+    echo "💡 Tip: Run 'pnpm security:scan:workflows' locally to see detailed results."
+    exit 1
+  fi
+  
+  echo "✅ All security scans passed!"
+  echo "🚀 Your workflows are secure and ready to push!"
+else
+  echo "ℹ️  No GitHub Actions workflow files in this push, running basic security scan..."
+  
+  # Run basic Snyk scan for dependency vulnerabilities
+  echo "🔍 Running dependency security scan..."
+  pnpm security:scan:deps
+  
+  if [ $? -ne 0 ]; then
+    echo "❌ Dependency security scan failed. Please fix the issues before pushing."
+    echo "💡 Tip: Run 'pnpm security:scan:deps' locally to see detailed results."
+    exit 1
+  fi
+  
+  echo "✅ Basic security scan passed!"
+fi

@@ -1,0 +1,37 @@
+{
+	"$schema": "http://json.schemastore.org/package",
+	"name": "@repo/config-testing",
+	"license": "MIT",
+	"private": "true",
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"clean": "rm -rf dist",
+		"type-check": "tsc --noEmit",
+		"prebuild": "pnpm clean",
+		"lint": "pnpm oxlint . && eslint . --ext .ts,.tsx",
+		"lint:fix": "pnpm oxlint . --fix && eslint . --ext .ts,.tsx --fix",
+		"lint:ci": "pnpm oxlint . --max-warnings=0 && eslint . --ext .ts,.tsx --max-warnings 0",
+		"lint:oxlint": "pnpm oxlint .",
+		"lint:fix:oxlint": "pnpm oxlint . --fix",
+		"lint:ci:oxlint": "pnpm oxlint . --max-warnings=0",
+		"lint:eslint": "eslint . --ext .ts,.tsx",
+		"lint:fix:eslint": "eslint . --ext .ts,.tsx --fix",
+		"lint:ci:eslint": "eslint . --ext .ts,.tsx --max-warnings 0"
+	},
+	"exports": {
+		".": "./dist/src/index.js"
+	},
+	"dependencies": {
+		"@faker-js/faker": "^10.0.0"
+	},
+	"devDependencies": {
+		"typescript": "catalog:",
+		"eslint": "catalog:"
+	},
+	"engines": {
+		"node": ">=18.0.0",
+		"pnpm": ">=8.0.0"
+	}
+}

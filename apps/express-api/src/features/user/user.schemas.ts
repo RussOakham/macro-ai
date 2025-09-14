@@ -68,7 +68,7 @@ const messageBaseSchema = registerZodSchema(
 // Add a schema for validating user ID
 const userIdSchema = registerZodSchema(
 	'UserId',
-	z.string().uuid('Invalid user ID format'),
+	z.uuid('Invalid user ID format'),
 	'User ID validation schema',
 )
 

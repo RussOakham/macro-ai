@@ -20,13 +20,13 @@ vi.mock('../../../utils/response-handlers.ts', () => ({
 // Import after mocking
 import { tryCatch } from '../../../utils/error-handling/try-catch.ts'
 import { safeValidateSchema } from '../../../utils/response-handlers.ts'
-// Import the repository instances to test
 import type {
 	SemanticSearchOptions,
 	SemanticSearchResult,
 	TChatVector,
 	TInsertChatVector,
 } from '../chat.types.ts'
+// Import the repository instances to test
 import { vectorRepository } from '../vector.data-access.ts'
 
 describe('Chat Data Access Layer', () => {
@@ -187,6 +187,7 @@ describe('Chat Data Access Layer', () => {
 			})
 		})
 
+		// eslint-disable-next-line no-secrets/no-secrets
 		describe('findVectorsByChatId', () => {
 			it('should return vectors for chat', async () => {
 				// Arrange
@@ -201,6 +202,7 @@ describe('Chat Data Access Layer', () => {
 				// Assert
 				expect(tryCatch).toHaveBeenCalledWith(
 					expect.any(Object),
+					// eslint-disable-next-line no-secrets/no-secrets
 					'vectorRepository - findVectorsByChatId',
 				)
 				expect(result).toEqual(mockVectors)

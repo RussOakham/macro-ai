@@ -130,7 +130,7 @@ Our comprehensive documentation covers everything from getting started to advanc
 - **[Release Process](./docs/operations/release-process.md)** - Semantic versioning and releases
 - **[Database Operations](./docs/operations/database-operations.md)** - Schema management and maintenance
 - **[Incident Response](./docs/operations/incident-response.md)** - Troubleshooting and emergency procedures
-- **[Merge Strategy](./docs/operations/merge-strategy.md)** - Trunk-based development workflow
+- **[Merge Strategy](./docs/operations/merge-strategy.md)** - Git flow-based development workflow
 
 ### 🎯 Features
 
@@ -181,7 +181,7 @@ We welcome contributions! Please read our contributing guidelines:
 1. **[Development Setup](./docs/getting-started/development-setup.md)** - Set up your development environment
 2. **[Coding Standards](./docs/development/coding-standards.md)** - Follow our code style guidelines
 3. **[Testing Strategy](./docs/development/testing-strategy.md)** - Write comprehensive tests
-4. **[Merge Strategy](./docs/operations/merge-strategy.md)** - Follow our trunk-based workflow
+4. **[Merge Strategy](./docs/operations/merge-strategy.md)** - Follow our Git Flow workflow
 
 ### Code Quality Standards
 

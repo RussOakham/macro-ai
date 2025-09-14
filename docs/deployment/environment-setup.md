@@ -58,15 +58,30 @@ COOKIE_DOMAIN=localhost
 RELATIONAL_DATABASE_URL=postgresql://postgres:password@localhost:5432/macro_ai_dev
 ```
 
-#### Staging Environment 📋 PLANNED
+## 🏗️ Infrastructure Scaling Strategy
+
+Environments (staging/production) can operate at different infrastructure scales:
+
+- **Hobby Scale**: Cost-optimized for <£10/month (Neon, Upstash, Lambda)
+- **Enterprise Scale**: Production-ready for £100-300/month (RDS, ElastiCache, ECS)
+
+### Environment + Scale Matrix
+
+| Environment | Default Scale | Upgrade Path | Cost Target       |
+| ----------- | ------------- | ------------ | ----------------- |
+| staging     | hobby         | N/A          | <£5/month         |
+| production  | hobby         | enterprise   | <£10 → £300/month |
+
+#### Staging Environment (Hobby Scale) 📋 PLANNED
 
 **Purpose**: Pre-production testing and validation
 
 **Characteristics**:
 
-- Production-like configuration with library optimizations
-- Reduced scale and redundancy
+- Production-like configuration at hobby scale
+- Cost-optimized infrastructure (Neon, Upstash)
 - Full feature testing capability
+- Automatic deployment from `develop` branch
 - Isolated from production data
 
 **Configuration**:
@@ -74,10 +89,11 @@ RELATIONAL_DATABASE_URL=postgresql://postgres:password@localhost:5432/macro_ai_d
 ```bash
 NODE_ENV=production    # Uses production for library optimizations
 APP_ENV=staging        # Application knows it's staging environment
+CDK_DEPLOY_SCALE=hobby # Cost-optimized infrastructure scale
 API_KEY=staging-unique-32-character-key-here
 SERVER_PORT=3040
 COOKIE_DOMAIN=staging.macro-ai.com
-RELATIONAL_DATABASE_URL=postgresql://staging_user:secure_pass@staging-db:5432/macro_ai_staging
+RELATIONAL_DATABASE_URL=postgresql://staging_user:secure_pass@neon-staging:5432/macro_ai_staging
 ```
 
 **Environment Variable Strategy**:
@@ -85,26 +101,46 @@ RELATIONAL_DATABASE_URL=postgresql://staging_user:secure_pass@staging-db:5432/ma
 - `NODE_ENV=production` ensures staging gets the same library optimizations as production (Express, logging, security)
 - `APP_ENV=staging` allows application-specific staging behavior (URLs, feature flags, etc.)
 
-#### Production Environment 📋 PLANNED
+#### Production Environment (Hobby → Enterprise Scale) 📋 PLANNED
 
 **Purpose**: Live application serving end users
 
-**Characteristics**:
+**Hobby Scale Characteristics**:
+
+- Cost-optimized for personal projects
+- Suitable for <100 users
+- Automatic deployment from `main` branch
+- Easy upgrade path to enterprise
+
+**Enterprise Scale Characteristics**:
 
 - High availability and redundancy
 - Auto-scaling capabilities
 - Comprehensive monitoring
 - Security hardening
 
-**Configuration**:
+**Configuration (Hobby Scale)**:
 
 ```bash
 NODE_ENV=production
 APP_ENV=production
+CDK_DEPLOY_SCALE=hobby # Cost-optimized infrastructure
 API_KEY=production-unique-32-character-key-here
 SERVER_PORT=3040
 COOKIE_DOMAIN=macro-ai.com
-RELATIONAL_DATABASE_URL=postgresql://prod_user:very_secure_pass@prod-db:5432/macro_ai_prod?sslmode=require
+RELATIONAL_DATABASE_URL=postgresql://prod_user:secure_pass@neon-prod:5432/macro_ai_prod?sslmode=require
+```
+
+**Configuration (Enterprise Scale)**:
+
+```bash
+NODE_ENV=production
+APP_ENV=production
+CDK_DEPLOY_SCALE=enterprise # Full AWS managed services
+API_KEY=production-unique-32-character-key-here
+SERVER_PORT=3040
+COOKIE_DOMAIN=macro-ai.com
+RELATIONAL_DATABASE_URL=postgresql://prod_user:very_secure_pass@rds-prod:5432/macro_ai_prod?sslmode=require
 ```
 
 ## 🔧 Environment Variable Strategy
@@ -758,14 +794,13 @@ const productionConfigSchema = z.object({
 	SERVER_PORT: z.coerce.number().default(3040),
 	COOKIE_DOMAIN: z.string().min(1),
 	COOKIE_ENCRYPTION_KEY: z.string().min(32),
-	RELATIONAL_DATABASE_URL: z.string().url(),
+	RELATIONAL_DATABASE_URL: z.url(),
 	OPENAI_API_KEY: z.string().startsWith('sk-'),
 	AWS_COGNITO_REGION: z.string().min(1),
 	AWS_COGNITO_USER_POOL_ID: z.string().min(1),
 	AWS_COGNITO_USER_POOL_CLIENT_ID: z.string().min(1),
 	AWS_COGNITO_USER_POOL_SECRET_KEY: z.string().min(1),
-	AWS_COGNITO_ACCESS_KEY: z.string().min(1),
-	AWS_COGNITO_SECRET_KEY: z.string().min(1),
+	// AWS Cognito credentials removed - using IAM roles instead
 })
 
 const stagingConfigSchema = productionConfigSchema.extend({

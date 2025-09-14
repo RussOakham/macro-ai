@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express'
+import { type NextFunction, type Request, type Response } from 'express'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -213,16 +213,16 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: User not found',
 				expect.objectContaining({
 					path: '/api/users/123',
 					method: 'GET',
 					status: 404,
 					type: 'NotFoundError',
 					service: 'user service',
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
 					stack: expect.any(String), // Stack trace is included in non-production
 				}),
+				'[ErrorHandler]: User not found',
 			)
 		})
 
@@ -245,11 +245,10 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Database connection failed',
 				expect.objectContaining({
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 					stack: expect.any(String),
 				}),
+				'[ErrorHandler]: Database connection failed',
 			)
 		})
 
@@ -272,10 +271,10 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Database connection failed',
 				expect.objectContaining({
 					stack: undefined,
 				}),
+				'[ErrorHandler]: Database connection failed',
 			)
 		})
 	})
@@ -474,10 +473,10 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Token expired',
 				expect.objectContaining({
 					service: 'auth middleware',
 				}),
+				'[ErrorHandler]: Token expired',
 			)
 		})
 
@@ -499,10 +498,10 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Unknown service error',
 				expect.objectContaining({
 					service: 'unknown',
 				}),
+				'[ErrorHandler]: Unknown service error',
 			)
 		})
 
@@ -525,10 +524,10 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Invalid email format',
 				expect.objectContaining({
 					type: 'ValidationError',
 				}),
+				'[ErrorHandler]: Invalid email format',
 			)
 		})
 	})
@@ -549,11 +548,11 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Endpoint not found',
 				expect.objectContaining({
 					path: '/api/nonexistent',
 					method: 'POST',
 				}),
+				'[ErrorHandler]: Endpoint not found',
 			)
 		})
 
@@ -572,11 +571,11 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Server error',
 				expect.objectContaining({
 					path: undefined,
 					method: 'GET',
 				}),
+				'[ErrorHandler]: Server error',
 			)
 		})
 
@@ -595,11 +594,11 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Server error',
 				expect.objectContaining({
 					path: '/api/test',
 					method: undefined,
 				}),
+				'[ErrorHandler]: Server error',
 			)
 		})
 	})
@@ -729,7 +728,7 @@ describe('errorHandler Middleware', () => {
 
 		it('should handle very large error messages', async () => {
 			// Arrange
-			const largeMessage = 'Error: ' + 'x'.repeat(10000)
+			const largeMessage = `Error: ${'x'.repeat(10000)}`
 			const error = new InternalError(largeMessage, 'test')
 
 			// Act
@@ -818,7 +817,8 @@ describe('errorHandler Middleware', () => {
 		it('should not expose sensitive information in production', async () => {
 			// Arrange
 			const sensitiveError = new InternalError(
-				'Database connection failed: password=secret123',
+				// eslint-disable-next-line no-secrets/no-secrets
+				'Database connection failed: password=FAKE_TEST_PASSWORD_123',
 				'database service',
 			)
 			process.env.NODE_ENV = 'production'
@@ -833,7 +833,8 @@ describe('errorHandler Middleware', () => {
 
 			// Assert - In production, only message is exposed, not details or type
 			expect(mockResponse.json).toHaveBeenCalledWith({
-				message: 'Database connection failed: password=secret123',
+				// eslint-disable-next-line no-secrets/no-secrets
+				message: 'Database connection failed: password=FAKE_TEST_PASSWORD_123',
 			})
 			expect(mockResponse.json).toHaveBeenCalledTimes(1)
 		})
@@ -854,10 +855,10 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Internal error',
 				expect.objectContaining({
 					stack: undefined,
 				}),
+				'[ErrorHandler]: Internal error',
 			)
 		})
 
@@ -984,10 +985,10 @@ describe('errorHandler Middleware', () => {
 
 			// Assert
 			expect(pino.logger.error).toHaveBeenCalledWith(
-				'[ErrorHandler]: Generic error',
 				expect.objectContaining({
 					service: 'globalErrorHandler',
 				}),
+				'[ErrorHandler]: Generic error',
 			)
 		})
 	})

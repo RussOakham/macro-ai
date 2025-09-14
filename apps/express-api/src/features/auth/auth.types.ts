@@ -1,4 +1,4 @@
-import {
+import type {
 	ConfirmForgotPasswordCommandOutput,
 	ConfirmSignUpCommandOutput,
 	ForgotPasswordCommandOutput,
@@ -8,12 +8,11 @@ import {
 	ResendConfirmationCodeCommandOutput,
 	SignUpCommandOutput,
 } from '@aws-sdk/client-cognito-identity-provider'
-import express from 'express'
-import { z } from 'zod'
+import type express from 'express'
+import type { z } from 'zod'
 
-import { Result } from '../../utils/errors.ts'
-
-import {
+import { type Result } from '../../utils/errors.ts'
+import type {
 	authResponseSchema,
 	confirmForgotPasswordRequestSchema,
 	confirmRegistrationRequestSchema,

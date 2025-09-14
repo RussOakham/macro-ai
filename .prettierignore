@@ -1,0 +1,9 @@
+# Auto-generated MSW mocks
+**/src/test/mocks/
+**/src/test/mocks/**/*
+
+# Tanstack Router generated files
+routeTree.gen.ts    
+
+# Hey-Api autogen files
+**/macro-ai-api-client/src/client

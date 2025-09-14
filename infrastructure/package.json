@@ -1,0 +1,58 @@
+{
+	"name": "@repo/infrastructure",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"engines": {
+		"node": ">=20.0.0",
+		"pnpm": ">=9.0.0"
+	},
+	"description": "AWS CDK infrastructure for Macro AI hobby deployment",
+	"scripts": {
+		"build": "tsc",
+		"watch": "tsc -w",
+		"clean": "rm -rf dist lib cdk.out",
+		"cdk": "cdk",
+		"deploy": "cdk deploy --all --require-approval never",
+		"deploy:env": "cdk deploy MacroAi$(echo ${CDK_DEPLOY_ENV:-hobby} | sed 's/./\\U&/')Stack --require-approval never",
+		"destroy": "cdk destroy",
+		"diff": "cdk diff",
+		"synth": "cdk synth",
+		"bootstrap": "cdk bootstrap",
+		"format": "prettier --check --cache .",
+		"format:fix": "prettier --write --cache .",
+		"lint": "pnpm oxlint . && eslint . --ext .ts,.tsx",
+		"lint:fix": "pnpm oxlint . --fix && eslint . --ext .ts,.tsx --fix",
+		"lint:ci": "pnpm oxlint . --max-warnings=0 && eslint . --ext .ts,.tsx --max-warnings 0",
+		"lint:oxlint": "pnpm oxlint .",
+		"lint:fix:oxlint": "pnpm oxlint . --fix",
+		"lint:ci:oxlint": "pnpm oxlint . --max-warnings=0",
+		"lint:eslint": "eslint . --ext .ts,.tsx",
+		"lint:fix:eslint": "eslint . --ext .ts,.tsx --fix",
+		"lint:ci:eslint": "eslint . --ext .ts,.tsx --max-warnings 0",
+		"type-check": "tsc --noEmit",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"deploy-ec2": "tsx scripts/deploy-ec2.ts",
+		"deploy-pipeline": "tsx scripts/deploy-pipeline.ts",
+		"deploy-ec2:github": "scripts/github-actions-deploy.sh"
+	},
+	"dependencies": {
+		"aws-cdk-lib": "^2.212.0",
+		"constructs": "^10.3.0",
+		"source-map-support": "^0.5.21"
+	},
+	"devDependencies": {
+		"@repo/config-eslint": "workspace:*",
+		"@repo/config-testing": "workspace:*",
+		"@repo/config-typescript": "workspace:*",
+		"@types/node": "catalog:",
+		"aws-cdk": "^2.1027.0",
+		"eslint": "catalog:",
+		"globals": "catalog:",
+		"prettier": "^3.6.2",
+		"tsx": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

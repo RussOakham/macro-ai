@@ -1,0 +1,39 @@
+import { useQuery } from '@tanstack/react-query'
+import Cookies from 'js-cookie'
+
+import { QUERY_KEY } from '@/constants/query-keys'
+
+import { getAuthUser } from '../../network/auth/get-auth-user'
+
+const useIsAuthenticated = () => {
+	const accessToken = Cookies.get('macro-ai-accessToken')
+
+	const {
+		data: user,
+		isError,
+		isFetching,
+		isSuccess,
+	} = useQuery({
+		enabled: !!accessToken,
+		gcTime: Infinity,
+		queryFn: async () => getAuthUser(),
+		queryKey: [QUERY_KEY.authUser],
+		staleTime: Infinity,
+	})
+
+	if (isFetching || isError) {
+		return false
+	}
+
+	if (!isSuccess) {
+		return false
+	}
+
+	if (!user.id) {
+		return false
+	}
+
+	return true
+}
+
+export { useIsAuthenticated }

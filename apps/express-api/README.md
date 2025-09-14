@@ -30,8 +30,9 @@ Modern Express.js backend API for the Macro AI platform, built with TypeScript, 
 pnpm install
 
 # Set up environment variables
-cp .env.example .env
-# Edit .env with your configuration
+cp config/examples/env.local.example .env.local
+# Edit .env.local with your configuration
+# See ../../docs/configuration/ENVIRONMENT_TEMPLATE.md for comprehensive configuration options
 
 # Generate database migrations
 pnpm db:generate
@@ -100,30 +101,25 @@ src/
 
 ### Environment Variables
 
+For comprehensive environment configuration, see [ENVIRONMENT_TEMPLATE.md](./docs/configuration/ENVIRONMENT_TEMPLATE.md).
+
+**Quick Setup:**
+
 ```bash
-# API Configuration
-API_KEY=your-32-character-api-key
-SERVER_PORT=3040
+# Copy the local development template
+cp config/examples/env.local.example .env.local
 
-# Database
-RELATIONAL_DATABASE_URL=postgresql://user:pass@localhost:5432/macro_ai_dev
-NON_RELATIONAL_DATABASE_URL=redis://localhost:6379/0
-
-# AWS Cognito
-AWS_COGNITO_REGION=us-east-1
-AWS_COGNITO_USER_POOL_ID=your-pool-id
-AWS_COGNITO_USER_POOL_CLIENT_ID=your-client-id
-AWS_COGNITO_USER_POOL_SECRET_KEY=your-secret-key
-AWS_COGNITO_ACCESS_KEY=your-access-key
-AWS_COGNITO_SECRET_KEY=your-secret-key
-
-# OpenAI
-OPENAI_API_KEY=sk-your-openai-api-key
-
-# Security
-COOKIE_DOMAIN=localhost
-COOKIE_ENCRYPTION_KEY=your-32-character-encryption-key
+# Edit with your configuration values
+nano .env.local
 ```
+
+**Key Variables:**
+
+- `API_KEY`: 32-character API key for authentication
+- `SERVER_PORT`: Express server port (default: 3040)
+- `RELATIONAL_DATABASE_URL`: PostgreSQL connection string
+- `AWS_COGNITO_*`: AWS Cognito authentication configuration
+- `OPENAI_API_KEY`: OpenAI API key for AI chat functionality
 
 ### Database Schema
 

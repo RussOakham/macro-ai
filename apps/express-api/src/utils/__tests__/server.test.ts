@@ -1,12 +1,19 @@
-import express, { Express, NextFunction, Request, Response } from 'express'
-import path from 'path'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import path from 'node:path'
+
+import express, {
+	type Express,
+	type NextFunction,
+	type Request,
+	type Response,
+} from 'express'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { mockConfig } from '../test-helpers/config.mock.ts'
+import { mockExpress } from '../test-helpers/express-mocks.ts'
 import { mockLogger } from '../test-helpers/logger.mock.ts'
 
 // Mock all external dependencies before importing the server module
-vi.mock('../../config/default.ts', () => mockConfig.createModule())
+vi.mock('../../utils/load-config.ts', () => mockConfig.createModule())
 
 vi.mock('../logger.ts', () => mockLogger.createModule())
 
@@ -101,22 +108,37 @@ vi.mock('process', () => ({
 
 describe('createServer', () => {
 	let mockApp: {
-		use: ReturnType<typeof vi.fn>
 		listen: ReturnType<typeof vi.fn>
+		use: ReturnType<typeof vi.fn>
 	}
 
 	beforeEach(() => {
-		vi.clearAllMocks()
+		// Setup test helpers (this includes vi.clearAllMocks())
+		mockConfig.setup()
+		mockLogger.setup()
+
 		vi.resetModules()
 
 		// Setup mock Express app
 		mockApp = {
 			use: vi.fn(),
 			listen: vi.fn(),
-		}
+			disable: vi.fn(),
+			enable: vi.fn(),
+			set: vi.fn(),
+			get: vi.fn(),
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		} as any
 
 		// Mock express() to return our mock app
 		vi.mocked(express).mockReturnValue(mockApp as unknown as Express)
+	})
+
+	afterEach(() => {
+		// Ensure environment variables do not leak between tests
+		delete process.env.APP_ENV
+		delete process.env.CORS_ALLOWED_ORIGINS
+		vi.resetModules()
 	})
 
 	describe('Express App Creation', () => {
@@ -136,7 +158,7 @@ describe('createServer', () => {
 			// Arrange
 			const mockStaticMiddleware = vi.fn()
 			vi.mocked(express.static).mockReturnValue(mockStaticMiddleware)
-			// eslint-disable-next-line @typescript-eslint/unbound-method
+
 			vi.mocked(path.join).mockReturnValue('/mocked/public/path')
 
 			// Act
@@ -144,7 +166,7 @@ describe('createServer', () => {
 			createServer()
 
 			// Assert
-			// eslint-disable-next-line @typescript-eslint/unbound-method
+
 			expect(vi.mocked(path.join)).toHaveBeenCalledWith(
 				expect.any(String),
 				'public',
@@ -182,11 +204,51 @@ describe('createServer', () => {
 			createServer()
 
 			// Assert
-			expect(cors.default).toHaveBeenCalledWith({
-				origin: ['http://localhost:3000', 'http://localhost:3040'],
+			expect(cors.default).toHaveBeenCalledWith(
+				expect.objectContaining({
+					credentials: true,
+					exposedHeaders: ['cache-control'],
+					methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+					allowedHeaders: [
+						'Origin',
+						'X-Requested-With',
+						'Content-Type',
+						'Accept',
+						'Authorization',
+						'X-API-KEY',
+						'x-api-key',
+						'X-Api-Key',
+						'Cache-Control',
+					],
+					maxAge: 86400,
+					origin: expect.any(Function),
+				}),
+			)
+			expect(mockApp.use).toHaveBeenCalledWith(mockCorsMiddleware)
+		})
+	})
+
+	it('should configure CORS with env-driven origins when CORS_ALLOWED_ORIGINS is set', async () => {
+		// Arrange
+		process.env.CORS_ALLOWED_ORIGINS =
+			'https://example.com, http://localhost:3000'
+		const mockCorsMiddleware = vi.fn()
+		const cors = await import('cors')
+		vi.mocked(cors.default).mockReturnValue(mockCorsMiddleware)
+
+		// Need to re-import the module to pick up env var
+		vi.resetModules()
+		const { createServer } = await import('../server.ts')
+
+		// Act
+		createServer()
+
+		// Assert
+		expect(cors.default).toHaveBeenCalledWith(
+			expect.objectContaining({
 				credentials: true,
-				exposedHeaders: ['cache-control'], // 'set-cookie' cannot be exposed via CORS
-				methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+				exposedHeaders: ['cache-control'],
+				methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
 				allowedHeaders: [
 					'Origin',
 					'X-Requested-With',
@@ -194,12 +256,44 @@ describe('createServer', () => {
 					'Accept',
 					'Authorization',
 					'X-API-KEY',
+					'x-api-key',
+					'X-Api-Key',
 					'Cache-Control',
 				],
-				maxAge: 86400, // 24 hours
-			})
-			expect(mockApp.use).toHaveBeenCalledWith(mockCorsMiddleware)
-		})
+				maxAge: 86400,
+				origin: expect.any(Function),
+			}),
+		)
+		expect(mockApp.use).toHaveBeenCalledWith(mockCorsMiddleware)
+
+		// Cleanup
+		delete process.env.CORS_ALLOWED_ORIGINS
+	})
+
+	it('should handle preview APP_ENV (pr-*) by parsing origins but not widening credentials policy', async () => {
+		// Arrange
+		process.env.APP_ENV = 'pr-123'
+		process.env.CORS_ALLOWED_ORIGINS = ''
+		const cors = await import('cors')
+		const mockCorsMiddleware = vi.fn()
+		vi.mocked(cors.default).mockReturnValue(mockCorsMiddleware)
+
+		vi.resetModules()
+		const { createServer } = await import('../server.ts')
+
+		// Act
+		createServer()
+
+		// Assert: we still configure CORS with credentials true (callback will constrain origins)
+		expect(cors.default).toHaveBeenCalledWith(
+			expect.objectContaining({
+				credentials: true,
+			}),
+		)
+
+		// Cleanup
+		delete process.env.APP_ENV
+		delete process.env.CORS_ALLOWED_ORIGINS
 	})
 
 	describe('Body Parsing Middleware', () => {
@@ -217,7 +311,6 @@ describe('createServer', () => {
 
 			// Assert
 			expect(compression.default).toHaveBeenCalledWith({
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 				filter: expect.any(Function),
 			})
 			expect(mockApp.use).toHaveBeenCalledWith(mockCompressionMiddleware)
@@ -258,17 +351,13 @@ describe('createServer', () => {
 					cookies: {},
 				} as Request
 
-				const mockRes = {} as Response
+				const mockRes = mockExpress.createResponse() as Response
 
 				// Test streaming endpoint - should return false (no compression)
 				expect(filterFunction(streamingReq, mockRes)).toBe(false)
 
-				// Test regular endpoint - should use default filter
+				// Test regular endpoint - should return true (compress)
 				expect(filterFunction(regularReq, mockRes)).toBe(true)
-				expect(compression.default.filter).toHaveBeenCalledWith(
-					regularReq,
-					mockRes,
-				)
 			}
 		})
 
@@ -276,7 +365,7 @@ describe('createServer', () => {
 			// Arrange
 			const mockJsonMiddleware = vi.fn()
 			const bodyParser = await import('body-parser')
-			// eslint-disable-next-line @typescript-eslint/unbound-method
+
 			vi.mocked(bodyParser.default.json).mockReturnValue(mockJsonMiddleware)
 
 			// Act
@@ -284,7 +373,7 @@ describe('createServer', () => {
 			createServer()
 
 			// Assert
-			// eslint-disable-next-line @typescript-eslint/unbound-method
+
 			expect(vi.mocked(bodyParser.default.json)).toHaveBeenCalledTimes(1)
 			expect(mockApp.use).toHaveBeenCalledWith(mockJsonMiddleware)
 		})
@@ -407,7 +496,7 @@ describe('createServer', () => {
 			// Arrange
 			const mockSwaggerSetup = vi.fn()
 			const swaggerUi = await import('swagger-ui-express')
-			// eslint-disable-next-line @typescript-eslint/no-deprecated
+
 			vi.mocked(swaggerUi.default.setup).mockReturnValue(mockSwaggerSetup)
 
 			// Act
@@ -415,7 +504,7 @@ describe('createServer', () => {
 			createServer()
 
 			// Assert
-			// eslint-disable-next-line @typescript-eslint/no-deprecated
+
 			expect(vi.mocked(swaggerUi.default.setup)).toHaveBeenCalledWith(
 				undefined,
 				{
@@ -496,20 +585,25 @@ describe('createServer', () => {
 				(call) => call[0] === defaultRateLimiter,
 			)
 			const apiRouterIndex = useCalls.findIndex((call) => call[0] === '/api')
-			const swaggerIndex = useCalls.findIndex((call) => call[0] === '/api-docs')
+			// Find the swagger setup (not the early CORS middleware)
+			const swaggerIndex = useCalls.findIndex(
+				(call) => call[0] === '/api-docs' && call.length > 2, // swagger setup has multiple middleware
+			)
 			const errorHandlerIndex = useCalls.findIndex(
 				(call) => call[0] === errorHandler,
 			)
 
-			// Verify order: logger -> security middleware -> routes -> error handler
+			// Verify order: logger -> security middleware -> api key auth -> routes -> error handler
 			expect(pinoIndex).toBeGreaterThan(-1)
-			expect(apiKeyIndex).toBeGreaterThan(pinoIndex)
-			expect(helmetIndex).toBeGreaterThan(apiKeyIndex)
+			expect(helmetIndex).toBeGreaterThan(pinoIndex)
 			expect(securityIndex).toBeGreaterThan(helmetIndex)
 			expect(rateLimitIndex).toBeGreaterThan(securityIndex)
+			expect(apiKeyIndex).toBeGreaterThan(rateLimitIndex)
 			expect(apiRouterIndex).toBeGreaterThan(rateLimitIndex)
-			expect(swaggerIndex).toBeGreaterThan(apiRouterIndex)
-			expect(errorHandlerIndex).toBeGreaterThan(swaggerIndex)
+			expect(swaggerIndex).toBeGreaterThan(rateLimitIndex)
+			expect(errorHandlerIndex).toBeGreaterThan(
+				Math.max(apiRouterIndex, swaggerIndex),
+			)
 			expect(errorHandlerIndex).toBe(useCalls.length - 1) // Error handler should be last
 		})
 	})

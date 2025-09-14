@@ -1,13 +1,14 @@
-import { LoggerOptions, pino } from 'pino'
+import { pino } from 'pino'
+import type { LoggerOptions } from 'pino'
 
 const pinoOptions: LoggerOptions = {
-	transport: {
-		target: 'pino-pretty',
+	browser: {
+		asObject: true,
+		serialize: true,
 	},
 	enabled: process.env.NODE_ENV !== 'test',
-	browser: {
-		serialize: true,
-		asObject: true,
+	transport: {
+		target: 'pino-pretty',
 	},
 }
 

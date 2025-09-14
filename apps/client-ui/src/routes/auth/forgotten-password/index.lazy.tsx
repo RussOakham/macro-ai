@@ -1,6 +1,6 @@
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router'
+import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -23,28 +23,26 @@ import {
 import { Input } from '@/components/ui/input'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
-import { usePostForgotPassword } from '@/services/hooks/auth/usePostForgotPassword'
-import {
-	forgotPasswordSchemaClient,
-	type TForgotPasswordClient,
-} from '@/services/network/auth/postForgotPassword'
+import { usePostForgotPassword } from '@/services/hooks/auth/use-post-forgot-password'
+import { zForgotPasswordRequest } from '@/services/network/auth/post-forgot-password'
+import type { ForgotPasswordRequest } from '@/services/network/auth/post-forgot-password'
 
 const RouteComponent = () => {
 	const navigate = useNavigate({ from: '/auth/forgotten-password' })
-	const { mutateAsync: postForgotPassword, isPending } = usePostForgotPassword()
+	const { isPending, mutateAsync: postForgotPassword } = usePostForgotPassword()
 
-	const form = useForm<TForgotPasswordClient>({
-		resolver: zodResolver(forgotPasswordSchemaClient),
+	const form = useForm<ForgotPasswordRequest>({
 		defaultValues: {
 			email: '',
 		},
+		resolver: zodResolver(zForgotPasswordRequest),
 	})
 
-	const onSubmit = async ({ email }: TForgotPasswordClient) => {
+	const onSubmit = async ({ email }: ForgotPasswordRequest) => {
 		try {
 			const response = await postForgotPassword({ email })
 
-			logger.info('Forgot password success', response)
+			logger.info(response, 'Forgot password success')
 			toast.success('Verification code sent! Please check your email.')
 			await navigate({ to: '/auth/forgotten-password/verify' })
 		} catch (error: unknown) {
@@ -66,7 +64,7 @@ const RouteComponent = () => {
 				</CardHeader>
 				<CardContent>
 					<Form {...form}>
-						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+						<form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
 							<FormField
 								control={form.control}
 								name="email"
@@ -80,7 +78,7 @@ const RouteComponent = () => {
 									</FormItem>
 								)}
 							/>
-							<Button type="submit" className="w-full" disabled={isPending}>
+							<Button className="w-full" disabled={isPending} type="submit">
 								{isPending ? 'Sending...' : 'Send verification code'}
 							</Button>
 						</form>
@@ -88,8 +86,8 @@ const RouteComponent = () => {
 				</CardContent>
 				<CardFooter className="flex justify-center">
 					<Button
-						variant="link"
 						onClick={() => navigate({ to: '/auth/login' })}
+						variant="link"
 					>
 						Back to login
 					</Button>

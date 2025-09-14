@@ -1,73 +1,34 @@
 // ============================================================================
-// Chat Types - Using API Client Types for Type Safety and Consistency
-// ============================================================================
-
-import type {
-	ChatDeleteChatsByIdResponse,
-	ChatGetChatsByIdResponse,
-	ChatGetChatsResponse,
-	ChatPostChatsByIdStreamRequest,
-	ChatPostChatsRequest,
-	ChatPostChatsResponse,
-	ChatPutChatsByIdRequest,
-	ChatPutChatsByIdResponse,
-} from '@repo/macro-ai-api-client'
-
-// ============================================================================
-// Re-export API Client Types for Convenience
-// ============================================================================
-
-// Request types
-export type {
-	ChatPostChatsByIdStreamRequest,
-	ChatPostChatsRequest,
-	ChatPutChatsByIdRequest,
-}
-
-// Response types
-export type {
-	ChatDeleteChatsByIdResponse,
-	ChatGetChatsByIdResponse,
-	ChatGetChatsResponse,
-	ChatPostChatsResponse,
-	ChatPutChatsByIdResponse,
-}
-
-// ============================================================================
 // Derived Types for Frontend Use
 // ============================================================================
 
-// Extract Chat type from API response
-export type Chat = ChatGetChatsResponse['data'][0]
-
-// Extract pagination metadata type
-export type PaginationMeta = NonNullable<ChatGetChatsResponse['meta']>
-
-// Pagination options for requests
-export interface PaginationOptions {
-	page?: number
-	limit?: number
-}
+import type { GetChatsResponse } from '@repo/macro-ai-api-client'
 
 // Generic API response wrapper (inferred from API client types)
 export interface ApiResponse<T> {
-	success: boolean
 	data: T
 	meta?: PaginationMeta
+	success: boolean
 }
 
-// Chat list response (alias for convenience)
-export type ChatListResponse = ChatGetChatsResponse
+// Chat with transformed dates for frontend use
+export interface ChatWithDates {
+	createdAt: Date
+	id: string
+	title: string
+	updatedAt: Date
+	userId: string
+}
+
+// Extract pagination metadata type
+export type PaginationMeta = NonNullable<GetChatsResponse['meta']>
 
 // ============================================================================
 // Frontend-Specific Types
 // ============================================================================
 
-// Chat with transformed dates for frontend use
-export interface ChatWithDates {
-	id: string
-	userId: string
-	title: string
-	createdAt: Date
-	updatedAt: Date
+// Pagination options for requests
+export interface PaginationOptions {
+	limit?: number
+	page?: number
 }

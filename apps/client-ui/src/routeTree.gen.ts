@@ -8,329 +8,255 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, createRootRoute } from '@tanstack/react-router'
 
-// Import Routes
+import { Route as ChatRouteImport } from './routes/chat'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as ChatChatIdRouteImport } from './routes/chat/$chatId'
 
-import { Route as rootRoute } from './routes/__root'
-import { Route as ChatImport } from './routes/chat'
-import { Route as IndexImport } from './routes/index'
-import { Route as ChatChatIdImport } from './routes/chat/$chatId'
-
-// Create Virtual Routes
-
-const AuthResendConfirmationCodeLazyImport = createFileRoute(
-	'/auth/resend-confirmation-code',
+const rootRouteImport = createRootRoute()
+const AuthResendConfirmationCodeLazyRouteImport = createFileRoute(
+  '/auth/resend-confirmation-code',
 )()
-const AuthRegisterLazyImport = createFileRoute('/auth/register')()
-const AuthLoginLazyImport = createFileRoute('/auth/login')()
-const AuthConfirmRegistrationLazyImport = createFileRoute(
-	'/auth/confirm-registration',
+const AuthRegisterLazyRouteImport = createFileRoute('/auth/register')()
+const AuthLoginLazyRouteImport = createFileRoute('/auth/login')()
+const AuthConfirmRegistrationLazyRouteImport = createFileRoute(
+  '/auth/confirm-registration',
 )()
-const AuthForgottenPasswordIndexLazyImport = createFileRoute(
-	'/auth/forgotten-password/',
+const AuthForgottenPasswordIndexLazyRouteImport = createFileRoute(
+  '/auth/forgotten-password/',
 )()
-const AuthForgottenPasswordVerifyLazyImport = createFileRoute(
-	'/auth/forgotten-password/verify',
+const AuthForgottenPasswordVerifyLazyRouteImport = createFileRoute(
+  '/auth/forgotten-password/verify',
 )()
 
-// Create/Update Routes
-
-const ChatRoute = ChatImport.update({
-	id: '/chat',
-	path: '/chat',
-	getParentRoute: () => rootRoute,
+const ChatRoute = ChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const IndexRoute = IndexImport.update({
-	id: '/',
-	path: '/',
-	getParentRoute: () => rootRoute,
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
 } as any)
-
 const AuthResendConfirmationCodeLazyRoute =
-	AuthResendConfirmationCodeLazyImport.update({
-		id: '/auth/resend-confirmation-code',
-		path: '/auth/resend-confirmation-code',
-		getParentRoute: () => rootRoute,
-	} as any).lazy(() =>
-		import('./routes/auth/resend-confirmation-code.lazy').then((d) => d.Route),
-	)
-
-const AuthRegisterLazyRoute = AuthRegisterLazyImport.update({
-	id: '/auth/register',
-	path: '/auth/register',
-	getParentRoute: () => rootRoute,
+  AuthResendConfirmationCodeLazyRouteImport.update({
+    id: '/auth/resend-confirmation-code',
+    path: '/auth/resend-confirmation-code',
+    getParentRoute: () => rootRouteImport,
+  } as any).lazy(() =>
+    import('./routes/auth/resend-confirmation-code.lazy').then((d) => d.Route),
+  )
+const AuthRegisterLazyRoute = AuthRegisterLazyRouteImport.update({
+  id: '/auth/register',
+  path: '/auth/register',
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/auth/register.lazy').then((d) => d.Route))
-
-const AuthLoginLazyRoute = AuthLoginLazyImport.update({
-	id: '/auth/login',
-	path: '/auth/login',
-	getParentRoute: () => rootRoute,
+const AuthLoginLazyRoute = AuthLoginLazyRouteImport.update({
+  id: '/auth/login',
+  path: '/auth/login',
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/auth/login.lazy').then((d) => d.Route))
-
 const AuthConfirmRegistrationLazyRoute =
-	AuthConfirmRegistrationLazyImport.update({
-		id: '/auth/confirm-registration',
-		path: '/auth/confirm-registration',
-		getParentRoute: () => rootRoute,
-	} as any).lazy(() =>
-		import('./routes/auth/confirm-registration.lazy').then((d) => d.Route),
-	)
-
-const ChatChatIdRoute = ChatChatIdImport.update({
-	id: '/$chatId',
-	path: '/$chatId',
-	getParentRoute: () => ChatRoute,
+  AuthConfirmRegistrationLazyRouteImport.update({
+    id: '/auth/confirm-registration',
+    path: '/auth/confirm-registration',
+    getParentRoute: () => rootRouteImport,
+  } as any).lazy(() =>
+    import('./routes/auth/confirm-registration.lazy').then((d) => d.Route),
+  )
+const ChatChatIdRoute = ChatChatIdRouteImport.update({
+  id: '/$chatId',
+  path: '/$chatId',
+  getParentRoute: () => ChatRoute,
 } as any)
-
 const AuthForgottenPasswordIndexLazyRoute =
-	AuthForgottenPasswordIndexLazyImport.update({
-		id: '/auth/forgotten-password/',
-		path: '/auth/forgotten-password/',
-		getParentRoute: () => rootRoute,
-	} as any).lazy(() =>
-		import('./routes/auth/forgotten-password/index.lazy').then((d) => d.Route),
-	)
-
+  AuthForgottenPasswordIndexLazyRouteImport.update({
+    id: '/auth/forgotten-password/',
+    path: '/auth/forgotten-password/',
+    getParentRoute: () => rootRouteImport,
+  } as any).lazy(() =>
+    import('./routes/auth/forgotten-password/index.lazy').then((d) => d.Route),
+  )
 const AuthForgottenPasswordVerifyLazyRoute =
-	AuthForgottenPasswordVerifyLazyImport.update({
-		id: '/auth/forgotten-password/verify',
-		path: '/auth/forgotten-password/verify',
-		getParentRoute: () => rootRoute,
-	} as any).lazy(() =>
-		import('./routes/auth/forgotten-password/verify.lazy').then((d) => d.Route),
-	)
+  AuthForgottenPasswordVerifyLazyRouteImport.update({
+    id: '/auth/forgotten-password/verify',
+    path: '/auth/forgotten-password/verify',
+    getParentRoute: () => rootRouteImport,
+  } as any).lazy(() =>
+    import('./routes/auth/forgotten-password/verify.lazy').then((d) => d.Route),
+  )
 
-// Populate the FileRoutesByPath interface
-
-declare module '@tanstack/react-router' {
-	interface FileRoutesByPath {
-		'/': {
-			id: '/'
-			path: '/'
-			fullPath: '/'
-			preLoaderRoute: typeof IndexImport
-			parentRoute: typeof rootRoute
-		}
-		'/chat': {
-			id: '/chat'
-			path: '/chat'
-			fullPath: '/chat'
-			preLoaderRoute: typeof ChatImport
-			parentRoute: typeof rootRoute
-		}
-		'/chat/$chatId': {
-			id: '/chat/$chatId'
-			path: '/$chatId'
-			fullPath: '/chat/$chatId'
-			preLoaderRoute: typeof ChatChatIdImport
-			parentRoute: typeof ChatImport
-		}
-		'/auth/confirm-registration': {
-			id: '/auth/confirm-registration'
-			path: '/auth/confirm-registration'
-			fullPath: '/auth/confirm-registration'
-			preLoaderRoute: typeof AuthConfirmRegistrationLazyImport
-			parentRoute: typeof rootRoute
-		}
-		'/auth/login': {
-			id: '/auth/login'
-			path: '/auth/login'
-			fullPath: '/auth/login'
-			preLoaderRoute: typeof AuthLoginLazyImport
-			parentRoute: typeof rootRoute
-		}
-		'/auth/register': {
-			id: '/auth/register'
-			path: '/auth/register'
-			fullPath: '/auth/register'
-			preLoaderRoute: typeof AuthRegisterLazyImport
-			parentRoute: typeof rootRoute
-		}
-		'/auth/resend-confirmation-code': {
-			id: '/auth/resend-confirmation-code'
-			path: '/auth/resend-confirmation-code'
-			fullPath: '/auth/resend-confirmation-code'
-			preLoaderRoute: typeof AuthResendConfirmationCodeLazyImport
-			parentRoute: typeof rootRoute
-		}
-		'/auth/forgotten-password/verify': {
-			id: '/auth/forgotten-password/verify'
-			path: '/auth/forgotten-password/verify'
-			fullPath: '/auth/forgotten-password/verify'
-			preLoaderRoute: typeof AuthForgottenPasswordVerifyLazyImport
-			parentRoute: typeof rootRoute
-		}
-		'/auth/forgotten-password/': {
-			id: '/auth/forgotten-password/'
-			path: '/auth/forgotten-password'
-			fullPath: '/auth/forgotten-password'
-			preLoaderRoute: typeof AuthForgottenPasswordIndexLazyImport
-			parentRoute: typeof rootRoute
-		}
-	}
+export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
+  '/chat': typeof ChatRouteWithChildren
+  '/chat/$chatId': typeof ChatChatIdRoute
+  '/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
+  '/auth/login': typeof AuthLoginLazyRoute
+  '/auth/register': typeof AuthRegisterLazyRoute
+  '/auth/resend-confirmation-code': typeof AuthResendConfirmationCodeLazyRoute
+  '/auth/forgotten-password/verify': typeof AuthForgottenPasswordVerifyLazyRoute
+  '/auth/forgotten-password': typeof AuthForgottenPasswordIndexLazyRoute
+}
+export interface FileRoutesByTo {
+  '/': typeof IndexRoute
+  '/chat': typeof ChatRouteWithChildren
+  '/chat/$chatId': typeof ChatChatIdRoute
+  '/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
+  '/auth/login': typeof AuthLoginLazyRoute
+  '/auth/register': typeof AuthRegisterLazyRoute
+  '/auth/resend-confirmation-code': typeof AuthResendConfirmationCodeLazyRoute
+  '/auth/forgotten-password/verify': typeof AuthForgottenPasswordVerifyLazyRoute
+  '/auth/forgotten-password': typeof AuthForgottenPasswordIndexLazyRoute
+}
+export interface FileRoutesById {
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/chat': typeof ChatRouteWithChildren
+  '/chat/$chatId': typeof ChatChatIdRoute
+  '/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
+  '/auth/login': typeof AuthLoginLazyRoute
+  '/auth/register': typeof AuthRegisterLazyRoute
+  '/auth/resend-confirmation-code': typeof AuthResendConfirmationCodeLazyRoute
+  '/auth/forgotten-password/verify': typeof AuthForgottenPasswordVerifyLazyRoute
+  '/auth/forgotten-password/': typeof AuthForgottenPasswordIndexLazyRoute
+}
+export interface FileRouteTypes {
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths:
+    | '/'
+    | '/chat'
+    | '/chat/$chatId'
+    | '/auth/confirm-registration'
+    | '/auth/login'
+    | '/auth/register'
+    | '/auth/resend-confirmation-code'
+    | '/auth/forgotten-password/verify'
+    | '/auth/forgotten-password'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/chat'
+    | '/chat/$chatId'
+    | '/auth/confirm-registration'
+    | '/auth/login'
+    | '/auth/register'
+    | '/auth/resend-confirmation-code'
+    | '/auth/forgotten-password/verify'
+    | '/auth/forgotten-password'
+  id:
+    | '__root__'
+    | '/'
+    | '/chat'
+    | '/chat/$chatId'
+    | '/auth/confirm-registration'
+    | '/auth/login'
+    | '/auth/register'
+    | '/auth/resend-confirmation-code'
+    | '/auth/forgotten-password/verify'
+    | '/auth/forgotten-password/'
+  fileRoutesById: FileRoutesById
+}
+export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
+  ChatRoute: typeof ChatRouteWithChildren
+  AuthConfirmRegistrationLazyRoute: typeof AuthConfirmRegistrationLazyRoute
+  AuthLoginLazyRoute: typeof AuthLoginLazyRoute
+  AuthRegisterLazyRoute: typeof AuthRegisterLazyRoute
+  AuthResendConfirmationCodeLazyRoute: typeof AuthResendConfirmationCodeLazyRoute
+  AuthForgottenPasswordVerifyLazyRoute: typeof AuthForgottenPasswordVerifyLazyRoute
+  AuthForgottenPasswordIndexLazyRoute: typeof AuthForgottenPasswordIndexLazyRoute
 }
 
-// Create and export the route tree
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/resend-confirmation-code': {
+      id: '/auth/resend-confirmation-code'
+      path: '/auth/resend-confirmation-code'
+      fullPath: '/auth/resend-confirmation-code'
+      preLoaderRoute: typeof AuthResendConfirmationCodeLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/register': {
+      id: '/auth/register'
+      path: '/auth/register'
+      fullPath: '/auth/register'
+      preLoaderRoute: typeof AuthRegisterLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/login': {
+      id: '/auth/login'
+      path: '/auth/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/confirm-registration': {
+      id: '/auth/confirm-registration'
+      path: '/auth/confirm-registration'
+      fullPath: '/auth/confirm-registration'
+      preLoaderRoute: typeof AuthConfirmRegistrationLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat/$chatId': {
+      id: '/chat/$chatId'
+      path: '/$chatId'
+      fullPath: '/chat/$chatId'
+      preLoaderRoute: typeof ChatChatIdRouteImport
+      parentRoute: typeof ChatRoute
+    }
+    '/auth/forgotten-password/': {
+      id: '/auth/forgotten-password/'
+      path: '/auth/forgotten-password'
+      fullPath: '/auth/forgotten-password'
+      preLoaderRoute: typeof AuthForgottenPasswordIndexLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/forgotten-password/verify': {
+      id: '/auth/forgotten-password/verify'
+      path: '/auth/forgotten-password/verify'
+      fullPath: '/auth/forgotten-password/verify'
+      preLoaderRoute: typeof AuthForgottenPasswordVerifyLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+  }
+}
 
 interface ChatRouteChildren {
-	ChatChatIdRoute: typeof ChatChatIdRoute
+  ChatChatIdRoute: typeof ChatChatIdRoute
 }
 
 const ChatRouteChildren: ChatRouteChildren = {
-	ChatChatIdRoute: ChatChatIdRoute,
+  ChatChatIdRoute: ChatChatIdRoute,
 }
 
 const ChatRouteWithChildren = ChatRoute._addFileChildren(ChatRouteChildren)
 
-export interface FileRoutesByFullPath {
-	'/': typeof IndexRoute
-	'/chat': typeof ChatRouteWithChildren
-	'/chat/$chatId': typeof ChatChatIdRoute
-	'/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
-	'/auth/login': typeof AuthLoginLazyRoute
-	'/auth/register': typeof AuthRegisterLazyRoute
-	'/auth/resend-confirmation-code': typeof AuthResendConfirmationCodeLazyRoute
-	'/auth/forgotten-password/verify': typeof AuthForgottenPasswordVerifyLazyRoute
-	'/auth/forgotten-password': typeof AuthForgottenPasswordIndexLazyRoute
-}
-
-export interface FileRoutesByTo {
-	'/': typeof IndexRoute
-	'/chat': typeof ChatRouteWithChildren
-	'/chat/$chatId': typeof ChatChatIdRoute
-	'/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
-	'/auth/login': typeof AuthLoginLazyRoute
-	'/auth/register': typeof AuthRegisterLazyRoute
-	'/auth/resend-confirmation-code': typeof AuthResendConfirmationCodeLazyRoute
-	'/auth/forgotten-password/verify': typeof AuthForgottenPasswordVerifyLazyRoute
-	'/auth/forgotten-password': typeof AuthForgottenPasswordIndexLazyRoute
-}
-
-export interface FileRoutesById {
-	__root__: typeof rootRoute
-	'/': typeof IndexRoute
-	'/chat': typeof ChatRouteWithChildren
-	'/chat/$chatId': typeof ChatChatIdRoute
-	'/auth/confirm-registration': typeof AuthConfirmRegistrationLazyRoute
-	'/auth/login': typeof AuthLoginLazyRoute
-	'/auth/register': typeof AuthRegisterLazyRoute
-	'/auth/resend-confirmation-code': typeof AuthResendConfirmationCodeLazyRoute
-	'/auth/forgotten-password/verify': typeof AuthForgottenPasswordVerifyLazyRoute
-	'/auth/forgotten-password/': typeof AuthForgottenPasswordIndexLazyRoute
-}
-
-export interface FileRouteTypes {
-	fileRoutesByFullPath: FileRoutesByFullPath
-	fullPaths:
-		| '/'
-		| '/chat'
-		| '/chat/$chatId'
-		| '/auth/confirm-registration'
-		| '/auth/login'
-		| '/auth/register'
-		| '/auth/resend-confirmation-code'
-		| '/auth/forgotten-password/verify'
-		| '/auth/forgotten-password'
-	fileRoutesByTo: FileRoutesByTo
-	to:
-		| '/'
-		| '/chat'
-		| '/chat/$chatId'
-		| '/auth/confirm-registration'
-		| '/auth/login'
-		| '/auth/register'
-		| '/auth/resend-confirmation-code'
-		| '/auth/forgotten-password/verify'
-		| '/auth/forgotten-password'
-	id:
-		| '__root__'
-		| '/'
-		| '/chat'
-		| '/chat/$chatId'
-		| '/auth/confirm-registration'
-		| '/auth/login'
-		| '/auth/register'
-		| '/auth/resend-confirmation-code'
-		| '/auth/forgotten-password/verify'
-		| '/auth/forgotten-password/'
-	fileRoutesById: FileRoutesById
-}
-
-export interface RootRouteChildren {
-	IndexRoute: typeof IndexRoute
-	ChatRoute: typeof ChatRouteWithChildren
-	AuthConfirmRegistrationLazyRoute: typeof AuthConfirmRegistrationLazyRoute
-	AuthLoginLazyRoute: typeof AuthLoginLazyRoute
-	AuthRegisterLazyRoute: typeof AuthRegisterLazyRoute
-	AuthResendConfirmationCodeLazyRoute: typeof AuthResendConfirmationCodeLazyRoute
-	AuthForgottenPasswordVerifyLazyRoute: typeof AuthForgottenPasswordVerifyLazyRoute
-	AuthForgottenPasswordIndexLazyRoute: typeof AuthForgottenPasswordIndexLazyRoute
-}
-
 const rootRouteChildren: RootRouteChildren = {
-	IndexRoute: IndexRoute,
-	ChatRoute: ChatRouteWithChildren,
-	AuthConfirmRegistrationLazyRoute: AuthConfirmRegistrationLazyRoute,
-	AuthLoginLazyRoute: AuthLoginLazyRoute,
-	AuthRegisterLazyRoute: AuthRegisterLazyRoute,
-	AuthResendConfirmationCodeLazyRoute: AuthResendConfirmationCodeLazyRoute,
-	AuthForgottenPasswordVerifyLazyRoute: AuthForgottenPasswordVerifyLazyRoute,
-	AuthForgottenPasswordIndexLazyRoute: AuthForgottenPasswordIndexLazyRoute,
+  IndexRoute: IndexRoute,
+  ChatRoute: ChatRouteWithChildren,
+  AuthConfirmRegistrationLazyRoute: AuthConfirmRegistrationLazyRoute,
+  AuthLoginLazyRoute: AuthLoginLazyRoute,
+  AuthRegisterLazyRoute: AuthRegisterLazyRoute,
+  AuthResendConfirmationCodeLazyRoute: AuthResendConfirmationCodeLazyRoute,
+  AuthForgottenPasswordVerifyLazyRoute: AuthForgottenPasswordVerifyLazyRoute,
+  AuthForgottenPasswordIndexLazyRoute: AuthForgottenPasswordIndexLazyRoute,
 }
-
-export const routeTree = rootRoute
-	._addFileChildren(rootRouteChildren)
-	._addFileTypes<FileRouteTypes>()
-
-/* ROUTE_MANIFEST_START
-{
-  "routes": {
-    "__root__": {
-      "filePath": "__root.tsx",
-      "children": [
-        "/",
-        "/chat",
-        "/auth/confirm-registration",
-        "/auth/login",
-        "/auth/register",
-        "/auth/resend-confirmation-code",
-        "/auth/forgotten-password/verify",
-        "/auth/forgotten-password/"
-      ]
-    },
-    "/": {
-      "filePath": "index.tsx"
-    },
-    "/chat": {
-      "filePath": "chat.tsx",
-      "children": [
-        "/chat/$chatId"
-      ]
-    },
-    "/chat/$chatId": {
-      "filePath": "chat/$chatId.tsx",
-      "parent": "/chat"
-    },
-    "/auth/confirm-registration": {
-      "filePath": "auth/confirm-registration.lazy.tsx"
-    },
-    "/auth/login": {
-      "filePath": "auth/login.lazy.tsx"
-    },
-    "/auth/register": {
-      "filePath": "auth/register.lazy.tsx"
-    },
-    "/auth/resend-confirmation-code": {
-      "filePath": "auth/resend-confirmation-code.lazy.tsx"
-    },
-    "/auth/forgotten-password/verify": {
-      "filePath": "auth/forgotten-password/verify.lazy.tsx"
-    },
-    "/auth/forgotten-password/": {
-      "filePath": "auth/forgotten-password/index.lazy.tsx"
-    }
-  }
-}
-ROUTE_MANIFEST_END */
+export const routeTree = rootRouteImport
+  ._addFileChildren(rootRouteChildren)
+  ._addFileTypes<FileRouteTypes>()

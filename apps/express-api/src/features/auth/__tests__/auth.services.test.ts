@@ -1,24 +1,26 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import crypto from 'node:crypto'
+
 import {
 	CognitoIdentityProviderClient,
-	ConfirmForgotPasswordCommandOutput,
+	type ConfirmForgotPasswordCommandOutput,
 	ConfirmSignUpCommand,
-	ConfirmSignUpCommandOutput,
-	ForgotPasswordCommandOutput,
+	type ConfirmSignUpCommandOutput,
+	type ForgotPasswordCommandOutput,
 	GetUserCommand,
-	GetUserCommandOutput,
+	type GetUserCommandOutput,
 	GlobalSignOutCommand,
-	GlobalSignOutCommandOutput,
+	type GlobalSignOutCommandOutput,
 	InitiateAuthCommand,
-	InitiateAuthCommandOutput,
+	type InitiateAuthCommandOutput,
 	ListUsersCommand,
-	ListUsersCommandOutput,
-	ResendConfirmationCodeCommandOutput,
+	type ListUsersCommandOutput,
+	type ResendConfirmationCodeCommandOutput,
 	SignUpCommand,
-	SignUpCommandOutput,
-	UserType,
+	type SignUpCommandOutput,
+	type UserType,
 } from '@aws-sdk/client-cognito-identity-provider'
 import { mockClient } from 'aws-sdk-client-mock'
-import crypto from 'crypto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -26,21 +28,29 @@ import {
 	tryCatchSync,
 } from '../../../utils/error-handling/try-catch.ts'
 import {
-	AppError,
+	type AppError,
 	InternalError,
 	NotFoundError,
 	ValidationError,
 } from '../../../utils/errors.ts'
+import { MockDataFactory } from '../../../utils/test-helpers/advanced-mocking.ts'
 import { mockConfig } from '../../../utils/test-helpers/config.mock.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
+import { mockParameterStore } from '../../../utils/test-helpers/parameter-store.mock.ts'
 import { CognitoService } from '../auth.services.ts'
-import { TRegisterUserRequest } from '../auth.types.ts'
+import type { TRegisterUserRequest } from '../auth.types.ts'
 
 // Mock the logger using the reusable helper
 vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 
 // Mock the config using the reusable helper
-vi.mock('../../../config/default.ts', () => mockConfig.createModule())
+vi.mock('../../../utils/load-config.ts', () => mockConfig.createModule())
+
+// Mock the Parameter Store service
+vi.mock('../../../utils/parameter-store.ts', () => ({
+	createParameterStoreService: vi.fn(),
+	ParameterStoreService: vi.fn(),
+}))
 
 // Mock the tryCatch utilities
 vi.mock('../../../utils/error-handling/try-catch.ts', () => ({
@@ -77,11 +87,24 @@ const mockTryCatchSyncWithRealImplementation = () => {
 describe('CognitoService', () => {
 	let cognitoService: CognitoService
 
-	beforeEach(() => {
+	beforeEach(async () => {
+		// Clear all mocks for test isolation
+		vi.clearAllMocks()
+
 		// Use config mock setup for consistent test environment
 		mockConfig.setup()
 		mockLogger.setup()
 		cognitoMock.reset()
+
+		// Mock the Parameter Store service to return default Cognito configuration
+		const mockParamStore = mockParameterStore.setupDefaultCognitoConfig()
+		const { createParameterStoreService } = await import(
+			'../../../utils/parameter-store.ts'
+		)
+		vi.mocked(createParameterStoreService).mockReturnValue(
+			mockParamStore as any,
+		)
+
 		cognitoService = new CognitoService()
 	})
 
@@ -94,7 +117,7 @@ describe('CognitoService', () => {
 
 		it('should successfully sign up a user when passwords match', async () => {
 			// Arrange
-			const mockUserId = '123e4567-e89b-12d3-a456-426614174000'
+			const mockUserId = MockDataFactory.uuid()
 			const mockSignUpResponse: SignUpCommandOutput = {
 				UserSub: mockUserId,
 				UserConfirmed: false,
@@ -104,7 +127,9 @@ describe('CognitoService', () => {
 				},
 			}
 
-			vi.mocked(crypto.randomUUID).mockReturnValue(mockUserId)
+			vi.mocked(crypto.randomUUID).mockReturnValue(
+				mockUserId as `${string}-${string}-${string}-${string}-${string}`,
+			)
 			vi.mocked(tryCatchSync)
 				.mockReturnValueOnce([true, null]) // password validation
 				.mockReturnValueOnce(['mock-secret-hash', null]) // hash generation
@@ -126,6 +151,7 @@ describe('CognitoService', () => {
 			// Arrange
 			const invalidRequest = {
 				...validRequest,
+				// eslint-disable-next-line no-secrets/no-secrets
 				confirmPassword: 'DifferentPassword123!',
 			}
 			const validationError = new ValidationError(
@@ -173,7 +199,9 @@ describe('CognitoService', () => {
 			const mockSecretHash = 'mock-secret-hash'
 			const cognitoError = new InternalError('Cognito error', 'authService')
 
-			vi.mocked(crypto.randomUUID).mockReturnValue(mockUserId)
+			vi.mocked(crypto.randomUUID).mockReturnValue(
+				mockUserId as `${string}-${string}-${string}-${string}-${string}`,
+			)
 			vi.mocked(tryCatchSync)
 				.mockReturnValueOnce([true, null]) // password validation
 				.mockReturnValueOnce([mockSecretHash, null]) // hash generation
@@ -196,7 +224,7 @@ describe('CognitoService', () => {
 		it('should successfully confirm sign up', async () => {
 			// Arrange
 			const mockUser: UserType = {
-				Username: '123e4567-e89b-12d3-a456-426614174000',
+				Username: MockDataFactory.uuid(),
 				Attributes: [{ Name: 'email', Value: email }],
 				UserCreateDate: new Date(),
 				UserLastModifiedDate: new Date(),
@@ -741,6 +769,7 @@ describe('CognitoService', () => {
 				email,
 				code,
 				newPassword,
+				// eslint-disable-next-line no-secrets/no-secrets
 				'DifferentPassword123!',
 			)
 
@@ -928,6 +957,7 @@ describe('CognitoService', () => {
 				const requestWithMismatchedPasswords: TRegisterUserRequest = {
 					email: 'test@example.com',
 					password: 'Password123!',
+					// eslint-disable-next-line no-secrets/no-secrets
 					confirmPassword: 'DifferentPassword456!',
 				}
 
@@ -952,6 +982,7 @@ describe('CognitoService', () => {
 				const email = 'test@example.com'
 				const code = '123456'
 				const newPassword = 'NewPassword123!'
+				// eslint-disable-next-line no-secrets/no-secrets
 				const confirmPassword = 'DifferentPassword456!'
 
 				// Let tryCatchSync run the real password validation logic

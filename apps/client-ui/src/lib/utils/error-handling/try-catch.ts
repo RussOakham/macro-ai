@@ -3,7 +3,7 @@ import { logger } from '@/lib/logger/logger'
 import type { IStandardizedError } from '@/lib/types'
 
 // Go-style Result type for client-side error handling
-export type Result<T, E = IStandardizedError> = [T, null] | [null, E]
+type Result<T, E = IStandardizedError> = [null, E] | [T, null]
 
 /**
  * Client-side wrapper for async operations using Go-style error handling
@@ -38,10 +38,13 @@ const tryCatch = async <T>(
 		const standardizedError = standardizeError(error)
 
 		// Log error with context
-		logger.error(`[${context}]: ${standardizedError.message}`, {
-			error: standardizedError,
-			context,
-		})
+		logger.error(
+			{
+				context,
+				error: standardizedError,
+			},
+			`[${context}]: ${standardizedError.message}`,
+		)
 
 		return [null, standardizedError]
 	}
@@ -76,10 +79,13 @@ const tryCatchSync = <T>(func: () => T, context = 'unknown'): Result<T> => {
 		const standardizedError = standardizeError(error)
 
 		// Log error with context
-		logger.error(`[${context}]: ${standardizedError.message}`, {
-			error: standardizedError,
-			context,
-		})
+		logger.error(
+			{
+				context,
+				error: standardizedError,
+			},
+			`[${context}]: ${standardizedError.message}`,
+		)
 
 		return [null, standardizedError]
 	}
@@ -88,15 +94,21 @@ const tryCatchSync = <T>(func: () => T, context = 'unknown'): Result<T> => {
 /**
  * Helper function to create a success Result tuple
  * Useful for consistent return patterns
+ * @param data - The successful data to wrap in a Result tuple
+ * @returns Result tuple with success data and null error
  */
-export const ok = <T>(data: T): Result<T, never> => [data, null]
+const ok = <T>(data: T): Result<T, never> => [data, null]
 
 /**
  * Helper function to create an error Result tuple
  * Useful for consistent return patterns
+ * @param error - The error to wrap in a Result tuple
+ * @returns Result tuple with null data and error
  */
-export const err = <E extends IStandardizedError>(
-	error: E,
-): Result<never, E> => [null, error]
+const err = <E extends IStandardizedError>(error: E): Result<never, E> => [
+	null,
+	error,
+]
 
-export { tryCatch, tryCatchSync }
+export { err, ok, tryCatch, tryCatchSync }
+export type { Result }

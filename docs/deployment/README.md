@@ -13,7 +13,6 @@ monitoring, and scalable architecture patterns.
 ### Infrastructure & Deployment
 
 - **[AWS Deployment](./aws-deployment.md)** - AWS infrastructure and deployment strategies
-
   - Infrastructure as Code (Terraform/CDK)
   - AWS services architecture (ECS, RDS, Cognito)
   - Environment-specific configurations
@@ -30,7 +29,6 @@ monitoring, and scalable architecture patterns.
 ### Automation & Monitoring
 
 - **[CI/CD Pipeline](./ci-cd-pipeline.md)** - GitHub Actions and automation
-
   - Automated testing and quality checks
   - Build and deployment workflows
   - Environment promotion strategies
@@ -80,14 +78,15 @@ Development → Staging → Production
 # Build production images
 pnpm build
 
-# Deploy to staging
-pnpm deploy:staging
+# Deploy infrastructure
+cd infrastructure
+pnpm deploy
 
 # Run integration tests
 pnpm test:integration
 
-# Deploy to production (with approval)
-pnpm deploy:production
+# Deploy to production (legacy - being migrated to EC2)
+# pnpm deploy:production
 ```
 
 ## 🛡️ Security Considerations

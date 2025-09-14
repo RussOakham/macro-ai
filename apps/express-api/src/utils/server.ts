@@ -1,9 +1,10 @@
+import path from 'node:path'
+
 import bodyParser from 'body-parser'
 import compression from 'compression'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
-import express, { Express } from 'express'
-import path from 'path'
+import express, { type Express } from 'express'
 import swaggerUi from 'swagger-ui-express'
 
 import { apiKeyAuth } from '../middleware/api-key.middleware.ts'
@@ -14,7 +15,8 @@ import {
 	securityHeadersMiddleware,
 } from '../middleware/security-headers.middleware.ts'
 import { appRouter } from '../router/index.routes.ts'
-
+import { doubleCsrfProtection } from './csrf.ts'
+import { config } from './load-config.ts'
 import { pino } from './logger.ts'
 
 // Export options for use in generate-swagger.ts
@@ -22,28 +24,85 @@ import { pino } from './logger.ts'
 const createServer = (): Express => {
 	const app: Express = express()
 
+	// Disable X-Powered-By header for security
+	app.disable('x-powered-by')
+
 	// Add static file serving for swagger.json
 	app.use(express.static(path.join(process.cwd(), 'public')))
 
 	app.use(pino)
+
+	const { logger } = pino
+
+	// Public endpoints: allow broad CORS for browser access (no credentials)
+	app.use('/api-docs', cors({ origin: true, credentials: false }))
+	app.use('/swagger.json', cors({ origin: true, credentials: false }))
+
+	// Simplified CORS configuration for ephemeral environments
+	let corsOrigins = 'http://localhost:3000'
+
+	if (config.NODE_ENV === 'test') {
+		corsOrigins = 'http://localhost:3000'
+	}
+
+	if (config.NODE_ENV === 'development') {
+		// Local and test environments
+		corsOrigins = 'http://localhost:3000'
+
+		// Pr environments
+		if (config.APP_ENV.startsWith('pr-')) {
+			corsOrigins = `https://${config.APP_ENV}.macro-ai.russoakham.dev`
+		}
+	}
+
+	if (config.NODE_ENV === 'production') {
+		// Production and staging environments
+		corsOrigins = `https://${process.env.CUSTOM_DOMAIN_NAME ?? ''}`
+
+		// Staging environments
+		if (config.APP_ENV === 'staging') {
+			corsOrigins = `https://staging.${process.env.CUSTOM_DOMAIN_NAME ?? ''}`
+		}
+	}
+
+	logger.info(`[server] CORS: Using origins: ${corsOrigins}`)
+
 	app.use(
 		cors({
-			origin: ['http://localhost:3000', 'http://localhost:3040'],
+			origin: (origin, callback) => {
+				// Allow requests with no origin (REST tools, same-origin)
+				if (!origin) {
+					callback(null, true)
+					return
+				}
+
+				// Check if origin is in allowed list
+				if (corsOrigins.includes(origin)) {
+					callback(null, true)
+					return
+				}
+
+				logger.warn(`[server] CORS: ❌ Denying origin: ${origin}`)
+				callback(null, false)
+			},
 			credentials: true,
-			exposedHeaders: ['cache-control'], // 'set-cookie' cannot be exposed via CORS
-			methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+			methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
 			allowedHeaders: [
 				'Origin',
 				'X-Requested-With',
 				'Content-Type',
 				'Accept',
 				'Authorization',
-				'X-API-KEY',
+				'X-API-KEY', // Exact case for API key middleware
+				'x-api-key', // Lowercase version for browser compatibility
+				'X-Api-Key', // Uppercase version for browser compatibility
 				'Cache-Control',
 			],
-			maxAge: 86400, // 24 hours
+			exposedHeaders: ['cache-control'],
+			maxAge: 86400,
 		}),
 	)
+
 	// Conditional compression - disable for streaming endpoints
 	app.use(
 		compression({
@@ -53,7 +112,8 @@ const createServer = (): Express => {
 					return false
 				}
 				// Use default compression filter for other endpoints
-				return compression.filter(req, res)
+				// Default compression filter logic - check if response should be compressed
+				return res.getHeader('content-encoding') === undefined
 			},
 		}),
 	)
@@ -61,11 +121,24 @@ const createServer = (): Express => {
 	app.use(express.urlencoded({ extended: true }))
 	app.use(cookieParser())
 
-	// Add middlewares
-	app.use(apiKeyAuth)
+	// Apply CSRF protection to all routes except public endpoints and API routes
+	app.use((req, res, next) => {
+		// Skip CSRF for public documentation endpoints and API routes
+		if (
+			req.path.startsWith('/api-docs') ||
+			req.path.startsWith('/swagger.json') ||
+			req.path.startsWith('/api/')
+		) {
+			return next()
+		}
+		return doubleCsrfProtection(req, res, next)
+	})
+
+	// Add middlewares (CORS must come BEFORE authentication for OPTIONS preflight)
 	app.use(helmetMiddleware)
 	app.use(securityHeadersMiddleware)
 	app.use(defaultRateLimiter)
+	app.use(apiKeyAuth) // Move API key auth after CORS to allow OPTIONS preflight
 
 	app.use('/api', appRouter())
 	app.use(
@@ -85,4 +158,5 @@ const createServer = (): Express => {
 	return app
 }
 
+// Note: generateCsrfToken is now exported from ./csrf.ts
 export { createServer }

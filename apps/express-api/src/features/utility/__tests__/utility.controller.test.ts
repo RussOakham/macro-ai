@@ -1,9 +1,9 @@
-import { NextFunction, Request, Response } from 'express'
+import { type NextFunction, type Request, type Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { InternalError } from '../../../utils/errors.ts'
-import { mockExpress } from '../../../utils/test-helpers/express-mocks.ts'
+import { createMockExpressObjects } from '../../../utils/test-helpers/enhanced-mocks.ts'
 import { mockLogger } from '../../../utils/test-helpers/logger.mock.ts'
 import { mockUtilityService } from '../../../utils/test-helpers/utility-service.mock.ts'
 import { utilityController } from '../utility.controller.ts'
@@ -16,105 +16,112 @@ vi.mock('../utility.services.ts', () => mockUtilityService.createModule())
 vi.mock('../../../utils/logger.ts', () => mockLogger.createModule())
 
 describe('UtilityController', () => {
-	let mockRequest: Partial<Request>
-	let mockResponse: Partial<Response>
+	let mockRequest: Request
+	let mockResponse: Response
 	let mockNext: NextFunction
 
 	beforeEach(() => {
-		const mocks = mockExpress.setup()
-		mockRequest = mocks.req
-		mockResponse = mocks.res
-		mockNext = mocks.next
+		vi.clearAllMocks()
+		const { req, res, next } = createMockExpressObjects({
+			headers: {
+				'User-Agent': 'Mozilla/5.0 (Test Browser)',
+				'X-Forwarded-For': '192.168.1.1',
+				'X-Real-IP': '192.168.1.1',
+				Origin: 'http://localhost:3000',
+				Referer: 'http://localhost:3000/health',
+			},
+			method: 'GET',
+			ip: '127.0.0.1',
+			path: '/health',
+		})
+		mockRequest = req
+		mockResponse = res
+		mockNext = next
 	})
 
 	describe('getHealthStatus', () => {
-		it('should return health status successfully', () => {
-			// Arrange
-			const mockHealthStatus = mockUtilityService.createHealthStatus()
-			vi.mocked(utilityService.getHealthStatus).mockReturnValue([
-				mockHealthStatus,
+		describe.each([
+			[
+				'successful health status',
+				mockUtilityService.createHealthStatus(),
 				null,
-			])
-
-			// Act
-			utilityController.getHealthStatus(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
-
-			// Assert
-			expect(utilityService.getHealthStatus).toHaveBeenCalledOnce()
-			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
-			expect(mockResponse.json).toHaveBeenCalledWith({
-				message: 'Api Health Status: OK',
-			})
-			expect(mockNext).not.toHaveBeenCalled()
-		})
-
-		it('should handle error and call next middleware', () => {
-			// Arrange
-			const mockError = new InternalError('Health check failed', 'test')
-			vi.mocked(utilityService.getHealthStatus).mockReturnValue([
+				StatusCodes.OK,
+				{ message: 'Api Health Status: OK' },
+			],
+			[
+				'health status error',
 				null,
-				mockError,
-			])
+				new InternalError('Health check failed', 'test'),
+				null,
+				null,
+			],
+		] as const)(
+			'should handle %s',
+			(scenario, mockResult, mockError, expectedStatus, expectedJson) => {
+				it(`should ${scenario}`, () => {
+					// Arrange
+					vi.mocked(utilityService.getHealthStatus).mockReturnValue(
+						mockError ? [null, mockError] : [mockResult, null],
+					)
 
-			// Act
-			utilityController.getHealthStatus(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+					// Act
+					utilityController.getHealthStatus(mockRequest, mockResponse, mockNext)
 
-			// Assert
-			expect(utilityService.getHealthStatus).toHaveBeenCalledOnce()
-			expect(mockNext).toHaveBeenCalledWith(mockError)
-			expect(mockResponse.status).not.toHaveBeenCalled()
-			expect(mockResponse.json).not.toHaveBeenCalled()
-		})
+					// Assert
+					expect(utilityService.getHealthStatus).toHaveBeenCalledOnce()
+					if (mockError) {
+						expect(mockNext).toHaveBeenCalledWith(mockError)
+						expect(mockResponse.status).not.toHaveBeenCalled()
+						expect(mockResponse.json).not.toHaveBeenCalled()
+					} else {
+						expect(mockResponse.status).toHaveBeenCalledWith(expectedStatus)
+						expect(mockResponse.json).toHaveBeenCalledWith(expectedJson)
+						expect(mockNext).not.toHaveBeenCalled()
+					}
+				})
+			},
+		)
 	})
 
 	describe('getSystemInfo', () => {
-		it('should return system info successfully', () => {
-			// Arrange
-			const mockSystemInfo = mockUtilityService.createSystemInfo()
-			vi.mocked(utilityService.getSystemInfo).mockReturnValue([
-				mockSystemInfo,
+		describe.each([
+			[
+				'successful system info',
+				mockUtilityService.createSystemInfo(),
 				null,
-			])
+				StatusCodes.OK,
+			],
+			[
+				'system info error',
+				null,
+				new InternalError('System info failed', 'test'),
+				null,
+			],
+		] as const)(
+			'should handle %s',
+			(scenario, mockResult, mockError, expectedStatus) => {
+				it(`should ${scenario}`, () => {
+					// Arrange
+					vi.mocked(utilityService.getSystemInfo).mockReturnValue(
+						mockError ? [null, mockError] : [mockResult, null],
+					)
 
-			// Act
-			utilityController.getSystemInfo(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
+					// Act
+					utilityController.getSystemInfo(mockRequest, mockResponse, mockNext)
 
-			// Assert
-			expect(utilityService.getSystemInfo).toHaveBeenCalledOnce()
-			expect(mockResponse.status).toHaveBeenCalledWith(StatusCodes.OK)
-			expect(mockResponse.json).toHaveBeenCalledWith(mockSystemInfo)
-			expect(mockNext).not.toHaveBeenCalled()
-		})
-
-		it('should handle error and call next middleware', () => {
-			// Arrange
-			const mockError = new InternalError('System info failed', 'test')
-			vi.mocked(utilityService.getSystemInfo).mockReturnValue([null, mockError])
-
-			// Act
-			utilityController.getSystemInfo(
-				mockRequest as Request,
-				mockResponse as Response,
-				mockNext,
-			)
-
-			// Assert
-			expect(utilityService.getSystemInfo).toHaveBeenCalledOnce()
-			expect(mockNext).toHaveBeenCalledWith(mockError)
-			expect(mockResponse.status).not.toHaveBeenCalled()
-			expect(mockResponse.json).not.toHaveBeenCalled()
-		})
+					// Assert
+					expect(utilityService.getSystemInfo).toHaveBeenCalledOnce()
+					if (mockError) {
+						expect(mockNext).toHaveBeenCalledWith(mockError)
+						expect(mockResponse.status).not.toHaveBeenCalled()
+						expect(mockResponse.json).not.toHaveBeenCalled()
+					} else {
+						expect(mockResponse.status).toHaveBeenCalledWith(expectedStatus)
+						expect(mockResponse.json).toHaveBeenCalledWith(mockResult)
+						expect(mockNext).not.toHaveBeenCalled()
+					}
+				})
+			},
+		)
 	})
 })

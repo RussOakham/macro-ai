@@ -1,0 +1,75 @@
+node_modules
+**/node_modules
+.turbo
+**/.turbo
+.cursor
+.github
+.husky
+.vscode
+
+# Environment variables
+.env*
+**/.env*
+
+# Build outputs and caches
+dist
+**/dist
+coverage
+**/coverage
+test-results
+**/test-results
+.nyc_output
+**/.nyc_output
+
+# Logs
+*.log
+**/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Development files
+README.md
+**/README.md
+*.md
+**/*.md
+docs
+**/docs
+.act
+**/.act
+
+# Git and version control
+.git
+.gitignore
+.gitattributes
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Testing
+**/__tests__/**
+**/*.test.*
+**/*.spec.*
+jest.config.*
+vitest.config.*
+vitest.workspace.*
+
+# Temporary files
+tmp
+temp
+*.tmp
+*.temp

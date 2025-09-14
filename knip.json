@@ -1,0 +1,254 @@
+{
+	"$schema": "https://unpkg.com/knip@5/schema.json",
+	"workspaces": {
+		".": {
+			"entry": ["turbo.json", "pnpm-workspace.yaml", "package.json"],
+			"project": [
+				"turbo.json",
+				"pnpm-workspace.yaml",
+				"package.json",
+				"**/*.md",
+				"**/*.json",
+				"**/*.yaml",
+				"**/*.yml"
+			]
+		},
+		"apps/express-api": {
+			"entry": [
+				"src/index.ts",
+				"src/**/*.test.ts",
+				"src/**/*.spec.ts",
+				"scripts/**/*.ts"
+			],
+			"project": [
+				"src/**/*.ts",
+				"src/**/*.js",
+				"src/**/*.json",
+				"scripts/**/*.ts",
+				"scripts/**/*.js",
+				"public/**/*",
+				"package.json",
+				"tsconfig.json",
+				"vitest.config.ts",
+				"esbuild.config.js"
+			],
+			"ignore": [
+				"src/**/*.d.ts",
+				"dist/**/*",
+				"coverage/**/*",
+				"public/swagger.json",
+				"config/**/*",
+				".env*",
+				"src/utils/load-config.ts"
+			],
+			"ignoreDependencies": [
+				"@types/node",
+				"@types/express",
+				"@types/cors",
+				"@types/helmet",
+				"@types/cookie-parser",
+				"@types/bcryptjs",
+				"@types/jsonwebtoken",
+				"@types/supertest",
+				"vitest",
+				"@vitest/ui",
+				"supertest",
+				"rimraf",
+				"esbuild",
+				"tsx"
+			]
+		},
+		"apps/client-ui": {
+			"entry": [
+				"src/main.tsx",
+				"src/**/*.test.ts",
+				"src/**/*.test.tsx",
+				"src/**/*.spec.ts",
+				"src/**/*.spec.tsx"
+			],
+			"project": [
+				"src/**/*.ts",
+				"src/**/*.tsx",
+				"src/**/*.js",
+				"src/**/*.jsx",
+				"src/**/*.json",
+				"package.json",
+				"tsconfig.json",
+				"tsconfig.node.json",
+				"vite.config.ts",
+				"vitest.config.ts",
+				"tailwind.config.js",
+				"postcss.config.js",
+				"index.html"
+			],
+			"ignore": [
+				"src/**/*.d.ts",
+				"dist/**/*",
+				"coverage/**/*",
+				"src/routeTree.gen.ts",
+				"src/test/mocks/**/*"
+			],
+			"ignoreDependencies": [
+				"@types/node",
+				"@types/react",
+				"@types/react-dom",
+				"vitest",
+				"@vitest/ui",
+				"vite",
+				"@vitejs/plugin-react",
+				"tailwindcss",
+				"postcss",
+				"autoprefixer"
+			]
+		},
+		"infrastructure": {
+			"entry": [
+				"src/app.ts",
+				"src/**/*.test.ts",
+				"src/**/*.spec.ts",
+				"src/**/*.stack.ts"
+			],
+			"project": [
+				"src/**/*.ts",
+				"src/**/*.js",
+				"src/**/*.json",
+				"package.json",
+				"tsconfig.json"
+			],
+			"ignore": [
+				"src/**/*.d.ts",
+				"dist/**/*",
+				"coverage/**/*",
+				"src/generated/**/*",
+				"cdk.out/**",
+				"cdk.context.json",
+				"cdk-outputs.json"
+			],
+			"ignoreDependencies": [
+				"@types/node",
+				"vitest",
+				"@vitest/ui",
+				"tsup",
+				"tsx"
+			]
+		},
+		"packages/macro-ai-api-client": {
+			"entry": [
+				"src/index.ts",
+				"src/**/*.test.ts",
+				"src/**/*.spec.ts",
+				"scripts/**/*.ts"
+			],
+			"project": [
+				"src/**/*.ts",
+				"src/**/*.js",
+				"src/**/*.json",
+				"scripts/**/*.ts",
+				"scripts/**/*.js",
+				"package.json",
+				"tsconfig.json",
+				"tsup.config.ts",
+				"vitest.config.ts"
+			],
+			"ignore": [
+				"src/**/*.d.ts",
+				"dist/**/*",
+				"coverage/**/*",
+				"src/generated/**/*",
+				"src/client/**/*"
+			],
+			"ignoreDependencies": [
+				"@types/node",
+				"vitest",
+				"@vitest/ui",
+				"tsup",
+				"tsx",
+				"@hey-api/openapi-ts",
+				"@hey-api/typescript",
+				"@hey-api/schemas",
+				"@hey-api/sdk",
+				"@hey-api/client-axios"
+			]
+		},
+		"packages/config-eslint": {
+			"entry": ["index.js", "react.js"],
+			"project": ["*.js", "package.json"]
+		},
+		"packages/config-typescript": {
+			"entry": ["base.json", "nextjs.json", "react-library.json"],
+			"project": ["*.json", "package.json"]
+		},
+		"tests/integration": {
+			"entry": ["**/*.test.ts", "**/*.spec.ts"],
+			"project": [
+				"**/*.ts",
+				"**/*.js",
+				"**/*.json",
+				"package.json",
+				"tsconfig.json"
+			],
+			"ignore": ["**/*.d.ts", "dist/**/*", "coverage/**/*"],
+			"ignoreDependencies": [
+				"@types/node",
+				"vitest",
+				"@vitest/ui",
+				"tsup",
+				"tsx"
+			]
+		}
+	},
+	"ignore": [
+		"**/*.md",
+		"**/README.md",
+		"**/CHANGELOG.md",
+		"**/.env*",
+		"**/node_modules/**",
+		"**/dist/**",
+		"**/build/**",
+		"**/coverage/**",
+		"**/.turbo/**",
+		"**/.next/**",
+		"**/.vercel/**",
+		"**/public/swagger.json",
+		"**/lambda-deployment.zip",
+		".env",
+		".env.local",
+		".env.development",
+		".env.production",
+		"process.env.*",
+		"**/cdk.out/**",
+		"**/cdk.context.json",
+		"**/cdk-outputs.json",
+		"**/src/client/**/*",
+		"**/src/generated/**/*"
+	],
+	"ignoreDependencies": [
+		"husky",
+		"lint-staged",
+		"prettier",
+		"turbo",
+		"knip",
+		"@hey-api/openapi-ts",
+		"@hey-api/typescript",
+		"@hey-api/schemas",
+		"@hey-api/sdk",
+		"@hey-api/client-axios"
+	],
+	"ignoreExportsUsedInFile": true,
+	"includeEntryExports": false,
+	"rules": {
+		"files": "error",
+		"dependencies": "error",
+		"devDependencies": "error",
+		"unlisted": "error",
+		"exports": "error",
+		"nsExports": "error",
+		"classMembers": "error",
+		"types": "error",
+		"nsTypes": "error",
+		"enumMembers": "error",
+		"duplicates": "error"
+	},
+	"ignoreExportsUsedInFile": true,
+	"includeEntryExports": true
+}

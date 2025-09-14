@@ -293,7 +293,7 @@ export type { User, CreateUserRequest }
 
 // ✅ Good: Default exports only for React components
 export default function UserProfile({ user }: { user: User }) {
-  return <div>{user.name}</div>
+	return <div>{user.name}</div>
 }
 ```
 
@@ -429,27 +429,69 @@ export default defineConfig({
 
 ## 🔧 Linting and Formatting
 
-### ESLint Configuration ✅ ENFORCED
+### Oxlint + ESLint Configuration ✅ ENFORCED
 
-```json
-// .eslintrc.json
-{
-	"extends": [
-		"@typescript-eslint/recommended",
-		"@typescript-eslint/recommended-requiring-type-checking",
-		"prettier"
-	],
-	"rules": {
-		"@typescript-eslint/no-unused-vars": "error",
-		"@typescript-eslint/explicit-function-return-type": "warn",
-		"@typescript-eslint/no-explicit-any": "error",
-		"@typescript-eslint/prefer-nullish-coalescing": "error",
-		"@typescript-eslint/prefer-optional-chain": "error",
-		"prefer-const": "error",
-		"no-var": "error",
-		"no-console": "warn"
-	}
-}
+Our project uses a **dual-linter approach** with Oxlint as the primary linter and ESLint for type-aware rules:
+
+#### Oxlint (Primary Linter)
+
+- **Fast**: 10-100x faster than ESLint
+- **Comprehensive**: Handles most code quality and style rules
+- **Zero-config**: Works out of the box with sensible defaults
+
+```bash
+# Run Oxlint
+pnpm lint:oxlint
+
+# Fix issues automatically
+pnpm lint:fix:oxlint
+```
+
+#### ESLint (Type-Aware Rules)
+
+- **TypeScript Integration**: Handles type-aware rules that require TypeScript analysis
+- **Specialized Rules**: Security, testing, and framework-specific rules
+- **Complementary**: Works alongside Oxlint without duplication
+
+```javascript
+// eslint.config.js
+import * as repoConfig from '@repo/config-eslint'
+
+export default repoConfig.config(
+	// Global ignores - must be first
+	{
+		ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.lcov'],
+	},
+	// Use shared base config with modular approach
+	...repoConfig.configs.base,
+	// Add project-specific configurations
+	{
+		languageOptions: {
+			parserOptions: {
+				project: './tsconfig.json',
+				tsconfigRootDir: import.meta.dirname,
+			},
+		},
+		rules: {
+			// Project-specific rule overrides
+			'@typescript-eslint/no-unused-vars': 'error',
+			'@typescript-eslint/explicit-function-return-type': 'warn',
+		},
+	},
+)
+```
+
+#### Linting Workflow
+
+```bash
+# Run both linters
+pnpm lint
+
+# Fix issues with both linters
+pnpm lint:fix
+
+# CI mode (strict, no warnings)
+pnpm lint:ci
 ```
 
 ### Prettier Configuration ✅ ENFORCED
@@ -688,7 +730,7 @@ async function loadAnalytics() {
 // ✅ Good: Zod schema validation
 const createUserSchema = z.object({
 	name: z.string().min(1).max(100),
-	email: z.string().email(),
+	email: z.email(),
 	age: z.number().int().min(13).max(120),
 })
 

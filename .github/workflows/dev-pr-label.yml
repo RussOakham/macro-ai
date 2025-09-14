@@ -4,6 +4,9 @@
 
 name: Dev - PR Label Check
 
+permissions:
+  pull-requests: read
+
 on:
   pull_request:
     types: [opened, reopened, labeled, unlabeled, synchronize]
@@ -24,7 +27,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [20.x]
+        node-version: [20.19.4]
     steps:
       - name: Check PR Label
         uses: mheap/github-action-required-labels@v5.4.1

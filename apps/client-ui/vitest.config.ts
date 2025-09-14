@@ -1,18 +1,30 @@
-import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
+import { commonTestConfig, unitTestTimeouts } from '@repo/config-testing'
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
-import path from 'path'
-import { defineConfig } from 'vite'
+import path from 'node:path'
+import { defineConfig } from 'vitest/config'
 
 const ReactCompilerConfig = {
 	target: '19',
 }
 
+// Conditionally include React Compiler plugin based on environment variable
+const shouldUseReactCompiler =
+	process.env.PREVIEW === 'true' || process.env.NODE_ENV === 'development'
+
+const babelPlugins = shouldUseReactCompiler
+	? [['babel-plugin-react-compiler', ReactCompilerConfig]]
+	: []
+
+// Detect if running in act environment
+const isActEnvironment = process.env.ACT_LOCAL === 'true'
+
 export default defineConfig({
 	plugins: [
-		TanStackRouterVite(),
+		tanstackRouter(),
 		react({
 			babel: {
-				plugins: [['babel-plugin-react-compiler', ReactCompilerConfig]],
+				plugins: babelPlugins,
 			},
 		}),
 	],
@@ -22,28 +34,33 @@ export default defineConfig({
 		},
 	},
 	test: {
-		globals: true,
-		environment: 'jsdom',
-		setupFiles: ['./src/test/setup.ts'],
-		include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-		exclude: [
-			'**/node_modules/**',
-			'**/dist/**',
-			'**/.{idea,git,cache,output,temp}/**',
-			'**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
-		],
+		...commonTestConfig,
+		...unitTestTimeouts,
 		coverage: {
-			provider: 'v8',
-			reporter: ['text', 'json', 'html'],
+			...commonTestConfig.coverage,
 			exclude: [
-				'node_modules/',
+				...commonTestConfig.coverage.exclude,
 				'src/test/',
 				'**/*.d.ts',
 				'**/*.config.*',
 				'**/coverage/**',
 				'**/dist/**',
-				'**/.{idea,git,cache,output,temp}/**',
+				'**/routeTree.gen.ts',
+				'**/main.tsx',
+				'src/**/*.stories.{ts,tsx}',
 			],
+			include: ['src/**/*.{ts,tsx}'],
+			// Per-package coverage reporting
+			reportsDirectory: './coverage',
+			thresholds: {
+				global: {
+					branches: 20,
+
+					functions: 30,
+					lines: 30,
+					statements: 30,
+				},
+			},
 		},
 		// Mock CSS modules and other assets
 		css: {
@@ -51,5 +68,29 @@ export default defineConfig({
 				classNameStrategy: 'non-scoped',
 			},
 		},
+		environment: 'happy-dom',
+		exclude: [
+			...commonTestConfig.exclude,
+			'src/routeTree.gen.ts',
+			'src/**/*.e2e.test.{ts,tsx}',
+			'src/test/mocks/**/*',
+		],
+		// React-specific globals
+		globals: true,
+		include: ['src/**/*.{test,spec}.{ts,tsx}'],
+		name: 'client-ui',
+		pool: 'threads',
+		poolOptions: {
+			threads: {
+				isolate: true,
+			},
+		},
+		setupFiles: ['./src/test/setup.ts'],
+		// Optimize timeouts for act environment
+		...(isActEnvironment && {
+			hookTimeout: 15000,
+			teardownTimeout: 10000,
+			testTimeout: 10000,
+		}),
 	},
 })

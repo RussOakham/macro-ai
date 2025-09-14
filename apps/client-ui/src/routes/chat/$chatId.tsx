@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import type { QueryClient } from '@tanstack/react-query'
 import { createFileRoute, redirect } from '@tanstack/react-router'
+import { useState } from 'react'
 import { z } from 'zod'
 
 import { AuthRouteLoading } from '@/components/auth/auth-route-loading'
@@ -8,15 +9,15 @@ import { ChatSidebar } from '@/components/chat/chat-sidebar/chat-sidebar'
 import { attemptAuthenticationWithRefresh } from '@/lib/auth/auth-utils'
 import { standardizeError } from '@/lib/errors/standardize-error'
 import { logger } from '@/lib/logger/logger'
-import { useGetUser } from '@/services/hooks/user/getUser'
+import { useGetUser } from '@/services/hooks/user/get-user'
 
 // Route parameter validation schema
 const chatParamsSchema = z.object({
-	chatId: z.string().uuid('Invalid chat ID format'),
+	chatId: z.uuid('Invalid chat ID format'),
 })
 
 const ChatPage = () => {
-	const { data: user, isFetching, isError, error, isSuccess } = useGetUser()
+	const { data: user, error, isError, isFetching, isSuccess } = useGetUser()
 	const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
 	if (isFetching && !user) {
@@ -34,8 +35,8 @@ const ChatPage = () => {
 			{/* Mobile Sidebar Overlay */}
 			{isMobileSidebarOpen && (
 				<button
-					className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
 					aria-label="Close sidebar"
+					className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
 					onClick={() => {
 						setIsMobileSidebarOpen(false)
 					}}
@@ -68,14 +69,12 @@ const ChatPage = () => {
 }
 
 export const Route = createFileRoute('/chat/$chatId')({
-	component: ChatPage,
-	pendingComponent: AuthRouteLoading,
 	params: {
 		parse: (params) => chatParamsSchema.parse(params),
 		stringify: ({ chatId }) => ({ chatId }),
 	},
 	beforeLoad: async ({ context, location, params }) => {
-		const { queryClient } = context
+		const { queryClient } = context as { queryClient: QueryClient }
 
 		// Attempt authentication with automatic refresh capability
 		const authResult = await attemptAuthenticationWithRefresh(queryClient)
@@ -83,10 +82,10 @@ export const Route = createFileRoute('/chat/$chatId')({
 		if (!authResult.success) {
 			// eslint-disable-next-line @typescript-eslint/only-throw-error
 			throw redirect({
-				to: '/auth/login',
 				search: {
 					redirect: location.pathname,
 				},
+				to: '/auth/login',
 			})
 		}
 
@@ -94,11 +93,13 @@ export const Route = createFileRoute('/chat/$chatId')({
 		try {
 			chatParamsSchema.parse(params)
 		} catch (error) {
-			logger.error('Invalid chat ID parameter', { params, error })
+			logger.error({ error, params }, 'Invalid chat ID parameter')
 			// eslint-disable-next-line @typescript-eslint/only-throw-error
 			throw redirect({
 				to: '/chat',
 			})
 		}
 	},
+	component: ChatPage,
+	pendingComponent: AuthRouteLoading,
 })
