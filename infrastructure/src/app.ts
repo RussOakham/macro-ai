@@ -6,6 +6,7 @@ import 'source-map-support/register.js'
 
 // Hobby stack removed - preview environments only
 import { MacroAiPreviewStack } from './stacks/macro-ai-preview-stack.js'
+import { MacroAiStagingStack } from './stacks/macro-ai-staging-stack.js'
 import { TAG_VALUES, TaggingStrategy } from './utils/tagging-strategy.js'
 
 const app = new cdk.App()
@@ -100,7 +101,7 @@ if (isPreviewEnvironment) {
 		tags,
 	})
 } else if (deploymentEnv === 'staging') {
-	// Staging environment - reuse preview stack with staging configuration
+	// Staging environment - use dedicated staging stack
 	const branchName = process.env.BRANCH_NAME ?? 'develop'
 
 	// Custom domain configuration for staging
@@ -112,18 +113,16 @@ if (isPreviewEnvironment) {
 	}
 
 	// eslint-disable-next-line sonarjs/constructor-for-side-effects
-	new MacroAiPreviewStack(app, stackName, {
+	new MacroAiStagingStack(app, stackName, {
 		env: {
 			account,
 			region,
 		},
 		description: stackDescription,
-		environmentName: deploymentEnv,
-		prNumber: 0, // Use 0 for staging (not a PR)
 		branchName,
-		scale: 'preview', // Use preview scale for staging
+		deploymentType: 'staging',
+		deploymentScale: 'preview', // Staging uses preview scale
 		customDomain,
-		// Complex features removed - focus on core ECS functionality
 		tags,
 	})
 } else {
