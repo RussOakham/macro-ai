@@ -50,7 +50,7 @@ echo "[INFO] App Environment: $APP_ENV"
 echo "[INFO] Using Parameter Store prefix: $PARAMETER_STORE_PREFIX"
 echo "[INFO] Output file: $ENV_FILE"
 
-# Fetch all parameters with the determined prefix
+# Fetch all parameters with the determined prefix and map to correct environment variable names
 # Priority order: Parameter Store > Build Defaults
 aws ssm get-parameters-by-path \
     --path "$PARAMETER_STORE_PREFIX" \
@@ -61,6 +61,103 @@ aws ssm get-parameters-by-path \
     --output json \
     | jq -r '.Parameters[] | "\(.Name | gsub("^'$PARAMETER_STORE_PREFIX'/"; ""))=\(.Value)"' \
     > "$ENV_FILE"
+
+# Apply parameter name to environment variable name mapping
+# This matches the CDK EnvironmentConfigConstruct parameter mappings
+echo "" >> "$ENV_FILE"
+echo "# Mapped environment variables (Parameter Store key -> Environment variable name)" >> "$ENV_FILE"
+
+# API Configuration
+if grep -q "^api-key=" "$ENV_FILE"; then
+    API_KEY_VALUE=$(grep "^api-key=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "API_KEY=$API_KEY_VALUE" >> "$ENV_FILE"
+fi
+
+# Cookie Configuration
+if grep -q "^cookie-encryption-key=" "$ENV_FILE"; then
+    COOKIE_KEY_VALUE=$(grep "^cookie-encryption-key=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "COOKIE_ENCRYPTION_KEY=$COOKIE_KEY_VALUE" >> "$ENV_FILE"
+fi
+
+# AWS Cognito Configuration
+if grep -q "^aws-cognito-region=" "$ENV_FILE"; then
+    COGNITO_REGION_VALUE=$(grep "^aws-cognito-region=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "AWS_COGNITO_REGION=$COGNITO_REGION_VALUE" >> "$ENV_FILE"
+fi
+if grep -q "^aws-cognito-user-pool-id=" "$ENV_FILE"; then
+    POOL_ID_VALUE=$(grep "^aws-cognito-user-pool-id=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "AWS_COGNITO_USER_POOL_ID=$POOL_ID_VALUE" >> "$ENV_FILE"
+fi
+if grep -q "^aws-cognito-user-pool-client-id=" "$ENV_FILE"; then
+    CLIENT_ID_VALUE=$(grep "^aws-cognito-user-pool-client-id=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "AWS_COGNITO_USER_POOL_CLIENT_ID=$CLIENT_ID_VALUE" >> "$ENV_FILE"
+fi
+if grep -q "^aws-cognito-user-pool-secret-key=" "$ENV_FILE"; then
+    SECRET_KEY_VALUE=$(grep "^aws-cognito-user-pool-secret-key=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "AWS_COGNITO_USER_POOL_SECRET_KEY=$SECRET_KEY_VALUE" >> "$ENV_FILE"
+fi
+
+# Database Configuration
+if grep -q "^relational-database-url=" "$ENV_FILE"; then
+    DB_URL_VALUE=$(grep "^relational-database-url=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "RELATIONAL_DATABASE_URL=$DB_URL_VALUE" >> "$ENV_FILE"
+fi
+if grep -q "^non-relational-database-url=" "$ENV_FILE"; then
+    REDIS_URL_VALUE=$(grep "^non-relational-database-url=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "REDIS_URL=$REDIS_URL_VALUE" >> "$ENV_FILE"
+fi
+
+# OpenAI Configuration
+if grep -q "^openai-api-key=" "$ENV_FILE"; then
+    OPENAI_KEY_VALUE=$(grep "^openai-api-key=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "OPENAI_API_KEY=$OPENAI_KEY_VALUE" >> "$ENV_FILE"
+fi
+
+# Redis Configuration (if different from non-relational-database-url)
+if grep -q "^redis-url=" "$ENV_FILE"; then
+    REDIS_URL_VALUE=$(grep "^redis-url=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "REDIS_URL=$REDIS_URL_VALUE" >> "$ENV_FILE"
+fi
+
+# Rate Limiting Configuration
+if grep -q "^rate-limit-window-ms=" "$ENV_FILE"; then
+    RATE_LIMIT_WINDOW_VALUE=$(grep "^rate-limit-window-ms=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "RATE_LIMIT_WINDOW_MS=$RATE_LIMIT_WINDOW_VALUE" >> "$ENV_FILE"
+fi
+if grep -q "^rate-limit-max-requests=" "$ENV_FILE"; then
+    RATE_LIMIT_MAX_VALUE=$(grep "^rate-limit-max-requests=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "RATE_LIMIT_MAX_REQUESTS=$RATE_LIMIT_MAX_VALUE" >> "$ENV_FILE"
+fi
+if grep -q "^auth-rate-limit-window-ms=" "$ENV_FILE"; then
+    AUTH_RATE_LIMIT_WINDOW_VALUE=$(grep "^auth-rate-limit-window-ms=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "AUTH_RATE_LIMIT_WINDOW_MS=$AUTH_RATE_LIMIT_WINDOW_VALUE" >> "$ENV_FILE"
+fi
+if grep -q "^auth-rate-limit-max-requests=" "$ENV_FILE"; then
+    AUTH_RATE_LIMIT_MAX_VALUE=$(grep "^auth-rate-limit-max-requests=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "AUTH_RATE_LIMIT_MAX_REQUESTS=$AUTH_RATE_LIMIT_MAX_VALUE" >> "$ENV_FILE"
+fi
+if grep -q "^api-rate-limit-window-ms=" "$ENV_FILE"; then
+    API_RATE_LIMIT_WINDOW_VALUE=$(grep "^api-rate-limit-window-ms=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "API_RATE_LIMIT_WINDOW_MS=$API_RATE_LIMIT_WINDOW_VALUE" >> "$ENV_FILE"
+fi
+if grep -q "^api-rate-limit-max-requests=" "$ENV_FILE"; then
+    API_RATE_LIMIT_MAX_VALUE=$(grep "^api-rate-limit-max-requests=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "API_RATE_LIMIT_MAX_REQUESTS=$API_RATE_LIMIT_MAX_VALUE" >> "$ENV_FILE"
+fi
+
+# Optional Configuration
+if grep -q "^cors-allowed-origins=" "$ENV_FILE"; then
+    CORS_ORIGINS_VALUE=$(grep "^cors-allowed-origins=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "CORS_ALLOWED_ORIGINS=$CORS_ORIGINS_VALUE" >> "$ENV_FILE"
+fi
+if grep -q "^cookie-domain=" "$ENV_FILE"; then
+    COOKIE_DOMAIN_VALUE=$(grep "^cookie-domain=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "COOKIE_DOMAIN=$COOKIE_DOMAIN_VALUE" >> "$ENV_FILE"
+fi
+if grep -q "^aws-cognito-refresh-token-expiry=" "$ENV_FILE"; then
+    REFRESH_TOKEN_EXPIRY_VALUE=$(grep "^aws-cognito-refresh-token-expiry=" "$ENV_FILE" | cut -d'=' -f2-)
+    echo "AWS_COGNITO_REFRESH_TOKEN_EXPIRY=$REFRESH_TOKEN_EXPIRY_VALUE" >> "$ENV_FILE"
+fi
 
 # Add APP_ENV (this is the only value that comes from the workflow, not Parameter Store)
 echo "APP_ENV=$APP_ENV" >> "$ENV_FILE"
