@@ -38,13 +38,22 @@ env:
   HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
 
 jobs:
-  # Change detection using reusable workflow
+  # Force deployment (change detection disabled for testing)
   change-detection:
-    name: Detect Changes
-    uses: ./.github/workflows/reusable-change-detection.yml
-    with:
-      base-ref: ${{ github.event.pull_request.base.sha || github.event.before || 'HEAD~1' }}
-      head-ref: ${{ github.event.pull_request.head.sha || github.sha }}
+    name: Force Deployment (Change Detection Disabled)
+    runs-on: ubuntu-latest
+    outputs:
+      has-backend-changes: true
+      has-frontend-changes: true
+      has-infrastructure-changes: true
+      has-workflow-changes: true
+      deployment-scope: both
+      changed-files: '[]'
+    steps:
+      - name: Force deployment for testing
+        run: |
+          echo "🚀 Change detection disabled - forcing deployment of all components for testing"
+          echo "This ensures the workflow runs fully every time while we test the deployment fix"
 
   # Build Express API Docker image
   build-express-api:
@@ -52,9 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [change-detection]
     if: |
-      needs.change-detection.outputs.has-backend-changes == 'true' ||
-      needs.change-detection.outputs.has-infrastructure-changes == 'true' ||
-      github.event.inputs.force-deploy == 'true'
+      needs.change-detection.outputs.has-backend-changes == 'true' || needs.change-detection.outputs.has-infrastructure-changes == 'true'
 
     permissions:
       id-token: write
@@ -110,11 +117,45 @@ jobs:
           echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
           echo "Generated image tag: ${IMAGE_TAG}"
 
-      - name: Prepare build context (no secrets)
-        id: prepare-build
+      - name: Generate environment file from Parameter Store
+        id: generate-env
         run: |
-          echo "🔍 Preparing Docker build context without secrets..."
-          echo "✅ Build context prepared - secrets will be injected at runtime via ECS"
+          echo "🔍 Fetching environment variables from AWS Parameter Store..."
+
+          # For staging deployments, use staging environment parameters
+          ENV_NAME="staging"
+          PARAM_PATH="/macro-ai/${ENV_NAME}"
+          ENV_FILE="apps/express-api/.env.docker"
+
+          echo "🌍 Environment: ${ENV_NAME}"
+          echo "📥 Fetching from: ${PARAM_PATH}"
+
+          # Create the environment file using our script
+          chmod +x apps/express-api/scripts/generate-env-from-parameter-store.sh
+
+          # Set APP_ENV for the new programmatic approach
+          APP_ENV="staging"
+
+          # Pass GitHub secrets as environment variables for the script
+          ENV_FILE="${ENV_FILE}" \
+          AWS_REGION="us-east-1" \
+          APP_ENV="${APP_ENV}" \
+          API_KEY="${{ secrets.API_KEY }}" \
+          OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+          AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}" \
+          AWS_ROLE_ARN="${{ secrets.AWS_ROLE_ARN }}" \
+          SERVER_PORT="${{ secrets.SERVER_PORT }}" \
+          RATE_LIMIT_WINDOW_MS="${{ secrets.RATE_LIMIT_WINDOW_MS }}" \
+          RATE_LIMIT_MAX_REQUESTS="${{ secrets.RATE_LIMIT_MAX_REQUESTS }}" \
+          AUTH_RATE_LIMIT_WINDOW_MS="${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS }}" \
+          AUTH_RATE_LIMIT_MAX_REQUESTS="${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS }}" \
+          API_RATE_LIMIT_WINDOW_MS="${{ secrets.API_RATE_LIMIT_WINDOW_MS }}" \
+          API_RATE_LIMIT_MAX_REQUESTS="${{ secrets.API_RATE_LIMIT_MAX_REQUESTS }}" \
+          COST_ALERT_EMAILS="${{ secrets.COST_ALERT_EMAILS }}" \
+          ./apps/express-api/scripts/generate-env-from-parameter-store.sh
+
+          echo "✅ Environment file generated from ${ENV_NAME} environment"
+          echo "env-file=${ENV_FILE}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push Docker image
         id: build
@@ -145,11 +186,12 @@ jobs:
               --encryption-configuration encryptionType=AES256
           }
 
-          # Build without injecting secrets (use ECS runtime secrets)
+          # Build with environment file using BuildKit
           docker buildx build \
             --file apps/express-api/Dockerfile.distroless \
             --target ecs-runner \
             --platform linux/amd64 \
+            --build-arg ENV_FILE="${{ steps.generate-env.outputs.env-file }}" \
             --cache-from type=gha \
             --cache-to type=gha,mode=max \
             --tag "${IMAGE_URI}" \
@@ -177,6 +219,15 @@ jobs:
             image-tag.txt
           retention-days: 1
 
+      - name: Cleanup environment file
+        if: always()
+        run: |
+          ENV_FILE="${{ steps.generate-env.outputs.env-file }}"
+          if [[ -f "${ENV_FILE}" ]]; then
+            rm -f "${ENV_FILE}"
+            echo "🧹 Cleaned up: ${ENV_FILE}"
+          fi
+
   # Deploy backend using reusable workflow
   deploy-backend:
     name: Deploy Backend
@@ -190,7 +241,7 @@ jobs:
       image-uri: ${{ needs.build-express-api.outputs.image-uri }}
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
-      should-deploy: ${{ needs.change-detection.outputs.has-backend-changes == 'true' || needs.change-detection.outputs.has-infrastructure-changes == 'true' || github.event.inputs.force-deploy == 'true' }}
+      should-deploy: ${{ needs.change-detection.outputs.has-backend-changes == 'true' || needs.change-detection.outputs.has-infrastructure-changes == 'true' }}
     secrets:
       API_KEY: ${{ secrets.API_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
