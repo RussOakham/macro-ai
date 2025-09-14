@@ -10,7 +10,9 @@
 		"pretty": true,
 		"noFallthroughCasesInSwitch": true,
 		"noImplicitReturns": true,
-		"forceConsistentCasingInFileNames": true
+		"forceConsistentCasingInFileNames": true,
+		"skipLibCheck": true,
+		"skipDefaultLibCheck": true
 	},
 	"files": ["index.ts"]
 }

@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/*
   - infrastructure
+  - infrastructure/pulumi
   - tests/*
 
 catalog:
