@@ -54,30 +54,32 @@ on:
         type: boolean
         default: true
     secrets:
-      API_KEY:
-        required: true
-      OPENAI_API_KEY:
-        required: true
+      # AWS credentials are required for CDK deployment
       AWS_ACCOUNT_ID:
         required: true
       AWS_ROLE_ARN:
         required: true
+      # All other secrets are optional - they will be sourced from Parameter Store
+      API_KEY:
+        required: false
+      OPENAI_API_KEY:
+        required: false
       SERVER_PORT:
-        required: true
+        required: false
       RATE_LIMIT_WINDOW_MS:
-        required: true
+        required: false
       RATE_LIMIT_MAX_REQUESTS:
-        required: true
+        required: false
       AUTH_RATE_LIMIT_WINDOW_MS:
-        required: true
+        required: false
       AUTH_RATE_LIMIT_MAX_REQUESTS:
-        required: true
+        required: false
       API_RATE_LIMIT_WINDOW_MS:
-        required: true
+        required: false
       API_RATE_LIMIT_MAX_REQUESTS:
-        required: true
+        required: false
       COST_ALERT_EMAILS:
-        required: true
+        required: false
     outputs:
       api-endpoint:
         description: 'Deployed API endpoint URL'

@@ -45,12 +45,14 @@ on:
         type: boolean
         default: true
     secrets:
+      # AWS credentials are required for CDK deployment
       AWS_ACCOUNT_ID:
         required: true
       AWS_ROLE_ARN:
         required: true
+      # API_KEY is optional - it will be sourced from Parameter Store
       API_KEY:
-        required: true
+        required: false
     outputs:
       app-url:
         description: 'Deployed frontend app URL'

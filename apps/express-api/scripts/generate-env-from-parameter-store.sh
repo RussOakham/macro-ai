@@ -9,6 +9,9 @@ set -e
 # - development → /macro-ai/development/
 # - staging → /macro-ai/staging/
 # - production → /macro-ai/production/
+#
+# All environment variables are sourced from Parameter Store as the single source of truth.
+# Only APP_ENV is passed from the workflow to determine which Parameter Store prefix to use.
 
 echo "[INFO] Generating environment file from Parameter Store..."
 
@@ -48,7 +51,7 @@ echo "[INFO] Using Parameter Store prefix: $PARAMETER_STORE_PREFIX"
 echo "[INFO] Output file: $ENV_FILE"
 
 # Fetch all parameters with the determined prefix
-# Priority order: GitHub Secrets > Parameter Store > Build Defaults
+# Priority order: Parameter Store > Build Defaults
 aws ssm get-parameters-by-path \
     --path "$PARAMETER_STORE_PREFIX" \
     --recursive \
@@ -59,31 +62,10 @@ aws ssm get-parameters-by-path \
     | jq -r '.Parameters[] | "\(.Name | gsub("^'$PARAMETER_STORE_PREFIX'/"; ""))=\(.Value)"' \
     > "$ENV_FILE"
 
-# Add GitHub secrets and real values (highest priority)
-# These come from the workflow and override any Parameter Store defaults
+# Add APP_ENV (this is the only value that comes from the workflow, not Parameter Store)
 echo "APP_ENV=$APP_ENV" >> "$ENV_FILE"
-if [ -n "$API_KEY" ]; then 
-    echo "API_KEY=$API_KEY" >> "$ENV_FILE"
-    echo "[INFO] API_KEY added from GitHub secrets"
-else
-    echo "[ERROR] API_KEY is required but not provided in GitHub secrets"
-    echo "[ERROR] Please add API_KEY to your GitHub repository secrets"
-    exit 1
-fi
-if [ -n "$OPENAI_API_KEY" ]; then echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> "$ENV_FILE"; fi
-if [ -n "$AWS_ACCOUNT_ID" ]; then echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> "$ENV_FILE"; fi
-if [ -n "$AWS_REGION" ]; then echo "AWS_REGION=$AWS_REGION" >> "$ENV_FILE"; fi
-if [ -n "$AWS_ROLE_ARN" ]; then echo "AWS_ROLE_ARN=$AWS_ROLE_ARN" >> "$ENV_FILE"; fi
-if [ -n "$SERVER_PORT" ]; then echo "SERVER_PORT=$SERVER_PORT" >> "$ENV_FILE"; fi
-if [ -n "$RATE_LIMIT_WINDOW_MS" ]; then echo "RATE_LIMIT_WINDOW_MS=$RATE_LIMIT_WINDOW_MS" >> "$ENV_FILE"; fi
-if [ -n "$RATE_LIMIT_MAX_REQUESTS" ]; then echo "RATE_LIMIT_MAX_REQUESTS=$RATE_LIMIT_MAX_REQUESTS" >> "$ENV_FILE"; fi
-if [ -n "$AUTH_RATE_LIMIT_WINDOW_MS" ]; then echo "AUTH_RATE_LIMIT_WINDOW_MS=$AUTH_RATE_LIMIT_WINDOW_MS" >> "$ENV_FILE"; fi
-if [ -n "$AUTH_RATE_LIMIT_MAX_REQUESTS" ]; then echo "AUTH_RATE_LIMIT_MAX_REQUESTS=$AUTH_RATE_LIMIT_MAX_REQUESTS" >> "$ENV_FILE"; fi
-if [ -n "$API_RATE_LIMIT_WINDOW_MS" ]; then echo "API_RATE_LIMIT_WINDOW_MS=$API_RATE_LIMIT_WINDOW_MS" >> "$ENV_FILE"; fi
-if [ -n "$API_RATE_LIMIT_MAX_REQUESTS" ]; then echo "API_RATE_LIMIT_MAX_REQUESTS=$API_RATE_LIMIT_MAX_REQUESTS" >> "$ENV_FILE"; fi
-if [ -n "$COST_ALERT_EMAILS" ]; then echo "COST_ALERT_EMAILS=$COST_ALERT_EMAILS" >> "$ENV_FILE"; fi
 
-# Add essential build-time defaults only for variables not available from GitHub secrets
+# Add essential build-time defaults only for variables not available from Parameter Store
 # These ensure the build can complete but will be overridden by real values at runtime
 echo "NODE_ENV=production" >> "$ENV_FILE"
 echo "AWS_COGNITO_REGION=us-east-1" >> "$ENV_FILE"
