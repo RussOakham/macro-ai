@@ -251,6 +251,36 @@ export class EcsFargateConstruct extends Construct {
 			? ecs.ContainerImage.fromRegistry(imageUri)
 			: ecs.ContainerImage.fromEcrRepository(this.ecrRepository, imageTag)
 
+		// DEBUG: Log environment variables before adding to task definition
+		const nonSecureEnvVars =
+			this.environmentConfig.getNonSecureEnvironmentVariables()
+        console.log(
+            '[DEBUG] ECS Task Definition: Non-secure environment variables:',
+        )
+        console.log(
+            `[DEBUG]   Total variables: ${Object.keys(nonSecureEnvVars).length}`,
+        )
+		if (nonSecureEnvVars.API_KEY) {
+			console.log(
+				`[DEBUG]   API_KEY: ${nonSecureEnvVars.API_KEY} (${nonSecureEnvVars.API_KEY.length} chars)`,
+			)
+		} else {
+			console.log(
+				'[ERROR]   API_KEY: NOT FOUND in non-secure environment variables!',
+			)
+		}
+
+		const secureSecrets = this.environmentConfig.getSecureParametersAsSecrets()
+		console.log('[DEBUG] ECS Task Definition: Secure parameters as secrets:')
+		console.log(`[DEBUG]   Total secrets: ${Object.keys(secureSecrets).length}`)
+		if (secureSecrets.API_KEY) {
+			console.log(`[DEBUG]   API_KEY secret: ${secureSecrets.API_KEY}`)
+		} else {
+			console.log(
+				'[DEBUG]   API_KEY: Not found in secure secrets (expected for non-secure parameter)',
+			)
+		}
+
 		// Add container to task definition
 		this.taskDefinition.addContainer('ExpressApiContainer', {
 			image: containerImage,
@@ -262,7 +292,7 @@ export class EcsFargateConstruct extends Construct {
 			}),
 			environment: {
 				// Use only non-secure environment variables from Parameter Store
-				...this.environmentConfig.getNonSecureEnvironmentVariables(),
+				...nonSecureEnvVars,
 				// Override with container-specific values
 				NODE_ENV:
 					environmentName === 'production' ? 'production' : 'development',
@@ -278,7 +308,7 @@ export class EcsFargateConstruct extends Construct {
 			},
 			secrets: {
 				// Use secure parameters as ECS secrets
-				...this.environmentConfig.getSecureParametersAsSecrets(),
+				...secureSecrets,
 			},
 			healthCheck: {
 				command: [
@@ -291,6 +321,24 @@ export class EcsFargateConstruct extends Construct {
 				startPeriod: cdk.Duration.seconds(60),
 			},
 		})
+
+		// DEBUG: Log final task definition environment variables
+		console.log(
+			'[DEBUG] ECS Task Definition: Final container environment variables:',
+		)
+		console.log(
+			`[DEBUG]   Total environment variables: ${Object.keys(nonSecureEnvVars).length + 3}`,
+		) // +3 for NODE_ENV, APP_ENV, and optional PR_NUMBER/CUSTOM_DOMAIN_NAME
+		console.log(`[DEBUG]   Total secrets: ${Object.keys(secureSecrets).length}`)
+		if (nonSecureEnvVars.API_KEY) {
+			console.log(
+				`[DEBUG]   API_KEY in environment: ${nonSecureEnvVars.API_KEY} (${nonSecureEnvVars.API_KEY.length} chars)`,
+			)
+		} else {
+			console.log(
+				'[ERROR]   API_KEY: NOT FOUND in final task definition environment!',
+			)
+		}
 
 		// Create Fargate service
 		this.service = new ecs.FargateService(this, 'FargateService', {

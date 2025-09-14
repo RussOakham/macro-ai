@@ -273,6 +273,16 @@ export class EnvironmentConfigConstruct extends Construct {
 	}
 
 	/**
+	 * Add environment-specific configuration
+	 */
+	private addEnvironmentSpecificConfig(envVars: Record<string, string>): void {
+		envVars.NODE_ENV = 'production'
+		envVars.APP_ENV =
+			(this.node.tryGetContext('environmentName') as string) || 'preview'
+		envVars.SERVER_PORT = '3040'
+	}
+
+	/**
 	 * Escape environment variable values for .env file format
 	 */
 	// eslint-disable-next-line class-methods-use-this
@@ -298,54 +308,39 @@ export class EnvironmentConfigConstruct extends Construct {
 	private fetchParameterStoreValues(): Record<string, string> {
 		const envVars: Record<string, string> = {}
 
+		console.log(
+			`[DEBUG] CDK EnvironmentConfigConstruct: Fetching parameters from ${this.parameterPrefix}`,
+		)
+
 		// Fetch each parameter value
 		for (const mapping of this.parameterMappings) {
-			try {
-				// Try to fetch from Parameter Store first
-				const paramName = `${this.parameterPrefix}/${mapping.paramKey}`
-
-				// Use appropriate method based on whether parameter is secure
-				let paramValue: string
-				if (mapping.isSecure) {
-					paramValue = cdk.SecretValue.ssmSecure(paramName).unsafeUnwrap()
-				} else {
-					paramValue = ssm.StringParameter.valueForStringParameter(
-						this,
-						paramName,
-						1, // Version - use latest
-					)
-				}
-
-				envVars[mapping.envVar] = paramValue
-				console.log(
-					`✅ Fetched ${mapping.envVar} from Parameter Store: ${paramName} (${mapping.isSecure ? 'secure' : 'standard'})`,
-				)
-			} catch {
-				// If Parameter Store fetch fails, use default value or throw error for required params
-				if (mapping.defaultValue) {
-					envVars[mapping.envVar] = mapping.defaultValue
-					console.log(
-						`⚠️ Using default value for ${mapping.envVar}: ${mapping.defaultValue}`,
-					)
-				} else {
-					// For required parameters without defaults, this will cause deployment to fail
-					console.error(
-						`❌ Failed to fetch required parameter ${mapping.envVar} from ${this.parameterPrefix}/${mapping.paramKey}`,
-					)
-					throw new Error(
-						`Required parameter ${mapping.envVar} not found in Parameter Store. Please ensure ${this.parameterPrefix}/${mapping.paramKey} exists.`,
-					)
-				}
-			}
+			this.fetchSingleParameter(mapping, envVars)
 		}
 
 		// Add environment-specific configuration
-		envVars.NODE_ENV = 'production'
-		envVars.APP_ENV =
-			(this.node.tryGetContext('environmentName') as string) || 'preview'
-		envVars.SERVER_PORT = '3040'
+		this.addEnvironmentSpecificConfig(envVars)
+
+		// DEBUG: Log final environment variables
+		this.logFinalEnvironmentVariables(envVars)
 
 		return envVars
+	}
+
+	/**
+	 * Fetch a single parameter from Parameter Store
+	 */
+	private fetchSingleParameter(
+		mapping: ParameterMapping,
+		envVars: Record<string, string>,
+	): void {
+		try {
+			const paramName = `${this.parameterPrefix}/${mapping.paramKey}`
+			const paramValue = this.getParameterValue(mapping, paramName)
+			envVars[mapping.envVar] = paramValue
+			this.logParameterFetch(mapping, paramName, paramValue)
+		} catch (error) {
+			this.handleParameterFetchError(mapping, error)
+		}
 	}
 
 	/**
@@ -370,5 +365,86 @@ export class EnvironmentConfigConstruct extends Construct {
 		}
 
 		return lines.join('\n')
+	}
+
+	/**
+	 * Get parameter value from Parameter Store
+	 */
+	private getParameterValue(
+		mapping: ParameterMapping,
+		paramName: string,
+	): string {
+		if (mapping.isSecure) {
+			return cdk.SecretValue.ssmSecure(paramName).unsafeUnwrap()
+		} else {
+			return ssm.StringParameter.valueForStringParameter(
+				this,
+				paramName,
+				1, // Version - use latest
+			)
+		}
+	}
+
+	/**
+	 * Handle parameter fetch error
+	 */
+	private handleParameterFetchError(
+		mapping: ParameterMapping,
+		error: unknown,
+	): void {
+		if (mapping.defaultValue) {
+			console.log(
+				`⚠️ Using default value for ${mapping.envVar}: ${mapping.defaultValue}`,
+			)
+		} else {
+			console.error(
+				`❌ Failed to fetch required parameter ${mapping.envVar} from ${this.parameterPrefix}/${mapping.paramKey}`,
+			)
+			console.error('❌ Error details:', error)
+			throw new Error(
+				`Required parameter ${mapping.envVar} not found in Parameter Store. Please ensure ${this.parameterPrefix}/${mapping.paramKey} exists.`,
+			)
+		}
+	}
+
+	/**
+	 * Log final environment variables
+	 */
+	private logFinalEnvironmentVariables(envVars: Record<string, string>): void {
+		console.log(
+			'[DEBUG] CDK EnvironmentConfigConstruct: Final environment variables:',
+		)
+		console.log(`[DEBUG]   Total variables: ${Object.keys(envVars).length}`)
+		if (envVars.API_KEY) {
+			console.log(
+				`[DEBUG]   API_KEY: ${envVars.API_KEY} (${envVars.API_KEY.length} chars)`,
+			)
+		} else {
+			console.log(
+				'[ERROR]   API_KEY: NOT FOUND in final environment variables!',
+			)
+		}
+	}
+
+	/**
+	 * Log parameter fetch with special handling for API_KEY
+	 */
+	private logParameterFetch(
+		mapping: ParameterMapping,
+		paramName: string,
+		paramValue: string,
+	): void {
+		if (mapping.envVar === 'API_KEY') {
+			const apiKeyLength = paramValue.length
+			console.log('[DEBUG] API_KEY fetched from Parameter Store:')
+			console.log(`[DEBUG]   Parameter: ${paramName}`)
+			console.log(`[DEBUG]   Value: ${paramValue}`)
+			console.log(`[DEBUG]   Length: ${apiKeyLength} characters`)
+			console.log(`[DEBUG]   Type: ${mapping.isSecure ? 'secure' : 'standard'}`)
+		} else {
+			console.log(
+				`✅ Fetched ${mapping.envVar} from Parameter Store: ${paramName} (${mapping.isSecure ? 'secure' : 'standard'})`,
+			)
+		}
 	}
 }

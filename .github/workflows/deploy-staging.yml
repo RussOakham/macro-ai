@@ -2,16 +2,16 @@ name: Deploy Staging Environment
 
 on:
   pull_request:
-    types: [ opened, reopened, synchronize ]
-    branches: [ develop ]
+    types: [opened, reopened, synchronize]
+    branches: [develop]
     paths:
-    - 'infrastructure/**'
-    - 'apps/express-api/**'
-    - 'apps/client-ui/**'
-    - 'packages/macro-ai-api-client/**'
-    - 'packages/ui-library/**'
-    - '.github/workflows/deploy-staging.yml'
-    - '.github/workflows/reusable-*.yml'
+      - 'infrastructure/**'
+      - 'apps/express-api/**'
+      - 'apps/client-ui/**'
+      - 'packages/macro-ai-api-client/**'
+      - 'packages/ui-library/**'
+      - '.github/workflows/deploy-staging.yml'
+      - '.github/workflows/reusable-*.yml'
   workflow_dispatch:
     inputs:
       force-deploy:
@@ -50,16 +50,16 @@ jobs:
       deployment-scope: both
       changed-files: '[]'
     steps:
-    - name: Force deployment for testing
-      run: |
-        echo "🚀 Change detection disabled - forcing deployment of all components for testing"
-        echo "This ensures the workflow runs fully every time while we test the deployment fix"
+      - name: Force deployment for testing
+        run: |
+          echo "🚀 Change detection disabled - forcing deployment of all components for testing"
+          echo "This ensures the workflow runs fully every time while we test the deployment fix"
 
   # Build Express API Docker image
   build-express-api:
     name: Build Docker Image for ECS
     runs-on: ubuntu-latest
-    needs: [ change-detection ]
+    needs: [change-detection]
     if: |
       needs.change-detection.outputs.has-backend-changes == 'true' || needs.change-detection.outputs.has-infrastructure-changes == 'true'
 
@@ -73,154 +73,201 @@ jobs:
       image-tag: ${{ steps.build.outputs.image-tag }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: ${{ env.PNPM_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
-    - name: Cache pnpm dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.pnpm-store
-          node_modules
-        key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          pnpm-${{ runner.os }}-
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        role-session-name: github-actions-build-docker-staging
-        aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-build-docker-staging
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Log in to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Generate image tag
-      id: image-tag
-      run: |
-        IMAGE_TAG="staging-${{ github.sha }}"
-        echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-        echo "Generated image tag: ${IMAGE_TAG}"
+      - name: Generate image tag
+        id: image-tag
+        run: |
+          IMAGE_TAG="staging-${{ github.sha }}"
+          echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Generated image tag: ${IMAGE_TAG}"
 
-    - name: Generate environment file from Parameter Store
-      id: generate-env
-      run: |
-        echo "🔍 Fetching environment variables from AWS Parameter Store..."
+      - name: Generate environment file from Parameter Store
+        id: generate-env
+        run: |
+          echo "🔍 Fetching environment variables from AWS Parameter Store..."
 
-        # For staging deployments, use staging environment parameters
-        ENV_NAME="staging"
-        PARAM_PATH="/macro-ai/${ENV_NAME}"
-        ENV_FILE="apps/express-api/.env.docker"
+          # For staging deployments, use staging environment parameters
+          ENV_NAME="staging"
+          PARAM_PATH="/macro-ai/${ENV_NAME}"
+          ENV_FILE="apps/express-api/.env.docker"
 
-        echo "🌍 Environment: ${ENV_NAME}"
-        echo "📥 Fetching from: ${PARAM_PATH}"
+          echo "🌍 Environment: ${ENV_NAME}"
+          echo "📥 Fetching from: ${PARAM_PATH}"
 
-        # Create the environment file using our script
-        chmod +x apps/express-api/scripts/generate-env-from-parameter-store.sh
+          # DEBUG: Check Parameter Store API_KEY before script execution
+          echo "[DEBUG] Checking Parameter Store API_KEY before script execution..."
+          API_KEY_FROM_PS=$(aws ssm get-parameter --name "${PARAM_PATH}/api-key" --region "${{ env.AWS_REGION }}" --query 'Parameter.Value' --output text 2>/dev/null || echo "NOT_FOUND")
+          if [[ "$API_KEY_FROM_PS" != "NOT_FOUND" ]]; then
+            API_KEY_LENGTH=${#API_KEY_FROM_PS}
+            echo "[DEBUG] Parameter Store API_KEY found:"
+            echo "[DEBUG]   Value: ${API_KEY_FROM_PS}"
+            echo "[DEBUG]   Length: ${API_KEY_LENGTH} characters"
+          else
+            echo "[ERROR] API_KEY NOT FOUND in Parameter Store at ${PARAM_PATH}/api-key"
+          fi
 
-        # Set APP_ENV for the new programmatic approach
-        APP_ENV="staging"
+          # Create the environment file using our script
+          chmod +x apps/express-api/scripts/generate-env-from-parameter-store.sh
 
-        # Pass only APP_ENV and AWS_REGION to the script
-        # All other environment variables are sourced from Parameter Store
-        ENV_FILE="${ENV_FILE}" \
-        AWS_REGION="us-east-1" \
-        APP_ENV="${APP_ENV}" \
-        ./apps/express-api/scripts/generate-env-from-parameter-store.sh
+          # Set APP_ENV for the new programmatic approach
+          APP_ENV="staging"
 
-        echo "✅ Environment file generated from ${ENV_NAME} environment"
-        echo "env-file=${ENV_FILE}" >> "$GITHUB_OUTPUT"
+          # Pass only APP_ENV and AWS_REGION to the script
+          # All other environment variables are sourced from Parameter Store
+          ENV_FILE="${ENV_FILE}" \
+          AWS_REGION="us-east-1" \
+          APP_ENV="${APP_ENV}" \
+          ./apps/express-api/scripts/generate-env-from-parameter-store.sh
 
-    - name: Build and push Docker image
-      id: build
-      run: |
-        ECR_REPOSITORY="macro-ai-staging-express-api"
-        IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
-        ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+          # DEBUG: Verify environment file contents
+          echo "[DEBUG] Environment file generated: ${ENV_FILE}"
+          echo "[DEBUG] File size: $(wc -c < "${ENV_FILE}") bytes"
+          echo "[DEBUG] Number of lines: $(wc -l < "${ENV_FILE}")"
+          echo "[DEBUG] API_KEY in file:"
+          if grep -q "^API_KEY=" "${ENV_FILE}"; then
+            API_KEY_VALUE=$(grep "^API_KEY=" "${ENV_FILE}" | cut -d'=' -f2-)
+            API_KEY_LENGTH=${#API_KEY_VALUE}
+            echo "[DEBUG]   Value: ${API_KEY_VALUE}"
+            echo "[DEBUG]   Length: ${API_KEY_LENGTH} characters"
+          else
+            echo "[ERROR] API_KEY NOT FOUND in generated environment file!"
+            echo "[ERROR] First 10 lines of environment file:"
+            head -10 "${ENV_FILE}"
+          fi
 
-        if [[ -z "${ECR_REGISTRY}" ]]; then
-          echo "⚠️ ECR registry output is empty, using fallback from AWS account ID"
-          ECR_REGISTRY="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
-        fi
+          echo "✅ Environment file generated from ${ENV_NAME} environment"
+          echo "env-file=${ENV_FILE}" >> "$GITHUB_OUTPUT"
 
-        IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+      - name: Build and push Docker image
+        id: build
+        run: |
+          ECR_REPOSITORY="macro-ai-staging-express-api"
+          IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
+          ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
 
-        echo "🐳 Building Docker image..."
-        echo "Repository: ${ECR_REPOSITORY}"
-        echo "Tag: ${IMAGE_TAG}"
-        echo "Registry: ${ECR_REGISTRY}"
-        echo "URI: ${IMAGE_URI}"
+          if [[ -z "${ECR_REGISTRY}" ]]; then
+            echo "⚠️ ECR registry output is empty, using fallback from AWS account ID"
+            ECR_REGISTRY="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
+          fi
 
-        # Create ECR repository if it doesn't exist
-        aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" >/dev/null 2>&1 || {
-          echo "📦 Creating ECR repository: ${ECR_REPOSITORY}"
-          aws ecr create-repository \
-            --repository-name "${ECR_REPOSITORY}" \
-            --image-scanning-configuration scanOnPush=true \
-            --encryption-configuration encryptionType=AES256
-        }
+          IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
 
-        # Build with environment file using BuildKit
-        docker buildx build \
-          --file apps/express-api/Dockerfile.distroless \
-          --target ecs-runner \
-          --platform linux/amd64 \
-          --build-arg ENV_FILE="${{ steps.generate-env.outputs.env-file }}" \
-          --cache-from type=gha \
-          --cache-to type=gha,mode=max \
-          --tag "${IMAGE_URI}" \
-          --push \
-          .
+          echo "🐳 Building Docker image..."
+          echo "Repository: ${ECR_REPOSITORY}"
+          echo "Tag: ${IMAGE_TAG}"
+          echo "Registry: ${ECR_REGISTRY}"
+          echo "URI: ${IMAGE_URI}"
 
-        echo "✅ Image built and pushed successfully!"
-        echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
-        echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          # Create ECR repository if it doesn't exist
+          aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" >/dev/null 2>&1 || {
+            echo "📦 Creating ECR repository: ${ECR_REPOSITORY}"
+            aws ecr create-repository \
+              --repository-name "${ECR_REPOSITORY}" \
+              --image-scanning-configuration scanOnPush=true \
+              --encryption-configuration encryptionType=AES256
+          }
 
-    - name: Save image URI to artifact
-      env:
-        IMAGE_URI: ${{ steps.build.outputs.image-uri }}
-        IMAGE_TAG: ${{ steps.build.outputs.image-tag }}
-      run: |
-        echo "${IMAGE_URI}" > image-uri.txt
-        echo "${IMAGE_TAG}" > image-tag.txt
+          # DEBUG: Verify environment file before Docker build
+          echo "[DEBUG] Environment file before Docker build:"
+          echo "[DEBUG]   File: ${{ steps.generate-env.outputs.env-file }}"
+          if [[ -f "${{ steps.generate-env.outputs.env-file }}" ]]; then
+            echo "[DEBUG]   File exists: YES"
+            echo "[DEBUG]   File size: $(wc -c < "${{ steps.generate-env.outputs.env-file }}") bytes"
+            echo "[DEBUG]   API_KEY in file:"
+            if grep -q "^API_KEY=" "${{ steps.generate-env.outputs.env-file }}"; then
+              API_KEY_VALUE=$(grep "^API_KEY=" "${{ steps.generate-env.outputs.env-file }}" | cut -d'=' -f2-)
+              API_KEY_LENGTH=${#API_KEY_VALUE}
+              echo "[DEBUG]     Value: ${API_KEY_VALUE}"
+              echo "[DEBUG]     Length: ${API_KEY_LENGTH} characters"
+            else
+              echo "[ERROR]     API_KEY NOT FOUND in environment file!"
+            fi
+          else
+            echo "[ERROR]   Environment file does not exist!"
+          fi
 
-    - name: Upload Docker image artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: docker-image-info
-        path: |
-          image-uri.txt
-          image-tag.txt
-        retention-days: 1
+          # Build with environment file using BuildKit
+          docker buildx build \
+            --file apps/express-api/Dockerfile.distroless \
+            --target ecs-runner \
+            --platform linux/amd64 \
+            --build-arg ENV_FILE="${{ steps.generate-env.outputs.env-file }}" \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --tag "${IMAGE_URI}" \
+            --push \
+            .
 
-    - name: Cleanup environment file
-      if: always()
-      run: |
-        ENV_FILE="${{ steps.generate-env.outputs.env-file }}"
-        if [[ -f "${ENV_FILE}" ]]; then
-          rm -f "${ENV_FILE}"
-          echo "🧹 Cleaned up: ${ENV_FILE}"
-        fi
+          echo "✅ Image built and pushed successfully!"
+          echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Save image URI to artifact
+        env:
+          IMAGE_URI: ${{ steps.build.outputs.image-uri }}
+          IMAGE_TAG: ${{ steps.build.outputs.image-tag }}
+        run: |
+          echo "${IMAGE_URI}" > image-uri.txt
+          echo "${IMAGE_TAG}" > image-tag.txt
+
+      - name: Upload Docker image artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-info
+          path: |
+            image-uri.txt
+            image-tag.txt
+          retention-days: 1
+
+      - name: Cleanup environment file
+        if: always()
+        run: |
+          ENV_FILE="${{ steps.generate-env.outputs.env-file }}"
+          if [[ -f "${ENV_FILE}" ]]; then
+            rm -f "${ENV_FILE}"
+            echo "🧹 Cleaned up: ${ENV_FILE}"
+          fi
 
   # Deploy backend using reusable workflow
   deploy-backend:
     name: Deploy Backend
-    needs: [ change-detection, build-express-api ]
+    needs: [change-detection, build-express-api]
     uses: ./.github/workflows/reusable-deploy-backend.yml
     with:
       environment-name: staging
@@ -254,100 +301,101 @@ jobs:
       # All other environment variables are sourced from Parameter Store
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-    needs: [ change-detection ]
+    needs: [change-detection]
 
   # Schedule automatic teardown at 6 PM
   schedule-teardown:
     name: Schedule Automatic Teardown
     runs-on: ubuntu-latest
-    needs: [ deploy-backend, deploy-frontend ]
+    needs: [deploy-backend, deploy-frontend]
     if: always() && (needs.deploy-backend.result == 'success' || needs.deploy-frontend.result == 'success')
 
     steps:
-    - name: Schedule teardown
-      run: |
-        echo "🕕 Staging environment will be automatically torn down at 6 PM"
-        echo "This helps control costs for the personal project"
-        echo "To prevent teardown, run the workflow with 'force-deploy: true'"
+      - name: Schedule teardown
+        run: |
+          echo "🕕 Staging environment will be automatically torn down at 6 PM"
+          echo "This helps control costs for the personal project"
+          echo "To prevent teardown, run the workflow with 'force-deploy: true'"
 
   # Summary job
   deployment-summary:
     name: Staging Deployment Summary
     runs-on: ubuntu-latest
-    needs: [ change-detection, deploy-backend, deploy-frontend, schedule-teardown ]
+    needs:
+      [change-detection, deploy-backend, deploy-frontend, schedule-teardown]
     if: always()
 
     steps:
-    - name: Generate deployment summary
-      run: |
-        echo "🚀 Staging deployment completed!"
-        echo "Change Detection: ${{ needs.change-detection.outputs.deployment-scope }}"
-        echo "Backend: ${{ needs.deploy-backend.result == 'success' && 'Deployed' || 'Skipped' }}"
-        echo "Frontend: ${{ needs.deploy-frontend.result == 'success' && 'Deployed' || 'Skipped' }}"
-        echo ""
-        echo "🕕 Automatic teardown scheduled for 6 PM"
-        echo "To prevent teardown, run the workflow with 'force-deploy: true'"
+      - name: Generate deployment summary
+        run: |
+          echo "🚀 Staging deployment completed!"
+          echo "Change Detection: ${{ needs.change-detection.outputs.deployment-scope }}"
+          echo "Backend: ${{ needs.deploy-backend.result == 'success' && 'Deployed' || 'Skipped' }}"
+          echo "Frontend: ${{ needs.deploy-frontend.result == 'success' && 'Deployed' || 'Skipped' }}"
+          echo ""
+          echo "🕕 Automatic teardown scheduled for 6 PM"
+          echo "To prevent teardown, run the workflow with 'force-deploy: true'"
 
-    - name: Create deployment summary comment
-      if: github.event_name == 'push'
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const frontendDeployed = '${{ needs.deploy-frontend.result }}' === 'success';
-          const backendDeployed = '${{ needs.deploy-backend.result }}' === 'success';
-          const deploymentScope = '${{ needs.change-detection.outputs.deployment-scope }}';
+      - name: Create deployment summary comment
+        if: github.event_name == 'push'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const frontendDeployed = '${{ needs.deploy-frontend.result }}' === 'success';
+            const backendDeployed = '${{ needs.deploy-backend.result }}' === 'success';
+            const deploymentScope = '${{ needs.change-detection.outputs.deployment-scope }}';
 
-          // Get deployment details using predictable URLs
-          const customDomain = '${{ vars.CUSTOM_DOMAIN_NAME }}';
-          const appUrl = frontendDeployed ? `https://staging.${customDomain}` : null;
-          const appId = frontendDeployed ? '${{ needs.deploy-frontend.outputs.app-id }}' : null;
-          const backendUrl = backendDeployed ? `https://api-staging.${customDomain}` : null;
-          const backendStack = backendDeployed ? '${{ needs.deploy-backend.outputs.stack-name }}' : null;
+            // Get deployment details using predictable URLs
+            const customDomain = '${{ vars.CUSTOM_DOMAIN_NAME }}';
+            const appUrl = frontendDeployed ? `https://staging.${customDomain}` : null;
+            const appId = frontendDeployed ? '${{ needs.deploy-frontend.outputs.app-id }}' : null;
+            const backendUrl = backendDeployed ? `https://api-staging.${customDomain}` : null;
+            const backendStack = backendDeployed ? '${{ needs.deploy-backend.outputs.stack-name }}' : null;
 
-          const comment = `## 🚀 Staging Environment Deployed Successfully!
+            const comment = `## 🚀 Staging Environment Deployed Successfully!
 
-          ### 🌐 Staging URLs
-          - **Frontend**: ${appUrl ? `[${appUrl}](${appUrl})` : 'Not deployed'}
-          - **Backend API**: ${backendUrl || 'Not deployed'}
+            ### 🌐 Staging URLs
+            - **Frontend**: ${appUrl ? `[${appUrl}](${appUrl})` : 'Not deployed'}
+            - **Backend API**: ${backendUrl || 'Not deployed'}
 
-          ### 📋 Deployment Details
-          - **Environment**: \`staging\`
-          - **Deployment Scope**: \`${deploymentScope}\`
-          - **Amplify App ID**: \`${appId || 'N/A'}\`
-          - **Branch**: \`develop\`
-          - **Backend Status**: ${backendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
-          - **Frontend Status**: ${frontendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
+            ### 📋 Deployment Details
+            - **Environment**: \`staging\`
+            - **Deployment Scope**: \`${deploymentScope}\`
+            - **Amplify App ID**: \`${appId || 'N/A'}\`
+            - **Branch**: \`develop\`
+            - **Backend Status**: ${backendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
+            - **Frontend Status**: ${frontendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
 
-          ### 🔗 Quick Links
-          ${appId ? `- [AWS Amplify Console](https://console.aws.amazon.com/amplify/home?region=us-east-1#/${appId})` : ''}
-          ${backendStack ? `- [Backend Stack](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?stackId=${backendStack})` : ''}
+            ### 🔗 Quick Links
+            ${appId ? `- [AWS Amplify Console](https://console.aws.amazon.com/amplify/home?region=us-east-1#/${appId})` : ''}
+            ${backendStack ? `- [Backend Stack](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?stackId=${backendStack})` : ''}
 
-          ### 🎯 Change Detection Results
-          - **Backend Changes**: ${{ needs.change-detection.outputs.has-backend-changes == 'true' && '✅' || '❌' }}
-          - **Frontend Changes**: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' && '✅' || '❌' }}
-          - **Infrastructure Changes**: ${{ needs.change-detection.outputs.has-infrastructure-changes == 'true' && '✅' || '❌' }}
+            ### 🎯 Change Detection Results
+            - **Backend Changes**: ${{ needs.change-detection.outputs.has-backend-changes == 'true' && '✅' || '❌' }}
+            - **Frontend Changes**: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' && '✅' || '❌' }}
+            - **Infrastructure Changes**: ${{ needs.change-detection.outputs.has-infrastructure-changes == 'true' && '✅' || '❌' }}
 
-          ### 🕕 Cost Management
-          - **Automatic Teardown**: Scheduled for 6 PM today
-          - **To Prevent Teardown**: Run workflow with \`force-deploy: true\`
-          - **Manual Teardown**: Use the \`teardown-staging.yml\` workflow
+            ### 🕕 Cost Management
+            - **Automatic Teardown**: Scheduled for 6 PM today
+            - **To Prevent Teardown**: Run workflow with \`force-deploy: true\`
+            - **Manual Teardown**: Use the \`teardown-staging.yml\` workflow
 
-          ---
-          *Staging environment provides a persistent testing environment with automatic cost controls.*`;
+            ---
+            *Staging environment provides a persistent testing environment with automatic cost controls.*`;
 
-          // Find the latest commit and comment on it
-          const { data: commits } = await github.rest.repos.listCommits({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            sha: 'develop',
-            per_page: 1
-          });
-
-          if (commits.length > 0) {
-            await github.rest.repos.createCommitComment({
+            // Find the latest commit and comment on it
+            const { data: commits } = await github.rest.repos.listCommits({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              commit_sha: commits[0].sha,
-              body: comment
+              sha: 'develop',
+              per_page: 1
             });
-          }
+
+            if (commits.length > 0) {
+              await github.rest.repos.createCommitComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: commits[0].sha,
+                body: comment
+              });
+            }

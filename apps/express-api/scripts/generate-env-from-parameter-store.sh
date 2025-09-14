@@ -173,6 +173,20 @@ echo "COOKIE_ENCRYPTION_KEY=build-time-default-key-for-docker-build" >> "$ENV_FI
 echo "RELATIONAL_DATABASE_URL=postgresql://build:build@localhost:5432/build" >> "$ENV_FILE"
 echo "REDIS_URL=redis://localhost:6379" >> "$ENV_FILE"
 
+# DEBUG: Log API_KEY value and length for debugging
+if grep -q "^API_KEY=" "$ENV_FILE"; then
+    API_KEY_VALUE=$(grep "^API_KEY=" "$ENV_FILE" | cut -d'=' -f2-)
+    API_KEY_LENGTH=${#API_KEY_VALUE}
+    echo "[DEBUG] API_KEY found in environment file:"
+    echo "[DEBUG]   Value: ${API_KEY_VALUE}"
+    echo "[DEBUG]   Length: ${API_KEY_LENGTH} characters"
+    echo "[DEBUG]   Source: Parameter Store (${PARAMETER_STORE_PREFIX}/api-key)"
+else
+    echo "[ERROR] API_KEY NOT FOUND in environment file!"
+    echo "[ERROR] Available variables:"
+    grep "^[A-Z_]" "$ENV_FILE" | head -10
+fi
+
 # Validate that we got some parameters
 if [ ! -s "$ENV_FILE" ]; then
     echo "[ERROR] No parameters found with prefix: $PARAMETER_STORE_PREFIX"
