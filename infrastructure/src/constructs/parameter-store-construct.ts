@@ -40,6 +40,11 @@ export class ParameterStoreConstruct extends Construct {
 			.toLowerCase()
 			.startsWith('pr-')
 
+		// Detect staging environment - skip parameter creation (use existing parameters)
+		const isStagingEnvironment = props.environmentName
+			.toLowerCase()
+			=== 'staging'
+
 		if (isPreviewEnvironment) {
 			// Use shared development parameter prefix for all preview environments
 			// Note: No trailing slash to avoid double slashes when joining with tier names
@@ -53,8 +58,20 @@ export class ParameterStoreConstruct extends Construct {
 			console.log(
 				`💰 Cost optimization: No new parameters created for ephemeral environment`,
 			)
+		} else if (isStagingEnvironment) {
+			// Use staging parameter prefix but skip parameter creation (use existing parameters)
+			this.parameterPrefix = '/macro-ai/staging'
+
+			// Skip parameter creation for staging (use existing manually managed parameters)
+			this.parameters = {}
+
+			console.log(`✅ Staging environment detected: ${props.environmentName}`)
+			console.log(`📋 Using parameter prefix: ${this.parameterPrefix}`)
+			console.log(
+				`🔧 Using existing manually managed parameters`,
+			)
 		} else {
-			// Standard behavior for staging/production environments
+			// Standard behavior for production environments
 			this.parameterPrefix =
 				props.parameterPrefix ?? `/macro-ai/${props.environmentName}`
 
