@@ -9,6 +9,8 @@ const environmentName = config.get('environmentName') || 'dev'
 // const prNumber = config.getNumber('prNumber') || 0
 // const branchName = config.get('branchName') || 'main'
 const imageUri = config.get('imageUri') || 'nginx:latest'
+const deploymentType = config.get('deploymentType') || 'dev'
+// const deploymentScale = config.get('deploymentScale') || 'preview'
 
 // Determine if this is a preview environment
 const isPreviewEnvironment = environmentName.startsWith('pr-')
@@ -101,9 +103,20 @@ const cluster = new aws.ecs.Cluster('macro-ai-cluster', {
 })
 
 // Get secrets from Doppler using the official provider
+// Map deployment type to Doppler config
+const dopplerConfig = (() => {
+	if (deploymentType === 'staging') {
+		return 'stg'
+	}
+	if (deploymentType === 'production') {
+		return 'prd'
+	}
+	return environmentName
+})()
+
 const dopplerSecrets = doppler.getSecretsOutput({
 	project: 'macro-ai',
-	config: environmentName,
+	config: dopplerConfig,
 })
 
 // Create environment variables from Doppler secrets
