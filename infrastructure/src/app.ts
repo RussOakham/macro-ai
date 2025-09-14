@@ -99,10 +99,37 @@ if (isPreviewEnvironment) {
 		// Complex features removed - focus on core ECS functionality
 		tags,
 	})
+} else if (deploymentEnv === 'staging') {
+	// Staging environment - reuse preview stack with staging configuration
+	const branchName = process.env.BRANCH_NAME ?? 'develop'
+
+	// Custom domain configuration for staging
+	const customDomain = {
+		domainName: 'macro-ai.russoakham.dev',
+		hostedZoneId: 'Z10081873B648ARROPNER',
+		apiSubdomain: 'api-staging', // staging API subdomain
+		// Note: certificateArn is optional - if not provided, the load balancer will create one
+	}
+
+	// eslint-disable-next-line sonarjs/constructor-for-side-effects
+	new MacroAiPreviewStack(app, stackName, {
+		env: {
+			account,
+			region,
+		},
+		description: stackDescription,
+		environmentName: deploymentEnv,
+		prNumber: 0, // Use 0 for staging (not a PR)
+		branchName,
+		scale: 'preview', // Use preview scale for staging
+		customDomain,
+		// Complex features removed - focus on core ECS functionality
+		tags,
+	})
 } else {
-	// Only preview environments are supported
+	// Only preview and staging environments are supported
 	throw new Error(
-		`Only preview environments (pr-*) are supported. Got: ${deploymentEnv}`,
+		`Only preview (pr-*) and staging environments are supported. Got: ${deploymentEnv}`,
 	)
 }
 
