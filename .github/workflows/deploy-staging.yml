@@ -2,16 +2,16 @@ name: Deploy Staging Environment
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
-    branches: [develop]
+    types: [ opened, reopened, synchronize ]
+    branches: [ develop ]
     paths:
-      - 'infrastructure/**'
-      - 'apps/express-api/**'
-      - 'apps/client-ui/**'
-      - 'packages/macro-ai-api-client/**'
-      - 'packages/ui-library/**'
-      - '.github/workflows/deploy-staging.yml'
-      - '.github/workflows/reusable-*.yml'
+    - 'infrastructure/**'
+    - 'apps/express-api/**'
+    - 'apps/client-ui/**'
+    - 'packages/macro-ai-api-client/**'
+    - 'packages/ui-library/**'
+    - '.github/workflows/deploy-staging.yml'
+    - '.github/workflows/reusable-*.yml'
   workflow_dispatch:
     inputs:
       force-deploy:
@@ -50,7 +50,7 @@ jobs:
   build-express-api:
     name: Build Docker Image for ECS
     runs-on: ubuntu-latest
-    needs: [change-detection]
+    needs: [ change-detection ]
     if: |
       needs.change-detection.outputs.has-backend-changes == 'true' ||
       needs.change-detection.outputs.has-infrastructure-changes == 'true' ||
@@ -66,104 +66,121 @@ jobs:
       image-tag: ${{ steps.build.outputs.image-tag }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: ${{ env.PNPM_VERSION }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
 
-      - name: Cache pnpm dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pnpm-store
-            node_modules
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-${{ runner.os }}-
+    - name: Cache pnpm dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pnpm-store
+          node_modules
+        key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          pnpm-${{ runner.os }}-
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          role-session-name: github-actions-build-docker-staging
-          aws-region: ${{ env.AWS_REGION }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        role-session-name: github-actions-build-docker-staging
+        aws-region: ${{ env.AWS_REGION }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+    - name: Log in to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Generate image tag
-        id: image-tag
-        run: |
-          IMAGE_TAG="staging-${{ github.sha }}"
-          echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-          echo "Generated image tag: ${IMAGE_TAG}"
+    - name: Generate image tag
+      id: image-tag
+      run: |
+        IMAGE_TAG="staging-${{ github.sha }}"
+        echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+        echo "Generated image tag: ${IMAGE_TAG}"
 
-      - name: Prepare build context (no secrets)
-        id: prepare-build
-        run: |
-          echo "🔍 Preparing Docker build context without secrets..."
-          echo "✅ Build context prepared - secrets will be injected at runtime via ECS"
+    - name: Prepare build context (no secrets)
+      id: prepare-build
+      run: |
+        echo "🔍 Preparing Docker build context without secrets..."
+        echo "✅ Build context prepared - secrets will be injected at runtime via ECS"
 
-      - name: Build and push Docker image
-        id: build
-        run: |
-          ECR_REPOSITORY="macro-ai-staging-express-api"
-          IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
-          ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+    - name: Build and push Docker image
+      id: build
+      run: |
+        ECR_REPOSITORY="macro-ai-staging-express-api"
+        IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
+        ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
 
-          if [[ -z "${ECR_REGISTRY}" ]]; then
-            echo "⚠️ ECR registry output is empty, using fallback from AWS account ID"
-            ECR_REGISTRY="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
-          fi
+        if [[ -z "${ECR_REGISTRY}" ]]; then
+          echo "⚠️ ECR registry output is empty, using fallback from AWS account ID"
+          ECR_REGISTRY="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
+        fi
 
-          IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+        IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
 
-          echo "🐳 Building Docker image..."
-          echo "Repository: ${ECR_REPOSITORY}"
-          echo "Tag: ${IMAGE_TAG}"
-          echo "Registry: ${ECR_REGISTRY}"
-          echo "URI: ${IMAGE_URI}"
+        echo "🐳 Building Docker image..."
+        echo "Repository: ${ECR_REPOSITORY}"
+        echo "Tag: ${IMAGE_TAG}"
+        echo "Registry: ${ECR_REGISTRY}"
+        echo "URI: ${IMAGE_URI}"
 
-          # Create ECR repository if it doesn't exist
-          aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" >/dev/null 2>&1 || {
-            echo "📦 Creating ECR repository: ${ECR_REPOSITORY}"
-            aws ecr create-repository \
-              --repository-name "${ECR_REPOSITORY}" \
-              --image-scanning-configuration scanOnPush=true \
-              --encryption-configuration encryptionType=AES256
-          }
+        # Create ECR repository if it doesn't exist
+        aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" >/dev/null 2>&1 || {
+          echo "📦 Creating ECR repository: ${ECR_REPOSITORY}"
+          aws ecr create-repository \
+            --repository-name "${ECR_REPOSITORY}" \
+            --image-scanning-configuration scanOnPush=true \
+            --encryption-configuration encryptionType=AES256
+        }
 
-          # Build without injecting secrets (use ECS runtime secrets)
-          docker buildx build \
-            --file apps/express-api/Dockerfile.distroless \
-            --target ecs-runner \
-            --platform linux/amd64 \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
-            --tag "${IMAGE_URI}" \
-            --push \
-            .
+        # Build without injecting secrets (use ECS runtime secrets)
+        docker buildx build \
+          --file apps/express-api/Dockerfile.distroless \
+          --target ecs-runner \
+          --platform linux/amd64 \
+          --cache-from type=gha \
+          --cache-to type=gha,mode=max \
+          --tag "${IMAGE_URI}" \
+          --push \
+          .
 
-          echo "✅ Image built and pushed successfully!"
-          echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
-          echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+        echo "✅ Image built and pushed successfully!"
+        echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+        echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+
+    - name: Save image URI to artifact
+      env:
+        IMAGE_URI: ${{ steps.build.outputs.image-uri }}
+        IMAGE_TAG: ${{ steps.build.outputs.image-tag }}
+      run: |
+        echo "${IMAGE_URI}" > image-uri.txt
+        echo "${IMAGE_TAG}" > image-tag.txt
+
+    - name: Upload Docker image artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-image-info
+        path: |
+          image-uri.txt
+          image-tag.txt
+        retention-days: 1
 
   # Deploy backend using reusable workflow
   deploy-backend:
     name: Deploy Backend
-    needs: [change-detection, build-express-api]
+    needs: [ change-detection, build-express-api ]
     uses: ./.github/workflows/reusable-deploy-backend.yml
     with:
       environment-name: staging
@@ -204,101 +221,100 @@ jobs:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       API_KEY: ${{ secrets.API_KEY }}
-    needs: [change-detection]
+    needs: [ change-detection ]
 
   # Schedule automatic teardown at 6 PM
   schedule-teardown:
     name: Schedule Automatic Teardown
     runs-on: ubuntu-latest
-    needs: [deploy-backend, deploy-frontend]
+    needs: [ deploy-backend, deploy-frontend ]
     if: always() && (needs.deploy-backend.result == 'success' || needs.deploy-frontend.result == 'success')
 
     steps:
-      - name: Schedule teardown
-        run: |
-          echo "🕕 Staging environment will be automatically torn down at 6 PM"
-          echo "This helps control costs for the personal project"
-          echo "To prevent teardown, run the workflow with 'force-deploy: true'"
+    - name: Schedule teardown
+      run: |
+        echo "🕕 Staging environment will be automatically torn down at 6 PM"
+        echo "This helps control costs for the personal project"
+        echo "To prevent teardown, run the workflow with 'force-deploy: true'"
 
   # Summary job
   deployment-summary:
     name: Staging Deployment Summary
     runs-on: ubuntu-latest
-    needs:
-      [change-detection, deploy-backend, deploy-frontend, schedule-teardown]
+    needs: [ change-detection, deploy-backend, deploy-frontend, schedule-teardown ]
     if: always()
 
     steps:
-      - name: Generate deployment summary
-        run: |
-          echo "🚀 Staging deployment completed!"
-          echo "Change Detection: ${{ needs.change-detection.outputs.deployment-scope }}"
-          echo "Backend: ${{ needs.deploy-backend.result == 'success' && 'Deployed' || 'Skipped' }}"
-          echo "Frontend: ${{ needs.deploy-frontend.result == 'success' && 'Deployed' || 'Skipped' }}"
-          echo ""
-          echo "🕕 Automatic teardown scheduled for 6 PM"
-          echo "To prevent teardown, run the workflow with 'force-deploy: true'"
+    - name: Generate deployment summary
+      run: |
+        echo "🚀 Staging deployment completed!"
+        echo "Change Detection: ${{ needs.change-detection.outputs.deployment-scope }}"
+        echo "Backend: ${{ needs.deploy-backend.result == 'success' && 'Deployed' || 'Skipped' }}"
+        echo "Frontend: ${{ needs.deploy-frontend.result == 'success' && 'Deployed' || 'Skipped' }}"
+        echo ""
+        echo "🕕 Automatic teardown scheduled for 6 PM"
+        echo "To prevent teardown, run the workflow with 'force-deploy: true'"
 
-      - name: Create deployment summary comment
-        if: github.event_name == 'push'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const frontendDeployed = '${{ needs.deploy-frontend.result }}' === 'success';
-            const backendDeployed = '${{ needs.deploy-backend.result }}' === 'success';
-            const deploymentScope = '${{ needs.change-detection.outputs.deployment-scope }}';
+    - name: Create deployment summary comment
+      if: github.event_name == 'push'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const frontendDeployed = '${{ needs.deploy-frontend.result }}' === 'success';
+          const backendDeployed = '${{ needs.deploy-backend.result }}' === 'success';
+          const deploymentScope = '${{ needs.change-detection.outputs.deployment-scope }}';
 
-            // Get deployment details using predictable URLs
-            const customDomain = '${{ vars.CUSTOM_DOMAIN_NAME }}';
-            const appUrl = frontendDeployed ? `https://staging.${customDomain}` : null;
-            const appId = frontendDeployed ? '${{ needs.deploy-frontend.outputs.app-id }}' : null;
-            const backendUrl = backendDeployed ? `https://api-staging.${customDomain}` : null;
-            const backendStack = backendDeployed ? '${{ needs.deploy-backend.outputs.stack-name }}' : null;
+          // Get deployment details using predictable URLs
+          const customDomain = '${{ vars.CUSTOM_DOMAIN_NAME }}';
+          const appUrl = frontendDeployed ? `https://staging.${customDomain}` : null;
+          const appId = frontendDeployed ? '${{ needs.deploy-frontend.outputs.app-id }}' : null;
+          const backendUrl = backendDeployed ? `https://api-staging.${customDomain}` : null;
+          const backendStack = backendDeployed ? '${{ needs.deploy-backend.outputs.stack-name }}' : null;
 
-            const comment = `## 🚀 Staging Environment Deployed Successfully!
+          const comment = `## 🚀 Staging Environment Deployed Successfully!
 
-            ### 🌐 Staging URLs
-            - **Frontend**: ${appUrl ? `[${appUrl}](${appUrl})` : 'Not deployed'}
-            - **Backend API**: ${backendUrl || 'Not deployed'}
+          ### 🌐 Staging URLs
+          - **Frontend**: ${appUrl ? `[${appUrl}](${appUrl})` : 'Not deployed'}
+          - **Backend API**: ${backendUrl || 'Not deployed'}
 
-            ### 📋 Deployment Details
-            - **Environment**: \`staging\`
-            - **Deployment Scope**: \`${deploymentScope}\`
-            - **Amplify App ID**: \`${appId || 'N/A'}\`
-            - **Branch**: \`develop\`
-            - **Backend Status**: ${backendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
-            - **Frontend Status**: ${frontendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
+          ### 📋 Deployment Details
+          - **Environment**: \`staging\`
+          - **Deployment Scope**: \`${deploymentScope}\`
+          - **Amplify App ID**: \`${appId || 'N/A'}\`
+          - **Branch**: \`develop\`
+          - **Backend Status**: ${backendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
+          - **Frontend Status**: ${frontendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
 
-            ### 🔗 Quick Links
-            ${appId ? `- [AWS Amplify Console](https://console.aws.amazon.com/amplify/home?region=us-east-1#/${appId})` : ''}
-            ${backendStack ? `- [Backend Stack](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?stackId=${backendStack})` : ''}
+          ### 🔗 Quick Links
+          ${appId ? `- [AWS Amplify Console](https://console.aws.amazon.com/amplify/home?region=us-east-1#/${appId})` : ''}
+          ${backendStack ? `- [Backend Stack](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?stackId=${backendStack})` : ''}
 
-            ### 🎯 Change Detection Results
-            - **Backend Changes**: ${{ needs.change-detection.outputs.has-backend-changes == 'true' && '✅' || '❌' }}
-            - **Frontend Changes**: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' && '✅' || '❌' }}
-            - **Infrastructure Changes**: ${{ needs.change-detection.outputs.has-infrastructure-changes == 'true' && '✅' || '❌' }}
+          ### 🎯 Change Detection Results
+          - **Backend Changes**: ${{ needs.change-detection.outputs.has-backend-changes == 'true' && '✅' || '❌' }}
+          - **Frontend Changes**: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' && '✅' || '❌' }}
+          - **Infrastructure Changes**: ${{ needs.change-detection.outputs.has-infrastructure-changes == 'true' && '✅' || '❌' }}
 
-            ### 🕕 Cost Management
-            - **Automatic Teardown**: Scheduled for 6 PM today
-            - **To Prevent Teardown**: Run workflow with \`force-deploy: true\`
-            - **Manual Teardown**: Use the \`teardown-staging.yml\` workflow
+          ### 🕕 Cost Management
+          - **Automatic Teardown**: Scheduled for 6 PM today
+          - **To Prevent Teardown**: Run workflow with \`force-deploy: true\`
+          - **Manual Teardown**: Use the \`teardown-staging.yml\` workflow
 
-            ---
-            *Staging environment provides a persistent testing environment with automatic cost controls.*`;
+          ---
+          *Staging environment provides a persistent testing environment with automatic cost controls.*`;
 
-            // Find the latest commit and comment on it
-            const { data: commits } = await github.rest.repos.listCommits({
+          // Find the latest commit and comment on it
+          const { data: commits } = await github.rest.repos.listCommits({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            sha: 'develop',
+            per_page: 1
+          });
+
+          if (commits.length > 0) {
+            await github.rest.repos.createCommitComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              sha: 'develop',
-              per_page: 1
+              commit_sha: commits[0].sha,
+              body: comment
             });
-
-            if (commits.length > 0) {
-              await github.rest.repos.createCommitComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                commit_sha: commits[0].sha,
-                body: comment
-              });
-            }
+          }
