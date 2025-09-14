@@ -148,7 +148,7 @@ jobs:
           role-session-name: GitHubActions-Pulumi-Deploy-${{ github.run_id }}
 
       - name: Install Pulumi CLI
-        uses: pulumi/actions@v5
+        uses: pulumi/actions@v4
         with:
           command: install
 

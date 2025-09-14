@@ -287,6 +287,13 @@ jobs:
           pnpm install --frozen-lockfile
           echo "✅ Dependencies installed successfully"
 
+      - name: Install Pulumi dependencies
+        run: |
+          echo "📦 Installing Pulumi dependencies..."
+          cd infrastructure/pulumi
+          pnpm install --frozen-lockfile
+          echo "✅ Pulumi dependencies installed successfully"
+
       # Download .env files from artifacts to prevent secret exposure
       - name: Download env artifacts
         if: env.ACT_LOCAL != 'true'
@@ -426,6 +433,13 @@ jobs:
           echo "📦 Installing dependencies for lint job..."
           pnpm install --frozen-lockfile
           echo "✅ Dependencies installed successfully"
+
+      - name: Install Pulumi dependencies
+        run: |
+          echo "📦 Installing Pulumi dependencies..."
+          cd infrastructure/pulumi
+          pnpm install --frozen-lockfile
+          echo "✅ Pulumi dependencies installed successfully"
 
       # Download .env files from artifacts to prevent secret exposure
       - name: Download env artifacts
@@ -611,6 +625,13 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Install Pulumi dependencies
+        run: |
+          echo "📦 Installing Pulumi dependencies..."
+          cd infrastructure/pulumi
+          pnpm install --frozen-lockfile
+          echo "✅ Pulumi dependencies installed successfully"
 
       # Download .env files from artifacts to prevent secret exposure
       - name: Download env artifacts
@@ -951,6 +972,13 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Install Pulumi dependencies
+        run: |
+          echo "📦 Installing Pulumi dependencies..."
+          cd infrastructure/pulumi
+          pnpm install --frozen-lockfile
+          echo "✅ Pulumi dependencies installed successfully"
 
       # Download .env files from artifacts to prevent secret exposure
       - name: Download env artifacts
