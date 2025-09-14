@@ -87,13 +87,16 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		})
 
 		// Create Environment Config construct for Parameter Store integration
+		// Determine if this is a preview environment based on environment name
+		const isPreviewEnvironment = environmentName.startsWith('pr-')
+
 		this.environmentConfig = new EnvironmentConfigConstruct(
 			this,
 			'EnvironmentConfig',
 			{
 				environmentName,
 				parameterPrefix: this.parameterStore.parameterPrefix,
-				isPreviewEnvironment: true,
+				isPreviewEnvironment,
 			},
 		)
 

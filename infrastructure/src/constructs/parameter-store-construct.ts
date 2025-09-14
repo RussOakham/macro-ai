@@ -56,7 +56,9 @@ export class ParameterStoreConstruct extends Construct {
 
 		// No parameter creation - all parameters are manually managed
 		this.parameters = {}
-		console.log(`🔧 Using manually managed parameters (no CDK parameter creation)`)
+		console.log(
+			`🔧 Using manually managed parameters (no CDK parameter creation)`,
+		)
 
 		// Create IAM policy for applications to read parameters (works for both modes)
 		this.readPolicy = this.createReadPolicy()
@@ -95,7 +97,6 @@ export class ParameterStoreConstruct extends Construct {
 			return `${this.parameterPrefix}${tier}-${key}`
 		}
 	}
-
 
 	private createReadPolicy(): iam.ManagedPolicy {
 		return new iam.ManagedPolicy(this, 'ParameterStoreReadPolicy', {
