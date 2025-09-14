@@ -43,8 +43,8 @@ jobs:
     name: Detect Changes
     uses: ./.github/workflows/reusable-change-detection.yml
     with:
-      base-ref: ${{ github.event.before || 'HEAD~1' }}
-      head-ref: ${{ github.sha }}
+      base-ref: ${{ github.event.pull_request.base.sha || github.event.before || 'HEAD~1' }}
+      head-ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
   # Build Express API Docker image
   build-express-api:
