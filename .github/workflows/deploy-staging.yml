@@ -163,6 +163,7 @@ jobs:
   # Deploy backend using reusable workflow
   deploy-backend:
     name: Deploy Backend
+    needs: [change-detection, build-express-api]
     uses: ./.github/workflows/reusable-deploy-backend.yml
     with:
       environment-name: staging
@@ -186,7 +187,6 @@ jobs:
       API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS }}
       API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS }}
       COST_ALERT_EMAILS: ${{ secrets.COST_ALERT_EMAILS }}
-    needs: [change-detection, build-express-api]
 
   # Deploy frontend using reusable workflow
   deploy-frontend:
