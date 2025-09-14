@@ -9,6 +9,7 @@
  */
 
 import { config as dotenvConfig } from 'dotenv'
+import { fromError } from 'zod-validation-error'
 
 import { envSchema, type TEnv } from './env.schema.ts'
 
@@ -23,11 +24,9 @@ export const config = (() => {
 	const result = envSchema.safeParse(process.env)
 
 	if (!result.success) {
-		const errors = result.error.issues
-			.map((err) => `${err.path.join('.')}: ${err.message}`)
-			.join(', ')
+		const errors = fromError(result.error)
 
-		throw new Error(`Environment configuration error: ${errors}`)
+		throw new Error(`Environment configuration error: ${errors.message}`)
 	}
 
 	return result.data
