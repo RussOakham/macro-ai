@@ -58,6 +58,8 @@ on:
         required: true
       AWS_ROLE_ARN:
         required: true
+      PULUMI_ACCESS_TOKEN:
+        required: true
     outputs:
       api-endpoint:
         description: 'Deployed API endpoint URL'
