@@ -26,6 +26,12 @@ monitoring, and scalable architecture patterns.
   - SSL/TLS certificate management
   - Domain and DNS configuration
 
+- **[CloudFormation to Pulumi Migration](./cloudformation-to-pulumi-migration-plan.md)** - Infrastructure modernization
+  - Migration from CloudFormation + Parameter Store to Pulumi + Doppler
+  - Improved developer experience and secret management
+  - Step-by-step migration plan with automated and manual steps
+  - Rollback procedures and timeline
+
 ### Automation & Monitoring
 
 - **[CI/CD Pipeline](./ci-cd-pipeline.md)** - GitHub Actions and automation
