@@ -612,7 +612,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-
       # Download .env files from artifacts to prevent secret exposure
       - name: Download env artifacts
         if: env.ACT_LOCAL != 'true'
@@ -952,7 +951,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
 
       # Download .env files from artifacts to prevent secret exposure
       - name: Download env artifacts

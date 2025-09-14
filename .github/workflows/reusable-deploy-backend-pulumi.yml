@@ -148,14 +148,9 @@ jobs:
           role-session-name: GitHubActions-Pulumi-Deploy-${{ github.run_id }}
 
       - name: Install Pulumi CLI
-        uses: pulumi/actions@v4
-        with:
-          command: install
-
-      - name: Install Pulumi dependencies
         run: |
-          cd infrastructure/pulumi
-          pnpm install --frozen-lockfile
+          curl -fsSL https://get.pulumi.com | sh
+          echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
 
       - name: Set Pulumi configuration
         id: pulumi-config

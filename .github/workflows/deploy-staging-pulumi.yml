@@ -157,6 +157,19 @@ jobs:
           echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
           echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
 
+      - name: Create image URI file
+        run: |
+          echo "${{ steps.build.outputs.image-uri }}" > image-uri.txt
+
+      - name: Upload Docker image info as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-info
+          path: |
+            image-uri.txt
+          retention-days: 1
+        if: always()
+
   # Deploy backend using Pulumi
   deploy-backend:
     name: Deploy Backend (Pulumi)
