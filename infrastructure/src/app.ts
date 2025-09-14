@@ -21,8 +21,8 @@ if (!account) {
 	)
 }
 
-// Get deployment configuration
-const deploymentEnv = process.env.CDK_DEPLOY_ENV ?? 'development'
+// Get deployment configuration from CDK context
+const deploymentEnv = app.node.tryGetContext('environmentName') ?? 'development'
 
 // Detect ephemeral preview environments
 const isPreviewEnvironment = deploymentEnv.startsWith('pr-')
