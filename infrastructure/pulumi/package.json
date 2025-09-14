@@ -1,0 +1,22 @@
+{
+	"name": "macro-ai-infrastructure",
+	"version": "1.0.0",
+	"description": "Pulumi infrastructure for Macro AI",
+	"main": "index.ts",
+	"scripts": {
+		"build": "tsc",
+		"preview": "pulumi preview",
+		"deploy": "pulumi up",
+		"destroy": "pulumi destroy"
+	},
+	"devDependencies": {
+		"@types/node": "^20.0.0",
+		"typescript": "^5.0.0"
+	},
+	"dependencies": {
+		"@pulumi/aws": "^6.0.0",
+		"@pulumi/awsx": "^2.0.0",
+		"@pulumiverse/doppler": "^0.9.0",
+		"@pulumi/pulumi": "^3.0.0"
+	}
+}
