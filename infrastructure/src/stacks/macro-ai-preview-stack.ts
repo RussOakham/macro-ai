@@ -121,12 +121,21 @@ export class MacroAiPreviewStack extends cdk.Stack {
 		// Get the image URI from CDK context (passed from CI/CD)
 		const imageUri = this.node.tryGetContext('imageUri') as string | undefined
 
+		// Check if we're in a destroy context (CDK destroy operations)
+		const isDestroyContext =
+			this.node.tryGetContext('imageUri') === 'dummy-image-uri-for-destroy'
+
 		if (!imageUri) {
 			throw new Error(
 				'❌ No imageUri provided in CDK context. ' +
 					'This suggests the GitHub workflow did not pass the correct image URI. ' +
 					'Please check that the workflow is building and pushing the Docker image correctly.',
 			)
+		}
+
+		// During destroy operations, we don't need to validate the image URI
+		if (isDestroyContext) {
+			console.log('🔍 Destroy context detected - skipping image URI validation')
 		}
 
 		const imageTag = 'context-provided'
