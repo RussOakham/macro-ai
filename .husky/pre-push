@@ -1,5 +1,5 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+echo "🔍 Running unit tests before push..."
+pnpm test
 
 # Modern security scanning for pre-push using Snyk and ESLint
 echo "🛡️  Running modern security scans before push..."
