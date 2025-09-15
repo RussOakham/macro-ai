@@ -306,3 +306,6 @@ export const { dnsName: albDnsName, zoneId: albZoneId } = alb
 export const { arn: listenerArn } = listener
 export const environment = environmentName
 export const isPreview = isPreviewEnvironment
+
+// Export API endpoint for workflow compatibility
+export const apiEndpoint = pulumi.interpolate`http://${alb.dnsName}`
