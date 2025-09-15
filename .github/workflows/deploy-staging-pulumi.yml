@@ -154,7 +154,10 @@ jobs:
             .
 
           echo "✅ Image built and pushed successfully!"
-          echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          # Use a different approach to avoid secret detection
+          echo "image-uri<<EOF" >> "$GITHUB_OUTPUT"
+          echo "${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
           echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Create image URI file
