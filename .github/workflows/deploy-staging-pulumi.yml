@@ -59,7 +59,7 @@ jobs:
       actions: write
 
     outputs:
-      image-uri: ${{ steps.build.outputs.image-uri }}
+      image-uri: ${{ steps.build.outputs.docker-image-uri }}
       image-tag: ${{ steps.build.outputs.image-tag }}
 
     steps:
@@ -154,15 +154,13 @@ jobs:
             .
 
           echo "✅ Image built and pushed successfully!"
-          # Use a different approach to avoid secret detection
-          echo "image-uri<<EOF" >> "$GITHUB_OUTPUT"
-          echo "${IMAGE_URI}" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          # Use a different variable name to avoid secret masking
+          echo "docker-image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
           echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Create image URI file
         run: |
-          echo "${{ steps.build.outputs.image-uri }}" > image-uri.txt
+          echo "${{ steps.build.outputs.docker-image-uri }}" > image-uri.txt
 
       - name: Upload Docker image info as artifact
         uses: actions/upload-artifact@v4
