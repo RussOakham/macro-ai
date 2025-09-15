@@ -177,7 +177,6 @@ jobs:
     with:
       environment-name: staging
       deployment-type: staging
-      deployment-scale: preview
       branch-name: develop
       image-uri: ${{ needs.build-express-api.outputs.image-uri }}
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
@@ -187,6 +186,9 @@ jobs:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+      DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
+      DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
+      DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
     needs: [change-detection, build-express-api]
 
   # Deploy frontend using reusable workflow

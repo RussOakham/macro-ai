@@ -120,7 +120,7 @@ jobs:
         id: doppler-token
         run: |
           DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
-          
+
           # Set the appropriate Doppler token based on deployment type
           if [[ "${DEPLOYMENT_TYPE}" == "staging" ]]; then
             DOPPLER_TOKEN="${{ secrets.DOPPLER_TOKEN_STAGING }}"
@@ -132,7 +132,7 @@ jobs:
             DOPPLER_TOKEN="${{ secrets.DOPPLER_TOKEN_DEV }}"
             echo "🔑 Using dev Doppler token"
           fi
-          
+
           echo "DOPPLER_TOKEN=${DOPPLER_TOKEN}" >> $GITHUB_ENV
           echo "✅ Doppler token set for ${DEPLOYMENT_TYPE} environment"
 
@@ -213,10 +213,10 @@ jobs:
         run: |
           API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}"
           echo "🔍 Performing health check on: ${API_ENDPOINT}"
-          
+
           # Wait for the service to be ready
           sleep 30
-          
+
           # Perform health check
           if curl -f -s "${API_ENDPOINT}/health" > /dev/null; then
             echo "✅ Health check passed"
