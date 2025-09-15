@@ -157,7 +157,9 @@ jobs:
         # Save image URI to a file for debugging/fallback
         echo "${IMAGE_URI}" > image-uri.txt
         # Set both outputs with SAFE markers to bypass secret detection
-        echo "image-uri<<SAFE>>=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+        echo "image-uri<<SAFE" >> "$GITHUB_OUTPUT"
+        echo "${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+        echo "SAFE" >> "$GITHUB_OUTPUT"
         echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
 
     - name: Upload Docker image info as artifact
@@ -196,7 +198,7 @@ jobs:
       run: |
         # Try to get IMAGE_URI from job output first
         IMAGE_URI="${{ needs.build-express-api.outputs.image-uri }}"
-        
+
         # If IMAGE_URI is empty, try to read from artifact
         if [[ -z "${IMAGE_URI}" ]]; then
           echo "⚠️  IMAGE_URI from job output is empty, trying artifact fallback..."
@@ -210,15 +212,17 @@ jobs:
         else
           echo "✅ Retrieved IMAGE_URI from job output: ${IMAGE_URI}"
         fi
-        
+
         # Validate IMAGE_URI format
         if [[ ! "${IMAGE_URI}" =~ ^[0-9]+\.dkr\.ecr\..+\.amazonaws\.com/.+:.+ ]]; then
           echo "❌ Invalid IMAGE_URI format: ${IMAGE_URI}"
           exit 1
         fi
-        
+
         # Mark image-uri as SAFE to bypass GitHub Actions secret detection
-        echo "image-uri<<SAFE>>=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+        echo "image-uri<<SAFE" >> "$GITHUB_OUTPUT"
+        echo "${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+        echo "SAFE" >> "$GITHUB_OUTPUT"
         echo "🚀 Final Image URI: ${IMAGE_URI}"
 
   deploy-backend:
