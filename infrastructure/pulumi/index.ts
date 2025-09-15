@@ -257,33 +257,97 @@ const targetGroup = new aws.lb.TargetGroup('macro-ai-tg', {
 	},
 })
 
-// Create ECS service
-const service = new aws.ecs.Service('macro-ai-service', {
-	name: `macro-ai-${environmentName}-service`,
-	cluster: cluster.arn,
-	taskDefinition: taskDefinition.arn,
-	desiredCount: 1,
-	launchType: 'FARGATE',
-	networkConfiguration: {
-		subnets: vpc.privateSubnetIds,
-		securityGroups: [ecsSecurityGroup.id],
-		assignPublicIp: false,
-	},
-	loadBalancers: [
-		{
-			targetGroupArn: targetGroup.arn,
-			containerName: 'macro-ai-container',
-			containerPort: 3040,
-		},
-	],
-	healthCheckGracePeriodSeconds: 60,
-	tags: {
-		Name: `macro-ai-${environmentName}-service`,
-		Environment: environmentName,
-		Project: 'MacroAI',
-		Component: 'ecs-service',
-	},
+// Define a health check hook that will poll the service until it's ready
+const healthCheckHook = new pulumi.ResourceHook('after', async () => {
+	// Get the ALB DNS name from the stack outputs
+	const albDnsName = alb.dnsName.apply((dns) => dns)
+
+	if (!albDnsName) {
+		// eslint-disable-next-line no-console
+		console.log('Health check: ALB DNS name not available yet')
+		return
+	}
+
+	// Wait for the ALB DNS name to be available
+	const resolvedDnsName = await albDnsName
+	const healthEndpoint = `http://${resolvedDnsName}/api/health`
+	// eslint-disable-next-line no-console
+	console.log(`Health check: Starting health check for ${healthEndpoint}`)
+
+	// Poll the health endpoint with linear backoff
+	const maxRetries = 30
+	for (let i = 0; i < maxRetries; i++) {
+		try {
+			// Create an AbortController for timeout
+			const controller = new AbortController()
+			const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+			
+			const response = await fetch(healthEndpoint, {
+				method: 'GET',
+				signal: controller.signal,
+			})
+			
+			clearTimeout(timeoutId)
+
+			if (response.ok) {
+				const data = await response.text()
+				// eslint-disable-next-line no-console
+				console.log(`Health check passed: ${data}`)
+				return
+			} else {
+				// eslint-disable-next-line no-console
+				console.log(
+					`Health check attempt ${i + 1} failed: HTTP ${response.status}`,
+				)
+			}
+		} catch (error) {
+			// eslint-disable-next-line no-console
+			console.log(`Health check attempt ${i + 1} failed: ${String(error)}`)
+		}
+
+		// Linear backoff - wait (i + 1) seconds before next attempt
+		await new Promise((resolve) => setTimeout(resolve, (i + 1) * 1000))
+	}
+
+	throw new Error(`Health check failed after ${maxRetries} attempts`)
 })
+
+// Create ECS service with health check hook
+const service = new aws.ecs.Service(
+	'macro-ai-service',
+	{
+		name: `macro-ai-${environmentName}-service`,
+		cluster: cluster.arn,
+		taskDefinition: taskDefinition.arn,
+		desiredCount: 1,
+		launchType: 'FARGATE',
+		networkConfiguration: {
+			subnets: vpc.privateSubnetIds,
+			securityGroups: [ecsSecurityGroup.id],
+			assignPublicIp: false,
+		},
+		loadBalancers: [
+			{
+				targetGroupArn: targetGroup.arn,
+				containerName: 'macro-ai-container',
+				containerPort: 3040,
+			},
+		],
+		healthCheckGracePeriodSeconds: 60,
+		tags: {
+			Name: `macro-ai-${environmentName}-service`,
+			Environment: environmentName,
+			Project: 'MacroAI',
+			Component: 'ecs-service',
+		},
+	},
+	{
+		hooks: {
+			afterCreate: [healthCheckHook],
+			afterUpdate: [healthCheckHook],
+		},
+	},
+)
 
 // Create listener
 const listener = new aws.lb.Listener('macro-ai-listener', {
