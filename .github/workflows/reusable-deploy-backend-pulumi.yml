@@ -160,6 +160,8 @@ jobs:
 
       - name: Deploy Backend Infrastructure (Pulumi)
         id: deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ENV_NAME="${{ inputs.environment-name }}"
           DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
@@ -185,6 +187,8 @@ jobs:
 
           # Extract image tag from image URI for ECR verification
           IMAGE_TAG=$(echo "${IMAGE_URI}" | cut -d':' -f2)
+          echo "🔍 Extracted image tag: ${IMAGE_TAG}"
+          echo "📝 Setting Pulumi config imageTag to: ${IMAGE_TAG}"
           pulumi config set imageTag "${IMAGE_TAG}" --stack "${STACK_NAME}"
 
           if [[ -n "${PR_NUMBER}" ]]; then
