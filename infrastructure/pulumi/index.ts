@@ -171,13 +171,20 @@ function extractSecretFromTable(value: string, key: string): null | string {
 	const lines = value.split('\n')
 	for (const line of lines) {
 		if (line.includes('│') && line.includes(key)) {
-				const parts = line.split('│')
-				if (parts.length >= 3 && parts[2]) {
-					const cleanValue = parts[2].trim()
+			const parts = line.split('│')
+			if (parts.length >= 3 && parts[2]) {
+				const cleanValue = parts[2].trim()
+				// Skip table headers and empty values
 				if (
 					cleanValue &&
 					cleanValue !== 'VALUE' &&
-					cleanValue !== 'RAW VALUE'
+					cleanValue !== 'RAW VALUE' &&
+					cleanValue !== 'NOTE' &&
+					cleanValue !== 'NAME' &&
+					cleanValue !== '─' &&
+					!cleanValue.startsWith('├') &&
+					!cleanValue.startsWith('└') &&
+					!cleanValue.startsWith('┌')
 				) {
 					// eslint-disable-next-line no-console
 					console.log(`Extracted ${key}: ${cleanValue.substring(0, 20)}...`)
