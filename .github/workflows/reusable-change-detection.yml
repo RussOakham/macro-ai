@@ -56,8 +56,14 @@ jobs:
 
           echo "🔍 Checking changes between ${BASE_REF} and ${HEAD_REF}"
 
-          # Fetch the base branch to ensure it's available for comparison
-          git fetch origin "${BASE_REF}:${BASE_REF}"
+          # Fetch the base reference - handle both branch names and commit refs
+          if [[ "${BASE_REF}" =~ ^[a-f0-9]{40}$ ]] || [[ "${BASE_REF}" =~ ^HEAD~[0-9]+$ ]]; then
+            # It's a commit hash or HEAD~N reference, fetch all refs to ensure it's available
+            git fetch origin
+          else
+            # It's a branch name, fetch it specifically
+            git fetch origin "${BASE_REF}:${BASE_REF}"
+          fi
 
           # Get all changed files
           CHANGED_FILES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" || echo "")
@@ -93,8 +99,14 @@ jobs:
           BASE_REF="${{ inputs.base-ref }}"
           HEAD_REF="${{ inputs.head-ref }}"
 
-          # Fetch the base branch to ensure it's available for comparison
-          git fetch origin "${BASE_REF}:${BASE_REF}"
+          # Fetch the base reference - handle both branch names and commit refs
+          if [[ "${BASE_REF}" =~ ^[a-f0-9]{40}$ ]] || [[ "${BASE_REF}" =~ ^HEAD~[0-9]+$ ]]; then
+            # It's a commit hash or HEAD~N reference, fetch all refs to ensure it's available
+            git fetch origin
+          else
+            # It's a branch name, fetch it specifically
+            git fetch origin "${BASE_REF}:${BASE_REF}"
+          fi
 
           # Check for backend-related changes
           BACKEND_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^infrastructure/|^apps/express-api/|^packages/macro-ai-api-client/' || true)
@@ -127,8 +139,14 @@ jobs:
           BASE_REF="${{ inputs.base-ref }}"
           HEAD_REF="${{ inputs.head-ref }}"
 
-          # Fetch the base branch to ensure it's available for comparison
-          git fetch origin "${BASE_REF}:${BASE_REF}"
+          # Fetch the base reference - handle both branch names and commit refs
+          if [[ "${BASE_REF}" =~ ^[a-f0-9]{40}$ ]] || [[ "${BASE_REF}" =~ ^HEAD~[0-9]+$ ]]; then
+            # It's a commit hash or HEAD~N reference, fetch all refs to ensure it's available
+            git fetch origin
+          else
+            # It's a branch name, fetch it specifically
+            git fetch origin "${BASE_REF}:${BASE_REF}"
+          fi
 
           # Check for frontend-related changes
           FRONTEND_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^apps/client-ui/|^packages/ui-library/' || true)
@@ -161,8 +179,14 @@ jobs:
           BASE_REF="${{ inputs.base-ref }}"
           HEAD_REF="${{ inputs.head-ref }}"
 
-          # Fetch the base branch to ensure it's available for comparison
-          git fetch origin "${BASE_REF}:${BASE_REF}"
+          # Fetch the base reference - handle both branch names and commit refs
+          if [[ "${BASE_REF}" =~ ^[a-f0-9]{40}$ ]] || [[ "${BASE_REF}" =~ ^HEAD~[0-9]+$ ]]; then
+            # It's a commit hash or HEAD~N reference, fetch all refs to ensure it's available
+            git fetch origin
+          else
+            # It's a branch name, fetch it specifically
+            git fetch origin "${BASE_REF}:${BASE_REF}"
+          fi
 
           # Check for infrastructure-related changes
           INFRASTRUCTURE_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^infrastructure/|^\.github/workflows/.*\.yml$' || true)
@@ -195,8 +219,14 @@ jobs:
           BASE_REF="${{ inputs.base-ref }}"
           HEAD_REF="${{ inputs.head-ref }}"
 
-          # Fetch the base branch to ensure it's available for comparison
-          git fetch origin "${BASE_REF}:${BASE_REF}"
+          # Fetch the base reference - handle both branch names and commit refs
+          if [[ "${BASE_REF}" =~ ^[a-f0-9]{40}$ ]] || [[ "${BASE_REF}" =~ ^HEAD~[0-9]+$ ]]; then
+            # It's a commit hash or HEAD~N reference, fetch all refs to ensure it's available
+            git fetch origin
+          else
+            # It's a branch name, fetch it specifically
+            git fetch origin "${BASE_REF}:${BASE_REF}"
+          fi
 
           # Check for workflow-related changes
           WORKFLOW_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^\.github/workflows/|^\.github/actions/' || true)
