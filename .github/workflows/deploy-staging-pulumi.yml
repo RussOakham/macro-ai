@@ -59,7 +59,7 @@ jobs:
       actions: write
 
     outputs:
-      image-uri: ${{ steps.build.outputs.docker-image-uri }}
+      image-uri: ${{ steps.build.outputs.image-uri }}
       image-tag: ${{ steps.build.outputs.image-tag }}
 
     steps:
@@ -156,8 +156,8 @@ jobs:
           echo "✅ Image built and pushed successfully!"
           # Save image URI to a file to avoid secret detection
           echo "${IMAGE_URI}" > image-uri.txt
-          # Also set step output for job output compatibility
-          echo "docker-image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          # Set step output with consistent naming (like deploy-preview.yml.disabled)
+          echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
           echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Upload Docker image info as artifact
@@ -170,9 +170,9 @@ jobs:
         if: always()
 
   # Deploy backend using Pulumi
-  # Get image URI from artifact
+  # Get image URI with fallback logic (like deploy-preview.yml.disabled)
   get-image-uri:
-    name: Get Image URI from Artifact
+    name: Get Image URI with Fallback
     runs-on: ubuntu-latest
     needs: [build-express-api]
     outputs:
@@ -184,12 +184,45 @@ jobs:
           name: docker-image-info
           path: ./
 
-      - name: Read image URI from file
+      - name: Get image URI with fallback logic
         id: image-uri
         run: |
-          IMAGE_URI=$(cat image-uri.txt)
+          # Debug: Check all available outputs
+          echo "🔍 Debugging job outputs..."
+          echo "needs.build-express-api.outputs:"
+          echo "  image-uri: '${{ needs.build-express-api.outputs.image-uri }}'"
+          echo "  image-tag: '${{ needs.build-express-api.outputs.image-tag }}'"
+          
+          echo "🔍 Build job status:"
+          echo "  Job name: build-express-api"
+          echo "  Job status: ${{ needs.build-express-api.result }}"
+          echo "  Job outputs available: ${{ contains(needs.build-express-api.outputs, 'image-uri') }}"
+          
+          # Check if build job completed successfully
+          if [[ "${{ needs.build-express-api.result }}" != "success" ]]; then
+            echo "❌ Build job did not complete successfully"
+            exit 1
+          fi
+          
+          # Try to get IMAGE_URI from job output first, fallback to artifact
+          IMAGE_URI="${{ needs.build-express-api.outputs.image-uri }}"
+          
+          # If IMAGE_URI is empty, try to read from artifact
+          if [[ -z "${IMAGE_URI}" ]]; then
+            echo "⚠️  IMAGE_URI from job output is empty, trying artifact fallback..."
+            if [[ -f "image-uri.txt" ]]; then
+              IMAGE_URI=$(cat image-uri.txt)
+              echo "✅ Retrieved IMAGE_URI from artifact: ${IMAGE_URI}"
+            else
+              echo "❌ No IMAGE_URI found in job output or artifact"
+              exit 1
+            fi
+          else
+            echo "✅ Retrieved IMAGE_URI from job output: ${IMAGE_URI}"
+          fi
+          
           echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
-          echo "Image URI from artifact: ${IMAGE_URI}"
+          echo "🚀 Final Image URI: ${IMAGE_URI}"
 
   deploy-backend:
     name: Deploy Backend (Pulumi)
