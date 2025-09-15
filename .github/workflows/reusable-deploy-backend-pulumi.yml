@@ -1,53 +1,36 @@
-name: Reusable Backend Deployment (Pulumi)
-
-permissions:
-  contents: read
-  id-token: write
+name: Reusable Deploy Backend (Pulumi)
 
 on:
   workflow_call:
     inputs:
       environment-name:
-        description: 'Environment name (e.g., pr-123, staging, production)'
+        description: 'Environment name (e.g., staging, production, pr-123)'
         required: true
         type: string
       deployment-type:
-        description: 'Deployment type (preview, staging, production)'
+        description: 'Type of deployment (staging, production, preview)'
         required: true
         type: string
-      deployment-scale:
-        description: 'Deployment scale (preview, hobby, enterprise)'
-        required: true
-        type: string
-      pr-number:
-        description: 'PR number (for preview environments)'
-        required: false
-        type: string
-        default: ''
-      branch-name:
-        description: 'Branch name'
-        required: false
-        type: string
-        default: ''
       image-uri:
         description: 'Docker image URI to deploy'
         required: true
         type: string
+      pr-number:
+        description: 'PR number for preview deployments'
+        required: false
+        type: string
+      branch-name:
+        description: 'Branch name for the deployment'
+        required: false
+        type: string
       custom-domain-name:
-        description: 'Custom domain name (optional)'
+        description: 'Custom domain name for the deployment'
         required: false
         type: string
-        default: ''
       hosted-zone-id:
-        description: 'Hosted zone ID for custom domain (optional)'
+        description: 'Route53 hosted zone ID for custom domain'
         required: false
         type: string
-        default: ''
-      cost-alert-emails:
-        description: 'Comma-separated list of cost alert emails'
-        required: false
-        type: string
-        default: ''
       should-deploy:
         description: 'Whether to actually deploy (for conditional deployment)'
         required: false
@@ -60,12 +43,18 @@ on:
         required: true
       PULUMI_ACCESS_TOKEN:
         required: true
+      DOPPLER_TOKEN_STAGING:
+        required: true
+      DOPPLER_TOKEN_DEV:
+        required: true
+      DOPPLER_TOKEN_PROD:
+        required: true
     outputs:
       api-endpoint:
         description: 'Deployed API endpoint URL'
         value: ${{ jobs.deploy-backend.outputs.api-endpoint }}
       stack-name:
-        description: 'Pulumi stack name'
+        description: 'Pulumi stack name used'
         value: ${{ jobs.deploy-backend.outputs.stack-name }}
       health-status:
         description: 'Health check status'
@@ -82,190 +71,166 @@ jobs:
   deploy-backend:
     name: Deploy Backend Infrastructure (Pulumi)
     runs-on: ubuntu-latest
-    if: inputs.should-deploy == true
-
+    if: ${{ inputs.should-deploy }}
     permissions:
       id-token: write
       contents: read
-
-    outputs:
-      api-endpoint: ${{ steps.deploy.outputs.api-endpoint }}
-      stack-name: ${{ steps.deploy.outputs.stack-name }}
-      health-status: ${{ steps.health-check.outputs.health-status }}
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Download Docker image artifacts (fallback)
-      uses: actions/download-artifact@v4
-      with:
-        name: docker-image-info
-        path: ./artifacts
-      continue-on-error: true
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
-    - name: Set image URI from artifact or input
-      id: image-uri
-      run: |
-        # Try to get image URI from artifact first (fallback)
-        if [[ -f "./artifacts/image-uri.txt" ]]; then
-          IMAGE_URI=$(cat ./artifacts/image-uri.txt)
-          echo "✅ Using image URI from artifact: ${IMAGE_URI}"
-        else
-          # Fall back to input parameter
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-Pulumi-Deploy-${{ github.run_id }}
+
+      - name: Install Pulumi CLI
+        run: |
+          curl -fsSL https://get.pulumi.com | sh
+          echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
+
+      - name: Install Pulumi dependencies
+        run: |
+          cd infrastructure/pulumi
+          pnpm install --frozen-lockfile
+
+      - name: Set Doppler token based on deployment type
+        id: doppler-token
+        run: |
+          DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
+          
+          # Set the appropriate Doppler token based on deployment type
+          if [[ "${DEPLOYMENT_TYPE}" == "staging" ]]; then
+            DOPPLER_TOKEN="${{ secrets.DOPPLER_TOKEN_STAGING }}"
+            echo "🔑 Using staging Doppler token"
+          elif [[ "${DEPLOYMENT_TYPE}" == "production" ]]; then
+            DOPPLER_TOKEN="${{ secrets.DOPPLER_TOKEN_PROD }}"
+            echo "🔑 Using production Doppler token"
+          else
+            DOPPLER_TOKEN="${{ secrets.DOPPLER_TOKEN_DEV }}"
+            echo "🔑 Using dev Doppler token"
+          fi
+          
+          echo "DOPPLER_TOKEN=${DOPPLER_TOKEN}" >> $GITHUB_ENV
+          echo "✅ Doppler token set for ${DEPLOYMENT_TYPE} environment"
+
+      - name: Set Pulumi configuration
+        id: pulumi-config
+        run: |
+          ENV_NAME="${{ inputs.environment-name }}"
+          DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
+          PR_NUMBER="${{ inputs.pr-number }}"
           IMAGE_URI="${{ inputs.image-uri }}"
-          echo "⚠️ Using image URI from input: ${IMAGE_URI}"
-        fi
 
-        echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
-        echo "Final image URI: ${IMAGE_URI}"
+          # Determine stack name based on environment type
+          if [[ "${DEPLOYMENT_TYPE}" == "preview" ]]; then
+            STACK_NAME="pr-${PR_NUMBER}"
+          elif [[ "${DEPLOYMENT_TYPE}" == "staging" ]]; then
+            STACK_NAME="stg"
+          elif [[ "${DEPLOYMENT_TYPE}" == "production" ]]; then
+            STACK_NAME="prd"
+          else
+            STACK_NAME="${ENV_NAME}"
+          fi
 
-    - name: Install pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: ${{ env.PNPM_VERSION }}
+          echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
+          echo "📦 Pulumi Stack: ${STACK_NAME}"
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
+      - name: Deploy Backend Infrastructure (Pulumi)
+        id: deploy
+        run: |
+          ENV_NAME="${{ inputs.environment-name }}"
+          DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
+          PR_NUMBER="${{ inputs.pr-number }}"
+          BRANCH_NAME="${{ inputs.branch-name }}"
+          CUSTOM_DOMAIN_NAME="${{ inputs.custom-domain-name }}"
+          HOSTED_ZONE_ID="${{ inputs.hosted-zone-id }}"
+          IMAGE_URI="${{ inputs.image-uri }}"
+          STACK_NAME="${{ steps.pulumi-config.outputs.stack-name }}"
 
-    - name: Cache pnpm dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.pnpm-store
-          node_modules
-        key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          pnpm-${{ runner.os }}-
+          echo "🚀 Starting Pulumi deployment..."
+          echo "Environment: ${ENV_NAME}"
+          echo "Deployment Type: ${DEPLOYMENT_TYPE}"
+          echo "Stack: ${STACK_NAME}"
+          echo "Image URI: ${IMAGE_URI}"
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        aws-region: ${{ env.AWS_REGION }}
-        role-session-name: GitHubActions-Pulumi-Deploy-${{ github.run_id }}
+          cd infrastructure/pulumi
 
-    - name: Install Pulumi CLI
-      run: |
-        curl -fsSL https://get.pulumi.com | sh
-        echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
+          # Set Pulumi configuration
+          pulumi config set environmentName "${ENV_NAME}" --stack "${STACK_NAME}"
+          pulumi config set deploymentType "${DEPLOYMENT_TYPE}" --stack "${STACK_NAME}"
+          pulumi config set imageUri "${IMAGE_URI}" --stack "${STACK_NAME}"
 
-    - name: Install Pulumi dependencies
-      run: |
-        cd infrastructure/pulumi
-        pnpm install --frozen-lockfile
+          if [[ -n "${PR_NUMBER}" ]]; then
+            pulumi config set prNumber "${PR_NUMBER}" --stack "${STACK_NAME}"
+          fi
 
-    - name: Set Pulumi configuration
-      id: pulumi-config
-      run: |
-        ENV_NAME="${{ inputs.environment-name }}"
-        DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
-        PR_NUMBER="${{ inputs.pr-number }}"
-        IMAGE_URI="${{ steps.image-uri.outputs.image-uri }}"
+          if [[ -n "${BRANCH_NAME}" ]]; then
+            pulumi config set branchName "${BRANCH_NAME}" --stack "${STACK_NAME}"
+          fi
 
-        # Determine stack name based on environment type
-        if [[ "${DEPLOYMENT_TYPE}" == "preview" ]]; then
-          STACK_NAME="pr-${PR_NUMBER}"
-        elif [[ "${DEPLOYMENT_TYPE}" == "staging" ]]; then
-          STACK_NAME="stg"
-        elif [[ "${DEPLOYMENT_TYPE}" == "production" ]]; then
-          STACK_NAME="prd"
-        else
-          STACK_NAME="${ENV_NAME}"
-        fi
+          if [[ -n "${CUSTOM_DOMAIN_NAME}" ]]; then
+            pulumi config set customDomainName "${CUSTOM_DOMAIN_NAME}" --stack "${STACK_NAME}"
+          fi
 
-        echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
-        echo "📦 Pulumi Stack: ${STACK_NAME}"
+          if [[ -n "${HOSTED_ZONE_ID}" ]]; then
+            pulumi config set hostedZoneId "${HOSTED_ZONE_ID}" --stack "${STACK_NAME}"
+          fi
 
-    - name: Deploy Backend Infrastructure (Pulumi)
-      id: deploy
-      run: |
-        ENV_NAME="${{ inputs.environment-name }}"
-        DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
-        DEPLOYMENT_SCALE="${{ inputs.deployment-scale }}"
-        IMAGE_URI="${{ steps.image-uri.outputs.image-uri }}"
-        STACK_NAME="${{ steps.pulumi-config.outputs.stack-name }}"
+          # Deploy the infrastructure
+          pulumi up --yes --stack "${STACK_NAME}"
 
-        echo "🚀 Deploying Backend Infrastructure with Pulumi"
-        echo "Environment: ${ENV_NAME}"
-        echo "Type: ${DEPLOYMENT_TYPE}"
-        echo "Scale: ${DEPLOYMENT_SCALE}"
-        echo "Image: ${IMAGE_URI}"
-        echo "Stack: ${STACK_NAME}"
+          # Get the API endpoint
+          API_ENDPOINT=$(pulumi stack output apiEndpoint --stack "${STACK_NAME}")
+          echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
+          echo "✅ Deployment completed successfully!"
+          echo "🌐 API Endpoint: ${API_ENDPOINT}"
 
-        # Change to Pulumi directory
-        cd infrastructure/pulumi
-
-        # Set Pulumi configuration for this deployment
-        pulumi config set imageUri "${IMAGE_URI}" --stack "${STACK_NAME}"
-        pulumi config set environmentName "${ENV_NAME}" --stack "${STACK_NAME}"
-        pulumi config set deploymentType "${DEPLOYMENT_TYPE}" --stack "${STACK_NAME}"
-        pulumi config set deploymentScale "${DEPLOYMENT_SCALE}" --stack "${STACK_NAME}"
-
-        # Set PR number if provided
-        if [[ -n "${{ inputs.pr-number }}" ]]; then
-          pulumi config set prNumber "${{ inputs.pr-number }}" --stack "${STACK_NAME}"
-        fi
-
-        # Set branch name if provided
-        if [[ -n "${{ inputs.branch-name }}" ]]; then
-          pulumi config set branchName "${{ inputs.branch-name }}" --stack "${STACK_NAME}"
-        fi
-
-        # Set custom domain if provided
-        if [[ -n "${{ inputs.custom-domain-name }}" ]]; then
-          pulumi config set customDomainName "${{ inputs.custom-domain-name }}" --stack "${STACK_NAME}"
-        fi
-
-        if [[ -n "${{ inputs.hosted-zone-id }}" ]]; then
-          pulumi config set hostedZoneId "${{ inputs.hosted-zone-id }}" --stack "${STACK_NAME}"
-        fi
-
-        # Deploy the stack
-        pulumi up --stack "${STACK_NAME}" --yes
-
-        echo "✅ Pulumi deployment completed"
-
-        # Extract API endpoint from stack outputs
-        API_ENDPOINT=$(pulumi stack output albDnsName --stack "${STACK_NAME}" 2>/dev/null || echo "")
-        if [[ -n "${API_ENDPOINT}" ]]; then
-          API_ENDPOINT="http://${API_ENDPOINT}"
-        fi
-
-        echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
-        echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
-        echo "🌐 API Endpoint: ${API_ENDPOINT}"
-
-    - name: Health Check
-      id: health-check
-      run: |
-        API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}"
-
-        if [[ -n "${API_ENDPOINT}" ]]; then
-          HEALTH_URL="${API_ENDPOINT%/}/api/health"
-          echo "🔍 Testing health endpoint: ${HEALTH_URL}"
-
-          # Wait for deployment to stabilize
+      - name: Health Check
+        id: health-check
+        run: |
+          API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}"
+          echo "🔍 Performing health check on: ${API_ENDPOINT}"
+          
+          # Wait for the service to be ready
           sleep 30
+          
+          # Perform health check
+          if curl -f -s "${API_ENDPOINT}/health" > /dev/null; then
+            echo "✅ Health check passed"
+            echo "health-status=healthy" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Health check failed"
+            echo "health-status=unhealthy" >> $GITHUB_OUTPUT
+            exit 1
+          fi
 
-          # Test health endpoint with retries
-          for i in {1..5}; do
-            HEALTH_RESPONSE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 --connect-timeout 5 "${HEALTH_URL}" 2>/dev/null || echo "000")
-            if [[ "$HEALTH_RESPONSE" == "200" ]]; then
-              echo "health-status=healthy" >> $GITHUB_OUTPUT
-              echo "✅ Health check passed (attempt $i)"
-              break
-            else
-              echo "⚠️ Health check failed (attempt $i): $HEALTH_RESPONSE"
-              if [[ $i -eq 5 ]]; then
-                echo "health-status=unhealthy" >> $GITHUB_OUTPUT
-              fi
-              sleep 10
-            fi
-          done
-        else
-          echo "health-status=unknown" >> $GITHUB_OUTPUT
-          echo "⚠️ Cannot perform health check - no API endpoint"
-        fi
+      - name: Output Results
+        run: |
+          echo "🎉 Deployment Summary:"
+          echo "Environment: ${{ inputs.environment-name }}"
+          echo "Stack: ${{ steps.pulumi-config.outputs.stack-name }}"
+          echo "API Endpoint: ${{ steps.deploy.outputs.api-endpoint }}"
+          echo "Health Status: ${{ steps.health-check.outputs.health-status }}"
