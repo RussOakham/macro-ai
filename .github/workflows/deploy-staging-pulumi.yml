@@ -1,3 +1,4 @@
+---
 name: Deploy Staging Environment (Pulumi)
 
 on:
@@ -357,7 +358,8 @@ jobs:
       backend-url: ${{ format('https://api-staging.{0}', vars.CUSTOM_DOMAIN_NAME) }}
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
-      should-deploy: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' || github.event.inputs.force-deploy == 'true' }}
+      should-deploy: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' ||
+        github.event.inputs.force-deploy == 'true' }}
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
@@ -429,13 +431,17 @@ jobs:
             - **Frontend Status**: ${frontendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
 
             ### 🔗 Quick Links
-            ${appId ? `- [AWS Amplify Console](https://console.aws.amazon.com/amplify/home?region=us-east-1#/${appId})` : ''}
+            ${appId ? `- [AWS Amplify Console](https://console.aws.amazon.com/amplify/home?region=us-east-1#/${appId})` :
+              ''
             ${backendStack ? `- [Pulumi Stack](https://app.pulumi.com/orgs/macro-ai/stacks/${backendStack})` : ''}
 
             ### 🎯 Change Detection Results
-            - **Backend Changes**: ${{ needs.change-detection.outputs.has-backend-changes == 'true' && '✅' || '❌' }}
-            - **Frontend Changes**: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' && '✅' || '❌' }}
-            - **Infrastructure Changes**: ${{ needs.change-detection.outputs.has-infrastructure-changes == 'true' && '✅' || '❌' }}
+            - **Backend Changes**: ${{ needs.change-detection.outputs.has-backend-changes == 'true' &&
+              '✅' || '❌' }}
+            - **Frontend Changes**: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' &&
+              '✅' || '❌' }}
+            - **Infrastructure Changes**: ${{ needs.change-detection.outputs.has-infrastructure-changes == 'true' &&
+              '✅' || '❌' }}
 
             ### 🕕 Cost Management
             - **Automatic Teardown**: Scheduled for 6 PM today
@@ -461,8 +467,3 @@ jobs:
                 body: comment
               });
             }
-<<<<<<< HEAD
-
-# Trigger deployment to fix Doppler token configuration
-=======
->>>>>>> be186f14e43fa78d3b4a57a393ed67a9ecdc7a9d
