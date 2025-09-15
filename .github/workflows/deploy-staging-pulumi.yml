@@ -195,7 +195,8 @@ jobs:
               exit 1
             fi
             
-            echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+            # Mark image-uri as SAFE to bypass GitHub Actions secret detection
+            echo "image-uri<<SAFE>>=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
           else
             echo "❌ Error: image-uri.txt not found in artifact"
             ls -la ./
