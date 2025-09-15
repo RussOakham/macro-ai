@@ -166,7 +166,6 @@ jobs:
     with:
       environment-name: staging
       deployment-type: staging
-      deployment-scale: preview
       branch-name: develop
       image-uri: ${{ needs.build-express-api.outputs.image-uri }}
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
