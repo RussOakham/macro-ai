@@ -153,22 +153,61 @@ const dopplerSecrets = doppler.getSecretsOutput({
 	config: dopplerConfig,
 })
 
+// Helper function to extract secret value from Doppler table format
+function extractSecretFromTable(value: string, key: string): null | string {
+	// The values are in a formatted table, we need to extract the actual value
+	// Look for the pattern: '│ KEY_NAME │ actual_value │'
+	const regex = /│\s+\w+\s+│\s+([^│\s]+)\s+│/u
+	const match = regex.exec(value)
+	if (match && match[1]) {
+		// Clean up the extracted value
+		const cleanValue = match[1].trim()
+		// eslint-disable-next-line no-console
+		console.log(`Extracted ${key}: ${cleanValue.substring(0, 20)}...`)
+		return cleanValue
+	}
+
+	// Fallback: try to extract from the table format more broadly
+	const lines = value.split('\n')
+	for (const line of lines) {
+		if (line.includes('│') && line.includes(key)) {
+				const parts = line.split('│')
+				if (parts.length >= 3 && parts[2]) {
+					const cleanValue = parts[2].trim()
+				if (
+					cleanValue &&
+					cleanValue !== 'VALUE' &&
+					cleanValue !== 'RAW VALUE'
+				) {
+					// eslint-disable-next-line no-console
+					console.log(`Extracted ${key}: ${cleanValue.substring(0, 20)}...`)
+					return cleanValue
+				}
+			}
+		}
+	}
+
+	return null
+}
+
 // Create environment variables from Doppler secrets
 const allEnvironmentVariables = dopplerSecrets.apply((secrets) => {
 	const envVars: Record<string, string> = {}
 
 	// Debug: Log what we're getting from Doppler
+	// eslint-disable-next-line no-console
 	console.log('Doppler secrets received:', Object.keys(secrets))
+	// eslint-disable-next-line no-console
 	console.log('Doppler secrets structure:', secrets)
-	
+
 	// The Doppler provider returns secrets in a different structure
-	// Check if secrets is an object with actual secret values
-	if (secrets && typeof secrets === 'object') {
-		// Add all secrets as environment variables
-		Object.entries(secrets).forEach(([key, value]) => {
-			// Skip metadata keys that start with lowercase letters
-			if (key === key.toLowerCase() && key !== 'map' && key !== 'id' && key !== 'config' && key !== 'project') {
-				envVars[key] = String(value)
+	// The actual secrets are in the 'map' property
+	if (secrets && secrets.map && typeof secrets.map === 'object') {
+		// Extract actual secret values from the map
+		Object.entries(secrets.map).forEach(([key, value]) => {
+			const extractedValue = extractSecretFromTable(String(value), key)
+			if (extractedValue) {
+				envVars[key] = extractedValue
 			}
 		})
 	}
@@ -320,12 +359,12 @@ const healthCheckHook = new pulumi.ResourceHook('after', async () => {
 	const resolvedDnsName = await albDnsName
 	const healthEndpoint = `http://${resolvedDnsName}/api/health`
 	// eslint-disable-next-line no-console
-	console.log(`Health check: Starting health check for ${healthEndpoint}`)
+	console.log('Health check: Starting health check for', healthEndpoint)
 
 	// Poll the health endpoint with exponential backoff and timeout
 	const maxRetries = 20 // Reduced from 30
 	const maxWaitTime = 300000 // 5 minutes total timeout
-	
+
 	let totalWaitTime = 0
 	for (let i = 0; i < maxRetries && totalWaitTime < maxWaitTime; i++) {
 		try {
@@ -343,23 +382,26 @@ const healthCheckHook = new pulumi.ResourceHook('after', async () => {
 			if (response.ok) {
 				const data = await response.text()
 				// eslint-disable-next-line no-console
-				console.log(`Health check passed: ${data}`)
+				console.log('Health check passed:', data)
 				return
 			} else {
 				// eslint-disable-next-line no-console
 				console.log(
-					`Health check attempt ${i + 1} failed: HTTP ${response.status}`,
+					'Health check attempt',
+					i + 1,
+					'failed: HTTP',
+					response.status,
 				)
 			}
 		} catch (error) {
 			// eslint-disable-next-line no-console
-			console.log(`Health check attempt ${i + 1} failed: ${String(error)}`)
+			console.log('Health check attempt', i + 1, 'failed:', String(error))
 		}
 
 		// Exponential backoff with jitter - wait 2^i seconds, max 30 seconds
 		const waitTime = Math.min(2 ** i * 1000, 30000)
 		totalWaitTime += waitTime
-		
+
 		if (totalWaitTime < maxWaitTime) {
 			// eslint-disable-next-line no-console
 			console.log(`Waiting ${waitTime / 1000} seconds before next attempt...`)
@@ -368,7 +410,9 @@ const healthCheckHook = new pulumi.ResourceHook('after', async () => {
 	}
 
 	// eslint-disable-next-line no-console
-	console.log(`Health check failed after ${maxRetries} attempts or ${totalWaitTime / 1000} seconds`)
+	console.log(
+		`Health check failed after ${maxRetries} attempts or ${totalWaitTime / 1000} seconds`,
+	)
 	// Don't throw error, just log and continue - this allows the deployment to complete
 	// The service will still be created and can be debugged separately
 })
