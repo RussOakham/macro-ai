@@ -170,17 +170,26 @@ jobs:
         if: always()
 
   # Deploy backend using Pulumi
-  # Get image URI from job output
+  # Get image URI from artifact
   get-image-uri:
-    name: Get Image URI from Job Output
+    name: Get Image URI from Artifact
     runs-on: ubuntu-latest
     needs: [build-express-api]
     outputs:
-      image-uri: ${{ needs.build-express-api.outputs.image-uri }}
+      image-uri: ${{ steps.image-uri.outputs.image-uri }}
     steps:
-      - name: Display image URI
+      - name: Download Docker image info artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-info
+          path: ./
+
+      - name: Read image URI from file
+        id: image-uri
         run: |
-          echo "Image URI: ${{ needs.build-express-api.outputs.image-uri }}"
+          IMAGE_URI=$(cat image-uri.txt)
+          echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          echo "Image URI from artifact: ${IMAGE_URI}"
 
   deploy-backend:
     name: Deploy Backend (Pulumi)
