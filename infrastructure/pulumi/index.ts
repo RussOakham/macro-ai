@@ -157,63 +157,15 @@ const dopplerSecrets = doppler.getSecretsOutput({
 function extractSecretFromTable(value: string, key: string): null | string {
 	// The values are in a formatted table, we need to extract the actual value
 	// Look for the pattern: '│ KEY_NAME │ actual_value │'
-	const regex = /│\s+\w+\s+│\s+([^│\s]+)\s+│/u
-	const match = regex.exec(value)
-	if (match && match[1]) {
-		// Clean up the extracted value
-		const cleanValue = match[1].trim()
-		// Skip table headers and empty values
-		if (
-			cleanValue &&
-			cleanValue !== 'VALUE' &&
-			cleanValue !== 'RAW VALUE' &&
-			cleanValue !== 'NOTE' &&
-			cleanValue !== 'NAME' &&
-			cleanValue !== '─' &&
-			!cleanValue.startsWith('├') &&
-			!cleanValue.startsWith('└') &&
-			!cleanValue.startsWith('┌')
-		) {
-			// eslint-disable-next-line no-console
-			console.log(`Extracted ${key}: [REDACTED]`)
-			return cleanValue
-		}
-	}
-
-	// Fallback: try to extract from the table format more broadly
-	// Look for lines that contain the key and extract the value from the VALUE column
 	const lines = value.split('\n')
-	for (const line of lines) {
-		if (line.includes('│') && line.includes(key)) {
-			const parts = line.split('│')
-			if (parts.length >= 3 && parts[2]) {
-				const cleanValue = parts[2].trim()
-				// Skip table headers and empty values
-				if (
-					cleanValue &&
-					cleanValue !== 'VALUE' &&
-					cleanValue !== 'RAW VALUE' &&
-					cleanValue !== 'NOTE' &&
-					cleanValue !== 'NAME' &&
-					cleanValue !== '─' &&
-					!cleanValue.startsWith('├') &&
-					!cleanValue.startsWith('└') &&
-					!cleanValue.startsWith('┌')
-				) {
-					// eslint-disable-next-line no-console
-					console.log(`Extracted ${key}: [REDACTED]`)
-					return cleanValue
-				}
-			}
-		}
-	}
-
-	// Additional fallback: look for multi-line values that span multiple rows
-	// This handles cases where the value is split across multiple lines
 	const valueLines = []
 	let inValueSection = false
+	let foundKey = false
+
 	for (const line of lines) {
+		// Check if this line contains the key we're looking for
 		if (line.includes('│') && line.includes(key) && !line.includes('NAME')) {
+			foundKey = true
 			inValueSection = true
 			const parts = line.split('│')
 			if (parts.length >= 3 && parts[2]) {
@@ -221,24 +173,36 @@ function extractSecretFromTable(value: string, key: string): null | string {
 				if (
 					cleanValue &&
 					cleanValue !== 'VALUE' &&
-					cleanValue !== 'RAW VALUE'
+					cleanValue !== 'RAW VALUE' &&
+					cleanValue !== 'NOTE' &&
+					cleanValue !== '─' &&
+					!cleanValue.startsWith('├') &&
+					!cleanValue.startsWith('└') &&
+					!cleanValue.startsWith('┌')
 				) {
 					valueLines.push(cleanValue)
 				}
 			}
 		} else if (inValueSection && line.includes('│') && !line.includes('└')) {
+			// Continue collecting value parts from subsequent lines
 			const parts = line.split('│')
 			if (parts.length >= 3 && parts[2]) {
 				const cleanValue = parts[2].trim()
 				if (
 					cleanValue &&
 					cleanValue !== 'VALUE' &&
-					cleanValue !== 'RAW VALUE'
+					cleanValue !== 'RAW VALUE' &&
+					cleanValue !== 'NOTE' &&
+					cleanValue !== '─' &&
+					!cleanValue.startsWith('├') &&
+					!cleanValue.startsWith('└') &&
+					!cleanValue.startsWith('┌')
 				) {
 					valueLines.push(cleanValue)
 				}
 			}
 		} else if (inValueSection && line.includes('└')) {
+			// End of table section
 			break
 		}
 	}
@@ -246,7 +210,7 @@ function extractSecretFromTable(value: string, key: string): null | string {
 	if (valueLines.length > 0) {
 		const fullValue = valueLines.join('')
 		// eslint-disable-next-line no-console
-		console.log(`Extracted ${key} (multi-line): [REDACTED]`)
+		console.log(`Extracted ${key}: [REDACTED]`)
 		return fullValue
 	}
 
@@ -269,6 +233,9 @@ const allEnvironmentVariables = dopplerSecrets.apply((secrets) => {
 			const extractedValue = extractSecretFromTable(String(value), key)
 			if (extractedValue) {
 				envVars[key] = extractedValue
+			} else {
+				// eslint-disable-next-line no-console
+				console.log(`Failed to extract secret for key: ${key}`)
 			}
 		})
 	}
