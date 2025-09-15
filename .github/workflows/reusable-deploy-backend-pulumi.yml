@@ -183,6 +183,10 @@ jobs:
           pulumi config set deploymentType "${DEPLOYMENT_TYPE}" --stack "${STACK_NAME}"
           pulumi config set imageUri "${IMAGE_URI}" --stack "${STACK_NAME}"
 
+          # Extract image tag from image URI for ECR verification
+          IMAGE_TAG=$(echo "${IMAGE_URI}" | cut -d':' -f2)
+          pulumi config set imageTag "${IMAGE_TAG}" --stack "${STACK_NAME}"
+
           if [[ -n "${PR_NUMBER}" ]]; then
             pulumi config set prNumber "${PR_NUMBER}" --stack "${STACK_NAME}"
           fi

@@ -9,8 +9,13 @@ const environmentName = config.get('environmentName') || 'dev'
 // const prNumber = config.getNumber('prNumber') || 0
 // const branchName = config.get('branchName') || 'main'
 const imageUri = config.get('imageUri') || 'nginx:latest'
+const imageTag = config.get('imageTag') || 'latest'
 const deploymentType = config.get('deploymentType') || 'dev'
 // const deploymentScale = config.get('deploymentScale') || 'preview'
+
+// ECR repository configuration
+const ecrRepositoryName = `macro-ai-${environmentName}-express-api`
+const awsRegion = 'us-east-1'
 
 // Determine if this is a preview environment
 const isPreviewEnvironment = environmentName.startsWith('pr-')
@@ -60,6 +65,35 @@ const albSecurityGroup = new aws.ec2.SecurityGroup('macro-ai-alb-sg', {
 		Component: 'load-balancer',
 	},
 })
+
+// Query ECR to verify image exists and get the exact URI
+let verifiedImageUri: pulumi.Output<string>
+
+if (imageUri && imageUri !== 'nginx:latest') {
+	// If imageUri is provided, verify it exists in ECR
+	console.log(`🔍 Verifying image exists in ECR: ${imageUri}`)
+
+	// Query ECR to get the image details using the official getImage function
+	const ecrImage = aws.ecr.getImageOutput({
+		repositoryName: ecrRepositoryName,
+		imageTag: imageTag,
+	})
+
+	// Use the imageUri directly from ECR response
+	verifiedImageUri = ecrImage.apply((image) => {
+		if (!image.imageDigest) {
+			throw new Error(
+				`❌ Image with tag '${imageTag}' not found in ECR repository '${ecrRepositoryName}'`,
+			)
+		}
+		console.log(`✅ Verified image URI from ECR: ${image.imageUri}`)
+		return image.imageUri
+	})
+} else {
+	// Fallback to provided imageUri or default
+	verifiedImageUri = pulumi.output(imageUri)
+	console.log(`⚠️  Using fallback image URI: ${imageUri}`)
+}
 
 // Create security group for ECS service
 const ecsSecurityGroup = new aws.ec2.SecurityGroup('macro-ai-ecs-sg', {
@@ -166,32 +200,34 @@ const taskDefinition = new aws.ecs.TaskDefinition('macro-ai-task', {
 			Project: 'MacroAI',
 		},
 	}).arn,
-	containerDefinitions: allEnvironmentVariables.apply((envVars) =>
-		JSON.stringify([
-			{
-				name: 'macro-ai-container',
-				image: imageUri,
-				portMappings: [
-					{
-						containerPort: 3040,
-						protocol: 'tcp',
-					},
-				],
-				environment: Object.entries(envVars).map(([name, value]) => ({
-					name,
-					value: String(value),
-				})),
-				logConfiguration: {
-					logDriver: 'awslogs',
-					options: {
-						'awslogs-group': `/ecs/macro-ai-${environmentName}`,
-						'awslogs-region': 'us-east-1',
-						'awslogs-stream-prefix': 'ecs',
+	containerDefinitions: pulumi
+		.all([allEnvironmentVariables, verifiedImageUri])
+		.apply(([envVars, verifiedImage]) =>
+			JSON.stringify([
+				{
+					name: 'macro-ai-container',
+					image: verifiedImage,
+					portMappings: [
+						{
+							containerPort: 3040,
+							protocol: 'tcp',
+						},
+					],
+					environment: Object.entries(envVars).map(([name, value]) => ({
+						name,
+						value: String(value),
+					})),
+					logConfiguration: {
+						logDriver: 'awslogs',
+						options: {
+							'awslogs-group': `/ecs/macro-ai-${environmentName}`,
+							'awslogs-region': 'us-east-1',
+							'awslogs-stream-prefix': 'ecs',
+						},
 					},
 				},
-			},
-		]),
-	),
+			]),
+		),
 	tags: {
 		Name: `macro-ai-${environmentName}-task`,
 		Environment: environmentName,
