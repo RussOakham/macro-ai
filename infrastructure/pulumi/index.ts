@@ -162,12 +162,26 @@ function extractSecretFromTable(value: string, key: string): null | string {
 	if (match && match[1]) {
 		// Clean up the extracted value
 		const cleanValue = match[1].trim()
-		// eslint-disable-next-line no-console
-		console.log(`Extracted ${key}: ${cleanValue.substring(0, 20)}...`)
-		return cleanValue
+		// Skip table headers and empty values
+		if (
+			cleanValue &&
+			cleanValue !== 'VALUE' &&
+			cleanValue !== 'RAW VALUE' &&
+			cleanValue !== 'NOTE' &&
+			cleanValue !== 'NAME' &&
+			cleanValue !== '─' &&
+			!cleanValue.startsWith('├') &&
+			!cleanValue.startsWith('└') &&
+			!cleanValue.startsWith('┌')
+		) {
+			// eslint-disable-next-line no-console
+			console.log(`Extracted ${key}: [REDACTED]`)
+			return cleanValue
+		}
 	}
 
 	// Fallback: try to extract from the table format more broadly
+	// Look for lines that contain the key and extract the value from the VALUE column
 	const lines = value.split('\n')
 	for (const line of lines) {
 		if (line.includes('│') && line.includes(key)) {
@@ -187,11 +201,53 @@ function extractSecretFromTable(value: string, key: string): null | string {
 					!cleanValue.startsWith('┌')
 				) {
 					// eslint-disable-next-line no-console
-					console.log(`Extracted ${key}: ${cleanValue.substring(0, 20)}...`)
+					console.log(`Extracted ${key}: [REDACTED]`)
 					return cleanValue
 				}
 			}
 		}
+	}
+
+	// Additional fallback: look for multi-line values that span multiple rows
+	// This handles cases where the value is split across multiple lines
+	const valueLines = []
+	let inValueSection = false
+	for (const line of lines) {
+		if (line.includes('│') && line.includes(key) && !line.includes('NAME')) {
+			inValueSection = true
+			const parts = line.split('│')
+			if (parts.length >= 3 && parts[2]) {
+				const cleanValue = parts[2].trim()
+				if (
+					cleanValue &&
+					cleanValue !== 'VALUE' &&
+					cleanValue !== 'RAW VALUE'
+				) {
+					valueLines.push(cleanValue)
+				}
+			}
+		} else if (inValueSection && line.includes('│') && !line.includes('└')) {
+			const parts = line.split('│')
+			if (parts.length >= 3 && parts[2]) {
+				const cleanValue = parts[2].trim()
+				if (
+					cleanValue &&
+					cleanValue !== 'VALUE' &&
+					cleanValue !== 'RAW VALUE'
+				) {
+					valueLines.push(cleanValue)
+				}
+			}
+		} else if (inValueSection && line.includes('└')) {
+			break
+		}
+	}
+
+	if (valueLines.length > 0) {
+		const fullValue = valueLines.join('')
+		// eslint-disable-next-line no-console
+		console.log(`Extracted ${key} (multi-line): [REDACTED]`)
+		return fullValue
 	}
 
 	return null
@@ -201,11 +257,9 @@ function extractSecretFromTable(value: string, key: string): null | string {
 const allEnvironmentVariables = dopplerSecrets.apply((secrets) => {
 	const envVars: Record<string, string> = {}
 
-	// Debug: Log what we're getting from Doppler
+	// Debug: Log what we're getting from Doppler (keys only for security)
 	// eslint-disable-next-line no-console
 	console.log('Doppler secrets received:', Object.keys(secrets))
-	// eslint-disable-next-line no-console
-	console.log('Doppler secrets structure:', secrets)
 
 	// The Doppler provider returns secrets in a different structure
 	// The actual secrets are in the 'map' property
@@ -224,7 +278,8 @@ const allEnvironmentVariables = dopplerSecrets.apply((secrets) => {
 	envVars.SERVER_PORT = '3040'
 	envVars.APP_ENV = environmentName
 
-	console.log('Final environment variables:', Object.keys(envVars))
+	// eslint-disable-next-line no-console
+	console.log('Final environment variables count:', Object.keys(envVars).length)
 	return envVars
 })
 
