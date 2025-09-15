@@ -201,16 +201,16 @@ const taskDefinition = new aws.ecs.TaskDefinition('macro-ai-task', {
 })
 
 // Create CloudWatch log group
-// const logGroup = new aws.cloudwatch.LogGroup('macro-ai-logs', {
-// 	name: `/ecs/macro-ai-${environmentName}`,
-// 	retentionInDays: 7, // Cost optimization for preview
-// 	tags: {
-// 		Name: `macro-ai-${environmentName}-logs`,
-// 		Environment: environmentName,
-// 		Project: 'MacroAI',
-// 		Component: 'logging',
-// 	},
-// })
+const logGroup = new aws.cloudwatch.LogGroup('macro-ai-logs', {
+	name: `/ecs/macro-ai-${environmentName}`,
+	retentionInDays: 7, // Cost optimization for preview
+	tags: {
+		Name: `macro-ai-${environmentName}-logs`,
+		Environment: environmentName,
+		Project: 'MacroAI',
+		Component: 'logging',
+	},
+})
 
 // Create Application Load Balancer
 const alb = new aws.lb.LoadBalancer('macro-ai-alb', {
@@ -281,12 +281,12 @@ const healthCheckHook = new pulumi.ResourceHook('after', async () => {
 			// Create an AbortController for timeout
 			const controller = new AbortController()
 			const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
-			
+
 			const response = await fetch(healthEndpoint, {
 				method: 'GET',
 				signal: controller.signal,
 			})
-			
+
 			clearTimeout(timeoutId)
 
 			if (response.ok) {
@@ -368,6 +368,7 @@ export const { arn: clusterArn } = cluster
 export const { name: serviceName } = service
 export const { dnsName: albDnsName, zoneId: albZoneId } = alb
 export const { arn: listenerArn } = listener
+export const { name: logGroupName } = logGroup
 export const environment = environmentName
 export const isPreview = isPreviewEnvironment
 
