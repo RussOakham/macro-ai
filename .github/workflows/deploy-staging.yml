@@ -24,6 +24,7 @@ permissions:
   actions: read
   pull-requests: write
   issues: write
+  id-token: write
 
 env:
   AWS_REGION: us-east-1
@@ -161,7 +162,7 @@ jobs:
   # Deploy backend using reusable workflow
   deploy-backend:
     name: Deploy Backend
-    uses: ./.github/workflows/reusable-deploy-backend.yml
+    uses: ./.github/workflows/reusable-deploy-backend-pulumi.yml
     with:
       environment-name: staging
       deployment-type: staging
@@ -172,18 +173,12 @@ jobs:
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
       should-deploy: ${{ needs.change-detection.outputs.has-backend-changes == 'true' || needs.change-detection.outputs.has-infrastructure-changes == 'true' || github.event.inputs.force-deploy == 'true' }}
     secrets:
-      API_KEY: ${{ secrets.API_KEY }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      SERVER_PORT: ${{ secrets.SERVER_PORT }}
-      RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS }}
-      RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS }}
-      AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS }}
-      AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS }}
-      API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS }}
-      API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS }}
-      COST_ALERT_EMAILS: ${{ secrets.COST_ALERT_EMAILS }}
+      PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+      DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
+      DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
+      DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
     needs: [change-detection, build-express-api]
 
   # Deploy frontend using reusable workflow
