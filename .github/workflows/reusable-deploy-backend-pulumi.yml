@@ -213,30 +213,30 @@ jobs:
                     pulumi config set doppler:dopplerToken "${DOPPLER_TOKEN_DEV}" --secret --stack "${STACK_NAME}"
                   fi
 
-          if [[ -n "${PR_NUMBER}" ]]; then
-            pulumi config set prNumber "${PR_NUMBER}" --stack "${STACK_NAME}"
-          fi
+                  if [[ -n "${PR_NUMBER}" ]]; then
+                    pulumi config set prNumber "${PR_NUMBER}" --stack "${STACK_NAME}"
+                  fi
 
-          if [[ -n "${BRANCH_NAME}" ]]; then
-            pulumi config set branchName "${BRANCH_NAME}" --stack "${STACK_NAME}"
-          fi
+                  if [[ -n "${BRANCH_NAME}" ]]; then
+                    pulumi config set branchName "${BRANCH_NAME}" --stack "${STACK_NAME}"
+                  fi
 
-          if [[ -n "${CUSTOM_DOMAIN_NAME}" ]]; then
-            pulumi config set customDomainName "${CUSTOM_DOMAIN_NAME}" --stack "${STACK_NAME}"
-          fi
+                  if [[ -n "${CUSTOM_DOMAIN_NAME}" ]]; then
+                    pulumi config set customDomainName "${CUSTOM_DOMAIN_NAME}" --stack "${STACK_NAME}"
+                  fi
 
-          if [[ -n "${HOSTED_ZONE_ID}" ]]; then
-            pulumi config set hostedZoneId "${HOSTED_ZONE_ID}" --stack "${STACK_NAME}"
-          fi
+                  if [[ -n "${HOSTED_ZONE_ID}" ]]; then
+                    pulumi config set hostedZoneId "${HOSTED_ZONE_ID}" --stack "${STACK_NAME}"
+                  fi
 
-          # Deploy the infrastructure
-          pulumi up --yes --stack "${STACK_NAME}"
+                  # Deploy the infrastructure
+                  pulumi up --yes --stack "${STACK_NAME}"
 
-          # Get the API endpoint
-          API_ENDPOINT=$(pulumi stack output apiEndpoint --stack "${STACK_NAME}")
-          echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
-          echo "✅ Deployment completed successfully!"
-          echo "🌐 API Endpoint: ${API_ENDPOINT}"
+                  # Get the API endpoint
+                  API_ENDPOINT=$(pulumi stack output apiEndpoint --stack "${STACK_NAME}")
+                  echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
+                  echo "✅ Deployment completed successfully!"
+                  echo "🌐 API Endpoint: ${API_ENDPOINT}"
 
       - name: Health Check
         id: health-check
