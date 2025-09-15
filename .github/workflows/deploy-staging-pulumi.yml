@@ -220,7 +220,7 @@ jobs:
         id: reconstruct-image-uri
         run: |
           echo "🔍 Starting image URI reconstruction..."
-          
+
           # Get the image tag from the build step
           IMAGE_TAG="${{ needs.build-express-api.outputs.image-tag }}"
           echo "📥 Received image tag: '${IMAGE_TAG}'"
@@ -265,6 +265,7 @@ jobs:
         id: deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
         run: |
           ENV_NAME="staging"
           DEPLOYMENT_TYPE="staging"
