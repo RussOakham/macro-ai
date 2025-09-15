@@ -409,7 +409,7 @@ const targetGroup = new aws.lb.TargetGroup('macro-ai-tg', {
 // Define a health check hook that will poll the service until it's ready
 const healthCheckHook = new pulumi.ResourceHook('after', async () => {
 	// Get the ALB DNS name from the stack outputs
-	const albDnsName = alb.dnsName.apply((dns) => dns)
+	const albDnsName = alb.dnsName
 
 	if (!albDnsName) {
 		// eslint-disable-next-line no-console
