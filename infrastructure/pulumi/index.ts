@@ -204,7 +204,11 @@ function processSecret(
 }
 
 // Function to fetch secrets using Doppler Node SDK
-async function fetchDopplerSecrets(project: string, config: string, dopplerToken: string) {
+async function fetchDopplerSecrets(
+	project: string,
+	config: string,
+	dopplerToken: string,
+) {
 	const sdk = new DopplerSDK({
 		accessToken: dopplerToken,
 	})
@@ -241,7 +245,9 @@ const allEnvironmentVariables = pulumi
 	.output(dopplerToken)
 	.apply((token) => {
 		if (!token) {
-			throw new Error('Doppler token not found in Pulumi configuration. Please set doppler:dopplerToken in your stack config.')
+			throw new Error(
+				'Doppler token not found in Pulumi configuration. Please set doppler:dopplerToken in your stack config.',
+			)
 		}
 		return fetchDopplerSecrets('macro-ai', dopplerConfig, token)
 	})
