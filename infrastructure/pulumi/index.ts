@@ -3,11 +3,11 @@ import * as awsx from '@pulumi/awsx'
 import * as pulumi from '@pulumi/pulumi'
 import * as doppler from '@pulumiverse/doppler'
 
-import { createEnvironmentVariablesFromCli } from '../src/doppler-cli-simple'
-
 // Get configuration
 const config = new pulumi.Config()
 const environmentName = config.get('environmentName') || 'dev'
+
+// No table parsing needed - the Pulumi Doppler provider returns direct string values!
 // const prNumber = config.getNumber('prNumber') || 0
 // const branchName = config.get('branchName') || 'main'
 const imageUri = config.get('imageUri') || 'nginx:latest'
@@ -17,7 +17,6 @@ const deploymentType = config.get('deploymentType') || 'dev'
 
 // ECR repository configuration
 const ecrRepositoryName = `macro-ai-${environmentName}-express-api`
-const awsRegion = 'us-east-1'
 
 // Determine if this is a preview environment
 const isPreviewEnvironment = environmentName.startsWith('pr-')
@@ -73,7 +72,6 @@ let verifiedImageUri: pulumi.Output<string>
 
 if (imageUri && imageUri !== 'nginx:latest') {
 	// If imageUri is provided, verify it exists in ECR
-	console.log(`🔍 Verifying image exists in ECR: ${imageUri}`)
 
 	// Query ECR to get the image details using the official getImage function
 	const ecrImage = aws.ecr.getImageOutput({
@@ -88,13 +86,11 @@ if (imageUri && imageUri !== 'nginx:latest') {
 				`❌ Image with tag '${imageTag}' not found in ECR repository '${ecrRepositoryName}'`,
 			)
 		}
-		console.log(`✅ Verified image URI from ECR: ${image.imageUri}`)
 		return image.imageUri
 	})
 } else {
 	// Fallback to provided imageUri or default
 	verifiedImageUri = pulumi.output(imageUri)
-	console.log(`⚠️  Using fallback image URI: ${imageUri}`)
 }
 
 // Create security group for ECS service
@@ -150,21 +146,31 @@ const dopplerConfig = (() => {
 	return environmentName
 })()
 
-// Get Doppler secrets - the provider returns JSON format directly according to the SDK
-const dopplerSecrets = doppler.getSecretsOutput({
+// Get Doppler secrets - the provider returns JSON format directly!
+const dopplerSecrets = doppler.getSecrets({
 	project: 'macro-ai',
 	config: dopplerConfig,
 })
 
-// Create environment variables from Doppler secrets (simplified - no table parsing needed!)
-const allEnvironmentVariables = dopplerSecrets.apply((secrets) => {
+// Create environment variables from Doppler secrets (direct JSON format)
+const allEnvironmentVariables = dopplerSecrets.then((secrets) => {
+
+	const envVars: Record<string, string> = {}
+
+	// The Pulumi Doppler provider returns direct JSON in secrets.map
 	if (secrets && secrets.map) {
-		// The provider returns direct string values in secrets.map
-		return createEnvironmentVariablesFromCli(secrets.map, environmentName)
+		Object.entries(secrets.map).forEach(([key, value]) => {
+			envVars[key] = String(value)
+		})
 	}
 
-	// Fallback for null/undefined
-	return createEnvironmentVariablesFromCli({}, environmentName)
+	// Add application-specific environment variables
+	envVars.NODE_ENV = 'production'
+	envVars.SERVER_PORT = '3040'
+	envVars.APP_ENV = environmentName
+
+
+	return envVars
 })
 
 // Create ECS task definition
@@ -296,15 +302,12 @@ const healthCheckHook = new pulumi.ResourceHook('after', async () => {
 	const albDnsName = alb.dnsName
 
 	if (!albDnsName) {
-		console.log('Health check: ALB DNS name not available yet')
 		return
 	}
 
 	// Wait for the ALB DNS name to be available
 	const resolvedDnsName = await albDnsName
 	const healthEndpoint = `http://${resolvedDnsName}/api/health`
-
-	console.log('Health check: Starting health check for', healthEndpoint)
 
 	// Poll the health endpoint with exponential backoff and timeout
 	const maxRetries = 20 // Reduced from 30
@@ -325,20 +328,11 @@ const healthCheckHook = new pulumi.ResourceHook('after', async () => {
 			clearTimeout(timeoutId)
 
 			if (response.ok) {
-				const data = await response.text()
-
-				console.log('Health check passed:', data)
+				await response.text()
 				return
-			} else {
-				console.log(
-					'Health check attempt',
-					i + 1,
-					'failed: HTTP',
-					response.status,
-				)
 			}
-		} catch (error) {
-			console.log('Health check attempt', i + 1, 'failed:', String(error))
+		} catch {
+			// Ignore errors and continue to next attempt
 		}
 
 		// Exponential backoff with jitter - wait 2^i seconds, max 30 seconds
@@ -346,14 +340,10 @@ const healthCheckHook = new pulumi.ResourceHook('after', async () => {
 		totalWaitTime += waitTime
 
 		if (totalWaitTime < maxWaitTime) {
-			console.log(`Waiting ${waitTime / 1000} seconds before next attempt...`)
 			await new Promise((resolve) => setTimeout(resolve, waitTime))
 		}
 	}
 
-	console.log(
-		`Health check failed after ${maxRetries} attempts or ${totalWaitTime / 1000} seconds`,
-	)
 	// Don't throw error, just log and continue - this allows the deployment to complete
 	// The service will still be created and can be debugged separately
 })
