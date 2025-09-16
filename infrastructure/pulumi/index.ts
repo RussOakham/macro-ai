@@ -1,7 +1,7 @@
+import { DopplerSDK } from '@dopplerhq/node-sdk'
 import * as aws from '@pulumi/aws'
 import * as awsx from '@pulumi/awsx'
 import * as pulumi from '@pulumi/pulumi'
-import * as doppler from '@pulumiverse/doppler'
 
 // Get configuration
 const config = new pulumi.Config()
@@ -146,32 +146,113 @@ const dopplerConfig = (() => {
 	return environmentName
 })()
 
-// Get Doppler secrets - the provider returns JSON format directly!
-const dopplerSecrets = doppler.getSecrets({
-	project: 'macro-ai',
-	config: dopplerConfig,
-})
+// Helper function to parse ASCII table values
+function parseAsciiTableValue(tableString: string): string {
+	const lines = tableString.split('\n')
+	const valueLines: string[] = []
 
-// Create environment variables from Doppler secrets (direct JSON format)
-const allEnvironmentVariables = dopplerSecrets.then((secrets) => {
-
-	const envVars: Record<string, string> = {}
-
-	// The Pulumi Doppler provider returns direct JSON in secrets.map
-	if (secrets && secrets.map) {
-		Object.entries(secrets.map).forEach(([key, value]) => {
-			envVars[key] = String(value)
-		})
+	for (let i = 1; i < lines.length; i++) {
+		// Skip header row
+		const line = lines[i]
+		if (
+			line &&
+			line.includes('│') &&
+			!line.includes('├') &&
+			!line.includes('└') &&
+			!line.includes('NAME')
+		) {
+			// Extract the VALUE column (second column)
+			const parts = line.split('│')
+			if (parts.length >= 3) {
+				const value = parts[2]?.trim()
+				if (value && value !== '' && value !== 'VALUE') {
+					valueLines.push(value)
+				}
+			}
+		}
 	}
 
-	// Add application-specific environment variables
-	envVars.NODE_ENV = 'production'
-	envVars.SERVER_PORT = '3040'
-	envVars.APP_ENV = environmentName
+	return valueLines.join('')
+}
 
+// Helper function to process a single secret
+function processSecret(
+	key: string,
+	secretObj: { computed?: string },
+): null | string {
+	if (!secretObj?.computed) {
+		return null
+	}
 
-	return envVars
-})
+	// For secrets that are already plain strings (like DOPPLER_*)
+	if (
+		typeof secretObj.computed === 'string' &&
+		!secretObj.computed.includes('┌')
+	) {
+		return secretObj.computed
+	}
+
+	// For secrets that are in ASCII table format, parse them
+	if (
+		typeof secretObj.computed === 'string' &&
+		secretObj.computed.includes('┌')
+	) {
+		return parseAsciiTableValue(secretObj.computed)
+	}
+
+	return null
+}
+
+// Function to fetch secrets using Doppler Node SDK
+async function fetchDopplerSecrets(project: string, config: string) {
+	const sdk = new DopplerSDK({
+		accessToken: process.env.DOPPLER_API_KEY || process.env.DOPPLER_TOKEN,
+	})
+
+	try {
+		const response = await sdk.secrets.list(project, config)
+
+		if (!response.secrets) {
+			throw new Error('No secrets found')
+		}
+
+		// Convert the response to a simple key-value object
+		const secrets: Record<string, string> = {}
+
+		Object.entries(response.secrets).forEach(([key, secretObj]) => {
+			const value = processSecret(key, secretObj as { computed?: string })
+			if (value !== null) {
+				secrets[key] = value
+			}
+		})
+
+		return secrets
+	} catch (error) {
+		console.error('Failed to fetch Doppler secrets:', error)
+		throw error
+	}
+}
+
+// Create environment variables from Doppler secrets using Node SDK
+const allEnvironmentVariables = pulumi
+	.output(fetchDopplerSecrets('macro-ai', dopplerConfig))
+	.apply((secrets: Record<string, string>) => {
+		const envVars: Record<string, string> = {}
+
+		// Process secrets from the Node SDK response (direct JSON object)
+		if (secrets) {
+			Object.entries(secrets).forEach(([key, value]) => {
+				envVars[key] = String(value)
+			})
+		}
+
+		// Add application-specific environment variables
+		envVars.NODE_ENV = 'production'
+		envVars.SERVER_PORT = '3040'
+		envVars.APP_ENV = environmentName
+
+		return envVars
+	})
 
 // Create ECS task definition
 const taskDefinition = new aws.ecs.TaskDefinition('macro-ai-task', {

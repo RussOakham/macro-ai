@@ -38,6 +38,7 @@
 		"deploy-ec2:github": "scripts/github-actions-deploy.sh"
 	},
 	"dependencies": {
+		"@dopplerhq/node-sdk": "^1.3.0",
 		"aws-cdk-lib": "^2.212.0",
 		"constructs": "^10.3.0",
 		"source-map-support": "^0.5.21"

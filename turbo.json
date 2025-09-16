@@ -46,7 +46,9 @@
 				"MODE",
 				"VITE_API_BASE_URL",
 				"API_BASE_URL",
-				"REDIS_URL"
+				"REDIS_URL",
+				"DOPPLER_API_KEY",
+				"DOPPLER_TOKEN"
 			]
 		},
 		"lint": {
@@ -71,7 +73,9 @@
 				"CUSTOM_DOMAIN_NAME",
 				"VITE_API_BASE_URL",
 				"API_BASE_URL",
-				"REDIS_URL"
+				"REDIS_URL",
+				"DOPPLER_API_KEY",
+				"DOPPLER_TOKEN"
 			]
 		},
 		"lint:oxlint": {
