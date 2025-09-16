@@ -3,6 +3,8 @@ import * as awsx from '@pulumi/awsx'
 import * as pulumi from '@pulumi/pulumi'
 import * as doppler from '@pulumiverse/doppler'
 
+import { createEnvironmentVariablesFromCli } from '../src/doppler-cli-simple'
+
 // Get configuration
 const config = new pulumi.Config()
 const environmentName = config.get('environmentName') || 'dev'
@@ -148,106 +150,21 @@ const dopplerConfig = (() => {
 	return environmentName
 })()
 
+// Get Doppler secrets - the provider returns JSON format directly according to the SDK
 const dopplerSecrets = doppler.getSecretsOutput({
 	project: 'macro-ai',
 	config: dopplerConfig,
 })
 
-// Helper function to extract secret value from Doppler table format
-function extractSecretFromTable(value: string, key: string): null | string {
-	// The values are in a formatted table, we need to extract the actual value
-	// Look for the pattern: '│ KEY_NAME │ actual_value │'
-	const lines = value.split('\n')
-	const valueLines = []
-	let inValueSection = false
-	let foundKey = false
-
-	for (const line of lines) {
-		// Check if this line contains the key we're looking for
-		if (line.includes('│') && line.includes(key) && !line.includes('NAME')) {
-			foundKey = true
-			inValueSection = true
-			const parts = line.split('│')
-			if (parts.length >= 3 && parts[2]) {
-				const cleanValue = parts[2].trim()
-				if (
-					cleanValue &&
-					cleanValue !== 'VALUE' &&
-					cleanValue !== 'RAW VALUE' &&
-					cleanValue !== 'NOTE' &&
-					cleanValue !== '─' &&
-					!cleanValue.startsWith('├') &&
-					!cleanValue.startsWith('└') &&
-					!cleanValue.startsWith('┌')
-				) {
-					valueLines.push(cleanValue)
-				}
-			}
-		} else if (inValueSection && line.includes('│') && !line.includes('└')) {
-			// Continue collecting value parts from subsequent lines
-			const parts = line.split('│')
-			if (parts.length >= 3 && parts[2]) {
-				const cleanValue = parts[2].trim()
-				if (
-					cleanValue &&
-					cleanValue !== 'VALUE' &&
-					cleanValue !== 'RAW VALUE' &&
-					cleanValue !== 'NOTE' &&
-					cleanValue !== '─' &&
-					!cleanValue.startsWith('├') &&
-					!cleanValue.startsWith('└') &&
-					!cleanValue.startsWith('┌')
-				) {
-					valueLines.push(cleanValue)
-				}
-			}
-		} else if (inValueSection && line.includes('└')) {
-			// End of table section
-			break
-		}
-	}
-
-	if (valueLines.length > 0) {
-		const fullValue = valueLines.join('')
-		// eslint-disable-next-line no-console
-		console.log(`Extracted ${key}: [REDACTED]`)
-		return fullValue
-	}
-
-	return null
-}
-
-// Create environment variables from Doppler secrets
+// Create environment variables from Doppler secrets (simplified - no table parsing needed!)
 const allEnvironmentVariables = dopplerSecrets.apply((secrets) => {
-	const envVars: Record<string, string> = {}
-
-	// Debug: Log what we're getting from Doppler (keys only for security)
-	// eslint-disable-next-line no-console
-	console.log('Doppler secrets received:', Object.keys(secrets))
-
-	// The Doppler provider returns secrets in a different structure
-	// The actual secrets are in the 'map' property
-	if (secrets && secrets.map && typeof secrets.map === 'object') {
-		// Extract actual secret values from the map
-		Object.entries(secrets.map).forEach(([key, value]) => {
-			const extractedValue = extractSecretFromTable(String(value), key)
-			if (extractedValue) {
-				envVars[key] = extractedValue
-			} else {
-				// eslint-disable-next-line no-console
-				console.log(`Failed to extract secret for key: ${key}`)
-			}
-		})
+	if (secrets && secrets.map) {
+		// The provider returns direct string values in secrets.map
+		return createEnvironmentVariablesFromCli(secrets.map, environmentName)
 	}
 
-	// Add application-specific environment variables
-	envVars.NODE_ENV = 'production'
-	envVars.SERVER_PORT = '3040'
-	envVars.APP_ENV = environmentName
-
-	// eslint-disable-next-line no-console
-	console.log('Final environment variables count:', Object.keys(envVars).length)
-	return envVars
+	// Fallback for null/undefined
+	return createEnvironmentVariablesFromCli({}, environmentName)
 })
 
 // Create ECS task definition
@@ -379,7 +296,6 @@ const healthCheckHook = new pulumi.ResourceHook('after', async () => {
 	const albDnsName = alb.dnsName
 
 	if (!albDnsName) {
-		// eslint-disable-next-line no-console
 		console.log('Health check: ALB DNS name not available yet')
 		return
 	}
@@ -387,7 +303,7 @@ const healthCheckHook = new pulumi.ResourceHook('after', async () => {
 	// Wait for the ALB DNS name to be available
 	const resolvedDnsName = await albDnsName
 	const healthEndpoint = `http://${resolvedDnsName}/api/health`
-	// eslint-disable-next-line no-console
+
 	console.log('Health check: Starting health check for', healthEndpoint)
 
 	// Poll the health endpoint with exponential backoff and timeout
@@ -410,11 +326,10 @@ const healthCheckHook = new pulumi.ResourceHook('after', async () => {
 
 			if (response.ok) {
 				const data = await response.text()
-				// eslint-disable-next-line no-console
+
 				console.log('Health check passed:', data)
 				return
 			} else {
-				// eslint-disable-next-line no-console
 				console.log(
 					'Health check attempt',
 					i + 1,
@@ -423,7 +338,6 @@ const healthCheckHook = new pulumi.ResourceHook('after', async () => {
 				)
 			}
 		} catch (error) {
-			// eslint-disable-next-line no-console
 			console.log('Health check attempt', i + 1, 'failed:', String(error))
 		}
 
@@ -432,13 +346,11 @@ const healthCheckHook = new pulumi.ResourceHook('after', async () => {
 		totalWaitTime += waitTime
 
 		if (totalWaitTime < maxWaitTime) {
-			// eslint-disable-next-line no-console
 			console.log(`Waiting ${waitTime / 1000} seconds before next attempt...`)
 			await new Promise((resolve) => setTimeout(resolve, waitTime))
 		}
 	}
 
-	// eslint-disable-next-line no-console
 	console.log(
 		`Health check failed after ${maxRetries} attempts or ${totalWaitTime / 1000} seconds`,
 	)
