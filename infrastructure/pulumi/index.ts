@@ -10,7 +10,7 @@ const environmentName = config.get('environmentName') || 'dev'
 // No table parsing needed - the Pulumi Doppler provider returns direct string values!
 // const prNumber = config.getNumber('prNumber') || 0
 // const branchName = config.get('branchName') || 'main'
-const imageUri = config.get('imageUri') || 'nginx:latest'
+const imageUri = config.get('imageUri')
 const imageTag = config.get('imageTag') || 'latest'
 const deploymentType = config.get('deploymentType') || 'dev'
 // const deploymentScale = config.get('deploymentScale') || 'preview'
@@ -70,7 +70,7 @@ const albSecurityGroup = new aws.ec2.SecurityGroup('macro-ai-alb-sg', {
 // Query ECR to verify image exists and get the exact URI
 let verifiedImageUri: pulumi.Output<string>
 
-if (imageUri && imageUri !== 'nginx:latest') {
+if (imageUri) {
 	// If imageUri is provided, verify it exists in ECR
 
 	// Query ECR to get the image details using the official getImage function
@@ -89,8 +89,10 @@ if (imageUri && imageUri !== 'nginx:latest') {
 		return image.imageUri
 	})
 } else {
-	// Fallback to provided imageUri or default
-	verifiedImageUri = pulumi.output(imageUri)
+	// No imageUri provided - this should cause deployment to fail
+	throw new Error(
+		'❌ No imageUri provided in Pulumi configuration. Please set imageUri in your stack config.',
+	)
 }
 
 // Create security group for ECS service
@@ -245,9 +247,10 @@ const allEnvironmentVariables = pulumi
 	.output(dopplerToken)
 	.apply((token) => {
 		// Fall back to environment variable if Pulumi config is not available (e.g., in CI/CD)
-		const fallbackToken = process.env.DOPPLER_TOKEN || process.env.DOPPLER_TOKEN_STAGING
+		const fallbackToken =
+			process.env.DOPPLER_TOKEN || process.env.DOPPLER_TOKEN_STAGING
 		const finalToken = token || fallbackToken
-		
+
 		if (!finalToken) {
 			throw new Error(
 				'Doppler token not found in Pulumi configuration or environment variables. Please set doppler:dopplerToken in your stack config or DOPPLER_TOKEN in environment variables.',
