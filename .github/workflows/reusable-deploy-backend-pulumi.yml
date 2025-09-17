@@ -76,191 +76,200 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: ${{ env.PNPM_VERSION }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
 
-      - name: Cache pnpm dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pnpm-store
-            node_modules
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-${{ runner.os }}-
+    - name: Cache pnpm dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pnpm-store
+          node_modules
+        key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          pnpm-${{ runner.os }}-
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-          role-session-name: GitHubActions-Pulumi-Deploy-${{ github.run_id }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
+        role-session-name: GitHubActions-Pulumi-Deploy-${{ github.run_id }}
 
-      - name: Install Pulumi CLI
-        run: |
-          curl -fsSL https://get.pulumi.com | sh
-          echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
+    - name: Install Pulumi CLI
+      run: |
+        curl -fsSL https://get.pulumi.com | sh
+        echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
 
-      - name: Install Pulumi dependencies
-        run: |
-          cd infrastructure/pulumi
-          pnpm install --frozen-lockfile
+    - name: Install Pulumi dependencies
+      run: |
+        cd infrastructure/pulumi
+        pnpm install --frozen-lockfile
 
-      - name: Set Doppler token based on deployment type
-        id: doppler-token
-        run: |
-          DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
+    - name: Set Doppler token based on deployment type
+      id: doppler-token
+      run: |
+        DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
 
-          # Set the appropriate Doppler token based on deployment type
-          if [[ "${DEPLOYMENT_TYPE}" == "staging" ]]; then
-            DOPPLER_TOKEN="${{ secrets.DOPPLER_TOKEN_STAGING }}"
-            echo "🔑 Using staging Doppler token"
-          elif [[ "${DEPLOYMENT_TYPE}" == "production" ]]; then
-            DOPPLER_TOKEN="${{ secrets.DOPPLER_TOKEN_PROD }}"
-            echo "🔑 Using production Doppler token"
-          else
-            DOPPLER_TOKEN="${{ secrets.DOPPLER_TOKEN_DEV }}"
-            echo "🔑 Using dev Doppler token"
-          fi
+        # Set the appropriate Doppler token based on deployment type
+        if [[ "${DEPLOYMENT_TYPE}" == "staging" ]]; then
+          DOPPLER_TOKEN="${{ secrets.DOPPLER_TOKEN_STAGING }}"
+          echo "🔑 Using staging Doppler token"
+        elif [[ "${DEPLOYMENT_TYPE}" == "production" ]]; then
+          DOPPLER_TOKEN="${{ secrets.DOPPLER_TOKEN_PROD }}"
+          echo "🔑 Using production Doppler token"
+        else
+          DOPPLER_TOKEN="${{ secrets.DOPPLER_TOKEN_DEV }}"
+          echo "🔑 Using dev Doppler token"
+        fi
 
-          echo "DOPPLER_TOKEN=${DOPPLER_TOKEN}" >> $GITHUB_ENV
-          echo "✅ Doppler token set for ${DEPLOYMENT_TYPE} environment"
+        echo "DOPPLER_TOKEN=${DOPPLER_TOKEN}" >> $GITHUB_ENV
+        echo "✅ Doppler token set for ${DEPLOYMENT_TYPE} environment"
 
-      - name: Set Pulumi configuration
-        id: pulumi-config
-        run: |
-          ENV_NAME="${{ inputs.environment-name }}"
-          DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
-          PR_NUMBER="${{ inputs.pr-number }}"
-          IMAGE_URI="${{ inputs.image-uri }}"
+    - name: Set Pulumi configuration
+      id: pulumi-config
+      run: |
+        ENV_NAME="${{ inputs.environment-name }}"
+        DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
+        PR_NUMBER="${{ inputs.pr-number }}"
+        IMAGE_URI="${{ inputs.image-uri }}"
 
-          # Determine stack name based on environment type
-          if [[ "${DEPLOYMENT_TYPE}" == "preview" ]]; then
-            STACK_NAME="pr-${PR_NUMBER}"
-          elif [[ "${DEPLOYMENT_TYPE}" == "staging" ]]; then
-            STACK_NAME="stg"
-          elif [[ "${DEPLOYMENT_TYPE}" == "production" ]]; then
-            STACK_NAME="prd"
-          else
-            STACK_NAME="${ENV_NAME}"
-          fi
+        # Determine stack name based on environment type
+        if [[ "${DEPLOYMENT_TYPE}" == "preview" ]]; then
+          STACK_NAME="pr-${PR_NUMBER}"
+        elif [[ "${DEPLOYMENT_TYPE}" == "staging" ]]; then
+          STACK_NAME="stg"
+        elif [[ "${DEPLOYMENT_TYPE}" == "production" ]]; then
+          STACK_NAME="prd"
+        else
+          STACK_NAME="${ENV_NAME}"
+        fi
 
-          echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
-          echo "📦 Pulumi Stack: ${STACK_NAME}"
+        echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
+        echo "📦 Pulumi Stack: ${STACK_NAME}"
 
-      - name: Deploy Backend Infrastructure (Pulumi)
-        id: deploy
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
-          DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
-          DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
-        run: |
-          ENV_NAME="${{ inputs.environment-name }}"
-          DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
-          PR_NUMBER="${{ inputs.pr-number }}"
-          BRANCH_NAME="${{ inputs.branch-name }}"
-          CUSTOM_DOMAIN_NAME="${{ inputs.custom-domain-name }}"
-          HOSTED_ZONE_ID="${{ inputs.hosted-zone-id }}"
-          IMAGE_URI="${{ inputs.image-uri }}"
-          STACK_NAME="${{ steps.pulumi-config.outputs.stack-name }}"
+    - name: Deploy Backend Infrastructure (Pulumi)
+      id: deploy
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
+        DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
+      run: |
+        ENV_NAME="${{ inputs.environment-name }}"
+        DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
+        PR_NUMBER="${{ inputs.pr-number }}"
+        BRANCH_NAME="${{ inputs.branch-name }}"
+        CUSTOM_DOMAIN_NAME="${{ inputs.custom-domain-name }}"
+        HOSTED_ZONE_ID="${{ inputs.hosted-zone-id }}"
+        IMAGE_URI="${{ inputs.image-uri }}"
+        STACK_NAME="${{ steps.pulumi-config.outputs.stack-name }}"
 
-          echo "🚀 Starting Pulumi deployment..."
-          echo "Environment: ${ENV_NAME}"
-          echo "Deployment Type: ${DEPLOYMENT_TYPE}"
-          echo "Stack: ${STACK_NAME}"
-          echo "Image URI: ${IMAGE_URI}"
+        echo "🚀 Starting Pulumi deployment..."
+        echo "Environment: ${ENV_NAME}"
+        echo "Deployment Type: ${DEPLOYMENT_TYPE}"
+        echo "Stack: ${STACK_NAME}"
+        echo "Image URI: ${IMAGE_URI}"
 
-          cd infrastructure/pulumi
+        cd infrastructure/pulumi
 
-          # Set Pulumi configuration
-          pulumi config set environmentName "${ENV_NAME}" --stack "${STACK_NAME}"
-          pulumi config set deploymentType "${DEPLOYMENT_TYPE}" --stack "${STACK_NAME}"
-          pulumi config set imageUri "${IMAGE_URI}" --stack "${STACK_NAME}"
+        # Set Pulumi configuration
+        pulumi config set environmentName "${ENV_NAME}" --stack "${STACK_NAME}"
+        pulumi config set deploymentType "${DEPLOYMENT_TYPE}" --stack "${STACK_NAME}"
+        pulumi config set imageUri "${IMAGE_URI}" --stack "${STACK_NAME}"
 
-          # Extract image tag from image URI for ECR verification
-          IMAGE_TAG=$(echo "${IMAGE_URI}" | cut -d':' -f2)
-          echo "🔍 Extracted image tag: ${IMAGE_TAG}"
-          echo "📝 Setting Pulumi config imageTag to: ${IMAGE_TAG}"
-          pulumi config set imageTag "${IMAGE_TAG}" --stack "${STACK_NAME}"
+        # Extract image tag from image URI for ECR verification
+        IMAGE_TAG=$(echo "${IMAGE_URI}" | cut -d':' -f2)
+        echo "🔍 Extracted image tag: ${IMAGE_TAG}"
+        echo "📝 Setting Pulumi config imageTag to: ${IMAGE_TAG}"
+        pulumi config set imageTag "${IMAGE_TAG}" --stack "${STACK_NAME}"
 
-          # Set Doppler token for environment variable injection
-          echo "🔐 Setting Doppler token for environment variable injection..."
-          if [[ "${ENV_NAME}" == "staging" ]]; then
-            # Obfuscate token for logging (show first 3 chars + ****)
-            TOKEN_PREFIX=$(echo "${DOPPLER_TOKEN_STAGING}" | cut -c1-3)
-            echo "🔐 Using Doppler token: ${TOKEN_PREFIX}****"
-            pulumi config set doppler:dopplerToken "${DOPPLER_TOKEN_STAGING}" --secret --stack "${STACK_NAME}"
-          elif [[ "${ENV_NAME}" == "production" ]]; then
-            # Obfuscate token for logging (show first 3 chars + ****)
-            TOKEN_PREFIX=$(echo "${DOPPLER_TOKEN_PROD}" | cut -c1-3)
-            echo "🔐 Using Doppler token: ${TOKEN_PREFIX}****"
-            pulumi config set doppler:dopplerToken "${DOPPLER_TOKEN_PROD}" --secret --stack "${STACK_NAME}"
-          else
-            # Obfuscate token for logging (show first 3 chars + ****)
-            TOKEN_PREFIX=$(echo "${DOPPLER_TOKEN_DEV}" | cut -c1-3)
-            echo "🔐 Using Doppler token: ${TOKEN_PREFIX}****"
-            pulumi config set doppler:dopplerToken "${DOPPLER_TOKEN_DEV}" --secret --stack "${STACK_NAME}"
-          fi
+        # Set Doppler token for environment variable injection
+        echo "🔐 Setting Doppler token for environment variable injection..."
+        if [[ "${ENV_NAME}" == "staging" ]]; then
+          # Obfuscate token for logging (show first 3 chars + ****)
+          TOKEN_PREFIX=$(echo "${DOPPLER_TOKEN_STAGING}" | cut -c1-3)
+          echo "🔐 Using Doppler token: ${TOKEN_PREFIX}****"
+          pulumi config set doppler:dopplerToken "${DOPPLER_TOKEN_STAGING}" --secret --stack "${STACK_NAME}"
+        elif [[ "${ENV_NAME}" == "production" ]]; then
+          # Obfuscate token for logging (show first 3 chars + ****)
+          TOKEN_PREFIX=$(echo "${DOPPLER_TOKEN_PROD}" | cut -c1-3)
+          echo "🔐 Using Doppler token: ${TOKEN_PREFIX}****"
+          pulumi config set doppler:dopplerToken "${DOPPLER_TOKEN_PROD}" --secret --stack "${STACK_NAME}"
+        else
+          # Obfuscate token for logging (show first 3 chars + ****)
+          TOKEN_PREFIX=$(echo "${DOPPLER_TOKEN_DEV}" | cut -c1-3)
+          echo "🔐 Using Doppler token: ${TOKEN_PREFIX}****"
+          pulumi config set doppler:dopplerToken "${DOPPLER_TOKEN_DEV}" --secret --stack "${STACK_NAME}"
+        fi
 
-          if [[ -n "${PR_NUMBER}" ]]; then
-            pulumi config set prNumber "${PR_NUMBER}" --stack "${STACK_NAME}"
-          fi
+        if [[ -n "${PR_NUMBER}" ]]; then
+          pulumi config set prNumber "${PR_NUMBER}" --stack "${STACK_NAME}"
+        fi
 
-          if [[ -n "${BRANCH_NAME}" ]]; then
-            pulumi config set branchName "${BRANCH_NAME}" --stack "${STACK_NAME}"
-          fi
+        if [[ -n "${BRANCH_NAME}" ]]; then
+          pulumi config set branchName "${BRANCH_NAME}" --stack "${STACK_NAME}"
+        fi
 
-          if [[ -n "${CUSTOM_DOMAIN_NAME}" ]]; then
-            pulumi config set customDomainName "${CUSTOM_DOMAIN_NAME}" --stack "${STACK_NAME}"
-          fi
+        if [[ -n "${CUSTOM_DOMAIN_NAME}" ]]; then
+          pulumi config set customDomainName "${CUSTOM_DOMAIN_NAME}" --stack "${STACK_NAME}"
+        fi
 
-          if [[ -n "${HOSTED_ZONE_ID}" ]]; then
-            pulumi config set hostedZoneId "${HOSTED_ZONE_ID}" --stack "${STACK_NAME}"
-          fi
+        if [[ -n "${HOSTED_ZONE_ID}" ]]; then
+          pulumi config set hostedZoneId "${HOSTED_ZONE_ID}" --stack "${STACK_NAME}"
+        fi
 
-          # Deploy the infrastructure
-          pulumi up --yes --stack "${STACK_NAME}"
+        # Verify Doppler token was set correctly
+        echo "🔍 Verifying Doppler token configuration..."
+        if pulumi config get doppler:dopplerToken --stack "${STACK_NAME}" >/dev/null 2>&1; then
+          echo "✅ Doppler token configuration verified"
+        else
+          echo "❌ Failed to verify Doppler token configuration"
+          exit 1
+        fi
 
-          # Get the API endpoint
-          API_ENDPOINT=$(pulumi stack output apiEndpoint --stack "${STACK_NAME}")
-          echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
-          echo "✅ Deployment completed successfully!"
-          echo "🌐 API Endpoint: ${API_ENDPOINT}"
+        # Deploy the infrastructure
+        pulumi up --yes --stack "${STACK_NAME}"
 
-      - name: Health Check
-        id: health-check
-        run: |
-          API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}"
-          echo "🔍 Performing health check on: ${API_ENDPOINT}"
+        # Get the API endpoint
+        API_ENDPOINT=$(pulumi stack output apiEndpoint --stack "${STACK_NAME}")
+        echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
+        echo "✅ Deployment completed successfully!"
+        echo "🌐 API Endpoint: ${API_ENDPOINT}"
 
-          # Wait for the service to be ready
-          sleep 30
+    - name: Health Check
+      id: health-check
+      run: |
+        API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}"
+        echo "🔍 Performing health check on: ${API_ENDPOINT}"
 
-          # Perform health check
-          if curl -f -s "${API_ENDPOINT}/health" > /dev/null; then
-            echo "✅ Health check passed"
-            echo "health-status=healthy" >> $GITHUB_OUTPUT
-          else
-            echo "❌ Health check failed"
-            echo "health-status=unhealthy" >> $GITHUB_OUTPUT
-            exit 1
-          fi
+        # Wait for the service to be ready
+        sleep 30
 
-      - name: Output Results
-        run: |
-          echo "🎉 Deployment Summary:"
-          echo "Environment: ${{ inputs.environment-name }}"
-          echo "Stack: ${{ steps.pulumi-config.outputs.stack-name }}"
-          echo "API Endpoint: ${{ steps.deploy.outputs.api-endpoint }}"
-          echo "Health Status: ${{ steps.health-check.outputs.health-status }}"
+        # Perform health check
+        if curl -f -s "${API_ENDPOINT}/health" > /dev/null; then
+          echo "✅ Health check passed"
+          echo "health-status=healthy" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Health check failed"
+          echo "health-status=unhealthy" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+
+    - name: Output Results
+      run: |
+        echo "🎉 Deployment Summary:"
+        echo "Environment: ${{ inputs.environment-name }}"
+        echo "Stack: ${{ steps.pulumi-config.outputs.stack-name }}"
+        echo "API Endpoint: ${{ steps.deploy.outputs.api-endpoint }}"
+        echo "Health Status: ${{ steps.health-check.outputs.health-status }}"
