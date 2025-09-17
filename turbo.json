@@ -48,7 +48,10 @@
 				"API_BASE_URL",
 				"REDIS_URL",
 				"DOPPLER_API_KEY",
-				"DOPPLER_TOKEN"
+				"DOPPLER_TOKEN",
+				"DOPPLER_TOKEN_STAGING",
+				"DOPPLER_TOKEN_DEV",
+				"DOPPLER_TOKEN_PROD"
 			]
 		},
 		"lint": {

@@ -535,64 +535,19 @@ let httpsListener: aws.lb.Listener | undefined
 if (customDomainName && hostedZoneId) {
 	console.log('🌐 Setting up custom domain:', customDomainName)
 
-	// Create ACM certificate for the custom domain
-	const certificate = new aws.acm.Certificate(
-		`macro-ai-${environmentName}-certificate`,
-		{
-			domainName: customDomainName,
-			subjectAlternativeNames: [
-				`*.${customDomainName.split('.').slice(-2).join('.')}`,
-			], // Wildcard for subdomain
-			validationMethod: 'DNS',
-			tags: {
-				Name: `macro-ai-${environmentName}-certificate`,
-				Environment: environmentName,
-				Project: 'MacroAI',
-				Component: 'certificate',
-			},
-		},
-	)
+	// Use existing wildcard certificate for all environments
+	// This covers: macro-ai.russoakham.dev, *.russoakham.dev (staging, dev, pr-*, etc.)
+	const certificateArn =
+		'arn:aws:acm:us-east-1:861909001362:certificate/316283f2-a8c5-44d4-a229-a21f635d7127'
 
-	// Get the hosted zone (for validation)
-	aws.route53.getZoneOutput({
-		zoneId: hostedZoneId,
-	})
-
-	// Create DNS validation records
-	const certificateValidationRecords =
-		certificate.domainValidationOptions.apply((options) =>
-			options.map(
-				(option, index) =>
-					new aws.route53.Record(
-						`macro-ai-${environmentName}-certificate-validation-${index}`,
-						{
-							name: option.resourceRecordName,
-							records: [option.resourceRecordValue],
-							ttl: 60,
-							type: option.resourceRecordType,
-							zoneId: hostedZoneId,
-						},
-					),
-			),
-		)
-
-	// Validate the certificate
-	const certificateValidation = new aws.acm.CertificateValidation(
-		`macro-ai-${environmentName}-certificate-validation`,
-		{
-			certificateArn: certificate.arn,
-			validationRecordFqdns: certificateValidationRecords.apply((records) =>
-				records.map((record) => record.fqdn),
-			),
-		},
-	)
+	console.log('🔒 Using existing wildcard certificate for all environments')
 
 	// Create HTTPS listener with certificate
 	httpsListener = new aws.lb.Listener('macro-ai-https-listener', {
 		loadBalancerArn: alb.arn,
 		port: 443,
 		protocol: 'HTTPS',
-		certificateArn: certificateValidation.certificateArn,
+		certificateArn: certificateArn,
 		defaultActions: [
 			{
 				type: 'forward',
