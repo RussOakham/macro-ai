@@ -221,7 +221,7 @@ jobs:
         id: reconstruct-image-uri
         run: |
           echo "🔍 Reconstructing image URI from image tag..."
-          
+
           # Get the image tag from the build step
           IMAGE_TAG="${{ needs.build-express-api.outputs.image-tag }}"
           echo "📥 Received image tag: '${IMAGE_TAG}'"
