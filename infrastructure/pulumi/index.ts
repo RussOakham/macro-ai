@@ -276,6 +276,11 @@ const allEnvironmentVariables = pulumi
 		envVars.NODE_ENV = 'production'
 		envVars.SERVER_PORT = '3040'
 		envVars.APP_ENV = environmentName
+		
+		// Add custom domain name for CORS configuration
+		if (customDomainName) {
+			envVars.CUSTOM_DOMAIN_NAME = customDomainName
+		}
 
 		return envVars
 	})
@@ -511,11 +516,13 @@ let httpsListener: aws.lb.Listener | undefined
 
 if (customDomainName && hostedZoneId) {
 	console.log('🌐 Setting up custom domain:', customDomainName)
-	
+
 	// Create ACM certificate for the custom domain
 	const certificate = new aws.acm.Certificate('macro-ai-certificate', {
 		domainName: customDomainName,
-		subjectAlternativeNames: [`*.${customDomainName.split('.').slice(-2).join('.')}`], // Wildcard for subdomain
+		subjectAlternativeNames: [
+			`*.${customDomainName.split('.').slice(-2).join('.')}`,
+		], // Wildcard for subdomain
 		validationMethod: 'DNS',
 		tags: {
 			Name: `macro-ai-${environmentName}-certificate`,
@@ -531,23 +538,30 @@ if (customDomainName && hostedZoneId) {
 	})
 
 	// Create DNS validation records
-	const certificateValidationRecords = certificate.domainValidationOptions.apply(options => 
-		options.map(option => 
-			new aws.route53.Record('macro-ai-certificate-validation', {
-				name: option.resourceRecordName,
-				records: [option.resourceRecordValue],
-				ttl: 60,
-				type: option.resourceRecordType,
-				zoneId: hostedZoneId,
-			})
+	const certificateValidationRecords =
+		certificate.domainValidationOptions.apply((options) =>
+			options.map(
+				(option) =>
+					new aws.route53.Record('macro-ai-certificate-validation', {
+						name: option.resourceRecordName,
+						records: [option.resourceRecordValue],
+						ttl: 60,
+						type: option.resourceRecordType,
+						zoneId: hostedZoneId,
+					}),
+			),
 		)
-	)
 
 	// Validate the certificate
-	const certificateValidation = new aws.acm.CertificateValidation('macro-ai-certificate-validation', {
-		certificateArn: certificate.arn,
-		validationRecordFqdns: certificateValidationRecords.apply(records => records.map(record => record.fqdn)),
-	})
+	const certificateValidation = new aws.acm.CertificateValidation(
+		'macro-ai-certificate-validation',
+		{
+			certificateArn: certificate.arn,
+			validationRecordFqdns: certificateValidationRecords.apply((records) =>
+				records.map((record) => record.fqdn),
+			),
+		},
+	)
 
 	// Create HTTPS listener with certificate
 	httpsListener = new aws.lb.Listener('macro-ai-https-listener', {
@@ -617,7 +631,7 @@ export const environment = environmentName
 export const isPreview = isPreviewEnvironment
 
 // Export API endpoint for workflow compatibility
-export const apiEndpoint = customDomainOutput 
+export const apiEndpoint = customDomainOutput
 	? pulumi.interpolate`https://${customDomainOutput}`
 	: pulumi.interpolate`http://${alb.dnsName}`
 
