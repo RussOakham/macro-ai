@@ -16,8 +16,26 @@ const deploymentType = config.get('deploymentType') || 'dev'
 // const deploymentScale = config.get('deploymentScale') || 'preview'
 
 // Custom domain configuration
-const customDomainName = config.get('customDomainName')
+const baseDomainName =
+	config.get('customDomainName') || 'macro-ai.russoakham.dev'
 const hostedZoneId = config.get('hostedZoneId')
+
+// Construct the full custom domain name based on environment
+let customDomainName: string | undefined
+if (hostedZoneId) {
+	if (environmentName === 'staging') {
+		customDomainName = `staging.${baseDomainName}`
+	} else if (environmentName === 'production' || environmentName === 'prd') {
+		customDomainName = baseDomainName
+	} else if (environmentName.startsWith('pr-')) {
+		// For preview environments, use the PR number as subdomain
+		const prNumber = environmentName.replace('pr-', '')
+		customDomainName = `pr-${prNumber}.${baseDomainName}`
+	} else {
+		// For dev environment, use dev subdomain
+		customDomainName = `dev.${baseDomainName}`
+	}
+}
 
 // ECR repository configuration
 const ecrRepositoryName = `macro-ai-${environmentName}-express-api`
@@ -518,19 +536,22 @@ if (customDomainName && hostedZoneId) {
 	console.log('🌐 Setting up custom domain:', customDomainName)
 
 	// Create ACM certificate for the custom domain
-	const certificate = new aws.acm.Certificate('macro-ai-certificate', {
-		domainName: customDomainName,
-		subjectAlternativeNames: [
-			`*.${customDomainName.split('.').slice(-2).join('.')}`,
-		], // Wildcard for subdomain
-		validationMethod: 'DNS',
-		tags: {
-			Name: `macro-ai-${environmentName}-certificate`,
-			Environment: environmentName,
-			Project: 'MacroAI',
-			Component: 'certificate',
+	const certificate = new aws.acm.Certificate(
+		`macro-ai-${environmentName}-certificate`,
+		{
+			domainName: customDomainName,
+			subjectAlternativeNames: [
+				`*.${customDomainName.split('.').slice(-2).join('.')}`,
+			], // Wildcard for subdomain
+			validationMethod: 'DNS',
+			tags: {
+				Name: `macro-ai-${environmentName}-certificate`,
+				Environment: environmentName,
+				Project: 'MacroAI',
+				Component: 'certificate',
+			},
 		},
-	})
+	)
 
 	// Get the hosted zone (for validation)
 	aws.route53.getZoneOutput({
@@ -541,20 +562,23 @@ if (customDomainName && hostedZoneId) {
 	const certificateValidationRecords =
 		certificate.domainValidationOptions.apply((options) =>
 			options.map(
-				(option) =>
-					new aws.route53.Record('macro-ai-certificate-validation', {
-						name: option.resourceRecordName,
-						records: [option.resourceRecordValue],
-						ttl: 60,
-						type: option.resourceRecordType,
-						zoneId: hostedZoneId,
-					}),
+				(option, index) =>
+					new aws.route53.Record(
+						`macro-ai-${environmentName}-certificate-validation-${index}`,
+						{
+							name: option.resourceRecordName,
+							records: [option.resourceRecordValue],
+							ttl: 60,
+							type: option.resourceRecordType,
+							zoneId: hostedZoneId,
+						},
+					),
 			),
 		)
 
 	// Validate the certificate
 	const certificateValidation = new aws.acm.CertificateValidation(
-		'macro-ai-certificate-validation',
+		`macro-ai-${environmentName}-certificate-validation`,
 		{
 			certificateArn: certificate.arn,
 			validationRecordFqdns: certificateValidationRecords.apply((records) =>
