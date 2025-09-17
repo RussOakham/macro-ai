@@ -1,23 +1,24 @@
 name: Deploy Staging Environment
 
-on:
-  push:
-    branches: [develop]
-    paths:
-      - 'infrastructure/**'
-      - 'apps/express-api/**'
-      - 'apps/client-ui/**'
-      - 'packages/macro-ai-api-client/**'
-      - 'packages/ui-library/**'
-      - '.github/workflows/deploy-staging.yml'
-      - '.github/workflows/reusable-*.yml'
-  workflow_dispatch:
-    inputs:
-      force-deploy:
-        description: 'Force deployment even if no changes detected'
-        required: false
-        type: boolean
-        default: false
+# DISABLED: This workflow is replaced by deploy-staging-pulumi.yml
+# on:
+#   push:
+#     branches: [develop]
+#     paths:
+#       - 'infrastructure/**'
+#       - 'apps/express-api/**'
+#       - 'apps/client-ui/**'
+#       - 'packages/macro-ai-api-client/**'
+#       - 'packages/ui-library/**'
+#       - '.github/workflows/deploy-staging.yml'
+#       - '.github/workflows/reusable-*.yml'
+#   workflow_dispatch:
+#     inputs:
+#       force-deploy:
+#         description: 'Force deployment even if no changes detected'
+#         required: false
+#         type: boolean
+#         default: false
 
 permissions:
   contents: write
