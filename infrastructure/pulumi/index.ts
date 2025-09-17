@@ -15,6 +15,10 @@ const imageTag = config.get('imageTag') || 'latest'
 const deploymentType = config.get('deploymentType') || 'dev'
 // const deploymentScale = config.get('deploymentScale') || 'preview'
 
+// Custom domain configuration
+const customDomainName = config.get('customDomainName')
+const hostedZoneId = config.get('hostedZoneId')
+
 // ECR repository configuration
 const ecrRepositoryName = `macro-ai-${environmentName}-express-api`
 
@@ -501,6 +505,107 @@ const listener = new aws.lb.Listener('macro-ai-listener', {
 	],
 })
 
+// Custom domain implementation
+let customDomainOutput: string | undefined
+let httpsListener: aws.lb.Listener | undefined
+
+if (customDomainName && hostedZoneId) {
+	console.log('🌐 Setting up custom domain:', customDomainName)
+	
+	// Create ACM certificate for the custom domain
+	const certificate = new aws.acm.Certificate('macro-ai-certificate', {
+		domainName: customDomainName,
+		subjectAlternativeNames: [`*.${customDomainName.split('.').slice(-2).join('.')}`], // Wildcard for subdomain
+		validationMethod: 'DNS',
+		tags: {
+			Name: `macro-ai-${environmentName}-certificate`,
+			Environment: environmentName,
+			Project: 'MacroAI',
+			Component: 'certificate',
+		},
+	})
+
+	// Get the hosted zone (for validation)
+	aws.route53.getZoneOutput({
+		zoneId: hostedZoneId,
+	})
+
+	// Create DNS validation records
+	const certificateValidationRecords = certificate.domainValidationOptions.apply(options => 
+		options.map(option => 
+			new aws.route53.Record('macro-ai-certificate-validation', {
+				name: option.resourceRecordName,
+				records: [option.resourceRecordValue],
+				ttl: 60,
+				type: option.resourceRecordType,
+				zoneId: hostedZoneId,
+			})
+		)
+	)
+
+	// Validate the certificate
+	const certificateValidation = new aws.acm.CertificateValidation('macro-ai-certificate-validation', {
+		certificateArn: certificate.arn,
+		validationRecordFqdns: certificateValidationRecords.apply(records => records.map(record => record.fqdn)),
+	})
+
+	// Create HTTPS listener with certificate
+	httpsListener = new aws.lb.Listener('macro-ai-https-listener', {
+		loadBalancerArn: alb.arn,
+		port: 443,
+		protocol: 'HTTPS',
+		certificateArn: certificateValidation.certificateArn,
+		defaultActions: [
+			{
+				type: 'forward',
+				targetGroupArn: targetGroup.arn,
+			},
+		],
+	})
+
+	// Redirect HTTP to HTTPS
+	new aws.lb.ListenerRule('macro-ai-redirect-rule', {
+		listenerArn: listener.arn,
+		priority: 1,
+		actions: [
+			{
+				type: 'redirect',
+				redirect: {
+					port: '443',
+					protocol: 'HTTPS',
+					statusCode: 'HTTP_301',
+				},
+			},
+		],
+		conditions: [
+			{
+				pathPattern: {
+					values: ['/*'],
+				},
+			},
+		],
+	})
+
+	// Create Route 53 record pointing to the ALB
+	new aws.route53.Record('macro-ai-alb-record', {
+		name: customDomainName,
+		type: 'A',
+		zoneId: hostedZoneId,
+		aliases: [
+			{
+				name: alb.dnsName,
+				zoneId: alb.zoneId,
+				evaluateTargetHealth: true,
+			},
+		],
+	})
+
+	customDomainOutput = customDomainName
+	console.log('✅ Custom domain configured: https://', customDomainName)
+} else {
+	console.log('ℹ️ No custom domain configured, using ALB DNS name')
+}
+
 // Export important values
 export const { vpcId } = vpc
 export const { arn: clusterArn } = cluster
@@ -512,4 +617,10 @@ export const environment = environmentName
 export const isPreview = isPreviewEnvironment
 
 // Export API endpoint for workflow compatibility
-export const apiEndpoint = pulumi.interpolate`http://${alb.dnsName}`
+export const apiEndpoint = customDomainOutput 
+	? pulumi.interpolate`https://${customDomainOutput}`
+	: pulumi.interpolate`http://${alb.dnsName}`
+
+// Export custom domain information
+export const customDomain = customDomainOutput
+export const httpsListenerArn = httpsListener?.arn
