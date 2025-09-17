@@ -1,0 +1,4 @@
+config:
+  macro-ai-infrastructure:environmentName: staging
+  macro-ai-infrastructure:deploymentType: staging
+  macro-ai-infrastructure:imageUri: nginx:latest

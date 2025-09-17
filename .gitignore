@@ -77,3 +77,6 @@ scripts/octoscan
 
 # Personal tmux configuration (user-specific)
 ~/.config/tmux/
+
+# MCP Server Memory Data
+data/
