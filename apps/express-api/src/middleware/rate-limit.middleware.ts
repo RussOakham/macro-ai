@@ -18,37 +18,57 @@ let apiStore = undefined
 
 // Initialize Redis if in production and Redis URL is available
 if (config.NODE_ENV === 'production' && config.REDIS_URL) {
-	const redisClient = createClient({
-		url: config.REDIS_URL,
-		socket: {
-			connectTimeout: 50000,
-		},
-	})
+	try {
+		const redisClient = createClient({
+			url: config.REDIS_URL,
+			socket: {
+				connectTimeout: 10000, // Reduced timeout for faster failure detection
+			},
+		})
 
-	redisClient.connect().catch((err: unknown) => {
-		const error = standardizeError(err)
-		logger.error(
-			`[middleware - rateLimit]: Redis connection error: ${error.message}`,
+		// Handle Redis connection errors gracefully
+		redisClient.on('error', (err: unknown) => {
+			const error = standardizeError(err)
+			logger.warn(
+				`[middleware - rateLimit]: Redis connection error: ${error.message}. Falling back to in-memory rate limiting.`,
+			)
+		})
+
+		redisClient.on('connect', () => {
+			logger.info('[middleware - rateLimit]: Redis connected successfully')
+		})
+
+		// Attempt to connect to Redis
+		redisClient.connect().catch((err: unknown) => {
+			const error = standardizeError(err)
+			logger.warn(
+				`[middleware - rateLimit]: Redis connection failed: ${error.message}. Falling back to in-memory rate limiting.`,
+			)
+		})
+
+		// Create separate store instances with unique prefixes
+		defaultStore = new RedisStore({
+			sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+			prefix: 'rl:default:',
+		})
+
+		authStore = new RedisStore({
+			sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+			prefix: 'rl:auth:',
+		})
+
+		apiStore = new RedisStore({
+			sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+			prefix: 'rl:api:',
+		})
+
+		logger.info('[middleware - rateLimit]: Using Redis store for rate limiting')
+	} catch (error) {
+		const err = standardizeError(error)
+		logger.warn(
+			`[middleware - rateLimit]: Failed to initialize Redis: ${err.message}. Falling back to in-memory rate limiting.`,
 		)
-	})
-
-	// Create separate store instances with unique prefixes
-	defaultStore = new RedisStore({
-		sendCommand: (...args: string[]) => redisClient.sendCommand(args),
-		prefix: 'rl:default:',
-	})
-
-	authStore = new RedisStore({
-		sendCommand: (...args: string[]) => redisClient.sendCommand(args),
-		prefix: 'rl:auth:',
-	})
-
-	apiStore = new RedisStore({
-		sendCommand: (...args: string[]) => redisClient.sendCommand(args),
-		prefix: 'rl:api:',
-	})
-
-	logger.info('[middleware - rateLimit]: Using Redis store for rate limiting')
+	}
 }
 
 // Default rate limit configuration
