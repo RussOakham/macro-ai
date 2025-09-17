@@ -1,7 +1,0 @@
-config:
-  macro-ai-infrastructure:environmentName: dev
-  macro-ai-infrastructure:prNumber: '0'
-  macro-ai-infrastructure:branchName: main
-  macro-ai-infrastructure:imageUri: nginx:latest
-  doppler:dopplerToken:
-    secure: AAABAHAZdYt55WQbolqaIFbPmvyxhG2P47hZgUGCs6MHzVw8lFdq2XNOxNnJZvrwkSEinAZXqE68yfjSkOs2Epji0ssqTiyL/PTKWOqeXoLC

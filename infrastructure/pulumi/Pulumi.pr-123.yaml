@@ -1,5 +1,0 @@
-config:
-  macro-ai-infrastructure:environmentName: pr-123
-  macro-ai-infrastructure:prNumber: 123
-  macro-ai-infrastructure:branchName: feature/pulumi-migration
-  macro-ai-infrastructure:imageUri: nginx:latest
