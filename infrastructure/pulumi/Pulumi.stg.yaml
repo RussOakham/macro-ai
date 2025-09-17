@@ -9,3 +9,5 @@ config:
   macro-ai:hostedZoneId: ''
   doppler:dopplerToken:
     secure: AAABAHKRkb8r+YC2VUSRt0AjmdMTw5y16/3sAZnfZ80=
+  macro-ai-infrastructure:customDomainName: staging.macro-ai.russoakham.dev
+  macro-ai-infrastructure:hostedZoneId: Z10081873B648ARROPNER
