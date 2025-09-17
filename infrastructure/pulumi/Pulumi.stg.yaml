@@ -1,4 +1,11 @@
 config:
-  macro-ai-infrastructure:environmentName: staging
-  macro-ai-infrastructure:deploymentType: staging
-  macro-ai-infrastructure:imageUri: nginx:latest
+  macro-ai:environmentName: staging
+  macro-ai:deploymentType: staging
+  macro-ai:deploymentScale: preview
+  macro-ai:imageUri: nginx:latest
+  macro-ai:prNumber: '0'
+  macro-ai:branchName: develop
+  macro-ai:customDomainName: ''
+  macro-ai:hostedZoneId: ''
+  doppler:dopplerToken:
+    secure: AAABAHKRkb8r+YC2VUSRt0AjmdMTw5y16/3sAZnfZ80=

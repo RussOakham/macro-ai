@@ -3,15 +3,15 @@ name: Deploy Staging Environment (Pulumi)
 
 on:
   push:
-    branches: [ develop ]
+    branches: [develop]
     paths:
-    - 'infrastructure/**'
-    - 'apps/express-api/**'
-    - 'apps/client-ui/**'
-    - 'packages/macro-ai-api-client/**'
-    - 'packages/ui-library/**'
-    - '.github/workflows/deploy-staging-pulumi.yml'
-    - '.github/workflows/reusable-*.yml'
+      - 'infrastructure/**'
+      - 'apps/express-api/**'
+      - 'apps/client-ui/**'
+      - 'packages/macro-ai-api-client/**'
+      - 'packages/ui-library/**'
+      - '.github/workflows/deploy-staging-pulumi.yml'
+      - '.github/workflows/reusable-*.yml'
   workflow_dispatch:
     inputs:
       force-deploy:
@@ -48,7 +48,7 @@ jobs:
   build-express-api:
     name: Build Docker Image for ECS
     runs-on: ubuntu-latest
-    needs: [ change-detection ]
+    needs: [change-detection]
     if: |
       needs.change-detection.outputs.has-backend-changes == 'true' ||
       needs.change-detection.outputs.has-infrastructure-changes == 'true' ||
@@ -63,107 +63,107 @@ jobs:
       image-tag: ${{ steps.image-tag.outputs.image-tag }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: ${{ env.PNPM_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
-    - name: Cache pnpm dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.pnpm-store
-          node_modules
-        key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          pnpm-${{ runner.os }}-
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        role-session-name: github-actions-build-docker-staging
-        aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-build-docker-staging
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Log in to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Generate image tag
-      id: image-tag
-      run: |
-        IMAGE_TAG="staging-${{ github.sha }}"
-        echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-        echo "Generated image tag: ${IMAGE_TAG}"
-
-    - name: Prepare build context (no secrets)
-      id: prepare-build
-      run: |
-        echo "🔍 Preparing Docker build context without secrets..."
-        echo "✅ Build context prepared - secrets will be injected at runtime via ECS"
-
-    - name: Build and push Docker image
-      id: build
-      run: |
-        ECR_REPOSITORY="macro-ai-staging-express-api"
-        IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
-        ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
-
-        if [[ -z "${ECR_REGISTRY}" ]]; then
-          echo "⚠️ ECR registry output is empty, using fallback from AWS account ID"
-          ECR_REGISTRY="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
-        fi
-
-        IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
-
-        echo "🐳 Building Docker image..."
-        echo "Repository: ${ECR_REPOSITORY}"
-        echo "Tag: ${IMAGE_TAG}"
-        echo "Registry: ${ECR_REGISTRY}"
-        echo "URI: ${IMAGE_URI}"
-
-        # Create ECR repository if it doesn't exist
-        aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" >/dev/null 2>&1 || {
-          echo "📦 Creating ECR repository: ${ECR_REPOSITORY}"
-          aws ecr create-repository \
-            --repository-name "${ECR_REPOSITORY}" \
-            --image-scanning-configuration scanOnPush=true \
-            --encryption-configuration encryptionType=AES256
-        }
-
-        # Build without injecting secrets (use ECS runtime secrets)
-        docker buildx build \
-          --file apps/express-api/Dockerfile.distroless \
-          --target ecs-runner \
-          --platform linux/amd64 \
-          --cache-from type=gha \
-          --cache-to type=gha,mode=max \
-          --tag "${IMAGE_URI}" \
-          --push \
-          .
-
-          echo "✅ Image built and pushed successfully!"
-          # Only output the image tag - no secret-like strings
+      - name: Generate image tag
+        id: image-tag
+        run: |
+          IMAGE_TAG="staging-${{ github.sha }}"
           echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-          echo "📤 Outputting image tag: ${IMAGE_TAG}"
-          echo "🔗 Full image URI was: ${IMAGE_URI}"
+          echo "Generated image tag: ${IMAGE_TAG}"
+
+      - name: Prepare build context (no secrets)
+        id: prepare-build
+        run: |
+          echo "🔍 Preparing Docker build context without secrets..."
+          echo "✅ Build context prepared - secrets will be injected at runtime via ECS"
+
+      - name: Build and push Docker image
+        id: build
+        run: |
+          ECR_REPOSITORY="macro-ai-staging-express-api"
+          IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
+          ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+
+          if [[ -z "${ECR_REGISTRY}" ]]; then
+            echo "⚠️ ECR registry output is empty, using fallback from AWS account ID"
+            ECR_REGISTRY="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
+          fi
+
+          IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+
+          echo "🐳 Building Docker image..."
+          echo "Repository: ${ECR_REPOSITORY}"
+          echo "Tag: ${IMAGE_TAG}"
+          echo "Registry: ${ECR_REGISTRY}"
+          echo "URI: ${IMAGE_URI}"
+
+          # Create ECR repository if it doesn't exist
+          aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" >/dev/null 2>&1 || {
+            echo "📦 Creating ECR repository: ${ECR_REPOSITORY}"
+            aws ecr create-repository \
+              --repository-name "${ECR_REPOSITORY}" \
+              --image-scanning-configuration scanOnPush=true \
+              --encryption-configuration encryptionType=AES256
+          }
+
+          # Build without injecting secrets (use ECS runtime secrets)
+          docker buildx build \
+            --file apps/express-api/Dockerfile.distroless \
+            --target ecs-runner \
+            --platform linux/amd64 \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --tag "${IMAGE_URI}" \
+            --push \
+            .
+
+            echo "✅ Image built and pushed successfully!"
+            # Only output the image tag - no secret-like strings
+            echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+            echo "📤 Outputting image tag: ${IMAGE_TAG}"
+            echo "🔗 Full image URI was: ${IMAGE_URI}"
 
   # Deploy backend using Pulumi
   deploy-backend:
     name: Deploy Backend (Pulumi)
     runs-on: ubuntu-latest
-    needs: [ change-detection, build-express-api ]
+    needs: [change-detection, build-express-api]
     if: |
       needs.change-detection.outputs.has-backend-changes == 'true' ||
       needs.change-detection.outputs.has-infrastructure-changes == 'true' ||
@@ -173,188 +173,188 @@ jobs:
       contents: read
       actions: write
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: ${{ env.PNPM_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
-    - name: Cache pnpm dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.pnpm-store
-          node_modules
-        key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          pnpm-${{ runner.os }}-
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        role-session-name: github-actions-deploy-backend-staging
-        aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-deploy-backend-staging
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Install Pulumi CLI
-      uses: pulumi/actions@v4
-      with:
-        pulumi-version: latest
+      - name: Install Pulumi CLI
+        uses: pulumi/actions@v4
+        with:
+          pulumi-version: latest
 
-    - name: Install Pulumi dependencies
-      run: |
-        cd infrastructure/pulumi
-        pnpm install
+      - name: Install Pulumi dependencies
+        run: |
+          cd infrastructure/pulumi
+          pnpm install
 
-    - name: Set Doppler token based on deployment type
-      run: |
-        echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_STAGING }}" >> $GITHUB_ENV
+      - name: Set Doppler token based on deployment type
+        run: |
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_STAGING }}" >> $GITHUB_ENV
 
-    - name: Reconstruct image URI from tag
-      id: reconstruct-image-uri
-      run: |
-        echo "🔍 Starting image URI reconstruction..."
+      - name: Reconstruct image URI from tag
+        id: reconstruct-image-uri
+        run: |
+          echo "🔍 Starting image URI reconstruction..."
 
-        # Get the image tag from the build step
-        IMAGE_TAG="${{ needs.build-express-api.outputs.image-tag }}"
-        echo "📥 Received image tag: '${IMAGE_TAG}'"
+          # Get the image tag from the build step
+          IMAGE_TAG="${{ needs.build-express-api.outputs.image-tag }}"
+          echo "📥 Received image tag: '${IMAGE_TAG}'"
 
-        if [[ -z "${IMAGE_TAG}" ]]; then
-          echo "❌ No image tag found from build step"
-          echo "🔍 Available job outputs:"
-          echo "  - build-express-api.outputs.image-tag: '${{ needs.build-express-api.outputs.image-tag }}'"
-          exit 1
-        fi
+          if [[ -z "${IMAGE_TAG}" ]]; then
+            echo "❌ No image tag found from build step"
+            echo "🔍 Available job outputs:"
+            echo "  - build-express-api.outputs.image-tag: '${{ needs.build-express-api.outputs.image-tag }}'"
+            exit 1
+          fi
 
-        echo "✅ Retrieved image tag: ${IMAGE_TAG}"
+          echo "✅ Retrieved image tag: ${IMAGE_TAG}"
 
-        # Reconstruct the full image URI from known components
-        AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}"
-        AWS_REGION="us-east-1"  # Fixed region for staging
-        ECR_REPOSITORY="macro-ai-staging-express-api"
+          # Reconstruct the full image URI from known components
+          AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}"
+          AWS_REGION="us-east-1"  # Fixed region for staging
+          ECR_REPOSITORY="macro-ai-staging-express-api"
 
-        echo "🔧 Using components:"
-        echo "  - AWS_ACCOUNT_ID: ${AWS_ACCOUNT_ID}"
-        echo "  - AWS_REGION: ${AWS_REGION}"
-        echo "  - ECR_REPOSITORY: ${ECR_REPOSITORY}"
-        echo "  - IMAGE_TAG: ${IMAGE_TAG}"
+          echo "🔧 Using components:"
+          echo "  - AWS_ACCOUNT_ID: ${AWS_ACCOUNT_ID}"
+          echo "  - AWS_REGION: ${AWS_REGION}"
+          echo "  - ECR_REPOSITORY: ${ECR_REPOSITORY}"
+          echo "  - IMAGE_TAG: ${IMAGE_TAG}"
 
-        IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
 
-        echo "✅ Reconstructed image URI: ${IMAGE_URI}"
+          echo "✅ Reconstructed image URI: ${IMAGE_URI}"
 
-        # Validate IMAGE_URI format
-        if [[ ! "${IMAGE_URI}" =~ ^[0-9]+\.dkr\.ecr\..+\.amazonaws\.com/.+:.+ ]]; then
-          echo "❌ Invalid IMAGE_URI format: ${IMAGE_URI}"
-          echo "🔍 Expected format: [ACCOUNT_ID].dkr.ecr.[REGION].amazonaws.com/[REPO]:[TAG]"
-          exit 1
-        fi
+          # Validate IMAGE_URI format
+          if [[ ! "${IMAGE_URI}" =~ ^[0-9]+\.dkr\.ecr\..+\.amazonaws\.com/.+:.+ ]]; then
+            echo "❌ Invalid IMAGE_URI format: ${IMAGE_URI}"
+            echo "🔍 Expected format: [ACCOUNT_ID].dkr.ecr.[REGION].amazonaws.com/[REPO]:[TAG]"
+            exit 1
+          fi
 
-        # Output the image URI for use in subsequent steps
-        echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
-        echo "🚀 Final Image URI: ${IMAGE_URI}"
-        echo "✅ Image URI reconstruction completed successfully!"
+          # Output the image URI for use in subsequent steps
+          echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          echo "🚀 Final Image URI: ${IMAGE_URI}"
+          echo "✅ Image URI reconstruction completed successfully!"
 
-    - name: Deploy Backend Infrastructure (Pulumi)
-      id: deploy
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-        DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
-      run: |
-        ENV_NAME="staging"
-        DEPLOYMENT_TYPE="staging"
-        PR_NUMBER=""
-        BRANCH_NAME="develop"
-        CUSTOM_DOMAIN_NAME="${{ vars.CUSTOM_DOMAIN_NAME }}"
-        HOSTED_ZONE_ID="${{ vars.HOSTED_ZONE_ID }}"
-        IMAGE_URI="${{ steps.reconstruct-image-uri.outputs.image-uri }}"
-        STACK_NAME="stg"
+      - name: Deploy Backend Infrastructure (Pulumi)
+        id: deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
+        run: |
+          ENV_NAME="staging"
+          DEPLOYMENT_TYPE="staging"
+          PR_NUMBER=""
+          BRANCH_NAME="develop"
+          CUSTOM_DOMAIN_NAME="${{ vars.CUSTOM_DOMAIN_NAME }}"
+          HOSTED_ZONE_ID="${{ vars.HOSTED_ZONE_ID }}"
+          IMAGE_URI="${{ steps.reconstruct-image-uri.outputs.image-uri }}"
+          STACK_NAME="stg"
 
-        echo "🚀 Starting Pulumi deployment..."
-        echo "Environment: ${ENV_NAME}"
-        echo "Deployment Type: ${DEPLOYMENT_TYPE}"
-        echo "Stack: ${STACK_NAME}"
-        echo "Image URI: ${IMAGE_URI}"
+          echo "🚀 Starting Pulumi deployment..."
+          echo "Environment: ${ENV_NAME}"
+          echo "Deployment Type: ${DEPLOYMENT_TYPE}"
+          echo "Stack: ${STACK_NAME}"
+          echo "Image URI: ${IMAGE_URI}"
 
-        cd infrastructure/pulumi
+          cd infrastructure/pulumi
 
-        # Set Pulumi configuration
-        pulumi config set environmentName "${ENV_NAME}" --stack "${STACK_NAME}"
-        pulumi config set deploymentType "${DEPLOYMENT_TYPE}" --stack "${STACK_NAME}"
-        pulumi config set imageUri "${IMAGE_URI}" --stack "${STACK_NAME}"
+          # Set Pulumi configuration
+          pulumi config set environmentName "${ENV_NAME}" --stack "${STACK_NAME}"
+          pulumi config set deploymentType "${DEPLOYMENT_TYPE}" --stack "${STACK_NAME}"
+          pulumi config set imageUri "${IMAGE_URI}" --stack "${STACK_NAME}"
 
-        # Extract image tag from image URI for ECR verification
-        IMAGE_TAG=$(echo "${IMAGE_URI}" | cut -d':' -f2)
-        echo "🔍 Extracted image tag: ${IMAGE_TAG}"
-        echo "📝 Setting Pulumi config imageTag to: ${IMAGE_TAG}"
-        pulumi config set imageTag "${IMAGE_TAG}" --stack "${STACK_NAME}"
+          # Extract image tag from image URI for ECR verification
+          IMAGE_TAG=$(echo "${IMAGE_URI}" | cut -d':' -f2)
+          echo "🔍 Extracted image tag: ${IMAGE_TAG}"
+          echo "📝 Setting Pulumi config imageTag to: ${IMAGE_TAG}"
+          pulumi config set imageTag "${IMAGE_TAG}" --stack "${STACK_NAME}"
 
-          # Set Doppler token for environment variable injection
-          echo "🔐 Setting Doppler token for environment variable injection..."
-          # Obfuscate token for logging (show first 3 chars + ****)
-          TOKEN_PREFIX=$(echo "${DOPPLER_TOKEN_STAGING}" | cut -c1-3)
-          echo "🔐 Using Doppler token: ${TOKEN_PREFIX}****"
-          pulumi config set doppler:dopplerToken "${DOPPLER_TOKEN_STAGING}" --secret --stack "${STACK_NAME}"
+            # Set Doppler token for environment variable injection
+            echo "🔐 Setting Doppler token for environment variable injection..."
+            # Obfuscate token for logging (show first 3 chars + ****)
+            TOKEN_PREFIX=$(echo "${DOPPLER_TOKEN_STAGING}" | cut -c1-3)
+            echo "🔐 Using Doppler token: ${TOKEN_PREFIX}****"
+            pulumi config set doppler:dopplerToken "${DOPPLER_TOKEN_STAGING}" --secret --stack "${STACK_NAME}"
 
-        if [[ -n "${PR_NUMBER}" ]]; then
-          pulumi config set prNumber "${PR_NUMBER}" --stack "${STACK_NAME}"
-        fi
+          if [[ -n "${PR_NUMBER}" ]]; then
+            pulumi config set prNumber "${PR_NUMBER}" --stack "${STACK_NAME}"
+          fi
 
-        if [[ -n "${BRANCH_NAME}" ]]; then
-          pulumi config set branchName "${BRANCH_NAME}" --stack "${STACK_NAME}"
-        fi
+          if [[ -n "${BRANCH_NAME}" ]]; then
+            pulumi config set branchName "${BRANCH_NAME}" --stack "${STACK_NAME}"
+          fi
 
-        if [[ -n "${CUSTOM_DOMAIN_NAME}" ]]; then
-          pulumi config set customDomainName "${CUSTOM_DOMAIN_NAME}" --stack "${STACK_NAME}"
-        fi
+          if [[ -n "${CUSTOM_DOMAIN_NAME}" ]]; then
+            pulumi config set customDomainName "${CUSTOM_DOMAIN_NAME}" --stack "${STACK_NAME}"
+          fi
 
-        if [[ -n "${HOSTED_ZONE_ID}" ]]; then
-          pulumi config set hostedZoneId "${HOSTED_ZONE_ID}" --stack "${STACK_NAME}"
-        fi
+          if [[ -n "${HOSTED_ZONE_ID}" ]]; then
+            pulumi config set hostedZoneId "${HOSTED_ZONE_ID}" --stack "${STACK_NAME}"
+          fi
 
-        # Verify Doppler token was set correctly
-        echo "🔍 Verifying Doppler token configuration..."
-        if pulumi config get doppler:dopplerToken --stack "${STACK_NAME}" >/dev/null 2>&1; then
-          echo "✅ Doppler token configuration verified"
-        else
-          echo "❌ Failed to verify Doppler token configuration"
-          exit 1
-        fi
+          # Verify Doppler token was set correctly
+          echo "🔍 Verifying Doppler token configuration..."
+          if pulumi config get doppler:dopplerToken --stack "${STACK_NAME}" >/dev/null 2>&1; then
+            echo "✅ Doppler token configuration verified"
+          else
+            echo "❌ Failed to verify Doppler token configuration"
+            exit 1
+          fi
 
-        # Deploy the infrastructure
-        pulumi up --yes --stack "${STACK_NAME}"
+          # Deploy the infrastructure
+          pulumi up --yes --stack "${STACK_NAME}"
 
-        # Get the API endpoint
-        API_ENDPOINT=$(pulumi stack output apiEndpoint --stack "${STACK_NAME}")
-        echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
-        echo "✅ Deployment completed successfully!"
-        echo "🌐 API Endpoint: ${API_ENDPOINT}"
+          # Get the API endpoint
+          API_ENDPOINT=$(pulumi stack output apiEndpoint --stack "${STACK_NAME}")
+          echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
+          echo "✅ Deployment completed successfully!"
+          echo "🌐 API Endpoint: ${API_ENDPOINT}"
 
-    - name: Health Check
-      run: |
-        echo "🔍 Performing health check..."
-        API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}"
-        if [[ -n "${API_ENDPOINT}" ]]; then
-          echo "✅ API Endpoint available: ${API_ENDPOINT}"
-        else
-          echo "⚠️ API Endpoint not available"
-        fi
+      - name: Health Check
+        run: |
+          echo "🔍 Performing health check..."
+          API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}"
+          if [[ -n "${API_ENDPOINT}" ]]; then
+            echo "✅ API Endpoint available: ${API_ENDPOINT}"
+          else
+            echo "⚠️ API Endpoint not available"
+          fi
 
-    - name: Output Results
-      run: |
-        echo "📊 Deployment Results:"
-        echo "  - Environment: staging"
-        echo "  - Stack: stg"
-        echo "  - API Endpoint: ${{ steps.deploy.outputs.api-endpoint }}"
-        echo "  - Image URI: ${{ steps.reconstruct-image-uri.outputs.image-uri }}"
+      - name: Output Results
+        run: |
+          echo "📊 Deployment Results:"
+          echo "  - Environment: staging"
+          echo "  - Stack: stg"
+          echo "  - API Endpoint: ${{ steps.deploy.outputs.api-endpoint }}"
+          echo "  - Image URI: ${{ steps.reconstruct-image-uri.outputs.image-uri }}"
 
   # Deploy frontend using reusable workflow
   deploy-frontend:
@@ -372,104 +372,105 @@ jobs:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       API_KEY: ${{ secrets.API_KEY }}
-    needs: [ change-detection ]
+    needs: [change-detection]
 
   # Schedule automatic teardown at 6 PM
   schedule-teardown:
     name: Schedule Automatic Teardown
     runs-on: ubuntu-latest
-    needs: [ deploy-backend, deploy-frontend ]
+    needs: [deploy-backend, deploy-frontend]
     if: always() && (needs.deploy-backend.result == 'success' || needs.deploy-frontend.result == 'success')
 
     steps:
-    - name: Schedule teardown
-      run: |
-        echo "🕕 Staging environment will be automatically torn down at 6 PM"
-        echo "This helps control costs for the personal project"
-        echo "To prevent teardown, run the workflow with 'force-deploy: true'"
+      - name: Schedule teardown
+        run: |
+          echo "🕕 Staging environment will be automatically torn down at 6 PM"
+          echo "This helps control costs for the personal project"
+          echo "To prevent teardown, run the workflow with 'force-deploy: true'"
 
   # Summary job
   deployment-summary:
     name: Staging Deployment Summary (Pulumi)
     runs-on: ubuntu-latest
-    needs: [ change-detection, deploy-backend, deploy-frontend, schedule-teardown ]
+    needs:
+      [change-detection, deploy-backend, deploy-frontend, schedule-teardown]
     if: always()
 
     steps:
-    - name: Generate deployment summary
-      run: |
-        echo "🚀 Staging deployment completed with Pulumi!"
-        echo "Change Detection: ${{ needs.change-detection.outputs.deployment-scope }}"
-        echo "Backend: ${{ needs.deploy-backend.result == 'success' && 'Deployed' || 'Skipped' }}"
-        echo "Frontend: ${{ needs.deploy-frontend.result == 'success' && 'Deployed' || 'Skipped' }}"
-        echo ""
-        echo "🕕 Automatic teardown scheduled for 6 PM"
-        echo "To prevent teardown, run the workflow with 'force-deploy: true'"
+      - name: Generate deployment summary
+        run: |
+          echo "🚀 Staging deployment completed with Pulumi!"
+          echo "Change Detection: ${{ needs.change-detection.outputs.deployment-scope }}"
+          echo "Backend: ${{ needs.deploy-backend.result == 'success' && 'Deployed' || 'Skipped' }}"
+          echo "Frontend: ${{ needs.deploy-frontend.result == 'success' && 'Deployed' || 'Skipped' }}"
+          echo ""
+          echo "🕕 Automatic teardown scheduled for 6 PM"
+          echo "To prevent teardown, run the workflow with 'force-deploy: true'"
 
-    - name: Create deployment summary comment
-      if: github.event_name == 'push'
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const frontendDeployed = '${{ needs.deploy-frontend.result }}' === 'success';
-          const backendDeployed = '${{ needs.deploy-backend.result }}' === 'success';
-          const deploymentScope = '${{ needs.change-detection.outputs.deployment-scope }}';
+      - name: Create deployment summary comment
+        if: github.event_name == 'push'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const frontendDeployed = '${{ needs.deploy-frontend.result }}' === 'success';
+            const backendDeployed = '${{ needs.deploy-backend.result }}' === 'success';
+            const deploymentScope = '${{ needs.change-detection.outputs.deployment-scope }}';
 
-          // Get deployment details using predictable URLs
-          const customDomain = '${{ vars.CUSTOM_DOMAIN_NAME }}';
-          const appUrl = frontendDeployed ? `https://staging.${customDomain}` : null;
-          const appId = frontendDeployed ? '${{ needs.deploy-frontend.outputs.app-id }}' : null;
-          const backendUrl = backendDeployed ? `https://api-staging.${customDomain}` : null;
-          const backendStack = backendDeployed ? '${{ needs.deploy-backend.outputs.stack-name }}' : null;
+            // Get deployment details using predictable URLs
+            const customDomain = '${{ vars.CUSTOM_DOMAIN_NAME }}';
+            const appUrl = frontendDeployed ? `https://staging.${customDomain}` : null;
+            const appId = frontendDeployed ? '${{ needs.deploy-frontend.outputs.app-id }}' : null;
+            const backendUrl = backendDeployed ? `https://api-staging.${customDomain}` : null;
+            const backendStack = backendDeployed ? '${{ needs.deploy-backend.outputs.stack-name }}' : null;
 
-          const comment = `## 🚀 Staging Environment Deployed Successfully! (Pulumi)
+            const comment = `## 🚀 Staging Environment Deployed Successfully! (Pulumi)
 
-          ### 🌐 Staging URLs
-          - **Frontend**: ${appUrl ? `[${appUrl}](${appUrl})` : 'Not deployed'}
-          - **Backend API**: ${backendUrl || 'Not deployed'}
+            ### 🌐 Staging URLs
+            - **Frontend**: ${appUrl ? `[${appUrl}](${appUrl})` : 'Not deployed'}
+            - **Backend API**: ${backendUrl || 'Not deployed'}
 
-          ### 📋 Deployment Details
-          - **Environment**: \`staging\`
-          - **Infrastructure**: \`Pulumi\` (migrated from CDK)
-          - **Deployment Scope**: \`${deploymentScope}\`
-          - **Amplify App ID**: \`${appId || 'N/A'}\`
-          - **Branch**: \`develop\`
-          - **Backend Status**: ${backendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
-          - **Frontend Status**: ${frontendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
+            ### 📋 Deployment Details
+            - **Environment**: \`staging\`
+            - **Infrastructure**: \`Pulumi\` (migrated from CDK)
+            - **Deployment Scope**: \`${deploymentScope}\`
+            - **Amplify App ID**: \`${appId || 'N/A'}\`
+            - **Branch**: \`develop\`
+            - **Backend Status**: ${backendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
+            - **Frontend Status**: ${frontendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
 
-          ### 🔗 Quick Links
-          ${appId ? `- [AWS Amplify Console](https://console.aws.amazon.com/amplify/home?region=us-east-1#/${appId})` : ''}
-          ${backendStack ? `- [Pulumi Stack](https://app.pulumi.com/orgs/macro-ai/stacks/${backendStack})` : ''}
+            ### 🔗 Quick Links
+            ${appId ? `- [AWS Amplify Console](https://console.aws.amazon.com/amplify/home?region=us-east-1#/${appId})` : ''}
+            ${backendStack ? `- [Pulumi Stack](https://app.pulumi.com/orgs/macro-ai/stacks/${backendStack})` : ''}
 
-          ### 🎯 Change Detection Results
-          - **Backend Changes**: ${{ needs.change-detection.outputs.has-backend-changes == 'true' &&
-            '✅' || '❌' }}
-          - **Frontend Changes**: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' &&
-            '✅' || '❌' }}
-          - **Infrastructure Changes**: ${{ needs.change-detection.outputs.has-infrastructure-changes == 'true' &&
-            '✅' || '❌' }}
+            ### 🎯 Change Detection Results
+            - **Backend Changes**: ${{ needs.change-detection.outputs.has-backend-changes == 'true' &&
+              '✅' || '❌' }}
+            - **Frontend Changes**: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' &&
+              '✅' || '❌' }}
+            - **Infrastructure Changes**: ${{ needs.change-detection.outputs.has-infrastructure-changes == 'true' &&
+              '✅' || '❌' }}
 
-          ### 🕕 Cost Management
-          - **Automatic Teardown**: Scheduled for 6 PM today
-          - **To Prevent Teardown**: Run workflow with \`force-deploy: true\`
-          - **Manual Teardown**: Use the \`teardown-staging.yml\` workflow
+            ### 🕕 Cost Management
+            - **Automatic Teardown**: Scheduled for 6 PM today
+            - **To Prevent Teardown**: Run workflow with \`force-deploy: true\`
+            - **Manual Teardown**: Use the \`teardown-staging.yml\` workflow
 
-          ---
-          *Staging environment now uses Pulumi for infrastructure management with Doppler for secrets.*`;
+            ---
+            *Staging environment now uses Pulumi for infrastructure management with Doppler for secrets.*`;
 
-          // Find the latest commit and comment on it
-          const { data: commits } = await github.rest.repos.listCommits({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            sha: 'develop',
-            per_page: 1
-          });
-
-          if (commits.length > 0) {
-            await github.rest.repos.createCommitComment({
+            // Find the latest commit and comment on it
+            const { data: commits } = await github.rest.repos.listCommits({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              commit_sha: commits[0].sha,
-              body: comment
+              sha: 'develop',
+              per_page: 1
             });
-          }
+
+            if (commits.length > 0) {
+              await github.rest.repos.createCommitComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: commits[0].sha,
+                body: comment
+              });
+            }
