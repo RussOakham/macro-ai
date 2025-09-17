@@ -276,7 +276,7 @@ const allEnvironmentVariables = pulumi
 		envVars.NODE_ENV = 'production'
 		envVars.SERVER_PORT = '3040'
 		envVars.APP_ENV = environmentName
-		
+
 		// Add custom domain name for CORS configuration
 		if (customDomainName) {
 			envVars.CUSTOM_DOMAIN_NAME = customDomainName
