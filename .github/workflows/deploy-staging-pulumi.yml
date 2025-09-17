@@ -320,6 +320,15 @@ jobs:
           pulumi config set hostedZoneId "${HOSTED_ZONE_ID}" --stack "${STACK_NAME}"
         fi
 
+        # Verify Doppler token was set correctly
+        echo "🔍 Verifying Doppler token configuration..."
+        if pulumi config get doppler:dopplerToken --stack "${STACK_NAME}" >/dev/null 2>&1; then
+          echo "✅ Doppler token configuration verified"
+        else
+          echo "❌ Failed to verify Doppler token configuration"
+          exit 1
+        fi
+
         # Deploy the infrastructure
         pulumi up --yes --stack "${STACK_NAME}"
 
