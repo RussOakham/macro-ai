@@ -237,19 +237,23 @@ async function fetchDopplerSecrets(
 	}
 }
 
-// Get Doppler token from Pulumi configuration
+// Get Doppler token from Pulumi configuration or environment variables
 const dopplerToken = config.getSecret('doppler:dopplerToken')
 
 // Create environment variables from Doppler secrets using Node SDK
 const allEnvironmentVariables = pulumi
 	.output(dopplerToken)
 	.apply((token) => {
-		if (!token) {
+		// Fall back to environment variable if Pulumi config is not available (e.g., in CI/CD)
+		const fallbackToken = process.env.DOPPLER_TOKEN || process.env.DOPPLER_TOKEN_STAGING
+		const finalToken = token || fallbackToken
+		
+		if (!finalToken) {
 			throw new Error(
-				'Doppler token not found in Pulumi configuration. Please set doppler:dopplerToken in your stack config.',
+				'Doppler token not found in Pulumi configuration or environment variables. Please set doppler:dopplerToken in your stack config or DOPPLER_TOKEN in environment variables.',
 			)
 		}
-		return fetchDopplerSecrets('macro-ai', dopplerConfig, token)
+		return fetchDopplerSecrets('macro-ai', dopplerConfig, finalToken)
 	})
 	.apply((secrets: Record<string, string>) => {
 		const envVars: Record<string, string> = {}
