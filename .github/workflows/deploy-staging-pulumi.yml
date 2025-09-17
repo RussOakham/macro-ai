@@ -154,7 +154,7 @@ jobs:
             .
 
             echo "✅ Image built and pushed successfully!"
-            # Only output the image tag - no secret-like strings
+            # Only output the image tag - full URI triggers GitHub secret protection
             echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
             echo "📤 Outputting image tag: ${IMAGE_TAG}"
             echo "🔗 Full image URI was: ${IMAGE_URI}"
@@ -220,8 +220,8 @@ jobs:
       - name: Reconstruct image URI from tag
         id: reconstruct-image-uri
         run: |
-          echo "🔍 Starting image URI reconstruction..."
-
+          echo "🔍 Reconstructing image URI from image tag..."
+          
           # Get the image tag from the build step
           IMAGE_TAG="${{ needs.build-express-api.outputs.image-tag }}"
           echo "📥 Received image tag: '${IMAGE_TAG}'"
