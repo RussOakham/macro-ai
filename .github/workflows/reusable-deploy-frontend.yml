@@ -167,11 +167,11 @@ jobs:
           pr-number: ${{ inputs.pr-number }}
           build-mode: ${{ inputs.deployment-type }}
           # Use Doppler synced secrets instead of hardcoded values
-          api-endpoint: ${{ secrets.VITE_API_URL }}
+          api-endpoint: ${{ inputs.backend-url }}
           custom-domain-name: ${{ inputs.custom-domain-name }}
           hosted-zone-id: ${{ inputs.hosted-zone-id }}
           # Use Doppler synced API key
-          api-key: ${{ secrets.VITE_API_KEY }}
+          api-key: ${{ secrets.API_KEY }}
           backend-stack-name: 'placeholder'
           resolution-method: 'artifact-based'
           output-file: '.env.preview'
