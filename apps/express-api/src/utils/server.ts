@@ -51,14 +51,19 @@ const createServer = (): Express => {
 
 		// Pr environments
 		if (config.APP_ENV.startsWith('pr-')) {
+			// For PR environments, the frontend will be on pr-XX.macro-ai.russoakham.dev
+			// while the backend will be on pr-XX-api.macro-ai.russoakham.dev
 			corsOrigins = `https://${config.APP_ENV}.macro-ai.russoakham.dev`
 		}
 	}
 
 	if (config.NODE_ENV === 'production') {
 		// Production and staging environments
-		// CUSTOM_DOMAIN_NAME already includes the full domain (e.g., staging.macro-ai.russoakham.dev)
-		corsOrigins = `https://${process.env.CUSTOM_DOMAIN_NAME ?? ''}`
+		// CUSTOM_DOMAIN_NAME now includes the API subdomain (e.g., staging.api.macro-ai.russoakham.dev)
+		// We need to construct the frontend domain by removing the .api part
+		const apiDomain = process.env.CUSTOM_DOMAIN_NAME ?? ''
+		const frontendDomain = apiDomain.replace('.api.', '.')
+		corsOrigins = `https://${frontendDomain}`
 	}
 
 	logger.info(`[server] CORS: Using origins: ${corsOrigins}`)
