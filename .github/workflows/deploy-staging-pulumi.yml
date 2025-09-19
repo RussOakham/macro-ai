@@ -373,6 +373,8 @@ jobs:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       # Use Doppler synced secrets instead of hardcoded API_KEY
       API_KEY: ${{ secrets.VITE_API_KEY }}
+      VITE_API_URL: ${{ secrets.VITE_API_URL }}
+      VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
     needs: [change-detection]
 
   # Schedule automatic teardown at 6 PM
