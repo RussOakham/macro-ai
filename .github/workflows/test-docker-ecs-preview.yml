@@ -68,22 +68,55 @@ jobs:
       - name: Generate environment file
         id: generate-env
         run: |
-          echo "🔍 Fetching environment variables from Parameter Store..."
+          echo "🔍 Generating environment file from Doppler secrets..."
 
           # Use development parameters for testing
-          PARAM_PATH="/macro-ai/development"
           ENV_FILE="apps/express-api/.env.test"
+          APP_ENV="pr-${{ github.event.number }}"
 
-          echo "📥 Fetching from: ${PARAM_PATH}"
+          echo "📝 App Environment: ${APP_ENV}"
 
-          # Create the environment file using our script
-          chmod +x apps/express-api/scripts/generate-env-from-parameter-store.sh
-          ./apps/express-api/scripts/generate-env-from-parameter-store.sh \
-            "${PARAM_PATH}" \
-            "${{ env.AWS_REGION }}" \
-            "${ENV_FILE}"
+          # Create environment file directly from Doppler secrets
+          cat > "${ENV_FILE}" << EOF
+# Environment configuration for PR testing
+NODE_ENV=test
+APP_ENV=${APP_ENV}
+SERVER_PORT=${{ secrets.SERVER_PORT }}
 
-          echo "✅ Environment file generated"
+# API Configuration
+API_KEY=${{ secrets.API_KEY }}
+
+# AWS Cognito
+AWS_COGNITO_REGION=${{ secrets.AWS_COGNITO_REGION }}
+AWS_COGNITO_USER_POOL_ID=${{ secrets.AWS_COGNITO_USER_POOL_ID }}
+AWS_COGNITO_USER_POOL_CLIENT_ID=${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID }}
+AWS_COGNITO_USER_POOL_SECRET_KEY=${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY }}
+AWS_COGNITO_REFRESH_TOKEN_EXPIRY=${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY }}
+
+# Cookie Settings
+COOKIE_DOMAIN=${{ secrets.COOKIE_DOMAIN }}
+COOKIE_ENCRYPTION_KEY=${{ secrets.COOKIE_ENCRYPTION_KEY }}
+
+# Database
+REDIS_URL=${{ secrets.REDIS_URL }}
+RELATIONAL_DATABASE_URL=${{ secrets.RELATIONAL_DATABASE_URL }}
+
+# OpenAI
+OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=${{ secrets.RATE_LIMIT_WINDOW_MS }}
+RATE_LIMIT_MAX_REQUESTS=${{ secrets.RATE_LIMIT_MAX_REQUESTS }}
+AUTH_RATE_LIMIT_WINDOW_MS=${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS }}
+AUTH_RATE_LIMIT_MAX_REQUESTS=${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS }}
+API_RATE_LIMIT_WINDOW_MS=${{ secrets.API_RATE_LIMIT_WINDOW_MS }}
+API_RATE_LIMIT_MAX_REQUESTS=${{ secrets.API_RATE_LIMIT_MAX_REQUESTS }}
+
+# Cost Alerts
+COST_ALERT_EMAILS=${{ secrets.COST_ALERT_EMAILS }}
+EOF
+
+          echo "✅ Environment file generated from Doppler secrets"
           echo "env-file=${ENV_FILE}" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image

@@ -297,13 +297,13 @@ jobs:
             echo "- **staging.macro-ai.com** is no longer available" >> $GITHUB_STEP_SUMMARY
             echo "- All staging data has been permanently lost" >> $GITHUB_STEP_SUMMARY
             echo "- Frontend staging deployments will fail until backend is redeployed" >> $GITHUB_STEP_SUMMARY
-            echo "- Parameter Store staging configurations remain (manual cleanup required)" >> $GITHUB_STEP_SUMMARY
+            echo "- Doppler staging configurations remain (no cleanup needed)" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### 🔄 Recovery Steps" >> $GITHUB_STEP_SUMMARY
             echo "To restore staging environment:" >> $GITHUB_STEP_SUMMARY
             echo "1. ⚠️ Legacy deployment workflows have been removed during Lambda-to-EC2 migration" >> $GITHUB_STEP_SUMMARY
             echo "2. Use new EC2-based deployment workflows once migration is complete" >> $GITHUB_STEP_SUMMARY
-            echo "3. Update Parameter Store values if needed" >> $GITHUB_STEP_SUMMARY
+            echo "3. Doppler secrets are already configured for staging" >> $GITHUB_STEP_SUMMARY
             echo "4. Redeploy frontend to staging environment" >> $GITHUB_STEP_SUMMARY
           else
             echo "### ❌ STAGING TEARDOWN FAILED" >> $GITHUB_STEP_SUMMARY

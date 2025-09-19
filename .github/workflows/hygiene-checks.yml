@@ -101,11 +101,7 @@ jobs:
             echo "NODE_ENV=${NODE_ENV}"
           } >> "$GITHUB_ENV"
 
-          # Determine parameter store path based on APP_ENV
-          PARAM_PATH="/macro-ai/${APP_ENV}"
-          echo "🔍 Using parameter store path: ${PARAM_PATH}"
-
-          # Fetch all runtime configuration from Parameter Store using environment-specific path
+          # Load environment variables from Doppler secrets
           if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
             echo "🔍 Running in act environment - using mock parameters for local testing"
 
@@ -133,69 +129,51 @@ jobs:
 
             echo "✅ Using mock parameters for local testing"
           else
-            echo "🔍 Running in GitHub Actions - fetching parameters from: ${PARAM_PATH}"
+            echo "🔍 Running in GitHub Actions - using Doppler secrets for environment variables"
 
-            # Function to fetch parameter with error handling
-          fetch_param() {
-            local param_name="$1"
-            local param_path="${PARAM_PATH}/${param_name}"
-            local value
+            # Load environment variables from Doppler secrets (already available as GitHub secrets)
+            AWS_COGNITO_REGION="${{ secrets.AWS_COGNITO_REGION }}"
+            AWS_COGNITO_USER_POOL_ID="${{ secrets.AWS_COGNITO_USER_POOL_ID }}"
+            AWS_COGNITO_USER_POOL_CLIENT_ID="${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID }}"
+            AWS_COGNITO_USER_POOL_SECRET_KEY="${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY }}"
+            AWS_COGNITO_REFRESH_TOKEN_EXPIRY="${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY }}"
 
-            echo "  📥 Fetching: ${param_path}"
-            if value=$(aws ssm get-parameter --name "${param_path}" --with-decryption --query "Parameter.Value" --output text 2>&1); then
-              echo "    ✅ ${param_name}: OK"
-              echo "$value"
-            else
-              echo "    ❌ ${param_name}: FAILED - $value"
-              return 1
+            COOKIE_DOMAIN="${{ secrets.COOKIE_DOMAIN }}"
+            COOKIE_ENCRYPTION_KEY="${{ secrets.COOKIE_ENCRYPTION_KEY }}"
+
+            REDIS_URL="${{ secrets.REDIS_URL }}"
+            RELATIONAL_DATABASE_URL="${{ secrets.RELATIONAL_DATABASE_URL }}"
+
+            OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
+
+            RATE_LIMIT_WINDOW_MS="${{ secrets.RATE_LIMIT_WINDOW_MS }}"
+            RATE_LIMIT_MAX_REQUESTS="${{ secrets.RATE_LIMIT_MAX_REQUESTS }}"
+            AUTH_RATE_LIMIT_WINDOW_MS="${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS }}"
+            AUTH_RATE_LIMIT_MAX_REQUESTS="${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS }}"
+            API_RATE_LIMIT_WINDOW_MS="${{ secrets.API_RATE_LIMIT_WINDOW_MS }}"
+            API_RATE_LIMIT_MAX_REQUESTS="${{ secrets.API_RATE_LIMIT_MAX_REQUESTS }}"
+
+            # Verify all required parameters were loaded
+            echo "🔍 Verifying all required parameters were loaded from Doppler..."
+            required_params=(
+              "AWS_COGNITO_REGION" "AWS_COGNITO_USER_POOL_ID" "AWS_COGNITO_USER_POOL_CLIENT_ID"
+              "AWS_COGNITO_USER_POOL_SECRET_KEY" "COOKIE_ENCRYPTION_KEY" "RELATIONAL_DATABASE_URL" "REDIS_URL"
+              "OPENAI_API_KEY"
+            )
+
+            missing_params=()
+            for param in "${required_params[@]}"; do
+              if [[ -z "${!param}" ]]; then
+                missing_params+=("$param")
+              fi
+            done
+
+            if [[ ${#missing_params[@]} -gt 0 ]]; then
+              echo "❌ Missing required parameters from Doppler: ${missing_params[*]}"
+              exit 1
             fi
-          }
 
-          # Fetch all parameters with error handling
-          AWS_COGNITO_REGION=$(fetch_param "aws-cognito-region")
-          AWS_COGNITO_USER_POOL_ID=$(fetch_param "aws-cognito-user-pool-id")
-          AWS_COGNITO_USER_POOL_CLIENT_ID=$(fetch_param "aws-cognito-user-pool-client-id")
-          AWS_COGNITO_USER_POOL_SECRET_KEY=$(fetch_param "aws-cognito-user-pool-secret-key")
-
-          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=$(fetch_param "aws-cognito-refresh-token-expiry")
-
-          COOKIE_DOMAIN=$(fetch_param "cookie-domain")
-          COOKIE_ENCRYPTION_KEY=$(fetch_param "cookie-encryption-key")
-
-          REDIS_URL=$(fetch_param "redis-url")
-          RELATIONAL_DATABASE_URL=$(fetch_param "relational-database-url")
-
-          OPENAI_API_KEY=$(fetch_param "openai-api-key")
-
-          RATE_LIMIT_WINDOW_MS=$(fetch_param "rate-limit-window-ms")
-          RATE_LIMIT_MAX_REQUESTS=$(fetch_param "rate-limit-max-requests")
-          AUTH_RATE_LIMIT_WINDOW_MS=$(fetch_param "auth-rate-limit-window-ms")
-          AUTH_RATE_LIMIT_MAX_REQUESTS=$(fetch_param "auth-rate-limit-max-requests")
-          API_RATE_LIMIT_WINDOW_MS=$(fetch_param "api-rate-limit-window-ms")
-          API_RATE_LIMIT_MAX_REQUESTS=$(fetch_param "api-rate-limit-max-requests")
-
-          # Verify all required parameters were fetched...
-          echo "🔍 Verifying all required parameters were fetched..."
-          required_params=(
-            "AWS_COGNITO_REGION" "AWS_COGNITO_USER_POOL_ID" "AWS_COGNITO_USER_POOL_CLIENT_ID"
-            		"AWS_COGNITO_USER_POOL_SECRET_KEY" "COOKIE_ENCRYPTION_KEY" "RELATIONAL_DATABASE_URL" "REDIS_URL"
-            "OPENAI_API_KEY"
-          )
-
-          missing_params=()
-          for param in "${required_params[@]}"; do
-            if [[ -z "${!param}" ]]; then
-              missing_params+=("$param")
-            fi
-          done
-
-          if [[ ${#missing_params[@]} -gt 0 ]]; then
-            echo "❌ Missing required parameters: ${missing_params[*]}"
-            exit 1
-          fi
-
-          echo "✅ All required parameters fetched successfully"
-          echo "✅ Environment variables loaded from AWS Parameter Store"
+            echo "✅ All required parameters loaded successfully from Doppler secrets"
 
           # Create .env files using artifacts instead of step outputs to prevent secret exposure
           mkdir -p /tmp/envs

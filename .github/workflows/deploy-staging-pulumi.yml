@@ -365,7 +365,7 @@ jobs:
       deployment-type: staging
       branch-name: develop
       # Use Doppler synced VITE_API_URL as backend-url
-      backend-url: ${{ vars.VITE_API_URL }}
+      backend-url: ${{ secrets.VITE_API_URL }}
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
       should-deploy: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' || github.event.inputs.force-deploy == 'true' }}
