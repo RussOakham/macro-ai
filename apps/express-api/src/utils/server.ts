@@ -57,12 +57,8 @@ const createServer = (): Express => {
 
 	if (config.NODE_ENV === 'production') {
 		// Production and staging environments
+		// CUSTOM_DOMAIN_NAME already includes the full domain (e.g., staging.macro-ai.russoakham.dev)
 		corsOrigins = `https://${process.env.CUSTOM_DOMAIN_NAME ?? ''}`
-
-		// Staging environments
-		if (config.APP_ENV === 'staging') {
-			corsOrigins = `https://staging.${process.env.CUSTOM_DOMAIN_NAME ?? ''}`
-		}
 	}
 
 	logger.info(`[server] CORS: Using origins: ${corsOrigins}`)

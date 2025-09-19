@@ -32,35 +32,49 @@ if (config.NODE_ENV === 'production' && config.REDIS_URL) {
 			logger.warn(
 				`[middleware - rateLimit]: Redis connection error: ${error.message}. Falling back to in-memory rate limiting.`,
 			)
+			// Don't crash the application - just log the error
 		})
 
 		redisClient.on('connect', () => {
 			logger.info('[middleware - rateLimit]: Redis connected successfully')
 		})
 
-		// Attempt to connect to Redis
+		// Attempt to connect to Redis with better error handling
 		redisClient.connect().catch((err: unknown) => {
 			const error = standardizeError(err)
 			logger.warn(
 				`[middleware - rateLimit]: Redis connection failed: ${error.message}. Falling back to in-memory rate limiting.`,
 			)
+			// Don't crash the application - just log the error and continue
 		})
 
 		// Create separate store instances with unique prefixes
-		defaultStore = new RedisStore({
-			sendCommand: (...args: string[]) => redisClient.sendCommand(args),
-			prefix: 'rl:default:',
-		})
+		// Wrap in try-catch to prevent crashes if Redis is unavailable
+		try {
+			defaultStore = new RedisStore({
+				sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+				prefix: 'rl:default:',
+			})
 
-		authStore = new RedisStore({
-			sendCommand: (...args: string[]) => redisClient.sendCommand(args),
-			prefix: 'rl:auth:',
-		})
+			authStore = new RedisStore({
+				sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+				prefix: 'rl:auth:',
+			})
 
-		apiStore = new RedisStore({
-			sendCommand: (...args: string[]) => redisClient.sendCommand(args),
-			prefix: 'rl:api:',
-		})
+			apiStore = new RedisStore({
+				sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+				prefix: 'rl:api:',
+			})
+		} catch (storeError) {
+			const error = standardizeError(storeError)
+			logger.warn(
+				`[middleware - rateLimit]: Failed to create Redis stores: ${error.message}. Falling back to in-memory rate limiting.`,
+			)
+			// Reset stores to undefined to use in-memory fallback
+			defaultStore = undefined
+			authStore = undefined
+			apiStore = undefined
+		}
 
 		logger.info('[middleware - rateLimit]: Using Redis store for rate limiting')
 	} catch (error) {
