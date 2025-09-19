@@ -171,63 +171,6 @@ const dopplerConfig = (() => {
 	return environmentName
 })()
 
-// Helper function to parse ASCII table values
-function parseAsciiTableValue(tableString: string): string {
-	const lines = tableString.split('\n')
-	const valueLines: string[] = []
-
-	for (let i = 1; i < lines.length; i++) {
-		// Skip header row
-		const line = lines[i]
-		if (
-			line &&
-			line.includes('│') &&
-			!line.includes('├') &&
-			!line.includes('└') &&
-			!line.includes('NAME')
-		) {
-			// Extract the VALUE column (second column)
-			const parts = line.split('│')
-			if (parts.length >= 3) {
-				const value = parts[2]?.trim()
-				if (value && value !== '' && value !== 'VALUE') {
-					valueLines.push(value)
-				}
-			}
-		}
-	}
-
-	return valueLines.join('')
-}
-
-// Helper function to process a single secret
-function processSecret(
-	key: string,
-	secretObj: { computed?: string },
-): null | string {
-	if (!secretObj?.computed) {
-		return null
-	}
-
-	// For secrets that are already plain strings (like DOPPLER_*)
-	if (
-		typeof secretObj.computed === 'string' &&
-		!secretObj.computed.includes('┌')
-	) {
-		return secretObj.computed
-	}
-
-	// For secrets that are in ASCII table format, parse them
-	if (
-		typeof secretObj.computed === 'string' &&
-		secretObj.computed.includes('┌')
-	) {
-		return parseAsciiTableValue(secretObj.computed)
-	}
-
-	return null
-}
-
 // Function to fetch secrets using Doppler Node SDK
 async function fetchDopplerSecrets(
 	project: string,
@@ -246,12 +189,11 @@ async function fetchDopplerSecrets(
 		}
 
 		// Convert the response to a simple key-value object
-		const secrets: Record<string, string> = {}
+		const secrets: Record<string, boolean | number | string> = {}
 
 		Object.entries(response.secrets).forEach(([key, secretObj]) => {
-			const value = processSecret(key, secretObj as { computed?: string })
-			if (value !== null) {
-				secrets[key] = value
+			if (secretObj?.computed !== undefined && secretObj?.computed !== null) {
+				secrets[key] = secretObj.computed
 			}
 		})
 
@@ -281,7 +223,7 @@ const allEnvironmentVariables = pulumi
 		}
 		return fetchDopplerSecrets('macro-ai', dopplerConfig, finalToken)
 	})
-	.apply((secrets: Record<string, string>) => {
+	.apply((secrets: Record<string, boolean | number | string>) => {
 		const envVars: Record<string, string> = {}
 
 		// Process secrets from the Node SDK response (direct JSON object)
