@@ -25,9 +25,12 @@ if (config.NODE_ENV === 'production' && config.REDIS_URL) {
 		})
 
 		// Test the connection
-		redis.ping()
+		redis
+			.ping()
 			.then(() => {
-				logger.info('[middleware - rateLimit]: Upstash Redis connected successfully')
+				logger.info(
+					'[middleware - rateLimit]: Upstash Redis connected successfully',
+				)
 				return undefined
 			})
 			.catch((err: unknown) => {
@@ -44,7 +47,9 @@ if (config.NODE_ENV === 'production' && config.REDIS_URL) {
 		authStore = createUpstashStore(redis, 'rl:auth:')
 		apiStore = createUpstashStore(redis, 'rl:api:')
 
-		logger.info('[middleware - rateLimit]: Using Upstash Redis store for rate limiting')
+		logger.info(
+			'[middleware - rateLimit]: Using Upstash Redis store for rate limiting',
+		)
 	} catch (error) {
 		const err = standardizeError(error)
 		logger.warn(
@@ -63,19 +68,21 @@ function createUpstashStore(redis: Redis, prefix: string) {
 				const windowMs = 15 * 60 * 1000 // Default window size
 				const window = Math.floor(now / windowMs)
 				const keyWithWindow = `${fullKey}:${window}`
-				
+
 				// Increment the counter and set expiration
 				const pipeline = redis.pipeline()
 				pipeline.incr(keyWithWindow)
 				pipeline.expire(keyWithWindow, Math.ceil(windowMs / 1000))
-				
+
 				const results = await pipeline.exec()
 				return {
 					totalHits: results[0] as number,
 					resetTime: new Date((window + 1) * windowMs),
 				}
 			} catch (error) {
-				logger.warn(`[middleware - rateLimit]: Redis operation failed: ${error}. Falling back to in-memory.`)
+				logger.warn(
+					`[middleware - rateLimit]: Redis operation failed: ${error}. Falling back to in-memory.`,
+				)
 				// Return a fallback response
 				return {
 					totalHits: 1,
@@ -92,7 +99,9 @@ function createUpstashStore(redis: Redis, prefix: string) {
 					await redis.decr(keys[0])
 				}
 			} catch (error) {
-				logger.warn(`[middleware - rateLimit]: Redis decrement failed: ${error}`)
+				logger.warn(
+					`[middleware - rateLimit]: Redis decrement failed: ${error}`,
+				)
 			}
 		},
 		async resetKey(key: string) {
