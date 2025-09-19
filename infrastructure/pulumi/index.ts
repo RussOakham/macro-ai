@@ -21,19 +21,20 @@ const baseDomainName =
 const hostedZoneId = config.get('hostedZoneId')
 
 // Construct the full custom domain name based on environment
+// Backend should use API subdomain to avoid conflicts with frontend
 let customDomainName: string | undefined
 if (hostedZoneId) {
 	if (environmentName === 'staging') {
-		customDomainName = `staging.${baseDomainName}`
+		customDomainName = `staging.api.${baseDomainName}`
 	} else if (environmentName === 'production' || environmentName === 'prd') {
-		customDomainName = baseDomainName
+		customDomainName = `api.${baseDomainName}`
 	} else if (environmentName.startsWith('pr-')) {
-		// For preview environments, use the PR number as subdomain
+		// For preview environments, use the PR number as subdomain with API prefix
 		const prNumber = environmentName.replace('pr-', '')
-		customDomainName = `pr-${prNumber}.${baseDomainName}`
+		customDomainName = `pr-${prNumber}.api.${baseDomainName}`
 	} else {
-		// For dev environment, use dev subdomain
-		customDomainName = `dev.${baseDomainName}`
+		// For dev environment, use dev subdomain with API prefix
+		customDomainName = `dev.api.${baseDomainName}`
 	}
 }
 
