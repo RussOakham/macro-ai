@@ -119,7 +119,8 @@ jobs:
           matrix="{ \"include\": [$base_tests$e2e_test] }"
 
           # Convert matrix to single line to avoid GitHub Actions output issues
-          matrix_single_line=$(echo "$matrix" | tr -d '\n' | sed 's/  */ /g')
+          matrix_single_line=$(echo "$matrix" | tr -d '\n')
+          matrix_single_line=${matrix_single_line//  */ }
           echo "matrix=$matrix_single_line" >> $GITHUB_OUTPUT
           echo "📊 Test matrix created:"
           echo "$matrix"
@@ -170,26 +171,28 @@ jobs:
           mkdir -p ${{ matrix.package }}
 
           # Set environment variables for Express API tests (needed for API client build)
-          echo "NODE_ENV=test" >> $GITHUB_ENV
-          echo "APP_ENV=test" >> $GITHUB_ENV
-          echo "SERVER_PORT=3000" >> $GITHUB_ENV
-          echo "API_KEY=local-test-api-key-not-a-real-secret-for-testing-purposes" >> $GITHUB_ENV
-          echo "AWS_COGNITO_REGION=us-east-1" >> $GITHUB_ENV
-          echo "AWS_COGNITO_USER_POOL_ID=test-pool-id" >> $GITHUB_ENV
-          echo "AWS_COGNITO_USER_POOL_CLIENT_ID=test-client-id" >> $GITHUB_ENV
-          echo "AWS_COGNITO_USER_POOL_SECRET_KEY=local-test-cognito-secret-not-real" >> $GITHUB_ENV
-          echo "COOKIE_ENCRYPTION_KEY=local-test-cookie-key-not-real-32-chars-minimum" >> $GITHUB_ENV
-          echo "REDIS_URL=redis://localhost:6379" >> $GITHUB_ENV
-          echo "RELATIONAL_DATABASE_URL=postgres://test:test@localhost:5432/test_db" >> $GITHUB_ENV
-          echo "OPENAI_API_KEY=sk-local-test-openai-key-not-real-for-testing" >> $GITHUB_ENV
-          echo "COOKIE_DOMAIN=localhost" >> $GITHUB_ENV
-          echo "AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30" >> $GITHUB_ENV
-          echo "RATE_LIMIT_WINDOW_MS=900000" >> $GITHUB_ENV
-          echo "RATE_LIMIT_MAX_REQUESTS=100" >> $GITHUB_ENV
-          echo "AUTH_RATE_LIMIT_WINDOW_MS=3600000" >> $GITHUB_ENV
-          echo "AUTH_RATE_LIMIT_MAX_REQUESTS=10" >> $GITHUB_ENV
-          echo "API_RATE_LIMIT_WINDOW_MS=60000" >> $GITHUB_ENV
-          echo "API_RATE_LIMIT_MAX_REQUESTS=60" >> $GITHUB_ENV
+          {
+            echo "NODE_ENV=test"
+            echo "APP_ENV=test"
+            echo "SERVER_PORT=3000"
+            echo "API_KEY=local-test-api-key-not-a-real-secret-for-testing-purposes"
+            echo "AWS_COGNITO_REGION=us-east-1"
+            echo "AWS_COGNITO_USER_POOL_ID=test-pool-id"
+            echo "AWS_COGNITO_USER_POOL_CLIENT_ID=test-client-id"
+            echo "AWS_COGNITO_USER_POOL_SECRET_KEY=local-test-cognito-secret-not-real"
+            echo "COOKIE_ENCRYPTION_KEY=local-test-cookie-key-not-real-32-chars-minimum"
+            echo "REDIS_URL=redis://localhost:6379"
+            echo "RELATIONAL_DATABASE_URL=postgres://test:test@localhost:5432/test_db"
+            echo "OPENAI_API_KEY=sk-local-test-openai-key-not-real-for-testing"
+            echo "COOKIE_DOMAIN=localhost"
+            echo "AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30"
+            echo "RATE_LIMIT_WINDOW_MS=900000"
+            echo "RATE_LIMIT_MAX_REQUESTS=100"
+            echo "AUTH_RATE_LIMIT_WINDOW_MS=3600000"
+            echo "AUTH_RATE_LIMIT_MAX_REQUESTS=10"
+            echo "API_RATE_LIMIT_WINDOW_MS=60000"
+            echo "API_RATE_LIMIT_MAX_REQUESTS=60"
+          } >> $GITHUB_ENV
 
           # Basic test environment variables (for other packages)
           cat > ${{ matrix.package }}/.env.test << EOF

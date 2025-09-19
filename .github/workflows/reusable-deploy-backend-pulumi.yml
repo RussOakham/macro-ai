@@ -36,6 +36,11 @@ on:
         required: false
         type: boolean
         default: true
+      deployment-scale:
+        description: 'Deployment scale (preview, staging, production)'
+        required: false
+        type: string
+        default: 'staging'
     secrets:
       AWS_ACCOUNT_ID:
         required: true

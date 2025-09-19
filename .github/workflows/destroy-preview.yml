@@ -69,7 +69,7 @@ jobs:
         run: |
           ENV_NAME="pr-${{ github.event.pull_request.number }}"
           # Capitalize first letter for stack name (pr-123 -> Pr-123)
-          STACK_NAME="MacroAi$(echo "${ENV_NAME}" | sed 's/^./\U&/')Stack"
+          STACK_NAME="MacroAi${ENV_NAME^}Stack"
           echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
           echo "Stack name: ${STACK_NAME}"
 

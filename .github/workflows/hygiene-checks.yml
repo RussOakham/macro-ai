@@ -96,8 +96,10 @@ jobs:
           echo "✅ Environment configuration: APP_ENV=${APP_ENV}, NODE_ENV=${NODE_ENV}"
 
           # Set workflow environment variables for all jobs
-          echo "APP_ENV=${APP_ENV}" >> $GITHUB_ENV
-          echo "NODE_ENV=${NODE_ENV}" >> $GITHUB_ENV
+          {
+            echo "APP_ENV=${APP_ENV}"
+            echo "NODE_ENV=${NODE_ENV}"
+          } >> "$GITHUB_ENV"
 
           # Determine parameter store path based on APP_ENV
           PARAM_PATH="/macro-ai/${APP_ENV}"
@@ -140,9 +142,7 @@ jobs:
             local value
 
             echo "  📥 Fetching: ${param_path}"
-            value=$(aws ssm get-parameter --name "${param_path}" --with-decryption --query "Parameter.Value" --output text 2>&1)
-
-            if [ $? -eq 0 ]; then
+            if value=$(aws ssm get-parameter --name "${param_path}" --with-decryption --query "Parameter.Value" --output text 2>&1); then
               echo "    ✅ ${param_name}: OK"
               echo "$value"
             else
@@ -783,11 +783,11 @@ jobs:
                 0;
               }
             ")
-            echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
-            echo "✅ Coverage extracted: $COVERAGE%"
+            echo "percentage=${COVERAGE}" >> "$GITHUB_OUTPUT"
+            echo "✅ Coverage extracted: ${COVERAGE}%"
           else
             echo "⚠️ Coverage file not found, setting coverage to 0%"
-            echo "percentage=0" >> $GITHUB_OUTPUT
+            echo "percentage=0" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create coverage badge
@@ -858,20 +858,22 @@ jobs:
 
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "🔎 Validating changed workflow files..."
-            git fetch --no-tags --depth=2 origin ${GITHUB_BASE_REF:-main}
+            git fetch --no-tags --depth=2 origin "${GITHUB_BASE_REF:-main}"
             CHANGED=$(git diff --name-only "origin/${GITHUB_BASE_REF:-main}" | grep '^\.github/workflows/' || true)
             if [[ -z "$CHANGED" ]]; then
               echo "No changed workflow files; running full validation as a fallback"
               actionlint -color || {
-                echo ""
-                echo "⚠️  ACTIONLINT FOUND ISSUES (treated as warnings)"
-                echo "📝 Please review the issues above and address them in a follow-up PR"
-                echo "✅ Continuing build despite actionlint findings..."
+                {
+                  echo ""
+                  echo "⚠️  ACTIONLINT FOUND ISSUES (treated as warnings)"
+                  echo "📝 Please review the issues above and address them in a follow-up PR"
+                  echo "✅ Continuing build despite actionlint findings..."
+                }
               }
             else
               echo "Changed workflows:"; echo "$CHANGED"
               # actionlint accepts file paths directly
-              actionlint -color $CHANGED || {
+              actionlint -color "$CHANGED" || {
                 echo ""
                 echo "⚠️  ACTIONLINT FOUND ISSUES (treated as warnings)"
                 echo "📝 Please review the issues above and address them in a follow-up PR"
