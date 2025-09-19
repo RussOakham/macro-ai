@@ -551,10 +551,22 @@ if (customDomainName && hostedZoneId) {
 		},
 	})
 
-	// Create DNS validation records
+	// Create DNS validation records with deduplication and overwrite protection
 	const certificateValidationRecords =
-		certificate.domainValidationOptions.apply((options) =>
-			options.map(
+		certificate.domainValidationOptions.apply((options) => {
+			// Deduplicate validation options to prevent duplicate records
+			const uniqueOptions = options.filter(
+				(option, index, self) =>
+					index ===
+					self.findIndex(
+						(o) =>
+							o.resourceRecordName === option.resourceRecordName &&
+							o.resourceRecordType === option.resourceRecordType &&
+							o.resourceRecordValue === option.resourceRecordValue,
+					),
+			)
+
+			return uniqueOptions.map(
 				(option, index) =>
 					new aws.route53.Record(
 						`macro-ai-wildcard-certificate-validation-${index}`,
@@ -564,10 +576,11 @@ if (customDomainName && hostedZoneId) {
 							ttl: 60,
 							type: option.resourceRecordType,
 							zoneId: hostedZoneId,
+							allowOverwrite: true, // Allow overwriting existing records
 						},
 					),
-			),
-		)
+			)
+		})
 
 	// Validate the certificate
 	const certificateValidation = new aws.acm.CertificateValidation(
