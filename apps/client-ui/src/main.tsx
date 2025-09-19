@@ -4,6 +4,7 @@ import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 
+// Test Doppler integration for frontend environment variables
 import { AuthRouteLoading } from './components/auth/auth-route-loading.tsx'
 import { ThemeProvider } from './components/providers/theme-provider.tsx'
 import { AppWrapper } from './lib/app-wrapper.tsx'
