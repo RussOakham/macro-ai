@@ -537,12 +537,18 @@ if (customDomainName && hostedZoneId) {
 	console.log('🌐 Setting up custom domain:', customDomainName)
 
 	// Smart certificate management: Always create/update certificate for zero-downtime deployments
-	// This covers: macro-ai.russoakham.dev, *.russoakham.dev (staging, dev, pr-*, etc.)
+	// This covers: 
+	// - macro-ai.russoakham.dev (base domain)
+	// - *.macro-ai.russoakham.dev (staging, dev, pr-*, etc.)
+	// - *.api.macro-ai.russoakham.dev (staging.api, dev.api, pr-*.api, etc.)
 	// Pulumi will handle reuse automatically - if certificate exists with same name, it reuses it
 
 	const certificate = new aws.acm.Certificate('macro-ai-wildcard-certificate', {
 		domainName: baseDomainName,
-		subjectAlternativeNames: [`*.${baseDomainName}`],
+		subjectAlternativeNames: [
+			`*.${baseDomainName}`,
+			`*.api.${baseDomainName}`,
+		],
 		validationMethod: 'DNS',
 		tags: {
 			Name: 'macro-ai-wildcard-certificate',
