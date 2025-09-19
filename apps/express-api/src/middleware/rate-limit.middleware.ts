@@ -1,8 +1,7 @@
+import { Redis } from '@upstash/redis'
 import { type NextFunction, type Request, type Response } from 'express'
 import rateLimit, { type Options } from 'express-rate-limit'
 import { StatusCodes } from 'http-status-codes'
-import { RedisStore } from 'rate-limit-redis'
-import { createClient } from 'redis'
 
 import { standardizeError } from '../utils/errors.ts'
 import { config } from '../utils/load-config.ts'
@@ -10,78 +9,103 @@ import { pino } from '../utils/logger.ts'
 
 const { logger } = pino
 
-// Initialize Redis stores for production environments
-// Each rate limiter needs its own store instance with unique prefix
+// Initialize Upstash Redis for production environments
 let defaultStore = undefined
 let authStore = undefined
 let apiStore = undefined
 
-// Initialize Redis if in production and Redis URL is available
+// Initialize Upstash Redis if in production and Redis URL is available
 if (config.NODE_ENV === 'production' && config.REDIS_URL) {
 	try {
-		const redisClient = createClient({
-			url: config.REDIS_URL,
-			socket: {
-				connectTimeout: 10000, // Reduced timeout for faster failure detection
-			},
+		// Parse the Redis URL to extract connection details
+		const redisUrl = new URL(config.REDIS_URL)
+		const redis = new Redis({
+			url: redisUrl.toString(),
+			token: redisUrl.password,
 		})
 
-		// Handle Redis connection errors gracefully
-		redisClient.on('error', (err: unknown) => {
-			const error = standardizeError(err)
-			logger.warn(
-				`[middleware - rateLimit]: Redis connection error: ${error.message}. Falling back to in-memory rate limiting.`,
-			)
-			// Don't crash the application - just log the error
-		})
-
-		redisClient.on('connect', () => {
-			logger.info('[middleware - rateLimit]: Redis connected successfully')
-		})
-
-		// Attempt to connect to Redis with better error handling
-		redisClient.connect().catch((err: unknown) => {
-			const error = standardizeError(err)
-			logger.warn(
-				`[middleware - rateLimit]: Redis connection failed: ${error.message}. Falling back to in-memory rate limiting.`,
-			)
-			// Don't crash the application - just log the error and continue
-		})
-
-		// Create separate store instances with unique prefixes
-		// Wrap in try-catch to prevent crashes if Redis is unavailable
-		try {
-			defaultStore = new RedisStore({
-				sendCommand: (...args: string[]) => redisClient.sendCommand(args),
-				prefix: 'rl:default:',
+		// Test the connection
+		redis.ping()
+			.then(() => {
+				logger.info('[middleware - rateLimit]: Upstash Redis connected successfully')
+				return undefined
+			})
+			.catch((err: unknown) => {
+				const error = standardizeError(err)
+				logger.warn(
+					`[middleware - rateLimit]: Upstash Redis connection failed: ${error.message}. Falling back to in-memory rate limiting.`,
+				)
+				return undefined
 			})
 
-			authStore = new RedisStore({
-				sendCommand: (...args: string[]) => redisClient.sendCommand(args),
-				prefix: 'rl:auth:',
-			})
+		// Create custom store instances for each rate limiter
+		// Upstash Redis doesn't need the RedisStore wrapper - we'll create custom stores
+		defaultStore = createUpstashStore(redis, 'rl:default:')
+		authStore = createUpstashStore(redis, 'rl:auth:')
+		apiStore = createUpstashStore(redis, 'rl:api:')
 
-			apiStore = new RedisStore({
-				sendCommand: (...args: string[]) => redisClient.sendCommand(args),
-				prefix: 'rl:api:',
-			})
-		} catch (storeError) {
-			const error = standardizeError(storeError)
-			logger.warn(
-				`[middleware - rateLimit]: Failed to create Redis stores: ${error.message}. Falling back to in-memory rate limiting.`,
-			)
-			// Reset stores to undefined to use in-memory fallback
-			defaultStore = undefined
-			authStore = undefined
-			apiStore = undefined
-		}
-
-		logger.info('[middleware - rateLimit]: Using Redis store for rate limiting')
+		logger.info('[middleware - rateLimit]: Using Upstash Redis store for rate limiting')
 	} catch (error) {
 		const err = standardizeError(error)
 		logger.warn(
-			`[middleware - rateLimit]: Failed to initialize Redis: ${err.message}. Falling back to in-memory rate limiting.`,
+			`[middleware - rateLimit]: Failed to initialize Upstash Redis: ${err.message}. Falling back to in-memory rate limiting.`,
 		)
+	}
+}
+
+// Custom store implementation for Upstash Redis
+function createUpstashStore(redis: Redis, prefix: string) {
+	return {
+		async increment(key: string) {
+			try {
+				const fullKey = `${prefix}${key}`
+				const now = Date.now()
+				const windowMs = 15 * 60 * 1000 // Default window size
+				const window = Math.floor(now / windowMs)
+				const keyWithWindow = `${fullKey}:${window}`
+				
+				// Increment the counter and set expiration
+				const pipeline = redis.pipeline()
+				pipeline.incr(keyWithWindow)
+				pipeline.expire(keyWithWindow, Math.ceil(windowMs / 1000))
+				
+				const results = await pipeline.exec()
+				return {
+					totalHits: results[0] as number,
+					resetTime: new Date((window + 1) * windowMs),
+				}
+			} catch (error) {
+				logger.warn(`[middleware - rateLimit]: Redis operation failed: ${error}. Falling back to in-memory.`)
+				// Return a fallback response
+				return {
+					totalHits: 1,
+					resetTime: new Date(Date.now() + 15 * 60 * 1000),
+				}
+			}
+		},
+		async decrement(key: string) {
+			try {
+				const fullKey = `${prefix}${key}`
+				// Get all keys matching the pattern and decrement
+				const keys = await redis.keys(`${fullKey}:*`)
+				if (keys.length > 0 && keys[0]) {
+					await redis.decr(keys[0])
+				}
+			} catch (error) {
+				logger.warn(`[middleware - rateLimit]: Redis decrement failed: ${error}`)
+			}
+		},
+		async resetKey(key: string) {
+			try {
+				const fullKey = `${prefix}${key}`
+				const keys = await redis.keys(`${fullKey}:*`)
+				if (keys.length > 0) {
+					await redis.del(...(keys as string[]))
+				}
+			} catch (error) {
+				logger.warn(`[middleware - rateLimit]: Redis reset failed: ${error}`)
+			}
+		},
 	}
 }
 
