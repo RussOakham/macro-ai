@@ -154,6 +154,19 @@ runs:
           echo "🌐 Using custom domain pattern API endpoint: $CUSTOM_API_URL"
           echo "📝 Custom domain: ${{ inputs.custom-domain-name }}"
           echo "📝 PR number: ${{ inputs.pr-number }}"
+        elif [[ -n "${{ inputs.custom-domain-name }}" ]]; then
+          # For staging/production, use custom domain pattern
+          if [[ "${{ inputs.environment-name }}" == "staging" ]]; then
+            CUSTOM_API_URL="https://staging.api.${{ inputs.custom-domain-name }}/api"
+          elif [[ "${{ inputs.environment-name }}" == "production" ]]; then
+            CUSTOM_API_URL="https://api.${{ inputs.custom-domain-name }}/api"
+          else
+            CUSTOM_API_URL="https://${{ inputs.environment-name }}.api.${{ inputs.custom-domain-name }}/api"
+          fi
+          export VITE_API_URL="$CUSTOM_API_URL"
+          echo "🌐 Using custom domain pattern API endpoint: $CUSTOM_API_URL"
+          echo "📝 Custom domain: ${{ inputs.custom-domain-name }}"
+          echo "📝 Environment: ${{ inputs.environment-name }}"
         fi
 
         # Set backend metadata if provided

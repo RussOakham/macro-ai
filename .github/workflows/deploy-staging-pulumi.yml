@@ -364,14 +364,15 @@ jobs:
       environment-name: staging
       deployment-type: staging
       branch-name: develop
-      backend-url: ${{ format('https://api-staging.{0}', vars.CUSTOM_DOMAIN_NAME) }}
+      # Remove hardcoded backend-url - let Doppler provide VITE_API_URL
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
       should-deploy: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' || github.event.inputs.force-deploy == 'true' }}
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      API_KEY: ${{ secrets.API_KEY }}
+      # Use Doppler synced secrets instead of hardcoded API_KEY
+      API_KEY: ${{ secrets.VITE_API_KEY }}
     needs: [change-detection]
 
   # Schedule automatic teardown at 6 PM
