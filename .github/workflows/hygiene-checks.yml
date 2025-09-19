@@ -384,12 +384,12 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
 
           # Rate Limiting
-          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
-          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
-          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
-          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
-          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
 
   lint:
     needs: setup
@@ -527,12 +527,12 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
 
           # Rate Limiting
-          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
-          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
-          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
-          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
-          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
 
       - name: Generate MSW handlers
         run: |
@@ -572,12 +572,12 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
 
           # Rate Limiting
-          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
-          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
-          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
-          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
-          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
 
   test:
     needs: setup
@@ -706,12 +706,12 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
 
           # Rate Limiting
-          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
-          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
-          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
-          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
-          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
 
       - name: Generate MSW handlers
         run: |
@@ -748,12 +748,12 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
 
           # Rate Limiting
-          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
-          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
-          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
-          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
-          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
@@ -1052,12 +1052,12 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
 
           # Rate Limiting
-          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
-          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
-          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
-          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
-          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
 
       - name: Generate MSW handlers
         run: |
@@ -1095,12 +1095,12 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
 
           # Rate Limiting
-          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || 900000 }}
-          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || 100 }}
-          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || 3600000 }}
-          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || 10 }}
-          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || 60000 }}
-          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || 60 }}
+          RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
+          RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
+          AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
+          AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
+          API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
+          API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
 
       # Snyk Security Scanning
       - name: Run Snyk to check for vulnerabilities
