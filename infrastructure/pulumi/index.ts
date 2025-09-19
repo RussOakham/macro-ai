@@ -542,17 +542,20 @@ if (customDomainName && hostedZoneId) {
 	// - *.api.macro-ai.russoakham.dev (staging.api, dev.api, pr-*.api, etc.)
 	// Pulumi will handle reuse automatically - if certificate exists with same name, it reuses it
 
-	const certificate = new aws.acm.Certificate('macro-ai-api-wildcard-certificate', {
-		domainName: `api.${baseDomainName}`,
-		subjectAlternativeNames: [`*.api.${baseDomainName}`],
-		validationMethod: 'DNS',
-		tags: {
-			Name: 'macro-ai-api-wildcard-certificate',
-			Environment: 'shared',
-			Project: 'MacroAI',
-			Component: 'backend-certificate',
+	const certificate = new aws.acm.Certificate(
+		'macro-ai-api-wildcard-certificate',
+		{
+			domainName: `api.${baseDomainName}`,
+			subjectAlternativeNames: [`*.api.${baseDomainName}`],
+			validationMethod: 'DNS',
+			tags: {
+				Name: 'macro-ai-api-wildcard-certificate',
+				Environment: 'shared',
+				Project: 'MacroAI',
+				Component: 'backend-certificate',
+			},
 		},
-	})
+	)
 
 	// Create DNS validation records with deduplication and overwrite protection
 	const certificateValidationRecords =
