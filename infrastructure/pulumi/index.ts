@@ -536,25 +536,21 @@ let httpsListener: aws.lb.Listener | undefined
 if (customDomainName && hostedZoneId) {
 	console.log('🌐 Setting up custom domain:', customDomainName)
 
-	// Smart certificate management: Always create/update certificate for zero-downtime deployments
-	// This covers: 
-	// - macro-ai.russoakham.dev (base domain)
-	// - *.macro-ai.russoakham.dev (staging, dev, pr-*, etc.)
+	// Backend certificate management: Focus only on API subdomains
+	// Frontend certificates are managed by AWS Amplify automatically
+	// This covers:
 	// - *.api.macro-ai.russoakham.dev (staging.api, dev.api, pr-*.api, etc.)
 	// Pulumi will handle reuse automatically - if certificate exists with same name, it reuses it
 
-	const certificate = new aws.acm.Certificate('macro-ai-wildcard-certificate', {
-		domainName: baseDomainName,
-		subjectAlternativeNames: [
-			`*.${baseDomainName}`,
-			`*.api.${baseDomainName}`,
-		],
+	const certificate = new aws.acm.Certificate('macro-ai-api-wildcard-certificate', {
+		domainName: `api.${baseDomainName}`,
+		subjectAlternativeNames: [`*.api.${baseDomainName}`],
 		validationMethod: 'DNS',
 		tags: {
-			Name: 'macro-ai-wildcard-certificate',
+			Name: 'macro-ai-api-wildcard-certificate',
 			Environment: 'shared',
 			Project: 'MacroAI',
-			Component: 'certificate',
+			Component: 'backend-certificate',
 		},
 	})
 
@@ -576,7 +572,7 @@ if (customDomainName && hostedZoneId) {
 			return uniqueOptions.map(
 				(option, index) =>
 					new aws.route53.Record(
-						`macro-ai-wildcard-certificate-validation-${index}`,
+						`macro-ai-api-wildcard-certificate-validation-${index}`,
 						{
 							name: option.resourceRecordName,
 							records: [option.resourceRecordValue],
@@ -591,7 +587,7 @@ if (customDomainName && hostedZoneId) {
 
 	// Validate the certificate
 	const certificateValidation = new aws.acm.CertificateValidation(
-		'macro-ai-wildcard-certificate-validation',
+		'macro-ai-api-wildcard-certificate-validation',
 		{
 			certificateArn: certificate.arn,
 			validationRecordFqdns: certificateValidationRecords.apply((records) =>
