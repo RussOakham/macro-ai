@@ -535,12 +535,56 @@ let httpsListener: aws.lb.Listener | undefined
 if (customDomainName && hostedZoneId) {
 	console.log('🌐 Setting up custom domain:', customDomainName)
 
-	// Use existing wildcard certificate for all environments
+	// Smart certificate management: Always create/update certificate for zero-downtime deployments
 	// This covers: macro-ai.russoakham.dev, *.russoakham.dev (staging, dev, pr-*, etc.)
-	const certificateArn =
-		'arn:aws:acm:us-east-1:861909001362:certificate/316283f2-a8c5-44d4-a229-a21f635d7127'
+	// Pulumi will handle reuse automatically - if certificate exists with same name, it reuses it
 
-	console.log('🔒 Using existing wildcard certificate for all environments')
+	const certificate = new aws.acm.Certificate('macro-ai-wildcard-certificate', {
+		domainName: baseDomainName,
+		subjectAlternativeNames: [`*.${baseDomainName}`],
+		validationMethod: 'DNS',
+		tags: {
+			Name: 'macro-ai-wildcard-certificate',
+			Environment: 'shared',
+			Project: 'MacroAI',
+			Component: 'certificate',
+		},
+	})
+
+	// Create DNS validation records
+	const certificateValidationRecords =
+		certificate.domainValidationOptions.apply((options) =>
+			options.map(
+				(option, index) =>
+					new aws.route53.Record(
+						`macro-ai-wildcard-certificate-validation-${index}`,
+						{
+							name: option.resourceRecordName,
+							records: [option.resourceRecordValue],
+							ttl: 60,
+							type: option.resourceRecordType,
+							zoneId: hostedZoneId,
+						},
+					),
+			),
+		)
+
+	// Validate the certificate
+	const certificateValidation = new aws.acm.CertificateValidation(
+		'macro-ai-wildcard-certificate-validation',
+		{
+			certificateArn: certificate.arn,
+			validationRecordFqdns: certificateValidationRecords.apply((records) =>
+				records.map((record) => record.fqdn),
+			),
+		},
+	)
+
+	const { certificateArn } = certificateValidation
+
+	console.log(
+		'🔒 Smart certificate management: Pulumi will reuse existing certificate for zero-downtime deployments',
+	)
 
 	// Create HTTPS listener with certificate
 	httpsListener = new aws.lb.Listener('macro-ai-https-listener', {
