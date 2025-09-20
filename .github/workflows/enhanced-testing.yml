@@ -128,9 +128,8 @@ jobs:
           matrix="{ \"include\": [$base_tests] }"
         fi
 
-        # Convert matrix to single line to avoid GitHub Actions output issues
-        matrix_single_line=$(echo "$matrix" | tr -d $'\n')
-        matrix_single_line=${matrix_single_line//  */ }
+        # Convert matrix to single line with safer processing
+        matrix_single_line=$(echo "$matrix" | tr -d $'\n' | sed 's/[[:space:]]+/ /g')
         echo "matrix=$matrix_single_line" >> "$GITHUB_OUTPUT"
         echo "📊 Test matrix created:"
         echo "$matrix"
