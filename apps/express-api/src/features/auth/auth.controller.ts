@@ -588,7 +588,7 @@ class AuthController implements IAuthController {
 
 		res
 			.cookie('macro-ai-accessToken', refreshLoginResponse.tokens.accessToken, {
-				httpOnly: false,
+				httpOnly: true,
 				secure: nodeEnv === 'production',
 				domain: cookieDomain !== 'localhost' ? cookieDomain : undefined,
 				sameSite: 'strict',
