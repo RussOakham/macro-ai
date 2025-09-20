@@ -287,11 +287,15 @@ runs:
         fi
 
         echo ""
-        echo "🔍 Environment File Contents (first 10 lines):"
-        head -10 "${{ inputs.output-file }}" | sed 's/^/  /'
+        echo "🔍 Environment File Contents (first 10 variables, values redacted):"
+
+        # Parse .env file and show only variable names with redacted values for security
+        awk 'NR <= 10 && /^[^#]/ && /=/ {split($0, parts, "="); print "  " parts[1] "=REDACTED"}' "${{ inputs.output-file }}"
 
         TOTAL_LINES=$(wc -l < "${{ inputs.output-file }}")
-        if [[ $TOTAL_LINES -gt 10 ]]; then
-          echo "  ... ($((TOTAL_LINES - 10)) more lines)"
+        TOTAL_VARS=$(awk '/^[^#]/ && /=/' "${{ inputs.output-file }}" | wc -l)
+
+        if [[ $TOTAL_VARS -gt 10 ]]; then
+          echo "  ... ($((TOTAL_VARS - 10)) more variables)"
         fi
         echo ""
