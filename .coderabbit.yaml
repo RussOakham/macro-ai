@@ -158,6 +158,7 @@ reviews:
     - '**/codeql-db/**'
     - '**/cdk.out/**'
     - '**/infrastructure/dist/**'
+    - '**/infrastructure/cdk.out/**' # More specific CDK output exclusion
     - '.next/**'
     - '.nuxt/**'
     - '.output/**'
@@ -171,6 +172,9 @@ reviews:
     # Git and CI artifacts
     - '.git/**'
     - '**/.git/**'
+
+    # Generated files (allow review of intentional changes)
+    - '**/public/swagger.json'
   # Pre-merge checks for quality gates
   pre_merge_checks:
     title:

@@ -325,8 +325,8 @@ DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 
 Create the following environments in GitHub:
 
-- `production` (hobby → enterprise scale)
-- `staging` (hobby scale)
+- `production`
+- `staging`
 
 Each environment should have:
 

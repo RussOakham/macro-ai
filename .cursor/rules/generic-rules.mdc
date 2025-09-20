@@ -1,3 +1,9 @@
+---
+description: Generic Development Rules and Best Practices
+globs: "*"
+alwaysApply: true
+---
+
 # Generic Development Rules
 
 - "Be objective and avoid being overly agreeable."
@@ -17,19 +23,21 @@
 - Maintain context across conversations through memory management
 - Structure all complex work through Task Orchestrator
 - Reference documentation for best practices before implementation
-- Maintain security-first approach with regular Semgrep scans
+- Maintain security-first approach with regular security reviews
 
 ### Memory Management Workflow
 
 - Store context after completing tasks or making architectural decisions
 - Create entities for project decisions, technical approaches, configuration details
 - Start conversations by reading relevant memory to restore context
+- **Use `acuvity-mcp-server-memory`** as an alternative to the default memory tool for enhanced knowledge graph capabilities
 
 ### Task Analysis Workflow
 
 - Use sequential thinking to break down complex requests
 - Create features/tasks in Task Orchestrator for multi-step work
 - Apply appropriate templates for requirements, technical approach, testing strategies
+- **Proactively identify** and utilize dependency-specific tools (Pulumi, Neon, AWS) when available
 
 ### Documentation Reference Strategy
 
@@ -39,9 +47,17 @@
 
 ### Security Review Integration
 
-- Run Semgrep scans after significant code changes
+- Perform security reviews after significant code changes
 - Create security review tasks and document security decisions
-- Scan new code before suggesting and flag potential issues proactively
+- Review new code before suggesting and flag potential issues proactively
+
+### Dependency-Specific Tool Usage
+
+- Use **Pulumi tools** (`mcp_pulumi_*`) proactively when working with infrastructure as code
+- Use **Neon database tools** when working with PostgreSQL/Neon databases
+- Use **AWS documentation tools** for AWS service best practices and implementation guidance
+- **Always check** for dependency-specific MCP tools before implementing functionality manually
+- **Proactively discover** and utilize specialized tools for better accuracy and efficiency
 
 ## Triage Guidelines
 
@@ -56,8 +72,8 @@
    - Use `Ref` MCP to locate relevant code/docs in repo
 
 3. **Static and runtime analysis (as needed)**
-   - Use `semgrep` MCP for security/correctness scans
    - Use `puppeteer` MCP for automated frontend checks
+   - Use dependency-specific tools when available (e.g., Pulumi, Neon tools)
 
 4. **Contextual reasoning (supporting)**
    - Use `sequentialthinking` MCP for multi-step investigations
@@ -65,13 +81,73 @@
 
 5. **Avoid assumptions** — confirm findings against CLI logs before proposing fixes
 
+
 ## CLI Usage Guidelines
 
-- **Always prefer CLI tools** (`aws`, `gh`) over MCP abstractions for investigations
+- **Use `run_terminal_cmd`** to access CLI tools proactively for investigations
+- **Always prefer CLI tools** over MCP abstractions when possible
 - Craft queries for **fully formed output**
 - Avoid open-ended results requiring manual input (pagers, truncated outputs)
 - Prefer structured output formats (`--json`, `--output yaml`)
 - Use `--no-cli-pager` or `--no-pager` for AWS CLI commands
+
+## Available CLI Tools & Usage
+
+### **Essential Development Tools**
+- **`gh`** - GitHub CLI: Create PRs, manage issues, view workflows, run actions
+- **`aws`** - AWS CLI: Manage AWS resources, check logs, deploy infrastructure
+- **`docker`** - Container management: Build, run, manage containers and images
+- **`pnpm`** - Package manager: Install dependencies, run scripts, manage workspaces
+
+### **Version Control & Git**
+- **`git`** - Version control: Branch management, commits, merges, history
+- **`tsc`** - TypeScript compiler: Type checking, compilation, build verification
+- **`npx`** - Node package runner: Execute packages without global installation
+
+### **File Operations & Search**
+- **`fd`** - Modern find: Fast file searching with regex support and git integration
+- **`ripgrep`** - Fast text search: Recursive grep with advanced filtering
+- **`fzf`** - Fuzzy finder: Interactive file/directory selection with preview
+- **`zoxide`** - Smart cd: Auto-learning directory jumper (like autojump)
+- **`bat`** - Cat with syntax highlighting: Enhanced file viewing with git integration
+
+### **Data Processing**
+- **`jq`** - JSON processor: Parse, filter, and transform JSON data
+- **`yq`** - YAML processor: Parse and manipulate YAML files
+
+### **Secrets & Environment Management**
+- **`doppler`** - Environment secrets: Manage secrets across environments securely
+
+### **Infrastructure as Code**
+- **`pulumi`** - Infrastructure as code: Deploy and manage cloud infrastructure
+- **`kubectl`** - Kubernetes CLI: Manage Kubernetes clusters and resources
+
+### **System Monitoring & Utilities**
+- **`tree`** - Directory structure: Visual directory tree with file sizes
+- **`curl`** - HTTP client: API testing, data fetching, network requests
+- **`make`** - Build automation: Run build scripts and complex workflows
+
+### **Recommended CLI Workflows**
+
+#### **Development Workflow**
+- `pnpm install && pnpm build` - Install dependencies and build project
+- `gh pr create --web` - Create pull request with browser preview
+- `aws logs tail --follow` - Monitor application logs in real-time
+
+#### **File Operations**
+- `fd .ts --type f | fzf` - Find and select TypeScript files interactively
+- `zoxide add . && z project` - Add current directory and jump back quickly
+- `bat package.json` - View package.json with syntax highlighting
+
+#### **Infrastructure & Deployment**
+- `pulumi preview && pulumi up` - Preview and deploy infrastructure changes
+- `kubectl get pods -A` - Check Kubernetes pod status
+- `doppler run -- pnpm dev` - Run with secrets from Doppler
+
+#### **Git & Code Quality**
+- `gh pr list --author "@me"` - List your open PRs
+- `tsc --noEmit` - Type check without generating output files
+- `git log --oneline -10` - View recent commit history
 
 ## Documentation Standards
 

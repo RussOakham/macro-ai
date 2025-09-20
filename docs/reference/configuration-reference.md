@@ -360,27 +360,12 @@ VITE_API_URL=http://localhost:3040/api
 VITE_API_KEY=dev-32-character-key-for-local-development
 ```
 
-## 🏗️ Infrastructure Scaling Strategy
-
-Environments (staging/production) can operate at different infrastructure scales:
-
-- **Hobby Scale**: Cost-optimized for <£10/month (Neon, Upstash, Lambda)
-- **Enterprise Scale**: Production-ready for £100-300/month (RDS, ElastiCache, ECS)
-
-### Environment + Scale Matrix
-
-| Environment | Default Scale | Upgrade Path | Cost Target       |
-| ----------- | ------------- | ------------ | ----------------- |
-| staging     | hobby         | N/A          | <£5/month         |
-| production  | hobby         | enterprise   | <£10 → £300/month |
-
-### Staging Environment (Hobby Scale) 📋 PLANNED
+### Staging Environment 📋 PLANNED
 
 ```bash
 # Express API
 NODE_ENV=production    # Uses production for library optimizations
 APP_ENV=staging        # Application knows it's staging
-CDK_DEPLOY_SCALE=hobby # Infrastructure scale
 API_KEY=staging-unique-32-character-key-here
 SERVER_PORT=3040
 COOKIE_DOMAIN=staging.macro-ai.com
@@ -394,41 +379,18 @@ VITE_API_URL=https://api-staging.macro-ai.com/api
 VITE_API_KEY=staging-unique-32-character-key-here
 ```
 
-### Production Environment (Hobby Scale → Enterprise Scale) 📋 PLANNED
-
-#### Production (Hobby Scale)
+### Production Environment 📋 PLANNED
 
 ```bash
 # Express API
 NODE_ENV=production
 APP_ENV=production
-CDK_DEPLOY_SCALE=hobby # Cost-optimized infrastructure
 API_KEY=production-unique-32-character-key-here
 SERVER_PORT=3040
 COOKIE_DOMAIN=macro-ai.com
 COOKIE_ENCRYPTION_KEY=production-32-character-encryption-key
 RELATIONAL_DATABASE_URL=postgresql://prod_user:secure_pass@neon-prod:5432/macro_ai_prod?sslmode=require
 REDIS_URL=redis://upstash-prod:6379/0
-OPENAI_API_KEY=sk-your-production-openai-key
-
-# Client UI
-VITE_API_URL=https://api.macro-ai.com/api
-VITE_API_KEY=production-unique-32-character-key-here
-```
-
-#### Production (Enterprise Scale)
-
-```bash
-# Express API
-NODE_ENV=production
-APP_ENV=production
-CDK_DEPLOY_SCALE=enterprise # Full AWS managed services
-API_KEY=production-unique-32-character-key-here
-SERVER_PORT=3040
-COOKIE_DOMAIN=macro-ai.com
-COOKIE_ENCRYPTION_KEY=production-32-character-encryption-key
-RELATIONAL_DATABASE_URL=postgresql://prod_user:very_secure_pass@rds-prod:5432/macro_ai_prod?sslmode=require
-REDIS_URL=redis://elasticache-prod:6379/0
 OPENAI_API_KEY=sk-your-production-openai-key
 
 # Client UI

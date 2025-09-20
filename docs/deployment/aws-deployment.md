@@ -307,26 +307,25 @@ export class MacroAiStack extends cdk.Stack {
 
 - Single AZ deployment
 - Cost-optimized resource allocation
-- Production-like configurations at hobby scale
+- Production-like configurations
 - Automatic deployment from `develop` branch
 
 **Configuration:**
 
 ```typescript
-export const stagingHobbyConfig = {
+export const stagingConfig = {
 	environment: 'staging',
-	scale: 'hobby',
 	vpc: {
 		maxAzs: 1,
 		natGateways: 0, // Use public subnets only
 	},
 	database: {
-		// Using Neon PostgreSQL for hobby scale
+		// Using Neon PostgreSQL
 		provider: 'neon',
 		connectionString: process.env.NEON_DATABASE_URL,
 	},
 	cache: {
-		// Using Upstash Redis for hobby scale
+		// Using Upstash Redis
 		provider: 'upstash',
 		connectionString: process.env.UPSTASH_REDIS_URL,
 	},
@@ -345,29 +344,26 @@ export const stagingHobbyConfig = {
 
 **Characteristics:**
 
-- Cost-optimized production configuration
-- Suitable for personal projects (<100 users)
-- Easy upgrade path to enterprise scale
+- Production configuration
 - Automatic deployment from `main` branch
 
 **Configuration:**
 
 ```typescript
-export const productionHobbyConfig = {
+export const productionConfig = {
 	environment: 'production',
-	scale: 'hobby',
 	vpc: {
 		maxAzs: 1,
 		natGateways: 1,
 	},
 	database: {
-		// Using Neon PostgreSQL for hobby scale
+		// Using Neon PostgreSQL
 		provider: 'neon',
 		connectionString: process.env.NEON_DATABASE_URL,
 		backupRetention: cdk.Duration.days(7),
 	},
 	cache: {
-		// Using Upstash Redis for hobby scale
+		// Using Upstash Redis
 		provider: 'upstash',
 		connectionString: process.env.UPSTASH_REDIS_URL,
 	},
@@ -382,7 +378,7 @@ export const productionHobbyConfig = {
 }
 ```
 
-### Production Environment (Enterprise Scale)
+### Production Environment
 
 **Characteristics:**
 
@@ -390,49 +386,33 @@ export const productionHobbyConfig = {
 - Auto-scaling capabilities
 - Comprehensive monitoring
 - Security hardening
-- Full AWS managed services
 
 **Configuration:**
 
 ```typescript
-export const productionEnterpriseConfig = {
+export const productionConfig = {
 	environment: 'production',
-	scale: 'enterprise',
 	vpc: {
-		maxAzs: 3,
-		natGateways: 3, // One per AZ for HA
+		maxAzs: 1,
+		natGateways: 1,
 	},
 	database: {
-		// Using RDS PostgreSQL for enterprise scale
-		instanceType: ec2.InstanceType.of(
-			ec2.InstanceClass.R6G,
-			ec2.InstanceSize.LARGE,
-		),
-		multiAz: true,
-		deletionProtection: true,
-		backupRetention: cdk.Duration.days(30),
-		performanceInsights: true,
+		// Using Neon PostgreSQL
+		provider: 'neon',
+		connectionString: process.env.NEON_DATABASE_URL,
 	},
 	cache: {
-		// Using ElastiCache Redis for enterprise scale
-		nodeType: 'cache.r6g.large',
-		numCacheNodes: 2,
-		multiAz: true,
+		// Using Upstash Redis
+		provider: 'upstash',
+		connectionString: process.env.UPSTASH_REDIS_URL,
 	},
 	ecs: {
-		desiredCount: 3,
-		cpu: 1024,
-		memoryLimitMiB: 2048,
-		autoScaling: {
-			minCapacity: 2,
-			maxCapacity: 10,
-			targetCpuUtilization: 70,
-		},
+		desiredCount: 1,
+		cpu: 256,
+		memoryLimitMiB: 512,
 	},
 	monitoring: {
-		detailedMonitoring: true,
-		logRetention: logs.RetentionDays.SIX_MONTHS,
-		alarms: true,
+		logRetention: logs.RetentionDays.THREE_DAYS,
 	},
 }
 ```

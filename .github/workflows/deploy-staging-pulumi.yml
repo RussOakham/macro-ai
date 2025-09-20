@@ -385,11 +385,22 @@ jobs:
       API_KEY: ${{ secrets.VITE_API_KEY }}
     needs: [ change-detection ]
 
+  # Production monitoring setup using reusable workflow
+  setup-monitoring:
+    name: Setup Staging Monitoring
+    uses: ./.github/workflows/reusable-production-monitoring.yml
+    with:
+      environment-name: staging
+      deployment-type: staging
+      backend-stack-name: stg
+    needs: [ deploy-backend, deploy-frontend ]
+    if: always() && (needs.deploy-backend.result == 'success' || needs.deploy-frontend.result == 'success')
+
   # Schedule automatic teardown at 6 PM
   schedule-teardown:
     name: Schedule Automatic Teardown
     runs-on: ubuntu-latest
-    needs: [ deploy-backend, deploy-frontend ]
+    needs: [ deploy-backend, deploy-frontend, setup-monitoring ]
     if: always() && (needs.deploy-backend.result == 'success' || needs.deploy-frontend.result == 'success')
 
     steps:
@@ -404,7 +415,7 @@ jobs:
   deployment-summary:
     name: Staging Deployment Summary (Pulumi)
     runs-on: ubuntu-latest
-    needs: [ change-detection, deploy-backend, deploy-frontend, schedule-teardown ]
+    needs: [ change-detection, deploy-backend, deploy-frontend, setup-monitoring, schedule-teardown ]
     if: always()
 
     steps:

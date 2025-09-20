@@ -17,7 +17,7 @@ that include both backend API and frontend UI components.
 #### **Ephemeral Environment Isolation**
 
 - Each PR gets a unique environment namespace: `pr-{number}`
-- Complete infrastructure isolation using AWS CDK stacks
+- Complete infrastructure isolation using Pulumi stacks
 - Automatic cleanup when PRs are closed or merged
 - No shared resources between preview environments
 
@@ -156,7 +156,7 @@ on:
 #### **Phase 2: Optimized Backend Deployment**
 
 1. **Conditional Docker Build**: Build and push ECS-optimized container image only if backend changes detected
-2. **Infrastructure Deployment**: Deploy ECS Fargate stack via AWS CDK (always required for new PRs)
+2. **Infrastructure Deployment**: Deploy ECS Fargate stack via Pulumi (always required for new PRs)
 3. **Health Check Validation**: Verify API endpoints are responding
 4. **Configuration Injection**: Apply environment-specific settings
 
@@ -273,7 +273,7 @@ shared_changes:
 
 - **Docker Image Builds**: Skip when no backend changes
 - **Frontend Builds**: Use cached builds when no frontend changes
-- **Infrastructure Updates**: Minimal CDK diff when no infrastructure changes
+- **Infrastructure Updates**: Minimal Pulumi diff when no infrastructure changes
 - **Test Execution**: Run only relevant test suites
 
 ##### **Cost Optimization**

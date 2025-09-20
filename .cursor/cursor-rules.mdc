@@ -1,3 +1,9 @@
+---
+description: Cursor Rules for Macro AI Project
+globs: "*"
+alwaysApply: true
+---
+
 # Cursor Rules for Macro AI Project
 
 ## Repository Overview
@@ -35,19 +41,21 @@ This is a **TypeScript monorepo** managed with **pnpm workspaces**. It contains:
 
 ## CLI Tools & Shell Preferences
 
-**Use bash for:**
+**macOS (Darwin):**
 
-- pnpm commands, scripts with pipes/redirection
-- Git operations, Docker commands
-- JSON/YAML processing (jq, yq)
-- File operations (fd, ripgrep, bat, eza)
-- AWS SAM, aws-vault operations
+- Use **zsh with oh-my-zsh** for all operations
+- Configure oh-my-zsh with plugins: `git`, `docker`, `aws`, `gh`
+- Enhanced shell experience with better autocompletion and theming
 
-**Use PowerShell for:**
+**Windows:**
 
-- AWS CLI commands (`aws`, `session-manager-plugin`)
-- GitHub CLI (`gh`) operations
-- Basic commands when bash unavailable
+- Use **bash** for: pnpm commands, scripts with pipes/redirection, Git operations, Docker commands, JSON/YAML processing (jq, yq), file operations (fd, ripgrep, bat, eza), AWS SAM, aws-vault operations
+- Use **PowerShell** for: AWS CLI commands (`aws`, `session-manager-plugin`), GitHub CLI (`gh`) operations, basic commands when bash unavailable
+
+**Linux:**
+
+- Use **bash** as default shell for all operations
+- Enhanced with common tools: `git`, `docker`, `aws`, `gh` aliases
 
 ## Testing Requirements
 

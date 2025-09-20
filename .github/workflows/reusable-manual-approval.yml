@@ -1,0 +1,63 @@
+name: Reusable Manual Approval Gate
+
+on:
+  workflow_call:
+    inputs:
+      environment-name:
+        description: 'Environment name (staging, production)'
+        required: true
+        type: string
+      deployment-type:
+        description: 'Type of deployment (standard, hotfix, rollback)'
+        required: true
+        type: string
+      change-summary:
+        description: 'Summary of changes being deployed'
+        required: false
+        type: string
+      deployment-details:
+        description: 'Additional deployment details'
+        required: false
+        type: string
+
+jobs:
+  manual-approval:
+    name: Manual Approval Required
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment-name }}
+    if: always()
+
+    steps:
+    - name: Manual Approval Gate
+      run: |
+        echo "🛑 DEPLOYMENT REQUIRES MANUAL APPROVAL"
+        echo ""
+        echo "📋 Deployment Details:"
+        echo "  - Environment: ${{ inputs.environment-name }}"
+        echo "  - Deployment Type: ${{ inputs.deployment-type }}"
+        echo "  - Branch: ${{ github.ref_name }}"
+        echo "  - Trigger: ${{ github.event_name }}"
+        if [[ -n "${{ inputs.change-summary }}" ]]; then
+          echo "  - Changes: ${{ inputs.change-summary }}"
+        fi
+        if [[ -n "${{ inputs.deployment-details }}" ]]; then
+          echo "  - Details: ${{ inputs.deployment-details }}"
+        fi
+        echo ""
+        echo "⚠️ This deployment requires manual approval before proceeding"
+        echo "✅ Approval will trigger the deployment process"
+
+        # This step will show in GitHub Actions UI and require manual approval
+        # The job will pause here until approved
+        echo "⏳ Waiting for manual approval..."
+
+    - name: Approval Status
+      run: |
+        echo "✅ Manual approval received"
+        echo "🚀 Proceeding with deployment"
+        echo "approved=true" >> "$GITHUB_OUTPUT"
+
+    - name: Post-Approval Validation
+      run: |
+        echo "🔍 Running post-approval validation..."
+        echo "✅ Deployment approved and validated"

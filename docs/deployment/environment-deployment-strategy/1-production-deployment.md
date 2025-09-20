@@ -3,8 +3,7 @@
 ## 📋 Overview
 
 The production deployment strategy provides a robust, scalable, and cost-conscious environment for serving end users. This
-strategy is designed to start with hobby-scale infrastructure suitable for personal projects while providing a clear upgrade
-path to enterprise-scale infrastructure for revenue-generating applications.
+strategy is designed to provide scalable infrastructure suitable for both personal projects and revenue-generating applications.
 
 ## 🏗️ Architecture Design Considerations
 
@@ -122,8 +121,8 @@ MacroAiProductionStack
 
 #### **Final Cost per Month**
 
-- **With Optimizations**: ~£25/month for hobby scale production
-- **Target Cost**: <£30/month for personal project
+- **With Optimizations**: ~£25/month
+- **Target Cost**: <£30/month
 - **Annual Cost**: ~£300/year
 - **Cost per User**: ~£0.30/month per user (100 users)
 
@@ -373,10 +372,9 @@ shared_changes:
 
 #### **User Growth Metrics**
 
-- **<100 Users**: Hobby scale infrastructure
-- **100-500 Users**: Enhanced hobby scale with better monitoring
-- **500-1,000 Users**: Transition to enterprise scale
-- **1,000+ Users**: Full enterprise scale with auto-scaling
+- **Scalable Infrastructure**: Adjust resources based on user load
+- **Monitoring**: Enhanced monitoring for larger user bases
+- **Auto-scaling**: Automatic resource scaling capabilities
 
 #### **Performance Metrics**
 
@@ -387,20 +385,18 @@ shared_changes:
 
 #### **Revenue Metrics**
 
-- **<£1,000/month**: Hobby scale
-- **£1,000-£5,000/month**: Enhanced hobby scale
-- **£5,000-£25,000/month**: Enterprise scale
-- **£25,000+/month**: Full enterprise scale with premium features
+- **Cost Optimization**: Infrastructure scales with revenue
+- **Resource Allocation**: Adjust based on usage patterns
+- **Monitoring Costs**: Track and optimize infrastructure spending
 
 ### Upgrade Path Implementation
 
-#### **Phase 1: Enhanced Hobby Scale**
+#### **Phase 1: Enhanced Configuration**
 
 ```typescript
-// Enhanced hobby scale configuration
-export const enhancedHobbyConfig = {
+// Production configuration
+export const productionConfig = {
 	environment: 'production',
-	scale: 'enhanced-hobby',
 	vpc: {
 		maxAzs: 2, // Add second AZ
 		natGateways: 1,

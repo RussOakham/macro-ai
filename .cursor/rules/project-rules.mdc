@@ -1,3 +1,9 @@
+---
+description: Macro AI Project Rules
+globs: "*"
+alwaysApply: true
+---
+
 # Macro AI Project Rules
 
 ## Repository Structure
@@ -33,21 +39,20 @@ This is a **TypeScript monorepo** managed with **pnpm workspaces**:
 - Avoid `console.log` in production (use pino logger)
 - Export public functions/types from `index.ts` barrel files
 
-## CLI Tools & Shell Preferences
+## CLI Tools & Shell Preferences (OS-Specific)
 
-**Use bash for:**
+**macOS (Darwin):**
+- Use **zsh with oh-my-zsh** for all operations
+- Configure oh-my-zsh with plugins: `git`, `docker`, `aws`, `gh`
+- Enhanced shell experience with better autocompletion and theming
 
-- pnpm commands, scripts with pipes/redirection
-- Git operations, Docker commands
-- JSON/YAML processing (jq, yq)
-- File operations (fd, ripgrep, bat, eza)
-- AWS SAM, aws-vault operations
+**Windows:**
+- Use **bash** for: pnpm commands, scripts with pipes/redirection, Git operations, Docker commands, JSON/YAML processing (jq, yq), file operations (fd, ripgrep, bat, eza), AWS SAM, aws-vault operations
+- Use **PowerShell** for: AWS CLI commands (`aws`, `session-manager-plugin`), GitHub CLI (`gh`) operations, basic commands when bash unavailable
 
-**Use PowerShell for:**
-
-- AWS CLI commands (`aws`, `session-manager-plugin`)
-- GitHub CLI (`gh`) operations
-- Basic commands when bash unavailable
+**Linux:**
+- Use **bash** as default shell for all operations
+- Enhanced with common tools: `git`, `docker`, `aws`, `gh` aliases
 
 ## Testing Requirements
 
