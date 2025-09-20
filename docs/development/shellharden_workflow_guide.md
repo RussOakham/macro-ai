@@ -46,7 +46,7 @@ shellharden --replace .github/workflows/enhanced-testing.yml
 ### 4. Apply fixes to all workflow files
 
 ```bash
-for file in .github/workflows/*.yml; do 
+for file in .github/workflows/*.yml; do
   shellharden --replace "$file"
 done
 ```

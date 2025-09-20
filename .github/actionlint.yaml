@@ -17,12 +17,12 @@ config-variables: null
 paths:
   .github/workflows/**/*.yml:
     ignore:
-    # Ignore SC2086 violations for GitHub Actions expressions
-    # These are legitimate workflow constructs that actionlint misinterprets
-    - 'SC2086.*Double quote to prevent globbing and word splitting'
-    # Ignore SC2034 violations for variables that are actually used
-    # These are false positives where actionlint can't detect usage in complex workflows
-    - 'SC2034.*appears unused.*Verify use.*or export if used externally'
-    # Ignore SC2163 violations for export statements with GitHub Actions expressions
-    # These are necessary for workflow functionality
-    - 'SC2163.*This does not export.*key.*Remove.*or use'
+      # Ignore SC2086 violations for GitHub Actions expressions
+      # These are legitimate workflow constructs that actionlint misinterprets
+      - 'SC2086.*Double quote to prevent globbing and word splitting'
+      # Ignore SC2034 violations for variables that are actually used
+      # These are false positives where actionlint can't detect usage in complex workflows
+      - 'SC2034.*appears unused.*Verify use.*or export if used externally'
+      # Ignore SC2163 violations for export statements with GitHub Actions expressions
+      # These are necessary for workflow functionality
+      - 'SC2163.*This does not export.*key.*Remove.*or use'
