@@ -13,11 +13,18 @@
 		"preferredServers": [
 			"aws-documentation",
 			"ref",
-			"semgrep",
 			"task-orchestrator",
 			"sequentialthinking",
 			"memory"
-		]
+		],
+		"alternateServers": {
+			"memory": ["acuvity-mcp-server-memory"]
+		},
+		"dependencyTools": {
+			"pulumi": "mcp_pulumi_*",
+			"neon": "neon-database",
+			"aws": "aws-documentation"
+		}
 	},
 	"workflow": {
 		"useSequentialThinking": true,
@@ -25,7 +32,9 @@
 		"autoTemplateApplication": true,
 		"documentationReference": true,
 		"preferCliTools": true,
-		"commitConvention": "conventional-commits"
+		"commitConvention": "conventional-commits",
+		"useDependencyTools": true,
+		"proactiveToolDiscovery": true
 	},
 	"memory": {
 		"autoStoreContext": true,
@@ -67,18 +76,72 @@
 		"exportFromBarrelFiles": true
 	},
 	"shell": {
-		"preferBashFor": [
-			"pnpm",
-			"git",
-			"docker",
-			"json-processing",
-			"file-operations",
-			"aws-sam",
-			"aws-vault"
-		],
-		"preferPowerShellFor": ["aws-cli", "github-cli"],
+		"osSpecific": {
+			"darwin": {
+				"defaultShell": "zsh",
+				"recommendedSetup": "oh-my-zsh",
+				"plugins": ["git", "docker", "aws", "gh", "fzf", "zoxide"],
+				"appliesTo": ["all-operations"],
+				"availableTools": [
+					"gh",
+					"aws",
+					"docker",
+					"pnpm",
+					"git",
+					"node",
+					"npm",
+					"npx",
+					"zoxide",
+					"fzf",
+					"bat",
+					"fd",
+					"jq",
+					"yq",
+					"doppler",
+					"pulumi",
+					"kubectl",
+					"tree",
+					"curl",
+					"make",
+					"gcc",
+					"g++",
+					"python3",
+					"tsc"
+				]
+			},
+			"win32": {
+				"preferBashFor": [
+					"pnpm",
+					"git",
+					"docker",
+					"json-processing",
+					"file-operations",
+					"aws-sam",
+					"aws-vault",
+					"node",
+					"npm",
+					"npx"
+				],
+				"preferPowerShellFor": ["aws-cli", "github-cli"],
+				"availableTools": ["git", "node", "npm", "npx", "python"]
+			},
+			"linux": {
+				"defaultShell": "bash",
+				"appliesTo": ["all-operations"],
+				"availableTools": [
+					"git",
+					"docker",
+					"aws",
+					"gh",
+					"node",
+					"npm",
+					"python3"
+				]
+			}
+		},
 		"useStructuredOutput": true,
-		"avoidPagers": true
+		"avoidPagers": true,
+		"preferModernTools": true
 	},
 	"triage": {
 		"prioritizeCliTools": true,
