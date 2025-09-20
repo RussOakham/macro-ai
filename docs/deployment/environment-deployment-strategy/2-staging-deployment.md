@@ -21,7 +21,7 @@ consciousness for personal projects.
 - Automatic deployment on merge to `develop` branch
 - Scheduled teardown at 6 PM daily for cost optimization
 - On-demand deployment workflow for immediate access
-- Production-like configuration at hobby scale
+- Production-like configuration
 
 #### **Enhanced Infrastructure Over Preview**
 

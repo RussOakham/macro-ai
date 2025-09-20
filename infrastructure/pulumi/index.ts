@@ -13,7 +13,6 @@ const environmentName = config.get('environmentName') || 'dev'
 const imageUri = config.get('imageUri')
 const imageTag = config.get('imageTag') || 'latest'
 const deploymentType = config.get('deploymentType') || 'dev'
-// const deploymentScale = config.get('deploymentScale') || 'preview'
 
 // Custom domain configuration
 const baseDomainName =

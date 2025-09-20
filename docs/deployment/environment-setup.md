@@ -58,27 +58,13 @@ COOKIE_DOMAIN=localhost
 RELATIONAL_DATABASE_URL=postgresql://postgres:password@localhost:5432/macro_ai_dev
 ```
 
-## 🏗️ Infrastructure Scaling Strategy
-
-Environments (staging/production) can operate at different infrastructure scales:
-
-- **Hobby Scale**: Cost-optimized for <£10/month (Neon, Upstash, Lambda)
-- **Enterprise Scale**: Production-ready for £100-300/month (RDS, ElastiCache, ECS)
-
-### Environment + Scale Matrix
-
-| Environment | Default Scale | Upgrade Path | Cost Target       |
-| ----------- | ------------- | ------------ | ----------------- |
-| staging     | hobby         | N/A          | <£5/month         |
-| production  | hobby         | enterprise   | <£10 → £300/month |
-
-#### Staging Environment (Hobby Scale) 📋 PLANNED
+#### Staging Environment 📋 PLANNED
 
 **Purpose**: Pre-production testing and validation
 
 **Characteristics**:
 
-- Production-like configuration at hobby scale
+- Production-like configuration
 - Cost-optimized infrastructure (Neon, Upstash)
 - Full feature testing capability
 - Automatic deployment from `develop` branch
@@ -89,7 +75,6 @@ Environments (staging/production) can operate at different infrastructure scales
 ```bash
 NODE_ENV=production    # Uses production for library optimizations
 APP_ENV=staging        # Application knows it's staging environment
-CDK_DEPLOY_SCALE=hobby # Cost-optimized infrastructure scale
 API_KEY=staging-unique-32-character-key-here
 SERVER_PORT=3040
 COOKIE_DOMAIN=staging.macro-ai.com
@@ -101,46 +86,28 @@ RELATIONAL_DATABASE_URL=postgresql://staging_user:secure_pass@neon-staging:5432/
 - `NODE_ENV=production` ensures staging gets the same library optimizations as production (Express, logging, security)
 - `APP_ENV=staging` allows application-specific staging behavior (URLs, feature flags, etc.)
 
-#### Production Environment (Hobby → Enterprise Scale) 📋 PLANNED
+#### Production Environment 📋 PLANNED
 
 **Purpose**: Live application serving end users
 
-**Hobby Scale Characteristics**:
+**Characteristics**:
 
-- Cost-optimized for personal projects
-- Suitable for <100 users
-- Automatic deployment from `main` branch
-- Easy upgrade path to enterprise
-
-**Enterprise Scale Characteristics**:
-
+- Production-ready infrastructure
 - High availability and redundancy
 - Auto-scaling capabilities
 - Comprehensive monitoring
 - Security hardening
+- Automatic deployment from `main` branch
 
-**Configuration (Hobby Scale)**:
+**Configuration**:
 
 ```bash
 NODE_ENV=production
 APP_ENV=production
-CDK_DEPLOY_SCALE=hobby # Cost-optimized infrastructure
 API_KEY=production-unique-32-character-key-here
 SERVER_PORT=3040
 COOKIE_DOMAIN=macro-ai.com
 RELATIONAL_DATABASE_URL=postgresql://prod_user:secure_pass@neon-prod:5432/macro_ai_prod?sslmode=require
-```
-
-**Configuration (Enterprise Scale)**:
-
-```bash
-NODE_ENV=production
-APP_ENV=production
-CDK_DEPLOY_SCALE=enterprise # Full AWS managed services
-API_KEY=production-unique-32-character-key-here
-SERVER_PORT=3040
-COOKIE_DOMAIN=macro-ai.com
-RELATIONAL_DATABASE_URL=postgresql://prod_user:very_secure_pass@rds-prod:5432/macro_ai_prod?sslmode=require
 ```
 
 ## 🔧 Environment Variable Strategy

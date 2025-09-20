@@ -567,8 +567,8 @@ permissions:
 
 ### Environment Protection
 
-- **Production**: Manual approval required (hobby → enterprise scale)
-- **Staging**: Automatic deployment with validation (hobby scale)
+- **Production**: Manual approval required
+- **Staging**: Automatic deployment with validation
 
 ## 📊 Monitoring and Observability
 
@@ -673,9 +673,8 @@ graph TB
 **Environment Configuration**:
 
 - Uses `CDK_DEPLOY_ENV` environment variable
-- Supports staging and production environments with hobby/enterprise scaling
+- Supports staging and production environments
 - Stack naming convention: `MacroAi{Environment}Stack` (e.g., MacroAiStagingStack, MacroAiProductionStack)
-- Infrastructure scaling via `CDK_DEPLOY_SCALE` (hobby/enterprise)
 
 ### Deploy Full-Stack - Detailed Breakdown
 

@@ -62,7 +62,7 @@ with scalability for enterprise applications.
 ### 3. Production Deployment Strategy
 
 **Purpose**: Live environment serving end users  
-**Cost**: £25-300/month (hobby to enterprise scale)  
+**Cost**: £25-300/month  
 **Duration**: Persistent  
 **Target**: End users and revenue generation
 
@@ -136,7 +136,7 @@ All environments support intelligent change detection:
 
 - **Backend Changes**: Only deploy ECS Fargate service
 - **Frontend Changes**: Only deploy Amplify application
-- **Infrastructure Changes**: Deploy CDK stack
+- **Infrastructure Changes**: Deploy Pulumi stack
 - **Shared Changes**: Full deployment required
 
 ## 🚀 Scaling Path
@@ -228,9 +228,9 @@ All environments support intelligent change detection:
 
 1. **Implement Preview/PR Workflow**: Set up automated PR environment creation
 2. **Deploy Staging Environment**: Create persistent staging with scheduled lifecycle
-3. **Deploy Production Infrastructure**: Start with hobby scale, plan for enterprise scaling
+3. **Deploy Production Infrastructure**: Plan for scalable production deployment
 4. **Monitor and Optimize**: Track costs, performance, and user satisfaction
-5. **Scale as Needed**: Transition to enterprise scale based on business growth
+5. **Scale as Needed**: Adjust infrastructure based on business growth
 
 ---
 
