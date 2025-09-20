@@ -154,6 +154,8 @@ jobs:
         ECR_REGISTRY="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
         if [[ "${DEPLOYMENT_TYPE}" == "production" ]]; then
           ECR_REPOSITORY="macro-ai-production-express-api"
+        elif [[ "${DEPLOYMENT_TYPE}" == "minimal-production" ]]; then
+          ECR_REPOSITORY="macro-ai-minimal-prod-express-api"
         elif [[ "${DEPLOYMENT_TYPE}" == "staging" ]]; then
           ECR_REPOSITORY="macro-ai-staging-express-api"
         else

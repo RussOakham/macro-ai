@@ -189,7 +189,7 @@ jobs:
     uses: ./.github/workflows/reusable-deploy-backend-pulumi.yml
     with:
       environment-name: production
-      deployment-type: production
+      deployment-type: minimal-production
       image-tag: ${{ needs.build-express-api.outputs.image-tag }}
       branch-name: main
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
@@ -213,7 +213,7 @@ jobs:
     uses: ./.github/workflows/reusable-deploy-frontend.yml
     with:
       environment-name: production
-      deployment-type: production
+      deployment-type: minimal-production
       branch-name: main
       backend-url: ${{ vars.VITE_API_URL }}
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
@@ -233,7 +233,7 @@ jobs:
     uses: ./.github/workflows/reusable-production-monitoring.yml
     with:
       environment-name: production
-      deployment-type: production
+      deployment-type: minimal-production
       backend-stack-name: prd
 
   # Cost optimization summary
