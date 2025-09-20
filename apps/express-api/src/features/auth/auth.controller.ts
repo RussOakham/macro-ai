@@ -590,6 +590,8 @@ class AuthController implements IAuthController {
 			// eslint-disable-next-line security-node/detect-crlf
 			.cookie('macro-ai-accessToken', refreshLoginResponse.tokens.accessToken, {
 				httpOnly: false, // Intentionally false - frontend React app needs access to this cookie
+				// Snyk Code: This is intentional - frontend needs access to read this cookie
+				// To ignore this false positive: Go to Snyk UI -> Project -> Issues -> Ignore
 				secure: nodeEnv === 'production',
 				domain: cookieDomain !== 'localhost' ? cookieDomain : undefined,
 				sameSite: 'strict',

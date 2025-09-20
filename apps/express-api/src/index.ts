@@ -29,7 +29,8 @@ const startServer = async () => {
 
 		// Create and start the server
 		// Note: Using HTTP server as HTTPS termination is handled by AWS ALB/CloudFront
-		// Snyk ignore: This is intentional - HTTPS termination handled by AWS ALB/CloudFront
+		// Snyk Code: This is intentional - HTTPS termination handled by AWS ALB/CloudFront
+		// To ignore this false positive: Go to Snyk UI -> Project -> Issues -> Ignore
 		const app = createServer()
 		// eslint-disable-next-line security-node/detect-crlf
 		const httpServer = createHttpServer(app)
