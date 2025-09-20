@@ -32,7 +32,6 @@ const startServer = async () => {
 		// Snyk Code: This is intentional - HTTPS termination handled by AWS ALB/CloudFront
 		// To ignore this false positive: Go to Snyk UI -> Project -> Issues -> Ignore
 		const app = createServer()
-		// eslint-disable-next-line security-node/detect-crlf
 		const httpServer = createHttpServer(app)
 
 		httpServer.listen(config.port, () => {
