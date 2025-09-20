@@ -1,3 +1,4 @@
+---
 name: Reusable Deploy Backend (Pulumi)
 
 on:
@@ -11,8 +12,8 @@ on:
         description: 'Type of deployment (staging, production, preview)'
         required: true
         type: string
-      image-uri:
-        description: 'Docker image URI to deploy'
+      image-tag:
+        description: 'Docker image tag to deploy'
         required: true
         type: string
       pr-number:
@@ -147,7 +148,19 @@ jobs:
         ENV_NAME="${{ inputs.environment-name }}"
         DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
         PR_NUMBER="${{ inputs.pr-number }}"
-        IMAGE_URI="${{ inputs.image-uri }}"
+        IMAGE_TAG="${{ inputs.image-tag }}"
+
+        # Construct the full image URI from tag
+        ECR_REGISTRY="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
+        if [[ "${DEPLOYMENT_TYPE}" == "production" ]]; then
+          ECR_REPOSITORY="macro-ai-production-express-api"
+        elif [[ "${DEPLOYMENT_TYPE}" == "staging" ]]; then
+          ECR_REPOSITORY="macro-ai-staging-express-api"
+        else
+          ECR_REPOSITORY="macro-ai-staging-express-api"
+        fi
+        IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+        echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
 
         # Determine stack name based on environment type
         if [[ "${DEPLOYMENT_TYPE}" == "preview" ]]; then
@@ -177,7 +190,7 @@ jobs:
         BRANCH_NAME="${{ inputs.branch-name }}"
         CUSTOM_DOMAIN_NAME="${{ inputs.custom-domain-name }}"
         HOSTED_ZONE_ID="${{ inputs.hosted-zone-id }}"
-        IMAGE_URI="${{ inputs.image-uri || 'N/A' }}"
+        IMAGE_URI="${{ steps.pulumi-config.outputs.image-uri }}"
         STACK_NAME="${{ steps.pulumi-config.outputs.stack-name }}"
 
         echo "🚀 Starting Pulumi deployment..."

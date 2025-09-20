@@ -190,7 +190,7 @@ jobs:
     with:
       environment-name: production
       deployment-type: production
-      image-uri: ${{ needs.build-express-api.outputs.image-tag }}
+      image-tag: ${{ needs.build-express-api.outputs.image-tag }}
       branch-name: main
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
