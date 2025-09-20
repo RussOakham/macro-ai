@@ -327,7 +327,7 @@ jobs:
   # Deploy frontend using reusable workflow
   deploy-frontend:
     name: Deploy Frontend
-    needs: [ deploy-backend ]
+    needs: [ change-detection, deploy-backend ]
     if: |
       needs.change-detection.outputs.has-frontend-changes == 'true' ||
       github.event.inputs.force-rebuild == 'true'

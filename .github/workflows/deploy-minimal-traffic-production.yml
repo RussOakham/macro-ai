@@ -206,7 +206,7 @@ jobs:
   # Deploy frontend using hobby-scale configuration
   deploy-frontend:
     name: Deploy Frontend
-    needs: [ validate-minimal-traffic, deploy-backend ]
+    needs: [ validate-minimal-traffic, change-detection, deploy-backend ]
     if: |
       needs.change-detection.outputs.has-frontend-changes == 'true'
 
