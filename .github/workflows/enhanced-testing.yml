@@ -121,8 +121,12 @@ jobs:
           }'
         fi
 
-        # Create final matrix
-        matrix="{ \"include\": [$base_tests$e2e_test] }"
+        # Create final matrix - handle E2E tests properly
+        if [ "$HAS_E2E" = "true" ]; then
+          matrix="{ \"include\": [$base_tests$e2e_test] }"
+        else
+          matrix="{ \"include\": [$base_tests] }"
+        fi
 
         # Convert matrix to single line to avoid GitHub Actions output issues
         matrix_single_line=$(echo "$matrix" | tr -d $'\n')
