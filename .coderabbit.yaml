@@ -1,3 +1,4 @@
+---
 # CodeRabbit Configuration
 # This configuration reduces noise by focusing on critical issues and ignoring nitpicks
 # Based on: https://docs.coderabbit.ai/reference/yaml-template
@@ -140,62 +141,36 @@ reviews:
     checkmake:
       enabled: true
 
-  # Path filters to ignore generated files and config files that cause noise
+  # Path filters to ignore generated files and build artifacts that cause noise
   path_filters:
-    - path: 'node_modules/**'
-      instructions: 'Ignore generated dependencies'
-    - path: 'dist/**'
-      instructions: 'Ignore build output'
-    - path: 'build/**'
-      instructions: 'Ignore build artifacts'
-    - path: 'coverage/**'
-      instructions: 'Ignore test coverage reports'
-    - path: '**/*.min.js'
-      instructions: 'Ignore minified files'
-    - path: '**/*.bundle.js'
-      instructions: 'Ignore bundled files'
-    - path: 'package.json'
-      instructions: 'Ignore package configuration'
-    - path: 'package-lock.json'
-      instructions: 'Ignore lock files'
-    - path: 'pnpm-lock.yaml'
-      instructions: 'Ignore lock files'
-    - path: 'yarn.lock'
-      instructions: 'Ignore lock files'
-    - path: '*.config.js'
-      instructions: 'Ignore configuration files'
-    - path: '*.config.ts'
-      instructions: 'Ignore configuration files'
-    - path: 'eslint.config.*'
-      instructions: 'Ignore ESLint configuration'
-    - path: 'tsconfig*.json'
-      instructions: 'Ignore TypeScript configuration'
-    - path: 'vite.config.*'
-      instructions: 'Ignore Vite configuration'
-    - path: 'vitest.config.*'
-      instructions: 'Ignore Vitest configuration'
-    - path: 'tailwind.config.*'
-      instructions: 'Ignore Tailwind configuration'
-    - path: 'postcss.config.*'
-      instructions: 'Ignore PostCSS configuration'
-    - path: 'drizzle.config.*'
-      instructions: 'Ignore Drizzle configuration'
-    - path: 'turbo.json'
-      instructions: 'Ignore Turbo configuration'
-    - path: 'knip.json'
-      instructions: 'Ignore Knip configuration'
-    - path: '.gitignore'
-      instructions: 'Ignore git configuration'
-    - path: '**/coverage-reports/**'
-      instructions: 'Ignore coverage reports'
-    - path: '**/test-results/**'
-      instructions: 'Ignore test results'
-    - path: '**/codeql-db/**'
-      instructions: 'Ignore CodeQL database'
-    - path: '**/cdk.out/**'
-      instructions: 'Ignore CDK output'
-    - path: '**/infrastructure/dist/**'
-      instructions: 'Ignore infrastructure build output'
+    # Build outputs and generated files
+    - 'node_modules/**'
+    - '**/dist/**'
+    - '**/build/**'
+    - '**/out/**'
+    - 'coverage/**'
+    - '**/coverage-reports/**'
+    - '**/test-results/**'
+    - '**/*.min.js'
+    - '**/*.bundle.js'
+
+    # Build artifacts and cache directories
+    - '**/codeql-db/**'
+    - '**/cdk.out/**'
+    - '**/infrastructure/dist/**'
+    - '.next/**'
+    - '.nuxt/**'
+    - '.output/**'
+    - '.vercel/**'
+
+    # Lock files (allow review of intentional changes)
+    - '**/package-lock.json'
+    - '**/yarn.lock'
+    - '**/pnpm-lock.yaml'
+
+    # Git and CI artifacts
+    - '.git/**'
+    - '**/.git/**'
   # Pre-merge checks for quality gates
   pre_merge_checks:
     title:

@@ -64,234 +64,238 @@ outputs:
 runs:
   using: 'composite'
   steps:
-  - name: Validate inputs
-    shell: bash
-    run: |
-      echo "🔧 Frontend Environment Generation"
-      echo "=================================="
-      echo "Environment: ${{ inputs.environment }}"
-      echo "PR Number: ${{ inputs.pr-number || 'N/A' }}"
-      echo "Build Mode: ${{ inputs.build-mode }}"
-      echo "API Endpoint: ${{ inputs.api-endpoint || 'Auto-resolve' }}"
-      echo "Output File: ${{ inputs.output-file }}"
-      echo "Include Metadata: ${{ inputs.include-build-metadata }}"
-      echo "Debug: ${{ inputs.debug }}"
-      echo ""
+    - name: Validate inputs
+      shell: bash
+      run: |
+        echo "🔧 Frontend Environment Generation"
+        echo "=================================="
+        echo "Environment: ${{ inputs.environment }}"
+        echo "PR Number: ${{ inputs.pr-number || 'N/A' }}"
+        echo "Build Mode: ${{ inputs.build-mode }}"
+        echo "API Endpoint: ${{ inputs.api-endpoint || 'Auto-resolve' }}"
+        echo "Output File: ${{ inputs.output-file }}"
+        echo "Include Metadata: ${{ inputs.include-build-metadata }}"
+        echo "Debug: ${{ inputs.debug }}"
+        echo ""
 
-  - name: Setup environment generation
-    shell: bash
-    run: |
-      cd apps/client-ui
+    - name: Setup environment generation
+      shell: bash
+      run: |
+        cd apps/client-ui
 
-      # Make scripts executable
-      chmod +x scripts/inject-preview-env.sh
-      chmod +x scripts/api-resolution-service.sh
+        # Make scripts executable
+        chmod +x scripts/inject-preview-env.sh
+        chmod +x scripts/api-resolution-service.sh
 
-      # Validate required tools
-      if ! command -v jq &> /dev/null; then
-        echo "❌ jq not found"
-        exit 1
-      fi
+        # Validate required tools
+        if ! command -v jq &> /dev/null; then
+          echo "❌ jq not found"
+          exit 1
+        fi
 
-      echo "✅ Environment generation setup complete"
+        echo "✅ Environment generation setup complete"
 
-  - name: Generate environment variables
-    id: generate
-    shell: bash
-    run: |
-      cd apps/client-ui
+    - name: Generate environment variables
+      id: generate
+      shell: bash
+      run: |
+        cd apps/client-ui
 
-      # Set up environment variables for the injection script
-      export ENVIRONMENT_NAME="${{ inputs.environment }}"
-      export BUILD_MODE="${{ inputs.build-mode }}"
+        # Set up environment variables for the injection script
+        export ENVIRONMENT_NAME="${{ inputs.environment }}"
+        export BUILD_MODE="${{ inputs.build-mode }}"
 
-      # Handle API key from Doppler secrets
-      if [[ -n "${{ inputs.api-key }}" ]]; then
-        export VITE_API_KEY="${{ inputs.api-key }}"
-        echo "🔑 Using API key from Doppler secrets"
-      else
-        echo "❌ No API key provided from Doppler secrets"
-        exit 1
-      fi
-
-      # Set PR number if provided
-      if [[ -n "${{ inputs.pr-number }}" ]]; then
-        export PR_NUMBER="${{ inputs.pr-number }}"
-      fi
-
-      # Set API endpoint - priority order: explicit input > custom domain pattern > discovery
-      if [[ -n "${{ inputs.api-endpoint }}" ]]; then
-        export VITE_API_URL="${{ inputs.api-endpoint }}"
-        echo "🔗 Using provided API endpoint: ${{ inputs.api-endpoint }}"
-      elif [[ -n "${{ inputs.custom-domain-name }}" && -n "${{ inputs.pr-number }}" ]]; then
-        # Construct API URL using custom domain pattern
-        CUSTOM_API_URL="https://pr-${{ inputs.pr-number }}-api.${{ inputs.custom-domain-name }}/api"
-        export VITE_API_URL="$CUSTOM_API_URL"
-        echo "🌐 Using custom domain pattern API endpoint: $CUSTOM_API_URL"
-        echo "📝 Custom domain: ${{ inputs.custom-domain-name }}"
-        echo "📝 PR number: ${{ inputs.pr-number }}"
-      elif [[ -n "${{ inputs.custom-domain-name }}" ]]; then
-        # For staging/production, use custom domain pattern
-        if [[ "${{ inputs.environment }}" == "staging" ]]; then
-          CUSTOM_API_URL="https://staging.api.${{ inputs.custom-domain-name }}/api"
-        elif [[ "${{ inputs.environment }}" == "production" ]]; then
-          CUSTOM_API_URL="https://api.${{ inputs.custom-domain-name }}/api"
+        # Handle API key from Doppler secrets
+        if [[ -n "${{ inputs.api-key }}" ]]; then
+          export VITE_API_KEY="${{ inputs.api-key }}"
+          echo "🔑 Using API key from Doppler secrets"
         else
-          CUSTOM_API_URL="https://${{ inputs.environment }}.api.${{ inputs.custom-domain-name }}/api"
+          echo "❌ No API key provided from Doppler secrets"
+          exit 1
         fi
-        export VITE_API_URL="$CUSTOM_API_URL"
-        echo "🌐 Using custom domain pattern API endpoint: $CUSTOM_API_URL"
-        echo "📝 Custom domain: ${{ inputs.custom-domain-name }}"
-        echo "📝 Environment: ${{ inputs.environment }}"
-      fi
 
-      # Set backend metadata if provided
-      if [[ -n "${{ inputs.backend-stack-name }}" ]]; then
-        export VITE_BACKEND_STACK_NAME="${{ inputs.backend-stack-name }}"
-      fi
-
-      if [[ -n "${{ inputs.resolution-method }}" ]]; then
-        export VITE_API_RESOLUTION_METHOD="${{ inputs.resolution-method }}"
-      fi
-
-      # Set build metadata if enabled
-      if [[ "${{ inputs.include-build-metadata }}" == "true" ]]; then
-        export VITE_BUILD_TIMESTAMP="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-        export VITE_BUILD_COMMIT="${GITHUB_SHA:-unknown}"
-        export VITE_BUILD_BRANCH="${GITHUB_REF_NAME:-unknown}"
-        export VITE_BUILD_WORKFLOW="${GITHUB_WORKFLOW:-unknown}"
-        export VITE_BUILD_RUN_ID="${GITHUB_RUN_ID:-unknown}"
-        
+        # Set PR number if provided
         if [[ -n "${{ inputs.pr-number }}" ]]; then
-          export VITE_PR_NUMBER="${{ inputs.pr-number }}"
+          export PR_NUMBER="${{ inputs.pr-number }}"
         fi
-      fi
 
-      # Enable debug mode if requested
-      if [[ "${{ inputs.debug }}" == "true" ]]; then
-        export DEBUG="true"
-      fi
-
-      # Prepare injection script arguments
-      INJECTION_ARGS=(
-        "--environment" "${{ inputs.environment }}"
-        "--build-mode" "${{ inputs.build-mode }}"
-        "--output-file" "${{ inputs.output-file }}"
-      )
-
-      if [[ -n "${{ inputs.pr-number }}" ]]; then
-        INJECTION_ARGS+=("--pr-number" "${{ inputs.pr-number }}")
-      fi
-
-      if [[ "${{ inputs.debug }}" == "true" ]]; then
-        INJECTION_ARGS+=("--debug")
-      fi
-
-      # Run environment variable injection
-      echo "🔧 Generating environment variables..."
-      if ./scripts/inject-preview-env.sh "${INJECTION_ARGS[@]}"; then
-        echo "✅ Environment variables generated successfully"
-      else
-        echo "❌ Environment variable generation failed"
-        exit 1
-      fi
-
-      # Verify output file exists
-      if [[ ! -f "${{ inputs.output-file }}" ]]; then
-        echo "❌ Output file not found: ${{ inputs.output-file }}"
-        exit 1
-      fi
-
-      # Extract information from generated file
-      API_URL=$(grep "VITE_API_URL=" "${{ inputs.output-file }}" | cut -d'=' -f2 || echo "")
-      VARIABLES_COUNT=$(grep -c "=" "${{ inputs.output-file }}" || echo "0")
-
-      # Set outputs
-      echo "env-file=${{ inputs.output-file }}" >> $GITHUB_OUTPUT
-      echo "api-url=$API_URL" >> $GITHUB_OUTPUT
-      echo "variables-count=$VARIABLES_COUNT" >> $GITHUB_OUTPUT
-
-      echo ""
-      echo "📋 Generated Environment Variables:"
-      echo "  Output File: ${{ inputs.output-file }}"
-      echo "  API URL: $API_URL"
-      echo "  Variables Count: $VARIABLES_COUNT"
-
-  - name: Validate environment variables
-    id: validate
-    shell: bash
-    if: inputs.validate-variables == 'true'
-    run: |
-      cd apps/client-ui
-
-      echo "🔍 Validating environment variables..."
-
-      ENV_FILE="${{ inputs.output-file }}"
-      VALIDATION_ERRORS=0
-
-      # Check for required variables
-      REQUIRED_VARS=("VITE_API_URL" "VITE_API_KEY" "VITE_APP_ENV")
-
-      for var in "${REQUIRED_VARS[@]}"; do
-        if grep -q "^${var}=" "$ENV_FILE"; then
-          VALUE=$(grep "^${var}=" "$ENV_FILE" | cut -d'=' -f2)
-          if [[ -n "$VALUE" && "$VALUE" != "undefined" ]]; then
-            echo "✅ $var: OK"
+        # Set API endpoint - priority order: explicit input > custom domain pattern > discovery
+        if [[ -n "${{ inputs.api-endpoint }}" ]]; then
+          export VITE_API_URL="${{ inputs.api-endpoint }}"
+          echo "🔗 Using provided API endpoint: ${{ inputs.api-endpoint }}"
+        elif [[ -n "${{ inputs.custom-domain-name }}" && -n "${{ inputs.pr-number }}" ]]; then
+          # Construct API URL using custom domain pattern
+          CUSTOM_API_URL="https://pr-${{ inputs.pr-number }}-api.${{ inputs.custom-domain-name }}/api"
+          export VITE_API_URL="$CUSTOM_API_URL"
+          echo "🌐 Using custom domain pattern API endpoint: $CUSTOM_API_URL"
+          echo "📝 Custom domain: ${{ inputs.custom-domain-name }}"
+          echo "📝 PR number: ${{ inputs.pr-number }}"
+        elif [[ -n "${{ inputs.custom-domain-name }}" ]]; then
+          # For staging/production, use custom domain pattern
+          if [[ "${{ inputs.environment }}" == "staging" ]]; then
+            CUSTOM_API_URL="https://staging.api.${{ inputs.custom-domain-name }}/api"
+          elif [[ "${{ inputs.environment }}" == "production" ]]; then
+            CUSTOM_API_URL="https://api.${{ inputs.custom-domain-name }}/api"
           else
-            echo "❌ $var: Empty or undefined"
+            CUSTOM_API_URL="https://${{ inputs.environment }}.api.${{ inputs.custom-domain-name }}/api"
+          fi
+          export VITE_API_URL="$CUSTOM_API_URL"
+          echo "🌐 Using custom domain pattern API endpoint: $CUSTOM_API_URL"
+          echo "📝 Custom domain: ${{ inputs.custom-domain-name }}"
+          echo "📝 Environment: ${{ inputs.environment }}"
+        fi
+
+        # Set backend metadata if provided
+        if [[ -n "${{ inputs.backend-stack-name }}" ]]; then
+          export VITE_BACKEND_STACK_NAME="${{ inputs.backend-stack-name }}"
+        fi
+
+        if [[ -n "${{ inputs.resolution-method }}" ]]; then
+          export VITE_API_RESOLUTION_METHOD="${{ inputs.resolution-method }}"
+        fi
+
+        # Set build metadata if enabled
+        if [[ "${{ inputs.include-build-metadata }}" == "true" ]]; then
+          export VITE_BUILD_TIMESTAMP="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          export VITE_BUILD_COMMIT="${GITHUB_SHA:-unknown}"
+          export VITE_BUILD_BRANCH="${GITHUB_REF_NAME:-unknown}"
+          export VITE_BUILD_WORKFLOW="${GITHUB_WORKFLOW:-unknown}"
+          export VITE_BUILD_RUN_ID="${GITHUB_RUN_ID:-unknown}"
+          
+          if [[ -n "${{ inputs.pr-number }}" ]]; then
+            export VITE_PR_NUMBER="${{ inputs.pr-number }}"
+          fi
+        fi
+
+        # Enable debug mode if requested
+        if [[ "${{ inputs.debug }}" == "true" ]]; then
+          export DEBUG="true"
+        fi
+
+        # Prepare injection script arguments
+        INJECTION_ARGS=(
+          "--environment" "${{ inputs.environment }}"
+          "--build-mode" "${{ inputs.build-mode }}"
+          "--output-file" "${{ inputs.output-file }}"
+        )
+
+        if [[ -n "${{ inputs.pr-number }}" ]]; then
+          INJECTION_ARGS+=("--pr-number" "${{ inputs.pr-number }}")
+        fi
+
+        if [[ "${{ inputs.debug }}" == "true" ]]; then
+          INJECTION_ARGS+=("--debug")
+        fi
+
+        # Run environment variable injection
+        echo "🔧 Generating environment variables..."
+        if ./scripts/inject-preview-env.sh "${INJECTION_ARGS[@]}"; then
+          echo "✅ Environment variables generated successfully"
+        else
+          echo "❌ Environment variable generation failed"
+          exit 1
+        fi
+
+        # Verify output file exists
+        if [[ ! -f "${{ inputs.output-file }}" ]]; then
+          echo "❌ Output file not found: ${{ inputs.output-file }}"
+          exit 1
+        fi
+
+        # Extract information from generated file
+        API_URL=$(grep "VITE_API_URL=" "${{ inputs.output-file }}" | cut -d'=' -f2 || echo "")
+        VARIABLES_COUNT=$(grep -c "=" "${{ inputs.output-file }}" || echo "0")
+
+        # Set outputs
+        echo "env-file=${{ inputs.output-file }}" >> $GITHUB_OUTPUT
+        echo "api-url=$API_URL" >> $GITHUB_OUTPUT
+        echo "variables-count=$VARIABLES_COUNT" >> $GITHUB_OUTPUT
+
+        echo ""
+        echo "📋 Generated Environment Variables:"
+        echo "  Output File: ${{ inputs.output-file }}"
+        echo "  API URL: $API_URL"
+        echo "  Variables Count: $VARIABLES_COUNT"
+
+    - name: Validate environment variables
+      id: validate
+      shell: bash
+      if: inputs.validate-variables == 'true'
+      run: |
+        cd apps/client-ui
+
+        echo "🔍 Validating environment variables..."
+
+        ENV_FILE="${{ inputs.output-file }}"
+        VALIDATION_ERRORS=0
+
+        # Check for required variables
+        REQUIRED_VARS=("VITE_API_URL" "VITE_API_KEY" "VITE_APP_ENV")
+
+        for var in "${REQUIRED_VARS[@]}"; do
+          if grep -q "^${var}=" "$ENV_FILE"; then
+            VALUE=$(grep "^${var}=" "$ENV_FILE" | cut -d'=' -f2)
+            if [[ -n "$VALUE" && "$VALUE" != "undefined" ]]; then
+              echo "✅ $var: OK"
+            else
+              echo "❌ $var: Empty or undefined"
+              VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
+            fi
+          else
+            echo "❌ $var: Missing"
             VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
           fi
-        else
-          echo "❌ $var: Missing"
-          VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
+        done
+
+        # Validate API URL format
+        API_URL=$(grep "VITE_API_URL=" "$ENV_FILE" | cut -d'=' -f2 || echo "")
+        if [[ -n "$API_URL" ]]; then
+          if [[ "$API_URL" =~ ^https?:// ]]; then
+            echo "✅ API URL format: Valid"
+          else
+            echo "❌ API URL format: Invalid (not HTTP/HTTPS)"
+            VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
+          fi
         fi
-      done
 
-      # Validate API URL format
-      API_URL=$(grep "VITE_API_URL=" "$ENV_FILE" | cut -d'=' -f2 || echo "")
-      if [[ -n "$API_URL" ]]; then
-        if [[ "$API_URL" =~ ^https?:// ]]; then
-          echo "✅ API URL format: Valid"
+        # Set validation result
+        if [[ $VALIDATION_ERRORS -eq 0 ]]; then
+          echo "validation-result=success" >> $GITHUB_OUTPUT
+          echo "✅ Environment variable validation passed"
         else
-          echo "❌ API URL format: Invalid (not HTTP/HTTPS)"
-          VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
+          echo "validation-result=failed" >> $GITHUB_OUTPUT
+          echo "❌ Environment variable validation failed ($VALIDATION_ERRORS errors)"
+          exit 1
         fi
-      fi
 
-      # Set validation result
-      if [[ $VALIDATION_ERRORS -eq 0 ]]; then
-        echo "validation-result=success" >> $GITHUB_OUTPUT
-        echo "✅ Environment variable validation passed"
-      else
-        echo "validation-result=failed" >> $GITHUB_OUTPUT
-        echo "❌ Environment variable validation failed ($VALIDATION_ERRORS errors)"
-        exit 1
-      fi
+    - name: Display environment summary
+      shell: bash
+      run: |
+        cd apps/client-ui
 
-  - name: Display environment summary
-    shell: bash
-    run: |
-      cd apps/client-ui
+        echo ""
+        echo "📊 Environment Generation Summary"
+        echo "================================="
+        echo "Environment: ${{ inputs.environment }}"
+        echo "Build Mode: ${{ inputs.build-mode }}"
+        echo "Output File: ${{ steps.generate.outputs.env-file }}"
+        echo "API URL: ${{ steps.generate.outputs.api-url }}"
+        echo "Variables Count: ${{ steps.generate.outputs.variables-count }}"
 
-      echo ""
-      echo "📊 Environment Generation Summary"
-      echo "================================="
-      echo "Environment: ${{ inputs.environment }}"
-      echo "Build Mode: ${{ inputs.build-mode }}"
-      echo "Output File: ${{ steps.generate.outputs.env-file }}"
-      echo "API URL: ${{ steps.generate.outputs.api-url }}"
-      echo "Variables Count: ${{ steps.generate.outputs.variables-count }}"
+        if [[ "${{ inputs.validate-variables }}" == "true" ]]; then
+          echo "Validation: ${{ steps.validate.outputs.validation-result }}"
+        fi
 
-      if [[ "${{ inputs.validate-variables }}" == "true" ]]; then
-        echo "Validation: ${{ steps.validate.outputs.validation-result }}"
-      fi
+        echo ""
+        echo "🔍 Environment File Contents (first 10 variables, values redacted):"
 
-      echo ""
-      echo "🔍 Environment File Contents (first 10 lines):"
-      head -10 "${{ inputs.output-file }}" | sed 's/^/  /'
+        # Parse .env file and show only variable names with redacted values for security
+        awk 'NR <= 10 && /^[^#]/ && /=/ {split($0, parts, "="); print "  " parts[1] "=REDACTED"}' "${{ inputs.output-file }}"
 
-      TOTAL_LINES=$(wc -l < "${{ inputs.output-file }}")
-      if [[ $TOTAL_LINES -gt 10 ]]; then
-        echo "  ... ($((TOTAL_LINES - 10)) more lines)"
-      fi
-      echo ""
+        TOTAL_LINES=$(wc -l < "${{ inputs.output-file }}")
+        TOTAL_VARS=$(awk '/^[^#]/ && /=/' "${{ inputs.output-file }}" | wc -l)
+
+        if [[ $TOTAL_VARS -gt 10 ]]; then
+          echo "  ... ($((TOTAL_VARS - 10)) more variables)"
+        fi
+        echo ""

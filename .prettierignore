@@ -7,3 +7,7 @@ routeTree.gen.ts
 
 # Hey-Api autogen files
 **/macro-ai-api-client/src/client
+
+# GitHub Actions workflow files - shell syntax should not be auto-formatted
+# as prettier can introduce shellcheck violations (SC2086, SC2129, etc.)
+.github/workflows/

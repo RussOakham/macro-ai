@@ -60,6 +60,18 @@ end-to-end type safety.
 - **Vitest**: Testing framework
 - **ESLint + Prettier**: Code quality and formatting
 
+### Tooling Guides
+
+- **[Shellharden Workflow Guide](./shellharden_workflow_guide.md)** - Using shellharden for shell script linting and fixing
+  - GitHub Actions workflow integration
+  - Actionlint configuration for shellcheck violations
+  - Best practices for shell scripts in workflows
+
+- **[Shellharden Practical Guide](./shellharden_practical_guide.md)** - Practical shellharden usage and examples
+  - Common shell script patterns and fixes
+  - Integration with development workflow
+  - Troubleshooting shell script issues
+
 ### Recommended IDE Setup
 
 - **VS Code**: Primary IDE with recommended extensions

@@ -312,6 +312,50 @@ pnpm security:scan:advanced
 1. **Snyk Authentication**: Ensure `SNYK_TOKEN` is set in GitHub Secrets
 2. **ESLint Errors**: Check ESLint configuration and plugin versions
 3. **Semgrep Failures**: Verify GitHub Actions permissions for security events
+4. **Snyk False Positives**: See "Handling Snyk False Positives" section below
+
+### Handling Snyk False Positives
+
+Snyk Code (SAST) may flag legitimate code patterns as security issues. Here's how to handle false positives:
+
+#### Code-Level Issues (Snyk Code)
+
+**Important**: Snyk Code issues cannot be ignored using the `.snyk` file or inline comments. They must be ignored through
+the Snyk UI.
+
+**To ignore false positives:**
+
+1. **Navigate to Snyk UI**: Go to your Snyk project dashboard
+2. **Find the issue**: Locate the specific security issue in the Issues list
+3. **Ignore the issue**: Click the "Ignore" button on the issue card
+4. **Set expiration**: Choose an expiration date or select "Never expire"
+5. **Add reason**: Provide a clear reason for ignoring (e.g., "Intentional - frontend needs cookie access")
+
+**Common false positives in this project:**
+
+- **HttpOnly cookie disabled**: Purposeful - frontend React app needs access to authentication cookies
+- **HTTP instead of HTTPS**: Purposeful - HTTPS termination handled by AWS ALB/CloudFront at infrastructure level
+
+#### Dependency Vulnerabilities (Snyk Open Source)
+
+For dependency vulnerabilities, you can use the `.snyk` file:
+
+```yaml
+ignore:
+  SNYK-VULN-ID:
+    - '*':
+        reason: 'Reason for ignoring vulnerability'
+        expires: 'YYYY-MM-DDTHH:mm:ss.fffZ'
+```
+
+#### Code Comments for Documentation
+
+While Snyk doesn't use inline comments for ignoring, you can document intentional security decisions:
+
+```typescript
+// Snyk Code: This is intentional - HTTPS termination handled by AWS ALB/CloudFront
+// To ignore this false positive: Go to Snyk UI -> Project -> Issues -> Ignore
+```
 
 ### Getting Help
 

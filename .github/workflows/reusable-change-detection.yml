@@ -42,43 +42,43 @@ jobs:
     outputs:
       changed-files: ${{ steps.check.outputs.changed-files }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ inputs.head-ref }}
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ inputs.head-ref }}
 
-      - name: Check for all changes
-        id: check
-        run: |
-          BASE_REF="${{ inputs.base-ref }}"
-          HEAD_REF="${{ inputs.head-ref }}"
+    - name: Check for all changes
+      id: check
+      run: |
+        BASE_REF="${{ inputs.base-ref }}"
+        HEAD_REF="${{ inputs.head-ref }}"
 
-          echo "🔍 Checking changes between ${BASE_REF} and ${HEAD_REF}"
+        echo "🔍 Checking changes between '${BASE_REF}' and '${HEAD_REF}'"
 
-          # Fetch the base reference - handle both branch names and commit refs
-          if [[ "${BASE_REF}" =~ ^[a-f0-9]{40}$ ]] || [[ "${BASE_REF}" =~ ^HEAD~[0-9]+$ ]]; then
-            # It's a commit hash or HEAD~N reference, fetch all refs to ensure it's available
-            git fetch origin
-          else
-            # It's a branch name, fetch it specifically
-            git fetch origin "${BASE_REF}:${BASE_REF}"
-          fi
+        # Fetch the base reference - handle both branch names and commit refs
+        if [[ "${BASE_REF}" =~ ^[a-f0-9]{40}$ ]] || [[ "${BASE_REF}" =~ ^HEAD~[0-9]+$ ]]; then
+          # It's a commit hash or HEAD~N reference, fetch all refs to ensure it's available
+          git fetch origin
+        else
+          # It's a branch name, fetch it specifically
+          git fetch origin "${BASE_REF}":"${BASE_REF}"
+        fi
 
-          # Get all changed files
-          CHANGED_FILES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" || echo "")
+        # Get all changed files
+        CHANGED_FILES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" || echo "")
 
-          if [[ -n "$CHANGED_FILES" ]]; then
-            echo "✅ Changes detected:"
-            echo "$CHANGED_FILES"
+        if [[ -n "$CHANGED_FILES" ]]; then
+          echo "✅ Changes detected:"
+          echo "$CHANGED_FILES"
 
-            # Convert to JSON array for output
-            CHANGED_FILES_JSON=$(echo "$CHANGED_FILES" | jq -R -s -c 'split("\n")[:-1]')
-            echo "changed-files=${CHANGED_FILES_JSON}" >> $GITHUB_OUTPUT
-          else
-            echo "ℹ️ No changes detected"
-            echo "changed-files=[]" >> $GITHUB_OUTPUT
-          fi
+          # Convert to JSON array for output
+          CHANGED_FILES_JSON=$(echo "$CHANGED_FILES" | jq -R -s -c 'split("\n")[:-1]')
+          echo "changed-files=${CHANGED_FILES_JSON}" >> "$GITHUB_OUTPUT"
+        else
+          echo "ℹ️ No changes detected"
+          echo "changed-files=[]" >> "$GITHUB_OUTPUT"
+        fi
 
   check-backend-changes:
     name: Check Backend Changes
@@ -87,38 +87,38 @@ jobs:
     outputs:
       has-backend-changes: ${{ steps.check.outputs.has-backend-changes }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ inputs.head-ref }}
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ inputs.head-ref }}
 
-      - name: Check for backend changes
-        id: check
-        run: |
-          BASE_REF="${{ inputs.base-ref }}"
-          HEAD_REF="${{ inputs.head-ref }}"
+    - name: Check for backend changes
+      id: check
+      run: |
+        BASE_REF="${{ inputs.base-ref }}"
+        HEAD_REF="${{ inputs.head-ref }}"
 
-          # Fetch the base reference - handle both branch names and commit refs
-          if [[ "${BASE_REF}" =~ ^[a-f0-9]{40}$ ]] || [[ "${BASE_REF}" =~ ^HEAD~[0-9]+$ ]]; then
-            # It's a commit hash or HEAD~N reference, fetch all refs to ensure it's available
-            git fetch origin
-          else
-            # It's a branch name, fetch it specifically
-            git fetch origin "${BASE_REF}:${BASE_REF}"
-          fi
+        # Fetch the base reference - handle both branch names and commit refs
+        if [[ "${BASE_REF}" =~ ^[a-f0-9]{40}$ ]] || [[ "${BASE_REF}" =~ ^HEAD~[0-9]+$ ]]; then
+          # It's a commit hash or HEAD~N reference, fetch all refs to ensure it's available
+          git fetch origin
+        else
+          # It's a branch name, fetch it specifically
+          git fetch origin "${BASE_REF}":"${BASE_REF}"
+        fi
 
-          # Check for backend-related changes
-          BACKEND_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^infrastructure/|^apps/express-api/|^packages/macro-ai-api-client/' || true)
+        # Check for backend-related changes
+        BACKEND_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^infrastructure/|^apps/express-api/|^packages/macro-ai-api-client/' || true)
 
-          if [[ -n "$BACKEND_CHANGES" ]]; then
-            echo "✅ Backend changes detected:"
-            echo "$BACKEND_CHANGES"
-            echo "has-backend-changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "ℹ️ No backend changes detected"
-            echo "has-backend-changes=false" >> $GITHUB_OUTPUT
-          fi
+        if [[ -n "$BACKEND_CHANGES" ]]; then
+          echo "✅ Backend changes detected:"
+          echo "$BACKEND_CHANGES"
+          echo "has-backend-changes=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "ℹ️ No backend changes detected"
+          echo "has-backend-changes=false" >> "$GITHUB_OUTPUT"
+        fi
 
   check-frontend-changes:
     name: Check Frontend Changes
@@ -127,38 +127,38 @@ jobs:
     outputs:
       has-frontend-changes: ${{ steps.check.outputs.has-frontend-changes }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ inputs.head-ref }}
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ inputs.head-ref }}
 
-      - name: Check for frontend changes
-        id: check
-        run: |
-          BASE_REF="${{ inputs.base-ref }}"
-          HEAD_REF="${{ inputs.head-ref }}"
+    - name: Check for frontend changes
+      id: check
+      run: |
+        BASE_REF="${{ inputs.base-ref }}"
+        HEAD_REF="${{ inputs.head-ref }}"
 
-          # Fetch the base reference - handle both branch names and commit refs
-          if [[ "${BASE_REF}" =~ ^[a-f0-9]{40}$ ]] || [[ "${BASE_REF}" =~ ^HEAD~[0-9]+$ ]]; then
-            # It's a commit hash or HEAD~N reference, fetch all refs to ensure it's available
-            git fetch origin
-          else
-            # It's a branch name, fetch it specifically
-            git fetch origin "${BASE_REF}:${BASE_REF}"
-          fi
+        # Fetch the base reference - handle both branch names and commit refs
+        if [[ "${BASE_REF}" =~ ^[a-f0-9]{40}$ ]] || [[ "${BASE_REF}" =~ ^HEAD~[0-9]+$ ]]; then
+          # It's a commit hash or HEAD~N reference, fetch all refs to ensure it's available
+          git fetch origin
+        else
+          # It's a branch name, fetch it specifically
+          git fetch origin "${BASE_REF}":"${BASE_REF}"
+        fi
 
-          # Check for frontend-related changes
-          FRONTEND_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^apps/client-ui/|^packages/ui-library/' || true)
+        # Check for frontend-related changes
+        FRONTEND_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^apps/client-ui/|^packages/ui-library/' || true)
 
-          if [[ -n "$FRONTEND_CHANGES" ]]; then
-            echo "✅ Frontend changes detected:"
-            echo "$FRONTEND_CHANGES"
-            echo "has-frontend-changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "ℹ️ No frontend changes detected"
-            echo "has-frontend-changes=false" >> $GITHUB_OUTPUT
-          fi
+        if [[ -n "$FRONTEND_CHANGES" ]]; then
+          echo "✅ Frontend changes detected:"
+          echo "$FRONTEND_CHANGES"
+          echo "has-frontend-changes=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "ℹ️ No frontend changes detected"
+          echo "has-frontend-changes=false" >> "$GITHUB_OUTPUT"
+        fi
 
   check-infrastructure-changes:
     name: Check Infrastructure Changes
@@ -167,38 +167,38 @@ jobs:
     outputs:
       has-infrastructure-changes: ${{ steps.check.outputs.has-infrastructure-changes }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ inputs.head-ref }}
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ inputs.head-ref }}
 
-      - name: Check for infrastructure changes
-        id: check
-        run: |
-          BASE_REF="${{ inputs.base-ref }}"
-          HEAD_REF="${{ inputs.head-ref }}"
+    - name: Check for infrastructure changes
+      id: check
+      run: |
+        BASE_REF="${{ inputs.base-ref }}"
+        HEAD_REF="${{ inputs.head-ref }}"
 
-          # Fetch the base reference - handle both branch names and commit refs
-          if [[ "${BASE_REF}" =~ ^[a-f0-9]{40}$ ]] || [[ "${BASE_REF}" =~ ^HEAD~[0-9]+$ ]]; then
-            # It's a commit hash or HEAD~N reference, fetch all refs to ensure it's available
-            git fetch origin
-          else
-            # It's a branch name, fetch it specifically
-            git fetch origin "${BASE_REF}:${BASE_REF}"
-          fi
+        # Fetch the base reference - handle both branch names and commit refs
+        if [[ "${BASE_REF}" =~ ^[a-f0-9]{40}$ ]] || [[ "${BASE_REF}" =~ ^HEAD~[0-9]+$ ]]; then
+          # It's a commit hash or HEAD~N reference, fetch all refs to ensure it's available
+          git fetch origin
+        else
+          # It's a branch name, fetch it specifically
+          git fetch origin "${BASE_REF}":"${BASE_REF}"
+        fi
 
-          # Check for infrastructure-related changes
-          INFRASTRUCTURE_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^infrastructure/|^\.github/workflows/.*\.yml$' || true)
+        # Check for infrastructure-related changes
+        INFRASTRUCTURE_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^infrastructure/|^\.github/workflows/.*\.yml$' || true)
 
-          if [[ -n "$INFRASTRUCTURE_CHANGES" ]]; then
-            echo "✅ Infrastructure changes detected:"
-            echo "$INFRASTRUCTURE_CHANGES"
-            echo "has-infrastructure-changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "ℹ️ No infrastructure changes detected"
-            echo "has-infrastructure-changes=false" >> $GITHUB_OUTPUT
-          fi
+        if [[ -n "$INFRASTRUCTURE_CHANGES" ]]; then
+          echo "✅ Infrastructure changes detected:"
+          echo "$INFRASTRUCTURE_CHANGES"
+          echo "has-infrastructure-changes=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "ℹ️ No infrastructure changes detected"
+          echo "has-infrastructure-changes=false" >> "$GITHUB_OUTPUT"
+        fi
 
   check-workflow-changes:
     name: Check Workflow Changes
@@ -207,78 +207,73 @@ jobs:
     outputs:
       has-workflow-changes: ${{ steps.check.outputs.has-workflow-changes }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ inputs.head-ref }}
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ inputs.head-ref }}
 
-      - name: Check for workflow changes
-        id: check
-        run: |
-          BASE_REF="${{ inputs.base-ref }}"
-          HEAD_REF="${{ inputs.head-ref }}"
+    - name: Check for workflow changes
+      id: check
+      run: |
+        BASE_REF="${{ inputs.base-ref }}"
+        HEAD_REF="${{ inputs.head-ref }}"
 
-          # Fetch the base reference - handle both branch names and commit refs
-          if [[ "${BASE_REF}" =~ ^[a-f0-9]{40}$ ]] || [[ "${BASE_REF}" =~ ^HEAD~[0-9]+$ ]]; then
-            # It's a commit hash or HEAD~N reference, fetch all refs to ensure it's available
-            git fetch origin
-          else
-            # It's a branch name, fetch it specifically
-            git fetch origin "${BASE_REF}:${BASE_REF}"
-          fi
+        # Fetch the base reference - handle both branch names and commit refs
+        if [[ "${BASE_REF}" =~ ^[a-f0-9]{40}$ ]] || [[ "${BASE_REF}" =~ ^HEAD~[0-9]+$ ]]; then
+          # It's a commit hash or HEAD~N reference, fetch all refs to ensure it's available
+          git fetch origin
+        else
+          # It's a branch name, fetch it specifically
+          git fetch origin "${BASE_REF}":"${BASE_REF}"
+        fi
 
-          # Check for workflow-related changes
-          WORKFLOW_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^\.github/workflows/|^\.github/actions/' || true)
+        # Check for workflow-related changes
+        WORKFLOW_CHANGES=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" | grep -E '^\.github/workflows/|^\.github/actions/' || true)
 
-          if [[ -n "$WORKFLOW_CHANGES" ]]; then
-            echo "✅ Workflow changes detected:"
-            echo "$WORKFLOW_CHANGES"
-            echo "has-workflow-changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "ℹ️ No workflow changes detected"
-            echo "has-workflow-changes=false" >> $GITHUB_OUTPUT
-          fi
+        if [[ -n "$WORKFLOW_CHANGES" ]]; then
+          echo "✅ Workflow changes detected:"
+          echo "$WORKFLOW_CHANGES"
+          echo "has-workflow-changes=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "ℹ️ No workflow changes detected"
+          echo "has-workflow-changes=false" >> "$GITHUB_OUTPUT"
+        fi
 
   determine-scope:
     name: Determine Deployment Scope
     runs-on: ubuntu-latest
-    needs:
-      [
-        check-backend-changes,
-        check-frontend-changes,
-        check-infrastructure-changes,
-      ]
+    needs: [ check-backend-changes, check-frontend-changes, check-infrastructure-changes ]
     outputs:
       deployment-scope: ${{ steps.scope.outputs.deployment-scope }}
     steps:
-      - name: Determine deployment scope
-        id: scope
-        run: |
-          HAS_BACKEND="${{ needs.check-backend-changes.outputs.has-backend-changes }}"
-          HAS_FRONTEND="${{ needs.check-frontend-changes.outputs.has-frontend-changes }}"
-          HAS_INFRASTRUCTURE="${{ needs.check-infrastructure-changes.outputs.has-infrastructure-changes }}"
+    - name: Determine deployment scope
+      id: scope
+      run: |
+        HAS_BACKEND="${{ needs.check-backend-changes.outputs.has-backend-changes }}"
+        HAS_FRONTEND="${{ needs.check-frontend-changes.outputs.has-frontend-changes }}"
+        HAS_INFRASTRUCTURE="${{ needs.check-infrastructure-changes.outputs.has-infrastructure-changes }}"
 
-          echo "🔍 Determining deployment scope..."
-          echo "Backend changes: ${HAS_BACKEND}"
-          echo "Frontend changes: ${HAS_FRONTEND}"
-          echo "Infrastructure changes: ${HAS_INFRASTRUCTURE}"
+        echo "🔍 Determining deployment scope..."
+        echo "Backend changes: '${HAS_BACKEND}'"
+        echo "Frontend changes: '${HAS_FRONTEND}'"
+        echo "Infrastructure changes: '${HAS_INFRASTRUCTURE}'"
 
-          if [[ "${HAS_BACKEND}" == "true" && "${HAS_FRONTEND}" == "true" ]]; then
-            DEPLOYMENT_SCOPE="both"
-            echo "📦 Deployment scope: Both frontend and backend"
-          elif [[ "${HAS_BACKEND}" == "true" ]]; then
-            DEPLOYMENT_SCOPE="backend"
-            echo "🔧 Deployment scope: Backend only"
-          elif [[ "${HAS_FRONTEND}" == "true" ]]; then
-            DEPLOYMENT_SCOPE="frontend"
-            echo "🎨 Deployment scope: Frontend only"
-          elif [[ "${HAS_INFRASTRUCTURE}" == "true" ]]; then
-            DEPLOYMENT_SCOPE="infrastructure"
-            echo "🏗️ Deployment scope: Infrastructure only"
-          else
-            DEPLOYMENT_SCOPE="none"
-            echo "⏭️ Deployment scope: No deployment needed"
-          fi
+        if [[ "${HAS_BACKEND}" == "true" && "${HAS_FRONTEND}" == "true" ]]; then
+          DEPLOYMENT_SCOPE="both"
+          echo "📦 Deployment scope: '${DEPLOYMENT_SCOPE}'"
+        elif [[ "${HAS_BACKEND}" == "true" ]]; then
+          DEPLOYMENT_SCOPE="backend"
+          echo "🔧 Deployment scope: '${DEPLOYMENT_SCOPE}'"
+        elif [[ "${HAS_FRONTEND}" == "true" ]]; then
+          DEPLOYMENT_SCOPE="frontend"
+          echo "🎨 Deployment scope: '${DEPLOYMENT_SCOPE}'"
+        elif [[ "${HAS_INFRASTRUCTURE}" == "true" ]]; then
+          DEPLOYMENT_SCOPE="infrastructure"
+          echo "🏗️ Deployment scope: '${DEPLOYMENT_SCOPE}'"
+        else
+          DEPLOYMENT_SCOPE="none"
+          echo "⏭️ Deployment scope: '${DEPLOYMENT_SCOPE}'"
+        fi
 
-          echo "deployment-scope=${DEPLOYMENT_SCOPE}" >> $GITHUB_OUTPUT
+        echo "deployment-scope=${DEPLOYMENT_SCOPE}" >> "$GITHUB_OUTPUT"

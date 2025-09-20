@@ -36,78 +36,84 @@ jobs:
       amplify-app-name: ${{ steps.amplify-info.outputs.amplify-app-name }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Validate PR number format
-        id: validate-pr
-        run: |
-          PR_NUMBER="${{ github.event.inputs.pr_number }}"
+    - name: Validate PR number format
+      id: validate-pr
+      run: |
+        PR_NUMBER="${{ github.event.inputs.pr_number }}"
 
-          if [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
-            echo "❌ Invalid PR number format: $PR_NUMBER"
-            echo "PR number must be a positive integer (e.g., 123)"
-            exit 1
-          fi
+        if [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+          echo "❌ Invalid PR number format: $PR_NUMBER"
+          echo "PR number must be a positive integer (e.g., 123)"
+          exit 1
+        fi
 
-          echo "✅ PR number format valid: $PR_NUMBER"
+        echo "✅ PR number format valid: $PR_NUMBER"
 
-      - name: Validate confirmation input
-        id: validate-confirm
-        run: |
-          CONFIRM_INPUT="${{ github.event.inputs.confirm }}"
+    - name: Validate confirmation input
+      id: validate-confirm
+      run: |
+        CONFIRM_INPUT="${{ github.event.inputs.confirm }}"
 
-          if [[ "$CONFIRM_INPUT" != "I UNDERSTAND" ]]; then
-            echo "❌ Confirmation failed. Expected: 'I UNDERSTAND', Got: '$CONFIRM_INPUT'"
-            echo "This is a safety measure to prevent accidental environment destruction."
-            exit 1
-          fi
+        if [[ "$CONFIRM_INPUT" != "I UNDERSTAND" ]]; then
+          echo "❌ Confirmation failed. Expected: 'I UNDERSTAND', Got: '$CONFIRM_INPUT'"
+          echo "This is a safety measure to prevent accidental environment destruction."
+          exit 1
+        fi
 
-          echo "✅ Confirmation validated"
+        echo "✅ Confirmation validated"
 
-      - name: Check code ownership
-        id: codeowner-check
-        uses: ./.github/actions/check-codeowner
-        with:
-          mode: 'pr'
-          base-ref: ${{ github.event.pull_request.base.ref }}
+    - name: Check code ownership
+      id: codeowner-check
+      uses: ./.github/actions/check-codeowner
+      with:
+        mode: 'pr'
+        base-ref: ${{ github.event.pull_request.base.ref }}
 
-      - name: Generate environment name
-        id: env-name
-        run: |
-          ENV_NAME="pr-${{ github.event.inputs.pr_number }}"
-          echo "env-name=${ENV_NAME}" >> $GITHUB_OUTPUT
-          echo "🌍 Environment name: ${ENV_NAME}"
+    - name: Generate environment name
+      id: env-name
+      run: |
+        ENV_NAME="pr-${{ github.event.inputs.pr_number }}"
+        echo "env-name=${ENV_NAME}" >> "$GITHUB_OUTPUT"
+        echo "🌍 Environment name: ${ENV_NAME}"
 
-      - name: Generate Amplify app info
-        id: amplify-info
-        run: |
-          AMPLIFY_APP_NAME="macro-ai-frontend-pr-${{ github.event.inputs.pr_number }}"
-          echo "amplify-app-name=${AMPLIFY_APP_NAME}" >> $GITHUB_OUTPUT
+    - name: Generate Amplify app info
+      id: amplify-info
+      run: |
+        AMPLIFY_APP_NAME="macro-ai-frontend-pr-${{ github.event.inputs.pr_number }}"
+        {
+          echo "amplify-app-name=${AMPLIFY_APP_NAME}"
           echo "📱 Amplify app name: ${AMPLIFY_APP_NAME}"
+        } >> "$GITHUB_OUTPUT"
 
-      - name: Make destruction decision
-        id: decision
-        run: |
-          IS_OWNER="${{ steps.codeowner-check.outputs.is-owner }}"
-          ACTOR="${{ steps.codeowner-check.outputs.target-user }}"
+    - name: Make destruction decision
+      id: decision
+      run: |
+        IS_OWNER="${{ steps.codeowner-check.outputs.is-owner }}"
+        ACTOR="${{ steps.codeowner-check.outputs.target-user }}"
 
-          if [[ "${IS_OWNER}" == "true" ]]; then
-            echo "should-destroy=true" >> $GITHUB_OUTPUT
+        if [[ "${IS_OWNER}" == "true" ]]; then
+          {
+            echo "should-destroy=true"
             echo "✅ Manual frontend teardown approved for code owner: ${ACTOR}"
             echo "🗑️ Target environment: ${{ steps.env-name.outputs.env-name }}"
             echo "📱 Target Amplify app: ${{ steps.amplify-info.outputs.amplify-app-name }}"
-          else
-            echo "should-destroy=false" >> $GITHUB_OUTPUT
+          } >> "$GITHUB_OUTPUT"
+        else
+          {
+            echo "should-destroy=false"
             echo "❌ Manual frontend teardown blocked: ${ACTOR} is not a code owner"
-            exit 1
-          fi
+          } >> "$GITHUB_OUTPUT"
+          exit 1
+        fi
 
   # Check if the Amplify app exists
   check-amplify-app:
     name: Check Amplify App
     runs-on: ubuntu-latest
-    needs: [validate-request]
+    needs: [ validate-request ]
     if: needs.validate-request.outputs.should-destroy == 'true'
 
     permissions:
@@ -119,55 +125,61 @@ jobs:
       app-id: ${{ steps.check-app.outputs.app-id }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
 
-      - name: Check Amplify app existence
-        id: check-app
-        run: |
-          AMPLIFY_APP_NAME="${{ needs.validate-request.outputs.amplify-app-name }}"
+    - name: Check Amplify app existence
+      id: check-app
+      run: |
+        AMPLIFY_APP_NAME="${{ needs.validate-request.outputs.amplify-app-name }}"
 
-          echo "🔍 Checking for Amplify app: ${AMPLIFY_APP_NAME}"
+        echo "🔍 Checking for Amplify app: ${AMPLIFY_APP_NAME}"
 
-          # Check if Amplify app exists
-          APP_INFO=$(aws amplify list-apps \
-            --query "apps[?name=='${AMPLIFY_APP_NAME}'].{appId:appId,name:name,status:status}" \
-            --output json 2>/dev/null || echo "[]")
+        # Check if Amplify app exists
+        APP_INFO=$(aws amplify list-apps \
+          --query "apps[?name=='${AMPLIFY_APP_NAME}'].{appId:appId,name:name,status:status}" \
+          --output json 2>/dev/null || echo "[]")
 
-          if [[ "$APP_INFO" != "[]" ]] && [[ -n "$APP_INFO" ]]; then
-            APP_ID=$(echo "$APP_INFO" | jq -r '.[0].appId' 2>/dev/null || echo "")
-            APP_STATUS=$(echo "$APP_INFO" | jq -r '.[0].status' 2>/dev/null || echo "")
+        if [[ "$APP_INFO" != "[]" ]] && [[ -n "$APP_INFO" ]]; then
+          APP_ID=$(echo "$APP_INFO" | jq -r '.[0].appId' 2>/dev/null || echo "")
+          APP_STATUS=$(echo "$APP_INFO" | jq -r '.[0].status' 2>/dev/null || echo "")
 
-            if [[ -n "$APP_ID" && "$APP_ID" != "null" ]]; then
-              echo "app-exists=true" >> $GITHUB_OUTPUT
-              echo "app-id=${APP_ID}" >> $GITHUB_OUTPUT
+          if [[ -n "$APP_ID" && "$APP_ID" != "null" ]]; then
+            {
+              echo "app-exists=true"
+              echo "app-id=${APP_ID}"
               echo "✅ Amplify app found: ${APP_ID} (status: ${APP_STATUS})"
-            else
-              echo "app-exists=false" >> $GITHUB_OUTPUT
-              echo "app-id=" >> $GITHUB_OUTPUT
-              echo "⚠️ Amplify app data found but could not extract app ID"
-            fi
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "app-exists=false" >> $GITHUB_OUTPUT
-            echo "app-id=" >> $GITHUB_OUTPUT
+            {
+              echo "app-exists=false"
+              echo "app-id="
+              echo "⚠️ Amplify app data found but could not extract app ID"
+            } >> "$GITHUB_OUTPUT"
+          fi
+        else
+          {
+            echo "app-exists=false"
+            echo "app-id="
             echo "ℹ️ Amplify app not found"
             echo "This could mean:"
             echo "  - The frontend preview was never deployed"
             echo "  - The app was already deleted"
             echo "  - The PR number is incorrect"
-          fi
+          } >> "$GITHUB_OUTPUT"
+        fi
 
   # Destroy the frontend development environment
   destroy-frontend-environment:
     name: Destroy Frontend Environment
     runs-on: ubuntu-latest
-    needs: [validate-request, check-amplify-app]
+    needs: [ validate-request, check-amplify-app ]
     if: needs.validate-request.outputs.should-destroy == 'true' && needs.check-amplify-app.outputs.app-exists == 'true'
 
     permissions:
@@ -179,175 +191,181 @@ jobs:
       verification-result: ${{ steps.verify.outputs.verification-result }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: ${{ env.PNPM_VERSION }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
 
-      - name: Cache pnpm dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pnpm-store
-            node_modules
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-${{ runner.os }}-
+    - name: Cache pnpm dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pnpm-store
+          node_modules
+        key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          pnpm-${{ runner.os }}-
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install Amplify CLI
-        run: |
-          npm install -g @aws-amplify/cli
-          amplify --version
+    - name: Install Amplify CLI
+      run: |
+        npm install -g @aws-amplify/cli
+        amplify --version
 
-      - name: Destroy frontend infrastructure
-        id: destroy
-        run: |
-          cd apps/client-ui
+    - name: Destroy frontend infrastructure
+      id: destroy
+      run: |
+        cd apps/client-ui
 
-          APP_ID="${{ needs.check-amplify-app.outputs.app-id }}"
-          ENV_NAME="${{ needs.validate-request.outputs.env-name }}"
-          AMPLIFY_APP_NAME="${{ needs.validate-request.outputs.amplify-app-name }}"
+        APP_ID="${{ needs.check-amplify-app.outputs.app-id }}"
+        ENV_NAME="${{ needs.validate-request.outputs.env-name }}"
+        AMPLIFY_APP_NAME="${{ needs.validate-request.outputs.amplify-app-name }}"
 
-          echo "🗑️ MANUAL TEARDOWN: Destroying frontend development environment"
-          echo "📱 Amplify app: ${AMPLIFY_APP_NAME}"
-          echo "🆔 App ID: ${APP_ID}"
-          echo "🌍 Environment: ${ENV_NAME}"
-          echo "👤 Requested by: ${{ needs.validate-request.outputs.target-user }}"
-          echo "📅 Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-          echo ""
-          echo "⚠️  This action will permanently destroy the frontend preview environment"
+        echo "🗑️ MANUAL TEARDOWN: Destroying frontend development environment"
+        echo "📱 Amplify app: ${AMPLIFY_APP_NAME}"
+        echo "🆔 App ID: ${APP_ID}"
+        echo "🌍 Environment: ${ENV_NAME}"
+        echo "👤 Requested by: ${{ needs.validate-request.outputs.target-user }}"
+        echo "📅 Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+        echo ""
+        echo "⚠️  This action will permanently destroy the frontend preview environment"
 
-          # Make destroy script executable
-          chmod +x scripts/destroy-amplify-preview.sh
+        # Make destroy script executable
+        chmod +x scripts/destroy-amplify-preview.sh
 
-          # Set environment variables for the script
-          export AMPLIFY_APP_ID="${APP_ID}"
-          export AMPLIFY_APP_NAME="${AMPLIFY_APP_NAME}"
-          export ENVIRONMENT_NAME="${ENV_NAME}"
-          export PR_NUMBER="${{ github.event.inputs.pr_number }}"
-          export AWS_REGION="${{ env.AWS_REGION }}"
+        # Set environment variables for the script
+        export AMPLIFY_APP_ID="${APP_ID}"
+        export AMPLIFY_APP_NAME="${AMPLIFY_APP_NAME}"
+        export ENVIRONMENT_NAME="${ENV_NAME}"
+        export PR_NUMBER="${{ github.event.inputs.pr_number }}"
+        export AWS_REGION="${{ env.AWS_REGION }}"
 
-          # Attempt to destroy the app with retries
-          DESTROY_SUCCESS=false
-          for attempt in {1..3}; do
-            echo "🔄 Destruction attempt ${attempt}/3..."
+        # Attempt to destroy the app with retries
+        DESTROY_SUCCESS=false
+        for attempt in {1..3}; do
+          echo "🔄 Destruction attempt ${attempt}/3..."
 
-            if ./scripts/destroy-amplify-preview.sh; then
-              DESTROY_SUCCESS=true
-              echo "✅ Amplify app destroyed successfully"
-              break
-            else
-              echo "❌ Destruction attempt ${attempt} failed"
-              if [[ ${attempt} -lt 3 ]]; then
-                echo "⏳ Waiting 30 seconds before retry..."
-                sleep 30
-              fi
+          if ./scripts/destroy-amplify-preview.sh; then
+            DESTROY_SUCCESS=true
+            echo "✅ Amplify app destroyed successfully"
+            break
+          else
+            echo "❌ Destruction attempt ${attempt} failed"
+            if [[ ${attempt} -lt 3 ]]; then
+              echo "⏳ Waiting 30 seconds before retry..."
+              sleep 30
             fi
-          done
-
-          if [[ "${DESTROY_SUCCESS}" == "true" ]]; then
-            echo "destroy-result=success" >> $GITHUB_OUTPUT
-          else
-            echo "destroy-result=failed" >> $GITHUB_OUTPUT
-            echo "❌ All destruction attempts failed"
-            exit 1
           fi
+        done
 
-      - name: Verify app deletion
-        id: verify
-        run: |
-          APP_ID="${{ needs.check-amplify-app.outputs.app-id }}"
+        if [[ "${DESTROY_SUCCESS}" == "true" ]]; then
+          echo "destroy-result=success" >> "$GITHUB_OUTPUT"
+        else
+          {
+            echo "destroy-result=failed"
+            echo "❌ All destruction attempts failed"
+          } >> "$GITHUB_OUTPUT"
+          exit 1
+        fi
 
-          echo "🔍 Verifying app deletion..."
+    - name: Verify app deletion
+      id: verify
+      run: |
+        APP_ID="${{ needs.check-amplify-app.outputs.app-id }}"
 
-          # Wait a moment for AWS to process the deletion
-          sleep 15
+        echo "🔍 Verifying app deletion..."
 
-          # Check if app still exists
-          APP_STATUS=$(aws amplify get-app \
-            --app-id "${APP_ID}" \
-            --query 'app.status' \
-            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+        # Wait a moment for AWS to process the deletion
+        sleep 15
 
-          if [[ "${APP_STATUS}" == "DOES_NOT_EXIST" ]]; then
-            echo "verification-result=success" >> $GITHUB_OUTPUT
+        # Check if app still exists
+        APP_STATUS=$(aws amplify get-app \
+          --app-id "${APP_ID}" \
+          --query 'app.status' \
+          --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+
+        if [[ "${APP_STATUS}" == "DOES_NOT_EXIST" ]]; then
+          {
+            echo "verification-result=success"
             echo "✅ App deletion verified - frontend environment fully cleaned up"
-          else
-            echo "verification-result=partial" >> $GITHUB_OUTPUT
+          } >> "$GITHUB_OUTPUT"
+        else
+          {
+            echo "verification-result=partial"
             echo "⚠️ App still exists with status: ${APP_STATUS}"
             echo "This may be normal if deletion is still in progress"
-          fi
+          } >> "$GITHUB_OUTPUT"
+        fi
 
   # Generate manual teardown report
   generate-manual-teardown-report:
     name: Generate Manual Teardown Report
     runs-on: ubuntu-latest
-    needs: [validate-request, check-amplify-app, destroy-frontend-environment]
+    needs: [ validate-request, check-amplify-app, destroy-frontend-environment ]
     if: always() && needs.validate-request.outputs.should-destroy == 'true'
 
     steps:
-      - name: Generate teardown report
-        run: |
+    - name: Generate teardown report
+      run: |
+        {
+          echo "## 🗑️ Manual Frontend Environment Teardown Report"
+          echo ""
+          echo "**Environment:** \`${{ needs.validate-request.outputs.env-name }}\`"
+          echo "**Amplify App:** \`${{ needs.validate-request.outputs.amplify-app-name }}\`"
+          echo "**Requested by:** @${{ needs.validate-request.outputs.target-user }}"
+          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo ""
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        APP_EXISTS="${{ needs.check-amplify-app.outputs.app-exists }}"
+        DESTROY_RESULT="${{ needs.destroy-frontend-environment.outputs.destroy-result }}"
+        VERIFICATION_RESULT="${{ needs.destroy-frontend-environment.outputs.verification-result }}"
+
+        if [[ "${APP_EXISTS}" == "false" ]]; then
           {
-            echo "## 🗑️ Manual Frontend Environment Teardown Report"
+            echo "**Status:** ℹ️ No action taken - Amplify app was not found"
             echo ""
-            echo "**Environment:** \`${{ needs.validate-request.outputs.env-name }}\`"
-            echo "**Amplify App:** \`${{ needs.validate-request.outputs.amplify-app-name }}\`"
-            echo "**Requested by:** @${{ needs.validate-request.outputs.target-user }}"
-            echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-            echo ""
+            echo "**Possible reasons:**"
+            echo "- Frontend preview was never deployed for this PR"
+            echo "- App was already manually deleted"
+            echo "- Incorrect PR number provided"
           } >> "$GITHUB_STEP_SUMMARY"
-
-          APP_EXISTS="${{ needs.check-amplify-app.outputs.app-exists }}"
-          DESTROY_RESULT="${{ needs.destroy-frontend-environment.outputs.destroy-result }}"
-          VERIFICATION_RESULT="${{ needs.destroy-frontend-environment.outputs.verification-result }}"
-
-          if [[ "${APP_EXISTS}" == "false" ]]; then
-            {
-              echo "**Status:** ℹ️ No action taken - Amplify app was not found"
-              echo ""
-              echo "**Possible reasons:**"
-              echo "- Frontend preview was never deployed for this PR"
-              echo "- App was already manually deleted"
-              echo "- Incorrect PR number provided"
-            } >> "$GITHUB_STEP_SUMMARY"
-          elif [[ "${DESTROY_RESULT}" == "success" ]]; then
-            {
-              echo "**Status:** ✅ Frontend development environment destroyed successfully"
-              if [[ "${VERIFICATION_RESULT}" == "success" ]]; then
-                echo "**Verification:** ✅ Deletion confirmed"
-              else
-                echo "**Verification:** ⚠️ Deletion in progress"
-              fi
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            {
-              echo "**Status:** ❌ Frontend environment teardown failed"
-              echo "**Action Required:** Manual cleanup may be needed"
-              echo ""
-              echo "**Manual cleanup commands:**"
-              echo "\`\`\`bash"
-              echo "aws amplify delete-app --app-id ${{ needs.check-amplify-app.outputs.app-id }}"
-              echo "\`\`\`"
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
-
+        elif [[ "${DESTROY_RESULT}" == "success" ]]; then
           {
-            echo ""
-            echo "---"
-            echo "*This report was generated by manual teardown workflow.*"
+            echo "**Status:** ✅ Frontend development environment destroyed successfully"
+            if [[ "${VERIFICATION_RESULT}" == "success" ]]; then
+              echo "**Verification:** ✅ Deletion confirmed"
+            else
+              echo "**Verification:** ⚠️ Deletion in progress"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
+        else
+          {
+            echo "**Status:** ❌ Frontend environment teardown failed"
+            echo "**Action Required:** Manual cleanup may be needed"
+            echo ""
+            echo "**Manual cleanup commands:**"
+            echo "\`\`\`bash"
+            echo "aws amplify delete-app --app-id ${{ needs.check-amplify-app.outputs.app-id }}"
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+        {
+          echo ""
+          echo "---"
+          echo "*This report was generated by manual teardown workflow.*"
+        } >> "$GITHUB_STEP_SUMMARY"
