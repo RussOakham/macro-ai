@@ -141,35 +141,36 @@ reviews:
     checkmake:
       enabled: true
 
-  # Path filters to ignore generated files and config files that cause noise
+  # Path filters to ignore generated files and build artifacts that cause noise
   path_filters:
+    # Build outputs and generated files
     - 'node_modules/**'
-    - 'dist/**'
-    - 'build/**'
+    - '**/dist/**'
+    - '**/build/**'
+    - '**/out/**'
     - 'coverage/**'
-    - '**/*.min.js'
-    - '**/*.bundle.js'
-    - 'package.json'
-    - 'package-lock.json'
-    - 'pnpm-lock.yaml'
-    - 'yarn.lock'
-    - '*.config.js'
-    - '*.config.ts'
-    - 'eslint.config.*'
-    - 'tsconfig*.json'
-    - 'vite.config.*'
-    - 'vitest.config.*'
-    - 'tailwind.config.*'
-    - 'postcss.config.*'
-    - 'drizzle.config.*'
-    - 'turbo.json'
-    - 'knip.json'
-    - '.gitignore'
     - '**/coverage-reports/**'
     - '**/test-results/**'
+    - '**/*.min.js'
+    - '**/*.bundle.js'
+
+    # Build artifacts and cache directories
     - '**/codeql-db/**'
     - '**/cdk.out/**'
     - '**/infrastructure/dist/**'
+    - '.next/**'
+    - '.nuxt/**'
+    - '.output/**'
+    - '.vercel/**'
+
+    # Lock files (allow review of intentional changes)
+    - '**/package-lock.json'
+    - '**/yarn.lock'
+    - '**/pnpm-lock.yaml'
+
+    # Git and CI artifacts
+    - '.git/**'
+    - '**/.git/**'
   # Pre-merge checks for quality gates
   pre_merge_checks:
     title:
