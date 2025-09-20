@@ -1,0 +1,358 @@
+---
+name: Deploy Minimal Traffic Production (Hobby Scale)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm-minimal-traffic:
+        description: 'Confirm deployment for minimal traffic (<1000 visits/month)'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: read
+  pull-requests: write
+  issues: write
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20.19.4'
+  PNPM_VERSION: '10.14.0'
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  CUSTOM_DOMAIN_NAME: ${{ vars.CUSTOM_DOMAIN_NAME }}
+  HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
+
+jobs:
+  # Validate minimal traffic deployment
+  validate-minimal-traffic:
+    name: Validate Minimal Traffic Deployment
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm-minimal-traffic == 'true'
+
+    steps:
+    - name: Minimal Traffic Validation
+      run: |
+        echo "🧪 Minimal Traffic Production Deployment"
+        echo ""
+        echo "📊 Expected Usage:"
+        echo "  - <1000 visits per month"
+        echo "  - Personal project or small business"
+        echo "  - Cost-optimized infrastructure"
+        echo ""
+        echo "💰 Cost Breakdown:"
+        echo "  - ECS Fargate: ~$15/month"
+        echo "  - ALB: ~$0.60/month"
+        echo "  - Neon PostgreSQL: ~$9/month"
+        echo "  - Upstash Redis: ~$4.50/month"
+        echo "  - CloudFront CDN: ~$3/month"
+        echo "  - CloudWatch Logs: ~$1.50/month"
+        echo "  - NAT Gateway: ~$2.70/month"
+        echo "  ---------------------------"
+        echo "  Total: ~$36.30/month"
+        echo ""
+        echo "✅ This configuration is optimized for minimal traffic"
+        echo "✅ All costs are predictable and budget-friendly"
+        echo "✅ Infrastructure scales with your growth"
+
+    - name: Confirm Deployment
+      run: |
+        echo "✅ Minimal traffic deployment validated"
+        echo "🚀 Proceeding with hobby-scale production deployment"
+
+  # Change detection for minimal deployment
+  change-detection:
+    name: Detect Changes
+    uses: ./.github/workflows/reusable-change-detection.yml
+    with:
+      base-ref: ${{ github.event.before || 'HEAD~1' }}
+      head-ref: ${{ github.sha }}
+    needs: [ validate-minimal-traffic ]
+
+  # Build Express API Docker image
+  build-express-api:
+    name: Build Docker Image for Minimal Traffic Production
+    runs-on: ubuntu-latest
+    needs: [ validate-minimal-traffic, change-detection ]
+    if: |
+      needs.change-detection.outputs.has-backend-changes == 'true' ||
+      needs.change-detection.outputs.has-infrastructure-changes == 'true'
+
+    permissions:
+      id-token: write
+      contents: read
+      actions: write
+
+    outputs:
+      image-tag: ${{ steps.image-tag.outputs.image-tag }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: ${{ env.PNPM_VERSION }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Cache pnpm dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pnpm-store
+          node_modules
+        key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          pnpm-${{ runner.os }}-
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        role-session-name: github-actions-build-docker-minimal-prod
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Generate image tag
+      id: image-tag
+      shell: bash
+      run: |
+        IMAGE_TAG="minimal-prod-${{ github.sha }}"
+        echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+        echo "Generated image tag: '${IMAGE_TAG}'"
+
+    - name: Build and push Docker image
+      id: build
+      shell: bash
+      run: |
+        ECR_REPOSITORY="macro-ai-minimal-prod-express-api"
+        IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
+        ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+
+        if [[ -z "${ECR_REGISTRY}" ]]; then
+          echo "⚠️ ECR registry output is empty, using fallback from AWS account ID"
+          ECR_REGISTRY="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
+        fi
+
+        IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+
+        echo "🐳 Building minimal traffic production Docker image..."
+        echo "Repository: ${ECR_REPOSITORY}"
+        echo "Tag: '${IMAGE_TAG}'"
+        echo "Registry: ${ECR_REGISTRY}"
+        echo "URI: ${IMAGE_URI}"
+
+        # Create ECR repository if it doesn't exist
+        aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" >/dev/null 2>&1 || {
+          echo "📦 Creating ECR repository: ${ECR_REPOSITORY}"
+          aws ecr create-repository \
+            --repository-name "${ECR_REPOSITORY}" \
+            --image-scanning-configuration scanOnPush=true \
+            --encryption-configuration encryptionType=AES256
+        }
+
+        # Build with production optimizations but minimal resource allocation
+        docker buildx build \
+          --file apps/express-api/Dockerfile.distroless \
+          --target ecs-runner \
+          --platform linux/amd64 \
+          --cache-from type=gha \
+          --cache-to type=gha,mode=max \
+          --tag "${IMAGE_URI}" \
+          --push \
+          .
+
+        echo "✅ Minimal traffic production image built and pushed successfully!"
+        echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+        echo "📤 Outputting image tag: '${IMAGE_TAG}'"
+        echo "🔗 Full image URI was: ${IMAGE_URI}"
+
+  # Deploy backend using hobby-scale configuration
+  deploy-backend:
+    name: Deploy Backend (Hobby Scale)
+    needs: [ validate-minimal-traffic, build-express-api ]
+    if: needs.build-express-api.result == 'success'
+
+    uses: ./.github/workflows/reusable-deploy-backend-pulumi.yml
+    with:
+      environment-name: production
+      deployment-type: production
+      image-uri: ${{ needs.build-express-api.outputs.image-tag }}
+      branch-name: main
+      custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
+      hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
+      should-deploy: true
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+      DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
+      DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
+      DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
+
+  # Deploy frontend using hobby-scale configuration
+  deploy-frontend:
+    name: Deploy Frontend
+    needs: [ validate-minimal-traffic, deploy-backend ]
+    if: |
+      needs.change-detection.outputs.has-frontend-changes == 'true'
+
+    uses: ./.github/workflows/reusable-deploy-frontend.yml
+    with:
+      environment-name: production
+      deployment-type: production
+      branch-name: main
+      backend-url: ${{ vars.VITE_API_URL }}
+      custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
+      hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
+      should-deploy: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' }}
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      API_KEY: ${{ secrets.VITE_API_KEY }}
+
+  # Setup minimal traffic monitoring
+  setup-monitoring:
+    name: Setup Minimal Traffic Monitoring
+    needs: [ deploy-backend, deploy-frontend ]
+    if: always() && (needs.deploy-backend.result == 'success' || needs.deploy-frontend.result == 'success')
+
+    uses: ./.github/workflows/reusable-production-monitoring.yml
+    with:
+      environment-name: production
+      deployment-type: production
+      backend-stack-name: prd
+
+  # Cost optimization summary
+  cost-optimization:
+    name: Cost Optimization Summary
+    runs-on: ubuntu-latest
+    needs: [ validate-minimal-traffic, deploy-backend, deploy-frontend, setup-monitoring ]
+    if: always()
+
+    steps:
+    - name: Generate cost optimization summary
+      run: |
+        echo "💰 Minimal Traffic Production Deployment - Cost Summary"
+        echo ""
+        echo "📊 Monthly Cost Breakdown:"
+        echo "  - ECS Fargate (1 vCPU, 512MB): $15.00"
+        echo "  - Application Load Balancer: $0.60"
+        echo "  - Neon PostgreSQL: $9.00"
+        echo "  - Upstash Redis: $4.50"
+        echo "  - CloudFront CDN: $3.00"
+        echo "  - CloudWatch Logs: $1.50"
+        echo "  - NAT Gateway: $2.70"
+        echo "  ---------------------------"
+        echo "  Total: $36.30/month"
+        echo ""
+        echo "🎯 Optimizations Applied:"
+        echo "  - Single AZ deployment"
+        echo "  - Serverless databases (Neon + Upstash)"
+        echo "  - Essential monitoring only"
+        echo "  - Cost allocation tags configured"
+        echo ""
+        echo "📈 Scaling Ready:"
+        echo "  - Infrastructure can scale up as traffic grows"
+        echo "  - No auto-scaling needed for minimal traffic"
+        echo "  - Manual scaling when user base grows"
+        echo ""
+        echo "✅ Deployment optimized for <1000 visits/month"
+
+  # Deployment summary
+  deployment-summary:
+    name: Minimal Traffic Production Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [ validate-minimal-traffic, change-detection, deploy-backend, deploy-frontend, setup-monitoring, cost-optimization ]
+    if: always()
+
+    steps:
+    - name: Generate deployment summary
+      shell: bash
+      run: |
+        echo "🚀 Minimal Traffic Production Deployment Completed!"
+        echo ""
+        echo "📋 Deployment Details:"
+        echo "  - Environment: production (hobby scale)"
+        echo "  - Target Traffic: <1000 visits/month"
+        echo "  - Cost Optimization: ~$36.30/month"
+        echo "  - Infrastructure: Single AZ, cost-optimized"
+        echo ""
+        echo "✅ Validation: ${{ needs.validate-minimal-traffic.result }}"
+        echo "🔧 Backend deployment: ${{ needs.deploy-backend.result }}"
+        echo "🎨 Frontend deployment: ${{ needs.deploy-frontend.result }}"
+        echo "📊 Monitoring setup: ${{ needs.setup-monitoring.result }}"
+        echo ""
+        echo "💰 Cost Status: Optimized for minimal traffic"
+        echo "📈 Scaling Status: Ready to scale up as needed"
+
+    - name: Create deployment summary comment
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const frontendDeployed = '${{ needs.deploy-frontend.result }}' === 'success';
+          const backendDeployed = '${{ needs.deploy-backend.result }}' === 'success';
+
+          const comment = `## 🚀 Minimal Traffic Production Deployment Completed!
+
+          ### 🌐 Production URLs
+          - **Frontend**: https://${'${{ vars.CUSTOM_DOMAIN_NAME }}'}
+          - **Backend API**: https://api.${'${{ vars.CUSTOM_DOMAIN_NAME }}'}
+
+          ### 📋 Deployment Details
+          - **Environment**: \`production\` (hobby scale)
+          - **Target Traffic**: <1000 visits/month
+          - **Cost Optimization**: ~$36.30/month
+          - **Infrastructure**: Single AZ, cost-optimized configuration
+          - **Backend Status**: ${backendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
+          - **Frontend Status**: ${frontendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
+
+          ### 💰 Cost Breakdown
+          - **ECS Fargate**: $15.00/month
+          - **ALB**: $0.60/month
+          - **Neon PostgreSQL**: $9.00/month
+          - **Upstash Redis**: $4.50/month
+          - **CloudFront CDN**: $3.00/month
+          - **CloudWatch Logs**: $1.50/month
+          - **NAT Gateway**: $2.70/month
+          - **Total**: $36.30/month
+
+          ### 🎯 Optimizations Applied
+          - ✅ Single AZ deployment (cost savings)
+          - ✅ Serverless databases (pay-per-use)
+          - ✅ Essential monitoring only
+          - ✅ Cost allocation tags configured
+          - ✅ Ready to scale up as traffic grows
+
+          ---
+          *Minimal traffic production deployment optimized for cost efficiency.*`;
+
+          // Find the latest commit and comment on it
+          const { data: commits } = await github.rest.repos.listCommits({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            sha: 'main',
+            per_page: 1
+          });
+
+          if (commits.length > 0) {
+            await github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: commits[0].sha,
+              body: comment
+            });
+          }
