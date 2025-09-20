@@ -143,39 +143,38 @@ reviews:
 
   # Path filters to ignore generated files and build artifacts that cause noise
   path_filters:
-    # Build outputs and generated files
-    - 'node_modules/**'
-    - '**/dist/**'
-    - '**/build/**'
-    - '**/out/**'
-    - 'coverage/**'
-    - '**/coverage-reports/**'
-    - '**/test-results/**'
-    - '**/*.min.js'
-    - '**/*.bundle.js'
+  # Build outputs and generated files
+  - 'node_modules/**'
+  - '**/dist/**'
+  - '**/build/**'
+  - '**/out/**'
+  - 'coverage/**'
+  - '**/coverage-reports/**'
+  - '**/test-results/**'
+  - '**/*.min.js'
+  - '**/*.bundle.js'
 
-    # Build artifacts and cache directories
-    - '**/codeql-db/**'
-    - '**/cdk.out/**'
-    - '**/infrastructure/dist/**'
-    - '**/infrastructure/cdk.out/**'  # More specific CDK output exclusion
-    - '.next/**'
-    - '.nuxt/**'
-    - '.output/**'
-    - '.vercel/**'
+  # Build artifacts and cache directories
+  - '**/codeql-db/**'
+  - '**/cdk.out/**'
+  - '**/infrastructure/dist/**'
+  - '**/infrastructure/cdk.out/**' # More specific CDK output exclusion
+  - '.next/**'
+  - '.nuxt/**'
+  - '.output/**'
+  - '.vercel/**'
 
-    # Lock files (allow review of intentional changes)
-    - '**/package-lock.json'
-    - '**/yarn.lock'
-    - '**/pnpm-lock.yaml'
+  # Lock files (allow review of intentional changes)
+  - '**/package-lock.json'
+  - '**/yarn.lock'
+  - '**/pnpm-lock.yaml'
 
-    # Infrastructure files to include in review
-    - '!infrastructure/pulumi/index.ts'  # Explicitly include for review
-    - '!infrastructure/src/**/*.ts'      # Include infrastructure source files
+  # Git and CI artifacts
+  - '.git/**'
+  - '**/.git/**'
 
-    # Git and CI artifacts
-    - '.git/**'
-    - '**/.git/**'
+  # Generated files (allow review of intentional changes)
+  - '**/public/swagger.json'
   # Pre-merge checks for quality gates
   pre_merge_checks:
     title:
@@ -230,9 +229,9 @@ reviews:
     docstrings:
       language: en-US
       path_instructions:
-        - path: ''
-          instructions: ''
+      - path: ''
+        instructions: ''
     unit_tests:
       path_instructions:
-        - path: ''
-          instructions: ''
+      - path: ''
+        instructions: ''
