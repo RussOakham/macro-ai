@@ -76,15 +76,17 @@ jobs:
         id: env-name
         run: |
           ENV_NAME="pr-${{ github.event.inputs.pr_number }}"
-          echo "env-name=${ENV_NAME}" >> $GITHUB_OUTPUT
+          echo "env-name=${ENV_NAME}" >> "$GITHUB_OUTPUT"
           echo "🌍 Environment name: ${ENV_NAME}"
 
       - name: Generate Amplify app info
         id: amplify-info
         run: |
           AMPLIFY_APP_NAME="macro-ai-frontend-pr-${{ github.event.inputs.pr_number }}"
-          echo "amplify-app-name=${AMPLIFY_APP_NAME}" >> $GITHUB_OUTPUT
-          echo "📱 Amplify app name: ${AMPLIFY_APP_NAME}"
+          {
+            echo "amplify-app-name=${AMPLIFY_APP_NAME}"
+            echo "📱 Amplify app name: ${AMPLIFY_APP_NAME}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Make destruction decision
         id: decision
@@ -93,13 +95,17 @@ jobs:
           ACTOR="${{ steps.codeowner-check.outputs.target-user }}"
 
           if [[ "${IS_OWNER}" == "true" ]]; then
-            echo "should-destroy=true" >> $GITHUB_OUTPUT
-            echo "✅ Manual frontend teardown approved for code owner: ${ACTOR}"
-            echo "🗑️ Target environment: ${{ steps.env-name.outputs.env-name }}"
-            echo "📱 Target Amplify app: ${{ steps.amplify-info.outputs.amplify-app-name }}"
+            {
+              echo "should-destroy=true"
+              echo "✅ Manual frontend teardown approved for code owner: ${ACTOR}"
+              echo "🗑️ Target environment: ${{ steps.env-name.outputs.env-name }}"
+              echo "📱 Target Amplify app: ${{ steps.amplify-info.outputs.amplify-app-name }}"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "should-destroy=false" >> $GITHUB_OUTPUT
-            echo "❌ Manual frontend teardown blocked: ${ACTOR} is not a code owner"
+            {
+              echo "should-destroy=false"
+              echo "❌ Manual frontend teardown blocked: ${ACTOR} is not a code owner"
+            } >> "$GITHUB_OUTPUT"
             exit 1
           fi
 
@@ -145,22 +151,28 @@ jobs:
             APP_STATUS=$(echo "$APP_INFO" | jq -r '.[0].status' 2>/dev/null || echo "")
 
             if [[ -n "$APP_ID" && "$APP_ID" != "null" ]]; then
-              echo "app-exists=true" >> $GITHUB_OUTPUT
-              echo "app-id=${APP_ID}" >> $GITHUB_OUTPUT
-              echo "✅ Amplify app found: ${APP_ID} (status: ${APP_STATUS})"
+              {
+                echo "app-exists=true"
+                echo "app-id=${APP_ID}"
+                echo "✅ Amplify app found: ${APP_ID} (status: ${APP_STATUS})"
+              } >> "$GITHUB_OUTPUT"
             else
-              echo "app-exists=false" >> $GITHUB_OUTPUT
-              echo "app-id=" >> $GITHUB_OUTPUT
-              echo "⚠️ Amplify app data found but could not extract app ID"
+              {
+                echo "app-exists=false"
+                echo "app-id="
+                echo "⚠️ Amplify app data found but could not extract app ID"
+              } >> "$GITHUB_OUTPUT"
             fi
           else
-            echo "app-exists=false" >> $GITHUB_OUTPUT
-            echo "app-id=" >> $GITHUB_OUTPUT
-            echo "ℹ️ Amplify app not found"
-            echo "This could mean:"
-            echo "  - The frontend preview was never deployed"
-            echo "  - The app was already deleted"
-            echo "  - The PR number is incorrect"
+            {
+              echo "app-exists=false"
+              echo "app-id="
+              echo "ℹ️ Amplify app not found"
+              echo "This could mean:"
+              echo "  - The frontend preview was never deployed"
+              echo "  - The app was already deleted"
+              echo "  - The PR number is incorrect"
+            } >> "$GITHUB_OUTPUT"
           fi
 
   # Destroy the frontend development environment
@@ -260,10 +272,12 @@ jobs:
           done
 
           if [[ "${DESTROY_SUCCESS}" == "true" ]]; then
-            echo "destroy-result=success" >> $GITHUB_OUTPUT
+            echo "destroy-result=success" >> "$GITHUB_OUTPUT"
           else
-            echo "destroy-result=failed" >> $GITHUB_OUTPUT
-            echo "❌ All destruction attempts failed"
+            {
+              echo "destroy-result=failed"
+              echo "❌ All destruction attempts failed"
+            } >> "$GITHUB_OUTPUT"
             exit 1
           fi
 
@@ -284,12 +298,16 @@ jobs:
             --output text 2>/dev/null || echo "DOES_NOT_EXIST")
 
           if [[ "${APP_STATUS}" == "DOES_NOT_EXIST" ]]; then
-            echo "verification-result=success" >> $GITHUB_OUTPUT
-            echo "✅ App deletion verified - frontend environment fully cleaned up"
+            {
+              echo "verification-result=success"
+              echo "✅ App deletion verified - frontend environment fully cleaned up"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "verification-result=partial" >> $GITHUB_OUTPUT
-            echo "⚠️ App still exists with status: ${APP_STATUS}"
-            echo "This may be normal if deletion is still in progress"
+            {
+              echo "verification-result=partial"
+              echo "⚠️ App still exists with status: ${APP_STATUS}"
+              echo "This may be normal if deletion is still in progress"
+            } >> "$GITHUB_OUTPUT"
           fi
 
   # Generate manual teardown report
