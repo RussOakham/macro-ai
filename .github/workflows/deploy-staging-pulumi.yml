@@ -102,6 +102,7 @@ jobs:
 
       - name: Generate image tag
         id: image-tag
+        shell: bash
         run: |
           IMAGE_TAG="staging-${{ github.sha }}"
           echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
@@ -109,12 +110,14 @@ jobs:
 
       - name: Prepare build context (no secrets)
         id: prepare-build
+        shell: bash
         run: |
           echo "🔍 Preparing Docker build context without secrets..."
           echo "✅ Build context prepared - secrets will be injected at runtime via ECS"
 
       - name: Build and push Docker image
         id: build
+        shell: bash
         run: |
           ECR_REPOSITORY="macro-ai-staging-express-api"
           IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
@@ -209,16 +212,19 @@ jobs:
           pulumi-version: latest
 
       - name: Install Pulumi dependencies
+        shell: bash
         run: |
           cd infrastructure/pulumi
           pnpm install
 
       - name: Set Doppler token based on deployment type
+        shell: bash
         run: |
-          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_STAGING }}" >> $GITHUB_ENV
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_STAGING }}" >> "$GITHUB_ENV"
 
       - name: Reconstruct image URI from tag
         id: reconstruct-image-uri
+        shell: bash
         run: |
           echo "🔍 Reconstructing image URI from image tag..."
 
@@ -268,6 +274,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
           DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
+        shell: bash
         run: |
           ENV_NAME="staging"
           DEPLOYMENT_TYPE="staging"
@@ -282,17 +289,17 @@ jobs:
           echo "Environment: ${ENV_NAME}"
           echo "Deployment Type: ${DEPLOYMENT_TYPE}"
           echo "Stack: ${STACK_NAME}"
-          echo "Image URI: ${IMAGE_URI}"
+          echo "Image URI: ${IMAGE_URI:-N/A}"
 
           cd infrastructure/pulumi
 
           # Set Pulumi configuration
           pulumi config set environmentName "${ENV_NAME}" --stack "${STACK_NAME}"
           pulumi config set deploymentType "${DEPLOYMENT_TYPE}" --stack "${STACK_NAME}"
-          pulumi config set imageUri "${IMAGE_URI}" --stack "${STACK_NAME}"
+          pulumi config set imageUri "${IMAGE_URI:-N/A}" --stack "${STACK_NAME}"
 
           # Extract image tag from image URI for ECR verification
-          IMAGE_TAG=$(echo "${IMAGE_URI}" | cut -d':' -f2)
+          IMAGE_TAG=$(echo "${IMAGE_URI:-N/A}" | cut -d':' -f2)
           echo "🔍 Extracted image tag: ${IMAGE_TAG}"
           echo "📝 Setting Pulumi config imageTag to: ${IMAGE_TAG}"
           pulumi config set imageTag "${IMAGE_TAG}" --stack "${STACK_NAME}"
@@ -339,6 +346,7 @@ jobs:
           echo "🌐 API Endpoint: ${API_ENDPOINT}"
 
       - name: Health Check
+        shell: bash
         run: |
           echo "🔍 Performing health check..."
           API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}"
@@ -349,6 +357,7 @@ jobs:
           fi
 
       - name: Output Results
+        shell: bash
         run: |
           echo "📊 Deployment Results:"
           echo "  - Environment: staging"
@@ -385,6 +394,7 @@ jobs:
 
     steps:
       - name: Schedule teardown
+        shell: bash
         run: |
           echo "🕕 Staging environment will be automatically torn down at 6 PM"
           echo "This helps control costs for the personal project"
@@ -400,6 +410,7 @@ jobs:
 
     steps:
       - name: Generate deployment summary
+        shell: bash
         run: |
           echo "🚀 Staging deployment completed with Pulumi!"
           echo "Change Detection: ${{ needs.change-detection.outputs.deployment-scope }}"
@@ -423,7 +434,7 @@ jobs:
             const appUrl = frontendDeployed ? `https://staging.${customDomain}` : null;
             const appId = frontendDeployed ? '${{ needs.deploy-frontend.outputs.app-id }}' : null;
             const backendUrl = backendDeployed ? `https://api-staging.${customDomain}` : null;
-            const backendStack = backendDeployed ? '${{ needs.deploy-backend.outputs.stack-name }}' : null;
+            const backendStack = backendDeployed ? 'stg' : null;
 
             const comment = `## 🚀 Staging Environment Deployed Successfully! (Pulumi)
 

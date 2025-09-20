@@ -53,6 +53,7 @@ jobs:
 
       - name: Analyze test structure
         id: check-tests
+        shell: bash
         run: |
           echo "🔍 Analyzing test structure..."
 
@@ -71,8 +72,8 @@ jobs:
             echo "✅ E2E tests found"
           fi
 
-          echo "has-integration=$has_integration" >> $GITHUB_OUTPUT
-          echo "has-e2e=$has_e2e" >> $GITHUB_OUTPUT
+          echo "has-integration=$has_integration" >> "$GITHUB_OUTPUT"
+          echo "has-e2e=$has_e2e" >> "$GITHUB_OUTPUT"
 
       - name: Create test matrix
         id: matrix
@@ -122,7 +123,7 @@ jobs:
           # Convert matrix to single line to avoid GitHub Actions output issues
           matrix_single_line=$(echo "$matrix" | tr -d '\n')
           matrix_single_line=${matrix_single_line//  */ }
-          echo "matrix=$matrix_single_line" >> $GITHUB_OUTPUT
+          echo "matrix=$matrix_single_line" >> "$GITHUB_OUTPUT"
           echo "📊 Test matrix created:"
           echo "$matrix"
 
@@ -141,6 +142,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
+        shell: bash
         run: |
           apt-get update && apt-get install -y git
           npm install -g pnpm@${{ env.PNPM_VERSION }}
@@ -159,17 +161,19 @@ jobs:
             pnpm-${{ runner.os }}-
 
       - name: Install dependencies
+        shell: bash
         run: |
           echo "📦 Installing dependencies..."
           pnpm install --frozen-lockfile
           echo "✅ Dependencies installed"
 
       - name: Setup test environment
+        shell: bash
         run: |
-          echo "🔧 Setting up test environment for ${{ matrix.name }}..."
+          echo "🔧 Setting up test environment for '${{ matrix.name }}'..."
 
           # Create test-specific environment configuration
-          mkdir -p ${{ matrix.package }}
+          mkdir -p "${{ matrix.package }}"
 
           # Set environment variables for Express API tests (needed for API client build)
           {
@@ -218,6 +222,7 @@ jobs:
           echo "✅ Test environment configured"
 
       - name: Build dependencies
+        shell: bash
         run: |
           echo "🔨 Building required dependencies..."
           pnpm --filter @repo/config-testing build
@@ -232,32 +237,35 @@ jobs:
 
       - name: Generate API client
         if: contains(matrix.package, 'macro-ai-api-client')
+        shell: bash
         run: |
           echo "🔧 Generating API client files..."
-          cd ${{ matrix.package }}
+          cd "${{ matrix.package }}"
           pnpm generate
           echo "✅ API client generated"
 
       - name: Generate MSW handlers
         if: contains(matrix.package, 'client-ui')
+        shell: bash
         run: |
           echo "🔧 Generating MSW handlers for client-ui tests..."
-          cd ${{ matrix.package }}
+          cd "${{ matrix.package }}"
           pnpm generate:msw
           echo "✅ MSW handlers generated"
 
       - name: Run tests with enhanced reporting
         id: test-execution
+        shell: bash
         run: |
-          echo "🧪 Running ${{ matrix.name }}..."
+          echo "🧪 Running '${{ matrix.name }}'..."
 
           # Set test-specific configuration
           export VITEST_REPORTER="${{ env.VITEST_REPORTER }}"
 
           # Calculate test timeout
-          timeout_seconds=$((${{ matrix.timeout }} / 1000))
+          timeout_seconds=$(( ${{ matrix.timeout }} / 1000 ))
 
-          cd ${{ matrix.package }}
+          cd "${{ matrix.package }}"
 
           # Run tests with timeout and capture output
           start_time=$(date +%s)
@@ -275,8 +283,8 @@ jobs:
           duration=$((end_time - start_time))
 
           echo "⏱️  Test execution completed in ${duration} seconds"
-          echo "duration=$duration" >> $GITHUB_OUTPUT
-          echo "exit-code=${test_exit_code:-0}" >> $GITHUB_OUTPUT
+          echo "duration=$duration" >> "$GITHUB_OUTPUT"
+          echo "exit-code=${test_exit_code:-0}" >> "$GITHUB_OUTPUT"
 
           # Sanitize coverage paths to remove absolute filesystem paths
           if [ -f "coverage/coverage-summary.json" ]; then
@@ -317,12 +325,13 @@ jobs:
       - name: Sanitize artifact name
         id: sanitize-name
         if: always()
+        shell: bash
         run: |
           # Sanitize the matrix name and package for artifact naming
           sanitized_name=$(echo "${{ matrix.name }}" | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
           sanitized_package=$(echo "${{ matrix.package }}" | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
-          echo "sanitized-name=$sanitized_name" >> $GITHUB_OUTPUT
-          echo "sanitized-package=$sanitized_package" >> $GITHUB_OUTPUT
+          echo "sanitized-name=$sanitized_name" >> "$GITHUB_OUTPUT"
+          echo "sanitized-package=$sanitized_package" >> "$GITHUB_OUTPUT"
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -338,6 +347,7 @@ jobs:
 
       - name: Skip upload in act environment
         if: always() && env.ACT_LOCAL == 'true'
+        shell: bash
         run: |
           echo "🔍 Running in act environment - skipping test result uploads"
           echo "✅ Upload step skipped for local testing"
@@ -353,6 +363,7 @@ jobs:
 
       - name: Skip publish in act environment
         if: always() && env.ACT_LOCAL == 'true'
+        shell: bash
         run: |
           echo "🔍 Running in act environment - skipping test result publishing"
           echo "✅ Publish step skipped for local testing"
@@ -360,10 +371,11 @@ jobs:
       - name: Extract test metrics
         id: metrics
         if: always()
+        shell: bash
         run: |
           echo "📊 Extracting test metrics..."
 
-          cd ${{ matrix.package }}
+          cd "${{ matrix.package }}"
 
           # Extract coverage percentage
           if [ -f "coverage/coverage-summary.json" ]; then
@@ -374,10 +386,10 @@ jobs:
                 Math.round(cov.total.statements.pct || 0);
               } catch(e) { 0; }
             ")
-            echo "coverage=$coverage" >> $GITHUB_OUTPUT
+            echo "coverage=$coverage" >> "$GITHUB_OUTPUT"
             echo "✅ Coverage: $coverage%"
           else
-            echo "coverage=0" >> $GITHUB_OUTPUT
+            echo "coverage=0" >> "$GITHUB_OUTPUT"
             echo "⚠️ No coverage data found"
           fi
 
@@ -392,15 +404,16 @@ jobs:
             failure_count=$([ "$failure_count" -eq "$failure_count" ] 2>/dev/null && echo "$failure_count" || echo "0")
             error_count=$([ "$error_count" -eq "$error_count" ] 2>/dev/null && echo "$error_count" || echo "0")
 
-            echo "test-count=$test_count" >> $GITHUB_OUTPUT
-            echo "failure-count=$failure_count" >> $GITHUB_OUTPUT
-            echo "error-count=$error_count" >> $GITHUB_OUTPUT
+            echo "test-count=$test_count" >> "$GITHUB_OUTPUT"
+            echo "failure-count=$failure_count" >> "$GITHUB_OUTPUT"
+            echo "error-count=$error_count" >> "$GITHUB_OUTPUT"
 
             echo "✅ Tests: $test_count, Failures: $failure_count, Errors: $error_count"
           fi
 
       - name: Performance analysis
         if: always() && steps.test-execution.outputs.duration
+        shell: bash
         run: |
           duration=${{ steps.test-execution.outputs.duration }}
           threshold=$((${{ matrix.timeout }} / 1000))
@@ -412,7 +425,7 @@ jobs:
 
           if [ $duration -gt $threshold ]; then
             echo "⚠️ Performance warning: Tests exceeded expected duration"
-            echo "::warning title=Test Performance::${{ matrix.name }} took ${duration}s (>${threshold}s threshold)"
+            echo "::warning title=Test Performance::'${{ matrix.name }}' took ${duration}s (>${threshold}s threshold)"
           fi
 
   test-summary:
@@ -553,6 +566,7 @@ jobs:
             }
 
       - name: Set job status
+        shell: bash
         run: |
           # Check if any test jobs failed
           # For matrix jobs, we need to check if any individual job failed
@@ -577,6 +591,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Track test performance trends
+        shell: bash
         run: |
           echo "📈 Tracking test performance trends..."
 
@@ -604,6 +619,7 @@ jobs:
     steps:
       - name: Notify on test failures
         if: contains(needs.test-execution.result, 'failure')
+        shell: bash
         run: |
           echo "🚨 Test failures detected on ${{ github.ref_name }} branch"
 
@@ -617,6 +633,7 @@ jobs:
 
       - name: Notify on test success
         if: needs.test-execution.result == 'success'
+        shell: bash
         run: |
           echo "✅ All tests passed on ${{ github.ref_name }} branch"
           echo "Would send success notification if configured"
