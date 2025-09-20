@@ -587,8 +587,9 @@ class AuthController implements IAuthController {
 		}
 
 		res
+			// eslint-disable-next-line security-node/detect-crlf
 			.cookie('macro-ai-accessToken', refreshLoginResponse.tokens.accessToken, {
-				httpOnly: true,
+				httpOnly: false, // Intentionally false - frontend React app needs access to this cookie
 				secure: nodeEnv === 'production',
 				domain: cookieDomain !== 'localhost' ? cookieDomain : undefined,
 				sameSite: 'strict',
