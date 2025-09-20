@@ -249,6 +249,7 @@ jobs:
         # Get the API endpoint
         API_ENDPOINT=$(pulumi stack output apiEndpoint --stack "${STACK_NAME}")
         echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
+        echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
         echo "✅ Deployment completed successfully!"
         echo "🌐 API Endpoint: ${API_ENDPOINT}"
 
@@ -270,6 +271,12 @@ jobs:
           echo "health-status=unhealthy" >> "$GITHUB_OUTPUT"
           exit 1
         fi
+
+    - name: Set job outputs
+      id: job-outputs
+      run: |
+        # Capture outputs from steps for job-level access
+        echo "health-status=${{ steps.health-check.outputs.health-status }}" >> $GITHUB_OUTPUT
 
     - name: Output Results
       run: |
