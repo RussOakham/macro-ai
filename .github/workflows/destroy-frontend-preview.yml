@@ -296,22 +296,30 @@ jobs:
           VERIFICATION_RESULT="${{ needs.destroy-frontend-preview.outputs.verification-result }}"
 
           if [[ "${APP_EXISTS}" == "false" ]]; then
-            echo "**Status:** ℹ️ No cleanup needed - Amplify app was not found" >> $GITHUB_STEP_SUMMARY
+            {
+              echo "**Status:** ℹ️ No cleanup needed - Amplify app was not found"
+            } >> "$GITHUB_STEP_SUMMARY"
           elif [[ "${DESTROY_RESULT}" == "success" ]]; then
-            echo "**Status:** ✅ Frontend preview environment destroyed successfully" >> $GITHUB_STEP_SUMMARY
-            if [[ "${VERIFICATION_RESULT}" == "success" ]]; then
-              echo "**Verification:** ✅ Deletion confirmed" >> $GITHUB_STEP_SUMMARY
-            else
-              echo "**Verification:** ⚠️ Deletion in progress" >> $GITHUB_STEP_SUMMARY
-            fi
+            {
+              echo "**Status:** ✅ Frontend preview environment destroyed successfully"
+              if [[ "${VERIFICATION_RESULT}" == "success" ]]; then
+                echo "**Verification:** ✅ Deletion confirmed"
+              else
+                echo "**Verification:** ⚠️ Deletion in progress"
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "**Status:** ❌ Frontend preview teardown failed" >> $GITHUB_STEP_SUMMARY
-            echo "**Action Required:** Manual cleanup may be needed" >> $GITHUB_STEP_SUMMARY
+            {
+              echo "**Status:** ❌ Frontend preview teardown failed"
+              echo "**Action Required:** Manual cleanup may be needed"
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "*This report was generated automatically when the PR was closed.*" >> $GITHUB_STEP_SUMMARY
+          {
+            echo ""
+            echo "---"
+            echo "*This report was generated automatically when the PR was closed.*"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Comment teardown status on PR
         uses: actions/github-script@v7
