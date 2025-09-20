@@ -1,0 +1,28 @@
+self-hosted-runner:
+  # Labels of self-hosted runner in array of strings.
+  labels: []
+
+# Configuration variables in array of strings defined in your repository or
+# organization. `null` means disabling configuration variables check.
+# Empty array means no configuration variable is allowed.
+config-variables: null
+
+# Configuration for file paths. The keys are glob patterns to match to file
+# paths relative to the repository root. The values are the configurations for
+# the file paths. Note that the path separator is always '/'.
+# The following configurations are available.
+#
+# "ignore" is an array of regular expression patterns. Matched error messages
+# are ignored. This is similar to the "-ignore" command line option.
+paths:
+  .github/workflows/**/*.yml:
+    ignore:
+    # Ignore SC2086 violations for GitHub Actions expressions
+    # These are legitimate workflow constructs that actionlint misinterprets
+    - 'SC2086.*Double quote to prevent globbing and word splitting'
+    # Ignore SC2034 violations for variables that are actually used
+    # These are false positives where actionlint can't detect usage in complex workflows
+    - 'SC2034.*appears unused.*Verify use.*or export if used externally'
+    # Ignore SC2163 violations for export statements with GitHub Actions expressions
+    # These are necessary for workflow functionality
+    - 'SC2163.*This does not export.*key.*Remove.*or use'
