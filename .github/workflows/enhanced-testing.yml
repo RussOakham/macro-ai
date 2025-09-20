@@ -80,6 +80,8 @@ jobs:
     - name: Create test matrix
       id: matrix
       shell: bash
+      env:
+        HAS_E2E: ${{ steps.check-tests.outputs.has-e2e }}
       run: |
         echo "📋 Creating test execution matrix..."
 
@@ -110,7 +112,7 @@ jobs:
 
         # Add E2E tests if they exist
         e2e_test=""
-        if [ "${{ steps.check-tests.outputs.has-e2e }}" = "true" ]; then
+        if [ "$HAS_E2E" = "true" ]; then
           echo "Adding E2E tests to matrix..."
           e2e_test=',{
             "name": "E2E Tests",
