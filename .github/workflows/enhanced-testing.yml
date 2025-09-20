@@ -366,6 +366,7 @@ jobs:
         path: ${{ matrix.package }}/test-results.xml
         reporter: java-junit
         fail-on-error: false
+        working-directory: ${{ matrix.package }}
 
     - name: Skip publish in act environment
       if: always() && env.ACT_LOCAL == 'true'
