@@ -368,9 +368,10 @@ jobs:
       if: always() && env.ACT_LOCAL != 'true'
       with:
         name: ${{ matrix.name }} Results
-        path: test-results/**/test-results.xml
+        path: test-results.xml
         reporter: java-junit
         fail-on-error: false
+        working-directory: ${{ matrix.package }}
 
     - name: Skip publish in act environment
       if: always() && env.ACT_LOCAL == 'true'
