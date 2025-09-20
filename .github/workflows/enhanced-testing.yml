@@ -424,7 +424,7 @@ jobs:
       shell: bash
       run: |
         duration=${{ steps.test-execution.outputs.duration }}
-        threshold=$((${{ matrix.timeout }} / 1000))
+        threshold=$(( ${{ matrix.timeout || 120000 }} / 1000 ))
 
         echo "📈 Performance Analysis:"
         echo "  Duration: ${duration}s"
