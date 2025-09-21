@@ -21,8 +21,8 @@ jobs:
       contents: read
       pull-requests: write
     outputs:
-      api-endpoint: ${{ steps.deploy.outputs.api-endpoint }}
-      stack-name: ${{ steps.deploy.outputs.stack-name }}
+      api-endpoint: ${{ steps.deploy-infrastructure.outputs.api-endpoint }}
+      stack-name: ${{ steps.deploy-infrastructure.outputs.stack-name }}
       should-deploy: ${{ steps.decide-deploy.outputs.should-deploy }}
     steps:
     - name: Checkout code
@@ -175,10 +175,10 @@ jobs:
         API_KEY: "${{ secrets.VITE_API_KEY }}"
 
     - name: Frontend Deployment Summary
-      if: needs.deploy-frontend.outputs.app-url
+      if: steps.deploy.outputs.app-url
       run: |
         echo "🎉 Complete PR Preview Environment Deployed!"
-        echo "📱 Frontend URL: ${{ needs.deploy-frontend.outputs.app-url }}"
+        echo "📱 Frontend URL: ${{ steps.deploy.outputs.app-url }}"
         echo "🔗 Backend API: ${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
         echo "📝 Stack: ${{ needs.deploy-pr-preview.outputs.stack-name }}"
         echo "🔢 PR: #${{ github.event.number }}"
