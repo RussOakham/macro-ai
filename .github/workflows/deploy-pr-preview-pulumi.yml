@@ -318,34 +318,9 @@ jobs:
         echo "🔢 PR: #${{ github.event.number }}"
         echo "🌿 Branch: ${{ github.event.pull_request.head.ref }}"
 
-    - name: Frontend Health Check
-      if: needs.deploy-frontend.outputs.app-url
-      id: frontend-health-check
-      run: |
-        FRONTEND_URL="${{ needs.deploy-frontend.outputs.app-url }}"
-        echo "🔍 Performing frontend health check on: '$FRONTEND_URL'"
-
-        # Wait for the frontend to be ready
-        sleep 30
-
-        # Perform frontend health check
-        for i in {1..10}; do
-          if curl -f -s -o /dev/null -w "%{http_code}" "$FRONTEND_URL" | grep -q "200"; then
-            echo "✅ Frontend health check passed on attempt ${i}"
-            echo "frontend-health-status=healthy" >> "$GITHUB_OUTPUT"
-            echo "✅ Frontend is responding at ${FRONTEND_URL}"
-            exit 0
-          fi
-          echo "⏳ Frontend health check attempt ${i} failed, retrying..."
-          sleep 15
-        done
-
-        echo "❌ Frontend health check failed after 10 attempts"
-        echo "frontend-health-status=unhealthy" >> "$GITHUB_OUTPUT"
-        exit 1
 
     - name: Backend Health Check
-      if: needs.deploy-pr-preview.outputs.api-endpoint != '' && needs.deploy-pr-preview.outputs.has-backend-changes == 'true'
+      if: needs.deploy-pr-preview.outputs.api-endpoint != '' && needs.deploy-pr-preview.outputs.has-backend-changes == 'true' && needs.deploy-frontend.outputs.frontend-health-status != ''
       id: backend-health-check
       run: |
         API_ENDPOINT="${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
@@ -371,13 +346,13 @@ jobs:
         exit 1
 
     - name: Comment PR with deployment info
-      if: needs.deploy-pr-preview.outputs.should-deploy == 'true' && needs.deploy-pr-preview.outputs.api-endpoint != '' && needs.deploy-pr-preview.outputs.has-backend-changes == 'true'
+      if: needs.deploy-pr-preview.outputs.should-deploy == 'true' && needs.deploy-frontend.outputs.frontend-health-status != ''
       uses: actions/github-script@v7
       with:
         script: |
           const apiEndpoint = '${{ needs.deploy-pr-preview.outputs.api-endpoint }}';
           const stackName = '${{ needs.deploy-pr-preview.outputs.stack-name }}';
-          const frontendHealthStatus = '${{ steps.frontend-health-check.outputs.frontend-health-status }}';
+          const frontendHealthStatus = '${{ needs.deploy-frontend.outputs.frontend-health-status }}';
           const backendHealthStatus = '${{ steps.backend-health-check.outputs.backend-health-status }}';
           const prNumber = '${{ github.event.number }}';
           const branchRef = '${{ github.event.pull_request.head.ref }}';

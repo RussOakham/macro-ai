@@ -54,10 +54,13 @@ on:
     outputs:
       app-url:
         description: 'Deployed frontend app URL'
-        value: ${{ jobs.deploy.outputs.app-url }}
+        value: ${{ jobs.deploy-frontend.outputs.app-url }}
       app-id:
         description: 'Amplify app ID'
-        value: ${{ jobs.deploy.outputs.app-id }}
+        value: ${{ jobs.deploy-frontend.outputs.app-id }}
+      frontend-health-status:
+        description: 'Frontend health check status'
+        value: ${{ jobs.frontend-health-check.outputs.frontend-health-status }}
 
 env:
   AWS_REGION: us-east-1
@@ -433,3 +436,45 @@ jobs:
           echo "❌ Frontend deployment failed with status: ${JOB_STATUS}"
           exit 1
         fi
+
+  frontend-health-check:
+    name: Frontend Health Check
+    runs-on: ubuntu-latest
+    needs: deploy-frontend
+    if: always() && needs.deploy-frontend.outputs.app-url != ''
+    outputs:
+      frontend-health-status: ${{ steps.health-check.outputs.frontend-health-status }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: '${{ env.PNPM_VERSION }}'
+
+    - name: Perform Frontend Health Check
+      id: health-check
+      run: |
+        FRONTEND_URL="${{ needs.deploy-frontend.outputs.app-url }}"
+        echo "🔍 Performing frontend health check on: '$FRONTEND_URL'"
+
+        # Wait for the frontend to be ready
+        sleep 30
+
+        # Perform frontend health check
+        for i in {1..10}; do
+          if curl -f -s -o /dev/null -w "%{http_code}" "$FRONTEND_URL" | grep -q "200"; then
+            echo "✅ Frontend health check passed on attempt ${i}"
+            echo "frontend-health-status=healthy" >> "$GITHUB_OUTPUT"
+            echo "✅ Frontend is responding at ${FRONTEND_URL}"
+            exit 0
+          fi
+          echo "⏳ Frontend health check attempt ${i} failed, retrying..."
+          sleep 15
+        done
+
+        echo "❌ Frontend health check failed after 10 attempts"
+        echo "frontend-health-status=unhealthy" >> "$GITHUB_OUTPUT"
+        exit 1
