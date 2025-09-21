@@ -167,6 +167,11 @@ const dopplerConfig = (() => {
 		return configuredConfig
 	}
 
+	// Special handling for PR previews - use 'dev' config
+	if (deploymentType === 'preview') {
+		return 'dev'
+	}
+
 	// Fallback to deployment type mapping
 	if (deploymentType === 'staging') {
 		return 'stg'

@@ -257,7 +257,7 @@ jobs:
         pulumi config set imageUri "${IMAGE_URI}" --stack "${STACK_NAME}"
         pulumi config set imageTag "${{ steps.build-image.outputs.image-tag }}" --stack "${STACK_NAME}"
         pulumi config set doppler:dopplerToken "${DOPPLER_TOKEN}" --secret --stack "${STACK_NAME}"
-        pulumi config set doppler:config "dev" --stack "${STACK_NAME}"  # All PRs use dev config
+        # Doppler config is handled in Pulumi code for PR previews (uses 'dev' config)
         pulumi config set prNumber "${{ github.event.number }}" --stack "${STACK_NAME}"
         pulumi config set branchName "$BRANCH_REF" --stack "${STACK_NAME}"
         pulumi config set customDomainName "macro-ai.russoakham.dev" --stack "${STACK_NAME}"
