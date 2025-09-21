@@ -320,36 +320,66 @@ jobs:
       run: |
         echo "Generating amplify.yml configuration..."
         cat > amplify.yml << 'EOF'
-version: 1
-applications:
-  - appRoot: apps/client-ui
-    frontend:
-      phases:
-        preBuild:
-          commands:
-            - echo "Installing dependencies..."
-            - npm install -g pnpm@10.14.0
-            - pnpm install --frozen-lockfile
-        build:
-          commands:
-            - echo "Building React application..."
-            - pnpm run build
-      artifacts:
-        baseDirectory: apps/client-ui/dist
-        files:
-          - '**/*'
-      cache:
-        paths:
-          - node_modules/**/*
-          - .pnpm-store/**/*
-EOF
-        echo "Amplify configuration generated:"
-        cat amplify.yml
-
+          ---
+          version: 1
+          applications:
+            - appRoot: apps/client-ui
+              frontend:
+                phases:
+                  preBuild:
+                    commands:
+                      - echo "Installing dependencies..."
+                      - npm install -g pnpm@10.14.0
+                      - pnpm install --frozen-lockfile
+                  build:
+                    commands:
+                      - echo "Building React application..."
+                      - pnpm run build
+                artifacts:
+                  baseDirectory: apps/client-ui/dist
+                  files:
+                    - '**/*'
+                cache:
+                  paths:
+                    - node_modules/**/*
+                    - .pnpm-store/**/*
+        EOF
     - name: Deploy to Amplify
       id: deploy
       run: |
         echo "Deploying frontend to Amplify..."
+        # Determine app name based on environment
+        APP_NAME="macro-ai-pr-${{ github.event.number }}"
+        BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+
+        # For PR previews, create a simple static deployment without GitHub integration
+        # This avoids the webhook permission issues while still providing preview functionality
+
+        # Create Amplify app without repository connection (manual deployment)
+        CREATE_APP_OUTPUT=$(aws amplify create-app --name "$APP_NAME" --platform WEB --environment-variables "VITE_API_URL=$VITE_API_URL,VITE_API_KEY=$VITE_API_KEY")
+        APP_ID=$(echo "$CREATE_APP_OUTPUT" | jq -r '.app.appId')
+        echo "Created Amplify app with ID: $APP_ID"
+
+        # Create a branch for this PR preview
+        echo "Creating Amplify branch for PR preview..."
+        CREATE_BRANCH_OUTPUT=$(aws amplify create-branch --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --stage "DEVELOPMENT" --build-spec "amplify.yml")
+        echo "Created Amplify branch: $BRANCH_NAME"
+
+        # Start a new deployment
+        START_DEPLOYMENT_OUTPUT=$(aws amplify start-deployment --app-id "$APP_ID" --branch-name "$BRANCH_NAME")
+        JOB_ID=$(echo "$START_DEPLOYMENT_OUTPUT" | jq -r '.jobId')
+        echo "Started Amplify deployment with Job ID: $JOB_ID"
+
+        # Wait for deployment to complete
+        echo "Waiting for deployment to complete..."
+        aws amplify wait deployment-completed --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --job-id "$JOB_ID"
+
+        # Get the deployed URL (use default domain since no custom domain configured)
+        APP_URL=$(aws amplify get-branch --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --query "branch.associatedResource.defaultDomain" --output text)
+
+        echo "Deployed Frontend URL: $APP_URL"
+        echo "app-url=$APP_URL" >> $GITHUB_OUTPUT
+        echo "app-id=$APP_ID" >> $GITHUB_OUTPUT
         # Determine app name based on environment
         APP_NAME="macro-ai-pr-${{ github.event.number }}"
         BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
