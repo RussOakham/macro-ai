@@ -12,17 +12,16 @@ concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.event.pull_request.head.ref || github.ref }}'
   cancel-in-progress: true
 
-  env:
-  AWS_REGION: us-east-1
-  NODE_VERSION: '20.19.4'
-  PNPM_VERSION: '10.14.0'
-  CUSTOM_DOMAIN_NAME: ${{ vars.CUSTOM_DOMAIN_NAME }}
-  HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
-
 jobs:
   deploy-pr-preview:
     name: Deploy PR Preview Infrastructure
     runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-1
+      NODE_VERSION: '20.19.4'
+      PNPM_VERSION: '10.14.0'
+      CUSTOM_DOMAIN_NAME: ${{ vars.CUSTOM_DOMAIN_NAME }}
+      HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
     permissions:
       id-token: write
       contents: read
@@ -322,7 +321,8 @@ jobs:
         script: |
           const apiEndpoint = '${{ needs.deploy-pr-preview.outputs.api-endpoint }}';
           const stackName = '${{ needs.deploy-pr-preview.outputs.stack-name }}';
-          const healthStatus = '${{ steps.health-check.outputs.health-status }}';
+          const frontendHealthStatus = '${{ steps.frontend-health-check.outputs.frontend-health-status }}';
+          const backendHealthStatus = '${{ steps.backend-health-check.outputs.backend-health-status }}';
           const prNumber = '${{ github.event.number }}';
           const branchRef = '${{ github.event.pull_request.head.ref }}';
           const hasBackendChanges = '${{ needs.deploy-pr-preview.outputs.has-backend-changes }}' === 'true';
@@ -331,12 +331,38 @@ jobs:
           let healthIcon = '⚠️';
           let healthMessage = 'Health check in progress...';
 
-          if (healthStatus === 'healthy') {
+          // Determine overall health status
+          if (hasBackendChanges && hasFrontendChanges) {
+            // Both backend and frontend changed - both need to be healthy
+            if (backendHealthStatus === 'healthy' && frontendHealthStatus === 'healthy') {
+              healthIcon = '✅';
+              healthMessage = 'Health check passed - both frontend and backend are ready!';
+            } else {
+              healthIcon = '❌';
+              healthMessage = 'Health check failed - please check the workflow logs';
+            }
+          } else if (hasBackendChanges) {
+            // Only backend changed
+            if (backendHealthStatus === 'healthy') {
+              healthIcon = '✅';
+              healthMessage = 'Backend health check passed - service is ready!';
+            } else {
+              healthIcon = '❌';
+              healthMessage = 'Backend health check failed - please check the workflow logs';
+            }
+          } else if (hasFrontendChanges) {
+            // Only frontend changed
+            if (frontendHealthStatus === 'healthy') {
+              healthIcon = '✅';
+              healthMessage = 'Frontend health check passed - application is ready!';
+            } else {
+              healthIcon = '❌';
+              healthMessage = 'Frontend health check failed - please check the workflow logs';
+            }
+          } else {
+            // No changes detected
             healthIcon = '✅';
-            healthMessage = 'Health check passed - service is ready!';
-          } else if (healthStatus === 'unhealthy') {
-            healthIcon = '❌';
-            healthMessage = 'Health check failed - please check the workflow logs';
+            healthMessage = 'No changes detected - existing environment is ready!';
           }
 
           const frontendUrl = '${{ needs.deploy-frontend.outputs.app-url }}';
@@ -359,7 +385,8 @@ jobs:
             'You can now test your complete application:',
             '1. **Frontend**: Visit the frontend URL above to interact with your changes',
             '2. **Backend API**: Test API endpoints directly at \`' + apiEndpoint + '\`',
-            '3. **Health Check**: \`' + apiEndpoint + '/health\`',
+            '3. **Frontend Health Check**: \`' + frontendUrl + '\`',
+            '4. **Backend Health Check**: \`' + apiEndpoint + '/health\`',
             '',
             '### 🏗️ **Infrastructure Details**',
             '- Full ECS Fargate deployment',
@@ -385,30 +412,56 @@ jobs:
             body: body
           });
 
-    - name: Health Check
-      if: needs.deploy-frontend.outputs.app-url && needs.deploy-pr-preview.outputs.should-deploy == 'true' && needs.deploy-pr-preview.outputs.api-endpoint != '' && needs.deploy-pr-preview.outputs.has-backend-changes == 'true'
-      id: health-check
+    - name: Frontend Health Check
+      if: needs.deploy-frontend.outputs.app-url
+      id: frontend-health-check
+      run: |
+        FRONTEND_URL="${{ needs.deploy-frontend.outputs.app-url }}"
+        echo "🔍 Performing frontend health check on: '$FRONTEND_URL'"
+
+        # Wait for the frontend to be ready
+        sleep 30
+
+        # Perform frontend health check
+        for i in {1..10}; do
+          if curl -f -s -o /dev/null -w "%{http_code}" "$FRONTEND_URL" | grep -q "200"; then
+            echo "✅ Frontend health check passed on attempt ${i}"
+            echo "frontend-health-status=healthy" >> "$GITHUB_OUTPUT"
+            echo "✅ Frontend is responding at ${FRONTEND_URL}"
+            exit 0
+          fi
+          echo "⏳ Frontend health check attempt ${i} failed, retrying..."
+          sleep 15
+        done
+
+        echo "❌ Frontend health check failed after 10 attempts"
+        echo "frontend-health-status=unhealthy" >> "$GITHUB_OUTPUT"
+        exit 1
+
+    - name: Backend Health Check
+      if: needs.deploy-pr-preview.outputs.api-endpoint != '' && needs.deploy-pr-preview.outputs.has-backend-changes == 'true'
+      id: backend-health-check
       run: |
         API_ENDPOINT="${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
-        echo "🔍 Performing health check on: '$API_ENDPOINT'"
+        echo "🔍 Performing backend health check on: '$API_ENDPOINT'"
 
         # Wait for the service to be ready
         sleep 30
 
-        # Perform health check
+        # Perform backend health check
         for i in {1..10}; do
           if curl -f -s "${API_ENDPOINT}/health" > /dev/null 2>&1; then
-            echo "✅ Health check passed on attempt ${i}"
-            echo "health-status=healthy" >> "$GITHUB_OUTPUT"
-            echo "✅ Service is responding at ${API_ENDPOINT}"
+            echo "✅ Backend health check passed on attempt ${i}"
+            echo "backend-health-status=healthy" >> "$GITHUB_OUTPUT"
+            echo "✅ Backend service is responding at ${API_ENDPOINT}"
             exit 0
           fi
-          echo "⏳ Health check attempt ${i} failed, retrying..."
+          echo "⏳ Backend health check attempt ${i} failed, retrying..."
           sleep 15
         done
 
-        echo "❌ Health check failed after 10 attempts"
-        echo "health-status=unhealthy" >> "$GITHUB_OUTPUT"
+        echo "❌ Backend health check failed after 10 attempts"
+        echo "backend-health-status=unhealthy" >> "$GITHUB_OUTPUT"
         exit 1
 
     - name: Comment PR on failure
