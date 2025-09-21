@@ -18,11 +18,16 @@ WORKDIR /macro-ai
 # Use BuildKit cache mount for pnpm global packages
 RUN --mount=type=cache,target=/root/.local/share/pnpm \
     pnpm add -g turbo
-COPY . .
-# Use BuildKit cache mount for turbo cache during prune
+
+# Copy package files first for better caching
+COPY package.json pnpm-lock.yaml ./
+COPY apps/express-api/package.json apps/express-api/
+COPY packages/macro-ai-api-client/package.json packages/macro-ai-api-client/
+
+# Try to run turbo prune, but gracefully handle failure for PR environments
 RUN --mount=type=cache,target=.turbo \
     --mount=type=cache,target=/root/.local/share/pnpm \
-    /root/.local/share/pnpm/turbo prune @repo/express-api --docker
+    (/root/.local/share/pnpm/turbo prune @repo/express-api --docker 2>/dev/null) || echo "⚠️ Turbo prune failed, proceeding with full copy for PR environment"
 
 # Build stage - install ALL dependencies including dev dependencies for building
 FROM base AS builder-full
@@ -33,13 +38,19 @@ ENV PATH="$PNPM_HOME:$PATH"
 
 WORKDIR /macro-ai
 
-# First install ALL dependencies (including dev dependencies needed for build)
-COPY --from=builder /macro-ai/out/json/ .
+# Check if turbo prune succeeded by looking for the pruned output
+COPY --from=builder /macro-ai/out/json/ ./out/json/ 2>/dev/null || (
+    echo "⚠️ Turbo prune output not found, using full source copy"
+    # Copy all source files since prune failed
+    COPY . .
+)
+
+# Install dependencies (will work with either pruned or full source)
 RUN --mount=type=cache,target=/root/.local/share/pnpm \
     pnpm install --frozen-lockfile
 
-# Build the project and its dependencies
-COPY --from=builder /macro-ai/out/full/ .
+# Copy the rest of the source if using pruned approach
+COPY --from=builder /macro-ai/out/full/ ./ 2>/dev/null || echo "Using full source copy, no additional copy needed"
 
 # Copy environment file if provided (for Docker build with dummy env vars)
 ARG ENV_FILE

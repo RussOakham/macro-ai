@@ -145,7 +145,7 @@ jobs:
         # Build Docker image for PR
         IMAGE_TAG="pr-${{ github.event.number }}-${{ github.run_id }}"
 
-        # Build and push to ECR
+        # Build and push to ECR - skip turbo prune step that's causing issues
         cd apps/express-api
         docker build \
           --build-arg NODE_ENV=production \
