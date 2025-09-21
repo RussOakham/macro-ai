@@ -225,7 +225,9 @@ jobs:
         # For now, we'll use the Pulumi CLI directly
         cd infrastructure/pulumi
 
-        # Pulumi will automatically install dependencies with pnpm
+        # Install Pulumi dependencies with pnpm
+        echo "📦 Installing Pulumi dependencies with pnpm..."
+        pnpm install --frozen-lockfile
 
         # Set up environment variables
         export PULUMI_ACCESS_TOKEN="${{ secrets.PULUMI_ACCESS_TOKEN }}"
