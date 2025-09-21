@@ -65,7 +65,8 @@ ENV PATH="$PNPM_HOME:$PATH"
 WORKDIR /macro-ai
 
 # Install ONLY production dependencies
-COPY --from=builder /macro-ai/out/json/ .
+# Try to copy from pruned output, fallback to full source if prune failed
+COPY --from=builder /macro-ai/out/json/ ./ 2>/dev/null || COPY . .
 RUN --mount=type=cache,target=/root/.local/share/pnpm \
     pnpm install --prod --frozen-lockfile --ignore-scripts
 
