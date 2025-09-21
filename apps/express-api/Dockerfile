@@ -38,19 +38,13 @@ ENV PATH="$PNPM_HOME:$PATH"
 
 WORKDIR /macro-ai
 
-# Check if turbo prune succeeded by looking for the pruned output
-COPY --from=builder /macro-ai/out/json/ ./out/json/ 2>/dev/null || (
-    echo "⚠️ Turbo prune output not found, using full source copy"
-    # Copy all source files since prune failed
-    COPY . .
-)
+# Copy source files
+# First try to copy from pruned output, then fallback to full source
+COPY . .
 
 # Install dependencies (will work with either pruned or full source)
 RUN --mount=type=cache,target=/root/.local/share/pnpm \
     pnpm install --frozen-lockfile
-
-# Copy the rest of the source if using pruned approach
-COPY --from=builder /macro-ai/out/full/ ./ 2>/dev/null || echo "Using full source copy, no additional copy needed"
 
 # Copy environment file if provided (for Docker build with dummy env vars)
 ARG ENV_FILE
