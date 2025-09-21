@@ -225,13 +225,17 @@ jobs:
         # For now, we'll use the Pulumi CLI directly
         cd infrastructure/pulumi
 
-        # Install Pulumi dependencies with pnpm
-        echo "📦 Installing Pulumi dependencies with pnpm..."
-        pnpm install --frozen-lockfile
+        # Install Pulumi CLI (using same approach as staging)
+        uses: pulumi/actions@v5
+        with:
+          pulumi-version: latest
+
+        # Set Doppler token for dev config (all PRs use dev secrets)
+        echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> $GITHUB_ENV
 
         # Set up environment variables
         export PULUMI_ACCESS_TOKEN="${{ secrets.PULUMI_ACCESS_TOKEN }}"
-        export DOPPLER_TOKEN="${{ secrets.DOPPLER_TOKEN_DEV }}"
+        # Use the DOPPLER_TOKEN from environment (set above for dev config)
         export AWS_REGION="${{ env.AWS_REGION }}"
         export AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}"
 
@@ -247,6 +251,7 @@ jobs:
         pulumi config set imageUri "${IMAGE_URI}" --stack "${STACK_NAME}"
         pulumi config set imageTag "${{ steps.build-image.outputs.image-tag }}" --stack "${STACK_NAME}"
         pulumi config set doppler:dopplerToken "${DOPPLER_TOKEN}" --secret --stack "${STACK_NAME}"
+        pulumi config set doppler:dopplerConfig "dev" --stack "${STACK_NAME}"  # All PRs use dev config
         pulumi config set prNumber "${{ github.event.number }}" --stack "${STACK_NAME}"
         pulumi config set branchName "$BRANCH_REF" --stack "${STACK_NAME}"
         pulumi config set customDomainName "macro-ai.russoakham.dev" --stack "${STACK_NAME}"
