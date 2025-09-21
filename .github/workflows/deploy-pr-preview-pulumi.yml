@@ -138,8 +138,36 @@ jobs:
         echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
         echo "stack-name=${STACK_NAME_OUTPUT}" >> $GITHUB_OUTPUT
 
-        echo "✅ Deployment completed successfully!"
+        echo "✅ Backend deployment completed successfully!"
         echo "🌐 API Endpoint: ${API_ENDPOINT}"
+
+    - name: Deploy Frontend to Amplify
+      if: steps.decide-deploy.outputs.deployment-action == 'deploy' && steps.deploy.outputs.api-endpoint
+      id: deploy-frontend
+      uses: ./.github/workflows/reusable-deploy-frontend.yml
+      with:
+        environment-name: "pr-${{ github.event.number }}"
+        deployment-type: "preview"
+        pr-number: "${{ github.event.number }}"
+        branch-name: "${{ github.head_ref }}"
+        backend-url: "${{ steps.deploy.outputs.api-endpoint }}"
+        custom-domain-name: "macro-ai.russoakham.dev"
+        hosted-zone-id: "${{ secrets.ROUTE53_HOSTED_ZONE_ID }}"
+        should-deploy: true
+      secrets:
+        AWS_ACCOUNT_ID: "${{ secrets.AWS_ACCOUNT_ID }}"
+        AWS_ROLE_ARN: "${{ secrets.AWS_ROLE_ARN }}"
+        API_KEY: "${{ secrets.VITE_API_KEY }}"
+
+    - name: Frontend Deployment Summary
+      if: steps.deploy-frontend.outputs.app-url
+      run: |
+        echo "🎉 Complete PR Preview Environment Deployed!"
+        echo "📱 Frontend URL: ${{ steps.deploy-frontend.outputs.app-url }}"
+        echo "🔗 Backend API: ${{ steps.deploy.outputs.api-endpoint }}"
+        echo "📝 Stack: ${{ steps.deploy.outputs.stack-name }}"
+        echo "🔢 PR: #${{ github.event.number }}"
+        echo "🌿 Branch: ${{ github.head_ref }}"
 
     - name: Health Check
       if: steps.decide-deploy.outputs.deployment-action == 'deploy' && steps.deploy.outputs.api-endpoint
@@ -189,25 +217,34 @@ jobs:
             healthMessage = 'Health check failed - please check the workflow logs';
           }
 
+          const frontendUrl = '${{ steps.deploy-frontend.outputs.app-url }}';
+
           const body = [
             '## 🚀 PR Preview Environment Deployed',
             '',
-            `**${healthIcon} Infrastructure deployed successfully!**`,
+            `**${healthIcon} Complete preview environment deployed successfully!**`,
             '',
-            `- **API Endpoint**: ${apiEndpoint}`,
+            '### 🌐 **Access URLs**',
+            `- **Frontend**: ${frontendUrl || 'Deploying...'}`,
+            `- **Backend API**: ${apiEndpoint}`,
             `- **Pulumi Stack**: \`${stackName}\``,
             `- **Environment**: Preview for PR #${prNumber}`,
             `- **Branch**: \`${branchRef}\``,
             `- **Health Status**: ${healthMessage}`,
             '',
-            '### 🔍 Testing Your Changes',
+            '### 🔍 **Testing Your Changes**',
             '',
-            'You can now test your changes at the API endpoint above. The environment includes:',
+            'You can now test your complete application:',
+            '1. **Frontend**: Visit the frontend URL above to interact with your changes',
+            '2. **Backend API**: Test API endpoints directly at \`' + apiEndpoint + '\`',
+            '3. **Health Check**: \`' + apiEndpoint + '/health\`',
+            '',
+            '### 🏗️ **Infrastructure Details**',
             '- Full ECS Fargate deployment',
             '- Application Load Balancer',
-            '- Custom domain (\`pr-' + prNumber + '.api.macro-ai.russoakham.dev\`)',
+            '- Custom domains (\`pr-' + prNumber + '.api.macro-ai.russoakham.dev\`)',
             '- Doppler secrets integration',
-            '- Health check endpoint: \`' + apiEndpoint + '/health\`',
+            '- Amplify frontend deployment',
             '',
             '### 🧹 Automatic Cleanup',
             '',
