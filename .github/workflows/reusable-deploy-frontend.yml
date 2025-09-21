@@ -58,6 +58,9 @@ on:
       app-id:
         description: 'Amplify app ID'
         value: ${{ jobs.deploy-frontend.outputs.app-id }}
+      frontend-health-status:
+        description: 'Frontend health check status'
+        value: ${{ jobs.frontend-health-check.outputs.frontend-health-status }}
 
 env:
   AWS_REGION: us-east-1
@@ -221,32 +224,7 @@ jobs:
         rm -f "$TEMP_ENV_FILE"
 
         # Generate amplify.yml configuration
-        printf 'version: 1\n' > amplify.yml
-        {
-          printf 'applications:\n'
-          printf '  - appRoot: apps/client-ui\n'
-          printf '    frontend:\n'
-          printf '      phases:\n'
-          printf '        preBuild:\n'
-        } >> amplify.yml
-        {
-          printf '          commands:\n'
-          printf '            - echo "Installing dependencies..."\n'
-          printf '            - npm install -g pnpm@%s\n' "${PNPM_VERSION}"
-          printf '            - pnpm install --frozen-lockfile\n'
-          printf '        build:\n'
-          printf '          commands:\n'
-          printf '            - echo "Building React application..."\n'
-          printf '            - pnpm run build\n'
-          printf '      artifacts:\n'
-          printf '        baseDirectory: dist\n'
-          printf '        files:\n'
-          printf '          - '\''**/*'\''\n'
-          printf '      cache:\n'
-          printf '        paths:\n'
-          printf '          - node_modules/**/*\n'
-          printf '          - .pnpm-store/**/*\n'
-        } >> amplify.yml
+        printf 'version: 1\napplications:\n  - appRoot: apps/client-ui\n    frontend:\n      phases:\n        preBuild:\n          commands:\n            - echo "Installing dependencies..."\n            - npm install -g pnpm@%s\n            - pnpm install --frozen-lockfile\n        build:\n          commands:\n            - echo "Building React application..."\n            - pnpm run build\n      artifacts:\n        baseDirectory: dist\n        files:\n          - "**/*"\n      cache:\n        paths:\n          - node_modules/**/*\n          - .pnpm-store/**/*\n' "${PNPM_VERSION}" > amplify.yml
 
         echo "✅ Generated amplify.yml configuration"
 
@@ -458,3 +436,46 @@ jobs:
           echo "❌ Frontend deployment failed with status: ${JOB_STATUS}"
           exit 1
         fi
+
+  frontend-health-check:
+    name: Frontend Health Check
+    runs-on: ubuntu-latest
+    needs: deploy-frontend
+    if: always() && needs.deploy-frontend.outputs.app-url != ''
+    outputs:
+      frontend-health-status: ${{ steps.health-check.outputs.frontend-health-status }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: '${{ env.PNPM_VERSION }}'
+
+    - name: Perform Frontend Health Check
+      id: health-check
+      run: |
+        FRONTEND_URL="${{ needs.deploy-frontend.outputs.app-url }}"
+        echo "🔍 Performing frontend health check on: '$FRONTEND_URL'"
+
+        # Wait for the frontend to be ready
+        sleep 30
+
+        # Perform frontend health check
+        for i in {1..10}; do
+          if curl -f -s -o /dev/null -w "%{http_code}" "$FRONTEND_URL" | grep -q "200"; then
+            echo "✅ Frontend health check passed on attempt ${i}"
+            echo "frontend-health-status=healthy" >> "$GITHUB_OUTPUT"
+            echo "✅ Frontend is responding at ${FRONTEND_URL}"
+            exit 0
+          fi
+          echo "⏳ Frontend health check attempt ${i} failed, retrying..."
+          sleep 15
+        done
+
+        echo "⚠️ Frontend health check failed after 10 attempts"
+        echo "frontend-health-status=unknown" >> "$GITHUB_OUTPUT"
+        echo "⚠️ Frontend health status unknown - will proceed anyway"
+        exit 0

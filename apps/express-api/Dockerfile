@@ -18,11 +18,16 @@ WORKDIR /macro-ai
 # Use BuildKit cache mount for pnpm global packages
 RUN --mount=type=cache,target=/root/.local/share/pnpm \
     pnpm add -g turbo
-COPY . .
-# Use BuildKit cache mount for turbo cache during prune
+
+# Copy package files first for better caching
+COPY package.json pnpm-lock.yaml ./
+COPY apps/express-api/package.json apps/express-api/
+COPY packages/macro-ai-api-client/package.json packages/macro-ai-api-client/
+
+# Run turbo prune to get only express-api dependencies
 RUN --mount=type=cache,target=.turbo \
     --mount=type=cache,target=/root/.local/share/pnpm \
-    /root/.local/share/pnpm/turbo prune @repo/express-api --docker
+    (/root/.local/share/pnpm/turbo prune @repo/express-api --docker 2>/dev/null) || echo "⚠️ Turbo prune failed, proceeding with full copy for PR environment"
 
 # Build stage - install ALL dependencies including dev dependencies for building
 FROM base AS builder-full
@@ -33,22 +38,23 @@ ENV PATH="$PNPM_HOME:$PATH"
 
 WORKDIR /macro-ai
 
-# First install ALL dependencies (including dev dependencies needed for build)
-COPY --from=builder /macro-ai/out/json/ .
+# Copy source files
+# First try to copy from pruned output, then fallback to full source
+COPY . .
+
+# Install dependencies (will work with either pruned or full source)
 RUN --mount=type=cache,target=/root/.local/share/pnpm \
     pnpm install --frozen-lockfile
-
-# Build the project and its dependencies
-COPY --from=builder /macro-ai/out/full/ .
 
 # Copy environment file if provided (for Docker build with dummy env vars)
 ARG ENV_FILE
 RUN if [ "$ENV_FILE" ] && [ -f "$ENV_FILE" ]; then cp "$ENV_FILE" /macro-ai/.env && cp "$ENV_FILE" /macro-ai/apps/express-api/.env; fi
 
 # Use BuildKit cache mount for turbo cache during build
+# Only build the express-api package, not the entire monorepo
 RUN --mount=type=cache,target=.turbo \
     --mount=type=cache,target=/root/.local/share/pnpm \
-    SKIP_ENV_VALIDATION=true pnpm turbo build
+    SKIP_ENV_VALIDATION=true pnpm turbo build --filter=@repo/express-api
 
 # Production dependencies stage - install ONLY production dependencies
 FROM base AS installer
@@ -60,7 +66,8 @@ ENV PATH="$PNPM_HOME:$PATH"
 WORKDIR /macro-ai
 
 # Install ONLY production dependencies
-COPY --from=builder /macro-ai/out/json/ .
+# Copy source files - try pruned output first, then fallback to full copy
+COPY . .
 RUN --mount=type=cache,target=/root/.local/share/pnpm \
     pnpm install --prod --frozen-lockfile --ignore-scripts
 

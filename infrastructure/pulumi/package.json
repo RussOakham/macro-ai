@@ -16,7 +16,8 @@
 	"dependencies": {
 		"@pulumi/aws": "~6.83.0",
 		"@pulumi/awsx": "^2.0.0",
-		"@pulumiverse/doppler": "^0.9.0",
-		"@pulumi/pulumi": "^3.0.0"
+		"@pulumi/pulumi": "^3.0.0",
+		"@pulumi/pulumiservice": "^0.31.0",
+		"@pulumiverse/doppler": "^0.9.0"
 	}
 }

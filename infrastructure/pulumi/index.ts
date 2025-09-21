@@ -38,7 +38,8 @@ if (hostedZoneId) {
 }
 
 // ECR repository configuration
-const ecrRepositoryName = `macro-ai-${environmentName}-express-api`
+// Use the same repository for all environments (staging and PR previews)
+const ecrRepositoryName = 'macro-ai-staging-express-api'
 
 // Determine if this is a preview environment
 const isPreviewEnvironment = environmentName.startsWith('pr-')
@@ -158,9 +159,21 @@ const cluster = new aws.ecs.Cluster('macro-ai-cluster', {
 	},
 })
 
-// Get secrets from Doppler using the official provider
-// Map deployment type to Doppler config
+// Get Doppler project and config from Pulumi configuration
+const dopplerProject = config.get('doppler:project') || 'macro-ai'
 const dopplerConfig = (() => {
+	// Use configured Doppler config, or fallback to deployment type mapping
+	const configuredConfig = config.get('doppler:config')
+	if (configuredConfig) {
+		return configuredConfig
+	}
+
+	// Special handling for PR previews - use 'dev' config
+	if (deploymentType === 'preview') {
+		return 'dev'
+	}
+
+	// Fallback to deployment type mapping
 	if (deploymentType === 'staging') {
 		return 'stg'
 	}
@@ -220,7 +233,7 @@ const allEnvironmentVariables = pulumi
 				'Doppler token not found in Pulumi configuration or environment variables. Please set doppler:dopplerToken in your stack config or DOPPLER_TOKEN in environment variables.',
 			)
 		}
-		return fetchDopplerSecrets('macro-ai', dopplerConfig, finalToken)
+		return fetchDopplerSecrets(dopplerProject, dopplerConfig, finalToken)
 	})
 	.apply((secrets: Record<string, boolean | number | string>) => {
 		const envVars: Record<string, string> = {}
@@ -621,3 +634,12 @@ export const apiEndpoint = customDomainOutput
 // Export custom domain information
 export const customDomain = customDomainOutput
 export const httpsListenerArn = httpsListener?.arn
+
+// Configure deployment settings for Review Stacks
+// This enables automatic PR preview deployments
+// Note: Configuration is handled via Pulumi config, not programmatic resources
+// The PR stack should have these config values set:
+// - github:pullRequestTemplate: true
+// - github:repository: RussOakham/macro-ai
+// - github:deployCommits: false
+// - github:previewPullRequests: false

@@ -707,6 +707,9 @@ importers:
       '@pulumi/pulumi':
         specifier: ^3.0.0
         version: 3.196.0(typescript@5.9.2)
+      '@pulumi/pulumiservice':
+        specifier: ^0.31.0
+        version: 0.31.0(typescript@5.9.2)
       '@pulumiverse/doppler':
         specifier: ^0.9.0
         version: 0.9.0(typescript@5.9.2)
@@ -3678,6 +3681,12 @@ packages:
         optional: true
       typescript:
         optional: true
+
+  '@pulumi/pulumiservice@0.31.0':
+    resolution:
+      {
+        integrity: sha512-qbusybLrWd8sptANmK+9x1k3DWwQVr6tRAnEYxhCeu/ytPl8E6+XzQOxWlUZOputILWyfhFPFUa0Dm1G5yVLQQ==,
+      }
 
   '@pulumiverse/doppler@0.9.0':
     resolution:
@@ -14874,6 +14883,15 @@ snapshots:
     transitivePeerDependencies:
       - bluebird
       - supports-color
+
+  '@pulumi/pulumiservice@0.31.0(typescript@5.9.2)':
+    dependencies:
+      '@pulumi/pulumi': 3.196.0(typescript@5.9.2)
+    transitivePeerDependencies:
+      - bluebird
+      - supports-color
+      - ts-node
+      - typescript
 
   '@pulumiverse/doppler@0.9.0(typescript@5.9.2)':
     dependencies:
