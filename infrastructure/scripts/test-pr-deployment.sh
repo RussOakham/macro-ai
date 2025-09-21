@@ -97,7 +97,7 @@ echo "🔍 Step 3: Checking Configuration Files"
 echo "---------------------------------------"
 
 check_file "pulumi/index.ts" "Pulumi main configuration"
-check_file ".github/workflows/deploy-pr-preview-pulumi.yml" "PR deployment workflow"
+check_file "../.github/workflows/deploy-pr-preview-pulumi.yml" "PR deployment workflow"
 check_file "scripts/setup-pr-stack.sh" "PR stack setup script"
 check_file "scripts/setup-doppler-pr.sh" "Doppler PR setup script"
 check_file "scripts/verify-github-app.sh" "GitHub App verification script"
@@ -162,7 +162,7 @@ echo "---------------------------------"
 
 # Test Doppler connectivity
 echo "🔐 Testing Doppler connectivity..."
-if doppler secrets list --project macro-ai --config dev --json | head -1 &> /dev/null; then
+if doppler projects get macro-ai &> /dev/null; then
     echo "✅ Doppler connectivity successful"
 else
     echo "❌ Doppler connectivity failed"
