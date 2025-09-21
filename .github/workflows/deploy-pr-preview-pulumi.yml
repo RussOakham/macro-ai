@@ -307,6 +307,8 @@ jobs:
     runs-on: ubuntu-latest
     if: always() && needs.deploy-frontend.result != 'cancelled'
     needs: [ deploy-pr-preview, deploy-frontend ]
+    permissions:
+      pull-requests: write
 
     steps:
     - name: Generate deployment summary
