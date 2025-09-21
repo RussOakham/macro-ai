@@ -284,6 +284,9 @@ jobs:
   deploy-frontend:
     name: Deploy Frontend to Amplify
     uses: ./.github/workflows/reusable-deploy-frontend.yml
+    permissions:
+      id-token: write
+      contents: read
     with:
       environment-name: pr-${{ github.event.number }}
       deployment-type: preview
