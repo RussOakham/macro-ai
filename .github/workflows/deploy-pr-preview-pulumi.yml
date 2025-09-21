@@ -330,6 +330,7 @@ jobs:
 
         if [ -z "$APP_ID" ]; then
           echo "Creating Amplify app for PR previews with GitHub integration..."
+          BUILD_SPEC="version: 1\napplications:\n  - appRoot: apps/client-ui\n    frontend:\n      phases:\n        preBuild:\n          commands:\n            - echo \"Installing dependencies...\"\n            - npm install -g pnpm@10.14.0\n            - pnpm install --frozen-lockfile\n        build:\n          commands:\n            - echo \"Building React application...\"\n            - pnpm run build\n      artifacts:\n        baseDirectory: apps/client-ui/dist\n        files:\n          - '**/*'\n      cache:\n        paths:\n          - node_modules/**/*\n          - .pnpm-store/**/*\n      environmentVariables:\n        VITE_API_URL: $VITE_API_URL\n        VITE_API_KEY: $VITE_API_KEY"
           CREATE_APP_OUTPUT=$(aws amplify create-app \
             --name "$APP_NAME" \
             --platform WEB \
@@ -337,7 +338,7 @@ jobs:
             --enable-branch-auto-build \
             --repository "https://github.com/RussOakham/macro-ai" \
             --access-token "${{ secrets.GITHUB_TOKEN }}" \
-            --build-spec "version: 1\napplications:\n  - appRoot: apps/client-ui\n    frontend:\n      phases:\n        preBuild:\n          commands:\n            - echo \"Installing dependencies...\"\n            - npm install -g pnpm@10.14.0\n            - pnpm install --frozen-lockfile\n        build:\n          commands:\n            - echo \"Building React application...\"\n            - pnpm run build\n      artifacts:\n        baseDirectory: apps/client-ui/dist\n        files:\n          - '**/*'\n      cache:\n        paths:\n          - node_modules/**/*\n          - .pnpm-store/**/*\n      environmentVariables:\n        VITE_API_URL: $VITE_API_URL\n        VITE_API_KEY: $VITE_API_KEY"
+            --build-spec "$BUILD_SPEC")
           APP_ID=$(echo "$CREATE_APP_OUTPUT" | jq -r '.app.appId')
           echo "Created Amplify app with ID: $APP_ID"
         else
