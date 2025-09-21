@@ -353,42 +353,19 @@ jobs:
         # Determine app name based on environment
         APP_NAME="macro-ai-pr-${{ github.event.number }}"
         BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
-        CUSTOM_DOMAIN_NAME="${{ vars.CUSTOM_DOMAIN_NAME }}"
-        HOSTED_ZONE_ID="${{ vars.HOSTED_ZONE_ID }}"
 
-        # Check if app exists
-        APP_ID=$(aws amplify list-apps --query "apps[?name=='$APP_NAME'].appId" --output text)
+        # For PR previews, create a simple static deployment without GitHub integration
+        # This avoids the webhook permission issues while still providing preview functionality
 
-        if [ -z "$APP_ID" ]; then
-          echo "Amplify app '$APP_NAME' not found. Creating new app..."
-          # Create new Amplify app
-          CREATE_APP_OUTPUT=$(aws amplify create-app --name "$APP_NAME" --repository "https://github.com/RussOakham/macro-ai" --oauth-token "${{ secrets.GITHUB_TOKEN }}" --platform WEB --environment-variables "VITE_API_URL=$VITE_API_URL,VITE_API_KEY=$VITE_API_KEY")
-          APP_ID=$(echo "$CREATE_APP_OUTPUT" | jq -r '.app.appId')
-          echo "Created Amplify app with ID: $APP_ID"
+        # Create Amplify app without repository connection (manual deployment)
+        CREATE_APP_OUTPUT=$(aws amplify create-app --name "$APP_NAME" --platform WEB --environment-variables "VITE_API_URL=$VITE_API_URL,VITE_API_KEY=$VITE_API_KEY")
+        APP_ID=$(echo "$CREATE_APP_OUTPUT" | jq -r '.app.appId')
+        echo "Created Amplify app with ID: $APP_ID"
 
-          # Configure custom domain
-          echo "Configuring custom domain: pr-${{ github.event.number }}.$CUSTOM_DOMAIN_NAME"
-          aws amplify create-domain-association --app-id "$APP_ID" --domain-name "$CUSTOM_DOMAIN_NAME" --sub-domain-settings "[{\"prefix\":\"pr-${{ github.event.number }}\",\"branchName\":\"$BRANCH_NAME\"}]" --auto-sub-domain-iam-role arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/amplify-domain-manager --region us-east-1
-          echo "Custom domain association created."
-        else
-          echo "Amplify app '$APP_NAME' found with ID: $APP_ID. Updating app..."
-          # Update existing Amplify app environment variables
-          aws amplify update-app --app-id "$APP_ID" --environment-variables "VITE_API_URL=$VITE_API_URL,VITE_API_KEY=$VITE_API_KEY"
-        fi
-
-        # Check if branch exists
-        BRANCH_ARN=$(aws amplify list-branches --app-id "$APP_ID" --query "branches[?branchName=='$BRANCH_NAME'].branchArn" --output text)
-
-        if [ -z "$BRANCH_ARN" ]; then
-          echo "Amplify branch '$BRANCH_NAME' not found. Creating new branch..."
-          # Create new Amplify branch
-          CREATE_BRANCH_OUTPUT=$(aws amplify create-branch --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --stage "DEVELOPMENT" --enable-auto-build --enable-pull-request-preview --pull-request-storage-and-cleanup --build-spec "amplify.yml")
-          echo "Created Amplify branch: $BRANCH_NAME"
-        else
-          echo "Amplify branch '$BRANCH_NAME' found. Updating branch..."
-          # Update existing Amplify branch
-          aws amplify update-branch --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --build-spec "amplify.yml"
-        fi
+        # Create a branch for this PR preview
+        echo "Creating Amplify branch for PR preview..."
+        CREATE_BRANCH_OUTPUT=$(aws amplify create-branch --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --stage "DEVELOPMENT" --build-spec "amplify.yml")
+        echo "Created Amplify branch: $BRANCH_NAME"
 
         # Start a new deployment
         START_DEPLOYMENT_OUTPUT=$(aws amplify start-deployment --app-id "$APP_ID" --branch-name "$BRANCH_NAME")
@@ -399,11 +376,8 @@ jobs:
         echo "Waiting for deployment to complete..."
         aws amplify wait deployment-completed --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --job-id "$JOB_ID"
 
-        # Get the deployed URL
-        APP_URL=$(aws amplify get-branch --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --query "branch.associatedResource.customDomains[?domainName=='pr-${{ github.event.number }}.$CUSTOM_DOMAIN_NAME'].domainUrl" --output text)
-        if [ -z "$APP_URL" ]; then
-          APP_URL=$(aws amplify get-branch --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --query "branch.associatedResource.defaultDomain" --output text)
-        fi
+        # Get the deployed URL (use default domain since no custom domain configured)
+        APP_URL=$(aws amplify get-branch --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --query "branch.associatedResource.defaultDomain" --output text)
 
         echo "Deployed Frontend URL: $APP_URL"
         echo "app-url=$APP_URL" >> $GITHUB_OUTPUT
