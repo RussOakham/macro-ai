@@ -214,6 +214,14 @@ jobs:
       with:
         pulumi-version: latest
 
+    - name: Install Pulumi Dependencies
+      if: steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true')
+      shell: bash
+      run: |
+        echo "📦 Installing Pulumi project dependencies..."
+        cd infrastructure/pulumi
+        pnpm install
+
     - name: Deploy PR Preview Infrastructure
       if: steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true')
       id: deploy
