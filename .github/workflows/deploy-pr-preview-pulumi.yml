@@ -315,96 +315,50 @@ jobs:
         echo "Generated VITE_API_URL: $VITE_API_URL"
         echo "Generated VITE_API_KEY: (masked)"
 
-    - name: Generate Amplify Configuration
-      id: generate-amplify-config
-      run: |
-        echo "Generating amplify.yml configuration..."
-        cat > amplify.yml << 'EOF'
----
-version: 1
-applications:
-  - appRoot: apps/client-ui
-    frontend:
-      phases:
-        preBuild:
-          commands:
-            - echo "Installing dependencies..."
-            - npm install -g pnpm@10.14.0
-            - pnpm install --frozen-lockfile
-        build:
-          commands:
-            - echo "Building React application..."
-            - pnpm run build
-      artifacts:
-        baseDirectory: apps/client-ui/dist
-        files:
-          - '**/*'
-      cache:
-        paths:
-          - node_modules/**/*
-          - .pnpm-store/**/*
-EOF
     - name: Deploy to Amplify
       id: deploy
+      env:
+        BRANCH_REF: ${{ github.event.pull_request.head.ref }}
       run: |
         echo "Deploying frontend to Amplify..."
-        # Determine app name based on environment
-        APP_NAME="macro-ai-pr-${{ github.event.number }}"
-        BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+        # Use a single Amplify app for all PR previews (following Amplify's intended GitHub integration)
+        APP_NAME="macro-ai-pr-previews"
+        BRANCH_NAME="$BRANCH_REF"
 
-        # For PR previews, create a simple static deployment without GitHub integration
-        # This avoids the webhook permission issues while still providing preview functionality
+        # Check if the PR previews app exists, create it if not
+        APP_ID=$(aws amplify list-apps --query "apps[?name=='$APP_NAME'].appId" --output text)
 
-        # Create Amplify app without repository connection (manual deployment)
-        CREATE_APP_OUTPUT=$(aws amplify create-app --name "$APP_NAME" --platform WEB --environment-variables "VITE_API_URL=$VITE_API_URL,VITE_API_KEY=$VITE_API_KEY")
-        APP_ID=$(echo "$CREATE_APP_OUTPUT" | jq -r '.app.appId')
-        echo "Created Amplify app with ID: $APP_ID"
+        if [ -z "$APP_ID" ]; then
+          echo "Creating Amplify app for PR previews with GitHub integration..."
+          CREATE_APP_OUTPUT=$(aws amplify create-app \
+            --name "$APP_NAME" \
+            --platform WEB \
+            --enable-auto-branch-creation \
+            --enable-branch-auto-build \
+            --repository "https://github.com/RussOakham/macro-ai" \
+            --access-token "${{ secrets.GITHUB_TOKEN }}" \
+            --build-spec "version: 1\napplications:\n  - appRoot: apps/client-ui\n    frontend:\n      phases:\n        preBuild:\n          commands:\n            - echo \"Installing dependencies...\"\n            - npm install -g pnpm@10.14.0\n            - pnpm install --frozen-lockfile\n        build:\n          commands:\n            - echo \"Building React application...\"\n            - pnpm run build\n      artifacts:\n        baseDirectory: apps/client-ui/dist\n        files:\n          - '**/*'\n      cache:\n        paths:\n          - node_modules/**/*\n          - .pnpm-store/**/*\n      environmentVariables:\n        VITE_API_URL: $VITE_API_URL\n        VITE_API_KEY: $VITE_API_KEY"
+          APP_ID=$(echo "$CREATE_APP_OUTPUT" | jq -r '.app.appId')
+          echo "Created Amplify app with ID: $APP_ID"
+        else
+          echo "Using existing Amplify app with ID: $APP_ID"
+        fi
 
-        # Create a branch for this PR preview
-        echo "Creating Amplify branch for PR preview..."
-        CREATE_BRANCH_OUTPUT=$(aws amplify create-branch --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --stage "DEVELOPMENT" --build-spec "amplify.yml")
-        echo "Created Amplify branch: $BRANCH_NAME"
-
-        # Start a new deployment
-        START_DEPLOYMENT_OUTPUT=$(aws amplify start-deployment --app-id "$APP_ID" --branch-name "$BRANCH_NAME")
-        JOB_ID=$(echo "$START_DEPLOYMENT_OUTPUT" | jq -r '.jobId')
-        echo "Started Amplify deployment with Job ID: $JOB_ID"
-
-        # Wait for deployment to complete
-        echo "Waiting for deployment to complete..."
-        aws amplify wait deployment-completed --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --job-id "$JOB_ID"
-
-        # Get the deployed URL (use default domain since no custom domain configured)
-        APP_URL=$(aws amplify get-branch --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --query "branch.associatedResource.defaultDomain" --output text)
-
-        echo "Deployed Frontend URL: $APP_URL"
-        echo "app-url=$APP_URL" >> $GITHUB_OUTPUT
-        echo "app-id=$APP_ID" >> $GITHUB_OUTPUT
-        # Determine app name based on environment
-        APP_NAME="macro-ai-pr-${{ github.event.number }}"
-        BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
-
-        # For PR previews, create a simple static deployment without GitHub integration
-        # This avoids the webhook permission issues while still providing preview functionality
-
-        # Create Amplify app without repository connection (manual deployment)
-        CREATE_APP_OUTPUT=$(aws amplify create-app --name "$APP_NAME" --platform WEB --environment-variables "VITE_API_URL=$VITE_API_URL,VITE_API_KEY=$VITE_API_KEY")
-        APP_ID=$(echo "$CREATE_APP_OUTPUT" | jq -r '.app.appId')
-        echo "Created Amplify app with ID: $APP_ID"
-
-        # Create a branch for this PR preview
-        echo "Creating Amplify branch for PR preview..."
-        CREATE_BRANCH_OUTPUT=$(aws amplify create-branch --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --stage "DEVELOPMENT" --build-spec "amplify.yml")
-        echo "Created Amplify branch: $BRANCH_NAME"
-
-        # Start a new deployment
-        START_DEPLOYMENT_OUTPUT=$(aws amplify start-deployment --app-id "$APP_ID" --branch-name "$BRANCH_NAME")
-        JOB_ID=$(echo "$START_DEPLOYMENT_OUTPUT" | jq -r '.jobId')
-        echo "Started Amplify deployment with Job ID: $JOB_ID"
-
-        # Wait for deployment to complete
-        echo "Waiting for deployment to complete..."
-        aws amplify wait deployment-completed --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --job-id "$JOB_ID"
+        # Create or update the branch for this PR
+        echo "Setting up branch for PR preview..."
+        BRANCH_OUTPUT=$(aws amplify create-branch \
+          --app-id "$APP_ID" \
+          --branch-name "$BRANCH_NAME" \
+          --stage "DEVELOPMENT" \
+          --environment-variables "VITE_API_URL=$VITE_API_URL,VITE_API_KEY=$VITE_API_KEY" \
+          --enable-auto-build \
+          2>/dev/null || aws amplify update-branch \
+            --app-id "$APP_ID" \
+            --branch-name "$BRANCH_NAME" \
+            --stage "DEVELOPMENT" \
+            --environment-variables "VITE_API_URL=$VITE_API_URL,VITE_API_KEY=$VITE_API_KEY" \
+            --enable-auto-build)
+        echo "Branch setup completed: $BRANCH_NAME"
 
         # Get the deployed URL (use default domain since no custom domain configured)
         APP_URL=$(aws amplify get-branch --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --query "branch.associatedResource.defaultDomain" --output text)
@@ -413,18 +367,23 @@ EOF
         echo "app-url=$APP_URL" >> $GITHUB_OUTPUT
         echo "app-id=$APP_ID" >> $GITHUB_OUTPUT
 
-    - name: Cleanup Amplify App on PR Close
+    - name: Cleanup Amplify Branch on PR Close
       if: github.event.action == 'closed'
       run: |
-        echo "PR closed. Cleaning up Amplify app and branch..."
-        APP_NAME="macro-ai-pr-${{ github.event.number }}"
+        echo "PR closed. Cleaning up Amplify branch..."
+        # Use the single PR previews app
+        APP_NAME="macro-ai-pr-previews"
+        BRANCH_NAME="$BRANCH_REF"
+
+        # Get the app ID
         APP_ID=$(aws amplify list-apps --query "apps[?name=='$APP_NAME'].appId" --output text)
+
         if [ -n "$APP_ID" ]; then
-          echo "Deleting Amplify app: $APP_NAME (ID: $APP_ID)"
-          aws amplify delete-app --app-id "$APP_ID"
-          echo "Amplify app deleted."
+          echo "Deleting Amplify branch: $BRANCH_NAME from app: $APP_NAME (ID: $APP_ID)"
+          aws amplify delete-branch --app-id "$APP_ID" --branch-name "$BRANCH_NAME" || echo "Branch $BRANCH_NAME not found, skipping deletion."
+          echo "Amplify branch deleted."
         else
-          echo "Amplify app $APP_NAME not found, skipping deletion."
+          echo "Amplify app $APP_NAME not found, skipping branch deletion."
         fi
 
     - name: Frontend Deployment Summary
