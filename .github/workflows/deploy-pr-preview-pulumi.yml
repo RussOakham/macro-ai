@@ -9,7 +9,7 @@ on:
     - develop
 
 concurrency:
-  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.event.pull_request.head.ref || github.ref }}'
   cancel-in-progress: true
 
 env:
@@ -46,17 +46,22 @@ jobs:
 
     - name: Detect changes
       id: change-detection
+      env:
+        BASE_REF: ${{ github.event.pull_request.base.ref }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        PR_NUMBER: ${{ github.event.number }}
+        BRANCH_REF: ${{ github.event.pull_request.head.ref }}
       run: |
-        echo "🔍 Detecting changes for PR #${{ github.event.number }}..."
+        echo "🔍 Detecting changes for PR #$PR_NUMBER..."
 
         # Get base branch (default to develop if not specified)
-        BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
+        BASE_BRANCH="$BASE_REF"
         if [[ -z "$BASE_BRANCH" ]]; then
           BASE_BRANCH="develop"
         fi
 
-        # Get head branch
-        HEAD_REF="${{ github.event.pull_request.head.sha }}"
+        # Get head SHA
+        HEAD_REF="$HEAD_SHA"
 
         echo "Base branch: $BASE_BRANCH"
         echo "Head SHA: $HEAD_REF"
@@ -193,11 +198,14 @@ jobs:
     - name: Deploy PR Preview Infrastructure
       if: steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true')
       id: deploy
+      env:
+        PR_NUMBER: ${{ github.event.number }}
+        BRANCH_REF: ${{ github.event.pull_request.head.ref }}
       run: |
         echo "🚀 Starting PR Preview deployment..."
-        echo "Environment: pr-${{ github.event.number }}"
-        echo "PR Number: ${{ github.event.number }}"
-        echo "Branch: ${{ github.head_ref }}"
+        echo "Environment: pr-$PR_NUMBER"
+        echo "PR Number: $PR_NUMBER"
+        echo "Branch: $BRANCH_REF"
         echo "Image Tag: ${{ steps.build-image.outputs.image-tag }}"
 
         # Call the reusable workflow via GitHub API or use a different approach
@@ -223,7 +231,7 @@ jobs:
         pulumi config set imageTag "${{ steps.build-image.outputs.image-tag }}" --stack "${STACK_NAME}"
         pulumi config set doppler:dopplerToken "${DOPPLER_TOKEN}" --secret --stack "${STACK_NAME}"
         pulumi config set prNumber "${{ github.event.number }}" --stack "${STACK_NAME}"
-        pulumi config set branchName "${{ github.head_ref }}" --stack "${STACK_NAME}"
+        pulumi config set branchName "$BRANCH_REF" --stack "${STACK_NAME}"
         pulumi config set customDomainName "macro-ai.russoakham.dev" --stack "${STACK_NAME}"
         pulumi config set hostedZoneId "${{ secrets.ROUTE53_HOSTED_ZONE_ID }}" --stack "${STACK_NAME}"
 
@@ -263,15 +271,11 @@ jobs:
         environment-name: "pr-${{ github.event.number }}"
         deployment-type: "preview"
         pr-number: "${{ github.event.number }}"
-        branch-name: "${{ github.head_ref }}"
+        branch-name: "${{ github.event.pull_request.head.ref }}"
         backend-url: "${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
         custom-domain-name: "${{ vars.CUSTOM_DOMAIN_NAME }}"
         hosted-zone-id: "${{ vars.HOSTED_ZONE_ID }}"
         should-deploy: true
-      secrets:
-        AWS_ACCOUNT_ID: "${{ secrets.AWS_ACCOUNT_ID }}"
-        AWS_ROLE_ARN: "${{ secrets.AWS_ROLE_ARN }}"
-        API_KEY: "${{ secrets.VITE_API_KEY }}"
 
     - name: Frontend Deployment Summary
       if: steps.deploy.outputs.app-url
@@ -280,15 +284,14 @@ jobs:
         echo "📱 Frontend URL: ${{ steps.deploy.outputs.app-url }}"
         echo "🔗 Backend API: ${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
         echo "📝 Stack: ${{ needs.deploy-pr-preview.outputs.stack-name }}"
-        echo "🔢 PR: #${{ github.event.number }}"
-        echo "🌿 Branch: ${{ github.head_ref }}"
-
+        echo "🔢 PR: #$PR_NUMBER"
+        echo "🌿 Branch: $BRANCH_REF"
     - name: Health Check
-      if: needs.deploy-pr-preview.outputs.should-deploy == 'true' && needs.deploy-pr-preview.outputs.api-endpoint != '' && needs.deploy-pr-preview.outputs.has-backend-changes == 'true'
+      if: steps.deploy.outputs.app-url && needs.deploy-pr-preview.outputs.should-deploy == 'true' && needs.deploy-pr-preview.outputs.api-endpoint != '' && needs.deploy-pr-preview.outputs.has-backend-changes == 'true'
       id: health-check
       run: |
         API_ENDPOINT="${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
-        echo "🔍 Performing health check on: '${API_ENDPOINT}'"
+        echo "🔍 Performing health check on: '$API_ENDPOINT'"
 
         # Wait for the service to be ready
         sleep 30
@@ -318,7 +321,7 @@ jobs:
             const stackName = '${{ needs.deploy-pr-preview.outputs.stack-name }}';
           const healthStatus = '${{ steps.health-check.outputs.health-status }}';
           const prNumber = '${{ github.event.number }}';
-          const branchRef = '${{ github.head_ref }}';
+          const branchRef = '${{ github.event.pull_request.head.ref }}';
           const hasBackendChanges = '${{ needs.deploy-pr-preview.outputs.has-backend-changes }}' === 'true';
           const hasFrontendChanges = '${{ needs.deploy-pr-preview.outputs.has-frontend-changes }}' === 'true';
 
