@@ -208,12 +208,19 @@ jobs:
           echo "⏭️ No relevant changes - skipping deployment"
         fi
 
+    - name: Install Pulumi CLI
+      if: steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true')
+      uses: pulumi/actions@v5
+      with:
+        pulumi-version: latest
+
     - name: Deploy PR Preview Infrastructure
       if: steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true')
       id: deploy
       env:
         PR_NUMBER: ${{ github.event.number }}
         BRANCH_REF: ${{ github.event.pull_request.head.ref }}
+        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
       run: |
         echo "🚀 Starting PR Preview deployment..."
         echo "Environment: pr-$PR_NUMBER"
@@ -225,17 +232,8 @@ jobs:
         # For now, we'll use the Pulumi CLI directly
         cd infrastructure/pulumi
 
-        # Install Pulumi CLI (using same approach as staging)
-        uses: pulumi/actions@v5
-        with:
-          pulumi-version: latest
-
-        # Set Doppler token for dev config (all PRs use dev secrets)
-        echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> $GITHUB_ENV
-
         # Set up environment variables
         export PULUMI_ACCESS_TOKEN="${{ secrets.PULUMI_ACCESS_TOKEN }}"
-        # Use the DOPPLER_TOKEN from environment (set above for dev config)
         export AWS_REGION="${{ env.AWS_REGION }}"
         export AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}"
 
