@@ -141,16 +141,31 @@ jobs:
         echo "✅ Backend deployment completed successfully!"
         echo "🌐 API Endpoint: ${API_ENDPOINT}"
 
-    - name: Deploy Frontend to Amplify
-      if: steps.decide-deploy.outputs.deployment-action == 'deploy' && steps.deploy.outputs.api-endpoint
-      id: deploy-frontend
+  deploy-frontend:
+    name: Deploy Frontend to Amplify
+    runs-on: ubuntu-latest
+    needs: deploy-pr-preview
+    if: needs.deploy-pr-preview.outputs.should-deploy == 'true' && needs.deploy-pr-preview.outputs.api-endpoint != ''
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      app-url: ${{ steps.deploy.outputs.app-url }}
+      app-id: ${{ steps.deploy.outputs.app-id }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy Frontend
+      id: deploy
       uses: ./.github/workflows/reusable-deploy-frontend.yml
       with:
         environment-name: "pr-${{ github.event.number }}"
         deployment-type: "preview"
         pr-number: "${{ github.event.number }}"
         branch-name: "${{ github.head_ref }}"
-        backend-url: "${{ steps.deploy.outputs.api-endpoint }}"
+        backend-url: "${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
         custom-domain-name: "macro-ai.russoakham.dev"
         hosted-zone-id: "${{ secrets.ROUTE53_HOSTED_ZONE_ID }}"
         should-deploy: true
@@ -160,20 +175,20 @@ jobs:
         API_KEY: "${{ secrets.VITE_API_KEY }}"
 
     - name: Frontend Deployment Summary
-      if: steps.deploy-frontend.outputs.app-url
+      if: needs.deploy-frontend.outputs.app-url
       run: |
         echo "🎉 Complete PR Preview Environment Deployed!"
-        echo "📱 Frontend URL: ${{ steps.deploy-frontend.outputs.app-url }}"
-        echo "🔗 Backend API: ${{ steps.deploy.outputs.api-endpoint }}"
-        echo "📝 Stack: ${{ steps.deploy.outputs.stack-name }}"
+        echo "📱 Frontend URL: ${{ needs.deploy-frontend.outputs.app-url }}"
+        echo "🔗 Backend API: ${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
+        echo "📝 Stack: ${{ needs.deploy-pr-preview.outputs.stack-name }}"
         echo "🔢 PR: #${{ github.event.number }}"
         echo "🌿 Branch: ${{ github.head_ref }}"
 
     - name: Health Check
-      if: steps.decide-deploy.outputs.deployment-action == 'deploy' && steps.deploy.outputs.api-endpoint
+      if: needs.deploy-pr-preview.outputs.should-deploy == 'true' && needs.deploy-pr-preview.outputs.api-endpoint != ''
       id: health-check
       run: |
-        API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}"
+        API_ENDPOINT="${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
         echo "🔍 Performing health check on: '${API_ENDPOINT}'"
 
         # Wait for the service to be ready
@@ -195,13 +210,13 @@ jobs:
         echo "health-status=unhealthy" >> "$GITHUB_OUTPUT"
         exit 1
 
-    - name: Comment PR with deployment info
-      if: steps.decide-deploy.outputs.deployment-action == 'deploy' && steps.deploy.outputs.api-endpoint
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const apiEndpoint = '${{ steps.deploy.outputs.api-endpoint }}';
-          const stackName = '${{ steps.deploy.outputs.stack-name }}';
+        - name: Comment PR with deployment info
+        if: needs.deploy-pr-preview.outputs.should-deploy == 'true' && needs.deploy-pr-preview.outputs.api-endpoint != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const apiEndpoint = '${{ needs.deploy-pr-preview.outputs.api-endpoint }}';
+            const stackName = '${{ needs.deploy-pr-preview.outputs.stack-name }}';
           const healthStatus = '${{ steps.health-check.outputs.health-status }}';
           const prNumber = '${{ github.event.number }}';
           const branchRef = '${{ github.head_ref }}';
@@ -217,7 +232,7 @@ jobs:
             healthMessage = 'Health check failed - please check the workflow logs';
           }
 
-          const frontendUrl = '${{ steps.deploy-frontend.outputs.app-url }}';
+          const frontendUrl = '${{ needs.deploy-frontend.outputs.app-url }}';
 
           const body = [
             '## 🚀 PR Preview Environment Deployed',
@@ -264,7 +279,7 @@ jobs:
           });
 
     - name: Comment PR on failure
-      if: steps.decide-deploy.outputs.deployment-action == 'deploy' && failure()
+      if: needs.deploy-pr-preview.outputs.should-deploy == 'true' && failure()
       uses: actions/github-script@v7
       with:
         script: |
