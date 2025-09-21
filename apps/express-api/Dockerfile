@@ -24,7 +24,7 @@ COPY package.json pnpm-lock.yaml ./
 COPY apps/express-api/package.json apps/express-api/
 COPY packages/macro-ai-api-client/package.json packages/macro-ai-api-client/
 
-# Try to run turbo prune, but gracefully handle failure for PR environments
+# Run turbo prune to get only express-api dependencies
 RUN --mount=type=cache,target=.turbo \
     --mount=type=cache,target=/root/.local/share/pnpm \
     (/root/.local/share/pnpm/turbo prune @repo/express-api --docker 2>/dev/null) || echo "⚠️ Turbo prune failed, proceeding with full copy for PR environment"
@@ -51,9 +51,10 @@ ARG ENV_FILE
 RUN if [ "$ENV_FILE" ] && [ -f "$ENV_FILE" ]; then cp "$ENV_FILE" /macro-ai/.env && cp "$ENV_FILE" /macro-ai/apps/express-api/.env; fi
 
 # Use BuildKit cache mount for turbo cache during build
+# Only build the express-api package, not the entire monorepo
 RUN --mount=type=cache,target=.turbo \
     --mount=type=cache,target=/root/.local/share/pnpm \
-    SKIP_ENV_VALIDATION=true pnpm turbo build
+    SKIP_ENV_VALIDATION=true pnpm turbo build --filter=@repo/express-api
 
 # Production dependencies stage - install ONLY production dependencies
 FROM base AS installer
