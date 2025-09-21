@@ -209,11 +209,7 @@ jobs:
           echo "⏭️ No relevant changes - skipping deployment"
         fi
 
-    - name: Install Pulumi CLI
-      if: steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true')
-      uses: pulumi/actions@v5
-      with:
-        pulumi-version: latest
+    # Pulumi CLI already installed earlier in the workflow
 
     - name: Install Pulumi Dependencies
       if: steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true')
