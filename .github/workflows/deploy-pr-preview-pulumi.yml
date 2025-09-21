@@ -145,14 +145,14 @@ jobs:
         # Build Docker image for PR
         IMAGE_TAG="pr-${{ github.event.number }}-${{ github.run_id }}"
 
-        # Build and push to ECR - skip turbo prune step that's causing issues
-        cd apps/express-api
+        # Build and push to ECR - use full monorepo context
         docker build \
           --build-arg NODE_ENV=production \
           --build-arg SERVER_PORT=3040 \
           --build-arg APP_ENV=pr-${{ github.event.number }} \
           --target runner \
           -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/macro-ai-staging-express-api:${IMAGE_TAG} \
+          -f apps/express-api/Dockerfile \
           .
 
         # Login to ECR and push
