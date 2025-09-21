@@ -151,6 +151,7 @@ jobs:
           --build-arg SERVER_PORT=3040 \
           --build-arg APP_ENV=pr-${{ github.event.number }} \
           --target runner \
+          --no-cache \
           -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/macro-ai-staging-express-api:${IMAGE_TAG} \
           -f apps/express-api/Dockerfile \
           .
