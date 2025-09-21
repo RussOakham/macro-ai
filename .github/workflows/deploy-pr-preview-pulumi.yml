@@ -139,7 +139,7 @@ jobs:
       if: github.event.action != 'closed'
       id: build-image
       env:
-        AWS_REGION: us-east-1
+        AWS_REGION: ${{ env.AWS_REGION }}
         DOCKER_BUILDKIT: 1
       run: |
         # Build Docker image for PR
@@ -151,7 +151,7 @@ jobs:
           --build-arg NODE_ENV=production \
           --build-arg SERVER_PORT=3040 \
           --build-arg APP_ENV=pr-${{ github.event.number }} \
-          --target production \
+          --target runner \
           -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/macro-ai-staging-express-api:${IMAGE_TAG} \
           .
 
@@ -215,7 +215,7 @@ jobs:
         # Set up environment variables
         export PULUMI_ACCESS_TOKEN="${{ secrets.PULUMI_ACCESS_TOKEN }}"
         export DOPPLER_TOKEN="${{ secrets.DOPPLER_TOKEN_DEV }}"
-        export AWS_REGION="us-east-1"
+        export AWS_REGION="${{ env.AWS_REGION }}"
         export AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}"
 
         STACK_NAME="pr-${{ github.event.number }}"
