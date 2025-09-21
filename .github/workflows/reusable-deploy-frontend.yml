@@ -221,32 +221,30 @@ jobs:
         rm -f "$TEMP_ENV_FILE"
 
         # Generate amplify.yml configuration
-        printf 'version: 1\n' > amplify.yml
-        {
-          printf 'applications:\n'
-          printf '  - appRoot: apps/client-ui\n'
-          printf '    frontend:\n'
-          printf '      phases:\n'
-          printf '        preBuild:\n'
-        } >> amplify.yml
-        {
-          printf '          commands:\n'
-          printf '            - echo "Installing dependencies..."\n'
-          printf '            - npm install -g pnpm@%s\n' "${PNPM_VERSION}"
-          printf '            - pnpm install --frozen-lockfile\n'
-          printf '        build:\n'
-          printf '          commands:\n'
-          printf '            - echo "Building React application..."\n'
-          printf '            - pnpm run build\n'
-          printf '      artifacts:\n'
-          printf '        baseDirectory: dist\n'
-          printf '        files:\n'
-          printf '          - '\''**/*'\''\n'
-          printf '      cache:\n'
-          printf '        paths:\n'
-          printf '          - node_modules/**/*\n'
-          printf '          - .pnpm-store/**/*\n'
-        } >> amplify.yml
+        cat > amplify.yml << 'EOF'
+version: 1
+applications:
+  - appRoot: apps/client-ui
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - echo "Installing dependencies..."
+            - npm install -g pnpm@${PNPM_VERSION}
+            - pnpm install --frozen-lockfile
+        build:
+          commands:
+            - echo "Building React application..."
+            - pnpm run build
+      artifacts:
+        baseDirectory: dist
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
+          - .pnpm-store/**/*
+EOF
 
         echo "✅ Generated amplify.yml configuration"
 
