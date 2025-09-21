@@ -54,10 +54,10 @@ on:
     outputs:
       app-url:
         description: 'Deployed frontend app URL'
-        value: ${{ jobs.deploy-frontend.outputs.app-url }}
+        value: ${{ steps.deploy.outputs.app-url }}
       app-id:
         description: 'Amplify app ID'
-        value: ${{ jobs.deploy-frontend.outputs.app-id }}
+        value: ${{ steps.deploy.outputs.app-id }}
 
 env:
   AWS_REGION: us-east-1

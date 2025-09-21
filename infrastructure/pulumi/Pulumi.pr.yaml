@@ -1,8 +1,8 @@
 config:
-  github:pullRequestTemplate: "true"
+  github:pullRequestTemplate: 'true'
   github:repository: RussOakham/macro-ai
-  github:deployCommits: "false"
-  github:previewPullRequests: "false"
+  github:deployCommits: 'false'
+  github:previewPullRequests: 'false'
   doppler:project: macro-ai
   doppler:config: dev
   doppler:dopplerToken:
