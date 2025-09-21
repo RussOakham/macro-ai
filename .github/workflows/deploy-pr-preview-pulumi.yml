@@ -328,7 +328,7 @@ jobs:
                 preBuild:
                   commands:
                     - echo "Installing dependencies..."
-                    - npm install -g pnpm@10.14.0 # Ensure pnpm is installed
+                    - npm install -g pnpm@10.14.0
                     - pnpm install --frozen-lockfile
                 build:
                   commands:
