@@ -356,7 +356,7 @@ jobs:
 
         # Perform backend health check
         for i in {1..10}; do
-          if curl -f -s "${API_ENDPOINT}/health" > /dev/null 2>&1; then
+          if curl -f -s "${API_ENDPOINT}/api/health" > /dev/null 2>&1; then
             echo "✅ Backend health check passed on attempt ${i}"
             echo "backend-health-status=healthy" >> "$GITHUB_OUTPUT"
             echo "✅ Backend service is responding at ${API_ENDPOINT}"
@@ -442,7 +442,7 @@ jobs:
             '1. **Frontend**: Visit the frontend URL above to interact with your changes',
             '2. **Backend API**: Test API endpoints directly at \`' + apiEndpoint + '\`',
             '3. **Frontend Health Check**: \`' + frontendUrl + '\`',
-            '4. **Backend Health Check**: \`' + apiEndpoint + '/health\`',
+            '4. **Backend Health Check**: \`' + apiEndpoint + '/api/health\`',
             '',
             '### 🏗️ **Infrastructure Details**',
             '- Full ECS Fargate deployment',
