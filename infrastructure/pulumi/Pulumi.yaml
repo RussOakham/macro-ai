@@ -3,7 +3,7 @@ description: Macro-AI infrastructure managed with Pulumi
 runtime:
   name: nodejs
   options:
-    packagemanager: npm
+    packagemanager: pnpm
 config:
   pulumi:tags:
     value:
