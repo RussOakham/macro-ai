@@ -26,8 +26,8 @@ jobs:
       contents: read
       pull-requests: write
     outputs:
-      api-endpoint: ${{ steps.deploy-infrastructure.outputs.api-endpoint }}
-      stack-name: ${{ steps.deploy-infrastructure.outputs.stack-name }}
+      api-endpoint: ${{ steps.deploy.outputs.api-endpoint }}
+      stack-name: ${{ steps.deploy.outputs.stack-name }}
       should-deploy: ${{ steps.decide-deploy.outputs.should-deploy }}
       has-backend-changes: ${{ steps.change-detection.outputs.has-backend-changes }}
       has-frontend-changes: ${{ steps.change-detection.outputs.has-frontend-changes }}
@@ -135,6 +135,19 @@ jobs:
         curl -fsSL https://get.pulumi.com | sh
         echo "$HOME/.pulumi/bin" >> "$GITHUB_PATH"
 
+    - name: Configure AWS credentials
+      if: github.event.action != 'closed'
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        role-session-name: pr-preview-build-docker
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Log in to Amazon ECR
+      if: github.event.action != 'closed'
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
     - name: Build and push Docker image
       if: github.event.action != 'closed'
       id: build-image
@@ -144,21 +157,20 @@ jobs:
       run: |
         # Build Docker image for PR
         IMAGE_TAG="pr-${{ github.event.number }}-${{ github.run_id }}"
+        ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
 
-        # Build and push to ECR - use full monorepo context
-        docker build \
+        # Build and push to ECR using buildx (automatically uses ECR login)
+        docker buildx build \
           --build-arg NODE_ENV=production \
           --build-arg SERVER_PORT=3040 \
           --build-arg APP_ENV=pr-${{ github.event.number }} \
           --target runner \
           --no-cache \
-          -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/macro-ai-staging-express-api:${IMAGE_TAG} \
+          --platform linux/amd64 \
+          --tag "${ECR_REGISTRY}/macro-ai-staging-express-api:${IMAGE_TAG}" \
+          --push \
           -f apps/express-api/Dockerfile \
           .
-
-        # Login to ECR and push
-        aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
-        docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/macro-ai-staging-express-api:${IMAGE_TAG}
 
         echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
         echo "✅ Docker image built and pushed: ${IMAGE_TAG}"
