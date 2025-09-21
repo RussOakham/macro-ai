@@ -12,6 +12,11 @@ concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
   cancel-in-progress: true
 
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20.19.4'
+  PNPM_VERSION: '10.14.0'
+
 jobs:
   deploy-pr-preview:
     name: Deploy PR Preview Infrastructure
@@ -27,6 +32,7 @@ jobs:
       has-backend-changes: ${{ steps.change-detection.outputs.has-backend-changes }}
       has-frontend-changes: ${{ steps.change-detection.outputs.has-frontend-changes }}
       has-infrastructure-changes: ${{ steps.change-detection.outputs.has-infrastructure-changes }}
+      is-first-deployment: ${{ steps.change-detection.outputs.is-first-deployment }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -86,6 +92,22 @@ jobs:
         else
           echo "ℹ️ No infrastructure changes detected"
           echo "has-infrastructure-changes=false" >> "$GITHUB_OUTPUT"
+        fi
+
+        # Check if this is the first deployment of this PR environment
+        PR_NUMBER="${{ github.event.number }}"
+        STACK_NAME="pr-${PR_NUMBER}"
+        if pulumi stack select "$STACK_NAME" 2>/dev/null; then
+          # Stack exists, this is not the first deployment
+          echo "ℹ️ Existing PR environment detected - using selective deployment"
+          echo "is-first-deployment=false" >> "$GITHUB_OUTPUT"
+        else
+          # Stack doesn't exist, this is the first deployment
+          echo "🚀 First deployment of PR environment - deploying both backend and frontend"
+          echo "is-first-deployment=true" >> "$GITHUB_OUTPUT"
+          # On first deployment, set both to true to ensure complete environment
+          echo "has-backend-changes=true" >> "$GITHUB_OUTPUT"
+          echo "has-frontend-changes=true" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Setup Node.js
@@ -169,7 +191,7 @@ jobs:
         fi
 
     - name: Deploy PR Preview Infrastructure
-      if: steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true')
+      if: steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true')
       id: deploy
       run: |
         echo "🚀 Starting PR Preview deployment..."
@@ -222,7 +244,7 @@ jobs:
     name: Deploy Frontend to Amplify
     runs-on: ubuntu-latest
     needs: deploy-pr-preview
-    if: needs.deploy-pr-preview.outputs.should-deploy == 'true' && needs.deploy-pr-preview.outputs.has-frontend-changes == 'true' && needs.deploy-pr-preview.outputs.api-endpoint != ''
+    if: needs.deploy-pr-preview.outputs.should-deploy == 'true' && (needs.deploy-pr-preview.outputs.has-frontend-changes == 'true' || needs.deploy-pr-preview.outputs.is-first-deployment == 'true') && needs.deploy-pr-preview.outputs.api-endpoint != ''
     permissions:
       id-token: write
       contents: read
@@ -243,8 +265,8 @@ jobs:
         pr-number: "${{ github.event.number }}"
         branch-name: "${{ github.head_ref }}"
         backend-url: "${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
-        custom-domain-name: "macro-ai.russoakham.dev"
-        hosted-zone-id: "${{ secrets.ROUTE53_HOSTED_ZONE_ID }}"
+        custom-domain-name: "${{ vars.CUSTOM_DOMAIN_NAME }}"
+        hosted-zone-id: "${{ vars.HOSTED_ZONE_ID }}"
         should-deploy: true
       secrets:
         AWS_ACCOUNT_ID: "${{ secrets.AWS_ACCOUNT_ID }}"
