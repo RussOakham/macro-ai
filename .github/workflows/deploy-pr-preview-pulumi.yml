@@ -298,6 +298,175 @@ jobs:
       with:
         version: '${{ env.PNPM_VERSION }}'
 
+    - name: Cache pnpm dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pnpm-store
+          node_modules
+        key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          pnpm-${{ runner.os }}-
+
+    - name: Install dependencies
+      run: |
+        cd apps/client-ui
+        pnpm install --frozen-lockfile
+
+    - name: Generate API client package
+      env:
+        # Minimal environment variables required for swagger generation
+        API_KEY: 'placeholder-api-key-for-swagger-generation-32chars'
+        NODE_ENV: 'development'
+        APP_ENV: 'development'
+        SERVER_PORT: '3040'
+        AWS_COGNITO_REGION: 'us-east-1'
+        AWS_COGNITO_USER_POOL_ID: 'us-east-1_placeholder'
+        AWS_COGNITO_USER_POOL_CLIENT_ID: 'placeholder-client-id'
+        AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30'
+        COOKIE_DOMAIN: 'localhost'
+        COOKIE_ENCRYPTION_KEY: 'placeholder-cookie-encryption-key-32chars'
+        REDIS_URL: 'redis://localhost:6379'
+        RELATIONAL_DATABASE_URL: 'postgresql://localhost:5432/placeholder'
+        OPENAI_API_KEY: 'sk-placeholder-openai-api-key-for-swagger-generation'
+        RATE_LIMIT_WINDOW_MS: '900000'
+        RATE_LIMIT_MAX_REQUESTS: '100'
+        AUTH_RATE_LIMIT_WINDOW_MS: '3600000'
+        AUTH_RATE_LIMIT_MAX_REQUESTS: '10'
+        API_RATE_LIMIT_WINDOW_MS: '60000'
+        API_RATE_LIMIT_MAX_REQUESTS: '60'
+        COST_ALERT_EMAILS: 'placeholder-cost-alert-emails'
+      run: |
+        echo "🔧 Generating API client package from OpenAPI specification"
+
+        # Install dependencies for express-api to generate OpenAPI spec
+        cd apps/express-api
+        pnpm install --frozen-lockfile
+
+        # Generate OpenAPI specification
+        echo "📋 Generating OpenAPI specification..."
+        pnpm run generate-swagger
+
+        # Build the API client package
+        echo "📦 Building API client package..."
+        cd ../../packages/macro-ai-api-client
+        pnpm install --frozen-lockfile
+        pnpm run build
+
+        echo "✅ API client package built successfully"
+
+    - name: Generate environment configuration
+      id: generate-env-config
+      uses: ./.github/actions/generate-frontend-env
+      with:
+        environment: ${{ github.event.number }}
+        pr-number: ${{ github.event.number }}
+        build-mode: 'preview'
+        # Use Doppler synced secrets instead of hardcoded values
+        api-endpoint: ${{ needs.deploy-pr-preview.outputs.api-endpoint }}
+        api-key: ${{ secrets.API_KEY }}
+        backend-stack-name: 'placeholder'
+        resolution-method: 'artifact-based'
+        output-file: '.env.preview'
+        include-build-metadata: 'true'
+        validate-variables: 'true'
+        debug: 'false'
+
+    - name: Generate Amplify configuration
+      run: |
+        cd apps/client-ui
+
+        ENV_NAME="${{ github.event.number }}"
+        DEPLOYMENT_TYPE="preview"
+
+        # Set environment variables for configuration generation
+        PNPM_VERSION="${{ env.PNPM_VERSION }}"
+
+        # Load environment variables from .env.preview
+        TEMP_ENV_FILE=$(mktemp)
+        if grep '^[A-Za-z_][A-Za-z0-9_]*=' ".env.preview" > "${TEMP_ENV_FILE}"; then
+          echo "Found environment variables in .env.preview"
+        else
+          echo "No environment variables found in .env.preview"
+          touch "$TEMP_ENV_FILE"
+        fi
+
+        # Export variables safely
+        if [[ -s "$TEMP_ENV_FILE" ]]; then
+          while IFS= read -r line; do
+            [[ -z "$line" || "${line:0:1}" == "#" ]] && continue
+            if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+              key="${line%%=*}"
+              value="${line#*=}"
+              if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+                value="${value:1:-1}"
+              elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+                value="${value:1:-1}"
+              fi
+              printf -v "$key" '%s' "$value"
+              export "$key"
+            fi
+          done < "$TEMP_ENV_FILE"
+          echo "✅ Loaded $(wc -l < "$TEMP_ENV_FILE") environment variables"
+        fi
+
+        # Clean up temporary file
+        rm -f "$TEMP_ENV_FILE"
+
+        # Generate amplify.yml configuration
+        printf 'version: 1\napplications:\n  - appRoot: apps/client-ui\n    frontend:\n      phases:\n        preBuild:\n          commands:\n            - echo "Installing dependencies..."\n            - npm install -g pnpm@%s\n            - pnpm install --frozen-lockfile\n        build:\n          commands:\n            - echo "Building React application..."\n            - pnpm run build\n      artifacts:\n        baseDirectory: dist\n        files:\n          - "**/*"\n      cache:\n        paths:\n          - node_modules/**/*\n          - .pnpm-store/**/*\n' "${PNPM_VERSION}" > amplify.yml
+
+        echo "✅ Generated amplify.yml configuration"
+
+    - name: Build React application
+      run: |
+        cd apps/client-ui
+
+        # Load environment variables from .env.preview
+        TEMP_ENV_FILE=$(mktemp)
+        if grep '^[A-Za-z_][A-Za-z0-9_]*=' ".env.preview" > "${TEMP_ENV_FILE}"; then
+          echo "Found environment variables in .env.preview"
+        else
+          echo "No environment variables found in .env.preview"
+          touch "$TEMP_ENV_FILE"
+        fi
+
+        if [[ -s "$TEMP_ENV_FILE" ]]; then
+          while IFS= read -r line; do
+            [[ -z "$line" || "${line:0:1}" == "#" ]] && continue
+            if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+              key="${line%%=*}"
+              value="${line#*=}"
+              if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+                value="${value:1:-1}"
+              elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+                value="${value:1:-1}"
+              fi
+              printf -v "$key" '%s' "$value"
+              export "$key"
+            fi
+          done < "$TEMP_ENV_FILE"
+          echo "✅ Loaded environment variables for build"
+        fi
+
+        # Clean up temporary file
+        rm -f "$TEMP_ENV_FILE"
+
+        # Build the application
+        echo "🔨 Building React application..."
+        pnpm run build
+
+        echo "✅ Build completed successfully"
+
+        # Verify build output
+        if [[ -d "dist" && -f "dist/index.html" ]]; then
+          echo "✅ Build artifacts verified"
+          echo "📊 Build size: $(du -sh dist)"
+        else
+          echo "❌ Build verification failed"
+          exit 1
+        fi
+
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -319,12 +488,12 @@ jobs:
     - name: Deploy to Amplify
       id: deploy
       env:
-        BRANCH_REF: ${{ github.event.pull_request.head.ref }}
+        PR_NUMBER: ${{ github.event.number }}
       run: |
         echo "Deploying frontend to Amplify..."
         # Use a single Amplify app for all PR previews (following Amplify's intended GitHub integration)
         APP_NAME="macro-ai-pr-previews"
-        BRANCH_NAME="$BRANCH_REF"
+        BRANCH_NAME="pr-${PR_NUMBER}"
 
         # Check if the PR previews app exists, create it if not
         APP_ID=$(aws amplify list-apps --query "apps[?name=='$APP_NAME'].appId" --output text)
@@ -372,12 +541,81 @@ jobs:
         fi
         echo "Branch setup completed: $BRANCH_NAME"
 
-        # Get the deployed URL (use default domain since no custom domain configured)
-        APP_URL=$(aws amplify get-branch --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --region "${AWS_REGION}" --query "branch.associatedResource.defaultDomain" --output text)
+        # Deploy the application
+        echo "🚀 Starting deployment..."
 
-        echo "Deployed Frontend URL: $APP_URL"
-        echo "app-url=$APP_URL" >> $GITHUB_OUTPUT
-        echo "app-id=$APP_ID" >> $GITHUB_OUTPUT
+        # Ensure build artifacts exist and zip them
+        cd apps/client-ui
+        if [[ -d "dist" ]]; then
+          (cd dist && zip -qr ../build.zip .)
+        else
+          echo "❌ Build artifacts not found in apps/client-ui/dist"
+          exit 1
+        fi
+
+        # Request a deployment
+        DEPLOY_JSON=$(aws amplify create-deployment \
+          --app-id "$APP_ID" \
+          --branch-name "$BRANCH_NAME" \
+          --region "${AWS_REGION}")
+        JOB_ID=$(echo "$DEPLOY_JSON" | jq -r '.jobId')
+        UPLOAD_URL=$(echo "$DEPLOY_JSON" | jq -r '.zipUploadUrl')
+
+        if [[ -z "$JOB_ID" || -z "$UPLOAD_URL" || "$JOB_ID" == "null" || "$UPLOAD_URL" == "null" ]]; then
+          echo "❌ Failed to create deployment or retrieve upload URL"
+          exit 1
+        fi
+
+        echo "📋 Deployment job ID: ${JOB_ID}"
+        echo "⬆️ Uploading build.zip to pre-signed URL"
+        curl -sS -X PUT -H "Content-Type: application/zip" --upload-file build.zip "$UPLOAD_URL"
+
+        # Start the deployment
+        aws amplify start-deployment \
+          --app-id "$APP_ID" \
+          --branch-name "$BRANCH_NAME" \
+          --job-id "$JOB_ID" \
+          --region "${AWS_REGION}"
+
+        # Wait for deployment to complete
+        echo "⏳ Waiting for deployment to complete..."
+        MAX_ATTEMPTS=90; SLEEP=10
+        for ((i=1;i<=MAX_ATTEMPTS;i++)); do
+          STATUS=$(aws amplify get-job \
+            --app-id "$APP_ID" \
+            --branch-name "$BRANCH_NAME" \
+            --job-id "$JOB_ID" \
+            --region "${AWS_REGION}" \
+            --query 'job.summary.status' \
+            --output text)
+          echo "🔎 Attempt $i/$MAX_ATTEMPTS: status=${STATUS}"
+          if [[ "$STATUS" == "SUCCEED" || "$STATUS" == "FAILED" || "$STATUS" == "CANCELLED" ]]; then
+            break
+          fi
+          sleep $SLEEP
+        done
+
+        # Get final deployment status
+        JOB_STATUS=$(aws amplify get-job \
+          --app-id "$APP_ID" \
+          --branch-name "$BRANCH_NAME" \
+          --job-id "$JOB_ID" \
+          --region "${AWS_REGION}" \
+          --query 'job.summary.status' \
+          --output text)
+
+        if [[ "$JOB_STATUS" == "SUCCEED" ]]; then
+          # Generate app URL
+          APP_URL=$(aws amplify get-branch --app-id "$APP_ID" --branch-name "$BRANCH_NAME" --region "${AWS_REGION}" --query "branch.associatedResource.defaultDomain" --output text)
+
+          echo "app-id=${APP_ID}" >> $GITHUB_OUTPUT
+          echo "app-url=${APP_URL}" >> $GITHUB_OUTPUT
+          echo "✅ Frontend deployment successful!"
+          echo "🌐 Frontend URL: ${APP_URL}"
+        else
+          echo "❌ Frontend deployment failed with status: ${JOB_STATUS}"
+          exit 1
+        fi
 
     - name: Cleanup Amplify Branch on PR Close
       if: github.event.action == 'closed'
@@ -385,7 +623,8 @@ jobs:
         echo "PR closed. Cleaning up Amplify branch..."
         # Use the single PR previews app
         APP_NAME="macro-ai-pr-previews"
-        BRANCH_NAME="$BRANCH_REF"
+        PR_NUMBER="${{ github.event.number }}"
+        BRANCH_NAME="pr-${PR_NUMBER}"
 
         # Get the app ID
         APP_ID=$(aws amplify list-apps --query "apps[?name=='$APP_NAME'].appId" --output text)
