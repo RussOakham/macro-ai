@@ -320,30 +320,30 @@ jobs:
       run: |
         echo "Generating amplify.yml configuration..."
         cat > amplify.yml << 'EOF'
-          ---
-          version: 1
-          applications:
-            - appRoot: apps/client-ui
-              frontend:
-                phases:
-                  preBuild:
-                    commands:
-                      - echo "Installing dependencies..."
-                      - npm install -g pnpm@10.14.0
-                      - pnpm install --frozen-lockfile
-                  build:
-                    commands:
-                      - echo "Building React application..."
-                      - pnpm run build
-                artifacts:
-                  baseDirectory: apps/client-ui/dist
-                  files:
-                    - '**/*'
-                cache:
-                  paths:
-                    - node_modules/**/*
-                    - .pnpm-store/**/*
-        EOF
+---
+version: 1
+applications:
+  - appRoot: apps/client-ui
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - echo "Installing dependencies..."
+            - npm install -g pnpm@10.14.0
+            - pnpm install --frozen-lockfile
+        build:
+          commands:
+            - echo "Building React application..."
+            - pnpm run build
+      artifacts:
+        baseDirectory: apps/client-ui/dist
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
+          - .pnpm-store/**/*
+EOF
     - name: Deploy to Amplify
       id: deploy
       run: |
