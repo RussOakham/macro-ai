@@ -38,7 +38,8 @@ if (hostedZoneId) {
 }
 
 // ECR repository configuration
-const ecrRepositoryName = `macro-ai-${environmentName}-express-api`
+// Use the same repository for all environments (staging and PR previews)
+const ecrRepositoryName = 'macro-ai-staging-express-api'
 
 // Determine if this is a preview environment
 const isPreviewEnvironment = environmentName.startsWith('pr-')
