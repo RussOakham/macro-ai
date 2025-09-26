@@ -1,0 +1,71 @@
+---
+name: PR Preview URLs
+
+on:
+  pull_request:
+    types: [opened, reopened]
+    branches:
+      - main
+      - develop
+
+permissions:
+  pull-requests: write
+
+env:
+  CUSTOM_DOMAIN_NAME: ${{ vars.CUSTOM_DOMAIN_NAME }}
+
+jobs:
+  post-preview-urls:
+    name: Post Preview URLs
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Post Preview URLs
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const prNumber = context.issue.number;
+          const customDomainName = '${{ vars.CUSTOM_DOMAIN_NAME }}';
+
+          // Generate predictable URLs based on PR number
+          const backendApiUrl = `https://pr-${prNumber}.api.${customDomainName}`;
+          const frontendUrl = `https://pr-${prNumber}.${customDomainName}`;
+
+          const body = [
+            '## 🚀 PR Preview Environment URLs',
+            '',
+            '**Preview environments will be automatically deployed for this PR.**',
+            '',
+            '### 🌐 **Access URLs**',
+            `- **Frontend**: [${frontendUrl}](${frontendUrl})`,
+            `- **Backend API**: [${backendApiUrl}](${backendApiUrl})`,
+            '',
+            '### 🔍 **Health Checks**',
+            `- **Frontend Health**: \`${frontendUrl}\``,
+            `- **Backend Health**: \`${backendApiUrl}/api/health\``,
+            '',
+            '### 🏗️ **Infrastructure Details**',
+            '- **Backend**: ECS Fargate with Application Load Balancer',
+            '- **Frontend**: AWS Amplify with CloudFront CDN',
+            '- **Custom Domain**: Automatic DNS configuration',
+            '- **Environment**: Preview for PR #' + prNumber,
+            '',
+            '### 🧹 **Automatic Cleanup**',
+            '',
+            'This environment will be automatically destroyed when you:',
+            '- Close this PR',
+            '- Merge this PR to main',
+            '- Push new commits (environment will be updated)',
+            '',
+            '**⚠️ Note**: This is a cost-optimized preview environment with reduced resources.',
+            '',
+            '---',
+            '*URLs are generated based on your PR number and will be active once deployment completes.*'
+          ].join('\n');
+
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: body
+          });

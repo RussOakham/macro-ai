@@ -145,21 +145,21 @@ Based on your existing release process documentation:
 
 ```typescript
 // Pulumi already supports version-aware deployments
-const stack = new pulumi.StackReference("macro-ai/staging", {
-  name: "staging"
-});
+const stack = new pulumi.StackReference('macro-ai/staging', {
+	name: 'staging',
+})
 
 // Version-aware deployments with circuit breakers
-const deployment = new aws.ecs.Service("api-service", {
-  deploymentConfiguration: {
-    maximumPercent: 200,
-    minimumHealthyPercent: 100,
-    deploymentCircuitBreaker: {
-      enable: true,
-      rollback: true
-    }
-  }
-});
+const deployment = new aws.ecs.Service('api-service', {
+	deploymentConfiguration: {
+		maximumPercent: 200,
+		minimumHealthyPercent: 100,
+		deploymentCircuitBreaker: {
+			enable: true,
+			rollback: true,
+		},
+	},
+})
 ```
 
 ### Node.js Ecosystem Libraries
@@ -179,26 +179,26 @@ npm install --save-dev \
 
 ```javascript
 // scripts/version-manager.js - Leverages existing patterns
-import semver from 'semver';
-import { determineBumpFromChanges } from './your-existing-change-logic';
+import semver from 'semver'
+import { determineBumpFromChanges } from './your-existing-change-logic'
 
 export class VersionManager {
-  static async determineBump() {
-    const changes = await this.analyzeChanges();
-    return this.calculateBump(changes);
-  }
+	static async determineBump() {
+		const changes = await this.analyzeChanges()
+		return this.calculateBump(changes)
+	}
 
-  static analyzeChanges() {
-    // Use your existing change detection logic
-    const gitDiff = execSync('git diff --name-only HEAD~1');
-    // Return structured change analysis
-  }
+	static analyzeChanges() {
+		// Use your existing change detection logic
+		const gitDiff = execSync('git diff --name-only HEAD~1')
+		// Return structured change analysis
+	}
 
-  static calculateBump(changes) {
-    if (changes.hasBreaking) return 'major';
-    if (changes.hasFeatures) return 'minor';
-    return 'patch';
-  }
+	static calculateBump(changes) {
+		if (changes.hasBreaking) return 'major'
+		if (changes.hasFeatures) return 'minor'
+		return 'patch'
+	}
 }
 ```
 
@@ -294,7 +294,7 @@ jobs:
   # Pre-deployment validation
   validate-deployment:
     runs-on: ubuntu-latest
-    environment: production-approval  # 👈 This triggers approval requirement
+    environment: production-approval # 👈 This triggers approval requirement
     steps:
       - name: Pre-deployment Validation
         run: |
@@ -305,7 +305,7 @@ jobs:
   deploy-production:
     runs-on: ubuntu-latest
     needs: validate-deployment
-    environment: production  # 👈 Requires approval
+    environment: production # 👈 Requires approval
     steps:
       - name: Deploy to Production
         run: |
