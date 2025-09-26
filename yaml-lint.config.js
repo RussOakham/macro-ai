@@ -1,7 +1,7 @@
 // YAML Lint Configuration
 // This file configures yaml-lint for JavaScript-based YAML validation
 
-module.exports = {
+export default {
 	// Files to lint
 	files: [
 		'**/*.yml',

@@ -141,40 +141,47 @@ reviews:
     checkmake:
       enabled: true
 
-  # Path filters to ignore generated files and build artifacts that cause noise
+  # Path filters to ignore auto-generated files and build artifacts
   path_filters:
-    # Build outputs and generated files
-    - 'node_modules/**'
-    - '**/dist/**'
-    - '**/build/**'
-    - '**/out/**'
-    - 'coverage/**'
-    - '**/coverage-reports/**'
-    - '**/test-results/**'
-    - '**/*.min.js'
-    - '**/*.bundle.js'
+  # Node modules and dependencies
+  - 'node_modules/**'
+  - '**/node_modules/**'
 
-    # Build artifacts and cache directories
-    - '**/codeql-db/**'
-    - '**/cdk.out/**'
-    - '**/infrastructure/dist/**'
-    - '**/infrastructure/cdk.out/**' # More specific CDK output exclusion
-    - '.next/**'
-    - '.nuxt/**'
-    - '.output/**'
-    - '.vercel/**'
+  # Build outputs and cache directories
+  - '**/dist/**'
+  - '**/build/**'
+  - '**/out/**'
+  - '**/cdk.out/**'
+  - '**/infrastructure/dist/**'
+  - '.next/**'
+  - '.nuxt/**'
+  - '.output/**'
+  - '.vercel/**'
 
-    # Lock files (allow review of intentional changes)
-    - '**/package-lock.json'
-    - '**/yarn.lock'
-    - '**/pnpm-lock.yaml'
+  # Coverage and test artifacts
+  - 'coverage/**'
+  - '**/coverage/**'
+  - '**/coverage-reports/**'
+  - '**/test-results/**'
 
-    # Git and CI artifacts
-    - '.git/**'
-    - '**/.git/**'
+  # Cache and temporary directories
+  - '**/codeql-db/**'
+  - '.git/**'
+  - '**/.git/**'
 
-    # Generated files (allow review of intentional changes)
-    - '**/public/swagger.json'
+  # Minified and bundled files (typically auto-generated)
+  - '**/*.min.js'
+  - '**/*.min.css'
+  - '**/*.bundle.js'
+  - '**/*.bundle.css'
+
+  # Auto-generated API files that shouldn't be manually edited
+  - '**/public/swagger.json'
+  - 'packages/macro-ai-api-client/**/*.gen.ts'
+  - 'packages/macro-ai-api-client/**/*.gen.js'
+  - 'packages/macro-ai-api-client/**/*.gen.d.ts'
+  - 'packages/macro-ai-api-client/dist/**'
+  - 'packages/macro-ai-api-client/coverage/**'
   # Pre-merge checks for quality gates
   pre_merge_checks:
     title:
@@ -229,9 +236,9 @@ reviews:
     docstrings:
       language: en-US
       path_instructions:
-        - path: ''
-          instructions: ''
+      - path: ''
+        instructions: ''
     unit_tests:
       path_instructions:
-        - path: ''
-          instructions: ''
+      - path: ''
+        instructions: ''
