@@ -487,6 +487,6 @@ This ADR should be reviewed:
 - **Technology Updates**: When new database features or alternatives emerge
 - **Cost Reviews**: During budget planning and cost optimization
 
-**Last Reviewed**: 2024-01-15
-**Next Review**: 2024-04-15
+**Last Reviewed**: Current
+**Next Review**: Quarterly
 **Reviewers**: Architecture Team, Database Team, DevOps Team

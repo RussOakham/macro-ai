@@ -450,7 +450,7 @@ pnpm --filter @repo/express-api db:reset
 		"build": "pnpm generate && tsup",
 		"dev": "pnpm generate && tsup --watch",
 		"clean": "rm -rf dist && find src -type f \\( -name '*.ts' -o -name '*.js' \\) ! -name 'index.ts' -delete",
-		"generate": "cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && tsx --tsconfig scripts/tsconfig.json scripts/generate-modular.ts",
+		"generate": "cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && pnpm generate",
 		"test": "vitest run",
 		"test:coverage": "vitest run --coverage",
 		"lint": "eslint ."

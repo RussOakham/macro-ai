@@ -5,7 +5,7 @@
 This document serves as the **living source of truth** for the current state of the macro-ai codebase after completing
 Phase 1 cleanup. It documents what exists now, not historical artifacts or removed items.
 
-**Last Updated**: September 1, 2025  
+**Last Updated**: Current  
 **Status**: Phase 3 Complete - Phase 4 In Progress  
 **Total Impact**: 468+ lines of code removed, significant bundle size improvements
 
@@ -22,7 +22,6 @@ The codebase maintains its monorepo architecture with the following **active pac
 - `packages/config-eslint` — Shared eslint config (cleaned and optimized)
 - `packages/config-typescript` - Shared TypeScript configs (cleaned and optimized)
 - `packages/macro-ai-api-client` — Shared API client and OpenAPI typings (cleaned and optimized)
-- `packages/types-macro-ai-api` - Types package (cleaned and optimized)
 - `infrastructure` - Infrastructure constructs and scripts (cleaned and optimized)
 
 ### **Quality Metrics**

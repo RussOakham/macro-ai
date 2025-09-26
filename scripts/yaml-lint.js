@@ -108,7 +108,11 @@ const checkTrailingSpaces = function checkTrailingSpaces(line, lineNumber) {
 /**
  * Check indentation consistency
  */
-const checkIndentation = function checkIndentation(line, lineNumber, expectedIndent) {
+const checkIndentation = function checkIndentation(
+	line,
+	lineNumber,
+	expectedIndent,
+) {
 	const indentMatch = line.match(/^(?<indent>\s*)/u)
 	if (!indentMatch) {
 		return null
@@ -191,7 +195,8 @@ const lintYamlFile = function lintYamlFile(filePath) {
 		const content = readFileSync(filePath, 'utf8')
 		const lines = content.split('\n')
 		const fileType = getFileType(filePath)
-		const maxLineLength = FILE_TYPE_OVERRIDES[fileType]?.lineLength || CONFIG.lineLength.default
+		const maxLineLength =
+			FILE_TYPE_OVERRIDES[fileType]?.lineLength || CONFIG.lineLength.default
 		const issues = []
 
 		for (let index = 0; index < lines.length; index++) {
@@ -247,7 +252,9 @@ const printIssues = function printIssues(filePath, issues) {
 	console.log(`\n${filePath}:`)
 	issues.forEach((issue) => {
 		const icon = issue.type === 'error' ? '❌' : '⚠️'
-		console.log(`  ${icon} Line ${issue.line}: ${issue.message} (${issue.rule})`)
+		console.log(
+			`  ${icon} Line ${issue.line}: ${issue.message} (${issue.rule})`,
+		)
 	})
 }
 
@@ -283,7 +290,9 @@ const runLinter = async function runLinter() {
 			}
 		}
 
-		console.log(`\n📊 Summary: ${filesWithIssues} files with issues, ${totalIssues} total issues`)
+		console.log(
+			`\n📊 Summary: ${filesWithIssues} files with issues, ${totalIssues} total issues`,
+		)
 
 		if (filesWithIssues > 0) {
 			process.exit(1)

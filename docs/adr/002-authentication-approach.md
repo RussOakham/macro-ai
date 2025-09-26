@@ -340,6 +340,6 @@ This ADR should be reviewed:
 - **Security Reviews**: During security audits and penetration testing
 - **Cost Reviews**: During budget planning and cost optimization reviews
 
-**Last Reviewed**: 2024-01-15
-**Next Review**: 2024-04-15
+**Last Reviewed**: Current
+**Next Review**: Quarterly
 **Reviewers**: Architecture Team, Security Team, DevOps Team
