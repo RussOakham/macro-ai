@@ -372,21 +372,25 @@ deploy-production:
         # Update monitoring dashboards
 ```
 
-### Integration with AWS CDK 📋 PLANNED
+### Integration with Pulumi ✅ IMPLEMENTED
 
 ```yaml
 - name: Configure AWS credentials
   uses: aws-actions/configure-aws-credentials@v4
   with:
-    aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
     aws-region: us-east-1
 
-- name: Deploy infrastructure
+- name: Configure Doppler
+  run: |
+    echo "${{ secrets.DOPPLER_TOKEN }}" | doppler configure set token --stdin
+
+- name: Deploy infrastructure with Pulumi
   run: |
     cd infrastructure
     npm install
-    cdk deploy --require-approval never
+    pulumi stack select prod
+    pulumi up --yes
 
 - name: Build and push Docker images
   run: |

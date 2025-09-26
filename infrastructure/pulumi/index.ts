@@ -1,3 +1,4 @@
+/* eslint-disable security-node/detect-crlf */
 import { DopplerSDK } from '@dopplerhq/node-sdk'
 import * as aws from '@pulumi/aws'
 import * as awsx from '@pulumi/awsx'

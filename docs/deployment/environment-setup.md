@@ -164,229 +164,178 @@ switch (config.appEnv) {
 
 ## 🔐 Secrets Management
 
-### AWS Secrets Manager Integration 📋 PLANNED
+### Doppler Secrets Management ✅ IMPLEMENTED
 
-#### Secret Organization Strategy
+#### Doppler Project Organization
 
 ```text
-/macro-ai/
-├── dev/
-│   ├── api-keys
-│   ├── database-credentials
-│   └── external-services
-├── staging/
-│   ├── api-keys
-│   ├── database-credentials
-│   └── external-services
-└── production/
-    ├── api-keys
-    ├── database-credentials
-    └── external-services
+macro-ai-dev/          # Development project
+├── dev/              # Development config (shared with preview environments)
+├── staging/          # Staging config
+└── prod/             # Production config
+
+macro-ai-staging/      # Staging project
+└── staging/          # Staging-specific config
+
+macro-ai-prod/         # Production project
+└── prod/             # Production-specific config
 ```
 
 #### Secret Categories
 
 **1. API Configuration Secrets**
 
-```json
-{
-	"name": "/macro-ai/production/api-keys",
-	"description": "API configuration secrets for production",
-	"secretString": {
-		"API_KEY": "production-32-character-api-key-here",
-		"COOKIE_ENCRYPTION_KEY": "production-32-character-encryption-key-here"
-	}
-}
+```bash
+# Doppler CLI commands for managing secrets
+doppler secrets set API_KEY "production-32-character-api-key-here" --project macro-ai-prod --config prod
+doppler secrets set COOKIE_ENCRYPTION_KEY "production-32-character-encryption-key-here" --project macro-ai-prod --config prod
 ```
 
 **2. Database Credentials**
 
-```json
-{
-	"name": "/macro-ai/production/database-credentials",
-	"description": "Database connection credentials",
-	"secretString": {
-		"RELATIONAL_DATABASE_URL": "postgresql://prod_user:secure_password@prod-db.cluster-xyz.us-east-1.rds.amazonaws.com:5432/macro_ai_prod?sslmode=require",
-		"DB_USERNAME": "prod_user",
-		"DB_PASSWORD": "very_secure_database_password"
-	}
-}
+```bash
+# Set database connection strings
+doppler secrets set RELATIONAL_DATABASE_URL "postgresql://prod_user:secure_password@prod-db.cluster-xyz.us-east-1.rds.amazonaws.com:5432/macro_ai_prod?sslmode=require" --project macro-ai-prod --config prod
+doppler secrets set REDIS_URL "redis://prod-redis-cluster:6379" --project macro-ai-prod --config prod
 ```
 
 **3. External Service Credentials**
 
-```json
-{
-	"name": "/macro-ai/production/external-services",
-	"description": "External service API keys and credentials",
-	"secretString": {
-		"OPENAI_API_KEY": "sk-production-openai-api-key-here",
-		"AWS_COGNITO_USER_POOL_ID": "us-east-1_XXXXXXXXX",
-		"AWS_COGNITO_USER_POOL_CLIENT_ID": "production-client-id",
-		"AWS_COGNITO_USER_POOL_SECRET_KEY": "production-client-secret"
-	}
-}
+```bash
+# Set external service credentials
+doppler secrets set OPENAI_API_KEY "sk-production-openai-api-key-here" --project macro-ai-prod --config prod
+doppler secrets set AWS_COGNITO_USER_POOL_ID "us-east-1_XXXXXXXXX" --project macro-ai-prod --config prod
+doppler secrets set AWS_COGNITO_USER_POOL_CLIENT_ID "production-client-id" --project macro-ai-prod --config prod
+doppler secrets set AWS_COGNITO_USER_POOL_SECRET_KEY "production-client-secret" --project macro-ai-prod --config prod
 ```
 
 #### Secret Access Patterns
 
-**ECS Task Role Policy**:
+**Doppler Environment Variables**:
 
-```json
-{
-	"Version": "2012-10-17",
-	"Statement": [
-		{
-			"Effect": "Allow",
-			"Action": ["secretsmanager:GetSecretValue"],
-			"Resource": [
-				"arn:aws:secretsmanager:us-east-1:123456789012:secret:/macro-ai/production/*"
-			]
-		}
-	]
+Doppler automatically injects secrets as environment variables in the ECS tasks. No additional IAM permissions or code
+changes are required for secret access.
+
+**Application Secret Usage**:
+
+````typescript
+// Secrets are automatically available as environment variables
+const openaiApiKey = process.env.OPENAI_API_KEY
+const databaseUrl = process.env.RELATIONAL_DATABASE_URL
+const redisUrl = process.env.REDIS_URL
 }
-```
 
-**Application Secret Loading**:
+// No additional secret management code needed - Doppler handles everything automatically
+
+## 🔧 Environment Configuration Management
+
+### Doppler Integration ✅ IMPLEMENTED
+
+Doppler automatically handles secret injection into ECS tasks through environment variables. The application code remains unchanged and simply reads from `process.env`.
+
+### Environment-Specific Configuration
+
+Each environment has its own Doppler configuration that defines which secrets are available:
+
+- **Development**: Local secrets for development
+- **Staging**: Production-like secrets for testing
+- **Production**: Live production secrets
+
+### Secret Rotation Strategy
+
+Doppler provides built-in secret rotation capabilities:
+
+1. **Automatic Rotation**: Secrets can be rotated on a schedule
+2. **Version Control**: Previous secret versions are retained
+3. **Rollback Support**: Easy rollback to previous secret versions if needed
+
+## 🌐 Domain and DNS Configuration
+
+### Environment-Specific Domains
+
+| Environment | Domain | Purpose |
+|-------------|--------|---------|
+| Development | `localhost:3040` | Local development |
+| Staging | `staging.macro-ai.com` | Pre-production testing |
+| Production | `macro-ai.com` | Live application |
+
+### DNS Configuration
+
+**Route 53 Hosted Zone**: `macro-ai.com`
+
+**DNS Records**:
+- `staging.macro-ai.com` → Load Balancer (Staging)
+- `macro-ai.com` → Load Balancer (Production)
+
+## 🔧 Environment Prerequisites
+
+### Required Tools
+
+1. **Doppler CLI**: For secret management
+   ```bash
+   brew install doppler
+   doppler login
+   ```
+
+2. **AWS CLI**: For infrastructure management
+   ```bash
+   aws configure
+   ```
+
+3. **Pulumi CLI**: For infrastructure as code
+   ```bash
+   brew install pulumi
+   ```
+
+### Environment Access
+
+Each team member should have:
+
+- **Doppler Access**: Read access to appropriate projects
+- **AWS Access**: Appropriate IAM permissions for deployment
+- **GitHub Access**: Repository access for CI/CD triggers
+
+## 🔍 Environment Validation
+
+### Pre-Deployment Checks
+
+Before deploying to any environment:
+
+1. **Secret Validation**: Verify all required secrets are set in Doppler
+2. **Infrastructure Check**: Ensure Pulumi stack is up-to-date
+3. **DNS Validation**: Confirm DNS records point to correct load balancers
+4. **Health Checks**: Verify application health endpoints
+
+### Post-Deployment Validation
+
+After deployment:
+
+1. **Application Health**: Check API endpoints respond correctly
+2. **Database Connectivity**: Verify database connections work
+3. **External Services**: Confirm third-party integrations function
+4. **Monitoring**: Validate CloudWatch metrics and alarms
 
 ```typescript
-import {
-	SecretsManagerClient,
-	GetSecretValueCommand,
-} from '@aws-sdk/client-secrets-manager'
+// Secrets are automatically available as environment variables
+const openaiApiKey = process.env.OPENAI_API_KEY
+const databaseUrl = process.env.RELATIONAL_DATABASE_URL
+const redisUrl = process.env.REDIS_URL
 
-class SecretManager {
-	private client: SecretsManagerClient
-
-	constructor() {
-		this.client = new SecretsManagerClient({ region: 'us-east-1' })
-	}
-
-	async getSecret(secretName: string): Promise<Record<string, string>> {
-		try {
-			const command = new GetSecretValueCommand({ SecretId: secretName })
-			const response = await this.client.send(command)
-
-			// Check if SecretString exists and is not null/undefined
-			if (!response.SecretString) {
-				console.warn(`Secret ${secretName} has no SecretString value`)
-				return {}
-			}
-
-			// Safely parse JSON with error handling
-			try {
-				const parsed = JSON.parse(response.SecretString)
-
-				// Ensure the parsed result is an object
-				if (
-					typeof parsed !== 'object' ||
-					parsed === null ||
-					Array.isArray(parsed)
-				) {
-					console.warn(
-						`Secret ${secretName} does not contain a valid JSON object`,
-					)
-					return {}
-				}
-
-				return parsed
-			} catch (parseError) {
-				console.error(
-					`Failed to parse JSON for secret ${secretName}:`,
-					parseError,
-				)
-				return {}
-			}
-		} catch (error) {
-			console.error(`Failed to retrieve secret ${secretName}:`, error)
-			return {}
-		}
-	}
-
-	private mergeSecretsWithEnvCheck(
-		secrets: Record<string, string>,
-		secretType: string,
-	): void {
-		const overrides: string[] = []
-
-		for (const [key, value] of Object.entries(secrets)) {
-			// Check if environment variable already exists
-			if (process.env[key] !== undefined) {
-				overrides.push(key)
-				console.warn(
-					`Environment variable ${key} already exists and will be overridden by ${secretType} secret`,
-				)
-			}
-
-			// Set the environment variable
-			process.env[key] = value
-		}
-
-		if (overrides.length > 0) {
-			console.info(
-				`Overridden ${overrides.length} existing environment variables from ${secretType}:`,
-				overrides,
-			)
-		}
-	}
-
-	async loadEnvironmentSecrets(): Promise<void> {
-		const environment = process.env.NODE_ENV || 'development'
-
-		if (environment === 'production' || environment === 'staging') {
-			try {
-				const apiSecrets = await this.getSecret(
-					`/macro-ai/${environment}/api-keys`,
-				)
-				const dbSecrets = await this.getSecret(
-					`/macro-ai/${environment}/database-credentials`,
-				)
-				const serviceSecrets = await this.getSecret(
-					`/macro-ai/${environment}/external-services`,
-				)
-
-				// Merge secrets into process.env with conflict detection
-				this.mergeSecretsWithEnvCheck(apiSecrets, 'API keys')
-				this.mergeSecretsWithEnvCheck(dbSecrets, 'database credentials')
-				this.mergeSecretsWithEnvCheck(serviceSecrets, 'external services')
-
-				console.info(
-					`Successfully loaded secrets for ${environment} environment`,
-				)
-			} catch (error) {
-				console.error('Failed to load environment secrets:', error)
-				// Don't throw - allow application to continue with existing env vars
-			}
-		}
-	}
-}
-```
-
-### Secret Rotation Strategy 📋 PLANNED
+### Secret Rotation Strategy ✅ IMPLEMENTED
 
 #### Automated Rotation
 
-```yaml
-# AWS Lambda function for secret rotation
-Resources:
-  SecretRotationFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: macro-ai-secret-rotation
-      Runtime: nodejs20.x
-      Handler: index.handler
-      Code:
-        ZipFile: |
-          exports.handler = async (event) => {
-            // Implement secret rotation logic
-            // Update database passwords
-            // Rotate API keys
-            // Update application configurations
-          }
-      Environment:
-        Variables:
-          ENVIRONMENT: !Ref Environment
-```
+Doppler provides built-in secret rotation capabilities:
+
+```bash
+# Rotate a specific secret
+doppler secrets rotate API_KEY --project macro-ai-prod --config prod
+
+# Set up automatic rotation schedule
+doppler secrets set-rotation API_KEY --interval 90d --project macro-ai-prod --config prod
+
+# View rotation history
+doppler secrets history API_KEY --project macro-ai-prod --config prod
 
 #### Rotation Schedule
 
@@ -840,3 +789,4 @@ export const getFeatureFlags = (): FeatureFlags => {
 - **[Monitoring and Logging](./monitoring-logging.md)** - Observability and alerting setup
 - **[Environment Configuration](../getting-started/environment-configuration.md)** - Development environment setup
 - **[Security Architecture](../architecture/security-architecture.md)** - Security best practices and implementation
+````
