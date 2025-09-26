@@ -1,3 +1,4 @@
+/* eslint-disable no-magic-numbers */
 // YAML Lint Configuration
 // This file configures yaml-lint for JavaScript-based YAML validation
 
