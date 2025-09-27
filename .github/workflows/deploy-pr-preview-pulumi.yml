@@ -3,10 +3,10 @@ name: Deploy PR Preview (Pulumi)
 
 on:
   pull_request:
-    types: [ opened, synchronize, closed ]
+    types: [opened, synchronize, closed]
     branches:
-    - main
-    - develop
+      - main
+      - develop
 
 concurrency:
   group: >-
@@ -36,24 +36,24 @@ jobs:
       has-infrastructure-changes: ${{ steps.change-detection.outputs.has-infrastructure-changes }}
       is-first-deployment: ${{ steps.change-detection.outputs.is-first-deployment }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: '10.14.0'
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '10.14.0'
 
-    - name: Detect changes
-      id: change-detection
-      env:
-        BASE_REF: ${{ github.event.pull_request.base.ref }}
-        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        PR_NUMBER: ${{ github.event.number }}
-        BRANCH_REF: ${{ github.event.pull_request.head.ref }}
-      run: |
+      - name: Detect changes
+        id: change-detection
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.number }}
+          BRANCH_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
         echo "🔍 Detecting changes for PR #$PR_NUMBER..."
 
         # Get base branch (default to develop if not specified)
@@ -322,10 +322,10 @@ jobs:
         echo "🔢 PR: #${{ github.event.number }}"
         echo "🌿 Branch: $BRANCH_NAME"
 
-    - name: Backend Health Check
-      if: needs.deploy-pr-preview.outputs.api-endpoint != '' && needs.deploy-pr-preview.outputs.has-backend-changes == 'true'
-      id: backend-health-check
-      run: |
+      - name: Backend Health Check
+        if: needs.deploy-pr-preview.outputs.api-endpoint != '' && needs.deploy-pr-preview.outputs.has-backend-changes == 'true'
+        id: backend-health-check
+        run: |
         API_ENDPOINT="${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
         echo "🔍 Performing backend health check on: '$API_ENDPOINT'"
 
@@ -354,7 +354,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.action == 'closed'
     steps:
-    - name: Configure AWS Credentials
+      - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
