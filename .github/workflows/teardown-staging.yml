@@ -363,7 +363,7 @@ jobs:
 
     outputs:
       destroy-result: ${{ steps.destroy.outputs.destroy-result }}
-      verification-result: ${{ steps.verify.outputs.verification-result }}
+      verification-result: ${{ steps.remove-stack.outputs.verification-result }}
 
     steps:
     - name: Checkout code
