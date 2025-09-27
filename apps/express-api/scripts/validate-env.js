@@ -8,12 +8,8 @@
  * are caught early in the CI/CD pipeline.
  */
 
-import { readFileSync, existsSync } from 'node:fs'
-import { resolve, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+// This validation script now assumes secrets are injected at runtime by Doppler, so
+// we no longer read local .env files on disk.
 
 // Color codes for console output
 const colors = {
@@ -50,7 +46,6 @@ function logFatal(message) {
 const requiredEnvVars = [
 	// API
 	'API_KEY',
-	'NODE_ENV',
 	'SERVER_PORT',
 
 	// AWS Cognito
@@ -82,6 +77,7 @@ const optionalEnvVars = [
 	'CORS_ALLOWED_ORIGINS',
 	'COOKIE_DOMAIN',
 	'AWS_COGNITO_REFRESH_TOKEN_EXPIRY',
+	'NODE_ENV',
 ]
 
 // Validation rules
@@ -101,13 +97,6 @@ const validationRules = {
 	OPENAI_API_KEY: (value) => {
 		if (!value || !value.startsWith('sk-')) {
 			return 'OpenAI API key must start with "sk-"'
-		}
-		return null
-	},
-	NODE_ENV: (value) => {
-		const validEnvs = ['development', 'production', 'test']
-		if (!validEnvs.includes(value)) {
-			return `NODE_ENV must be one of: ${validEnvs.join(', ')}`
 		}
 		return null
 	},
@@ -147,98 +136,9 @@ function loadEnvFile() {
 	}
 
 	// Environment file loading order (higher priority files first)
-	const envFiles = []
-
-	// Environment-specific files (highest priority)
-	switch (envType) {
-		case 'development': {
-			envFiles.push(
-				{
-					path: '.env.development',
-					description: 'Development environment file',
-				},
-				{
-					path: '.env.local',
-					description: 'Local development environment file',
-				},
-			)
-			break
-		}
-		case 'test': {
-			envFiles.push({ path: '.env.test', description: 'Test environment file' })
-			break
-		}
-		case 'staging': {
-			envFiles.push({
-				path: '.env.staging',
-				description: 'Staging environment file',
-			})
-			break
-		}
-		case 'production':
-		case 'preview': {
-			// Production and preview environments should use pre-set environment variables
-			logInfo(
-				`${envType} environment detected - using pre-set environment variables`,
-			)
-			return {}
-		}
-	}
-
-	// Base .env file (lowest priority)
-	envFiles.push({ path: '.env', description: 'Base environment file' })
-
 	logInfo(`Environment type: ${envType}`)
-
-	const allEnvVars = {}
-	let loadedCount = 0
-
-	// Load files in reverse order so later files in array override earlier ones
-	for (let i = envFiles.length - 1; i >= 0; i--) {
-		const envFile = envFiles[i]
-		const envPath = resolve(__dirname, '..', envFile.path)
-
-		if (existsSync(envPath)) {
-			try {
-				const envContent = readFileSync(envPath, 'utf8')
-				const fileVars = {}
-
-				envContent.split('\n').forEach((line) => {
-					const trimmed = line.trim()
-					if (trimmed && !trimmed.startsWith('#')) {
-						const [key, ...valueParts] = trimmed.split('=')
-						if (key && valueParts.length > 0) {
-							const value = valueParts.join('=').replace(/^["']|["']$/g, '')
-							// Allow higher-priority values to replace lower-priority ones
-							allEnvVars[key] = value
-							fileVars[key] = value
-						}
-					}
-				})
-
-				if (Object.keys(fileVars).length > 0) {
-					loadedCount++
-					logInfo(
-						`Loaded ${Object.keys(fileVars).length} variables from ${envFile.description}`,
-					)
-				}
-			} catch (error) {
-				logWarning(`Failed to read ${envFile.path}: ${error.message}`)
-			}
-		}
-	}
-
-	if (loadedCount === 0) {
-		logInfo(
-			'No environment files found - using system environment variables only',
-		)
-	} else {
-		logInfo(
-			`Total loaded: ${Object.keys(allEnvVars).length} variables from ${loadedCount} file(s)`,
-		)
-	}
-
-	return allEnvVars
+	logInfo('Doppler configuration detected; skipping .env file loading')
+	return {}
 }
 
 /**

@@ -47,15 +47,17 @@ npm install -g pnpm
 pnpm install
 ```
 
-### 3. Environment Configuration
+### 3. Doppler Secrets Configuration
 
 ```bash
-# Copy environment templates
-cp apps/express-api/.env.example apps/express-api/.env
-cp apps/client-ui/.env.example apps/client-ui/.env
+# Install Doppler CLI if not already installed (macOS example)
+brew install dopplerhq/cli/doppler
 
-# Edit environment files with your configuration
-# See Environment Configuration guide for detailed setup
+# Link this repository to the Macro AI dev config (creates .doppler.yaml)
+doppler setup --project macro-ai --config dev_personal
+
+# Verify secrets are available
+doppler secrets download --format env --no-file | head
 ```
 
 ### 4. Database Setup
@@ -69,8 +71,8 @@ pnpm db:push:express-api
 ### 5. Start Development
 
 ```bash
-# Start all development servers
-pnpm dev
+# Start all development servers with secrets injected at runtime
+doppler run -- pnpm dev
 ```
 
 **Access Points:**
@@ -215,16 +217,15 @@ pnpm db:push
 
 #### 2. Configure Environment Variables
 
-Update `apps/express-api/.env`:
+Secrets for the Express API live in Doppler. Set or update them with:
 
 ```bash
-# AWS Cognito Configuration
-AWS_COGNITO_REGION=us-east-1
-AWS_COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
-AWS_COGNITO_USER_POOL_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
-AWS_COGNITO_USER_POOL_SECRET_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-# AWS credentials are no longer required - using IAM roles instead
-AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30
+doppler secrets set \
+  AWS_COGNITO_REGION=us-east-1 \
+  AWS_COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx \
+  AWS_COGNITO_USER_POOL_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx \
+  AWS_COGNITO_USER_POOL_SECRET_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
+  AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30
 ```
 
 #### 3. IAM Role Setup (Production/ECS)
@@ -273,48 +274,31 @@ environment variables, but this is not required for production deployments.
 
 #### 2. Configure Environment
 
-Update `apps/express-api/.env`:
-
 ```bash
-# OpenAI Configuration
-OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+doppler secrets set OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ### Additional Environment Configuration
 
 #### Express API Environment
 
-Complete `apps/express-api/.env` configuration:
+To review or change any API secrets at runtime:
 
 ```bash
-# API Configuration
-API_KEY=your-32-character-api-key-here
-SERVER_PORT=3040
+# Inspect current values
+doppler secrets download --format env --no-file | grep -E '^(API_|COOKIE_|RATE_|AUTH_|REDIS_)'
 
-# Cookie Configuration
-COOKIE_DOMAIN=localhost
-COOKIE_ENCRYPTION_KEY=your-32-character-encryption-key-here
-
-# Rate Limiting
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
-AUTH_RATE_LIMIT_WINDOW_MS=3600000
-AUTH_RATE_LIMIT_MAX_REQUESTS=10
-API_RATE_LIMIT_WINDOW_MS=60000
-API_RATE_LIMIT_MAX_REQUESTS=60
-
-# Redis (optional - for rate limiting)
-REDIS_URL=redis://localhost:6379
+# Update as needed
+doppler secrets set API_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+doppler secrets set COOKIE_ENCRYPTION_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
 ```
 
 #### Client UI Environment
 
-Complete `apps/client-ui/.env` configuration:
-
 ```bash
-# API Configuration
-VITE_API_URL=http://localhost:3040/api
-VITE_API_KEY=your-32-character-api-key-here
+# Ensure frontend points to the dev API and uses the same API key
+doppler secrets set VITE_API_URL=http://localhost:3040/api
+doppler secrets set VITE_API_KEY=$(doppler secrets get API_KEY --plain)
 ```
 
 #### Generate Secure Keys

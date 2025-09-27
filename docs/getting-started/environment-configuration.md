@@ -14,11 +14,11 @@ integration to ensure consistent deployments.
 macro-ai/
 ├── apps/
 │   ├── express-api/
-│   │   ├── .env.example          # Template for API configuration
-│   │   └── .env                  # Your local API configuration
+│   │   ├── .env.example          # Template for API configuration (reference)
+│   │   └── (managed via Doppler)
 │   └── client-ui/
-│       ├── .env.example          # Template for UI configuration
-│       └── .env                  # Your local UI configuration
+│       ├── .env.example          # Template for UI configuration (reference)
+│       └── (managed via Doppler)
 └── .env                          # Optional root-level shared variables
 ```
 
@@ -31,10 +31,10 @@ runtime configuration errors.
 
 ### Complete Environment Setup
 
-Create `apps/express-api/.env` from the template:
+Link the repository to its Doppler project instead of creating `.env` files manually:
 
 ```bash
-cp apps/express-api/.env.example apps/express-api/.env
+doppler setup --project macro-ai --config dev_personal
 ```
 
 ### Required Configuration Variables
@@ -42,9 +42,8 @@ cp apps/express-api/.env.example apps/express-api/.env
 #### API Configuration
 
 ```bash
-# API Configuration
-API_KEY=your-32-character-api-key-here
-SERVER_PORT=3040
+doppler secrets set API_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+doppler secrets set SERVER_PORT=3040
 ```
 
 **API_KEY Requirements:**
@@ -62,13 +61,11 @@ SERVER_PORT=3040
 #### AWS Cognito Configuration
 
 ```bash
-# AWS Cognito Configuration
-AWS_COGNITO_REGION=us-east-1
-AWS_COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
-AWS_COGNITO_USER_POOL_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
-AWS_COGNITO_USER_POOL_SECRET_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-# AWS credentials are no longer required - using IAM roles instead
-AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30
+doppler secrets set AWS_COGNITO_REGION=us-east-1
+doppler secrets set AWS_COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
+doppler secrets set AWS_COGNITO_USER_POOL_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
+doppler secrets set AWS_COGNITO_USER_POOL_SECRET_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+doppler secrets set AWS_COGNITO_REFRESH_TOKEN_EXPIRY=30
 ```
 
 **Configuration Details:**
@@ -91,9 +88,8 @@ The application now uses AWS IAM roles instead of hardcoded credentials for enha
 #### Cookie Configuration
 
 ```bash
-# Cookie Configuration
-COOKIE_DOMAIN=localhost
-COOKIE_ENCRYPTION_KEY=your-32-character-encryption-key-here
+doppler secrets set COOKIE_DOMAIN=localhost
+doppler secrets set COOKIE_ENCRYPTION_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
 ```
 
 **Configuration Details:**
@@ -105,9 +101,8 @@ COOKIE_ENCRYPTION_KEY=your-32-character-encryption-key-here
 #### Database Configuration
 
 ```bash
-# Database Configuration
-RELATIONAL_DATABASE_URL=postgresql://username:password@localhost:5432/database_name
-REDIS_URL=redis://localhost:6379
+doppler secrets set RELATIONAL_DATABASE_URL=postgresql://username:password@localhost:5432/database_name
+doppler secrets set REDIS_URL=redis://localhost:6379
 ```
 
 **PostgreSQL URL Format:**
@@ -132,8 +127,7 @@ RELATIONAL_DATABASE_URL=postgresql://user:pass@prod-host:5432/macro_ai_prod?sslm
 #### OpenAI Configuration
 
 ```bash
-# OpenAI Configuration
-OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+doppler secrets set OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 **Requirements:**
@@ -145,14 +139,12 @@ OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 #### Rate Limiting Configuration
 
 ```bash
-# Rate Limiting Configuration
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
-AUTH_RATE_LIMIT_WINDOW_MS=3600000
-AUTH_RATE_LIMIT_MAX_REQUESTS=10
-API_RATE_LIMIT_WINDOW_MS=60000
-API_RATE_LIMIT_MAX_REQUESTS=60
-REDIS_URL=redis://localhost:6379
+doppler secrets set RATE_LIMIT_WINDOW_MS=900000
+doppler secrets set RATE_LIMIT_MAX_REQUESTS=100
+doppler secrets set AUTH_RATE_LIMIT_WINDOW_MS=3600000
+doppler secrets set AUTH_RATE_LIMIT_MAX_REQUESTS=10
+doppler secrets set API_RATE_LIMIT_WINDOW_MS=60000
+doppler secrets set API_RATE_LIMIT_MAX_REQUESTS=60
 ```
 
 **Rate Limiting Tiers:**
@@ -221,10 +213,11 @@ const envSchema = z.object({
 
 ### Complete Environment Setup
 
-Create `apps/client-ui/.env` from the template:
+Client UI variables are stored in the same Doppler config. Use the CLI to review or override values:
 
 ```bash
-cp apps/client-ui/.env.example apps/client-ui/.env
+doppler secrets get VITE_API_URL
+doppler secrets get VITE_API_KEY
 ```
 
 ### Required Configuration Variables
@@ -432,20 +425,19 @@ sudo systemctl start postgresql    # Linux
 
 Keep environment configurations synchronized across team members:
 
-1. **Update `.env.example` files** when adding new variables
+1. **Update Doppler configs** when adding new variables (`doppler secrets set ...`)
 2. **Document new variables** in this guide
 3. **Communicate changes** to team members
-4. **Version control** configuration schemas
+4. **Version control** configuration schemas and `.doppler.yaml`
 
 ### Configuration Backup
 
 ```bash
 # Backup current configuration (excluding secrets)
-cp apps/express-api/.env apps/express-api/.env.backup
-cp apps/client-ui/.env apps/client-ui/.env.backup
+cp .doppler.yaml .doppler.yaml.backup
 
 # Create sanitized backup for sharing
-sed 's/=.*/=REDACTED/' apps/express-api/.env > apps/express-api/.env.template
+doppler secrets download --format env --no-file | sed 's/=.*$/=REDACTED/' > doppler-secrets.snapshot
 ```
 
 ## 📚 Related Documentation

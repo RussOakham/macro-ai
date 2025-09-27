@@ -23,13 +23,12 @@ git clone https://github.com/RussOakham/macro-ai.git
 cd macro-ai
 pnpm install
 
-# Set up environment
-cp apps/express-api/.env.example apps/express-api/.env
-cp apps/client-ui/.env.example apps/client-ui/.env
-# Edit .env files with your configuration
+# Link Doppler (creates `.doppler.yaml` with project/config defaults)
+doppler setup --project macro-ai --config dev_personal
 
-# Start development servers
-pnpm dev
+# Start development servers with runtime secrets
+doppler run -- pnpm dev
+
 ```
 
 **📚 [Complete Setup Guide →](./docs/getting-started/development-setup.md)**
