@@ -513,8 +513,8 @@ jobs:
         pnpm lint
         echo "✅ Lint checks passed successfully"
       env:
+        NODE_ENV: development
         # Core Configuration
-        NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
         SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
         API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
@@ -995,8 +995,8 @@ jobs:
     - name: Build types package
       run: pnpm --filter @repo/macro-ai-api-client build
       env:
+        NODE_ENV: production
         # Core Configuration
-        NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
         SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
         API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
@@ -1038,8 +1038,8 @@ jobs:
     - name: Run ESLint Security Scan
       run: pnpm lint:eslint
       env:
+        NODE_ENV: development
         # Core Configuration
-        NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
         SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
         API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
