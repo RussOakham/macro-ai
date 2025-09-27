@@ -1,6 +1,5 @@
 # Test Cache Setup Action
 # Optimizes CI/CD performance by caching test dependencies and results
-
 name: 'Setup Test Cache'
 description: 'Sets up comprehensive caching for test dependencies and results'
 
@@ -51,7 +50,8 @@ runs:
           packages/*/node_modules
           apps/*/dist
           packages/*/dist
-        key: deps-${{ runner.os }}-${{ inputs.node-version }}-${{ hashFiles('**/pnpm-lock.yaml') }}${{ inputs.cache-key-suffix }}
+        key: |
+          deps-${{ runner.os }}-${{ inputs.node-version }}-${{ hashFiles('**/pnpm-lock.yaml') }}${{ inputs.cache-key-suffix }}
         restore-keys: |
           deps-${{ runner.os }}-${{ inputs.node-version }}-
           deps-${{ runner.os }}-

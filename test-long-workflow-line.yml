@@ -4,5 +4,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Test step with extremely long line that exceeds the default 120 character limit but should be fine for workflow files since they allow up to 200 characters for better readability in CI/CD configurations
+      - name: Test step with long line that exceeds default 120 character limit
+        # This line is split to stay within the 200 character limit for workflow files
         run: echo "This is a test to verify that workflow files use the correct line length limit"

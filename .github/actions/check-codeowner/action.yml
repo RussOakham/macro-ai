@@ -107,7 +107,9 @@ runs:
           popd >/dev/null
 
           if [[ -z "$CODEOWNERS_FILE" ]]; then
-            echo "::error::CODEOWNERS file not found in any canonical location ('.github/CODEOWNERS', 'CODEOWNERS', 'docs/CODEOWNERS') on refs: '${{ inputs.base-ref }}', 'develop', 'main', or origin/HEAD default branch."
+            echo "::error::CODEOWNERS file not found in any canonical location"
+            echo "::error::('.github/CODEOWNERS', 'CODEOWNERS', 'docs/CODEOWNERS')"
+            echo "::error::on refs: '${{ inputs.base-ref }}', 'develop', 'main', or origin/HEAD default branch."
             exit 1
           else
             echo "::notice::Using CODEOWNERS from '${USED_REF}' at path '${CODEOWNERS_FILE#codeowner-check-repo/}'"
@@ -116,11 +118,12 @@ runs:
 
         # Extract owners from CODEOWNERS (ignore comments and empty lines)
         # This handles @username and @org/team format and normalizes to lowercase
-        OWNERS=$(grep -v '^#' "${CODEOWNERS_FILE}" | grep -v '^[[:space:]]*$' | \
-                 grep -o '@[a-zA-Z0-9_/-]*' | \
-                 sed 's/@//' | \
-                 tr '[:upper:]' '[:lower:]' | \
-                 sort -u)
+        OWNERS=$(grep -v '^#' "${CODEOWNERS_FILE}" | \
+          grep -v '^[[:space:]]*$' | \
+          grep -o '@[a-zA-Z0-9_/-]*' | \
+          sed 's/@//' | \
+          tr '[:upper:]' '[:lower:]' | \
+          sort -u)
 
         echo "::debug::Found code owners: ${OWNERS}"
 

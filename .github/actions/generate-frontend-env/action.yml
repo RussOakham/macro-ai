@@ -161,7 +161,6 @@ runs:
           export VITE_BUILD_BRANCH="${GITHUB_REF_NAME:-unknown}"
           export VITE_BUILD_WORKFLOW="${GITHUB_WORKFLOW:-unknown}"
           export VITE_BUILD_RUN_ID="${GITHUB_RUN_ID:-unknown}"
-          
           if [[ -n "${{ inputs.pr-number }}" ]]; then
             export VITE_PR_NUMBER="${{ inputs.pr-number }}"
           fi
@@ -290,7 +289,8 @@ runs:
         echo "🔍 Environment File Contents (first 10 variables, values redacted):"
 
         # Parse .env file and show only variable names with redacted values for security
-        awk 'NR <= 10 && /^[^#]/ && /=/ {split($0, parts, "="); print "  " parts[1] "=REDACTED"}' "${{ inputs.output-file }}"
+        awk 'NR <= 10 && /^[^#]/ && /=/ {split($0, parts, "=");
+          print "  " parts[1] "=REDACTED"}' "${{ inputs.output-file }}"
 
         TOTAL_LINES=$(wc -l < "${{ inputs.output-file }}")
         TOTAL_VARS=$(awk '/^[^#]/ && /=/' "${{ inputs.output-file }}" | wc -l)

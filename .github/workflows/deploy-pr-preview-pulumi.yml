@@ -53,72 +53,80 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.number }}
           BRANCH_REF: ${{ github.event.pull_request.head.ref }}
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
         run: |
-        echo "🔍 Detecting changes for PR #$PR_NUMBER..."
+          echo "🔍 Detecting changes for PR #$PR_NUMBER..."
 
-        # Get base branch (default to develop if not specified)
-        BASE_BRANCH="$BASE_REF"
-        if [[ -z "$BASE_BRANCH" ]]; then
-          BASE_BRANCH="develop"
-        fi
+          # Get base branch (default to develop if not specified)
+          BASE_BRANCH="$BASE_REF"
+          if [[ -z "$BASE_BRANCH" ]]; then
+            BASE_BRANCH="develop"
+          fi
 
-        # Get head SHA
-        HEAD_REF="$HEAD_SHA"
+          # Get head SHA
+          HEAD_REF="$HEAD_SHA"
 
-        echo "Base branch: $BASE_BRANCH"
-        echo "Head SHA: $HEAD_REF"
+          echo "Base branch: $BASE_BRANCH"
+          echo "Head SHA: $HEAD_REF"
 
-        # Fetch the base branch to compare against
-        git fetch origin "$BASE_BRANCH"
+          # Fetch the base branch to compare against
+          git fetch origin "$BASE_BRANCH"
 
-        # Check for backend-related changes
-        BACKEND_CHANGES=$(git diff --name-only "origin/$BASE_BRANCH...$HEAD_REF" | grep -E '^infrastructure/|^apps/express-api/|^packages/macro-ai-api-client/' || true)
-        if [[ -n "$BACKEND_CHANGES" ]]; then
-          echo "✅ Backend changes detected"
-          echo "has-backend-changes=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "ℹ️ No backend changes detected"
-          echo "has-backend-changes=false" >> "$GITHUB_OUTPUT"
-        fi
+          # Check for backend-related changes
+          BACKEND_CHANGES=$(git diff --name-only "origin/$BASE_BRANCH...$HEAD_REF" | grep -E '^infrastructure/|^apps/express-api/|^packages/macro-ai-api-client/' || true)
+          if [[ -n "$BACKEND_CHANGES" ]]; then
+            echo "✅ Backend changes detected"
+            echo "has-backend-changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ℹ️ No backend changes detected"
+            echo "has-backend-changes=false" >> "$GITHUB_OUTPUT"
+          fi
 
-        # Check for frontend-related changes
-        FRONTEND_CHANGES=$(git diff --name-only "origin/$BASE_BRANCH...$HEAD_REF" | grep -E '^apps/client-ui/|^packages/ui-library/' || true)
-        if [[ -n "$FRONTEND_CHANGES" ]]; then
-          echo "✅ Frontend changes detected"
-          echo "has-frontend-changes=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "ℹ️ No frontend changes detected"
-          echo "has-frontend-changes=false" >> "$GITHUB_OUTPUT"
-        fi
+          # Check for frontend-related changes
+          FRONTEND_CHANGES=$(git diff --name-only "origin/$BASE_BRANCH...$HEAD_REF" | grep -E '^apps/client-ui/|^packages/ui-library/' || true)
+          if [[ -n "$FRONTEND_CHANGES" ]]; then
+            echo "✅ Frontend changes detected"
+            echo "has-frontend-changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ℹ️ No frontend changes detected"
+            echo "has-frontend-changes=false" >> "$GITHUB_OUTPUT"
+          fi
 
-        # Check for infrastructure-related changes
-        INFRASTRUCTURE_CHANGES=$(git diff --name-only "origin/$BASE_BRANCH...$HEAD_REF" | grep -E '^infrastructure/|\.github/workflows/.*\.yml$' || true)
-        if [[ -n "$INFRASTRUCTURE_CHANGES" ]]; then
-          echo "✅ Infrastructure changes detected"
-          echo "has-infrastructure-changes=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "ℹ️ No infrastructure changes detected"
-          echo "has-infrastructure-changes=false" >> "$GITHUB_OUTPUT"
-        fi
+          # Check for infrastructure-related changes
+          INFRASTRUCTURE_CHANGES=$(git diff --name-only "origin/$BASE_BRANCH...$HEAD_REF" | grep -E '^infrastructure/|\.github/workflows/.*\.yml$' || true)
+          if [[ -n "$INFRASTRUCTURE_CHANGES" ]]; then
+            echo "✅ Infrastructure changes detected"
+            echo "has-infrastructure-changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ℹ️ No infrastructure changes detected"
+            echo "has-infrastructure-changes=false" >> "$GITHUB_OUTPUT"
+          fi
 
-        # Check if this is the first deployment of this PR environment
-        PR_NUMBER="${{ github.event.number }}"
-        STACK_NAME="pr-${PR_NUMBER}"
+          # Check if this is the first deployment of this PR environment
+          PR_NUMBER="${{ github.event.number }}"
+          STACK_NAME="pr-${PR_NUMBER}"
 
-        cd infrastructure/pulumi
+          # Install Pulumi CLI if not already available
+          if ! command -v pulumi >/dev/null 2>&1; then
+            echo "📦 Installing Pulumi CLI..."
+            curl -fsSL https://get.pulumi.com | sh
+            export PATH="$HOME/.pulumi/bin:$PATH"
+          fi
 
-        if pulumi stack select "$STACK_NAME" 2>/dev/null; then
-          # Stack exists, this is not the first deployment
-          echo "ℹ️ Existing PR environment detected - using selective deployment"
-          echo "is-first-deployment=false" >> "$GITHUB_OUTPUT"
-        else
-          # Stack doesn't exist, this is the first deployment
-          echo "🚀 First deployment of PR environment - deploying both backend and frontend"
-          echo "is-first-deployment=true" >> "$GITHUB_OUTPUT"
-          # On first deployment, set both to true to ensure complete environment
-          echo "has-backend-changes=true" >> "$GITHUB_OUTPUT"
-          echo "has-frontend-changes=true" >> "$GITHUB_OUTPUT"
-        fi
+          cd infrastructure/pulumi
+
+          if pulumi stack select "$STACK_NAME" 2>/dev/null; then
+            # Stack exists, this is not the first deployment
+            echo "ℹ️ Existing PR environment detected - using selective deployment"
+            echo "is-first-deployment=false" >> "$GITHUB_OUTPUT"
+          else
+            # Stack doesn't exist, this is the first deployment
+            echo "🚀 First deployment of PR environment - deploying both backend and frontend"
+            echo "is-first-deployment=true" >> "$GITHUB_OUTPUT"
+            # On first deployment, set both to true to ensure complete environment
+            echo "has-backend-changes=true" >> "$GITHUB_OUTPUT"
+            echo "has-frontend-changes=true" >> "$GITHUB_OUTPUT"
+          fi
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -134,11 +142,6 @@ jobs:
         key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
         restore-keys: |
           pnpm-${{ runner.os }}-
-
-    - name: Install Pulumi CLI
-      run: |
-        curl -fsSL https://get.pulumi.com | sh
-        echo "$HOME/.pulumi/bin" >> "$GITHUB_PATH"
 
     - name: Configure AWS credentials
       if: github.event.action != 'closed'
@@ -216,7 +219,11 @@ jobs:
     # Pulumi CLI already installed earlier in the workflow
 
     - name: Install Pulumi Dependencies
-      if: steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true')
+      if: >-
+        steps.decide-deploy.outputs.should-deploy == 'true' &&
+        (steps.change-detection.outputs.has-backend-changes == 'true' ||
+        steps.change-detection.outputs.has-infrastructure-changes == 'true' ||
+        steps.change-detection.outputs.is-first-deployment == 'true')
       shell: bash
       run: |
         echo "📦 Installing Pulumi project dependencies..."
@@ -224,7 +231,11 @@ jobs:
         pnpm install
 
     - name: Deploy PR Preview Infrastructure
-      if: steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true')
+      if: >-
+        steps.decide-deploy.outputs.should-deploy == 'true' &&
+        (steps.change-detection.outputs.has-backend-changes == 'true' ||
+        steps.change-detection.outputs.has-infrastructure-changes == 'true' ||
+        steps.change-detection.outputs.is-first-deployment == 'true')
       id: deploy
       env:
         PR_NUMBER: ${{ github.event.number }}
@@ -295,7 +306,10 @@ jobs:
       backend-url: ${{ needs.deploy-pr-preview.outputs.api-endpoint }}
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
-      should-deploy: ${{ needs.deploy-pr-preview.outputs.should-deploy == 'true' && (needs.deploy-pr-preview.outputs.has-frontend-changes == 'true' || needs.deploy-pr-preview.outputs.is-first-deployment == 'true') }}
+      should-deploy: >-
+        ${{ needs.deploy-pr-preview.outputs.should-deploy == 'true' &&
+        (needs.deploy-pr-preview.outputs.has-frontend-changes == 'true' ||
+        needs.deploy-pr-preview.outputs.is-first-deployment == 'true') }}
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}

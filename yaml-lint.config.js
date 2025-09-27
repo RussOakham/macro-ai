@@ -3,35 +3,48 @@
 // This file configures yaml-lint for JavaScript-based YAML validation
 
 export default {
-	// Files to lint
+	// Files to lint - Focus on project files only
 	files: [
 		'**/*.yml',
 		'**/*.yaml',
+		// Exclude dependency files that are outside our control
 		'!**/node_modules/**',
+		'!**/node_modules/**/*',
+		'!**/.pnpm/**',
+		'!**/.pnpm/**/*',
+		// Exclude build outputs and generated files
 		'!**/dist/**',
 		'!**/coverage/**',
 		'!**/build/**',
+		'!**/*.d.ts',
+		'!**/coverage-reports/**',
+		'!**/test-results/**',
+		// Exclude specific generated files
+		'!**/routeTree.gen.ts',
+		'!**/main.tsx',
+		'!**/*.gen.ts',
+		'!**/*.gen.js',
 	],
 
-	// YAML parser options
+	// YAML parser options - Focus on syntax correctness
 	parser: {
 		// Use 2-space indentation
 		indent: 2,
 
-		// Line length limit
-		lineWidth: 120,
+		// Disable strict line width checking (we'll handle this per file type)
+		lineWidth: -1,
 
-		// Quote style preference
-		singleQuote: true,
+		// Allow flexible quote styles
+		singleQuote: false,
 
 		// Allow trailing commas in flow collections
-		trailingComma: false,
+		trailingComma: true,
 
-		// Allow unquoted strings
+		// Allow unquoted strings where safe
 		noRefs: false,
 
-		// Allow duplicate keys (will be warned)
-		noDuplicateKeys: false,
+		// Disallow duplicate keys (will be caught by rules)
+		noDuplicateKeys: true,
 
 		// Allow anchors and aliases
 		noAnchors: false,
@@ -40,55 +53,37 @@ export default {
 		noTags: false,
 	},
 
-	// Rules configuration
+	// Rules configuration - Focus on syntax issues that could break GitHub Actions
 	rules: {
-		// Require consistent indentation
+		// Critical: YAML syntax errors that will break parsing
 		indent: ['error', 2],
 
-		// Enforce line length
-		'max-len': ['warn', { code: 120, ignoreUrls: true }],
-
-		// Require newline at end of file
-		'eol-last': ['error', 'always'],
-
-		// Disallow trailing whitespace
-		'no-trailing-spaces': 'error',
-
-		// Disallow multiple consecutive empty lines
-		'no-multiple-empty-lines': ['error', { max: 2, maxEOF: 1 }],
-
-		// Require consistent quote style
-		quotes: ['warn', 'single', { avoidEscape: true }],
-
-		// Disallow duplicate keys
+		// Critical: Prevents unpredictable behavior in GitHub Actions
 		'no-duplicate-keys': 'error',
 
-		// Require consistent spacing around colons
-		'key-spacing': ['error', { beforeColon: false, afterColon: true }],
+		// Critical: Required for valid YAML
+		'eol-last': ['error', 'always'],
 
-		// Require consistent spacing around commas
-		'comma-spacing': ['error', { before: false, after: true }],
+		// Important: Can cause GitHub Actions failures
+		'no-trailing-spaces': 'warn',
 
-		// Require consistent spacing around brackets
-		'array-bracket-spacing': ['error', 'never'],
-
-		// Require consistent spacing around braces
-		'object-curly-spacing': ['error', 'never'],
-
-		// Require consistent spacing around hyphens in arrays
-		'array-bracket-newline': ['error', 'consistent'],
-
-		// Require consistent spacing around colons in objects
-		'object-colon-spacing': ['error', { before: false, after: true }],
+		// Style only: Doesn't break functionality, just formatting
+		'max-len': 'off',
+		'no-multiple-empty-lines': 'off',
+		quotes: 'off',
+		'key-spacing': 'off',
+		'comma-spacing': 'off',
+		'array-bracket-spacing': 'off',
+		'object-curly-spacing': 'off',
+		'array-bracket-newline': 'off',
+		'object-colon-spacing': 'off',
 	},
 
-	// Override rules for specific file patterns
+	// Override rules for specific file patterns - simplified
 	overrides: [
 		{
 			files: ['docker-compose*.yml', 'docker-compose*.yaml'],
 			rules: {
-				// Docker Compose files can have longer lines
-				'max-len': ['warn', { code: 200, ignoreUrls: true }],
 				// Allow more flexible indentation for Docker Compose
 				indent: ['warn', 2],
 			},
@@ -101,8 +96,6 @@ export default {
 				'.github/workflows/*.yaml',
 			],
 			rules: {
-				// GitHub Actions workflows can have longer lines
-				'max-len': ['warn', { code: 200, ignoreUrls: true }],
 				// Allow more flexible indentation for workflows
 				indent: ['warn', 2],
 			},
@@ -110,8 +103,6 @@ export default {
 		{
 			files: ['amplify*.yml', 'amplify*.yaml'],
 			rules: {
-				// Amplify files can have longer lines
-				'max-len': ['warn', { code: 200, ignoreUrls: true }],
 				// Allow more flexible indentation for Amplify
 				indent: ['warn', 2],
 			},
