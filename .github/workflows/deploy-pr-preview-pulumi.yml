@@ -53,6 +53,7 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.number }}
           BRANCH_REF: ${{ github.event.pull_request.head.ref }}
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
         run: |
           echo "🔍 Detecting changes for PR #$PR_NUMBER..."
 
@@ -105,6 +106,13 @@ jobs:
           PR_NUMBER="${{ github.event.number }}"
           STACK_NAME="pr-${PR_NUMBER}"
 
+          # Install Pulumi CLI if not already available
+          if ! command -v pulumi >/dev/null 2>&1; then
+            echo "📦 Installing Pulumi CLI..."
+            curl -fsSL https://get.pulumi.com | sh
+            export PATH="$HOME/.pulumi/bin:$PATH"
+          fi
+
           cd infrastructure/pulumi
 
           if pulumi stack select "$STACK_NAME" 2>/dev/null; then
@@ -134,11 +142,6 @@ jobs:
         key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
         restore-keys: |
           pnpm-${{ runner.os }}-
-
-    - name: Install Pulumi CLI
-      run: |
-        curl -fsSL https://get.pulumi.com | sh
-        echo "$HOME/.pulumi/bin" >> "$GITHUB_PATH"
 
     - name: Configure AWS credentials
       if: github.event.action != 'closed'

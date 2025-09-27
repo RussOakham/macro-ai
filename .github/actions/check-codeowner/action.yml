@@ -25,126 +25,128 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Checkout base repository for CODEOWNERS
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ inputs.base-ref }}
-        path: codeowner-check-repo
+  - name: Checkout base repository for CODEOWNERS
+    uses: actions/checkout@v4
+    with:
+      ref: ${{ inputs.base-ref }}
+      path: codeowner-check-repo
 
-    - name: Validate code ownership
-      id: validate
-      shell: bash
-      run: |
-        set -euo pipefail
+  - name: Validate code ownership
+    id: validate
+    shell: bash
+    run: |
+      set -euo pipefail
 
-        # Determine target user based on mode
-        if [[ "${{ inputs.mode }}" == "pr" ]]; then
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            TARGET_USER="${{ github.event.pull_request.user.login }}"
-          else
-            echo "::error::Mode 'pr' requires pull_request event"
-            exit 1
-          fi
-        elif [[ "${{ inputs.mode }}" == "manual" ]]; then
-          TARGET_USER="${{ github.actor }}"
+      # Determine target user based on mode
+      if [[ "${{ inputs.mode }}" == "pr" ]]; then
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          TARGET_USER="${{ github.event.pull_request.user.login }}"
         else
-          echo "::error::Invalid mode '${{ inputs.mode }}'. Must be 'pr' or 'manual'"
+          echo "::error::Mode 'pr' requires pull_request event"
           exit 1
         fi
+      elif [[ "${{ inputs.mode }}" == "manual" ]]; then
+        TARGET_USER="${{ github.actor }}"
+      else
+        echo "::error::Invalid mode '${{ inputs.mode }}'. Must be 'pr' or 'manual'"
+        exit 1
+      fi
 
-        echo "target-user=${TARGET_USER}" >> $GITHUB_OUTPUT
-        echo "::notice::Validating code ownership for user: ${TARGET_USER}"
+      echo "target-user=${TARGET_USER}" >> $GITHUB_OUTPUT
+      echo "::notice::Validating code ownership for user: ${TARGET_USER}"
 
-        # Read and parse CODEOWNERS file with canonical locations and robust branch fallback
-        USED_REF="${{ inputs.base-ref }}"
-        CODEOWNERS_FILE=""
+      # Read and parse CODEOWNERS file with canonical locations and robust branch fallback
+      USED_REF="${{ inputs.base-ref }}"
+      CODEOWNERS_FILE=""
 
-        find_codeowners() {
-          local base_path="$1"
-          local candidates=(
-            "$base_path/.github/CODEOWNERS"
-            "$base_path/CODEOWNERS"
-            "$base_path/docs/CODEOWNERS"
-          )
-          for f in "${candidates[@]}"; do
-            if [[ -f "$f" ]]; then
-              CODEOWNERS_FILE="$f"
-              return 0
-            fi
-          done
-          return 1
-        }
-
-        # Try current ref checkout first
-        find_codeowners "codeowner-check-repo" || true
-
-        if [[ -z "$CODEOWNERS_FILE" ]]; then
-          echo "::notice::CODEOWNERS not found on '${USED_REF}'. Attempting fallback branches and default origin/HEAD..."
-          pushd codeowner-check-repo >/dev/null
-
-          # Fetch remote refs once
-          git fetch origin --depth=1 +refs/heads/*:refs/remotes/origin/* || true
-
-          # Determine origin default branch (origin/HEAD)
-          DEFAULT_BRANCH_REF=$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null || true)
-          DEFAULT_BRANCH=${DEFAULT_BRANCH_REF#origin/}
-
-          # Candidate branches in order: input base-ref, develop, main, default
-          CANDIDATES=("${{ inputs.base-ref }}" "develop" "main" "$DEFAULT_BRANCH")
-
-          for BR in "${CANDIDATES[@]}"; do
-            [[ -z "$BR" ]] && continue
-            if git show-ref --verify --quiet "refs/remotes/origin/$BR"; then
-              git checkout -f -B "$BR" "refs/remotes/origin/$BR" || true
-              if find_codeowners "."; then
-                USED_REF="$BR"
-                # Re-resolve path from repo root
-                CODEOWNERS_FILE="codeowner-check-repo/${CODEOWNERS_FILE#./}"
-                break
-              fi
-            fi
-          done
-          popd >/dev/null
-
-          if [[ -z "$CODEOWNERS_FILE" ]]; then
-            echo "::error::CODEOWNERS file not found in any canonical location ('.github/CODEOWNERS', 'CODEOWNERS', 'docs/CODEOWNERS') on refs: '${{ inputs.base-ref }}', 'develop', 'main', or origin/HEAD default branch."
-            exit 1
-          else
-            echo "::notice::Using CODEOWNERS from '${USED_REF}' at path '${CODEOWNERS_FILE#codeowner-check-repo/}'"
-          fi
-        fi
-
-        # Extract owners from CODEOWNERS (ignore comments and empty lines)
-        # This handles @username and @org/team format and normalizes to lowercase
-        OWNERS=$(grep -v '^#' "${CODEOWNERS_FILE}" | \
-          grep -v '^[[:space:]]*$' | \
-          grep -o '@[a-zA-Z0-9_/-]*' | \
-          sed 's/@//' | \
-          tr '[:upper:]' '[:lower:]' | \
-          sort -u)
-
-        echo "::debug::Found code owners: ${OWNERS}"
-
-        # Normalize target user to lowercase for comparison
-        TARGET_USER_LOWER=$(echo "${TARGET_USER}" | tr '[:upper:]' '[:lower:]')
-
-        # Check if target user is in the owners list
-        IS_OWNER="false"
-        for owner in ${OWNERS}; do
-          if [[ "${owner}" == "${TARGET_USER_LOWER}" ]]; then
-            IS_OWNER="true"
-            break
+      find_codeowners() {
+        local base_path="$1"
+        local candidates=(
+          "$base_path/.github/CODEOWNERS"
+          "$base_path/CODEOWNERS"
+          "$base_path/docs/CODEOWNERS"
+        )
+        for f in "${candidates[@]}"; do
+          if [[ -f "$f" ]]; then
+            CODEOWNERS_FILE="$f"
+            return 0
           fi
         done
+        return 1
+      }
 
-        echo "is-owner=${IS_OWNER}" >> $GITHUB_OUTPUT
+      # Try current ref checkout first
+      find_codeowners "codeowner-check-repo" || true
 
-        if [[ "${IS_OWNER}" == "true" ]]; then
-          echo "::notice::✅ User ${TARGET_USER} is a code owner"
+      if [[ -z "$CODEOWNERS_FILE" ]]; then
+        echo "::notice::CODEOWNERS not found on '${USED_REF}'. Attempting fallback branches and default origin/HEAD..."
+        pushd codeowner-check-repo >/dev/null
+
+        # Fetch remote refs once
+        git fetch origin --depth=1 +refs/heads/*:refs/remotes/origin/* || true
+
+        # Determine origin default branch (origin/HEAD)
+        DEFAULT_BRANCH_REF=$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null || true)
+        DEFAULT_BRANCH=${DEFAULT_BRANCH_REF#origin/}
+
+        # Candidate branches in order: input base-ref, develop, main, default
+        CANDIDATES=("${{ inputs.base-ref }}" "develop" "main" "$DEFAULT_BRANCH")
+
+        for BR in "${CANDIDATES[@]}"; do
+          [[ -z "$BR" ]] && continue
+          if git show-ref --verify --quiet "refs/remotes/origin/$BR"; then
+            git checkout -f -B "$BR" "refs/remotes/origin/$BR" || true
+            if find_codeowners "."; then
+              USED_REF="$BR"
+              # Re-resolve path from repo root
+              CODEOWNERS_FILE="codeowner-check-repo/${CODEOWNERS_FILE#./}"
+              break
+            fi
+          fi
+        done
+        popd >/dev/null
+
+        if [[ -z "$CODEOWNERS_FILE" ]]; then
+          echo "::error::CODEOWNERS file not found in any canonical location"
+          echo "::error::('.github/CODEOWNERS', 'CODEOWNERS', 'docs/CODEOWNERS')"
+          echo "::error::on refs: '${{ inputs.base-ref }}', 'develop', 'main', or origin/HEAD default branch."
+          exit 1
         else
-          echo "::notice::❌ User ${TARGET_USER} is not a code owner"
+          echo "::notice::Using CODEOWNERS from '${USED_REF}' at path '${CODEOWNERS_FILE#codeowner-check-repo/}'"
         fi
+      fi
 
-    - name: Cleanup checkout
-      shell: bash
-      run: rm -rf codeowner-check-repo
+      # Extract owners from CODEOWNERS (ignore comments and empty lines)
+      # This handles @username and @org/team format and normalizes to lowercase
+      OWNERS=$(grep -v '^#' "${CODEOWNERS_FILE}" | \
+        grep -v '^[[:space:]]*$' | \
+        grep -o '@[a-zA-Z0-9_/-]*' | \
+        sed 's/@//' | \
+        tr '[:upper:]' '[:lower:]' | \
+        sort -u)
+
+      echo "::debug::Found code owners: ${OWNERS}"
+
+      # Normalize target user to lowercase for comparison
+      TARGET_USER_LOWER=$(echo "${TARGET_USER}" | tr '[:upper:]' '[:lower:]')
+
+      # Check if target user is in the owners list
+      IS_OWNER="false"
+      for owner in ${OWNERS}; do
+        if [[ "${owner}" == "${TARGET_USER_LOWER}" ]]; then
+          IS_OWNER="true"
+          break
+        fi
+      done
+
+      echo "is-owner=${IS_OWNER}" >> $GITHUB_OUTPUT
+
+      if [[ "${IS_OWNER}" == "true" ]]; then
+        echo "::notice::✅ User ${TARGET_USER} is a code owner"
+      else
+        echo "::notice::❌ User ${TARGET_USER} is not a code owner"
+      fi
+
+  - name: Cleanup checkout
+    shell: bash
+    run: rm -rf codeowner-check-repo
