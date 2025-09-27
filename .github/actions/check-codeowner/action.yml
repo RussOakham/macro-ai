@@ -79,8 +79,7 @@ runs:
         find_codeowners "codeowner-check-repo" || true
 
         if [[ -z "$CODEOWNERS_FILE" ]]; then
-          echo "::notice::CODEOWNERS not found on '${USED_REF}'.
-            ::Attempting fallback branches and default origin/HEAD..."
+          echo "::notice::CODEOWNERS not found on '${USED_REF}'. Attempting fallback branches and default origin/HEAD..."
           pushd codeowner-check-repo >/dev/null
 
           # Fetch remote refs once
@@ -108,9 +107,7 @@ runs:
           popd >/dev/null
 
           if [[ -z "$CODEOWNERS_FILE" ]]; then
-            echo "::error::CODEOWNERS file not found in any canonical location
-              ::('.github/CODEOWNERS', 'CODEOWNERS', 'docs/CODEOWNERS') on refs:
-              ::'${{ inputs.base-ref }}', 'develop', 'main', or origin/HEAD default branch."
+            echo "::error::CODEOWNERS file not found in any canonical location ('.github/CODEOWNERS', 'CODEOWNERS', 'docs/CODEOWNERS') on refs: '${{ inputs.base-ref }}', 'develop', 'main', or origin/HEAD default branch."
             exit 1
           else
             echo "::notice::Using CODEOWNERS from '${USED_REF}' at path '${CODEOWNERS_FILE#codeowner-check-repo/}'"
