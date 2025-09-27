@@ -52,6 +52,7 @@ const vpc = new awsx.ec2.Vpc('macro-ai-vpc', {
 	numberOfAvailabilityZones: 2,
 	enableDnsHostnames: true,
 	enableDnsSupport: true,
+	natGateways: { strategy: 'None' }, // ensure no NATs are created
 })
 
 // Create security group for ALB
@@ -91,32 +92,23 @@ const albSecurityGroup = new aws.ec2.SecurityGroup('macro-ai-alb-sg', {
 	},
 })
 
-// Query ECR to verify image exists and get the exact URI
+// Resolve image URI
 let verifiedImageUri: pulumi.Output<string>
-
 if (imageUri) {
-	// If imageUri is provided, verify it exists in ECR
-
-	// Query ECR to get the image details using the official getImage function
+	verifiedImageUri = pulumi.output(imageUri)
+} else {
 	const ecrImage = aws.ecr.getImageOutput({
 		repositoryName: ecrRepositoryName,
-		imageTag: imageTag,
+		imageTag,
 	})
-
-	// Use the imageUri directly from ECR response
 	verifiedImageUri = ecrImage.apply((image) => {
-		if (!image.imageDigest) {
+		if (!image.imageDigest || !image.imageUri) {
 			throw new Error(
 				`❌ Image with tag '${imageTag}' not found in ECR repository '${ecrRepositoryName}'`,
 			)
 		}
 		return image.imageUri
 	})
-} else {
-	// No imageUri provided - this should cause deployment to fail
-	throw new Error(
-		'❌ No imageUri provided in Pulumi configuration. Please set imageUri in your stack config.',
-	)
 }
 
 // Create security group for ECS service
@@ -221,43 +213,45 @@ async function fetchDopplerSecrets(
 const dopplerToken = config.getSecret('doppler:dopplerToken')
 
 // Create environment variables from Doppler secrets using Node SDK
-const allEnvironmentVariables = pulumi
-	.output(dopplerToken)
-	.apply((token) => {
-		// Fall back to environment variable if Pulumi config is not available (e.g., in CI/CD)
-		const fallbackToken =
-			process.env.DOPPLER_TOKEN || process.env.DOPPLER_TOKEN_STAGING
-		const finalToken = token || fallbackToken
+const allEnvironmentVariables = pulumi.secret(
+	pulumi
+		.output(dopplerToken)
+		.apply((token) => {
+			// Fall back to environment variable if Pulumi config is not available (e.g., in CI/CD)
+			const fallbackToken =
+				process.env.DOPPLER_TOKEN || process.env.DOPPLER_TOKEN_STAGING
+			const finalToken = token || fallbackToken
 
-		if (!finalToken) {
-			throw new Error(
-				'Doppler token not found in Pulumi configuration or environment variables. Please set doppler:dopplerToken in your stack config or DOPPLER_TOKEN in environment variables.',
-			)
-		}
-		return fetchDopplerSecrets(dopplerProject, dopplerConfig, finalToken)
-	})
-	.apply((secrets: Record<string, boolean | number | string>) => {
-		const envVars: Record<string, string> = {}
+			if (!finalToken) {
+				throw new Error(
+					'Doppler token not found in Pulumi configuration or environment variables. Please set doppler:dopplerToken in your stack config or DOPPLER_TOKEN in environment variables.',
+				)
+			}
+			return fetchDopplerSecrets(dopplerProject, dopplerConfig, finalToken)
+		})
+		.apply((secrets: Record<string, boolean | number | string>) => {
+			const envVars: Record<string, string> = {}
 
-		// Process secrets from the Node SDK response (direct JSON object)
-		if (secrets) {
-			Object.entries(secrets).forEach(([key, value]) => {
-				envVars[key] = String(value)
-			})
-		}
+			// Process secrets from the Node SDK response (direct JSON object)
+			if (secrets) {
+				Object.entries(secrets).forEach(([key, value]) => {
+					envVars[key] = String(value)
+				})
+			}
 
-		// Add application-specific environment variables
-		envVars.NODE_ENV = 'production'
-		envVars.SERVER_PORT = '3040'
-		envVars.APP_ENV = environmentName
+			// Add application-specific environment variables
+			envVars.NODE_ENV = 'production'
+			envVars.SERVER_PORT = '3040'
+			envVars.APP_ENV = environmentName
 
-		// Add custom domain name for CORS configuration
-		if (customDomainName) {
-			envVars.CUSTOM_DOMAIN_NAME = customDomainName
-		}
+			// Add custom domain name for CORS configuration
+			if (customDomainName) {
+				envVars.CUSTOM_DOMAIN_NAME = customDomainName
+			}
 
-		return envVars
-	})
+			return envVars
+		}),
+)
 
 // Create ECS task definition
 const taskDefinition = new aws.ecs.TaskDefinition('macro-ai-task', {
@@ -310,7 +304,7 @@ const taskDefinition = new aws.ecs.TaskDefinition('macro-ai-task', {
 						logDriver: 'awslogs',
 						options: {
 							'awslogs-group': `/ecs/macro-ai-${environmentName}`,
-							'awslogs-region': 'us-east-1',
+							'awslogs-region': aws.config.region,
 							'awslogs-stream-prefix': 'ecs',
 						},
 					},
@@ -444,9 +438,9 @@ const service = new aws.ecs.Service(
 		desiredCount: 1,
 		launchType: 'FARGATE',
 		networkConfiguration: {
-			subnets: vpc.privateSubnetIds,
+			subnets: vpc.publicSubnetIds,
 			securityGroups: [ecsSecurityGroup.id],
-			assignPublicIp: false,
+			assignPublicIp: true,
 		},
 		loadBalancers: [
 			{

@@ -164,9 +164,6 @@ reviews:
     description:
       mode: 'warning'
       requirements: 'Include a brief description of changes'
-    labels:
-      mode: 'warning'
-      requirements: 'Add appropriate labels for categorization'
 
   # Enable finishing touches for better code quality
   finishing_touches:
