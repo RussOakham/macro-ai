@@ -28,81 +28,80 @@ outputs:
 runs:
   using: 'composite'
   steps:
-  - name: Setup pnpm
-    uses: pnpm/action-setup@v4
-    with:
-      version: ${{ inputs.pnpm-version }}
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: ${{ inputs.pnpm-version }}
 
-  - name: Setup Node.js
-    uses: actions/setup-node@v4
-    with:
-      node-version: ${{ inputs.node-version }}
-      cache: 'pnpm'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'pnpm'
 
-  - name: Cache dependencies
-    id: cache-dependencies
-    uses: actions/cache@v4
-    with:
-      path: |
-        ~/.pnpm-store
-        node_modules
-        apps/*/node_modules
-        packages/*/node_modules
-        apps/*/dist
-        packages/*/dist
-      key: |
-        deps-${{ runner.os }}-${{ inputs.node-version }}-${{ hashFiles('**/pnpm-lock.yaml') }}${{ inputs.cache-key-suffix }}
-      restore-keys: |
-        deps-${{ runner.os }}-${{ inputs.node-version }}-
-        deps-${{ runner.os }}-
+    - name: Cache dependencies
+      id: cache-dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pnpm-store
+          node_modules
+          apps/*/node_modules
+          packages/*/node_modules
+          apps/*/dist
+          packages/*/dist
+        key: |
+          deps-${{ runner.os }}-${{ inputs.node-version }}-${{ hashFiles('**/pnpm-lock.yaml') }}${{ inputs.cache-key-suffix }}
+        restore-keys: |
+          deps-${{ runner.os }}-${{ inputs.node-version }}-
+          deps-${{ runner.os }}-
 
-  - name: Cache Vitest results
-    id: cache-test-results
-    uses: actions/cache@v4
-    with:
-      path: |
-        apps/*/coverage
-        packages/*/coverage
-        apps/*/.vitest-cache
-        packages/*/.vitest-cache
-      key: test-results-${{ runner.os }}-${{ github.sha }}
-      restore-keys: |
-        test-results-${{ runner.os }}-
+    - name: Cache Vitest results
+      id: cache-test-results
+      uses: actions/cache@v4
+      with:
+        path: |
+          apps/*/coverage
+          packages/*/coverage
+          apps/*/.vitest-cache
+          packages/*/.vitest-cache
+        key: test-results-${{ runner.os }}-${{ github.sha }}
+        restore-keys: |
+          test-results-${{ runner.os }}-
 
-  - name: Cache TypeScript builds
-    uses: actions/cache@v4
-    with:
-      path: |
-        apps/*/tsconfig.tsbuildinfo
-        packages/*/tsconfig.tsbuildinfo
-        **/dist/**/*.d.ts
-      key: typescript-${{ runner.os }}-${{ hashFiles('**/tsconfig.json', '**/package.json') }}
-      restore-keys: |
-        typescript-${{ runner.os }}-
+    - name: Cache TypeScript builds
+      uses: actions/cache@v4
+      with:
+        path: |
+          apps/*/tsconfig.tsbuildinfo
+          packages/*/tsconfig.tsbuildinfo
+          **/dist/**/*.d.ts
+        key: typescript-${{ runner.os }}-${{ hashFiles('**/tsconfig.json', '**/package.json') }}
+        restore-keys: |
+          typescript-${{ runner.os }}-
 
-  - name: Install dependencies
-    if: steps.cache-dependencies.outputs.cache-hit != 'true'
-    shell: bash
-    run: |
-      echo "📦 Installing dependencies (cache miss)..."
-      pnpm install --frozen-lockfile
-      echo "✅ Dependencies installed"
+    - name: Install dependencies
+      if: steps.cache-dependencies.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        echo "📦 Installing dependencies (cache miss)..."
+        pnpm install --frozen-lockfile
+        echo "✅ Dependencies installed"
 
-  - name: Verify cached dependencies
-    if: steps.cache-dependencies.outputs.cache-hit == 'true'
-    shell: bash
-    run: |
-      echo "✅ Dependencies restored from cache"
-      echo "📦 Verifying installation..."
-      pnpm install --frozen-lockfile --prefer-offline
-      echo "✅ Dependencies verified"
+    - name: Verify cached dependencies
+      if: steps.cache-dependencies.outputs.cache-hit == 'true'
+      shell: bash
+      run: |
+        echo "✅ Dependencies restored from cache"
+        echo "📦 Verifying installation..."
+        pnpm install --frozen-lockfile --prefer-offline
+        echo "✅ Dependencies verified"
 
-  - name: Build shared packages
-    shell: bash
-    run: |
-      echo "🔨 Building shared packages..."
-      pnpm --filter @repo/config-testing build
-      pnpm --filter @repo/config-typescript build
-      pnpm --filter @repo/config-eslint build
-      echo "✅ Shared packages built"
-
+    - name: Build shared packages
+      shell: bash
+      run: |
+        echo "🔨 Building shared packages..."
+        pnpm --filter @repo/config-testing build
+        pnpm --filter @repo/config-typescript build
+        pnpm --filter @repo/config-eslint build
+        echo "✅ Shared packages built"
