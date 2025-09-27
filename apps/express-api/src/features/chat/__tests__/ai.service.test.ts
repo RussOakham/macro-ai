@@ -101,10 +101,6 @@ describe('AIService', () => {
 					/^(sk-|build-time-not-required)/,
 				) as string,
 			})
-			expect(mockOpenAIInstance).toHaveBeenCalledWith('gpt-3.5-turbo')
-			expect(mockOpenAIInstance.embedding).toHaveBeenCalledWith(
-				'text-embedding-3-small',
-			)
 
 			// Verify the service was created successfully
 			expect(aiService).toBeDefined()

@@ -1,0 +1,317 @@
+---
+name: Deploy PR Preview (Pulumi)
+
+on:
+  pull_request:
+    types: [opened, synchronize, closed]
+    branches:
+      - main
+      - develop
+
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.number || github.sha }}'
+  cancel-in-progress: true
+
+jobs:
+  deploy-pr-preview:
+    name: Deploy PR Preview Infrastructure
+    runs-on: ubuntu-latest
+    if: github.event.pull_request != null
+    env:
+      AWS_REGION: us-east-1
+      NODE_VERSION: '20.19.4'
+      PNPM_VERSION: '10.14.0'
+      CUSTOM_DOMAIN_NAME: ${{ vars.CUSTOM_DOMAIN_NAME }}
+      HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    outputs:
+      api-endpoint: ${{ steps.deploy.outputs.api-endpoint }}
+      stack-name: ${{ steps.deploy.outputs.stack-name }}
+      should-deploy: ${{ steps.decide-deploy.outputs.should-deploy }}
+      has-backend-changes: ${{ steps.change-detection.outputs.has-backend-changes }}
+      has-frontend-changes: ${{ steps.change-detection.outputs.has-frontend-changes }}
+      has-infrastructure-changes: ${{ steps.change-detection.outputs.has-infrastructure-changes }}
+      is-first-deployment: ${{ steps.change-detection.outputs.is-first-deployment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '10.14.0'
+
+      - name: Detect changes
+        id: change-detection
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.number }}
+          PR_ACTION: ${{ github.event.action }}
+          BRANCH_REF: ${{ github.event.pull_request.head.ref }}
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+        run: |
+          echo "🔍 Detecting changes for PR #$PR_NUMBER..."
+
+          # Get base branch (default to develop if not specified)
+          BASE_BRANCH="$BASE_REF"
+          if [[ -z "$BASE_BRANCH" ]]; then
+            BASE_BRANCH="develop"
+          fi
+
+          # Get head SHA
+          HEAD_REF="$HEAD_SHA"
+
+          echo "Base branch: $BASE_BRANCH"
+          echo "Head SHA: $HEAD_REF"
+
+          # Fetch the base branch to compare against
+          git fetch origin "$BASE_BRANCH"
+
+          # Check for backend-related changes
+          BACKEND_CHANGES=$(git diff --name-only "origin/$BASE_BRANCH...$HEAD_REF" | grep -E '^infrastructure/|^apps/express-api/|^packages/macro-ai-api-client/' || true)
+          if [[ -n "$BACKEND_CHANGES" ]]; then
+            echo "✅ Backend changes detected"
+            echo "has-backend-changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ℹ️ No backend changes detected"
+            echo "has-backend-changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Check for frontend-related changes
+          FRONTEND_CHANGES=$(git diff --name-only "origin/$BASE_BRANCH...$HEAD_REF" | grep -E '^apps/client-ui/|^packages/ui-library/' || true)
+          if [[ -n "$FRONTEND_CHANGES" ]]; then
+            echo "✅ Frontend changes detected"
+            echo "has-frontend-changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ℹ️ No frontend changes detected"
+            echo "has-frontend-changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Check for infrastructure-related changes
+          INFRASTRUCTURE_CHANGES=$(git diff --name-only "origin/$BASE_BRANCH...$HEAD_REF" | grep -E '^infrastructure/|\.github/workflows/.*\.yml$' || true)
+          if [[ -n "$INFRASTRUCTURE_CHANGES" ]]; then
+            echo "✅ Infrastructure changes detected"
+            echo "has-infrastructure-changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ℹ️ No infrastructure changes detected"
+            echo "has-infrastructure-changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Check if this is the first deployment of this PR environment
+          PR_NUMBER="${PR_NUMBER}"
+          STACK_NAME="pr-${PR_NUMBER}"
+
+          # Install Pulumi CLI if not already available
+          if ! command -v pulumi >/dev/null 2>&1; then
+            echo "📦 Installing Pulumi CLI..."
+            curl -fsSL https://get.pulumi.com | sh
+            export PATH="$HOME/.pulumi/bin:$PATH"
+          fi
+
+          cd infrastructure/pulumi
+
+          if pulumi stack select "$STACK_NAME" 2>/dev/null; then
+            # Stack exists, this is not the first deployment
+            echo "ℹ️ Existing PR environment detected - using selective deployment"
+            echo "is-first-deployment=false" >> "$GITHUB_OUTPUT"
+          else
+            # Stack doesn't exist, this is the first deployment
+            echo "🚀 First deployment of PR environment - deploying both backend and frontend"
+            echo "is-first-deployment=true" >> "$GITHUB_OUTPUT"
+            # On first deployment, set both to true to ensure complete environment
+            echo "has-backend-changes=true" >> "$GITHUB_OUTPUT"
+            echo "has-frontend-changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.4'
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Configure AWS credentials
+        if: github.event.action != 'closed'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: pr-preview-build-docker
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        if: github.event.action != 'closed'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        if: github.event.action != 'closed'
+        id: build-image
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+          DOCKER_BUILDKIT: 1
+        run: |
+          # Build Docker image for PR
+          IMAGE_TAG="pr-${{ github.event.number }}-${{ github.run_id }}"
+          ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+
+          # Build and push to ECR using buildx (automatically uses ECR login)
+          docker buildx build \
+            --build-arg NODE_ENV=production \
+            --build-arg SERVER_PORT=3040 \
+            --build-arg APP_ENV=pr-${{ github.event.number }} \
+            --target runner \
+            --no-cache \
+            --platform linux/amd64 \
+            --tag "${ECR_REGISTRY}/macro-ai-staging-express-api:${IMAGE_TAG}" \
+            --push \
+            -f apps/express-api/Dockerfile \
+            .
+
+          echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "✅ Docker image built and pushed: ${IMAGE_TAG}"
+
+      - name: Decide deployment action
+        id: decide-deploy
+        run: |
+          echo "🔍 Deciding deployment action..."
+
+          # Check if PR is closed
+          if [[ "${PR_ACTION}" == "closed" ]]; then
+            echo "should-deploy=false" >> $GITHUB_OUTPUT
+            echo "deployment-action=destroy" >> $GITHUB_OUTPUT
+            echo "✅ PR closed - will destroy environment"
+            exit 0
+          fi
+
+          # Check if any changes require deployment
+          HAS_BACKEND="${{ steps.change-detection.outputs.has-backend-changes }}"
+          HAS_FRONTEND="${{ steps.change-detection.outputs.has-frontend-changes }}"
+          HAS_INFRASTRUCTURE="${{ steps.change-detection.outputs.has-infrastructure-changes }}"
+
+          echo "Backend changes: $HAS_BACKEND"
+          echo "Frontend changes: $HAS_FRONTEND"
+          echo "Infrastructure changes: $HAS_INFRASTRUCTURE"
+
+          # Deploy if any changes are detected
+          if [[ "$HAS_BACKEND" == "true" || "$HAS_FRONTEND" == "true" || "$HAS_INFRASTRUCTURE" == "true" ]]; then
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+            echo "deployment-action=deploy" >> $GITHUB_OUTPUT
+            echo "✅ Changes detected - will deploy"
+          else
+            echo "should-deploy=false" >> $GITHUB_OUTPUT
+            echo "deployment-action=skip" >> $GITHUB_OUTPUT
+            echo "⏭️ No relevant changes - skipping deployment"
+          fi
+
+      - name: Install Pulumi Dependencies
+        if: >-
+          steps.decide-deploy.outputs.should-deploy == 'true' &&
+          (steps.change-detection.outputs.has-backend-changes == 'true' ||
+          steps.change-detection.outputs.has-infrastructure-changes == 'true' ||
+          steps.change-detection.outputs.is-first-deployment == 'true')
+        shell: bash
+        run: |
+          echo "📦 Installing Pulumi project dependencies..."
+          cd infrastructure/pulumi
+          pnpm install
+
+      - name: Deploy PR Preview Infrastructure
+        if: >-
+          steps.decide-deploy.outputs.should-deploy == 'true' &&
+          (steps.change-detection.outputs.has-backend-changes == 'true' ||
+          steps.change-detection.outputs.has-infrastructure-changes == 'true' ||
+          steps.change-detection.outputs.is-first-deployment == 'true')
+        id: deploy
+        env:
+          PR_NUMBER: ${{ github.event.number }}
+          BRANCH_REF: ${{ github.event.pull_request.head.ref }}
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        run: |
+          echo "🚀 Starting PR Preview deployment..."
+          echo "Environment: pr-$PR_NUMBER"
+          echo "PR Number: $PR_NUMBER"
+          echo "Branch: $BRANCH_REF"
+          echo "Image Tag: ${{ steps.build-image.outputs.image-tag }}"
+
+          # Call the reusable workflow via GitHub API or use a different approach
+          # For now, we'll use the Pulumi CLI directly
+          cd infrastructure/pulumi
+
+          # Set up environment variables
+          export PULUMI_ACCESS_TOKEN="${{ secrets.PULUMI_ACCESS_TOKEN }}"
+          export AWS_REGION="${{ env.AWS_REGION }}"
+          export AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}"
+
+          STACK_NAME="pr-${{ github.event.number }}"
+          IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/macro-ai-staging-express-api:${{ steps.build-image.outputs.image-tag }}"
+
+          echo "🔧 Setting Pulumi configuration for stack: ${STACK_NAME}"
+          pulumi stack select ${STACK_NAME} || pulumi stack init ${STACK_NAME}
+
+          # Set all required configuration
+          pulumi config set environmentName "pr-${{ github.event.number }}" --stack "${STACK_NAME}"
+          pulumi config set deploymentType "preview" --stack "${STACK_NAME}"
+          pulumi config set imageUri "${IMAGE_URI}" --stack "${STACK_NAME}"
+          pulumi config set imageTag "${{ steps.build-image.outputs.image-tag }}" --stack "${STACK_NAME}"
+          pulumi config set doppler:dopplerToken "${DOPPLER_TOKEN}" --secret --stack "${STACK_NAME}"
+          # Doppler config is handled in Pulumi code for PR previews (uses 'dev' config)
+          pulumi config set prNumber "${{ github.event.number }}" --stack "${STACK_NAME}"
+          pulumi config set branchName "$BRANCH_REF" --stack "${STACK_NAME}"
+          if [[ -n "${CUSTOM_DOMAIN_NAME:-}" ]]; then
+            pulumi config set customDomainName "${CUSTOM_DOMAIN_NAME}" --stack "${STACK_NAME}"
+          fi
+          if [[ -n "${HOSTED_ZONE_ID:-}" ]]; then
+            pulumi config set hostedZoneId "${HOSTED_ZONE_ID}" --stack "${STACK_NAME}"
+          fi
+
+          echo "🚀 Deploying infrastructure..."
+          pulumi up --yes --stack "${STACK_NAME}"
+
+          # Get outputs
+          API_ENDPOINT=$(pulumi stack output apiEndpoint --stack "${STACK_NAME}")
+          STACK_NAME_OUTPUT=$(pulumi stack output stackName --stack "${STACK_NAME}" || echo "${STACK_NAME}")
+
+          echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
+          echo "stack-name=${STACK_NAME_OUTPUT}" >> $GITHUB_OUTPUT
+
+          echo "✅ Backend deployment completed successfully!"
+          echo "🌐 API Endpoint: ${API_ENDPOINT}"
+
+  deploy-frontend:
+    name: Deploy Frontend to Amplify
+    uses: ./.github/workflows/reusable-deploy-frontend.yml
+    if: github.event.pull_request != null
+    needs: [deploy-pr-preview]
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      environment-name: pr-${{ github.event.number }}
+      deployment-type: preview
+      pr-number: ${{ github.event.number }}
+      branch-name: ${{ github.event.pull_request.head.ref }}
+      backend-url: ${{ needs.deploy-pr-preview.outputs.api-endpoint }}
+      custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
+      hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
+      should-deploy: >-
+        ${{ needs.deploy-pr-preview.outputs.should-deploy == 'true' &&
+        (needs.deploy-pr-preview.outputs.has-frontend-changes == 'true' ||
+        needs.deploy-pr-preview.outputs.is-first-deployment == 'true') }}
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      API_KEY: ${{ secrets.VITE_API_KEY }}

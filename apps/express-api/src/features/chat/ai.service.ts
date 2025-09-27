@@ -22,8 +22,6 @@ interface ChatMessage {
  * Provides Go-style error handling for all AI operations
  */
 class AIService {
-	private chatModel: LanguageModelV1 | null = null
-	private embeddingModel: EmbeddingModel<string> | null = null
 	private initialized = false
 	private initPromise: null | Promise<void> = null
 	private openai: null | ReturnType<typeof createOpenAI> = null
@@ -45,7 +43,7 @@ class AIService {
 
 		const [result, error] = await tryCatch(
 			embed({
-				model: this.embeddingModel!,
+				model: this.openai!.embedding('text-embedding-3-small'),
 				value: text,
 			}),
 			'aiService - generateEmbedding',
@@ -138,7 +136,7 @@ class AIService {
 
 		const [result, error] = await tryCatch(
 			generateText({
-				model: this.chatModel!,
+				model: this.openai!('gpt-3.5-turbo'),
 				messages,
 				maxTokens: 1000,
 				temperature: 0.7,
@@ -165,7 +163,7 @@ class AIService {
 
 		const [streamResult, error] = await tryCatch(async () => {
 			const result = streamText({
-				model: this.chatModel!,
+				model: this.openai!('gpt-3.5-turbo'),
 				messages,
 				maxTokens: 1000,
 				temperature: 0.7,
@@ -199,13 +197,13 @@ class AIService {
 		switch (useCase) {
 			case 'chat':
 				return {
-					model: this.chatModel!,
+					model: this.openai!('gpt-3.5-turbo'),
 					maxTokens: 1000,
 					temperature: 0.7,
 				}
 			case 'embedding':
 				return {
-					model: this.embeddingModel!,
+					model: this.openai!.embedding('text-embedding-3-small'),
 					dimensions: 1536,
 				}
 		}
@@ -266,8 +264,6 @@ class AIService {
 		this.openai = createOpenAI({
 			apiKey: config.openaiApiKey,
 		})
-		this.chatModel = this.openai('gpt-3.5-turbo')
-		this.embeddingModel = this.openai.embedding('text-embedding-3-small')
 		this.initialized = true
 	}
 }
