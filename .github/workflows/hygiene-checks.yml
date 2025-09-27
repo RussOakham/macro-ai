@@ -33,7 +33,6 @@ jobs:
     name: Setup Environment
     runs-on: ubuntu-latest
     outputs:
-      NODE_ENV: ${{ env.NODE_ENV }}
       APP_ENV: ${{ env.APP_ENV }}
     steps:
     - name: Detect environment
@@ -86,19 +85,11 @@ jobs:
           fi
         fi
 
-        # Derive NODE_ENV from APP_ENV
-        if [[ "$APP_ENV" == "production" || "$APP_ENV" == "staging" ]]; then
-          NODE_ENV="production"
-        else
-          NODE_ENV="development"
-        fi
-
-        echo "✅ Environment configuration: APP_ENV=${APP_ENV}, NODE_ENV=${NODE_ENV}"
+        echo "✅ Environment configuration: APP_ENV=${APP_ENV}"
 
         # Set workflow environment variables for all jobs
         {
           echo "APP_ENV=${APP_ENV}"
-          echo "NODE_ENV=${NODE_ENV}"
         } >> "$GITHUB_ENV"
 
         # Load environment variables from Doppler secrets
@@ -183,7 +174,6 @@ jobs:
         # API Configuration
         API_KEY=${{ secrets.API_KEY }}
         SERVER_PORT=${{ secrets.SERVER_PORT || '3040' }}
-        NODE_ENV=${NODE_ENV}
         APP_ENV=${APP_ENV}
 
         # AWS Cognito Configuration
