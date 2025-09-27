@@ -143,6 +143,22 @@ reviews:
 
   # Path filters to ignore auto-generated files and build artifacts
   path_filters:
+    # Explicitly include documentation and infrastructure for review
+    - 'docs/**'
+    - 'infrastructure/**'
+
+    # Include configuration files for review
+    - '.coderabbit.yaml'
+    - '.github/**'
+    - 'eslint.config.js'
+    - 'package.json'
+    - 'pnpm-lock.yaml'
+    - 'turbo.json'
+    - 'tsconfig.json'
+    - 'vitest.config.ts'
+    - 'vitest.workspace.ts'
+    - 'yaml-lint.config.js'
+
     # Node modules and dependencies
     - 'node_modules/**'
     - '**/node_modules/**'
