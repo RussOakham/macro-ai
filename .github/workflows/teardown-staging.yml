@@ -1,0 +1,541 @@
+name: Manual Teardown - Staging Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to teardown (staging)'
+        required: true
+        default: 'staging'
+        type: string
+      confirm:
+        description: 'Type "I UNDERSTAND AND CONFIRM" to confirm staging environment destruction'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20.19.4'
+  PNPM_VERSION: '10.14.0'
+  # AWS environment variables
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+
+jobs:
+  # Validate the teardown request
+  validate-request:
+    name: Validate Teardown Request
+    runs-on: ubuntu-latest
+
+    outputs:
+      should-destroy: ${{ steps.decision.outputs.should-destroy }}
+      env-name: ${{ steps.env-name.outputs.env-name }}
+      target-user: ${{ steps.codeowner-check.outputs.target-user }}
+      amplify-app-name: ${{ steps.amplify-info.outputs.amplify-app-name }}
+      pulumi-stack-name: ${{ steps.pulumi-info.outputs.pulumi-stack-name }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Validate environment input
+      id: validate-env
+      run: |
+        ENVIRONMENT="${{ github.event.inputs.environment }}"
+
+        if [[ "$ENVIRONMENT" != "staging" ]]; then
+          echo "❌ Invalid environment: $ENVIRONMENT"
+          echo "Only 'staging' environment is supported for manual teardown"
+          exit 1
+        fi
+
+        echo "✅ Environment validated: $ENVIRONMENT"
+
+    - name: Validate confirmation input
+      id: validate-confirm
+      run: |
+        CONFIRM_INPUT="${{ github.event.inputs.confirm }}"
+
+        if [[ "$CONFIRM_INPUT" != "I UNDERSTAND AND CONFIRM" ]]; then
+          echo "❌ Confirmation failed. Expected: 'I UNDERSTAND AND CONFIRM', Got: '$CONFIRM_INPUT'"
+          echo "This is a safety measure to prevent accidental environment destruction."
+          exit 1
+        fi
+
+        echo "✅ Confirmation validated"
+
+    - name: Check code ownership
+      id: codeowner-check
+      uses: ./.github/actions/check-codeowner
+      with:
+        mode: 'manual'
+
+    - name: Generate environment name
+      id: env-name
+      run: |
+        ENV_NAME="staging"
+        echo "env-name=${ENV_NAME}" >> "$GITHUB_OUTPUT"
+        echo "🌍 Environment name: ${ENV_NAME}"
+
+    - name: Generate Amplify app info
+      id: amplify-info
+      run: |
+        AMPLIFY_APP_NAME="macro-ai-frontend-staging"
+        {
+          echo "amplify-app-name=${AMPLIFY_APP_NAME}"
+          echo "📱 Amplify app name: ${AMPLIFY_APP_NAME}"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Generate Pulumi stack info
+      id: pulumi-info
+      run: |
+        PULUMI_STACK_NAME="stg"
+        {
+          echo "pulumi-stack-name=${PULUMI_STACK_NAME}"
+          echo "🔧 Pulumi stack name: ${PULUMI_STACK_NAME}"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Make destruction decision
+      id: decision
+      run: |
+        IS_OWNER="${{ steps.codeowner-check.outputs.is-owner }}"
+        ACTOR="${{ steps.codeowner-check.outputs.target-user }}"
+
+        if [[ "${IS_OWNER}" == "true" ]]; then
+          {
+            echo "should-destroy=true"
+            echo "✅ Manual staging teardown approved for code owner: ${ACTOR}"
+            echo "🗑️ Target environment: ${{ steps.env-name.outputs.env-name }}"
+            echo "📱 Target Amplify app: ${{ steps.amplify-info.outputs.amplify-app-name }}"
+            echo "🔧 Target Pulumi stack: ${{ steps.pulumi-info.outputs.pulumi-stack-name }}"
+          } >> "$GITHUB_OUTPUT"
+        else
+          {
+            echo "should-destroy=false"
+            echo "❌ Manual staging teardown blocked: ${ACTOR} is not a code owner"
+          } >> "$GITHUB_OUTPUT"
+          exit 1
+        fi
+
+  # Check if resources exist before attempting teardown
+  check-resources:
+    name: Check Resources
+    runs-on: ubuntu-latest
+    needs: [ validate-request ]
+    if: needs.validate-request.outputs.should-destroy == 'true'
+
+    permissions:
+      id-token: write
+      contents: read
+
+    outputs:
+      amplify-app-exists: ${{ steps.check-amplify.outputs.app-exists }}
+      amplify-app-id: ${{ steps.check-amplify.outputs.app-id }}
+      pulumi-stack-exists: ${{ steps.check-pulumi.outputs.stack-exists }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Install Pulumi CLI
+      run: |
+        curl -fsSL https://get.pulumi.com | sh
+        echo "$HOME/.pulumi/bin" >> "$GITHUB_PATH"
+
+    - name: Check Amplify app existence
+      id: check-amplify
+      run: |
+        AMPLIFY_APP_NAME="${{ needs.validate-request.outputs.amplify-app-name }}"
+
+        echo "🔍 Checking for Amplify app: ${AMPLIFY_APP_NAME}"
+
+        # Check if Amplify app exists
+        APP_INFO=$(aws amplify list-apps \
+          --query "apps[?name=='${AMPLIFY_APP_NAME}'].{appId:appId,name:name,status:status}" \
+          --output json 2>/dev/null || echo "[]")
+
+        if [[ "$APP_INFO" != "[]" ]] && [[ -n "$APP_INFO" ]]; then
+          APP_ID=$(echo "$APP_INFO" | jq -r '.[0].appId' 2>/dev/null || echo "")
+          APP_STATUS=$(echo "$APP_INFO" | jq -r '.[0].status' 2>/dev/null || echo "")
+
+          if [[ -n "$APP_ID" && "$APP_ID" != "null" ]]; then
+            {
+              echo "app-exists=true"
+              echo "app-id=${APP_ID}"
+              echo "✅ Amplify app found: ${APP_ID} (status: ${APP_STATUS})"
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "app-exists=false"
+              echo "app-id="
+              echo "⚠️ Amplify app data found but could not extract app ID"
+            } >> "$GITHUB_OUTPUT"
+          fi
+        else
+          {
+            echo "app-exists=false"
+            echo "app-id="
+            echo "ℹ️ Amplify app not found"
+            echo "This could mean:"
+            echo "  - The frontend was never deployed"
+            echo "  - The app was already deleted"
+          } >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Check Pulumi stack existence
+      id: check-pulumi
+      env:
+        PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+      run: |
+        STACK_NAME="${{ needs.validate-request.outputs.pulumi-stack-name }}"
+
+        echo "🔍 Checking for Pulumi stack: ${STACK_NAME}"
+
+        cd infrastructure/pulumi
+
+        # Check if stack exists (try to select it)
+        if pulumi stack select ${STACK_NAME} 2>/dev/null; then
+          {
+            echo "stack-exists=true"
+            echo "✅ Pulumi stack found: ${STACK_NAME}"
+          } >> "$GITHUB_OUTPUT"
+        else
+          {
+            echo "stack-exists=false"
+            echo "ℹ️ Pulumi stack not found: ${STACK_NAME}"
+            echo "This could mean:"
+            echo "  - The backend was never deployed"
+            echo "  - The stack was already destroyed"
+          } >> "$GITHUB_OUTPUT"
+        fi
+
+  # Destroy the frontend (Amplify) resources
+  destroy-frontend:
+    name: Destroy Frontend (Amplify)
+    runs-on: ubuntu-latest
+    needs: [ validate-request, check-resources ]
+    if: needs.validate-request.outputs.should-destroy == 'true' && needs.check-resources.outputs.amplify-app-exists == 'true'
+
+    permissions:
+      id-token: write
+      contents: read
+
+    outputs:
+      destroy-result: ${{ steps.destroy.outputs.destroy-result }}
+      verification-result: ${{ steps.verify.outputs.verification-result }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: ${{ env.PNPM_VERSION }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Cache pnpm dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pnpm-store
+          node_modules
+        key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          pnpm-${{ runner.os }}-
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Install Amplify CLI
+      run: |
+        npm install -g @aws-amplify/cli
+        amplify --version
+
+    - name: Destroy Amplify app
+      id: destroy
+      env:
+        ENV_NAME: ${{ needs.validate-request.outputs.env-name }}
+      run: |
+        APP_ID="${{ needs.check-resources.outputs.amplify-app-id }}"
+        ENV_NAME="${{ needs.validate-request.outputs.env-name }}"
+        AMPLIFY_APP_NAME="${{ needs.validate-request.outputs.amplify-app-name }}"
+
+        echo "🗑️ MANUAL TEARDOWN: Destroying frontend staging environment"
+        echo "📱 Amplify app: ${AMPLIFY_APP_NAME}"
+        echo "🆔 App ID: ${APP_ID}"
+        echo "🌍 Environment: ${ENV_NAME}"
+        echo "👤 Requested by: ${{ needs.validate-request.outputs.target-user }}"
+        echo "📅 Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+        echo ""
+        echo "⚠️  This action will permanently destroy the frontend staging environment"
+
+        # Make destroy script executable and run it
+        chmod +x scripts/destroy-amplify-preview.sh
+
+        # Set environment variables for the script
+        export AMPLIFY_APP_ID="${APP_ID}"
+        export AMPLIFY_APP_NAME="${AMPLIFY_APP_NAME}"
+        export ENVIRONMENT_NAME="${ENV_NAME}"
+        export AWS_REGION="${{ env.AWS_REGION }}"
+
+        # Run destruction script with retries
+        DESTROY_SUCCESS=false
+        for attempt in {1..3}; do
+          echo "🔄 Destruction attempt ${attempt}/3..."
+
+          if ./scripts/destroy-amplify-preview.sh; then
+            DESTROY_SUCCESS=true
+            echo "✅ Amplify app destroyed successfully"
+            break
+          else
+            echo "❌ Destruction attempt ${attempt} failed"
+            if [[ ${attempt} -lt 3 ]]; then
+              echo "⏳ Waiting 30 seconds before retry..."
+              sleep 30
+            fi
+          fi
+        done
+
+        if [[ "${DESTROY_SUCCESS}" == "true" ]]; then
+          echo "destroy-result=success" >> "$GITHUB_OUTPUT"
+        else
+          {
+            echo "destroy-result=failed"
+            echo "❌ All destruction attempts failed"
+          } >> "$GITHUB_OUTPUT"
+          exit 1
+        fi
+
+    - name: Verify app deletion
+      id: verify
+      run: |
+        APP_ID="${{ needs.check-resources.outputs.amplify-app-id }}"
+
+        echo "🔍 Verifying Amplify app deletion..."
+
+        # Wait a moment for AWS to process the deletion
+        sleep 15
+
+        # Check if app still exists
+        APP_STATUS=$(aws amplify get-app \
+          --app-id "${APP_ID}" \
+          --query 'app.status' \
+          --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+
+        if [[ "${APP_STATUS}" == "DOES_NOT_EXIST" ]]; then
+          {
+            echo "verification-result=success"
+            echo "✅ App deletion verified - frontend staging fully cleaned up"
+          } >> "$GITHUB_OUTPUT"
+        else
+          {
+            echo "verification-result=partial"
+            echo "⚠️ App still exists with status: ${APP_STATUS}"
+            echo "This may be normal if deletion is still in progress"
+          } >> "$GITHUB_OUTPUT"
+        fi
+
+  # Destroy the backend (Pulumi) resources
+  destroy-backend:
+    name: Destroy Backend (Pulumi)
+    runs-on: ubuntu-latest
+    needs: [ validate-request, check-resources ]
+    if: needs.validate-request.outputs.should-destroy == 'true' && needs.check-resources.outputs.pulumi-stack-exists == 'true'
+
+    permissions:
+      id-token: write
+      contents: read
+
+    outputs:
+      destroy-result: ${{ steps.destroy.outputs.destroy-result }}
+      verification-result: ${{ steps.remove-stack.outputs.verification-result }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: ${{ env.PNPM_VERSION }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Cache pnpm dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pnpm-store
+          node_modules
+        key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          pnpm-${{ runner.os }}-
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Install Pulumi CLI
+      run: |
+        curl -fsSL https://get.pulumi.com | sh
+        echo "$HOME/.pulumi/bin" >> "$GITHUB_PATH"
+
+    - name: Destroy Pulumi stack
+      id: destroy
+      env:
+        PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+      run: |
+        STACK_NAME="${{ needs.validate-request.outputs.pulumi-stack-name }}"
+        ENV_NAME="${{ needs.validate-request.outputs.env-name }}"
+
+        echo "🗑️ MANUAL TEARDOWN: Destroying backend staging environment"
+        echo "🔧 Pulumi stack: ${STACK_NAME}"
+        echo "🌍 Environment: ${ENV_NAME}"
+        echo "👤 Requested by: ${{ needs.validate-request.outputs.target-user }}"
+        echo "📅 Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+        echo ""
+        echo "⚠️  This action will permanently destroy the backend staging environment"
+
+        cd infrastructure/pulumi
+
+        # Select the stack
+        pulumi stack select ${STACK_NAME}
+
+        # Destroy with confirmation
+        DESTROY_SUCCESS=false
+        if pulumi destroy --yes --stack "${STACK_NAME}"; then
+          DESTROY_SUCCESS=true
+          echo "✅ Pulumi stack destroyed successfully"
+        else
+          echo "❌ Pulumi stack destruction failed"
+        fi
+
+        if [[ "${DESTROY_SUCCESS}" == "true" ]]; then
+          echo "destroy-result=success" >> "$GITHUB_OUTPUT"
+        else
+          {
+            echo "destroy-result=failed"
+            echo "❌ Stack destruction failed"
+          } >> "$GITHUB_OUTPUT"
+          exit 1
+        fi
+
+    - name: Remove Pulumi stack
+      id: remove-stack
+      env:
+        PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+      run: |
+        STACK_NAME="${{ needs.validate-request.outputs.pulumi-stack-name }}"
+
+        echo "🧹 Removing Pulumi stack completely..."
+
+        cd infrastructure/pulumi
+
+        # Remove the stack
+        if pulumi stack rm ${STACK_NAME} --yes; then
+          {
+            echo "verification-result=success"
+            echo "✅ Pulumi stack removed completely"
+          } >> "$GITHUB_OUTPUT"
+        else
+          {
+            echo "verification-result=partial"
+            echo "⚠️ Stack may still exist - manual cleanup may be needed"
+          } >> "$GITHUB_OUTPUT"
+        fi
+
+  # Generate comprehensive teardown report
+  generate-teardown-report:
+    name: Generate Teardown Report
+    runs-on: ubuntu-latest
+    needs: [ validate-request, check-resources, destroy-frontend, destroy-backend ]
+    if: always() && needs.validate-request.outputs.should-destroy == 'true'
+
+    steps:
+    - name: Generate teardown report
+      run: |
+        {
+          echo "## 🗑️ Manual Staging Environment Teardown Report"
+          echo ""
+          echo "**Environment:** \`${{ needs.validate-request.outputs.env-name }}\`"
+          echo "**Amplify App:** \`${{ needs.validate-request.outputs.amplify-app-name }}\`"
+          echo "**Pulumi Stack:** \`${{ needs.validate-request.outputs.pulumi-stack-name }}\`"
+          echo "**Requested by:** @${{ needs.validate-request.outputs.target-user }}"
+          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo ""
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        AMPLIFY_EXISTS="${{ needs.check-resources.outputs.amplify-app-exists }}"
+        PULUMI_EXISTS="${{ needs.check-resources.outputs.pulumi-stack-exists }}"
+        FRONTEND_RESULT="${{ needs.destroy-frontend.outputs.destroy-result }}"
+        BACKEND_RESULT="${{ needs.destroy-backend.outputs.destroy-result }}"
+        FRONTEND_VERIFICATION="${{ needs.destroy-frontend.outputs.verification-result }}"
+        BACKEND_VERIFICATION="${{ needs.destroy-backend.outputs.verification-result }}"
+
+        if [[ "${AMPLIFY_EXISTS}" == "false" && "${PULUMI_EXISTS}" == "false" ]]; then
+          {
+            echo "**Status:** ℹ️ No action taken - Resources were not found"
+            echo ""
+            echo "**Possible reasons:**"
+            echo "- Staging environment was never deployed"
+            echo "- Resources were already manually deleted"
+          } >> "$GITHUB_STEP_SUMMARY"
+        else
+          {
+            echo "**Frontend Status:**"
+            if [[ "${AMPLIFY_EXISTS}" == "false" ]]; then
+              echo "- ℹ️ Amplify app was not found"
+            elif [[ "${FRONTEND_RESULT}" == "success" ]]; then
+              echo "- ✅ Frontend destroyed successfully"
+              if [[ "${FRONTEND_VERIFICATION}" == "success" ]]; then
+                echo "  - ✅ Deletion confirmed"
+              else
+                echo "  - ⚠️ Deletion in progress"
+              fi
+            else
+              echo "- ❌ Frontend destruction failed"
+            fi
+            echo ""
+            echo "**Backend Status:**"
+            if [[ "${PULUMI_EXISTS}" == "false" ]]; then
+              echo "- ℹ️ Pulumi stack was not found"
+            elif [[ "${BACKEND_RESULT}" == "success" ]]; then
+              echo "- ✅ Backend destroyed successfully"
+              if [[ "${BACKEND_VERIFICATION}" == "success" ]]; then
+                echo "  - ✅ Stack removed completely"
+              else
+                echo "  - ⚠️ Stack may still exist"
+              fi
+            else
+              echo "- ❌ Backend destruction failed"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+        {
+          echo ""
+          echo "---"
+          echo "*This report was generated by manual teardown workflow.*"
+        } >> "$GITHUB_STEP_SUMMARY"

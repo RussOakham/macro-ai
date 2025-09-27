@@ -1,7 +1,7 @@
 # Workflow: Dev - PR Label Check
 # Purpose: Ensures every PR to main has exactly one versioning label: major, minor, or patch.
 # Maintainers: Keep label list in sync with dev-pr-open.yml
-
+---
 name: Dev - PR Label Check
 
 permissions:
@@ -9,9 +9,9 @@ permissions:
 
 on:
   pull_request:
-    types: [opened, reopened, labeled, unlabeled, synchronize]
+    types: [ opened, reopened, labeled, unlabeled, synchronize ]
     branches:
-      - main
+    - main
 
 concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
@@ -27,13 +27,13 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [20.19.4]
+        node-version: [ 20.19.4 ]
     steps:
-      - name: Check PR Label
-        uses: mheap/github-action-required-labels@v5.4.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          mode: exactly
-          count: 1
-          labels: 'major, minor, patch'
+    - name: Check PR Label
+      uses: mheap/github-action-required-labels@v5.4.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        mode: exactly
+        count: 1
+        labels: 'major, minor, patch'
