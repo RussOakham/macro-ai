@@ -6,5 +6,4 @@ config:
   doppler:project: macro-ai
   doppler:config: dev
   doppler:dopplerToken:
-    secure: >-
-      AAABAGrNtb/6zFGD9lWvdweYTekQg5yqrA9UkANr1eLKOyoPXwQYVWhChMhj9a9 tf5pTyODYx6hKnFuNKusp1V/9LkDrgv4zf4w9Hb1OxxbRksaukA==
+    secure: AAABAGrNtb/6zFGD9lWvdweYTekQg5yqrA9UkANr1eLKOyoPXwQYVWhChMhj9a9tf5pTyODYx6hKnFuNKusp1V/9LkDrgv4zf4w9Hb1OxxbRksaukA==
