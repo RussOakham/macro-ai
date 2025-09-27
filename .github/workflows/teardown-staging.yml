@@ -200,6 +200,8 @@ jobs:
 
         echo "🔍 Checking for Pulumi stack: ${STACK_NAME}"
 
+        cd infrastructure/pulumi
+
         # Check if stack exists (try to select it)
         if pulumi stack select ${STACK_NAME} 2>/dev/null; then
           {
