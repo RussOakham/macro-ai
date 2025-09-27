@@ -4,14 +4,6 @@ name: Deploy Staging Environment (Pulumi)
 on:
   push:
     branches: [ develop ]
-    paths:
-    - 'infrastructure/**'
-    - 'apps/express-api/**'
-    - 'apps/client-ui/**'
-    - 'packages/macro-ai-api-client/**'
-    - 'packages/ui-library/**'
-    - '.github/workflows/deploy-staging-pulumi.yml'
-    - '.github/workflows/reusable-*.yml'
   workflow_dispatch:
     inputs:
       force-deploy:
