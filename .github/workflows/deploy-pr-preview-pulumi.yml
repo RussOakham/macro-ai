@@ -3,13 +3,15 @@ name: Deploy PR Preview (Pulumi)
 
 on:
   pull_request:
-    types: [ opened, synchronize, closed ]
+    types: [opened, synchronize, closed]
     branches:
-    - main
-    - develop
+      - main
+      - develop
 
 concurrency:
-  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.event.pull_request.head.ref || github.ref }}'
+  group: >-
+    '${{ github.workflow }} @ ${{ github.event.pull_request.head.label ||
+    github.event.pull_request.head.ref || github.ref }}'
   cancel-in-progress: true
 
 jobs:
@@ -35,24 +37,24 @@ jobs:
       has-infrastructure-changes: ${{ steps.change-detection.outputs.has-infrastructure-changes }}
       is-first-deployment: ${{ steps.change-detection.outputs.is-first-deployment }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: '10.14.0'
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '10.14.0'
 
-    - name: Detect changes
-      id: change-detection
-      env:
-        BASE_REF: ${{ github.event.pull_request.base.ref }}
-        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        PR_NUMBER: ${{ github.event.number }}
-        BRANCH_REF: ${{ github.event.pull_request.head.ref }}
-      run: |
+      - name: Detect changes
+        id: change-detection
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.number }}
+          BRANCH_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
         echo "🔍 Detecting changes for PR #$PR_NUMBER..."
 
         # Get base branch (default to develop if not specified)
@@ -307,19 +309,21 @@ jobs:
       pull-requests: write
 
     steps:
-    - name: Generate deployment summary
-      run: |
+      - name: Generate deployment summary
+        env:
+          BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
+        run: |
         echo "🎉 Complete PR Preview Environment Deployed!"
         echo "📱 Frontend URL: ${{ needs.deploy-frontend.outputs.app-url }}"
         echo "🔗 Backend API: ${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
         echo "📝 Stack: ${{ needs.deploy-pr-preview.outputs.stack-name }}"
         echo "🔢 PR: #${{ github.event.number }}"
-        echo "🌿 Branch: ${{ github.event.pull_request.head.ref }}"
+        echo "🌿 Branch: $BRANCH_NAME"
 
-    - name: Backend Health Check
-      if: needs.deploy-pr-preview.outputs.api-endpoint != '' && needs.deploy-pr-preview.outputs.has-backend-changes == 'true'
-      id: backend-health-check
-      run: |
+      - name: Backend Health Check
+        if: needs.deploy-pr-preview.outputs.api-endpoint != '' && needs.deploy-pr-preview.outputs.has-backend-changes == 'true'
+        id: backend-health-check
+        run: |
         API_ENDPOINT="${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
         echo "🔍 Performing backend health check on: '$API_ENDPOINT'"
 
@@ -343,16 +347,13 @@ jobs:
         echo "⚠️ Backend health status unknown - will proceed anyway"
         exit 0
 
-
-
   cleanup-on-pr-close:
     name: Cleanup on PR Close
     runs-on: ubuntu-latest
     if: github.event.action == 'closed'
-    needs: [ deploy-pr-preview, deploy-frontend ]
 
     steps:
-    - name: Configure AWS Credentials
+      - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -382,7 +383,6 @@ jobs:
         else
           echo "Amplify app $APP_NAME not found, skipping branch deletion."
         fi
-
 
     - name: Cleanup Pulumi Stack
       env:

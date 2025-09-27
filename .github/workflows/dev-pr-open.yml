@@ -1,14 +1,14 @@
 # Workflow: Dev - PR Open
 # Purpose: On PR open/reopen/sync to main, comment if versioning label (major/minor/patch) is missing.
 # Maintainers: Please keep the label list in sync with dev-pr-label.yml
-
+---
 name: Dev - PR Open
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [ opened, reopened, synchronize ]
     branches:
-      - main
+    - main
 
 concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
@@ -22,25 +22,25 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20.19.4]
+        node-version: [ 20.19.4 ]
     steps:
-      - name: Check for version label
-        id: label_check
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const labels = ['major', 'minor', 'patch'];
-            const prLabels = await github.rest.issues.listLabelsOnIssue({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number
-            });
-            const hasLabel = prLabels.data.some(label => labels.includes(label.name));
-            core.setOutput('has_label', hasLabel);
+    - name: Check for version label
+      id: label_check
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const labels = ['major', 'minor', 'patch'];
+          const prLabels = await github.rest.issues.listLabelsOnIssue({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number
+          });
+          const hasLabel = prLabels.data.some(label => labels.includes(label.name));
+          core.setOutput('has_label', hasLabel);
 
-      - name: Add Comment
-        if: steps.label_check.outputs.has_label == 'false'
-        uses: mshick/add-pr-comment@v2.8.2
-        with:
-          message: Please set a versioning label of either `major`, `minor`, or `patch` to the pull request. https://semver.org/
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Add Comment
+      if: steps.label_check.outputs.has_label == 'false'
+      uses: mshick/add-pr-comment@v2.8.2
+      with:
+        message: Please set a versioning label of either `major`, `minor`, or `patch` to the pull request. https://semver.org/
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
