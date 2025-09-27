@@ -385,6 +385,7 @@ jobs:
       environment-name: staging
       deployment-type: staging
       backend-stack-name: stg
+    secrets: inherit
     needs: [ deploy-backend, deploy-frontend ]
     if: always() && (needs.deploy-backend.result == 'success' || needs.deploy-frontend.result == 'success')
 
@@ -410,6 +411,7 @@ jobs:
     needs: [ change-detection, deploy-backend, deploy-frontend, setup-monitoring, schedule-teardown ]
     if: always()
     permissions:
+      contents: write
       pull-requests: write
 
     steps:
