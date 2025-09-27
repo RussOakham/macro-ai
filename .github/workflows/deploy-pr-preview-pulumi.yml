@@ -54,71 +54,71 @@ jobs:
           PR_NUMBER: ${{ github.event.number }}
           BRANCH_REF: ${{ github.event.pull_request.head.ref }}
         run: |
-        echo "🔍 Detecting changes for PR #$PR_NUMBER..."
+          echo "🔍 Detecting changes for PR #$PR_NUMBER..."
 
-        # Get base branch (default to develop if not specified)
-        BASE_BRANCH="$BASE_REF"
-        if [[ -z "$BASE_BRANCH" ]]; then
-          BASE_BRANCH="develop"
-        fi
+          # Get base branch (default to develop if not specified)
+          BASE_BRANCH="$BASE_REF"
+          if [[ -z "$BASE_BRANCH" ]]; then
+            BASE_BRANCH="develop"
+          fi
 
-        # Get head SHA
-        HEAD_REF="$HEAD_SHA"
+          # Get head SHA
+          HEAD_REF="$HEAD_SHA"
 
-        echo "Base branch: $BASE_BRANCH"
-        echo "Head SHA: $HEAD_REF"
+          echo "Base branch: $BASE_BRANCH"
+          echo "Head SHA: $HEAD_REF"
 
-        # Fetch the base branch to compare against
-        git fetch origin "$BASE_BRANCH"
+          # Fetch the base branch to compare against
+          git fetch origin "$BASE_BRANCH"
 
-        # Check for backend-related changes
-        BACKEND_CHANGES=$(git diff --name-only "origin/$BASE_BRANCH...$HEAD_REF" | grep -E '^infrastructure/|^apps/express-api/|^packages/macro-ai-api-client/' || true)
-        if [[ -n "$BACKEND_CHANGES" ]]; then
-          echo "✅ Backend changes detected"
-          echo "has-backend-changes=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "ℹ️ No backend changes detected"
-          echo "has-backend-changes=false" >> "$GITHUB_OUTPUT"
-        fi
+          # Check for backend-related changes
+          BACKEND_CHANGES=$(git diff --name-only "origin/$BASE_BRANCH...$HEAD_REF" | grep -E '^infrastructure/|^apps/express-api/|^packages/macro-ai-api-client/' || true)
+          if [[ -n "$BACKEND_CHANGES" ]]; then
+            echo "✅ Backend changes detected"
+            echo "has-backend-changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ℹ️ No backend changes detected"
+            echo "has-backend-changes=false" >> "$GITHUB_OUTPUT"
+          fi
 
-        # Check for frontend-related changes
-        FRONTEND_CHANGES=$(git diff --name-only "origin/$BASE_BRANCH...$HEAD_REF" | grep -E '^apps/client-ui/|^packages/ui-library/' || true)
-        if [[ -n "$FRONTEND_CHANGES" ]]; then
-          echo "✅ Frontend changes detected"
-          echo "has-frontend-changes=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "ℹ️ No frontend changes detected"
-          echo "has-frontend-changes=false" >> "$GITHUB_OUTPUT"
-        fi
+          # Check for frontend-related changes
+          FRONTEND_CHANGES=$(git diff --name-only "origin/$BASE_BRANCH...$HEAD_REF" | grep -E '^apps/client-ui/|^packages/ui-library/' || true)
+          if [[ -n "$FRONTEND_CHANGES" ]]; then
+            echo "✅ Frontend changes detected"
+            echo "has-frontend-changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ℹ️ No frontend changes detected"
+            echo "has-frontend-changes=false" >> "$GITHUB_OUTPUT"
+          fi
 
-        # Check for infrastructure-related changes
-        INFRASTRUCTURE_CHANGES=$(git diff --name-only "origin/$BASE_BRANCH...$HEAD_REF" | grep -E '^infrastructure/|\.github/workflows/.*\.yml$' || true)
-        if [[ -n "$INFRASTRUCTURE_CHANGES" ]]; then
-          echo "✅ Infrastructure changes detected"
-          echo "has-infrastructure-changes=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "ℹ️ No infrastructure changes detected"
-          echo "has-infrastructure-changes=false" >> "$GITHUB_OUTPUT"
-        fi
+          # Check for infrastructure-related changes
+          INFRASTRUCTURE_CHANGES=$(git diff --name-only "origin/$BASE_BRANCH...$HEAD_REF" | grep -E '^infrastructure/|\.github/workflows/.*\.yml$' || true)
+          if [[ -n "$INFRASTRUCTURE_CHANGES" ]]; then
+            echo "✅ Infrastructure changes detected"
+            echo "has-infrastructure-changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ℹ️ No infrastructure changes detected"
+            echo "has-infrastructure-changes=false" >> "$GITHUB_OUTPUT"
+          fi
 
-        # Check if this is the first deployment of this PR environment
-        PR_NUMBER="${{ github.event.number }}"
-        STACK_NAME="pr-${PR_NUMBER}"
+          # Check if this is the first deployment of this PR environment
+          PR_NUMBER="${{ github.event.number }}"
+          STACK_NAME="pr-${PR_NUMBER}"
 
-        cd infrastructure/pulumi
+          cd infrastructure/pulumi
 
-        if pulumi stack select "$STACK_NAME" 2>/dev/null; then
-          # Stack exists, this is not the first deployment
-          echo "ℹ️ Existing PR environment detected - using selective deployment"
-          echo "is-first-deployment=false" >> "$GITHUB_OUTPUT"
-        else
-          # Stack doesn't exist, this is the first deployment
-          echo "🚀 First deployment of PR environment - deploying both backend and frontend"
-          echo "is-first-deployment=true" >> "$GITHUB_OUTPUT"
-          # On first deployment, set both to true to ensure complete environment
-          echo "has-backend-changes=true" >> "$GITHUB_OUTPUT"
-          echo "has-frontend-changes=true" >> "$GITHUB_OUTPUT"
-        fi
+          if pulumi stack select "$STACK_NAME" 2>/dev/null; then
+            # Stack exists, this is not the first deployment
+            echo "ℹ️ Existing PR environment detected - using selective deployment"
+            echo "is-first-deployment=false" >> "$GITHUB_OUTPUT"
+          else
+            # Stack doesn't exist, this is the first deployment
+            echo "🚀 First deployment of PR environment - deploying both backend and frontend"
+            echo "is-first-deployment=true" >> "$GITHUB_OUTPUT"
+            # On first deployment, set both to true to ensure complete environment
+            echo "has-backend-changes=true" >> "$GITHUB_OUTPUT"
+            echo "has-frontend-changes=true" >> "$GITHUB_OUTPUT"
+          fi
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
