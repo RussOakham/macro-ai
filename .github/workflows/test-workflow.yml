@@ -1,9 +1,0 @@
----
-name: Test Workflow
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Test step with a very long line that should be allowed in workflow files but not in regular YAML files because workflow files have a 200 character limit while regular files have only 120 characters
-      run: echo "This is a test workflow file for testing the YAML linter"

@@ -3,15 +3,14 @@ name: Deploy PR Preview (Pulumi)
 
 on:
   pull_request:
-    types: [opened, synchronize, closed]
+    types: [ opened, synchronize, closed ]
     branches:
-      - main
-      - develop
+    - main
+    - develop
 
 concurrency:
   group: >-
-    '${{ github.workflow }} @ ${{ github.event.pull_request.head.label ||
-    github.event.pull_request.head.ref || github.ref }}'
+    '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.event.pull_request.head.ref || github.ref }}'
   cancel-in-progress: true
 
 jobs:
@@ -312,43 +311,43 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Generate deployment summary
-        env:
-          BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
-        run: |
-          echo "🎉 Complete PR Preview Environment Deployed!"
-          echo "📱 Frontend URL: ${{ needs.deploy-frontend.outputs.app-url }}"
-          echo "🔗 Backend API: ${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
-          echo "📝 Stack: ${{ needs.deploy-pr-preview.outputs.stack-name }}"
-          echo "🔢 PR: #${{ github.event.number }}"
-          echo "🌿 Branch: $BRANCH_NAME"
+    - name: Generate deployment summary
+      env:
+        BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
+      run: |
+        echo "🎉 Complete PR Preview Environment Deployed!"
+        echo "📱 Frontend URL: ${{ needs.deploy-frontend.outputs.app-url }}"
+        echo "🔗 Backend API: ${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
+        echo "📝 Stack: ${{ needs.deploy-pr-preview.outputs.stack-name }}"
+        echo "🔢 PR: #${{ github.event.number }}"
+        echo "🌿 Branch: $BRANCH_NAME"
 
-      - name: Backend Health Check
-        if: needs.deploy-pr-preview.outputs.api-endpoint != '' && needs.deploy-pr-preview.outputs.has-backend-changes == 'true'
-        id: backend-health-check
-        run: |
-          API_ENDPOINT="${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
-          echo "🔍 Performing backend health check on: '$API_ENDPOINT'"
+    - name: Backend Health Check
+      if: needs.deploy-pr-preview.outputs.api-endpoint != '' && needs.deploy-pr-preview.outputs.has-backend-changes == 'true'
+      id: backend-health-check
+      run: |
+        API_ENDPOINT="${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
+        echo "🔍 Performing backend health check on: '$API_ENDPOINT'"
 
-          # Wait for the service to be ready
-          sleep 30
+        # Wait for the service to be ready
+        sleep 30
 
-          # Perform backend health check
-          for i in {1..10}; do
-            if curl -f -s --connect-timeout 5 --max-time 10 "${API_ENDPOINT}/api/health" > /dev/null 2>&1; then
-              echo "✅ Backend health check passed on attempt ${i}"
-              echo "backend-health-status=healthy" >> "$GITHUB_OUTPUT"
-              echo "✅ Backend service is responding at ${API_ENDPOINT}"
-              exit 0
-            fi
-            echo "⏳ Backend health check attempt ${i} failed, retrying..."
-            sleep 15
-          done
+        # Perform backend health check
+        for i in {1..10}; do
+          if curl -f -s --connect-timeout 5 --max-time 10 "${API_ENDPOINT}/api/health" > /dev/null 2>&1; then
+            echo "✅ Backend health check passed on attempt ${i}"
+            echo "backend-health-status=healthy" >> "$GITHUB_OUTPUT"
+            echo "✅ Backend service is responding at ${API_ENDPOINT}"
+            exit 0
+          fi
+          echo "⏳ Backend health check attempt ${i} failed, retrying..."
+          sleep 15
+        done
 
-          echo "⚠️ Backend health check failed after 10 attempts"
-          echo "backend-health-status=unknown" >> "$GITHUB_OUTPUT"
-          echo "⚠️ Backend health status unknown - will proceed anyway"
-          exit 0
+        echo "⚠️ Backend health check failed after 10 attempts"
+        echo "backend-health-status=unknown" >> "$GITHUB_OUTPUT"
+        echo "⚠️ Backend health status unknown - will proceed anyway"
+        exit 0
 
   cleanup-on-pr-close:
     name: Cleanup on PR Close
