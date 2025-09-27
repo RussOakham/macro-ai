@@ -51,7 +51,8 @@ runs:
           packages/*/node_modules
           apps/*/dist
           packages/*/dist
-        key: deps-${{ runner.os }}-${{ inputs.node-version }}-${{ hashFiles('**/pnpm-lock.yaml') }}${{ inputs.cache-key-suffix }}
+        key: >-
+          deps-${{ runner.os }}-${{ inputs.node-version }}- ${{ hashFiles('**/pnpm-lock.yaml') }}${{ inputs.cache-key-suffix }}
         restore-keys: |
           deps-${{ runner.os }}-${{ inputs.node-version }}-
           deps-${{ runner.os }}-

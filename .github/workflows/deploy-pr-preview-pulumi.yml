@@ -216,7 +216,11 @@ jobs:
     # Pulumi CLI already installed earlier in the workflow
 
     - name: Install Pulumi Dependencies
-      if: steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true')
+      if: >-
+        steps.decide-deploy.outputs.should-deploy == 'true' &&
+        (steps.change-detection.outputs.has-backend-changes == 'true' ||
+        steps.change-detection.outputs.has-infrastructure-changes == 'true' ||
+        steps.change-detection.outputs.is-first-deployment == 'true')
       shell: bash
       run: |
         echo "📦 Installing Pulumi project dependencies..."
@@ -224,7 +228,11 @@ jobs:
         pnpm install
 
     - name: Deploy PR Preview Infrastructure
-      if: steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true')
+      if: >-
+        steps.decide-deploy.outputs.should-deploy == 'true' &&
+        (steps.change-detection.outputs.has-backend-changes == 'true' ||
+        steps.change-detection.outputs.has-infrastructure-changes == 'true' ||
+        steps.change-detection.outputs.is-first-deployment == 'true')
       id: deploy
       env:
         PR_NUMBER: ${{ github.event.number }}
@@ -295,7 +303,10 @@ jobs:
       backend-url: ${{ needs.deploy-pr-preview.outputs.api-endpoint }}
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
-      should-deploy: ${{ needs.deploy-pr-preview.outputs.should-deploy == 'true' && (needs.deploy-pr-preview.outputs.has-frontend-changes == 'true' || needs.deploy-pr-preview.outputs.is-first-deployment == 'true') }}
+      should-deploy: >-
+        ${{ needs.deploy-pr-preview.outputs.should-deploy == 'true' &&
+        (needs.deploy-pr-preview.outputs.has-frontend-changes == 'true' ||
+        needs.deploy-pr-preview.outputs.is-first-deployment == 'true') }}
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}

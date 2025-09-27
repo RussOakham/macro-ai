@@ -195,17 +195,15 @@ runs:
           STACK_NAME=$(echo "$DISCOVERY_RESULT" | jq -r '.backend_stack // ""')
           RESOLUTION_METHOD=$(echo "$DISCOVERY_RESULT" | jq -r '.resolution_method // "unknown"')
           FALLBACK_USED=$(echo "$DISCOVERY_RESULT" | jq -r '.fallback_used // false')
-          
           # Validation information
           VALIDATION_PERFORMED=$(echo "$DISCOVERY_RESULT" | jq -r '.validation.performed // false')
           CONNECTIVITY_STATUS="unknown"
           RESPONSE_TIME="0"
-          
           if [[ "$VALIDATION_PERFORMED" == "true" ]]; then
             CONNECTIVITY_STATUS=$(echo "$DISCOVERY_RESULT" | jq -r '.validation.connectivity_status // "unknown"')
             RESPONSE_TIME=$(echo "$DISCOVERY_RESULT" | jq -r '.validation.response_time_ms // 0')
           fi
-          
+
           # Set outputs
           echo "backend-found=$BACKEND_FOUND" >> $GITHUB_OUTPUT
           echo "api-endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
@@ -215,7 +213,7 @@ runs:
           echo "connectivity-status=$CONNECTIVITY_STATUS" >> $GITHUB_OUTPUT
           echo "response-time=$RESPONSE_TIME" >> $GITHUB_OUTPUT
           echo "discovery-result=$DISCOVERY_RESULT" >> $GITHUB_OUTPUT
-          
+
           # Log results
           echo ""
           echo "🎯 Backend Discovery Results:"
@@ -224,12 +222,12 @@ runs:
           echo "  Stack Name: $STACK_NAME"
           echo "  Resolution Method: $RESOLUTION_METHOD"
           echo "  Fallback Used: $FALLBACK_USED"
-          
+
           if [[ "$VALIDATION_PERFORMED" == "true" ]]; then
             echo "  Connectivity Status: $CONNECTIVITY_STATUS"
             echo "  Response Time: ${RESPONSE_TIME}ms"
           fi
-          
+
           if [[ "$BACKEND_FOUND" == "true" ]]; then
             echo "✅ Backend discovery successful"
           else
@@ -239,7 +237,7 @@ runs:
           # Discovery failed
           ERROR_MSG=$(echo "$DISCOVERY_RESULT" | jq -r '.error // "unknown_error"')
           echo "❌ Backend discovery failed: $ERROR_MSG"
-          
+
           # Set default outputs
           echo "backend-found=false" >> $GITHUB_OUTPUT
           echo "api-endpoint=" >> $GITHUB_OUTPUT
@@ -249,7 +247,7 @@ runs:
           echo "connectivity-status=unknown" >> $GITHUB_OUTPUT
           echo "response-time=0" >> $GITHUB_OUTPUT
           echo "discovery-result=$DISCOVERY_RESULT" >> $GITHUB_OUTPUT
-          
+
           exit 1
         fi
 
