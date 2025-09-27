@@ -39,7 +39,6 @@
 	"dependencies": {
 		"@dopplerhq/node-sdk": "^1.3.0",
 		"@pulumi/aws": "^6.50.0",
-		"@pulumi/doppler": "^1.5.0",
 		"@pulumi/pulumi": "^3.134.0",
 		"source-map-support": "^0.5.21"
 	},
