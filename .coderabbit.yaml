@@ -141,9 +141,20 @@ reviews:
     checkmake:
       enabled: true
 
-  # Path filters - focus review on documentation and infrastructure
+  # Path filters - enable full repository coverage with targeted exclusions
   path_filters:
-    # Include specific paths for review (overrides default exclusions)
+    # Include all files by default for full repository coverage
+    - '**/*'
+    # Exclude specific directories/files that shouldn't be reviewed
+    - '!**/node_modules/**'
+    - '!**/dist/**'
+    - '!**/build/**'
+    - '!**/.git/**'
+    - '!**/coverage/**'
+    - '!.codeql/**'
+    - '!**/*.log'
+    - '!**/.DS_Store'
+    # Keep important paths for explicit review (docs, infrastructure, config)
     - 'docs/**'
     - 'infrastructure/**'
     - '.coderabbit.yaml'
