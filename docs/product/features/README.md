@@ -1,6 +1,6 @@
 # Product Features Documentation
 
-## Status: ⚠️ IN_DEVELOPMENT
+## Status: ✅ PRODUCTION-READY
 
 This section provides product-focused documentation for all major features of the Macro AI application, including
 strategic context, user value propositions, and feature evolution roadmap. We maintain this documentation to bridge
@@ -125,18 +125,21 @@ success against product goals, and coordinate cross-functional development effor
 
 ### Requirements and Planning
 
-- **[Multi-Model Chat PRD](../requirements/prds/multi-model-chat.md)** - Multi-model platform requirements
-- **[Response Sources PRD](../requirements/prds/response-sources-sidebar.md)** - Research tools requirements
+- **[Multi-Model Chat Strategy](../strategy/product-roadmap.md#phase-2-multi-model-platform-launch)** - Multi-model platform
+  strategy
+- **[Response Sources Strategy](../strategy/product-roadmap.md#phase-3-response-sources--research-enhancement)** - Research
+  tools strategy
 - **[Implementation Plans](../planning/implementation-plans/README.md)** - Feature development coordination
 - **[Feature Flags Strategy](../planning/feature-flags/strategy.md)** - Feature rollout and testing approach
 
 ### Technical Implementation
 
-- **[Technical Features](../../features/README.md)** - Detailed technical implementation documentation
+- **[Technical Features](../../../features/README.md)** - Detailed technical implementation documentation
 - **[System Architecture](../../architecture/system-architecture.md)** - Technical foundation for features
-- **[Multi-Model Architecture](../requirements/technical-designs/multi-model-architecture.md)** - Multi-model technical design
-- **[Response Sources Design](../requirements/technical-designs/response-sources-implementation.md)** - Research tools
-  technical design
+- **[Multi-Model Architecture](../strategy/product-roadmap.md#phase-2-multi-model-platform-launch)** - Multi-model technical
+  strategy
+- **[Response Sources Design](../strategy/product-roadmap.md#phase-3-response-sources--research-enhancement)** - Research
+  tools strategy
 
 ### Analysis and Communication
 
@@ -147,6 +150,6 @@ success against product goals, and coordinate cross-functional development effor
 
 ---
 
-**Last Updated**: August 2025  
+**Last Updated**: Current  
 **Documentation Version**: 1.0.0  
-**Next Review**: September 2025
+**Next Review**: Quarterly

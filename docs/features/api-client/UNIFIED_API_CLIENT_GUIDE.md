@@ -122,7 +122,7 @@ graph TB
 │   └── types/             # TypeScript type definitions
 │       └── index.ts            # Type exports
 ├── scripts/               # Generation scripts
-│   ├── generate-modular.ts     # Main generation script
+│   ├── generate.ts            # Main generation script
 │   └── utils/                  # Generation utilities
 └── dist/                  # Built distribution
 ```
@@ -292,7 +292,7 @@ pnpm test
 ### **Generation Process**
 
 ```typescript
-// scripts/generate-modular.ts
+// scripts/generate.ts
 import { generateModularClients } from './utils/file-generator'
 
 async function main() {
@@ -1090,7 +1090,7 @@ overhead typically associated with API clients while ensuring perfect synchroniz
 
 ---
 
-**Last Updated**: August 31, 2025  
+**Last Updated**: Current  
 **Version**: 2.0.0  
 **Status**: Production Ready ✅
 

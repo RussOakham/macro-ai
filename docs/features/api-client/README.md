@@ -194,7 +194,7 @@ const userOps = apiClient.user
 	"scripts": {
 		"build": "pnpm generate && tsup",
 		"dev": "pnpm generate && tsup --watch",
-		"generate": "tsx scripts/generate-modular.ts"
+		"generate": "pnpm generate"
 	}
 }
 ```

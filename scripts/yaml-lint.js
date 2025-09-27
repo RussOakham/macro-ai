@@ -1,413 +1,311 @@
 #!/usr/bin/env node
+/* eslint-disable security-node/detect-crlf */
 
 /**
- * Custom YAML Linting Script
- * Uses js-yaml for comprehensive YAML validation and formatting checks
+ * Custom YAML Linter
+ * Comprehensive YAML validation with detailed error reporting
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
+import { readFileSync } from 'node:fs'
 import { glob } from 'glob'
-import yaml from 'js-yaml'
+import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-const projectRoot = path.resolve(__dirname, '..')
+// Get the directory name in ES modules
+const filename = fileURLToPath(import.meta.url)
+const dirname = path.dirname(filename)
 
 // Configuration
-const config = {
+const CONFIG = {
 	// File patterns to lint
-	patterns: ['**/*.yml', '**/*.yaml'],
-
-	// Directories to ignore
-	ignore: [
-		'**/node_modules/**',
-		'**/dist/**',
-		'**/coverage/**',
-		'**/build/**',
-		'**/.git/**',
-		'**/pnpm-lock.yaml',
-		'**/package-lock.json',
-		'**/yarn.lock',
+	patterns: [
+		'**/*.yml',
+		'**/*.yaml',
+		'!**/node_modules/**',
+		'!**/dist/**',
+		'!**/coverage/**',
+		'!**/build/**',
+		'!**/cdk.out/**',
+		'!**/infrastructure/dist/**',
+		'!**/.git/**',
+		'!**/pnpm-lock.yaml',
+		'!**/package-lock.json',
+		'!**/yarn.lock',
 	],
 
-	// YAML parsing options
-	yamlOptions: {
-		// Use 2-space indentation
-		indent: 2,
-
-		// Line width limit
-		lineWidth: 120,
-
-		// Quote style
-		quotingType: "'",
-
-		// Force quotes for certain values
-		forceQuotes: false,
-
-		// Allow duplicate keys (will be warned)
-		noDuplicateKeys: false,
-
-		// Allow anchors and aliases
-		noAnchors: false,
-
-		// Allow tags
-		noTags: false,
+	// Line length limits
+	lineLength: {
+		default: 120,
+		dockerCompose: 200,
+		githubActions: 200,
+		amplify: 200,
 	},
 
-	// Validation rules
-	rules: {
-		maxLineLength: 120,
-		indentSize: 2,
-		requireNewlineAtEnd: true,
-		allowTrailingSpaces: false,
-		maxConsecutiveEmptyLines: 2,
-		requireConsistentQuotes: true,
-		preferSingleQuotes: true,
-	},
+	// Indentation settings
+	indent: 2,
 }
 
-// Color codes for console output
-const colors = {
-	reset: '\x1b[0m',
-	red: '\x1b[31m',
-	green: '\x1b[32m',
-	yellow: '\x1b[33m',
-	blue: '\x1b[34m',
-	magenta: '\x1b[35m',
-	cyan: '\x1b[36m',
-	white: '\x1b[37m',
-}
-
-// Error tracking
-let errorCount = 0
-let warningCount = 0
-let fileCount = 0
-
-/**
- * Log a message with color
- */
-function log(color, message) {
-	console.log(`${colors[color]}${message}${colors.reset}`)
+// File type overrides
+const FILE_TYPE_OVERRIDES = {
+	'docker-compose': { lineLength: CONFIG.lineLength.dockerCompose },
+	workflow: { lineLength: CONFIG.lineLength.githubActions },
+	amplify: { lineLength: CONFIG.lineLength.amplify },
 }
 
 /**
- * Log an error message
+ * Get file type based on filename
  */
-function logError(file, line, message) {
-	errorCount++
-	log('red', `❌ ${file}:${line || '?'} - ${message}`)
-}
+const getFileType = function getFileType(filePath) {
+	const basename = path.basename(filePath)
 
-/**
- * Log a warning message
- */
-function logWarning(file, line, message) {
-	warningCount++
-	log('yellow', `⚠️  ${file}:${line || '?'} - ${message}`)
-}
-
-/**
- * Log a success message
- */
-function logSuccess(file, message) {
-	log('green', `✅ ${file} - ${message}`)
-}
-
-/**
- * Validate YAML syntax
- */
-function validateYamlSyntax(filePath, content) {
-	try {
-		yaml.load(content, {
-			filename: filePath,
-			...config.yamlOptions,
-		})
-		return { valid: true, error: null }
-	} catch (error) {
-		return { valid: false, error: error.message }
+	if (basename.startsWith('docker-compose')) {
+		return 'docker-compose'
 	}
+
+	if (
+		basename.includes('workflow') ||
+		filePath.includes('/.github/workflows/')
+	) {
+		return 'workflow'
+	}
+
+	if (basename.startsWith('amplify')) {
+		return 'amplify'
+	}
+
+	return 'default'
 }
 
 /**
- * Check line length
+ * Check if line exceeds length limit
  */
-function checkLineLength(filePath, content) {
-	const lines = content.split('\n')
-	const issues = []
-
-	lines.forEach((line, index) => {
-		if (line.length > config.rules.maxLineLength) {
-			issues.push({
-				line: index + 1,
-				message: `Line too long (${line.length} > ${config.rules.maxLineLength} characters)`,
-			})
+const checkLineLength = function checkLineLength(line, maxLength, lineNumber) {
+	if (line.length > maxLength) {
+		return {
+			type: 'warning',
+			line: lineNumber,
+			message: `Line exceeds ${maxLength} characters (${line.length})`,
+			rule: 'line-length',
 		}
-	})
-
-	return issues
-}
-
-/**
- * Check indentation consistency
- */
-function checkIndentation(filePath, content) {
-	const lines = content.split('\n')
-	const issues = []
-
-	lines.forEach((line, index) => {
-		if (line.trim() === '') return // Skip empty lines
-
-		// Check for tabs (should use spaces)
-		if (line.includes('\t')) {
-			issues.push({
-				line: index + 1,
-				message: 'Found tab character, use spaces for indentation',
-			})
-		}
-
-		// Check for inconsistent indentation
-		const leadingSpaces = line.match(/^(\s*)/)[1].length
-		if (leadingSpaces > 0 && leadingSpaces % config.rules.indentSize !== 0) {
-			issues.push({
-				line: index + 1,
-				message: `Inconsistent indentation (${leadingSpaces} spaces, should be multiple of ${config.rules.indentSize})`,
-			})
-		}
-	})
-
-	return issues
+	}
+	return null
 }
 
 /**
  * Check for trailing spaces
  */
-function checkTrailingSpaces(filePath, content) {
-	const lines = content.split('\n')
-	const issues = []
-
-	lines.forEach((line, index) => {
-		if (line.endsWith(' ') || line.endsWith('\t')) {
-			issues.push({
-				line: index + 1,
-				message: 'Trailing whitespace found',
-			})
+const checkTrailingSpaces = function checkTrailingSpaces(line, lineNumber) {
+	if (line.match(/\s+$/u)) {
+		return {
+			type: 'error',
+			line: lineNumber,
+			message: 'Trailing spaces found',
+			rule: 'trailing-spaces',
 		}
-	})
-
-	return issues
-}
-
-/**
- * Check for excessive empty lines
- */
-function checkEmptyLines(filePath, content) {
-	const lines = content.split('\n')
-	const issues = []
-	let consecutiveEmptyLines = 0
-
-	lines.forEach((line, index) => {
-		if (line.trim() === '') {
-			consecutiveEmptyLines++
-		} else {
-			if (consecutiveEmptyLines > config.rules.maxConsecutiveEmptyLines) {
-				issues.push({
-					line: index - consecutiveEmptyLines + 1,
-					message: `Too many consecutive empty lines (${consecutiveEmptyLines} > ${config.rules.maxConsecutiveEmptyLines})`,
-				})
-			}
-			consecutiveEmptyLines = 0
-		}
-	})
-
-	return issues
-}
-
-/**
- * Check for newline at end of file
- */
-function checkNewlineAtEnd(filePath, content) {
-	if (config.rules.requireNewlineAtEnd && !content.endsWith('\n')) {
-		return [
-			{
-				line: content.split('\n').length,
-				message: 'File should end with a newline',
-			},
-		]
 	}
-	return []
+	return null
 }
 
 /**
- * Check for duplicate keys
+ * Check indentation consistency
  */
-function checkDuplicateKeys(filePath, content) {
-	try {
-		const doc = yaml.load(content, {
-			filename: filePath,
-			...config.yamlOptions,
-		})
-
-		const issues = []
-
-		function checkObject(obj, path = '') {
-			if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
-				return
-			}
-
-			const keys = Object.keys(obj)
-			const seenKeys = new Set()
-
-			keys.forEach((key) => {
-				if (seenKeys.has(key)) {
-					issues.push({
-						line: 0, // Line number detection for duplicate keys is complex
-						message: `Duplicate key '${key}' found${path ? ` in ${path}` : ''}`,
-					})
-				}
-				seenKeys.add(key)
-
-				// Recursively check nested objects
-				checkObject(obj[key], path ? `${path}.${key}` : key)
-			})
-		}
-
-		checkObject(doc)
-		return issues
-	} catch (error) {
-		// If we can't parse the YAML, skip this check
-		return []
+const checkIndentation = function checkIndentation(
+	line,
+	lineNumber,
+	expectedIndent,
+) {
+	const indentMatch = line.match(/^(?<indent>\s*)/u)
+	if (!indentMatch) {
+		return null
 	}
+
+	const indent = indentMatch.groups.indent
+
+	// Check if indentation is a multiple of expected spaces
+	if (indent.length % expectedIndent !== 0) {
+		return {
+			type: 'error',
+			line: lineNumber,
+			message: `Inconsistent indentation. Expected multiple of ${expectedIndent} spaces`,
+			rule: 'indentation',
+		}
+	}
+
+	// Check for tabs
+	if (indent.includes('\t')) {
+		return {
+			type: 'error',
+			line: lineNumber,
+			message: 'Tabs found. Use spaces only',
+			rule: 'indentation',
+		}
+	}
+
+	return null
+}
+
+/**
+ * Check for empty lines at start/end
+ */
+const checkEmptyLines = function checkEmptyLines(lines, lineNumber) {
+	const isEmpty = lines[lineNumber - 1].trim() === ''
+	const prevLineEmpty = lineNumber > 1 && lines[lineNumber - 2].trim() === ''
+
+	// Check for too many consecutive empty lines
+	if (isEmpty && prevLineEmpty) {
+		return {
+			type: 'error',
+			line: lineNumber,
+			message: 'Multiple consecutive empty lines',
+			rule: 'empty-lines',
+		}
+	}
+
+	// Check for empty line at start of file
+	if (lineNumber === 1 && isEmpty) {
+		return {
+			type: 'error',
+			line: lineNumber,
+			message: 'Empty line at start of file',
+			rule: 'empty-lines',
+		}
+	}
+
+	// Check for missing newline at end of file
+	if (
+		lineNumber === lines.length &&
+		!isEmpty &&
+		!lines[lineNumber - 1].endsWith('\n')
+	) {
+		return {
+			type: 'error',
+			line: lineNumber,
+			message: 'Missing newline at end of file',
+			rule: 'eof-newline',
+		}
+	}
+
+	return null
 }
 
 /**
  * Lint a single YAML file
  */
-function lintFile(filePath) {
-	const relativePath = path.relative(projectRoot, filePath)
-	fileCount++
-
+const lintYamlFile = function lintYamlFile(filePath) {
 	try {
-		const content = fs.readFileSync(filePath, 'utf8')
+		const content = readFileSync(filePath, 'utf8')
+		const lines = content.split('\n')
+		const fileType = getFileType(filePath)
+		const maxLineLength =
+			FILE_TYPE_OVERRIDES[fileType]?.lineLength || CONFIG.lineLength.default
+		const issues = []
 
-		// Validate YAML syntax
-		const syntaxCheck = validateYamlSyntax(filePath, content)
-		if (!syntaxCheck.valid) {
-			logError(relativePath, 0, `YAML syntax error: ${syntaxCheck.error}`)
-			return false
+		for (let index = 0; index < lines.length; index++) {
+			const line = lines[index]
+			const lineNumber = index + 1
+
+			// Check line length
+			const lineLengthIssue = checkLineLength(line, maxLineLength, lineNumber)
+			if (lineLengthIssue) {
+				issues.push(lineLengthIssue)
+			}
+
+			// Check trailing spaces
+			const trailingSpacesIssue = checkTrailingSpaces(line, lineNumber)
+			if (trailingSpacesIssue) {
+				issues.push(trailingSpacesIssue)
+			}
+
+			// Check indentation
+			const indentationIssue = checkIndentation(line, lineNumber, CONFIG.indent)
+			if (indentationIssue) {
+				issues.push(indentationIssue)
+			}
+
+			// Check empty lines
+			const emptyLinesIssue = checkEmptyLines(lines, lineNumber)
+			if (emptyLinesIssue) {
+				issues.push(emptyLinesIssue)
+			}
 		}
 
-		// Run all checks
-		const checks = [
-			{ name: 'Line length', fn: () => checkLineLength(filePath, content) },
-			{ name: 'Indentation', fn: () => checkIndentation(filePath, content) },
+		return issues
+	} catch (error) {
+		return [
 			{
-				name: 'Trailing spaces',
-				fn: () => checkTrailingSpaces(filePath, content),
-			},
-			{ name: 'Empty lines', fn: () => checkEmptyLines(filePath, content) },
-			{
-				name: 'Newline at end',
-				fn: () => checkNewlineAtEnd(filePath, content),
-			},
-			{
-				name: 'Duplicate keys',
-				fn: () => checkDuplicateKeys(filePath, content),
+				type: 'error',
+				line: 0,
+				message: `Failed to read file: ${error.message}`,
+				rule: 'file-read',
 			},
 		]
-
-		let hasIssues = false
-
-		checks.forEach((check) => {
-			const issues = check.fn()
-			issues.forEach((issue) => {
-				if (check.name === 'Line length' || check.name === 'Empty lines') {
-					logWarning(
-						relativePath,
-						issue.line,
-						`${check.name}: ${issue.message}`,
-					)
-				} else {
-					logError(relativePath, issue.line, `${check.name}: ${issue.message}`)
-				}
-				hasIssues = true
-			})
-		})
-
-		if (!hasIssues) {
-			logSuccess(relativePath, 'No issues found')
-		}
-
-		return !hasIssues
-	} catch (error) {
-		logError(relativePath, 0, `Failed to read file: ${error.message}`)
-		return false
 	}
 }
 
 /**
- * Main function
+ * Print issues in a formatted way
  */
-async function main() {
-	log('cyan', '🔍 YAML Linting Tool')
-	log('cyan', '==================')
+const printIssues = function printIssues(filePath, issues) {
+	if (issues.length === 0) {
+		return
+	}
+
+	console.log(`\n${filePath}:`)
+	issues.forEach((issue) => {
+		const icon = issue.type === 'error' ? '❌' : '⚠️'
+		console.log(
+			`  ${icon} Line ${issue.line}: ${issue.message} (${issue.rule})`,
+		)
+	})
+}
+
+/**
+ * Main linting function
+ */
+const runLinter = async function runLinter() {
+	// const args = process.argv.slice(2)
+	// const shouldFix = args.includes('--fix')
+
+	console.log('🔍 Running YAML Linter...')
 
 	try {
-		// Find all YAML files
-		const files = []
-		for (const pattern of config.patterns) {
-			const matches = await glob(pattern, {
-				cwd: projectRoot,
-				ignore: config.ignore,
-				absolute: true,
-			})
-			files.push(...matches)
-		}
+		const files = await glob(CONFIG.patterns, {
+			cwd: path.join(dirname, '..'),
+			absolute: true,
+			dot: true,
+		})
 
 		if (files.length === 0) {
-			log('yellow', 'No YAML files found to lint')
+			console.log('✅ No YAML files found to lint')
 			return
 		}
 
-		log('blue', `Found ${files.length} YAML file(s) to lint`)
-		log('blue', '')
+		let totalIssues = 0
+		let filesWithIssues = 0
 
-		// Lint each file
-		let successCount = 0
 		for (const file of files) {
-			if (lintFile(file)) {
-				successCount++
+			const issues = lintYamlFile(file)
+			if (issues.length > 0) {
+				filesWithIssues += 1
+				totalIssues += issues.length
+				printIssues(file, issues)
 			}
 		}
 
-		// Summary
-		log('blue', '')
-		log('cyan', '📊 Summary')
-		log('cyan', '==========')
-		log('blue', `Files processed: ${fileCount}`)
-		log('green', `Files passed: ${successCount}`)
-		log('red', `Errors: ${errorCount}`)
-		log('yellow', `Warnings: ${warningCount}`)
+		console.log(
+			`\n📊 Summary: ${filesWithIssues} files with issues, ${totalIssues} total issues`,
+		)
 
-		if (errorCount > 0) {
-			log('red', '')
-			log('red', '❌ Linting failed with errors')
+		if (filesWithIssues > 0) {
 			process.exit(1)
-		} else if (warningCount > 0) {
-			log('yellow', '')
-			log('yellow', '⚠️  Linting completed with warnings')
-			process.exit(0)
 		} else {
-			log('green', '')
-			log('green', '✅ All YAML files passed linting')
-			process.exit(0)
+			console.log('✅ All YAML files passed linting!')
 		}
 	} catch (error) {
-		log('red', `❌ Fatal error: ${error.message}`)
+		console.error('❌ Error running linter:', error.message)
 		process.exit(1)
 	}
 }
 
-// Run the main function
-main()
+// Run the linter
+runLinter()

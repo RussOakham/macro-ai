@@ -328,7 +328,7 @@ jobs:
 
         # Perform backend health check
         for i in {1..10}; do
-          if curl -f -s "${API_ENDPOINT}/api/health" > /dev/null 2>&1; then
+          if curl -f -s --connect-timeout 5 --max-time 10 "${API_ENDPOINT}/api/health" > /dev/null 2>&1; then
             echo "✅ Backend health check passed on attempt ${i}"
             echo "backend-health-status=healthy" >> "$GITHUB_OUTPUT"
             echo "✅ Backend service is responding at ${API_ENDPOINT}"
@@ -343,140 +343,7 @@ jobs:
         echo "⚠️ Backend health status unknown - will proceed anyway"
         exit 0
 
-    - name: Comment PR with deployment info
-      if: needs.deploy-pr-preview.outputs.should-deploy == 'true'
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const apiEndpoint = '${{ needs.deploy-pr-preview.outputs.api-endpoint }}';
-          const stackName = '${{ needs.deploy-pr-preview.outputs.stack-name }}';
-          const frontendHealthStatus = '${{ needs.deploy-frontend.outputs.frontend-health-status || 'unknown' }}';
-          const backendHealthStatus = '${{ steps.backend-health-check.outputs.backend-health-status || 'unknown' }}';
-          const prNumber = '${{ github.event.number }}';
-          const branchRef = '${{ github.event.pull_request.head.ref }}';
-          const hasBackendChanges = '${{ needs.deploy-pr-preview.outputs.has-backend-changes }}' === 'true';
-          const hasFrontendChanges = '${{ needs.deploy-pr-preview.outputs.has-frontend-changes }}' === 'true';
 
-          let healthIcon = '⚠️';
-          let healthMessage = 'Health check in progress...';
-
-          // Determine overall health status
-          let frontendStatus = frontendHealthStatus === 'healthy' ? '✅' : frontendHealthStatus === 'unknown' ? '⚠️' : '❌';
-          let backendStatus = backendHealthStatus === 'healthy' ? '✅' : backendHealthStatus === 'unknown' ? '⚠️' : '❌';
-
-          if (hasBackendChanges && hasFrontendChanges) {
-            // Both backend and frontend changed
-            if (frontendHealthStatus === 'healthy' && backendHealthStatus === 'healthy') {
-              healthIcon = '✅';
-              healthMessage = 'Health check passed - both frontend and backend are ready!';
-            } else {
-              healthIcon = '⚠️';
-              healthMessage = `Health check mixed - Frontend: ${frontendStatus}, Backend: ${backendStatus}. Check workflow logs for details.`;
-            }
-          } else if (hasBackendChanges) {
-            // Only backend changed
-            if (backendHealthStatus === 'healthy') {
-              healthIcon = '✅';
-              healthMessage = 'Backend health check passed - service is ready!';
-            } else if (backendHealthStatus === 'unknown') {
-              healthIcon = '⚠️';
-              healthMessage = 'Backend health check status unknown - check workflow logs';
-            } else {
-              healthIcon = '❌';
-              healthMessage = 'Backend health check failed - please check the workflow logs';
-            }
-          } else if (hasFrontendChanges) {
-            // Only frontend changed
-            if (frontendHealthStatus === 'healthy') {
-              healthIcon = '✅';
-              healthMessage = 'Frontend health check passed - application is ready!';
-            } else if (frontendHealthStatus === 'unknown') {
-              healthIcon = '⚠️';
-              healthMessage = 'Frontend health check status unknown - check workflow logs';
-            } else {
-              healthIcon = '❌';
-              healthMessage = 'Frontend health check failed - please check the workflow logs';
-            }
-          } else {
-            // No changes detected
-            healthIcon = '✅';
-            healthMessage = 'No changes detected - existing environment is ready!';
-          }
-
-          const frontendUrl = '${{ needs.deploy-frontend.outputs.app-url || 'Deploying...' }}';
-
-          const body = [
-            '## 🚀 PR Preview Environment Deployed',
-            '',
-            `**${healthIcon} Complete preview environment deployed successfully!**`,
-            '',
-            '### 🌐 **Access URLs**',
-            `- **Frontend**: ${frontendUrl || 'Deploying...'}`,
-            `- **Backend API**: ${apiEndpoint}`,
-            `- **Pulumi Stack**: \`${stackName}\``,
-            `- **Environment**: Preview for PR #${prNumber}`,
-            `- **Branch**: \`${branchRef}\``,
-            `- **Health Status**: ${healthMessage}`,
-            '',
-            '### 🔍 **Testing Your Changes**',
-            '',
-            'You can now test your complete application:',
-            '1. **Frontend**: Visit the frontend URL above to interact with your changes',
-            '2. **Backend API**: Test API endpoints directly at \`' + apiEndpoint + '\`',
-            '3. **Frontend Health Check**: \`' + frontendUrl + '\`',
-            '4. **Backend Health Check**: \`' + apiEndpoint + '/api/health\`',
-            '',
-            '### 🏗️ **Infrastructure Details**',
-            '- Full ECS Fargate deployment',
-            '- Application Load Balancer',
-            '- Custom domains (\`pr-' + prNumber + '.api.' + '${{ vars.CUSTOM_DOMAIN_NAME }}' + '\`)',
-            '- Doppler secrets integration',
-            '- Amplify frontend deployment',
-            '',
-            '### 🧹 Automatic Cleanup',
-            '',
-            'This environment will be automatically destroyed when you:',
-            '- Close this PR',
-            '- Merge this PR to main',
-            '- Push new commits (environment will be updated)',
-            '',
-            '**⚠️ Note**: This is a cost-optimized preview environment with reduced resources.'
-          ].join('\n');
-
-          await github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: body
-          });
-
-    - name: Comment PR on failure
-      if: needs.deploy-pr-preview.outputs.should-deploy == 'true' && failure() && needs.deploy-pr-preview.outputs.has-backend-changes == 'true'
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const prNumber = '${{ github.event.number }}';
-
-          const body = [
-            '## ❌ PR Preview Environment Deployment Failed',
-            '',
-            '**❌ The preview environment could not be deployed.**',
-            '',
-            'Please check the workflow logs for details. Common issues:',
-            '- Docker build failures',
-            '- Pulumi deployment errors',
-            '- AWS permission issues',
-            '- Doppler configuration problems',
-            '',
-            'The development team has been notified.'
-          ].join('\n');
-
-          await github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: body
-          });
 
   cleanup-on-pr-close:
     name: Cleanup on PR Close
@@ -491,6 +358,11 @@ jobs:
         role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
         aws-region: ${{ env.AWS_REGION }}
         role-session-name: pr-preview-cleanup
+
+    - name: Install Pulumi CLI
+      run: |
+        curl -fsSL https://get.pulumi.com | sh
+        echo "$HOME/.pulumi/bin" >> "$GITHUB_PATH"
 
     - name: Cleanup Amplify Branch
       run: |
@@ -511,35 +383,10 @@ jobs:
           echo "Amplify app $APP_NAME not found, skipping branch deletion."
         fi
 
-    - name: Comment PR on cleanup
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const prNumber = '${{ github.event.number }}';
-
-          const body = [
-            '## 🧹 PR Preview Environment Cleaned Up',
-            '',
-            '**✅ The preview environment for PR #' + prNumber + ' has been destroyed.**',
-            '',
-            'The following resources have been cleaned up:',
-            '- ECS Fargate service and task definition',
-            '- Application Load Balancer and target group',
-            '- VPC resources (if not shared)',
-            '- CloudWatch log groups',
-            '- Route53 records (if applicable)',
-            '',
-            '**Cost savings**: All preview environment resources have been removed to avoid unnecessary charges.'
-          ].join('\n');
-
-          await github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: body
-          });
 
     - name: Cleanup Pulumi Stack
+      env:
+        PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
       run: |
         echo "🧹 Cleaning up PR #${{ github.event.number }} environment..."
 

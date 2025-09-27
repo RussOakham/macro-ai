@@ -254,7 +254,7 @@ export async function generateApiClient(): Promise<void> {
 // Package.json scripts integration
 {
   "scripts": {
-    "generate": "tsx scripts/generate-modular.ts",
+    "generate": "pnpm generate",
     "build": "pnpm generate && tsc",
     "dev": "pnpm generate && tsc --watch"
   }
@@ -567,6 +567,6 @@ This ADR should be reviewed:
 - **Tool Updates**: When updating Zodios or OpenAPI tooling
 - **Performance Reviews**: When client bundle size or performance concerns arise
 
-**Last Reviewed**: 2024-01-15
-**Next Review**: 2024-02-15
+**Last Reviewed**: Current
+**Next Review**: Quarterly
 **Reviewers**: Frontend Team, Backend Team, DevOps Team

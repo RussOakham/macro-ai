@@ -1,15 +1,16 @@
 # AWS Deployment Strategy
 
-## Current Implementation Status 🚀 PHASE 1 COMPLETE
+## Current Implementation Status 🚀 PULUMI + AMPLIFY DEPLOYMENT
 
-This document outlines the comprehensive AWS deployment strategy for the Macro AI application, including Infrastructure
-as Code (IaC) recommendations, AWS services architecture, and deployment automation strategies.
+This document outlines the current AWS deployment strategy for the Macro AI application, featuring a hybrid Pulumi and
+Amplify deployment approach with automated CI/CD pipelines and comprehensive monitoring.
 
-**Phase 1 Status**: ✅ **COMPLETE** (Foundation Setup)
-**Date Completed**: 2025-08-04
-**Next Phase**: API Conversion & Lambda Deployment
+**Deployment Status**: ✅ **ACTIVE** (Pulumi Infrastructure + Amplify Frontend)
+**Infrastructure**: Pulumi (TypeScript) with Doppler secrets management
+**Frontend**: AWS Amplify for static site deployment
+**Backend**: Pulumi-managed ECS Fargate containers
 
-The foundation infrastructure is **deployed and validated** for scalable, secure, and cost-effective cloud deployment.
+The infrastructure is **deployed and operational** with scalable, secure, and cost-effective cloud deployment.
 
 ## 🏗️ Architecture Overview
 
@@ -160,128 +161,156 @@ Resources:
 
 ## 🏗️ Infrastructure as Code (IaC)
 
-### AWS CDK (Recommended) ✅ PREFERRED
+### Pulumi (TypeScript) ✅ CURRENT DEPLOYMENT
 
 **Benefits:**
 
 - Type-safe infrastructure definitions
 - Familiar programming languages (TypeScript)
-- Built-in best practices and constructs
-- Excellent IDE support
+- Multi-cloud support and portability
+- Excellent IDE support and debugging
+- Doppler integration for secrets management
 
 **Project Structure:**
 
 ```text
 infrastructure/
-├── bin/
-│   └── macro-ai-stack.ts          # CDK app entry point
-├── lib/
-│   ├── compute/
-│   │   ├── ecs-cluster.ts         # ECS cluster and services
-│   │   └── load-balancer.ts       # ALB configuration
-│   ├── database/
-│   │   ├── rds-postgres.ts        # PostgreSQL database
-│   │   └── elasticache.ts         # Redis cache
-│   ├── networking/
-│   │   ├── vpc.ts                 # VPC and networking
-│   │   └── security-groups.ts     # Security group rules
-│   ├── storage/
-│   │   └── s3-buckets.ts          # S3 bucket configuration
-│   ├── monitoring/
-│   │   └── cloudwatch.ts          # Monitoring and alarms
-│   └── macro-ai-stack.ts          # Main stack definition
-├── config/
-│   ├── dev.ts                     # Development configuration
-│   ├── staging.ts                 # Staging configuration
-│   └── prod.ts                    # Production configuration
+├── pulumi/
+│   ├── index.ts                   # Main Pulumi program
+│   ├── Pulumi.yaml               # Pulumi project configuration
+│   ├── Pulumi.dev.yaml           # Development stack config
+│   ├── Pulumi.stg.yaml           # Staging stack config
+│   └── Pulumi.pr.yaml            # Preview stack config
 └── package.json
 ```
 
-**Sample CDK Stack:**
+**Sample Pulumi Infrastructure:**
 
 ```typescript
-import * as cdk from 'aws-cdk-lib'
-import * as ecs from 'aws-cdk-lib/aws-ecs'
-import * as ec2 from 'aws-cdk-lib/aws-ec2'
-import * as rds from 'aws-cdk-lib/aws-rds'
-import { Construct } from 'constructs'
+import * as pulumi from '@pulumi/pulumi'
+import * as aws from '@pulumi/aws'
+import * as doppler from '@pulumiverse/doppler'
 
-export class MacroAiStack extends cdk.Stack {
-	constructor(scope: Construct, id: string, props?: cdk.StackProps) {
-		super(scope, id, props)
+// Get configuration
+const config = new pulumi.Config()
+const environment = config.require('environment')
 
-		// VPC with public and private subnets
-		const vpc = new ec2.Vpc(this, 'MacroAiVpc', {
-			maxAzs: 2,
-			natGateways: 1,
-		})
+// Create Doppler secret reference
+const secrets = new doppler.Secret('macro-ai-secrets', {
+	project: `macro-ai-${environment}`,
+	config: environment === 'pr' ? 'dev' : environment,
+})
 
-		// ECS Cluster
-		const cluster = new ecs.Cluster(this, 'MacroAiCluster', {
-			vpc,
-			containerInsights: true,
-		})
+// Create VPC
+const vpc = new aws.ec2.Vpc('macro-ai-vpc', {
+	cidrBlock: '10.0.0.0/16',
+	enableDnsHostnames: true,
+	enableDnsSupport: true,
+	tags: {
+		Name: 'macro-ai-vpc',
+		Environment: environment,
+	},
+})
 
-		// RDS PostgreSQL with pgvector
-		const database = new rds.DatabaseInstance(this, 'MacroAiDatabase', {
-			engine: rds.DatabaseInstanceEngine.postgres({
-				version: rds.PostgresEngineVersion.VER_15,
-			}),
-			instanceType: ec2.InstanceType.of(
-				ec2.InstanceClass.T3,
-				ec2.InstanceSize.MICRO,
-			),
-			vpc,
-			credentials: rds.Credentials.fromGeneratedSecret('postgres'),
-			multiAz: false, // Enable for production
-			deletionProtection: false, // Enable for production
-		})
+// Create ECS cluster
+const cluster = new aws.ecs.Cluster('macro-ai-cluster', {
+	name: `macro-ai-${environment}`,
+	tags: {
+		Environment: environment,
+	},
+})
 
-		// ECS Service for Express API
-		const apiService = new ecs.FargateService(this, 'ApiService', {
-			cluster,
-			taskDefinition: this.createApiTaskDefinition(cluster),
-			desiredCount: 2,
-		})
+// Create ECS service
+const service = new aws.ecs.Service('macro-ai-service', {
+	cluster: cluster.arn,
+	desiredCount: 1,
+	taskDefinition: createTaskDefinition().arn,
+	tags: {
+		Environment: environment,
+	},
+})
 
-		// ECS Service for Client UI
-		const uiService = new ecs.FargateService(this, 'UiService', {
-			cluster,
-			taskDefinition: this.createUiTaskDefinition(cluster),
-			desiredCount: 2,
-		})
-	}
-
-	private createApiTaskDefinition(
-		cluster: ecs.Cluster,
-	): ecs.FargateTaskDefinition {
-		const taskDef = new ecs.FargateTaskDefinition(this, 'ApiTaskDef', {
-			memoryLimitMiB: 512,
-			cpu: 256,
-		})
-
-		taskDef.addContainer('api', {
-			image: ecs.ContainerImage.fromRegistry('macro-ai/express-api:latest'),
-			portMappings: [{ containerPort: 3040 }],
-			logging: ecs.LogDrivers.awsLogs({
-				streamPrefix: 'api',
-			}),
-			environment: {
-				NODE_ENV: 'production',
+function createTaskDefinition(): aws.ecs.TaskDefinition {
+	return new aws.ecs.TaskDefinition('macro-ai-task', {
+		family: `macro-ai-${environment}`,
+		cpu: '256',
+		memory: '512',
+		networkMode: 'awsvpc',
+		requiresCompatibilities: ['FARGATE'],
+		executionRoleArn: createExecutionRole().arn,
+		taskRoleArn: createTaskRole().arn,
+		containerDefinitions: JSON.stringify([
+			{
+				name: 'api',
+				image: 'macro-ai/express-api:latest',
+				portMappings: [
+					{
+						containerPort: 3040,
+						protocol: 'tcp',
+					},
+				],
+				environment: [
+					{ name: 'NODE_ENV', value: 'production' },
+					{ name: 'APP_ENV', value: environment },
+				],
+				secrets: [
+					{
+						name: 'API_KEY',
+						valueFrom: secrets.secrets['API_KEY'],
+					},
+					{
+						name: 'DATABASE_URL',
+						valueFrom: secrets.secrets['DATABASE_URL'],
+					},
+				],
+				logConfiguration: {
+					logDriver: 'awslogs',
+					options: {
+						'awslogs-group': `/aws/ecs/macro-ai-${environment}`,
+						'awslogs-region': 'us-east-1',
+						'awslogs-stream-prefix': 'ecs',
+					},
+				},
 			},
-			secrets: {
-				API_KEY: ecs.Secret.fromSecretsManager(
-					secretsManager.Secret.fromSecretNameV2(
-						this,
-						'ApiKey',
-						'macro-ai/api-key',
-					),
-				),
-			},
-		})
+		]),
+	})
+}
 
-		return taskDef
-	}
+function createExecutionRole(): aws.iam.Role {
+	return new aws.iam.Role('macro-ai-execution-role', {
+		assumeRolePolicy: {
+			Version: '2012-10-17',
+			Statement: [
+				{
+					Action: 'sts:AssumeRole',
+					Effect: 'Allow',
+					Principal: {
+						Service: 'ecs-tasks.amazonaws.com',
+					},
+				},
+			],
+		},
+		managedPolicyArns: [
+			'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy',
+		],
+	})
+}
+
+function createTaskRole(): aws.iam.Role {
+	return new aws.iam.Role('macro-ai-task-role', {
+		assumeRolePolicy: {
+			Version: '2012-10-17',
+			Statement: [
+				{
+					Action: 'sts:AssumeRole',
+					Effect: 'Allow',
+					Principal: {
+						Service: 'ecs-tasks.amazonaws.com',
+					},
+				},
+			],
+		},
+	})
 }
 ```
 
