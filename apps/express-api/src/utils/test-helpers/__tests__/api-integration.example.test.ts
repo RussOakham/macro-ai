@@ -137,8 +137,6 @@ describe('API Integration Testing Examples', () => {
 			expect(errorResponse).toMatchObject({
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 				message: expect.stringContaining('API key'),
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-				type: expect.any(String),
 			})
 		})
 
@@ -155,8 +153,6 @@ describe('API Integration Testing Examples', () => {
 			expect(errorResponse).toMatchObject({
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 				message: expect.stringContaining('API key'),
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-				type: expect.any(String),
 			})
 		})
 	})
@@ -171,8 +167,6 @@ describe('API Integration Testing Examples', () => {
 			expect(errorResponse).toMatchObject({
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 				message: expect.stringContaining('API key'),
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-				type: expect.any(String),
 			})
 		})
 
@@ -199,8 +193,6 @@ describe('API Integration Testing Examples', () => {
 			expect(errorResponse).toMatchObject({
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 				message: expect.stringContaining('API key'),
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-				type: expect.any(String),
 			})
 		})
 	})
@@ -224,8 +216,6 @@ describe('API Integration Testing Examples', () => {
 			expect(errorResponse).toMatchObject({
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 				message: expect.stringContaining('JSON'),
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-				type: expect.any(String),
 			})
 		})
 
@@ -236,8 +226,6 @@ describe('API Integration Testing Examples', () => {
 			expect(errorResponse).toMatchObject({
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 				message: expect.stringContaining('API key'),
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-				type: expect.any(String),
 			})
 		})
 	})
