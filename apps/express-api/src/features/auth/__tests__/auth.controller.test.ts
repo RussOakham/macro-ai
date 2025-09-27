@@ -575,7 +575,7 @@ describe('AuthController', () => {
 				'access-token',
 				expect.objectContaining({
 					httpOnly: true,
-					secure: false, // test environment
+					secure: false, // matches test environment
 					domain: undefined, // localhost case
 					sameSite: 'strict',
 				}),
@@ -585,7 +585,7 @@ describe('AuthController', () => {
 				'refresh-token',
 				expect.objectContaining({
 					httpOnly: true,
-					secure: false, // test environment
+					secure: false, // matches test environment
 					domain: undefined, // localhost case
 					sameSite: 'strict',
 				}),
@@ -740,7 +740,7 @@ describe('AuthController', () => {
 				expect.objectContaining({
 					domain: undefined, // Should be undefined for localhost
 					httpOnly: true,
-					secure: false, // test environment
+					secure: false, // matches test environment
 					sameSite: 'strict',
 				}),
 			)
@@ -750,7 +750,7 @@ describe('AuthController', () => {
 				expect.objectContaining({
 					domain: undefined, // Should be undefined for localhost
 					httpOnly: true,
-					secure: false, // test environment
+					secure: false, // matches test environment
 					sameSite: 'strict',
 				}),
 			)
@@ -760,7 +760,7 @@ describe('AuthController', () => {
 				expect.objectContaining({
 					domain: undefined, // Should be undefined for localhost
 					httpOnly: true,
-					secure: false, // test environment
+					secure: false, // matches test environment
 					sameSite: 'strict',
 				}),
 			)
@@ -1171,7 +1171,7 @@ describe('AuthController', () => {
 				'new-access-token',
 				expect.objectContaining({
 					httpOnly: false,
-					secure: false, // test environment
+					secure: false, // matches test environment
 					domain: undefined, // localhost case
 					sameSite: 'strict',
 				}),
@@ -1181,7 +1181,7 @@ describe('AuthController', () => {
 				'new-refresh-token',
 				expect.objectContaining({
 					httpOnly: true,
-					secure: false, // test environment
+					secure: false, // matches test environment
 					domain: undefined, // localhost case
 					sameSite: 'strict',
 				}),
@@ -1191,7 +1191,7 @@ describe('AuthController', () => {
 				'encrypted-username',
 				expect.objectContaining({
 					httpOnly: true,
-					secure: false, // test environment
+					secure: false, // matches test environment
 					domain: undefined, // localhost case
 					sameSite: 'strict',
 				}),
@@ -1249,7 +1249,7 @@ describe('AuthController', () => {
 				expect.objectContaining({
 					domain: undefined, // Should be undefined for localhost
 					httpOnly: false,
-					secure: false, // test environment
+					secure: false, // matches test environment
 					sameSite: 'strict',
 				}),
 			)
@@ -1259,7 +1259,7 @@ describe('AuthController', () => {
 				expect.objectContaining({
 					domain: undefined, // Should be undefined for localhost
 					httpOnly: true,
-					secure: false, // test environment
+					secure: false, // matches test environment
 					sameSite: 'strict',
 				}),
 			)
@@ -1269,7 +1269,7 @@ describe('AuthController', () => {
 				expect.objectContaining({
 					domain: undefined, // Should be undefined for localhost
 					httpOnly: true,
-					secure: false, // test environment
+					secure: false, // matches test environment
 					sameSite: 'strict',
 				}),
 			)
