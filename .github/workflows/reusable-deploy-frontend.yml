@@ -225,7 +225,7 @@ jobs:
         rm -f "$TEMP_ENV_FILE"
 
         # Generate amplify.yml configuration
-        cat > amplify.yml << EOF
+        cat > amplify.yml <<EOF
         version: 1
         applications:
           - appRoot: apps/client-ui
@@ -248,7 +248,7 @@ jobs:
                 paths:
                   - node_modules/**/*
                   - .pnpm-store/**/*
-EOF
+        EOF
 
         echo "✅ Generated amplify.yml configuration"
 
