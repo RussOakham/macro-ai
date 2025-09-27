@@ -273,7 +273,6 @@ jobs:
         # API Configuration
         API_KEY=dummy-api-key-for-act-testing
         SERVER_PORT=3040
-        NODE_ENV=development
         APP_ENV=development
 
         # AWS Cognito Configuration
@@ -326,8 +325,8 @@ jobs:
         pnpm build
         echo "✅ Build completed successfully"
       env:
+        NODE_ENV: production
         # Core Configuration
-        NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
         SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
         API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
@@ -469,8 +468,8 @@ jobs:
     - name: Build types package
       run: pnpm --filter @repo/macro-ai-api-client build
       env:
+        NODE_ENV: production
         # Core Configuration
-        NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
         SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
         API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
@@ -648,8 +647,8 @@ jobs:
     - name: Build types package
       run: pnpm --filter @repo/macro-ai-api-client build
       env:
+        NODE_ENV: test
         # Core Configuration
-        NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
         SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
         API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
@@ -690,8 +689,8 @@ jobs:
     - name: Run test with coverage
       run: pnpm test:coverage
       env:
+        NODE_ENV: test
         # Core Configuration
-        NODE_ENV: ${{ needs.setup.outputs.NODE_ENV }}
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
         SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
         API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
