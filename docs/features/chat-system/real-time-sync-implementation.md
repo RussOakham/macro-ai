@@ -83,7 +83,7 @@ modern real-time features.
    ```typescript
    // Replace multiple provider calls with single OpenRouter call
    const completion = await openrouter.chat.completions.create({
-   	model: 'anthropic/claude-3.7-sonnet', // Unified model naming
+   	model: 'anthropic/claude-3-5-sonnet', // Unified model naming
    	messages: [{ role: 'user', content: userMessage }],
    	// OpenRouter handles provider selection automatically
    })
@@ -207,7 +207,7 @@ export const useSendMessage = (chatId: string) => {
 
 			// Send to AI via OpenRouter
 			const response = await openrouter.chat.completions.create({
-				model: 'anthropic/claude-3.7-sonnet',
+				model: 'anthropic/claude-3-5-sonnet',
 				messages: [{ role: 'user', content }],
 			})
 

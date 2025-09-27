@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable security-node/detect-crlf */
 
 /**
  * Custom YAML Linter
@@ -63,7 +64,7 @@ const getFileType = function getFileType(filePath) {
 
 	if (
 		basename.includes('workflow') ||
-		filename.includes('/.github/workflows/')
+		filePath.includes('/.github/workflows/')
 	) {
 		return 'workflow'
 	}
@@ -271,6 +272,7 @@ const runLinter = async function runLinter() {
 		const files = await glob(CONFIG.patterns, {
 			cwd: path.join(dirname, '..'),
 			absolute: true,
+			dot: true,
 		})
 
 		if (files.length === 0) {

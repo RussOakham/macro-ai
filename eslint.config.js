@@ -58,6 +58,7 @@ export default repoConfig.config(
 			'capitalized-comments': 'off',
 			'no-plusplus': 'off',
 			'max-statements': 'off',
+			'max-lines': 'off',
 		},
 	},
 	{

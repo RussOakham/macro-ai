@@ -143,19 +143,19 @@ reviews:
 
   # Path filters - focus review on documentation and infrastructure
   path_filters:
-  # Include specific paths for review (overrides default exclusions)
-  - 'docs/**'
-  - 'infrastructure/**'
-  - '.coderabbit.yaml'
-  - '.github/**'
-  - 'eslint.config.js'
-  - 'package.json'
-  - 'pnpm-lock.yaml'
-  - 'turbo.json'
-  - 'tsconfig.json'
-  - 'vitest.config.ts'
-  - 'vitest.workspace.ts'
-  - 'yaml-lint.config.js'
+    # Include specific paths for review (overrides default exclusions)
+    - 'docs/**'
+    - 'infrastructure/**'
+    - '.coderabbit.yaml'
+    - '.github/**'
+    - 'eslint.config.js'
+    - 'package.json'
+    - 'pnpm-lock.yaml'
+    - 'turbo.json'
+    - 'tsconfig.json'
+    - 'vitest.config.ts'
+    - 'vitest.workspace.ts'
+    - 'yaml-lint.config.js'
   # Pre-merge checks for quality gates
   pre_merge_checks:
     title:
@@ -210,9 +210,9 @@ reviews:
     docstrings:
       language: en-US
       path_instructions:
-      - path: ''
-        instructions: ''
+        - path: ''
+          instructions: ''
     unit_tests:
       path_instructions:
-      - path: ''
-        instructions: ''
+        - path: ''
+          instructions: ''

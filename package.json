@@ -17,6 +17,7 @@
 		"dev": "turbo run dev --env-mode=loose",
 		"dev:types": "turbo run dev --filter=@repo/macro-ai-api-client",
 		"clean:types": "turbo run clean --filter=@repo/macro-ai-api-client",
+		"generate": "turbo run generate --filter=@repo/macro-ai-api-client",
 		"generate:types": "turbo run generate --filter=@repo/macro-ai-api-client",
 		"db:generate:express-api": "pnpm --filter @repo/express-api db:generate",
 		"db:push:express-api": "pnpm --filter @repo/express-api db:push",
