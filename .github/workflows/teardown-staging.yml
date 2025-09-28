@@ -146,6 +146,20 @@ jobs:
         role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
         aws-region: ${{ env.AWS_REGION }}
 
+    - name: Configure staging secrets
+      shell: bash
+      env:
+        DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
+      run: |
+        if [[ -z "$DOPPLER_TOKEN_STAGING" ]]; then
+          echo "❌ Missing Doppler token for staging"
+          exit 1
+        fi
+
+        echo "::add-mask::$DOPPLER_TOKEN_STAGING"
+        export DOPPLER_TOKEN="$DOPPLER_TOKEN_STAGING"
+        doppler secrets download --no-file --format env >> "$GITHUB_ENV"
+
     - name: Install Pulumi CLI
       run: |
         curl -fsSL https://get.pulumi.com | sh
@@ -236,6 +250,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
 
     - name: Install pnpm
       uses: pnpm/action-setup@v4

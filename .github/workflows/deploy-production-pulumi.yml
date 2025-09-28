@@ -78,10 +78,16 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+
     - name: Install pnpm
       uses: pnpm/action-setup@v4
       with:
         version: ${{ env.PNPM_VERSION }}
+
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -105,20 +111,34 @@ jobs:
         role-session-name: github-actions-pre-deployment-prod
         aws-region: ${{ env.AWS_REGION }}
 
+    - name: Configure Doppler secrets
+      shell: bash
+      env:
+        DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
+      run: |
+        if [[ -z "$DOPPLER_TOKEN_PROD" ]]; then
+          echo "❌ Missing Doppler token for production"
+          exit 1
+        fi
+
+        echo "::add-mask::$DOPPLER_TOKEN_PROD"
+        export DOPPLER_TOKEN="$DOPPLER_TOKEN_PROD"
+        doppler secrets download --no-file --format env >> "$GITHUB_ENV"
+
     - name: Code Quality Checks
       run: |
         echo "🔍 Running code quality checks..."
 
         # Type checking
-        pnpm tsc --noEmit
+        doppler run -- pnpm tsc --noEmit
 
         # ESLint checks
-        pnpm lint
+        doppler run -- pnpm lint
 
         # Test execution
         if [[ "${{ github.event.inputs.skip-tests }}" == "false" ]]; then
           echo "🧪 Running test suite..."
-          pnpm test --run
+          doppler run -- pnpm test --run
         else
           echo "⏭️ Skipping tests as requested"
         fi
@@ -127,7 +147,7 @@ jobs:
       run: |
         echo "🔒 Running security scanning..."
         # Run security scan workflow
-        pnpm run security-scan || echo "⚠️ Security scan failed, but continuing..."
+        doppler run -- pnpm run security-scan || echo "⚠️ Security scan failed, but continuing..."
 
     - name: Performance Baseline
       run: |

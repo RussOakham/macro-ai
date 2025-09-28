@@ -46,6 +46,9 @@ jobs:
       with:
         version: '10.14.0'
 
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+
     - name: Detect changes
       id: change-detection
       env:
@@ -217,6 +220,22 @@ jobs:
           echo "⏭️ No relevant changes - skipping deployment"
         fi
 
+    - name: Configure Doppler secrets
+      if: >-
+        steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true')
+      shell: bash
+      env:
+        DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
+      run: |
+        if [[ -z "$DOPPLER_TOKEN_DEV" ]]; then
+          echo "❌ Missing Doppler token for preview deployments"
+          exit 1
+        fi
+
+        echo "::add-mask::$DOPPLER_TOKEN_DEV"
+        export DOPPLER_TOKEN="$DOPPLER_TOKEN_DEV"
+        doppler secrets download --no-file --format env >> "$GITHUB_ENV"
+
     - name: Install Pulumi Dependencies
       if: >-
         steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true')
@@ -273,7 +292,7 @@ jobs:
         fi
 
         echo "🚀 Deploying infrastructure..."
-        pulumi up --yes --stack "${STACK_NAME}"
+        doppler run -- pulumi up --yes --stack "${STACK_NAME}"
 
         # Get outputs
         API_ENDPOINT=$(pulumi stack output apiEndpoint --stack "${STACK_NAME}")

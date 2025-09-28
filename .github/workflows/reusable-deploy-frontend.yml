@@ -52,6 +52,12 @@ on:
         required: true
       API_KEY:
         required: true
+      DOPPLER_TOKEN_DEV:
+        required: false
+      DOPPLER_TOKEN_STAGING:
+        required: false
+      DOPPLER_TOKEN_PROD:
+        required: false
     outputs:
       app-url:
         description: 'Deployed frontend app URL'
@@ -89,6 +95,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -121,45 +130,74 @@ jobs:
         cd apps/client-ui
         pnpm install --frozen-lockfile
 
-    - name: Generate API client package
+    - name: Configure Doppler secrets
+      id: configure-doppler
+      shell: bash
       env:
-        # Minimal environment variables required for swagger generation
-        API_KEY: 'placeholder-api-key-for-swagger-generation-32chars'
-        NODE_ENV: 'development'
-        APP_ENV: 'development'
-        SERVER_PORT: '3040'
-        AWS_COGNITO_REGION: 'us-east-1'
-        AWS_COGNITO_USER_POOL_ID: 'us-east-1_placeholder'
-        AWS_COGNITO_USER_POOL_CLIENT_ID: 'placeholder-client-id'
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY: '30'
-        COOKIE_DOMAIN: 'localhost'
-        COOKIE_ENCRYPTION_KEY: 'placeholder-cookie-encryption-key-32chars'
-        REDIS_URL: 'redis://localhost:6379'
-        RELATIONAL_DATABASE_URL: 'postgresql://localhost:5432/placeholder'
-        OPENAI_API_KEY: 'sk-placeholder-openai-api-key-for-swagger-generation'
-        RATE_LIMIT_WINDOW_MS: '900000'
-        RATE_LIMIT_MAX_REQUESTS: '100'
-        AUTH_RATE_LIMIT_WINDOW_MS: '3600000'
-        AUTH_RATE_LIMIT_MAX_REQUESTS: '10'
-        API_RATE_LIMIT_WINDOW_MS: '60000'
-        API_RATE_LIMIT_MAX_REQUESTS: '60'
-        COST_ALERT_EMAILS: 'placeholder-cost-alert-emails'
+        DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
+        DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
+        DEPLOYMENT_TYPE: ${{ inputs.deployment-type }}
+      run: |
+        if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
+          echo "DOPPLER_DISABLED=true" >> "$GITHUB_ENV"
+          cat <<'EOF' >> "$GITHUB_ENV"
+API_KEY=dummy-api-key-at-least-32-chars-long
+SERVER_PORT=3040
+APP_ENV=development
+AWS_COGNITO_REGION=us-east-1
+AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
+AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
+AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
+COOKIE_DOMAIN=localhost
+COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
+RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
+REDIS_URL=redis://localhost:6379
+OPENAI_API_KEY=mock-openai-key-for-local-testing-only
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+AUTH_RATE_LIMIT_WINDOW_MS=900000
+AUTH_RATE_LIMIT_MAX_REQUESTS=5
+API_RATE_LIMIT_WINDOW_MS=60000
+API_RATE_LIMIT_MAX_REQUESTS=10
+VITE_API_URL=http://localhost:3040/api
+VITE_API_KEY=dummy-api-key-at-least-32-chars-long
+EOF
+        else
+          case "$DEPLOYMENT_TYPE" in
+            production)
+              TOKEN="$DOPPLER_TOKEN_PROD"
+              ;;
+            staging)
+              TOKEN="$DOPPLER_TOKEN_STAGING"
+              ;;
+            *)
+              TOKEN="$DOPPLER_TOKEN_DEV"
+              ;;
+          esac
+
+          if [[ -z "$TOKEN" ]]; then
+            echo "❌ Missing Doppler token for deployment type $DEPLOYMENT_TYPE"
+            exit 1
+          fi
+
+          echo "::add-mask::$TOKEN"
+          export DOPPLER_TOKEN="$TOKEN"
+          doppler secrets download --no-file --format env >> "$GITHUB_ENV"
+        fi
+
+    - name: Generate API client package
       run: |
         echo "🔧 Generating API client package from OpenAPI specification"
 
-        # Install dependencies for express-api to generate OpenAPI spec
         cd apps/express-api
         pnpm install --frozen-lockfile
+        doppler run -- pnpm run generate-swagger
 
-        # Generate OpenAPI specification
-        echo "📋 Generating OpenAPI specification..."
-        pnpm run generate-swagger
-
-        # Build the API client package
-        echo "📦 Building API client package..."
         cd ../../packages/macro-ai-api-client
         pnpm install --frozen-lockfile
-        pnpm run build
+        doppler run -- pnpm run build
 
         echo "✅ API client package built successfully"
 
@@ -189,42 +227,8 @@ jobs:
 
         ENV_NAME="${{ inputs.environment-name }}"
         DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
-
-        # Set environment variables for configuration generation
         PNPM_VERSION="${{ env.PNPM_VERSION }}"
 
-        # Load environment variables from .env.preview
-        TEMP_ENV_FILE=$(mktemp)
-        if grep '^[A-Za-z_][A-Za-z0-9_]*=' ".env.preview" > "${TEMP_ENV_FILE}"; then
-          echo "Found environment variables in .env.preview"
-        else
-          echo "No environment variables found in .env.preview"
-          touch "$TEMP_ENV_FILE"
-        fi
-
-        # Export variables safely
-        if [[ -s "$TEMP_ENV_FILE" ]]; then
-          while IFS= read -r line; do
-            [[ -z "$line" || "${line:0:1}" == "#" ]] && continue
-            if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
-              key="${line%%=*}"
-              value="${line#*=}"
-              if [[ "$value" == \"*\" && "$value" == *\" ]]; then
-                value="${value:1:-1}"
-              elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
-                value="${value:1:-1}"
-              fi
-              printf -v "$key" '%s' "$value"
-              export "$key"
-            fi
-          done < "$TEMP_ENV_FILE"
-          echo "✅ Loaded $(wc -l < "$TEMP_ENV_FILE") environment variables"
-        fi
-
-        # Clean up temporary file
-        rm -f "$TEMP_ENV_FILE"
-
-        # Generate amplify.yml configuration
         cat > amplify.yml <<EOF
         version: 1
         applications:
@@ -256,39 +260,13 @@ jobs:
       run: |
         cd apps/client-ui
 
-        # Load environment variables
-        TEMP_ENV_FILE=$(mktemp)
-        if grep '^[A-Za-z_][A-Za-z0-9_]*=' ".env.preview" > "${TEMP_ENV_FILE}"; then
-          echo "Found environment variables in .env.preview"
-        else
-          echo "No environment variables found in .env.preview"
-          touch "$TEMP_ENV_FILE"
-        fi
-
-        if [[ -s "$TEMP_ENV_FILE" ]]; then
-          while IFS= read -r line; do
-            [[ -z "$line" || "${line:0:1}" == "#" ]] && continue
-            if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
-              key="${line%%=*}"
-              value="${line#*=}"
-              if [[ "$value" == \"*\" && "$value" == *\" ]]; then
-                value="${value:1:-1}"
-              elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
-                value="${value:1:-1}"
-              fi
-              printf -v "$key" '%s' "$value"
-              export "$key"
-            fi
-          done < "$TEMP_ENV_FILE"
-          echo "✅ Loaded environment variables for build"
-        fi
-
-        # Clean up temporary file
-        rm -f "$TEMP_ENV_FILE"
-
         # Build the application
         echo "🔨 Building React application..."
-        pnpm run build
+        if [[ "${DOPPLER_DISABLED}" == "true" ]]; then
+          pnpm run build
+        else
+          doppler run -- pnpm run build
+        fi
 
         echo "✅ Build completed successfully"
 

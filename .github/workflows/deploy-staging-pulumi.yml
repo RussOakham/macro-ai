@@ -58,6 +58,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+
     - name: Install pnpm
       uses: pnpm/action-setup@v4
       with:
@@ -209,10 +212,20 @@ jobs:
         cd "infrastructure/pulumi"
         pnpm install
 
-    - name: Set Doppler token based on deployment type
+    - name: Configure Doppler token
       shell: bash
+      env:
+        DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
       run: |
-        echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_STAGING }}" >> "$GITHUB_ENV"
+        if [[ -z "$DOPPLER_TOKEN_STAGING" ]]; then
+          echo "❌ Missing Doppler token for staging"
+          exit 1
+        fi
+
+        echo "::add-mask::$DOPPLER_TOKEN_STAGING"
+        echo "DOPPLER_TOKEN=$DOPPLER_TOKEN_STAGING" >> "$GITHUB_ENV"
+
+        doppler secrets download --no-file --format env >> "$GITHUB_ENV"
 
     - name: Reconstruct image URI from tag
       id: reconstruct-image-uri
@@ -329,7 +342,7 @@ jobs:
         fi
 
         # Deploy the infrastructure
-        pulumi up --yes --stack "${STACK_NAME}"
+        doppler run -- pulumi up --yes --stack "${STACK_NAME}"
 
         # Get the API endpoint
         API_ENDPOINT=$(pulumi stack output apiEndpoint --stack "${STACK_NAME}")

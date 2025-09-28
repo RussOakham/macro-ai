@@ -12,13 +12,13 @@ permissions:
 on:
   push:
     branches:
-    - develop
-    - main
+      - develop
+      - main
   pull_request:
-    types: [ opened, reopened, synchronize ]
+    types: [opened, reopened, synchronize]
     branches:
-    - develop
-    - main
+      - develop
+      - main
 
 concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
@@ -33,7 +33,7 @@ jobs:
     name: Setup Environment
     runs-on: ubuntu-latest
     outputs:
-      APP_ENV: ${{ env.APP_ENV }}
+      APP_ENV: ${{ steps.compute_app_env.outputs.APP_ENV }}
     steps:
     - name: Detect environment
       id: detect_env
@@ -62,162 +62,37 @@ jobs:
         role-session-name: github-actions-hygiene-checks
         aws-region: us-east-1
 
-    - name: Create Express API .env content
-      id: create_express_env
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+
+    - name: Determine application environment
+      id: compute_app_env
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        REF_NAME: ${{ github.ref_name }}
       run: |
-        echo "🔍 Computing environment configuration..."
-
-        # Compute APP_ENV based on event and branch
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+        if [[ "$EVENT_NAME" == "pull_request" ]]; then
           APP_ENV="development"
-          echo "🌱 Pull request detected: using development environment"
         else
-          # Direct push - determine branch
-          if [[ "${{ github.ref_name }}" == "develop" ]]; then
-            APP_ENV="staging"
-            echo "🚀 Develop branch detected: using staging environment"
-          elif [[ "${{ github.ref_name }}" == "main" ]]; then
-            APP_ENV="production"
-            echo "🏭 Main branch detected: using production environment"
-          else
-            APP_ENV="development"
-            echo "🌱 Other branch detected: using development environment"
-          fi
+          case "$REF_NAME" in
+            develop)
+              APP_ENV="staging"
+              ;;
+            main)
+              APP_ENV="production"
+              ;;
+            *)
+              APP_ENV="development"
+              ;;
+          esac
         fi
 
+        echo "APP_ENV=$APP_ENV" >> "$GITHUB_ENV"
+        echo "APP_ENV=$APP_ENV" >> "$GITHUB_OUTPUT"
+
+    - name: Log environment selection
+      run: |
         echo "✅ Environment configuration: APP_ENV=${APP_ENV}"
-
-        # Set workflow environment variables for all jobs
-        {
-          echo "APP_ENV=${APP_ENV}"
-        } >> "$GITHUB_ENV"
-
-        # Load environment variables from Doppler secrets
-        if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
-          echo "🔍 Running in act environment - using mock parameters for local testing"
-
-          # Mock parameters for local act testing
-          AWS_COGNITO_REGION="us-east-1"
-          AWS_COGNITO_USER_POOL_ID="us-east-1_mock_pool"
-          AWS_COGNITO_USER_POOL_CLIENT_ID="mock_client_id"
-          AWS_COGNITO_USER_POOL_SECRET_KEY="mock_secret_key"
-          AWS_COGNITO_REFRESH_TOKEN_EXPIRY="2592000"
-
-          COOKIE_DOMAIN="localhost"
-          COOKIE_ENCRYPTION_KEY="mock-encryption-key-for-local-testing-only"
-
-          REDIS_URL="redis://localhost:6379"
-          RELATIONAL_DATABASE_URL="postgresql://user:password@localhost:5432/macro_ai_test"
-
-          OPENAI_API_KEY="mock-openai-key-for-local-testing-only"
-
-          RATE_LIMIT_WINDOW_MS="900000"
-          RATE_LIMIT_MAX_REQUESTS="100"
-          AUTH_RATE_LIMIT_WINDOW_MS="900000"
-          AUTH_RATE_LIMIT_MAX_REQUESTS="5"
-          API_RATE_LIMIT_WINDOW_MS="60000"
-          API_RATE_LIMIT_MAX_REQUESTS="10"
-
-          echo "✅ Using mock parameters for local testing"
-        else
-          echo "🔍 Running in GitHub Actions - using Doppler secrets for environment variables"
-
-          # Load environment variables from Doppler secrets (already available as GitHub secrets)
-          AWS_COGNITO_REGION="${{ secrets.AWS_COGNITO_REGION }}"
-          AWS_COGNITO_USER_POOL_ID="${{ secrets.AWS_COGNITO_USER_POOL_ID }}"
-          AWS_COGNITO_USER_POOL_CLIENT_ID="${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID }}"
-          AWS_COGNITO_USER_POOL_SECRET_KEY="${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY }}"
-          AWS_COGNITO_REFRESH_TOKEN_EXPIRY="${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY }}"
-
-          COOKIE_DOMAIN="${{ secrets.COOKIE_DOMAIN }}"
-          COOKIE_ENCRYPTION_KEY="${{ secrets.COOKIE_ENCRYPTION_KEY }}"
-
-          REDIS_URL="${{ secrets.REDIS_URL }}"
-          RELATIONAL_DATABASE_URL="${{ secrets.RELATIONAL_DATABASE_URL }}"
-
-          OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
-
-          RATE_LIMIT_WINDOW_MS="${{ secrets.RATE_LIMIT_WINDOW_MS }}"
-          RATE_LIMIT_MAX_REQUESTS="${{ secrets.RATE_LIMIT_MAX_REQUESTS }}"
-          AUTH_RATE_LIMIT_WINDOW_MS="${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS }}"
-          AUTH_RATE_LIMIT_MAX_REQUESTS="${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS }}"
-          API_RATE_LIMIT_WINDOW_MS="${{ secrets.API_RATE_LIMIT_WINDOW_MS }}"
-          API_RATE_LIMIT_MAX_REQUESTS="${{ secrets.API_RATE_LIMIT_MAX_REQUESTS }}"
-
-          # Verify all required parameters were loaded
-          echo "🔍 Verifying all required parameters were loaded from Doppler..."
-          required_params=(
-            "AWS_COGNITO_REGION" "AWS_COGNITO_USER_POOL_ID" "AWS_COGNITO_USER_POOL_CLIENT_ID"
-            "AWS_COGNITO_USER_POOL_SECRET_KEY" "COOKIE_ENCRYPTION_KEY" "RELATIONAL_DATABASE_URL" "REDIS_URL"
-            "OPENAI_API_KEY"
-          )
-
-          missing_params=()
-          for param in "${required_params[@]}"; do
-            if [[ -z "${!param}" ]]; then
-              missing_params+=("$param")
-            fi
-          done
-
-          if [[ ${#missing_params[@]} -gt 0 ]]; then
-            echo "❌ Missing required parameters from Doppler: ${missing_params[*]}"
-            exit 1
-          fi
-
-          echo "✅ All required parameters loaded successfully from Doppler secrets"
-
-        # Create .env files using artifacts instead of step outputs to prevent secret exposure
-        mkdir -p /tmp/envs
-
-        # Create Express API .env file
-        cat << EOF > /tmp/envs/express-api.env
-        # API Configuration
-        API_KEY=${{ secrets.API_KEY }}
-        SERVER_PORT=${{ secrets.SERVER_PORT || '3040' }}
-        APP_ENV=${APP_ENV}
-
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION=${AWS_COGNITO_REGION}
-        AWS_COGNITO_USER_POOL_ID=${AWS_COGNITO_USER_POOL_ID}
-        AWS_COGNITO_USER_POOL_CLIENT_ID=${AWS_COGNITO_USER_POOL_CLIENT_ID}
-        AWS_COGNITO_USER_POOL_SECRET_KEY=${AWS_COGNITO_USER_POOL_SECRET_KEY}
-
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY=${AWS_COGNITO_REFRESH_TOKEN_EXPIRY}
-
-        # Cookie Configuration
-        COOKIE_DOMAIN=${COOKIE_DOMAIN}
-        COOKIE_ENCRYPTION_KEY=${COOKIE_ENCRYPTION_KEY}
-
-        # Databases
-        REDIS_URL=${REDIS_URL}
-        RELATIONAL_DATABASE_URL=${RELATIONAL_DATABASE_URL}
-
-        # OpenAI
-        OPENAI_API_KEY=${OPENAI_API_KEY}
-
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS}
-        RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS}
-        AUTH_RATE_LIMIT_WINDOW_MS=${AUTH_RATE_LIMIT_WINDOW_MS}
-        AUTH_RATE_LIMIT_MAX_REQUESTS=${AUTH_RATE_LIMIT_MAX_REQUESTS}
-        API_RATE_LIMIT_WINDOW_MS=${API_RATE_LIMIT_WINDOW_MS}
-        API_RATE_LIMIT_MAX_REQUESTS=${API_RATE_LIMIT_MAX_REQUESTS}
-        REDIS_URL=${REDIS_URL}
-        EOF
-
-        # Create Client UI .env file
-        cat << EOF > /tmp/envs/client-ui.env
-        VITE_API_URL=${{ secrets.VITE_API_URL || 'http://localhost:3040/api' }}
-        VITE_API_KEY=${{ secrets.VITE_API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-        EOF
-        fi
-
-    - name: Upload env artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: ci-env-files
-        path: /tmp/envs/
-        retention-days: 1
 
   build:
     needs: setup
@@ -227,7 +102,7 @@ jobs:
       actions: read
     strategy:
       matrix:
-        node-version: [ 20.19.4 ]
+        node-version: [20.19.4 ]
     steps:
     - uses: actions/checkout@v4
     - name: Install pnpm
@@ -255,69 +130,61 @@ jobs:
         pnpm install --frozen-lockfile
         echo "✅ Dependencies installed successfully"
 
-    # Download .env files from artifacts to prevent secret exposure
-    - name: Download env artifacts
-      if: env.ACT_LOCAL != 'true'
-      uses: actions/download-artifact@v4
-      with:
-        name: ci-env-files
-        path: /tmp/envs
-
-    - name: Create mock env files for act environment
-      if: env.ACT_LOCAL == 'true'
+    - name: Load secrets
+      shell: bash
+      env:
+        APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
+        DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
+        DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
       run: |
-        mkdir -p /tmp/envs apps/express-api apps/client-ui
+        if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
+          cat <<'EOF' >> "$GITHUB_ENV"
+APP_ENV=development
+API_KEY=dummy-api-key-for-act-testing
+SERVER_PORT=3040
+AWS_COGNITO_REGION=us-east-1
+AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
+AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
+AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
+COOKIE_DOMAIN=localhost
+COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
+RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
+REDIS_URL=redis://localhost:6379
+OPENAI_API_KEY=mock-openai-key-for-local-testing-only
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+AUTH_RATE_LIMIT_WINDOW_MS=900000
+AUTH_RATE_LIMIT_MAX_REQUESTS=5
+API_RATE_LIMIT_WINDOW_MS=60000
+API_RATE_LIMIT_MAX_REQUESTS=10
+VITE_API_URL=http://localhost:3040/api
+VITE_API_KEY=dummy-api-key-at-least-32-chars-long
+EOF
+          exit 0
+        fi
 
-        # Create Express API .env file with mock values
-        cat << EOF > /tmp/envs/express-api.env
-        # API Configuration
-        API_KEY=dummy-api-key-for-act-testing
-        SERVER_PORT=3040
-        APP_ENV=development
+        case "$APP_ENV" in
+          production)
+            TOKEN="$DOPPLER_TOKEN_PROD"
+            ;;
+          staging)
+            TOKEN="$DOPPLER_TOKEN_STAGING"
+            ;;
+          *)
+            TOKEN="$DOPPLER_TOKEN_DEV"
+            ;;
+        esac
 
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION=us-east-1
-        AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
-        AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
-        AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+        if [[ -z "$TOKEN" ]]; then
+          echo "❌ Missing Doppler token for environment $APP_ENV"
+          exit 1
+        fi
 
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
-
-        # Cookie Configuration
-        COOKIE_DOMAIN=localhost
-        COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
-
-        # Databases
-        REDIS_URL=redis://localhost:6379
-        RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
-
-        # OpenAI
-        OPENAI_API_KEY=mock-openai-key-for-local-testing-only
-
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS=900000
-        RATE_LIMIT_MAX_REQUESTS=100
-        AUTH_RATE_LIMIT_WINDOW_MS=900000
-        AUTH_RATE_LIMIT_MAX_REQUESTS=5
-        API_RATE_LIMIT_WINDOW_MS=60000
-        API_RATE_LIMIT_MAX_REQUESTS=10
-        EOF
-
-        # Create Client UI .env file
-        cat << EOF > /tmp/envs/client-ui.env
-        VITE_API_URL=http://localhost:3040/api
-        VITE_API_KEY=dummy-api-key-at-least-32-chars-long
-        EOF
-
-    - name: Create Express API .env file
-      run: |
-        mkdir -p apps/express-api
-        cp /tmp/envs/express-api.env apps/express-api/.env
-
-    - name: Create Client UI .env file
-      run: |
-        mkdir -p apps/client-ui
-        cp /tmp/envs/client-ui.env apps/client-ui/.env
+        echo "::add-mask::$TOKEN"
+        export DOPPLER_TOKEN="$TOKEN"
+        doppler secrets download --no-file --format env >> "$GITHUB_ENV"
 
     - name: Run build
       run: |
@@ -366,7 +233,7 @@ jobs:
       actions: read
     strategy:
       matrix:
-        node-version: [ 20.19.4 ]
+        node-version: [20.19.4 ]
     steps:
     - uses: actions/checkout@v4
     - name: Install pnpm
@@ -394,157 +261,69 @@ jobs:
         pnpm install --frozen-lockfile
         echo "✅ Dependencies installed successfully"
 
-    # Download .env files from artifacts to prevent secret exposure
-    - name: Download env artifacts
-      if: env.ACT_LOCAL != 'true'
-      uses: actions/download-artifact@v4
-      with:
-        name: ci-env-files
-        path: /tmp/envs
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
 
-    - name: Create mock env files for act environment
-      if: env.ACT_LOCAL == 'true'
+    - name: Load secrets for lint job
+      shell: bash
+      env:
+        APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
+        DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
+        DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
       run: |
-        mkdir -p /tmp/envs apps/express-api apps/client-ui
+        if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
+          cat <<'EOF' >> "$GITHUB_ENV"
+API_KEY=dummy-api-key-for-act-testing
+SERVER_PORT=3040
+AWS_COGNITO_REGION=us-east-1
+AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
+AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
+AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
+COOKIE_DOMAIN=localhost
+COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
+RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
+REDIS_URL=redis://localhost:6379
+OPENAI_API_KEY=mock-openai-key-for-local-testing-only
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+AUTH_RATE_LIMIT_WINDOW_MS=900000
+AUTH_RATE_LIMIT_MAX_REQUESTS=5
+API_RATE_LIMIT_WINDOW_MS=60000
+API_RATE_LIMIT_MAX_REQUESTS=10
+VITE_API_URL=http://localhost:3040/api
+VITE_API_KEY=dummy-api-key-at-least-32-chars-long
+EOF
+          exit 0
+        fi
 
-        # Create Express API .env file with mock values
-        cat << EOF > /tmp/envs/express-api.env
-        # API Configuration
-        API_KEY=dummy-api-key-for-act-testing
-        SERVER_PORT=3040
-        NODE_ENV=development
-        APP_ENV=development
+        case "$APP_ENV" in
+          production) TOKEN="$DOPPLER_TOKEN_PROD" ;;
+          staging) TOKEN="$DOPPLER_TOKEN_STAGING" ;;
+          *) TOKEN="$DOPPLER_TOKEN_DEV" ;;
+        esac
 
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION=us-east-1
-        AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
-        AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
-        AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+        if [[ -z "$TOKEN" ]]; then
+          echo "❌ Missing Doppler token for environment $APP_ENV"
+          exit 1
+        fi
 
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
-
-        # Cookie Configuration
-        COOKIE_DOMAIN=localhost
-        COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
-
-        # Databases
-        REDIS_URL=redis://localhost:6379
-        RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
-
-        # OpenAI
-        OPENAI_API_KEY=mock-openai-key-for-local-testing-only
-
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS=900000
-        RATE_LIMIT_MAX_REQUESTS=100
-        AUTH_RATE_LIMIT_WINDOW_MS=900000
-        AUTH_RATE_LIMIT_MAX_REQUESTS=5
-        API_RATE_LIMIT_WINDOW_MS=60000
-        API_RATE_LIMIT_MAX_REQUESTS=10
-        EOF
-
-        # Create Client UI .env file
-        cat << EOF > /tmp/envs/client-ui.env
-        VITE_API_URL=http://localhost:3040/api
-        VITE_API_KEY=dummy-api-key-at-least-32-chars-long
-        EOF
-
-    - name: Create Express API .env file
-      run: |
-        mkdir -p apps/express-api
-        cp /tmp/envs/express-api.env apps/express-api/.env
-
-    - name: Create Client UI .env file
-      run: |
-        mkdir -p apps/client-ui
-        cp /tmp/envs/client-ui.env apps/client-ui/.env
+        echo "::add-mask::$TOKEN"
+        export DOPPLER_TOKEN="$TOKEN"
+        doppler secrets download --no-file --format env >> "$GITHUB_ENV"
 
     - name: Build config packages
-      run: |
-        echo "🔨 Building config packages..."
-        pnpm --filter @repo/config-testing build
-        echo "✅ Config packages built successfully"
+      run: pnpm --filter @repo/config-testing build
 
     - name: Build types package
       run: pnpm --filter @repo/macro-ai-api-client build
-      env:
-        NODE_ENV: production
-        # Core Configuration
-        APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
-        API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-        AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-        AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-        AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-        # AWS Cognito credentials removed - using IAM roles instead
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
-
-        # Cookie Configuration
-        COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
-        COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
-
-        # Databases
-        REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
-        RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
-
-        # OpenAI
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
-
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-        RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-        AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-        AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-        API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-        API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
 
     - name: Generate MSW handlers
-      run: |
-        echo "🔧 Generating MSW handlers from OpenAPI spec..."
-        pnpm --filter client-ui generate:msw
-        echo "✅ MSW handlers generated successfully"
+      run: pnpm --filter client-ui generate:msw
 
     - name: Run lint
-      run: |
-        echo "🔍 Starting lint checks..."
-        pnpm lint
-        echo "✅ Lint checks passed successfully"
-      env:
-        NODE_ENV: development
-        # Core Configuration
-        APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
-        API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-        AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-        AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-        AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-        # AWS Cognito credentials removed - using IAM roles instead
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
-
-        # Cookie Configuration
-        COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
-        COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
-
-        # Databases
-        REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
-        RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
-
-        # OpenAI
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
-
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-        RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-        AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-        AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-        API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-        API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
+      run: doppler run -- pnpm lint
 
   test:
     needs: setup
@@ -554,7 +333,7 @@ jobs:
       actions: write # For uploading artifacts
     strategy:
       matrix:
-        node-version: [ 20.19.4 ]
+        node-version: [20.19.4 ]
     steps:
     - uses: actions/checkout@v4
     - name: Install pnpm
