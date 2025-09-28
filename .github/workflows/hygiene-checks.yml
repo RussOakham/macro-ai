@@ -114,6 +114,9 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+
     - name: Cache pnpm dependencies
       uses: actions/cache@v4
       with:
@@ -183,7 +186,7 @@ EOF
         fi
 
         echo "::add-mask::$TOKEN"
-        export DOPPLER_TOKEN="$TOKEN"
+        echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
         doppler secrets download --no-file --format env >> "$GITHUB_ENV"
 
     - name: Run build
@@ -261,9 +264,6 @@ EOF
         pnpm install --frozen-lockfile
         echo "✅ Dependencies installed successfully"
 
-    - name: Install Doppler CLI
-      uses: dopplerhq/cli-action@v3
-
     - name: Load secrets for lint job
       shell: bash
       env:
@@ -310,7 +310,7 @@ EOF
         fi
 
         echo "::add-mask::$TOKEN"
-        export DOPPLER_TOKEN="$TOKEN"
+        echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
         doppler secrets download --no-file --format env >> "$GITHUB_ENV"
 
     - name: Build config packages
@@ -359,69 +359,55 @@ EOF
       run: pnpm install --frozen-lockfile
 
     # Download .env files from artifacts to prevent secret exposure
-    - name: Download env artifacts
-      if: env.ACT_LOCAL != 'true'
-      uses: actions/download-artifact@v4
-      with:
-        name: ci-env-files
-        path: /tmp/envs
-
-    - name: Create mock env files for act environment
-      if: env.ACT_LOCAL == 'true'
+    - name: Setup secrets for tests
+      shell: bash
+      env:
+        APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
+        DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
+        DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
       run: |
-        mkdir -p /tmp/envs apps/express-api apps/client-ui
+        if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
+          cat <<'EOF' >> "$GITHUB_ENV"
+APP_ENV=development
+API_KEY=dummy-api-key-for-act-testing
+SERVER_PORT=3040
+AWS_COGNITO_REGION=us-east-1
+AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
+AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
+AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
+COOKIE_DOMAIN=localhost
+COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
+RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
+REDIS_URL=redis://localhost:6379
+OPENAI_API_KEY=mock-openai-key-for-local-testing-only
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+AUTH_RATE_LIMIT_WINDOW_MS=900000
+AUTH_RATE_LIMIT_MAX_REQUESTS=5
+API_RATE_LIMIT_WINDOW_MS=60000
+API_RATE_LIMIT_MAX_REQUESTS=10
+VITE_API_URL=http://localhost:3040/api
+VITE_API_KEY=dummy-api-key-at-least-32-chars-long
+EOF
+          exit 0
+        fi
 
-        # Create Express API .env file with mock values
-        cat << EOF > /tmp/envs/express-api.env
-        # API Configuration
-        API_KEY=dummy-api-key-for-act-testing
-        SERVER_PORT=3040
-        NODE_ENV=development
-        APP_ENV=development
+        case "$APP_ENV" in
+          production) TOKEN="$DOPPLER_TOKEN_PROD" ;;
+          staging) TOKEN="$DOPPLER_TOKEN_STAGING" ;;
+          *) TOKEN="$DOPPLER_TOKEN_DEV" ;;
+        esac
 
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION=us-east-1
-        AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
-        AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
-        AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+        if [[ -z "$TOKEN" ]]; then
+          echo "❌ Missing Doppler token for environment $APP_ENV"
+          exit 1
+        fi
 
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
-
-        # Cookie Configuration
-        COOKIE_DOMAIN=localhost
-        COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
-
-        # Databases
-        REDIS_URL=redis://localhost:6379
-        RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
-
-        # OpenAI
-        OPENAI_API_KEY=mock-openai-key-for-local-testing-only
-
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS=900000
-        RATE_LIMIT_MAX_REQUESTS=100
-        AUTH_RATE_LIMIT_WINDOW_MS=900000
-        AUTH_RATE_LIMIT_MAX_REQUESTS=5
-        API_RATE_LIMIT_WINDOW_MS=60000
-        API_RATE_LIMIT_MAX_REQUESTS=10
-        EOF
-
-        # Create Client UI .env file
-        cat << EOF > /tmp/envs/client-ui.env
-        VITE_API_URL=http://localhost:3040/api
-        VITE_API_KEY=dummy-api-key-at-least-32-chars-long
-        EOF
-
-    - name: Create Express API .env file
-      run: |
-        mkdir -p apps/express-api
-        cp /tmp/envs/express-api.env apps/express-api/.env
-
-    - name: Create Client UI .env file
-      run: |
-        mkdir -p apps/client-ui
-        cp /tmp/envs/client-ui.env apps/client-ui/.env
+        echo "::add-mask::$TOKEN"
+        echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+        doppler secrets download --no-file --format env >> "$GITHUB_ENV"
 
     - name: Build types package
       run: pnpm --filter @repo/macro-ai-api-client build
@@ -691,6 +677,9 @@ EOF
       with:
         version: 10.14.0
 
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
@@ -700,70 +689,55 @@ EOF
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
 
-    # Download .env files from artifacts to prevent secret exposure
-    - name: Download env artifacts
-      if: env.ACT_LOCAL != 'true'
-      uses: actions/download-artifact@v4
-      with:
-        name: ci-env-files
-        path: /tmp/envs
-
-    - name: Create mock env files for act environment
-      if: env.ACT_LOCAL == 'true'
+    - name: Setup secrets for security scan
+      shell: bash
+      env:
+        APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
+        DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
+        DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
       run: |
-        mkdir -p /tmp/envs apps/express-api apps/client-ui
+        if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
+          cat <<'EOF' >> "$GITHUB_ENV"
+APP_ENV=development
+API_KEY=dummy-api-key-for-act-testing
+SERVER_PORT=3040
+AWS_COGNITO_REGION=us-east-1
+AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
+AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
+AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
+COOKIE_DOMAIN=localhost
+COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
+RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
+REDIS_URL=redis://localhost:6379
+OPENAI_API_KEY=mock-openai-key-for-local-testing-only
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+AUTH_RATE_LIMIT_WINDOW_MS=900000
+AUTH_RATE_LIMIT_MAX_REQUESTS=5
+API_RATE_LIMIT_WINDOW_MS=60000
+API_RATE_LIMIT_MAX_REQUESTS=10
+VITE_API_URL=http://localhost:3040/api
+VITE_API_KEY=dummy-api-key-at-least-32-chars-long
+EOF
+          exit 0
+        fi
 
-        # Create Express API .env file with mock values
-        cat << EOF > /tmp/envs/express-api.env
-        # API Configuration
-        API_KEY=dummy-api-key-for-act-testing
-        SERVER_PORT=3040
-        NODE_ENV=development
-        APP_ENV=development
+        case "$APP_ENV" in
+          production) TOKEN="$DOPPLER_TOKEN_PROD" ;;
+          staging) TOKEN="$DOPPLER_TOKEN_STAGING" ;;
+          *) TOKEN="$DOPPLER_TOKEN_DEV" ;;
+        esac
 
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION=us-east-1
-        AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
-        AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
-        AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+        if [[ -z "$TOKEN" ]]; then
+          echo "❌ Missing Doppler token for environment $APP_ENV"
+          exit 1
+        fi
 
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
-
-        # Cookie Configuration
-        COOKIE_DOMAIN=localhost
-        COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
-
-        # Databases
-        REDIS_URL=redis://localhost:6379
-        RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
-
-        # OpenAI
-        OPENAI_API_KEY=mock-openai-key-for-local-testing-only
-
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS=900000
-        RATE_LIMIT_MAX_REQUESTS=100
-        AUTH_RATE_LIMIT_WINDOW_MS=900000
-        AUTH_RATE_LIMIT_MAX_REQUESTS=5
-        API_RATE_LIMIT_WINDOW_MS=60000
-        API_RATE_LIMIT_MAX_REQUESTS=10
-        EOF
-
-        # Create Client UI .env file
-        cat << EOF > /tmp/envs/client-ui.env
-        VITE_API_URL=http://localhost:3040/api
-        VITE_API_KEY=dummy-api-key-at-least-32-chars-long
-        EOF
-
-    - name: Create Express API .env file
-      run: |
-        mkdir -p apps/express-api
-        cp /tmp/envs/express-api.env apps/express-api/.env
-
-    - name: Create Client UI .env file
-      run: |
-        mkdir -p apps/client-ui
-        cp /tmp/envs/client-ui.env apps/client-ui/.env
+        echo "::add-mask::$TOKEN"
+        echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+        doppler secrets download --no-file --format env >> "$GITHUB_ENV"
 
     - name: Build config packages
       run: |
