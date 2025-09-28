@@ -11,7 +11,7 @@
 	},
 	"scripts": {
 		"validate-env": "doppler run -- node scripts/validate-env.js",
-		"prebuild": "pnpm run validate-env",
+		"prebuild": "if [ \"$SKIP_ENV_VALIDATION\" != \"true\" ]; then pnpm run validate-env; fi",
 		"build": "doppler run -- sh -c \"esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/index.js --sourcemap --packages=external && ( [ '$ACT_LOCAL' = 'true' ] && echo 'Skipping swagger generation in act environment' || [ '$SKIP_ENV_VALIDATION' = 'true' ] && echo 'Skipping swagger generation in Docker build' || pnpm exec tsx src/utils/swagger/generate-swagger.ts )\"",
 		"build:docker": "doppler run -- sh -c \"NODE_ENV=production SERVER_PORT=3000 esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/index.js --sourcemap --packages=external && NODE_ENV=production SERVER_PORT=3000 pnpm exec tsx src/utils/swagger/generate-swagger.ts\"",
 		"start": "doppler run -- node dist/index.js",
