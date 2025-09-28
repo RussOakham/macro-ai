@@ -177,6 +177,10 @@ jobs:
           --build-arg SERVER_PORT=3040 \
           --build-arg APP_ENV=pr-${{ github.event.number }} \
           --build-arg SKIP_ENV_VALIDATION=true \
+          --build-arg DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }} \
+          --build-arg DOPPLER_PROJECT=${{ secrets.DOPPLER_PROJECT }} \
+          --build-arg DOPPLER_CONFIG=${{ secrets.DOPPLER_CONFIG }} \
+          --build-arg DOPPLER_ENVIRONMENT=${{ secrets.DOPPLER_ENVIRONMENT }} \
           --target runner \
           --no-cache \
           --platform linux/amd64 \
