@@ -11,11 +11,11 @@
 	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo 'Skipping build in ACT environment' ) || (doppler run -- sh -c \"pnpm run generate && pnpm exec tsup\" || (echo 'Doppler failed, trying without Doppler...' && pnpm run generate && pnpm exec tsup))",
+		"build": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo 'Skipping build in ACT environment' ) || ( [ \"$SKIP_ENV_VALIDATION\" = \"true\" ] && sh -c \"echo 'Skipping API client generation in CI build' && pnpm exec tsup\" ) || (doppler run -- sh -c \"pnpm run generate && pnpm exec tsup\" || (echo 'Doppler failed, trying without Doppler...' && pnpm run generate && pnpm exec tsup))",
 		"dev": "doppler run -- sh -c \"pnpm run generate && pnpm exec tsup --watch\"",
 		"clean": "rm -rf dist && rm -rf src/client",
-		"type-check": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo 'Skipping type-check in ACT environment' ) || (doppler run -- pnpm exec tsc --noEmit || pnpm exec tsc --noEmit)",
-		"generate": "doppler run -- sh -c '( [ \"$ACT_LOCAL\" = \"true\" ] && echo \"Skipping API client generation in act environment\" || [ \"$SKIP_ENV_VALIDATION\" = \"true\" ] && echo \"Skipping API client generation in Docker build\" || (cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && pnpm exec openapi-ts) )'",
+		"type-check": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo 'Skipping type-check in ACT environment' ) || ( [ \"$SKIP_ENV_VALIDATION\" = \"true\" ] && pnpm exec tsc --noEmit ) || (doppler run -- pnpm exec tsc --noEmit || pnpm exec tsc --noEmit)",
+		"generate": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo 'Skipping API client generation in ACT environment' ) || ( [ \"$SKIP_ENV_VALIDATION\" = \"true\" ] && echo 'Skipping API client generation in CI build' ) || (doppler run -- sh -c '(cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && pnpm exec openapi-ts)')",
 		"format": "prettier --check --cache .",
 		"format:fix": "prettier --write --cache .",
 		"lint": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo 'Skipping lint in ACT environment' ) || (doppler run -- sh -c \"pnpm exec oxlint . && pnpm exec eslint .\" || (pnpm exec oxlint . && pnpm exec eslint .))",
@@ -27,9 +27,9 @@
 		"lint:eslint": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo 'Skipping lint:eslint in ACT environment' ) || (doppler run -- pnpm exec eslint . || pnpm exec eslint .)",
 		"lint:fix:eslint": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo 'Skipping lint:fix:eslint in ACT environment' ) || (doppler run -- pnpm exec eslint . --fix || pnpm exec eslint . --fix)",
 		"lint:ci:eslint": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo 'Skipping lint:ci:eslint in ACT environment' ) || (doppler run -- pnpm exec eslint . --max-warnings 0 || pnpm exec eslint . --max-warnings 0)",
-		"test": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo 'Skipping test in ACT environment' ) || (doppler run -- pnpm exec vitest run || pnpm exec vitest run)",
+		"test": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo 'Skipping test in ACT environment' ) || ( [ \"$SKIP_ENV_VALIDATION\" = \"true\" ] && pnpm exec vitest run ) || (doppler run -- pnpm exec vitest run || pnpm exec vitest run)",
 		"test:watch": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo 'Skipping test:watch in ACT environment' ) || (doppler run -- pnpm exec vitest || pnpm exec vitest)",
-		"test:coverage": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo 'Skipping test:coverage in ACT environment' ) || (doppler run -- pnpm exec vitest run --coverage || pnpm exec vitest run --coverage)"
+		"test:coverage": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo 'Skipping test:coverage in ACT environment' ) || ( [ \"$SKIP_ENV_VALIDATION\" = \"true\" ] && pnpm exec vitest run --coverage ) || (doppler run -- pnpm exec vitest run --coverage || pnpm exec vitest run --coverage)"
 	},
 	"devDependencies": {
 		"@hey-api/openapi-ts": "^0.82.3",
