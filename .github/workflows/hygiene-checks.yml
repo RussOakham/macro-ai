@@ -188,6 +188,8 @@ jobs:
 
           echo "::add-mask::$TOKEN"
           echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "DOPPLER_PROJECT=macro-ai" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=dev_personal" >> "$GITHUB_ENV"
           doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV"
 
       - name: Run build
@@ -316,6 +318,8 @@ jobs:
 
           echo "::add-mask::$TOKEN"
           echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "DOPPLER_PROJECT=macro-ai" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=dev_personal" >> "$GITHUB_ENV"
           doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV"
 
       - name: Build config packages
@@ -416,6 +420,8 @@ jobs:
 
           echo "::add-mask::$TOKEN"
           echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "DOPPLER_PROJECT=macro-ai" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=dev_personal" >> "$GITHUB_ENV"
           doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV"
 
       - name: Run test with coverage
@@ -661,28 +667,28 @@ jobs:
         run: |
           if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
             cat <<'EOF' >> "$GITHUB_ENV"
-            APP_ENV=development
-            API_KEY=dummy-api-key-for-act-testing
-            SERVER_PORT=3040
-            AWS_COGNITO_REGION=us-east-1
-            AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
-            AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
-            AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
-            AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
-            COOKIE_DOMAIN=localhost
-            COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
-            RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
-            REDIS_URL=redis://localhost:6379
-            OPENAI_API_KEY=mock-openai-key-for-local-testing-only
-            RATE_LIMIT_WINDOW_MS=900000
-            RATE_LIMIT_MAX_REQUESTS=100
-            AUTH_RATE_LIMIT_WINDOW_MS=900000
-            AUTH_RATE_LIMIT_MAX_REQUESTS=5
-            API_RATE_LIMIT_WINDOW_MS=60000
-            API_RATE_LIMIT_MAX_REQUESTS=10
-            VITE_API_URL=http://localhost:3040/api
-            VITE_API_KEY=dummy-api-key-at-least-32-chars-long
-            EOF
+APP_ENV=development
+API_KEY=dummy-api-key-for-act-testing
+SERVER_PORT=3040
+AWS_COGNITO_REGION=us-east-1
+AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
+AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
+AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
+COOKIE_DOMAIN=localhost
+COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
+RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
+REDIS_URL=redis://localhost:6379
+OPENAI_API_KEY=mock-openai-key-for-local-testing-only
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+AUTH_RATE_LIMIT_WINDOW_MS=900000
+AUTH_RATE_LIMIT_MAX_REQUESTS=5
+API_RATE_LIMIT_WINDOW_MS=60000
+API_RATE_LIMIT_MAX_REQUESTS=10
+VITE_API_URL=http://localhost:3040/api
+VITE_API_KEY=dummy-api-key-at-least-32-chars-long
+EOF
             exit 0
           fi
 
@@ -699,6 +705,8 @@ jobs:
 
           echo "::add-mask::$TOKEN"
           echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "DOPPLER_PROJECT=macro-ai" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=dev_personal" >> "$GITHUB_ENV"
           doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV"
 
       - name: Build config packages
