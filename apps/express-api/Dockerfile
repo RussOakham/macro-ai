@@ -37,6 +37,15 @@ ENV PNPM_HOME="/root/.local/share/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
 WORKDIR /macro-ai
+ARG DOPPLER_TOKEN
+ARG DOPPLER_PROJECT
+ARG DOPPLER_CONFIG
+ARG DOPPLER_ENVIRONMENT
+ENV PATH="/root/.doppler/bin:$PATH"
+
+# Install Doppler CLI for build-time secret access
+RUN apk add --no-cache curl gnupg
+RUN curl -Ls --retry 3 https://cli.doppler.com/install.sh | sh
 
 # Copy source files
 # First try to copy from pruned output, then fallback to full source
@@ -44,6 +53,12 @@ COPY . .
 
 # Install dependencies (will work with either pruned or full source)
 RUN --mount=type=cache,target=/root/.local/share/pnpm \
+    PATH="/root/.doppler/bin:$PATH" \
+    DOPPLER_PATH="/root/.doppler/bin" \
+    DOPPLER_TOKEN="$DOPPLER_TOKEN" \
+    DOPPLER_PROJECT="$DOPPLER_PROJECT" \
+    DOPPLER_CONFIG="$DOPPLER_CONFIG" \
+    DOPPLER_ENVIRONMENT="$DOPPLER_ENVIRONMENT" \
     pnpm install --frozen-lockfile
 
 # Copy environment file if provided (for Docker build with dummy env vars)
@@ -54,6 +69,12 @@ RUN if [ "$ENV_FILE" ] && [ -f "$ENV_FILE" ]; then cp "$ENV_FILE" /macro-ai/.env
 # Only build the express-api package, not the entire monorepo
 RUN --mount=type=cache,target=.turbo \
     --mount=type=cache,target=/root/.local/share/pnpm \
+    PATH="/root/.doppler/bin:$PATH" \
+    DOPPLER_PATH="/root/.doppler/bin" \
+    DOPPLER_TOKEN="$DOPPLER_TOKEN" \
+    DOPPLER_PROJECT="$DOPPLER_PROJECT" \
+    DOPPLER_CONFIG="$DOPPLER_CONFIG" \
+    DOPPLER_ENVIRONMENT="$DOPPLER_ENVIRONMENT" \
     SKIP_ENV_VALIDATION=true pnpm turbo build --filter=@repo/express-api
 
 # Production dependencies stage - install ONLY production dependencies
