@@ -212,6 +212,84 @@ jobs:
           doppler secrets download --no-file --format env -t "$TOKEN" 2>&1 | tail -5
         fi
 
+    - name: Load secrets for build
+      shell: bash
+      env:
+        APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
+        DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
+        DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
+      run: |
+        if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
+          {
+            echo 'APP_ENV=development'
+            echo 'API_KEY=dummy-api-key-for-act-testing'
+            echo 'SERVER_PORT=3040'
+            echo 'AWS_COGNITO_REGION=us-east-1'
+            echo 'AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool'
+            echo 'AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id'
+            echo 'AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key'
+            echo 'AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000'
+            echo 'COOKIE_DOMAIN=localhost'
+            echo 'COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only'
+            echo 'RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test'
+            echo 'REDIS_URL=redis://localhost:6379'
+            echo 'OPENAI_API_KEY=mock-openai-key-for-local-testing-only'
+            echo 'RATE_LIMIT_WINDOW_MS=900000'
+            echo 'RATE_LIMIT_MAX_REQUESTS=100'
+            echo 'AUTH_RATE_LIMIT_WINDOW_MS=900000'
+            echo 'AUTH_RATE_LIMIT_MAX_REQUESTS=5'
+            echo 'API_RATE_LIMIT_WINDOW_MS=60000'
+            echo 'API_RATE_LIMIT_MAX_REQUESTS=10'
+            echo 'VITE_API_URL=http://localhost:3040/api'
+            echo 'VITE_API_KEY=dummy-api-key-at-least-32-chars-long'
+          } >> "$GITHUB_ENV"
+          exit 0
+        fi
+
+        case "$APP_ENV" in
+          production)
+            TOKEN="$DOPPLER_TOKEN_PROD"
+            ;;
+          staging)
+            TOKEN="$DOPPLER_TOKEN_STAGING"
+            ;;
+          *)
+            TOKEN="$DOPPLER_TOKEN_DEV"
+            ;;
+        esac
+
+        if [[ -z "$TOKEN" ]]; then
+          echo "❌ Missing Doppler token for environment $APP_ENV"
+          exit 1
+        fi
+
+        echo "::add-mask::$TOKEN"
+        echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+        echo "DOPPLER_PROJECT=macro-ai" >> "$GITHUB_ENV"
+        echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+
+        echo "🔍 Doppler Resolution Debugging:"
+        echo "  CLI Version: $(doppler --version)"
+        echo "  Environment Variables:"
+        echo "    DOPPLER_TOKEN length: $(echo -n "$DOPPLER_TOKEN" | wc -c)"
+        echo "    DOPPLER_PROJECT: $DOPPLER_PROJECT"
+        echo "    DOPPLER_CONFIG: $DOPPLER_CONFIG"
+        echo "  Resolved Project: $(doppler configure get project)"
+        echo "  Resolved Config: $(doppler configure get config)"
+        echo "  Token Scope Check: $(doppler projects get macro-ai --json 2>/dev/null | jq -r '.configs.dev // "dev config not found"' 2>/dev/null || echo 'jq not available or API error')"
+        echo "  Token Format Check: $(echo "$TOKEN" | sed -E 's/(dp\.st\.dev\.[a-zA-Z0-9]{8})([a-zA-Z0-9]*)([a-zA-Z0-9]{5})$/\1***\3/')"
+        echo "  Token Length: $(echo -n "$TOKEN" | wc -c)"
+
+        echo "🔍 Attempting Doppler secrets download..."
+        if doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV" 2>&1; then
+          echo "✅ Doppler secrets download succeeded"
+        else
+          echo "❌ Doppler secrets download failed with exit code $?"
+          echo "🔍 Last Doppler command error details:"
+          doppler secrets download --no-file --format env -t "$TOKEN" 2>&1 | tail -5
+        fi
+
     - name: Run build
       run: |
         echo "🔨 Starting build process..."
