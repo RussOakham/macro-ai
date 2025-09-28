@@ -188,7 +188,7 @@ jobs:
 
           echo "::add-mask::$TOKEN"
           echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
-          doppler secrets download --no-file --format env >> "$GITHUB_ENV"
+          doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV"
 
       - name: Run build
         run: |
@@ -316,7 +316,7 @@ jobs:
 
           echo "::add-mask::$TOKEN"
           echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
-          doppler secrets download --no-file --format env >> "$GITHUB_ENV"
+          doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV"
 
       - name: Build config packages
         run: pnpm --filter @repo/config-testing build
@@ -377,29 +377,29 @@ jobs:
           DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
         run: |
           if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
-            cat <<'EOF' >> "$GITHUB_ENV"
-            APP_ENV=development
-            API_KEY=dummy-api-key-for-act-testing
-            SERVER_PORT=3040
-            AWS_COGNITO_REGION=us-east-1
-            AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
-            AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
-            AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
-            AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
-            COOKIE_DOMAIN=localhost
-            COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
-            RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
-            REDIS_URL=redis://localhost:6379
-            OPENAI_API_KEY=mock-openai-key-for-local-testing-only
-            RATE_LIMIT_WINDOW_MS=900000
-            RATE_LIMIT_MAX_REQUESTS=100
-            AUTH_RATE_LIMIT_WINDOW_MS=900000
-            AUTH_RATE_LIMIT_MAX_REQUESTS=5
-            API_RATE_LIMIT_WINDOW_MS=60000
-            API_RATE_LIMIT_MAX_REQUESTS=10
-            VITE_API_URL=http://localhost:3040/api
-            VITE_API_KEY=dummy-api-key-at-least-32-chars-long
-            EOF
+            {
+              echo 'APP_ENV=development'
+              echo 'API_KEY=dummy-api-key-for-act-testing'
+              echo 'SERVER_PORT=3040'
+              echo 'AWS_COGNITO_REGION=us-east-1'
+              echo 'AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool'
+              echo 'AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id'
+              echo 'AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key'
+              echo 'AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000'
+              echo 'COOKIE_DOMAIN=localhost'
+              echo 'COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only'
+              echo 'RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test'
+              echo 'REDIS_URL=redis://localhost:6379'
+              echo 'OPENAI_API_KEY=mock-openai-key-for-local-testing-only'
+              echo 'RATE_LIMIT_WINDOW_MS=900000'
+              echo 'RATE_LIMIT_MAX_REQUESTS=100'
+              echo 'AUTH_RATE_LIMIT_WINDOW_MS=900000'
+              echo 'AUTH_RATE_LIMIT_MAX_REQUESTS=5'
+              echo 'API_RATE_LIMIT_WINDOW_MS=60000'
+              echo 'API_RATE_LIMIT_MAX_REQUESTS=10'
+              echo 'VITE_API_URL=http://localhost:3040/api'
+              echo 'VITE_API_KEY=dummy-api-key-at-least-32-chars-long'
+            } >> "$GITHUB_ENV"
             exit 0
           fi
 
@@ -416,7 +416,7 @@ jobs:
 
           echo "::add-mask::$TOKEN"
           echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
-          doppler secrets download --no-file --format env >> "$GITHUB_ENV"
+          doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV"
 
       - name: Run test with coverage
         run: pnpm test:coverage
@@ -610,15 +610,9 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          # Use our custom configuration file
-          config-path: .gitleaks.toml
-          # Report findings to GitHub Security tab
-          report-format: sarif
-          # Fail on any secrets found (after allowlisting)
-          exit-code: 1
-          # Enable verbose output for debugging
-          verbose: true
+          GITLEAKS_CONFIG_PATH: .gitleaks.toml
+          GITLEAKS_REPORT_FORMAT: sarif
+          GITLEAKS_EXIT_CODE: 1
 
       - name: Skip Gitleaks in act environment
         if: env.ACT_LOCAL == 'true'
@@ -705,7 +699,7 @@ jobs:
 
           echo "::add-mask::$TOKEN"
           echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
-          doppler secrets download --no-file --format env >> "$GITHUB_ENV"
+          doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV"
 
       - name: Build config packages
         run: |
@@ -807,10 +801,6 @@ jobs:
         with:
           config: >-
             .semgrep.yml p/security p/owasp-top-ten p/javascript p/typescript p/yaml p/github-actions
-          generateSarif: '1'
-          generateGitlab: '0'
-          generateGithub: '1'
-          sarifOutput: 'semgrep.sarif'
 
       # Upload Semgrep results to GitHub Security tab
       - name: Check for SARIF file
