@@ -35,10 +35,15 @@ jobs:
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
 
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+
     # ESLint Security Scanning
     - name: Run ESLint Security Scan
       run: pnpm lint:eslint
       env:
+        # Skip API client generation to avoid Doppler dependency in security scan
+        ACT_LOCAL: 'true'
         # Mock environment variables for API client generation
         API_KEY: 'mock-api-key-for-ci-testing-purposes-only-32-chars-min'
         NODE_ENV: 'test'
@@ -75,9 +80,6 @@ jobs:
       with:
         config: >-
           p/security p/owasp-top-ten p/javascript p/typescript p/yaml p/github-actions .semgrep.yml
-        generateSarif: '0'
-        generateGitlab: '0'
-        generateGithub: '1'
 
     # GitHub Actions Workflow Security Scanning
     - name: Run Actionlint
