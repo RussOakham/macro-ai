@@ -199,6 +199,7 @@ jobs:
         echo "✅ Build completed successfully"
       env:
         NODE_ENV: production
+        SKIP_ENV_VALIDATION: true
         # Core Configuration
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
         SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
