@@ -44,6 +44,10 @@ jobs:
       env:
         # Skip API client generation to avoid Doppler dependency in security scan
         ACT_LOCAL: 'true'
+        # Doppler tokens for CI environment
+        DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
+        DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
         # Mock environment variables for API client generation
         API_KEY: 'mock-api-key-for-ci-testing-purposes-only-32-chars-min'
         NODE_ENV: 'test'
