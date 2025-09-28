@@ -190,6 +190,13 @@ jobs:
         echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
         echo "DOPPLER_PROJECT=macro-ai" >> "$GITHUB_ENV"
         echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+
+        echo "🔍 Doppler Resolution Debugging:"
+        echo "  CLI Version: $(doppler --version)"
+        echo "  Resolved Project: $(doppler configure get project)"
+        echo "  Resolved Config: $(doppler configure get config)"
+        echo "  Token Scope Check: $(doppler projects get macro-ai --json 2>/dev/null | jq -r '.configs.dev // "dev config not found"' 2>/dev/null || echo 'jq not available or API error')"
+
         doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV"
 
     - name: Run build
@@ -321,6 +328,13 @@ jobs:
         echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
         echo "DOPPLER_PROJECT=macro-ai" >> "$GITHUB_ENV"
         echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+
+        echo "🔍 Doppler Resolution Debugging (Lint Job):"
+        echo "  CLI Version: $(doppler --version)"
+        echo "  Resolved Project: $(doppler configure get project)"
+        echo "  Resolved Config: $(doppler configure get config)"
+        echo "  Token Scope Check: $(doppler projects get macro-ai --json 2>/dev/null | jq -r '.configs.dev // "dev config not found"' 2>/dev/null || echo 'jq not available or API error')"
+
         doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV"
 
     - name: Build config packages
@@ -423,6 +437,13 @@ jobs:
         echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
         echo "DOPPLER_PROJECT=macro-ai" >> "$GITHUB_ENV"
         echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+
+        echo "🔍 Doppler Resolution Debugging (Test Job):"
+        echo "  CLI Version: $(doppler --version)"
+        echo "  Resolved Project: $(doppler configure get project)"
+        echo "  Resolved Config: $(doppler configure get config)"
+        echo "  Token Scope Check: $(doppler projects get macro-ai --json 2>/dev/null | jq -r '.configs.dev // "dev config not found"' 2>/dev/null || echo 'jq not available or API error')"
+
         doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV"
 
     - name: Run test with coverage

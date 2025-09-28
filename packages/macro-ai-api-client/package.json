@@ -11,7 +11,7 @@
 	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo 'Skipping build in ACT environment' ) || ( [ \"$SKIP_ENV_VALIDATION\" = \"true\" ] && sh -c \"echo 'Skipping API client generation in CI build' && pnpm exec tsup\" ) || (doppler run -- sh -c \"pnpm run generate && pnpm exec tsup\" || (echo 'Doppler failed, trying without Doppler...' && pnpm run generate && pnpm exec tsup))",
+		"build": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo 'Skipping build in ACT environment' ) || ( [ \"$SKIP_ENV_VALIDATION\" = \"true\" ] && sh -c \"echo 'Skipping API client generation in CI build' && pnpm exec tsup\" ) || (echo \"🔍 Script Doppler Resolution: Project=$(doppler configure get project), Config=$(doppler configure get config)\" && doppler run -- sh -c \"pnpm run generate && pnpm exec tsup\" || (echo 'Doppler failed, trying without Doppler...' && pnpm run generate && pnpm exec tsup))",
 		"dev": "doppler run -- sh -c \"pnpm run generate && pnpm exec tsup --watch\"",
 		"clean": "rm -rf dist && rm -rf src/client",
 		"type-check": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo 'Skipping type-check in ACT environment' ) || ( [ \"$SKIP_ENV_VALIDATION\" = \"true\" ] && pnpm exec tsc --noEmit ) || (doppler run -- pnpm exec tsc --noEmit || pnpm exec tsc --noEmit)",
