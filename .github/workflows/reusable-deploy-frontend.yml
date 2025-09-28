@@ -142,28 +142,28 @@ jobs:
         if [[ "${{ env.ACT_LOCAL }}" == "true" ]]; then
           echo "DOPPLER_DISABLED=true" >> "$GITHUB_ENV"
           cat <<'EOF' >> "$GITHUB_ENV"
-API_KEY=dummy-api-key-at-least-32-chars-long
-SERVER_PORT=3040
-APP_ENV=development
-AWS_COGNITO_REGION=us-east-1
-AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
-AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
-AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
-AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
-COOKIE_DOMAIN=localhost
-COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
-RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
-REDIS_URL=redis://localhost:6379
-OPENAI_API_KEY=mock-openai-key-for-local-testing-only
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
-AUTH_RATE_LIMIT_WINDOW_MS=900000
-AUTH_RATE_LIMIT_MAX_REQUESTS=5
-API_RATE_LIMIT_WINDOW_MS=60000
-API_RATE_LIMIT_MAX_REQUESTS=10
-VITE_API_URL=http://localhost:3040/api
-VITE_API_KEY=dummy-api-key-at-least-32-chars-long
-EOF
+          API_KEY=dummy-api-key-at-least-32-chars-long
+          SERVER_PORT=3040
+          APP_ENV=development
+          AWS_COGNITO_REGION=us-east-1
+          AWS_COGNITO_USER_POOL_ID=us-east-1_mock_pool
+          AWS_COGNITO_USER_POOL_CLIENT_ID=mock_client_id
+          AWS_COGNITO_USER_POOL_SECRET_KEY=mock_secret_key
+          AWS_COGNITO_REFRESH_TOKEN_EXPIRY=2592000
+          COOKIE_DOMAIN=localhost
+          COOKIE_ENCRYPTION_KEY=mock-encryption-key-for-local-testing-only
+          RELATIONAL_DATABASE_URL=postgresql://user:password@localhost:5432/macro_ai_test
+          REDIS_URL=redis://localhost:6379
+          OPENAI_API_KEY=mock-openai-key-for-local-testing-only
+          RATE_LIMIT_WINDOW_MS=900000
+          RATE_LIMIT_MAX_REQUESTS=100
+          AUTH_RATE_LIMIT_WINDOW_MS=900000
+          AUTH_RATE_LIMIT_MAX_REQUESTS=5
+          API_RATE_LIMIT_WINDOW_MS=60000
+          API_RATE_LIMIT_MAX_REQUESTS=10
+          VITE_API_URL=http://localhost:3040/api
+          VITE_API_KEY=dummy-api-key-at-least-32-chars-long
+          EOF
         else
           case "$DEPLOYMENT_TYPE" in
             production)
@@ -183,7 +183,7 @@ EOF
           fi
 
           echo "::add-mask::$TOKEN"
-          export DOPPLER_TOKEN="$TOKEN"
+          echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
           doppler secrets download --no-file --format env >> "$GITHUB_ENV"
         fi
 
