@@ -813,9 +813,18 @@ jobs:
           sarifOutput: 'semgrep.sarif'
 
       # Upload Semgrep results to GitHub Security tab
+      - name: Check for SARIF file
+        if: always()
+        run: |
+          echo "Checking for SARIF file..."
+          ls -la semgrep.sarif || echo "SARIF file not found"
+          if [ -f "semgrep.sarif" ]; then
+            echo "SARIF file exists, size: $(stat -f%z semgrep.sarif 2>/dev/null || stat -c%s semgrep.sarif 2>/dev/null || echo 'unknown')"
+          fi
+
       - name: Upload Semgrep results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && hashFiles('semgrep.sarif') != ''
         with:
           sarif_file: semgrep.sarif
 
