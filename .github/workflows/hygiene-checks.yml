@@ -189,7 +189,7 @@ jobs:
         echo "::add-mask::$TOKEN"
         echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
         echo "DOPPLER_PROJECT=macro-ai" >> "$GITHUB_ENV"
-        echo "DOPPLER_CONFIG=dev_personal" >> "$GITHUB_ENV"
+        echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
         doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV"
 
     - name: Run build
@@ -320,7 +320,7 @@ jobs:
         echo "::add-mask::$TOKEN"
         echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
         echo "DOPPLER_PROJECT=macro-ai" >> "$GITHUB_ENV"
-        echo "DOPPLER_CONFIG=dev_personal" >> "$GITHUB_ENV"
+        echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
         doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV"
 
     - name: Build config packages
@@ -422,7 +422,7 @@ jobs:
         echo "::add-mask::$TOKEN"
         echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
         echo "DOPPLER_PROJECT=macro-ai" >> "$GITHUB_ENV"
-        echo "DOPPLER_CONFIG=dev_personal" >> "$GITHUB_ENV"
+        echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
         doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV"
 
     - name: Run test with coverage
@@ -707,7 +707,7 @@ jobs:
         echo "::add-mask::$TOKEN"
         echo "DOPPLER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
         echo "DOPPLER_PROJECT=macro-ai" >> "$GITHUB_ENV"
-        echo "DOPPLER_CONFIG=dev_personal" >> "$GITHUB_ENV"
+        echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
         doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV"
 
     - name: Build config packages
