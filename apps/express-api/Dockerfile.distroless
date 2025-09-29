@@ -38,7 +38,7 @@ COPY --from=builder /macro-ai/out/full/ .
 # Use BuildKit cache mount for turbo cache during build
 RUN --mount=type=cache,target=.turbo \
     --mount=type=cache,target=/root/.local/share/pnpm \
-    pnpm run prebuild:docker-image && pnpm run build:docker-image
+    pnpm turbo run build:docker-image --filter=@repo/express-api
 
 # Production dependencies stage - install ONLY production dependencies
 FROM base AS installer

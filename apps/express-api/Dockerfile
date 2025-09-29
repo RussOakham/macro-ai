@@ -50,7 +50,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm \
 # Only build the express-api package, not the entire monorepo
 RUN --mount=type=cache,target=.turbo \
     --mount=type=cache,target=/root/.local/share/pnpm \
-    pnpm run prebuild:docker-image && pnpm run build:docker-image
+    pnpm turbo run build:docker-image --filter=@repo/express-api
 
 # Production dependencies stage - install ONLY production dependencies
 FROM base AS installer
