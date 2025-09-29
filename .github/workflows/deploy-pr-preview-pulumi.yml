@@ -297,6 +297,11 @@ jobs:
         fi
 
         echo "🚀 Deploying infrastructure..."
+
+        # Configure Doppler for PR preview (uses 'dev' config)
+        doppler configure set project macro-ai --silent
+        doppler configure set config dev --silent
+
         doppler run -- pulumi up --yes --stack "${STACK_NAME}"
 
         # Get outputs
