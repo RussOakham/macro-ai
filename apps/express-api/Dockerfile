@@ -46,15 +46,11 @@ COPY . .
 RUN --mount=type=cache,target=/root/.local/share/pnpm \
     pnpm install --frozen-lockfile
 
-# Copy environment file if provided (for Docker build with dummy env vars)
-ARG ENV_FILE
-RUN if [ "$ENV_FILE" ] && [ -f "$ENV_FILE" ]; then cp "$ENV_FILE" /macro-ai/.env && cp "$ENV_FILE" /macro-ai/apps/express-api/.env; fi
-
 # Use BuildKit cache mount for turbo cache during build
 # Only build the express-api package, not the entire monorepo
 RUN --mount=type=cache,target=.turbo \
     --mount=type=cache,target=/root/.local/share/pnpm \
-    SKIP_ENV_VALIDATION=true pnpm turbo build --filter=@repo/express-api
+    pnpm run prebuild:docker-image && pnpm run build:docker-image
 
 # Production dependencies stage - install ONLY production dependencies
 FROM base AS installer

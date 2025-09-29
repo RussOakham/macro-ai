@@ -35,14 +35,10 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm \
 # Build the project and its dependencies
 COPY --from=builder /macro-ai/out/full/ .
 
-# Copy environment file if provided (for Docker build with dummy env vars)
-ARG ENV_FILE
-RUN if [ "$ENV_FILE" ] && [ -f "$ENV_FILE" ]; then cp "$ENV_FILE" /macro-ai/.env && cp "$ENV_FILE" /macro-ai/apps/express-api/.env; fi
-
 # Use BuildKit cache mount for turbo cache during build
 RUN --mount=type=cache,target=.turbo \
     --mount=type=cache,target=/root/.local/share/pnpm \
-    SKIP_ENV_VALIDATION=true pnpm turbo build
+    pnpm run prebuild:docker-image && pnpm run build:docker-image
 
 # Production dependencies stage - install ONLY production dependencies
 FROM base AS installer
