@@ -188,9 +188,9 @@ jobs:
 
         echo "::add-mask::$TOKEN"
 
-        # Set environment variables that take precedence over local Doppler config
-        export DOPPLER_PROJECT="macro-ai"
-        export DOPPLER_CONFIG="dev"
+        # Configure Doppler to use the correct project and config
+        doppler configure set project macro-ai
+        doppler configure set config dev
 
         echo "🔍 Doppler Resolution Debugging:"
         echo "  CLI Version: $(doppler --version)"
@@ -267,9 +267,9 @@ jobs:
 
         echo "::add-mask::$TOKEN"
 
-        # Set environment variables that take precedence over local Doppler config
-        export DOPPLER_PROJECT="macro-ai"
-        export DOPPLER_CONFIG="dev"
+        # Configure Doppler to use the correct project and config
+        doppler configure set project macro-ai
+        doppler configure set config dev
 
         echo "🔍 Doppler Resolution Debugging:"
         echo "  CLI Version: $(doppler --version)"
