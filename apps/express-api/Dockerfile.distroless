@@ -35,6 +35,9 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm \
 # Build the project and its dependencies
 COPY --from=builder /macro-ai/out/full/ .
 
+# Copy dummy environment file for build-time validation
+COPY .env.docker .env
+
 # Use BuildKit cache mount for turbo cache during build
 RUN --mount=type=cache,target=.turbo \
     --mount=type=cache,target=/root/.local/share/pnpm \
