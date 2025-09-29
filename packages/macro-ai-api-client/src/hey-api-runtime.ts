@@ -6,7 +6,7 @@ import type { CreateClientConfig } from './client/client.gen'
  */
 function getBaseURL(): string {
 	// Check if we're in a browser environment
-	if (typeof window !== 'undefined') {
+	if (typeof globalThis.window !== 'undefined') {
 		// Browser environment - use import.meta.env or fallback
 		const meta = import.meta as {
 			env?: { VITE_API_BASE_URL?: string; VITE_API_URL?: string }

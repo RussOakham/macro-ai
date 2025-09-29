@@ -15,7 +15,7 @@ with the same attention to detail and quality as any enterprise application.
 
 ## 🚀 Quick Start
 
-Get up and running in minutes:
+Get up and running in minutes with Doppler environment variable management:
 
 ```bash
 # Clone and install
@@ -23,16 +23,20 @@ git clone https://github.com/RussOakham/macro-ai.git
 cd macro-ai
 pnpm install
 
-# Set up environment
-cp apps/express-api/.env.example apps/express-api/.env
-cp apps/client-ui/.env.example apps/client-ui/.env
-# Edit .env files with your configuration
+# Install Doppler CLI and login
+brew install dopplerhq/cli/doppler  # macOS
+doppler login
 
-# Start development servers
+# Start development (all environment variables auto-injected from Doppler)
 pnpm dev
+
+# Or run individual services
+pnpm api    # Start Express API server
+pnpm ui     # Start React frontend
 ```
 
 **📚 [Complete Setup Guide →](./docs/getting-started/development-setup.md)**
+**🔐 [Environment Configuration →](./docs/getting-started/environment-configuration.md)**
 
 ## ✨ Features
 
