@@ -188,12 +188,16 @@ jobs:
 
         echo "::add-mask::$TOKEN"
 
+        # Set environment variables that take precedence over local Doppler config
+        export DOPPLER_PROJECT="macro-ai"
+        export DOPPLER_CONFIG="dev"
+
         echo "🔍 Doppler Resolution Debugging:"
         echo "  CLI Version: $(doppler --version)"
-        echo "  Using CLI flags directly (not environment variables):"
+        echo "  Environment Variables Set:"
+        echo "    DOPPLER_PROJECT: $DOPPLER_PROJECT"
+        echo "    DOPPLER_CONFIG: $DOPPLER_CONFIG"
         echo "    Token: $(echo "$TOKEN" | sed -E 's/(dp\.st\.dev\.[a-zA-Z0-9]{8})([a-zA-Z0-9]*)([a-zA-Z0-9]{5})$/\1***\3/')"
-        echo "    Project: macro-ai"
-        echo "    Config: dev"
         echo "  Resolved Project: $(doppler configure get project)"
         echo "  Resolved Config: $(doppler configure get config)"
         echo "  Token Scope Check: $(doppler projects get macro-ai --json 2>/dev/null | jq -r '.configs.dev // "dev config not found"' 2>/dev/null || echo 'jq not available or API error')"
@@ -201,12 +205,12 @@ jobs:
         echo "  Token Length: $(echo -n "$TOKEN" | wc -c)"
 
         echo "🔍 Attempting Doppler secrets download..."
-        if doppler secrets download --no-file --format env -t "$TOKEN" -p "macro-ai" -c "dev" >> "$GITHUB_ENV" 2>&1; then
+        if doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV" 2>&1; then
           echo "✅ Doppler secrets download succeeded"
         else
           echo "❌ Doppler secrets download failed with exit code $?"
           echo "🔍 Last Doppler command error details:"
-          doppler secrets download --no-file --format env -t "$TOKEN" -p "macro-ai" -c "dev" 2>&1 | tail -5
+          doppler secrets download --no-file --format env -t "$TOKEN" 2>&1 | tail -5
         fi
 
     - name: Load secrets for build
@@ -263,12 +267,16 @@ jobs:
 
         echo "::add-mask::$TOKEN"
 
+        # Set environment variables that take precedence over local Doppler config
+        export DOPPLER_PROJECT="macro-ai"
+        export DOPPLER_CONFIG="dev"
+
         echo "🔍 Doppler Resolution Debugging:"
         echo "  CLI Version: $(doppler --version)"
-        echo "  Using CLI flags directly (not environment variables):"
+        echo "  Environment Variables Set:"
+        echo "    DOPPLER_PROJECT: $DOPPLER_PROJECT"
+        echo "    DOPPLER_CONFIG: $DOPPLER_CONFIG"
         echo "    Token: $(echo "$TOKEN" | sed -E 's/(dp\.st\.dev\.[a-zA-Z0-9]{8})([a-zA-Z0-9]*)([a-zA-Z0-9]{5})$/\1***\3/')"
-        echo "    Project: macro-ai"
-        echo "    Config: dev"
         echo "  Resolved Project: $(doppler configure get project)"
         echo "  Resolved Config: $(doppler configure get config)"
         echo "  Token Scope Check: $(doppler projects get macro-ai --json 2>/dev/null | jq -r '.configs.dev // "dev config not found"' 2>/dev/null || echo 'jq not available or API error')"
@@ -276,12 +284,12 @@ jobs:
         echo "  Token Length: $(echo -n "$TOKEN" | wc -c)"
 
         echo "🔍 Attempting Doppler secrets download..."
-        if doppler secrets download --no-file --format env -t "$TOKEN" -p "macro-ai" -c "dev" >> "$GITHUB_ENV" 2>&1; then
+        if doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV" 2>&1; then
           echo "✅ Doppler secrets download succeeded"
         else
           echo "❌ Doppler secrets download failed with exit code $?"
           echo "🔍 Last Doppler command error details:"
-          doppler secrets download --no-file --format env -t "$TOKEN" -p "macro-ai" -c "dev" 2>&1 | tail -5
+          doppler secrets download --no-file --format env -t "$TOKEN" 2>&1 | tail -5
         fi
 
     - name: Run build
@@ -425,7 +433,7 @@ jobs:
         else
           echo "❌ Doppler secrets download failed with exit code $?"
           echo "🔍 Last Doppler command error details:"
-          doppler secrets download --no-file --format env -t "$TOKEN" -p "macro-ai" -c "dev" 2>&1 | tail -5
+          doppler secrets download --no-file --format env -t "$TOKEN" 2>&1 | tail -5
         fi
 
     - name: Build config packages
@@ -540,7 +548,7 @@ jobs:
         else
           echo "❌ Doppler secrets download failed with exit code $?"
           echo "🔍 Last Doppler command error details:"
-          doppler secrets download --no-file --format env -t "$TOKEN" -p "macro-ai" -c "dev" 2>&1 | tail -5
+          doppler secrets download --no-file --format env -t "$TOKEN" 2>&1 | tail -5
         fi
 
     - name: Run test with coverage
@@ -829,7 +837,7 @@ jobs:
         else
           echo "❌ Doppler secrets download failed with exit code $?"
           echo "🔍 Last Doppler command error details:"
-          doppler secrets download --no-file --format env -t "$TOKEN" -p "macro-ai" -c "dev" 2>&1 | tail -5
+          doppler secrets download --no-file --format env -t "$TOKEN" 2>&1 | tail -5
         fi
 
     - name: Build config packages
