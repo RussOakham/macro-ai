@@ -205,6 +205,9 @@ jobs:
         echo "  Token Length: $(echo -n "$TOKEN" | wc -c)"
 
         echo "🔍 Attempting Doppler secrets download..."
+        # Ensure Doppler config is set in this step's context
+        doppler configure set project macro-ai --silent
+        doppler configure set config dev --silent
         if doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV" 2>&1; then
           echo "✅ Doppler secrets download succeeded"
         else
@@ -284,6 +287,9 @@ jobs:
         echo "  Token Length: $(echo -n "$TOKEN" | wc -c)"
 
         echo "🔍 Attempting Doppler secrets download..."
+        # Ensure Doppler config is set in this step's context
+        doppler configure set project macro-ai --silent
+        doppler configure set config dev --silent
         if doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV" 2>&1; then
           echo "✅ Doppler secrets download succeeded"
         else
