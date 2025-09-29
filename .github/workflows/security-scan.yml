@@ -69,6 +69,7 @@ jobs:
         AUTH_RATE_LIMIT_MAX_REQUESTS: '10'
         API_RATE_LIMIT_WINDOW_MS: '60000'
         API_RATE_LIMIT_MAX_REQUESTS: '60'
+        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
 
     # Snyk Security Scanning
     - name: Run Snyk to check for vulnerabilities
