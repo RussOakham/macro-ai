@@ -205,10 +205,7 @@ jobs:
         echo "  Token Length: $(echo -n "$TOKEN" | wc -c)"
 
         echo "🔍 Attempting Doppler secrets download..."
-        # Ensure Doppler config is set in this step's context
-        doppler configure set project macro-ai --silent
-        doppler configure set config dev --silent
-        if doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV" 2>&1; then
+        if doppler secrets download --no-file --format env -t "$TOKEN" -p "macro-ai" -c "dev" >> "$GITHUB_ENV" 2>&1; then
           echo "✅ Doppler secrets download succeeded"
         else
           echo "❌ Doppler secrets download failed with exit code $?"
@@ -287,10 +284,7 @@ jobs:
         echo "  Token Length: $(echo -n "$TOKEN" | wc -c)"
 
         echo "🔍 Attempting Doppler secrets download..."
-        # Ensure Doppler config is set in this step's context
-        doppler configure set project macro-ai --silent
-        doppler configure set config dev --silent
-        if doppler secrets download --no-file --format env -t "$TOKEN" >> "$GITHUB_ENV" 2>&1; then
+        if doppler secrets download --no-file --format env -t "$TOKEN" -p "macro-ai" -c "dev" >> "$GITHUB_ENV" 2>&1; then
           echo "✅ Doppler secrets download succeeded"
         else
           echo "❌ Doppler secrets download failed with exit code $?"
@@ -444,6 +438,12 @@ jobs:
 
     - name: Build config packages
       run: pnpm --filter @repo/config-testing build
+
+    - name: Configure Doppler for API client build
+      shell: bash
+      run: |
+        doppler configure set project macro-ai --silent
+        doppler configure set config dev --silent
 
     - name: Build types package
       run: pnpm --filter @repo/macro-ai-api-client build
@@ -851,6 +851,12 @@ jobs:
         echo "🔨 Building config packages..."
         pnpm --filter @repo/config-testing build
         echo "✅ Config packages built successfully"
+
+    - name: Configure Doppler for API client build
+      shell: bash
+      run: |
+        doppler configure set project macro-ai --silent
+        doppler configure set config dev --silent
 
     - name: Build types package
       run: pnpm --filter @repo/macro-ai-api-client build
