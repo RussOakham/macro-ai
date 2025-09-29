@@ -239,6 +239,16 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+      with:
+        token: ${{ secrets.DOPPLER_TOKEN_DEV }}
+
+    - name: Configure Doppler
+      run: |
+        doppler configure set project macro-ai
+        doppler configure set config dev
+
     - name: Cache pnpm dependencies
       uses: actions/cache@v4
       with:
@@ -377,6 +387,16 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
+
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+      with:
+        token: ${{ secrets.DOPPLER_TOKEN_DEV }}
+
+    - name: Configure Doppler
+      run: |
+        doppler configure set project macro-ai
+        doppler configure set config dev
 
     - name: Cache pnpm dependencies
       uses: actions/cache@v4
@@ -565,6 +585,16 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
+
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+      with:
+        token: ${{ secrets.DOPPLER_TOKEN_DEV }}
+
+    - name: Configure Doppler
+      run: |
+        doppler configure set project macro-ai
+        doppler configure set config dev
 
     - name: Cache pnpm dependencies
       uses: actions/cache@v4
@@ -917,6 +947,16 @@ jobs:
       with:
         node-version: '20.19.4'
         cache: 'pnpm'
+
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+      with:
+        token: ${{ secrets.DOPPLER_TOKEN_DEV }}
+
+    - name: Configure Doppler
+      run: |
+        doppler configure set project macro-ai
+        doppler configure set config dev
 
     - name: Install dependencies
       run: pnpm install --frozen-lockfile

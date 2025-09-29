@@ -88,6 +88,16 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
 
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+      with:
+        token: ${{ secrets.DOPPLER_TOKEN_PROD }}
+
+    - name: Configure Doppler
+      run: |
+        doppler configure set project macro-ai
+        doppler configure set config prd
+
     - name: Cache pnpm dependencies
       uses: actions/cache@v4
       with:
