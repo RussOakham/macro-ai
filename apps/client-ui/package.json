@@ -31,7 +31,7 @@
 		"test:ui": "doppler run -- vitest --ui",
 		"test:run": "doppler run -- vitest run",
 		"test:coverage": "doppler run -- vitest run --coverage",
-		"generate:msw": "doppler run -- npx msw-auto-mock ../../apps/express-api/public/swagger.json -o src/test/mocks/",
+		"generate:msw": "npx msw-auto-mock ../../apps/express-api/public/swagger.json -o src/test/mocks/",
 		"deploy:amplify": "doppler run -- ./scripts/deploy-amplify.sh",
 		"deploy:staging": "doppler run -- AMPLIFY_ENV=staging ./scripts/deploy-amplify.sh",
 		"deploy:production": "doppler run -- AMPLIFY_ENV=production ./scripts/deploy-amplify.sh"
