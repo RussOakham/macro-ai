@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Config } from '../client/client/types.gen.js'
 
@@ -11,21 +11,13 @@ vi.mock('../client/client/index.js', () => ({
 	createConfig: mockCreateConfig,
 }))
 
-// Mock environment variables
-const originalEnv = process.env
-
 describe('API Client Package', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
-		process.env = { ...originalEnv }
-	})
-
-	afterEach(() => {
-		process.env = originalEnv
 	})
 
 	describe('createApiClient', () => {
-		it('should create client with provided baseURL and default config', async () => {
+		it('should create client with valid baseURL and default config', async () => {
 			const { createApiClient } = await import('../index.js')
 
 			const mockClient = {
@@ -54,28 +46,27 @@ describe('API Client Package', () => {
 			expect(result).toBe(mockClient)
 		})
 
-		it('should use localhost fallback when API_BASE_URL is not set', async () => {
-			delete process.env.API_BASE_URL
-
+		it('should throw error for invalid URL format', async () => {
 			const { createApiClient } = await import('../index.js')
 
-			mockCreateConfig.mockReturnValue({ baseURL: 'http://localhost:3000' })
-			mockCreateClient.mockReturnValue({ instance: {} })
+			expect(() => createApiClient('not-a-url')).toThrow(
+				'baseURL validation failed',
+			)
+		})
 
-			createApiClient('http://localhost:3000')
+		it('should throw error for empty string', async () => {
+			const { createApiClient } = await import('../index.js')
 
-			expect(mockCreateConfig).toHaveBeenCalledWith({
-				baseURL: 'http://localhost:3000',
-				headers: {
-					Accept: 'application/json',
-					'Content-Type': 'application/json',
-				},
-				responseType: 'json',
-				timeout: 30000,
-				validateStatus: expect.any(Function) as unknown as (
-					status: number,
-				) => boolean,
-			})
+			expect(() => createApiClient('')).toThrow('baseURL validation failed')
+		})
+
+		it('should throw error for undefined baseURL', async () => {
+			const { createApiClient } = await import('../index.js')
+
+			// @ts-expect-error Testing invalid input
+			expect(() => createApiClient(undefined)).toThrow(
+				'baseURL validation failed',
+			)
 		})
 
 		it('should merge custom configuration with defaults', async () => {
@@ -105,23 +96,6 @@ describe('API Client Package', () => {
 					status: number,
 				) => boolean,
 			})
-		})
-
-		it('should override baseURL from environment with provided baseURL', async () => {
-			process.env.API_BASE_URL = 'https://env.example.com'
-
-			const { createApiClient } = await import('../index.js')
-
-			mockCreateConfig.mockReturnValue({})
-			mockCreateClient.mockReturnValue({ instance: {} })
-
-			createApiClient('https://override.example.com')
-
-			expect(mockCreateConfig).toHaveBeenCalledWith(
-				expect.objectContaining({
-					baseURL: 'https://override.example.com',
-				}),
-			)
 		})
 	})
 

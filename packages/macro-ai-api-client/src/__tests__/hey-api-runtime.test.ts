@@ -1,25 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { createClientConfig } from '../hey-api-runtime.js'
 
-// Mock environment variables
-const originalEnv = process.env
-
 describe('Hey API Runtime Configuration', () => {
-	beforeEach(() => {
-		process.env = { ...originalEnv }
-	})
-
-	afterEach(() => {
-		process.env = originalEnv
-	})
-
 	describe('createClientConfig', () => {
-		it('should create configuration with default values', () => {
-			const config = createClientConfig({})
+		it('should create configuration with provided baseURL', () => {
+			const config = createClientConfig({ baseURL: 'https://api.example.com' })
 
 			expect(config).toEqual({
-				baseURL: 'http://localhost:3000',
+				baseURL: 'https://api.example.com',
 				headers: {
 					Accept: 'application/json',
 					'Content-Type': 'application/json',
@@ -32,16 +21,29 @@ describe('Hey API Runtime Configuration', () => {
 			})
 		})
 
-		it('should use API_BASE_URL from environment when available', () => {
+		it('should throw error when baseURL is not provided', () => {
+			expect(() => createClientConfig({})).toThrow(
+				'baseURL is required and must be provided explicitly. The API client is environment-agnostic and does not provide defaults.',
+			)
+		})
+
+		it('should throw error when baseURL is empty string', () => {
+			expect(() => createClientConfig({ baseURL: '' })).toThrow(
+				'baseURL is required and must be provided explicitly',
+			)
+		})
+
+		it('should use provided baseURL regardless of environment variables', () => {
 			process.env.API_BASE_URL = 'https://api.production.com'
 
-			const config = createClientConfig({})
+			const config = createClientConfig({ baseURL: 'https://api.custom.com' })
 
-			expect(config.baseURL).toBe('https://api.production.com')
+			expect(config.baseURL).toBe('https://api.custom.com')
 		})
 
 		it('should merge custom headers with defaults', () => {
 			const customConfig = {
+				baseURL: 'https://api.example.com',
 				headers: {
 					Authorization: 'Bearer token',
 					'X-API-Key': 'secret-key',
@@ -60,6 +62,7 @@ describe('Hey API Runtime Configuration', () => {
 
 		it('should override default headers when provided', () => {
 			const customConfig = {
+				baseURL: 'https://api.example.com',
 				headers: {
 					Accept: 'application/xml',
 					'Content-Type': 'application/xml',
@@ -76,6 +79,7 @@ describe('Hey API Runtime Configuration', () => {
 
 		it('should preserve other configuration properties', () => {
 			const customConfig = {
+				baseURL: 'https://api.example.com',
 				responseType: 'text' as const,
 				timeout: 60000,
 			}
@@ -88,7 +92,10 @@ describe('Hey API Runtime Configuration', () => {
 		})
 
 		it('should handle undefined headers gracefully', () => {
-			const config = createClientConfig({ headers: undefined })
+			const config = createClientConfig({
+				baseURL: 'https://api.example.com',
+				headers: undefined,
+			})
 
 			expect(config.headers).toEqual({
 				Accept: 'application/json',
@@ -99,7 +106,7 @@ describe('Hey API Runtime Configuration', () => {
 
 	describe('validateStatus function', () => {
 		it('should validate HTTP status codes correctly', () => {
-			const config = createClientConfig({})
+			const config = createClientConfig({ baseURL: 'https://api.example.com' })
 			const { validateStatus } = config
 
 			// Ensure validateStatus is defined
@@ -124,22 +131,13 @@ describe('Hey API Runtime Configuration', () => {
 		})
 	})
 
-	describe('environment variable handling', () => {
-		it('should handle missing API_BASE_URL gracefully', () => {
-			delete process.env.API_BASE_URL
+	describe('environment variable independence', () => {
+		it('should ignore environment variables and only use provided baseURL', () => {
+			process.env.API_BASE_URL = 'https://should-be-ignored.com'
 
-			const config = createClientConfig({})
+			const config = createClientConfig({ baseURL: 'https://api.example.com' })
 
-			expect(config.baseURL).toBe('http://localhost:3000')
-		})
-
-		it('should handle empty API_BASE_URL', () => {
-			process.env.API_BASE_URL = ''
-
-			const config = createClientConfig({})
-
-			// Empty string is not nullish, so it uses the empty string
-			expect(config.baseURL).toBe('')
+			expect(config.baseURL).toBe('https://api.example.com')
 		})
 	})
 })

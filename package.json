@@ -18,7 +18,6 @@
 		"dev:types": "turbo run dev --filter=@repo/macro-ai-api-client",
 		"clean:types": "turbo run clean --filter=@repo/macro-ai-api-client",
 		"generate": "turbo run generate --filter=@repo/macro-ai-api-client",
-		"generate:types": "turbo run generate --filter=@repo/macro-ai-api-client",
 		"db:generate:express-api": "pnpm --filter @repo/express-api db:generate",
 		"db:push:express-api": "pnpm --filter @repo/express-api db:push",
 		"lint": "doppler run -- turbo run lint",
@@ -130,7 +129,8 @@
 		"vitest": "^3.2.4",
 		"vitest-mock-extended": "^3.1.0",
 		"yaml": "^2.8.1",
-		"yaml-lint": "^1.7.0"
+		"yaml-lint": "^1.7.0",
+		"zod-validation-error": "4.0.2"
 	},
 	"packageManager": "pnpm@10.14.0",
 	"engines": {
