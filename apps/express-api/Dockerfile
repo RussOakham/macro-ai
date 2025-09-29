@@ -47,7 +47,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm \
     pnpm install --frozen-lockfile
 
 # Copy dummy environment file for build-time validation
-COPY .env.docker .env
+COPY apps/express-api/.env.docker .env
 
 # Use BuildKit cache mount for turbo cache during build
 # Only build the express-api package, not the entire monorepo
