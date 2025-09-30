@@ -361,6 +361,8 @@ jobs:
     name: Cleanup on PR Close
     runs-on: ubuntu-latest
     if: github.event.pull_request != null && github.event.action == 'closed'
+    env:
+      AWS_REGION: us-east-1
     steps:
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
