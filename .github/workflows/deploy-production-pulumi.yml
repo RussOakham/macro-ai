@@ -116,6 +116,8 @@ jobs:
         aws-region: ${{ env.AWS_REGION }}
 
     - name: Code Quality Checks
+      env:
+        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_PROD }}
       run: |
         echo "🔍 Running code quality checks..."
 
