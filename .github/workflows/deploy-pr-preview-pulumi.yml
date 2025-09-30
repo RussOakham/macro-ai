@@ -218,79 +218,34 @@ jobs:
           echo "⏭️ No relevant changes - skipping deployment"
         fi
 
-    - name: Install Pulumi Dependencies
-      if: >-
-        steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true')
-      shell: bash
-      run: |
-        echo "📦 Installing Pulumi project dependencies..."
-        cd infrastructure/pulumi
-        pnpm install
-
-    - name: Deploy PR Preview Infrastructure
-      if: >-
-        steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true')
-      id: deploy
-      env:
-        PR_NUMBER: ${{ github.event.number }}
-        BRANCH_REF: ${{ github.event.pull_request.head.ref }}
-        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
-      run: |
-        echo "🚀 Starting PR Preview deployment..."
-        echo "Environment: pr-$PR_NUMBER"
-        echo "PR Number: $PR_NUMBER"
-        echo "Branch: $BRANCH_REF"
-        echo "Image Tag: ${{ steps.build-image.outputs.image-tag }}"
-
-        # Call the reusable workflow via GitHub API or use a different approach
-        # For now, we'll use the Pulumi CLI directly
-        cd infrastructure/pulumi
-
-        # Set up environment variables
-        export PULUMI_ACCESS_TOKEN="${{ secrets.PULUMI_ACCESS_TOKEN }}"
-        export AWS_REGION="${{ env.AWS_REGION }}"
-        export AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}"
-
-        STACK_NAME="pr-${{ github.event.number }}"
-        IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/macro-ai-staging-express-api:${{ steps.build-image.outputs.image-tag }}"
-
-        echo "🔧 Setting Pulumi configuration for stack: ${STACK_NAME}"
-        pulumi stack select ${STACK_NAME} || pulumi stack init ${STACK_NAME}
-
-        # Set all required configuration
-        pulumi config set environmentName "pr-${{ github.event.number }}" --stack "${STACK_NAME}"
-        pulumi config set deploymentType "preview" --stack "${STACK_NAME}"
-        pulumi config set imageUri "${IMAGE_URI}" --stack "${STACK_NAME}"
-        pulumi config set imageTag "${{ steps.build-image.outputs.image-tag }}" --stack "${STACK_NAME}"
-        pulumi config set doppler:dopplerToken "${DOPPLER_TOKEN}" --secret --stack "${STACK_NAME}"
-        # Doppler config is handled in Pulumi code for PR previews (uses 'dev' config)
-        pulumi config set prNumber "${{ github.event.number }}" --stack "${STACK_NAME}"
-        pulumi config set branchName "$BRANCH_REF" --stack "${STACK_NAME}"
-        if [[ -n "${CUSTOM_DOMAIN_NAME:-}" ]]; then
-          pulumi config set customDomainName "${CUSTOM_DOMAIN_NAME}" --stack "${STACK_NAME}"
-        fi
-        if [[ -n "${HOSTED_ZONE_ID:-}" ]]; then
-          pulumi config set hostedZoneId "${HOSTED_ZONE_ID}" --stack "${STACK_NAME}"
-        fi
-
-        echo "🚀 Deploying infrastructure..."
-        pulumi up --yes --stack "${STACK_NAME}"
-
-        # Get outputs
-        API_ENDPOINT=$(pulumi stack output apiEndpoint --stack "${STACK_NAME}")
-        STACK_NAME_OUTPUT=$(pulumi stack output stackName --stack "${STACK_NAME}" || echo "${STACK_NAME}")
-
-        echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
-        echo "stack-name=${STACK_NAME_OUTPUT}" >> $GITHUB_OUTPUT
-
-        echo "✅ Backend deployment completed successfully!"
-        echo "🌐 API Endpoint: ${API_ENDPOINT}"
+  deploy-backend:
+    name: Deploy Backend Infrastructure
+    uses: ./.github/workflows/reusable-deploy-backend-pulumi.yml
+    if: >-
+      steps.decide-deploy.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-backend-changes == 'true' || steps.change-detection.outputs.has-infrastructure-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true')
+    needs: [ build-express-api ]
+    with:
+      environment-name: pr-${{ github.event.number }}
+      deployment-type: preview
+      image-tag: ${{ needs.build-express-api.outputs.image-tag }}
+      pr-number: ${{ github.event.number }}
+      branch-name: ${{ github.event.pull_request.head.ref }}
+      custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
+      hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
+      should-deploy: true
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+      DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
+      DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
+      DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
 
   deploy-frontend:
     name: Deploy Frontend to Amplify
     uses: ./.github/workflows/reusable-deploy-frontend.yml
     if: github.event.pull_request != null
-    needs: [ deploy-pr-preview ]
+    needs: [ deploy-backend ]
     permissions:
       id-token: write
       contents: read
@@ -299,11 +254,11 @@ jobs:
       deployment-type: preview
       pr-number: ${{ github.event.number }}
       branch-name: ${{ github.event.pull_request.head.ref }}
-      backend-url: ${{ needs.deploy-pr-preview.outputs.api-endpoint }}
+      backend-url: ${{ needs.deploy-backend.outputs.api-endpoint }}
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
       should-deploy: >-
-        ${{ needs.deploy-pr-preview.outputs.should-deploy == 'true' && (needs.deploy-pr-preview.outputs.has-frontend-changes == 'true' || needs.deploy-pr-preview.outputs.is-first-deployment == 'true') }}
+        ${{ needs.deploy-backend.outputs.should-deploy == 'true' && (steps.change-detection.outputs.has-frontend-changes == 'true' || steps.change-detection.outputs.is-first-deployment == 'true') }}
       doppler-config: dev
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
@@ -315,7 +270,7 @@ jobs:
     name: Frontend Deployment Summary
     runs-on: ubuntu-latest
     if: github.event.pull_request != null
-    needs: [ deploy-pr-preview, deploy-frontend ]
+    needs: [ deploy-backend, deploy-frontend ]
     permissions:
       pull-requests: write
     steps:
@@ -325,16 +280,16 @@ jobs:
       run: |
         echo "🎉 Complete PR Preview Environment Deployed!"
         echo "📱 Frontend URL: ${{ needs.deploy-frontend.outputs.app-url }}"
-        echo "🔗 Backend API: ${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
-        echo "📝 Stack: ${{ needs.deploy-pr-preview.outputs.stack-name }}"
+        echo "🔗 Backend API: ${{ needs.deploy-backend.outputs.api-endpoint }}"
+        echo "📝 Stack: ${{ needs.deploy-backend.outputs.stack-name }}"
         echo "🔢 PR: #${{ github.event.number }}"
         echo "🌿 Branch: $BRANCH_NAME"
 
     - name: Backend Health Check
-      if: needs.deploy-pr-preview.outputs.api-endpoint != '' && needs.deploy-pr-preview.outputs.has-backend-changes == 'true'
+      if: needs.deploy-backend.outputs.api-endpoint != '' && steps.change-detection.outputs.has-backend-changes == 'true'
       id: backend-health-check
       run: |
-        API_ENDPOINT="${{ needs.deploy-pr-preview.outputs.api-endpoint }}"
+        API_ENDPOINT="${{ needs.deploy-backend.outputs.api-endpoint }}"
         echo "🔍 Performing backend health check on: '$API_ENDPOINT'"
 
         # Wait for the service to be ready
