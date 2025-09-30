@@ -308,6 +308,7 @@ jobs:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       API_KEY: ${{ secrets.VITE_API_KEY }}
+      DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
 
   frontend-deployment-summary:
     name: Frontend Deployment Summary

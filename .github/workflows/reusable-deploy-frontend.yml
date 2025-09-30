@@ -52,6 +52,8 @@ on:
         required: true
       API_KEY:
         required: true
+      DOPPLER_TOKEN_DEV:
+        required: true
     outputs:
       app-url:
         description: 'Deployed frontend app URL'
