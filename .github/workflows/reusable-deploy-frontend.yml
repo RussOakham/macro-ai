@@ -116,6 +116,16 @@ jobs:
         restore-keys: |
           pnpm-${{ runner.os }}-
 
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+      with:
+        token: ${{ secrets.DOPPLER_TOKEN_DEV }}
+
+    - name: Configure Doppler
+      run: |
+        doppler configure set project macro-ai
+        doppler configure set config dev
+
     - name: Install dependencies
       run: |
         cd apps/client-ui

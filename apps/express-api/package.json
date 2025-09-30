@@ -22,7 +22,7 @@
 		"db:push": "doppler run -- drizzle-kit push",
 		"format": "prettier --check --cache .",
 		"format:fix": "prettier --write --cache .",
-		"lint": "[ \"$SKIP_DOPPLER\" = \"true\" ] && pnpm oxlint ./src && eslint ./src --ext .ts,.tsx || doppler run -- pnpm oxlint ./src && eslint ./src --ext .ts,.tsx",
+		"lint": "doppler run -- pnpm oxlint ./src && eslint ./src --ext .ts,.tsx",
 		"lint:fix": "doppler run -- pnpm oxlint ./src --fix && eslint ./src --ext .ts,.tsx --fix",
 		"lint:ci": "doppler run -- pnpm oxlint ./src --max-warnings=0 && eslint ./src --ext .ts,.tsx --max-warnings 0",
 		"lint:oxlint": "doppler run -- pnpm oxlint ./src",
@@ -32,7 +32,7 @@
 		"lint:fix:eslint": "doppler run -- eslint ./src --ext .ts,.tsx --fix",
 		"lint:ci:eslint": "doppler run -- eslint ./src --ext .ts,.tsx --max-warnings 0",
 		"type-check": "doppler run -- tsc --noEmit",
-		"test": "[ \"$SKIP_DOPPLER\" = \"true\" ] && vitest run --silent --config vitest.config.ts || doppler run -- vitest run --silent --config vitest.config.ts",
+		"test": "doppler run -- vitest run --silent --config vitest.config.ts",
 		"test:ui": "doppler run -- vitest",
 		"test:coverage": "doppler run -- vitest run --coverage",
 		"test:coverage:ui": "doppler run -- vitest --coverage --ui"
