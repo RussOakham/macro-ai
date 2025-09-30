@@ -137,12 +137,11 @@ jobs:
     - name: Run build
       run: |
         echo "🔨 Starting build process..."
-        pnpm build
+        doppler run -- pnpm build
         echo "✅ Build completed successfully"
       env:
         NODE_ENV: production
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        DOPPLER_TOKEN: ${{ steps.doppler-config.outputs.token }}
 
   lint:
     needs: setup
