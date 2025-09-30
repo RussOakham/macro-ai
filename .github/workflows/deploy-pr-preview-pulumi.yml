@@ -224,6 +224,9 @@ jobs:
     if: >-
       needs.deploy-pr-preview.outputs.should-deploy == 'true' && (needs.deploy-pr-preview.outputs.has-backend-changes == 'true' || needs.deploy-pr-preview.outputs.has-infrastructure-changes == 'true' || needs.deploy-pr-preview.outputs.is-first-deployment == 'true')
     needs: [ deploy-pr-preview ]
+    permissions:
+      id-token: write
+      contents: read
     with:
       environment-name: pr-${{ github.event.number }}
       deployment-type: preview
