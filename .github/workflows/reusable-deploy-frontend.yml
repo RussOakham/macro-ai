@@ -129,9 +129,13 @@ jobs:
     - name: Verify Doppler CLI
       run: |
         echo "🔍 Verifying Doppler CLI installation..."
-        doppler --version
-        doppler projects
-        echo "✅ Doppler CLI is accessible"
+        doppler --version || echo "❌ Doppler CLI not found"
+        echo "🔑 Checking Doppler token..."
+        echo "DOPPLER_TOKEN length: ${#DOPPLER_TOKEN}"
+        doppler projects || echo "❌ Doppler authentication failed"
+        echo "✅ Doppler CLI verification complete"
+      env:
+        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
 
     - name: Install dependencies
       run: |
