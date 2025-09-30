@@ -142,6 +142,7 @@ jobs:
       env:
         NODE_ENV: production
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
+        DOPPLER_TOKEN: ${{ steps.doppler-config.outputs.token }}
 
   lint:
     needs: setup
