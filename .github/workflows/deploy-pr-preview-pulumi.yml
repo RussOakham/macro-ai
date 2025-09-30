@@ -228,7 +228,7 @@ jobs:
       id-token: write
       contents: read
     with:
-      environment-name: preview
+      environment-name: pr-${{ github.event.number }}
       deployment-type: preview
       image-tag: ${{ needs.deploy-pr-preview.outputs.image-tag }}
       pr-number: ${{ github.event.number }}
