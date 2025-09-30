@@ -1,0 +1,19 @@
+name: 'Setup Mock Environment for Act'
+description: 'Creates mock environment configuration for local act testing'
+runs:
+  using: 'composite'
+  steps:
+    - name: Configure mock environment for act
+      if: env.ACT_LOCAL == 'true'
+      shell: bash
+      run: |
+        echo "🧪 Configuring mock environment for act local testing"
+
+        # Set SKIP_CONFIG_VALIDATION to bypass full environment validation
+        echo "SKIP_CONFIG_VALIDATION=true" >> "$GITHUB_ENV"
+
+        # Set minimal required environment variables for act
+        echo "NODE_ENV=test" >> "$GITHUB_ENV"
+        echo "APP_ENV=development" >> "$GITHUB_ENV"
+
+        echo "✅ Mock environment configured for act (config validation skipped)"
