@@ -262,7 +262,7 @@ const envSchema = z.object({
 
 ## 🎨 Client UI Configuration
 
-### Complete Environment Setup
+### Client UI Environment Setup
 
 Create `apps/client-ui/.env` from the template:
 
@@ -400,23 +400,23 @@ doppler whoami
 
 ```bash
 # Test Doppler connection
-doppler run --project macro-ai --config dev_personal -- echo "Doppler working!"
+doppler run -- echo "Doppler working!"
 
 # Check what secrets are available
-doppler secrets --project macro-ai --config dev_personal
+doppler secrets
 ```
 
 #### Doppler Commands Reference
 
 ```bash
 # View all available secrets (values hidden for security)
-doppler secrets --project macro-ai --config dev_personal
+doppler secrets
 
 # Run a command with secrets injected
-doppler run --project macro-ai --config dev_personal -- your-command
+doppler run -- your-command
 
 # Open Doppler dashboard
-doppler open --project macro-ai
+doppler open
 
 # Check your current configuration
 doppler configure debug

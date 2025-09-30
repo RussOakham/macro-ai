@@ -9,16 +9,18 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { assertConfig } from '../simple-config.ts'
 
 describe('Simple Config System', () => {
-	const originalEnv = process.env
+	let originalEnv: NodeJS.ProcessEnv
 
 	beforeEach(() => {
+		// Clone environment to avoid cross-test contamination
+		originalEnv = { ...process.env }
 		// Clear environment completely
 		process.env = {}
 	})
 
 	afterEach(() => {
 		// Restore original environment
-		process.env = originalEnv
+		process.env = { ...originalEnv }
 	})
 
 	describe('assertConfig with skip validation', () => {
@@ -35,7 +37,7 @@ describe('Simple Config System', () => {
 			expect(config.appEnv).toBe('development') // default
 		})
 
-		it.skip('should validate normally when SKIP_CONFIG_VALIDATION is not set', async () => {
+		it('should validate normally when SKIP_CONFIG_VALIDATION is not set', async () => {
 			// Ensure SKIP_CONFIG_VALIDATION is not set
 			delete process.env.SKIP_CONFIG_VALIDATION
 
@@ -43,7 +45,7 @@ describe('Simple Config System', () => {
 			await expect(assertConfig(false)).rejects.toThrow()
 		})
 
-		it.skip('should validate normally when SKIP_CONFIG_VALIDATION=false', async () => {
+		it('should validate normally when SKIP_CONFIG_VALIDATION=false', async () => {
 			// Explicitly set to false
 			process.env.SKIP_CONFIG_VALIDATION = 'false'
 
@@ -71,7 +73,7 @@ describe('Simple Config System', () => {
 			expect(typeof config).toBe('object')
 		})
 
-		it.skip('should override environment variable when explicitly passing false', async () => {
+		it('should override environment variable when explicitly passing false', async () => {
 			// Set environment variable to true, but explicitly pass false to function
 			process.env.SKIP_CONFIG_VALIDATION = 'true'
 
