@@ -360,37 +360,7 @@ jobs:
         echo "✅ Build completed successfully"
       env:
         NODE_ENV: production
-        # Core Configuration
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
-        API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-        AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-        AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-        AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-        # AWS Cognito credentials removed - using IAM roles instead
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
-
-        # Cookie Configuration
-        COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
-        COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
-
-        # Databases
-        REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
-        RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
-
-        # OpenAI
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
-
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-        RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-        AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-        AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-        API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-        API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
         DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
 
   lint:
@@ -538,37 +508,7 @@ jobs:
       run: pnpm --filter @repo/macro-ai-api-client build
       env:
         NODE_ENV: production
-        # Core Configuration
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
-        API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-        AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-        AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-        AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-        # AWS Cognito credentials removed - using IAM roles instead
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
-
-        # Cookie Configuration
-        COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
-        COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
-
-        # Databases
-        REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
-        RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
-
-        # OpenAI
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
-
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-        RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-        AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-        AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-        API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-        API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
         DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
 
     - name: Generate MSW handlers
@@ -584,37 +524,7 @@ jobs:
         echo "✅ Lint checks passed successfully"
       env:
         NODE_ENV: development
-        # Core Configuration
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
-        API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-        AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-        AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-        AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-        # AWS Cognito credentials removed - using IAM roles instead
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
-
-        # Cookie Configuration
-        COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
-        COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
-
-        # Databases
-        REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
-        RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
-
-        # OpenAI
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
-
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-        RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-        AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-        AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-        API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-        API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
         DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
 
   test:
@@ -753,37 +663,7 @@ jobs:
       run: pnpm --filter @repo/macro-ai-api-client build
       env:
         NODE_ENV: test
-        # Core Configuration
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
-        API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-        AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-        AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-        AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-        # AWS Cognito credentials removed - using IAM roles instead
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
-
-        # Cookie Configuration
-        COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
-        COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
-
-        # Databases
-        REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
-        RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
-
-        # OpenAI
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
-
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-        RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-        AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-        AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-        API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-        API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
         DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
 
     - name: Generate MSW handlers
@@ -796,37 +676,7 @@ jobs:
       run: pnpm test:coverage
       env:
         NODE_ENV: test
-        # Core Configuration
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
-        API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-        AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-        AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-        AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-        # AWS Cognito credentials removed - using IAM roles instead
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
-
-        # Cookie Configuration
-        COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
-        COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
-
-        # Databases
-        REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
-        RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
-
-        # OpenAI
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
-
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-        RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-        AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-        AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-        API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-        API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
         DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
 
     - name: Upload coverage reports
@@ -1137,37 +987,7 @@ jobs:
       run: pnpm --filter @repo/macro-ai-api-client build
       env:
         NODE_ENV: production
-        # Core Configuration
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
-        API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-        AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-        AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-        AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-        # AWS Cognito credentials removed - using IAM roles instead
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
-
-        # Cookie Configuration
-        COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
-        COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
-
-        # Databases
-        REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
-        RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
-
-        # OpenAI
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
-
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-        RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-        AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-        AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-        API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-        API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
         DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
 
     - name: Generate MSW handlers
@@ -1181,37 +1001,7 @@ jobs:
       run: pnpm lint:eslint
       env:
         NODE_ENV: development
-        # Core Configuration
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        SERVER_PORT: ${{ secrets.SERVER_PORT || '3040' }}
-        API_KEY: ${{ secrets.API_KEY || 'dummy-api-key-at-least-32-chars-long' }}
-
-        # AWS Cognito Configuration
-        AWS_COGNITO_REGION: ${{ secrets.AWS_COGNITO_REGION || 'us-east-1' }}
-        AWS_COGNITO_USER_POOL_ID: ${{ secrets.AWS_COGNITO_USER_POOL_ID || 'dummy-pool-id' }}
-        AWS_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.AWS_COGNITO_USER_POOL_CLIENT_ID || 'dummy-client-id' }}
-        AWS_COGNITO_USER_POOL_SECRET_KEY: ${{ secrets.AWS_COGNITO_USER_POOL_SECRET_KEY || 'dummy-secret-key' }}
-        # AWS Cognito credentials removed - using IAM roles instead
-        AWS_COGNITO_REFRESH_TOKEN_EXPIRY: ${{ secrets.AWS_COGNITO_REFRESH_TOKEN_EXPIRY || 30 }}
-
-        # Cookie Configuration
-        COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN || 'localhost' }}
-        COOKIE_ENCRYPTION_KEY: ${{ secrets.COOKIE_ENCRYPTION_KEY || 'dummy-encryption-key-at-least-32-chars-long' }}
-
-        # Databases
-        REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
-        RELATIONAL_DATABASE_URL: ${{ secrets.RELATIONAL_DATABASE_URL || 'dummy-url' }}
-
-        # OpenAI
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-dummy-openai-key-for-testing-only' }}
-
-        # Rate Limiting
-        RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS || '900000' }}
-        RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS || '100' }}
-        AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS || '3600000' }}
-        AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
-        API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
-        API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
         DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
 
     # Snyk Security Scanning
