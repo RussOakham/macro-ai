@@ -141,7 +141,54 @@ const convertToConfigType = (env: TEnv): ConfigType => ({
 	apiRateLimitMaxRequests: env.API_RATE_LIMIT_MAX_REQUESTS,
 })
 
-export const assertConfig = async (shouldLog = false): Promise<ConfigType> => {
+/**
+ * Get minimal config for Docker builds and CI where full validation is skipped
+ */
+const getMinimalConfig = (): ConfigType => ({
+	apiKey: 'dummy-api-key',
+	nodeEnv: 'development',
+	appEnv: 'development',
+	port: 3040,
+	awsCognitoRegion: 'us-east-1',
+	awsCognitoUserPoolId: 'dummy-pool-id',
+	awsCognitoUserPoolClientId: 'dummy-client-id',
+	awsCognitoRefreshTokenExpiry: 30,
+	openaiApiKey: 'dummy-openai-key',
+	relationalDatabaseUrl: 'postgresql://dummy:dummyuser@localhost:5432/dummy',
+	redisUrl: 'redis://localhost:6379',
+	cookieEncryptionKey: 'dummy-cookie-key-32-chars-minimum',
+	cookieDomain: 'localhost',
+	corsAllowedOrigins: undefined,
+	rateLimitWindowMs: 900000,
+	rateLimitMaxRequests: 100,
+	authRateLimitWindowMs: 900000,
+	authRateLimitMaxRequests: 5,
+	apiRateLimitWindowMs: 60000,
+	apiRateLimitMaxRequests: 1000,
+})
+
+export const assertConfig = async (
+	shouldLog = false,
+	skipValidation?: boolean,
+): Promise<ConfigType> => {
+	// Check if validation should be skipped (parameter takes precedence over env var)
+	const shouldSkipValidation =
+		skipValidation === true ||
+		(skipValidation !== false && process.env.SKIP_CONFIG_VALIDATION === 'true')
+
+	if (shouldSkipValidation) {
+		if (shouldLog) {
+			logger.info(
+				{
+					operation: 'assertConfig',
+					skipReason: skipValidation ? 'parameter' : 'environment',
+				},
+				'Configuration validation skipped for build-time compatibility',
+			)
+		}
+		return getMinimalConfig()
+	}
+
 	const [config, error] = await loadConfig()
 
 	if (error) {

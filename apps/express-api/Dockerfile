@@ -46,14 +46,11 @@ COPY . .
 RUN --mount=type=cache,target=/root/.local/share/pnpm \
     pnpm install --frozen-lockfile
 
-# Copy dummy environment file for build-time validation
-COPY apps/express-api/.env.docker .env
-
 # Use BuildKit cache mount for turbo cache during build
 # Only build the express-api package, not the entire monorepo
 RUN --mount=type=cache,target=.turbo \
     --mount=type=cache,target=/root/.local/share/pnpm \
-    pnpm turbo run build:docker-image --filter=@repo/express-api
+    SKIP_CONFIG_VALIDATION=true pnpm turbo run build:docker-image --filter=@repo/express-api
 
 # Production dependencies stage - install ONLY production dependencies
 FROM base AS installer

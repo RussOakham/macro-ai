@@ -15,7 +15,7 @@
 		"dev": "pnpm generate && tsup --watch",
 		"clean": "rm -rf dist && rm -rf src/client",
 		"type-check": "tsc --noEmit",
-		"generate": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo \"Skipping API client generation in act environment\" || [ \"$SKIP_ENV_VALIDATION\" = \"true\" ] && echo \"Skipping API client generation in Docker build\" || (cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && openapi-ts) )",
+		"generate": "( [ \"$ACT_LOCAL\" = \"true\" ] && echo \"Skipping API client generation in act environment\" || [ \"$SKIP_CONFIG_VALIDATION\" = \"true\" ] && echo \"Skipping API client generation in Docker build\" || (cd ../../apps/express-api && pnpm generate-swagger && cd ../../packages/macro-ai-api-client && openapi-ts) )",
 		"format": "prettier --check --cache .",
 		"format:fix": "prettier --write --cache .",
 		"lint": "pnpm oxlint . && eslint .",

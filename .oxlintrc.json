@@ -92,6 +92,7 @@
 		"import/no-namespace": "off",
 		"import/no-named-as-default": "off",
 		"import/no-anonymous-default-export": "off",
+		"import/no-named-export": "off",
 		// unicorn plugin
 		"unicorn/filename-case": "off",
 		"unicorn/prefer-node-protocol": "error",
