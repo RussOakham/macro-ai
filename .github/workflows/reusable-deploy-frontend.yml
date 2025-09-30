@@ -322,6 +322,8 @@ jobs:
           echo "❌ Build verification failed"
           exit 1
         fi
+      env:
+        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
 
     - name: Deploy to Amplify
       id: deploy
