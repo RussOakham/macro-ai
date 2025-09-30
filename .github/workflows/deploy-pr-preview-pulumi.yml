@@ -228,7 +228,7 @@ jobs:
       id-token: write
       contents: read
     with:
-      environment-name: pr-${{ github.event.number }}
+      environment-name: preview
       deployment-type: preview
       image-tag: ${{ needs.deploy-pr-preview.outputs.image-tag }}
       pr-number: ${{ github.event.number }}
@@ -240,8 +240,8 @@ jobs:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-      DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
       DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
+      DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
       DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
 
   deploy-frontend:
