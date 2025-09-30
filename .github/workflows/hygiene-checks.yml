@@ -33,9 +33,10 @@ jobs:
     name: Setup Environment
     runs-on: ubuntu-latest
     outputs:
-      APP_ENV: ${{ env.APP_ENV }}
+      APP_ENV: ${{ steps.determine-env.outputs.app_env }}
     steps:
     - name: Determine environment
+      id: determine-env
       run: |
         echo "🔍 Computing environment configuration..."
 
@@ -59,6 +60,7 @@ jobs:
 
         echo "✅ Environment configuration: APP_ENV=${APP_ENV}"
         echo "APP_ENV=${APP_ENV}" >> "$GITHUB_ENV"
+        echo "app_env=${APP_ENV}" >> "$GITHUB_OUTPUT"
 
   build:
     needs: setup
