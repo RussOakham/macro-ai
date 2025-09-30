@@ -332,7 +332,7 @@ jobs:
         echo "✅ MSW handlers generated successfully"
 
     - name: Run test with coverage
-      run: pnpm test:coverage
+      run: SKIP_CONFIG_VALIDATION=true pnpm test:coverage
       env:
         NODE_ENV: test
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}

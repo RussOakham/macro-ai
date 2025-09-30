@@ -524,8 +524,6 @@ describe('AuthController', () => {
 	describe('login', () => {
 		it('should successfully login a user', async () => {
 			// Arrange
-			const originalCookieDomain = process.env.COOKIE_DOMAIN
-			process.env.COOKIE_DOMAIN = 'localhost'
 
 			const loginRequest: TLoginRequest = {
 				email: 'test@example.com',
@@ -609,8 +607,6 @@ describe('AuthController', () => {
 			})
 			expect(mockNext).not.toHaveBeenCalled()
 
-			// Cleanup
-			process.env.COOKIE_DOMAIN = originalCookieDomain
 		})
 
 		it('should handle Cognito signIn error', async () => {
@@ -700,8 +696,6 @@ describe('AuthController', () => {
 
 		it('should set domain field to undefined when cookieDomain is localhost', async () => {
 			// Arrange
-			const originalCookieDomain = process.env.COOKIE_DOMAIN
-			process.env.COOKIE_DOMAIN = 'localhost'
 
 			const loginRequest = {
 				email: 'test@example.com',
@@ -774,8 +768,6 @@ describe('AuthController', () => {
 				}),
 			)
 
-			// Cleanup
-			process.env.COOKIE_DOMAIN = originalCookieDomain
 		})
 	})
 
@@ -1136,8 +1128,6 @@ describe('AuthController', () => {
 	describe('refreshToken', () => {
 		it('should successfully refresh token', async () => {
 			// Arrange
-			const originalCookieDomain = process.env.COOKIE_DOMAIN
-			process.env.COOKIE_DOMAIN = 'localhost'
 
 			mockRequest.cookies = {
 				'macro-ai-refreshToken': 'refresh-token',
@@ -1222,14 +1212,10 @@ describe('AuthController', () => {
 			})
 			expect(mockNext).not.toHaveBeenCalled()
 
-			// Cleanup
-			process.env.COOKIE_DOMAIN = originalCookieDomain
 		})
 
 		it('should set domain field to undefined when cookieDomain is localhost during refresh', async () => {
 			// Arrange
-			const originalCookieDomain = process.env.COOKIE_DOMAIN
-			process.env.COOKIE_DOMAIN = 'localhost'
 
 			mockRequest.cookies = {
 				'macro-ai-refreshToken': 'refresh-token',
@@ -1295,8 +1281,6 @@ describe('AuthController', () => {
 				}),
 			)
 
-			// Cleanup
-			process.env.COOKIE_DOMAIN = originalCookieDomain
 		})
 
 		it('should handle getRefreshToken error', async () => {
