@@ -306,12 +306,73 @@ AWS_ROLE_ARN=arn:aws:iam::YOUR_ACCOUNT_ID:role/GitHubActionsRole
 AWS_ACCOUNT_ID=123456789012
 AWS_REGION=us-east-1
 
-# Frontend Configuration
-FRONTEND_API_KEY=your-production-api-key-32-characters-long
+# Doppler Authentication Tokens (Environment-Specific)
+DOPPLER_TOKEN_DEV=dp.st.dev.xxxxxxxxxxxxxxxxxxxx
+DOPPLER_TOKEN_STAGING=dp.st.stg.xxxxxxxxxxxxxxxxxxxx
+DOPPLER_TOKEN_PROD=dp.st.prd.xxxxxxxxxxxxxxxxxxxx
+
+# Frontend Configuration (Vite-specific, not in Doppler)
+VITE_API_KEY=your-api-key-32-characters-long
 ```
 
-> **Note**: The `AWS_ACCOUNT_ID` and `AWS_REGION` secrets are required for CDK synthesis and deployment.
-> The CDK app validates these environment variables before proceeding with stack operations.
+> **Note**:
+>
+> - The `AWS_ACCOUNT_ID` and `AWS_REGION` secrets are required for CDK synthesis and deployment
+> - **All application environment variables** (API keys, database URLs, AWS Cognito config, rate
+>   limiting, cookies, etc.) are now managed via **Doppler** and automatically injected during
+>   CI/CD workflows
+> - The `DOPPLER_TOKEN_*` secrets authenticate GitHub Actions with Doppler to fetch environment-specific configuration
+> - Each token corresponds to a specific Doppler config: `dev`, `stg`, or `prd`
+> - `VITE_*` variables are frontend-specific and managed separately via the `generate-frontend-env` action
+
+#### Doppler Configuration Structure
+
+The Doppler integration uses the following structure:
+
+- **Project**: `macro-ai`
+- **Configs**:
+  - `dev` - For PR previews and development deployments
+  - `dev_personal` - Local development (sub-config of `dev` with `localhost` overrides)
+  - `stg` - For staging/develop branch deployments
+  - `prd` - For production/main branch deployments
+
+#### Environment Variables Managed by Doppler
+
+All of the following are **automatically injected** via Doppler and do **NOT** need to be added as GitHub Secrets:
+
+```bash
+# Application Core
+API_KEY
+SERVER_PORT
+NODE_ENV
+APP_ENV
+
+# AWS Cognito
+AWS_COGNITO_REGION
+AWS_COGNITO_USER_POOL_ID
+AWS_COGNITO_USER_POOL_CLIENT_ID
+AWS_COGNITO_REFRESH_TOKEN_EXPIRY
+
+# Databases
+REDIS_URL
+RELATIONAL_DATABASE_URL
+
+# External Services
+OPENAI_API_KEY
+
+# Cookies & Security
+COOKIE_DOMAIN
+COOKIE_ENCRYPTION_KEY
+CORS_ALLOWED_ORIGINS
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS
+RATE_LIMIT_MAX_REQUESTS
+AUTH_RATE_LIMIT_WINDOW_MS
+AUTH_RATE_LIMIT_MAX_REQUESTS
+API_RATE_LIMIT_WINDOW_MS
+API_RATE_LIMIT_MAX_REQUESTS
+```
 
 #### Optional Secrets (for enhanced features)
 
@@ -406,8 +467,15 @@ aws iam get-role --role-name GitHubActionsRole
 #### 2. Environment Variables
 
 ```bash
-# Verify secrets are set correctly
+# Verify Doppler authentication
+doppler secrets --project macro-ai --config dev
+
+# Verify GitHub secrets are set correctly
 # Check GitHub repository settings → Secrets and variables
+# Required: DOPPLER_TOKEN_DEV, DOPPLER_TOKEN_STAGING, DOPPLER_TOKEN_PROD
+
+# Test Doppler CLI authentication in workflow context
+gh workflow run test-local.yml  # Should successfully authenticate with Doppler
 ```
 
 #### 3. Build Failures
@@ -647,10 +715,18 @@ After production teardown:
 
 ### Secrets Management
 
-- **GitHub Secrets**: Encrypted storage for sensitive values
-- **Environment Separation**: Different secrets for staging/production
+- **Doppler**: Centralized secret management for application environment variables across all environments
+  - Single source of truth for API keys, database URLs, AWS Cognito config, etc.
+  - Environment-specific configs (`dev`, `stg`, `prd`) with automatic injection
+  - Branch-based config selection in CI/CD workflows
+  - Sub-configs for local development (`dev_personal`) with environment-specific overrides
+- **GitHub Secrets**: Encrypted storage for CI/CD-specific values
+  - Doppler authentication tokens (`DOPPLER_TOKEN_*`)
+  - AWS credentials and configuration
+  - Vite frontend environment variables
+- **Environment Separation**: Different Doppler configs for dev/staging/production
 - **Least Privilege**: IAM roles with minimal required permissions
-- **Parameter Store**: Shared development secrets for cost optimization
+- **Parameter Store**: Legacy shared development secrets (being migrated to Doppler)
 
 ### Access Control
 

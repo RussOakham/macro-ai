@@ -566,6 +566,7 @@ sed 's/=.*/=REDACTED/' apps/express-api/.env > apps/express-api/.env.template
 
 - **[Development Setup](./development-setup.md)** - Complete development environment setup
 - **[Troubleshooting Guide](./troubleshooting.md)** - Configuration troubleshooting
+- **[Doppler CI/CD Integration](../ci-cd/doppler-workflow-integration.md)** - How Doppler is used in GitHub Actions workflows
 - **[Database Design](../architecture/database-design.md)** - Database configuration details
 - **[Authentication System](../features/authentication/README.md)** - AWS Cognito setup details
 - **[Deployment Guide](../deployment/environment-setup.md)** - Production environment configuration

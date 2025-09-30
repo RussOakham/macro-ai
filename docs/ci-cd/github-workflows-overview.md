@@ -607,7 +607,14 @@ concurrency:
 
 - `NODE_VERSION`: '20'
 - `PNPM_VERSION`: '9'
-- Comprehensive secret management with fallback values
+- **Doppler Integration**: All environment variables (API keys, database URLs,
+  AWS Cognito config, rate limiting, etc.) are automatically injected via Doppler CLI
+- **Branch-Based Configuration**: Workflows dynamically select Doppler config based on branch/context:
+  - PR branches: `dev` config with `DOPPLER_TOKEN_DEV`
+  - `develop` branch: `stg` config with `DOPPLER_TOKEN_STAGING`
+  - `main` branch: `prd` config with `DOPPLER_TOKEN_PROD`
+- **Minimal Explicit Variables**: Only `NODE_ENV`, `APP_ENV`, and `DOPPLER_TOKEN` are set in workflow `env` blocks
+- **Single Source of Truth**: All other environment variables are managed centrally in Doppler
 
 **Job Dependencies**:
 
@@ -897,7 +904,7 @@ strategy:
 **Build Failures**:
 
 - TypeScript compilation errors
-- Missing environment variables
+- Missing or invalid `DOPPLER_TOKEN` (check GitHub Secrets: `DOPPLER_TOKEN_DEV`, `DOPPLER_TOKEN_STAGING`, `DOPPLER_TOKEN_PROD`)
 - Dependency resolution issues
 - Cache corruption
 
@@ -929,7 +936,8 @@ strategy:
 1. Clear GitHub Actions cache
 2. Verify Node.js and pnpm versions
 3. Check dependency lock file integrity
-4. Validate environment file generation
+4. Validate Doppler CLI installation and token authentication
+5. Verify correct Doppler project (`macro-ai`) and config selection (`dev`, `stg`, or `prd`)
 
 **Integration Test Failures**:
 
