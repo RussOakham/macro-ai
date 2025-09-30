@@ -203,6 +203,10 @@ jobs:
 
         cd infrastructure/pulumi
 
+        # Create/select Pulumi stack
+        echo "🔧 Setting up Pulumi stack: ${STACK_NAME}"
+        pulumi stack select ${STACK_NAME} || pulumi stack init ${STACK_NAME}
+
         # Set Pulumi configuration
         pulumi config set environmentName "${ENV_NAME}" --stack "${STACK_NAME}"
         pulumi config set deploymentType "${DEPLOYMENT_TYPE}" --stack "${STACK_NAME}"
