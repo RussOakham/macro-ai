@@ -49,4 +49,12 @@ export default repoConfig.config(
 			'turbo/no-undeclared-env-vars': 'warn',
 		},
 	},
+	// File-specific overrides
+	{
+		files: ['src/features/chat/__tests__/ai.service.test.ts'],
+		rules: {
+			// Disable no-secrets rule for this specific comment about SKIP_CONFIG_VALIDATION
+			'no-secrets/no-secrets': 'off',
+		},
+	},
 )

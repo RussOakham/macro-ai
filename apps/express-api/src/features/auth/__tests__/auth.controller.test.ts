@@ -606,7 +606,6 @@ describe('AuthController', () => {
 				},
 			})
 			expect(mockNext).not.toHaveBeenCalled()
-
 		})
 
 		it('should handle Cognito signIn error', async () => {
@@ -767,7 +766,6 @@ describe('AuthController', () => {
 					sameSite: 'strict',
 				}),
 			)
-
 		})
 	})
 
@@ -1211,7 +1209,6 @@ describe('AuthController', () => {
 				},
 			})
 			expect(mockNext).not.toHaveBeenCalled()
-
 		})
 
 		it('should set domain field to undefined when cookieDomain is localhost during refresh', async () => {
@@ -1280,7 +1277,6 @@ describe('AuthController', () => {
 					sameSite: 'strict',
 				}),
 			)
-
 		})
 
 		it('should handle getRefreshToken error', async () => {
