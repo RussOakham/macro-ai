@@ -126,6 +126,13 @@ jobs:
         doppler configure set project macro-ai
         doppler configure set config dev
 
+    - name: Verify Doppler CLI
+      run: |
+        echo "🔍 Verifying Doppler CLI installation..."
+        doppler --version
+        doppler projects
+        echo "✅ Doppler CLI is accessible"
+
     - name: Install dependencies
       run: |
         cd apps/client-ui
@@ -159,18 +166,16 @@ jobs:
         echo "🔧 Generating API client package from OpenAPI specification"
 
         # Install dependencies for express-api to generate OpenAPI spec
-        cd apps/express-api
-        pnpm install --frozen-lockfile
+        pnpm --filter @repo/express-api install --frozen-lockfile
 
-        # Generate OpenAPI specification
+        # Generate OpenAPI specification from root directory
         echo "📋 Generating OpenAPI specification..."
-        pnpm run generate-swagger
+        pnpm --filter @repo/express-api run generate-swagger
 
         # Build the API client package
         echo "📦 Building API client package..."
-        cd ../../packages/macro-ai-api-client
-        pnpm install --frozen-lockfile
-        pnpm run build
+        pnpm --filter @repo/macro-ai-api-client install --frozen-lockfile
+        pnpm --filter @repo/macro-ai-api-client run build
 
         echo "✅ API client package built successfully"
 
