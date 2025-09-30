@@ -19,7 +19,8 @@ describe('Simple Config System', () => {
 		process.env = originalEnv
 	})
 
-	describe('assertConfig with skip validation', () => {
+	// eslint-disable-next-line no-secrets/no-secrets
+describe('assertConfig with skip validation', () => {
 		it('should return minimal config when SKIP_CONFIG_VALIDATION=true', async () => {
 			// Set the skip validation flag
 			process.env.SKIP_CONFIG_VALIDATION = 'true'
@@ -92,6 +93,7 @@ describe('Simple Config System', () => {
 			expect(config).toHaveProperty('awsCognitoRegion')
 			expect(config).toHaveProperty('awsCognitoUserPoolId')
 			expect(config).toHaveProperty('awsCognitoUserPoolClientId')
+			// eslint-disable-next-line no-secrets/no-secrets
 			expect(config).toHaveProperty('awsCognitoRefreshTokenExpiry')
 			expect(config).toHaveProperty('openaiApiKey')
 			expect(config).toHaveProperty('relationalDatabaseUrl')
