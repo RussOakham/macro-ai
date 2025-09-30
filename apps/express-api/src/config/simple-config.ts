@@ -13,10 +13,8 @@ import { exit } from 'node:process'
 
 import { type TEnv } from '../utils/env.schema.ts'
 import { type Result } from '../utils/errors.ts'
-import { pino } from '../utils/logger.ts'
+import { logger } from '../utils/logger.ts'
 import { type EnvConfigOptions, loadEnvConfig } from './env-config.ts'
-
-const { logger } = pino
 
 /**
  * Configuration loading options (backward compatibility)
