@@ -81,38 +81,39 @@ jobs:
         node-version: ${{ matrix.node-version }}
 
     - name: Set Doppler config based on branch
+      id: doppler-config
       run: |
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
           # PR context - use dev
-          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_ENV"
-          echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+          echo "token=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_OUTPUT"
+          echo "config=dev" >> "$GITHUB_OUTPUT"
           echo "🔑 Using DEV Doppler token for PR"
         elif [[ "${{ github.ref_name }}" == "develop" ]]; then
           # Develop branch - use staging
-          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_STAGING }}" >> "$GITHUB_ENV"
-          echo "DOPPLER_CONFIG=stg" >> "$GITHUB_ENV"
+          echo "token=${{ secrets.DOPPLER_TOKEN_STAGING }}" >> "$GITHUB_OUTPUT"
+          echo "config=stg" >> "$GITHUB_OUTPUT"
           echo "🔑 Using STAGING Doppler token for develop"
         elif [[ "${{ github.ref_name }}" == "main" ]]; then
           # Main branch - use production
-          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_PROD }}" >> "$GITHUB_ENV"
-          echo "DOPPLER_CONFIG=prd" >> "$GITHUB_ENV"
+          echo "token=${{ secrets.DOPPLER_TOKEN_PROD }}" >> "$GITHUB_OUTPUT"
+          echo "config=prd" >> "$GITHUB_OUTPUT"
           echo "🔑 Using PROD Doppler token for main"
         else
           # Default to dev for other branches
-          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_ENV"
-          echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+          echo "token=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_OUTPUT"
+          echo "config=dev" >> "$GITHUB_OUTPUT"
           echo "🔑 Using DEV Doppler token (default)"
         fi
 
     - name: Install Doppler CLI
       uses: dopplerhq/cli-action@v3
       with:
-        token: ${{ env.DOPPLER_TOKEN }}
+        token: ${{ steps.doppler-config.outputs.token }}
 
     - name: Configure Doppler
       run: |
         doppler configure set project macro-ai
-        doppler configure set config ${{ env.DOPPLER_CONFIG }}
+        doppler configure set config ${{ steps.doppler-config.outputs.config }}
 
     - name: Cache pnpm dependencies
       uses: actions/cache@v4
@@ -141,7 +142,7 @@ jobs:
       env:
         NODE_ENV: production
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
+        DOPPLER_TOKEN: ${{ steps.doppler-config.outputs.token }}
 
   lint:
     needs: setup
@@ -164,38 +165,39 @@ jobs:
         node-version: ${{ matrix.node-version }}
 
     - name: Set Doppler config based on branch
+      id: doppler-config
       run: |
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
           # PR context - use dev
-          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_ENV"
-          echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+          echo "token=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_OUTPUT"
+          echo "config=dev" >> "$GITHUB_OUTPUT"
           echo "🔑 Using DEV Doppler token for PR"
         elif [[ "${{ github.ref_name }}" == "develop" ]]; then
           # Develop branch - use staging
-          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_STAGING }}" >> "$GITHUB_ENV"
-          echo "DOPPLER_CONFIG=stg" >> "$GITHUB_ENV"
+          echo "token=${{ secrets.DOPPLER_TOKEN_STAGING }}" >> "$GITHUB_OUTPUT"
+          echo "config=stg" >> "$GITHUB_OUTPUT"
           echo "🔑 Using STAGING Doppler token for develop"
         elif [[ "${{ github.ref_name }}" == "main" ]]; then
           # Main branch - use production
-          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_PROD }}" >> "$GITHUB_ENV"
-          echo "DOPPLER_CONFIG=prd" >> "$GITHUB_ENV"
+          echo "token=${{ secrets.DOPPLER_TOKEN_PROD }}" >> "$GITHUB_OUTPUT"
+          echo "config=prd" >> "$GITHUB_OUTPUT"
           echo "🔑 Using PROD Doppler token for main"
         else
           # Default to dev for other branches
-          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_ENV"
-          echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+          echo "token=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_OUTPUT"
+          echo "config=dev" >> "$GITHUB_OUTPUT"
           echo "🔑 Using DEV Doppler token (default)"
         fi
 
     - name: Install Doppler CLI
       uses: dopplerhq/cli-action@v3
       with:
-        token: ${{ env.DOPPLER_TOKEN }}
+        token: ${{ steps.doppler-config.outputs.token }}
 
     - name: Configure Doppler
       run: |
         doppler configure set project macro-ai
-        doppler configure set config ${{ env.DOPPLER_CONFIG }}
+        doppler configure set config ${{ steps.doppler-config.outputs.config }}
 
     - name: Cache pnpm dependencies
       uses: actions/cache@v4
@@ -227,7 +229,7 @@ jobs:
       env:
         NODE_ENV: production
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
+        DOPPLER_TOKEN: ${{ steps.doppler-config.outputs.token }}
 
     - name: Generate MSW handlers
       run: |
@@ -243,7 +245,7 @@ jobs:
       env:
         NODE_ENV: development
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
+        DOPPLER_TOKEN: ${{ steps.doppler-config.outputs.token }}
 
   test:
     needs: setup
@@ -266,38 +268,39 @@ jobs:
         node-version: ${{ matrix.node-version }}
 
     - name: Set Doppler config based on branch
+      id: doppler-config
       run: |
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
           # PR context - use dev
-          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_ENV"
-          echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+          echo "token=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_OUTPUT"
+          echo "config=dev" >> "$GITHUB_OUTPUT"
           echo "🔑 Using DEV Doppler token for PR"
         elif [[ "${{ github.ref_name }}" == "develop" ]]; then
           # Develop branch - use staging
-          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_STAGING }}" >> "$GITHUB_ENV"
-          echo "DOPPLER_CONFIG=stg" >> "$GITHUB_ENV"
+          echo "token=${{ secrets.DOPPLER_TOKEN_STAGING }}" >> "$GITHUB_OUTPUT"
+          echo "config=stg" >> "$GITHUB_OUTPUT"
           echo "🔑 Using STAGING Doppler token for develop"
         elif [[ "${{ github.ref_name }}" == "main" ]]; then
           # Main branch - use production
-          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_PROD }}" >> "$GITHUB_ENV"
-          echo "DOPPLER_CONFIG=prd" >> "$GITHUB_ENV"
+          echo "token=${{ secrets.DOPPLER_TOKEN_PROD }}" >> "$GITHUB_OUTPUT"
+          echo "config=prd" >> "$GITHUB_OUTPUT"
           echo "🔑 Using PROD Doppler token for main"
         else
           # Default to dev for other branches
-          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_ENV"
-          echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+          echo "token=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_OUTPUT"
+          echo "config=dev" >> "$GITHUB_OUTPUT"
           echo "🔑 Using DEV Doppler token (default)"
         fi
 
     - name: Install Doppler CLI
       uses: dopplerhq/cli-action@v3
       with:
-        token: ${{ env.DOPPLER_TOKEN }}
+        token: ${{ steps.doppler-config.outputs.token }}
 
     - name: Configure Doppler
       run: |
         doppler configure set project macro-ai
-        doppler configure set config ${{ env.DOPPLER_CONFIG }}
+        doppler configure set config ${{ steps.doppler-config.outputs.config }}
 
     - name: Cache pnpm dependencies
       uses: actions/cache@v4
@@ -320,7 +323,7 @@ jobs:
       env:
         NODE_ENV: test
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
+        DOPPLER_TOKEN: ${{ steps.doppler-config.outputs.token }}
 
     - name: Generate MSW handlers
       run: |
@@ -333,7 +336,7 @@ jobs:
       env:
         NODE_ENV: test
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
+        DOPPLER_TOKEN: ${{ steps.doppler-config.outputs.token }}
 
     - name: Upload coverage reports
       uses: actions/upload-artifact@v4
@@ -532,38 +535,39 @@ jobs:
         cache: 'pnpm'
 
     - name: Set Doppler config based on branch
+      id: doppler-config
       run: |
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
           # PR context - use dev
-          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_ENV"
-          echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+          echo "token=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_OUTPUT"
+          echo "config=dev" >> "$GITHUB_OUTPUT"
           echo "🔑 Using DEV Doppler token for PR"
         elif [[ "${{ github.ref_name }}" == "develop" ]]; then
           # Develop branch - use staging
-          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_STAGING }}" >> "$GITHUB_ENV"
-          echo "DOPPLER_CONFIG=stg" >> "$GITHUB_ENV"
+          echo "token=${{ secrets.DOPPLER_TOKEN_STAGING }}" >> "$GITHUB_OUTPUT"
+          echo "config=stg" >> "$GITHUB_OUTPUT"
           echo "🔑 Using STAGING Doppler token for develop"
         elif [[ "${{ github.ref_name }}" == "main" ]]; then
           # Main branch - use production
-          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_PROD }}" >> "$GITHUB_ENV"
-          echo "DOPPLER_CONFIG=prd" >> "$GITHUB_ENV"
+          echo "token=${{ secrets.DOPPLER_TOKEN_PROD }}" >> "$GITHUB_OUTPUT"
+          echo "config=prd" >> "$GITHUB_OUTPUT"
           echo "🔑 Using PROD Doppler token for main"
         else
           # Default to dev for other branches
-          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_ENV"
-          echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+          echo "token=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_OUTPUT"
+          echo "config=dev" >> "$GITHUB_OUTPUT"
           echo "🔑 Using DEV Doppler token (default)"
         fi
 
     - name: Install Doppler CLI
       uses: dopplerhq/cli-action@v3
       with:
-        token: ${{ env.DOPPLER_TOKEN }}
+        token: ${{ steps.doppler-config.outputs.token }}
 
     - name: Configure Doppler
       run: |
         doppler configure set project macro-ai
-        doppler configure set config ${{ env.DOPPLER_CONFIG }}
+        doppler configure set config ${{ steps.doppler-config.outputs.config }}
 
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
@@ -582,7 +586,7 @@ jobs:
       env:
         NODE_ENV: production
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
+        DOPPLER_TOKEN: ${{ steps.doppler-config.outputs.token }}
 
     - name: Generate MSW handlers
       run: |
@@ -596,7 +600,7 @@ jobs:
       env:
         NODE_ENV: development
         APP_ENV: ${{ needs.setup.outputs.APP_ENV }}
-        DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
+        DOPPLER_TOKEN: ${{ steps.doppler-config.outputs.token }}
 
     # Snyk Security Scanning
     - name: Run Snyk to check for vulnerabilities
