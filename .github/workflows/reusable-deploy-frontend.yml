@@ -131,16 +131,6 @@ jobs:
         cd apps/client-ui
         pnpm install --frozen-lockfile
 
-    - name: Install Doppler CLI
-      uses: dopplerhq/cli-action@v3
-      with:
-        token: ${{ secrets.DOPPLER_TOKEN_DEV }}
-
-    - name: Configure Doppler
-      run: |
-        doppler configure set project macro-ai
-        doppler configure set config dev
-
     - name: Generate API client package
       env:
         # Minimal environment variables required for swagger generation
@@ -164,6 +154,7 @@ jobs:
         API_RATE_LIMIT_WINDOW_MS: '60000'
         API_RATE_LIMIT_MAX_REQUESTS: '60'
         COST_ALERT_EMAILS: 'placeholder-cost-alert-emails'
+        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
       run: |
         echo "🔧 Generating API client package from OpenAPI specification"
 
