@@ -29,13 +29,56 @@ runtime configuration errors.
 
 ## 🔧 Express API Configuration
 
-### Complete Environment Setup
+### Doppler Environment Setup (Default)
 
-Create `apps/express-api/.env` from the template:
+This project uses Doppler for secure environment variable management. All scripts automatically inject environment variables
+from Doppler.
+
+#### Doppler Configuration
+
+The project is configured with a central `.doppler.yaml` file that defines:
+
+- **Project:** `macro-ai`
+- **Config:** `dev_personal`
+
+All scripts automatically use this configuration, so you don't need to specify project/config parameters.
+
+#### Getting Started with Doppler
 
 ```bash
-cp apps/express-api/.env.example apps/express-api/.env
+# Install Doppler CLI (if not already installed)
+brew install dopplerhq/cli/doppler
+
+# Login to Doppler
+doppler login
+
+# All development scripts now automatically use Doppler
+pnpm dev          # Start all services with Doppler
+pnpm api          # Start API server with Doppler
+pnpm ui           # Start UI server with Doppler
+pnpm test         # Run tests with Doppler
+pnpm lint         # Run linting with Doppler
 ```
+
+#### Manual Doppler Commands
+
+If you need to run Doppler commands manually:
+
+```bash
+# View available secrets
+doppler secrets
+
+# Run a command with environment variables
+doppler run -- your-command-here
+
+# Open Doppler dashboard
+doppler open
+```
+
+### Traditional Environment Setup (Not Recommended)
+
+For CI/CD or deployment environments that don't support Doppler, you can still use `.env` files. However, this approach
+is not recommended for development as it requires manual secret management.
 
 ### Required Configuration Variables
 
@@ -219,7 +262,7 @@ const envSchema = z.object({
 
 ## 🎨 Client UI Configuration
 
-### Complete Environment Setup
+### Client UI Environment Setup
 
 Create `apps/client-ui/.env` from the template:
 
@@ -307,6 +350,77 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 - **Encryption Keys**: Minimum 32 characters, high entropy
 - **Database Passwords**: Minimum 16 characters, mixed case + numbers + symbols
 - **JWT Secrets**: Minimum 64 characters for production
+
+## 🔄 Doppler Workflow Benefits
+
+### Why Doppler is the Default
+
+Doppler is now the default environment management solution for this project because it provides:
+
+1. **Security First**: Secrets never touch your local filesystem or version control
+2. **Consistency**: Same environment variables across all developers and CI/CD
+3. **No More .env Files**: Eliminates the risk of committing secrets
+4. **Centralized Management**: Update secrets in one place, deploy everywhere
+5. **Audit Trail**: Track who changed what and when
+6. **Environment Parity**: Development, staging, and production use identical variable names
+7. **Automatic Injection**: All scripts automatically get the right environment variables
+
+### Doppler Troubleshooting
+
+#### Common Issues
+
+**"doppler: command not found"**
+
+```bash
+# Install Doppler CLI
+brew install dopplerhq/cli/doppler  # macOS
+# Or visit: https://docs.doppler.com/docs/install-cli
+```
+
+**"You are not logged in to Doppler"**
+
+```bash
+doppler login
+```
+
+**"Cannot access Doppler project"**
+
+```bash
+# Check your projects
+doppler projects
+
+# Check configs for the macro-ai project
+doppler configs list --project macro-ai
+
+# Verify your access
+doppler whoami
+```
+
+**"Secrets not loading"**
+
+```bash
+# Test Doppler connection
+doppler run -- echo "Doppler working!"
+
+# Check what secrets are available
+doppler secrets
+```
+
+#### Doppler Commands Reference
+
+```bash
+# View all available secrets (values hidden for security)
+doppler secrets
+
+# Run a command with secrets injected
+doppler run -- your-command
+
+# Open Doppler dashboard
+doppler open
+
+# Check your current configuration
+doppler configure debug
+```
 
 ## 🌍 Environment-Specific Configurations
 
@@ -452,6 +566,7 @@ sed 's/=.*/=REDACTED/' apps/express-api/.env > apps/express-api/.env.template
 
 - **[Development Setup](./development-setup.md)** - Complete development environment setup
 - **[Troubleshooting Guide](./troubleshooting.md)** - Configuration troubleshooting
+- **[Doppler CI/CD Integration](../ci-cd/doppler-workflow-integration.md)** - How Doppler is used in GitHub Actions workflows
 - **[Database Design](../architecture/database-design.md)** - Database configuration details
 - **[Authentication System](../features/authentication/README.md)** - AWS Cognito setup details
 - **[Deployment Guide](../deployment/environment-setup.md)** - Production environment configuration

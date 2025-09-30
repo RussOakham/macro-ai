@@ -64,4 +64,4 @@ catalog:
   typescript: ^5.9.2
   vitest: 3.1.2
   zod: ^4.1.5
-  zod-validation-error: ^4.0.1
+  zod-validation-error: ^4.0.2

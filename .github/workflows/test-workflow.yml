@@ -1,9 +1,0 @@
----
-name: Test Workflow
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Test step with a very long line that should be allowed in workflow files
-      run: echo "This is a test workflow file for testing the YAML linter"

@@ -54,6 +54,15 @@
 				"DOPPLER_TOKEN_PROD"
 			]
 		},
+		"build:docker-image": {
+			"dependsOn": ["^build:docker-image"],
+			"inputs": ["$TURBO_DEFAULT$"],
+			"outputs": ["dist/**"],
+			"env": ["SKIP_CONFIG_VALIDATION"]
+		},
+		"prebuild:docker-image": {
+			"cache": false
+		},
 		"lint": {
 			"dependsOn": ["^build"],
 			"env": [

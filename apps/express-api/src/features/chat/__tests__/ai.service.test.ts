@@ -96,9 +96,10 @@ describe('AIService', () => {
 			// Assert - Should create OpenAI client with a valid API key
 			// Note: Due to class property initialization timing, the actual env value is used
 			// In CI builds, this may be 'build-time-not-required' since OpenAI isn't needed during build
+			// When SKIP_CONFIG_VALIDATION=true (for tests), it uses 'dummy-openai-key'
 			expect(mockCreateOpenAI).toHaveBeenCalledWith({
 				apiKey: expect.stringMatching(
-					/^(sk-|build-time-not-required)/,
+					/^(sk-|build-time-not-required|dummy-openai-key)/,
 				) as string,
 			})
 

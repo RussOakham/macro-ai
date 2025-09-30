@@ -5,12 +5,13 @@
  * that centralizes test settings and eliminates duplication across the monorepo.
  */
 
-import { defineConfig } from 'vitest/config'
 import {
 	commonTestConfig,
-	unitTestTimeouts,
 	integrationTestTimeouts,
+	unitTestTimeouts,
 } from '@repo/config-testing'
+import { defineConfig } from 'vitest/config'
+import path from 'node:path'
 
 export default defineConfig({
 	test: {
@@ -34,7 +35,7 @@ export default defineConfig({
 							isolate: true,
 						},
 					},
-					setupFiles: ['./apps/express-api/vitest.setup.ts'],
+					setupFiles: ['./vitest.setup.ts'],
 					exclude: [...commonTestConfig.exclude, 'src/test/mocks/**/*'],
 				},
 			},
@@ -45,7 +46,7 @@ export default defineConfig({
 				plugins: [],
 				resolve: {
 					alias: {
-						'@': './src',
+						'@': path.resolve(__dirname, './apps/client-ui/src'),
 					},
 				},
 				test: {
@@ -59,7 +60,7 @@ export default defineConfig({
 							isolate: true,
 						},
 					},
-					setupFiles: ['./apps/client-ui/src/test/setup.ts'],
+					setupFiles: ['./src/test/setup.ts'],
 					include: ['src/**/*.{test,spec}.{ts,tsx}'],
 					exclude: [
 						...commonTestConfig.exclude,

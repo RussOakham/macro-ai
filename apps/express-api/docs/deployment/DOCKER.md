@@ -57,7 +57,7 @@ The application uses **build-time configuration injection**:
 - Configuration is baked into the container image
 - No runtime Parameter Store access needed
 - Faster container startup and more reliable operation
-- Set `SKIP_ENV_VALIDATION=true` during Docker builds to bypass local env checks and skip swagger generation
+- Set `SKIP_CONFIG_VALIDATION=true` during Docker builds to bypass environment validation for CI/CD compatibility
 
 ### Development Setup
 
