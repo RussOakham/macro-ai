@@ -45,6 +45,10 @@ on:
         required: false
         type: boolean
         default: true
+      doppler-config:
+        description: 'Doppler config to use (dev, stg, prd)'
+        required: true
+        type: string
     secrets:
       AWS_ACCOUNT_ID:
         required: true
@@ -52,7 +56,7 @@ on:
         required: true
       API_KEY:
         required: true
-      DOPPLER_TOKEN_DEV:
+      DOPPLER_TOKEN:
         required: true
     outputs:
       app-url:
@@ -121,12 +125,12 @@ jobs:
     - name: Install Doppler CLI
       uses: dopplerhq/cli-action@v3
       with:
-        token: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        token: ${{ secrets.DOPPLER_TOKEN }}
 
     - name: Configure Doppler
       run: |
         doppler configure set project macro-ai
-        doppler configure set config dev
+        doppler configure set config ${{ inputs.doppler-config }}
 
     - name: Verify Doppler CLI
       run: |
@@ -137,7 +141,7 @@ jobs:
         doppler projects || echo "❌ Doppler authentication failed"
         echo "✅ Doppler CLI verification complete"
       env:
-        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
 
     - name: Install dependencies
       run: |
@@ -167,7 +171,7 @@ jobs:
         API_RATE_LIMIT_WINDOW_MS: '60000'
         API_RATE_LIMIT_MAX_REQUESTS: '60'
         COST_ALERT_EMAILS: 'placeholder-cost-alert-emails'
-        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
       run: |
         echo "🔧 Generating API client package from OpenAPI specification"
 
@@ -323,7 +327,7 @@ jobs:
           exit 1
         fi
       env:
-        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
 
     - name: Deploy to Amplify
       id: deploy

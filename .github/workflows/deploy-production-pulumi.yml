@@ -351,10 +351,12 @@ jobs:
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
       should-deploy: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' || github.event.inputs.force-rebuild == 'true' }}
+      doppler-config: prd
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       API_KEY: ${{ secrets.VITE_API_KEY }}
+      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_PROD }}
 
   # Production monitoring setup
   production-monitoring:

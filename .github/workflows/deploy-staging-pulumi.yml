@@ -370,11 +370,13 @@ jobs:
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
       should-deploy: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' || github.event.inputs.force-deploy == 'true' }}
+      doppler-config: stg
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       # Use Doppler synced API key
       API_KEY: ${{ secrets.VITE_API_KEY }}
+      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_STAGING }}
     needs: [ change-detection ]
 
   # Production monitoring setup using reusable workflow

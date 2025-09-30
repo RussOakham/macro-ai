@@ -239,15 +239,39 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
+    - name: Set Doppler config based on branch
+      run: |
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          # PR context - use dev
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+          echo "🔑 Using DEV Doppler token for PR"
+        elif [[ "${{ github.ref_name }}" == "develop" ]]; then
+          # Develop branch - use staging
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_STAGING }}" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=stg" >> "$GITHUB_ENV"
+          echo "🔑 Using STAGING Doppler token for develop"
+        elif [[ "${{ github.ref_name }}" == "main" ]]; then
+          # Main branch - use production
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_PROD }}" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=prd" >> "$GITHUB_ENV"
+          echo "🔑 Using PROD Doppler token for main"
+        else
+          # Default to dev for other branches
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+          echo "🔑 Using DEV Doppler token (default)"
+        fi
+
     - name: Install Doppler CLI
       uses: dopplerhq/cli-action@v3
       with:
-        token: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        token: ${{ env.DOPPLER_TOKEN }}
 
     - name: Configure Doppler
       run: |
         doppler configure set project macro-ai
-        doppler configure set config dev
+        doppler configure set config ${{ env.DOPPLER_CONFIG }}
 
     - name: Cache pnpm dependencies
       uses: actions/cache@v4
@@ -367,7 +391,7 @@ jobs:
         AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
         API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
         API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
-        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
 
   lint:
     needs: setup
@@ -389,15 +413,39 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
+    - name: Set Doppler config based on branch
+      run: |
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          # PR context - use dev
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+          echo "🔑 Using DEV Doppler token for PR"
+        elif [[ "${{ github.ref_name }}" == "develop" ]]; then
+          # Develop branch - use staging
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_STAGING }}" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=stg" >> "$GITHUB_ENV"
+          echo "🔑 Using STAGING Doppler token for develop"
+        elif [[ "${{ github.ref_name }}" == "main" ]]; then
+          # Main branch - use production
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_PROD }}" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=prd" >> "$GITHUB_ENV"
+          echo "🔑 Using PROD Doppler token for main"
+        else
+          # Default to dev for other branches
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+          echo "🔑 Using DEV Doppler token (default)"
+        fi
+
     - name: Install Doppler CLI
       uses: dopplerhq/cli-action@v3
       with:
-        token: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        token: ${{ env.DOPPLER_TOKEN }}
 
     - name: Configure Doppler
       run: |
         doppler configure set project macro-ai
-        doppler configure set config dev
+        doppler configure set config ${{ env.DOPPLER_CONFIG }}
 
     - name: Cache pnpm dependencies
       uses: actions/cache@v4
@@ -521,7 +569,7 @@ jobs:
         AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
         API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
         API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
-        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
 
     - name: Generate MSW handlers
       run: |
@@ -567,7 +615,7 @@ jobs:
         AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
         API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
         API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
-        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
 
   test:
     needs: setup
@@ -589,15 +637,39 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
+    - name: Set Doppler config based on branch
+      run: |
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          # PR context - use dev
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+          echo "🔑 Using DEV Doppler token for PR"
+        elif [[ "${{ github.ref_name }}" == "develop" ]]; then
+          # Develop branch - use staging
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_STAGING }}" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=stg" >> "$GITHUB_ENV"
+          echo "🔑 Using STAGING Doppler token for develop"
+        elif [[ "${{ github.ref_name }}" == "main" ]]; then
+          # Main branch - use production
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_PROD }}" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=prd" >> "$GITHUB_ENV"
+          echo "🔑 Using PROD Doppler token for main"
+        else
+          # Default to dev for other branches
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+          echo "🔑 Using DEV Doppler token (default)"
+        fi
+
     - name: Install Doppler CLI
       uses: dopplerhq/cli-action@v3
       with:
-        token: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        token: ${{ env.DOPPLER_TOKEN }}
 
     - name: Configure Doppler
       run: |
         doppler configure set project macro-ai
-        doppler configure set config dev
+        doppler configure set config ${{ env.DOPPLER_CONFIG }}
 
     - name: Cache pnpm dependencies
       uses: actions/cache@v4
@@ -712,7 +784,7 @@ jobs:
         AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
         API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
         API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
-        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
 
     - name: Generate MSW handlers
       run: |
@@ -755,7 +827,7 @@ jobs:
         AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
         API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
         API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
-        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
 
     - name: Upload coverage reports
       uses: actions/upload-artifact@v4
@@ -953,15 +1025,39 @@ jobs:
         node-version: '20.19.4'
         cache: 'pnpm'
 
+    - name: Set Doppler config based on branch
+      run: |
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          # PR context - use dev
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+          echo "🔑 Using DEV Doppler token for PR"
+        elif [[ "${{ github.ref_name }}" == "develop" ]]; then
+          # Develop branch - use staging
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_STAGING }}" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=stg" >> "$GITHUB_ENV"
+          echo "🔑 Using STAGING Doppler token for develop"
+        elif [[ "${{ github.ref_name }}" == "main" ]]; then
+          # Main branch - use production
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_PROD }}" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=prd" >> "$GITHUB_ENV"
+          echo "🔑 Using PROD Doppler token for main"
+        else
+          # Default to dev for other branches
+          echo "DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN_DEV }}" >> "$GITHUB_ENV"
+          echo "DOPPLER_CONFIG=dev" >> "$GITHUB_ENV"
+          echo "🔑 Using DEV Doppler token (default)"
+        fi
+
     - name: Install Doppler CLI
       uses: dopplerhq/cli-action@v3
       with:
-        token: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        token: ${{ env.DOPPLER_TOKEN }}
 
     - name: Configure Doppler
       run: |
         doppler configure set project macro-ai
-        doppler configure set config dev
+        doppler configure set config ${{ env.DOPPLER_CONFIG }}
 
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
@@ -1072,7 +1168,7 @@ jobs:
         AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
         API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
         API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
-        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
 
     - name: Generate MSW handlers
       run: |
@@ -1116,7 +1212,7 @@ jobs:
         AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS || '10' }}
         API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS || '60000' }}
         API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS || '60' }}
-        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
+        DOPPLER_TOKEN: ${{ env.DOPPLER_TOKEN }}
 
     # Snyk Security Scanning
     - name: Run Snyk to check for vulnerabilities
