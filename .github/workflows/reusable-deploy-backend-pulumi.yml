@@ -145,11 +145,13 @@ jobs:
     - name: Set Pulumi configuration
       id: pulumi-config
       run: |
-        # Validate inputs first
+        # Validate and set inputs directly
         IMAGE_TAG="${{ inputs.image-tag }}"
         DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
+        PR_NUMBER="${{ inputs.pr-number }}"
+        ENV_NAME="${{ inputs.environment-name }}"
 
-        echo "🔍 Debug: IMAGE_TAG input = $IMAGE_TAG"
+        echo "🔍 Debug: IMAGE_TAG=$IMAGE_TAG, DEPLOYMENT_TYPE=$DEPLOYMENT_TYPE, PR_NUMBER=$PR_NUMBER, ENV_NAME=$ENV_NAME"
 
         # Ensure IMAGE_TAG is not empty
         if [[ -z "$IMAGE_TAG" ]]; then
@@ -157,10 +159,16 @@ jobs:
           exit 1
         fi
 
+        # Ensure PR_NUMBER is not empty for preview deployments
+        if [[ "$DEPLOYMENT_TYPE" == "preview" && -z "$PR_NUMBER" ]]; then
+          echo "❌ ERROR: PR_NUMBER is empty for preview deployment!"
+          exit 1
+        fi
+
         # Set environment variables using GitHub environment file
-        echo "ENV_NAME=${{ inputs.environment-name }}" >> $GITHUB_ENV
+        echo "ENV_NAME=$ENV_NAME" >> $GITHUB_ENV
         echo "DEPLOYMENT_TYPE=$DEPLOYMENT_TYPE" >> $GITHUB_ENV
-        echo "PR_NUMBER=${{ inputs.pr-number }}" >> $GITHUB_ENV
+        echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
         # Construct the full image URI from tag
@@ -180,14 +188,14 @@ jobs:
         echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
 
         # Determine stack name based on environment type
-        if [[ "${DEPLOYMENT_TYPE}" == "preview" ]]; then
-          STACK_NAME="pr-${PR_NUMBER:-0}"
-        elif [[ "${DEPLOYMENT_TYPE}" == "staging" ]]; then
+        if [[ "$DEPLOYMENT_TYPE" == "preview" ]]; then
+          STACK_NAME="pr-${PR_NUMBER}"
+        elif [[ "$DEPLOYMENT_TYPE" == "staging" ]]; then
           STACK_NAME="stg"
-        elif [[ "${DEPLOYMENT_TYPE}" == "production" ]]; then
+        elif [[ "$DEPLOYMENT_TYPE" == "production" ]]; then
           STACK_NAME="prd"
         else
-          STACK_NAME="${ENV_NAME}"
+          STACK_NAME="$ENV_NAME"
         fi
 
         echo "stack-name=${STACK_NAME}" >> "$GITHUB_OUTPUT"
