@@ -145,10 +145,13 @@ jobs:
     - name: Set Pulumi configuration
       id: pulumi-config
       run: |
-        ENV_NAME="${{ inputs.environment-name }}"
-        DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
-        PR_NUMBER="${{ inputs.pr-number }}"
-        IMAGE_TAG="${{ inputs.image-tag }}"
+        # Set environment variables using GitHub environment file
+        echo "ENV_NAME=${{ inputs.environment-name }}" >> $GITHUB_ENV
+        echo "DEPLOYMENT_TYPE=${{ inputs.deployment-type }}" >> $GITHUB_ENV
+        echo "PR_NUMBER=${{ inputs.pr-number }}" >> $GITHUB_ENV
+        echo "IMAGE_TAG=${{ inputs.image-tag }}" >> $GITHUB_ENV
+
+        echo "🔍 Debug: IMAGE_TAG input = ${{ inputs.image-tag }}"
 
         # Construct the full image URI from tag
         ECR_REGISTRY="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
@@ -161,7 +164,15 @@ jobs:
         else
           ECR_REPOSITORY="macro-ai-staging-express-api"
         fi
+
+        # Ensure IMAGE_TAG is not empty
+        if [[ -z "$IMAGE_TAG" ]]; then
+          echo "❌ ERROR: IMAGE_TAG is empty!"
+          exit 1
+        fi
+
         IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+        echo "🔍 Constructed IMAGE_URI: ${IMAGE_URI}"
         echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
 
         # Determine stack name based on environment type
