@@ -145,30 +145,34 @@ jobs:
     - name: Set Pulumi configuration
       id: pulumi-config
       run: |
-        # Set environment variables using GitHub environment file
-        echo "ENV_NAME=${{ inputs.environment-name }}" >> $GITHUB_ENV
-        echo "DEPLOYMENT_TYPE=${{ inputs.deployment-type }}" >> $GITHUB_ENV
-        echo "PR_NUMBER=${{ inputs.pr-number }}" >> $GITHUB_ENV
-        echo "IMAGE_TAG=${{ inputs.image-tag }}" >> $GITHUB_ENV
+        # Validate inputs first
+        IMAGE_TAG="${{ inputs.image-tag }}"
+        DEPLOYMENT_TYPE="${{ inputs.deployment-type }}"
 
-        echo "🔍 Debug: IMAGE_TAG input = ${{ inputs.image-tag }}"
-
-        # Construct the full image URI from tag
-        ECR_REGISTRY="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
-        if [[ "${DEPLOYMENT_TYPE}" == "production" ]]; then
-          ECR_REPOSITORY="macro-ai-production-express-api"
-        elif [[ "${DEPLOYMENT_TYPE}" == "minimal-production" ]]; then
-          ECR_REPOSITORY="macro-ai-minimal-prod-express-api"
-        elif [[ "${DEPLOYMENT_TYPE}" == "staging" ]]; then
-          ECR_REPOSITORY="macro-ai-staging-express-api"
-        else
-          ECR_REPOSITORY="macro-ai-staging-express-api"
-        fi
+        echo "🔍 Debug: IMAGE_TAG input = $IMAGE_TAG"
 
         # Ensure IMAGE_TAG is not empty
         if [[ -z "$IMAGE_TAG" ]]; then
           echo "❌ ERROR: IMAGE_TAG is empty!"
           exit 1
+        fi
+
+        # Set environment variables using GitHub environment file
+        echo "ENV_NAME=${{ inputs.environment-name }}" >> $GITHUB_ENV
+        echo "DEPLOYMENT_TYPE=$DEPLOYMENT_TYPE" >> $GITHUB_ENV
+        echo "PR_NUMBER=${{ inputs.pr-number }}" >> $GITHUB_ENV
+        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+        # Construct the full image URI from tag
+        ECR_REGISTRY="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
+        if [[ "$DEPLOYMENT_TYPE" == "production" ]]; then
+          ECR_REPOSITORY="macro-ai-production-express-api"
+        elif [[ "$DEPLOYMENT_TYPE" == "minimal-production" ]]; then
+          ECR_REPOSITORY="macro-ai-minimal-prod-express-api"
+        elif [[ "$DEPLOYMENT_TYPE" == "staging" ]]; then
+          ECR_REPOSITORY="macro-ai-staging-express-api"
+        else
+          ECR_REPOSITORY="macro-ai-staging-express-api"
         fi
 
         IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
