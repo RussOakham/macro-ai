@@ -18,6 +18,27 @@ variables across all environments (development, staging, and production). This a
 - **Consistency**: Same variables available locally and in CI/CD
 - **Audit Trail**: Changes to environment variables are tracked in Doppler
 
+## 🏗️ Current Architecture
+
+### ✅ **Standardized Reusable Workflow Pattern**
+
+All deployment workflows now follow a **consistent, reusable architecture**:
+
+- **Reusable Backend Deployment** (`reusable-deploy-backend-pulumi.yml`): Single source of truth
+  for Pulumi infrastructure deployment across all environments
+- **Reusable Frontend Deployment** (`reusable-deploy-frontend.yml`): Standardized Amplify deployment
+  with API client generation
+- **Branch-Based Config Selection**: Quality assurance workflows (hygiene-checks, security-scan)
+  use standardized Doppler config selection
+
+### **Architecture Benefits Achieved**
+
+- **🔄 Consistency**: All environments use identical deployment logic
+- **🛠️ Maintainability**: Single codebase for deployment operations
+- **🔒 Security**: Centralized Doppler token management
+- **🚀 Reliability**: Tested patterns across preview, staging, and production
+- **📊 Observability**: Unified logging and error handling
+
 ## 🏗️ Architecture
 
 ### Doppler Configuration Structure
@@ -147,6 +168,7 @@ All other variables (API keys, database URLs, AWS Cognito config, etc.) are inje
 
 - All jobs (build, lint, test, security-scan) use branch-based config selection
 - Environment variables injected for: build validation, linting, testing, security scanning
+- **Architecture**: Uses standardized branch-based Doppler config selection pattern
 
 ### 2. Security Scan (`security-scan.yml`)
 
@@ -156,8 +178,28 @@ All other variables (API keys, database URLs, AWS Cognito config, etc.) are inje
 
 - Scheduled runs use `dev` config by default
 - Branch pushes use branch-based config selection
+- **Architecture**: Same standardized Doppler integration as hygiene checks
 
-### 3. Reusable Deploy Frontend (`reusable-deploy-frontend.yml`)
+### 3. Reusable Backend Deployment (`reusable-deploy-backend-pulumi.yml`)
+
+**Purpose**: Standardized Pulumi infrastructure deployment across all environments
+
+**Doppler Usage**:
+
+- Accepts deployment-type input (`preview`/`staging`/`production`)
+- Automatically selects appropriate Doppler token and config based on deployment-type
+- Environment variables injected for: Pulumi deployment, infrastructure configuration, health checks
+- **Architecture**: Single source of truth for backend deployment Doppler integration
+
+**Token Selection Logic**:
+
+```yaml
+# preview → DOPPLER_TOKEN_DEV, config: dev
+# staging → DOPPLER_TOKEN_STAGING, config: stg
+# production → DOPPLER_TOKEN_PROD, config: prd
+```
+
+### 4. Reusable Frontend Deployment (`reusable-deploy-frontend.yml`)
 
 **Purpose**: Reusable workflow for frontend deployment to Amplify
 
@@ -165,34 +207,41 @@ All other variables (API keys, database URLs, AWS Cognito config, etc.) are inje
 
 - Accepts `DOPPLER_TOKEN` and `doppler-config` as inputs
 - Used for API client generation (swagger generation requires real env vars)
-- Calling workflows (PR preview, staging, production) pass appropriate token/config
+- Calling workflows pass appropriate token/config based on environment
+- **Architecture**: Frontend-specific Doppler integration for API client builds
 
-### 4. Deploy PR Preview (`deploy-pr-preview-pulumi.yml`)
+### 5. Deploy PR Preview (`deploy-pr-preview-pulumi.yml`)
 
 **Purpose**: Ephemeral PR preview environments
 
 **Doppler Usage**:
 
-- Uses `DOPPLER_TOKEN_DEV` and `dev` config
-- All PR previews share dev configuration
+- **No direct Doppler usage** - delegates to reusable workflows
+- Calls `reusable-deploy-backend-pulumi.yml` with `deployment-type: preview`
+- Calls `reusable-deploy-frontend.yml` with appropriate Doppler inputs
+- **Architecture**: Orchestrates reusable workflows, no inline Doppler logic
 
-### 5. Deploy Staging (`deploy-staging-pulumi.yml`)
+### 6. Deploy Staging (`deploy-staging-pulumi.yml`)
 
 **Purpose**: Staging environment deployment (develop branch)
 
 **Doppler Usage**:
 
-- Uses `DOPPLER_TOKEN_STAGING` and `stg` config
-- Staging-specific configuration
+- **No direct Doppler usage** - delegates to reusable workflows
+- Calls `reusable-deploy-backend-pulumi.yml` with `deployment-type: staging`
+- Calls `reusable-deploy-frontend.yml` with appropriate Doppler inputs
+- **Architecture**: Orchestrates reusable workflows, no inline Doppler logic
 
-### 6. Deploy Production (`deploy-production-pulumi.yml`, `deploy-minimal-traffic-production.yml`)
+### 7. Deploy Production (`deploy-production-pulumi.yml`, `deploy-minimal-traffic-production.yml`)
 
 **Purpose**: Production deployment workflows
 
 **Doppler Usage**:
 
-- Uses `DOPPLER_TOKEN_PROD` and `prd` config
-- Production-specific configuration with production credentials
+- **No direct Doppler usage** - delegates to reusable workflows
+- Calls `reusable-deploy-backend-pulumi.yml` with `deployment-type: production`
+- Calls `reusable-deploy-frontend.yml` with appropriate Doppler inputs
+- **Architecture**: Orchestrates reusable workflows, no inline Doppler logic
 
 ## 🚨 Troubleshooting
 
