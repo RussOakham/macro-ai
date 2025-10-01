@@ -20,6 +20,9 @@ on:
         description: 'Amplify app ID for frontend'
         required: false
         type: string
+    secrets:
+      AWS_ROLE_ARN:
+        required: true
 
 jobs:
   setup-monitoring:
