@@ -1,0 +1,514 @@
+name: Deploy PR Preview Environment (v2)
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [develop, main]
+    paths:
+      - 'infrastructure/**'
+      - 'apps/express-api/**'
+      - 'apps/client-ui/**'
+      - 'packages/macro-ai-api-client/**'
+      - 'packages/ui-library/**'
+      - '.github/workflows/deploy-preview*.yml'
+      - '.github/actions/check-codeowner/**'
+      - '.github/actions/discover-backend/**'
+      - '.github/actions/generate-frontend-env/**'
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+  issues: write
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20.19.4'
+  PNPM_VERSION: '10.14.0'
+  # CDK environment variables
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+  CDK_DEFAULT_REGION: us-east-1
+  # Custom domain configuration (optional)
+  CUSTOM_DOMAIN_NAME: ${{ vars.CUSTOM_DOMAIN_NAME }}
+  HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
+
+jobs:
+  # Validate access and determine deployment eligibility
+  validate-access:
+    name: Validate PR Access
+    runs-on: ubuntu-latest
+    outputs:
+      is-owner: ${{ steps.codeowner-check.outputs.is-owner }}
+      target-user: ${{ steps.codeowner-check.outputs.target-user }}
+      is-same-repo: ${{ steps.repo-check.outputs.is-same-repo }}
+      should-deploy: ${{ steps.decision.outputs.should-deploy }}
+      env-name: ${{ steps.env-name.outputs.env-name }}
+      pr-number: ${{ steps.env-name.outputs.pr-number }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Check repository ownership
+        id: repo-check
+        run: |
+          if [[ "${{ github.event.pull_request.head.repo.full_name }}" == "${{ github.repository }}" ]]; then
+            echo "is-same-repo=true" >> "$GITHUB_OUTPUT"
+            echo "✅ PR from same repository: ${{ github.event.pull_request.head.repo.full_name }}"
+          else
+            echo "is-same-repo=false" >> "$GITHUB_OUTPUT"
+            echo "❌ PR from forked repository: ${{ github.event.pull_request.head.repo.full_name }}"
+          fi
+
+      - name: Check code ownership
+        id: codeowner-check
+        uses: ./.github/actions/check-codeowner
+        with:
+          mode: 'pr'
+          base-ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Generate environment name
+        id: env-name
+        run: |
+          ENV_NAME="pr-${{ github.event.pull_request.number }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          echo "env-name=${ENV_NAME}" >> "$GITHUB_OUTPUT"
+          echo "pr-number=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "Environment name: ${ENV_NAME}"
+
+      - name: Make deployment decision
+        id: decision
+        run: |
+          IS_SAME_REPO="${{ steps.repo-check.outputs.is-same-repo }}"
+          IS_OWNER="${{ steps.codeowner-check.outputs.is-owner }}"
+
+          if [[ "${IS_SAME_REPO}" == "true" && "${IS_OWNER}" == "true" ]]; then
+            echo "should-deploy=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Deployment approved: same-repo PR by code owner ${{ steps.codeowner-check.outputs.target-user }}"
+          else
+            echo "should-deploy=false" >> "$GITHUB_OUTPUT"
+            echo "❌ Deployment blocked:"
+            echo "  - Same repo: ${IS_SAME_REPO}"
+            echo "  - Code owner: ${IS_OWNER}"
+            echo "  - User: ${{ steps.codeowner-check.outputs.target-user }}"
+          fi
+
+  # Change detection using reusable workflow
+  change-detection:
+    name: Detect Changes
+    uses: ./.github/workflows/reusable-change-detection.yml
+    with:
+      base-ref: ${{ github.event.pull_request.base.ref }}
+      head-ref: ${{ github.event.pull_request.head.sha }}
+    needs: validate-access
+    if: needs.validate-access.outputs.should-deploy == 'true'
+
+  # Check if this is the first deployment for this PR
+  check-first-deployment:
+    name: Check First Deployment
+    runs-on: ubuntu-latest
+    needs: validate-access
+    if: needs.validate-access.outputs.should-deploy == 'true'
+    outputs:
+      is-first-deployment: ${{ steps.check.outputs.is-first-deployment }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-check-first-deployment
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Check if this is first deployment
+        id: check
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          ENV_NAME="pr-${PR_NUMBER}"
+
+          # Check if environment already exists in AWS (indicating previous deployment)
+          if aws cloudformation describe-stacks --stack-name "macro-ai-preview-${ENV_NAME}" --region us-east-1 >/dev/null 2>&1; then
+            echo "is-first-deployment=false" >> "$GITHUB_OUTPUT"
+            echo "ℹ️ This is NOT the first deployment for PR #${PR_NUMBER} (stack exists)"
+          else
+            echo "is-first-deployment=true" >> "$GITHUB_OUTPUT"
+            echo "🚀 This IS the first deployment for PR #${PR_NUMBER} (no existing stack)"
+          fi
+
+  # Build Express API Docker image
+  build-express-api:
+    name: Build Docker Image for ECS
+    runs-on: ubuntu-latest
+    needs: [validate-access, change-detection, check-first-deployment]
+    if: |
+      needs.validate-access.outputs.should-deploy == 'true' &&
+      (needs.check-first-deployment.outputs.is-first-deployment == 'true' ||
+       needs.change-detection.outputs.has-backend-changes == 'true' ||
+       needs.change-detection.outputs.has-infrastructure-changes == 'true')
+
+    permissions:
+      id-token: write
+      contents: read
+      actions: write
+
+    outputs:
+      image-uri: ${{ steps.build.outputs.docker-image-uri }}
+      image-tag: ${{ steps.build.outputs.image-tag }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: github-actions-build-docker-ecs
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Generate image tag
+        id: image-tag
+        run: |
+          IMAGE_TAG="pr-${{ github.event.pull_request.number }}-${{ github.sha }}"
+          echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Generated image tag: ${IMAGE_TAG}"
+
+      - name: Generate environment file from Parameter Store
+        id: generate-env
+        run: |
+          echo "🔍 Fetching environment variables from AWS Parameter Store..."
+
+          # For PR deployments, use development environment parameters
+          ENV_NAME="development"
+          PARAM_PATH="/macro-ai/${ENV_NAME}"
+          ENV_FILE="apps/express-api/.env.docker"
+
+          echo "🌍 Environment: ${ENV_NAME}"
+          echo "📥 Fetching from: ${PARAM_PATH}"
+
+          # Create the environment file using our script
+          chmod +x apps/express-api/scripts/generate-env-from-parameter-store.sh
+
+          # Set APP_ENV for the new programmatic approach
+          APP_ENV="pr-${{ github.event.pull_request.number }}"
+
+          # Pass GitHub secrets as environment variables for the script
+          ENV_FILE="${ENV_FILE}" \
+          AWS_REGION="us-east-1" \
+          APP_ENV="${APP_ENV}" \
+          API_KEY="${{ secrets.API_KEY }}" \
+          OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+          AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}" \
+          AWS_ROLE_ARN="${{ secrets.AWS_ROLE_ARN }}" \
+          SERVER_PORT="${{ secrets.SERVER_PORT }}" \
+          RATE_LIMIT_WINDOW_MS="${{ secrets.RATE_LIMIT_WINDOW_MS }}" \
+          RATE_LIMIT_MAX_REQUESTS="${{ secrets.RATE_LIMIT_MAX_REQUESTS }}" \
+          AUTH_RATE_LIMIT_WINDOW_MS="${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS }}" \
+          AUTH_RATE_LIMIT_MAX_REQUESTS="${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS }}" \
+          API_RATE_LIMIT_WINDOW_MS="${{ secrets.API_RATE_LIMIT_WINDOW_MS }}" \
+          API_RATE_LIMIT_MAX_REQUESTS="${{ secrets.API_RATE_LIMIT_MAX_REQUESTS }}" \
+          COST_ALERT_EMAILS="${{ secrets.COST_ALERT_EMAILS }}" \
+          ./apps/express-api/scripts/generate-env-from-parameter-store.sh
+
+          echo "✅ Environment file generated from ${ENV_NAME} environment"
+          echo "env-file=${ENV_FILE}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push Docker image
+        id: build
+        run: |
+          # Use the same naming convention as CDK to avoid conflicts
+          ECR_REPOSITORY="macro-ai-pr-${{ github.event.number }}-express-api"
+          IMAGE_TAG="${{ steps.image-tag.outputs.image-tag }}"
+          ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+
+          if [[ -z "${ECR_REGISTRY}" ]]; then
+            echo "⚠️ ECR registry output is empty, using fallback from AWS account ID"
+            ECR_REGISTRY="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
+          fi
+
+          IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+
+          echo "🐳 Building Docker image..."
+          echo "Repository: ${ECR_REPOSITORY}"
+          echo "Tag: ${IMAGE_TAG}"
+          echo "Registry: ${ECR_REGISTRY}"
+          echo "URI: ${IMAGE_URI}"
+
+           # Check if ECR repository exists, create if it doesn't
+           if aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" >/dev/null 2>&1; then
+             echo "✅ ECR repository already exists: ${ECR_REPOSITORY}"
+           else
+             echo "📦 Creating ECR repository: ${ECR_REPOSITORY}"
+             aws ecr create-repository \
+               --repository-name "${ECR_REPOSITORY}" \
+               --image-scanning-configuration scanOnPush=true \
+               --encryption-configuration encryptionType=AES256
+           fi
+
+          # Build with environment file using BuildKit
+          docker buildx build \
+            --file apps/express-api/Dockerfile.distroless \
+            --target ecs-runner \
+            --platform linux/amd64 \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --build-arg ENV_FILE="${{ steps.generate-env.outputs.env-file }}" \
+            --tag "${IMAGE_URI}" \
+            --push \
+            .
+
+          echo "✅ Image built and pushed successfully!"
+          # Use a different variable name to avoid secret masking
+          echo "docker-image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          echo "image-tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Save image URI to artifact
+        env:
+          IMAGE_URI: ${{ steps.build.outputs.docker-image-uri }}
+          IMAGE_TAG: ${{ steps.build.outputs.image-tag }}
+        run: |
+          echo "${IMAGE_URI}" > image-uri.txt
+          echo "${IMAGE_TAG}" > image-tag.txt
+
+      - name: Upload Docker image artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-info
+          path: |
+            image-uri.txt
+            image-tag.txt
+          retention-days: 1
+
+      - name: Cleanup environment file
+        if: always()
+        run: |
+          ENV_FILE="${{ steps.generate-env.outputs.env-file }}"
+          if [[ -f "${ENV_FILE}" ]]; then
+            rm -f "${ENV_FILE}"
+            echo "🧹 Cleaned up: ${ENV_FILE}"
+          fi
+
+  # Deploy backend using reusable workflow
+  deploy-backend:
+    name: Deploy Backend
+    uses: ./.github/workflows/reusable-deploy-backend.yml
+    with:
+      environment-name: ${{ needs.validate-access.outputs.env-name }}
+      deployment-type: preview
+      deployment-scale: preview
+      pr-number: ${{ needs.validate-access.outputs.pr-number }}
+      branch-name: ${{ github.event.pull_request.head.ref }}
+      image-uri: ${{ needs.build-express-api.outputs.image-uri }}
+      custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
+      hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
+      should-deploy: ${{ needs.check-first-deployment.outputs.is-first-deployment == 'true' || needs.change-detection.outputs.has-backend-changes == 'true' || needs.change-detection.outputs.has-infrastructure-changes == 'true' }}
+    secrets:
+      API_KEY: ${{ secrets.API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      SERVER_PORT: ${{ secrets.SERVER_PORT }}
+      RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS }}
+      RATE_LIMIT_MAX_REQUESTS: ${{ secrets.RATE_LIMIT_MAX_REQUESTS }}
+      AUTH_RATE_LIMIT_WINDOW_MS: ${{ secrets.AUTH_RATE_LIMIT_WINDOW_MS }}
+      AUTH_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.AUTH_RATE_LIMIT_MAX_REQUESTS }}
+      API_RATE_LIMIT_WINDOW_MS: ${{ secrets.API_RATE_LIMIT_WINDOW_MS }}
+      API_RATE_LIMIT_MAX_REQUESTS: ${{ secrets.API_RATE_LIMIT_MAX_REQUESTS }}
+      COST_ALERT_EMAILS: ${{ secrets.COST_ALERT_EMAILS }}
+    needs:
+      [
+        validate-access,
+        change-detection,
+        check-first-deployment,
+        build-express-api,
+      ]
+    if: needs.validate-access.outputs.should-deploy == 'true'
+
+  # Deploy frontend using reusable workflow
+  deploy-frontend:
+    name: Deploy Frontend
+    uses: ./.github/workflows/reusable-deploy-frontend.yml
+    with:
+      environment-name: ${{ needs.validate-access.outputs.env-name }}
+      deployment-type: preview
+      pr-number: ${{ needs.validate-access.outputs.pr-number }}
+      branch-name: ${{ github.event.pull_request.head.ref }}
+      backend-url: ${{ format('https://api-pr-{0}.{1}', needs.validate-access.outputs.pr-number, vars.CUSTOM_DOMAIN_NAME) }}
+      custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
+      hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
+      should-deploy: ${{ needs.check-first-deployment.outputs.is-first-deployment == 'true' || needs.change-detection.outputs.has-frontend-changes == 'true' }}
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      API_KEY: ${{ secrets.API_KEY }}
+    needs: [validate-access, change-detection, check-first-deployment]
+    if: needs.validate-access.outputs.should-deploy == 'true' && (needs.check-first-deployment.outputs.is-first-deployment == 'true' || needs.change-detection.outputs.has-frontend-changes == 'true')
+
+  # Handle blocked deployments
+  explain-blocked:
+    name: Explain Blocked Deployment
+    runs-on: ubuntu-latest
+    needs: validate-access
+    if: needs.validate-access.outputs.should-deploy == 'false'
+
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Comment on blocked PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const isSameRepo = '${{ needs.validate-access.outputs.is-same-repo }}' === 'true';
+            const isOwner = '${{ needs.validate-access.outputs.is-owner }}' === 'true';
+            const targetUser = '${{ needs.validate-access.outputs.target-user }}';
+
+            let comment = `## 🚫 Preview Environment Deployment Blocked\n\n`;
+
+            if (!isSameRepo) {
+              comment += `### 🔒 Forked Repository\n`;
+              comment += `This PR originates from a forked repository. For security reasons, automatic preview deployments are restricted to the main repository.\n\n`;
+              comment += `**Options:**\n`;
+              comment += `- A repository maintainer can manually deploy a preview using the \`deploy-forked-pr-preview.yml\` workflow\n`;
+              comment += `- The preview will use trusted base repository code (not fork changes)\n\n`;
+            }
+
+            if (!isOwner) {
+              comment += `### 👤 Code Owner Required\n`;
+              comment += `User \`@${targetUser}\` is not listed as a code owner in \`.github/CODEOWNERS\`.\n\n`;
+              comment += `**To enable automatic preview deployments:**\n`;
+              comment += `- Add \`@${targetUser}\` to the \`.github/CODEOWNERS\` file\n`;
+              comment += `- Or have a code owner create the PR\n\n`;
+            }
+
+            comment += `### 🔍 Current Status\n`;
+            comment += `- **Same repository:** ${isSameRepo ? '✅' : '❌'}\n`;
+            comment += `- **Code owner:** ${isOwner ? '✅' : '❌'}\n`;
+            comment += `- **User:** \`@${targetUser}\`\n\n`;
+            comment += `---\n`;
+            comment += `*For questions about preview environments, contact a repository maintainer.*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # Summary job to show what was deployed
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs:
+      [
+        validate-access,
+        change-detection,
+        check-first-deployment,
+        deploy-backend,
+        deploy-frontend,
+      ]
+    if: always() && needs.validate-access.outputs.should-deploy == 'true'
+
+    permissions:
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Generate deployment summary
+        run: |
+          echo "🚀 Preview deployment completed!"
+          echo "First Deployment: ${{ needs.check-first-deployment.outputs.is-first-deployment == 'true' && 'Yes' || 'No' }}"
+          echo "Change Detection: ${{ needs.change-detection.outputs.deployment-scope }}"
+          echo "Backend: ${{ needs.deploy-backend.result == 'success' && 'Deployed' || 'Skipped' }}"
+          echo "Frontend: ${{ needs.deploy-frontend.result == 'success' && 'Deployed' || 'Skipped' }}"
+
+      - name: Comment on PR with deployment details
+        if: needs.deploy-frontend.result == 'success' || needs.deploy-backend.result == 'success'
+        uses: actions/github-script@v7
+        env:
+          BRANCH_REF: ${{ github.head_ref }}
+        with:
+          script: |
+            const frontendDeployed = '${{ needs.deploy-frontend.result }}' === 'success';
+            const backendDeployed = '${{ needs.deploy-backend.result }}' === 'success';
+            const deploymentScope = '${{ needs.change-detection.outputs.deployment-scope }}';
+            const isFirstDeployment = '${{ needs.check-first-deployment.outputs.is-first-deployment }}' === 'true';
+
+            // Get deployment details using predictable URLs
+            const prNumber = '${{ needs.validate-access.outputs.pr-number }}';
+            const customDomain = '${{ vars.CUSTOM_DOMAIN_NAME }}';
+            const appUrl = frontendDeployed ? `https://pr-${prNumber}.${customDomain}` : null;
+            const appId = frontendDeployed ? 'Amplify App ID (check AWS Console)' : null;
+            const backendUrl = backendDeployed ? `https://api-pr-${prNumber}.${customDomain}` : null;
+            const backendStack = backendDeployed ? `macro-ai-preview-pr-${prNumber}` : null;
+            const envName = '${{ needs.validate-access.outputs.env-name }}';
+
+            const comment = `## 🚀 Preview Environment Deployed Successfully!
+
+            ### 🌐 Preview URLs
+            - **Frontend**: ${appUrl ? `[${appUrl}](${appUrl})` : 'Not deployed'}
+            - **Backend API**: ${backendUrl || 'Not deployed'}
+
+            ### 📋 Deployment Details
+            - **Environment**: \`${envName}\`
+            - **Deployment Type**: ${isFirstDeployment ? '🚀 First Deployment (full pipeline)' : '🔄 Incremental (changes only)'}
+            - **Deployment Scope**: \`${deploymentScope}\`
+            - **Amplify App ID**: \`${appId || 'N/A'}\`
+            - **Branch**: \`${{ env.BRANCH_REF }}\`
+            - **Backend Status**: ${backendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
+            - **Frontend Status**: ${frontendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
+
+            ### 🔗 Quick Links
+            ${appId ? `- [AWS Amplify Console](https://console.aws.amazon.com/amplify/home?region=us-east-1#/${appId})` : ''}
+            ${backendStack ? `- [Backend Stack](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?stackId=${backendStack})` : ''}
+
+            ### 🎯 Change Detection Results
+            - **First Deployment**: ${isFirstDeployment ? '✅' : '❌'}
+            - **Backend Changes**: ${{ needs.change-detection.outputs.has-backend-changes == 'true' && '✅' || '❌' }}
+            - **Frontend Changes**: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' && '✅' || '❌' }}
+            - **Infrastructure Changes**: ${{ needs.change-detection.outputs.has-infrastructure-changes == 'true' && '✅' || '❌' }}
+
+            ---
+            *This preview environment will be automatically cleaned up when the PR is closed/merged.*
+
+            > ⚠️ **Note**: If this is the first deployment with custom domains, there may be a delay before the URLs become accessible due to SSL certificate validation and DNS propagation (typically 5-15 minutes).`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
