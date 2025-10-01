@@ -35,6 +35,7 @@ jobs:
       has-frontend-changes: ${{ steps.change-detection.outputs.has-frontend-changes }}
       has-infrastructure-changes: ${{ steps.change-detection.outputs.has-infrastructure-changes }}
       is-first-deployment: ${{ steps.change-detection.outputs.is-first-deployment }}
+      image-tag: ${{ steps.build-image.outputs.image-tag }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
