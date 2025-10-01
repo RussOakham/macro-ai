@@ -166,10 +166,12 @@ jobs:
         fi
 
         # Set environment variables using GitHub environment file
-        echo "ENV_NAME=$ENV_NAME" >> $GITHUB_ENV
-        echo "DEPLOYMENT_TYPE=$DEPLOYMENT_TYPE" >> $GITHUB_ENV
-        echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
-        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+        {
+          echo "ENV_NAME=$ENV_NAME"
+          echo "DEPLOYMENT_TYPE=$DEPLOYMENT_TYPE"
+          echo "PR_NUMBER=$PR_NUMBER"
+          echo "IMAGE_TAG=$IMAGE_TAG"
+        } >> $GITHUB_ENV
 
         # Construct the full image URI from tag
         ECR_REGISTRY="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
@@ -299,7 +301,7 @@ jobs:
       id: health-check
       run: |
         API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}"
-        echo "🔍 Performing health check on: '${API_ENDPOINT}'"
+        echo "🔍 Performing health check on: '${API_ENDPOINT}/api/health'"
 
         # Wait for the service to be ready
         sleep 30
