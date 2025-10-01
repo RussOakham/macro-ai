@@ -305,7 +305,7 @@ jobs:
         sleep 30
 
         # Perform health check
-        if curl -f -s "${API_ENDPOINT}/health" > /dev/null; then
+        if curl -f -s --connect-timeout 5 --max-time 10 "${API_ENDPOINT}/api/health" > /dev/null 2>&1; then
           echo "✅ Health check passed"
           echo "health-status=healthy" >> "$GITHUB_OUTPUT"
         else
