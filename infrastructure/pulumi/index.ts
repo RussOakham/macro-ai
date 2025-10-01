@@ -458,6 +458,7 @@ const service = new aws.ecs.Service(
 		},
 	},
 	{
+		dependsOn: [cluster],
 		hooks: {
 			afterCreate: [healthCheckHook],
 			afterUpdate: [healthCheckHook],
