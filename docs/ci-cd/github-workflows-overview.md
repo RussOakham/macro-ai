@@ -26,8 +26,7 @@ graph TB
     end
 
     subgraph "Persistent Environment Deployment"
-        INFRA[Deploy Infrastructure]
-        FULL_STACK[Deploy Full-Stack]
+        PREVIEW[Deploy PR Preview]
         STAGING[Deploy Staging]
     end
 
@@ -57,10 +56,6 @@ graph TB
     PR_CLOSE --> DESTROY_PREVIEW
 
     %% Persistent Environment Deployments
-    PUSH_MAIN --> HYGIENE
-    PUSH_MAIN --> INFRA
-    PUSH_MAIN --> FULL_STACK
-
     PUSH_DEV --> STAGING
 
     %% Manual Operations
@@ -88,8 +83,7 @@ graph TB
 | **Hygiene Checks**        | Code quality validation           | PR, Push to main                    | CI                       |
 | **PR Label Check**        | Enforce semantic versioning       | PR label changes                    | CI                       |
 | **PR Open Assistant**     | Guide PR labeling                 | PR open/reopen                      | CI                       |
-| **Deploy Infrastructure** | Backend infrastructure deployment | Push to main/develop, Manual        | staging/production       |
-| **Deploy Full-Stack**     | Complete application deployment   | Push to main, Manual, Workflow call | hobby/staging/production |
+| **Deploy PR Preview**     | Ephemeral PR environment deployment | PR open/sync/reopen               | pr-{number}             |
 | **Deploy Staging**        | Staging environment deployment    | Push to develop, Manual             | staging                  |
 
 ### 🚀 Ephemeral PR Environment Workflows
@@ -356,111 +350,93 @@ graph LR
 
 ## 🚀 Deployment Workflows
 
-### Infrastructure Deployment (`deploy-infrastructure.yml`)
+### Standardized Reusable Backend Deployment
 
-**Purpose**: Backend infrastructure deployment with AWS CDK
+**Architecture**: All deployment workflows now use the `reusable-deploy-backend-pulumi.yml` workflow
+for consistent backend infrastructure deployment.
+
+**Key Features**:
+
+- **Unified Deployment Logic**: Single source of truth for Pulumi infrastructure deployment
+- **Environment Agnostic**: Supports preview (`pr-{number}`), staging (`stg`), and production (`prd`) environments
+- **Doppler Integration**: Automatic environment variable injection based on deployment type
+- **Change Detection**: Smart deployment based on backend/infrastructure file changes
+- **Health Validation**: Automated post-deployment health checks
+
+**Reusable Workflow Interface**:
+
+```yaml
+inputs:
+  environment-name: # Target environment name
+  deployment-type: # preview|staging|production
+  image-tag: # Docker image tag to deploy
+  custom-domain-name: # Custom domain for the environment
+  hosted-zone-id: # Route53 hosted zone ID
+  should-deploy: # Whether deployment should proceed
+
+outputs:
+  api-endpoint: # Deployed API endpoint URL
+  stack-name: # Pulumi stack name
+  health-status: # Health check result
+```
+
+### PR Preview Deployment (`deploy-pr-preview-pulumi.yml`)
+
+**Purpose**: Ephemeral environment deployment for pull request validation
 
 **Triggers**:
 
-- Push to `develop` branch (deploy to staging) and `main` branch (deploy to production)
-- Pull requests to `develop` and `main` (same paths)
-- Manual dispatch with environment selection
+- PR opened, reopened, synchronized
+- Code owner PRs only (security requirement)
 
-**Job Flow**:
-
-```mermaid
-graph TB
-    BUILD_LAMBDA[Build Lambda Package] --> VALIDATE[Validate Infrastructure]
-    VALIDATE --> DEPLOY[Deploy to AWS]
-    DEPLOY --> CLEANUP[Cleanup Artifacts]
-
-    BUILD_LAMBDA --> SHOULD_DEPLOY{Should Deploy?}
-    SHOULD_DEPLOY -->|Yes| VALIDATE
-    SHOULD_DEPLOY -->|No| SKIP[Skip Deployment]
-```
-
-**Key Steps**:
-
-1. **Build Lambda**: Package Express API for AWS Lambda
-2. **Validate**: Lint, type-check, test, and synthesize CDK templates
-3. **Deploy**: Deploy infrastructure using CDK
-4. **Test**: Health check validation
-5. **PR Comments**: Deployment info for pull requests
-6. **Cleanup**: Automatic artifact cleanup
-
-**Environments**: hobby (default), staging, production
-
-### Full-Stack Deployment (Legacy - Removed)
-
-> **⚠️ REMOVED**: The `deploy-full-stack.yml` workflow has been removed as part of
-> the Lambda-to-EC2 migration. Full-stack deployments will be handled by new
-> EC2-based workflows once the migration is complete.
-
-**Comprehensive Job Architecture**:
+**Job Architecture**:
 
 ```mermaid
 graph TB
-    QUALITY[Quality Gates] --> BUILD_LAMBDA[Build Lambda]
-    QUALITY --> BUILD_FRONTEND[Build Frontend]
+    CHANGE_DETECT[Change Detection] --> BUILD_IMAGE[Build Docker Image]
+    BUILD_IMAGE --> DEPLOY_BACKEND[Deploy Backend<br/>Reusable Workflow]
+    DEPLOY_BACKEND --> DEPLOY_FRONTEND[Deploy Frontend]
+    DEPLOY_FRONTEND --> HEALTH_CHECK[Health Check]
+    HEALTH_CHECK --> DEPLOYMENT_SUMMARY[Deployment Summary]
 
-    BUILD_LAMBDA --> DEPLOY_BACKEND[Deploy Backend]
-    DEPLOY_BACKEND --> BUILD_FRONTEND
-    BUILD_FRONTEND --> DEPLOY_FRONTEND[Deploy Frontend]
-
-    DEPLOY_BACKEND --> INTEGRATION[Integration Tests]
-    DEPLOY_FRONTEND --> INTEGRATION
-
-    INTEGRATION --> SUMMARY[Deployment Summary]
+    DEPLOY_BACKEND --> MONITORING[Setup Monitoring]
 ```
 
-**Advanced Features**:
+**Key Features**:
 
-- **Change Detection**: Smart deployment based on file changes
-- **Environment Management**: Dynamic API endpoint configuration
-- **Parallel Processing**: Optimized job dependencies
-- **Integration Testing**: Comprehensive post-deployment validation
-- **Deployment Summary**: Detailed GitHub step summary with links
+- **Ephemeral Resources**: `pr-{number}` unique environment per PR
+- **Security First**: CODEOWNERS validation required
+- **Cost Optimized**: Automatic cleanup on PR close
+- **Full Stack**: Backend + Frontend deployment
 
-**Configuration Options**:
+### Staging Deployment (`deploy-staging-pulumi.yml`)
 
-- `environment`: Target deployment environment
-- `deploy_backend`: Enable/disable backend deployment
-- `deploy_frontend`: Enable/disable frontend deployment
-- `run_tests`: Enable/disable integration tests
+**Purpose**: Persistent staging environment deployment
 
-### Staging Deployment (Legacy - Removed)
-
-> **⚠️ REMOVED**: The `deploy-staging.yml` workflow has been removed as part of
-> the Lambda-to-EC2 migration.
+**Triggers**:
 
 - Push to `develop` branch
-- Manual dispatch with force deployment option
+- Manual dispatch with force-deploy option
 
-**Staging-Specific Features**:
+**Job Architecture**:
 
 ```mermaid
 graph TB
-    VALIDATE[Validate Deployment] --> DEPLOY[Deploy Full Stack]
-    DEPLOY --> STAGING_TESTS[Staging Environment Tests]
-    STAGING_TESTS --> NOTIFY[Deployment Notification]
+    CHANGE_DETECT[Change Detection] --> BUILD_IMAGE[Build Docker Image]
+    BUILD_IMAGE --> DEPLOY_BACKEND[Deploy Backend<br/>Reusable Workflow]
+    DEPLOY_BACKEND --> DEPLOY_FRONTEND[Deploy Frontend]
+    DEPLOY_FRONTEND --> MONITORING[Setup Monitoring]
+    MONITORING --> DEPLOYMENT_SUMMARY[Deployment Summary]
 
-    subgraph "Staging Tests"
-        API_TEST[API Health Check]
-        CORS_TEST[CORS Configuration]
-        PERF_TEST[Performance Tests]
-    end
-
-    STAGING_TESTS --> API_TEST
-    STAGING_TESTS --> CORS_TEST
-    STAGING_TESTS --> PERF_TEST
+    DEPLOY_BACKEND --> TEARDOWN_SCHEDULER[Schedule Teardown]
 ```
 
-**Staging Tests Include**:
+**Key Features**:
 
-- API Gateway health validation
-- CORS configuration testing
-- Basic performance benchmarking
-- Response time monitoring
+- **Persistent Environment**: `stg` environment with fixed resources
+- **Cost Management**: Automatic teardown scheduling (6 PM daily)
+- **Full Integration**: Backend, Frontend, and Monitoring setup
+- **Manual Override**: Force-deploy option for emergency scenarios
 
 ## 🚨 Emergency Operations
 

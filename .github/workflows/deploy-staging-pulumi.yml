@@ -183,11 +183,45 @@ jobs:
       DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
       DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
 
+  # Check if Amplify app exists (needed for first-time deployments)
+  check-amplify-app:
+    name: Check Amplify App Exists
+    runs-on: ubuntu-latest
+    needs: [ change-detection, deploy-backend ]
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      app-exists: ${{ steps.check.outputs.app-exists }}
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: us-east-1
+        role-session-name: GitHubActions-Staging-Check-${{ github.run_id }}
+
+    - name: Check if Amplify app exists
+      id: check
+      run: |
+        APP_NAME="macro-ai-staging"
+        APP_ID=$(aws amplify list-apps \
+          --query "apps[?name=='$APP_NAME'].appId" \
+          --output text 2>/dev/null || echo "")
+
+        if [ -n "$APP_ID" ]; then
+          echo "app-exists=true" >> $GITHUB_OUTPUT
+          echo "✅ Amplify app exists: $APP_ID"
+        else
+          echo "app-exists=false" >> $GITHUB_OUTPUT
+          echo "ℹ️ Amplify app does not exist - first deployment needed"
+        fi
+
   # Deploy frontend using reusable workflow
   deploy-frontend:
     name: Deploy Frontend
     uses: ./.github/workflows/reusable-deploy-frontend.yml
-    needs: [ change-detection, deploy-backend ]
+    needs: [ change-detection, deploy-backend, check-amplify-app ]
     with:
       environment-name: staging
       deployment-type: staging
@@ -195,7 +229,12 @@ jobs:
       backend-url: ${{ needs.deploy-backend.outputs.api-endpoint }}
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
-      should-deploy: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' || github.event.inputs.force-deploy == 'true' }}
+      should-deploy: >-
+        ${{
+          needs.change-detection.outputs.has-frontend-changes == 'true' ||
+          needs.check-amplify-app.outputs.app-exists == 'false' ||
+          github.event.inputs.force-deploy == 'true'
+        }}
       doppler-config: stg
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
@@ -213,7 +252,7 @@ jobs:
       deployment-type: staging
       backend-stack-name: stg
     secrets: inherit
-    needs: [ deploy-backend, deploy-frontend ]
+    needs: [ deploy-backend, deploy-frontend, check-amplify-app ]
     if: always() && (needs.deploy-backend.result == 'success' || needs.deploy-frontend.result == 'success')
 
   # Schedule automatic teardown at 6 PM
@@ -235,7 +274,7 @@ jobs:
   deployment-summary:
     name: Staging Deployment Summary (Pulumi)
     runs-on: ubuntu-latest
-    needs: [ change-detection, deploy-backend, deploy-frontend, setup-monitoring, schedule-teardown ]
+    needs: [ change-detection, deploy-backend, deploy-frontend, check-amplify-app, setup-monitoring, schedule-teardown ]
     if: always()
     permissions:
       contents: write
