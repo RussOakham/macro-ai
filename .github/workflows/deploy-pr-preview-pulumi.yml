@@ -223,7 +223,7 @@ jobs:
     name: Deploy Backend Infrastructure
     uses: ./.github/workflows/reusable-deploy-backend-pulumi.yml
     if: >-
-      needs.deploy-pr-preview.outputs.should-deploy == 'true' && (needs.deploy-pr-preview.outputs.has-backend-changes == 'true' || needs.deploy-pr-preview.outputs.has-infrastructure-changes == 'true' || needs.deploy-pr-preview.outputs.is-first-deployment == 'true')
+      github.event.action != 'closed' && needs.deploy-pr-preview.outputs.should-deploy == 'true' && (needs.deploy-pr-preview.outputs.has-backend-changes == 'true' || needs.deploy-pr-preview.outputs.has-infrastructure-changes == 'true' || needs.deploy-pr-preview.outputs.is-first-deployment == 'true')
     needs: [ deploy-pr-preview ]
     permissions:
       id-token: write
@@ -248,7 +248,7 @@ jobs:
   deploy-frontend:
     name: Deploy Frontend to Amplify
     uses: ./.github/workflows/reusable-deploy-frontend.yml
-    if: github.event.pull_request != null
+    if: github.event.pull_request != null && github.event.action != 'closed'
     needs: [ deploy-backend ]
     permissions:
       id-token: write
@@ -273,7 +273,7 @@ jobs:
   frontend-deployment-summary:
     name: Frontend Deployment Summary
     runs-on: ubuntu-latest
-    if: github.event.pull_request != null
+    if: github.event.pull_request != null && github.event.action != 'closed'
     needs: [ deploy-backend, deploy-frontend ]
     permissions:
       pull-requests: write
@@ -322,6 +322,8 @@ jobs:
     if: github.event.pull_request != null && github.event.action == 'closed'
     env:
       AWS_REGION: us-east-1
+    permissions:
+      id-token: write
     steps:
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
