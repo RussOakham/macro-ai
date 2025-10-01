@@ -298,8 +298,8 @@ jobs:
     - name: Health Check
       id: health-check
       run: |
-        API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}"
-        echo "🔍 Performing health check on: '${API_ENDPOINT}'"
+        API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}/api/health"
+        echo "🔍 Performing health check on: '${API_ENDPOINT}/api/health'"
 
         # Wait for the service to be ready
         sleep 30
