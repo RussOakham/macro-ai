@@ -114,7 +114,6 @@ export class FargateService extends pulumi.ComponentResource {
 				],
 				tags: {
 					Name: `macro-ai-${args.environmentName}-ecs-sg`,
-					Environment: args.environmentName,
 					...commonTags,
 					...args.tags,
 				},
@@ -130,7 +129,6 @@ export class FargateService extends pulumi.ComponentResource {
 				retentionInDays: args.logRetentionDays ?? costSettings.logRetentionDays,
 				tags: {
 					Name: `macro-ai-${args.environmentName}-logs`,
-					Environment: args.environmentName,
 					...commonTags,
 					...args.tags,
 				},
@@ -154,10 +152,10 @@ export class FargateService extends pulumi.ComponentResource {
 						},
 					],
 				}),
-		managedPolicyArns: [
-			// eslint-disable-next-line no-secrets/no-secrets
-			'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy',
-		],
+				managedPolicyArns: [
+					// eslint-disable-next-line no-secrets/no-secrets
+					'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy',
+				],
 				tags: {
 					Name: `macro-ai-${args.environmentName}-execution-role`,
 					...commonTags,
@@ -207,7 +205,6 @@ export class FargateService extends pulumi.ComponentResource {
 					),
 				tags: {
 					Name: `macro-ai-${args.environmentName}-task`,
-					Environment: args.environmentName,
 					...commonTags,
 					...args.tags,
 				},
@@ -239,7 +236,6 @@ export class FargateService extends pulumi.ComponentResource {
 				healthCheckGracePeriodSeconds: 60,
 				tags: {
 					Name: `macro-ai-${args.environmentName}-service`,
-					Environment: args.environmentName,
 					...commonTags,
 					...args.tags,
 				},

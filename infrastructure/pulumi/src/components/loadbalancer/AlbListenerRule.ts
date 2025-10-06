@@ -85,7 +85,6 @@ export class AlbListenerRule extends pulumi.ComponentResource {
 				],
 				tags: {
 					Name: `macro-ai-${args.environmentName}-listener-rule`,
-					Environment: args.environmentName,
 					...commonTags,
 					...args.tags,
 				},

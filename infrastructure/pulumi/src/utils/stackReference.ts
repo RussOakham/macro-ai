@@ -38,18 +38,3 @@ export function getSharedAlbResources(devStack: pulumi.StackReference) {
 		httpsListenerArn: devStack.requireOutput('httpsListenerArn'),
 	}
 }
-
-/**
- * Safely get optional outputs from stack reference
- */
-export function getOptionalOutput<T>(
-	stackRef: pulumi.StackReference,
-	outputName: string,
-	defaultValue: T,
-): pulumi.Output<T> {
-	try {
-		return stackRef.requireOutput(outputName) as pulumi.Output<T>
-	} catch {
-		return pulumi.output(defaultValue)
-	}
-}

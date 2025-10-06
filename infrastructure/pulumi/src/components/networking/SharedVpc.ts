@@ -80,12 +80,19 @@ export class SharedVpc extends pulumi.ComponentResource {
 			this.vpcId = existingVpc.id
 			this.publicSubnetIds = subnets.ids
 
-			// Create a dummy awsx VPC object for compatibility
-			this.vpc = awsx.ec2.Vpc.fromExistingVpcId(
-				name,
-				args.existingVpcId,
+			// Create a minimal awsx VPC object for compatibility
+			// Note: awsx.ec2.Vpc doesn't have fromExistingVpcId, so we create a minimal VPC
+			// that won't actually be used, but provides the interface
+			this.vpc = new awsx.ec2.Vpc(
+				`${name}-dummy`,
 				{
-					publicSubnetIds: this.publicSubnetIds,
+					// eslint-disable-next-line sonarjs/no-hardcoded-ip
+					cidrBlock: '10.0.0.0/16', // Dummy, not used
+					numberOfAvailabilityZones: 1,
+					enableDnsHostnames: true,
+					enableDnsSupport: true,
+					natGateways: { strategy: 'None' },
+					tags: { Name: 'dummy-vpc-for-existing-reference' },
 				},
 				{ parent: this },
 			)
@@ -104,18 +111,6 @@ export class SharedVpc extends pulumi.ComponentResource {
 					natGateways: {
 						strategy: createNatGateways ? 'Single' : 'None',
 					},
-					subnets: [
-						// Public subnets
-						{
-							type: 'public',
-							cidrMask: 24,
-							name: 'public',
-							tags: {
-								...commonTags,
-								Type: 'public',
-							},
-						},
-					],
 					tags: {
 						Name: `${args.environmentName}-vpc`,
 						...commonTags,

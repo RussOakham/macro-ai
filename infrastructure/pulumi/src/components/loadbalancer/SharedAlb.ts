@@ -78,7 +78,6 @@ export class SharedAlb extends pulumi.ComponentResource {
 					costSettings.enableDeletionProtection,
 				tags: {
 					Name: `macro-ai-${args.environmentName}-alb`,
-					Environment: args.environmentName,
 					...commonTags,
 					...args.tags,
 				},
@@ -141,7 +140,7 @@ export class SharedAlb extends pulumi.ComponentResource {
 					validationMethod: 'DNS',
 					tags: {
 						Name: `macro-ai-api-wildcard-certificate`,
-						Environment: 'shared',
+						CertificateType: 'shared',
 						...commonTags,
 						...args.tags,
 					},
