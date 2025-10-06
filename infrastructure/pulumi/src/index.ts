@@ -1,11 +1,21 @@
+// Automation - TODO: Reimplement once Pulumi dependencies are updated
+// export * from './automation'
+
 // Components
 export * from './components'
 
-export * from './config/constants'
 // Configuration
+export { APP_CONFIG, COST_OPTIMIZATION } from './config/constants'
 export * from './config/tags'
 
 // Utilities
-export * from './utils/doppler'
-export * from './utils/environment'
+export { getDopplerSecrets } from './utils/doppler'
+export {
+	constructCustomDomain,
+	getCostOptimizedSettings,
+	getDopplerConfig,
+	getDopplerSecrets as getDopplerSecretsEnv,
+	getEnvironmentSettings,
+	resolveImageUri,
+} from './utils/environment'
 export * from './utils/stackReference'

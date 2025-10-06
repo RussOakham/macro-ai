@@ -9,6 +9,8 @@ export interface CommonTags {
 	PullRequest?: string
 }
 
+export type TagsRecord = Record<string, string>
+
 export function getCommonTags(
 	environmentName: string,
 	deploymentType: string,
@@ -30,6 +32,22 @@ export function getCommonTags(
 	}
 
 	return tags
+}
+
+export function getCommonTagsAsRecord(
+	environmentName: string,
+	deploymentType: string,
+): TagsRecord {
+	const tags = getCommonTags(environmentName, deploymentType)
+	const record: TagsRecord = {}
+
+	Object.entries(tags).forEach(([key, value]) => {
+		if (value !== undefined) {
+			record[key] = value
+		}
+	})
+
+	return record
 }
 
 export function getEnvironmentConfig(environmentName: string) {

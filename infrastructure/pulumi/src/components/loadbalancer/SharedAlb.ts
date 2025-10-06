@@ -1,5 +1,6 @@
 import * as aws from '@pulumi/aws'
 import * as pulumi from '@pulumi/pulumi'
+import type { acm } from '@pulumi/aws/types/output'
 import { getCommonTags } from '../../config/tags'
 import { APP_CONFIG } from '../../config/constants'
 import { getCostOptimizedSettings } from '../../utils/environment'
@@ -150,7 +151,7 @@ export class SharedAlb extends pulumi.ComponentResource {
 
 			// Create DNS validation records
 			const validationRecords = this.certificate.domainValidationOptions.apply(
-				(options) => {
+				(options: acm.CertificateDomainValidationOption[]) => {
 					const uniqueOptions = options.filter(
 						(option, index, self) =>
 							index ===
