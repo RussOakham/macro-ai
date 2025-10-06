@@ -332,13 +332,14 @@ jobs:
     env:
       AWS_REGION: us-east-1
     permissions:
+      contents: read
       id-token: write
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        ref: ${{ github.event.pull_request.head.sha }}
+        ref: ${{ github.event.pull_request.base.ref }}
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
