@@ -78,13 +78,13 @@ graph TB
 
 ### Core CI/CD Workflows
 
-| Workflow                  | Purpose                           | Triggers                            | Environment              |
-| ------------------------- | --------------------------------- | ----------------------------------- | ------------------------ |
-| **Hygiene Checks**        | Code quality validation           | PR, Push to main                    | CI                       |
-| **PR Label Check**        | Enforce semantic versioning       | PR label changes                    | CI                       |
-| **PR Open Assistant**     | Guide PR labeling                 | PR open/reopen                      | CI                       |
-| **Deploy PR Preview**     | Ephemeral PR environment deployment | PR open/sync/reopen               | pr-{number}             |
-| **Deploy Staging**        | Staging environment deployment    | Push to develop, Manual             | staging                  |
+| Workflow              | Purpose                             | Triggers                | Environment |
+| --------------------- | ----------------------------------- | ----------------------- | ----------- |
+| **Hygiene Checks**    | Code quality validation             | PR, Push to main        | CI          |
+| **PR Label Check**    | Enforce semantic versioning         | PR label changes        | CI          |
+| **PR Open Assistant** | Guide PR labeling                   | PR open/reopen          | CI          |
+| **Deploy PR Preview** | Ephemeral PR environment deployment | PR open/sync/reopen     | pr-{number} |
+| **Deploy Staging**    | Staging environment deployment      | Push to develop, Manual | staging     |
 
 ### 🚀 Ephemeral PR Environment Workflows
 
