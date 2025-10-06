@@ -122,7 +122,7 @@ jobs:
         echo "🔍 Running code quality checks..."
 
         # Type checking
-        pnpm tsc --noEmit
+        pnpm type-check
 
         # ESLint checks
         pnpm lint
@@ -384,7 +384,7 @@ jobs:
     needs: [ pre-deployment-validation, manual-approval, deploy-backend, deploy-frontend, production-monitoring ]
     if: always()
     permissions:
-      pull-requests: write
+      deployments: write
 
     steps:
     - name: Generate deployment summary
@@ -404,72 +404,55 @@ jobs:
         echo "🎨 Frontend deployment: ${{ needs.deploy-frontend.result }}"
         echo "📊 Monitoring setup: ${{ needs.production-monitoring.result }}"
 
-    - name: Create deployment summary comment
-      if: github.event_name == 'push'
+    - name: Update deployment status
       uses: actions/github-script@v7
       with:
         script: |
-          const frontendDeployed = '${{ needs.deploy-frontend.result }}' === 'success';
-          const backendDeployed = '${{ needs.deploy-backend.result }}' === 'success';
-          const deploymentType = '${{ github.event.inputs.deployment-type || 'standard' }}';
+          const overallSuccess = '${{ needs.pre-deployment-validation.result }}' === 'success' &&
+                                '${{ needs.manual-approval.result }}' === 'success' &&
+                                ('${{ needs.deploy-backend.result }}' === 'success' || '${{ needs.deploy-backend.result }}' === 'skipped') &&
+                                ('${{ needs.deploy-frontend.result }}' === 'success' || '${{ needs.deploy-frontend.result }}' === 'skipped') &&
+                                '${{ needs.production-monitoring.result }}' === 'success';
 
-          // Get deployment details using predictable URLs
-          const customDomain = '${{ vars.CUSTOM_DOMAIN_NAME }}';
-          const appUrl = frontendDeployed ? `https://${customDomain}` : null;
-          const appId = frontendDeployed ? '${{ needs.deploy-frontend.outputs.app-id }}' : null;
-          const backendUrl = backendDeployed ? `https://api.${customDomain}` : null;
-          const backendStack = backendDeployed ? 'prd' : null;
+          const state = overallSuccess ? 'success' : 'failure';
 
-          const comment = `## 🚀 Production Environment Deployed Successfully!
-
-          ### 🌐 Production URLs
-          - **Frontend**: ${appUrl ? `[${appUrl}](${appUrl})` : 'Not deployed'}
-          - **Backend API**: ${backendUrl || 'Not deployed'}
-
-          ### 📋 Deployment Details
-          - **Environment**: \`production\`
-          - **Infrastructure**: \`Pulumi\` (blue-green deployment)
-          - **Deployment Type**: \`${deploymentType}\`
-          - **Amplify App ID**: \`${appId || 'N/A'}\`
-          - **Branch**: \`main\`
-          - **Backend Status**: ${backendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
-          - **Frontend Status**: ${frontendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
-
-          ### 🔗 Quick Links
-          ${appId ? `- [AWS Amplify Console](https://console.aws.amazon.com/amplify/home?region=us-east-1#/${appId})` : ''}
-          ${backendStack ? `- [Pulumi Stack](https://app.pulumi.com/orgs/macro-ai/stacks/${backendStack})` : ''}
-
-          ### 🎯 Change Detection Results
-          - **Backend Changes**: ${{ needs.change-detection.outputs.has-backend-changes == 'true' &&
-            '✅' || '❌' }}
-          - **Frontend Changes**: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' &&
-            '✅' || '❌' }}
-          - **Infrastructure Changes**: ${{ needs.change-detection.outputs.has-infrastructure-changes == 'true' &&
-            '✅' || '❌' }}
-
-          ### 📊 Deployment Phases
-          - ✅ Pre-deployment validation completed
-          - ✅ Manual approval received
-          - 🔧 Backend deployment ${backendDeployed ? '✅ completed' : '⏭️ skipped'}
-          - 🎨 Frontend deployment ${frontendDeployed ? '✅ completed' : '⏭️ skipped'}
-          - 📊 Production monitoring configured
-
-          ---
-          *Production deployment completed with manual approval and blue-green strategy.*`;
-
-          // Find the latest commit and comment on it
-          const { data: commits } = await github.rest.repos.listCommits({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            sha: 'main',
-            per_page: 1
-          });
-
-          if (commits.length > 0) {
-            await github.rest.repos.createCommitComment({
+          // Try to find existing deployment for this SHA
+          try {
+            const { data: deployments } = await github.rest.repos.listDeployments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              commit_sha: commits[0].sha,
-              body: comment
+              sha: context.sha,
+              environment: 'production'
             });
+
+            if (deployments.length > 0) {
+              // Update existing deployment status
+              await github.rest.repos.createDeploymentStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                deployment_id: deployments[0].id,
+                state: state,
+                description: `Production deployment ${state}`
+              });
+            } else {
+              // Create new deployment if none exists
+              const { data: deployment } = await github.rest.repos.createDeployment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: context.sha,
+                environment: 'production',
+                description: 'Production deployment via Pulumi'
+              });
+
+              // Set deployment status
+              await github.rest.repos.createDeploymentStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                deployment_id: deployment.id,
+                state: state,
+                description: `Production deployment ${state}`
+              });
+            }
+          } catch (error) {
+            console.log('Could not update deployment status:', error.message);
           }

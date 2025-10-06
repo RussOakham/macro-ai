@@ -1,7 +1,7 @@
 # Macro AI
 
 [![Build Status](https://github.com/RussOakham/macro-ai/workflows/Hygiene%20Checks/badge.svg)](https://github.com/RussOakham/macro-ai/actions/workflows/hygiene-checks.yml)
-[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/RussOakham/COVERAGE_GIST_ID/raw/macro-ai-coverage.json)](https://github.com/RussOakham/macro-ai/actions/workflows/hygiene-checks.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/RussOakham/df67a3b7af9d4814ca6d46a1222c80e1/raw/macro-ai-coverage.json)](https://github.com/RussOakham/macro-ai/actions/workflows/hygiene-checks.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
 [![pnpm](https://img.shields.io/badge/pnpm-8+-orange.svg)](https://pnpm.io/)
