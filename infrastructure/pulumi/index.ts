@@ -317,6 +317,9 @@ if (isPreviewEnvironment) {
 	)
 
 	// Create Fargate service
+	// Use environment-aware CPU/Memory sizing instead of static values
+	const costSettings = getCostOptimizedSettings(environmentName)
+
 	// permFargateService is intentionally unused - created for Pulumi resource side effects
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const permFargateService = new FargateService(`${environmentName}-service`, {
@@ -328,8 +331,8 @@ if (isPreviewEnvironment) {
 		environmentVariables: permEnvironmentVariables,
 		targetGroupArn: permTargetGroup.arn,
 		albSecurityGroupId: sharedAlbSecurityGroupId,
-		cpu: COST_OPTIMIZATION.ecsCpu,
-		memory: COST_OPTIMIZATION.ecsMemory,
+		cpu: costSettings.ecsCpu,
+		memory: costSettings.ecsMemory,
 		desiredCount: 1,
 		logRetentionDays: isPermanentEnvironment
 			? COST_OPTIMIZATION.logRetentionDays.permanent
