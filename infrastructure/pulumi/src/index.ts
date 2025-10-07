@@ -5,7 +5,7 @@
 export * from './components'
 
 // Configuration
-export { APP_CONFIG, COST_OPTIMIZATION } from './config/constants'
+export * from './config/constants'
 export * from './config/tags'
 
 // Utilities
