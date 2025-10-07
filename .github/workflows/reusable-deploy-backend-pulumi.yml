@@ -300,7 +300,7 @@ jobs:
         else
           API_ENDPOINT="https://dev.api.${{ inputs.custom-domain-name }}"
         fi
-        
+
         echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
         echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
         echo "✅ Deployment completed successfully!"
