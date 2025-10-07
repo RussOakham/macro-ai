@@ -262,8 +262,9 @@ if (isPreviewEnvironment) {
 		},
 	})
 
-	// Create listener rule (if custom domain)
+	// Create listener rule (if custom domain and HTTPS is available)
 	if (customDomainName && sharedAlb.httpsListener) {
+		console.log(`Creating listener rule for ${environmentName}: customDomainName=${customDomainName}, hasHttpsListener=${!!sharedAlb.httpsListener}`)
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		const permListenerRule = new AlbListenerRule(
 			`${environmentName}-listener-rule`,
@@ -279,6 +280,8 @@ if (isPreviewEnvironment) {
 				tags: commonTags,
 			},
 		)
+	} else {
+		console.log(`Skipping listener rule for ${environmentName}: customDomainName=${customDomainName}, hasHttpsListener=${!!sharedAlb.httpsListener}`)
 	}
 
 	// Create ECS cluster
@@ -339,12 +342,12 @@ if (isPreviewEnvironment) {
 }
 
 // ===================================================================
-// FINAL EXPORTS (Guaranteed to be available after all initialization)
+// EXPORTS (Available after all initialization)
 // ===================================================================
 
-// These exports are guaranteed to be available since they're set in both code paths
-export const finalVpcId = vpc!.vpcId
-export const finalAlbSecurityGroupId = sharedAlbSecurityGroupId!
-export const finalAlbDnsName = sharedAlb!.albDnsName
-export const finalAlbZoneId = sharedAlb!.albZoneId
-export const finalHttpsListenerArn = sharedAlb!.httpsListener?.arn
+// Core infrastructure outputs for PR preview stacks to reference
+export const vpcId = vpc!.vpcId
+export const albSecurityGroupId = sharedAlbSecurityGroupId!
+export const albDnsName = sharedAlb!.albDnsName
+export const albZoneId = sharedAlb!.albZoneId
+export const httpsListenerArn = sharedAlb!.httpsListener?.arn

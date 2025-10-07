@@ -5,3 +5,5 @@ config:
   macro-ai-infrastructure:imageUri: nginx:latest
   doppler:dopplerToken:
     secure: AAABAMQjNaWjiR9s/vJeDw9eGP6L/eqORc4TFKC3dmkBS7jqA770DAK7eyfiS8x6aVMNkixtFMZ+WWyt2RRP7KnluM74/Imomr1fQSkIIATI8Lev994mB3JtYrzZTw==
+  macro-ai-infrastructure:hostedZoneId: ""
+  macro-ai-infrastructure:customDomainName: "macro-ai.russoakham.dev"
