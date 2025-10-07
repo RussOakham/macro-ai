@@ -344,8 +344,17 @@ if (isPreviewEnvironment) {
 // ===================================================================
 
 // Core infrastructure outputs for PR preview stacks to reference
-export const vpcId = vpc!.vpcId
-export const albSecurityGroupId = sharedAlbSecurityGroupId!
-export const albDnsName = sharedAlb!.albDnsName
-export const albZoneId = sharedAlb!.albZoneId
-export const httpsListenerArn = sharedAlb!.httpsListener?.arn
+// Only permanent environments (dev, staging, production) export these
+export const vpcId = isPermanentEnvironment ? vpc!.vpcId : undefined
+export const albSecurityGroupId = isPermanentEnvironment
+	? sharedAlbSecurityGroupId!
+	: undefined
+export const albDnsName = isPermanentEnvironment
+	? sharedAlb!.albDnsName
+	: undefined
+export const albZoneId = isPermanentEnvironment
+	? sharedAlb!.albZoneId
+	: undefined
+export const httpsListenerArn = isPermanentEnvironment
+	? sharedAlb!.httpsListener?.arn
+	: undefined

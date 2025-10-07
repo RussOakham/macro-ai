@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable security-node/detect-crlf */
 import { DopplerSDK } from '@dopplerhq/node-sdk'
 import type { GetImageResult } from '@pulumi/aws/ecr'
 import * as pulumi from '@pulumi/pulumi'
@@ -71,6 +73,7 @@ export function getDopplerConfig(
  */
 type DopplerSecretValue = boolean | number | string
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 export async function fetchDopplerSecrets(
 	project: string,
 	config: string,
@@ -103,6 +106,7 @@ export async function fetchDopplerSecrets(
 				typeof secretObj === 'object' &&
 				'computed' in secretObj
 			) {
+				// oxlint-disable-next-line prefer-destructuring
 				const computed = (secretObj as any).computed
 				if (computed !== undefined && computed !== null) {
 					// Only store primitive values
