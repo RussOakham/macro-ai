@@ -3,12 +3,9 @@
 import { DopplerSDK } from '@dopplerhq/node-sdk'
 import type { GetImageResult } from '@pulumi/aws/ecr'
 import * as pulumi from '@pulumi/pulumi'
+import { APP_CONFIG } from '../config/constants'
 
-// Application configuration
-export const APP_CONFIG = {
-	port: 3040,
-	healthPath: '/api/health',
-}
+// Application configuration is defined centrally in `config/constants.ts`
 
 // Environment settings
 export interface EnvironmentSettings {

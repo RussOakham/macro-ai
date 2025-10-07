@@ -13,6 +13,7 @@ import {
 	getDopplerSecrets,
 	resolveImageUri,
 } from './src/utils/environment'
+import { getCostOptimizedSettings } from './src/utils/environment'
 
 // Get configuration
 const config = new pulumi.Config()
@@ -158,6 +159,8 @@ if (isPreviewEnvironment) {
 	)
 
 	// Create Fargate service
+	// Use environment-aware CPU/Memory sizing
+	const costSettings = getCostOptimizedSettings(environmentName)
 	// prFargateService is intentionally unused - created for Pulumi resource side effects
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	prFargateService = new FargateService(`pr-${prNumber}-service`, {
@@ -169,8 +172,8 @@ if (isPreviewEnvironment) {
 		environmentVariables: prEnvironmentVariables,
 		targetGroupArn: prTargetGroup.arn,
 		albSecurityGroupId: sharedAlbSecurityGroupId,
-		cpu: COST_OPTIMIZATION.ecsCpu,
-		memory: COST_OPTIMIZATION.ecsMemory,
+		cpu: costSettings.ecsCpu,
+		memory: costSettings.ecsMemory,
 		desiredCount: 1,
 		logRetentionDays: COST_OPTIMIZATION.logRetentionDays.preview,
 		tags: commonTags,

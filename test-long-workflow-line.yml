@@ -1,9 +1,0 @@
-name: Test workflow with very long line that should be allowed because workflow files have 200 character limit
-on: push
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Test step with long line that exceeds default 120 character limit
-        # This line is split to stay within the 200 character limit for workflow files
-        run: echo "This is a test to verify that workflow files use the correct line length limit"

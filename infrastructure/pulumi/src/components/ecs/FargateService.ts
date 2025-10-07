@@ -1,7 +1,7 @@
 import * as aws from '@pulumi/aws'
 import * as pulumi from '@pulumi/pulumi'
 
-import { APP_CONFIG, COST_OPTIMIZATION } from '../../config/constants'
+import { APP_CONFIG } from '../../config/constants'
 import { getCommonTags } from '../../config/tags'
 import { getCostOptimizedSettings } from '../../utils/environment'
 
@@ -175,8 +175,8 @@ export class FargateService extends pulumi.ComponentResource {
 				family: `macro-ai-${args.environmentName}`,
 				networkMode: 'awsvpc',
 				requiresCompatibilities: ['FARGATE'],
-				cpu: args.cpu || COST_OPTIMIZATION.ecsCpu,
-				memory: args.memory || COST_OPTIMIZATION.ecsMemory,
+				cpu: args.cpu ?? costSettings.ecsCpu,
+				memory: args.memory ?? costSettings.ecsMemory,
 				executionRoleArn: executionRole.arn,
 				containerDefinitions: pulumi
 					.all([
@@ -227,7 +227,7 @@ export class FargateService extends pulumi.ComponentResource {
 				name: `macro-ai-${args.environmentName}-service`,
 				cluster: args.clusterArn,
 				taskDefinition: this.taskDefinition.arn,
-				desiredCount: args.desiredCount || 1,
+				desiredCount: args.desiredCount ?? 1,
 				launchType: 'FARGATE',
 				networkConfiguration: {
 					subnets: args.subnetIds,

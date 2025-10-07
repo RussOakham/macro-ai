@@ -76,27 +76,19 @@ export class SharedVpc extends pulumi.ComponentResource {
 				{ parent: this },
 			)
 
-			// Create a minimal awsx VPC object for compatibility
-			// In practice, we'd pass subnet IDs directly to services
+			// Create awsx VPC wrapper for existing VPC - no new resources provisioned
+			// Use the existing VPC ID as the resource ID to prevent creation of new resources
+			this.vpc = new awsx.ec2.Vpc(
+				`${name}-existing-wrapper`,
+				{}, // Empty args since we're referencing existing VPC
+				{
+					parent: this,
+					id: args.existingVpcId, // This makes it reference existing VPC
+				},
+			)
+
 			this.vpcId = existingVpc.id
 			this.publicSubnetIds = subnets.ids
-
-			// Create a minimal awsx VPC object for compatibility
-			// Note: awsx.ec2.Vpc doesn't have fromExistingVpcId, so we create a minimal VPC
-			// that won't actually be used, but provides the interface
-			this.vpc = new awsx.ec2.Vpc(
-				`${name}-dummy`,
-				{
-					// eslint-disable-next-line sonarjs/no-hardcoded-ip
-					cidrBlock: '10.0.0.0/16', // Dummy, not used
-					numberOfAvailabilityZones: 1,
-					enableDnsHostnames: true,
-					enableDnsSupport: true,
-					natGateways: { strategy: 'None' },
-					tags: { Name: 'dummy-vpc-for-existing-reference' },
-				},
-				{ parent: this },
-			)
 		} else {
 			// Create new VPC
 			const createNatGateways =

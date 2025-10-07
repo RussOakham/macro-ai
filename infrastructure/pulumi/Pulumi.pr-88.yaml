@@ -1,8 +1,0 @@
-config:
-  doppler:dopplerToken:
-    secure: AAABAAqeEMEbfoz6yZiVoYHge+H1tkqq6R7u+FXzhYwjjoddBWQkJerpjPu1FxU3TblbbLQoKPvFM4yVVPXXNGmc2LV9WezSqTEJmFMwMW8MLZkG3g==
-  macro-ai-infrastructure:environmentName: pr-88
-  macro-ai-infrastructure:deploymentType: preview
-  macro-ai-infrastructure:imageUri: nginx:latest
-  macro-ai-infrastructure:customDomainName: macro-ai.russoakham.dev
-  macro-ai-infrastructure:hostedZoneId: Z10081873B648ARROPNER
