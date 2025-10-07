@@ -281,9 +281,9 @@ jobs:
           echo "🚀 Deploying infrastructure..."
           pulumi up --yes --stack "${STACK_NAME}"
 
-          # Get outputs
-          API_ENDPOINT=$(pulumi stack output apiEndpoint --stack "${STACK_NAME}")
-          STACK_NAME_OUTPUT=$(pulumi stack output stackName --stack "${STACK_NAME}" || echo "${STACK_NAME}")
+          # Construct API endpoint deterministically (no Pulumi output dependency)
+          API_ENDPOINT="https://pr-${{ github.event.number }}.api.${CUSTOM_DOMAIN_NAME}"
+          STACK_NAME_OUTPUT="${STACK_NAME}"
 
           echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
           echo "stack-name=${STACK_NAME_OUTPUT}" >> $GITHUB_OUTPUT
