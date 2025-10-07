@@ -132,14 +132,15 @@ export class SharedAlb extends pulumi.ComponentResource {
 
 		// Create HTTPS listener if domain provided
 		if (args.baseDomainName && args.hostedZoneId) {
-			// Create certificate for API domain (simplified for now)
+			// Create wildcard certificate for API subdomains (*.api.domain + api.domain)
 			this.certificate = new aws.acm.Certificate(
 				`${name}-certificate`,
 				{
-					domainName: `api.${args.baseDomainName}`,
+					domainName: `*.api.${args.baseDomainName}`,
+					subjectAlternativeNames: [`api.${args.baseDomainName}`],
 					validationMethod: 'DNS',
 					tags: {
-						Name: `macro-ai-api-certificate`,
+						Name: `macro-ai-api-wildcard-certificate`,
 						CertificateType: 'shared',
 						...commonTags,
 						...args.tags,

@@ -165,6 +165,9 @@ export class FargateService extends pulumi.ComponentResource {
 			{ parent: this },
 		)
 
+		// Get AWS region for log configuration
+		const awsRegion = pulumi.output(aws.getRegionOutput().name)
+
 		// Create task definition
 		this.taskDefinition = new aws.ecs.TaskDefinition(
 			`${name}-task`,
@@ -176,8 +179,13 @@ export class FargateService extends pulumi.ComponentResource {
 				memory: args.memory || COST_OPTIMIZATION.ecsMemory,
 				executionRoleArn: executionRole.arn,
 				containerDefinitions: pulumi
-					.all([args.environmentVariables, args.imageUri])
-					.apply(([envVars, image]) =>
+					.all([
+						args.environmentVariables,
+						args.imageUri,
+						this.logGroup.name,
+						awsRegion,
+					])
+					.apply(([envVars, image, logGroupName, region]) =>
 						JSON.stringify([
 							{
 								name: 'macro-ai-container',
@@ -195,8 +203,8 @@ export class FargateService extends pulumi.ComponentResource {
 								logConfiguration: {
 									logDriver: 'awslogs',
 									options: {
-										'awslogs-group': this.logGroup.name,
-										'awslogs-region': aws.config.region,
+										'awslogs-group': logGroupName,
+										'awslogs-region': region,
 										'awslogs-stream-prefix': 'ecs',
 									},
 								},

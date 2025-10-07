@@ -16,6 +16,7 @@ import {
 
 // Get configuration
 const config = new pulumi.Config()
+const dopplerConfig = new pulumi.Config('doppler')
 const environmentName = config.get('environmentName') || 'dev'
 const deploymentType = config.get('deploymentType') || 'dev'
 const imageUri = config.get('imageUri')
@@ -136,7 +137,7 @@ if (isPreviewEnvironment) {
 	})
 
 	// Get Doppler secrets
-	const prDopplerToken = config.getSecret('doppler:dopplerToken')
+	const prDopplerToken = dopplerConfig.getSecret('dopplerToken')
 	const prEnvironmentVariables = getDopplerSecrets(
 		prDopplerToken,
 		'macro-ai',
@@ -262,9 +263,8 @@ if (isPreviewEnvironment) {
 		},
 	})
 
-	// Create listener rule (if custom domain and HTTPS is available)
+	// Create listener rule (if custom domain)
 	if (customDomainName && sharedAlb.httpsListener) {
-		console.log(`Creating listener rule for ${environmentName}: customDomainName=${customDomainName}, hasHttpsListener=${!!sharedAlb.httpsListener}`)
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		const permListenerRule = new AlbListenerRule(
 			`${environmentName}-listener-rule`,
@@ -280,8 +280,6 @@ if (isPreviewEnvironment) {
 				tags: commonTags,
 			},
 		)
-	} else {
-		console.log(`Skipping listener rule for ${environmentName}: customDomainName=${customDomainName}, hasHttpsListener=${!!sharedAlb.httpsListener}`)
 	}
 
 	// Create ECS cluster
@@ -294,12 +292,12 @@ if (isPreviewEnvironment) {
 	})
 
 	// Get Doppler secrets
-	const dopplerConfig = getDopplerConfig(environmentName, deploymentType)
-	const permDopplerToken = config.getSecret('doppler:dopplerToken')
+	const dopplerConfigName = getDopplerConfig(environmentName, deploymentType)
+	const permDopplerToken = dopplerConfig.getSecret('dopplerToken')
 	const permEnvironmentVariables = getDopplerSecrets(
 		permDopplerToken,
 		'macro-ai',
-		dopplerConfig,
+		dopplerConfigName,
 		{
 			NODE_ENV: 'production',
 			SERVER_PORT: String(APP_CONFIG.port),

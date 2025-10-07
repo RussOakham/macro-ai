@@ -76,30 +76,74 @@ export async function fetchDopplerSecrets(
 	config: string,
 	dopplerToken: string,
 ): Promise<Record<string, DopplerSecretValue>> {
-	const sdk = new DopplerSDK({
-		accessToken: dopplerToken,
-	})
+	let sdk: DopplerSDK | null = null
+	let response: any = null
 
 	try {
-		const response = await sdk.secrets.list(project, config)
-
-		if (!response.secrets) {
-			throw new Error('No secrets found')
-		}
-
-		// Convert the response to a simple key-value object
-		const secrets: Record<string, boolean | number | string> = {}
-
-		Object.entries(response.secrets).forEach(([key, secretObj]) => {
-			if (secretObj?.computed !== undefined && secretObj?.computed !== null) {
-				secrets[key] = secretObj.computed
-			}
+		sdk = new DopplerSDK({
+			accessToken: dopplerToken,
 		})
 
+		// Fetch secrets from Doppler
+		response = await sdk.secrets.list(project, config)
+
+		if (!response || !response.secrets) {
+			throw new Error('No secrets found in Doppler response')
+		}
+
+		// Immediately extract only what we need to avoid holding large objects
+		const secrets: Record<string, boolean | number | string> = {}
+		let secretCount = 0
+
+		// Safely iterate and extract only the computed values
+		const secretEntries = Object.entries(response.secrets || {})
+		for (const [key, secretObj] of secretEntries) {
+			if (
+				secretObj &&
+				typeof secretObj === 'object' &&
+				'computed' in secretObj
+			) {
+				const computed = (secretObj as any).computed
+				if (computed !== undefined && computed !== null) {
+					// Only store primitive values
+					secrets[key] = computed
+					secretCount++
+				}
+			}
+		}
+
+		// Clear response to free memory
+		response = null
+
+		console.log(
+			`✓ Fetched ${secretCount} secrets from Doppler ${project}/${config}`,
+		)
 		return secrets
 	} catch (error) {
-		console.error('Failed to fetch Doppler secrets:', error)
-		throw error
+		// Clear any large objects immediately
+		response = null
+		sdk = null
+
+		// Extract only the error message, not the entire error object
+		let errorMsg = 'Unknown error'
+		try {
+			if (error instanceof Error) {
+				errorMsg = error.message
+			} else if (typeof error === 'string') {
+				errorMsg = error
+			} else if (error && typeof error === 'object' && 'message' in error) {
+				errorMsg = String((error as any).message)
+			}
+		} catch {
+			errorMsg = 'Error extracting error message'
+		}
+
+		// Create a clean error with minimal information
+		const cleanError = new Error(
+			`Doppler API error (${project}/${config}): ${errorMsg.substring(0, 150)}`,
+		)
+		console.error(`✗ ${cleanError.message}`)
+		throw cleanError
 	}
 }
 
@@ -113,22 +157,30 @@ export function getDopplerSecrets(
 	additionalEnvVars: Partial<EnvironmentSettings> = {},
 ): pulumi.Output<Record<string, string>> {
 	return pulumi.secret(
-		pulumi
-			.output(dopplerToken)
-			.apply((token) => {
-				// Fall back to environment variable if Pulumi config is not available
-				const fallbackToken =
-					process.env.DOPPLER_TOKEN || process.env.DOPPLER_TOKEN_STAGING
-				const finalToken = token || fallbackToken
+		pulumi.output(dopplerToken).apply(async (token) => {
+			// Fall back to environment variable if Pulumi config is not available
+			const fallbackToken =
+				process.env.DOPPLER_TOKEN || process.env.DOPPLER_TOKEN_STAGING
+			// Treat empty string as no token
+			const finalToken = (token && token.trim()) || fallbackToken
 
-				if (!finalToken) {
-					throw new Error(
-						'Doppler token not found in Pulumi configuration or environment variables.',
-					)
-				}
-				return fetchDopplerSecrets(project, config, finalToken)
-			})
-			.apply((secrets: Record<string, boolean | number | string>) => {
+			if (!finalToken || finalToken.trim() === '') {
+				console.warn(
+					'⚠ No Doppler token found, using only additional env vars',
+				)
+				// Return only additional env vars if no token
+				const envVars: Record<string, string> = {}
+				Object.entries(additionalEnvVars).forEach(([key, value]) => {
+					// eslint-disable-next-line sonarjs/different-types-comparison
+					if (value !== undefined) {
+						envVars[key] = String(value)
+					}
+				})
+				return envVars
+			}
+
+			try {
+				const secrets = await fetchDopplerSecrets(project, config, finalToken)
 				const envVars: Record<string, string> = {}
 
 				// Process secrets from the Node SDK response
@@ -138,7 +190,7 @@ export function getDopplerSecrets(
 					})
 				}
 
-				// Add additional environment variables
+				// Add additional environment variables (overrides Doppler)
 				Object.entries(additionalEnvVars).forEach(([key, value]) => {
 					// eslint-disable-next-line sonarjs/different-types-comparison
 					if (value !== undefined) {
@@ -147,7 +199,17 @@ export function getDopplerSecrets(
 				})
 
 				return envVars
-			}),
+			} catch (error) {
+				// Provide minimal error details to avoid serialization issues
+				const errorMessage =
+					error instanceof Error ? error.message : 'Unknown Doppler error'
+				const simpleError = new Error(
+					`Doppler secrets fetch failed for ${project}/${config}: ${errorMessage.substring(0, 150)}`,
+				)
+				console.error(`✗ ${simpleError.message}`)
+				throw simpleError
+			}
+		}),
 	)
 }
 
