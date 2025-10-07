@@ -38,11 +38,18 @@ export interface SharedVpcArgs {
 	tags?: Record<string, string>
 }
 
+// Interface for existing VPC references (doesn't create resources)
+interface ExistingVpcReference {
+	vpcId: pulumi.Output<string>
+	publicSubnetIds: pulumi.Output<string[]>
+	privateSubnetIds?: pulumi.Output<string[]>
+}
+
 export class SharedVpc extends pulumi.ComponentResource {
-	public readonly privateSubnetIds?: pulumi.Output<string[]>
-	public readonly publicSubnetIds: pulumi.Output<string[]>
-	public readonly vpc: awsx.ec2.Vpc
-	public readonly vpcId: pulumi.Output<string>
+	public privateSubnetIds?: pulumi.Output<string[]>
+	public publicSubnetIds: pulumi.Output<string[]>
+	public vpc: awsx.ec2.Vpc | ExistingVpcReference
+	public vpcId: pulumi.Output<string>
 
 	constructor(
 		name: string,
@@ -50,6 +57,10 @@ export class SharedVpc extends pulumi.ComponentResource {
 		opts?: pulumi.ComponentResourceOptions,
 	) {
 		super('macro-ai:networking:SharedVpc', name, {}, opts)
+
+		// Initialize properties that will be set in conditional blocks
+		this.vpcId = pulumi.output('')
+		this.publicSubnetIds = pulumi.output([])
 
 		const commonTags = getCommonTags(args.environmentName, args.environmentName)
 		const costSettings = getCostOptimizedSettings(args.environmentName)
@@ -76,17 +87,16 @@ export class SharedVpc extends pulumi.ComponentResource {
 				{ parent: this },
 			)
 
-			// Create awsx VPC wrapper for existing VPC - no new resources provisioned
-			// Use the existing VPC ID as the resource ID to prevent creation of new resources
-			this.vpc = new awsx.ec2.Vpc(
-				`${name}-existing-wrapper`,
-				{}, // Empty args since we're referencing existing VPC
-				{
-					parent: this,
-					id: args.existingVpcId, // This makes it reference existing VPC
-				},
-			)
+			// For existing VPCs, create a reference object that doesn't provision resources
+			const existingVpcRef: ExistingVpcReference = {
+				vpcId: existingVpc.id,
+				publicSubnetIds: subnets.ids,
+				privateSubnetIds: pulumi.output([]), // No private subnets in existing VPC for now
+			}
 
+			this.vpc = existingVpcRef
+
+			// Set properties for existing VPC case
 			this.vpcId = existingVpc.id
 			this.publicSubnetIds = subnets.ids
 		} else {
@@ -113,9 +123,14 @@ export class SharedVpc extends pulumi.ComponentResource {
 				{ parent: this },
 			)
 
-			this.vpcId = this.vpc.vpcId
-			this.publicSubnetIds = this.vpc.publicSubnetIds
-			this.privateSubnetIds = this.vpc.privateSubnetIds
+			// For new VPCs, get properties from the awsx VPC object
+			// For existing VPCs, these are already set above
+			if (this.vpc instanceof awsx.ec2.Vpc) {
+				this.vpcId = this.vpc.vpcId
+				this.publicSubnetIds = this.vpc.publicSubnetIds
+				this.privateSubnetIds = this.vpc.privateSubnetIds
+			}
+			// Note: For existing VPCs, vpcId and publicSubnetIds are already set above
 		}
 
 		this.registerOutputs({
