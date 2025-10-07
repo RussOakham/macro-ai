@@ -290,8 +290,41 @@ jobs:
         # Deploy the infrastructure
         pulumi up --yes --stack "${STACK_NAME}"
 
-        # Get the API endpoint
-        API_ENDPOINT=$(pulumi stack output apiEndpoint --stack "${STACK_NAME}")
+        # Construct API endpoint with validation and fail-fast behavior
+        INPUT_DOMAIN="${{ inputs.custom-domain-name }}"
+
+        # If a custom domain was provided, construct deterministic URL
+        if [[ -n "${INPUT_DOMAIN}" ]]; then
+          if [[ "${{ inputs.deployment-type }}" == "preview" ]]; then
+            API_ENDPOINT="https://pr-${{ inputs.pr-number }}.api.${INPUT_DOMAIN}"
+          elif [[ "${{ inputs.environment-name }}" == "staging" ]]; then
+            API_ENDPOINT="https://staging.api.${INPUT_DOMAIN}"
+          elif [[ "${{ inputs.environment-name }}" == "production" ]]; then
+            API_ENDPOINT="https://api.${INPUT_DOMAIN}"
+          else
+            API_ENDPOINT="https://dev.api.${INPUT_DOMAIN}"
+          fi
+        else
+          # No custom domain provided
+          if [[ "${{ inputs.deployment-type }}" == "preview" ]]; then
+            echo "❌ ERROR: custom-domain-name is required for preview deployments to construct pr-*.api.<domain> endpoints."
+            echo "   Provide inputs.custom-domain-name or configure a Pulumi output for the endpoint."
+            exit 1
+          fi
+
+          # Attempt to retrieve ALB DNS from Pulumi stack outputs as a fallback
+          echo "🔍 No custom domain provided. Attempting to read 'albDnsName' from Pulumi outputs..."
+          ALB_DNS=$(pulumi stack output albDnsName --stack "${STACK_NAME}" 2>/dev/null || true)
+
+          if [[ -z "${ALB_DNS}" ]]; then
+            echo "❌ ERROR: Unable to determine API endpoint. 'albDnsName' Pulumi output is missing or empty, and no custom-domain-name was provided."
+            echo "   Please ensure the stack exports 'albDnsName' or provide inputs.custom-domain-name."
+            exit 1
+          fi
+
+          API_ENDPOINT="https://${ALB_DNS}"
+        fi
+
         echo "api-endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
         echo "stack-name=${STACK_NAME}" >> $GITHUB_OUTPUT
         echo "✅ Deployment completed successfully!"
