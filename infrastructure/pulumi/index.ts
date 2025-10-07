@@ -174,7 +174,7 @@ if (isPreviewEnvironment) {
 		logRetentionDays: COST_OPTIMIZATION.logRetentionDays.preview,
 		tags: commonTags,
 	})
-
+} else {
 	// ========================
 	// PERMANENT ENVIRONMENT (dev, staging, production)
 	// ========================
