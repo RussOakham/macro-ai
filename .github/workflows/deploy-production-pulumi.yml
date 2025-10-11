@@ -114,6 +114,9 @@ jobs:
         restore-keys: |
           pnpm-${{ runner.os }}-
 
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
