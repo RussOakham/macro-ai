@@ -6,6 +6,14 @@ The preview/PR deployment strategy provides ephemeral, isolated environments for
 and collaboration without impacting shared environments. This system automatically creates full-stack preview environments
 that include both backend API and frontend UI components.
 
+**Key Features:**
+
+- **Automated Daily Destruction**: PR stacks auto-destroy at 8pm UTC for cost optimization
+- **Dev Stack Dependency**: Automatically ensures dev stack exists before PR deployment
+- **Shared Infrastructure**: Uses dev stack's VPC and ALB for cost efficiency
+- **Smart Change Detection**: Only deploys when relevant changes are detected
+- **Automatic Cleanup**: Environments destroyed when PRs are closed
+
 ## 🏗️ Architecture Design Considerations
 
 ### Infrastructure Overview
@@ -19,22 +27,138 @@ that include both backend API and frontend UI components.
 - Each PR gets a unique environment namespace: `pr-{number}`
 - Complete infrastructure isolation using Pulumi stacks
 - Automatic cleanup when PRs are closed or merged
-- No shared resources between preview environments
+- Shared VPC/ALB infrastructure from dev stack for cost efficiency
 
 #### **Full-Stack Deployment**
 
 - **Backend**: ECS Fargate-based API deployment with auto-scaling
 - **Frontend**: AWS Amplify-hosted React application
 - **Database**: Shared development database with read-only access for cost optimization
-- **Networking**: Isolated VPC with Application Load Balancer
+- **Networking**: Shared VPC from dev stack with isolated target groups
 
 #### **Cost-Optimized Infrastructure**
 
-- **NAT Gateway Elimination**: Saves ~$2.76/month per environment
-- **VPC Endpoints Removal**: Additional cost savings for preview environments
-- **Auto-Shutdown Scheduling**: 10 PM UTC daily shutdown (~68% cost reduction)
+- **Shared Infrastructure**: Reuses dev stack's VPC and ALB (~$16-22/month savings per PR)
+- **Auto-Shutdown Scheduling**: 8pm UTC daily destruction (~100% cost reduction overnight)
+- **Minimal Resources**: 256 CPU / 512 MB memory allocation for preview environments
 - **Shared Parameter Store**: Reuses development parameters instead of creating new ones
-- **Target Cost**: <$0.50/month per preview environment
+- **Target Cost**: <$0.50/month per preview environment (when active)
+
+## 🚀 Deployment Process
+
+### Automatic Deployment Triggers
+
+PR deployments are automatically triggered by pull request events:
+
+```yaml
+on:
+  pull_request:
+    types: [opened, synchronize, closed]
+    branches:
+      - main
+      - develop
+```
+
+### Dev Stack Dependency Management
+
+Before deploying any PR environment, the system ensures the dev stack exists:
+
+1. **Check Dev Stack Status**
+   - Verify dev stack exists with required resources
+   - Check for essential outputs (VPC ID, ALB Security Group)
+
+2. **Auto-Deploy Dev Stack (if missing)**
+   - Automatically deploy dev stack if not found
+   - Wait for deployment completion
+   - Verify required outputs are available
+
+3. **Proceed with PR Deployment**
+   - Use dev stack outputs for shared infrastructure
+   - Deploy PR-specific resources (Fargate service, target group)
+
+### Smart Change Detection
+
+The system intelligently detects what needs to be deployed:
+
+- **Backend Changes**: `infrastructure/`, `apps/express-api/`, `packages/macro-ai-api-client/`
+- **Frontend Changes**: `apps/client-ui/`, `packages/ui-library/`
+- **Infrastructure Changes**: `infrastructure/`, `.github/workflows/`
+- **First Deployment**: Always deploys both backend and frontend
+
+### Deployment Workflow
+
+1. **Change Detection**
+   - Analyze git diff against base branch
+   - Determine which components need deployment
+   - Check if this is first deployment of PR environment
+
+2. **Dev Stack Verification**
+   - Ensure dev stack exists and is healthy
+   - Auto-deploy dev stack if missing
+   - Verify shared infrastructure availability
+
+3. **Docker Image Build** (if backend changes)
+   - Build PR-specific Docker image
+   - Tag with `pr-{number}-{run-id}`
+   - Push to ECR repository
+
+4. **Backend Deployment** (if backend/infrastructure changes)
+   - Deploy Fargate service using shared VPC/ALB
+   - Create PR-specific target group
+   - Configure health checks and monitoring
+
+5. **Frontend Deployment** (if frontend changes or new backend)
+   - Deploy to Amplify with PR-specific branch
+   - Configure backend API endpoint
+   - Update DNS and routing
+
+6. **Health Verification**
+   - Backend health check with retries
+   - Frontend availability verification
+   - Complete deployment summary
+
+## 🕐 Daily Cost Optimization
+
+### Automated Destruction Schedule
+
+All PR environments are automatically destroyed daily at 8pm UTC:
+
+```yaml
+# Scheduled destruction runs daily at 8pm UTC
+schedule:
+  - cron: '0 20 * * *'
+```
+
+**Destruction Process:**
+
+1. **Identify Active PR Stacks**: List all stacks with `pr-` prefix
+2. **Destroy Infrastructure**: Run `pulumi destroy --yes` for each stack
+3. **Clean Up Resources**: Remove Amplify branches and ECR images
+4. **Verify Cleanup**: Ensure all resources are properly removed
+
+### Manual Re-deployment
+
+Teams can manually re-deploy PR environments when needed:
+
+```bash
+# Re-run PR deployment workflow
+gh workflow run deploy-pr-preview-pulumi.yml \
+  --ref feature/my-branch
+```
+
+## 🛡️ Safety and Resource Management
+
+### Stack Protection
+
+- **Production Protection**: Production stacks excluded from auto-destruction
+- **Dev Stack Management**: Dev stack also auto-destroys but can be manually re-deployed
+- **Validation Checks**: Safety checks prevent accidental production destruction
+
+### Resource Optimization
+
+- **Shared Infrastructure**: VPC, ALB, and security groups shared from dev stack
+- **Minimal Compute**: 256 CPU / 512 MB memory for cost efficiency
+- **Automatic Cleanup**: Complete resource cleanup on PR closure or daily schedule
 
 ### Infrastructure Components
 

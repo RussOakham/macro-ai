@@ -3,9 +3,37 @@
 import { DopplerSDK } from '@dopplerhq/node-sdk'
 import type { GetImageResult } from '@pulumi/aws/ecr'
 import * as pulumi from '@pulumi/pulumi'
+import type { Input } from '@pulumi/pulumi'
+
 import { APP_CONFIG } from '../config/constants'
 
 // Application configuration is defined centrally in `config/constants.ts`
+
+/**
+ * Supported deployment types
+ */
+export type DeploymentType = 'permanent' | 'preview'
+
+/**
+ * Known environment names
+ */
+export type EnvironmentName =
+	| 'dev'
+	| 'prd'
+	| 'prod'
+	| 'production'
+	| 'staging'
+	| 'stg'
+	| string
+
+/**
+ * Protected environment names that should not be auto-destroyed
+ */
+export const PROTECTED_ENVIRONMENTS: readonly string[] = [
+	'production',
+	'prod',
+	'prd',
+] as const
 
 // Environment settings
 export interface EnvironmentSettings {
@@ -149,6 +177,13 @@ export async function fetchDopplerSecrets(
 }
 
 /**
+ * Type guard to check if a value is not null or undefined
+ */
+function isDefined<T>(value: null | T | undefined): value is T {
+	return value !== null && value !== undefined
+}
+
+/**
  * Get Doppler secrets and merge with environment variables
  */
 export function getDopplerSecrets(
@@ -172,8 +207,7 @@ export function getDopplerSecrets(
 				// Return only additional env vars if no token
 				const envVars: Record<string, string> = {}
 				Object.entries(additionalEnvVars).forEach(([key, value]) => {
-					// eslint-disable-next-line sonarjs/different-types-comparison
-					if (value !== undefined) {
+					if (isDefined(value)) {
 						envVars[key] = String(value)
 					}
 				})
@@ -193,8 +227,7 @@ export function getDopplerSecrets(
 
 				// Add additional environment variables (overrides Doppler)
 				Object.entries(additionalEnvVars).forEach(([key, value]) => {
-					// eslint-disable-next-line sonarjs/different-types-comparison
-					if (value !== undefined) {
+					if (isDefined(value)) {
 						envVars[key] = String(value)
 					}
 				})
@@ -283,4 +316,106 @@ export function getEnvironmentSettings(
 		APP_ENV: environmentName,
 		CUSTOM_DOMAIN_NAME: customDomainName ?? '',
 	}
+}
+
+/**
+ * Stack management utilities for destruction scheduling and safety checks
+ */
+export interface StackMetadata {
+	environmentName: EnvironmentName
+	deploymentType: DeploymentType
+	createdAt: string
+	lastUpdated: string
+	autoDestroy: boolean
+	destructionSchedule?: string
+}
+
+/**
+ * AWS resource tags with optional Pulumi Input support
+ */
+export type ResourceTags = Record<string, Input<string>>
+
+/**
+ * Get stack tags for destruction scheduling and metadata
+ * Returns tags compatible with Pulumi AWS resources
+ */
+export function getStackTags(
+	environmentName: EnvironmentName,
+	deploymentType: DeploymentType,
+	customTags: Record<string, string> = {},
+): ResourceTags {
+	const isPreview = deploymentType === 'preview'
+	const now = new Date().toISOString()
+
+	const baseTags: ResourceTags = {
+		Environment: environmentName,
+		DeploymentType: deploymentType,
+		CreatedAt: now,
+		LastUpdated: now,
+		AutoDestroy: isPreview ? 'true' : 'false',
+		ManagedBy: 'pulumi',
+		Project: 'macro-ai',
+		...customTags,
+	}
+
+	// Add destruction schedule for environments that should auto-destroy
+	if (isPreview || environmentName === 'dev' || environmentName === 'stg') {
+		baseTags.DestructionSchedule = '20:00:00Z' // 8pm UTC
+		baseTags.DestructionEnabled = 'true'
+	}
+
+	return baseTags
+}
+
+/**
+ * Check if a stack should be protected from destruction
+ */
+export function isStackProtected(environmentName: EnvironmentName): boolean {
+	return PROTECTED_ENVIRONMENTS.includes(environmentName.toLowerCase())
+}
+
+/**
+ * Get stack metadata for destruction scheduling
+ */
+export function getStackMetadata(
+	environmentName: EnvironmentName,
+	deploymentType: DeploymentType,
+): StackMetadata {
+	const now = new Date().toISOString()
+	const isPreview = deploymentType === 'preview'
+	const shouldAutoDestroy =
+		isPreview || environmentName === 'dev' || environmentName === 'stg'
+
+	return {
+		environmentName,
+		deploymentType,
+		createdAt: now,
+		lastUpdated: now,
+		autoDestroy: shouldAutoDestroy,
+		destructionSchedule: shouldAutoDestroy ? '20:00:00Z' : undefined,
+	}
+}
+
+/**
+ * Validate stack destruction safety
+ */
+export function validateStackDestruction(
+	environmentName: EnvironmentName,
+	force = false,
+): { canDestroy: boolean; reason?: string } {
+	// Never allow destruction of production without explicit force flag
+	if (isStackProtected(environmentName) && !force) {
+		return {
+			canDestroy: false,
+			reason: `Stack '${environmentName}' is protected from destruction. Use --force to override.`,
+		}
+	}
+
+	// Check for active dependencies (this could be expanded)
+	if (environmentName === 'dev') {
+		// Dev stack might have PR dependencies - could add logic to check active PRs
+		// For now, allow destruction but could be enhanced
+	}
+
+	return { canDestroy: true }
 }

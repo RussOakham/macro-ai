@@ -3,14 +3,32 @@
 ## Current Implementation Status 🚀 PULUMI + AMPLIFY DEPLOYMENT
 
 This document outlines the current AWS deployment strategy for the Macro AI application, featuring a hybrid Pulumi and
-Amplify deployment approach with automated CI/CD pipelines and comprehensive monitoring.
+Amplify deployment approach with automated CI/CD pipelines, cost optimization, and comprehensive monitoring.
 
 **Deployment Status**: ✅ **ACTIVE** (Pulumi Infrastructure + Amplify Frontend)
 **Infrastructure**: Pulumi (TypeScript) with Doppler secrets management
 **Frontend**: AWS Amplify for static site deployment
 **Backend**: Pulumi-managed ECS Fargate containers
+**Cost Optimization**: Daily auto-destruction at 8pm UTC for dev/staging/PR environments
 
 The infrastructure is **deployed and operational** with scalable, secure, and cost-effective cloud deployment.
+
+## 🕐 Cost Optimization Features
+
+### Automated Daily Destruction
+
+All non-production environments are automatically destroyed daily at 8pm UTC to minimize costs:
+
+- **Dev Stack**: Auto-destroys daily, can be manually re-deployed
+- **Staging Stack**: Auto-destroys daily, can be manually re-deployed
+- **PR Stacks**: Auto-destroys daily, automatically re-deployed on new commits
+- **Production Stack**: Protected from auto-destruction
+
+### Smart Resource Management
+
+- **Shared Infrastructure**: PR environments share dev stack's VPC and ALB
+- **Environment-Aware Sizing**: Different CPU/memory allocations per environment
+- **Dependency Management**: PR deployments automatically ensure dev stack exists
 
 ## 🏗️ Architecture Overview
 
