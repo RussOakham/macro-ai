@@ -136,6 +136,10 @@ jobs:
       run: |
         echo "🔍 Running code quality checks..."
 
+        # Build packages that generate types (required before type checking)
+        echo "🏗️ Building packages with generated types..."
+        pnpm build --filter="@repo/macro-ai-api-client"
+
         # Type checking
         pnpm type-check
 
