@@ -153,7 +153,7 @@ jobs:
         # Test execution
         if [[ "${{ github.event.inputs.skip-tests }}" == "false" ]]; then
           echo "🧪 Running test suite..."
-          pnpm test --run
+          pnpm test
         else
           echo "⏭️ Skipping tests as requested"
         fi
