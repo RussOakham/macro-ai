@@ -39,6 +39,11 @@ on:
         required: false
         default: false
         type: boolean
+      force-deploy:
+        description: 'Force deployment regardless of change detection'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -73,7 +78,8 @@ jobs:
       needs.change-detection.outputs.has-backend-changes == 'true' ||
       needs.change-detection.outputs.has-frontend-changes == 'true' ||
       needs.change-detection.outputs.has-infrastructure-changes == 'true' ||
-      github.event.inputs.force-rebuild == 'true'
+      github.event.inputs.force-rebuild == 'true' ||
+      github.event.inputs.force-deploy == 'true'
 
     permissions:
       id-token: write
@@ -380,7 +386,8 @@ jobs:
     needs: [ change-detection, deploy-backend ]
     if: |
       needs.change-detection.outputs.has-frontend-changes == 'true' ||
-      github.event.inputs.force-rebuild == 'true'
+      github.event.inputs.force-rebuild == 'true' ||
+      github.event.inputs.force-deploy == 'true'
 
     uses: ./.github/workflows/reusable-deploy-frontend.yml
     with:
@@ -390,7 +397,7 @@ jobs:
       backend-url: ${{ needs.deploy-backend.outputs.api-endpoint }}
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
-      should-deploy: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' || github.event.inputs.force-rebuild == 'true' }}
+      should-deploy: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' || github.event.inputs.force-rebuild == 'true' || github.event.inputs.force-deploy == 'true' }}
       doppler-config: prd
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
