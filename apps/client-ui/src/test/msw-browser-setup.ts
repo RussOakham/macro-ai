@@ -8,7 +8,7 @@
 import type { RequestHandler } from 'msw'
 import { setupWorker } from 'msw/browser'
 
-import { handlers } from './mocks/handlers.js'
+import { handlers } from './mocks/handlers'
 
 // Create MSW worker for browser environment
 export const worker = setupWorker(...handlers)
