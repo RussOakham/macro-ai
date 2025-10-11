@@ -140,6 +140,10 @@ jobs:
         echo "🏗️ Building packages with generated types..."
         pnpm build --filter="@repo/macro-ai-api-client"
 
+        # Generate MSW mocks for client-ui (required for type checking)
+        echo "🎭 Generating MSW mocks for client-ui..."
+        pnpm --filter="client-ui" generate:msw
+
         # Type checking
         pnpm type-check
 
