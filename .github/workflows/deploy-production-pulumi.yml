@@ -368,7 +368,11 @@ jobs:
   deploy-backend:
     name: Deploy Backend (Blue-Green)
     needs: [ build-express-api ]
-    if: needs.build-express-api.result == 'success'
+    if: |
+      needs.build-express-api.result == 'success' &&
+      (needs.change-detection.outputs.has-backend-changes == 'true' ||
+       needs.change-detection.outputs.has-infrastructure-changes == 'true' ||
+       github.event.inputs.force-deploy == 'true')
 
     uses: ./.github/workflows/reusable-deploy-backend-pulumi.yml
     with:
@@ -394,6 +398,7 @@ jobs:
     needs: [ change-detection, deploy-backend ]
     if: |
       needs.change-detection.outputs.has-frontend-changes == 'true' ||
+      needs.change-detection.outputs.has-infrastructure-changes == 'true' ||
       github.event.inputs.force-rebuild == 'true' ||
       github.event.inputs.force-deploy == 'true'
 
