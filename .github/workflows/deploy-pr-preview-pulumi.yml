@@ -35,7 +35,7 @@ jobs:
       has-frontend-changes: ${{ steps.change-detection.outputs.has-frontend-changes }}
       has-infrastructure-changes: ${{ steps.change-detection.outputs.has-infrastructure-changes }}
       is-first-deployment: ${{ steps.change-detection.outputs.is-first-deployment }}
-      image-tag: ${{ steps.build-image.outputs.image-tag }}
+      image-tag: ${{ steps.set-image-tag.outputs.image-tag }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -189,6 +189,24 @@ jobs:
 
         echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
         echo "✅ Docker image built and pushed: ${IMAGE_TAG}"
+
+    - name: Set image tag fallback
+      if: github.event.action != 'closed'
+      id: set-image-tag
+      run: |
+        # If Docker build was skipped, use a fallback image tag
+        if [[ -z "${{ steps.build-image.outputs.image-tag }}" ]]; then
+          # Use 'latest' as fallback when no new image was built
+          IMAGE_TAG="latest"
+          echo "ℹ️ No new Docker image built - using fallback tag: ${IMAGE_TAG}"
+        else
+          # Use the newly built image tag
+          IMAGE_TAG="${{ steps.build-image.outputs.image-tag }}"
+          echo "✅ Using newly built image tag: ${IMAGE_TAG}"
+        fi
+        
+        echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+        echo "🔍 Final IMAGE_TAG: ${IMAGE_TAG}"
 
     - name: Decide deployment action
       id: decide-deploy
