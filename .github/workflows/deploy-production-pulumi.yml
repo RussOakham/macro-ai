@@ -37,7 +37,7 @@ on:
       skip-tests:
         description: 'Skip integration tests'
         required: false
-        default: false
+        default: true
         type: boolean
       force-deploy:
         description: 'Force deployment regardless of change detection'
