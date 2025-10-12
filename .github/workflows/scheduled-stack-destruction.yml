@@ -1,0 +1,262 @@
+name: Scheduled Stack Destruction
+
+on:
+  schedule:
+  # Run daily at 8pm UTC (20:00)
+  - cron: '0 20 * * *'
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: 'Target environment to destroy (dev, staging, pr-all, or specific pr-NUMBER)'
+        required: false
+        default: 'all'
+        type: string
+      dry_run:
+        description: 'Dry run mode (preview only, no destruction)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  AWS_REGION: us-east-1
+  PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+
+jobs:
+  list-stacks:
+    name: List Active Stacks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      dev_exists: ${{ steps.check-stacks.outputs.dev_exists }}
+      staging_exists: ${{ steps.check-stacks.outputs.staging_exists }}
+      pr_stacks: ${{ steps.check-stacks.outputs.pr_stacks }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Setup Pulumi
+      uses: pulumi/actions@v5
+      with:
+        pulumi-version: ^3.0.0
+
+    - name: Check active stacks
+      id: check-stacks
+      working-directory: infrastructure/pulumi
+      run: |
+        # List all stacks and check which ones exist
+        pulumi stack ls --json > stacks.json || echo "[]" > stacks.json
+
+        # Check for dev stack
+        DEV_EXISTS=$(jq -r '.[] | select(.name == "dev") | .name' stacks.json | wc -l)
+        echo "dev_exists=$DEV_EXISTS" >> $GITHUB_OUTPUT
+
+        # Check for staging stack
+        STAGING_EXISTS=$(jq -r '.[] | select(.name == "stg") | .name' stacks.json | wc -l)
+        echo "staging_exists=$STAGING_EXISTS" >> $GITHUB_OUTPUT
+
+        # Get PR stacks (stacks starting with "pr-")
+        PR_STACKS=$(jq -r '.[] | select(.name | startswith("pr-")) | .name' stacks.json | jq -R . | jq -s .)
+        echo "pr_stacks=$PR_STACKS" >> $GITHUB_OUTPUT
+
+        echo "Found stacks:"
+        echo "- Dev: $DEV_EXISTS"
+        echo "- Staging: $STAGING_EXISTS" 
+        echo "- PR stacks: $PR_STACKS"
+
+  destroy-dev:
+    name: Destroy Dev Stack
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    needs: list-stacks
+    if: |
+      needs.list-stacks.outputs.dev_exists == '1' && 
+      (github.event.inputs.target_environment == 'all' || 
+       github.event.inputs.target_environment == 'dev' || 
+       github.event.inputs.target_environment == '')
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Setup Pulumi
+      uses: pulumi/actions@v5
+      with:
+        pulumi-version: ^3.0.0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: infrastructure/pulumi/package-lock.json
+
+    - name: Install dependencies
+      working-directory: infrastructure/pulumi
+      run: npm ci
+
+    - name: Destroy dev stack
+      working-directory: infrastructure/pulumi
+      run: |
+        pulumi stack select dev
+
+        if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+          echo "🔍 DRY RUN: Preview destruction of dev stack"
+          pulumi preview --diff
+        else
+          echo "🗑️ Destroying dev stack..."
+          pulumi destroy --yes --skip-preview
+          echo "✅ Dev stack destroyed successfully"
+        fi
+
+  destroy-staging:
+    name: Destroy Staging Stack
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    needs: list-stacks
+    if: |
+      needs.list-stacks.outputs.staging_exists == '1' && 
+      (github.event.inputs.target_environment == 'all' || 
+       github.event.inputs.target_environment == 'staging' || 
+       github.event.inputs.target_environment == '')
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Setup Pulumi
+      uses: pulumi/actions@v5
+      with:
+        pulumi-version: ^3.0.0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: infrastructure/pulumi/package-lock.json
+
+    - name: Install dependencies
+      working-directory: infrastructure/pulumi
+      run: npm ci
+
+    - name: Destroy staging stack
+      working-directory: infrastructure/pulumi
+      run: |
+        pulumi stack select stg
+
+        if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+          echo "🔍 DRY RUN: Preview destruction of staging stack"
+          pulumi preview --diff
+        else
+          echo "🗑️ Destroying staging stack..."
+          pulumi destroy --yes --skip-preview
+          echo "✅ Staging stack destroyed successfully"
+        fi
+
+  destroy-pr-stacks:
+    name: Destroy PR Stacks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    needs: list-stacks
+    if: |
+      needs.list-stacks.outputs.pr_stacks != '[]' && 
+      (github.event.inputs.target_environment == 'all' || 
+       github.event.inputs.target_environment == 'pr-all' || 
+       github.event.inputs.target_environment == '' ||
+       startsWith(github.event.inputs.target_environment, 'pr-'))
+    strategy:
+      matrix:
+        stack: ${{ fromJson(needs.list-stacks.outputs.pr_stacks) }}
+      fail-fast: false
+    steps:
+    - name: Skip if specific PR requested and doesn't match
+      if: |
+        startsWith(github.event.inputs.target_environment, 'pr-') && 
+        github.event.inputs.target_environment != matrix.stack
+      run: |
+        echo "Skipping ${{ matrix.stack }} (not matching ${{ github.event.inputs.target_environment }})"
+        exit 0
+
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Setup Pulumi
+      uses: pulumi/actions@v5
+      with:
+        pulumi-version: ^3.0.0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: infrastructure/pulumi/package-lock.json
+
+    - name: Install dependencies
+      working-directory: infrastructure/pulumi
+      run: npm ci
+
+    - name: Destroy PR stack
+      working-directory: infrastructure/pulumi
+      run: |
+        pulumi stack select ${{ matrix.stack }}
+
+        if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+          echo "🔍 DRY RUN: Preview destruction of ${{ matrix.stack }} stack"
+          pulumi preview --diff
+        else
+          echo "🗑️ Destroying ${{ matrix.stack }} stack..."
+          pulumi destroy --yes --skip-preview
+          echo "✅ ${{ matrix.stack }} stack destroyed successfully"
+        fi
+
+  summary:
+    name: Destruction Summary
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    needs: [ list-stacks, destroy-dev, destroy-staging, destroy-pr-stacks ]
+    if: always()
+    steps:
+    - name: Print summary
+      run: |
+        echo "## Stack Destruction Summary"
+        echo "Timestamp: $(date -u)"
+        echo "Trigger: ${{ github.event_name }}"
+        echo "Target: ${{ github.event.inputs.target_environment || 'all' }}"
+        echo "Dry run: ${{ github.event.inputs.dry_run || 'false' }}"
+        echo ""
+        echo "### Results:"
+        echo "- Dev stack: ${{ needs.destroy-dev.result || 'skipped' }}"
+        echo "- Staging stack: ${{ needs.destroy-staging.result || 'skipped' }}"
+        echo "- PR stacks: ${{ needs.destroy-pr-stacks.result || 'skipped' }}"

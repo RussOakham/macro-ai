@@ -5,11 +5,19 @@
 The production deployment strategy provides a robust, scalable, and cost-conscious environment for serving end users. This
 strategy is designed to provide scalable infrastructure suitable for both personal projects and revenue-generating applications.
 
+**Key Features:**
+
+- **Automated Daily Cost Optimization**: Production stacks are protected from auto-destruction
+- **Test Mode Support**: Enables testing production deployments without manual approval
+- **Blue-Green Deployment**: Zero-downtime deployments with automatic rollback capability
+- **Manual Approval Gates**: Required for standard production deployments
+- **Comprehensive Monitoring**: CloudWatch dashboards and alerting
+
 ## 🏗️ Architecture Design Considerations
 
 ### Infrastructure Overview
 
-#### Hobby Scale Infrastructure
+#### Hobby Scale Infrastructureƒ
 
 ![Production Deployment - Hobby Scale](./diagrams/production-deployment-hobby.png)
 
@@ -22,7 +30,7 @@ strategy is designed to provide scalable infrastructure suitable for both person
 #### **Multi-Scale Infrastructure Design**
 
 - **Hobby Scale**: Cost-optimized for personal projects (<£10/month)
-- **Enterprise Scale**: Production-ready for revenue-generating applications (£100-30ƒ0/month)
+- **Enterprise Scale**: Production-ready for revenue-generating applications (£100-300/month)
 - **Seamless Upgrade Path**: Easy transition between scales without architectural changes
 - **Zero-Downtime Deployments**: Blue-green deployment strategy for reliability
 
@@ -39,6 +47,95 @@ strategy is designed to provide scalable infrastructure suitable for both person
 - **Compliance Ready**: SOC 2, GDPR, and industry standard compliance
 - **Secrets Management**: AWS Secrets Manager for sensitive data
 - **Audit Logging**: Comprehensive audit trails for compliance
+
+## 🚀 Deployment Process
+
+### Automatic Deployment (Push to Main)
+
+Production deployments are automatically triggered when changes are pushed to the `main` branch:
+
+```yaml
+# Triggers on push to main with relevant file changes
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infrastructure/**'
+      - 'apps/express-api/**'
+      - 'apps/client-ui/**'
+      - 'packages/macro-ai-api-client/**'
+```
+
+### Manual Deployment (Workflow Dispatch)
+
+Production deployments can also be triggered manually with additional options:
+
+- **Standard**: Normal production deployment with full approval process
+- **Hotfix**: Emergency deployment with expedited process
+- **Rollback**: Revert to previous version
+- **Test**: Deploy to production stack with testing configuration (bypasses approval)
+
+### Deployment Workflow
+
+1. **Pre-Deployment Validation**
+   - Code quality checks (TypeScript, ESLint)
+   - Security scanning
+   - Performance baseline establishment
+   - Test execution (unless skipped)
+
+2. **Manual Approval Gate**
+   - Required for standard, hotfix, and rollback deployments
+   - Bypassed for test mode deployments
+   - GitHub environment protection rules enforced
+
+3. **Docker Image Build**
+   - Production-optimized Docker image
+   - Multi-stage build with distroless base
+   - Pushed to ECR with production tags
+
+4. **Blue-Green Deployment**
+   - Deploy to new infrastructure alongside existing
+   - Health checks and validation
+   - Traffic cutover with zero downtime
+
+5. **Post-Deployment Monitoring**
+   - CloudWatch dashboard setup
+   - Production alerting activation
+   - Performance monitoring initialization
+
+### Test Mode Deployment
+
+Test mode enables testing the production deployment process without manual approval:
+
+```bash
+# Trigger test deployment via GitHub CLI
+gh workflow run deploy-production-pulumi.yml \
+  -f deployment-type=test \
+  -f test-mode=true
+```
+
+**Test Mode Features:**
+
+- Deploys to actual production stack
+- Bypasses manual approval requirement
+- Used for validating deployment process
+- Clearly marked in deployment status
+
+## 🛡️ Safety and Protection
+
+### Stack Protection
+
+Production stacks are protected from accidental destruction:
+
+- **Auto-Destroy Protection**: Production environments are excluded from daily auto-destruction
+- **Manual Approval Required**: All production changes require explicit approval
+- **Deployment Validation**: Comprehensive pre-deployment checks
+
+### Cost Management
+
+- **Resource Optimization**: Environment-aware CPU/memory sizing
+- **Monitoring and Alerting**: Cost monitoring and budget alerts
+- **Scheduled Reviews**: Regular cost optimization reviews
 
 ### Infrastructure Components
 

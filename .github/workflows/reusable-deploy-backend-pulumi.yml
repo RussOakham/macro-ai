@@ -336,18 +336,36 @@ jobs:
         API_ENDPOINT="${{ steps.deploy.outputs.api-endpoint }}"
         echo "🔍 Performing health check on: '${API_ENDPOINT}/api/health'"
 
-        # Wait for the service to be ready
-        sleep 30
+        # Health check with retry logic
+        MAX_ATTEMPTS=10
+        RETRY_DELAY=15
+        ATTEMPT=1
 
-        # Perform health check
-        if curl -f -s --connect-timeout 5 --max-time 10 "${API_ENDPOINT}/api/health" > /dev/null 2>&1; then
-          echo "✅ Health check passed"
-          echo "health-status=healthy" >> "$GITHUB_OUTPUT"
-        else
-          echo "❌ Health check failed"
-          echo "health-status=unhealthy" >> "$GITHUB_OUTPUT"
-          exit 1
-        fi
+        echo "⏳ Waiting for service to be ready (max ${MAX_ATTEMPTS} attempts, ${RETRY_DELAY}s intervals)..."
+
+        while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+          echo "🔄 Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: Checking health endpoint..."
+          
+          if curl -f -s --connect-timeout 10 --max-time 15 "${API_ENDPOINT}/api/health" > /dev/null 2>&1; then
+            echo "✅ Health check passed on attempt ${ATTEMPT}"
+            echo "health-status=healthy" >> "$GITHUB_OUTPUT"
+            exit 0
+          else
+            echo "⚠️  Health check failed on attempt ${ATTEMPT}"
+            if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+              echo "❌ Health check failed after ${MAX_ATTEMPTS} attempts"
+              echo "🔍 Final attempt with verbose output:"
+              curl -v --connect-timeout 10 --max-time 15 "${API_ENDPOINT}/api/health" || true
+              echo "health-status=unhealthy" >> "$GITHUB_OUTPUT"
+              exit 1
+            else
+              echo "⏳ Waiting ${RETRY_DELAY} seconds before next attempt..."
+              sleep $RETRY_DELAY
+            fi
+          fi
+          
+          ATTEMPT=$((ATTEMPT + 1))
+        done
 
     - name: Set job outputs
       id: job-outputs

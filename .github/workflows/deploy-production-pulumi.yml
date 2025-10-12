@@ -23,6 +23,11 @@ on:
         - standard
         - hotfix
         - rollback
+      test-mode:
+        description: 'Enable test mode (deploy to production stack but with testing configuration)'
+        required: false
+        default: false
+        type: boolean
       force-rebuild:
         description: 'Force rebuild ignoring cache'
         required: false
@@ -30,6 +35,11 @@ on:
         type: boolean
       skip-tests:
         description: 'Skip integration tests'
+        required: false
+        default: true
+        type: boolean
+      force-deploy:
+        description: 'Force deployment regardless of change detection'
         required: false
         default: false
         type: boolean
@@ -63,11 +73,17 @@ jobs:
     name: Pre-Deployment Validation
     runs-on: ubuntu-latest
     needs: [ change-detection ]
+    outputs:
+      has-backend-changes: ${{ needs.change-detection.outputs.has-backend-changes }}
+      has-frontend-changes: ${{ needs.change-detection.outputs.has-frontend-changes }}
+      has-infrastructure-changes: ${{ needs.change-detection.outputs.has-infrastructure-changes }}
+      deployment-scope: ${{ needs.change-detection.outputs.deployment-scope }}
     if: |
       needs.change-detection.outputs.has-backend-changes == 'true' ||
       needs.change-detection.outputs.has-frontend-changes == 'true' ||
       needs.change-detection.outputs.has-infrastructure-changes == 'true' ||
-      github.event.inputs.force-rebuild == 'true'
+      github.event.inputs.force-rebuild == 'true' ||
+      github.event.inputs.force-deploy == 'true'
 
     permissions:
       id-token: write
@@ -108,6 +124,9 @@ jobs:
         restore-keys: |
           pnpm-${{ runner.os }}-
 
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -121,6 +140,14 @@ jobs:
       run: |
         echo "🔍 Running code quality checks..."
 
+        # Build packages that generate types (required before type checking)
+        echo "🏗️ Building packages with generated types..."
+        pnpm build --filter="@repo/macro-ai-api-client"
+
+        # Generate MSW mocks for client-ui (required for type checking)
+        echo "🎭 Generating MSW mocks for client-ui..."
+        pnpm --filter="client-ui" generate:msw
+
         # Type checking
         pnpm type-check
 
@@ -130,7 +157,7 @@ jobs:
         # Test execution
         if [[ "${{ github.event.inputs.skip-tests }}" == "false" ]]; then
           echo "🧪 Running test suite..."
-          pnpm test --run
+          pnpm test
         else
           echo "⏭️ Skipping tests as requested"
         fi
@@ -154,14 +181,20 @@ jobs:
         echo "📋 Deployment Details:"
         echo "  - Environment: production"
         echo "  - Deployment Type: ${{ github.event.inputs.deployment-type || 'standard' }}"
+        echo "  - Test Mode: ${{ github.event.inputs.test-mode || 'false' }}"
         echo "  - Branch: ${{ github.ref_name }}"
-        echo "  - Changes Detected: ${{ needs.change-detection.outputs.deployment-scope }}"
+        echo "  - Changes Detected: ${{ needs.pre-deployment-validation.outputs.deployment-scope }}"
         echo ""
-        echo "🔍 Backend Changes: ${{ needs.change-detection.outputs.has-backend-changes }}"
-        echo "🎨 Frontend Changes: ${{ needs.change-detection.outputs.has-frontend-changes }}"
-        echo "🏗️ Infrastructure Changes: ${{ needs.change-detection.outputs.has-infrastructure-changes }}"
+        echo "🔍 Backend Changes: ${{ needs.pre-deployment-validation.outputs.has-backend-changes }}"
+        echo "🎨 Frontend Changes: ${{ needs.pre-deployment-validation.outputs.has-frontend-changes }}"
+        echo "🏗️ Infrastructure Changes: ${{ needs.pre-deployment-validation.outputs.has-infrastructure-changes }}"
         echo ""
-        echo "⚠️ This deployment requires manual approval before proceeding to production"
+        if [[ "${{ github.event.inputs.test-mode }}" == "true" ]]; then
+          echo "🧪 TEST MODE ENABLED - Production stack will be deployed with testing configuration"
+          echo "⚠️ This is for testing the production deployment process"
+        else
+          echo "⚠️ This deployment requires manual approval before proceeding to production"
+        fi
         echo "✅ Approval will trigger blue-green deployment process"
 
     - name: Output Validation Results
@@ -176,7 +209,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ pre-deployment-validation ]
     environment: production
-    if: always() && needs.pre-deployment-validation.result == 'success'
+    if: always() && needs.pre-deployment-validation.result == 'success' && github.event.inputs.test-mode != 'true'
 
     steps:
     - name: Manual Approval Gate
@@ -200,12 +233,34 @@ jobs:
         echo "✅ Manual approval received"
         echo "🚀 Proceeding with blue-green deployment"
 
+  # Test mode bypass (no approval required)
+  test-mode-bypass:
+    name: Test Mode - No Approval Required
+    runs-on: ubuntu-latest
+    needs: [ pre-deployment-validation ]
+    if: always() && needs.pre-deployment-validation.result == 'success' && github.event.inputs.test-mode == 'true'
+
+    steps:
+    - name: Test Mode Activated
+      run: |
+        echo "🧪 TEST MODE ACTIVATED"
+        echo ""
+        echo "⚠️ Manual approval bypassed for testing purposes"
+        echo "🚀 Proceeding directly to deployment"
+        echo ""
+        echo "📋 Test Mode Details:"
+        echo "  - This deploys to the actual production stack"
+        echo "  - Used for testing the production deployment process"
+        echo "  - Should only be used for validation and testing"
+
   # Build Express API Docker image
   build-express-api:
     name: Build Docker Image for Production
     runs-on: ubuntu-latest
-    needs: [ manual-approval ]
-    if: needs.manual-approval.result == 'success'
+    needs: [ manual-approval, test-mode-bypass ]
+    if: |
+      always() && 
+      (needs.manual-approval.result == 'success' || needs.test-mode-bypass.result == 'success')
 
     permissions:
       id-token: write
@@ -316,8 +371,13 @@ jobs:
   # Deploy backend using reusable workflow
   deploy-backend:
     name: Deploy Backend (Blue-Green)
-    needs: [ build-express-api ]
-    if: needs.build-express-api.result == 'success'
+    needs: [ build-express-api, pre-deployment-validation ]
+    if: |
+      needs.build-express-api.result == 'success' &&
+      needs.pre-deployment-validation.result == 'success' &&
+      (needs.pre-deployment-validation.outputs.has-backend-changes == 'true' ||
+       needs.pre-deployment-validation.outputs.has-infrastructure-changes == 'true' ||
+       github.event.inputs.force-deploy == 'true')
 
     uses: ./.github/workflows/reusable-deploy-backend-pulumi.yml
     with:
@@ -340,10 +400,13 @@ jobs:
   # Deploy frontend using reusable workflow
   deploy-frontend:
     name: Deploy Frontend
-    needs: [ change-detection, deploy-backend ]
+    needs: [ pre-deployment-validation, deploy-backend ]
     if: |
-      needs.change-detection.outputs.has-frontend-changes == 'true' ||
-      github.event.inputs.force-rebuild == 'true'
+      needs.pre-deployment-validation.result == 'success' &&
+      (needs.pre-deployment-validation.outputs.has-frontend-changes == 'true' ||
+       needs.pre-deployment-validation.outputs.has-infrastructure-changes == 'true' ||
+       github.event.inputs.force-rebuild == 'true' ||
+       github.event.inputs.force-deploy == 'true')
 
     uses: ./.github/workflows/reusable-deploy-frontend.yml
     with:
@@ -353,7 +416,7 @@ jobs:
       backend-url: ${{ needs.deploy-backend.outputs.api-endpoint }}
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
-      should-deploy: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' || github.event.inputs.force-rebuild == 'true' }}
+      should-deploy: ${{ needs.pre-deployment-validation.outputs.has-frontend-changes == 'true' || github.event.inputs.force-rebuild == 'true' || github.event.inputs.force-deploy == 'true' }}
       doppler-config: prd
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
@@ -381,7 +444,7 @@ jobs:
   deployment-summary:
     name: Production Deployment Summary
     runs-on: ubuntu-latest
-    needs: [ pre-deployment-validation, manual-approval, deploy-backend, deploy-frontend, production-monitoring ]
+    needs: [ pre-deployment-validation, manual-approval, test-mode-bypass, deploy-backend, deploy-frontend, production-monitoring ]
     if: always()
     permissions:
       deployments: write
@@ -395,11 +458,13 @@ jobs:
         echo "📋 Deployment Details:"
         echo "  - Environment: production"
         echo "  - Deployment Type: ${{ github.event.inputs.deployment-type || 'standard' }}"
+        echo "  - Test Mode: ${{ github.event.inputs.test-mode || 'false' }}"
         echo "  - Branch: ${{ github.ref_name }}"
         echo "  - Trigger: ${{ github.event_name }}"
         echo ""
         echo "✅ Pre-deployment validation: ${{ needs.pre-deployment-validation.result }}"
-        echo "✅ Manual approval: ${{ needs.manual-approval.result }}"
+        echo "✅ Manual approval: ${{ github.event.inputs.test-mode == 'true' && 'bypassed' || needs.manual-approval.result }}"
+        echo "✅ Test mode bypass: ${{ github.event.inputs.test-mode == 'true' && needs.test-mode-bypass.result || 'not-used' }}"
         echo "🔧 Backend deployment: ${{ needs.deploy-backend.result }}"
         echo "🎨 Frontend deployment: ${{ needs.deploy-frontend.result }}"
         echo "📊 Monitoring setup: ${{ needs.production-monitoring.result }}"
@@ -409,12 +474,16 @@ jobs:
       with:
         script: |
           const overallSuccess = '${{ needs.pre-deployment-validation.result }}' === 'success' &&
-                                '${{ needs.manual-approval.result }}' === 'success' &&
+                                ('${{ needs.manual-approval.result }}' === 'success' || '${{ needs.test-mode-bypass.result }}' === 'success') &&
                                 ('${{ needs.deploy-backend.result }}' === 'success' || '${{ needs.deploy-backend.result }}' === 'skipped') &&
                                 ('${{ needs.deploy-frontend.result }}' === 'success' || '${{ needs.deploy-frontend.result }}' === 'skipped') &&
                                 '${{ needs.production-monitoring.result }}' === 'success';
 
           const state = overallSuccess ? 'success' : 'failure';
+          const isTestMode = '${{ github.event.inputs.test-mode }}' === 'true';
+          const description = isTestMode ? 
+            `Production deployment ${state} (TEST MODE)` : 
+            `Production deployment ${state}`;
 
           // Try to find existing deployment for this SHA
           try {
@@ -432,7 +501,7 @@ jobs:
                 repo: context.repo.repo,
                 deployment_id: deployments[0].id,
                 state: state,
-                description: `Production deployment ${state}`
+                description: description
               });
             } else {
               // Create new deployment if none exists
@@ -441,7 +510,7 @@ jobs:
                 repo: context.repo.repo,
                 ref: context.sha,
                 environment: 'production',
-                description: 'Production deployment via Pulumi'
+                description: isTestMode ? 'Production deployment test via Pulumi' : 'Production deployment via Pulumi'
               });
 
               // Set deployment status
@@ -450,7 +519,7 @@ jobs:
                 repo: context.repo.repo,
                 deployment_id: deployment.id,
                 state: state,
-                description: `Production deployment ${state}`
+                description: description
               });
             }
           } catch (error) {

@@ -10,7 +10,7 @@ import type { RequestHandler } from 'msw'
 import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll } from 'vitest'
 
-import { handlers } from './mocks/handlers.js'
+import { handlers } from './mocks/handlers'
 
 // Create MSW server for Node.js environment (testing)
 export const server = setupServer(...handlers)

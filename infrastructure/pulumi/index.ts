@@ -1,5 +1,4 @@
-/* eslint-disable sonarjs/no-dead-store */
-/* eslint-disable sonarjs/no-unused-vars */
+/* eslint-disable sonarjs/constructor-for-side-effects */
 import * as aws from '@pulumi/aws'
 import * as pulumi from '@pulumi/pulumi'
 
@@ -53,7 +52,6 @@ let sharedAlb: SharedAlb | undefined
 let sharedAlbSecurityGroupId: pulumi.Output<string> | undefined
 
 // Variables for workflow compatibility exports
-let prFargateService: FargateService | undefined
 let prCustomDomainName: string | undefined
 
 if (isPreviewEnvironment) {
@@ -115,8 +113,7 @@ if (isPreviewEnvironment) {
 	})
 
 	// Create listener rule for host-based routing
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	const prListenerRule = new AlbListenerRule(`pr-${prNumber}-listener-rule`, {
+	new AlbListenerRule(`pr-${prNumber}-listener-rule`, {
 		environmentName,
 		listenerArn: sharedHttpsListenerArn,
 		targetGroupArn: prTargetGroup.arn,
@@ -161,9 +158,8 @@ if (isPreviewEnvironment) {
 	// Create Fargate service
 	// Use environment-aware CPU/Memory sizing
 	const costSettings = getCostOptimizedSettings(environmentName)
-	// prFargateService is intentionally unused - created for Pulumi resource side effects
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	prFargateService = new FargateService(`pr-${prNumber}-service`, {
+	// FargateService is created for Pulumi resource side effects
+	new FargateService(`pr-${prNumber}-service`, {
 		environmentName,
 		clusterArn: prCluster.arn,
 		vpcId: vpc.vpcId,
@@ -268,21 +264,17 @@ if (isPreviewEnvironment) {
 
 	// Create listener rule (if custom domain)
 	if (customDomainName && sharedAlb.httpsListener) {
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const permListenerRule = new AlbListenerRule(
-			`${environmentName}-listener-rule`,
-			{
-				environmentName,
-				listenerArn: sharedAlb.httpsListener.arn,
-				targetGroupArn: permTargetGroup.arn,
-				customDomainName,
-				priority: 100, // Base priority for permanent environments
-				hostedZoneId,
-				albDnsName: sharedAlb.albDnsName,
-				albZoneId: sharedAlb.albZoneId,
-				tags: commonTags,
-			},
-		)
+		new AlbListenerRule(`${environmentName}-listener-rule`, {
+			environmentName,
+			listenerArn: sharedAlb.httpsListener.arn,
+			targetGroupArn: permTargetGroup.arn,
+			customDomainName,
+			priority: 100, // Base priority for permanent environments
+			hostedZoneId,
+			albDnsName: sharedAlb.albDnsName,
+			albZoneId: sharedAlb.albZoneId,
+			tags: commonTags,
+		})
 	}
 
 	// Create ECS cluster
@@ -320,9 +312,8 @@ if (isPreviewEnvironment) {
 	// Use environment-aware CPU/Memory sizing instead of static values
 	const costSettings = getCostOptimizedSettings(environmentName)
 
-	// permFargateService is intentionally unused - created for Pulumi resource side effects
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	const permFargateService = new FargateService(`${environmentName}-service`, {
+	// FargateService is created for Pulumi resource side effects
+	new FargateService(`${environmentName}-service`, {
 		environmentName,
 		clusterArn: permCluster.arn,
 		vpcId: vpc.vpcId,

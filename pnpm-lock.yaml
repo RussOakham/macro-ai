@@ -707,6 +707,9 @@ importers:
 
   infrastructure/pulumi:
     dependencies:
+      '@dopplerhq/node-sdk':
+        specifier: ^1.0.0
+        version: 1.3.0
       '@pulumi/aws':
         specifier: ~6.83.0
         version: 6.83.0(typescript@5.9.2)
