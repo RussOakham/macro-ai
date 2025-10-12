@@ -23,7 +23,6 @@ on:
         - standard
         - hotfix
         - rollback
-        - test
       test-mode:
         description: 'Enable test mode (deploy to production stack but with testing configuration)'
         required: false
@@ -464,8 +463,8 @@ jobs:
         echo "  - Trigger: ${{ github.event_name }}"
         echo ""
         echo "✅ Pre-deployment validation: ${{ needs.pre-deployment-validation.result }}"
-        echo "✅ Manual approval: ${{ needs.manual-approval.result || 'bypassed' }}"
-        echo "✅ Test mode bypass: ${{ needs.test-mode-bypass.result || 'not-used' }}"
+        echo "✅ Manual approval: ${{ github.event.inputs.test-mode == 'true' && 'bypassed' || needs.manual-approval.result }}"
+        echo "✅ Test mode bypass: ${{ github.event.inputs.test-mode == 'true' && needs.test-mode-bypass.result || 'not-used' }}"
         echo "🔧 Backend deployment: ${{ needs.deploy-backend.result }}"
         echo "🎨 Frontend deployment: ${{ needs.deploy-frontend.result }}"
         echo "📊 Monitoring setup: ${{ needs.production-monitoring.result }}"

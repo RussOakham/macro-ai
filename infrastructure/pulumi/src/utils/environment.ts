@@ -343,6 +343,7 @@ export function getStackTags(
 	environmentName: EnvironmentName,
 	deploymentType: DeploymentType,
 	customTags: Record<string, string> = {},
+	destructionSchedule = '20:00:00Z',
 ): ResourceTags {
 	const isPreview = deploymentType === 'preview'
 	const now = new Date().toISOString()
@@ -360,7 +361,7 @@ export function getStackTags(
 
 	// Add destruction schedule for environments that should auto-destroy
 	if (isPreview || environmentName === 'dev' || environmentName === 'stg') {
-		baseTags.DestructionSchedule = '20:00:00Z' // 8pm UTC
+		baseTags.DestructionSchedule = destructionSchedule
 		baseTags.DestructionEnabled = 'true'
 	}
 

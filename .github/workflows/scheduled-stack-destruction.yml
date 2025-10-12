@@ -25,6 +25,8 @@ jobs:
   list-stacks:
     name: List Active Stacks
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       dev_exists: ${{ steps.check-stacks.outputs.dev_exists }}
       staging_exists: ${{ steps.check-stacks.outputs.staging_exists }}
@@ -72,6 +74,8 @@ jobs:
   destroy-dev:
     name: Destroy Dev Stack
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: list-stacks
     if: |
       needs.list-stacks.outputs.dev_exists == '1' && 
@@ -122,6 +126,8 @@ jobs:
   destroy-staging:
     name: Destroy Staging Stack
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: list-stacks
     if: |
       needs.list-stacks.outputs.staging_exists == '1' && 
@@ -172,6 +178,8 @@ jobs:
   destroy-pr-stacks:
     name: Destroy PR Stacks
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: list-stacks
     if: |
       needs.list-stacks.outputs.pr_stacks != '[]' && 
@@ -235,6 +243,8 @@ jobs:
   summary:
     name: Destruction Summary
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [ list-stacks, destroy-dev, destroy-staging, destroy-pr-stacks ]
     if: always()
     steps:

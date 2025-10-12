@@ -162,7 +162,9 @@ jobs:
       uses: aws-actions/amazon-ecr-login@v2
 
     - name: Build and push Docker image
-      if: github.event.action != 'closed'
+      if: >
+        github.event.action != 'closed' && (needs.deploy-pr-preview.outputs.has-backend-changes == 'true' ||
+         needs.deploy-pr-preview.outputs.is-first-deployment == 'true')
       id: build-image
       env:
         AWS_REGION: ${{ env.AWS_REGION }}
@@ -233,6 +235,7 @@ jobs:
     env:
       AWS_REGION: us-east-1
       PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+      NODE_VERSION: '20.19.4'
     permissions:
       id-token: write
       contents: read
@@ -263,8 +266,8 @@ jobs:
 
         # Check if dev stack exists and has resources
         if pulumi stack select dev 2>/dev/null; then
-          # Check if stack has any resources
-          RESOURCE_COUNT=$(pulumi stack --show-urns | grep -c "URN:" || echo "0")
+          # Check if stack has any resources using JSON output
+          RESOURCE_COUNT=$(pulumi stack --json | jq '.deployment.resources | length' 2>/dev/null || echo "0")
           if [ "$RESOURCE_COUNT" -gt 0 ]; then
             echo "✅ Dev stack exists with $RESOURCE_COUNT resources"
             echo "dev-stack-exists=true" >> $GITHUB_OUTPUT
@@ -281,7 +284,7 @@ jobs:
       if: steps.check-dev-stack.outputs.dev-stack-exists == 'false'
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: ${{ env.NODE_VERSION }}
 
     - name: Setup pnpm
       if: steps.check-dev-stack.outputs.dev-stack-exists == 'false'
@@ -376,11 +379,40 @@ jobs:
       DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
       DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
 
+  resolve-backend-endpoint:
+    name: Resolve Backend Endpoint
+    runs-on: ubuntu-latest
+    # Run regardless of backend job outcome to allow FE-only deploys
+    if: ${{ always() && github.event.pull_request != null && github.event.action != 'closed' }}
+    needs: [ deploy-pr-preview, deploy-backend ]
+    env:
+      PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+    outputs:
+      api-endpoint: ${{ steps.resolve.outputs.api-endpoint }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Setup Pulumi
+      uses: pulumi/actions@v5
+      with:
+        pulumi-version: ^3.0.0
+    - name: Resolve endpoint
+      id: resolve
+      working-directory: infrastructure/pulumi
+      run: |
+        if [ -n "${{ needs.deploy-backend.outputs.api-endpoint }}" ]; then
+          echo "api-endpoint=${{ needs.deploy-backend.outputs.api-endpoint }}" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        pulumi stack select pr-${{ github.event.number }}
+        API_ENDPOINT=$(pulumi stack output apiEndpoint || true)
+        echo "api-endpoint=${API_ENDPOINT}" >> "$GITHUB_OUTPUT"
+
   deploy-frontend:
     name: Deploy Frontend to Amplify
     uses: ./.github/workflows/reusable-deploy-frontend.yml
     if: github.event.pull_request != null && github.event.action != 'closed'
-    needs: [ deploy-backend ]
+    needs: [ resolve-backend-endpoint ]
     permissions:
       id-token: write
       contents: read
@@ -389,7 +421,7 @@ jobs:
       deployment-type: preview
       pr-number: ${{ github.event.number }}
       branch-name: ${{ github.event.pull_request.head.ref }}
-      backend-url: ${{ needs.deploy-backend.outputs.api-endpoint }}
+      backend-url: ${{ needs.resolve-backend-endpoint.outputs.api-endpoint }}
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
       should-deploy: >-
@@ -409,7 +441,7 @@ jobs:
     name: Frontend Deployment Summary
     runs-on: ubuntu-latest
     if: github.event.pull_request != null && github.event.action != 'closed'
-    needs: [ deploy-backend, deploy-frontend ]
+    needs: [ resolve-backend-endpoint, deploy-frontend ]
     permissions:
       pull-requests: write
     steps:

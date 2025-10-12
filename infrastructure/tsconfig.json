@@ -27,8 +27,8 @@
 		"noImplicitReturns": true,
 		"noPropertyAccessFromIndexSignature": false,
 		"noUncheckedIndexedAccess": false,
-		"noUnusedLocals": false,
-		"noUnusedParameters": false
+		"noUnusedLocals": true,
+		"noUnusedParameters": true
 	},
 	"include": ["src/**/*", "pulumi/**/*", "vitest.config.ts"],
 	"exclude": [
