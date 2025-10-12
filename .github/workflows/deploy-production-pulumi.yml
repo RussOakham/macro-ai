@@ -74,6 +74,11 @@ jobs:
     name: Pre-Deployment Validation
     runs-on: ubuntu-latest
     needs: [ change-detection ]
+    outputs:
+      has-backend-changes: ${{ needs.change-detection.outputs.has-backend-changes }}
+      has-frontend-changes: ${{ needs.change-detection.outputs.has-frontend-changes }}
+      has-infrastructure-changes: ${{ needs.change-detection.outputs.has-infrastructure-changes }}
+      deployment-scope: ${{ needs.change-detection.outputs.deployment-scope }}
     if: |
       needs.change-detection.outputs.has-backend-changes == 'true' ||
       needs.change-detection.outputs.has-frontend-changes == 'true' ||
@@ -179,11 +184,11 @@ jobs:
         echo "  - Deployment Type: ${{ github.event.inputs.deployment-type || 'standard' }}"
         echo "  - Test Mode: ${{ github.event.inputs.test-mode || 'false' }}"
         echo "  - Branch: ${{ github.ref_name }}"
-        echo "  - Changes Detected: ${{ needs.change-detection.outputs.deployment-scope }}"
+        echo "  - Changes Detected: ${{ needs.pre-deployment-validation.outputs.deployment-scope }}"
         echo ""
-        echo "🔍 Backend Changes: ${{ needs.change-detection.outputs.has-backend-changes }}"
-        echo "🎨 Frontend Changes: ${{ needs.change-detection.outputs.has-frontend-changes }}"
-        echo "🏗️ Infrastructure Changes: ${{ needs.change-detection.outputs.has-infrastructure-changes }}"
+        echo "🔍 Backend Changes: ${{ needs.pre-deployment-validation.outputs.has-backend-changes }}"
+        echo "🎨 Frontend Changes: ${{ needs.pre-deployment-validation.outputs.has-frontend-changes }}"
+        echo "🏗️ Infrastructure Changes: ${{ needs.pre-deployment-validation.outputs.has-infrastructure-changes }}"
         echo ""
         if [[ "${{ github.event.inputs.test-mode }}" == "true" ]]; then
           echo "🧪 TEST MODE ENABLED - Production stack will be deployed with testing configuration"
@@ -367,11 +372,12 @@ jobs:
   # Deploy backend using reusable workflow
   deploy-backend:
     name: Deploy Backend (Blue-Green)
-    needs: [ build-express-api ]
+    needs: [ build-express-api, pre-deployment-validation ]
     if: |
       needs.build-express-api.result == 'success' &&
-      (needs.change-detection.outputs.has-backend-changes == 'true' ||
-       needs.change-detection.outputs.has-infrastructure-changes == 'true' ||
+      needs.pre-deployment-validation.result == 'success' &&
+      (needs.pre-deployment-validation.outputs.has-backend-changes == 'true' ||
+       needs.pre-deployment-validation.outputs.has-infrastructure-changes == 'true' ||
        github.event.inputs.force-deploy == 'true')
 
     uses: ./.github/workflows/reusable-deploy-backend-pulumi.yml
@@ -395,12 +401,13 @@ jobs:
   # Deploy frontend using reusable workflow
   deploy-frontend:
     name: Deploy Frontend
-    needs: [ change-detection, deploy-backend ]
+    needs: [ pre-deployment-validation, deploy-backend ]
     if: |
-      needs.change-detection.outputs.has-frontend-changes == 'true' ||
-      needs.change-detection.outputs.has-infrastructure-changes == 'true' ||
-      github.event.inputs.force-rebuild == 'true' ||
-      github.event.inputs.force-deploy == 'true'
+      needs.pre-deployment-validation.result == 'success' &&
+      (needs.pre-deployment-validation.outputs.has-frontend-changes == 'true' ||
+       needs.pre-deployment-validation.outputs.has-infrastructure-changes == 'true' ||
+       github.event.inputs.force-rebuild == 'true' ||
+       github.event.inputs.force-deploy == 'true')
 
     uses: ./.github/workflows/reusable-deploy-frontend.yml
     with:
@@ -410,7 +417,7 @@ jobs:
       backend-url: ${{ needs.deploy-backend.outputs.api-endpoint }}
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
-      should-deploy: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' || github.event.inputs.force-rebuild == 'true' || github.event.inputs.force-deploy == 'true' }}
+      should-deploy: ${{ needs.pre-deployment-validation.outputs.has-frontend-changes == 'true' || github.event.inputs.force-rebuild == 'true' || github.event.inputs.force-deploy == 'true' }}
       doppler-config: prd
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
