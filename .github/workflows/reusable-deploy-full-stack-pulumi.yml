@@ -33,7 +33,7 @@ on:
         required: true
       DOPPLER_TOKEN:
         required: true
-      GITHUB_TOKEN:
+      GITHUB_PAT:
         required: true
       VITE_API_KEY:
         required: true
@@ -88,7 +88,7 @@ jobs:
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_PAT }}
         run: |
           pnpm install --frozen-lockfile
           
@@ -98,7 +98,7 @@ jobs:
           pulumi config set deployment-type ${{ inputs.deployment-type }}
           pulumi config set image-tag ${{ inputs.image-tag }}
           pulumi config set github-repository ${{ github.repository }}
-          pulumi config set --secret github-token ${{ secrets.GITHUB_TOKEN }}
+          pulumi config set --secret github-token ${{ secrets.GITHUB_PAT }}
           pulumi config set --secret vite-api-key ${{ secrets.VITE_API_KEY }}
           
           # Deploy everything (Pulumi detects changes)
