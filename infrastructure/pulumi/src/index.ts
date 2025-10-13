@@ -1,4 +1,4 @@
-// Automation - TODO: Reimplement once Pulumi dependencies are updated
+// Automation - Reimplement once Pulumi dependencies are updated
 // export * from './automation'
 
 // Components

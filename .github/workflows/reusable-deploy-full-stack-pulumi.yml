@@ -1,0 +1,127 @@
+name: Reusable Full Stack Deployment (Pulumi)
+
+on:
+  workflow_call:
+    inputs:
+      environment-name:
+        required: true
+        type: string
+      deployment-type:
+        required: true
+        type: string
+      pr-number:
+        required: false
+        type: string
+      branch-name:
+        required: false
+        type: string
+      custom-domain-name:
+        required: false
+        type: string
+      hosted-zone-id:
+        required: false
+        type: string
+      image-tag:
+        required: true
+        type: string
+    secrets:
+      AWS_ACCOUNT_ID:
+        required: true
+      AWS_ROLE_ARN:
+        required: true
+      PULUMI_ACCESS_TOKEN:
+        required: true
+      DOPPLER_TOKEN:
+        required: true
+      GITHUB_TOKEN:
+        required: true
+      VITE_API_KEY:
+        required: true
+    outputs:
+      backend-url:
+        value: ${{ jobs.deploy.outputs.backend-url }}
+      frontend-url:
+        value: ${{ jobs.deploy.outputs.frontend-url }}
+      stack-name:
+        value: ${{ jobs.deploy.outputs.stack-name }}
+
+jobs:
+  deploy:
+    name: Deploy Full Stack
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      backend-url: ${{ steps.deploy.outputs.backend-url }}
+      frontend-url: ${{ steps.deploy.outputs.frontend-url }}
+      stack-name: ${{ steps.deploy.outputs.stack-name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.4'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '10.14.0'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Build frontend
+        working-directory: apps/client-ui
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Deploy with Pulumi
+        id: deploy
+        working-directory: infrastructure/pulumi
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pnpm install --frozen-lockfile
+          
+          # Set stack configuration
+          pulumi stack select ${{ inputs.environment-name }} || pulumi stack init ${{ inputs.environment-name }}
+          pulumi config set environment-name ${{ inputs.environment-name }}
+          pulumi config set deployment-type ${{ inputs.deployment-type }}
+          pulumi config set image-tag ${{ inputs.image-tag }}
+          pulumi config set github-repository ${{ github.repository }}
+          pulumi config set --secret github-token ${{ secrets.GITHUB_TOKEN }}
+          pulumi config set --secret vite-api-key ${{ secrets.VITE_API_KEY }}
+          
+          # Deploy everything (Pulumi detects changes)
+          pulumi up --yes
+          
+          # Get outputs
+          BACKEND_URL=$(pulumi stack output apiEndpoint)
+          FRONTEND_URL=$(pulumi stack output frontendUrl)
+          STACK_NAME=$(pulumi stack --show-name)
+          
+          {
+            echo "backend-url=${BACKEND_URL}"
+            echo "frontend-url=${FRONTEND_URL}"
+            echo "stack-name=${STACK_NAME}"
+          } >> $GITHUB_OUTPUT
+
+      - name: Trigger Amplify Build
+        if: steps.deploy.outputs.frontend-url != ''
+        run: |
+          APP_ID=$(pulumi stack output amplifyAppId)
+          BRANCH_NAME=$(pulumi stack output amplifyBranchName)
+          
+          aws amplify start-job \
+            --app-id "$APP_ID" \
+            --branch-name "$BRANCH_NAME" \
+            --job-type RELEASE

@@ -1,3 +1,6 @@
+// Amplify components
+export { AmplifyApp, type AmplifyAppArgs } from './amplify'
+
 // ECS components
 export { FargateService, type FargateServiceArgs } from './ecs'
 

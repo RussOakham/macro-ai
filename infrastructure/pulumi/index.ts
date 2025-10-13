@@ -3,7 +3,13 @@ import * as aws from '@pulumi/aws'
 import * as pulumi from '@pulumi/pulumi'
 
 // Import our new components
-import { AlbListenerRule, FargateService, SharedAlb, SharedVpc } from './src'
+import {
+	AlbListenerRule,
+	AmplifyApp,
+	FargateService,
+	SharedAlb,
+	SharedVpc,
+} from './src'
 import { APP_CONFIG, COST_OPTIMIZATION } from './src/config/constants'
 import { getCommonTagsAsRecord } from './src/config/tags'
 import {
@@ -53,6 +59,7 @@ let sharedAlbSecurityGroupId: pulumi.Output<string> | undefined
 
 // Variables for workflow compatibility exports
 let prCustomDomainName: string | undefined
+let amplifyApp: AmplifyApp | undefined
 
 if (isPreviewEnvironment) {
 	// ========================
@@ -332,6 +339,71 @@ if (isPreviewEnvironment) {
 	})
 
 	// ===================================================================
+	// AMPLIFY FRONTEND DEPLOYMENT
+	// ===================================================================
+
+	// Create Amplify app for frontend deployment
+	if (isPermanentEnvironment || isPreviewEnvironment) {
+		// Determine buildspec file based on environment
+		let buildSpecPath: string
+		// eslint-disable-next-line sonarjs/no-gratuitous-expressions -- False positive, isPreviewEnvironment can be true here
+		if (isPreviewEnvironment) {
+			buildSpecPath =
+				'../../apps/client-ui/amplify-templates/amplify.preview.yml'
+		} else if (deploymentType === 'production') {
+			buildSpecPath =
+				'../../apps/client-ui/amplify-templates/amplify.production.yml'
+		} else {
+			buildSpecPath =
+				'../../apps/client-ui/amplify-templates/amplify.staging.yml'
+		}
+
+		// Read buildspec content
+		const buildSpec = pulumi
+			.output(pulumi.runtime.invoke('std:file', { input: buildSpecPath }))
+			.apply((result: unknown) => result as string)
+
+		// Get GitHub repository URL
+		const githubRepository =
+			config.get('github-repository') ||
+			'https://github.com/russoakham/macro-ai'
+
+		// Get secrets
+		const githubToken = config.requireSecret('github-token')
+		const viteApiKey = config.requireSecret('vite-api-key')
+
+		// Get backend API URL for frontend environment variables
+		const backendApiUrl = pulumi.interpolate`http://${customDomainName || sharedAlb!.albDnsName}:${permTargetGroup.port}`
+
+		// Create the Amplify app instance
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars, sonarjs/no-dead-store -- Used in exports below
+		amplifyApp = new AmplifyApp(`${environmentName}-frontend`, {
+			environmentName,
+			deploymentType,
+			buildSpec,
+			repository: githubRepository,
+			accessToken: githubToken,
+			environmentVariables: {
+				VITE_API_URL: backendApiUrl,
+				VITE_API_KEY: viteApiKey,
+				VITE_APP_ENV: environmentName,
+				VITE_APP_NAME: `Macro AI (${environmentName})`,
+				...(isPreviewEnvironment
+					? {
+							VITE_PR_NUMBER: environmentName.replace('pr-', ''),
+							VITE_PREVIEW_MODE: 'true',
+						}
+					: {}),
+			},
+			customDomainName: customDomainName
+				? `${environmentName}.${baseDomainName}`
+				: undefined,
+			hostedZoneId,
+			tags: commonTags,
+		})
+	}
+
+	// ===================================================================
 	// SHARED RESOURCE INITIALIZATION COMPLETE
 	// ===================================================================
 }
@@ -355,3 +427,9 @@ export const albZoneId = isPermanentEnvironment
 export const httpsListenerArn = isPermanentEnvironment
 	? sharedAlb!.httpsListener?.arn
 	: undefined
+
+// Amplify frontend outputs
+// Note: amplifyApp is used here in the exports
+export const amplifyAppId = amplifyApp?.app.id
+export const amplifyBranchName = amplifyApp?.branch.branchName
+export const frontendUrl = amplifyApp?.url
