@@ -22,18 +22,19 @@ with scalability for enterprise applications.
 #### Key Features
 
 - **Ephemeral Isolation**: Each PR gets a unique `pr-{number}` namespace
-- **Full-Stack Deployment**: Both frontend and backend components
+- **Full-Stack Deployment**: Both frontend and backend components via unified Pulumi workflow
 - **Automatic Cleanup**: Environment destroyed when PR is closed/merged
-- **Change Detection**: Only deploys components that have changed
+- **Pulumi Change Detection**: Stateful resource tracking - only modified resources are updated
 - **Cost Optimization**: Right-sized resources for short-term use
 
 #### Infrastructure Components
 
-- **Frontend**: AWS Amplify + CloudFront CDN
-- **Backend**: ECS Fargate with Application Load Balancer
+- **Frontend**: AWS Amplify + CloudFront CDN (Pulumi-managed)
+- **Backend**: ECS Fargate with Application Load Balancer (Pulumi-managed)
 - **Database**: Neon PostgreSQL (serverless)
 - **Cache**: Upstash Redis
 - **Monitoring**: CloudWatch
+- **IaC**: Pulumi with unified deployment workflow
 
 ### 2. Staging Deployment Strategy
 
@@ -49,15 +50,17 @@ with scalability for enterprise applications.
 - **Production-Like Configuration**: Similar to production but cost-optimized
 - **Integration Testing**: Full end-to-end testing capabilities
 - **Cost Controls**: 75% cost reduction through scheduled shutdown
+- **Unified Deployment**: Frontend and backend deployed together via Pulumi
 
 #### Infrastructure Components
 
-- **Frontend**: AWS Amplify + CloudFront CDN
-- **Backend**: ECS Fargate with Application Load Balancer
+- **Frontend**: AWS Amplify + CloudFront CDN (Pulumi-managed)
+- **Backend**: ECS Fargate with Application Load Balancer (Pulumi-managed)
 - **Database**: Neon PostgreSQL (serverless)
 - **Cache**: Upstash Redis
 - **Monitoring**: CloudWatch
 - **Scheduling**: Lambda-based shutdown automation
+- **IaC**: Pulumi with unified deployment workflow
 
 ### 3. Production Deployment Strategy
 
@@ -77,15 +80,17 @@ with scalability for enterprise applications.
 - **Cost Optimization**: Right-sized for personal use
 - **Reliability**: Single-AZ deployment
 - **Monitoring**: Basic CloudWatch monitoring
+- **Unified Deployment**: Frontend and backend deployed together via Pulumi
 
 ##### Infrastructure Components
 
-- **Frontend**: AWS Amplify + CloudFront CDN
-- **Backend**: ECS Fargate with Application Load Balancer
+- **Frontend**: AWS Amplify + CloudFront CDN (Pulumi-managed)
+- **Backend**: ECS Fargate with Application Load Balancer (Pulumi-managed)
 - **Database**: Neon PostgreSQL (serverless)
 - **Cache**: Upstash Redis
 - **Security**: AWS WAF
 - **Monitoring**: CloudWatch
+- **IaC**: Pulumi with unified deployment workflow
 
 #### Enterprise Scale (Revenue-Generating Applications)
 
@@ -99,16 +104,18 @@ with scalability for enterprise applications.
 - **Enterprise Security**: WAF + Shield DDoS protection
 - **Advanced Monitoring**: Comprehensive observability
 - **Database Redundancy**: RDS with read replicas
+- **Unified Deployment**: Frontend and backend deployed together via Pulumi
 
 ##### Infrastructure Components
 
-- **Frontend**: AWS Amplify + CloudFront CDN
-- **Backend**: ECS Fargate (Multi-AZ) with Application Load Balancer
+- **Frontend**: AWS Amplify + CloudFront CDN (Pulumi-managed)
+- **Backend**: ECS Fargate (Multi-AZ) with Application Load Balancer (Pulumi-managed)
 - **Database**: RDS PostgreSQL with read replicas
 - **Cache**: ElastiCache Redis cluster
 - **Security**: AWS WAF + Shield
 - **Monitoring**: CloudWatch + enhanced observability
 - **Auto-Scaling**: Application Auto Scaling
+- **IaC**: Pulumi with unified deployment workflow
 
 ## 💰 Cost Comparison
 
@@ -132,12 +139,13 @@ with scalability for enterprise applications.
 
 ### Change Detection & Optimization
 
-All environments support intelligent change detection:
+All environments leverage Pulumi's native stateful change detection:
 
-- **Backend Changes**: Only deploy ECS Fargate service
-- **Frontend Changes**: Only deploy Amplify application
-- **Infrastructure Changes**: Deploy Pulumi stack
-- **Shared Changes**: Full deployment required
+- **Infrastructure as Code**: Pulumi manages all resources (backend, frontend, infrastructure)
+- **Automatic Change Detection**: Pulumi detects changes and only updates modified resources
+- **Unified Deployments**: Frontend (Amplify) and backend (ECS) deployed together through Pulumi
+- **Atomic Rollbacks**: Failed deployments automatically roll back all changes
+- **No Custom Logic Needed**: Pulumi's state management eliminates fragile git-based change detection
 
 ## 🚀 Scaling Path
 
@@ -201,20 +209,23 @@ All environments support intelligent change detection:
 - [x] Production deployment strategy documentation
 - [x] Infrastructure diagrams for all environments
 - [x] Cost analysis and optimization strategies
-- [x] Change detection and deployment optimization
+- [x] Pulumi-based unified deployment architecture
+- [x] Removal of custom change detection (replaced with Pulumi's native state management)
+- [x] Amplify frontend deployment via Pulumi (no manual deployments)
+- [x] Unified full-stack deployment workflow for all environments
+- [x] Migration from fragile git-based change detection to Pulumi stateful tracking
 
 ### 🚧 In Progress
-
-- [ ] Implementation of preview/PR deployment workflow
-- [ ] Staging environment setup with scheduled shutdown
-- [ ] Production infrastructure deployment
-
-### 📋 Planned
 
 - [ ] Automated cost monitoring and alerting
 - [ ] Enhanced security implementations
 - [ ] Performance optimization and monitoring
+
+### 📋 Planned
+
 - [ ] Enterprise scaling preparations
+- [ ] Multi-region deployment capabilities
+- [ ] Advanced observability and monitoring
 
 ## 📚 Related Documentation
 

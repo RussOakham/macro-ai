@@ -62,24 +62,11 @@ jobs:
         echo "✅ Minimal traffic deployment validated"
         echo "🚀 Proceeding with hobby-scale production deployment"
 
-  # Change detection for minimal deployment
-  change-detection:
-    name: Detect Changes
-    uses: ./.github/workflows/reusable-change-detection.yml
-    with:
-      base-ref: ${{ github.event.before || 'HEAD~1' }}
-      head-ref: ${{ github.sha }}
-    needs: [ validate-minimal-traffic ]
-
   # Build Express API Docker image
   build-express-api:
     name: Build Docker Image for Minimal Traffic Production
     runs-on: ubuntu-latest
-    needs: [ validate-minimal-traffic, change-detection ]
-    if: |
-      needs.change-detection.outputs.has-backend-changes == 'true' ||
-      needs.change-detection.outputs.has-infrastructure-changes == 'true'
-
+    needs: [ validate-minimal-traffic ]
     permissions:
       id-token: write
       contents: read
@@ -180,13 +167,16 @@ jobs:
         echo "📤 Outputting image tag: '${IMAGE_TAG}'"
         echo "🔗 Full image URI was: ${IMAGE_URI}"
 
-  # Deploy backend using hobby-scale configuration
-  deploy-backend:
-    name: Deploy Backend (Hobby Scale)
+  # Deploy full stack using unified deployment
+  deploy-full-stack:
+    name: Deploy Full Stack (Hobby Scale)
     needs: [ validate-minimal-traffic, build-express-api ]
     if: needs.build-express-api.result == 'success'
 
-    uses: ./.github/workflows/reusable-deploy-backend-pulumi.yml
+    uses: ./.github/workflows/reusable-deploy-full-stack-pulumi.yml
+    permissions:
+      id-token: write
+      contents: read
     with:
       environment-name: production
       deployment-type: production
@@ -194,43 +184,19 @@ jobs:
       branch-name: main
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
-      should-deploy: true
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-      DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
-      DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
-      DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
-
-  # Deploy frontend using hobby-scale configuration
-  deploy-frontend:
-    name: Deploy Frontend
-    needs: [ validate-minimal-traffic, change-detection, deploy-backend ]
-    if: |
-      needs.change-detection.outputs.has-frontend-changes == 'true'
-
-    uses: ./.github/workflows/reusable-deploy-frontend.yml
-    with:
-      environment-name: production
-      deployment-type: minimal-production
-      branch-name: main
-      backend-url: ${{ vars.VITE_API_URL }}
-      custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
-      hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
-      should-deploy: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' }}
-      doppler-config: prd
-    secrets:
-      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      API_KEY: ${{ secrets.VITE_API_KEY }}
       DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_PROD }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_PAT }}
+      VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
 
   # Setup minimal traffic monitoring
   setup-monitoring:
     name: Setup Minimal Traffic Monitoring
-    needs: [ deploy-backend, deploy-frontend ]
-    if: always() && (needs.deploy-backend.result == 'success' || needs.deploy-frontend.result == 'success')
+    needs: [ deploy-full-stack ]
+    if: always() && needs.deploy-full-stack.result == 'success'
 
     uses: ./.github/workflows/reusable-production-monitoring.yml
     with:
@@ -244,7 +210,7 @@ jobs:
   cost-optimization:
     name: Cost Optimization Summary
     runs-on: ubuntu-latest
-    needs: [ validate-minimal-traffic, deploy-backend, deploy-frontend, setup-monitoring ]
+    needs: [ validate-minimal-traffic, deploy-full-stack, setup-monitoring ]
     if: always()
 
     steps:
@@ -280,7 +246,7 @@ jobs:
   deployment-summary:
     name: Minimal Traffic Production Deployment Summary
     runs-on: ubuntu-latest
-    needs: [ validate-minimal-traffic, change-detection, deploy-backend, deploy-frontend, setup-monitoring, cost-optimization ]
+    needs: [ validate-minimal-traffic, deploy-full-stack, setup-monitoring, cost-optimization ]
     if: always()
     permissions:
       deployments: write
@@ -298,8 +264,7 @@ jobs:
         echo "  - Infrastructure: Single AZ, cost-optimized"
         echo ""
         echo "✅ Validation: ${{ needs.validate-minimal-traffic.result }}"
-        echo "🔧 Backend deployment: ${{ needs.deploy-backend.result }}"
-        echo "🎨 Frontend deployment: ${{ needs.deploy-frontend.result }}"
+        echo "🚀 Full stack deployment: ${{ needs.deploy-full-stack.result }}"
         echo "📊 Monitoring setup: ${{ needs.setup-monitoring.result }}"
         echo ""
         echo "💰 Cost Status: Optimized for minimal traffic"
@@ -310,13 +275,13 @@ jobs:
       with:
         script: |
           const overallSuccess = '${{ needs.validate-minimal-traffic.result }}' === 'success' &&
-                                '${{ needs.change-detection.result }}' === 'success' &&
-                                ('${{ needs.deploy-backend.result }}' === 'success' || '${{ needs.deploy-backend.result }}' === 'skipped') &&
-                                ('${{ needs.deploy-frontend.result }}' === 'success' || '${{ needs.deploy-frontend.result }}' === 'skipped') &&
+                                '${{ needs.deploy-full-stack.result }}' === 'success' &&
                                 '${{ needs.setup-monitoring.result }}' === 'success' &&
                                 '${{ needs.cost-optimization.result }}' === 'success';
 
           const state = overallSuccess ? 'success' : 'failure';
+          const backendUrl = '${{ needs.deploy-full-stack.outputs.backend-url }}';
+          const frontendUrl = '${{ needs.deploy-full-stack.outputs.frontend-url }}';
 
           // Try to find existing deployment for this SHA
           try {
@@ -334,7 +299,8 @@ jobs:
                 repo: context.repo.repo,
                 deployment_id: deployments[0].id,
                 state: state,
-                description: `Minimal traffic production deployment ${state}`
+                description: `Minimal traffic production deployment ${state}`,
+                environment_url: frontendUrl || backendUrl
               });
             } else {
               // Create new deployment if none exists
@@ -352,7 +318,8 @@ jobs:
                 repo: context.repo.repo,
                 deployment_id: deployment.id,
                 state: state,
-                description: `Minimal traffic production deployment ${state}`
+                description: `Minimal traffic production deployment ${state}`,
+                environment_url: frontendUrl || backendUrl
               });
             }
           } catch (error) {
