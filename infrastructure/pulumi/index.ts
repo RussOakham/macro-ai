@@ -368,9 +368,12 @@ if (isPreviewEnvironment) {
 		}
 
 		// Read buildspec content
-		const buildSpec = pulumi
-			.output(pulumi.runtime.invoke('std:file', { input: buildSpecPath }))
-			.apply((result: unknown) => result as string)
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		const fs = require('node:fs')
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		const path = require('node:path')
+		const fullPath = path.resolve(buildSpecPath)
+		const buildSpec = fs.readFileSync(fullPath, 'utf8')
 
 		// Get GitHub repository URL
 		const githubRepository =
