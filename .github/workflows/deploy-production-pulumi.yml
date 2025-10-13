@@ -424,7 +424,7 @@ jobs:
           const description = isTestMode ? 
             `Production deployment ${state} (TEST MODE)` : 
             `Production deployment ${state}`;
-          
+
           const backendUrl = '${{ needs.deploy-full-stack.outputs.backend-url }}';
           const frontendUrl = '${{ needs.deploy-full-stack.outputs.frontend-url }}';
 

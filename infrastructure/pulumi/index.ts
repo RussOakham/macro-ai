@@ -18,13 +18,19 @@ import {
 	getDopplerSecrets,
 	resolveImageUri,
 } from './src/utils/environment'
+import type { DeploymentType } from './src/utils/environment'
 import { getCostOptimizedSettings } from './src/utils/environment'
 
 // Get configuration
 const config = new pulumi.Config()
 const dopplerConfig = new pulumi.Config('doppler')
 const environmentName = config.get('environmentName') || 'dev'
-const deploymentType = config.get('deploymentType') || 'dev'
+const deploymentTypeString = config.get('deploymentType') || 'dev'
+
+// Convert string to proper DeploymentType
+const deploymentType: DeploymentType = environmentName.startsWith('pr-')
+	? 'preview'
+	: 'permanent'
 const imageUri = config.get('imageUri')
 const imageTag = config.get('imageTag') || 'latest'
 const baseDomainName =
@@ -38,7 +44,7 @@ const isPermanentEnvironment = ['dev', 'prd', 'production', 'staging'].includes(
 )
 
 // Common tags for all resources
-const commonTags = getCommonTagsAsRecord(environmentName, deploymentType)
+const commonTags = getCommonTagsAsRecord(environmentName, deploymentTypeString)
 
 // Construct custom domain name
 const customDomainName = hostedZoneId
@@ -294,7 +300,10 @@ if (isPreviewEnvironment) {
 	})
 
 	// Get Doppler secrets
-	const dopplerConfigName = getDopplerConfig(environmentName, deploymentType)
+	const dopplerConfigName = getDopplerConfig(
+		environmentName,
+		deploymentTypeString,
+	)
 	const permDopplerToken = dopplerConfig.getSecret('dopplerToken')
 	const permEnvironmentVariables = getDopplerSecrets(
 		permDopplerToken,
@@ -350,7 +359,7 @@ if (isPreviewEnvironment) {
 		if (isPreviewEnvironment) {
 			buildSpecPath =
 				'../../apps/client-ui/amplify-templates/amplify.preview.yml'
-		} else if (deploymentType === 'production') {
+		} else if (environmentName === 'production' || environmentName === 'prd') {
 			buildSpecPath =
 				'../../apps/client-ui/amplify-templates/amplify.production.yml'
 		} else {
