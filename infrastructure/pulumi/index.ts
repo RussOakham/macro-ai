@@ -376,7 +376,6 @@ if (isPreviewEnvironment) {
 		const backendApiUrl = pulumi.interpolate`http://${customDomainName || sharedAlb!.albDnsName}:${permTargetGroup.port}`
 
 		// Create the Amplify app instance
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars, sonarjs/no-dead-store -- Used in exports below
 		amplifyApp = new AmplifyApp(`${environmentName}-frontend`, {
 			environmentName,
 			deploymentType,
