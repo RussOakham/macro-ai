@@ -104,10 +104,19 @@ jobs:
           # Deploy everything (Pulumi detects changes)
           pulumi up --yes
           
-          # Get outputs
-          BACKEND_URL=$(pulumi stack output apiEndpoint)
-          FRONTEND_URL=$(pulumi stack output frontendUrl)
+          # Get outputs with error handling
           STACK_NAME=$(pulumi stack --show-name)
+          
+          # Try to get backend URL (may not exist if no backend deployed)
+          BACKEND_URL=$(pulumi stack output apiEndpoint 2>/dev/null || echo "")
+          
+          # Try to get frontend URL (may not exist if no frontend deployed)
+          FRONTEND_URL=$(pulumi stack output frontendUrl 2>/dev/null || echo "")
+          
+          # Log what we found
+          echo "Stack: ${STACK_NAME}"
+          echo "Backend URL: ${BACKEND_URL:-'Not available'}"
+          echo "Frontend URL: ${FRONTEND_URL:-'Not available'}"
           
           {
             echo "backend-url=${BACKEND_URL}"
@@ -118,9 +127,18 @@ jobs:
       - name: Trigger Amplify Build
         if: steps.deploy.outputs.frontend-url != ''
         run: |
-          APP_ID=$(pulumi stack output amplifyAppId)
-          BRANCH_NAME=$(pulumi stack output amplifyBranchName)
+          # Get Amplify outputs with error handling
+          APP_ID=$(pulumi stack output amplifyAppId 2>/dev/null || echo "")
+          BRANCH_NAME=$(pulumi stack output amplifyBranchName 2>/dev/null || echo "")
           
+          if [ -z "$APP_ID" ] || [ -z "$BRANCH_NAME" ]; then
+            echo "⚠️ Amplify app not found or not deployed, skipping build trigger"
+            echo "APP_ID: ${APP_ID:-'Not available'}"
+            echo "BRANCH_NAME: ${BRANCH_NAME:-'Not available'}"
+            exit 0
+          fi
+          
+          echo "🚀 Triggering Amplify build for app: $APP_ID, branch: $BRANCH_NAME"
           aws amplify start-job \
             --app-id "$APP_ID" \
             --branch-name "$BRANCH_NAME" \
