@@ -380,7 +380,6 @@ if (isPreviewEnvironment) {
 			config.get('github-repository') ||
 			'https://github.com/russoakham/macro-ai'
 
-
 		// Get secrets
 		const githubToken = config.requireSecret('github-token')
 		const viteApiKey = config.requireSecret('vite-api-key')
@@ -413,7 +412,7 @@ if (isPreviewEnvironment) {
 				: undefined,
 			hostedZoneId,
 			tags: commonTags,
-		}		)
+		})
 	}
 
 	// ===================================================================

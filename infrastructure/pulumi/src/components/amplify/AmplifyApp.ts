@@ -86,7 +86,6 @@ export class AmplifyApp extends pulumi.ComponentResource {
 			args.repository,
 		)
 
-
 		// Create Amplify App with proper typing
 		this.app = new aws.amplify.App(
 			`${name}-app`,
