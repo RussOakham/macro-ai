@@ -222,7 +222,7 @@ jobs:
   # STAGE 3: ENSURE DEV STACK (SHARED INFRASTRUCTURE)
   # ===================================================================
   ensure-dev-stack:
-    name: Ensure Dev Stack Exists
+    name: Plan and Deploy Dev Stack
     runs-on: ubuntu-latest
     if: needs.validate-inputs.outputs.should-deploy == 'true' && needs.validate-inputs.outputs.deployment-action == 'deploy'
     needs: [ validate-inputs, build-and-prepare ]
@@ -234,7 +234,6 @@ jobs:
       id-token: write
       contents: read
     outputs:
-      dev-stack-exists: ${{ steps.check-dev-stack.outputs.dev-stack-exists }}
       dev-stack-deployed: ${{ steps.deploy-dev-stack.outputs.dev-stack-deployed }}
     steps:
     - name: Checkout code
@@ -244,7 +243,7 @@ jobs:
       uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        role-session-name: pr-preview-dev-stack-check
+        role-session-name: pr-preview-dev-stack
         aws-region: ${{ env.AWS_REGION }}
 
     - name: Setup Pulumi
@@ -252,47 +251,21 @@ jobs:
       with:
         pulumi-version: ^3.0.0
 
-    - name: Check if dev stack exists
-      id: check-dev-stack
-      working-directory: infrastructure/pulumi
-      run: |
-        echo "🔍 Checking if dev stack exists..."
-
-        # Check if dev stack exists and has resources
-        if pulumi stack select dev 2>/dev/null; then
-          # Check if stack has any resources using JSON output
-          RESOURCE_COUNT=$(pulumi stack --json | jq '.deployment.resources | length' 2>/dev/null || echo "0")
-          if [ "$RESOURCE_COUNT" -gt 0 ]; then
-            echo "✅ Dev stack exists with $RESOURCE_COUNT resources"
-            echo "dev-stack-exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "⚠️ Dev stack exists but has no resources"
-            echo "dev-stack-exists=false" >> $GITHUB_OUTPUT
-          fi
-        else
-          echo "❌ Dev stack does not exist"
-          echo "dev-stack-exists=false" >> $GITHUB_OUTPUT
-        fi
-
     - name: Setup Node.js
-      if: steps.check-dev-stack.outputs.dev-stack-exists == 'false'
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
 
     - name: Setup pnpm
-      if: steps.check-dev-stack.outputs.dev-stack-exists == 'false'
       uses: pnpm/action-setup@v4
       with:
         version: '10.14.0'
 
     - name: Install dependencies
-      if: steps.check-dev-stack.outputs.dev-stack-exists == 'false'
       working-directory: infrastructure/pulumi
       run: pnpm install
 
     - name: Plan dev stack
-      if: steps.check-dev-stack.outputs.dev-stack-exists == 'false'
       id: plan-dev-stack
       working-directory: infrastructure/pulumi
       env:
@@ -345,7 +318,7 @@ jobs:
         fi
 
     - name: Deploy dev stack
-      if: steps.check-dev-stack.outputs.dev-stack-exists == 'false' && steps.plan-dev-stack.outputs.dev-has-changes == 'true'
+      if: steps.plan-dev-stack.outputs.dev-has-changes == 'true'
       id: deploy-dev-stack
       working-directory: infrastructure/pulumi
       env:
