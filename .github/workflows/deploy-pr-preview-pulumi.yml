@@ -23,7 +23,8 @@ jobs:
     outputs:
       should-deploy: ${{ steps.decide-deploy.outputs.should-deploy }}
       deployment-action: ${{ steps.decide-deploy.outputs.deployment-action }}
-      pr-number: ${{ steps.decide-deploy.outputs.pr-number }}
+      pr-number: ${{ steps.validate-pr.outputs.pr-number }}
+      branch-name: ${{ steps.validate-pr.outputs.branch-name }}
       environment-name: ${{ steps.decide-deploy.outputs.environment-name }}
     steps:
     - name: Checkout code

@@ -123,6 +123,11 @@ jobs:
         echo "🔍 [Plan] Configuration set successfully"
         echo "  - Stack: $ENVIRONMENT_NAME"
         echo "  - Image Tag: $IMAGE_TAG"
+        
+        # Additional image tag debugging
+        echo "🔍 [Plan] Image tag details:"
+        echo "  - Full Image Tag: $IMAGE_TAG"
+        echo "  - Expected ECR URI: 861909001362.dkr.ecr.us-east-1.amazonaws.com/macro-ai-staging-express-api:$IMAGE_TAG"
 
         # Set domain configuration if available
         if [ -n "$CUSTOM_DOMAIN_NAME" ]; then
@@ -233,6 +238,11 @@ jobs:
         echo "🔍 [Apply] Configuration set successfully"
         echo "  - Stack: $ENVIRONMENT_NAME"
         echo "  - Image Tag: $IMAGE_TAG"
+        
+        # Additional image tag debugging
+        echo "🔍 [Apply] Image tag details:"
+        echo "  - Full Image Tag: $IMAGE_TAG"
+        echo "  - Expected ECR URI: 861909001362.dkr.ecr.us-east-1.amazonaws.com/macro-ai-staging-express-api:$IMAGE_TAG"
 
         # Set domain configuration if available
         if [ -n "$CUSTOM_DOMAIN_NAME" ]; then
