@@ -261,16 +261,19 @@ export function resolveImageUri(
 
 	// For PR preview environments, construct the image URI directly
 	// instead of looking it up in ECR during planning phase
-	const environmentName = new pulumi.Config().get('environmentName') || 'dev'
-	
+	const environmentName = new pulumi.Config().get('environment-name') || 'dev'
+
 	if (environmentName.startsWith('pr-')) {
 		// For PR environments, construct the ECR URI directly
 		// This avoids the race condition where plan runs before build
-		const accountId = new pulumi.Config('aws').get('accountId') || '861909001362'
+		const accountId =
+			new pulumi.Config('aws').get('accountId') || '861909001362'
 		const region = new pulumi.Config('aws').get('region') || 'us-east-1'
 		const ecrUri = `${accountId}.dkr.ecr.${region}.amazonaws.com/${ecrRepositoryName}:${imageTag}`
-		
-		console.log(`🔍 [resolveImageUri] Constructing ECR URI for PR environment: ${ecrUri}`)
+
+		console.log(
+			`🔍 [resolveImageUri] Constructing ECR URI for PR environment: ${ecrUri}`,
+		)
 		return pulumi.output(ecrUri)
 	}
 
