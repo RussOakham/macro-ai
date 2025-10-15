@@ -373,6 +373,7 @@ if (isPreviewEnvironment) {
 		// eslint-disable-next-line @typescript-eslint/no-require-imports
 		const path = require('node:path')
 		const fullPath = path.resolve(buildSpecPath)
+		// eslint-disable-next-line security/detect-non-literal-fs-filename
 		const buildSpec = fs.readFileSync(fullPath, 'utf8')
 
 		// Get GitHub repository URL
