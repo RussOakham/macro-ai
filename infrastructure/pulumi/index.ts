@@ -24,18 +24,18 @@ import { getCostOptimizedSettings } from './src/utils/environment'
 // Get configuration
 const config = new pulumi.Config()
 const dopplerConfig = new pulumi.Config('doppler')
-const environmentName = config.get('environmentName') || 'dev'
-const deploymentTypeString = config.get('deploymentType') || 'dev'
+const environmentName = config.get('environment-name') || 'dev'
+const deploymentTypeString = config.get('deployment-type') || 'dev'
 
 // Convert string to proper DeploymentType
 const deploymentType: DeploymentType = environmentName.startsWith('pr-')
 	? 'preview'
 	: 'permanent'
 const imageUri = config.get('imageUri')
-const imageTag = config.get('imageTag') || 'latest'
+const imageTag = config.get('image-tag') || 'latest'
 const baseDomainName =
-	config.get('customDomainName') || 'macro-ai.russoakham.dev'
-const hostedZoneId = config.get('hostedZoneId')
+	config.get('custom-domain-name') || 'macro-ai.russoakham.dev'
+const hostedZoneId = config.get('hosted-zone-id')
 
 // Determine environment type
 const isPreviewEnvironment = environmentName.startsWith('pr-')
