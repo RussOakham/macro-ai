@@ -38,8 +38,16 @@ jobs:
       env:
         PR_NUMBER: ${{ github.event.number }}
         BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
+        EVENT_NAME: ${{ github.event_name }}
+        EVENT_ACTION: ${{ github.event.action }}
       run: |
         echo "🔍 Validating PR inputs..."
+        
+        echo "🔍 Raw GitHub context values:"
+        echo "  - github.event.number: $PR_NUMBER"
+        echo "  - github.event.pull_request.head.ref: $BRANCH_NAME"
+        echo "  - github.event_name: $EVENT_NAME"
+        echo "  - github.event.action: $EVENT_ACTION"
 
         # Validate PR number
         if [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
