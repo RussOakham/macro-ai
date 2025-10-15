@@ -63,6 +63,10 @@ let vpc: SharedVpc | undefined
 let sharedAlb: SharedAlb | undefined
 let sharedAlbSecurityGroupId: pulumi.Output<string> | undefined
 
+// Variables for PR environments
+let sharedAlbDnsName: pulumi.Output<string> | undefined
+let sharedAlbZoneId: pulumi.Output<string> | undefined
+
 // Variables for workflow compatibility exports
 let prCustomDomainName: string | undefined
 let amplifyApp: AmplifyApp | undefined
@@ -90,8 +94,8 @@ if (isPreviewEnvironment) {
 		'albSecurityGroupId',
 	) as pulumi.Output<string>
 	const sharedHttpsListenerArn = devStack.requireOutput('httpsListenerArn')
-	const sharedAlbDnsName = devStack.requireOutput('albDnsName')
-	const sharedAlbZoneId = devStack.requireOutput('albZoneId')
+	sharedAlbDnsName = devStack.requireOutput('albDnsName') as pulumi.Output<string>
+	sharedAlbZoneId = devStack.requireOutput('albZoneId') as pulumi.Output<string>
 
 	// ===================================================================
 	// PR-SPECIFIC RESOURCES
@@ -386,7 +390,10 @@ if (isPreviewEnvironment) {
 		const viteApiKey = config.requireSecret('vite-api-key')
 
 		// Get backend API URL for frontend environment variables
-		const backendApiUrl = pulumi.interpolate`http://${customDomainName || sharedAlb!.albDnsName}:${permTargetGroup.port}`
+		// Use appropriate variables based on environment type
+		const backendApiUrl = isPreviewEnvironment
+			? pulumi.interpolate`http://${prCustomDomainName || sharedAlbDnsName}:${APP_CONFIG.port}`
+			: pulumi.interpolate`http://${customDomainName || sharedAlb!.albDnsName}:${permTargetGroup.port}`
 
 		// Create the Amplify app instance
 
