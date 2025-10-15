@@ -1,3 +1,4 @@
+/* eslint-disable security-node/detect-crlf */
 /* eslint-disable sonarjs/constructor-for-side-effects */
 import * as aws from '@pulumi/aws'
 import * as pulumi from '@pulumi/pulumi'
@@ -380,6 +381,17 @@ if (isPreviewEnvironment) {
 			config.get('github-repository') ||
 			'https://github.com/russoakham/macro-ai'
 
+		// Debug logging for configuration
+		console.log('🔍 [Config] Environment configuration:')
+		console.log(`  - Environment Name: ${environmentName}`)
+		console.log(`  - Deployment Type: ${deploymentType}`)
+		console.log(`  - GitHub Repository: ${githubRepository}`)
+		console.log(`  - Custom Domain: ${customDomainName || 'none'}`)
+		console.log(`  - Hosted Zone ID: ${hostedZoneId || 'none'}`)
+		console.log(`  - Image Tag: ${imageTag}`)
+		console.log(`  - Is Preview Environment: ${isPreviewEnvironment}`)
+		console.log(`  - Is Permanent Environment: ${isPermanentEnvironment}`)
+
 		// Get secrets
 		const githubToken = config.requireSecret('github-token')
 		const viteApiKey = config.requireSecret('vite-api-key')
@@ -388,6 +400,15 @@ if (isPreviewEnvironment) {
 		const backendApiUrl = pulumi.interpolate`http://${customDomainName || sharedAlb!.albDnsName}:${permTargetGroup.port}`
 
 		// Create the Amplify app instance
+		console.log('🚀 [AmplifyApp] Creating Amplify app...')
+		console.log(`  - App Name: macro-ai-${environmentName}`)
+		console.log(`  - Repository: ${githubRepository}`)
+		console.log(`  - Backend API URL: ${backendApiUrl}`)
+		const customDomain = customDomainName
+			? `${environmentName}.${baseDomainName}`
+			: 'none'
+		console.log(`  - Custom Domain: ${customDomain}`)
+
 		amplifyApp = new AmplifyApp(`${environmentName}-frontend`, {
 			environmentName,
 			deploymentType,
@@ -412,6 +433,8 @@ if (isPreviewEnvironment) {
 			hostedZoneId,
 			tags: commonTags,
 		})
+
+		console.log('✅ [AmplifyApp] Amplify app created successfully')
 	}
 
 	// ===================================================================

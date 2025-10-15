@@ -1,3 +1,4 @@
+/* eslint-disable security-node/detect-crlf */
 import * as aws from '@pulumi/aws'
 import * as pulumi from '@pulumi/pulumi'
 
@@ -81,12 +82,30 @@ export class AmplifyApp extends pulumi.ComponentResource {
 			args.tags,
 		)
 
+		// Validate and normalize repository URL
+		const normalizedRepository = AmplifyApp.normalizeRepositoryUrl(
+			args.repository,
+		)
+
+		// Debug logging
+		console.log(
+			`🔍 [AmplifyApp] Creating app for environment: ${args.environmentName}`,
+		)
+		console.log(`🔍 [AmplifyApp] Repository URL: ${normalizedRepository}`)
+		console.log(`🔍 [AmplifyApp] Access token provided: ${!!args.accessToken}`)
+		console.log(
+			`🔍 [AmplifyApp] Environment variables count: ${Object.keys(args.environmentVariables).length}`,
+		)
+		console.log(
+			`🔍 [AmplifyApp] Custom domain: ${args.customDomainName || 'none'}`,
+		)
+
 		// Create Amplify App with proper typing
 		this.app = new aws.amplify.App(
 			`${name}-app`,
 			{
 				name: `macro-ai-${args.environmentName}`,
-				repository: args.repository,
+				repository: normalizedRepository,
 				accessToken: args.accessToken,
 				buildSpec: args.buildSpec,
 				environmentVariables: args.environmentVariables,
@@ -235,6 +254,39 @@ export class AmplifyApp extends pulumi.ComponentResource {
 	}
 
 	/**
+	 * Normalize repository URL to ensure proper format for AWS Amplify
+	 */
+	private static normalizeRepositoryUrl(repository: string): string {
+		if (!repository?.trim()) {
+			throw new Error('Repository URL is required and cannot be empty')
+		}
+
+		let normalized = repository.trim()
+
+		// If it's already a full URL, return as-is
+		if (normalized.startsWith('https://github.com/')) {
+			return normalized
+		}
+
+		// If it's in owner/repo format, convert to full URL
+		if (normalized.includes('/') && !normalized.includes('://')) {
+			normalized = `https://github.com/${normalized}`
+		}
+
+		// Validate the final format
+		if (!normalized.startsWith('https://github.com/')) {
+			throw new Error(
+				`Invalid repository URL format: ${repository}. Expected format: 'https://github.com/owner/repo' or 'owner/repo'`,
+			)
+		}
+
+		console.log(
+			`🔍 [AmplifyApp] Normalized repository URL: ${repository} -> ${normalized}`,
+		)
+		return normalized
+	}
+
+	/**
 	 * Validate required arguments and throw descriptive errors
 	 */
 	private static validateArgs(args: AmplifyAppArgs): void {
@@ -253,6 +305,15 @@ export class AmplifyApp extends pulumi.ComponentResource {
 		if (args.customDomainName && !args.hostedZoneId) {
 			throw new Error(
 				'hostedZoneId is required when customDomainName is provided',
+			)
+		}
+
+		// Additional validation with better error messages
+		try {
+			AmplifyApp.normalizeRepositoryUrl(args.repository)
+		} catch (error) {
+			throw new Error(
+				`Repository validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
 			)
 		}
 	}

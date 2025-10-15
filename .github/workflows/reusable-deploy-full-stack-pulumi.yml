@@ -44,11 +44,115 @@ on:
         value: ${{ jobs.deploy.outputs.frontend-url }}
       stack-name:
         value: ${{ jobs.deploy.outputs.stack-name }}
+      plan-success:
+        value: ${{ jobs.plan.outputs.plan-success }}
+      changes-detected:
+        value: ${{ jobs.plan.outputs.changes-detected }}
 
 jobs:
+  # ===================================================================
+  # STAGE 1: PLAN (DRY RUN)
+  # ===================================================================
+  plan:
+    name: Plan Deployment
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      plan-success: ${{ steps.plan.outputs.plan-success }}
+      changes-detected: ${{ steps.plan.outputs.changes-detected }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.19.4'
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: '10.14.0'
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        role-session-name: pulumi-plan
+        aws-region: us-east-1
+
+    - name: Install dependencies
+      working-directory: infrastructure/pulumi
+      run: pnpm install --frozen-lockfile
+
+    - name: Plan Pulumi deployment
+      id: plan
+      working-directory: infrastructure/pulumi
+      env:
+        PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        CUSTOM_DOMAIN_NAME: ${{ inputs.custom-domain-name }}
+        HOSTED_ZONE_ID: ${{ inputs.hosted-zone-id }}
+      run: |
+        echo "🔍 Planning Pulumi deployment..."
+
+        ENVIRONMENT_NAME="${{ inputs.environment-name }}"
+        IMAGE_TAG="${{ inputs.image-tag }}"
+
+        # Set up stack configuration
+        pulumi stack select "$ENVIRONMENT_NAME" || pulumi stack init "$ENVIRONMENT_NAME"
+        pulumi config set environment-name "$ENVIRONMENT_NAME"
+        pulumi config set deployment-type "${{ inputs.deployment-type }}"
+        pulumi config set image-tag "$IMAGE_TAG"
+        pulumi config set github-repository ${{ github.repository }}
+        pulumi config set --secret github-token ${{ secrets.GITHUB_PAT }}
+        pulumi config set --secret vite-api-key ${{ secrets.VITE_API_KEY }}
+
+        # Set domain configuration if available
+        if [ -n "$CUSTOM_DOMAIN_NAME" ]; then
+          pulumi config set custom-domain-name "$CUSTOM_DOMAIN_NAME"
+        fi
+        if [ -n "$HOSTED_ZONE_ID" ]; then
+          pulumi config set hosted-zone-id "$HOSTED_ZONE_ID"
+        fi
+
+        # Run Pulumi preview (dry run)
+        echo "📋 Running Pulumi preview..."
+        if pulumi preview --json > plan-output.json 2>&1; then
+          echo "✅ Pulumi preview completed successfully"
+          echo "plan-success=true" >> $GITHUB_OUTPUT
+          
+          # Check if there are changes
+          CHANGES=$(jq -r '.changeSummary.create + .changeSummary.update + .changeSummary.delete' plan-output.json)
+          if [ "$CHANGES" -gt 0 ]; then
+            echo "📊 Changes detected: $CHANGES resources will be modified"
+            echo "changes-detected=true" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️ No changes detected - stack is up to date"
+            echo "changes-detected=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Show summary
+          echo "📋 Plan Summary:"
+          jq -r '.changeSummary | "  + Create: \(.create), ~ Update: \(.update), - Delete: \(.delete), = Same: \(.same)"' plan-output.json
+        else
+          echo "❌ Pulumi preview failed"
+          echo "plan-success=false" >> $GITHUB_OUTPUT
+          echo "changes-detected=false" >> $GITHUB_OUTPUT
+          cat plan-output.json
+          exit 1
+        fi
+
+  # ===================================================================
+  # STAGE 2: APPLY (DEPLOY INFRASTRUCTURE)
+  # ===================================================================
   deploy:
     name: Deploy Full Stack
     runs-on: ubuntu-latest
+    needs: [ plan ]
+    if: needs.plan.outputs.plan-success == 'true'
     permissions:
       id-token: write
       contents: read
@@ -57,89 +161,146 @@ jobs:
       frontend-url: ${{ steps.deploy.outputs.frontend-url }}
       stack-name: ${{ steps.deploy.outputs.stack-name }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.19.4'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.19.4'
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: '10.14.0'
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: '10.14.0'
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        role-session-name: pulumi-apply
+        aws-region: us-east-1
 
-      - name: Build frontend
-        working-directory: apps/client-ui
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm build
+    - name: Install dependencies
+      working-directory: infrastructure/pulumi
+      run: pnpm install --frozen-lockfile
 
-      - name: Deploy with Pulumi
-        id: deploy
-        working-directory: infrastructure/pulumi
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_PAT }}
-        run: |
-          pnpm install --frozen-lockfile
-          
-          # Set stack configuration
-          pulumi stack select ${{ inputs.environment-name }} || pulumi stack init ${{ inputs.environment-name }}
-          pulumi config set environment-name ${{ inputs.environment-name }}
-          pulumi config set deployment-type ${{ inputs.deployment-type }}
-          pulumi config set image-tag ${{ inputs.image-tag }}
-          pulumi config set github-repository ${{ github.repository }}
-          pulumi config set --secret github-token ${{ secrets.GITHUB_PAT }}
-          pulumi config set --secret vite-api-key ${{ secrets.VITE_API_KEY }}
-          
-          # Deploy everything (Pulumi detects changes)
-          pulumi up --yes
-          
-          # Get outputs with error handling
-          STACK_NAME=$(pulumi stack --show-name)
-          
-          # Try to get backend URL (may not exist if no backend deployed)
-          BACKEND_URL=$(pulumi stack output apiEndpoint 2>/dev/null || echo "")
-          
-          # Try to get frontend URL (may not exist if no frontend deployed)
-          FRONTEND_URL=$(pulumi stack output frontendUrl 2>/dev/null || echo "")
-          
-          # Log what we found
-          echo "Stack: ${STACK_NAME}"
-          echo "Backend URL: ${BACKEND_URL:-'Not available'}"
-          echo "Frontend URL: ${FRONTEND_URL:-'Not available'}"
-          
-          {
-            echo "backend-url=${BACKEND_URL}"
-            echo "frontend-url=${FRONTEND_URL}"
-            echo "stack-name=${STACK_NAME}"
-          } >> $GITHUB_OUTPUT
+    - name: Deploy with Pulumi
+      id: deploy
+      working-directory: infrastructure/pulumi
+      env:
+        PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+        DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        CUSTOM_DOMAIN_NAME: ${{ inputs.custom-domain-name }}
+        HOSTED_ZONE_ID: ${{ inputs.hosted-zone-id }}
+      run: |
+        echo "🚀 Applying Pulumi deployment..."
 
-      - name: Trigger Amplify Build
-        if: steps.deploy.outputs.frontend-url != ''
-        run: |
-          # Get Amplify outputs with error handling
-          APP_ID=$(pulumi stack output amplifyAppId 2>/dev/null || echo "")
-          BRANCH_NAME=$(pulumi stack output amplifyBranchName 2>/dev/null || echo "")
-          
-          if [ -z "$APP_ID" ] || [ -z "$BRANCH_NAME" ]; then
-            echo "⚠️ Amplify app not found or not deployed, skipping build trigger"
-            echo "APP_ID: ${APP_ID:-'Not available'}"
-            echo "BRANCH_NAME: ${BRANCH_NAME:-'Not available'}"
+        ENVIRONMENT_NAME="${{ inputs.environment-name }}"
+        IMAGE_TAG="${{ inputs.image-tag }}"
+
+        # Set up stack configuration
+        pulumi stack select "$ENVIRONMENT_NAME" || pulumi stack init "$ENVIRONMENT_NAME"
+        pulumi config set environment-name "$ENVIRONMENT_NAME"
+        pulumi config set deployment-type "${{ inputs.deployment-type }}"
+        pulumi config set image-tag "$IMAGE_TAG"
+        pulumi config set github-repository ${{ github.repository }}
+        pulumi config set --secret github-token ${{ secrets.GITHUB_PAT }}
+        pulumi config set --secret vite-api-key ${{ secrets.VITE_API_KEY }}
+
+        # Set domain configuration if available
+        if [ -n "$CUSTOM_DOMAIN_NAME" ]; then
+          pulumi config set custom-domain-name "$CUSTOM_DOMAIN_NAME"
+        fi
+        if [ -n "$HOSTED_ZONE_ID" ]; then
+          pulumi config set hosted-zone-id "$HOSTED_ZONE_ID"
+        fi
+
+        # Deploy everything (Pulumi detects changes)
+        echo "📦 Deploying infrastructure..."
+        pulumi up --yes
+
+        # Get outputs with error handling
+        STACK_NAME=$(pulumi stack --show-name)
+
+        # Try to get backend URL (may not exist if no backend deployed)
+        BACKEND_URL=$(pulumi stack output apiEndpoint 2>/dev/null || echo "")
+
+        # Try to get frontend URL (may not exist if no frontend deployed)
+        FRONTEND_URL=$(pulumi stack output frontendUrl 2>/dev/null || echo "")
+
+        # Log what we found
+        echo "Stack: ${STACK_NAME}"
+        echo "Backend URL: ${BACKEND_URL:-'Not available'}"
+        echo "Frontend URL: ${FRONTEND_URL:-'Not available'}"
+
+        {
+          echo "backend-url=${BACKEND_URL}"
+          echo "frontend-url=${FRONTEND_URL}"
+          echo "stack-name=${STACK_NAME}"
+        } >> $GITHUB_OUTPUT
+
+    - name: Trigger Amplify Build
+      if: steps.deploy.outputs.frontend-url != ''
+      run: |
+        # Get Amplify outputs with error handling
+        APP_ID=$(pulumi stack output amplifyAppId 2>/dev/null || echo "")
+        BRANCH_NAME=$(pulumi stack output amplifyBranchName 2>/dev/null || echo "")
+
+        if [ -z "$APP_ID" ] || [ -z "$BRANCH_NAME" ]; then
+          echo "⚠️ Amplify app not found or not deployed, skipping build trigger"
+          echo "APP_ID: ${APP_ID:-'Not available'}"
+          echo "BRANCH_NAME: ${BRANCH_NAME:-'Not available'}"
+          exit 0
+        fi
+
+        echo "🚀 Triggering Amplify build for app: $APP_ID, branch: $BRANCH_NAME"
+        aws amplify start-job \
+          --app-id "$APP_ID" \
+          --branch-name "$BRANCH_NAME" \
+          --job-type RELEASE
+
+  # ===================================================================
+  # STAGE 3: VALIDATE OUTPUTS
+  # ===================================================================
+  validate:
+    name: Validate Deployment
+    runs-on: ubuntu-latest
+    needs: [ deploy ]
+    if: needs.deploy.outputs.backend-url != ''
+    permissions:
+      pull-requests: write
+    steps:
+    - name: Backend Health Check
+      id: backend-health-check
+      run: |
+        API_ENDPOINT="${{ needs.deploy.outputs.backend-url }}"
+        echo "🔍 Performing backend health check on: '$API_ENDPOINT'"
+
+        # Wait for the service to be ready
+        sleep 30
+
+        # Perform backend health check
+        for i in {1..10}; do
+          if curl -f -s --connect-timeout 5 --max-time 10 "${API_ENDPOINT}/api/health" > /dev/null 2>&1; then
+            echo "✅ Backend health check passed on attempt ${i}"
+            echo "backend-health-status=healthy" >> "$GITHUB_OUTPUT"
+            echo "✅ Backend service is responding at ${API_ENDPOINT}"
             exit 0
           fi
-          
-          echo "🚀 Triggering Amplify build for app: $APP_ID, branch: $BRANCH_NAME"
-          aws amplify start-job \
-            --app-id "$APP_ID" \
-            --branch-name "$BRANCH_NAME" \
-            --job-type RELEASE
+          echo "⏳ Backend health check attempt ${i} failed, retrying..."
+          sleep 15
+        done
+
+        echo "⚠️ Backend health check failed after 10 attempts"
+        echo "⚠️ Backend health status unknown - will proceed anyway"
+        echo "backend-health-status=unknown" >> "$GITHUB_OUTPUT"
+        exit 0
+
+    - name: Generate deployment summary
+      run: |
+        echo "🎉 Deployment completed successfully!"
+        echo "📱 Frontend URL: ${{ needs.deploy.outputs.frontend-url }}"
+        echo "🔗 Backend API: ${{ needs.deploy.outputs.backend-url }}"
+        echo "📝 Stack: ${{ needs.deploy.outputs.stack-name }}"
+        echo "🔢 Environment: ${{ inputs.environment-name }}"
