@@ -449,7 +449,9 @@ if (isPreviewEnvironment) {
 		const viteApiKey = permEnvironmentVariables.apply(
 			(vars) => vars.VITE_API_KEY || 'default-api-key',
 		)
-		const githubToken = config.requireSecret('github-token')
+		const githubToken = permEnvironmentVariables.apply(
+			(vars) => vars.GITHUB_TOKEN || '',
+		)
 
 		// Get backend API URL for frontend environment variables
 		// Use appropriate variables based on environment type
