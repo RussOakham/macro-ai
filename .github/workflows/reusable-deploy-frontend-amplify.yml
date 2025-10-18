@@ -77,6 +77,24 @@ jobs:
         with:
           version: ${{ env.PNPM_VERSION }}
 
+      - name: Install Doppler CLI
+        uses: dopplerhq/cli-action@v3
+        with:
+          token: ${{ secrets.DOPPLER_TOKEN }}
+
+      - name: Configure Doppler
+        run: |
+          # Determine Doppler config based on environment
+          if [[ "${{ inputs.environment-name }}" == "production" ]]; then
+            DOPPLER_CONFIG="prd"
+          else
+            DOPPLER_CONFIG="dev"
+          fi
+          
+          doppler configure set project macro-ai
+          doppler configure set config "$DOPPLER_CONFIG"
+          echo "✅ Doppler configured for: $DOPPLER_CONFIG"
+
       - name: Cache pnpm dependencies
         uses: actions/cache@v4
         with:
@@ -88,7 +106,7 @@ jobs:
             pnpm-${{ runner.os }}-
 
       - name: Install dependencies
-        run: doppler run -- pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
 
