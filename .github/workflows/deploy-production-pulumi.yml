@@ -366,11 +366,28 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
 
+  # Deploy frontend to Amplify
+  deploy-frontend-production:
+    name: Deploy Frontend to Amplify (Production)
+    uses: ./.github/workflows/reusable-deploy-frontend-amplify.yml
+    if: needs.deploy-full-stack.result == 'success' && needs.deploy-full-stack.outputs.amplify-app-id != ''
+    needs: [ deploy-full-stack ]
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      amplify-app-id: ${{ needs.deploy-full-stack.outputs.amplify-app-id }}
+      amplify-branch-name: ${{ needs.deploy-full-stack.outputs.amplify-branch-name }}
+      environment-name: production
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+
   # Production monitoring setup
   production-monitoring:
     name: Production Monitoring Setup
     runs-on: ubuntu-latest
-    needs: [ deploy-full-stack ]
+    needs: [ deploy-full-stack, deploy-frontend-production ]
     if: always() && needs.deploy-full-stack.result == 'success'
 
     steps:
@@ -386,7 +403,7 @@ jobs:
   deployment-summary:
     name: Production Deployment Summary
     runs-on: ubuntu-latest
-    needs: [ pre-deployment-validation, manual-approval, test-mode-bypass, deploy-full-stack, production-monitoring ]
+    needs: [ pre-deployment-validation, manual-approval, test-mode-bypass, deploy-full-stack, deploy-frontend-production, production-monitoring ]
     if: always()
     permissions:
       deployments: write
@@ -408,6 +425,7 @@ jobs:
         echo "✅ Manual approval: ${{ github.event.inputs.test-mode == 'true' && 'bypassed' || needs.manual-approval.result }}"
         echo "✅ Test mode bypass: ${{ github.event.inputs.test-mode == 'true' && needs.test-mode-bypass.result || 'not-used' }}"
         echo "🚀 Full stack deployment: ${{ needs.deploy-full-stack.result }}"
+        echo "🌐 Frontend deployment: ${{ needs.deploy-frontend-production.result }}"
         echo "📊 Monitoring setup: ${{ needs.production-monitoring.result }}"
 
     - name: Update deployment status
@@ -417,6 +435,7 @@ jobs:
           const overallSuccess = '${{ needs.pre-deployment-validation.result }}' === 'success' &&
                                 ('${{ needs.manual-approval.result }}' === 'success' || '${{ needs.test-mode-bypass.result }}' === 'success') &&
                                 '${{ needs.deploy-full-stack.result }}' === 'success' &&
+                                '${{ needs.deploy-frontend-production.result }}' === 'success' &&
                                 '${{ needs.production-monitoring.result }}' === 'success';
 
           const state = overallSuccess ? 'success' : 'failure';
@@ -426,7 +445,7 @@ jobs:
             `Production deployment ${state}`;
 
           const backendUrl = '${{ needs.deploy-full-stack.outputs.backend-url }}';
-          const frontendUrl = '${{ needs.deploy-full-stack.outputs.frontend-url }}';
+          const frontendUrl = '${{ needs.deploy-frontend-production.outputs.frontend-deployment-url }}';
 
           // Try to find existing deployment for this SHA
           try {

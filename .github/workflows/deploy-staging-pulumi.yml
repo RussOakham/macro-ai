@@ -163,6 +163,23 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
 
+  # Deploy frontend to Amplify
+  deploy-frontend-staging:
+    name: Deploy Frontend to Amplify (Staging)
+    uses: ./.github/workflows/reusable-deploy-frontend-amplify.yml
+    if: needs.deploy-full-stack.result == 'success' && needs.deploy-full-stack.outputs.amplify-app-id != ''
+    needs: [ deploy-full-stack ]
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      amplify-app-id: ${{ needs.deploy-full-stack.outputs.amplify-app-id }}
+      amplify-branch-name: ${{ needs.deploy-full-stack.outputs.amplify-branch-name }}
+      environment-name: staging
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+
   # Production monitoring setup using reusable workflow
   setup-monitoring:
     name: Setup Staging Monitoring
@@ -172,14 +189,14 @@ jobs:
       deployment-type: staging
       backend-stack-name: stg
     secrets: inherit
-    needs: [ deploy-full-stack ]
+    needs: [ deploy-full-stack, deploy-frontend-staging ]
     if: always() && needs.deploy-full-stack.result == 'success'
 
   # Schedule automatic teardown at 6 PM
   schedule-teardown:
     name: Schedule Automatic Teardown
     runs-on: ubuntu-latest
-    needs: [ deploy-full-stack, setup-monitoring ]
+    needs: [ deploy-full-stack, deploy-frontend-staging, setup-monitoring ]
     if: always() && needs.deploy-full-stack.result == 'success'
 
     steps:
@@ -194,7 +211,7 @@ jobs:
   deployment-summary:
     name: Staging Deployment Summary (Pulumi)
     runs-on: ubuntu-latest
-    needs: [ deploy-full-stack, setup-monitoring, schedule-teardown ]
+    needs: [ deploy-full-stack, deploy-frontend-staging, setup-monitoring, schedule-teardown ]
     if: always()
     permissions:
       contents: write
@@ -206,7 +223,7 @@ jobs:
       run: |
         echo "🚀 Staging deployment completed with Pulumi!"
         echo "Backend: ${{ needs.deploy-full-stack.result == 'success' && 'Deployed' || 'Failed' }}"
-        echo "Frontend: ${{ needs.deploy-full-stack.result == 'success' && 'Deployed' || 'Failed' }}"
+        echo "Frontend: ${{ needs.deploy-frontend-staging.result == 'success' && 'Deployed' || 'Failed' }}"
         echo ""
         echo "🕕 Automatic teardown scheduled for 6 PM"
         echo "To prevent teardown, run the workflow with 'force-deploy: true'"
@@ -217,8 +234,9 @@ jobs:
       with:
         script: |
           const deployed = '${{ needs.deploy-full-stack.result }}' === 'success';
+          const frontendDeployed = '${{ needs.deploy-frontend-staging.result }}' === 'success';
           const backendUrl = deployed ? '${{ needs.deploy-full-stack.outputs.backend-url }}' : null;
-          const frontendUrl = deployed ? '${{ needs.deploy-full-stack.outputs.frontend-url }}' : null;
+          const frontendUrl = frontendDeployed ? '${{ needs.deploy-frontend-staging.outputs.frontend-deployment-url }}' : null;
           const stackName = deployed ? '${{ needs.deploy-full-stack.outputs.stack-name }}' : null;
 
           const comment = `## 🚀 Staging Environment Deployed Successfully! (Pulumi)

@@ -416,13 +416,33 @@ jobs:
       VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
 
   # ===================================================================
-  # STAGE 7: DEPLOYMENT SUMMARY
+  # STAGE 5: DEPLOY FRONTEND TO AMPLIFY
+  # ===================================================================
+  deploy-frontend:
+    name: Deploy Frontend to Amplify
+    uses: ./.github/workflows/reusable-deploy-frontend-amplify.yml
+    if: needs.deploy-full-stack.result == 'success' && needs.deploy-full-stack.outputs.amplify-app-id != ''
+    needs: [ validate-inputs, deploy-full-stack ]
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      amplify-app-id: ${{ needs.deploy-full-stack.outputs.amplify-app-id }}
+      amplify-branch-name: ${{ needs.deploy-full-stack.outputs.amplify-branch-name }}
+      environment-name: ${{ needs.validate-inputs.outputs.environment-name }}
+      pr-number: ${{ needs.validate-inputs.outputs.pr-number }}
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+
+  # ===================================================================
+  # STAGE 6: DEPLOYMENT SUMMARY
   # ===================================================================
   deployment-summary:
     name: Deployment Summary
     runs-on: ubuntu-latest
     if: github.event.pull_request != null && github.event.action != 'closed'
-    needs: [ deploy-full-stack ]
+    needs: [ deploy-full-stack, deploy-frontend ]
     permissions:
       pull-requests: write
     steps:
@@ -431,11 +451,12 @@ jobs:
         BRANCH_NAME: ${{ needs.validate-inputs.outputs.branch-name }}
       run: |
         echo "🎉 Complete PR Preview Environment Deployed!"
-        echo "📱 Frontend URL: ${{ needs.deploy-full-stack.outputs.frontend-url }}"
+        echo "📱 Frontend URL: ${{ needs.deploy-frontend.outputs.frontend-deployment-url }}"
         echo "🔗 Backend API: ${{ needs.deploy-full-stack.outputs.backend-url }}"
         echo "📝 Stack: ${{ needs.deploy-full-stack.outputs.stack-name }}"
         echo "🔢 PR: #${{ needs.validate-inputs.outputs.pr-number }}"
         echo "🌿 Branch: $BRANCH_NAME"
+        echo "✅ Frontend Deployment Status: ${{ needs.deploy-frontend.outputs.deployment-status }}"
 
   # ===================================================================
   # CLEANUP ON PR CLOSE
