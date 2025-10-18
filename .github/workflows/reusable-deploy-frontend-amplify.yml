@@ -154,7 +154,7 @@ jobs:
           zip -r "../../${ZIP_FILE}" .
           
           # Get file size
-          SIZE_BYTES=$(stat -f%z "../../${ZIP_FILE}")
+          SIZE_BYTES=$(wc -c < "../../${ZIP_FILE}")
           SIZE_MB=$((SIZE_BYTES / 1048576))
           
           # Check size limit (5GB)
