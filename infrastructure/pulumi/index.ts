@@ -203,8 +203,10 @@ if (isPreviewEnvironment) {
 
 	// Only create Amplify branch if shared app exists
 	if (sharedAmplifyAppId) {
-		// Get secrets
-		const viteApiKey = config.requireSecret('vite-api-key')
+		// Extract VITE_API_KEY from Doppler secrets
+		const viteApiKey = prEnvironmentVariables.apply(
+			(vars) => vars.VITE_API_KEY || 'default-api-key',
+		)
 
 		// Construct backend API URL for frontend
 		const backendApiUrl = pulumi.interpolate`https://${prCustomDomainName}`
@@ -443,7 +445,10 @@ if (isPreviewEnvironment) {
 			'https://github.com/russoakham/macro-ai'
 
 		// Get secrets
-		const viteApiKey = config.requireSecret('vite-api-key')
+		// Extract VITE_API_KEY from permEnvironmentVariables (Doppler)
+		const viteApiKey = permEnvironmentVariables.apply(
+			(vars) => vars.VITE_API_KEY || 'default-api-key',
+		)
 		const githubToken = config.requireSecret('github-token')
 
 		// Get backend API URL for frontend environment variables
