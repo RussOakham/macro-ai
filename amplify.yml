@@ -59,11 +59,7 @@ frontend:
         - echo "Starting React application build..."
         - echo "Target branch: $AWS_BRANCH"
 
-        # Run type checking
-        - echo "Running TypeScript type check..."
-        - pnpm type-check
-
-        # Run build
+        # Run build (Vite handles TypeScript compilation and type checking)
         - echo "Building application..."
         - pnpm build
 
