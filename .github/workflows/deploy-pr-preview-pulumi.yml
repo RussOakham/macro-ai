@@ -442,7 +442,7 @@ jobs:
     name: Deployment Summary
     runs-on: ubuntu-latest
     if: github.event.pull_request != null && github.event.action != 'closed'
-    needs: [ deploy-full-stack, deploy-frontend ]
+    needs: [ validate-inputs, deploy-full-stack, deploy-frontend ]
     permissions:
       pull-requests: write
     steps:
