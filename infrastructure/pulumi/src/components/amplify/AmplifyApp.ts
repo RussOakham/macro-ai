@@ -86,6 +86,82 @@ export class AmplifyApp extends pulumi.ComponentResource {
 			args.repository,
 		)
 
+		// ===================================================================
+		// CREATE IAM ROLES FOR AMPLIFY
+		// ===================================================================
+
+		// Create service role for Amplify
+		const serviceRole = new aws.iam.Role(
+			`${name}-service-role`,
+			{
+				assumeRolePolicy: JSON.stringify({
+					Version: '2012-10-17',
+					Statement: [
+						{
+							Action: 'sts:AssumeRole',
+							Effect: 'Allow',
+							Principal: {
+								Service: 'amplify.amazonaws.com',
+							},
+						},
+					],
+				}),
+				tags: {
+					Name: `macro-ai-${args.environmentName}-amplify-service-role`,
+					...tags,
+				},
+			},
+			{ parent: this },
+		)
+
+		// Attach policy to service role for basic Amplify operations
+		new aws.iam.RolePolicyAttachment(
+			`${name}-service-role-policy`,
+			{
+				role: serviceRole.name,
+				policyArn: 'arn:aws:iam::aws:policy/AdministratorAccess', // TODO: Restrict to minimal permissions
+			},
+			{ parent: this },
+		)
+
+		// Create compute role for build environment (SSR compute)
+		const computeRole = new aws.iam.Role(
+			`${name}-compute-role`,
+			{
+				assumeRolePolicy: JSON.stringify({
+					Version: '2012-10-17',
+					Statement: [
+						{
+							Action: 'sts:AssumeRole',
+							Effect: 'Allow',
+							Principal: {
+								Service: 'amplify.amazonaws.com',
+							},
+						},
+					],
+				}),
+				tags: {
+					Name: `macro-ai-${args.environmentName}-amplify-compute-role`,
+					...tags,
+				},
+			},
+			{ parent: this },
+		)
+
+		// Attach policy to compute role
+		new aws.iam.RolePolicyAttachment(
+			`${name}-compute-role-policy`,
+			{
+				role: computeRole.name,
+				policyArn: 'arn:aws:iam::aws:policy/AdministratorAccess', // TODO: Restrict to minimal permissions
+			},
+			{ parent: this },
+		)
+
+		// ===================================================================
+		// CREATE AMPLIFY APP WITH IAM ROLES
+		// ===================================================================
+
 		// Create Amplify App with proper typing
 		this.app = new aws.amplify.App(
 			`${name}-app`,
@@ -105,6 +181,7 @@ export class AmplifyApp extends pulumi.ComponentResource {
 				platform: args.platform || 'WEB',
 				description:
 					args.description || `Macro AI ${args.environmentName} frontend`,
+				iamServiceRoleArn: serviceRole.arn, // Attach service role
 				tags,
 			},
 			{ parent: this },
@@ -124,6 +201,8 @@ export class AmplifyApp extends pulumi.ComponentResource {
 				stage: AmplifyApp.getStage(args.deploymentType, args.environmentName),
 				enableBasicAuth: args.enableBasicAuth,
 				basicAuthCredentials: args.basicAuthCredentials,
+				// Set compute role for build environment to access AWS resources
+				backendEnvironmentArn: computeRole.arn,
 			},
 			{ parent: this },
 		)
