@@ -27,6 +27,9 @@ on:
       AWS_ACCOUNT_ID:
         description: 'AWS Account ID'
         required: true
+      DOPPLER_TOKEN:
+        description: 'Doppler token for accessing secrets'
+        required: true
     outputs:
       frontend-deployment-url:
         description: 'The deployed frontend URL'
@@ -85,9 +88,9 @@ jobs:
             pnpm-${{ runner.os }}-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: doppler run -- pnpm install --frozen-lockfile
         env:
-          HUSKY: 0
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
 
       # ===================================================================
       # 3. BUILD FRONTEND

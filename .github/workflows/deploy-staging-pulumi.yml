@@ -179,6 +179,7 @@ jobs:
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_STAGING }}
 
   # Production monitoring setup using reusable workflow
   setup-monitoring:
