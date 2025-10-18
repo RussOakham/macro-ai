@@ -5,6 +5,7 @@
 **Implemented Option 1**: Build and deploy frontend to AWS Amplify **after** Pulumi infrastructure creation in GitHub Actions.
 
 This approach provides:
+
 - ✅ **Clean separation of concerns**: Infrastructure first, then application
 - ✅ **Scalability**: Single reusable workflow for all three environments
 - ✅ **Reliability**: Explicit polling for deployment completion
@@ -14,7 +15,7 @@ This approach provides:
 
 ## Architecture
 
-```
+```text
 Deploy PR Preview / Staging / Production
          |
          ├─→ build-express-api (Docker image)
@@ -43,7 +44,8 @@ Deploy PR Preview / Staging / Production
 **Purpose**: Reusable workflow shared by all three deployment workflows (PR Preview, Staging, Production)
 
 **Key Features**:
-- **Build Stage**: 
+
+- **Build Stage**:
   - Sets up Node.js 20.19.4 + pnpm 10.14.0
   - Installs dependencies from monorepo
   - Runs `pnpm --filter client-ui build`
@@ -80,7 +82,7 @@ deploy-frontend:
   name: Deploy Frontend to Amplify
   uses: ./.github/workflows/reusable-deploy-frontend-amplify.yml
   if: needs.deploy-full-stack.result == 'success' && needs.deploy-full-stack.outputs.amplify-app-id != ''
-  needs: [ validate-inputs, deploy-full-stack ]
+  needs: [validate-inputs, deploy-full-stack]
   with:
     amplify-app-id: ${{ needs.deploy-full-stack.outputs.amplify-app-id }}
     amplify-branch-name: ${{ needs.deploy-full-stack.outputs.amplify-branch-name }}
@@ -89,6 +91,7 @@ deploy-frontend:
 ```
 
 **Updated**: `deployment-summary` job
+
 - Now depends on `deploy-frontend`
 - Uses `deploy-frontend.outputs.frontend-deployment-url` instead of `deploy-full-stack.outputs.frontend-url`
 - Displays frontend deployment status in summary
@@ -115,6 +118,7 @@ deploy-frontend:
 ## How It Works (Step-by-Step)
 
 ### 1. Pulumi Deploys Infrastructure
+
 ```bash
 # PR Preview Example
 pulumi stack select pr-90
@@ -127,12 +131,14 @@ pulumi up --yes
 ```
 
 ### 2. Frontend Workflow Starts
+
 ```bash
 # Triggered after deploy-full-stack succeeds
 # Receives Pulumi outputs as inputs
 ```
 
 ### 3. Frontend Build
+
 ```bash
 cd /workspace
 pnpm install --frozen-lockfile
@@ -142,6 +148,7 @@ pnpm --filter client-ui build
 ```
 
 ### 4. Create Zip Archive
+
 ```bash
 cd apps/client-ui/dist
 zip -r ../../frontend-12345.zip .
@@ -150,6 +157,7 @@ zip -r ../../frontend-12345.zip .
 ```
 
 ### 5. Amplify Manual Deployment
+
 ```bash
 # Create deployment slot
 aws amplify create-deployment \
@@ -179,7 +187,8 @@ aws amplify get-job \
 ```
 
 ### 6. Frontend URL Available
-```
+
+```text
 https://pr-90.macro-ai.russoakham.dev
 ```
 
@@ -188,14 +197,16 @@ https://pr-90.macro-ai.russoakham.dev
 ## Environment-Specific Configurations
 
 ### PR Preview (pr-{number})
+
 - Amplify branch: `pr-{number}`
 - Frontend URL: `https://pr-{number}.macro-ai.russoakham.dev`
-- Environment vars: 
+- Environment vars:
   - `VITE_API_URL`: `https://pr-{number}.api.macro-ai.russoakham.dev`
   - `VITE_PR_NUMBER`: `{number}`
   - `VITE_PREVIEW_MODE`: `true`
 
 ### Staging
+
 - Amplify branch: `develop` (reuses dev app)
 - Frontend URL: `https://develop.macro-ai.russoakham.dev`
 - Environment vars:
@@ -203,6 +214,7 @@ https://pr-90.macro-ai.russoakham.dev
   - `VITE_APP_ENV`: `staging`
 
 ### Production
+
 - Amplify branch: `main`
 - Frontend URL: `https://macro-ai.russoakham.dev`
 - Environment vars:
@@ -213,7 +225,7 @@ https://pr-90.macro-ai.russoakham.dev
 
 ## Deployment Flow Diagram
 
-```
+```text
 ┌─────────────────────────────────────────────┐
 │  GitHub Push / PR Created                   │
 └────────────────┬────────────────────────────┘
@@ -237,21 +249,22 @@ https://pr-90.macro-ai.russoakham.dev
 
 ## Key Benefits
 
-| Aspect | Benefit |
-|--------|---------|
-| **Separation of Concerns** | Infrastructure and app deployment are independent |
-| **Reliability** | Explicit polling ensures we wait for actual deployment |
-| **Speed** | Happens in parallel with backend availability checks |
-| **Reusability** | One workflow serves all three environments |
-| **Debugging** | Comprehensive logs at each stage |
-| **Flexibility** | Manual deployment API = no git dependency |
-| **Cost** | No additional infrastructure needed |
+| Aspect                     | Benefit                                                |
+| -------------------------- | ------------------------------------------------------ |
+| **Separation of Concerns** | Infrastructure and app deployment are independent      |
+| **Reliability**            | Explicit polling ensures we wait for actual deployment |
+| **Speed**                  | Happens in parallel with backend availability checks   |
+| **Reusability**            | One workflow serves all three environments             |
+| **Debugging**              | Comprehensive logs at each stage                       |
+| **Flexibility**            | Manual deployment API = no git dependency              |
+| **Cost**                   | No additional infrastructure needed                    |
 
 ---
 
 ## Testing Checklist
 
 ### PR Preview Testing
+
 - [ ] Create new PR to trigger workflow
 - [ ] Verify `deploy-frontend` job runs after `deploy-full-stack`
 - [ ] Verify frontend URL is accessible
@@ -261,12 +274,14 @@ https://pr-90.macro-ai.russoakham.dev
 - [ ] Test closing PR triggers cleanup
 
 ### Staging Testing
+
 - [ ] Push to `develop` branch
 - [ ] Verify `deploy-frontend-staging` runs
 - [ ] Verify staging frontend URL loads app
 - [ ] Verify staging environment variables
 
 ### Production Testing
+
 - [ ] Push to `main` branch
 - [ ] Verify `deploy-frontend-production` runs
 - [ ] Verify production frontend URL loads app
@@ -277,18 +292,22 @@ https://pr-90.macro-ai.russoakham.dev
 ## Troubleshooting
 
 ### Frontend URL works but shows Amplify welcome page
+
 **Cause**: Zip file wasn't properly uploaded or doesn't contain index.html  
 **Solution**: Check workflow logs for upload error, verify zip structure
 
 ### Build fails during pnpm install
+
 **Cause**: Dependency issue or memory  
 **Solution**: Check node_modules cache, review pnpm-lock.yaml changes
 
 ### Deployment times out (>30 min)
+
 **Cause**: Amplify build or deployment is slow  
 **Solution**: Check Amplify console logs, verify buildspec.yml, increase timeout if needed
 
 ### Environment variables not set in frontend
+
 **Cause**: Variables not passed to reusable workflow  
 **Solution**: Verify Pulumi outputs, check workflow inputs/outputs mapping
 

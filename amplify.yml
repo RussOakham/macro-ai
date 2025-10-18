@@ -1,0 +1,91 @@
+# Root-level Amplify Configuration for Macro AI
+# This file is auto-detected by Amplify when branches have enableAutoBuild: true
+# It uses conditional logic based on AWS_BRANCH environment variable to select appropriate build settings
+
+version: 1
+
+# Backend configuration (minimal since we use separate ECS deployment)
+backend:
+  phases:
+    build:
+      commands:
+        - echo "Backend build phase - using separate ECS deployment"
+        - echo "Environment: $AMPLIFY_ENVIRONMENT_NAME"
+        - echo "Branch: $AWS_BRANCH"
+
+# Frontend configuration with branch-based conditional logic
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "=== Amplify Frontend Pre-Build Phase ==="
+        - echo "Node version: $(node --version)"
+        - echo "Branch: $AWS_BRANCH"
+        - echo "API URL: ${VITE_API_URL:-not-set}"
+        
+        # Install pnpm globally
+        - echo "Installing pnpm package manager..."
+        - npm install -g pnpm@10.14.0
+        - echo "pnpm version: $(pnpm --version)"
+
+        # Install dependencies
+        - echo "Installing project dependencies..."
+        - pnpm install --frozen-lockfile
+
+        # Display environment configuration
+        - echo "=== Environment Configuration ==="
+        - echo "VITE_API_URL: ${VITE_API_URL:-not-set}"
+        - echo "VITE_APP_ENV: ${VITE_APP_ENV:-not-set}"
+        - echo "VITE_APP_NAME: ${VITE_APP_NAME:-not-set}"
+        - echo "AWS_BRANCH: $AWS_BRANCH"
+
+        # Validate environment variables
+        - echo "=== Environment Validation ==="
+        - |
+          if [ -z "$VITE_API_URL" ]; then
+            echo "ERROR: VITE_API_URL is not set"
+            exit 1
+          fi
+        - |
+          if [ -z "$VITE_API_KEY" ]; then
+            echo "ERROR: VITE_API_KEY is not set"
+            exit 1
+          fi
+        - echo "Environment validation passed"
+
+    build:
+      commands:
+        - echo "=== Amplify Frontend Build Phase ==="
+        - echo "Starting React application build..."
+        - echo "Target branch: $AWS_BRANCH"
+
+        # Run type checking
+        - echo "Running TypeScript type check..."
+        - pnpm type-check
+
+        # Run build
+        - echo "Building application..."
+        - pnpm build
+
+        # Validate build output
+        - echo "=== Build Validation ==="
+        - |
+          if [ ! -d "apps/client-ui/dist" ]; then
+            echo "ERROR: Build output directory not found"
+            exit 1
+          fi
+        - echo "Build completed successfully"
+        - echo "Build output size: $(du -sh apps/client-ui/dist | cut -f1)"
+
+  # Build artifacts configuration
+  artifacts:
+    baseDirectory: apps/client-ui/dist
+    files:
+      - '**/*'
+
+  # Cache configuration for faster builds
+  cache:
+    paths:
+      - node_modules/**/*
+      - .pnpm-store/**/*
+      - ~/.pnpm-store/**/*

@@ -42,7 +42,7 @@ jobs:
         EVENT_ACTION: ${{ github.event.action }}
       run: |
         echo "🔍 Validating PR inputs..."
-        
+
         echo "🔍 Raw GitHub context values:"
         echo "  - github.event.number: $PR_NUMBER"
         echo "  - github.event.pull_request.head.ref: $BRANCH_NAME"
