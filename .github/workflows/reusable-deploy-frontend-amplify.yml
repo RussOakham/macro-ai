@@ -87,7 +87,10 @@ jobs:
           # Determine Doppler config based on environment
           if [[ "${{ inputs.environment-name }}" == "production" ]]; then
             DOPPLER_CONFIG="prd"
+          elif [[ "${{ inputs.environment-name }}" == "staging" ]]; then
+            DOPPLER_CONFIG="stg"
           else
+            # Default to dev for PR previews (pr-*)
             DOPPLER_CONFIG="dev"
           fi
           
