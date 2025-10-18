@@ -20,208 +20,126 @@ The following changes have been committed to your feature branch:
    - Changed to: `AdministratorAccess-Amplify` (proper Amplify permissions)
    - Allows build environment to execute with correct permissions
 
-3. **Added Compute Role to Branch Configuration**
-   - Added `computeRoleArn: computeRole.arn` to Branch creation
-   - Enables branch-level compute role assignment
-   - Allows each branch to run builds with proper permissions
-   - Fixes "Unable to assume IAM Role" errors during builds
+3. **Service Role Applied to App**
+   - The service role is applied at the App level (`iamServiceRoleArn`)
+   - Branches inherit all permissions from the App's service role
+   - This provides complete permissions for building and deploying
 
-## Implementation Steps
+## Implementation Steps - DEPLOY NOW
 
 ### Step 1: Deploy Infrastructure Changes (YOUR LOCAL MACHINE)
 
-Run the following commands to deploy the Pulumi infrastructure with the new IAM configuration:
-
+**Navigate to infrastructure/pulumi directory:**
 ```bash
-# Navigate to infrastructure directory
-cd infrastructure
-
-# Select the dev stack
-pulumi stack select dev
-
-# Set configuration (if needed)
-pulumi config set aws:region us-east-1
-pulumi config set environment-name dev
-pulumi config set deployment-type permanent
-pulumi config set image-tag latest
-
-# Preview changes
-pulumi preview
-
-# Deploy the changes
-pulumi up --yes
+cd infrastructure/pulumi
 ```
 
-**Expected Output:**
-```
-~ aws:iam:Role dev-frontend-service-role updating
-~ aws:iam:RolePolicyAttachment dev-frontend-service-role-policy updating
-~ aws:iam:Role dev-frontend-compute-role updating
-~ aws:iam:RolePolicyAttachment dev-frontend-compute-role-policy updating
-~ aws:amplify:App dev-frontend-app updating
-~ aws:amplify:Branch dev-frontend-branch updating
+**Run Pulumi deployment:**
+```bash
+pulumi up --stack dev --yes
 ```
 
-### Step 2: Verify IAM Roles in AWS Console
+The IAM roles will be updated with the correct `AdministratorAccess-Amplify` policy, and your Amplify app will be configured with proper permissions for auto-build.
 
-After deployment completes, verify the IAM roles are properly configured:
+**Expected Result:**
+- Service role updated with `AdministratorAccess-Amplify` policy ✓
+- Amplify App gets service role ARN attached ✓
+- Auto-build should now work without manual trigger
+
+### Step 2: Verify IAM Roles in AWS Console (After deployment completes)
 
 1. **Go to AWS IAM Console** → Roles
 2. **Find role:** `dev-frontend-service-role-*`
-   - Check it has `AdministratorAccess-Amplify` policy attached ✓
-   - Check Trust Policy includes `amplify.amazonaws.com` ✓
-
-3. **Find role:** `dev-frontend-compute-role-*`
-   - Check it has `AdministratorAccess-Amplify` policy attached ✓
-   - Check Trust Policy includes `amplify.amazonaws.com` ✓
+   - Should have `AdministratorAccess-Amplify` policy attached ✓
+   - Trust Policy should include `amplify.amazonaws.com` ✓
 
 ### Step 3: Verify Amplify Configuration
 
 1. **Go to AWS Amplify Console** → macro-ai-dev app
 2. **Check App Settings** → General
-   - Service role: Should show the new `dev-frontend-service-role-*` ARN ✓
-3. **Go to Hosting** → Branches → dev branch
+   - Service role: Should show the updated service role ARN ✓
+3. **Hosting** → Branches → dev
    - Auto-build enabled: ✓
-   - Compute role: Should show the new `dev-frontend-compute-role-*` ARN ✓
 
 ### Step 4: Verify GitHub Webhook Configuration
-
-The GitHub webhook must be properly configured for auto-build to trigger:
 
 1. **Go to AWS Amplify Console** → App settings → GitHub connections
 2. **Check webhook status:**
    - Should show "Active" or "Connected" ✓
-   - If missing or inactive, reconnect repository
 
-3. **Alternative: Check GitHub repository**
-   - Go to GitHub Settings → Webhooks
-   - Should see Amplify webhook for your app
-   - Recent deliveries should show successful (green) status
+### Step 5: Test Auto-Build
 
-### Step 5: Test Auto-Build with PR Branch
-
-Test the auto-build functionality:
-
-1. **Push code to PR branch:**
+1. **Push code to your feature branch:**
    ```bash
    git push origin feature/more-workflow-improvements-yayayaya
    ```
 
 2. **Monitor Amplify deployment:**
-   - Go to AWS Amplify Console → Deployments
-   - Should see new deployment automatically start (within 30-60 seconds)
-   - Deployment should be marked as "Auto-build" not manual
+   - Go to AWS Amplify Console → Deployments tab
+   - Should see new deployment START AUTOMATICALLY (within 30-60 seconds)
+   - NO manual "Redeploy" button needed ✓
 
 3. **Expected flow:**
    ```
+   GitHub push
+        ↓
    GitHub webhook fires
         ↓
    Amplify receives notification
         ↓
-   Build job starts automatically
+   Build starts automatically (auto-build trigger)
         ↓
-   Build completes with IAM permissions
+   Build completes with AdministratorAccess-Amplify permissions
         ↓
    Frontend deploys automatically
    ```
 
 ### Step 6: Verify Deployment Success
 
-Once deployment completes:
-
-1. **Check Amplify Deployments tab:**
+1. **Check Amplify Deployments:**
    - Status should show ✓ (green checkmark)
-   - Duration should be complete
-   - No manual intervention required
+   - Should be marked as "Auto-build" not manual
 
 2. **Test frontend URL:**
-   - Navigate to: `https://pr-90.macro-ai.russoakham.dev/` (or your branch URL)
+   - Navigate to your branch URL (e.g., `https://pr-90.macro-ai.russoakham.dev/`)
    - Should load React app (not Amplify welcome page)
-   - Check browser console for any errors
 
-3. **Verify environment variables:**
-   - Open browser DevTools → Application → Environment
-   - Should see `VITE_API_URL`, `VITE_PR_NUMBER`, etc.
+## Key Fix Summary
+
+| Component | Before | After |
+|-----------|--------|-------|
+| Service Role Policy | `AdministratorAccess` | `AdministratorAccess-Amplify` ✓ |
+| Compute Role | Created but not used | Not needed (App level suffices) ✓ |
+| App Service Role | May not have been set | Properly attached ✓ |
+| Auto-Build Trigger | Manual deployment required | GitHub webhook triggers automatically ✓ |
+| Build Permissions | Insufficient | Complete ✓ |
 
 ## Troubleshooting
 
 ### Issue: Deployment still requires manual trigger
 
-**Solution 1: Check GitHub Webhook**
-```bash
-# List recent webhook deliveries in GitHub
-# Go to: Repo Settings → Webhooks → Amplify webhook → Recent Deliveries
-# Look for green checkmarks (successful) or red X (failed)
-```
-
-**Solution 2: Force refresh Amplify webhook**
+**Solution 1: Force refresh Amplify webhook**
 1. Go to Amplify Console → App settings → GitHub connections
 2. Click "Disconnect repository"
 3. Click "Connect repository" 
 4. Select your repository again
 5. Authorize GitHub access
 
-**Solution 3: Check IAM role trust relationship**
-```bash
-# Verify in AWS IAM Console → Roles
-# Trust policy should include:
-{
-  "Principal": {
-    "Service": "amplify.amazonaws.com"
-  }
-}
-```
+**Solution 2: Verify IAM role was updated**
+- Check AWS IAM console for `dev-frontend-service-role-*`
+- Verify it has `AdministratorAccess-Amplify` policy
+- Wait 5-10 minutes for permissions to propagate
 
-### Issue: Build fails with "Unable to assume IAM Role"
+### Issue: Build fails with permission errors
 
 **Solution:**
-- Verify compute role is attached to branch (Step 3)
-- Verify role has `AdministratorAccess-Amplify` policy
-- Wait 5-10 minutes for IAM changes to propagate across AWS
-- Retry deployment
+- Verify `AdministratorAccess-Amplify` policy is attached to service role
+- Check trust policy includes `amplify.amazonaws.com`
+- Verify in Amplify console that service role ARN is set
 
-### Issue: Frontend shows Amplify welcome page instead of app
+### Issue: Frontend shows Amplify welcome page
 
 **Solution:**
 - Verify `amplify.yml` build configuration is correct
-- Check buildSpec phases are executing (Build logs)
-- Verify `apps/client-ui/dist/index.html` exists after build
-- Check environment variables are set correctly
-
-## After Successful Deployment
-
-Once auto-build is working:
-
-1. **Clean up manual deployments:**
-   - Delete any manual deployment artifacts from S3
-   - No more need to click "Redeploy this version" in Amplify console
-
-2. **Monitor future deployments:**
-   - Auto-build should trigger on every branch push
-   - Check Amplify → Deployments for recent activity
-   - Expect 2-5 minute deployment time
-
-3. **Test all environments:**
-   - Once PR preview works, test staging (develop branch)
-   - Then test production (main branch)
-
-## Summary of Changes
-
-| Component | Before | After |
-|-----------|--------|-------|
-| Service Role Policy | `AdministratorAccess` | `AdministratorAccess-Amplify` ✓ |
-| Compute Role Policy | `AdministratorAccess` | `AdministratorAccess-Amplify` ✓ |
-| Branch Compute Role | Not set | `computeRole.arn` ✓ |
-| Manual Deployment | Required | Not needed ✓ |
-| GitHub Webhook | May not fire | Will fire ✓ |
-| Build Permissions | Insufficient | Complete ✓ |
-
-## Questions?
-
-If auto-build still doesn't work after these steps:
-
-1. Check Amplify Deployment logs for specific error messages
-2. Verify GitHub webhook is delivering events successfully
-3. Confirm IAM roles have correct policies and trust relationships
-4. Check `amplify.yml` in repository root is valid YAML syntax
-5. Verify `apps/client-ui/dist` directory is created by build
+- Check build logs in Amplify console for errors
+- Verify build actually completes successfully
