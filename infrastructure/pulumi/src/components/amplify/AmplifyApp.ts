@@ -204,9 +204,8 @@ export class AmplifyApp extends pulumi.ComponentResource {
 				stage: AmplifyApp.getStage(args.deploymentType, args.environmentName),
 				enableBasicAuth: args.enableBasicAuth,
 				basicAuthCredentials: args.basicAuthCredentials,
-				computeRoleArn: computeRole.arn, // Attach compute role
-				// Note: backendEnvironmentArn is only for Amplify Backend environments (not used in this project)
-				// We deploy backend to ECS separately, not to Amplify Backend
+				// Note: Compute role is configured at App level via iamServiceRoleArn
+				// Branches inherit permissions from the App's service role
 			},
 			{ parent: this },
 		)
