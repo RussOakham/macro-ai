@@ -94,7 +94,9 @@ if (isPreviewEnvironment) {
 		'albSecurityGroupId',
 	) as pulumi.Output<string>
 	const sharedHttpsListenerArn = devStack.requireOutput('httpsListenerArn')
-	sharedAlbDnsName = devStack.requireOutput('albDnsName') as pulumi.Output<string>
+	sharedAlbDnsName = devStack.requireOutput(
+		'albDnsName',
+	) as pulumi.Output<string>
 	sharedAlbZoneId = devStack.requireOutput('albZoneId') as pulumi.Output<string>
 
 	// ===================================================================
@@ -191,6 +193,81 @@ if (isPreviewEnvironment) {
 		logRetentionDays: COST_OPTIMIZATION.logRetentionDays.preview,
 		tags: commonTags,
 	})
+
+	// ===================================================================
+	// PR PREVIEW FRONTEND DEPLOYMENT
+	// ===================================================================
+
+	// Reference shared Amplify app from dev stack
+	const sharedAmplifyAppId = devStack.getOutput('sharedAmplifyAppId')
+
+	// Only create Amplify branch if shared app exists
+	if (sharedAmplifyAppId) {
+		// Get secrets
+		const viteApiKey = config.requireSecret('vite-api-key')
+
+		// Construct backend API URL for frontend
+		const backendApiUrl = pulumi.interpolate`https://${prCustomDomainName}`
+
+		// Create PR-specific Amplify branch
+		const prBranchName = `pr-${prNumber}`
+		const prAmplifyBranch = new aws.amplify.Branch(
+			`pr-${prNumber}-frontend-branch`,
+			{
+				appId: sharedAmplifyAppId,
+				branchName: prBranchName,
+				enableAutoBuild: false, // Manual builds via GitHub Actions
+				framework: 'React',
+				stage: 'DEVELOPMENT',
+				environmentVariables: {
+					VITE_API_URL: backendApiUrl,
+					VITE_API_KEY: viteApiKey,
+					VITE_APP_ENV: environmentName,
+					VITE_APP_NAME: pulumi.interpolate`Macro AI (${environmentName})`,
+					VITE_PR_NUMBER: String(prNumber),
+					VITE_PREVIEW_MODE: 'true',
+				},
+				tags: commonTags,
+			},
+		)
+
+		// Create custom domain for PR frontend (optional but recommended)
+		let prFrontendUrl: pulumi.Output<string>
+		let prDomainAssociation: aws.amplify.DomainAssociation | undefined
+
+		if (hostedZoneId && customDomainName) {
+			const prFrontendDomain = `pr-${prNumber}.${baseDomainName}`
+
+			prDomainAssociation = new aws.amplify.DomainAssociation(
+				`pr-${prNumber}-frontend-domain`,
+				{
+					appId: sharedAmplifyAppId,
+					domainName: baseDomainName,
+					subDomains: [
+						{
+							branchName: prAmplifyBranch.branchName,
+							prefix: `pr-${prNumber}`,
+						},
+					],
+					waitForVerification: false, // Don't block deployment
+				},
+				{ dependsOn: [prAmplifyBranch] },
+			)
+
+			prFrontendUrl = pulumi.interpolate`https://${prFrontendDomain}`
+		} else {
+			// Fallback to default Amplify domain
+			prFrontendUrl = pulumi.interpolate`https://${prAmplifyBranch.branchName}.${sharedAmplifyAppId}.amplifyapp.com`
+		}
+
+		// Store for exports
+		amplifyApp = {
+			app: { id: sharedAmplifyAppId } as aws.amplify.App,
+			branch: prAmplifyBranch,
+			domainAssociation: prDomainAssociation,
+			url: prFrontendUrl,
+		} as AmplifyApp
+	}
 } else {
 	// ========================
 	// PERMANENT ENVIRONMENT (dev, staging, production)
@@ -386,8 +463,8 @@ if (isPreviewEnvironment) {
 			'https://github.com/russoakham/macro-ai'
 
 		// Get secrets
-		const githubToken = config.requireSecret('github-token')
 		const viteApiKey = config.requireSecret('vite-api-key')
+		const githubToken = config.requireSecret('github-token')
 
 		// Get backend API URL for frontend environment variables
 		// Use appropriate variables based on environment type
@@ -448,8 +525,25 @@ export const httpsListenerArn = isPermanentEnvironment
 	? sharedAlb!.httpsListener?.arn
 	: undefined
 
-// Amplify frontend outputs
-// Note: amplifyApp is used here in the exports
-export const amplifyAppId = amplifyApp?.app.id
-export const amplifyBranchName = amplifyApp?.branch.branchName
+// Shared Amplify app (dev stack only - for PR previews to reference)
+export const sharedAmplifyAppId =
+	isPermanentEnvironment && environmentName === 'dev'
+		? amplifyApp?.app.id
+		: undefined
+
+// Amplify frontend outputs (all environments)
+export const amplifyAppId = amplifyApp?.app?.id
+export const amplifyBranchName = amplifyApp?.branch?.branchName
 export const frontendUrl = amplifyApp?.url
+
+// Backend API URL (all environments)
+/* eslint-disable sonarjs/no-nested-conditional */
+export const backendApiUrl = isPreviewEnvironment
+	? pulumi.interpolate`https://${prCustomDomainName}`
+	: customDomainName
+		? pulumi.interpolate`https://${customDomainName}`
+		: // oxlint-disable-next-line no-nested-ternary
+			sharedAlb?.albDnsName
+			? pulumi.interpolate`http://${sharedAlb.albDnsName}`
+			: 'Not available'
+/* eslint-enable sonarjs/no-nested-conditional */
