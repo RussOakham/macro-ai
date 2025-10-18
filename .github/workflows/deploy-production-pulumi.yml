@@ -366,29 +366,11 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
 
-  # Deploy frontend to Amplify
-  deploy-frontend-production:
-    name: Deploy Frontend to Amplify (Production)
-    uses: ./.github/workflows/reusable-deploy-frontend-amplify.yml
-    if: needs.deploy-full-stack.result == 'success' && needs.deploy-full-stack.outputs.amplify-app-id != ''
-    needs: [ deploy-full-stack ]
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      amplify-app-id: ${{ needs.deploy-full-stack.outputs.amplify-app-id }}
-      amplify-branch-name: ${{ needs.deploy-full-stack.outputs.amplify-branch-name }}
-      environment-name: production
-    secrets:
-      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_PROD }}
-
   # Production monitoring setup
   production-monitoring:
     name: Production Monitoring Setup
     runs-on: ubuntu-latest
-    needs: [ deploy-full-stack, deploy-frontend-production ]
+    needs: [ deploy-full-stack ]
     if: always() && needs.deploy-full-stack.result == 'success'
 
     steps:
@@ -404,7 +386,7 @@ jobs:
   deployment-summary:
     name: Production Deployment Summary
     runs-on: ubuntu-latest
-    needs: [ pre-deployment-validation, manual-approval, test-mode-bypass, deploy-full-stack, deploy-frontend-production, production-monitoring ]
+    needs: [ pre-deployment-validation, manual-approval, test-mode-bypass, deploy-full-stack, production-monitoring ]
     if: always()
     permissions:
       deployments: write
@@ -426,7 +408,7 @@ jobs:
         echo "✅ Manual approval: ${{ github.event.inputs.test-mode == 'true' && 'bypassed' || needs.manual-approval.result }}"
         echo "✅ Test mode bypass: ${{ github.event.inputs.test-mode == 'true' && needs.test-mode-bypass.result || 'not-used' }}"
         echo "🚀 Full stack deployment: ${{ needs.deploy-full-stack.result }}"
-        echo "🌐 Frontend deployment: ${{ needs.deploy-frontend-production.result }}"
+        echo "🌐 Frontend deployment: Automatically built by Amplify on branch push"
         echo "📊 Monitoring setup: ${{ needs.production-monitoring.result }}"
 
     - name: Update deployment status
@@ -436,7 +418,6 @@ jobs:
           const overallSuccess = '${{ needs.pre-deployment-validation.result }}' === 'success' &&
                                 ('${{ needs.manual-approval.result }}' === 'success' || '${{ needs.test-mode-bypass.result }}' === 'success') &&
                                 '${{ needs.deploy-full-stack.result }}' === 'success' &&
-                                '${{ needs.deploy-frontend-production.result }}' === 'success' &&
                                 '${{ needs.production-monitoring.result }}' === 'success';
 
           const state = overallSuccess ? 'success' : 'failure';
@@ -446,47 +427,4 @@ jobs:
             `Production deployment ${state}`;
 
           const backendUrl = '${{ needs.deploy-full-stack.outputs.backend-url }}';
-          const frontendUrl = '${{ needs.deploy-frontend-production.outputs.frontend-deployment-url }}';
-
-          // Try to find existing deployment for this SHA
-          try {
-            const { data: deployments } = await github.rest.repos.listDeployments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: context.sha,
-              environment: 'production'
-            });
-
-            if (deployments.length > 0) {
-              // Update existing deployment status
-              await github.rest.repos.createDeploymentStatus({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                deployment_id: deployments[0].id,
-                state: state,
-                description: description,
-                environment_url: frontendUrl || backendUrl
-              });
-            } else {
-              // Create new deployment if none exists
-              const { data: deployment } = await github.rest.repos.createDeployment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: context.sha,
-                environment: 'production',
-                description: isTestMode ? 'Production deployment test via Pulumi' : 'Production deployment via Pulumi'
-              });
-
-              // Set deployment status
-              await github.rest.repos.createDeploymentStatus({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                deployment_id: deployment.id,
-                state: state,
-                description: description,
-                environment_url: frontendUrl || backendUrl
-              });
-            }
-          } catch (error) {
-            console.log('Could not update deployment status:', error.message);
-          }
+          const frontendUrl = 'https://macro-ai.russoakham.dev';

@@ -211,12 +211,25 @@ if (isPreviewEnvironment) {
 
 		// Create PR-specific Amplify branch
 		const prBranchName = `pr-${prNumber}`
+
+		// Read buildSpec for preview environment
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		const fs = require('node:fs')
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		const path = require('node:path')
+		const buildSpecPath = path.resolve(
+			'../../apps/client-ui/amplify-templates/amplify.preview.yml',
+		)
+		// eslint-disable-next-line security/detect-non-literal-fs-filename
+		const previewBuildSpec = fs.readFileSync(buildSpecPath, 'utf8')
+
 		const prAmplifyBranch = new aws.amplify.Branch(
 			`pr-${prNumber}-frontend-branch`,
 			{
 				appId: sharedAmplifyAppId,
 				branchName: prBranchName,
-				enableAutoBuild: false, // Manual builds via GitHub Actions
+				enableAutoBuild: true, // Enable auto-build on branch push
+				buildSpec: previewBuildSpec, // Use preview-specific buildSpec
 				framework: 'React',
 				stage: 'DEVELOPMENT',
 				environmentVariables: {
