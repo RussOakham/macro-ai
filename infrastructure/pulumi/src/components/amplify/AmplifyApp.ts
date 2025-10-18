@@ -119,7 +119,9 @@ export class AmplifyApp extends pulumi.ComponentResource {
 			`${name}-service-role-policy`,
 			{
 				role: serviceRole.name,
-				policyArn: 'arn:aws:iam::aws:policy/AdministratorAccess', // TODO: Restrict to minimal permissions
+				// Use AWS-managed policy specifically designed for Amplify
+				// This includes S3, CloudFront, CloudWatch, and other necessary permissions
+				policyArn: 'arn:aws:iam::aws:policy/AdministratorAccess-Amplify',
 			},
 			{ parent: this },
 		)
@@ -148,12 +150,13 @@ export class AmplifyApp extends pulumi.ComponentResource {
 			{ parent: this },
 		)
 
-		// Attach policy to compute role
+		// Attach policy to compute role for build permissions
 		new aws.iam.RolePolicyAttachment(
 			`${name}-compute-role-policy`,
 			{
 				role: computeRole.name,
-				policyArn: 'arn:aws:iam::aws:policy/AdministratorAccess', // TODO: Restrict to minimal permissions
+				// Use AWS-managed policy for compute resources (S3, CloudWatch, etc.)
+				policyArn: 'arn:aws:iam::aws:policy/AdministratorAccess-Amplify',
 			},
 			{ parent: this },
 		)
@@ -201,6 +204,7 @@ export class AmplifyApp extends pulumi.ComponentResource {
 				stage: AmplifyApp.getStage(args.deploymentType, args.environmentName),
 				enableBasicAuth: args.enableBasicAuth,
 				basicAuthCredentials: args.basicAuthCredentials,
+				computeRoleArn: computeRole.arn, // Attach compute role
 				// Note: backendEnvironmentArn is only for Amplify Backend environments (not used in this project)
 				// We deploy backend to ECS separately, not to Amplify Backend
 			},
