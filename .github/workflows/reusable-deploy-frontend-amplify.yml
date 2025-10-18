@@ -130,6 +130,8 @@ jobs:
           
           echo "✅ Frontend build completed successfully"
           echo "build-success=true" >> $GITHUB_OUTPUT
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
 
       # ===================================================================
       # 4. PREPARE DEPLOYMENT ARCHIVE
