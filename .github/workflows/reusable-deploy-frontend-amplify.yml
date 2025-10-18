@@ -120,6 +120,12 @@ jobs:
         id: build
         run: |
           echo "🔨 Building frontend for ${{ inputs.environment-name }}..."
+          # Build dependencies first (e.g., @repo/macro-ai-api-client)
+          echo "📦 Building dependencies..."
+          pnpm --filter @repo/macro-ai-api-client build
+          
+          # Then build the frontend
+          echo "🏗️  Building frontend..."
           pnpm --filter client-ui build
           
           # Verify build artifacts exist
