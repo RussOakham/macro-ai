@@ -437,29 +437,6 @@ if (isPreviewEnvironment) {
 
 	// Create Amplify app for frontend deployment
 	if (isPermanentEnvironment || isPreviewEnvironment) {
-		// Determine buildspec file based on environment
-		let buildSpecPath: string
-		// eslint-disable-next-line sonarjs/no-gratuitous-expressions -- False positive, isPreviewEnvironment can be true here
-		if (isPreviewEnvironment) {
-			buildSpecPath =
-				'../../apps/client-ui/amplify-templates/amplify.preview.yml'
-		} else if (environmentName === 'production' || environmentName === 'prd') {
-			buildSpecPath =
-				'../../apps/client-ui/amplify-templates/amplify.production.yml'
-		} else {
-			buildSpecPath =
-				'../../apps/client-ui/amplify-templates/amplify.staging.yml'
-		}
-
-		// Read buildspec content
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const fs = require('node:fs')
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const path = require('node:path')
-		const fullPath = path.resolve(buildSpecPath)
-		// eslint-disable-next-line security/detect-non-literal-fs-filename
-		const buildSpec = fs.readFileSync(fullPath, 'utf8')
-
 		// Get GitHub repository URL
 		const githubRepository =
 			config.get('github-repository') ||
@@ -476,13 +453,15 @@ if (isPreviewEnvironment) {
 			: pulumi.interpolate`http://${customDomainName || sharedAlb!.albDnsName}:${permTargetGroup.port}`
 
 		// Create the Amplify app instance
-
+		// All environments use enableAutoBuild: true and the root amplify.yml configuration
 		amplifyApp = new AmplifyApp(`${environmentName}-frontend`, {
 			environmentName,
 			deploymentType,
-			buildSpec,
+			// Note: buildSpec is not provided - root amplify.yml will be auto-detected
+			// by Amplify for all branches (main, staging, pr-*, dev)
 			repository: githubRepository,
 			accessToken: githubToken,
+			enableAutoBuild: true, // All environments auto-build on branch push
 			environmentVariables: {
 				VITE_API_URL: backendApiUrl,
 				VITE_API_KEY: viteApiKey,

@@ -42,7 +42,7 @@ export type AmplifyFramework =
 export interface AmplifyAppArgs {
 	environmentName: string
 	deploymentType: DeploymentType
-	buildSpec: pulumi.Input<string>
+	buildSpec?: pulumi.Input<string> // Optional: if not provided, uses root amplify.yml
 	repository: string
 	accessToken: pulumi.Input<string>
 	environmentVariables: Record<string, pulumi.Input<string>>
@@ -52,7 +52,7 @@ export interface AmplifyAppArgs {
 	// Additional type-safe options
 	framework?: AmplifyFramework
 	platform?: 'WEB' | 'WEB_COMPUTE'
-	enableAutoBuild?: boolean
+	enableAutoBuild?: boolean // Default: true for all environments
 	enableBasicAuth?: boolean
 	basicAuthCredentials?: pulumi.Input<string>
 	customRules?: AmplifyCustomRule[]
@@ -93,7 +93,7 @@ export class AmplifyApp extends pulumi.ComponentResource {
 				name: `macro-ai-${args.environmentName}`,
 				repository: normalizedRepository,
 				accessToken: args.accessToken,
-				buildSpec: args.buildSpec,
+				...(args.buildSpec ? { buildSpec: args.buildSpec } : {}), // Only include if provided
 				environmentVariables: args.environmentVariables,
 				customRules: args.customRules || [
 					{
@@ -119,7 +119,7 @@ export class AmplifyApp extends pulumi.ComponentResource {
 					args.deploymentType,
 					args.environmentName,
 				),
-				enableAutoBuild: args.enableAutoBuild ?? false, // Manual builds via GitHub Actions
+				enableAutoBuild: args.enableAutoBuild ?? true, // Default: auto-build enabled for all environments
 				framework: args.framework || 'React',
 				stage: AmplifyApp.getStage(args.deploymentType, args.environmentName),
 				enableBasicAuth: args.enableBasicAuth,
@@ -282,9 +282,7 @@ export class AmplifyApp extends pulumi.ComponentResource {
 		if (!args.accessToken) {
 			throw new Error('accessToken is required')
 		}
-		if (!args.buildSpec) {
-			throw new Error('buildSpec is required')
-		}
+		// buildSpec is now optional - root amplify.yml will be used if not provided
 		if (args.customDomainName && !args.hostedZoneId) {
 			throw new Error(
 				'hostedZoneId is required when customDomainName is provided',
