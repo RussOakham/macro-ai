@@ -48,6 +48,10 @@ on:
         value: ${{ jobs.plan.outputs.plan-success }}
       changes-detected:
         value: ${{ jobs.plan.outputs.changes-detected }}
+      amplify-app-id:
+        value: ${{ jobs.deploy.outputs.amplify-app-id }}
+      amplify-branch-name:
+        value: ${{ jobs.deploy.outputs.amplify-branch-name }}
 
 jobs:
   # ===================================================================
@@ -179,6 +183,8 @@ jobs:
       backend-url: ${{ steps.deploy.outputs.backend-url }}
       frontend-url: ${{ steps.deploy.outputs.frontend-url }}
       stack-name: ${{ steps.deploy.outputs.stack-name }}
+      amplify-app-id: ${{ steps.deploy.outputs.amplify-app-id }}
+      amplify-branch-name: ${{ steps.deploy.outputs.amplify-branch-name }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -265,15 +271,23 @@ jobs:
         # Try to get frontend URL (may not exist if no frontend deployed)
         FRONTEND_URL=$(pulumi stack output frontendUrl 2>/dev/null || echo "")
 
+        # Try to get Amplify outputs (may not exist if no frontend deployed)
+        AMPLIFY_APP_ID=$(pulumi stack output amplifyAppId 2>/dev/null || echo "")
+        AMPLIFY_BRANCH_NAME=$(pulumi stack output amplifyBranchName 2>/dev/null || echo "")
+
         # Log what we found
         echo "Stack: ${STACK_NAME}"
         echo "Backend URL: ${BACKEND_URL:-'Not available'}"
         echo "Frontend URL: ${FRONTEND_URL:-'Not available'}"
+        echo "Amplify App ID: ${AMPLIFY_APP_ID:-'Not available'}"
+        echo "Amplify Branch: ${AMPLIFY_BRANCH_NAME:-'Not available'}"
 
         {
           echo "backend-url=${BACKEND_URL}"
           echo "frontend-url=${FRONTEND_URL}"
           echo "stack-name=${STACK_NAME}"
+          echo "amplify-app-id=${AMPLIFY_APP_ID}"
+          echo "amplify-branch-name=${AMPLIFY_BRANCH_NAME}"
         } >> $GITHUB_OUTPUT
 
     - name: Trigger Amplify Build
