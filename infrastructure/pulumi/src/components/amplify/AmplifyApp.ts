@@ -184,7 +184,8 @@ export class AmplifyApp extends pulumi.ComponentResource {
 				platform: args.platform || 'WEB',
 				description:
 					args.description || `Macro AI ${args.environmentName} frontend`,
-				iamServiceRoleArn: serviceRole.arn, // Attach service role
+				iamServiceRoleArn: serviceRole.arn, // Attach service role for app operations
+				computeRoleArn: computeRole.arn, // Attach compute role for build environment
 				tags,
 			},
 			{ parent: this },
@@ -204,8 +205,10 @@ export class AmplifyApp extends pulumi.ComponentResource {
 				stage: AmplifyApp.getStage(args.deploymentType, args.environmentName),
 				enableBasicAuth: args.enableBasicAuth,
 				basicAuthCredentials: args.basicAuthCredentials,
-				// Note: Compute role is configured at App level via iamServiceRoleArn
-				// Branches inherit permissions from the App's service role
+				// Note: IAM roles are configured at App level
+				// - iamServiceRoleArn: App-level service role for app operations
+				// - computeRoleArn: App-level compute role for build environment
+				// Branches inherit these permissions from the parent App
 			},
 			{ parent: this },
 		)
