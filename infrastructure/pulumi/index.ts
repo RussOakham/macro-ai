@@ -526,10 +526,7 @@ export const httpsListenerArn = isPermanentEnvironment
 	: undefined
 
 // Shared Amplify app (dev stack only - for PR previews to reference)
-export const sharedAmplifyAppId =
-	isPermanentEnvironment && environmentName === 'dev'
-		? amplifyApp?.app.id
-		: undefined
+export const sharedAmplifyAppId = amplifyApp?.app?.id
 
 // Amplify frontend outputs (all environments)
 export const amplifyAppId = amplifyApp?.app?.id
