@@ -127,7 +127,7 @@ jobs:
         echo "🔍 [Plan] Configuration set successfully"
         echo "  - Stack: $ENVIRONMENT_NAME"
         echo "  - Image Tag: $IMAGE_TAG"
-        
+
         # Additional image tag debugging
         echo "🔍 [Plan] Image tag details:"
         echo "  - Full Image Tag: $IMAGE_TAG"
@@ -244,7 +244,7 @@ jobs:
         echo "🔍 [Apply] Configuration set successfully"
         echo "  - Stack: $ENVIRONMENT_NAME"
         echo "  - Image Tag: $IMAGE_TAG"
-        
+
         # Additional image tag debugging
         echo "🔍 [Apply] Image tag details:"
         echo "  - Full Image Tag: $IMAGE_TAG"
@@ -291,6 +291,7 @@ jobs:
         } >> $GITHUB_OUTPUT
 
     - name: Trigger Amplify Build
+      id: trigger-build
       if: steps.deploy.outputs.amplify-app-id != ''
       run: |
         # Use outputs from the deploy step instead of re-querying Pulumi
@@ -306,10 +307,78 @@ jobs:
         fi
 
         echo "🚀 Triggering Amplify build for app: $APP_ID, branch: $BRANCH_NAME"
-        aws amplify start-job \
+        RESPONSE=$(aws amplify start-job \
           --app-id "$APP_ID" \
           --branch-name "$BRANCH_NAME" \
-          --job-type RELEASE
+          --job-type RELEASE \
+          --region us-east-1 \
+          --output json)
+
+        JOB_ID=$(echo "$RESPONSE" | jq -r '.jobSummary.jobId // empty')
+        if [ -z "$JOB_ID" ]; then
+          echo "❌ Failed to trigger build"
+          echo "$RESPONSE"
+          exit 1
+        fi
+
+        echo "✅ Build triggered successfully (Job ID: $JOB_ID)"
+        echo "job-id=$JOB_ID" >> $GITHUB_OUTPUT
+        echo "app-id=$APP_ID" >> $GITHUB_OUTPUT
+        echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+    - name: Monitor Amplify Build
+      if: steps.trigger-build.outputs.job-id != ''
+      run: |
+        JOB_ID="${{ steps.trigger-build.outputs.job-id }}"
+        APP_ID="${{ steps.trigger-build.outputs.app-id }}"
+        BRANCH_NAME="${{ steps.trigger-build.outputs.branch-name }}"
+        MAX_WAIT=1800  # 30 minutes
+        ELAPSED=0
+        POLL_INTERVAL=10
+
+        echo "⏳ Monitoring Amplify build (Job ID: $JOB_ID, App: $APP_ID, Branch: $BRANCH_NAME)"
+        echo "   Max wait time: 30 minutes"
+        echo ""
+
+        while [ $ELAPSED -lt $MAX_WAIT ]; do
+          JOB_STATUS=$(aws amplify get-job \
+            --app-id "$APP_ID" \
+            --branch-name "$BRANCH_NAME" \
+            --job-id "$JOB_ID" \
+            --region us-east-1 \
+            --output json)
+
+          STATUS=$(echo "$JOB_STATUS" | jq -r '.job.summary.status // "UNKNOWN"')
+          PROGRESS=$(echo "$JOB_STATUS" | jq -r '.job.summary.progressMessage // "In progress"')
+          END_TIME=$(echo "$JOB_STATUS" | jq -r '.job.summary.endTime // "N/A"')
+
+          echo "  Status: $STATUS - $PROGRESS (Elapsed: ${ELAPSED}s)"
+
+          if [ "$STATUS" = "SUCCEED" ]; then
+            echo ""
+            echo "✅ Amplify build SUCCEEDED!"
+            echo "   Domain: https://$BRANCH_NAME.${{ steps.trigger-build.outputs.app-id }}.amplifyapp.com"
+            exit 0
+          elif [ "$STATUS" = "FAILED" ]; then
+            echo ""
+            echo "❌ Amplify build FAILED!"
+            echo "   Job Status Details:"
+            echo "$JOB_STATUS" | jq '.job'
+            exit 1
+          elif [ "$STATUS" = "CANCELLED" ]; then
+            echo ""
+            echo "⚠️ Amplify build was CANCELLED"
+            exit 1
+          fi
+
+          sleep $POLL_INTERVAL
+          ELAPSED=$((ELAPSED + POLL_INTERVAL))
+        done
+
+        echo ""
+        echo "⚠️ Build monitoring timeout after 30 minutes"
+        echo "   Job may still be running - check AWS Amplify console for status"
+        exit 1
 
   # ===================================================================
   # STAGE 3: VALIDATE OUTPUTS
