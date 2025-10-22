@@ -291,14 +291,15 @@ jobs:
         } >> $GITHUB_OUTPUT
 
     - name: Trigger Amplify Build
-      if: steps.deploy.outputs.frontend-url != ''
+      if: steps.deploy.outputs.amplify-app-id != ''
       run: |
-        # Get Amplify outputs with error handling
-        APP_ID=$(pulumi stack output amplifyAppId 2>/dev/null || echo "")
-        BRANCH_NAME=$(pulumi stack output amplifyBranchName 2>/dev/null || echo "")
+        # Use outputs from the deploy step instead of re-querying Pulumi
+        # (re-querying loses the Pulumi stack context between steps)
+        APP_ID="${{ steps.deploy.outputs.amplify-app-id }}"
+        BRANCH_NAME="${{ steps.deploy.outputs.amplify-branch-name }}"
 
         if [ -z "$APP_ID" ] || [ -z "$BRANCH_NAME" ]; then
-          echo "⚠️ Amplify app not found or not deployed, skipping build trigger"
+          echo "⚠️ Amplify outputs not available, skipping build trigger"
           echo "APP_ID: ${APP_ID:-'Not available'}"
           echo "BRANCH_NAME: ${BRANCH_NAME:-'Not available'}"
           exit 0
