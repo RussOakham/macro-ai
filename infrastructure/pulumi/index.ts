@@ -449,54 +449,45 @@ if (isPreviewEnvironment) {
 		const viteApiKey = permEnvironmentVariables.apply(
 			(vars) => vars.VITE_API_KEY || 'default-api-key',
 		)
-		const githubToken = permEnvironmentVariables.apply(
+		const githubTokenValue = permEnvironmentVariables.apply(
 			(vars) => vars.AMPLIFY_GITHUB_PAT || '',
 		)
 
-		// Only create Amplify app if GitHub token is available
-		githubToken.apply((token) => {
-			if (!token || token === '') {
-				console.warn(
-					'⚠️  AMPLIFY_GITHUB_PAT not found in Doppler secrets. Amplify app will not be created. ' +
-						'Set AMPLIFY_GITHUB_PAT in Doppler (macro-ai/dev config) to enable GitHub integration.',
-				)
-				return
-			}
+		// Get backend API URL for frontend environment variables
+		// Use appropriate variables based on environment type
+		const backendApiUrl = isPreviewEnvironment
+			? pulumi.interpolate`https://${prCustomDomainName}`
+			: pulumi.interpolate`https://${customDomainName}`
 
-			// Get backend API URL for frontend environment variables
-			// Use appropriate variables based on environment type
-			const backendApiUrl = isPreviewEnvironment
-				? pulumi.interpolate`http://${prCustomDomainName || sharedAlbDnsName}:${APP_CONFIG.port}`
-				: pulumi.interpolate`http://${customDomainName || sharedAlb!.albDnsName}:${permTargetGroup.port}`
-
-			// Create the Amplify app instance
-			// All environments use enableAutoBuild: true and the root amplify.yml configuration
-			amplifyApp = new AmplifyApp(`${environmentName}-frontend`, {
-				environmentName,
-				deploymentType,
-				// Note: buildSpec is not provided - root amplify.yml will be auto-detected
-				// by Amplify for all branches (main, staging, pr-*, dev)
-				repository: githubRepository,
-				accessToken: token,
-				enableAutoBuild: true, // All environments auto-build on branch push
-				environmentVariables: {
-					VITE_API_URL: backendApiUrl,
-					VITE_API_KEY: viteApiKey,
-					VITE_APP_ENV: environmentName,
-					VITE_APP_NAME: `Macro AI (${environmentName})`,
-					...(isPreviewEnvironment
-						? {
-								VITE_PR_NUMBER: environmentName.replace('pr-', ''),
-								VITE_PREVIEW_MODE: 'true',
-							}
-						: {}),
-				},
-				customDomainName: customDomainName
-					? `${environmentName}.${baseDomainName}`
-					: undefined,
-				hostedZoneId,
-				tags: commonTags,
-			})
+		// Create Amplify app - will only work if GitHub token is present
+		// Pulumi will handle the async nature of githubTokenValue
+		amplifyApp = new AmplifyApp(`${environmentName}-frontend`, {
+			environmentName,
+			deploymentType,
+			// Note: buildSpec is not provided - root amplify.yml will be auto-detected
+			// by Amplify for all branches (main, staging, pr-*, dev)
+			repository: githubRepository,
+			accessToken: githubTokenValue,
+			enableAutoBuild: true, // All environments auto-build on branch push
+			environmentVariables: {
+				VITE_API_URL: backendApiUrl,
+				VITE_API_KEY: viteApiKey,
+				VITE_APP_ENV: environmentName,
+				VITE_APP_NAME: isPreviewEnvironment
+					? `Macro AI (PR-${environmentName.replace('pr-', '')})`
+					: `Macro AI (${environmentName})`,
+				...(isPreviewEnvironment
+					? {
+							VITE_PR_NUMBER: environmentName.replace('pr-', ''),
+							VITE_PREVIEW_MODE: 'true',
+						}
+					: {}),
+			},
+			customDomainName: customDomainName
+				? `${environmentName}.${baseDomainName}`
+				: undefined,
+			hostedZoneId,
+			tags: commonTags,
 		})
 	}
 
