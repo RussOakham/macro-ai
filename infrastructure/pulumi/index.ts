@@ -450,15 +450,15 @@ if (isPreviewEnvironment) {
 			(vars) => vars.VITE_API_KEY || 'default-api-key',
 		)
 		const githubToken = permEnvironmentVariables.apply(
-			(vars) => vars.GITHUB_TOKEN || '',
+			(vars) => vars.AMPLIFY_GITHUB_PAT || '',
 		)
 
 		// Only create Amplify app if GitHub token is available
 		githubToken.apply((token) => {
 			if (!token || token === '') {
 				console.warn(
-					'⚠️  GITHUB_TOKEN not found in Doppler secrets. Amplify app will not be created. ' +
-						'Set GITHUB_TOKEN in Doppler (macro-ai/dev config) to enable GitHub integration.',
+					'⚠️  AMPLIFY_GITHUB_PAT not found in Doppler secrets. Amplify app will not be created. ' +
+						'Set AMPLIFY_GITHUB_PAT in Doppler (macro-ai/dev config) to enable GitHub integration.',
 				)
 				return
 			}
