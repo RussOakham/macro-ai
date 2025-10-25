@@ -3,15 +3,6 @@
 
 version: 1
 
-# Backend configuration (minimal since we use separate Lambda deployment)
-backend:
-  phases:
-    build:
-      commands:
-        - echo "Backend build phase - using separate Lambda deployment"
-        - echo "Environment: $AMPLIFY_ENVIRONMENT_NAME"
-        - echo "Build timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-
 # Frontend configuration with comprehensive build process
 frontend:
   phases:

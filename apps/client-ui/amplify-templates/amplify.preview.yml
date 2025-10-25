@@ -18,18 +18,6 @@
 
 version: 1
 
-# Backend configuration
-backend:
-  phases:
-    build:
-      commands:
-        - echo "=== Preview Environment Backend Phase ==="
-        - echo "Environment: $AMPLIFY_ENVIRONMENT_NAME (Preview)"
-        - echo "PR Number: $VITE_PR_NUMBER"
-        - echo "Build timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-        - echo "Commit: $VITE_BUILD_COMMIT"
-        - echo "Branch: $VITE_BUILD_BRANCH"
-
 # Frontend configuration optimized for preview deployments
 frontend:
   phases:

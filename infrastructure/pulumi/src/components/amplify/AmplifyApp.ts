@@ -87,82 +87,7 @@ export class AmplifyApp extends pulumi.ComponentResource {
 		)
 
 		// ===================================================================
-		// CREATE IAM ROLES FOR AMPLIFY
-		// ===================================================================
-
-		// Create service role for Amplify
-		const serviceRole = new aws.iam.Role(
-			`${name}-service-role`,
-			{
-				assumeRolePolicy: JSON.stringify({
-					Version: '2012-10-17',
-					Statement: [
-						{
-							Action: 'sts:AssumeRole',
-							Effect: 'Allow',
-							Principal: {
-								Service: 'amplify.amazonaws.com',
-							},
-						},
-					],
-				}),
-				tags: {
-					Name: `macro-ai-${args.environmentName}-amplify-service-role`,
-					...tags,
-				},
-			},
-			{ parent: this },
-		)
-
-		// Attach policy to service role for basic Amplify operations
-		new aws.iam.RolePolicyAttachment(
-			`${name}-service-role-policy`,
-			{
-				role: serviceRole.name,
-				// Use AWS-managed policy specifically designed for Amplify
-				// This includes S3, CloudFront, CloudWatch, and other necessary permissions
-				policyArn: 'arn:aws:iam::aws:policy/AdministratorAccess-Amplify',
-			},
-			{ parent: this },
-		)
-
-		// Create compute role for build environment (SSR compute)
-		const computeRole = new aws.iam.Role(
-			`${name}-compute-role`,
-			{
-				assumeRolePolicy: JSON.stringify({
-					Version: '2012-10-17',
-					Statement: [
-						{
-							Action: 'sts:AssumeRole',
-							Effect: 'Allow',
-							Principal: {
-								Service: 'amplify.amazonaws.com',
-							},
-						},
-					],
-				}),
-				tags: {
-					Name: `macro-ai-${args.environmentName}-amplify-compute-role`,
-					...tags,
-				},
-			},
-			{ parent: this },
-		)
-
-		// Attach policy to compute role for build permissions
-		new aws.iam.RolePolicyAttachment(
-			`${name}-compute-role-policy`,
-			{
-				role: computeRole.name,
-				// Use AWS-managed policy for compute resources (S3, CloudWatch, etc.)
-				policyArn: 'arn:aws:iam::aws:policy/AdministratorAccess-Amplify',
-			},
-			{ parent: this },
-		)
-
-		// ===================================================================
-		// CREATE AMPLIFY APP WITH IAM ROLES
+		// CREATE AMPLIFY APP
 		// ===================================================================
 
 		// Create Amplify App with proper typing
@@ -184,8 +109,8 @@ export class AmplifyApp extends pulumi.ComponentResource {
 				platform: args.platform || 'WEB',
 				description:
 					args.description || `Macro AI ${args.environmentName} frontend`,
-				iamServiceRoleArn: serviceRole.arn, // Attach service role for app operations
-				computeRoleArn: computeRole.arn, // Attach compute role for build environment
+				// Note: IAM roles not configured - we use a separate ECS backend for API services
+				// Amplify Backend services (AppSync, Lambda, Cognito) are not used
 				tags,
 			},
 			{ parent: this },
@@ -205,10 +130,6 @@ export class AmplifyApp extends pulumi.ComponentResource {
 				stage: AmplifyApp.getStage(args.deploymentType, args.environmentName),
 				enableBasicAuth: args.enableBasicAuth,
 				basicAuthCredentials: args.basicAuthCredentials,
-				// Note: IAM roles are configured at App level
-				// - iamServiceRoleArn: App-level service role for app operations
-				// - computeRoleArn: App-level compute role for build environment
-				// Branches inherit these permissions from the parent App
 			},
 			{ parent: this },
 		)
