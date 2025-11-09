@@ -159,7 +159,7 @@ Our comprehensive documentation covers everything from getting started to advanc
 
 ## 🛠️ Development Commands
 
-The monorepo includes several scripts for efficient development:
+The monorepo includes several scripts for development:
 
 ```bash
 # Development
