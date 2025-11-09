@@ -323,6 +323,8 @@ jobs:
         else
           echo "❌ Dev stack preview failed"
           echo "dev-plan-success=false" >> $GITHUB_OUTPUT
+          echo "📋 Error output:"
+          cat dev-plan-output.json
           exit 1
         fi
 
