@@ -110,8 +110,8 @@ export class AmplifyApp extends pulumi.ComponentResource {
 				description:
 					args.description || `Macro AI ${args.environmentName} frontend`,
 				// Static frontend apps (platform: WEB) don't need an IAM service role
-				// Setting to undefined prevents Amplify from trying to assume a role
-				iamServiceRoleArn: undefined,
+				// Explicitly setting to empty string to remove any previously configured role
+				iamServiceRoleArn: '',
 				tags,
 			},
 			{ parent: this },
