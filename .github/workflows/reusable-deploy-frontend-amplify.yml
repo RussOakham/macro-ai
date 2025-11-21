@@ -79,8 +79,6 @@ jobs:
 
       - name: Install Doppler CLI
         uses: dopplerhq/cli-action@v3
-        with:
-          token: ${{ secrets.DOPPLER_TOKEN }}
 
       - name: Configure Doppler
         run: |
@@ -93,10 +91,12 @@ jobs:
             # Default to dev for PR previews (pr-*)
             DOPPLER_CONFIG="dev"
           fi
-          
+
           doppler configure set project macro-ai
           doppler configure set config "$DOPPLER_CONFIG"
           echo "✅ Doppler configured for: $DOPPLER_CONFIG"
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
 
       - name: Cache pnpm dependencies
         uses: actions/cache@v4
