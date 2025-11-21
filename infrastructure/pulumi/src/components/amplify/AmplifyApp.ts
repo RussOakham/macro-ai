@@ -48,6 +48,7 @@ export interface AmplifyAppArgs {
 	environmentVariables: Record<string, pulumi.Input<string>>
 	customDomainName?: string
 	hostedZoneId?: string
+	iamServiceRoleArn?: pulumi.Input<string> // Optional: IAM service role for Amplify
 	tags?: Record<string, string>
 	// Additional type-safe options
 	framework?: AmplifyFramework
@@ -109,12 +110,8 @@ export class AmplifyApp extends pulumi.ComponentResource {
 				platform: args.platform || 'WEB',
 				description:
 					args.description || `Macro AI ${args.environmentName} frontend`,
-				// Explicitly set to undefined to prevent Pulumi from sending empty strings
-				// This ensures Amplify doesn't check for IAM role permissions during build
-				// See: https://github.com/pulumi/pulumi-aws/issues/...
-				iamServiceRoleArn: undefined,
-				// Note: IAM roles not configured - we use a separate ECS backend for API services
-				// Amplify Backend services (AppSync, Lambda, Cognito) are not used
+				// IAM service role for Amplify (required for build logs and AWS service access)
+				iamServiceRoleArn: args.iamServiceRoleArn,
 				tags,
 			},
 			{ parent: this },

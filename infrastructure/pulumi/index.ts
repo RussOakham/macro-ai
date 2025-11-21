@@ -6,6 +6,7 @@ import * as pulumi from '@pulumi/pulumi'
 import {
 	AlbListenerRule,
 	AmplifyApp,
+	AmplifyServiceRole,
 	FargateService,
 	SharedAlb,
 	SharedVpc,
@@ -439,6 +440,16 @@ if (isPreviewEnvironment) {
 
 	// Create Amplify app for frontend deployment
 	if (isPermanentEnvironment || isPreviewEnvironment) {
+		// Create IAM service role for Amplify (shared across all environments)
+		const amplifyServiceRole = new AmplifyServiceRole(
+			'amplify-service-role',
+			{
+				environmentName,
+				deploymentType,
+				tags: commonTags,
+			},
+		)
+
 		// Get GitHub repository URL
 		const githubRepository =
 			config.get('github-repository') ||
@@ -487,6 +498,7 @@ if (isPreviewEnvironment) {
 				? `${environmentName}.${baseDomainName}`
 				: undefined,
 			hostedZoneId,
+			iamServiceRoleArn: amplifyServiceRole.roleArn,
 			tags: commonTags,
 		})
 	}
