@@ -219,9 +219,9 @@ if (isPreviewEnvironment) {
 			{
 				appId: sharedAmplifyAppId,
 				branchName: prBranchName,
-				enableAutoBuild: true, // Enable auto-build on branch push
+				enableAutoBuild: false, // Artifact upload deployment - builds happen in GitHub Actions
 				// Note: buildSpec is not available on Branch resource
-				// Amplify will auto-detect amplify.yml or buildspec.yml from the repository root
+				// For artifact uploads, builds are done in CI and uploaded via AWS CLI
 				framework: 'React',
 				stage: 'DEVELOPMENT',
 				environmentVariables: {
@@ -439,18 +439,10 @@ if (isPreviewEnvironment) {
 
 	// Create Amplify app for frontend deployment
 	if (isPermanentEnvironment || isPreviewEnvironment) {
-		// Get GitHub repository URL
-		const githubRepository =
-			config.get('github-repository') ||
-			'https://github.com/russoakham/macro-ai'
-
 		// Get secrets
 		// Extract VITE_API_KEY from permEnvironmentVariables (Doppler)
 		const viteApiKey = permEnvironmentVariables.apply(
 			(vars) => vars.VITE_API_KEY || 'default-api-key',
-		)
-		const githubTokenValue = permEnvironmentVariables.apply(
-			(vars) => vars.AMPLIFY_GITHUB_PAT || '',
 		)
 
 		// Get backend API URL for frontend environment variables
@@ -459,16 +451,15 @@ if (isPreviewEnvironment) {
 			? pulumi.interpolate`https://${prCustomDomainName}`
 			: pulumi.interpolate`https://${customDomainName}`
 
-		// Create Amplify app - will only work if GitHub token is present
-		// Pulumi will handle the async nature of githubTokenValue
+		// Create Amplify app for artifact upload deployments
+		// Frontend is built in GitHub Actions and uploaded as artifacts
+		// Repository connection is NOT needed for artifact uploads
 		amplifyApp = new AmplifyApp(`${environmentName}-frontend`, {
 			environmentName,
 			deploymentType,
-			// Note: buildSpec is not provided - root amplify.yml will be auto-detected
-			// by Amplify for all branches (main, staging, pr-*, dev)
-			repository: githubRepository,
-			accessToken: githubTokenValue,
-			enableAutoBuild: true, // All environments auto-build on branch push
+			// Note: repository and accessToken are omitted - we use artifact upload instead of source-based builds
+			// enableAutoBuild defaults to false, which is correct for artifact uploads
+			enableAutoBuild: false, // Artifact upload deployment - builds happen in GitHub Actions
 			environmentVariables: {
 				VITE_API_URL: backendApiUrl,
 				VITE_API_KEY: viteApiKey,

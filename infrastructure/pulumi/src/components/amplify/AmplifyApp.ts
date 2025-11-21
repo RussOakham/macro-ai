@@ -43,8 +43,8 @@ export interface AmplifyAppArgs {
 	environmentName: string
 	deploymentType: DeploymentType
 	buildSpec?: pulumi.Input<string> // Optional: if not provided, uses root amplify.yml
-	repository: string
-	accessToken: pulumi.Input<string>
+	repository?: string // Optional: only required for source-based builds (enableAutoBuild = true)
+	accessToken?: pulumi.Input<string> // Optional: only required for source-based builds (enableAutoBuild = true)
 	environmentVariables: Record<string, pulumi.Input<string>>
 	customDomainName?: string
 	hostedZoneId?: string
@@ -81,41 +81,44 @@ export class AmplifyApp extends pulumi.ComponentResource {
 			args.tags,
 		)
 
-		// Validate and normalize repository URL
-		const normalizedRepository = AmplifyApp.normalizeRepositoryUrl(
-			args.repository,
-		)
+		// Validate and normalize repository URL (only if using source-based builds)
+		const normalizedRepository = args.repository
+			? AmplifyApp.normalizeRepositoryUrl(args.repository)
+			: undefined
 
 		// ===================================================================
 		// CREATE AMPLIFY APP
 		// ===================================================================
 
 		// Create Amplify App with proper typing
-		this.app = new aws.amplify.App(
-			`${name}-app`,
-			{
-				name: `macro-ai-${args.environmentName}`,
-				repository: normalizedRepository,
-				accessToken: args.accessToken,
-				// Note: buildSpec is not used for artifact upload deployments
-				// Artifacts are built in GitHub Actions and uploaded directly
-				environmentVariables: args.environmentVariables,
-				customRules: args.customRules || [
-					{
-						source: '/<*>',
-						target: '/index.html',
-						status: '404-200',
-					},
-				],
-				platform: args.platform || 'WEB',
-				description:
-					args.description || `Macro AI ${args.environmentName} frontend`,
-				// Static frontend apps (platform: WEB) don't need an IAM service role
-				// Omitting iamServiceRoleArn entirely so AWS uses no role
-				tags,
-			},
-			{ parent: this },
-		)
+		// For artifact upload deployments, don't connect to repository
+		const appConfig: aws.amplify.AppArgs = {
+			name: `macro-ai-${args.environmentName}`,
+			// Note: buildSpec is not used for artifact upload deployments
+			// Artifacts are built in GitHub Actions and uploaded directly
+			environmentVariables: args.environmentVariables,
+			customRules: args.customRules || [
+				{
+					source: '/<*>',
+					target: '/index.html',
+					status: '404-200',
+				},
+			],
+			platform: args.platform || 'WEB',
+			description:
+				args.description || `Macro AI ${args.environmentName} frontend`,
+			// Static frontend apps (platform: WEB) don't need an IAM service role
+			// Omitting iamServiceRoleArn entirely so AWS uses no role
+			tags,
+		}
+
+		// Only add repository and accessToken if using source-based builds
+		if (normalizedRepository && args.accessToken) {
+			appConfig.repository = normalizedRepository
+			appConfig.accessToken = args.accessToken
+		}
+
+		this.app = new aws.amplify.App(`${name}-app`, appConfig, { parent: this })
 
 		// Create Branch with proper typing
 		this.branch = new aws.amplify.Branch(
@@ -283,25 +286,35 @@ export class AmplifyApp extends pulumi.ComponentResource {
 		if (!args.environmentName?.trim()) {
 			throw new Error('environmentName is required and cannot be empty')
 		}
-		if (!args.repository?.trim()) {
-			throw new Error('repository is required and cannot be empty')
+
+		// If enableAutoBuild is true, repository and accessToken are required
+		const enableAutoBuild = args.enableAutoBuild ?? false
+		if (enableAutoBuild) {
+			if (!args.repository?.trim()) {
+				throw new Error(
+					'repository is required when enableAutoBuild is true (source-based builds)',
+				)
+			}
+			if (!args.accessToken) {
+				throw new Error(
+					'accessToken is required when enableAutoBuild is true (source-based builds)',
+				)
+			}
+
+			// Validate repository URL format
+			try {
+				AmplifyApp.normalizeRepositoryUrl(args.repository)
+			} catch (error) {
+				throw new Error(
+					`Repository validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+				)
+			}
 		}
-		if (!args.accessToken) {
-			throw new Error('accessToken is required')
-		}
+
 		// buildSpec is now optional - root amplify.yml will be used if not provided
 		if (args.customDomainName && !args.hostedZoneId) {
 			throw new Error(
 				'hostedZoneId is required when customDomainName is provided',
-			)
-		}
-
-		// Additional validation with better error messages
-		try {
-			AmplifyApp.normalizeRepositoryUrl(args.repository)
-		} catch (error) {
-			throw new Error(
-				`Repository validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
 			)
 		}
 	}
