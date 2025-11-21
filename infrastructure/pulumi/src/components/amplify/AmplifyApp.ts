@@ -110,8 +110,7 @@ export class AmplifyApp extends pulumi.ComponentResource {
 				description:
 					args.description || `Macro AI ${args.environmentName} frontend`,
 				// Static frontend apps (platform: WEB) don't need an IAM service role
-				// Explicitly setting to empty string to remove any previously configured role
-				iamServiceRoleArn: '',
+				// Omitting iamServiceRoleArn entirely so AWS uses no role
 				tags,
 			},
 			{ parent: this },
