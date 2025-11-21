@@ -48,7 +48,6 @@ export interface AmplifyAppArgs {
 	environmentVariables: Record<string, pulumi.Input<string>>
 	customDomainName?: string
 	hostedZoneId?: string
-	iamServiceRoleArn?: pulumi.Input<string> // Optional: IAM service role for Amplify
 	tags?: Record<string, string>
 	// Additional type-safe options
 	framework?: AmplifyFramework
@@ -110,8 +109,9 @@ export class AmplifyApp extends pulumi.ComponentResource {
 				platform: args.platform || 'WEB',
 				description:
 					args.description || `Macro AI ${args.environmentName} frontend`,
-				// IAM service role for Amplify (required for build logs and AWS service access)
-				iamServiceRoleArn: args.iamServiceRoleArn,
+				// Static frontend apps (platform: WEB) don't need an IAM service role
+				// Setting to undefined prevents Amplify from trying to assume a role
+				iamServiceRoleArn: undefined,
 				tags,
 			},
 			{ parent: this },
