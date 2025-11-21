@@ -296,6 +296,7 @@ jobs:
         pulumi config set github-repository ${{ github.repository }}
         pulumi config set --secret github-token ${{ secrets.AMPLIFY_GITHUB_PAT }}
         pulumi config set --secret vite-api-key ${{ secrets.VITE_API_KEY }}
+        pulumi config set --secret doppler:dopplerToken "$DOPPLER_TOKEN"
 
         # Set domain configuration if available
         if [ -n "$CUSTOM_DOMAIN_NAME" ]; then
@@ -351,6 +352,7 @@ jobs:
         pulumi config set github-repository ${{ github.repository }}
         pulumi config set --secret github-token ${{ secrets.AMPLIFY_GITHUB_PAT }}
         pulumi config set --secret vite-api-key ${{ secrets.VITE_API_KEY }}
+        pulumi config set --secret doppler:dopplerToken "$DOPPLER_TOKEN"
 
         # Set domain configuration if available
         if [ -n "$CUSTOM_DOMAIN_NAME" ]; then
