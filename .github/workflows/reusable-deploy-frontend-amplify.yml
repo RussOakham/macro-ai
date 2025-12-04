@@ -352,7 +352,9 @@ jobs:
             --region ${{ env.AWS_REGION }} \
             --output json)
           
-          JOB_ID=$(echo "$RESPONSE" | jq -r '.jobId')
+          # API returns jobSummary.jobId (not top-level) per AWS docs
+          JOB_ID=$(echo "$RESPONSE" | jq -r '.jobId // .jobSummary.jobId')
+          JOB_STATUS=$(echo "$RESPONSE" | jq -r '.jobSummary.status // empty')
           
           if [ -z "$JOB_ID" ] || [ "$JOB_ID" = "null" ]; then
             echo "❌ Failed to start deployment"
@@ -360,7 +362,7 @@ jobs:
             exit 1
           fi
           
-          echo "✅ Deployment started: $JOB_ID"
+          echo "✅ Deployment started: $JOB_ID (status: ${JOB_STATUS:-unknown})"
           echo "job-id=${JOB_ID}" >> $GITHUB_OUTPUT
 
       # ===================================================================
