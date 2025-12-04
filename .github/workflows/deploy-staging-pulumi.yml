@@ -28,24 +28,10 @@ env:
   HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
 
 jobs:
-  # Change detection using reusable workflow
-  change-detection:
-    name: Detect Changes
-    uses: ./.github/workflows/reusable-change-detection.yml
-    with:
-      base-ref: ${{ github.event.before || 'HEAD~1' }}
-      head-ref: ${{ github.sha }}
-
   # Build Express API Docker image
   build-express-api:
     name: Build Docker Image for ECS
     runs-on: ubuntu-latest
-    needs: [ change-detection ]
-    if: |
-      needs.change-detection.outputs.has-backend-changes == 'true' ||
-      needs.change-detection.outputs.has-infrastructure-changes == 'true' ||
-      github.event.inputs.force-deploy == 'true'
-
     permissions:
       id-token: write
       contents: read
@@ -154,15 +140,11 @@ jobs:
           echo "📤 Outputting image tag: '${IMAGE_TAG}'"
           echo "🔗 Full image URI was: ${IMAGE_URI}"
 
-  # Deploy backend using reusable workflow
-  deploy-backend:
-    name: Deploy Backend Infrastructure
-    uses: ./.github/workflows/reusable-deploy-backend-pulumi.yml
-    if: |
-      needs.change-detection.outputs.has-backend-changes == 'true' ||
-      needs.change-detection.outputs.has-infrastructure-changes == 'true' ||
-      github.event.inputs.force-deploy == 'true'
-    needs: [ change-detection, build-express-api ]
+  # Deploy full stack using unified reusable workflow
+  deploy-full-stack:
+    name: Deploy Full Stack
+    uses: ./.github/workflows/reusable-deploy-full-stack-pulumi.yml
+    needs: [ build-express-api ]
     permissions:
       id-token: write
       contents: read
@@ -173,75 +155,13 @@ jobs:
       branch-name: develop
       custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
       hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
-      should-deploy: true
-      deployment-scale: staging
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-      DOPPLER_TOKEN_STAGING: ${{ secrets.DOPPLER_TOKEN_STAGING }}
-      DOPPLER_TOKEN_DEV: ${{ secrets.DOPPLER_TOKEN_DEV }}
-      DOPPLER_TOKEN_PROD: ${{ secrets.DOPPLER_TOKEN_PROD }}
-
-  # Check if Amplify app exists (needed for first-time deployments)
-  check-amplify-app:
-    name: Check Amplify App Exists
-    runs-on: ubuntu-latest
-    needs: [ change-detection, deploy-backend ]
-    permissions:
-      id-token: write
-      contents: read
-    outputs:
-      app-exists: ${{ steps.check.outputs.app-exists }}
-    steps:
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        aws-region: us-east-1
-        role-session-name: GitHubActions-Staging-Check-${{ github.run_id }}
-
-    - name: Check if Amplify app exists
-      id: check
-      run: |
-        APP_NAME="macro-ai-staging"
-        APP_ID=$(aws amplify list-apps \
-          --query "apps[?name=='$APP_NAME'].appId" \
-          --output text 2>/dev/null || echo "")
-
-        if [ -n "$APP_ID" ]; then
-          echo "app-exists=true" >> $GITHUB_OUTPUT
-          echo "✅ Amplify app exists: $APP_ID"
-        else
-          echo "app-exists=false" >> $GITHUB_OUTPUT
-          echo "ℹ️ Amplify app does not exist - first deployment needed"
-        fi
-
-  # Deploy frontend using reusable workflow
-  deploy-frontend:
-    name: Deploy Frontend
-    uses: ./.github/workflows/reusable-deploy-frontend.yml
-    needs: [ change-detection, deploy-backend, check-amplify-app ]
-    with:
-      environment-name: staging
-      deployment-type: staging
-      branch-name: develop
-      backend-url: ${{ needs.deploy-backend.outputs.api-endpoint }}
-      custom-domain-name: ${{ vars.CUSTOM_DOMAIN_NAME }}
-      hosted-zone-id: ${{ vars.HOSTED_ZONE_ID }}
-      should-deploy: >-
-        ${{
-          needs.change-detection.outputs.has-frontend-changes == 'true' ||
-          needs.check-amplify-app.outputs.app-exists == 'false' ||
-          github.event.inputs.force-deploy == 'true'
-        }}
-      doppler-config: stg
-    secrets:
-      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      # Use Doppler synced API key
-      API_KEY: ${{ secrets.VITE_API_KEY }}
       DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_STAGING }}
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
 
   # Production monitoring setup using reusable workflow
   setup-monitoring:
@@ -252,15 +172,15 @@ jobs:
       deployment-type: staging
       backend-stack-name: stg
     secrets: inherit
-    needs: [ deploy-backend, deploy-frontend, check-amplify-app ]
-    if: always() && (needs.deploy-backend.result == 'success' || needs.deploy-frontend.result == 'success')
+    needs: [ deploy-full-stack ]
+    if: always() && needs.deploy-full-stack.result == 'success'
 
   # Schedule automatic teardown at 6 PM
   schedule-teardown:
     name: Schedule Automatic Teardown
     runs-on: ubuntu-latest
-    needs: [ deploy-backend, deploy-frontend, setup-monitoring ]
-    if: always() && (needs.deploy-backend.result == 'success' || needs.deploy-frontend.result == 'success')
+    needs: [ deploy-full-stack, setup-monitoring ]
+    if: always() && needs.deploy-full-stack.result == 'success'
 
     steps:
     - name: Schedule teardown
@@ -274,7 +194,7 @@ jobs:
   deployment-summary:
     name: Staging Deployment Summary (Pulumi)
     runs-on: ubuntu-latest
-    needs: [ change-detection, deploy-backend, deploy-frontend, check-amplify-app, setup-monitoring, schedule-teardown ]
+    needs: [ deploy-full-stack, setup-monitoring, schedule-teardown ]
     if: always()
     permissions:
       contents: write
@@ -285,9 +205,8 @@ jobs:
       shell: bash
       run: |
         echo "🚀 Staging deployment completed with Pulumi!"
-        echo "Change Detection: ${{ needs.change-detection.outputs.deployment-scope }}"
-        echo "Backend: ${{ needs.deploy-backend.result == 'success' && 'Deployed' || 'Skipped' }}"
-        echo "Frontend: ${{ needs.deploy-frontend.result == 'success' && 'Deployed' || 'Skipped' }}"
+        echo "Backend: ${{ needs.deploy-full-stack.result == 'success' && 'Deployed' || 'Failed' }}"
+        echo "Frontend: Automatically built by Amplify on branch push"
         echo ""
         echo "🕕 Automatic teardown scheduled for 6 PM"
         echo "To prevent teardown, run the workflow with 'force-deploy: true'"
@@ -297,65 +216,25 @@ jobs:
       uses: actions/github-script@v7
       with:
         script: |
-          const frontendDeployed = '${{ needs.deploy-frontend.result }}' === 'success';
-          const backendDeployed = '${{ needs.deploy-backend.result }}' === 'success';
-          const deploymentScope = '${{ needs.change-detection.outputs.deployment-scope }}';
-
-          // Get deployment details using predictable URLs
-          const customDomain = '${{ vars.CUSTOM_DOMAIN_NAME }}';
-          const appUrl = frontendDeployed ? `https://staging.${customDomain}` : null;
-          const appId = frontendDeployed ? '${{ needs.deploy-frontend.outputs.app-id }}' : null;
-          const backendUrl = backendDeployed ? '${{ needs.deploy-backend.outputs.api-endpoint }}' : null;
-          const backendStack = backendDeployed ? '${{ needs.deploy-backend.outputs.stack-name }}' : null;
+          const deployed = '${{ needs.deploy-full-stack.result }}' === 'success';
+          const backendUrl = deployed ? '${{ needs.deploy-full-stack.outputs.backend-url }}' : null;
+          const frontendUrl = deployed ? 'https://develop.macro-ai.russoakham.dev' : null;
+          const stackName = deployed ? '${{ needs.deploy-full-stack.outputs.stack-name }}' : null;
 
           const comment = `## 🚀 Staging Environment Deployed Successfully! (Pulumi)
 
           ### 🌐 Staging URLs
-          - **Frontend**: ${appUrl ? `[${appUrl}](${appUrl})` : 'Not deployed'}
+          - **Frontend**: ${frontendUrl ? `[${frontendUrl}](${frontendUrl})` : 'Not deployed'} (Auto-built by Amplify)
           - **Backend API**: ${backendUrl || 'Not deployed'}
 
           ### 📋 Deployment Details
           - **Environment**: \`staging\`
-          - **Infrastructure**: \`Pulumi\` (migrated from CDK)
-          - **Deployment Scope**: \`${deploymentScope}\`
-          - **Amplify App ID**: \`${appId || 'N/A'}\`
+          - **Infrastructure**: \`Pulumi\`
           - **Branch**: \`develop\`
-          - **Backend Status**: ${backendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
-          - **Frontend Status**: ${frontendDeployed ? '✅ Deployed' : '⏭️ Skipped (no changes)'}
+          - **Deployment Status**: ${deployed ? '✅ Deployed' : '❌ Failed'}
+          - **Stack Name**: \`${stackName || 'N/A'}\`
 
           ### 🔗 Quick Links
-          ${appId ? `- [AWS Amplify Console](https://console.aws.amazon.com/amplify/home?region=us-east-1#/${appId})` : ''}
-          ${backendStack ? `- [Pulumi Stack](https://app.pulumi.com/orgs/macro-ai/stacks/${backendStack})` : ''}
-
-          ### 🎯 Change Detection Results
-          - **Backend Changes**: ${{ needs.change-detection.outputs.has-backend-changes == 'true' &&
-            '✅' || '❌' }}
-          - **Frontend Changes**: ${{ needs.change-detection.outputs.has-frontend-changes == 'true' &&
-            '✅' || '❌' }}
-          - **Infrastructure Changes**: ${{ needs.change-detection.outputs.has-infrastructure-changes == 'true' &&
-            '✅' || '❌' }}
-
-          ### 🕕 Cost Management
-          - **Automatic Teardown**: Scheduled for 6 PM today
-          - **To Prevent Teardown**: Run workflow with \`force-deploy: true\`
-          - **Manual Teardown**: Use the \`teardown-staging.yml\` workflow
-
-          ---
-          *Staging environment now uses Pulumi for infrastructure management with Doppler for secrets.*`;
-
-          // Find the latest commit and comment on it
-          const { data: commits } = await github.rest.repos.listCommits({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            sha: 'develop',
-            per_page: 1
-          });
-
-          if (commits.length > 0) {
-            await github.rest.repos.createCommitComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: commits[0].sha,
-              body: comment
-            });
-          }
+          ${stackName ? `- [Pulumi Stack](https://app.pulumi.com/orgs/macro-ai/stacks/${stackName})` : ''}
+          - [AWS Amplify Console](https://console.aws.amazon.com/amplify/home?region=us-east-1)
+          - [AWS ECS Console](https://console.aws.amazon.com/ecs/v2/clusters?region=us-east-1)

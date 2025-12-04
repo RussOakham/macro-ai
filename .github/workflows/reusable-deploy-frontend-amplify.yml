@@ -1,0 +1,472 @@
+---
+name: Reusable Frontend Amplify Deployment
+
+on:
+  workflow_call:
+    inputs:
+      amplify-app-id:
+        description: 'AWS Amplify App ID'
+        required: true
+        type: string
+      amplify-branch-name:
+        description: 'Amplify branch name to deploy to'
+        required: true
+        type: string
+      environment-name:
+        description: 'Environment name (pr-90, staging, production, etc)'
+        required: true
+        type: string
+      pr-number:
+        description: 'PR number (optional, for PR preview deployments)'
+        required: false
+        type: string
+    secrets:
+      AWS_ROLE_ARN:
+        description: 'AWS IAM role ARN for OIDC'
+        required: true
+      AWS_ACCOUNT_ID:
+        description: 'AWS Account ID'
+        required: true
+      DOPPLER_TOKEN:
+        description: 'Doppler token for accessing secrets'
+        required: true
+    outputs:
+      frontend-deployment-url:
+        description: 'The deployed frontend URL'
+        value: ${{ jobs.deploy.outputs.deployment-url }}
+      deployment-status:
+        description: 'Final deployment status'
+        value: ${{ jobs.deploy.outputs.deployment-status }}
+
+jobs:
+  # ===================================================================
+  # BUILD FRONTEND
+  # ===================================================================
+  deploy:
+    name: Build and Deploy Frontend to Amplify
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      deployment-url: ${{ steps.deployment-status.outputs.deployment-url }}
+      deployment-status: ${{ steps.deployment-status.outputs.status }}
+    env:
+      AWS_REGION: us-east-1
+      NODE_VERSION: '20.19.4'
+      PNPM_VERSION: '10.14.0'
+    steps:
+      # ===================================================================
+      # 1. CHECKOUT CODE
+      # ===================================================================
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ===================================================================
+      # 2. SETUP BUILD ENVIRONMENT
+      # ===================================================================
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install Doppler CLI
+        uses: dopplerhq/cli-action@v3
+
+      - name: Configure Doppler
+        run: |
+          # Determine Doppler config based on environment
+          if [[ "${{ inputs.environment-name }}" == "production" ]]; then
+            DOPPLER_CONFIG="prd"
+          elif [[ "${{ inputs.environment-name }}" == "staging" ]]; then
+            DOPPLER_CONFIG="stg"
+          else
+            # Default to dev for PR previews (pr-*)
+            DOPPLER_CONFIG="dev"
+          fi
+
+          doppler configure set project macro-ai
+          doppler configure set config "$DOPPLER_CONFIG"
+          echo "✅ Doppler configured for: $DOPPLER_CONFIG"
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+
+      # ===================================================================
+      # 3. BUILD FRONTEND
+      # ===================================================================
+      - name: Build frontend
+        id: build
+        run: |
+          echo "🔨 Building frontend for ${{ inputs.environment-name }}..."
+          # Build dependencies first (e.g., @repo/macro-ai-api-client)
+          echo "📦 Building dependencies..."
+          pnpm --filter @repo/macro-ai-api-client build
+          
+          # Then build the frontend
+          echo "🏗️  Building frontend..."
+          pnpm --filter client-ui build
+          
+          # Verify build artifacts exist
+          if [ ! -f "apps/client-ui/dist/index.html" ]; then
+            echo "❌ Build failed: index.html not found in dist directory"
+            exit 1
+          fi
+          
+          echo "✅ Frontend build completed successfully"
+          echo "build-success=true" >> $GITHUB_OUTPUT
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+
+      # ===================================================================
+      # 4. PREPARE DEPLOYMENT ARCHIVE
+      # ===================================================================
+      - name: Create zip archive
+        id: archive
+        run: |
+          echo "📦 Creating deployment archive..."
+          
+          cd apps/client-ui/dist
+          ZIP_FILE="frontend-${GITHUB_RUN_ID}.zip"
+          ZIP_PATH="${GITHUB_WORKSPACE}/apps/client-ui/${ZIP_FILE}"
+          
+          # Zip the contents (not the dist folder itself) to a fixed path
+          zip -r "$ZIP_PATH" .
+          
+          # Get file size
+          SIZE_BYTES=$(wc -c < "$ZIP_PATH")
+          SIZE_MB=$((SIZE_BYTES / 1048576))
+          
+          # Check size limit (5GB)
+          if [ $SIZE_BYTES -gt 5368709120 ]; then
+            echo "❌ Archive exceeds 5GB limit: ${SIZE_MB}MB"
+            exit 1
+          fi
+          
+          echo "✅ Archive created: ${ZIP_FILE} (${SIZE_MB}MB)"
+          echo "zip-file=${ZIP_FILE}" >> $GITHUB_OUTPUT
+          echo "zip-path=${ZIP_PATH}" >> $GITHUB_OUTPUT
+          echo "zip-size-bytes=${SIZE_BYTES}" >> $GITHUB_OUTPUT
+          
+          # Go back to root
+          cd ../../..
+
+      # ===================================================================
+      # 5. SETUP AWS CREDENTIALS
+      # ===================================================================
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: amplify-frontend-deploy-${{ inputs.environment-name }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # ===================================================================
+      # 6. ENSURE NO IN-FLIGHT JOB IS BLOCKING NEW DEPLOYMENT
+      # ===================================================================
+      - name: Stop existing in-flight Amplify job(s) (if any)
+        id: stop-existing-job
+        run: |
+          echo "🔍 Checking for existing non-terminal Amplify jobs..."
+
+          MAX_WAIT=300
+          INTERVAL=5
+
+          while true; do
+            ACTIVE_JOBS=$(
+              aws amplify list-jobs \
+                --app-id "${{ inputs.amplify-app-id }}" \
+                --branch-name "${{ inputs.amplify-branch-name }}" \
+                --max-items 25 \
+                --region ${{ env.AWS_REGION }} \
+                --output json \
+              | jq -c '
+                  .jobSummaries
+                  | map(select(.status
+                    | IN("PENDING","PROVISIONING","RUNNING","CANCELLING","QUEUED","IN_PROGRESS")))
+                  | sort_by(.jobId | tonumber)
+                '
+            )
+
+            if [ -z "$ACTIVE_JOBS" ] || [ "$ACTIVE_JOBS" = "[]" ]; then
+              echo "✅ No in-flight jobs found; safe to proceed"
+              break
+            fi
+
+            COUNT=$(echo "$ACTIVE_JOBS" | jq 'length')
+            echo "⚠️ Found ${COUNT} non-terminal job(s); stopping all..."
+
+            # Stop each active job
+            echo "$ACTIVE_JOBS" | jq -r '.[].jobId' | while read -r JOB_ID; do
+              echo "  - Stopping job ${JOB_ID}..."
+              aws amplify stop-job \
+                --app-id "${{ inputs.amplify-app-id }}" \
+                --branch-name "${{ inputs.amplify-branch-name }}" \
+                --job-id "${JOB_ID}" \
+                --region ${{ env.AWS_REGION }} \
+                --output json >/dev/null
+            done
+
+            # Wait for all to become terminal
+            ELAPSED=0
+            while [ $ELAPSED -lt $MAX_WAIT ]; do
+              REMAINING=$(
+                aws amplify list-jobs \
+                  --app-id "${{ inputs.amplify-app-id }}" \
+                  --branch-name "${{ inputs.amplify-branch-name }}" \
+                  --max-items 25 \
+                  --region ${{ env.AWS_REGION }} \
+                  --output json \
+                | jq '
+                    .jobSummaries
+                    | map(select(.status
+                      | IN("PENDING","PROVISIONING","RUNNING","CANCELLING","QUEUED","IN_PROGRESS")))
+                    | length
+                  '
+              )
+
+              echo "  - Remaining in-flight jobs: ${REMAINING}"
+              if [ "$REMAINING" -eq 0 ]; then
+                echo "✅ All prior jobs are now terminal; continuing"
+                break 2
+              fi
+
+              sleep $INTERVAL
+              ELAPSED=$((ELAPSED + INTERVAL))
+            done
+
+            echo "❌ Timed out waiting for previous jobs to stop"
+            exit 1
+          done
+
+      # ===================================================================
+      # 7. CREATE AMPLIFY DEPLOYMENT
+      # ===================================================================
+      - name: Create Amplify deployment
+        id: create-deployment
+        run: |
+          echo "🚀 Creating Amplify deployment..."
+          echo "  - App ID: ${{ inputs.amplify-app-id }}"
+          echo "  - Branch: ${{ inputs.amplify-branch-name }}"
+          echo "  - Environment: ${{ inputs.environment-name }}"
+          
+          RESPONSE=$(aws amplify create-deployment \
+            --app-id "${{ inputs.amplify-app-id }}" \
+            --branch-name "${{ inputs.amplify-branch-name }}" \
+            --region ${{ env.AWS_REGION }} \
+            --output json)
+          
+          JOB_ID=$(echo "$RESPONSE" | jq -r '.jobId')
+          UPLOAD_URL=$(echo "$RESPONSE" | jq -r '.zipUploadUrl')
+          
+          if [ -z "$JOB_ID" ] || [ "$JOB_ID" = "null" ]; then
+            echo "❌ Failed to create deployment"
+            echo "$RESPONSE"
+            exit 1
+          fi
+          
+          echo "✅ Deployment created (job): $JOB_ID"
+          echo "job-id=${JOB_ID}" >> $GITHUB_OUTPUT
+          echo "upload-url=${UPLOAD_URL}" >> $GITHUB_OUTPUT
+
+      # ===================================================================
+      # 8. UPLOAD ARTIFACT TO S3
+      # ===================================================================
+      - name: Upload artifact to Amplify
+        id: upload
+        run: |
+          echo "📤 Uploading artifact to Amplify..."
+          
+          ZIP_PATH="${{ steps.archive.outputs.zip-path }}"
+          UPLOAD_URL="${{ steps.create-deployment.outputs.upload-url }}"
+
+          echo "pwd: $(pwd)"
+          echo "ZIP_PATH: ${ZIP_PATH}"
+          echo "Listing zip path:"
+          ls -l "${ZIP_PATH}" || true
+          echo "Searching for zip files (maxdepth 3):"
+          find . -maxdepth 3 -name "frontend-*.zip" -ls || true
+
+          if [ ! -f "${ZIP_PATH}" ]; then
+            echo "❌ Zip file not found at ${ZIP_PATH}"
+            exit 1
+          fi
+          
+          # Upload using curl with retry logic
+          for i in {1..3}; do
+            if curl -X PUT \
+              -H "Content-Type: application/zip" \
+              --data-binary @"${ZIP_PATH}" \
+              "${UPLOAD_URL}" \
+              --output /dev/null \
+              --silent \
+              --show-error \
+              --retry 2; then
+              echo "✅ Upload successful on attempt $i"
+              echo "upload-success=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            if [ $i -lt 3 ]; then
+              echo "⏳ Upload attempt $i failed, retrying..."
+              sleep 5
+            fi
+          done
+          
+          echo "❌ Upload failed after 3 attempts"
+          exit 1
+
+      # ===================================================================
+      # 9. START AMPLIFY DEPLOYMENT
+      # ===================================================================
+      - name: Start deployment
+        id: start-deployment
+        run: |
+          echo "🎬 Starting Amplify deployment..."
+          
+          RESPONSE=$(aws amplify start-deployment \
+            --app-id "${{ inputs.amplify-app-id }}" \
+            --branch-name "${{ inputs.amplify-branch-name }}" \
+            --job-id "${{ steps.create-deployment.outputs.job-id }}" \
+            --region ${{ env.AWS_REGION }} \
+            --output json)
+          
+          # API returns jobSummary.jobId (not top-level) per AWS docs
+          JOB_ID=$(echo "$RESPONSE" | jq -r '.jobId // .jobSummary.jobId')
+          JOB_STATUS=$(echo "$RESPONSE" | jq -r '.jobSummary.status // empty')
+          
+          if [ -z "$JOB_ID" ] || [ "$JOB_ID" = "null" ]; then
+            echo "❌ Failed to start deployment"
+            echo "$RESPONSE"
+            exit 1
+          fi
+          
+          echo "✅ Deployment started: $JOB_ID (status: ${JOB_STATUS:-unknown})"
+          echo "job-id=${JOB_ID}" >> $GITHUB_OUTPUT
+
+      # ===================================================================
+      # 10. WAIT FOR DEPLOYMENT COMPLETION
+      # ===================================================================
+      - name: Wait for deployment completion
+        id: wait-deployment
+        run: |
+          echo "⏳ Waiting for deployment to complete..."
+          
+          JOB_ID="${{ steps.start-deployment.outputs.job-id }}"
+          APP_ID="${{ inputs.amplify-app-id }}"
+          BRANCH="${{ inputs.amplify-branch-name }}"
+          MAX_WAIT=1800  # 30 minutes
+          ELAPSED=0
+          POLL_INTERVAL=10
+          
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            JOB_STATUS=$(aws amplify get-job \
+              --app-id "$APP_ID" \
+              --branch-name "$BRANCH" \
+              --job-id "$JOB_ID" \
+              --region us-east-1 \
+              --output json)
+            
+            STATUS=$(echo "$JOB_STATUS" | jq -r '.job.summary.status')
+            PROGRESS=$(echo "$JOB_STATUS" | jq -r '.job.summary.progressMessage // "In progress"')
+            
+            echo "  Status: $STATUS - $PROGRESS"
+            
+            if [ "$STATUS" = "SUCCEED" ]; then
+              echo "✅ Deployment succeeded!"
+              echo "deployment-status=success" >> $GITHUB_OUTPUT
+              exit 0
+            elif [ "$STATUS" = "FAILED" ] || [ "$STATUS" = "CANCELLED" ]; then
+              echo "❌ Deployment $STATUS"
+              echo "deployment-status=failed" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+            
+            sleep $POLL_INTERVAL
+            ELAPSED=$((ELAPSED + POLL_INTERVAL))
+          done
+          
+          echo "⚠️ Deployment timeout after 30 minutes"
+          echo "deployment-status=timeout" >> $GITHUB_OUTPUT
+          exit 1
+
+      # ===================================================================
+      # 11. VERIFY DEPLOYMENT
+      # ===================================================================
+      - name: Verify deployment
+        id: deployment-status
+        if: always()
+        run: |
+          echo "🔍 Verifying deployment..."
+          
+          DEPLOY_STATUS="${{ steps.wait-deployment.outputs.deployment-status }}"
+          
+          if [ "$DEPLOY_STATUS" = "success" ]; then
+            # Get the deployment URL
+            BRANCH="${{ inputs.amplify-branch-name }}"
+            APP_ID="${{ inputs.amplify-app-id }}"
+            
+            # Construct the URL
+            if [ "$BRANCH" = "dev" ]; then
+              FRONTEND_URL="https://${BRANCH}.macro-ai.russoakham.dev"
+            else
+              FRONTEND_URL="https://${BRANCH}.macro-ai.russoakham.dev"
+            fi
+            
+            echo "✅ Deployment completed successfully!"
+            echo "📱 Frontend URL: $FRONTEND_URL"
+            echo "deployment-url=${FRONTEND_URL}" >> $GITHUB_OUTPUT
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Deployment failed with status: $DEPLOY_STATUS"
+            echo "deployment-url=" >> $GITHUB_OUTPUT
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      # ===================================================================
+      # 12. CLEANUP
+      # ===================================================================
+      - name: Cleanup artifacts
+        if: always()
+        run: |
+          echo "🧹 Cleaning up temporary files..."
+          rm -f apps/client-ui/frontend-*.zip
+          echo "✅ Cleanup completed"
+
+      # ===================================================================
+      # 13. SUMMARY
+      # ===================================================================
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "📊 Deployment Summary"
+          echo "  - Environment: ${{ inputs.environment-name }}"
+          echo "  - App ID: ${{ inputs.amplify-app-id }}"
+          echo "  - Branch: ${{ inputs.amplify-branch-name }}"
+          echo "  - ZIP Size: ${{ steps.archive.outputs.zip-size-bytes }} bytes"
+          echo "  - Deployment Job ID: ${{ steps.create-deployment.outputs.job-id }}"
+          echo "  - Job ID: ${{ steps.start-deployment.outputs.job-id }}"
+          echo "  - Final Status: ${{ steps.deployment-status.outputs.status }}"
+          echo "  - Deployment URL: ${{ steps.deployment-status.outputs.deployment-url }}"

@@ -5,8 +5,6 @@
 This directory contains comprehensive documentation for the Macro AI infrastructure, which has been
 **fully migrated to ECS Fargate** deployment strategy.
 
-All documentation reflects the current containerized architecture and eliminates outdated EC2 references.
-
 ## 🏗️ **Current Architecture: ECS Fargate**
 
 The infrastructure uses **AWS ECS Fargate** for compute, providing:

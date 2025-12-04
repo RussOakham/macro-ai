@@ -704,7 +704,7 @@ describe('React Testing Library Examples', () => {
 			setupServerWithHandlers([
 				http.get('http://localhost:3000/api/users', async () => {
 					// Add delay to simulate network latency and show loading state
-					await new Promise((resolve) => setTimeout(resolve, 100))
+					await new Promise((resolve) => setTimeout(resolve, 200))
 					return HttpResponse.json([
 						{ email: 'john@example.com', id: 1, name: 'John Doe' },
 						{ email: 'jane@example.com', id: 2, name: 'Jane Smith' },
@@ -760,10 +760,8 @@ describe('React Testing Library Examples', () => {
 			// Click load button
 			await user.click(screen.getByRole('button', { name: /load users/i }))
 
-			// Should show loading state
-			await waitFor(() => {
-				expect(screen.getByTestId('loading')).toBeInTheDocument()
-			})
+			// Should show loading state immediately after click
+			expect(screen.getByTestId('loading')).toBeInTheDocument()
 
 			// Wait for data to load
 			await waitFor(() => {

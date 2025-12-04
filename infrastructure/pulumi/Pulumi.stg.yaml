@@ -1,11 +1,11 @@
 config:
-  macro-ai-infrastructure:environmentName: staging
-  macro-ai-infrastructure:deploymentType: staging
+  macro-ai-infrastructure:environment-name: staging
+  macro-ai-infrastructure:deployment-type: staging
   macro-ai-infrastructure:branchName: main
   macro-ai-infrastructure:imageUri: '' # Set via CI/CD
-  macro-ai-infrastructure:imageTag: latest
-  macro-ai-infrastructure:customDomainName: macro-ai.russoakham.dev
-  macro-ai-infrastructure:hostedZoneId: Z0123456789ABC # Your Route53 zone
+  macro-ai-infrastructure:image-tag: latest
+  macro-ai-infrastructure:custom-domain-name: macro-ai.russoakham.dev
+  macro-ai-infrastructure:hosted-zone-id: Z0123456789ABC # Your Route53 zone
   doppler:project: macro-ai
   doppler:config: stg
   doppler:dopplerToken:

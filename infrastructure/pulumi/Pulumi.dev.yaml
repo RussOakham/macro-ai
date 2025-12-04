@@ -1,9 +1,9 @@
 config:
-  macro-ai-infrastructure:environmentName: dev
+  macro-ai-infrastructure:environment-name: dev
   macro-ai-infrastructure:prNumber: '0'
   macro-ai-infrastructure:branchName: main
   macro-ai-infrastructure:imageUri: nginx:latest
   doppler:dopplerToken:
     secure: AAABAEsKfsNO5hZot/BslqOrT0UoEm8mRqTVC8kbe/fNRG5kXGSDno0oJq5XiiPLsQAAIqs+GkIwkVJGVzsSDNXeersMGa2b+TzpmJuNXoWW3Qwhug==
-  macro-ai-infrastructure:hostedZoneId: 'Z10081873B648ARROPNER'
-  macro-ai-infrastructure:customDomainName: 'macro-ai.russoakham.dev'
+  macro-ai-infrastructure:hosted-zone-id: 'Z10081873B648ARROPNER'
+  macro-ai-infrastructure:custom-domain-name: 'macro-ai.russoakham.dev'

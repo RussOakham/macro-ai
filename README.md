@@ -159,7 +159,7 @@ Our comprehensive documentation covers everything from getting started to advanc
 
 ## 🛠️ Development Commands
 
-The monorepo includes several scripts for efficient development:
+The monorepo includes several scripts for development:
 
 ```bash
 # Development
@@ -206,4 +206,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **[GitHub Actions](https://github.com/RussOakham/macro-ai/actions)** - CI/CD pipeline status
 - **[Issues](https://github.com/RussOakham/macro-ai/issues)** - Bug reports and feature requests
 
-<!-- Trigger deployment test -->
+<!--- Trigger deployment test --->

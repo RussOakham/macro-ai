@@ -108,6 +108,16 @@ export async function fetchDopplerSecrets(
 	let response: any = null
 
 	try {
+		// Validate token is present
+		if (!dopplerToken || dopplerToken.trim() === '') {
+			throw new Error('Doppler token is empty or undefined')
+		}
+
+		// Log project and config for debugging (but not the token)
+		console.log(
+			`🔍 Fetching Doppler secrets for project: ${project}, config: ${config}`,
+		)
+
 		sdk = new DopplerSDK({
 			accessToken: dopplerToken,
 		})
@@ -153,24 +163,73 @@ export async function fetchDopplerSecrets(
 		response = null
 		sdk = null
 
-		// Extract only the error message, not the entire error object
+		// Extract detailed error information
 		let errorMsg = 'Unknown error'
+		let statusCode: number | undefined
+		let statusText: string | undefined
+
 		try {
 			if (error instanceof Error) {
 				errorMsg = error.message
+				// Check for HTTP error properties
+				const errorAny = error as any
+				if (errorAny.status) {
+					statusCode = errorAny.status
+				}
+				if (errorAny.statusCode) {
+					statusCode = errorAny.statusCode
+				}
+				if (errorAny.statusText) {
+					statusText = errorAny.statusText
+				}
+				// Check for response body
+				if (errorAny.response?.data) {
+					const responseData =
+						typeof errorAny.response.data === 'string'
+							? errorAny.response.data
+							: JSON.stringify(errorAny.response.data)
+					errorMsg = `${errorMsg} - Response: ${responseData.substring(0, 200)}`
+				}
 			} else if (typeof error === 'string') {
 				errorMsg = error
-			} else if (error && typeof error === 'object' && 'message' in error) {
-				errorMsg = String((error as any).message)
+			} else if (error && typeof error === 'object') {
+				// Try to extract meaningful information from the error object
+				const errorObj = error as any
+				if (errorObj.message) {
+					errorMsg = String(errorObj.message)
+				} else if (errorObj.error) {
+					errorMsg = String(errorObj.error)
+				} else {
+					// Try to stringify the error object
+					try {
+						errorMsg = JSON.stringify(errorObj).substring(0, 200)
+					} catch {
+						errorMsg = 'Error object could not be serialized'
+					}
+				}
+				if (errorObj.status) {
+					statusCode = errorObj.status
+				}
+				if (errorObj.statusCode) {
+					statusCode = errorObj.statusCode
+				}
 			}
-		} catch {
+		} catch (parseError) {
 			errorMsg = 'Error extracting error message'
 		}
 
-		// Create a clean error with minimal information
-		const cleanError = new Error(
-			`Doppler API error (${project}/${config}): ${errorMsg.substring(0, 150)}`,
-		)
+		// Build detailed error message
+		let detailedError = `Doppler API error (${project}/${config})`
+		if (statusCode) {
+			detailedError += ` - Status: ${statusCode}`
+		}
+		if (statusText) {
+			detailedError += ` - ${statusText}`
+		}
+		detailedError += ` - ${errorMsg.substring(0, 200)}`
+
+		// Create a clean error with detailed information
+		const cleanError = new Error(detailedError)
 		console.error(`✗ ${cleanError.message}`)
 		throw cleanError
 	}
@@ -259,6 +318,25 @@ export function resolveImageUri(
 		return pulumi.output(imageUri)
 	}
 
+	// For PR preview environments, construct the image URI directly
+	// instead of looking it up in ECR during planning phase
+	const environmentName = new pulumi.Config().get('environment-name') || 'dev'
+
+	if (environmentName.startsWith('pr-')) {
+		// For PR environments, construct the ECR URI directly
+		// This avoids the race condition where plan runs before build
+		const accountId =
+			new pulumi.Config('aws').get('accountId') || '861909001362'
+		const region = new pulumi.Config('aws').get('region') || 'us-east-1'
+		const ecrUri = `${accountId}.dkr.ecr.${region}.amazonaws.com/${ecrRepositoryName}:${imageTag}`
+
+		console.log(
+			`🔍 [resolveImageUri] Constructing ECR URI for PR environment: ${ecrUri}`,
+		)
+		return pulumi.output(ecrUri)
+	}
+
+	// For permanent environments, try to look up the image in ECR
 	// Import ECR module dynamically to avoid bundling issues
 	// eslint-disable-next-line @typescript-eslint/no-require-imports
 	const { getImageOutput } = require('@pulumi/aws/ecr')
