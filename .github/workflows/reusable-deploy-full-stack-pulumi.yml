@@ -143,9 +143,19 @@ jobs:
 
         # Run Pulumi preview (dry run)
         echo "📋 Running Pulumi preview..."
-        if pulumi preview --json > plan-output.json 2>&1; then
+        if pulumi preview --json > plan-output.json 2> plan-output.err; then
           echo "✅ Pulumi preview completed successfully"
           echo "plan-success=true" >> $GITHUB_OUTPUT
+
+          # Sanity check: ensure JSON is valid before parsing
+          if ! jq empty plan-output.json >/dev/null 2>&1; then
+            echo "❌ plan-output.json is not valid JSON"
+            echo "---- plan-output.json (head) ----"
+            head -40 plan-output.json || true
+            echo "---- plan-output.err (head) ----"
+            head -40 plan-output.err || true
+            exit 1
+          fi
           
           # Check if there are changes
           CHANGES=$(jq -r '.changeSummary.create + .changeSummary.update + .changeSummary.delete' plan-output.json)
@@ -164,7 +174,10 @@ jobs:
           echo "❌ Pulumi preview failed"
           echo "plan-success=false" >> $GITHUB_OUTPUT
           echo "changes-detected=false" >> $GITHUB_OUTPUT
-          cat plan-output.json
+          echo "---- plan-output.json (head) ----"
+          head -40 plan-output.json || true
+          echo "---- plan-output.err (head) ----"
+          head -40 plan-output.err || true
           exit 1
         fi
 
