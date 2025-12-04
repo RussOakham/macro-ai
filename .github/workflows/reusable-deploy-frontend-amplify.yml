@@ -181,7 +181,76 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       # ===================================================================
-      # 6. CREATE AMPLIFY DEPLOYMENT
+      # 6. ENSURE NO IN-FLIGHT JOB IS BLOCKING NEW DEPLOYMENT
+      # ===================================================================
+      - name: Stop existing in-flight Amplify job (if any)
+        id: stop-existing-job
+        run: |
+          echo "🔍 Checking for existing non-terminal Amplify jobs..."
+
+          ACTIVE_JOB=$(
+            aws amplify list-jobs \
+              --app-id "${{ inputs.amplify-app-id }}" \
+              --branch-name "${{ inputs.amplify-branch-name }}" \
+              --max-items 10 \
+              --region ${{ env.AWS_REGION }} \
+              --output json \
+            | jq -c '
+                .jobSummaries
+                | map(select(.status
+                  | IN("PENDING","PROVISIONING","RUNNING","CANCELLING","QUEUED","IN_PROGRESS")))
+                | sort_by(.jobId | tonumber)
+                | last
+              '
+          )
+
+          if [ -z "$ACTIVE_JOB" ] || [ "$ACTIVE_JOB" = "null" ]; then
+            echo "✅ No in-flight jobs found; safe to proceed"
+            exit 0
+          fi
+
+          ACTIVE_JOB_ID=$(echo "$ACTIVE_JOB" | jq -r '.jobId')
+          ACTIVE_JOB_STATUS=$(echo "$ACTIVE_JOB" | jq -r '.status')
+
+          echo "⚠️ Existing non-terminal job detected: ID=${ACTIVE_JOB_ID}, status=${ACTIVE_JOB_STATUS}. Stopping it..."
+
+          aws amplify stop-job \
+            --app-id "${{ inputs.amplify-app-id }}" \
+            --branch-name "${{ inputs.amplify-branch-name }}" \
+            --job-id "${ACTIVE_JOB_ID}" \
+            --region ${{ env.AWS_REGION }} \
+            --output json >/dev/null
+
+          # Wait for the job to reach a terminal state
+          MAX_WAIT=300
+          ELAPSED=0
+          INTERVAL=5
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            STATUS=$(aws amplify get-job \
+              --app-id "${{ inputs.amplify-app-id }}" \
+              --branch-name "${{ inputs.amplify-branch-name }}" \
+              --job-id "${ACTIVE_JOB_ID}" \
+              --region ${{ env.AWS_REGION }} \
+              --output json | jq -r '.job.summary.status')
+
+            echo "  - Current status: $STATUS (job ${ACTIVE_JOB_ID})"
+
+            case "$STATUS" in
+              SUCCEED|FAILED|CANCELLED)
+                echo "✅ Previous job is now terminal ($STATUS); continuing"
+                exit 0
+                ;;
+            esac
+
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+
+          echo "❌ Timed out waiting for previous job (${ACTIVE_JOB_ID}) to stop"
+          exit 1
+
+      # ===================================================================
+      # 7. CREATE AMPLIFY DEPLOYMENT
       # ===================================================================
       - name: Create Amplify deployment
         id: create-deployment
@@ -211,7 +280,7 @@ jobs:
           echo "upload-url=${UPLOAD_URL}" >> $GITHUB_OUTPUT
 
       # ===================================================================
-      # 7. UPLOAD ARTIFACT TO S3
+      # 8. UPLOAD ARTIFACT TO S3
       # ===================================================================
       - name: Upload artifact to Amplify
         id: upload
@@ -246,7 +315,7 @@ jobs:
           exit 1
 
       # ===================================================================
-      # 8. START AMPLIFY DEPLOYMENT
+      # 9. START AMPLIFY DEPLOYMENT
       # ===================================================================
       - name: Start deployment
         id: start-deployment
@@ -272,7 +341,7 @@ jobs:
           echo "job-id=${JOB_ID}" >> $GITHUB_OUTPUT
 
       # ===================================================================
-      # 9. WAIT FOR DEPLOYMENT COMPLETION
+      # 10. WAIT FOR DEPLOYMENT COMPLETION
       # ===================================================================
       - name: Wait for deployment completion
         id: wait-deployment
@@ -318,7 +387,7 @@ jobs:
           exit 1
 
       # ===================================================================
-      # 10. VERIFY DEPLOYMENT
+      # 11. VERIFY DEPLOYMENT
       # ===================================================================
       - name: Verify deployment
         id: deployment-status
@@ -352,7 +421,7 @@ jobs:
           fi
 
       # ===================================================================
-      # 11. CLEANUP
+      # 12. CLEANUP
       # ===================================================================
       - name: Cleanup artifacts
         if: always()
@@ -362,7 +431,7 @@ jobs:
           echo "✅ Cleanup completed"
 
       # ===================================================================
-      # 12. SUMMARY
+      # 13. SUMMARY
       # ===================================================================
       - name: Deployment summary
         if: always()
