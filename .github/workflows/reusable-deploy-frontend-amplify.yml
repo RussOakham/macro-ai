@@ -183,71 +183,80 @@ jobs:
       # ===================================================================
       # 6. ENSURE NO IN-FLIGHT JOB IS BLOCKING NEW DEPLOYMENT
       # ===================================================================
-      - name: Stop existing in-flight Amplify job (if any)
+      - name: Stop existing in-flight Amplify job(s) (if any)
         id: stop-existing-job
         run: |
           echo "🔍 Checking for existing non-terminal Amplify jobs..."
 
-          ACTIVE_JOB=$(
-            aws amplify list-jobs \
-              --app-id "${{ inputs.amplify-app-id }}" \
-              --branch-name "${{ inputs.amplify-branch-name }}" \
-              --max-items 10 \
-              --region ${{ env.AWS_REGION }} \
-              --output json \
-            | jq -c '
-                .jobSummaries
-                | map(select(.status
-                  | IN("PENDING","PROVISIONING","RUNNING","CANCELLING","QUEUED","IN_PROGRESS")))
-                | sort_by(.jobId | tonumber)
-                | last
-              '
-          )
-
-          if [ -z "$ACTIVE_JOB" ] || [ "$ACTIVE_JOB" = "null" ]; then
-            echo "✅ No in-flight jobs found; safe to proceed"
-            exit 0
-          fi
-
-          ACTIVE_JOB_ID=$(echo "$ACTIVE_JOB" | jq -r '.jobId')
-          ACTIVE_JOB_STATUS=$(echo "$ACTIVE_JOB" | jq -r '.status')
-
-          echo "⚠️ Existing non-terminal job detected: ID=${ACTIVE_JOB_ID}, status=${ACTIVE_JOB_STATUS}. Stopping it..."
-
-          aws amplify stop-job \
-            --app-id "${{ inputs.amplify-app-id }}" \
-            --branch-name "${{ inputs.amplify-branch-name }}" \
-            --job-id "${ACTIVE_JOB_ID}" \
-            --region ${{ env.AWS_REGION }} \
-            --output json >/dev/null
-
-          # Wait for the job to reach a terminal state
           MAX_WAIT=300
-          ELAPSED=0
           INTERVAL=5
-          while [ $ELAPSED -lt $MAX_WAIT ]; do
-            STATUS=$(aws amplify get-job \
-              --app-id "${{ inputs.amplify-app-id }}" \
-              --branch-name "${{ inputs.amplify-branch-name }}" \
-              --job-id "${ACTIVE_JOB_ID}" \
-              --region ${{ env.AWS_REGION }} \
-              --output json | jq -r '.job.summary.status')
 
-            echo "  - Current status: $STATUS (job ${ACTIVE_JOB_ID})"
+          while true; do
+            ACTIVE_JOBS=$(
+              aws amplify list-jobs \
+                --app-id "${{ inputs.amplify-app-id }}" \
+                --branch-name "${{ inputs.amplify-branch-name }}" \
+                --max-items 25 \
+                --region ${{ env.AWS_REGION }} \
+                --output json \
+              | jq -c '
+                  .jobSummaries
+                  | map(select(.status
+                    | IN("PENDING","PROVISIONING","RUNNING","CANCELLING","QUEUED","IN_PROGRESS")))
+                  | sort_by(.jobId | tonumber)
+                '
+            )
 
-            case "$STATUS" in
-              SUCCEED|FAILED|CANCELLED)
-                echo "✅ Previous job is now terminal ($STATUS); continuing"
-                exit 0
-                ;;
-            esac
+            if [ -z "$ACTIVE_JOBS" ] || [ "$ACTIVE_JOBS" = "[]" ]; then
+              echo "✅ No in-flight jobs found; safe to proceed"
+              break
+            fi
 
-            sleep $INTERVAL
-            ELAPSED=$((ELAPSED + INTERVAL))
+            COUNT=$(echo "$ACTIVE_JOBS" | jq 'length')
+            echo "⚠️ Found ${COUNT} non-terminal job(s); stopping all..."
+
+            # Stop each active job
+            echo "$ACTIVE_JOBS" | jq -r '.[].jobId' | while read -r JOB_ID; do
+              echo "  - Stopping job ${JOB_ID}..."
+              aws amplify stop-job \
+                --app-id "${{ inputs.amplify-app-id }}" \
+                --branch-name "${{ inputs.amplify-branch-name }}" \
+                --job-id "${JOB_ID}" \
+                --region ${{ env.AWS_REGION }} \
+                --output json >/dev/null
+            done
+
+            # Wait for all to become terminal
+            ELAPSED=0
+            while [ $ELAPSED -lt $MAX_WAIT ]; do
+              REMAINING=$(
+                aws amplify list-jobs \
+                  --app-id "${{ inputs.amplify-app-id }}" \
+                  --branch-name "${{ inputs.amplify-branch-name }}" \
+                  --max-items 25 \
+                  --region ${{ env.AWS_REGION }} \
+                  --output json \
+                | jq '
+                    .jobSummaries
+                    | map(select(.status
+                      | IN("PENDING","PROVISIONING","RUNNING","CANCELLING","QUEUED","IN_PROGRESS")))
+                    | length
+                  '
+              )
+
+              echo "  - Remaining in-flight jobs: ${REMAINING}"
+              if [ "$REMAINING" -eq 0 ]; then
+                echo "✅ All prior jobs are now terminal; continuing"
+                break 2
+              fi
+
+              sleep $INTERVAL
+              ELAPSED=$((ELAPSED + INTERVAL))
+            done
+
+            echo "❌ Timed out waiting for previous jobs to stop"
+            exit 1
           done
-
-          echo "❌ Timed out waiting for previous job (${ACTIVE_JOB_ID}) to stop"
-          exit 1
 
       # ===================================================================
       # 7. CREATE AMPLIFY DEPLOYMENT
@@ -287,7 +296,8 @@ jobs:
         run: |
           echo "📤 Uploading artifact to Amplify..."
           
-          ZIP_FILE="apps/client-ui/${{ steps.archive.outputs.zip-file }}"
+          # Archive was created at repo root (see archive step)
+          ZIP_FILE="${{ steps.archive.outputs.zip-file }}"
           UPLOAD_URL="${{ steps.create-deployment.outputs.upload-url }}"
           
           # Upload using curl with retry logic
