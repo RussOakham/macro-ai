@@ -197,17 +197,17 @@ jobs:
             --region ${{ env.AWS_REGION }} \
             --output json)
           
-          DEPLOYMENT_ID=$(echo "$RESPONSE" | jq -r '.deploymentId')
+          JOB_ID=$(echo "$RESPONSE" | jq -r '.jobId')
           UPLOAD_URL=$(echo "$RESPONSE" | jq -r '.zipUploadUrl')
           
-          if [ -z "$DEPLOYMENT_ID" ] || [ "$DEPLOYMENT_ID" = "null" ]; then
+          if [ -z "$JOB_ID" ] || [ "$JOB_ID" = "null" ]; then
             echo "❌ Failed to create deployment"
             echo "$RESPONSE"
             exit 1
           fi
           
-          echo "✅ Deployment created: $DEPLOYMENT_ID"
-          echo "deployment-id=${DEPLOYMENT_ID}" >> $GITHUB_OUTPUT
+          echo "✅ Deployment created (job): $JOB_ID"
+          echo "job-id=${JOB_ID}" >> $GITHUB_OUTPUT
           echo "upload-url=${UPLOAD_URL}" >> $GITHUB_OUTPUT
 
       # ===================================================================
@@ -256,7 +256,7 @@ jobs:
           RESPONSE=$(aws amplify start-deployment \
             --app-id "${{ inputs.amplify-app-id }}" \
             --branch-name "${{ inputs.amplify-branch-name }}" \
-            --deployment-id "${{ steps.create-deployment.outputs.deployment-id }}" \
+            --job-id "${{ steps.create-deployment.outputs.job-id }}" \
             --region ${{ env.AWS_REGION }} \
             --output json)
           
@@ -372,7 +372,7 @@ jobs:
           echo "  - App ID: ${{ inputs.amplify-app-id }}"
           echo "  - Branch: ${{ inputs.amplify-branch-name }}"
           echo "  - ZIP Size: ${{ steps.archive.outputs.zip-size-bytes }} bytes"
-          echo "  - Deployment ID: ${{ steps.create-deployment.outputs.deployment-id }}"
+          echo "  - Deployment Job ID: ${{ steps.create-deployment.outputs.job-id }}"
           echo "  - Job ID: ${{ steps.start-deployment.outputs.job-id }}"
           echo "  - Final Status: ${{ steps.deployment-status.outputs.status }}"
           echo "  - Deployment URL: ${{ steps.deployment-status.outputs.deployment-url }}"
