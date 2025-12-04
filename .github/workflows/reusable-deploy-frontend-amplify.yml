@@ -149,12 +149,13 @@ jobs:
           
           cd apps/client-ui/dist
           ZIP_FILE="frontend-${GITHUB_RUN_ID}.zip"
+          ZIP_PATH="${GITHUB_WORKSPACE}/apps/client-ui/${ZIP_FILE}"
           
-          # Zip the contents (not the dist folder itself)
-          zip -r "../../${ZIP_FILE}" .
+          # Zip the contents (not the dist folder itself) to a fixed path
+          zip -r "$ZIP_PATH" .
           
           # Get file size
-          SIZE_BYTES=$(wc -c < "../../${ZIP_FILE}")
+          SIZE_BYTES=$(wc -c < "$ZIP_PATH")
           SIZE_MB=$((SIZE_BYTES / 1048576))
           
           # Check size limit (5GB)
@@ -165,6 +166,7 @@ jobs:
           
           echo "✅ Archive created: ${ZIP_FILE} (${SIZE_MB}MB)"
           echo "zip-file=${ZIP_FILE}" >> $GITHUB_OUTPUT
+          echo "zip-path=${ZIP_PATH}" >> $GITHUB_OUTPUT
           echo "zip-size-bytes=${SIZE_BYTES}" >> $GITHUB_OUTPUT
           
           # Go back to root
@@ -296,15 +298,26 @@ jobs:
         run: |
           echo "📤 Uploading artifact to Amplify..."
           
-          # Archive was created at repo root (see archive step)
-          ZIP_FILE="${{ steps.archive.outputs.zip-file }}"
+          ZIP_PATH="${{ steps.archive.outputs.zip-path }}"
           UPLOAD_URL="${{ steps.create-deployment.outputs.upload-url }}"
+
+          echo "pwd: $(pwd)"
+          echo "ZIP_PATH: ${ZIP_PATH}"
+          echo "Listing zip path:"
+          ls -l "${ZIP_PATH}" || true
+          echo "Searching for zip files (maxdepth 3):"
+          find . -maxdepth 3 -name "frontend-*.zip" -ls || true
+
+          if [ ! -f "${ZIP_PATH}" ]; then
+            echo "❌ Zip file not found at ${ZIP_PATH}"
+            exit 1
+          fi
           
           # Upload using curl with retry logic
           for i in {1..3}; do
             if curl -X PUT \
               -H "Content-Type: application/zip" \
-              --data-binary @"${ZIP_FILE}" \
+              --data-binary @"${ZIP_PATH}" \
               "${UPLOAD_URL}" \
               --output /dev/null \
               --silent \
